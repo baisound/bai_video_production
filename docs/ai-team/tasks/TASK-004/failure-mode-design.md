@@ -13,7 +13,11 @@
 | workflow references unavailable class | `NOT_SUPPORTED` before queue |
 | ComfyUI queue/history timeout | `TIMEOUT`; no canonical asset |
 | ComfyUI history traversal/absolute/symlink output | `SECURITY` |
-| ComfyUI output missing/non-video | `DATA_INTEGRITY`/`EXTERNAL_DEPENDENCY` |
+| generated image history contains zero/multiple canonical image candidates | `DATA_INTEGRITY` / `HUMAN_REVIEW_REQUIRED`; do not guess output |
+| generated image output is missing/non-visual | `DATA_INTEGRITY`; no registration |
+| image model profile has restricted/conditional/unknown commercial runtime policy and commercial execution is requested without authorization Evidence | `AUTHORIZATION`; `/prompt` not sent |
+| caller supplies a custom model profile without model/license identifiers | `VALIDATION`; `/prompt` not sent |
+| ComfyUI video output missing/non-video | `DATA_INTEGRITY`/`EXTERNAL_DEPENDENCY` |
 | Audacity script pipe missing | `EXTERNAL_DEPENDENCY`; no project mutation |
 | Audacity current project has tracks | `SECURITY`; fail closed before import/effect |
 | OpenVINO effect not discoverable | `NOT_SUPPORTED`; no effect invocation |

@@ -1,14 +1,15 @@
 # TASK-004 — Detailed Design
 
-## 1. Three-lane architecture
+## 1. Four-lane architecture
 
-TASK-004 contains three independently bounded lanes sharing TASK-003 Asset/Evidence contracts.
+TASK-004 contains four independently bounded execution lanes sharing TASK-003 Asset/Evidence contracts.
 
-- **Lane A:** source Asset → timing inspection → normalization decision → derived CFR proxy / 48 kHz analysis audio → normalization manifest/Evidence.
-- **Lane B:** ComfyUI local runtime → resource admission → workflow validation/submission → generated output → canonical GENERATED_VIDEO Asset → generation manifest/Evidence.
-- **Lane C:** Audacity sandbox + mod-script-pipe → OpenVINO effect discovery/execution → processed WAV/stems → canonical AUDIO Assets → audio-AI manifest/Evidence.
+- **Lane A — Media Foundation:** source Asset → timing inspection → normalization decision → derived CFR proxy / 48 kHz analysis audio → normalization manifest/Evidence.
+- **Lane B — Local Image AI:** ComfyUI local runtime → license/resource admission → workflow validation/submission → generated image → canonical IMAGE Asset → generation manifest/Evidence.
+- **Lane C — Local Video AI:** ComfyUI local runtime → resource admission → workflow validation/submission → generated video → canonical GENERATED_VIDEO Asset → generation manifest/Evidence.
+- **Lane D — Local Audio AI:** Audacity sandbox + mod-script-pipe → OpenVINO effect discovery/execution → processed WAV/stems → canonical AUDIO Assets → audio-AI manifest/Evidence.
 
-Timeline placement and creative selection remain downstream contracts.
+A shared **Lane E policy layer** owns minimum Resource Admission, provider/license Evidence and Derived Asset publication. Timeline placement and creative selection remain downstream contracts.
 
 ## 2. Exact timebase
 
@@ -50,13 +51,13 @@ This prevents each local AI runtime from inventing a second Asset-write path.
 
 The Product communicates with ComfyUI through the documented local Server API. Endpoint policy permits loopback/private addresses and optionally explicit allowlisted local hostnames. Public hosts, URL credentials, query/fragment confusion and unsupported schemes are denied.
 
-Requests use bounded connect/read timeouts. No browser automation is required. Secrets are excluded from canonical manifests/Evidence.
+Requests use bounded connect/read timeouts. No browser automation is required. Secrets and raw prompts are excluded from canonical manifests/Evidence; prompt hashes are retained.
 
-## 8. ComfyUI workflow contract
+## 8. Shared ComfyUI workflow contract
 
-A workflow is supplied in API-format JSON. Recursive substitution replaces exact typed placeholders such as `{{PROMPT}}`, `{{SEED}}`, `{{WIDTH}}`, `{{HEIGHT}}`, `{{LENGTH_FRAMES}}`. There is no Python `eval` or expression engine.
+A workflow is supplied in API-format JSON. Recursive substitution replaces exact typed placeholders such as `{{PROMPT}}`, `{{NEGATIVE_PROMPT}}`, `{{SEED}}`, `{{WIDTH}}`, `{{HEIGHT}}`, `{{LENGTH_FRAMES}}` and caller-declared reference inputs. There is no Python `eval` or expression engine.
 
-Every `class_type` is checked against `/object_info` before `/prompt`. MiniMax H3 Native is the preferred first profile. MiniMaxH3-Easy is optional compatibility only.
+Every `class_type` is checked against `/object_info` before `/prompt`. Workflow bytes and rendered-contract metadata are checksummed. The Product does not hard-code a private/custom node implementation as a foundation dependency.
 
 ## 9. ComfyUI Resource Admission
 
@@ -64,19 +65,69 @@ Before queue submission the adapter reads `/system_stats`. If configured, it req
 
 This is a narrow TASK-004 safety slice; TASK-020 remains the owner of full admission/monitoring.
 
-## 10. Generated output ownership
+## 10. Local Image AI model/profile contract
+
+Image generation is modeled by a Product request independent of ComfyUI node names. Initial model-family profiles are:
+
+- `FLUX_1_SCHNELL` — preferred fast local image profile. Official model card declares Apache-2.0 and 1–4 inference steps. Built-in policy: commercial runtime allowed subject to ordinary Product rights review.
+- `FLUX_1_DEV` — high-quality compatibility profile. Official model license is non-commercial for model/runtime use unless separate authorization exists. Built-in policy: commercial runtime restricted; output rights are not conflated with model-runtime rights.
+- `SDXL_1_0` — compatibility profile under CreativeML Open RAIL++-M. Built-in policy records the license and requires policy review rather than silently claiming unrestricted use.
+- `SD3_5` — capability profile under Stability Community License. Because commercial terms depend on current license conditions/user circumstances, built-in policy is conditional and commercial runtime requires explicit authorization Evidence.
+- `SD1_5` — legacy compatibility family for ecosystem assets such as checkpoints/LoRA/ControlNet. Built-in policy remains review-required unless a concrete model/checkpoint license is supplied.
+- `CUSTOM` — always requires caller-supplied model identifier and license policy.
+
+Provider profile selection is separate from workflow selection. A caller can use a supported custom workflow while still producing canonical provenance.
+
+## 11. Image generation modes
+
+TASK-004 executes:
+
+- `TEXT_TO_IMAGE` — prompt/negative prompt/seed/dimensions via API workflow placeholders;
+- `IMAGE_TO_IMAGE` — same request plus one Product Asset input/reference mapping handled by caller workflow substitutions.
+
+Inpainting, ControlNet and LoRA are represented as capability/profile metadata during TASK-004; they may be executable if a supplied workflow needs no new Core contract, but they are not completion gates.
+
+## 12. Generated image output ownership
+
+ComfyUI history is untrusted external-runtime data. Image descriptors are collected from `outputs.*.images` and known image extensions. Exactly one canonical output is required for the initial Product API; multiple candidate images fail to Human Review rather than silently selecting one.
+
+Filename/subfolder/type metadata is normalized and must resolve under the configured ComfyUI output root. Absolute-path injection, traversal, non-output descriptors and symlink escape are rejected. The selected file is ffprobe-validated as a visual/image stream, checksummed, copied into Product staging and published as Asset type `IMAGE` with generation provenance.
+
+## 13. Image generation provenance and license gate
+
+Canonical provenance records:
+
+- provider/runtime = `COMFYUI_LOCAL`;
+- model family + explicit model identifier;
+- model license identifier and runtime policy state;
+- workflow checksum;
+- prompt and negative-prompt checksums (not raw text);
+- seed, mode, requested width/height;
+- source/reference Asset IDs where supplied;
+- safe device/resource summary;
+- capability/profile name.
+
+When `commercial_runtime_requested=true`, built-in profiles in `RESTRICTED`, `CONDITIONAL` or `UNKNOWN` state fail closed unless the request carries explicit `license_authorization_ref`. This is an execution gate only; it does not assert copyright/ownership of generated output.
+
+## 14. Generated video ownership
 
 ComfyUI history is untrusted external-runtime data. Returned filename/subfolder/type metadata is normalized and must resolve under the configured ComfyUI output root. Absolute-path injection, traversal and symlink escape are rejected. The selected file must contain a video stream.
 
 The file is copied into Product staging, hashed and published as `GENERATED_VIDEO`. Provenance records runtime/profile/model family, workflow checksum, prompt checksum, seed, mode, requested dimensions/frame count and safe device/runtime metadata.
 
-## 11. Audacity/OpenVINO license and process boundary
+## 15. MiniMax H3 profile
+
+MiniMax H3 Native is the preferred first video profile. Product request modes map to ComfyUI native T2V/I2V/First-Last/Reference workflows without embedding browser/UI automation. MiniMaxH3-Easy remains an optional workflow compatibility profile rather than a Core dependency.
+
+Live performance, exact VRAM requirements and model-specific generation quality are Evidence from the user's runtime, not facts invented by unit tests.
+
+## 16. Audacity/OpenVINO license and process boundary
 
 Intel `openvino-plugins-ai-audacity` is GPL-3.0 and is implemented as an Audacity module. TASK-004 does not copy its source, link it into Product Core, or claim it as Product code. The Product drives an installed user-local Audacity runtime via Audacity's documented `mod-script-pipe` automation boundary.
 
 This process separation also reflects Audacity's own security warning: scripting can read/write files and should not be exposed as a web service. The Adapter therefore supports local pipes only and does not expose a network listener.
 
-## 12. Audacity sandbox policy
+## 17. Audacity sandbox policy
 
 Before any effect:
 
@@ -91,7 +142,7 @@ Before any effect:
 
 No real/client Audacity project is modified by an authorized BAI operation.
 
-## 13. Dynamic OpenVINO effect discovery
+## 18. Dynamic OpenVINO effect discovery
 
 Audacity command IDs and plugin parameters may change between versions. The provider therefore does not assume one permanent scripting ID. `GetInfo: Type=Commands` is parsed and matched by normalized action/name strings for:
 
@@ -103,17 +154,17 @@ Audacity command IDs and plugin parameters may change between versions. The prov
 
 The discovered command descriptor and parameter schema are retained in capability Evidence. Executable Noise Suppression / Music Separation calls use either caller-supplied parameters validated against discovered names or conservative discovered defaults. Unknown requested parameters are rejected before effect execution.
 
-## 14. Noise Suppression operation
+## 19. Noise Suppression operation
 
 Noise Suppression imports one source track into the empty sandbox, applies the discovered OpenVINO Noise Suppression effect and exports lossless WAV to Product staging. The result is ffprobe-validated and published as a derived AUDIO Asset. Device/model/effect descriptor, input/output checksums and runtime result are recorded.
 
-## 15. Music Separation operation
+## 20. Music Separation operation
 
 Music Separation imports one source track and invokes OpenVINO Music Separation in caller-selected `2_STEM` or `4_STEM` mode. After execution, `GetInfo: Type=Tracks` identifies newly generated tracks. Expected stem roles are mapped by normalized track-name suffixes (Vocals/Instrumental or Drums/Bass/Other/Vocals), not by blind positional assumptions. Each stem is individually selected/exported as WAV, validated and published as a canonical AUDIO Asset.
 
 If expected stems cannot be proved, no stem set is declared complete; the operation fails with diagnostic Evidence.
 
-## 16. Capability-only OpenVINO features
+## 21. Capability-only OpenVINO features
 
 Whisper, MusicGen and Audio Super Resolution are discovered and exposed in the capability report during TASK-004, but their end-to-end Product workflows remain downstream:
 
@@ -123,8 +174,14 @@ Whisper, MusicGen and Audio Super Resolution are discovered and exposed in the c
 
 TASK-004 does not fake execution Evidence for these features.
 
-## 17. Idempotency and failure handling
+## 22. Idempotency and failure handling
 
-Normalization, local-video generation and local-audio processing reserve Job-scoped operations. COMPLETED replay returns canonical prior results. No Asset/manifest becomes canonical until bytes pass structural/checksum QA.
+Normalization, local-image generation, local-video generation and local-audio processing reserve Job-scoped operations. COMPLETED replay returns canonical prior results. No Asset/manifest becomes canonical until bytes pass structural/checksum QA.
 
 Timeout/resource/runtime errors are explicit Product errors. Staging is never exposed as a canonical Asset. A process crash after Asset publication is repaired from producer-operation binding when the canonical checksum still matches; mismatched/missing canonical output fails closed rather than recreating truth from untrusted bytes.
+
+## 23. Completion Evidence policy
+
+Unit/integration tests may emulate local runtimes to prove Product contracts, containment, state/idempotency and failure behavior. They do not prove that the user's installed ComfyUI models or Audacity OpenVINO plugins exist or perform well.
+
+TASK-004 can reach implementation-complete/checkpoint state without downloading third-party runtimes. If live runtime Evidence is unavailable, the final Judge must clearly distinguish `IMPLEMENTATION_COMPLETE` from provider-specific `LIVE_CAPABILITY_VERIFIED` rather than fabricating support.

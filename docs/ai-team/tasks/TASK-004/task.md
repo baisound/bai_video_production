@@ -1,4 +1,4 @@
-# TASK-004 — Media Normalization + Local AI Runtime Foundation
+# TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation
 
 - Status: `IN_PROGRESS`
 - Authorization: `OWNER_AUTHORIZED_IMPLEMENTATION`
@@ -6,12 +6,13 @@
 - Package target: `0.4.0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Adaptive score: `25`
+- Scope amendment: `OWNER_AUTHORIZED` — Local Image AI (Stable Diffusion / FLUX) added before implementation completion.
 
 ## Objective
 
-Establish the exact media-time foundation required by subtitles, filler/cut planning and Resolve assembly, while also delivering the first replaceable local Video/Audio AI runtime foundation on top of TASK-003 Asset Registry.
+Establish the exact media-time foundation required by subtitles, filler/cut planning and Resolve assembly, while also delivering replaceable local Image/Video/Audio AI runtime foundations on top of TASK-003 Asset Registry.
 
-TASK-004 has three bounded lanes. They share Asset/Evidence/Resource-Admission contracts but do not collapse downstream creative or timeline responsibilities into this task.
+TASK-004 has four bounded execution lanes plus one cross-cutting admission/evidence layer. They share Asset/Evidence contracts but do not collapse downstream creative or timeline responsibilities into this task.
 
 ## Lane A — Timebase / Proxy / Normalization
 
@@ -24,7 +25,21 @@ TASK-004 has three bounded lanes. They share Asset/Evidence/Resource-Admission c
 - normalization manifest and Evidence;
 - affine whole-file source→normalized handoff for TASK-022.
 
-## Lane B — Local Video AI / ComfyUI / MiniMax H3
+## Lane B — Local Image AI / ComfyUI / FLUX + Stable Diffusion
+
+- reuse the same ComfyUI local Server API trust boundary as video generation;
+- T2I and I2I executable Product contracts using API-format workflow JSON;
+- FLUX.1 Schnell is the preferred fast built-in model profile because its official model card declares Apache-2.0 and 1–4 step generation;
+- FLUX.1 Dev is registered as a restricted/conditional runtime profile and is not auto-selected for commercial runtime use without explicit license authorization;
+- SDXL 1.0 is supported as an OpenRAIL++ compatibility profile;
+- SD3/SD3.5 is capability/provider-ready with explicit conditional-license Evidence;
+- SD1.5 is retained as a legacy/LoRA/ControlNet compatibility family rather than the preferred default;
+- output-root containment/symlink/traversal defense;
+- generated-image structural/checksum validation and canonical IMAGE Asset registration;
+- model/workflow/prompt/seed/device/license provenance and conservative rights defaults;
+- Inpainting/ControlNet/LoRA contracts remain capability/profile-ready unless a low-cost implementation falls naturally inside this TASK.
+
+## Lane C — Local Video AI / ComfyUI / MiniMax H3
 
 - ComfyUI local Server API adapter (`/system_stats`, `/object_info`, `/prompt`, `/history/{prompt_id}`);
 - loopback/private/explicit-local endpoint policy; public endpoints denied by default;
@@ -37,7 +52,7 @@ TASK-004 has three bounded lanes. They share Asset/Evidence/Resource-Admission c
 - generated-video media/checksum validation and canonical GENERATED_VIDEO Asset registration;
 - model/workflow/prompt/seed/device provenance and conservative rights defaults.
 
-## Lane C — Local Audio AI / Audacity OpenVINO Boundary
+## Lane D — Local Audio AI / Audacity OpenVINO Boundary
 
 - GPL-3.0 Intel OpenVINO Audacity plugin code is NOT copied into BAI Core;
 - Audacity `mod-script-pipe` is treated as an external local runtime boundary;
@@ -49,19 +64,21 @@ TASK-004 has three bounded lanes. They share Asset/Evidence/Resource-Admission c
 - Whisper, MusicGen and Audio Super Resolution are capability-discovered/provider-ready in TASK-004, while their product workflows remain owned by TASK-006/023 and TASK-013;
 - no automatic installation/download of Audacity, plugins or model weights.
 
-## Cross-cutting Resource Admission
+## Cross-cutting — Resource Admission / Provider Evidence
 
-TASK-004 implements only the minimum admission floor needed before expensive local generation/inference: runtime availability, device visibility, verified free VRAM where applicable, disk-space floor and explicit execution authorization. Full monitoring/admission remains TASK-020.
+TASK-004 implements only the minimum admission floor needed before expensive local generation/inference: runtime availability, device visibility, verified free VRAM where applicable, disk-space floor, model/workflow capability validation and explicit execution authorization. Full monitoring/admission remains TASK-020.
+
+Every generated/processed Asset retains provider/model/workflow/version/license/provenance checksums without storing raw prompts in canonical Evidence. Commercial-runtime suitability is a separate policy gate from rights to generated output; unknown/conditional provider licenses fail closed when a caller explicitly requests commercial runtime authorization.
 
 ## Out of scope
 
-- exact edit/cut/subtitle/SE/BGM/narration placement on a Resolve timeline (`TASK-022`, `TASK-010`, `TASK-026`);
+- exact edit/cut/subtitle/SE/BGM/narration/image/video placement on a Resolve timeline (`TASK-022`, `TASK-010`, `TASK-026`);
 - automatic creative decision of where generated media belongs (`TASK-007/008`);
 - full Resource Admission/Monitoring system (`TASK-020`);
-- automatic download/install/update of ComfyUI, MiniMax weights, Audacity, OpenVINO plugins or third-party custom nodes;
+- automatic download/install/update of ComfyUI, model weights, Audacity, OpenVINO plugins or third-party custom nodes;
 - public/remote ComfyUI endpoints by default;
 - copying/linking GPL Audacity OpenVINO implementation into Product Core;
-- falsely declaring MiniMax H3 or OpenVINO model performance PASS without live user-runtime Evidence.
+- falsely declaring MiniMax H3, FLUX/Stable Diffusion or OpenVINO model performance PASS without live user-runtime Evidence.
 
 ## Acceptance criteria
 
@@ -73,9 +90,11 @@ TASK-004 implements only the minimum admission floor needed before expensive loc
 6. CFR proxy is generated only when policy/inspection requires it and passes timing QA before registration.
 7. ComfyUI public/untrusted endpoints are denied before network execution; configured resource floors fail closed before `/prompt`.
 8. ComfyUI workflow classes are checked against `/object_info`; placeholder substitution is data-only.
-9. ComfyUI history output must remain under the configured local output root and pass video/checksum validation before GENERATED_VIDEO registration.
-10. Audacity OpenVINO Adapter discovers commands dynamically, refuses non-empty projects and uses only Product-owned input/output paths.
-11. Noise Suppression output and Music Separation stems are media/checksum validated and registered as canonical derived AUDIO Assets with provider provenance.
-12. Whisper/MusicGen/AudioSR capability presence can be reported without falsely claiming task-level execution support.
-13. Unit, boundary-negative, integration, regression, contract and fault tests pass; package/docs/Git are synchronized.
-14. Missing user local runtimes may leave live-performance Evidence pending, but must never be fabricated.
+9. Image generation supports canonical T2I/I2I requests and only publishes a single unambiguous image under the configured output root after structural/checksum validation.
+10. FLUX/Stable Diffusion provider profiles retain explicit model/license policy Evidence; commercial-runtime requests fail closed for `RESTRICTED`, `CONDITIONAL` or `UNKNOWN` profiles unless explicitly authorized by caller-supplied license Evidence.
+11. Video generation output must remain under the configured local output root and pass video/checksum validation before GENERATED_VIDEO registration.
+12. Audacity OpenVINO Adapter discovers commands dynamically, refuses non-empty projects and uses only Product-owned input/output paths.
+13. Noise Suppression output and Music Separation stems are media/checksum validated and registered as canonical derived AUDIO Assets with provider provenance.
+14. Whisper/MusicGen/AudioSR capability presence can be reported without falsely claiming task-level execution support.
+15. Unit, boundary-negative, integration, regression, contract and fault tests pass; package/docs/Git are synchronized.
+16. Missing user local runtimes may leave live-performance Evidence pending, but must never be fabricated.

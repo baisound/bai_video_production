@@ -18,7 +18,7 @@
 - external side effects: `true`
 - data migration: `false`
 
-The result was produced with the BAI Development OS 1.0.0 adaptive-development profile implementation. The DEV-4 Safety Floor is retained because timebase errors contaminate subtitles/cuts/timeline placement, while a local generation adapter adds GPU/resource use, filesystem output and an external local-runtime trust boundary.
+The result was produced with the BAI Development OS 1.0.0 adaptive-development profile implementation. The DEV-4 Safety Floor is retained because timebase errors contaminate subtitles/cuts/timeline placement, while local image/video/audio generation adapters add GPU/resource use, filesystem output, model-license gates and multiple external local-runtime trust boundaries.
 
 ## Minimum governance applied
 

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_id",
+    "production_job_id",
+    "category",
+    "producer",
+    "created_at",
+    "input_checksums",
+    "output_checksums",
+    "details"
+  ],
+  "properties": {
+    "evidence_id": {
+      "type": "string",
+      "pattern": "^EVD-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "production_job_id": {
+      "type": "string",
+      "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "category": {
+      "type": "string"
+    },
+    "producer": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^OP-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "input_checksums": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "output_checksums": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "details": {
+      "type": "object"
+    },
+    "supersedes_evidence_id": {
+      "type": "string",
+      "pattern": "^EVD-[0-9A-HJKMNP-TV-Z]{26}$"
+    }
+  }
+}

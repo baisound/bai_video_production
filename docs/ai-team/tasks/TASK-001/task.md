@@ -11,16 +11,16 @@
 - Project Root: `/home/baisound/projects/ai-video-production`
 - Task ID: `TASK-001`
 - Historical Alias: `VIDEO-TASK-001`
-- Status: `ACTIVE`
-- Current Phase: `DESIGN`
+- Status: `COMPLETED`
+- Current Phase: `CLOSED`
 - Design Authorization: `AUTHORIZED`
-- Implementation Authorization: `NOT_AUTHORIZED`
-- Governance Profile: `DEV-3 HIGH ASSURANCE`
+- Implementation Authorization: `AUTHORIZED — Owner instruction 2026-08-09, TASK-001 scope only`
+- Governance Profile: `DEV-4 FOUNDATION CRITICAL` (machine revalidated, score 25)
 - Lifecycle Mode at Bootstrap: `DOCUMENT_GOVERNED_LEVEL_A`
 
 ## Objective
 
-AI動画制作自動化システムの全後続Taskが依存するProject FoundationとProduct Domain Contractを、後続実装が追加の暗黙判断を必要としない水準まで確定し、DEV-3のDesign ReviewとAuthorizationを経て実装可能なFinal Planへ統合する。
+AI動画制作自動化システムの全後続Taskが依存するProject FoundationとProduct Domain Contractを、後続実装が追加の暗黙判断を必要としない水準まで確定し、DEV-4のDesign/Failure-Mode ReviewとAuthorizationを経て実装・検証・Evidence・文書同期まで完了する。
 
 ## Background
 
@@ -97,7 +97,7 @@ AI動画制作自動化システムの全後続Taskが依存するProject Founda
 
 Referenceはcurrent BAI Development Governanceを上書きしない。
 
-## DEV-3 Required Design Topics
+## DEV-4 Required Design Topics
 
 Builderは少なくとも以下を詳細設計する。
 
@@ -284,7 +284,7 @@ TASK-001 Final Planまでに以下を決定する。
 
 起票時点では本Task Definition、Development Profile、Context Loading Planのみ。
 
-DEV-3進行に応じて必要なArtifactをRoleが生成する。
+DEV-4進行に応じて必要なArtifactを生成し、実装Critic・独立Test・Final Judgeまで完了する。
 
 - detailed design / builder-proposal
 - critic design review
@@ -318,7 +318,7 @@ DEV-3進行に応じて必要なArtifactをRoleが生成する。
 Design/Authorization後にのみ適用。
 
 - Final Planどおりのfoundation/schema/product contract codeが実装される。
-- DEV-3 required testsがPASSする。
+- DEV-4 required tests（unit / boundary-negative / integration / regression / contract / fault-recovery / consumer fixture）がPASSする。
 - Independent Testerがobserved evidenceを記録する。
 - Blocking Critic finding = 0。
 - Project/internal docs syncが完了する。
@@ -331,11 +331,9 @@ Design/Authorization後にのみ適用。
 - Product StateとBAI Lifecycleを一意に分離できない
 - 実機検証なしではContractを確定できず、別Taskへ切り出す必要がある
 - Required Evidenceが観測不能
-- DEV-4 Safety Floor条件が発生
+- TASK-001で認可したDEV-4 Scopeを超えるFoundation/Cross-project変更が必要
 - Scope外の外部side effectが必要
 
-## Next Role
+## Closure
 
-`Builder — DEV-3 Detailed Design`
-
-Builderは実装を開始しない。
+`TASK-001` is complete. No next role is active. `TASK-002 — Resolve Capability Spike` is recommendation-only and remains `NOT_STARTED / NOT_AUTHORIZED`.

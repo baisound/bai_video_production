@@ -1,0 +1,14 @@
+$ python -m pip wheel . --no-deps --no-build-isolation --wheel-dir /tmp/ai-video-wheel
+WARNING: The directory '/home/oai/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+Looking in indexes: https://reader:****@packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/pypi/pypi-public/simple
+Processing /mnt/data/ai-video-production
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: ai-video-production
+  Building wheel for ai-video-production (pyproject.toml): started
+  Building wheel for ai-video-production (pyproject.toml): finished with status 'done'
+  Created wheel for ai-video-production: filename=ai_video_production-0.1.0-py3-none-any.whl size=21977 sha256=4a0f0dcf5065901feba7bc3c16c707d04a8292d603eca98301e5fff3ca8f2764
+  Stored in directory: /tmp/pip-ephem-wheel-cache-2ddr6o__/wheels/6f/71/aa/7d1e1b03bc332c94a9dccad72752d6e42b1ca7fa06b9edd797
+Successfully built ai-video-production
+
+4a0f0dcf5065901feba7bc3c16c707d04a8292d603eca98301e5fff3ca8f2764  /tmp/ai-video-wheel/ai_video_production-0.1.0-py3-none-any.whl

@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`INITIALIZING`
+`FOUNDATION_READY`
 
 ## Purpose
 
@@ -32,7 +32,7 @@
 - Architecture Baseline: `Ver.2.27 CURRENT_CANONICAL`
 - Adapter: `.bai-os/project.json`
 - Bootstrap Governance Level: `Level A — Governance Only`
-- Target for TASK-001: evaluate `Level B — Runtime Assisted` only if machine-enforced lifecycle/tooling is justified
+- TASK-001 decision: remain `Level A — Governance Only`; runtime-assisted BAI dependency is not justified for the product foundation
 - BAI OS Core / shared Roles / OS-owned Tasks / Registry are not copied into this repository
 - Product runtime does not depend on BAI OS unless an authorized Task explicitly approves that dependency
 
@@ -70,7 +70,7 @@
 
 各TASKをDEV-0〜DEV-4へ分類する。すべての変更へ固定の最大手続きを強制しない。
 
-`TASK-001`は初期評価で`DEV-3 HIGH ASSURANCE`。理由はProject Core Architecture、Product State Machine、Security/Data Boundary Contractを定義するため。
+`TASK-001`はCurrent BAI Development OS machine policyで再評価し、`DEV-4 FOUNDATION CRITICAL`（score 25）として完了した。`LARGE + HIGH`、Core Architecture、Product State Machine、Security/Data Boundaryを含むためSafety Floorを下げていない。
 
 ## Security / Privacy Constraints
 
@@ -79,6 +79,14 @@
 - External inputから任意Shell/Pythonを直接実行しない。
 - PII、Voice Model、Rights metadataはSensitivity/Retentionを定義する。
 - External serviceのCredential/Egressを開発Toolingから扱う場合はBAI SecurityOS / IntegrationOS境界を優先する。
+
+## Current Consumer Task State
+
+- Last Completed: `TASK-001 — Project Foundation / Domain Model`
+- Active Task: `NONE`
+- Next Recommended: `TASK-002 — Resolve Capability Spike`
+- TASK-002: `NOT_STARTED / NOT_AUTHORIZED`
+- OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule
 

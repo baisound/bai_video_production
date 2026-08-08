@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "checkpoint_id",
+    "production_job_id",
+    "stage",
+    "input_hash",
+    "output_hash",
+    "resume_state",
+    "profile_snapshot_id",
+    "manifest_hashes",
+    "created_at"
+  ],
+  "properties": {
+    "checkpoint_id": {
+      "type": "string",
+      "pattern": "^CHK-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "production_job_id": {
+      "type": "string",
+      "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "stage": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "output_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "resume_state": {
+      "type": "string"
+    },
+    "profile_snapshot_id": {
+      "type": "string",
+      "pattern": "^PSN-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "manifest_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

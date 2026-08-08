@@ -1,0 +1,10 @@
+premiere-auto-edit-v2-corrected.zip
+sha256= 57548530a79bb1108fe9d45bd25e1b4defd9ed3dcd368bc2886e2b839aad78b0
+member_count= 19
+dangerous_findings= ()
+personal_path_findings= ()
+premiere-auto-edit.zip
+sha256= 5719719068d0ed8c8675eec9159f9f23c0265d08de630097fac3458e51fddbf0
+member_count= 7
+dangerous_findings= ()
+personal_path_findings= ('premiere-auto-edit/config.json',)

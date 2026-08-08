@@ -1,0 +1,19 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["asset_id","production_job_id","asset_type","logical_uri","checksum","rights_status","owner","retention_class","human_lock","generation_provenance","evidence_refs"],
+  "properties":{
+    "asset_id":{"type":"string","pattern":"^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "production_job_id":{"type":"string","pattern":"^JOB-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "asset_type":{"enum":["VIDEO","AUDIO","IMAGE","SUBTITLE","BGM","SFX","GENERATED_VIDEO","VOICE_MODEL","OTHER"]},
+    "logical_uri":{"type":"string","pattern":"^(asset|job)://"},
+    "checksum":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "rights_status":{"enum":["OWNED","LICENSED","PERMISSION_GRANTED","PLATFORM_RESTRICTED","UNKNOWN","BLOCKED"]},
+    "owner":{"type":"string","minLength":1},
+    "retention_class":{"enum":["STANDARD","CONFIDENTIAL","RESTRICTED","LEGAL_HOLD"]},
+    "human_lock":{"type":"boolean"},
+    "generation_provenance":{"type":"object"},
+    "evidence_refs":{"type":"array","items":{"type":"string"}}
+  }
+}

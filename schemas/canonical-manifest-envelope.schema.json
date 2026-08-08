@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/canonical-manifest-envelope-v1.json",
+  "title": "Canonical Manifest Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_id","schema_version","manifest_id","production_job_id","revision","created_at","producer","profile_snapshot_id","source_refs","input_checksums","content_checksum","payload","extensions"],
+  "properties": {
+    "schema_id": {"type":"string","pattern":"^[a-z][a-z0-9]*(?:[.-][a-z0-9][a-z0-9-]*)+$"},
+    "schema_version": {"type":"string","pattern":"^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "manifest_id": {"type":"string","pattern":"^MAN-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "production_job_id": {"type":"string","pattern":"^JOB-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "revision": {"type":"integer","minimum":1},
+    "created_at": {"type":"string","format":"date-time"},
+    "producer": {"type":"object","additionalProperties":false,"required":["component","version"],"properties":{"component":{"type":"string","minLength":1},"version":{"type":"string","minLength":1}}},
+    "profile_snapshot_id": {"type":"string","pattern":"^PSN-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "source_refs": {"type":"array","items":{"type":"string"}},
+    "input_checksums": {"type":"array","items":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"}},
+    "content_checksum": {"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "operation_id": {"type":"string","pattern":"^OP-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "idempotency_key": {"type":"string","minLength":1,"maxLength":200},
+    "payload": {"type":"object"},
+    "extensions": {"type":"object"}
+  }
+}

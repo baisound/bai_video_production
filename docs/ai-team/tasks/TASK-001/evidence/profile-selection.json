@@ -1,0 +1,55 @@
+{
+  "profile_id": "DEV_4_FOUNDATION_CRITICAL",
+  "score": 25,
+  "reasons": [
+    "BASE_SCORE_25"
+  ],
+  "change": {
+    "system_scale": "PROJECT",
+    "feature_scale": "LARGE",
+    "criticality": "CORE",
+    "failure_impact": "HIGH",
+    "reversibility": "MODERATE",
+    "novelty": "NEW_ARCHITECTURE",
+    "change_kind": "ARCHITECTURE",
+    "touches_security": true,
+    "touches_authorization": false,
+    "touches_state_machine": true,
+    "data_migration": false,
+    "cross_project_contract": false,
+    "external_side_effects": false
+  },
+  "execution": {
+    "rank": 4,
+    "label": "Foundation Critical",
+    "design_depth": "ARCHITECTURE_AND_FAILURE_MODE_DESIGN",
+    "required_roles": [
+      "Builder",
+      "Critic",
+      "Tester",
+      "Judge"
+    ],
+    "critic": "REQUIRED_INDEPENDENT_DESIGN_AND_IMPLEMENTATION",
+    "tester": "REQUIRED_INDEPENDENT",
+    "judge": "REQUIRED",
+    "test_requirements": [
+      "UNIT",
+      "BOUNDARY_NEGATIVE",
+      "INTEGRATION",
+      "REGRESSION",
+      "CONTRACT",
+      "FAULT_INJECTION_OR_RECOVERY",
+      "CONSUMER_FIXTURE_WHEN_APPLICABLE"
+    ],
+    "review_cycle_cap": 2,
+    "revalidation_scope": "IMPACTED_PLUS_CORE_REGRESSION",
+    "evidence_level": "CRITICAL",
+    "token_efficiency_rules": [
+      "SUMMARY_FIRST_CONTEXT",
+      "IMPACTED_ARTIFACTS_ONLY_BY_DEFAULT",
+      "NO_FULL_REVIEW_RESTART_FOR_LOCAL_FIX",
+      "STOP_AFTER_REVIEW_CYCLE_CAP_AND_ESCALATE_UNRESOLVED_ITEMS"
+    ],
+    "model_policy": "UNCHANGED_BY_PROFILE"
+  }
+}

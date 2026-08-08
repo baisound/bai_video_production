@@ -1,0 +1,9 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","additionalProperties":false,
+  "required":["profile_snapshot_id","profile_id","profile_version","created_at","checksum","config"],
+  "properties":{
+    "profile_snapshot_id":{"type":"string","pattern":"^PSN-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "profile_id":{"type":"string","minLength":1},"profile_version":{"type":"string","minLength":1},
+    "created_at":{"type":"string","format":"date-time"},"checksum":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},"config":{"type":"object"}
+  }
+}

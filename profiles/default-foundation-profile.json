@@ -1,0 +1,7 @@
+{
+  "profile_id": "default-foundation",
+  "version": "1.0.0",
+  "purpose": "foundation-contract-tests",
+  "output": {"target": "unspecified"},
+  "security": {"external_upload_default": false}
+}

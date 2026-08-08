@@ -12,9 +12,10 @@
     "reversibility": "MODERATE"
   },
   "commands": {
-    "test": "python -m pytest",
-    "build": "python -m compileall src"
+    "test": "python -m pytest -q",
+    "build": "python -m compileall -q src tests",
+    "package": "python -m pip wheel . --no-deps --no-build-isolation --wheel-dir /tmp/ai-video-wheel"
   },
   "project_evidence_root": "docs/ai-team/tasks",
-  "notes": "BAI Development OS core remains external. Product runtime must not depend on BAI OS without task-level approval. TASK-001 may revise build/test commands once the implementation stack is finalized."
+  "notes": "BAI Development OS core remains external. TASK-001 completed at DEV-4 and selected Level A Governance Only. No Product runtime dependency on BAI OS. Later Consumer TASKs require separate Owner authorization."
 }

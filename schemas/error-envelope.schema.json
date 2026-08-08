@@ -1,0 +1,9 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "type":"object","additionalProperties":false,"required":["error"],
+  "properties":{"error":{"type":"object","additionalProperties":false,"required":["code","category","message","retryable","details"],"properties":{
+    "code":{"type":"string","pattern":"^ERR_[A-Z0-9_]+$"},
+    "category":{"enum":["VALIDATION","AUTHORIZATION","NOT_SUPPORTED","TRANSIENT","RESOURCE_EXHAUSTED","TIMEOUT","EXTERNAL_DEPENDENCY","DATA_INTEGRITY","HUMAN_REVIEW_REQUIRED","INTERNAL","STATE","SECURITY"]},
+    "message":{"type":"string"},"retryable":{"type":"boolean"},"operation_id":{"type":"string"},"details":{"type":"object"},"evidence_uri":{"type":"string"}
+  }}}
+}

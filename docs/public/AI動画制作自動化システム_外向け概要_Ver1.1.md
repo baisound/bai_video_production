@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Overview Ver.1.0
+# AI動画制作自動化システム — Project Overview Ver.1.1
 
 ## 何を目指しているか
 
@@ -17,7 +17,8 @@
 5. 採用した編集案をDaVinci Resolveへ自動配置
 6. 人が通常の編集作業として続きを仕上げる
 7. 音量・映像・字幕などを公開前に自動チェック
-8. 将来はAI効果音、BGM、映像生成、自声TTS、縦動画化へ拡張
+8. 効果音・BGM・ナレーションを生成/取得し、Resolveの適切なAudio Trackへ自動配置
+9. 将来は生成映像、自声TTS高度化、縦動画化へ拡張
 
 ## このシステムの特徴
 
@@ -57,21 +58,21 @@ DaVinci Resolve Studio 21.0.2.4へのPython Scripting接続を実機で確認し
 
 状態管理、再開、Evidence、実機Capabilityを確立。
 
-### Step 2 — 素材解析基盤
+### Step 2 — 編集に直結する素材解析
 
-素材取込、時間軸正規化、シーン解析、字幕・音声認識を実装。
+素材取込と時間軸正規化の後、音声認識・SRT生成、無音や「えー」「あのー」などのフィラー/言い直し候補を優先して実装します。Scene解析は並列で精度を高めます。
 
-### Step 3 — 見どころ候補と編集計画
+### Step 3 — Cut・字幕のDaVinci Resolve自動編集
 
-映像・音声・字幕から候補区間を作り、目標尺に合わせたEdit Planを生成。
+不要区間のCut Planを作り、元動画のカットとSRT/字幕Track配置をResolve上で自動化します。
 
-### Step 4 — DaVinci Resolve自動編集MVP
+### Step 4 — SE・BGM・ナレーション
 
-Edit Planを安全な自動編集Timelineへ配置し、Render QAと人間へのHandoffまで実現。
+効果音/BGM/ナレーションを生成または取得し、タイミング、Loop、Fade等を含めてResolve Timelineへ配置します。
 
-### Step 5 — AI生成・クリエイター向け拡張
+### Step 5 — 編集精度と生成表現の高度化
 
-AI効果音、BGM、生成映像、自声TTS、縦動画、ゲーム別Profileを追加。
+Scene/Multimodal/ゲーム別Profile、生成映像、自声TTS高度化、縦動画等を追加します。
 
 ### Step 6 — 運用・学習
 

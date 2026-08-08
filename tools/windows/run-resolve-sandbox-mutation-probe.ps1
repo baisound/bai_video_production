@@ -15,16 +15,53 @@ if ([string]::IsNullOrWhiteSpace($SandboxProject)) { $SandboxProject = "BAI_CAPA
 if (-not $SandboxProject.StartsWith("BAI_CAPABILITY_PROBE_")) { throw "SandboxProject must begin BAI_CAPABILITY_PROBE_" }
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
-$out = Join-Path $OutputDir "resolve-sandbox-mutation-report.json"
+$outputRoot = (Resolve-Path $OutputDir).Path
+$out = Join-Path $outputRoot "resolve-sandbox-mutation-report.json"
 Write-Host "TASK-002 sandbox mutation evidence"
 Write-Host "Sandbox Project: $SandboxProject"
 Write-Host "This sequence may create/save/export a sandbox Project, create a Bin and Timeline, import a generated 1-second silent WAV, append it, and add one marker."
 Write-Host "It does NOT delete Projects, start/cancel renders, relink media, terminate Resolve, or write to a non-sandbox Project."
 Write-Host "Close any real/client Project before running. The probe fails closed if a non-sandbox Project is current."
 
+function Show-ProbeDiagnostic([string]$ReportPath) {
+    if (-not (Test-Path $ReportPath)) {
+        Write-Host "Diagnostic Evidence was not created: $ReportPath" -ForegroundColor Red
+        return
+    }
+    Write-Host "Diagnostic Evidence: $ReportPath" -ForegroundColor Yellow
+    try {
+        $diagnostic = Get-Content -Raw -Path $ReportPath | ConvertFrom-Json
+        $err = $diagnostic.mutation_error
+        if ($null -eq $err) { $err = $diagnostic.connection_error }
+        if ($null -ne $err) {
+            Write-Host "Failure code: $($err.code)" -ForegroundColor Red
+            Write-Host "Category: $($err.category)" -ForegroundColor Red
+            Write-Host "Message: $($err.message)" -ForegroundColor Red
+            Write-Host "Retryable: $($err.retryable)" -ForegroundColor Red
+            if ($null -ne $err.details -and ($err.details.PSObject.Properties.Count -gt 0)) {
+                Write-Host "Details: $($err.details | ConvertTo-Json -Compress -Depth 8)" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "No structured mutation_error/connection_error was present. Review capability rows in the Evidence JSON." -ForegroundColor Yellow
+        }
+        if ($null -ne $diagnostic.mutation_gate) {
+            Write-Host "Mutation gate: authorized=$($diagnostic.mutation_gate.authorized), executed=$($diagnostic.mutation_gate.executed), sandbox=$($diagnostic.mutation_gate.sandbox_project)" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "Could not parse diagnostic Evidence JSON: $($_.Exception.Message)" -ForegroundColor Red
+    }
+}
+
 & $Python -m ai_video_production.resolve_probe_cli --kind resolve --output $out --timeout-seconds $TimeoutSeconds --allow-mutation-probes --sandbox-project $SandboxProject
-if ($LASTEXITCODE -ne 0) { throw "Sandbox mutation probe failed. Keep the generated diagnostic Evidence if present." }
+$probeExit = $LASTEXITCODE
+if ($probeExit -ne 0) {
+    Show-ProbeDiagnostic $out
+    throw "Sandbox mutation probe failed (exit $probeExit). The detailed Evidence path is shown above."
+}
 $report = Get-Content -Raw -Path $out | ConvertFrom-Json
-if (-not $report.summary.mutation_probe_executed) { throw "Mutation evidence did not execute." }
+if (-not $report.summary.mutation_probe_executed) {
+    Show-ProbeDiagnostic $out
+    throw "Mutation evidence did not execute."
+}
 Write-Host "Evidence: $out"
 Write-Host "Supported: $($report.summary.supported) / Probe required: $($report.summary.probe_required)"

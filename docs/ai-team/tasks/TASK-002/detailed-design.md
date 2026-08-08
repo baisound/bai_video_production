@@ -141,3 +141,13 @@ Before final live mutation evidence, implementation Critic found that a current 
 A schema-valid `mutation_error` is preserved when the worker refuses the sandbox action. The supervisor returns the non-zero status but copies the exact structured worker Evidence instead of replacing it with a generic worker-failure report.
 
 WSL2 IPC evidence also fails closed unless both phases prove HTTP 401 rejection without credentials, authenticated round trips, and restart on the same endpoint host-kind/port. Temporary server processes are cleaned up in the PowerShell `finally` path.
+
+
+## 15. Target-run corrective diagnostics
+
+The first package 0.2.2 final-live-gate run produced two implementation findings in the Windows wrappers before valid final Evidence could be collected.
+
+1. The sandbox worker correctly retained schema-valid structured failure Evidence, but the PowerShell wrapper replaced the useful operator-facing explanation with a generic throw. Package 0.2.3 reads `mutation_error` first and `connection_error` second, then prints code/category/message/retryability and the exact Evidence path before returning failure. The fail-closed behavior is unchanged.
+2. The WSL2 wrapper passed Windows paths directly to `wsl.exe wslpath`, and the observed invocation lost Windows backslashes before conversion. Package 0.2.3 removes direct `wslpath` path arguments. Temporary environment variables are exported through `WSLENV` with `/p` translation for client/output paths. Phase 1 output existence and `host_kind` are positively checked before phase 2 begins. All bridge variables and the ephemeral bearer token are restored/removed in the `finally` path.
+
+These are runner correctness fixes, not relaxations of Resolve mutation authorization or IPC authentication. Final Windows/WSL2 behavioral Evidence must be recollected using package 0.2.3.

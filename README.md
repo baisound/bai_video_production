@@ -65,7 +65,9 @@ BAI Development OS internal TASK numbering is independent from this repository. 
 
 TASK-002 has accepted target-machine read-only evidence from **DaVinci Resolve Studio 21.0.2.4**. Attempt 02 connected through the Windows PROGRAMDATA scripting bridge and measured 7 safe read capabilities as `SUPPORTED`; 16 mutation/behavior-dependent capabilities remain `PROBE_REQUIRED` rather than being inferred from method presence.
 
-Package `0.2.2` adds the two final live-evidence tools required before the TASK can close:
+Package `0.2.3` is the corrective final-live-evidence checkpoint. The 0.2.2 target run showed that the sandbox wrapper hid the structured failure reason and the WSL runner corrupted Windows paths when calling `wslpath`. Version 0.2.3 keeps the same safety boundaries while surfacing sandbox error code/category/message and using temporary `WSLENV /p` path translation instead of direct `wslpath` conversion.
+
+The two final live-evidence tools remain:
 
 1. a minimal, explicit, fail-closed sandbox behavioral probe;
 2. a WSL2-to-Windows authenticated HTTP topology/restart probe.
@@ -94,14 +96,14 @@ Then measure the actual WSL2→Windows topology:
 powershell -ExecutionPolicy Bypass -File .\tools\windows\run-wsl2-ipc-probe.ps1
 ```
 
-This starts only a temporary token-authenticated HTTP probe server on Windows, verifies HTTP 401 without credentials, verifies authenticated WSL2 round trips, restarts the temporary server on the same endpoint and repeats the measurement. The bearer token is ephemeral and is not stored in Evidence.
+This starts only a temporary token-authenticated HTTP probe server on Windows, verifies HTTP 401 without credentials, verifies authenticated WSL2 round trips, restarts the temporary server on the same endpoint and repeats the measurement. Windows paths are passed through `WSLENV /p` and the temporary bridge environment is restored in `finally`. The bearer token is ephemeral and is not stored in Evidence.
 
 Return the generated `resolve-spike-evidence/` folder as a ZIP. TASK-002 remains open until these live outputs are reviewed, the Final IPC ADR is recorded and the DEV-4 final completion review passes.
 
 ## Project Roadmap
 
-- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md`
-- Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.0.docx`
-- External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.0.docx`
+- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.1 editing-first priority)
+- Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.1.docx`
+- External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.1.docx`
 
 TASK-002 Attempt 02 has established live read-only scripting connectivity to DaVinci Resolve Studio 21.0.2.4. Final live gates are the isolated sandbox behavioral probe and WSL2-to-Windows IPC topology probe.

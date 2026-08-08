@@ -8,5 +8,5 @@ This document constrains product architecture and domain meaning. Task-specific 
 
 ## Current roadmap documents
 
-- `roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.0.docx` — Project-wide design roadmap, dependencies, milestones, task namespace correction.
-- `public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.0.docx` — External-facing non-technical overview and roadmap.
+- `roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.1.docx` — Project-wide design roadmap, dependencies, milestones, task namespace correction.
+- `public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.1.docx` — External-facing non-technical overview and roadmap.

@@ -23,7 +23,7 @@ Attempt 02 is accepted as target read-only Resolve Evidence:
 - Windows-local HTTP/JSON: authentication + same-endpoint restart measured
 - Windows Named Pipe: authentication + same-endpoint restart measured
 
-Package 0.2.2 adds the final two live-evidence tools: a minimal sandbox behavioral probe and a WSL2-to-Windows authenticated HTTP/restart probe.
+Package 0.2.3 is the corrective live-evidence checkpoint. It fixes the Windows→WSL path bridge by replacing direct `wslpath` argument conversion with temporary `WSLENV /p` translation, validates phase output before reading `host_kind`, and surfaces structured sandbox `mutation_error` / `connection_error` details directly in PowerShell on failure.
 
 ## Completion gate
 
@@ -36,7 +36,7 @@ TASK-002 is **not COMPLETED**. Remaining gates:
 
 ## Project roadmap
 
-Project-level roadmap canonical: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md`.
+Project-level roadmap canonical: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.1 editing-first).
 
 The historical Ver.0.6 external-SKILL task-number collision is resolved prospectively by keeping existing TASK-020/021 and assigning external-SKILL additions to TASK-022 through TASK-026. Historical design documents are not rewritten.
 
@@ -50,6 +50,7 @@ The historical Ver.0.6 external-SKILL task-number collision is resolved prospect
 
 ## Current local verification
 
-- `pytest`: 74 / 74 PASS
+- `pytest`: 79 / 79 PASS
 - `compileall`: PASS
-- package 0.2.2 wheel + installed-package schema verification: PASS
+- package 0.2.3 wheel + installed-package schema verification: PASS
+- Windows Runner runtime verification: pending Owner rerun on target Windows/WSL2 after corrective patch

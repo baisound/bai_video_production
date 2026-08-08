@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.0
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.1
 
 - Project: `ai-video-production`
 - Date: 2026-08-09
@@ -26,13 +26,13 @@
 
 ### 3.1 Technical MVP
 
-素材を壊さず取り込み、時間軸を正規化し、字幕・Scene・候補区間を生成し、Canonical Edit PlanからDaVinci ResolveのAutomation-owned Timelineへ安全に配置し、Render QAとHuman Handoffまで到達する。
+素材を壊さず取り込み、時間軸を正規化し、字幕・Cut候補・Scene情報を生成し、Canonical Edit PlanからDaVinci ResolveのAutomation-owned Timelineへ安全に配置し、Render QAとHuman Handoffまで到達する。
 
-**Technical MVP Critical Path:**
+**Editing-first Critical Path:**
 
-`001 → 002 → 003 → 004 → (005 + 006) → 007 → 010 → 011 → 012`
+`001 → 002 → 003 → 004 → 022 → (006 + 023 + 024) → 007 → 010 → 011 → 012`
 
-補助基盤として `020 Resource Admission` と `022 Timeline Mapping` をMVP途中へ組み込む。
+`005 Scene Boundary`は編集品質向上の重要機能だが、SRT/フィラー/無音Cutの最初のVertical Sliceを阻害しない場合は並列または後追い可能とする。`020 Resource Admission`は高負荷処理導入前のSafety Gateとして必要時点までに組み込む。
 
 ### 3.2 Production Pilot
 
@@ -48,10 +48,10 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 |---|---|---|---|
 | P0 Foundation & Capability | 正本・State・Resolve実機能力を確定 | 001, 002 | Foundation PASS + Resolve/IPC ADR |
 | P1 Media Foundation | 素材・Path・Timebase・資源・Timeline Mapping確立 | 003, 004, 020, 022 | Golden ingest/normalize fixture PASS |
-| P2 Analysis MVP | Scene・ASR・字幕・基本Cut候補を生成 | 005, 006, 023, 024 | Analysis Manifest再現性 PASS |
+| P2 Editing Analysis MVP | ASR・SRT・字幕・無音/フィラー/言い直しCut候補を優先生成。Scene解析は並列化可能 | 006, 023, 024, 005 | Editing Analysis Manifest再現性 PASS |
 | P3 Edit Intelligence | Candidate Graph、Multimodal、DBD Profile | 007, 008, 009 | Edit Plan品質/再現性 Gate |
-| P4 Resolve Editing MVP | Resolve自動配置、Render QA、人間Handoff | 010, 011, 012 | **Technical MVP** |
-| P5 Generative Enhancement | AI素材生成、自声、SE/BGM配置 | 013, 014, 026 | Rights/Cost/QA Gate |
+| P4 Resolve Editing MVP | 元動画Cut、SRT/字幕Track、SE/BGM/ナレーションをResolveへ配置し、Render QA、人間Handoff | 010, 011, 012, 026 | **Technical MVP** |
+| P5 Generative Enhancement | AI SE/BGM/ナレーション生成の高度化、生成映像 | 013, 014 | Rights/Cost/QA Gate |
 | P6 Safety & Variants | Privacy、Storage GC、縦動画/Remotion | 016, 017, 018 | **Production Pilot** |
 | P7 Learning & Operations | YouTube Feedback、自動調整、統合Dashboard | 015, 019, 021 | Operable learning loop |
 | PX Optional NLE Expansion | Premiere互換出力 | 025 | Import Golden Fixture PASS |
@@ -67,15 +67,15 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 003 | Asset Registry / Ingest / Path Resolver | Ingest API, rights, checksum, path mapping | 001 | DEV-4候補 | NOT STARTED |
 | 004 | Timebase / Proxy / Normalization | ffprobe contract, VFR/CFR, time-map, proxy | 003 | DEV-4候補 | NOT STARTED |
 | 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | NOT STARTED |
-| 006 | ASR / Subtitle | Transcript/SRT, VAD, dictionary, review gate | 004 | DEV-3/4候補 | NOT STARTED |
-| 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan | 005,006 | DEV-3候補 | NOT STARTED |
+| 006 | ASR / Subtitle | Transcript/SRT, VAD, dictionary, review gate; Resolve字幕配置用canonical subtitle plan | 004 | DEV-3/4候補 | NOT STARTED |
+| 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3候補 | NOT STARTED |
 | 008 | Multimodal Scoring | audio/visual/OCR feature fusion | 007 | DEV-3候補 | NOT STARTED |
 | 009 | DBDProfilePlugin | DBD HUD/chase/event profile | 008 | DEV-3候補 | NOT STARTED |
-| 010 | Resolve Assembly MVP | Gateway/Controller, AUTO_ASSEMBLY, idempotency | 002,003,007,022 | DEV-4 | NOT STARTED |
+| 010 | Resolve Assembly MVP | 元動画Cut、Subtitle Track/SRT配置、Audio asset配置を含むGateway/Controller, AUTO_ASSEMBLY, idempotency。字幕配置/basic assembly sliceは007前に先行可 | 002,003,022; Cut plan反映は007 | DEV-4 | NOT STARTED |
 | 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4候補 | NOT STARTED |
 | 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3候補 | NOT STARTED |
-| 013 | AI SE / BGM / Video Adapters | provider adapters, rights/cost/evidence | 003,007 | DEV-4候補 | NOT STARTED |
-| 014 | Voice TTS | voice assets, dictionary, consent/retention | 003,006 | DEV-4 | NOT STARTED |
+| 013 | AI SE / BGM / Video Adapters | SE/BGM生成・取得、provider adapters, rights/cost/evidence。生成sliceは003後に前倒し可、内容連動選定は007依存 | 003; 007は内容連動時 | DEV-4候補 | NOT STARTED |
+| 014 | Voice TTS / Narration | ナレーション/自声TTS asset、dictionary、consent/retention。ユーザー指定原稿からの生成は003後に前倒し可 | 003; 自動原稿生成は006/007 | DEV-4 | NOT STARTED |
 | 015 | YouTube Feedback | performance ingest, feedback features | 008 | DEV-3候補 | NOT STARTED |
 | 016 | Privacy Guard | PII/notification/NG detection + redaction plan | 003,006 | DEV-4 | NOT STARTED |
 | 017 | Storage Lifecycle / GC | archive, retention, legal hold, staged delete | 003,018 | DEV-4 | NOT STARTED |
@@ -85,9 +85,9 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 021 | Integrated Dashboard / Operations | job/evidence/alerts/ops UI | Evidence contracts | DEV-3候補 | NOT STARTED |
 | 022 | Timeline Mapping Service | exact frame/time mapping, schema, golden fixtures | 001,003,004 | DEV-3/4候補 | NOT STARTED |
 | 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | NOT STARTED |
-| 024 | Silence Cut Candidate Worker | silence profile, keep blocks, cut evidence | 003,004,022 | DEV-3候補 | NOT STARTED |
+| 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3候補 | NOT STARTED |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
-| 026 | SE Placement / Preview BGM Worker | placement plan, bounded snap, preview bed | 002,022,025 | DEV-3候補 | NOT STARTED |
+| 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
 
 ## 6. Namespace Collision Resolution
 
@@ -107,42 +107,56 @@ Historical Designは書き換えない。本ロードマップでは次のよう
 
 ## 7. Recommended Execution Order
 
+### 7.1 Owner priority rule — Editing-first
+
+Owner判断により、**動画編集そのものと直結する補助機能を原則として前倒し**する。対象には元動画Cut、無音/フィラー/言い直しCut、SRT生成、字幕Timeline配置、SE生成/配置、BGM生成/配置、ナレーション生成/配置を含む。TASK番号は変更せず、依存関係を満たす範囲でExecution Waveを前倒しする。
+
+前倒し要求時は次の4区分で判定する。
+
+1. `DIRECT_FORWARD` — そのまま前倒し可能。
+2. `PARTIAL_FORWARD` — 生成等の独立sliceだけ先行可能。
+3. `PREREQUISITE_FIRST` — 最小の依存TASK/contractだけ先行すれば前倒し可能。
+4. `BLOCKED` — Safety Floorまたは未確定contractにより現時点では前倒し不可。
+
 ### Wave 1 — 現在
 
 1. TASK-002を完了: sandbox behavior + WSL2 IPC + Final ADR。
-2. TASK-003: Asset/Ingest。
-3. TASK-004: Timebase/Normalization。
+2. TASK-003: Asset/Ingestの編集機能向け最小slice。
+3. TASK-004: Timebase/Normalizationの編集機能向け最小slice。
+4. TASK-022: Timeline Mappingを早期確立。
 
-### Wave 2 — 基礎を並列化
+### Wave 2 — 編集価値を最短で出す
 
-- TASK-020 Resource Admission
-- TASK-022 Timeline Mapping
-- TASK-005 Scene Boundary
-- TASK-006 ASR/Subtitle
+- TASK-006 ASR/SRT + canonical subtitle plan
+- TASK-023 FasterWhisper Provider
+- TASK-024 Silence/Filler/Disfluency Cut Candidate
+- TASK-010のSubtitle Track / basic Cut assembly vertical slice
+- TASK-005 Scene Boundaryは上記と並列化し、SRT/フィラーCutの初回価値提供を待たせない
 
-TASK-005/006はTASK-004完了後に並列化可能。
+### Wave 3 — Cut PlanとResolve編集統合
 
-### Wave 3 — 候補編集
-
-- TASK-007 Candidate Clip Graph
-- TASK-023 FasterWhisper Provider（TASK-006 contract確定後）
-- TASK-024 Silence Cut Candidate
-
-### Wave 4 — Technical MVP
-
-- TASK-010 Resolve Assembly MVP
+- TASK-007 Candidate Clip Graph / Cut Plan
+- TASK-010 Resolve Assembly MVPを拡張し、元動画Cut + SRT/字幕配置をE2E化
 - TASK-011 Render QA/Loudness
 - TASK-012 Manual Handoff/Cubase
 
-ここを最初の明確な**「動画を投入して、人間が仕上げられる自動編集Timelineを得る」完成点**とする。
+ここを最初の明確な**「動画を投入して、Cut済み・字幕付きの自動編集Timelineを得る」完成点**とする。
 
-### Wave 5 — 精度と生成
+### Wave 4 — 音声演出を前倒し
 
+- TASK-013 SE/BGM生成slice（Asset基盤成立後はTASK-007完了を待たず前倒し可）
+- TASK-014 ナレーション/TTS生成slice（ユーザー指定原稿は早期実装可）
+- TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed
+- TASK-010へAudio placementを統合
+
+内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
+
+### Wave 5 — 精度向上
+
+- TASK-005 Scene Boundaryの高度化
 - TASK-008 Multimodal
 - TASK-009 DBD Profile
-- TASK-013 AI generation adapters
-- TASK-014 Voice TTS
-- TASK-026 SE/BGM placement
+- TASK-020 Resource Admission（高負荷処理本格化までに必須）
 
 ### Wave 6 — 公開運用
 
@@ -197,3 +211,4 @@ DBD/Multimodal/AI生成/縦動画がProfileで交換可能。
 - 新TASK追加時は空き番号を使用し、既存IDを再利用しない。
 - TASK依存変更は`docs/ai-team/task-index.md`と本書を同時更新する。
 - TASK開始はOwner指示を必要とし、ロードマップ掲載だけでは認可されない。
+- Ownerが編集系機能の前倒しを指定した場合は、依存関係・Safety Floor・先行contractを確認し、可能なら最小prerequisiteまたは部分sliceで前倒しする。前倒し不可の場合は理由と解除条件を開始前に明示する。

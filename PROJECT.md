@@ -84,10 +84,10 @@
 
 - Last Completed: `TASK-001 — Project Foundation / Domain Model`
 - Active Task: `TASK-002 — Resolve Capability Spike`
-- TASK-002: `IMPLEMENTED_AWAITING_FINAL_LIVE_EVIDENCE / ATTEMPT_02_READ_ONLY_ACCEPTED`
+- TASK-002: `IMPLEMENTED_AWAITING_FINAL_LIVE_EVIDENCE / ATTEMPT_02_READ_ONLY_ACCEPTED / RUNNER_CORRECTIVE_0.2.3`
 - Target Resolve: `DaVinci Resolve Studio 21.0.2.4` connected; 7 read-only capabilities `SUPPORTED`, 16 `PROBE_REQUIRED`
-- Completion Gate: minimal sandbox behavioral evidence, WSL2-to-Windows IPC evidence, Final IPC ADR and DEV-4 final review
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md`
+- Completion Gate: package 0.2.3でminimal sandbox behavioral evidenceとWSL2-to-Windows IPC evidenceを再実測し、Final IPC ADRとDEV-4 final reviewを完了
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.1 — Owner-directed editing-first priority (Cut/SRT/字幕/SE/BGM/ナレーションの生成・配置を前倒し)
 - Next Consumer Task: not authorized or started while TASK-002 remains open
 - OS-internal TASK-016 remains unrelated and untouched.
 

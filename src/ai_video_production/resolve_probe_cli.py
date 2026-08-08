@@ -94,8 +94,21 @@ def _run_worker(args: argparse.Namespace) -> int:
     try:
         resolve, source_kind = loader.connect()
     except ProductError as exc:
-        payload = ResolveCapabilityProbe(None, module_source_kind="NOT_FOUND").run()
+        source_kind = str(exc.details.get("module_source_kind") or {
+            "ERR_RESOLVE_SCRIPT_MODULE_NOT_FOUND": "MODULE_NOT_FOUND",
+            "ERR_RESOLVE_SCRIPT_MODULE_IMPORT_FAILED": "MODULE_IMPORT_FAILED",
+        }.get(exc.code, "DISCOVERY_OR_CONNECTION_ERROR"))
+        payload = ResolveCapabilityProbe(None, module_source_kind=source_kind).run()
         payload["connection_error"] = exc.to_envelope()["error"]
+        # Preserve the exact loader/connection failure on the root capability row.
+        # Historical reports before TASK-002 Attempt 02 used the generic
+        # ERR_RESOLVE_NOT_AVAILABLE here, even when discovery itself failed.
+        for row in payload["capabilities"]:
+            if row["capability_id"] == "resolve.connection":
+                row["error_code"] = exc.code
+                row["error_type"] = exc.category.value
+                row["notes"] = [exc.message]
+                break
     else:
         payload = ResolveCapabilityProbe(resolve, module_source_kind=source_kind, mode=ProbeMode.READ_ONLY).run()
 

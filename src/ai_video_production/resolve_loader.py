@@ -139,6 +139,7 @@ class ResolveModuleLoader:
                 "ERR_RESOLVE_SCRIPTAPP_MISSING",
                 "DaVinci Resolve scripting module does not expose scriptapp",
                 ProductErrorCategory.NOT_SUPPORTED,
+                details={"module_source_kind": discovery.source_kind},
             )
         try:
             resolve = scriptapp("Resolve")
@@ -148,7 +149,10 @@ class ResolveModuleLoader:
                 "DaVinci Resolve scripting connection failed",
                 ProductErrorCategory.EXTERNAL_DEPENDENCY,
                 retryable=True,
-                details={"exception_type": type(exc).__name__},
+                details={
+                    "exception_type": type(exc).__name__,
+                    "module_source_kind": discovery.source_kind,
+                },
             ) from exc
         if resolve is None:
             raise ProductError(
@@ -156,5 +160,6 @@ class ResolveModuleLoader:
                 "DaVinci Resolve is not available through the scripting bridge",
                 ProductErrorCategory.EXTERNAL_DEPENDENCY,
                 retryable=True,
+                details={"module_source_kind": discovery.source_kind},
             )
         return resolve, discovery.source_kind

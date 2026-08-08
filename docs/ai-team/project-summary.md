@@ -12,7 +12,7 @@ TASK-001 completed the domain contracts required before operational media/NLE ta
 
 TASK-002 has implemented the capability-measurement harness needed before production Resolve Gateway development. It performs version/product/readiness discovery through a strict safe-read allowlist, emits schema-validated capability evidence, keeps mutation operations unresolved until behavioral evidence exists, and compares IPC candidates without promoting a final transport from non-target observations.
 
-Local implementation verification is complete, including wheel installation outside the checkout. The task remains open because the build container cannot supply target Windows DaVinci Resolve or WSL2-to-Windows topology evidence.
+Local implementation verification is complete, including wheel installation outside the checkout. Windows Attempt 01 has now supplied valid Windows-local HTTP/JSON and Named Pipe evidence, but Resolve returned no live root object and WSL2 reachability remains unverified. Attempt 01 also exposed an Evidence-source labeling defect, corrected in package 0.2.1. TASK-002 therefore remains open for Attempt 02 rather than promoting unresolved capabilities.
 
 ## Current boundary
 

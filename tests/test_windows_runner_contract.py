@@ -13,6 +13,10 @@ def test_windows_runner_is_read_only_and_writes_both_evidence_reports():
     assert "--kind resolve" in text
     assert "--kind ipc" in text
     assert "WSL2-to-Windows reachability is NOT proven" in text
+    assert 'Get-Process -Name "Resolve"' in text
+    assert "live_resolve_connected" in text
+    assert "module_source_kind" in text
+    assert "does not satisfy TASK-002 live-Resolve completion evidence" in text
 
 
 def test_windows_runner_can_import_project_from_checkout_without_auto_installing():

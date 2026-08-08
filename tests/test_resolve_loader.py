@@ -37,6 +37,7 @@ def test_connect_none_is_retryable_dependency_error(monkeypatch):
         loader.connect()
     assert exc.value.code == "ERR_RESOLVE_NOT_AVAILABLE"
     assert exc.value.retryable is True
+    assert exc.value.details["module_source_kind"] == "TEST"
 
 
 def test_loader_does_not_hide_bridge_dependency_import_failure(monkeypatch):

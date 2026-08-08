@@ -3,7 +3,7 @@
 | Task | Title | Status | Authorization | Governance | Notes |
 |---|---|---|---|---|---|
 | TASK-001 | Project Foundation / Domain Model | COMPLETED | COMPLETED WITH AUTHORIZED IMPLEMENTATION | DEV-4 / score 25 | Historical alias `VIDEO-TASK-001` |
-| TASK-002 | Resolve Capability Spike | IMPLEMENTED_AWAITING_LIVE_EVIDENCE | AUTHORIZED_FOR_IMPLEMENTATION | DEV-4 / score 22 | Historical alias `VIDEO-TASK-002`; target Windows/Resolve + WSL2 evidence blocks completion |
+| TASK-002 | Resolve Capability Spike | IMPLEMENTED_AWAITING_LIVE_EVIDENCE | AUTHORIZED_FOR_IMPLEMENTATION | DEV-4 / score 22 | Historical alias `VIDEO-TASK-002`; Windows IPC measured; Resolve Attempt 01 retry + WSL2 + sandbox behavior block completion |
 
 ## Route control
 

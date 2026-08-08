@@ -10,7 +10,13 @@ ROOT = Path(__file__).parents[1]
 def test_cli_worker_writes_disconnected_schema_valid_report(tmp_path, monkeypatch):
     def fail_connect(self):
         from ai_video_production.errors import ProductError, ProductErrorCategory
-        raise ProductError("ERR_RESOLVE_NOT_AVAILABLE", "not running", ProductErrorCategory.EXTERNAL_DEPENDENCY, True)
+        raise ProductError(
+            "ERR_RESOLVE_NOT_AVAILABLE",
+            "not running",
+            ProductErrorCategory.EXTERNAL_DEPENDENCY,
+            True,
+            details={"module_source_kind": "WINDOWS_PROGRAMDATA"},
+        )
 
     monkeypatch.setattr(resolve_probe_cli.ResolveModuleLoader, "connect", fail_connect)
     args = resolve_probe_cli.build_parser().parse_args(["--worker", "--kind", "resolve", "--output", str(tmp_path / "out.json")])
@@ -19,6 +25,11 @@ def test_cli_worker_writes_disconnected_schema_valid_report(tmp_path, monkeypatc
     validate_instance(payload, ROOT / "schemas" / "resolve-capability-report.schema.json")
     assert payload["resolve"]["connected"] is False
     assert payload["connection_error"]["code"] == "ERR_RESOLVE_NOT_AVAILABLE"
+    assert payload["resolve"]["module_source_kind"] == "WINDOWS_PROGRAMDATA"
+    root = next(row for row in payload["capabilities"] if row["capability_id"] == "resolve.connection")
+    assert root["error_code"] == "ERR_RESOLVE_NOT_AVAILABLE"
+    assert root["error_type"] == "EXTERNAL_DEPENDENCY"
+    assert root["notes"] == ["not running"]
 
 
 def test_supervisor_timeout_writes_schema_valid_resolve_evidence(tmp_path, monkeypatch):
@@ -62,3 +73,28 @@ def test_packaged_schema_resources_match_canonical_schemas():
         canonical = json.loads((ROOT / "schemas" / name).read_text())
         packaged_text = resources.files("ai_video_production").joinpath("schema_resources", name).read_text(encoding="utf-8")
         assert json.loads(packaged_text) == canonical
+
+
+def test_cli_worker_distinguishes_actual_module_discovery_failure(tmp_path, monkeypatch):
+    def fail_connect(self):
+        from ai_video_production.errors import ProductError, ProductErrorCategory
+        raise ProductError(
+            "ERR_RESOLVE_SCRIPT_MODULE_NOT_FOUND",
+            "bridge missing",
+            ProductErrorCategory.EXTERNAL_DEPENDENCY,
+            False,
+            details={"platform": "Windows"},
+        )
+
+    monkeypatch.setattr(resolve_probe_cli.ResolveModuleLoader, "connect", fail_connect)
+    output = tmp_path / "module-missing.json"
+    args = resolve_probe_cli.build_parser().parse_args([
+        "--worker", "--kind", "resolve", "--output", str(output)
+    ])
+    assert resolve_probe_cli._run_worker(args) == 0
+    payload = json.loads(output.read_text())
+    validate_instance(payload, ROOT / "schemas" / "resolve-capability-report.schema.json")
+    assert payload["resolve"]["module_source_kind"] == "MODULE_NOT_FOUND"
+    assert payload["connection_error"]["code"] == "ERR_RESOLVE_SCRIPT_MODULE_NOT_FOUND"
+    root = next(row for row in payload["capabilities"] if row["capability_id"] == "resolve.connection")
+    assert root["error_code"] == "ERR_RESOLVE_SCRIPT_MODULE_NOT_FOUND"

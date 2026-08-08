@@ -8,7 +8,7 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-001 — Project Foundation / Domain Model`
 - Active Consumer TASK: `TASK-002 — Resolve Capability Spike`
-- TASK-002 stage: `IMPLEMENTED_AWAITING_LIVE_EVIDENCE`
+- TASK-002 stage: `IMPLEMENTED_AWAITING_LIVE_EVIDENCE / ATTEMPT_01_REVIEWED / RESOLVE_RETRY_REQUIRED`
 - TASK-002 governance: `DEV-4 FOUNDATION CRITICAL` / score `22`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -63,18 +63,18 @@ BAI Development OS internal TASK numbering is independent from this repository. 
 
 ## TASK-002 Resolve Capability Spike
 
-TASK-002 is implemented to the local-verification boundary and remains open as `IMPLEMENTED_AWAITING_LIVE_EVIDENCE`. The capability probe is read-only by default, never promotes mutation behavior from method presence alone, emits Schema-valid failure Evidence on supervisor timeout/worker failure, and packages its report Schemas so the installed wheel works outside the repository checkout.
+TASK-002 is implemented to the local-verification boundary and remains open as `IMPLEMENTED_AWAITING_LIVE_EVIDENCE`. Windows Attempt 01 measured HTTP/JSON and Windows Named Pipe successfully, but Resolve returned no live root object. Attempt 01 also exposed an Evidence-labeling defect that is fixed in package `0.2.1`; a Resolve live-evidence retry is required. The capability probe is read-only by default, never promotes mutation behavior from method presence alone, emits Schema-valid failure Evidence on supervisor timeout/worker failure, and packages its report Schemas so the installed wheel works outside the repository checkout.
 
 ### Target Windows evidence run
 
-No Python package installation is required for the project source itself because the PowerShell runner prepends this repository's `src/` to `PYTHONPATH`; the declared runtime dependency `jsonschema` must still be available. From the repository root on the target Windows workstation:
+The PowerShell runner prepends this repository's `src/` to `PYTHONPATH`; the declared runtime dependency `jsonschema` must still be available. The recommended command below installs the project and dependency into the active Python environment before the live run. From the repository root on the target Windows workstation:
 
 ```powershell
 python -m pip install -e .
 powershell -ExecutionPolicy Bypass -File .\tools\windows\run-resolve-capability-spike.ps1
 ```
 
-The runner writes `resolve-capability-report.json` and `resolve-ipc-probe-report.json`. It requests no mutation, deletion, forced Resolve termination, or write to a human-owned Timeline. The Windows-local IPC result does **not** prove WSL2-to-Windows reachability; that remains a separate completion-gate item documented under `tools/wsl/README.md`.
+The runner writes `resolve-capability-report.json` and `resolve-ipc-probe-report.json`. It requests no mutation, deletion, forced Resolve termination, or write to a human-owned Timeline. In package `0.2.1`, the runner exits non-zero when a live Resolve root object is not obtained while preserving the diagnostic JSON. The Windows-local IPC result does **not** prove WSL2-to-Windows reachability; that remains a separate completion-gate item documented under `tools/wsl/README.md`.
 
 ### Optional mutation authorization boundary
 

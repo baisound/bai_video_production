@@ -21,6 +21,15 @@ Impacted contracts:
 
 `ResolveCapabilityReport` is canonical JSON evidence for this task. It stores product/version and normalized observations, but strips secret-looking keys and avoids recording arbitrary full user paths.
 
+
+## 2.1 Connection Evidence semantics
+
+Module discovery and Resolve process/API connection are distinct evidence stages. A discovered `DaVinciResolveScript` module does not prove that `scriptapp("Resolve")` can obtain the live Resolve root object.
+
+The report must preserve the exact discovery source across post-discovery failures. `module_source_kind=MODULE_NOT_FOUND` is reserved for an actual bridge-module discovery miss; it must not be used for `ERR_RESOLVE_NOT_AVAILABLE`, `ERR_RESOLVE_CONNECT_FAILED`, or `ERR_RESOLVE_SCRIPTAPP_MISSING` after a module was already discovered. The `resolve.connection` capability row records the exact loader/connection error code and category.
+
+The Windows live-evidence runner treats `live_resolve_connected=false` as a failed completion-evidence run while retaining the generated JSON for diagnosis and historical Evidence.
+
 ## 3. Capability classification rules
 
 - `SUPPORTED`: the exact safe read call was executed successfully, or an authorized sandbox mutation test completed and verified its expected result.

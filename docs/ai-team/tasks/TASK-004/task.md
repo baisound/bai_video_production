@@ -45,9 +45,9 @@ TASK-004 has four bounded execution lanes plus one cross-cutting admission/evide
 - loopback/private/explicit-local endpoint policy; public endpoints denied by default;
 - workflow API-JSON validation and typed placeholder substitution without eval;
 - minimum GPU/VRAM Resource Admission before queue submission;
-- MiniMax H3 Native workflow profile as first intended provider;
+- MiniMax H3 Native workflow profile as first intended provider, with conditional Community-License acknowledgement/territory-review Evidence before execution;
 - optional MiniMaxH3-Easy compatibility profile without hard dependency;
-- T2V/I2V/First-Last/Reference request contract;
+- T2V/I2V/First-Last/Reference request contract with same-Job canonical reference-Asset staging into Product-owned ComfyUI input subdirectories;
 - output-root containment/symlink/traversal defense;
 - generated-video media/checksum validation and canonical GENERATED_VIDEO Asset registration;
 - model/workflow/prompt/seed/device provenance and conservative rights defaults.
@@ -92,9 +92,9 @@ Every generated/processed Asset retains provider/model/workflow/version/license/
 8. ComfyUI workflow classes are checked against `/object_info`; placeholder substitution is data-only.
 9. Image generation supports canonical T2I/I2I requests and only publishes a single unambiguous image under the configured output root after structural/checksum validation.
 10. FLUX/Stable Diffusion provider profiles retain explicit model/license policy Evidence; commercial-runtime requests fail closed for `RESTRICTED`, `CONDITIONAL` or `UNKNOWN` profiles unless explicitly authorized by caller-supplied license Evidence.
-11. Video generation output must remain under the configured local output root and pass video/checksum validation before GENERATED_VIDEO registration.
+11. Video generation output must remain under the configured local output root and pass video/checksum validation before GENERATED_VIDEO registration; MiniMax H3 execution requires explicit conditional-license acknowledgement Evidence and reference modes accept only validated same-Job canonical Assets.
 12. Audacity OpenVINO Adapter discovers commands dynamically, refuses non-empty projects and uses only Product-owned input/output paths.
-13. Noise Suppression output and Music Separation stems are media/checksum validated and registered as canonical derived AUDIO Assets with provider provenance.
+13. Noise Suppression output and Music Separation stems are media/checksum validated as a complete batch before canonical publication and registered as derived AUDIO Assets with per-operation provider/role provenance in the manifest.
 14. Whisper/MusicGen/AudioSR capability presence can be reported without falsely claiming task-level execution support.
 15. Unit, boundary-negative, integration, regression, contract and fault tests pass; package/docs/Git are synchronized.
 16. Missing user local runtimes may leave live-performance Evidence pending, but must never be fabricated.

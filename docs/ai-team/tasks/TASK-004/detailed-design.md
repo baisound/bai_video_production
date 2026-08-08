@@ -19,7 +19,7 @@ A shared **Lane E policy layer** owns minimum Resource Admission, provider/licen
 
 ## 3. Normalization policy
 
-A profile selects target frame rate and whether a proxy must be forced. CFR source video can remain the canonical source Asset when no video transform is necessary. VFR/forced material is transformed to a separate CFR proxy Asset. Audio is extracted to a separate 48 kHz PCM WAV when present.
+A profile selects target frame rate and whether a proxy must be forced. CFR source video can remain the canonical source Asset when no video transform is necessary. VFR/forced material is transformed to a separate CFR proxy Asset. Audio is extracted to a separate 48 kHz PCM WAV when present. When both proxy and analysis-audio outputs are required, both are generated and QA-validated in staging before either is canonically published.
 
 The source Asset path is resolved from its Job-scoped logical URI and its registered checksum is reverified before ffmpeg/ffprobe reads it.
 
@@ -113,11 +113,15 @@ When `commercial_runtime_requested=true`, built-in profiles in `RESTRICTED`, `CO
 
 ComfyUI history is untrusted external-runtime data. Returned filename/subfolder/type metadata is normalized and must resolve under the configured ComfyUI output root. Absolute-path injection, traversal and symlink escape are rejected. The selected file must contain a video stream.
 
-The file is copied into Product staging, hashed and published as `GENERATED_VIDEO`. Provenance records runtime/profile/model family, workflow checksum, prompt checksum, seed, mode, requested dimensions/frame count and safe device/runtime metadata.
+The file is copied into Product staging, hashed and published as `GENERATED_VIDEO`. Provenance records runtime/profile/model family, model-license policy, workflow checksum, prompt checksum, seed, mode, reference Asset bindings and safe device/runtime metadata.
 
-## 15. MiniMax H3 profile
+Video reference inputs are not accepted as arbitrary host paths. Caller-declared workflow placeholders are bound to same-Job canonical Assets, re-checksummed, derivative-rights gated and copied into an operation-owned subdirectory below the configured ComfyUI input root. `TEXT_TO_VIDEO` accepts no reference Assets; I2V/First-Last/Reference modes enforce bounded compatible Asset sets. Staged references are deleted after the operation and stale Product-owned operation staging is safely replaced on retry.
+
+## 15. MiniMax H3 profile and license gate
 
 MiniMax H3 Native is the preferred first video profile. Product request modes map to ComfyUI native T2V/I2V/First-Last/Reference workflows without embedding browser/UI automation. MiniMaxH3-Easy remains an optional workflow compatibility profile rather than a Core dependency.
+
+MiniMax H3 is not treated as an unrestricted open-source runtime. Its current Community License contains territory, use, redistribution and commercial-product conditions. The built-in profile is therefore `CONDITIONAL`; execution requires an explicit caller-supplied license authorization/acknowledgement reference, stored only as a checksum. Generated assets retain `MODEL_LICENSE_REVIEW_REQUIRED`/territory-review publication restrictions. This execution gate does not claim that an Output is legally publishable in every territory or use case.
 
 Live performance, exact VRAM requirements and model-specific generation quality are Evidence from the user's runtime, not facts invented by unit tests.
 
@@ -162,7 +166,7 @@ Noise Suppression imports one source track into the empty sandbox, applies the d
 
 Music Separation imports one source track and invokes OpenVINO Music Separation in caller-selected `2_STEM` or `4_STEM` mode. After execution, `GetInfo: Type=Tracks` identifies newly generated tracks. Expected stem roles are mapped by normalized track-name suffixes (Vocals/Instrumental or Drums/Bass/Other/Vocals), not by blind positional assumptions. Each stem is individually selected/exported as WAV, validated and published as a canonical AUDIO Asset.
 
-If expected stems cannot be proved, no stem set is declared complete; the operation fails with diagnostic Evidence.
+If expected stems cannot be proved, no stem set is declared complete. All reported stem descriptors, containment, media structure, checksums and the complete expected role set are validated as a batch **before any stem is published**; this prevents a failed partial separation from leaving a subset of stems as producer outputs.
 
 ## 21. Capability-only OpenVINO features
 
@@ -174,11 +178,13 @@ Whisper, MusicGen and Audio Super Resolution are discovered and exposed in the c
 
 TASK-004 does not fake execution Evidence for these features.
 
-## 22. Idempotency and failure handling
+## 22. Idempotency, batch publication and failure handling
 
-Normalization, local-image generation, local-video generation and local-audio processing reserve Job-scoped operations. COMPLETED replay returns canonical prior results. No Asset/manifest becomes canonical until bytes pass structural/checksum QA.
+Normalization, local-image generation, local-video generation and local-audio processing reserve Job-scoped operations. COMPLETED replay returns canonical prior results. For multi-output operations, every output is produced and structurally/checksum validated first; only then does canonical Asset publication begin. This avoids predictable partial publication caused by a later sibling-output QA failure.
 
-Timeout/resource/runtime errors are explicit Product errors. Staging is never exposed as a canonical Asset. A process crash after Asset publication is repaired from producer-operation binding when the canonical checksum still matches; mismatched/missing canonical output fails closed rather than recreating truth from untrusted bytes.
+The TASK-003 registry intentionally deduplicates byte-identical Assets by Job checksum. Therefore canonical **Asset identity describes bytes**, while TASK-004 operation Manifest/Evidence describes each processing/generation event. If an output deduplicates to an already-existing Asset, the operation Manifest still retains provider/model/workflow/source/role provenance and an explicit output binding; the Product does not mutate the historical Asset merely to attach a second producer story.
+
+Timeout/resource/runtime errors are explicit Product errors. Staging is never exposed as a canonical Asset. A process crash after Asset publication but before Manifest completion can leave valid checksum-addressed Assets; replay may reuse them only when the canonical checksum still matches and then completes the producer Manifest. Mismatched/missing canonical output fails closed rather than recreating truth from untrusted bytes.
 
 ## 23. Completion Evidence policy
 

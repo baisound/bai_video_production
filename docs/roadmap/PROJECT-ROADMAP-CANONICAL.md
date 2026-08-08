@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.3
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.4
 
 - Project: `ai-video-production`
 - Date: 2026-08-09
@@ -23,8 +23,13 @@
   - Final IPC ADR: WSL2→Windows primary = authenticated HTTP/JSON。Windows Named PipeはWindows-local optimization candidateとして保持
 - TASK-003 `Asset Registry / Ingest / Path Resolver`: **COMPLETED**
   - package `0.3.0`; secure allowlisted source ingest, SHA-256/dedupe, rights metadata, immutable `asset://` promotion, SQLite v2, concurrency-safe `source-manifest`, recovery/Evidence PASS
-- TASK-004以降: **NOT_STARTED / NOT_AUTHORIZED**
-- 推奨次ルート: `TASK-004 → TASK-022` の残る最小基盤を先行し、その後SRT/字幕・フィラー/無音Cut・SE/BGM/ナレーション生成配置をediting-firstで前倒し
+- TASK-004 `Media Normalization + Local Visual/Audio AI Runtime Foundation`: **IMPLEMENTATION COMPLETE / LIVE CAPABILITY EVIDENCE PENDING**
+  - package `0.4.0`; exact timebase/VFR inspection, CFR proxy, 48 kHz analysis audio
+  - ComfyUI local image/video runtime boundary, Character Identity, MiniMax H3 Production Brief / SingleFrame / Spectrum / Foley contracts
+  - Audacity/OpenVINO external local Audio AI boundary for Noise Suppression + 2/4-stem Music Separation
+  - local regression `229/229 PASS`; target ComfyUI/Audacity capability Evidence remains required before formal completion
+- TASK-005以降: **NOT_STARTED / NOT_AUTHORIZED**
+- TASK-004完了後の標準推奨次ルート: `TASK-022` を早期確立し、その後SRT/字幕・フィラー/無音Cut・SE/BGM/ナレーション生成配置をediting-firstで前倒し。Owner判断による再優先化を許容する
 
 ## 3. MVP定義
 
@@ -36,7 +41,7 @@
 
 `001 → 002 → 003 → 004 → 022 → (006 + 023 + 024) → 007 → 010 → 011 → 012`
 
-`005 Scene Boundary`は編集品質向上の重要機能だが、SRT/フィラー/無音Cutの最初のVertical Sliceを阻害しない場合は並列または後追い可能とする。`020 Resource Admission`は高負荷処理導入前のSafety Gateとして必要時点までに組み込む。
+`005 Scene Boundary`は編集品質向上の重要機能だが、SRT/フィラー/無音Cutの最初のVertical Sliceを阻害しない場合は並列または後追い可能とする。`020 Resource Admission`は高負荷処理導入前のSafety Gateとして必要時点までに組み込む。 TASK-004ではOwner優先判断によりLocal Image/Video/Audio AI Runtimeの最低限の実行基盤とResource Admission sliceを前倒ししたが、生成素材のTimeline配置や自動創作判断は後続TASKの責務を維持する。
 
 ### 3.2 Production Pilot
 
@@ -51,11 +56,11 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | Phase | 目的 | Canonical TASK | Exit Gate |
 |---|---|---|---|
 | P0 Foundation & Capability | 正本・State・Resolve実機能力を確定 | 001, 002 | Foundation PASS + Resolve/IPC ADR |
-| P1 Media Foundation | 素材・Path・Timebase・資源・Timeline Mapping確立 | 003, 004, 020, 022 | Golden ingest/normalize fixture PASS |
+| P1 Media + Local AI Foundation | 素材・Path・Timebase・Local AI Runtime・最小資源Admission・Timeline Mapping確立 | 003, 004, 020, 022 | Golden ingest/normalize + local runtime capability Gate |
 | P2 Editing Analysis MVP | ASR・SRT・字幕・無音/フィラー/言い直しCut候補を優先生成。Scene解析は並列化可能 | 006, 023, 024, 005 | Editing Analysis Manifest再現性 PASS |
 | P3 Edit Intelligence | Candidate Graph、Multimodal、DBD Profile | 007, 008, 009 | Edit Plan品質/再現性 Gate |
 | P4 Resolve Editing MVP | 元動画Cut、SRT/字幕Track、SE/BGM/ナレーションをResolveへ配置し、Render QA、人間Handoff | 010, 011, 012, 026 | **Technical MVP** |
-| P5 Generative Enhancement | AI SE/BGM/ナレーション生成の高度化、生成映像 | 013, 014 | Rights/Cost/QA Gate |
+| P5 Generative Enhancement | TASK-004で確立したLocal AI Runtime上にAI SE/BGM/ナレーション/生成映像の創作判断・高度化を追加 | 013, 014 | Rights/Cost/QA Gate |
 | P6 Safety & Variants | Privacy、Storage GC、縦動画/Remotion | 016, 017, 018 | **Production Pilot** |
 | P7 Learning & Operations | YouTube Feedback、自動調整、統合Dashboard | 015, 019, 021 | Operable learning loop |
 | PX Optional NLE Expansion | Premiere互換出力 | 025 | Import Golden Fixture PASS |
@@ -69,7 +74,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 001 | Project Foundation / Domain Model | ID, State, Manifest, Evidence, Checkpoint, DB | - | DEV-4 | COMPLETED |
 | 002 | Resolve Capability Spike | Capability Matrix, IPC ADR, live Evidence | 001 | DEV-4 | COMPLETED |
 | 003 | Asset Registry / Ingest / Path Resolver | Ingest API, rights, checksum, path mapping | 001 | DEV-4 / score 33 | COMPLETED |
-| 004 | Timebase / Proxy / Normalization | ffprobe contract, VFR/CFR, time-map, proxy | 003 | DEV-4候補 | NOT STARTED |
+| 004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | exact timebase/proxy/48k, ComfyUI image/H3, Character Identity, SingleFrame/Spectrum/Foley, Audacity OpenVINO, minimum admission/Evidence | 003 | DEV-4 / score 25 | IMPLEMENTATION COMPLETE / LIVE EVIDENCE PENDING |
 | 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | NOT STARTED |
 | 006 | ASR / Subtitle | Transcript/SRT, VAD, dictionary, review gate; Resolve字幕配置用canonical subtitle plan | 004 | DEV-3/4候補 | NOT STARTED |
 | 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3候補 | NOT STARTED |
@@ -78,7 +83,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 010 | Resolve Assembly MVP | 元動画Cut、Subtitle Track/SRT配置、Audio asset配置を含むGateway/Controller, AUTO_ASSEMBLY, idempotency。字幕配置/basic assembly sliceは007前に先行可 | 002,003,022; Cut plan反映は007 | DEV-4 | NOT STARTED |
 | 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4候補 | NOT STARTED |
 | 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3候補 | NOT STARTED |
-| 013 | AI SE / BGM / Video Adapters | SE/BGM生成・取得、provider adapters, rights/cost/evidence。生成sliceは003後に前倒し可、内容連動選定は007依存 | 003; 007は内容連動時 | DEV-4候補 | NOT STARTED |
+| 013 | AI SE / BGM / Video Orchestration | TASK-004 local-runtime基盤を利用したSE/BGM/Video生成のProvider選択・創作制御・rights/cost/evidence。内容連動選定は007依存 | 004; 007は内容連動時 | DEV-4候補 | NOT STARTED |
 | 014 | Voice TTS / Narration | ナレーション/自声TTS asset、dictionary、consent/retention。ユーザー指定原稿からの生成は003後に前倒し可 | 003; 自動原稿生成は006/007 | DEV-4 | NOT STARTED |
 | 015 | YouTube Feedback | performance ingest, feedback features | 008 | DEV-3候補 | NOT STARTED |
 | 016 | Privacy Guard | PII/notification/NG detection + redaction plan | 003,006 | DEV-4 | NOT STARTED |
@@ -125,8 +130,8 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 ### Wave 1 — 現在
 
 1. TASK-001〜003: **COMPLETED**。
-2. TASK-004: Timebase/Normalizationの編集機能向け最小slice。
-3. TASK-022: Timeline Mappingを早期確立。
+2. TASK-004: **実装完了・target local-runtime Evidence待ち**。Timebase/Normalizationに加えLocal Image/Video/Audio AI foundationを前倒し済み。
+3. TASK-004 final live capability Gate完了後、TASK-022: Timeline Mappingを早期確立。
 
 ### Wave 2 — 編集価値を最短で出す
 
@@ -147,7 +152,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 
 ### Wave 4 — 音声演出を前倒し
 
-- TASK-013 SE/BGM生成slice（Asset基盤成立後はTASK-007完了を待たず前倒し可）
+- TASK-013 SE/BGM/Video orchestration（TASK-004で生成Runtime基盤は先行済み。TASK-007完了を待たず、ユーザー指定Prompt/Assetによる生成sliceは前倒し可）
 - TASK-014 ナレーション/TTS生成slice（ユーザー指定原稿は早期実装可）
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed
 - TASK-010へAudio placementを統合
@@ -159,7 +164,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-005 Scene Boundaryの高度化
 - TASK-008 Multimodal
 - TASK-009 DBD Profile
-- TASK-020 Resource Admission（高負荷処理本格化までに必須）
+- TASK-020 Resource Admission（TASK-004で最低限のruntime/VRAM/disk admission floorを先行実装済み。全体監視・schedulerはTASK-020で完成）
 
 ### Wave 6 — 公開運用
 

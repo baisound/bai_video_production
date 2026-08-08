@@ -1,6 +1,6 @@
 # TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation
 
-- Status: `IN_PROGRESS`
+- Status: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
 - Authorization: `OWNER_AUTHORIZED_IMPLEMENTATION`
 - Historical alias: `VIDEO-TASK-004`
 - Package target: `0.4.0`

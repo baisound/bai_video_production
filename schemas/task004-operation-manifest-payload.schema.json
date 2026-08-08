@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/task004-operation-manifest-payload.schema.json",
+  "type": "object",
+  "required": ["lane", "operation_kind", "output_assets", "details"],
+  "properties": {
+    "lane": {"enum": ["TIMEBASE_NORMALIZATION", "LOCAL_IMAGE_AI", "LOCAL_VIDEO_AI", "LOCAL_AUDIO_AI"]},
+    "operation_kind": {"type": "string", "minLength": 1, "maxLength": 80},
+    "output_assets": {"type": "array", "items": {"type": "object"}},
+    "details": {"type": "object"}
+  },
+  "additionalProperties": false
+}

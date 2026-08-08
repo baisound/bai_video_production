@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/h3-production-brief-plan.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "template",
+    "text_sha256",
+    "reference_tags",
+    "target_duration_seconds",
+    "target_aspect_ratio",
+    "duration_tier"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "template": {
+      "enum": [
+        "T2VA",
+        "FULL_REFERENCE"
+      ]
+    },
+    "text_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "reference_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^<(Picture|Video|Audio) [1-9][0-9]*>$"
+      }
+    },
+    "target_duration_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 45
+    },
+    "target_aspect_ratio": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,3}:[1-9][0-9]{0,3}$"
+    },
+    "duration_tier": {
+      "enum": [
+        "STANDARD_1_15",
+        "EXPERIMENTAL_16_45"
+      ]
+    }
+  }
+}

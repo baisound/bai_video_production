@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`MEDIA_INGEST_READY`
+`TASK-004_IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
 
 ## Purpose
 
@@ -14,7 +14,7 @@
 
 ## Active Project Root
 
-`/home/baisound/projects/ai-video-production`
+Consumer Project Repository root. Machine-specific absolute paths are not canonical project metadata.
 
 ## Source / Test / Documentation
 
@@ -27,7 +27,6 @@
 
 ## BAI Development OS Integration
 
-- OS Root: `/home/baisound/bai-development-os`
 - OS Version Baseline: `1.0.0`
 - Architecture Baseline: `Ver.2.27 CURRENT_CANONICAL`
 - Adapter: `.bai-os/project.json`
@@ -70,7 +69,12 @@
 
 各TASKをDEV-0〜DEV-4へ分類する。すべての変更へ固定の最大手続きを強制しない。
 
-`TASK-001`は`DEV-4 FOUNDATION CRITICAL`（score 25）、`TASK-002`はResolve Gateway外部統合境界を含む`DEV-4 FOUNDATION CRITICAL`（score 22）として完了した。`TASK-003`はPath Security、Product State、SQLite migration、Filesystem side effect、Asset正本を同時に扱うため`DEV-4 FOUNDATION CRITICAL`（score 33）として完了した。Safety Floorは下げていない。
+- TASK-001: `DEV-4 FOUNDATION CRITICAL` / score 25 / COMPLETED
+- TASK-002: `DEV-4 FOUNDATION CRITICAL` / score 22 / COMPLETED
+- TASK-003: `DEV-4 FOUNDATION CRITICAL` / score 33 / COMPLETED
+- TASK-004: `DEV-4 FOUNDATION CRITICAL` / score 25 / implementation complete, target local-runtime Evidence pending
+
+TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Identity、MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley、Audacity OpenVINO外部Runtime境界を含むためSafety Floorを下げない。
 
 ## Security / Privacy Constraints
 
@@ -78,22 +82,23 @@
 - Product Path ResolverはAllowlist外Pathを拒否する。
 - External inputから任意Shell/Pythonを直接実行しない。
 - PII、Voice Model、Rights metadataはSensitivity/Retentionを定義する。
-- External serviceのCredential/Egressを開発Toolingから扱う場合はBAI SecurityOS / IntegrationOS境界を優先する。
+- External providerはlocal/private endpoint、explicit authorization、request-bound idempotency、output containmentを満たす。
+- 外部GPL実装（Audacity OpenVINO / Spectrum等）はBAI CoreへコピーせずRuntime境界で扱う。
 
 ## Current Consumer Task State
 
 - Last Completed: `TASK-003 — Asset Registry / Ingest / Path Resolver`
-- Active Task: `NONE`
-- TASK-003: `COMPLETED` / package `0.3.0` / DEV-4 score `33`
-- Asset/Ingest: allowlisted source boundary, fixed-argv ffprobe, streamed SHA-256, Job-local dedupe/rights review, immutable atomic promotion, SQLite schema v2, concurrency-safe source-manifest, append-only Evidence and crash/partial recovery
-- TASK-002 Resolve/IPC foundation remains `COMPLETED`; Target Resolve `DaVinci Resolve Studio 21.0.2.4`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.3 — Owner-directed editing-first priority
-- Recommended next Consumer Task: `TASK-004 — Timebase / Proxy / Normalization` (NOT_STARTED / NOT_AUTHORIZED)
-- Following minimum prerequisite: `TASK-022 — Timeline Mapping` after TASK-004; then SRT/字幕、無音/フィラーCut、SE/BGM/ナレーション機能を前倒し
+- Active Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
+- TASK-004: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
+- Package: `0.4.0`
+- Local verification: `229 / 229 PASS`, compileall PASS, wheel PASS, installed-wheel golden normalization PASS
+- Target-machine Gate: ComfyUI capability Evidence + Audacity/OpenVINO capability Evidence + final DEV-4 Judge review
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
+- Next Consumer Task: `NONE AUTHORIZED`; editing-first recommendation after TASK-004 is TASK-022 unless Owner reprioritizes
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule
 
 Taskは、選択DEV Profileの要求、実装、必要Test、blocking finding解消、内部文書同期、Completion Evidenceが揃った場合のみ完了する。
 
-Test PASSやNEXTをOwner Authorizationへ読み替えない。
+Local Test PASSや「implementation complete」をtarget runtime capability PASSまたはOwner Authorization for later TASKへ読み替えない。

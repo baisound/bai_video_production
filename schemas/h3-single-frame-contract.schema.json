@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/h3-single-frame-contract.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "requested_frame_count", "actual_frame_count", "selected_frame_index", "temporal_rope_strength"],
+  "properties": {
+    "mode": {"enum": ["SINGLE_FRAME_EDIT", "START_END_INTERPOLATE"]},
+    "requested_frame_count": {"type": "integer", "minimum": 1, "maximum": 3600},
+    "actual_frame_count": {"type": "integer", "minimum": 5, "maximum": 3604},
+    "selected_frame_index": {"type": "integer", "minimum": 0},
+    "temporal_rope_strength": {"type": "number", "minimum": 0, "maximum": 1}
+  }
+}

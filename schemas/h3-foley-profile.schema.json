@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/h3-foley-profile.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "width", "height", "target_duration_seconds", "duration_tier", "community_derived_fast_path"],
+  "properties": {
+    "mode": {"enum": ["STANDARD", "FAST_32"]},
+    "width": {"type": "integer", "minimum": 32, "maximum": 4096},
+    "height": {"type": "integer", "minimum": 32, "maximum": 4096},
+    "target_duration_seconds": {"type": "integer", "minimum": 1, "maximum": 45},
+    "duration_tier": {"enum": ["STANDARD_1_15", "EXPERIMENTAL_16_45"]},
+    "community_derived_fast_path": {"type": "boolean"}
+  }
+}

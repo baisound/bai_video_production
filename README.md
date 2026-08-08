@@ -7,9 +7,9 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - Product design baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-003 — Asset Registry / Ingest / Path Resolver`
-- Active Consumer TASK: `NONE`
-- TASK-003 stage: `COMPLETED` / package `0.3.0`
-- TASK-003 governance: `DEV-4 FOUNDATION CRITICAL` / score `33`
+- Active Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
+- TASK-004 stage: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE` / package `0.4.0`
+- TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
 
@@ -75,11 +75,11 @@ Final local verification: `81 / 81` tests PASS, compileall PASS, wheel/installed
 
 ## Project Roadmap
 
-- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.3 editing-first priority)
+- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.4 editing-first priority)
 - Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.2.docx`
 - External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.2.docx`
 
-TASK-003 is complete. The recommended next route is TASK-004 → TASK-022 as the remaining minimum editing foundation; later TASKs remain not authorized until explicit Owner instruction.
+TASK-003 is complete. TASK-004 implementation is locally complete and is awaiting target ComfyUI/Audacity capability Evidence. After TASK-004 closes, TASK-022 remains the default editing-first recommendation unless the Owner reprioritizes; later TASKs remain not authorized until explicit Owner instruction.
 
 
 ## TASK-003 Secure Asset Ingest
@@ -89,3 +89,10 @@ TASK-003 is **COMPLETED** in package `0.3.0`. It implements explicit source-root
 Raw machine source paths are intentionally boundary-only and are not written to successful canonical Asset/Manifest/Evidence output. Normalization/proxy/time-map processing remains TASK-004.
 
 Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS and a repository-external installed-wheel ingest using a real generated WAV + ffprobe PASS.
+
+
+## TASK-004 Media + Local AI Runtime Foundation
+
+TASK-004 package `0.4.0` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and 2/4-stem Music Separation. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
+
+Local DEV-4 verification is `229 / 229` tests PASS, compileall/diff-check PASS, wheel build PASS, and repository-external installed-wheel golden normalization using real ffmpeg/ffprobe PASS. Target ComfyUI/Audacity capabilities remain an explicit live-Evidence gate; absence is reported as structured fail-closed diagnostics rather than a fabricated PASS.

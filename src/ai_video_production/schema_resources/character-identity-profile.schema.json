@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/character-identity-profile.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["identity_key","version","display_name","aliases","visual_prompt","negative_prompt","style_prompt","voice_prompt","immutable_traits","allowed_variations","forbidden_drift"],
+  "properties": {
+    "identity_key":{"type":"string","pattern":"^[a-z][a-z0-9_-]{2,63}$"},
+    "version":{"type":"string","pattern":"^[0-9]+(?:\\.[0-9]+){0,2}$"},
+    "display_name":{"type":"string","minLength":1},
+    "aliases":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "visual_prompt":{"type":"string","minLength":1},
+    "negative_prompt":{"type":"string"},
+    "style_prompt":{"type":"string"},
+    "voice_prompt":{"type":"string"},
+    "immutable_traits":{"type":"object","additionalProperties":{"type":"string","minLength":1}},
+    "allowed_variations":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "forbidden_drift":{"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}}
+  }
+}

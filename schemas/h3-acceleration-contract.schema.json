@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/h3-acceleration-contract.schema.json",
+  "type": "object",
+  "required": ["mode"],
+  "properties": {
+    "mode": {"enum": ["NATIVE", "SPECTRUM_QUALITY", "SPECTRUM_FAST"]}
+  },
+  "additionalProperties": false
+}

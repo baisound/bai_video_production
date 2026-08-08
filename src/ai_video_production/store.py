@@ -616,6 +616,30 @@ class SQLiteProductStore:
             ).fetchone()
         return self._row_to_manifest(row) if row is not None else None
 
+    def find_manifest_by_operation(self, operation_id: str, manifest_type: str | None = None) -> ManifestRecord | None:
+        validate_id(operation_id, IdKind.OPERATION)
+        with self._connect() as conn:
+            if manifest_type is None:
+                row = conn.execute(
+                    "SELECT * FROM manifests WHERE operation_id=? AND status='COMMITTED' ORDER BY version DESC LIMIT 1",
+                    (operation_id,),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    "SELECT * FROM manifests WHERE operation_id=? AND type=? AND status='COMMITTED' ORDER BY version DESC LIMIT 1",
+                    (operation_id, manifest_type),
+                ).fetchone()
+        return self._row_to_manifest(row) if row is not None else None
+
+    def has_evidence_for_operation(self, operation_id: str, category: str | None = None) -> bool:
+        validate_id(operation_id, IdKind.OPERATION)
+        with self._connect() as conn:
+            if category is None:
+                row = conn.execute("SELECT 1 FROM evidence WHERE operation_id=? LIMIT 1", (operation_id,)).fetchone()
+            else:
+                row = conn.execute("SELECT 1 FROM evidence WHERE operation_id=? AND category=? LIMIT 1", (operation_id, category)).fetchone()
+        return row is not None
+
     def register_evidence_index(
         self,
         *,

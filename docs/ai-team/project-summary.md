@@ -10,20 +10,30 @@ The product analyzes source media, creates auditable edit intelligence and safel
 
 **TASK-002** completed DaVinci Resolve Studio 21.0.2.4 capability verification and the WSL2→Windows authenticated HTTP/JSON IPC architecture.
 
-**TASK-003** completed secure source Asset ingestion. Raw source paths are boundary-only; accepted bytes are staged, structurally probed, checksummed, rights-classified and atomically promoted to immutable `asset://` storage. SQLite schema v2 records extended Asset metadata and operation/version history. Concurrent source-manifest revisions are transactionally reserved and idempotent/partial/hard-crash recovery is supported without rewriting historical Evidence.
+**TASK-003** completed secure source Asset ingestion: allowlisted source boundary, ffprobe/SHA-256, rights metadata, immutable `asset://` promotion, SQLite v2, concurrency-safe source manifests and crash/idempotency recovery.
 
-## Editing-first roadmap
+## Active TASK-004 checkpoint
 
-The Owner prioritizes editing value. The minimum dependency route is now `TASK-004 -> TASK-022`, after which SRT/subtitle creation and Resolve placement, filler/silence/disfluency cuts, and SE/BGM/narration generation/placement are moved forward as dependencies safely permit. TASK numbers remain stable; execution order may change.
+TASK-004 implementation is locally complete in package `0.4.0` and awaits target-runtime capability Evidence. It establishes:
+
+- exact timebase/proxy/48 kHz media normalization;
+- shared safe derived-Asset publication;
+- ComfyUI local Image/Video AI boundary for FLUX/Stable Diffusion/MiniMax H3;
+- Character Identity and H3 Production Brief foundations;
+- optional H3 SingleFrame and Spectrum contracts;
+- H3 Foley/SFX generation contract with community-experimental modes clearly separated;
+- Audacity/OpenVINO external local Audio AI boundary for Noise Suppression and Music Separation;
+- minimum resource/license/admission Evidence and crash-safe external dispatch rules.
+
+These are prerequisites for the editing-first SRT/subtitle, filler/cut, SE/BGM/narration and Resolve placement route.
 
 ## Current verification
 
 - TASK-001: COMPLETED
 - TASK-002: COMPLETED
 - TASK-003: COMPLETED / DEV-4 score 33
-- package: `0.3.0`
-- `pytest`: `110 / 110 PASS`
-- compileall: PASS
-- wheel/installed-package real ingest verification: PASS
-- active Consumer TASK: none
-- recommended next: TASK-004, not authorized
+- TASK-004: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE` / DEV-4 score 25
+- package: `0.4.0`
+- `pytest`: `229 / 229 PASS`
+- wheel + installed-wheel golden normalization: PASS
+- target ComfyUI/Audacity live capability Evidence: PENDING

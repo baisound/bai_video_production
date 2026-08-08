@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "project_id": "ai-video-production",
+  "project_root": "/home/baisound/projects/ai-video-production",
+  "bai_development_os_root": "/home/baisound/bai-development-os",
+  "os_version": "1.0.0",
+  "project_type": "AI_MEDIA_AUTOMATION_APPLICATION",
+  "development_profile_defaults": {
+    "system_scale": "PROJECT",
+    "criticality": "STANDARD",
+    "failure_impact": "MODERATE",
+    "reversibility": "MODERATE"
+  },
+  "commands": {
+    "test": "python -m pytest",
+    "build": "python -m compileall src"
+  },
+  "project_evidence_root": "docs/ai-team/tasks",
+  "notes": "BAI Development OS core remains external. Product runtime must not depend on BAI OS without task-level approval. TASK-001 may revise build/test commands once the implementation stack is finalized."
+}

@@ -129,6 +129,10 @@ Live performance, exact VRAM requirements and model-specific generation quality 
 
 Intel `openvino-plugins-ai-audacity` is GPL-3.0 and is implemented as an Audacity module. TASK-004 does not copy its source, link it into Product Core, or claim it as Product code. The Product drives an installed user-local Audacity runtime via Audacity's documented `mod-script-pipe` automation boundary.
 
+### Windows mod-script-pipe transport framing
+
+The Windows pipe transport MUST follow Audacity's own `pipe_test.py` framing contract exactly: commands written to `\\.\pipe\ToSrvPipe` terminate with `CRLF + NUL` (`\r\n\0`), while POSIX uses LF. The Product must not normalize the Windows terminator to a plain LF. Replies are read from `FromSrvPipe` until the Audacity blank-line response delimiter, under bounded byte/line limits and an external supervisor timeout. This is transport framing only; it does not change effect authorization or execution policy.
+
 This process separation also reflects Audacity's own security warning: scripting can read/write files and should not be exposed as a web service. The Adapter therefore supports local pipes only and does not expose a network listener.
 
 ## 17. Audacity sandbox policy

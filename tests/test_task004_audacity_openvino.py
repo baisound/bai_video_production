@@ -14,7 +14,7 @@ from ai_video_production import (
     SeparationMode, SQLiteProductStore, SourcePathPolicy,
 )
 from ai_video_production.audacity_openvino_worker import (
-    AudacityPipe, _export, build_command, discover_features, separation_parameters, validate_effect_parameters,
+    AudacityPipe, _command_eol_for_os_name, _export, build_command, discover_features, separation_parameters, validate_effect_parameters,
 )
 
 
@@ -271,6 +271,22 @@ def test_audacity_command_builder_rejects_parameter_name_injection_and_nonfinite
         with pytest.raises(ValueError):
             build_command("Effect", {"Gain": value})
 
+
+
+
+def test_audacity_windows_pipe_uses_required_crlf_nul_terminator():
+    assert _command_eol_for_os_name("nt") == "\r\n\0"
+    assert _command_eol_for_os_name("posix") == "\n"
+
+
+def test_audacity_pipe_command_writes_configured_protocol_terminator():
+    pipe = AudacityPipe()
+    pipe._command_eol = "\r\n\0"
+    pipe._to = io.StringIO()
+    pipe._from = io.StringIO('[]\n\n')
+    reply = pipe.command("GetInfo: Type=Tracks Format=JSON")
+    assert pipe._to.getvalue().endswith("\r\n\0")
+    assert reply == '[]\n'
 
 def test_audacity_pipe_caps_untrusted_reply_size():
     pipe = AudacityPipe(max_reply_bytes=1024)

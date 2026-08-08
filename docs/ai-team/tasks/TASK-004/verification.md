@@ -2,17 +2,17 @@
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
 - Completion status: `LIVE_CAPABILITY_EVIDENCE_PENDING`
-- Package: `0.4.1`
+- Package: `0.4.2`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
 
-- `python -m pytest -q`: **231 / 231 PASS**
+- `python -m pytest -q`: **233 / 233 PASS**
 - `python -m compileall -q src tests`: PASS
 - `git diff --check`: PASS
 - wheel build with `pip wheel --no-deps --no-build-isolation`: PASS
-- wheel SHA-256: `69ccf086b2346c6e0e79f6fe8adcd7a1f0658abded50cd80beef6e1f28855009`
-- installed-wheel package version: `0.4.1`
+- wheel SHA-256: `5f1e9a7c81de56b2ac8612272294c40e340d80434cd551cfa1867cf04dde63d6`
+- installed-wheel package version: `0.4.2`
 - packaged TASK-004 schema resources: PASS
 - installed-wheel golden media ingest + forced CFR proxy + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
 - installed-wheel unavailable-ComfyUI diagnostic: expected fail-closed `ERR_PROVIDER_COMFY_UNREACHABLE`, exit 2
@@ -70,5 +70,14 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 
 - User target runtime proved both `ToSrvPipe` and `FromSrvPipe` exist and Audacity UI exposes OpenVINO Music Separation, Noise Suppression and Super Resolution.
 - Initial capability probe timed out at the former hard-coded 15-second discovery limit.
-- Corrective implementation raises capability-only default to 120 seconds, exposes a 5-600 second CLI/PowerShell override, and records worker discovery progress for timeout diagnosis.
-- Audio effect execution timeout remains separately controlled by `AudioAiRequest.timeout_seconds`; this patch does not silently lengthen or replay side-effecting effect executions.
+- Corrective implementation raised capability-only default to 120 seconds, exposed a 5-600 second CLI/PowerShell override, and recorded worker discovery progress for timeout diagnosis.
+- Audio effect execution timeout remained separately controlled by `AudioAiRequest.timeout_seconds`; the patch did not silently lengthen or replay side-effecting effect executions.
+
+## Live evidence corrective patch (0.4.2)
+
+- Attempt 02 passed the former timeout boundary but returned `ERR_PROVIDER_AUDACITY_OPENVINO_WORKER_FAILED` with `Audacity response did not contain JSON`.
+- Audacity's own reference `pipe_test.py` defines Windows command framing as `\r\n\0` and POSIX as `\n`. Product 0.4.1 incorrectly wrote plain LF to the Windows named pipe.
+- Product 0.4.2 now preserves the exact Windows CRLF+NUL transport terminator while keeping the existing bounded reply limits and external supervisor timeout.
+- Two regression tests pin the transport terminator contract and actual command write behavior.
+- Full regression is **233 / 233 PASS**, compileall PASS, wheel build PASS, and installed-wheel protocol smoke PASS.
+- Capability-only live evidence must be rerun on the target PC. No OpenVINO effect execution is yet claimed as live verified.

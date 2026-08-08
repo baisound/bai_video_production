@@ -166,6 +166,12 @@ def build_command(command_id: str, params: dict[str, Any] | None = None) -> str:
     return f"{command_id}:" + (" " + suffix if suffix else "")
 
 
+
+
+def _command_eol_for_os_name(name: str) -> str:
+    """Return the exact mod-script-pipe command terminator for the host OS."""
+    return "\r\n\0" if name == "nt" else "\n"
+
 def _extract_json(reply: str) -> Any:
     decoder = json.JSONDecoder()
     for i, ch in enumerate(reply):
@@ -190,16 +196,23 @@ class AudacityPipe:
         if os.name == "nt":
             self.to_path = r"\\.\pipe\ToSrvPipe"
             self.from_path = r"\\.\pipe\FromSrvPipe"
+            # Audacity's Windows mod-script-pipe protocol requires CRLF + NUL.
+            # A plain LF can be accepted inconsistently and may yield a status-only
+            # response instead of the command payload (for example GetInfo JSON).
+            self._command_eol = _command_eol_for_os_name(os.name)
         else:
             uid = os.getuid()
             self.to_path = f"/tmp/audacity_script_pipe.to.{uid}"
             self.from_path = f"/tmp/audacity_script_pipe.from.{uid}"
+            self._command_eol = _command_eol_for_os_name(os.name)
         self._to = None
         self._from = None
 
     def __enter__(self) -> "AudacityPipe":
         # A parent supervisor enforces the hard timeout so this worker may block safely.
-        self._to = open(self.to_path, "w", encoding="utf-8", newline="\n", buffering=1)
+        # newline="" preserves the exact protocol terminator, including the
+        # Windows NUL byte required by mod-script-pipe.
+        self._to = open(self.to_path, "w", encoding="utf-8", newline="", buffering=1)
         self._from = open(self.from_path, "r", encoding="utf-8", errors="replace", newline="")
         return self
 
@@ -211,7 +224,7 @@ class AudacityPipe:
 
     def command(self, command: str) -> str:
         assert self._to is not None and self._from is not None
-        self._to.write(command + "\n")
+        self._to.write(command + self._command_eol)
         self._to.flush()
         lines: list[str] = []
         reply_bytes = 0

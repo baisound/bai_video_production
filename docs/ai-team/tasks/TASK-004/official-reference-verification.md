@@ -37,3 +37,9 @@ Verified on 2026-08-09 against current primary documentation/repositories before
 - Audacity scripting reference exposes commands used to inspect/select/import/effect/export state.
 - Audacity warns of security implications when external processes can control the application; TASK-004 therefore keeps it local-only and requires an empty/sandbox project before mutation.
 - Command/effect availability can vary with installed modules/version, so the OpenVINO Adapter discovers effect descriptors dynamically instead of freezing one private implementation ID.
+
+## Additional H3 local-runtime references
+
+- `tori29umai0123/ComfyUI-MiniMaxH3-SingleFrame` defines experimental Single Frame Edit, Start/End interpolation, Temporal RoPE Patch, empty H3 AV latent and frame selection nodes. Its documented H3-compatible frame-count rule is minimum 5 and `frame_count % 17 == 5`. No repository license was verified during TASK-004 integration design, so Product Core does not copy the implementation and execution requires explicit local-use authorization.
+- `xmarre/ComfyUI-Spectrum-MiniMax-H3` exposes `SpectrumApplyMiniMaxH3`. Its own documentation explicitly describes Spectrum as an approximate, non-bit-identical accelerator and recommends Native comparison for quality-critical output. The repository carries its own external license and remains an independently installed ComfyUI runtime dependency, never copied into Product Core.
+- Public H3 prompt examples and community Foley experiments are treated as design/research inputs only. Product-owned schemas/compilers are independently implemented; community claims about low-resolution speed, long duration or quality are never promoted to official support without user-runtime Evidence.

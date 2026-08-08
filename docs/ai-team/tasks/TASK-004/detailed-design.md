@@ -191,3 +191,91 @@ Timeout/resource/runtime errors are explicit Product errors. Staging is never ex
 Unit/integration tests may emulate local runtimes to prove Product contracts, containment, state/idempotency and failure behavior. They do not prove that the user's installed ComfyUI models or Audacity OpenVINO plugins exist or perform well.
 
 TASK-004 can reach implementation-complete/checkpoint state without downloading third-party runtimes. If live runtime Evidence is unavailable, the final Judge must clearly distinguish `IMPLEMENTATION_COMPLETE` from provider-specific `LIVE_CAPABILITY_VERIFIED` rather than fabricating support.
+
+## 24. Character Identity foundation
+
+TASK-004 defines a Product-native `CharacterIdentityProfile`; it does not make an external character-skill repository a runtime dependency. A profile owns semantic identity constraints while the binary reference bundle is composed only from canonical same-Job `IMAGE` Assets admitted through TASK-003.
+
+- `face_anchor` is mandatory for a production-locked reference bundle; front/side/back/detail references are optional.
+- every reference Asset is checksum revalidated, must belong to the request Job and must allow derivative processing before local AI staging;
+- immutable traits, allowed variation and forbidden drift are explicit data, not prose-only prompt conventions;
+- profile reuse across Jobs is allowed only as metadata; reference bytes must be re-admitted into the target Job before generation;
+- generated reference refinements remain ordinary derived Assets and require human identity QA before becoming a new locked bundle;
+- voice-identity fields are metadata handoff for TASK-014 and are not treated as proof of consent or TTS authorization.
+
+The Character Identity layer is intentionally provider-neutral so FLUX/SDXL/H3 or later local providers can consume the same identity contract.
+
+## 25. H3 Production Brief Builder
+
+TASK-004 implements a deterministic Product-owned compiler that turns generation intent plus canonical reference bindings into a structured H3 production brief. The implementation may learn from public prompting examples, but no third-party system prompt text is bundled or executed as a dependency.
+
+Contract rules:
+
+- reference order is immutable and labels are assigned deterministically as `<Picture N>`, `<Video N>`, `<Audio N>`;
+- free-text fields may not inject reserved reference labels;
+- First/Last Frame roles accept `IMAGE` only, at most one of each, and must appear as a pair;
+- reference count is bounded to 9 images, 3 videos, 3 audio items and 15 total;
+- each reference records a semantic role and retention policy rather than relying on position alone;
+- the brief represents subject definitions, shot timing, camera behavior, visible end state, dialogue/diegetic SFX/soundscape/non-diegetic music as structured fields;
+- `1..15 s` is the standard duration tier. `16..45 s` is an explicitly experimental contract tier and is never presented as an official H3 capability guarantee;
+- canonical Evidence stores hashes/structured metadata and avoids storing raw user prompts by default.
+
+This compiler is later consumable by TASK-007/008 creative planning without coupling those downstream decisions into TASK-004.
+
+## 26. MiniMax H3 Single-Frame Transform provider
+
+`ComfyUI-MiniMaxH3-SingleFrame` is treated as an independently installed experimental ComfyUI custom-node capability. Its source is not copied into Product Core and execution requires an explicit external-node local-use authorization reference because no repository license was verified at integration-design time.
+
+Product modes:
+
+- `SINGLE_FRAME_EDIT`: one canonical IMAGE reference;
+- `START_END_INTERPOLATE`: two canonical IMAGE references;
+- optional Temporal RoPE policy for still-image-like transforms.
+
+The Product normalizes requested H3-compatible frame counts to the minimum value `>= 5` satisfying `frame_count % 17 == 5`, records requested and actual counts, bounds selected-frame access, validates required custom-node classes through `/object_info`, and applies the same local endpoint/resource/license/output containment gates as ordinary H3 generation.
+
+This provider is not the default still-image engine. FLUX/SDXL remain normal image-generation routes; H3 Single-Frame is a specialized route for character/pose transformation, reference refinement and start/end interpolation.
+
+## 27. MiniMax H3 Spectrum acceleration policy
+
+Spectrum is an **optional external accelerator**, never a MiniMax H3 dependency and never the Production default. Product Core does not copy the GPL-licensed Spectrum implementation. The independently installed ComfyUI node is detected as class `SpectrumApplyMiniMaxH3` and stays behind the existing ComfyUI runtime boundary.
+
+Acceleration contract:
+
+- `NATIVE` is the default quality-first mode;
+- `SPECTRUM_QUALITY` and `SPECTRUM_FAST` are explicit approximate modes and require the Spectrum class in the submitted workflow;
+- workflow validation forbids combining Spectrum with competing H3 cache/forecast wrappers on the same model branch; ambiguous combinations fail before `/prompt`;
+- Product records the selected acceleration mode, workflow hash, external-node identifier/license state and resource policy in operation provenance;
+- Spectrum parameters remain workflow-owned unless the Product has an explicitly versioned preset contract; Product does not guess third-party parameter names/defaults;
+- quality-critical output may be routed to Native and benchmark comparisons use same model/prompt/seed/workflow inputs where possible;
+- accelerator output remains subject to normal human visual/audio QA because Spectrum is approximate and may alter the generation trajectory.
+
+`history_storage=VRAM` may only be selected when Resource Admission can prove the configured free-VRAM floor. Otherwise a workflow must use system RAM or Native according to policy.
+
+## 28. H3 Foley / SFX experimental provider
+
+TASK-004 adds a bounded local SFX generation engine using H3 audio generation while keeping later automatic SE selection/placement owned by TASK-013/TASK-026.
+
+Profiles:
+
+- `STANDARD`: normal H3 audiovisual workflow and official-length policy (`1..15 s`);
+- `FAST_32`: community-derived experimental profile that requests `32x32` video, discards the visual result and extracts the generated audio. It requires a separate experimental acknowledgement and is never described as an official performance capability;
+- `16..45 s`: separate experimental duration tier requiring an additional acknowledgement; durations above 45 seconds are rejected by the TASK-004 contract.
+
+Optional reference audio must be a canonical same-Job AUDIO/SFX/BGM Asset with derivative rights and verified checksum before Product-owned ComfyUI staging. The completed H3 container is validated under the configured output root, then audio is extracted with fixed-argv ffmpeg to 48 kHz PCM WAV, QA checked and published as canonical `SFX` through the shared derived-asset publisher.
+
+Evidence records provider/workflow/model/seed/duration/resolution/reference hashes, experimental flags and output checksums. Human audio QA remains required; community speed/quality observations are not converted into a Product PASS claim without user-runtime Evidence.
+
+## 29. External-generation replay and idempotency floor
+
+All local AI executions are expensive external side effects even when they remain on the user's machine. Therefore operation idempotency binds an idempotency key to a canonical request fingerprint, not only to a broad command name.
+
+For ComfyUI-backed operations:
+
+1. reserve operation before queue submission;
+2. once `/prompt` returns `prompt_id`, persist that external reference immediately while status remains `IN_PROGRESS`;
+3. replay of an operation with a persisted `prompt_id` must reconcile through `/history/{prompt_id}` or fail closed; it must not blindly queue a second generation;
+4. only after output validation/publication is the operation marked `COMPLETED` with canonical Asset result reference;
+5. changed request payload under the same idempotency key is an integrity conflict.
+
+The same principle applies to Audacity/OpenVINO; where the external runtime lacks a stable resumable job identifier, an ambiguous post-dispatch crash fails closed for reconciliation rather than automatically repeating a destructive/expensive effect.

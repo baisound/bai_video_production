@@ -32,3 +32,12 @@
 | crash after bytes promotion but before metadata completion | replay repairs metadata only if producer-bound canonical checksum still matches |
 | canonical derived output missing/tampered during repair | `DATA_INTEGRITY`; do not recreate canonical truth silently |
 | byte-identical derived output already exists in Job Registry | reuse Asset byte identity; keep per-operation producer/source/role lineage in TASK-004 Manifest/Evidence rather than rewriting historical Asset provenance |
+| H3 Production Brief free text injects reserved `<Picture N>`/`<Video N>`/`<Audio N>` tags or invalid First/Last role topology | `VALIDATION`; no workflow compilation/queue |
+| H3 Single-Frame external custom node license/authorization is not explicitly acknowledged | `AUTHORIZATION`; `/prompt` not sent |
+| H3 Single-Frame requested frame count is incompatible | normalize to Product contract (`>=5`, `%17==5`) and record requested/actual; never silently omit Evidence |
+| Spectrum requested but `SpectrumApplyMiniMaxH3` is unavailable | `NOT_SUPPORTED`; fall back only when policy explicitly permits Native, otherwise no queue |
+| Spectrum and competing cache/forecast accelerator appear on the same model branch/workflow | `VALIDATION`; `/prompt` not sent |
+| H3 Foley FAST_32 requested without experimental acknowledgement | `AUTHORIZATION`; `/prompt` not sent |
+| H3 Foley duration 16..45 s requested without long-duration experimental acknowledgement or duration >45 s | `AUTHORIZATION`/`VALIDATION`; `/prompt` not sent |
+| replay sees ComfyUI operation already dispatched with persisted `prompt_id` | reconcile `/history/{prompt_id}` or fail closed; never blindly submit another prompt |
+| same idempotency key is reused with a materially different local-AI request | `DATA_INTEGRITY`; no external execution |

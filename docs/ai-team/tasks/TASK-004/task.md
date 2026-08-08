@@ -6,11 +6,21 @@
 - Package target: `0.4.0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Adaptive score: `25`
-- Scope amendment: `OWNER_AUTHORIZED` — Local Image AI (Stable Diffusion / FLUX) added before implementation completion.
+- Scope amendments: `OWNER_AUTHORIZED` — Local Image AI (Stable Diffusion / FLUX), Character Identity, H3 Production Brief, H3 Single-Frame Transform, Spectrum optional acceleration and H3 Foley/SFX experimental provider are included before TASK completion.
 
 ## Objective
 
 Establish the exact media-time foundation required by subtitles, filler/cut planning and Resolve assembly, while also delivering replaceable local Image/Video/Audio AI runtime foundations on top of TASK-003 Asset Registry.
+
+## Character Identity / H3 production foundation
+
+- TASK-004 establishes a bounded Character Identity foundation for later AI video consistency work.
+- Character identity is represented by a Product-native profile plus a same-Job reference bundle of canonical IMAGE Assets.
+- Validation proves same-Job scope, IMAGE-only references, derivative-rights eligibility and optional production-lock approval.
+- H3 Production Brief compilation preserves reference order/roles and explicit retention policy without bundling third-party system-prompt text.
+- MiniMax H3 Single-Frame Transform is an optional external-node capability for character/pose/reference refinement, not a replacement for ordinary image generation.
+- Spectrum is optional and approximate; Native remains the quality-first default and competing acceleration wrappers are mutually exclusive.
+- H3 Foley/SFX adds a local generation engine only; automatic SE decision/placement remains TASK-013/TASK-026.
 
 TASK-004 has four bounded execution lanes plus one cross-cutting admission/evidence layer. They share Asset/Evidence contracts but do not collapse downstream creative or timeline responsibilities into this task.
 
@@ -46,6 +56,9 @@ TASK-004 has four bounded execution lanes plus one cross-cutting admission/evide
 - workflow API-JSON validation and typed placeholder substitution without eval;
 - minimum GPU/VRAM Resource Admission before queue submission;
 - MiniMax H3 Native workflow profile as first intended provider, with conditional Community-License acknowledgement/territory-review Evidence before execution;
+- Product-owned H3 Production Brief Builder with immutable reference ordering/roles and reserved-tag injection protection;
+- optional H3 Single-Frame Transform provider requiring independently installed custom nodes and explicit external-node authorization;
+- optional Spectrum acceleration (`NATIVE` default; quality/fast approximate modes) with class detection, mutual-exclusion validation and Native fallback;
 - optional MiniMaxH3-Easy compatibility profile without hard dependency;
 - T2V/I2V/First-Last/Reference request contract with same-Job canonical reference-Asset staging into Product-owned ComfyUI input subdirectories;
 - output-root containment/symlink/traversal defense;
@@ -62,6 +75,7 @@ TASK-004 has four bounded execution lanes plus one cross-cutting admission/evide
 - outputs are exported to a Product-owned staging directory, media/checksum validated, and registered as canonical derived AUDIO Assets;
 - OpenVINO device/model/effect-command provenance and Evidence are retained;
 - Whisper, MusicGen and Audio Super Resolution are capability-discovered/provider-ready in TASK-004, while their product workflows remain owned by TASK-006/023 and TASK-013;
+- H3 Foley/SFX provider with standard 1–15 s generation plus separately acknowledged experimental FAST_32 and 16–45 s profiles;
 - no automatic installation/download of Audacity, plugins or model weights.
 
 ## Cross-cutting — Resource Admission / Provider Evidence
@@ -97,4 +111,6 @@ Every generated/processed Asset retains provider/model/workflow/version/license/
 13. Noise Suppression output and Music Separation stems are media/checksum validated as a complete batch before canonical publication and registered as derived AUDIO Assets with per-operation provider/role provenance in the manifest.
 14. Whisper/MusicGen/AudioSR capability presence can be reported without falsely claiming task-level execution support.
 15. Unit, boundary-negative, integration, regression, contract and fault tests pass; package/docs/Git are synchronized.
-16. Missing user local runtimes may leave live-performance Evidence pending, but must never be fabricated.
+16. H3 Production Brief reference order/role invariants, Single-Frame frame-count normalization/custom-node authorization, Spectrum mutual exclusion and H3 Foley experimental acknowledgements are enforced before queue submission.
+17. ComfyUI external `prompt_id` is persisted before result processing; replay must reconcile or fail closed and cannot blindly duplicate an already-dispatched generation.
+18. Missing user local runtimes may leave live-performance Evidence pending, but must never be fabricated.

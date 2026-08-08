@@ -2,17 +2,17 @@
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
 - Completion status: `LIVE_CAPABILITY_EVIDENCE_PENDING`
-- Package: `0.4.0`
+- Package: `0.4.1`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
 
-- `python -m pytest -q`: **229 / 229 PASS**
+- `python -m pytest -q`: **231 / 231 PASS**
 - `python -m compileall -q src tests`: PASS
 - `git diff --check`: PASS
 - wheel build with `pip wheel --no-deps --no-build-isolation`: PASS
 - wheel SHA-256: `69ccf086b2346c6e0e79f6fe8adcd7a1f0658abded50cd80beef6e1f28855009`
-- installed-wheel package version: `0.4.0`
+- installed-wheel package version: `0.4.1`
 - packaged TASK-004 schema resources: PASS
 - installed-wheel golden media ingest + forced CFR proxy + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
 - installed-wheel unavailable-ComfyUI diagnostic: expected fail-closed `ERR_PROVIDER_COMFY_UNREACHABLE`, exit 2
@@ -65,3 +65,10 @@ The build environment does not contain the Owner's actual ComfyUI/MiniMax/FLUX/S
 - live Audacity OpenVINO Noise Suppression or Music Separation behavior on the target PC.
 
 Target-machine capability Evidence is collected with `tools/windows/run-task004-local-ai-capability-probes.ps1`. These gates must be reviewed before TASK-004 can be marked `COMPLETED`.
+
+## Live evidence corrective patch (0.4.1)
+
+- User target runtime proved both `ToSrvPipe` and `FromSrvPipe` exist and Audacity UI exposes OpenVINO Music Separation, Noise Suppression and Super Resolution.
+- Initial capability probe timed out at the former hard-coded 15-second discovery limit.
+- Corrective implementation raises capability-only default to 120 seconds, exposes a 5-600 second CLI/PowerShell override, and records worker discovery progress for timeout diagnosis.
+- Audio effect execution timeout remains separately controlled by `AudioAiRequest.timeout_seconds`; this patch does not silently lengthen or replay side-effecting effect executions.

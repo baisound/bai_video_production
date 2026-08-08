@@ -8,7 +8,7 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 - Active Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- TASK-004 stage: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE` / package `0.4.0`
+- TASK-004 stage: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE` / package `0.4.1`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -93,6 +93,6 @@ Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS an
 
 ## TASK-004 Media + Local AI Runtime Foundation
 
-TASK-004 package `0.4.0` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and 2/4-stem Music Separation. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
+TASK-004 package `0.4.1` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and 2/4-stem Music Separation. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
 
-Local DEV-4 verification is `229 / 229` tests PASS, compileall/diff-check PASS, wheel build PASS, and repository-external installed-wheel golden normalization using real ffmpeg/ffprobe PASS. Target ComfyUI/Audacity capabilities remain an explicit live-Evidence gate; absence is reported as structured fail-closed diagnostics rather than a fabricated PASS.
+Local DEV-4 verification is `231 / 231` tests PASS, compileall/diff-check PASS, wheel build PASS, and repository-external installed-wheel golden normalization using real ffmpeg/ffprobe PASS. Target ComfyUI/Audacity capabilities remain an explicit live-Evidence gate; absence is reported as structured fail-closed diagnostics rather than a fabricated PASS.

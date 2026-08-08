@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 import re
 import sys
-from typing import Any
+from typing import Any, Callable
 
 
 FEATURE_TERMS = {
@@ -306,11 +306,22 @@ def _report_capabilities(commands: list[dict[str, Any]], tracks: list[dict[str, 
     }
 
 
-def execute(request: dict[str, Any]) -> dict[str, Any]:
+def execute(
+    request: dict[str, Any],
+    *,
+    progress: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
     operation = request.get("operation")
+    mark = progress or (lambda _phase: None)
+    mark("OPENING_PIPE")
     with AudacityPipe() as pipe:
+        mark("PIPE_CONNECTED")
+        mark("DISCOVERING_COMMANDS")
         commands = _commands(pipe)
+        mark("COMMANDS_DISCOVERED")
+        mark("DISCOVERING_TRACKS")
         tracks_before = _tracks(pipe)
+        mark("TRACKS_DISCOVERED")
         capabilities = _report_capabilities(commands, tracks_before)
         if operation == "CAPABILITY":
             return capabilities
@@ -360,12 +371,26 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--request", required=True)
     parser.add_argument("--report", required=True)
+    parser.add_argument("--progress")
     args = parser.parse_args(argv)
     request_path = Path(args.request)
     report_path = Path(args.report)
+    progress_path = Path(args.progress) if args.progress else None
+
+    def mark(phase: str) -> None:
+        if progress_path is None:
+            return
+        progress_path.parent.mkdir(parents=True, exist_ok=True)
+        progress_path.write_text(
+            json.dumps({"phase": phase}, ensure_ascii=False, sort_keys=True),
+            encoding="utf-8",
+        )
+
     try:
         request = json.loads(request_path.read_text(encoding="utf-8"))
-        report = execute(request)
+        mark("REQUEST_LOADED")
+        report = execute(request, progress=mark)
+        mark("EXECUTION_COMPLETE")
         rc = 0 if report.get("ok", True) else 2
     except PermissionError as exc:
         report = {"ok": False, "error_code": "ERR_AUDIO_RUNTIME_EXISTING_PROJECT_PROTECTED", "category": "SECURITY", "message": str(exc)}

@@ -9,7 +9,7 @@
 - Owner explicitly authorized the expanded TASK-004 implementation scope.
 - Internal detailed design and failure-mode design existed before the corresponding implementation changes.
 - DEV-4 Critic blocking findings are resolved.
-- Local regression is 229/229 PASS; compileall/diff-check/wheel/installed-wheel golden normalization are PASS.
+- Local regression is 231/231 PASS; compileall/diff-check/wheel/installed-wheel golden normalization are PASS.
 - External-runtime absence is represented as fail-closed diagnostic Evidence rather than a fabricated capability PASS.
 
 ## Remaining completion gates

@@ -24,10 +24,10 @@
 - TASK-003 `Asset Registry / Ingest / Path Resolver`: **COMPLETED**
   - package `0.3.0`; secure allowlisted source ingest, SHA-256/dedupe, rights metadata, immutable `asset://` promotion, SQLite v2, concurrency-safe `source-manifest`, recovery/Evidence PASS
 - TASK-004 `Media Normalization + Local Visual/Audio AI Runtime Foundation`: **IMPLEMENTATION COMPLETE / LIVE CAPABILITY EVIDENCE PENDING**
-  - package `0.4.0`; exact timebase/VFR inspection, CFR proxy, 48 kHz analysis audio
+  - package `0.4.1`; exact timebase/VFR inspection, CFR proxy, 48 kHz analysis audio
   - ComfyUI local image/video runtime boundary, Character Identity, MiniMax H3 Production Brief / SingleFrame / Spectrum / Foley contracts
   - Audacity/OpenVINO external local Audio AI boundary for Noise Suppression + 2/4-stem Music Separation
-  - local regression `229/229 PASS`; target ComfyUI/Audacity capability Evidence remains required before formal completion
+  - local regression `231/231 PASS`; target ComfyUI/Audacity capability Evidence remains required before formal completion
 - TASK-005以降: **NOT_STARTED / NOT_AUTHORIZED**
 - TASK-004完了後の標準推奨次ルート: `TASK-022` を早期確立し、その後SRT/字幕・フィラー/無音Cut・SE/BGM/ナレーション生成配置をediting-firstで前倒し。Owner判断による再優先化を許容する
 

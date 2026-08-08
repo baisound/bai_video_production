@@ -155,15 +155,63 @@ def test_audio_ai_idempotent_replay_does_not_run_worker_twice(tmp_path):
 
 
 def test_capability_only_reports_whisper_musicgen_audio_sr_without_execution_claim(tmp_path):
-    def runner(request,*a):
+    observed_timeout = []
+    def runner(request, work_root, timeout):
         assert request["operation"] == "CAPABILITY"
+        observed_timeout.append(timeout)
         return capability()
     service,_store,_resolver,_job,_source=make_env(tmp_path,runner)
     report=service.capability_report(work_root=tmp_path/"cap")
     assert report["features"]["WHISPER_TRANSCRIPTION"]["available"]
     assert report["features"]["MUSIC_GENERATION"]["available"]
     assert report["features"]["AUDIO_SUPER_RESOLUTION"]["available"]
+    assert observed_timeout == [120]
 
+
+
+
+def test_worker_timeout_reports_current_phase_and_discards_stale_progress(tmp_path, monkeypatch):
+    import subprocess
+    import ai_video_production.audacity_openvino as adapter
+
+    service, _store, _resolver, _job, _source = make_env(tmp_path, lambda *args: {})
+    work = tmp_path / "worker-timeout"
+    work.mkdir()
+    progress = work / "progress.json"
+    progress.write_text('{"phase":"STALE_PHASE"}', encoding="utf-8")
+
+    def fake_run(command, **kwargs):
+        assert not progress.exists()
+        progress.write_text('{"phase":"DISCOVERING_COMMANDS"}', encoding="utf-8")
+        raise subprocess.TimeoutExpired(command, kwargs["timeout"])
+
+    monkeypatch.setattr(adapter.subprocess, "run", fake_run)
+    with pytest.raises(ProductError) as exc:
+        service._run_worker({"operation":"CAPABILITY"}, work, 120)
+    assert exc.value.code == "ERR_PROVIDER_AUDACITY_OPENVINO_TIMEOUT"
+    assert exc.value.details == {"timeout_seconds":120, "progress":{"phase":"DISCOVERING_COMMANDS"}}
+
+def test_worker_execute_reports_discovery_phases(monkeypatch):
+    import ai_video_production.audacity_openvino_worker as worker
+
+    phases = []
+    class FakePipe:
+        def __enter__(self): return self
+        def __exit__(self, *args): return None
+        def command(self, command):
+            if "Type=Commands" in command:
+                return '[{"id":"OVNS","name":"OpenVINO Noise Suppression"}]\n\n'
+            if "Type=Tracks" in command:
+                return '[]\n\n'
+            raise AssertionError(command)
+
+    monkeypatch.setattr(worker, "AudacityPipe", FakePipe)
+    report = worker.execute({"operation":"CAPABILITY"}, progress=phases.append)
+    assert report["connected"] is True
+    assert phases == [
+        "OPENING_PIPE", "PIPE_CONNECTED", "DISCOVERING_COMMANDS",
+        "COMMANDS_DISCOVERED", "DISCOVERING_TRACKS", "TRACKS_DISCOVERED",
+    ]
 
 def test_audio_ai_denied_derivative_rights_fails_before_worker(tmp_path):
     calls=[]

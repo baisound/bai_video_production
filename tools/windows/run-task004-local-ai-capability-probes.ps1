@@ -1,10 +1,12 @@
 param(
     [string]$ComfyEndpoint = "http://127.0.0.1:8188",
+    [int]$AudacityTimeoutSeconds = 120,
     [switch]$SkipComfyUI,
     [switch]$SkipAudacity
 )
 
 $ErrorActionPreference = "Stop"
+if ($AudacityTimeoutSeconds -lt 5 -or $AudacityTimeoutSeconds -gt 600) { throw "AudacityTimeoutSeconds must be 5-600" }
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $evidence = Join-Path $repo "task004-live-evidence"
 $runtime = Join-Path $evidence "_runtime"
@@ -44,7 +46,8 @@ try {
             "--db", $db,
             "--asset-root", $assetRoot,
             "--job-root", $jobRoot,
-            "--work-root", $workRoot
+            "--work-root", $workRoot,
+            "--timeout-seconds", $AudacityTimeoutSeconds
         ) "audacity-openvino-capability.json"
         if ($code -ne 0) { $failed++ }
     }

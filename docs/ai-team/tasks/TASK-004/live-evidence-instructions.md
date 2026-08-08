@@ -55,3 +55,13 @@ A successful report proves that the external Audacity scripting boundary can be 
 ## Evidence handoff
 
 Zip the `task004-live-evidence/` directory and return it for final DEV-4 live-evidence review. Missing optional providers may remain `NOT_VERIFIED` rather than being treated as implementation failure; required runtime claims are never fabricated.
+
+## Audacity/OpenVINO capability timeout
+
+The live capability probe uses a dedicated Audacity discovery timeout of **120 seconds** by default because `GetInfo: Type=Commands Format=JSON` may enumerate a large installed effect set. The timeout is configurable without changing Product execution timeouts:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-task004-local-ai-capability-probes.ps1 -SkipComfyUI -AudacityTimeoutSeconds 120
+```
+
+If discovery still times out, `task004-live-evidence/_runtime/audacity/work/progress.json` records the last completed discovery phase (`OPENING_PIPE`, `PIPE_CONNECTED`, `DISCOVERING_COMMANDS`, `COMMANDS_DISCOVERED`, `DISCOVERING_TRACKS`, `TRACKS_DISCOVERED`). This is diagnostic Evidence only and does not authorize or execute an OpenVINO audio effect.

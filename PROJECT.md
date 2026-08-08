@@ -90,7 +90,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Last Completed: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 - Active Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - TASK-004: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
-- Package: `0.4.0`
+- Package: `0.4.1`
 - Local verification: `229 / 229 PASS`, compileall PASS, wheel PASS, installed-wheel golden normalization PASS
 - Target-machine Gate: ComfyUI capability Evidence + Audacity/OpenVINO capability Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4

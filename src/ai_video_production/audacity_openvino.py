@@ -74,14 +74,33 @@ class AudacityOpenVinoService:
         req = work_root / "request.json"
         report = work_root / "report.json"
         req.write_text(json.dumps(request, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+        progress = work_root / "progress.json"
+        progress.unlink(missing_ok=True)
         try:
             proc = subprocess.run(
-                [sys.executable, "-m", "ai_video_production.audacity_openvino_worker", "--request", str(req), "--report", str(report)],
+                [
+                    sys.executable, "-m", "ai_video_production.audacity_openvino_worker",
+                    "--request", str(req), "--report", str(report), "--progress", str(progress),
+                ],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace",
                 timeout=timeout_seconds, check=False, shell=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise ProductError("ERR_PROVIDER_AUDACITY_OPENVINO_TIMEOUT", "Audacity OpenVINO worker timed out", ProductErrorCategory.TIMEOUT, retryable=True, details={"timeout_seconds": timeout_seconds}) from exc
+            details: dict[str, Any] = {"timeout_seconds": timeout_seconds}
+            if progress.exists():
+                try:
+                    progress_value = json.loads(progress.read_text(encoding="utf-8"))
+                    if isinstance(progress_value, dict):
+                        details["progress"] = progress_value
+                except (OSError, json.JSONDecodeError):
+                    pass
+            raise ProductError(
+                "ERR_PROVIDER_AUDACITY_OPENVINO_TIMEOUT",
+                "Audacity OpenVINO worker timed out",
+                ProductErrorCategory.TIMEOUT,
+                retryable=True,
+                details=details,
+            ) from exc
         if not report.exists():
             raise ProductError("ERR_PROVIDER_AUDACITY_OPENVINO_REPORT_MISSING", "Audacity OpenVINO worker did not produce a report", ProductErrorCategory.EXTERNAL_DEPENDENCY, details={"exit_code": proc.returncode})
         try:
@@ -92,7 +111,7 @@ class AudacityOpenVinoService:
             raise ProductError("ERR_PROVIDER_AUDACITY_OPENVINO_REPORT_INVALID", "Audacity OpenVINO worker report must be an object", ProductErrorCategory.EXTERNAL_DEPENDENCY)
         return value
 
-    def capability_report(self, *, timeout_seconds: int = 15, work_root: Path) -> dict[str, Any]:
+    def capability_report(self, *, timeout_seconds: int = 120, work_root: Path) -> dict[str, Any]:
         report = self.worker_runner({"operation": "CAPABILITY"}, work_root, timeout_seconds)
         if report.get("ok") is False:
             self._raise_report_error(report)

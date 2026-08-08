@@ -9,7 +9,7 @@
 - Active Consumer Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
-- Package: `0.4.0`
+- Package: `0.4.1`
 - Next Consumer Task: `NONE AUTHORIZED`
 
 ## TASK-004 implemented scope
@@ -49,7 +49,7 @@
 - `pytest`: `229 / 229 PASS`
 - `compileall`: PASS
 - `git diff --check`: PASS
-- package `0.4.0` wheel build: PASS
+- package `0.4.1` wheel build: PASS
 - installed-wheel packaged schemas: PASS
 - installed-wheel real ffmpeg/ffprobe golden normalization: PASS
 - absent ComfyUI/Audacity runtimes: structured fail-closed diagnostics PASS

@@ -1,0 +1,13 @@
+$ python -m pip install --no-deps --target /tmp/ai-video-task002-target-final <wheel>
+WARNING: The directory '/home/oai/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+Looking in indexes: https://reader:****@packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/pypi/pypi-public/simple
+Processing /tmp/ai-video-task002-wheel-final/ai_video_production-0.2.0-py3-none-any.whl
+Installing collected packages: ai-video-production
+Successfully installed ai-video-production-0.2.0
+$ installed Resolve probe outside checkout
+$ installed IPC probe outside checkout
+resolve.json SCHEMA_PASS
+ipc.json SCHEMA_PASS
+INSTALLED_PACKAGE_EXECUTION_PASS
+$ wheel sha256
+baa2c0deb3adf180b87039d45f8b32cc3355e518e44e58e88229ef44bb8156fa  /tmp/ai-video-task002-wheel-final/ai_video_production-0.2.0-py3-none-any.whl

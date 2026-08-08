@@ -1,9 +1,10 @@
 # Consumer Task Index
 
-| Task | Title | Status | Authorization | Notes |
-|---|---|---|---|---|
-| TASK-001 | Project Foundation / Domain Model | COMPLETED | COMPLETED WITH AUTHORIZED IMPLEMENTATION | Historical alias `VIDEO-TASK-001`; DEV-4 |
+| Task | Title | Status | Authorization | Governance | Notes |
+|---|---|---|---|---|---|
+| TASK-001 | Project Foundation / Domain Model | COMPLETED | COMPLETED WITH AUTHORIZED IMPLEMENTATION | DEV-4 / score 25 | Historical alias `VIDEO-TASK-001` |
+| TASK-002 | Resolve Capability Spike | IMPLEMENTED_AWAITING_LIVE_EVIDENCE | AUTHORIZED_FOR_IMPLEMENTATION | DEV-4 / score 22 | Historical alias `VIDEO-TASK-002`; target Windows/Resolve + WSL2 evidence blocks completion |
 
-## Recommended route only
+## Route control
 
-The product design baseline maps historical `VIDEO-TASK-002` to **Resolve Capability Spike** with dependency on 001. If the Owner chooses to continue sequentially, the Consumer task would be formalized as `TASK-002`; it is currently **NOT_STARTED / NOT_AUTHORIZED** and no TASK-002 implementation has been created.
+No later Consumer TASK is started or authorized while TASK-002 remains open. The next route is to execute the supplied read-only Windows evidence runner, return the generated reports, then review remaining `PROBE_REQUIRED` rows and the IPC ADR.

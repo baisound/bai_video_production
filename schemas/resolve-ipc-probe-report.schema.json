@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/resolve-ipc-probe-report.schema.json",
+  "title": "Resolve IPC Probe Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "probe_id",
+    "created_at",
+    "host_platform",
+    "results",
+    "adr"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "probe_id": {
+      "type": "string",
+      "pattern": "^EVD-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "host_platform": {
+      "type": "string"
+    },
+    "results": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "required": [
+          "candidate",
+          "status",
+          "target_platform_measured",
+          "auth_verified",
+          "restart_verified",
+          "round_trips",
+          "latency_p50_ms",
+          "latency_p95_ms",
+          "dependency_present",
+          "notes"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "candidate": {
+            "enum": [
+              "LOCALHOST_HTTP_JSON",
+              "WINDOWS_NAMED_PIPE",
+              "GRPC",
+              "ZEROMQ"
+            ]
+          },
+          "status": {
+            "enum": [
+              "MEASURED",
+              "FAILED",
+              "PROBE_REQUIRED"
+            ]
+          },
+          "target_platform_measured": {
+            "type": "boolean"
+          },
+          "auth_verified": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "restart_verified": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "round_trips": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "latency_p50_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "latency_p95_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "dependency_present": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "adr": {
+      "type": "object",
+      "required": [
+        "status",
+        "selected",
+        "reason",
+        "target_windows_core_candidates_measured",
+        "wsl2_reachability_verified"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "PROVISIONAL",
+            "FINAL"
+          ]
+        },
+        "selected": {
+          "enum": [
+            "LOCALHOST_HTTP_JSON",
+            "WINDOWS_NAMED_PIPE",
+            "GRPC",
+            "ZEROMQ"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target_windows_core_candidates_measured": {
+          "type": "boolean"
+        },
+        "wsl2_reachability_verified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "supervision": {
+      "type": "object",
+      "required": [
+        "timed_out",
+        "timeout_seconds",
+        "worker_exit_code"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "timed_out": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "worker_exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

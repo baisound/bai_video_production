@@ -7,7 +7,9 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - Product design baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-001 — Project Foundation / Domain Model`
-- TASK-001 governance: `DEV-4 FOUNDATION CRITICAL`
+- Active Consumer TASK: `TASK-002 — Resolve Capability Spike`
+- TASK-002 stage: `IMPLEMENTED_AWAITING_LIVE_EVIDENCE`
+- TASK-002 governance: `DEV-4 FOUNDATION CRITICAL` / score `22`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
 
@@ -57,3 +59,23 @@ references/external-skill/   Owner-provided reference-only code archives
 ## Governance boundary
 
 BAI Development OS internal TASK numbering is independent from this repository. OS-internal `TASK-016` is not implemented or authorized by this project. A recommended next Consumer task is not started until Owner instruction is given.
+
+
+## TASK-002 Resolve Capability Spike
+
+TASK-002 is implemented to the local-verification boundary and remains open as `IMPLEMENTED_AWAITING_LIVE_EVIDENCE`. The capability probe is read-only by default, never promotes mutation behavior from method presence alone, emits Schema-valid failure Evidence on supervisor timeout/worker failure, and packages its report Schemas so the installed wheel works outside the repository checkout.
+
+### Target Windows evidence run
+
+No Python package installation is required for the project source itself because the PowerShell runner prepends this repository's `src/` to `PYTHONPATH`; the declared runtime dependency `jsonschema` must still be available. From the repository root on the target Windows workstation:
+
+```powershell
+python -m pip install -e .
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-resolve-capability-spike.ps1
+```
+
+The runner writes `resolve-capability-report.json` and `resolve-ipc-probe-report.json`. It requests no mutation, deletion, forced Resolve termination, or write to a human-owned Timeline. The Windows-local IPC result does **not** prove WSL2-to-Windows reachability; that remains a separate completion-gate item documented under `tools/wsl/README.md`.
+
+### Optional mutation authorization boundary
+
+`--allow-mutation-probes` only opens the explicit sandbox authorization gate and requires a Project name beginning `BAI_CAPABILITY_PROBE_`. The current TASK-002 implementation deliberately does not auto-run mutation sequences even after that gate is authorized. Actual sandbox behavior must be separately reviewed and executed on the target workstation before any mutation capability can become `SUPPORTED`.

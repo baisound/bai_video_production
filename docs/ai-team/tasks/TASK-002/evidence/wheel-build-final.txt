@@ -1,0 +1,16 @@
+WARNING: The directory '/home/oai/.cache/pip' or its parent directory is not owned or is not writable by the current user. The cache has been disabled. Check the permissions and owner of that directory. If executing pip with sudo, you should use sudo's -H flag.
+Looking in indexes: https://reader:****@packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/pypi/pypi-public/simple
+Processing /mnt/data/ai-video-production
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: ai-video-production
+  Building wheel for ai-video-production (pyproject.toml): started
+  Building wheel for ai-video-production (pyproject.toml): finished with status 'done'
+  Created wheel for ai-video-production: filename=ai_video_production-0.2.0-py3-none-any.whl size=37187 sha256=baa2c0deb3adf180b87039d45f8b32cc3355e518e44e58e88229ef44bb8156fa
+  Stored in directory: /tmp/pip-ephem-wheel-cache-gmxanfva/wheels/6f/71/aa/7d1e1b03bc332c94a9dccad72752d6e42b1ca7fa06b9edd797
+Successfully built ai-video-production
+$ wheel sha256
+baa2c0deb3adf180b87039d45f8b32cc3355e518e44e58e88229ef44bb8156fa  /tmp/ai-video-task002-wheel-final/ai_video_production-0.2.0-py3-none-any.whl
+$ packaged report schemas
+ai_video_production/schema_resources/resolve-capability-report.schema.json 2026-08-08 16:00:38         5472
+ai_video_production/schema_resources/resolve-ipc-probe-report.schema.json 2026-08-08 16:00:38         3802

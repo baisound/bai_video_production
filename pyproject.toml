@@ -4,12 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-video-production"
-version = "0.1.0"
-description = "Foundation contracts for the AI video production automation system"
+version = "0.2.0"
+description = "Consumer-project foundation and DaVinci Resolve capability spike tooling"
 requires-python = ">=3.11"
 dependencies = [
   "jsonschema>=4.20,<5",
 ]
+
+[project.scripts]
+ai-video-resolve-probe = "ai_video_production.resolve_probe_cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
@@ -24,3 +27,6 @@ where = ["src"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.setuptools.package-data]
+ai_video_production = ["schema_resources/*.json"]

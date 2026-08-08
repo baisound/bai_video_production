@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/resolve-capability-report.schema.json",
+  "title": "Resolve Capability Report",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "probe_id",
+    "created_at",
+    "mode",
+    "host",
+    "resolve",
+    "capabilities",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "probe_id": {
+      "type": "string",
+      "pattern": "^EVD-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "READ_ONLY",
+        "SANDBOX_MUTATION"
+      ]
+    },
+    "host": {
+      "type": "object",
+      "required": [
+        "platform",
+        "platform_release",
+        "machine",
+        "python_version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "platform": {
+          "type": "string"
+        },
+        "platform_release": {
+          "type": "string"
+        },
+        "machine": {
+          "type": "string"
+        },
+        "python_version": {
+          "type": "string"
+        }
+      }
+    },
+    "resolve": {
+      "type": "object",
+      "required": [
+        "connected",
+        "module_source_kind",
+        "version",
+        "product_name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "connected": {
+          "type": "boolean"
+        },
+        "module_source_kind": {
+          "type": "string"
+        },
+        "version": {},
+        "product_name": {}
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "capability_id",
+          "area",
+          "status",
+          "object_name",
+          "method_candidates",
+          "observed_methods",
+          "studio_requirement",
+          "fallback",
+          "notes"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "capability_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_.-]+$"
+          },
+          "area": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "SUPPORTED",
+              "LIMITED",
+              "UNSUPPORTED",
+              "PROBE_REQUIRED"
+            ]
+          },
+          "object_name": {
+            "type": "string"
+          },
+          "method_candidates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "observed_methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "elapsed_ms": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "return_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "studio_requirement": {
+            "type": "string"
+          },
+          "fallback": {
+            "type": "string",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "error_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "supported",
+        "limited",
+        "unsupported",
+        "probe_required",
+        "live_resolve_connected",
+        "mutation_probe_executed"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "supported": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "limited": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unsupported": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "probe_required": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "live_resolve_connected": {
+          "type": "boolean"
+        },
+        "mutation_probe_executed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "connection_error": {
+      "type": "object"
+    },
+    "mutation_gate": {
+      "type": "object",
+      "required": [
+        "authorized",
+        "sandbox_project",
+        "executed",
+        "note"
+      ],
+      "properties": {
+        "authorized": {
+          "const": true
+        },
+        "sandbox_project": {
+          "type": "string",
+          "pattern": "^BAI_CAPABILITY_PROBE_"
+        },
+        "executed": {
+          "const": false
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "supervision": {
+      "type": "object",
+      "required": [
+        "timed_out",
+        "timeout_seconds",
+        "worker_exit_code"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "timed_out": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 600
+        },
+        "worker_exit_code": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

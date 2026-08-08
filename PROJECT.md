@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`FOUNDATION_READY`
+`RESOLVE_SPIKE_AWAITING_LIVE_EVIDENCE`
 
 ## Purpose
 
@@ -70,7 +70,7 @@
 
 各TASKをDEV-0〜DEV-4へ分類する。すべての変更へ固定の最大手続きを強制しない。
 
-`TASK-001`はCurrent BAI Development OS machine policyで再評価し、`DEV-4 FOUNDATION CRITICAL`（score 25）として完了した。`LARGE + HIGH`、Core Architecture、Product State Machine、Security/Data Boundaryを含むためSafety Floorを下げていない。
+`TASK-001`は`DEV-4 FOUNDATION CRITICAL`（score 25）として完了した。`TASK-002`はResolve Gatewayという外部統合境界、Security、External Side Effect、New Architectureを含むため`DEV-4 FOUNDATION CRITICAL`（score 22）として起票・認可されている。Safety Floorは下げていない。
 
 ## Security / Privacy Constraints
 
@@ -83,9 +83,10 @@
 ## Current Consumer Task State
 
 - Last Completed: `TASK-001 — Project Foundation / Domain Model`
-- Active Task: `NONE`
-- Next Recommended: `TASK-002 — Resolve Capability Spike`
-- TASK-002: `NOT_STARTED / NOT_AUTHORIZED`
+- Active Task: `TASK-002 — Resolve Capability Spike`
+- TASK-002: `IMPLEMENTED_AWAITING_LIVE_EVIDENCE / AUTHORIZED_FOR_IMPLEMENTATION`
+- Completion Gate: target Windows + DaVinci Resolve live capability evidence and target-topology IPC/WSL2 evidence
+- Next Consumer Task: not authorized or started while TASK-002 remains open
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

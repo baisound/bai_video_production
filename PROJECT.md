@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`FOUNDATION_READY`
+`MEDIA_INGEST_READY`
 
 ## Purpose
 
@@ -70,7 +70,7 @@
 
 各TASKをDEV-0〜DEV-4へ分類する。すべての変更へ固定の最大手続きを強制しない。
 
-`TASK-001`は`DEV-4 FOUNDATION CRITICAL`（score 25）として完了した。`TASK-002`はResolve Gatewayという外部統合境界、Security、External Side Effect、New Architectureを含むため`DEV-4 FOUNDATION CRITICAL`（score 22）として起票・認可されている。Safety Floorは下げていない。
+`TASK-001`は`DEV-4 FOUNDATION CRITICAL`（score 25）、`TASK-002`はResolve Gateway外部統合境界を含む`DEV-4 FOUNDATION CRITICAL`（score 22）として完了した。`TASK-003`はPath Security、Product State、SQLite migration、Filesystem side effect、Asset正本を同時に扱うため`DEV-4 FOUNDATION CRITICAL`（score 33）として完了した。Safety Floorは下げていない。
 
 ## Security / Privacy Constraints
 
@@ -82,13 +82,14 @@
 
 ## Current Consumer Task State
 
-- Last Completed: `TASK-002 — Resolve Capability Spike`
+- Last Completed: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 - Active Task: `NONE`
-- TASK-002: `COMPLETED` / package `0.2.4`
-- Target Resolve: `DaVinci Resolve Studio 21.0.2.4`; final sandbox matrix `15 SUPPORTED / 1 LIMITED / 7 PROBE_REQUIRED / 0 UNSUPPORTED`
-- Final IPC ADR: WSL2→Windows primary transport = authenticated HTTP/JSON over the Windows host/default-gateway endpoint; Windows Named Pipe retained as Windows-local optimization candidate
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.2 — Owner-directed editing-first priority (Cut/SRT/字幕/SE/BGM/ナレーションの生成・配置を前倒し)
-- Recommended next Consumer Task: `TASK-003 — Asset Registry / Ingest / Path Resolver` (NOT_STARTED / NOT_AUTHORIZED)
+- TASK-003: `COMPLETED` / package `0.3.0` / DEV-4 score `33`
+- Asset/Ingest: allowlisted source boundary, fixed-argv ffprobe, streamed SHA-256, Job-local dedupe/rights review, immutable atomic promotion, SQLite schema v2, concurrency-safe source-manifest, append-only Evidence and crash/partial recovery
+- TASK-002 Resolve/IPC foundation remains `COMPLETED`; Target Resolve `DaVinci Resolve Studio 21.0.2.4`
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.3 — Owner-directed editing-first priority
+- Recommended next Consumer Task: `TASK-004 — Timebase / Proxy / Normalization` (NOT_STARTED / NOT_AUTHORIZED)
+- Following minimum prerequisite: `TASK-022 — Timeline Mapping` after TASK-004; then SRT/字幕、無音/フィラーCut、SE/BGM/ナレーション機能を前倒し
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

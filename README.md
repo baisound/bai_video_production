@@ -6,10 +6,10 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 
 - Product design baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
-- Last completed Consumer TASK: `TASK-002 — Resolve Capability Spike`
+- Last completed Consumer TASK: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 - Active Consumer TASK: `NONE`
-- TASK-002 stage: `COMPLETED` / package `0.2.4`
-- TASK-002 governance: `DEV-4 FOUNDATION CRITICAL` / score `22`
+- TASK-003 stage: `COMPLETED` / package `0.3.0`
+- TASK-003 governance: `DEV-4 FOUNDATION CRITICAL` / score `33`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
 
@@ -75,8 +75,17 @@ Final local verification: `81 / 81` tests PASS, compileall PASS, wheel/installed
 
 ## Project Roadmap
 
-- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.2 editing-first priority)
+- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.3 editing-first priority)
 - Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.2.docx`
 - External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.2.docx`
 
-TASK-002 is complete. The recommended next route is TASK-003 → TASK-004 → TASK-022 as the minimum editing foundation; later TASKs remain not authorized until explicit Owner instruction.
+TASK-003 is complete. The recommended next route is TASK-004 → TASK-022 as the remaining minimum editing foundation; later TASKs remain not authorized until explicit Owner instruction.
+
+
+## TASK-003 Secure Asset Ingest
+
+TASK-003 is **COMPLETED** in package `0.3.0`. It implements explicit source-root authorization, symlink/path escape refusal, fixed-argv ffprobe inspection, streamed SHA-256, Job-local dedupe/rights conflict review, deterministic `asset://` targets, atomic target-local promotion, read-only canonical source assets, extended rights metadata, additive SQLite schema v2, concurrency-safe versioned source manifests, append-only Evidence and idempotent/partial/hard-crash recovery.
+
+Raw machine source paths are intentionally boundary-only and are not written to successful canonical Asset/Manifest/Evidence output. Normalization/proxy/time-map processing remains TASK-004.
+
+Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS and a repository-external installed-wheel ingest using a real generated WAV + ffprobe PASS.

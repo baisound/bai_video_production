@@ -76,12 +76,15 @@ class ManifestEnvelope:
         idempotency_key: str | None = None,
         created_at: str | None = None,
         extensions: dict[str, Any] | None = None,
+        manifest_id: str | None = None,
     ) -> "ManifestEnvelope":
         validate_schema_id(schema_id)
         if not _SEMVER.fullmatch(schema_version):
             raise ValueError("schema_version must be semantic version x.y.z")
         validate_id(production_job_id, IdKind.JOB)
         validate_id(profile_snapshot_id, IdKind.PROFILE_SNAPSHOT)
+        if manifest_id is not None:
+            validate_id(manifest_id, IdKind.MANIFEST)
         if operation_id is not None:
             validate_id(operation_id, IdKind.OPERATION)
         if revision < 1:
@@ -101,7 +104,7 @@ class ManifestEnvelope:
         return cls(
             schema_id=schema_id,
             schema_version=schema_version,
-            manifest_id=generate_id(IdKind.MANIFEST),
+            manifest_id=manifest_id or generate_id(IdKind.MANIFEST),
             production_job_id=production_job_id,
             revision=revision,
             created_at=created_at or utc_now_iso(),

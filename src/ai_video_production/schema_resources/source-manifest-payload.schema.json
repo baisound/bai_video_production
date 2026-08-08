@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/source-manifest-payload.schema.json",
+  "title": "Source Manifest Payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "asset_count",
+    "assets",
+    "rights_review_asset_ids"
+  ],
+  "properties": {
+    "asset_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://baisound.local/schemas/asset-record.schema.json",
+        "title": "Asset Record",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "asset_id",
+          "production_job_id",
+          "asset_type",
+          "logical_uri",
+          "checksum",
+          "rights_status",
+          "owner",
+          "retention_class",
+          "human_lock",
+          "generation_provenance",
+          "evidence_refs",
+          "commercial_use",
+          "derivative_allowed",
+          "reuse_allowed",
+          "audio_rights_status",
+          "territory",
+          "publication_restrictions",
+          "approved_segments",
+          "media_metadata"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+          },
+          "production_job_id": {
+            "type": "string",
+            "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+          },
+          "asset_type": {
+            "enum": [
+              "VIDEO",
+              "AUDIO",
+              "IMAGE",
+              "SUBTITLE",
+              "BGM",
+              "SFX",
+              "GENERATED_VIDEO",
+              "VOICE_MODEL",
+              "OTHER"
+            ]
+          },
+          "logical_uri": {
+            "type": "string",
+            "pattern": "^(asset|job)://JOB-[0-9A-HJKMNP-TV-Z]{26}/"
+          },
+          "checksum": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "rights_status": {
+            "enum": [
+              "OWNED",
+              "LICENSED",
+              "PERMISSION_GRANTED",
+              "PLATFORM_RESTRICTED",
+              "UNKNOWN",
+              "BLOCKED"
+            ]
+          },
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "retention_class": {
+            "enum": [
+              "STANDARD",
+              "CONFIDENTIAL",
+              "RESTRICTED",
+              "LEGAL_HOLD"
+            ]
+          },
+          "human_lock": {
+            "type": "boolean"
+          },
+          "generation_provenance": {
+            "type": "object"
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "original_name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^/\\\\\\u0000]+$"
+          },
+          "commercial_use": {
+            "enum": [
+              "ALLOWED",
+              "DENIED",
+              "UNKNOWN"
+            ]
+          },
+          "derivative_allowed": {
+            "enum": [
+              "ALLOWED",
+              "DENIED",
+              "UNKNOWN"
+            ]
+          },
+          "reuse_allowed": {
+            "enum": [
+              "ALLOWED",
+              "DENIED",
+              "UNKNOWN"
+            ]
+          },
+          "audio_rights_status": {
+            "enum": [
+              "SAFE",
+              "REPLACE",
+              "REVIEW",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "source_ref": {
+            "type": "string"
+          },
+          "source_project": {
+            "type": "string"
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "territory": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "rights_valid_until": {
+            "type": "string"
+          },
+          "publication_restrictions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "approved_segments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "in_us",
+                "out_us"
+              ],
+              "properties": {
+                "in_us": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "out_us": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "media_metadata": {
+            "type": "object"
+          },
+          "perceptual_hash": {
+            "type": "string"
+          },
+          "audio_fingerprint": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "rights_review_asset_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "uniqueItems": true
+    }
+  }
+}

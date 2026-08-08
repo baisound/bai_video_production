@@ -151,3 +151,21 @@ The first package 0.2.2 final-live-gate run produced two implementation findings
 2. The WSL2 wrapper passed Windows paths directly to `wsl.exe wslpath`, and the observed invocation lost Windows backslashes before conversion. Package 0.2.3 removes direct `wslpath` path arguments. Temporary environment variables are exported through `WSLENV` with `/p` translation for client/output paths. Phase 1 output existence and `host_kind` are positively checked before phase 2 begins. All bridge variables and the ephemeral bearer token are restored/removed in the `finally` path.
 
 These are runner correctness fixes, not relaxations of Resolve mutation authorization or IPC authentication. Final Windows/WSL2 behavioral Evidence must be recollected using package 0.2.3.
+
+
+## Final Live Evidence and Completion Addendum — Package 0.2.4
+
+Attempt 03 completed the remaining target-machine gates. DaVinci Resolve Studio 21.0.2.4 executed the isolated sandbox sequence in `BAI_CAPABILITY_PROBE_MANUAL`, producing `15 SUPPORTED / 1 LIMITED / 7 PROBE_REQUIRED / 0 UNSUPPORTED`. WSL2-to-Windows HTTP/JSON verified unauthenticated rejection, authenticated roundtrips and same-endpoint restart/reconnect with p50 `1.255 ms` and p95 `1.699 ms`.
+
+The Final IPC ADR selects authenticated HTTP/JSON over the Windows host/default-gateway endpoint as the primary WSL2→Windows boundary. Named Pipe remains a Windows-local optimization candidate.
+
+The Owner observed the generated probe WAV becoming offline/red after the 0.2.3 probe process exited. This was traced to `TemporaryDirectory` cleanup, not to Resolve import/Timeline placement failure. Package 0.2.4 therefore:
+
+- retains the generated WAV and exported DRP under the requested Evidence directory;
+- forwards that persistent asset directory through the supervised worker boundary;
+- restricts Sandbox Project names to `^BAI_CAPABILITY_PROBE_[A-Za-z0-9_-]+$` before project-name-derived Evidence paths are used;
+- leaves all fail-closed Project identity and mutation restrictions unchanged.
+
+The Owner explicitly stated that another target-machine run solely to confirm the retained-media visual state is not mandatory. Local regression covers retained asset existence and sandbox path-safety.
+
+TASK-002 is complete after Final Critic/Judge approval. `timeline.subtitles`, `media.relink` and render mutation rows remain `PROBE_REQUIRED` and must be resolved only in the later TASK that owns those behaviors.

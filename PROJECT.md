@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`RESOLVE_SPIKE_FINAL_LIVE_EVIDENCE_PENDING`
+`FOUNDATION_READY`
 
 ## Purpose
 
@@ -82,13 +82,13 @@
 
 ## Current Consumer Task State
 
-- Last Completed: `TASK-001 — Project Foundation / Domain Model`
-- Active Task: `TASK-002 — Resolve Capability Spike`
-- TASK-002: `IMPLEMENTED_AWAITING_FINAL_LIVE_EVIDENCE / ATTEMPT_02_READ_ONLY_ACCEPTED / RUNNER_CORRECTIVE_0.2.3`
-- Target Resolve: `DaVinci Resolve Studio 21.0.2.4` connected; 7 read-only capabilities `SUPPORTED`, 16 `PROBE_REQUIRED`
-- Completion Gate: package 0.2.3でminimal sandbox behavioral evidenceとWSL2-to-Windows IPC evidenceを再実測し、Final IPC ADRとDEV-4 final reviewを完了
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.1 — Owner-directed editing-first priority (Cut/SRT/字幕/SE/BGM/ナレーションの生成・配置を前倒し)
-- Next Consumer Task: not authorized or started while TASK-002 remains open
+- Last Completed: `TASK-002 — Resolve Capability Spike`
+- Active Task: `NONE`
+- TASK-002: `COMPLETED` / package `0.2.4`
+- Target Resolve: `DaVinci Resolve Studio 21.0.2.4`; final sandbox matrix `15 SUPPORTED / 1 LIMITED / 7 PROBE_REQUIRED / 0 UNSUPPORTED`
+- Final IPC ADR: WSL2→Windows primary transport = authenticated HTTP/JSON over the Windows host/default-gateway endpoint; Windows Named Pipe retained as Windows-local optimization candidate
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.2 — Owner-directed editing-first priority (Cut/SRT/字幕/SE/BGM/ナレーションの生成・配置を前倒し)
+- Recommended next Consumer Task: `TASK-003 — Asset Registry / Ingest / Path Resolver` (NOT_STARTED / NOT_AUTHORIZED)
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

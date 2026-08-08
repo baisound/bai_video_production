@@ -4,53 +4,70 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `RESOLVE_SPIKE_FINAL_LIVE_EVIDENCE_PENDING`
-- Last Completed Task: `TASK-001 — Project Foundation / Domain Model`
-- Active Consumer Task: `TASK-002 — Resolve Capability Spike`
+- Project Status: `FOUNDATION_READY`
+- Last Completed Task: `TASK-002 — Resolve Capability Spike`
+- Active Consumer Task: `NONE`
 - TASK-002 Profile: `DEV-4 FOUNDATION CRITICAL` / score `22`
-- TASK-002 Authorization: `AUTHORIZED_FOR_IMPLEMENTATION` by explicit Owner instruction on 2026-08-09
-- TASK-002 Stage: `IMPLEMENTED_AWAITING_FINAL_LIVE_EVIDENCE`
+- TASK-002 Status: `COMPLETED`
+- TASK-002 Package: `0.2.4`
 - Next Consumer Task: `NONE AUTHORIZED`
+- Recommended next route: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 
-## TASK-002 live evidence state
+## TASK-002 final live evidence
 
-Attempt 02 is accepted as target read-only Resolve Evidence:
+Target Resolve sandbox Evidence is accepted:
 
 - Windows 11 / Python 3.12.4
-- `DaVinci Resolve Studio 21.0.2.4`
-- scripting connection: connected via `WINDOWS_PROGRAMDATA`
-- canonical rows: `7 SUPPORTED / 16 PROBE_REQUIRED / 0 UNSUPPORTED`
-- Windows-local HTTP/JSON: authentication + same-endpoint restart measured
-- Windows Named Pipe: authentication + same-endpoint restart measured
+- DaVinci Resolve Studio `21.0.2.4`
+- scripting bridge: `WINDOWS_PROGRAMDATA`
+- sandbox mutation Project: `BAI_CAPABILITY_PROBE_MANUAL`
+- mutation authorized/executed: true / true
+- final capability matrix: `15 SUPPORTED / 1 LIMITED / 7 PROBE_REQUIRED / 0 UNSUPPORTED`
 
-Package 0.2.3 is the corrective live-evidence checkpoint. It fixes the Windows→WSL path bridge by replacing direct `wslpath` argument conversion with temporary `WSLENV /p` translation, validates phase output before reading `host_kind`, and surfaces structured sandbox `mutation_error` / `connection_error` details directly in PowerShell on failure.
+Measured WSL2 -> Windows IPC:
 
-## Completion gate
+- transport: authenticated HTTP/JSON
+- Windows host resolution: `DEFAULT_GATEWAY`
+- unauthenticated rejection: PASS
+- authenticated roundtrip: PASS
+- same-endpoint restart/reconnect: PASS
+- 16 round trips
+- p50 `1.255 ms`
+- p95 `1.699 ms`
+- bearer token persisted to Evidence: false
 
-TASK-002 is **not COMPLETED**. Remaining gates:
+Final IPC ADR selects authenticated HTTP/JSON as the WSL2 -> Windows primary transport. Windows Named Pipe remains a Windows-local optimization candidate.
 
-1. minimal sandbox behavioral Evidence on the target Resolve installation;
-2. WSL2-to-Windows IPC topology Evidence;
-3. Final IPC ADR;
-4. final DEV-4 Critic/Judge and completion record.
+## Final corrective change
+
+Package 0.2.4 retains generated probe WAV/DRP files under the Evidence directory instead of deleting them with a temporary directory. It also restricts Sandbox Project names to a path-safe grammar. This addresses the Owner-observed post-process offline/red Timeline media without changing the measured Resolve capability result or weakening mutation safeguards.
+
+Per Owner direction, another live run solely to verify the visual post-run online state is not required for TASK-002 completion.
 
 ## Project roadmap
 
-Project-level roadmap canonical: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.1 editing-first).
+Project-level roadmap canonical: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.2 editing-first).
 
-The historical Ver.0.6 external-SKILL task-number collision is resolved prospectively by keeping existing TASK-020/021 and assigning external-SKILL additions to TASK-022 through TASK-026. Historical design documents are not rewritten.
+TASK-002 is complete. The roadmap now recommends the minimum dependency foundation `TASK-003 -> TASK-004 -> TASK-022`, then moves SRT/subtitle, filler/silence cut and SE/BGM/narration generation/placement forward as early as dependencies safely permit. Later TASKs remain `NOT_STARTED / NOT_AUTHORIZED`.
 
 ## Safety boundaries
 
-- Default Resolve probe remains read-only.
-- Sandbox probe fails closed when a non-sandbox Project is current.
-- Sandbox probe does not delete Projects, start/cancel render, relink media, terminate Resolve, or write to human/non-sandbox Projects.
-- BAI Development OS Core and OS-internal TASK-016 remain untouched.
+- default Resolve probe remains read-only;
+- mutation remains explicit and fail-closed;
+- a non-sandbox or unverifiable Project is never mutated;
+- sandbox name grammar blocks project-name-derived path traversal;
+- sandbox probe does not delete Projects, start/cancel render, relink media or terminate Resolve;
+- bearer tokens are ephemeral and not written to Evidence;
+- BAI Development OS Core and OS-internal TASK-016 remain untouched;
 - DistributedOS remains disabled.
 
-## Current local verification
+## Current verification
 
-- `pytest`: 79 / 79 PASS
+- `pytest`: `81 / 81 PASS`
 - `compileall`: PASS
-- package 0.2.3 wheel + installed-package schema verification: PASS
-- Windows Runner runtime verification: pending Owner rerun on target Windows/WSL2 after corrective patch
+- package `0.2.4` wheel build: PASS
+- wheel SHA-256: `4309d3ddb3d83608decc8ad55e7a11385517a23264050e34afec3fde2cc8273b`
+- installed-package schema verification: PASS
+- installed-package sandbox path guard: PASS
+- final Critic: `PASS / 0 BLOCKING FINDINGS`
+- final Judge: `APPROVED / COMPLETED`

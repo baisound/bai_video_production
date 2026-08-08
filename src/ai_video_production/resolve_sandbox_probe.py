@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import tempfile
 import time
 import wave
 from typing import Any, Callable
@@ -94,7 +93,13 @@ def _kind(value: Any) -> str:
     return "OBJECT"
 
 
-def run_resolve_sandbox_probe(resolve: object, *, module_source_kind: str, sandbox_project: str) -> dict[str, Any]:
+def run_resolve_sandbox_probe(
+    resolve: object,
+    *,
+    module_source_kind: str,
+    sandbox_project: str,
+    probe_assets_dir: Path,
+) -> dict[str, Any]:
     """Exercise a minimal, disposable Resolve sandbox sequence.
 
     The sequence never deletes a Project, never starts/cancels rendering, never
@@ -153,86 +158,87 @@ def run_resolve_sandbox_probe(resolve: object, *, module_source_kind: str, sandb
         _update_row(report, "project.save", status=CapabilityStatus.SUPPORTED if ok and value is not False else CapabilityStatus.PROBE_REQUIRED,
                     elapsed_ms=elapsed, return_kind=_kind(value), notes=["Saved isolated sandbox Project." if ok and value is not False else "SaveProject failed."], error_type=error)
 
-    with tempfile.TemporaryDirectory(prefix="bai-resolve-sandbox-") as tmp:
-        tmpdir = Path(tmp)
-        export_path = tmpdir / "sandbox.drp"
-        export = getattr(pm, "ExportProject", None)
-        if callable(export):
-            ok, value, elapsed, error = _elapsed_call(export, sandbox_project, str(export_path))
-            verified = ok and value is not False and export_path.exists() and export_path.stat().st_size > 0
-            _update_row(report, "project.snapshot", status=CapabilityStatus.SUPPORTED if verified else CapabilityStatus.PROBE_REQUIRED,
-                        elapsed_ms=elapsed, return_kind=_kind(value), notes=["ExportProject produced a non-empty temporary .drp snapshot." if verified else "Project export did not produce a verifiable temporary snapshot."], error_type=error)
+    probe_assets_dir = Path(probe_assets_dir)
+    probe_assets_dir.mkdir(parents=True, exist_ok=True)
+    tmpdir = probe_assets_dir
+    export_path = tmpdir / "sandbox.drp"
+    export = getattr(pm, "ExportProject", None)
+    if callable(export):
+        ok, value, elapsed, error = _elapsed_call(export, sandbox_project, str(export_path))
+        verified = ok and value is not False and export_path.exists() and export_path.stat().st_size > 0
+        _update_row(report, "project.snapshot", status=CapabilityStatus.SUPPORTED if verified else CapabilityStatus.PROBE_REQUIRED,
+                    elapsed_ms=elapsed, return_kind=_kind(value), notes=["ExportProject produced a non-empty retained .drp snapshot in the TASK-002 probe Evidence assets." if verified else "Project export did not produce a verifiable retained snapshot."], error_type=error)
 
-        media_pool = getattr(project, "GetMediaPool", lambda: None)()
-        if media_pool is not None:
+    media_pool = getattr(project, "GetMediaPool", lambda: None)()
+    if media_pool is not None:
+        _update_row(
+            report,
+            "media_pool.access",
+            status=CapabilityStatus.SUPPORTED,
+            return_kind="OBJECT",
+            notes=["Media Pool obtained from the isolated sandbox Project during behavioral probe."],
+        )
+    imported_items: list[Any] = []
+    timeline = None
+    if media_pool is not None:
+        get_root = getattr(media_pool, "GetRootFolder", None)
+        add_folder = getattr(media_pool, "AddSubFolder", None)
+        if callable(get_root) and callable(add_folder):
+            root = get_root()
+            ok, folder, elapsed, error = _elapsed_call(add_folder, root, "BAI_TASK002_PROBE")
+            _update_row(report, "bin.ensure", status=CapabilityStatus.SUPPORTED if ok and folder is not None else CapabilityStatus.PROBE_REQUIRED,
+                        elapsed_ms=elapsed, return_kind=_kind(folder), notes=["Created isolated probe Bin." if ok and folder is not None else "Probe Bin creation failed."], error_type=error)
+
+        wav_path = tmpdir / "task002_probe.wav"
+        _silent_wav(wav_path)
+        import_media = getattr(media_pool, "ImportMedia", None)
+        if callable(import_media):
+            ok, value, elapsed, error = _elapsed_call(import_media, [str(wav_path)])
+            if ok and isinstance(value, (list, tuple)):
+                imported_items = list(value)
+            verified = bool(imported_items)
+            _update_row(report, "media.import", status=CapabilityStatus.SUPPORTED if verified else CapabilityStatus.PROBE_REQUIRED,
+                        elapsed_ms=elapsed, return_kind=_kind(value), notes=["Imported generated one-second silent WAV retained in the TASK-002 probe Evidence assets." if verified else "Retained probe WAV import returned no media items."], error_type=error)
+
+        create_timeline = getattr(media_pool, "CreateEmptyTimeline", None)
+        if callable(create_timeline):
+            ok, timeline, elapsed, error = _elapsed_call(create_timeline, "BAI_TASK002_PROBE_TIMELINE")
+            _update_row(report, "timeline.create", status=CapabilityStatus.SUPPORTED if ok and timeline is not None else CapabilityStatus.PROBE_REQUIRED,
+                        elapsed_ms=elapsed, return_kind=_kind(timeline), notes=["Created isolated probe Timeline." if ok and timeline is not None else "Probe Timeline creation failed."], error_type=error)
+
+        append = getattr(media_pool, "AppendToTimeline", None)
+        if callable(append) and imported_items:
+            ok, value, elapsed, error = _elapsed_call(append, imported_items)
+            verified = ok and value not in (None, False, [])
+            _update_row(report, "timeline.build", status=CapabilityStatus.SUPPORTED if verified else CapabilityStatus.PROBE_REQUIRED,
+                        elapsed_ms=elapsed, return_kind=_kind(value), notes=["Appended imported probe media to isolated Timeline." if verified else "AppendToTimeline returned no verifiable Timeline item."], error_type=error)
+
+    if timeline is not None:
+        current_timeline = getattr(project, "GetCurrentTimeline", lambda: None)()
+        if current_timeline is not None:
             _update_row(
                 report,
-                "media_pool.access",
+                "timeline.current",
                 status=CapabilityStatus.SUPPORTED,
                 return_kind="OBJECT",
-                notes=["Media Pool obtained from the isolated sandbox Project during behavioral probe."],
+                notes=["Current Timeline obtained after isolated sandbox Timeline creation."],
             )
-        imported_items: list[Any] = []
-        timeline = None
-        if media_pool is not None:
-            get_root = getattr(media_pool, "GetRootFolder", None)
-            add_folder = getattr(media_pool, "AddSubFolder", None)
-            if callable(get_root) and callable(add_folder):
-                root = get_root()
-                ok, folder, elapsed, error = _elapsed_call(add_folder, root, "BAI_TASK002_PROBE")
-                _update_row(report, "bin.ensure", status=CapabilityStatus.SUPPORTED if ok and folder is not None else CapabilityStatus.PROBE_REQUIRED,
-                            elapsed_ms=elapsed, return_kind=_kind(folder), notes=["Created isolated probe Bin." if ok and folder is not None else "Probe Bin creation failed."], error_type=error)
-
-            wav_path = tmpdir / "task002_probe.wav"
-            _silent_wav(wav_path)
-            import_media = getattr(media_pool, "ImportMedia", None)
-            if callable(import_media):
-                ok, value, elapsed, error = _elapsed_call(import_media, [str(wav_path)])
-                if ok and isinstance(value, (list, tuple)):
-                    imported_items = list(value)
-                verified = bool(imported_items)
-                _update_row(report, "media.import", status=CapabilityStatus.SUPPORTED if verified else CapabilityStatus.PROBE_REQUIRED,
-                            elapsed_ms=elapsed, return_kind=_kind(value), notes=["Imported generated one-second silent WAV from a temporary probe directory." if verified else "Temporary WAV import returned no media items."], error_type=error)
-
-            create_timeline = getattr(media_pool, "CreateEmptyTimeline", None)
-            if callable(create_timeline):
-                ok, timeline, elapsed, error = _elapsed_call(create_timeline, "BAI_TASK002_PROBE_TIMELINE")
-                _update_row(report, "timeline.create", status=CapabilityStatus.SUPPORTED if ok and timeline is not None else CapabilityStatus.PROBE_REQUIRED,
-                            elapsed_ms=elapsed, return_kind=_kind(timeline), notes=["Created isolated probe Timeline." if ok and timeline is not None else "Probe Timeline creation failed."], error_type=error)
-
-            append = getattr(media_pool, "AppendToTimeline", None)
-            if callable(append) and imported_items:
-                ok, value, elapsed, error = _elapsed_call(append, imported_items)
-                verified = ok and value not in (None, False, [])
-                _update_row(report, "timeline.build", status=CapabilityStatus.SUPPORTED if verified else CapabilityStatus.PROBE_REQUIRED,
-                            elapsed_ms=elapsed, return_kind=_kind(value), notes=["Appended imported probe media to isolated Timeline." if verified else "AppendToTimeline returned no verifiable Timeline item."], error_type=error)
-
-        if timeline is not None:
-            current_timeline = getattr(project, "GetCurrentTimeline", lambda: None)()
-            if current_timeline is not None:
-                _update_row(
-                    report,
-                    "timeline.current",
-                    status=CapabilityStatus.SUPPORTED,
-                    return_kind="OBJECT",
-                    notes=["Current Timeline obtained after isolated sandbox Timeline creation."],
-                )
-            add_marker = getattr(timeline, "AddMarker", None)
-            if callable(add_marker):
-                get_start = getattr(timeline, "GetStartFrame", None)
-                marker_frame = 0
-                if callable(get_start):
-                    try:
-                        observed_start = get_start()
-                    except Exception:
-                        observed_start = None
-                    if isinstance(observed_start, (int, float)):
-                        marker_frame = observed_start
-                ok, value, elapsed, error = _elapsed_call(
-                    add_marker, marker_frame, "Blue", "BAI TASK-002", "Sandbox capability probe", 1, "TASK002"
-                )
-                _update_row(report, "timeline.markers", status=CapabilityStatus.SUPPORTED if ok and value is not False else CapabilityStatus.PROBE_REQUIRED,
-                            elapsed_ms=elapsed, return_kind=_kind(value), notes=["Added marker at the sandbox Timeline start frame." if ok and value is not False else "AddMarker failed."], error_type=error)
+        add_marker = getattr(timeline, "AddMarker", None)
+        if callable(add_marker):
+            get_start = getattr(timeline, "GetStartFrame", None)
+            marker_frame = 0
+            if callable(get_start):
+                try:
+                    observed_start = get_start()
+                except Exception:
+                    observed_start = None
+                if isinstance(observed_start, (int, float)):
+                    marker_frame = observed_start
+            ok, value, elapsed, error = _elapsed_call(
+                add_marker, marker_frame, "Blue", "BAI TASK-002", "Sandbox capability probe", 1, "TASK002"
+            )
+            _update_row(report, "timeline.markers", status=CapabilityStatus.SUPPORTED if ok and value is not False else CapabilityStatus.PROBE_REQUIRED,
+                        elapsed_ms=elapsed, return_kind=_kind(value), notes=["Added marker at the sandbox Timeline start frame." if ok and value is not False else "AddMarker failed."], error_type=error)
 
     report["mutation_gate"] = {
         "authorized": True,

@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.1
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.2
 
 - Project: `ai-video-production`
 - Date: 2026-08-09
@@ -15,12 +15,14 @@
 ## 2. 現在地点
 
 - TASK-001 `Project Foundation / Domain Model`: **COMPLETED**
-- TASK-002 `Resolve Capability Spike`: **IN PROGRESS**
+- TASK-002 `Resolve Capability Spike`: **COMPLETED**
   - DaVinci Resolve Studio `21.0.2.4` へ実接続済み
-  - Resolve read-only Capability Matrix: 23項目中 7 `SUPPORTED` / 16 `PROBE_REQUIRED`
+  - Final sandbox Capability Matrix: 23項目中 15 `SUPPORTED` / 1 `LIMITED` / 7 `PROBE_REQUIRED` / 0 `UNSUPPORTED`
   - Windows-local IPC: HTTP/JSON・Named Pipeとも認証/再起動を実測済み
-  - 残Gate: Sandbox Mutation Behavioral Evidence、WSL2→Windows IPC Evidence、Final ADR
+  - WSL2→Windows HTTP/JSON: 認証拒否、認証付きRoundtrip、同一Endpoint再起動を実測PASS。p50 `1.255 ms` / p95 `1.699 ms`
+  - Final IPC ADR: WSL2→Windows primary = authenticated HTTP/JSON。Windows Named PipeはWindows-local optimization candidateとして保持
 - TASK-003以降: **NOT_STARTED / NOT_AUTHORIZED**
+- 推奨次ルート: `TASK-003 → TASK-004 → TASK-022` の最小基盤を先行し、その後SRT/字幕・フィラー/無音Cut・SE/BGM/ナレーション生成配置をediting-firstで前倒し
 
 ## 3. MVP定義
 
@@ -63,7 +65,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | TASK | 名称 | 主成果物 | 主要依存 | 予備Governance | 現在状態 |
 |---|---|---|---|---|---|
 | 001 | Project Foundation / Domain Model | ID, State, Manifest, Evidence, Checkpoint, DB | - | DEV-4 | COMPLETED |
-| 002 | Resolve Capability Spike | Capability Matrix, IPC ADR, live Evidence | 001 | DEV-4 | IN PROGRESS |
+| 002 | Resolve Capability Spike | Capability Matrix, IPC ADR, live Evidence | 001 | DEV-4 | COMPLETED |
 | 003 | Asset Registry / Ingest / Path Resolver | Ingest API, rights, checksum, path mapping | 001 | DEV-4候補 | NOT STARTED |
 | 004 | Timebase / Proxy / Normalization | ffprobe contract, VFR/CFR, time-map, proxy | 003 | DEV-4候補 | NOT STARTED |
 | 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | NOT STARTED |

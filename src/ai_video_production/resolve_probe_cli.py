@@ -119,8 +119,17 @@ def _run_worker(args: argparse.Namespace) -> int:
                         "--sandbox-project is required for sandbox mutation evidence",
                         ProductErrorCategory.SECURITY,
                     )
+                if not args.probe_assets_dir:
+                    raise ProductError(
+                        "ERR_RESOLVE_PROBE_ASSETS_DIR_REQUIRED",
+                        "--probe-assets-dir is required for sandbox mutation evidence",
+                        ProductErrorCategory.SECURITY,
+                    )
                 payload = run_resolve_sandbox_probe(
-                    resolve, module_source_kind=source_kind, sandbox_project=args.sandbox_project
+                    resolve,
+                    module_source_kind=source_kind,
+                    sandbox_project=args.sandbox_project,
+                    probe_assets_dir=Path(args.probe_assets_dir),
                 )
             except ProductError as exc:
                 payload = ResolveCapabilityProbe(
@@ -146,6 +155,12 @@ def _run_worker(args: argparse.Namespace) -> int:
 def _run_supervised(args: argparse.Namespace) -> int:
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
+    if args.allow_mutation_probes and not args.probe_assets_dir:
+        # Keep mutation probe media alive after the supervised worker exits so
+        # Resolve does not mark the imported test asset offline merely because
+        # the worker temporary directory is cleaned up. Sandbox-name safety is
+        # enforced inside authorize_mutation_probe before this path is written.
+        args.probe_assets_dir = str(output.parent / "probe-assets" / args.sandbox_project)
     with tempfile.TemporaryDirectory(prefix="bai-resolve-probe-") as tmp:
         worker_output = Path(tmp) / output.name
         command = [
@@ -159,7 +174,13 @@ def _run_supervised(args: argparse.Namespace) -> int:
             str(worker_output),
         ]
         if args.allow_mutation_probes:
-            command.extend(["--allow-mutation-probes", "--sandbox-project", args.sandbox_project])
+            command.extend([
+                "--allow-mutation-probes",
+                "--sandbox-project",
+                args.sandbox_project,
+                "--probe-assets-dir",
+                args.probe_assets_dir,
+            ])
             if args.current_project_name:
                 command.extend(["--current-project-name", args.current_project_name])
         try:
@@ -200,6 +221,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--timeout-seconds", type=int, default=90)
     parser.add_argument("--allow-mutation-probes", action="store_true")
     parser.add_argument("--sandbox-project", default="")
+    parser.add_argument("--probe-assets-dir", default="")
     parser.add_argument("--current-project-name", default="")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     return parser

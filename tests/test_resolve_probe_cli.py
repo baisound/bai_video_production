@@ -121,6 +121,7 @@ def test_worker_preserves_fail_closed_sandbox_error_as_schema_valid_evidence(tmp
     args = resolve_probe_cli.build_parser().parse_args([
         '--worker', '--kind', 'resolve', '--output', str(output),
         '--allow-mutation-probes', '--sandbox-project', 'BAI_CAPABILITY_PROBE_UNIT',
+        '--probe-assets-dir', str(tmp_path / 'probe-assets'),
     ])
     assert resolve_probe_cli._run_worker(args) == 2
     payload = json.loads(output.read_text())
@@ -130,6 +131,55 @@ def test_worker_preserves_fail_closed_sandbox_error_as_schema_valid_evidence(tmp
     assert payload['mutation_gate']['authorized'] is False
     assert payload['mutation_gate']['executed'] is False
     assert payload['mutation_error']['code'] == 'ERR_RESOLVE_CURRENT_PROJECT_NAME_UNVERIFIED'
+
+
+def test_supervisor_derives_persistent_probe_assets_dir_when_omitted(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    captured = {}
+
+    def fake_run(command, **_kwargs):
+        captured['command'] = command
+        worker_output = Path(command[command.index('--output') + 1])
+        payload = resolve_probe_cli.ResolveCapabilityProbe(None, module_source_kind='TEST').run()
+        resolve_probe_cli._write_report(worker_output, payload, 'resolve-capability-report.schema.json')
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(resolve_probe_cli.subprocess, 'run', fake_run)
+    output = tmp_path / 'evidence' / 'report.json'
+    args = resolve_probe_cli.build_parser().parse_args([
+        '--kind', 'resolve', '--output', str(output), '--timeout-seconds', '5',
+        '--allow-mutation-probes', '--sandbox-project', 'BAI_CAPABILITY_PROBE_UNIT',
+    ])
+    assert resolve_probe_cli._run_supervised(args) == 0
+    expected = output.parent / 'probe-assets' / 'BAI_CAPABILITY_PROBE_UNIT'
+    command = captured['command']
+    assert command[command.index('--probe-assets-dir') + 1] == str(expected)
+
+
+def test_supervisor_forwards_persistent_probe_assets_dir_to_worker(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    captured = {}
+
+    def fake_run(command, **_kwargs):
+        captured['command'] = command
+        worker_output = Path(command[command.index('--output') + 1])
+        payload = resolve_probe_cli.ResolveCapabilityProbe(None, module_source_kind='TEST').run()
+        resolve_probe_cli._write_report(worker_output, payload, 'resolve-capability-report.schema.json')
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(resolve_probe_cli.subprocess, 'run', fake_run)
+    output = tmp_path / 'evidence' / 'report.json'
+    assets = tmp_path / 'evidence' / 'probe-assets' / 'BAI_CAPABILITY_PROBE_UNIT'
+    args = resolve_probe_cli.build_parser().parse_args([
+        '--kind', 'resolve', '--output', str(output), '--timeout-seconds', '5',
+        '--allow-mutation-probes', '--sandbox-project', 'BAI_CAPABILITY_PROBE_UNIT',
+        '--probe-assets-dir', str(assets),
+    ])
+    assert resolve_probe_cli._run_supervised(args) == 0
+    command = captured['command']
+    assert command[command.index('--probe-assets-dir') + 1] == str(assets)
 
 
 def test_supervisor_preserves_schema_valid_nonzero_worker_evidence(tmp_path, monkeypatch):

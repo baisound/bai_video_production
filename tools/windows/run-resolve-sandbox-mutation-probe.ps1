@@ -12,11 +12,13 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $srcRoot = Join-Path $repoRoot "src"
 if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) { $env:PYTHONPATH = $srcRoot } else { $env:PYTHONPATH = "$srcRoot;$($env:PYTHONPATH)" }
 if ([string]::IsNullOrWhiteSpace($SandboxProject)) { $SandboxProject = "BAI_CAPABILITY_PROBE_" + (Get-Date -Format "yyyyMMdd_HHmmss") }
-if (-not $SandboxProject.StartsWith("BAI_CAPABILITY_PROBE_")) { throw "SandboxProject must begin BAI_CAPABILITY_PROBE_" }
+if ($SandboxProject -notmatch '^BAI_CAPABILITY_PROBE_[A-Za-z0-9_-]+$') { throw "SandboxProject must match ^BAI_CAPABILITY_PROBE_[A-Za-z0-9_-]+$" }
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 $outputRoot = (Resolve-Path $OutputDir).Path
 $out = Join-Path $outputRoot "resolve-sandbox-mutation-report.json"
+$assetDir = Join-Path (Join-Path $outputRoot "probe-assets") $SandboxProject
+New-Item -ItemType Directory -Force -Path $assetDir | Out-Null
 Write-Host "TASK-002 sandbox mutation evidence"
 Write-Host "Sandbox Project: $SandboxProject"
 Write-Host "This sequence may create/save/export a sandbox Project, create a Bin and Timeline, import a generated 1-second silent WAV, append it, and add one marker."
@@ -52,7 +54,7 @@ function Show-ProbeDiagnostic([string]$ReportPath) {
     }
 }
 
-& $Python -m ai_video_production.resolve_probe_cli --kind resolve --output $out --timeout-seconds $TimeoutSeconds --allow-mutation-probes --sandbox-project $SandboxProject
+& $Python -m ai_video_production.resolve_probe_cli --kind resolve --output $out --timeout-seconds $TimeoutSeconds --allow-mutation-probes --sandbox-project $SandboxProject --probe-assets-dir $assetDir
 $probeExit = $LASTEXITCODE
 if ($probeExit -ne 0) {
     Show-ProbeDiagnostic $out
@@ -64,4 +66,5 @@ if (-not $report.summary.mutation_probe_executed) {
     throw "Mutation evidence did not execute."
 }
 Write-Host "Evidence: $out"
+Write-Host "Probe assets retained: $assetDir"
 Write-Host "Supported: $($report.summary.supported) / Probe required: $($report.summary.probe_required)"

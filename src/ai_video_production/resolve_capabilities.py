@@ -25,6 +25,7 @@ class ProbeMode(str, Enum):
 
 
 _SANDBOX_PREFIX = "BAI_CAPABILITY_PROBE_"
+_SANDBOX_NAME = re.compile(r"^BAI_CAPABILITY_PROBE_[A-Za-z0-9_-]+$")
 _SECRET_KEY = re.compile(r"(?:secret|token|password|api[_-]?key|credential|authorization)", re.I)
 _PATHISH = re.compile(r"^(?:[A-Za-z]:[\\/]|/home/|/Users/|\\\\)")
 
@@ -162,6 +163,12 @@ def authorize_mutation_probe(*, allow_mutation: bool, sandbox_project: str | Non
         raise ProductError(
             "ERR_RESOLVE_SANDBOX_REQUIRED",
             f"mutation probe project must start with {_SANDBOX_PREFIX}",
+            ProductErrorCategory.SECURITY,
+        )
+    if _SANDBOX_NAME.fullmatch(sandbox_project) is None:
+        raise ProductError(
+            "ERR_RESOLVE_SANDBOX_NAME_INVALID",
+            "mutation probe project name may contain only ASCII letters, digits, underscore and hyphen after the required prefix",
             ProductErrorCategory.SECURITY,
         )
     if current_project_name and not current_project_name.startswith(_SANDBOX_PREFIX):

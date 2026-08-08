@@ -1,0 +1,6 @@
+version= 0.2.4
+schema= resolve-capability-report.schema.json PASS
+schema= resolve-ipc-probe-report.schema.json PASS
+schema= resolve-wsl-ipc-probe-report.schema.json PASS
+sandbox_path_guard= ERR_RESOLVE_SANDBOX_NAME_INVALID PASS
+installed-package verification PASS

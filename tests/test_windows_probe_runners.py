@@ -51,3 +51,6 @@ def test_sandbox_runner_keeps_fail_closed_acknowledgement_and_sandbox_prefix():
     assert 'IUnderstandThisCreatesSandboxProject' in text
     assert 'BAI_CAPABILITY_PROBE_' in text
     assert 'fails closed' in text
+    assert "'^BAI_CAPABILITY_PROBE_[A-Za-z0-9_-]+$'" in text
+    assert '--probe-assets-dir $assetDir' in text
+    assert 'Probe assets retained:' in text

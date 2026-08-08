@@ -6,9 +6,9 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 
 - Product design baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
-- Last completed Consumer TASK: `TASK-001 — Project Foundation / Domain Model`
-- Active Consumer TASK: `TASK-002 — Resolve Capability Spike`
-- TASK-002 stage: `IMPLEMENTED_AWAITING_FINAL_LIVE_EVIDENCE / ATTEMPT_02_READ_ONLY_ACCEPTED`
+- Last completed Consumer TASK: `TASK-002 — Resolve Capability Spike`
+- Active Consumer TASK: `NONE`
+- TASK-002 stage: `COMPLETED` / package `0.2.4`
 - TASK-002 governance: `DEV-4 FOUNDATION CRITICAL` / score `22`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -63,47 +63,20 @@ BAI Development OS internal TASK numbering is independent from this repository. 
 
 ## TASK-002 Resolve Capability Spike
 
-TASK-002 has accepted target-machine read-only evidence from **DaVinci Resolve Studio 21.0.2.4**. Attempt 02 connected through the Windows PROGRAMDATA scripting bridge and measured 7 safe read capabilities as `SUPPORTED`; 16 mutation/behavior-dependent capabilities remain `PROBE_REQUIRED` rather than being inferred from method presence.
+TASK-002 is **COMPLETED**. Target-machine live evidence was collected from **DaVinci Resolve Studio 21.0.2.4** through the Windows PROGRAMDATA scripting bridge. The final isolated sandbox run measured `15 SUPPORTED / 1 LIMITED / 7 PROBE_REQUIRED / 0 UNSUPPORTED`, including Project save/export, Media Pool/Bin access, generated WAV import, Timeline creation/append and marker placement.
 
-Package `0.2.3` is the corrective final-live-evidence checkpoint. The 0.2.2 target run showed that the sandbox wrapper hid the structured failure reason and the WSL runner corrupted Windows paths when calling `wslpath`. Version 0.2.3 keeps the same safety boundaries while surfacing sandbox error code/category/message and using temporary `WSLENV /p` path translation instead of direct `wslpath` conversion.
+WSL2-to-Windows authenticated HTTP/JSON also passed the required topology checks: unauthenticated rejection, authenticated roundtrip and same-endpoint restart/reconnect. The measured WSL2 result was p50 `1.255 ms` / p95 `1.699 ms` across 16 round trips. The Final IPC ADR therefore selects authenticated HTTP/JSON as the primary WSL2→Windows transport. Windows Named Pipe remains a Windows-local optimization candidate.
 
-The two final live-evidence tools remain:
+Package `0.2.4` retains the generated probe WAV and `.drp` under the Evidence directory instead of deleting them at process exit, and restricts Sandbox Project names to a path-safe grammar. The Owner explicitly waived another live run solely to confirm the post-run visual online state; this is not a TASK-002 completion gate.
 
-1. a minimal, explicit, fail-closed sandbox behavioral probe;
-2. a WSL2-to-Windows authenticated HTTP topology/restart probe.
+The default capability runner remains read-only. Historical Attempt 01/02/03 Evidence is preserved under `docs/ai-team/tasks/TASK-002/evidence/`. Subtitle mutation, relink and render mutations remain `PROBE_REQUIRED` until the later owning TASK actually needs those capabilities.
 
-The default capability runner remains read-only. Historical Attempt 01/02 evidence is preserved under the TASK evidence directory.
-
-### Final target evidence runs
-
-Install the current checkout on the Windows target first:
-
-```powershell
-python -m pip install -e .
-```
-
-With Resolve Studio running and **no real/client Project left current**, execute the sandbox probe:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\windows\run-resolve-sandbox-mutation-probe.ps1 -IUnderstandThisCreatesSandboxProject
-```
-
-The runner creates/uses only a Project named `BAI_CAPABILITY_PROBE_*`. It may create/save/export that sandbox, create a Bin/Timeline, import a generated one-second silent WAV, append it and add one marker. It does **not** delete Projects, start/cancel rendering, relink media, terminate Resolve, or write to a non-sandbox Project. Project identity must be positively verified before further mutation.
-
-Then measure the actual WSL2→Windows topology:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\windows\run-wsl2-ipc-probe.ps1
-```
-
-This starts only a temporary token-authenticated HTTP probe server on Windows, verifies HTTP 401 without credentials, verifies authenticated WSL2 round trips, restarts the temporary server on the same endpoint and repeats the measurement. Windows paths are passed through `WSLENV /p` and the temporary bridge environment is restored in `finally`. The bearer token is ephemeral and is not stored in Evidence.
-
-Return the generated `resolve-spike-evidence/` folder as a ZIP. TASK-002 remains open until these live outputs are reviewed, the Final IPC ADR is recorded and the DEV-4 final completion review passes.
+Final local verification: `81 / 81` tests PASS, compileall PASS, wheel/installed-package verification PASS.
 
 ## Project Roadmap
 
-- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.1 editing-first priority)
-- Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.1.docx`
-- External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.1.docx`
+- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.2 editing-first priority)
+- Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.2.docx`
+- External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.2.docx`
 
-TASK-002 Attempt 02 has established live read-only scripting connectivity to DaVinci Resolve Studio 21.0.2.4. Final live gates are the isolated sandbox behavioral probe and WSL2-to-Windows IPC topology probe.
+TASK-002 is complete. The recommended next route is TASK-003 → TASK-004 → TASK-022 as the minimum editing foundation; later TASKs remain not authorized until explicit Owner instruction.

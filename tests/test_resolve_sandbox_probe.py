@@ -87,8 +87,14 @@ def caps(report):
     return {r['capability_id']: r for r in report['capabilities']}
 
 
-def test_sandbox_probe_executes_only_isolated_minimum_sequence():
-    report = run_resolve_sandbox_probe(Resolve(), module_source_kind='TEST', sandbox_project='BAI_CAPABILITY_PROBE_UNIT')
+def test_sandbox_probe_executes_only_isolated_minimum_sequence(tmp_path):
+    assets = tmp_path / "probe-assets"
+    report = run_resolve_sandbox_probe(
+        Resolve(),
+        module_source_kind='TEST',
+        sandbox_project='BAI_CAPABILITY_PROBE_UNIT',
+        probe_assets_dir=assets,
+    )
     validate_instance(report, SCHEMA)
     rows = caps(report)
     for cap in ('project.create','project.open','project.save','project.snapshot','bin.ensure','media.import','timeline.create','timeline.build','timeline.markers'):
@@ -99,14 +105,17 @@ def test_sandbox_probe_executes_only_isolated_minimum_sequence():
     assert report['mode'] == 'SANDBOX_MUTATION'
     assert report['summary']['mutation_probe_executed'] is True
     assert report['mutation_gate']['executed'] is True
+    assert (assets / 'task002_probe.wav').is_file()
+    assert (assets / 'sandbox.drp').is_file()
 
 
-def test_sandbox_probe_refuses_non_sandbox_current_project_before_mutation():
+def test_sandbox_probe_refuses_non_sandbox_current_project_before_mutation(tmp_path):
     with pytest.raises(ProductError) as exc:
         run_resolve_sandbox_probe(
             Resolve(Project('CLIENT_PROJECT')),
             module_source_kind='TEST',
             sandbox_project='BAI_CAPABILITY_PROBE_UNIT',
+            probe_assets_dir=tmp_path / 'assets',
         )
     assert exc.value.code == 'ERR_RESOLVE_EXISTING_PROJECT_PROTECTED'
 
@@ -115,12 +124,13 @@ class UnnamedProject:
         raise AssertionError("must not be called when current Project name is unverifiable")
 
 
-def test_sandbox_probe_fails_closed_when_current_project_name_cannot_be_verified():
+def test_sandbox_probe_fails_closed_when_current_project_name_cannot_be_verified(tmp_path):
     with pytest.raises(ProductError) as exc:
         run_resolve_sandbox_probe(
             Resolve(UnnamedProject()),
             module_source_kind='TEST',
             sandbox_project='BAI_CAPABILITY_PROBE_UNIT',
+            probe_assets_dir=tmp_path / 'assets',
         )
     assert exc.value.code == 'ERR_RESOLVE_CURRENT_PROJECT_NAME_UNVERIFIED'
 
@@ -135,11 +145,12 @@ class ResolveCreatesUnnamed(Resolve):
         self.pm = CreateUnnamedProjectManager()
 
 
-def test_sandbox_probe_stops_after_creation_if_created_project_identity_is_unverifiable():
+def test_sandbox_probe_stops_after_creation_if_created_project_identity_is_unverifiable(tmp_path):
     with pytest.raises(ProductError) as exc:
         run_resolve_sandbox_probe(
             ResolveCreatesUnnamed(),
             module_source_kind='TEST',
             sandbox_project='BAI_CAPABILITY_PROBE_UNIT',
+            probe_assets_dir=tmp_path / 'assets',
         )
     assert exc.value.code == 'ERR_RESOLVE_SANDBOX_IDENTITY_UNVERIFIED'

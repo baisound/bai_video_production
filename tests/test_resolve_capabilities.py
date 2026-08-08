@@ -157,6 +157,14 @@ def test_mutation_guard_requires_explicit_permission_and_sandbox():
     assert exc.value.code == "ERR_RESOLVE_SANDBOX_REQUIRED"
 
     with pytest.raises(ProductError) as exc:
+        authorize_mutation_probe(
+            allow_mutation=True,
+            sandbox_project="BAI_CAPABILITY_PROBE_../ESCAPE",
+            current_project_name=None,
+        )
+    assert exc.value.code == "ERR_RESOLVE_SANDBOX_NAME_INVALID"
+
+    with pytest.raises(ProductError) as exc:
         authorize_mutation_probe(allow_mutation=True, sandbox_project="BAI_CAPABILITY_PROBE_X", current_project_name="CLIENT_PROJECT")
     assert exc.value.code == "ERR_RESOLVE_EXISTING_PROJECT_PROTECTED"
 

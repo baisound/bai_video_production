@@ -1,0 +1,10 @@
+Looking in indexes: https://reader:****@packages.applied-caas-gateway1.internal.api.openai.org/artifactory/api/pypi/pypi-public/simple
+Processing /mnt/data/ai-video-production
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Building wheels for collected packages: ai-video-production
+  Building wheel for ai-video-production (pyproject.toml): started
+  Building wheel for ai-video-production (pyproject.toml): finished with status 'done'
+  Created wheel for ai-video-production: filename=ai_video_production-0.2.4-py3-none-any.whl size=43650 sha256=4309d3ddb3d83608decc8ad55e7a11385517a23264050e34afec3fde2cc8273b
+  Stored in directory: /tmp/pip-ephem-wheel-cache-a1yvlitr/wheels/6f/71/aa/7d1e1b03bc332c94a9dccad72752d6e42b1ca7fa06b9edd797
+Successfully built ai-video-production

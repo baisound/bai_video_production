@@ -17,5 +17,5 @@
     "package": "python -m pip wheel . --no-deps --no-build-isolation --wheel-dir /tmp/ai-video-wheel"
   },
   "project_evidence_root": "docs/ai-team/tasks",
-  "notes": "BAI Development OS core remains external. TASK-001 is COMPLETED at DEV-4. TASK-002 Resolve Capability Spike is DEV-4 / AUTHORIZED_FOR_IMPLEMENTATION / IMPLEMENTED_AWAITING_LIVE_EVIDENCE. No Product runtime dependency on BAI OS. OS-internal TASK-016 remains untouched."
+  "notes": "BAI Development OS core remains external. TASK-001 is COMPLETED at DEV-4. TASK-002 Resolve Capability Spike is DEV-4 / COMPLETED with target Resolve sandbox and WSL2 IPC live Evidence. No Product runtime dependency on BAI OS. OS-internal TASK-016 remains untouched."
 }

@@ -212,14 +212,14 @@
       ],
       "properties": {
         "authorized": {
-          "const": true
+          "type": "boolean"
         },
         "sandbox_project": {
           "type": "string",
           "pattern": "^BAI_CAPABILITY_PROBE_"
         },
         "executed": {
-          "const": false
+          "type": "boolean"
         },
         "note": {
           "type": "string"
@@ -251,6 +251,9 @@
           ]
         }
       }
+    },
+    "mutation_error": {
+      "type": "object"
     }
   },
   "additionalProperties": false

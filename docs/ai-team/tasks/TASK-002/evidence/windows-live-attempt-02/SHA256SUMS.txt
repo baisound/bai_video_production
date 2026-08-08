@@ -1,0 +1,2 @@
+4c7f578c0c8c6fbed80efc2ac2975b74646059784a1647aa23ce4c6b59219363  docs/ai-team/tasks/TASK-002/evidence/windows-live-attempt-02/original/resolve-capability-report.json
+95786f1ff8e789df776e28bf8d9596e5fd4b9d73205845b5e47810b032b4e83a  docs/ai-team/tasks/TASK-002/evidence/windows-live-attempt-02/original/resolve-ipc-probe-report.json

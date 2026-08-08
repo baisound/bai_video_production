@@ -1,0 +1,6 @@
+package_file= /mnt/data/task002-installed-022/ai_video_production/__init__.py
+resolve-capability-report.schema.json schema_bytes= 5533
+resolve-ipc-probe-report.schema.json schema_bytes= 3802
+resolve-wsl-ipc-probe-report.schema.json schema_bytes= 1320
+wsl_report_schema=PASS
+same_endpoint_restart_verified= True

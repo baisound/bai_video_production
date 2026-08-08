@@ -2,18 +2,26 @@
 
 `ai-video-production` is a Consumer Project built on BAI Development OS governance without copying OS Core into the repository.
 
-The product aims to analyze source video/audio/images/subtitles/AI-generated assets, produce auditable edit plans, automate safe deterministic assembly around DaVinci Resolve, and preserve human-controlled finishing surfaces.
+The product analyzes video/audio/images/subtitles/AI-generated assets, produces auditable edit plans, automates safe deterministic assembly around DaVinci Resolve, and preserves human-controlled finishing surfaces.
 
 ## Completed foundation
 
-TASK-001 completed the domain contracts required before operational media/NLE tasks: Product IDs, state/recovery, manifests, schemas, assets/rights, logical paths, atomic persistence primitives, errors/evidence, ownership, profiles/plugins, SQLite persistence and idempotency.
+TASK-001 completed Product IDs, state/recovery, manifests, schemas, assets/rights, logical paths, atomic persistence, errors/evidence, ownership, profiles/plugins, SQLite persistence and idempotency.
 
 ## Active Resolve capability spike
 
-TASK-002 has implemented the capability-measurement harness needed before production Resolve Gateway development. It performs version/product/readiness discovery through a strict safe-read allowlist, emits schema-validated capability evidence, keeps mutation operations unresolved until behavioral evidence exists, and compares IPC candidates without promoting a final transport from non-target observations.
+TASK-002 has now passed the target read-only Resolve connection gate. Attempt 02 connected to `DaVinci Resolve Studio 21.0.2.4` and measured seven safe read capabilities as `SUPPORTED`, while leaving sixteen mutation/behavior-dependent rows `PROBE_REQUIRED` rather than inferring support from method presence.
 
-Local implementation verification is complete, including wheel installation outside the checkout. Windows Attempt 01 has now supplied valid Windows-local HTTP/JSON and Named Pipe evidence, but Resolve returned no live root object and WSL2 reachability remains unverified. Attempt 01 also exposed an Evidence-source labeling defect, corrected in package 0.2.1. TASK-002 therefore remains open for Attempt 02 rather than promoting unresolved capabilities.
+Windows-local HTTP/JSON and Named Pipe authentication/restart evidence is valid. Package 0.2.2 adds a narrow Resolve sandbox behavioral runner and WSL2-to-Windows IPC topology runner. TASK-002 remains open until those live outputs, Final IPC ADR and DEV-4 final review are complete.
 
-## Current boundary
+## Project roadmap
 
-Production Resolve Gateway Server/Controller, timeline assembly, rendering, deletion, process termination and writes to human-owned timelines remain outside TASK-002. No later Consumer TASK is authorized.
+The new canonical roadmap defines the Critical Path from foundation to Technical MVP, Production Pilot and Enhanced Product. Existing TASK-001 through TASK-021 identities are preserved. A historical external-SKILL numbering collision is resolved by assigning those additions to TASK-022 through TASK-026 without rewriting historical evidence.
+
+No later Consumer TASK is authorized by the roadmap itself.
+
+## Current local verification
+
+- `pytest`: 74 / 74 PASS
+- `compileall`: PASS
+- package 0.2.2 wheel + installed-package schema verification: PASS

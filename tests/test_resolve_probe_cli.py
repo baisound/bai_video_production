@@ -69,7 +69,7 @@ def test_supervisor_worker_failure_writes_schema_valid_ipc_evidence(tmp_path, mo
 def test_packaged_schema_resources_match_canonical_schemas():
     from importlib import resources
 
-    for name in ("resolve-capability-report.schema.json", "resolve-ipc-probe-report.schema.json"):
+    for name in ("resolve-capability-report.schema.json", "resolve-ipc-probe-report.schema.json", "resolve-wsl-ipc-probe-report.schema.json"):
         canonical = json.loads((ROOT / "schemas" / name).read_text())
         packaged_text = resources.files("ai_video_production").joinpath("schema_resources", name).read_text(encoding="utf-8")
         assert json.loads(packaged_text) == canonical
@@ -98,3 +98,63 @@ def test_cli_worker_distinguishes_actual_module_discovery_failure(tmp_path, monk
     assert payload["connection_error"]["code"] == "ERR_RESOLVE_SCRIPT_MODULE_NOT_FOUND"
     root = next(row for row in payload["capabilities"] if row["capability_id"] == "resolve.connection")
     assert root["error_code"] == "ERR_RESOLVE_SCRIPT_MODULE_NOT_FOUND"
+
+
+def test_worker_preserves_fail_closed_sandbox_error_as_schema_valid_evidence(tmp_path, monkeypatch):
+    class UnnamedProject:
+        pass
+    class PM:
+        def GetCurrentProject(self):
+            return UnnamedProject()
+    class Resolve:
+        def GetProjectManager(self):
+            return PM()
+        def GetVersionString(self):
+            return '21.0.2.4'
+        def GetVersion(self):
+            return [21, 0, 2, 4, '']
+        def GetProductName(self):
+            return 'DaVinci Resolve Studio'
+
+    monkeypatch.setattr(resolve_probe_cli.ResolveModuleLoader, 'connect', lambda _self: (Resolve(), 'TEST'))
+    output = tmp_path / 'sandbox-refused.json'
+    args = resolve_probe_cli.build_parser().parse_args([
+        '--worker', '--kind', 'resolve', '--output', str(output),
+        '--allow-mutation-probes', '--sandbox-project', 'BAI_CAPABILITY_PROBE_UNIT',
+    ])
+    assert resolve_probe_cli._run_worker(args) == 2
+    payload = json.loads(output.read_text())
+    validate_instance(payload, ROOT / 'schemas' / 'resolve-capability-report.schema.json')
+    assert payload['resolve']['connected'] is True
+    assert payload['mode'] == 'SANDBOX_MUTATION'
+    assert payload['mutation_gate']['authorized'] is False
+    assert payload['mutation_gate']['executed'] is False
+    assert payload['mutation_error']['code'] == 'ERR_RESOLVE_CURRENT_PROJECT_NAME_UNVERIFIED'
+
+
+def test_supervisor_preserves_schema_valid_nonzero_worker_evidence(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    def fake_run(command, **_kwargs):
+        worker_output = Path(command[command.index('--output') + 1])
+        payload = resolve_probe_cli.ResolveCapabilityProbe(None, module_source_kind='TEST').run()
+        payload['mutation_error'] = {
+            'code': 'ERR_TEST_FAIL_CLOSED',
+            'category': 'SECURITY',
+            'message': 'blocked',
+            'retryable': False,
+            'details': {},
+        }
+        resolve_probe_cli._write_report(worker_output, payload, 'resolve-capability-report.schema.json')
+        return SimpleNamespace(returncode=2)
+
+    monkeypatch.setattr(resolve_probe_cli.subprocess, 'run', fake_run)
+    output = tmp_path / 'preserved.json'
+    args = resolve_probe_cli.build_parser().parse_args([
+        '--kind', 'resolve', '--output', str(output), '--timeout-seconds', '5'
+    ])
+    assert resolve_probe_cli._run_supervised(args) == 2
+    payload = json.loads(output.read_text())
+    validate_instance(payload, ROOT / 'schemas' / 'resolve-capability-report.schema.json')
+    assert payload['mutation_error']['code'] == 'ERR_TEST_FAIL_CLOSED'
+    assert 'connection_error' not in payload

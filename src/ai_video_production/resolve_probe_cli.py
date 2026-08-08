@@ -12,7 +12,8 @@ from typing import Any
 from .atomic import AtomicJsonWriter
 from .errors import ProductError, ProductErrorCategory
 from .ipc_probe import build_ipc_unavailable_report, run_ipc_probe
-from .resolve_capabilities import ProbeMode, ResolveCapabilityProbe, authorize_mutation_probe
+from .resolve_capabilities import ProbeMode, ResolveCapabilityProbe
+from .resolve_sandbox_probe import run_resolve_sandbox_probe
 from .resolve_loader import ResolveModuleLoader
 from .schema_contracts import validate_instance
 
@@ -110,25 +111,33 @@ def _run_worker(args: argparse.Namespace) -> int:
                 row["notes"] = [exc.message]
                 break
     else:
-        payload = ResolveCapabilityProbe(resolve, module_source_kind=source_kind, mode=ProbeMode.READ_ONLY).run()
-
-    if args.allow_mutation_probes:
-        current_name = args.current_project_name or None
-        authorize_mutation_probe(
-            allow_mutation=True,
-            sandbox_project=args.sandbox_project,
-            current_project_name=current_name,
-        )
-        payload["mutation_gate"] = {
-            "authorized": True,
-            "sandbox_project": args.sandbox_project,
-            "executed": False,
-            "note": (
-                "TASK-002 exposes the explicit sandbox authorization gate. This command does not automatically "
-                "execute mutation sequences; capability rows remain PROBE_REQUIRED until a separately reviewed "
-                "sandbox live sequence supplies behavioral evidence."
-            ),
-        }
+        if args.allow_mutation_probes:
+            try:
+                if not args.sandbox_project:
+                    raise ProductError(
+                        "ERR_RESOLVE_SANDBOX_REQUIRED",
+                        "--sandbox-project is required for sandbox mutation evidence",
+                        ProductErrorCategory.SECURITY,
+                    )
+                payload = run_resolve_sandbox_probe(
+                    resolve, module_source_kind=source_kind, sandbox_project=args.sandbox_project
+                )
+            except ProductError as exc:
+                payload = ResolveCapabilityProbe(
+                    resolve, module_source_kind=source_kind, mode=ProbeMode.SANDBOX_MUTATION
+                ).run()
+                if args.sandbox_project.startswith("BAI_CAPABILITY_PROBE_"):
+                    payload["mutation_gate"] = {
+                        "authorized": False,
+                        "sandbox_project": args.sandbox_project,
+                        "executed": False,
+                        "note": "Sandbox mutation was refused before any TASK-002 behavioral change executed.",
+                    }
+                payload["mutation_error"] = exc.to_envelope()["error"]
+                _write_report(output, payload, "resolve-capability-report.schema.json")
+                return 2
+        else:
+            payload = ResolveCapabilityProbe(resolve, module_source_kind=source_kind, mode=ProbeMode.READ_ONLY).run()
 
     _write_report(output, payload, "resolve-capability-report.schema.json")
     return 0
@@ -166,17 +175,22 @@ def _run_supervised(args: argparse.Namespace) -> int:
             print(f"probe timed out after {args.timeout_seconds}s", file=sys.stderr)
             return 124
 
-        if result.returncode != 0 or not worker_output.is_file():
-            _write_supervision_failure(
-                output,
-                kind=args.kind,
-                timeout_seconds=args.timeout_seconds,
-                timed_out=False,
-                worker_exit_code=result.returncode,
-            )
-            return result.returncode if result.returncode != 0 else 1
-        output.write_bytes(worker_output.read_bytes())
-    return 0
+        if worker_output.is_file():
+            # Preserve a schema-valid worker report even when the worker returns
+            # non-zero (for example, a fail-closed sandbox authorization refusal).
+            # The caller still receives the non-zero exit code, but the exact
+            # structured evidence is not replaced by a generic supervisor error.
+            output.write_bytes(worker_output.read_bytes())
+            return result.returncode
+
+        _write_supervision_failure(
+            output,
+            kind=args.kind,
+            timeout_seconds=args.timeout_seconds,
+            timed_out=False,
+            worker_exit_code=result.returncode,
+        )
+        return result.returncode if result.returncode != 0 else 1
 
 
 def build_parser() -> argparse.ArgumentParser:

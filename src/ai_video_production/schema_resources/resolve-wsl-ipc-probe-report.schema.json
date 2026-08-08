@@ -1,0 +1,14 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://baisound.local/schemas/resolve-wsl-ipc-probe-report.schema.json",
+  "title":"Resolve WSL2 to Windows IPC Probe Report",
+  "type":"object","additionalProperties":false,
+  "required":["schema_version","probe_id","created_at","source_platform","candidate","endpoint_host_kind","endpoint_port","auth_rejection_verified","authenticated_roundtrip_verified","same_endpoint_restart_verified","round_trips","latency_p50_ms","latency_p95_ms","token_persisted","notes"],
+  "properties":{
+    "schema_version":{"const":"1.0.0"},"probe_id":{"type":"string","pattern":"^EVD-[0-9A-HJKMNP-TV-Z]{26}$"},"created_at":{"type":"string"},
+    "source_platform":{"const":"WSL2"},"candidate":{"const":"LOCALHOST_HTTP_JSON"},"endpoint_host_kind":{"enum":["LOOPBACK","DEFAULT_GATEWAY","RESOLV_NAMESERVER"]},
+    "endpoint_port":{"type":"integer","minimum":1,"maximum":65535},"auth_rejection_verified":{"type":"boolean"},"authenticated_roundtrip_verified":{"type":"boolean"},
+    "same_endpoint_restart_verified":{"type":"boolean"},"round_trips":{"type":"integer","minimum":1},"latency_p50_ms":{"type":"number","minimum":0},"latency_p95_ms":{"type":"number","minimum":0},
+    "token_persisted":{"const":false},"notes":{"type":"array","items":{"type":"string"}}
+  }
+}

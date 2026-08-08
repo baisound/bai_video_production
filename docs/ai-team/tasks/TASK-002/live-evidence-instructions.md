@@ -1,6 +1,6 @@
 # TASK-002 — Live Evidence Instructions
 
-Current retry package: `0.2.1` / Attempt 02.
+> Current note (2026-08-09): Attempt 02 read-only Evidence has been accepted. This file documents the earlier read-only retry path. For the **current final live gates**, use `attempt-02-next-evidence-instructions.md`.
 
 ## Purpose
 

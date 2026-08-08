@@ -2,7 +2,7 @@
 
 ## Status
 
-`IMPLEMENTED_AWAITING_LIVE_EVIDENCE / ATTEMPT_01_REVIEWED / RESOLVE_RETRY_REQUIRED`
+`IMPLEMENTED_AWAITING_FINAL_LIVE_EVIDENCE / ATTEMPT_02_READ_ONLY_ACCEPTED`
 
 ## Historical alias
 
@@ -43,4 +43,4 @@ Convert the product design's Resolve Gateway assumptions into measured capabilit
 - Negative tests prove missing module, disconnected Resolve and unsafe mutation requests do not become false `SUPPORTED` results.
 - IPC probe proves localhost HTTP restart/auth behavior locally and marks target-Windows-only candidates as unresolved when not actually measured there.
 - Full regression suite passes.
-- **Completion gate:** target Windows/Resolve live evidence must exist before mutation capabilities or final IPC ADR are promoted. Until then TASK-002 remains in progress even if implementation code is complete.
+- **Completion gate:** Attempt 02 has established the live target Resolve connection and read-only matrix. TASK-002 remains open until minimal sandbox behavioral evidence, WSL2-to-Windows IPC evidence, Final IPC ADR and final DEV-4 Critic/Judge are complete.

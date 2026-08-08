@@ -51,7 +51,7 @@ Requires all of:
 
 1. explicit runtime `--allow-mutation-probes`;
 2. sandbox Project name beginning `BAI_CAPABILITY_PROBE_`;
-3. current Project is absent or already a sandbox Project;
+3. current Project is absent or its identity is positively verified as a sandbox Project;
 4. no automatic deletion or forced Resolve termination.
 
 The first implementation delivers the gating contract and test seam. Live sandbox execution is a separate evidence action on the user's Windows machine.
@@ -95,7 +95,8 @@ The ADR selector refuses a `FINAL` transport decision unless target Windows evid
 | Resolve process/API unavailable | `connected=false`; capabilities unresolved |
 | Safe query raises | record normalized error and `PROBE_REQUIRED`/`LIMITED`; continue other independent probes |
 | Mutation requested without opt-in | fail closed with `ERR_RESOLVE_MUTATION_NOT_AUTHORIZED` |
-| Non-sandbox Project mutation | fail closed with `ERR_RESOLVE_SANDBOX_REQUIRED` |
+| Non-sandbox Project mutation | fail closed with `ERR_RESOLVE_EXISTING_PROJECT_PROTECTED` |
+| Current/created sandbox Project identity cannot be verified | fail closed before further mutation with `ERR_RESOLVE_CURRENT_PROJECT_NAME_UNVERIFIED` / `ERR_RESOLVE_SANDBOX_IDENTITY_UNVERIFIED` |
 | Probe worker hangs | outer supervisor timeout terminates the worker and writes a Schema-valid supervision-failure Evidence report |
 | Secret-like value in evidence | redact before JSON serialization |
 | Target-only IPC not tested | `PROBE_REQUIRED`, never inferred from another OS |
@@ -121,3 +122,22 @@ Repository implementation can reach `IMPLEMENTED_AWAITING_LIVE_EVIDENCE` in this
 The CLI report schemas are packaged as Python package resources in addition to the repository-level canonical copies. A contract test requires both copies to remain byte-semantically equivalent, and installed-wheel execution is verified from outside the source checkout.
 
 Supervised timeout/worker-failure paths must emit reports that validate against the same canonical report schemas; failure Evidence is never a one-off ad-hoc JSON shape.
+
+## 12. Attempt 02 refinement — behavioral scope
+
+Attempt 02 established live `DaVinci Resolve Studio 21.0.2.4` connectivity through `WINDOWS_PROGRAMDATA`. The remaining sandbox probe is therefore limited to operations required to de-risk the later Resolve Assembly MVP: Project create/open/save/export, Bin ensure, generated temporary WAV import, Timeline create/build and marker write.
+
+Rendering, render cancellation, relink, subtitle mutation, Project deletion and Resolve process termination remain outside this live sequence. A non-sandbox current Project causes a fail-closed authorization error before the mutation sequence begins.
+
+## 13. WSL2 target-topology probe
+
+Windows-local loopback evidence does not prove the WSL2 production topology. Package 0.2.2 adds a temporary token-authenticated HTTP probe server plus WSL2 client. The Windows orchestrator restarts only the temporary probe server on the same port and requires both WSL phases to reject unauthenticated access and pass authenticated round trips. The bearer token is ephemeral and is not persisted into Evidence.
+
+
+## 14. Attempt 02 DEV-4 safety refinement
+
+Before final live mutation evidence, implementation Critic found that a current Project object with an unreadable/unknown name could otherwise be treated similarly to “no current Project.” The sandbox runner now fails closed whenever an existing Project identity cannot be positively verified. A newly created or reloaded sandbox Project is also re-identified before any subsequent save/media/timeline behavior continues.
+
+A schema-valid `mutation_error` is preserved when the worker refuses the sandbox action. The supervisor returns the non-zero status but copies the exact structured worker Evidence instead of replacing it with a generic worker-failure report.
+
+WSL2 IPC evidence also fails closed unless both phases prove HTTP 401 rejection without credentials, authenticated round trips, and restart on the same endpoint host-kind/port. Temporary server processes are cleaned up in the PowerShell `finally` path.

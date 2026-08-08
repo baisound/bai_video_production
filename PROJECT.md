@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`RESOLVE_SPIKE_LIVE_EVIDENCE_RETRY_REQUIRED`
+`RESOLVE_SPIKE_FINAL_LIVE_EVIDENCE_PENDING`
 
 ## Purpose
 
@@ -84,8 +84,10 @@
 
 - Last Completed: `TASK-001 — Project Foundation / Domain Model`
 - Active Task: `TASK-002 — Resolve Capability Spike`
-- TASK-002: `IMPLEMENTED_AWAITING_LIVE_EVIDENCE / ATTEMPT_01_REVIEWED / RESOLVE_RETRY_REQUIRED`
-- Completion Gate: successful target Resolve connection/capability evidence, required sandbox behavioral evidence, and target-topology IPC/WSL2 evidence
+- TASK-002: `IMPLEMENTED_AWAITING_FINAL_LIVE_EVIDENCE / ATTEMPT_02_READ_ONLY_ACCEPTED`
+- Target Resolve: `DaVinci Resolve Studio 21.0.2.4` connected; 7 read-only capabilities `SUPPORTED`, 16 `PROBE_REQUIRED`
+- Completion Gate: minimal sandbox behavioral evidence, WSL2-to-Windows IPC evidence, Final IPC ADR and DEV-4 final review
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md`
 - Next Consumer Task: not authorized or started while TASK-002 remains open
 - OS-internal TASK-016 remains unrelated and untouched.
 

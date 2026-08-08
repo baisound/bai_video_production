@@ -8,7 +8,7 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-001 — Project Foundation / Domain Model`
 - Active Consumer TASK: `TASK-002 — Resolve Capability Spike`
-- TASK-002 stage: `IMPLEMENTED_AWAITING_LIVE_EVIDENCE / ATTEMPT_01_REVIEWED / RESOLVE_RETRY_REQUIRED`
+- TASK-002 stage: `IMPLEMENTED_AWAITING_FINAL_LIVE_EVIDENCE / ATTEMPT_02_READ_ONLY_ACCEPTED`
 - TASK-002 governance: `DEV-4 FOUNDATION CRITICAL` / score `22`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -63,19 +63,45 @@ BAI Development OS internal TASK numbering is independent from this repository. 
 
 ## TASK-002 Resolve Capability Spike
 
-TASK-002 is implemented to the local-verification boundary and remains open as `IMPLEMENTED_AWAITING_LIVE_EVIDENCE`. Windows Attempt 01 measured HTTP/JSON and Windows Named Pipe successfully, but Resolve returned no live root object. Attempt 01 also exposed an Evidence-labeling defect that is fixed in package `0.2.1`; a Resolve live-evidence retry is required. The capability probe is read-only by default, never promotes mutation behavior from method presence alone, emits Schema-valid failure Evidence on supervisor timeout/worker failure, and packages its report Schemas so the installed wheel works outside the repository checkout.
+TASK-002 has accepted target-machine read-only evidence from **DaVinci Resolve Studio 21.0.2.4**. Attempt 02 connected through the Windows PROGRAMDATA scripting bridge and measured 7 safe read capabilities as `SUPPORTED`; 16 mutation/behavior-dependent capabilities remain `PROBE_REQUIRED` rather than being inferred from method presence.
 
-### Target Windows evidence run
+Package `0.2.2` adds the two final live-evidence tools required before the TASK can close:
 
-The PowerShell runner prepends this repository's `src/` to `PYTHONPATH`; the declared runtime dependency `jsonschema` must still be available. The recommended command below installs the project and dependency into the active Python environment before the live run. From the repository root on the target Windows workstation:
+1. a minimal, explicit, fail-closed sandbox behavioral probe;
+2. a WSL2-to-Windows authenticated HTTP topology/restart probe.
+
+The default capability runner remains read-only. Historical Attempt 01/02 evidence is preserved under the TASK evidence directory.
+
+### Final target evidence runs
+
+Install the current checkout on the Windows target first:
 
 ```powershell
 python -m pip install -e .
-powershell -ExecutionPolicy Bypass -File .\tools\windows\run-resolve-capability-spike.ps1
 ```
 
-The runner writes `resolve-capability-report.json` and `resolve-ipc-probe-report.json`. It requests no mutation, deletion, forced Resolve termination, or write to a human-owned Timeline. In package `0.2.1`, the runner exits non-zero when a live Resolve root object is not obtained while preserving the diagnostic JSON. The Windows-local IPC result does **not** prove WSL2-to-Windows reachability; that remains a separate completion-gate item documented under `tools/wsl/README.md`.
+With Resolve Studio running and **no real/client Project left current**, execute the sandbox probe:
 
-### Optional mutation authorization boundary
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-resolve-sandbox-mutation-probe.ps1 -IUnderstandThisCreatesSandboxProject
+```
 
-`--allow-mutation-probes` only opens the explicit sandbox authorization gate and requires a Project name beginning `BAI_CAPABILITY_PROBE_`. The current TASK-002 implementation deliberately does not auto-run mutation sequences even after that gate is authorized. Actual sandbox behavior must be separately reviewed and executed on the target workstation before any mutation capability can become `SUPPORTED`.
+The runner creates/uses only a Project named `BAI_CAPABILITY_PROBE_*`. It may create/save/export that sandbox, create a Bin/Timeline, import a generated one-second silent WAV, append it and add one marker. It does **not** delete Projects, start/cancel rendering, relink media, terminate Resolve, or write to a non-sandbox Project. Project identity must be positively verified before further mutation.
+
+Then measure the actual WSL2→Windows topology:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-wsl2-ipc-probe.ps1
+```
+
+This starts only a temporary token-authenticated HTTP probe server on Windows, verifies HTTP 401 without credentials, verifies authenticated WSL2 round trips, restarts the temporary server on the same endpoint and repeats the measurement. The bearer token is ephemeral and is not stored in Evidence.
+
+Return the generated `resolve-spike-evidence/` folder as a ZIP. TASK-002 remains open until these live outputs are reviewed, the Final IPC ADR is recorded and the DEV-4 final completion review passes.
+
+## Project Roadmap
+
+- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md`
+- Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.0.docx`
+- External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.0.docx`
+
+TASK-002 Attempt 02 has established live read-only scripting connectivity to DaVinci Resolve Studio 21.0.2.4. Final live gates are the isolated sandbox behavioral probe and WSL2-to-Windows IPC topology probe.

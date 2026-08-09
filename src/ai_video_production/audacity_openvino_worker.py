@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import hashlib
 import json
 import math
 import os
@@ -9,6 +10,18 @@ from pathlib import Path
 import re
 import sys
 from typing import Any, Callable
+
+
+WINDOWS_AUDACITY_PATH_LIMIT = 259
+
+
+class AudacityCommandError(RuntimeError):
+    """A sanitized mod-script-pipe command failure safe for Evidence."""
+
+    def __init__(self, command_id: str, reply: str) -> None:
+        self.command_id = command_id
+        self.reply_sha256 = "sha256:" + hashlib.sha256(reply.encode("utf-8", errors="replace")).hexdigest()
+        super().__init__(f"Audacity command failed: {command_id}")
 
 
 FEATURE_TERMS = {
@@ -303,7 +316,8 @@ class AudacityPipe:
         reply = "".join(lines)
         low = reply.lower()
         if "batchcommand finished: failed" in low or "error:" in low:
-            raise RuntimeError("Audacity command reported failure")
+            command_id = command.split(":", 1)[0].strip() or "UNKNOWN"
+            raise AudacityCommandError(command_id, reply)
         return reply
 
 
@@ -387,13 +401,31 @@ def _remove_all_tracks(pipe: AudacityPipe) -> None:
         pass
 
 
-def _import(pipe: AudacityPipe, path: Path) -> None:
-    pipe.command(build_command("Import2", {"Filename": str(path)}))
+def _audacity_file_argument(path: Path, *, os_name: str | None = None) -> str:
+    """Return an Audacity-compatible path and reject legacy-Windows hangs."""
+    name = os.name if os_name is None else os_name
+    value = str(path)
+    if name == "nt":
+        value = value.replace("\\", "/")
+        if len(value) > WINDOWS_AUDACITY_PATH_LIMIT:
+            raise ValueError(
+                f"Audacity path exceeds the Windows safety limit ({len(value)} > {WINDOWS_AUDACITY_PATH_LIMIT})"
+            )
+    return value
+
+
+def _import(pipe: AudacityPipe, path: Path, *, progress: Callable[[str], None] | None = None) -> None:
+    mark = progress or (lambda _phase: None)
+    mark("SENDING_IMPORT2")
+    pipe.command(build_command("Import2", {"Filename": _audacity_file_argument(path)}))
+    mark("IMPORT2_COMPLETED")
+    mark("SELECTING_IMPORTED_SOURCE")
     pipe.command("SelectAll:")
+    mark("IMPORTED_SOURCE_SELECTED")
 
 
 def _export(pipe: AudacityPipe, path: Path) -> None:
-    pipe.command(build_command("Export2", {"Filename": str(path), "NumChannels": 2}))
+    pipe.command(build_command("Export2", {"Filename": _audacity_file_argument(path), "NumChannels": 2}))
 
 
 def _report_capabilities(features: dict[str, dict[str, Any] | None], tracks: list[dict[str, Any]]) -> dict[str, Any]:
@@ -470,7 +502,7 @@ def execute(
         try:
             mark("PREFLIGHT_VALIDATED")
             mark("IMPORTING_SOURCE")
-            _import(pipe, source)
+            _import(pipe, source, progress=mark)
             mark("SOURCE_IMPORTED")
             if operation == "NOISE_SUPPRESSION":
                 mark("APPLYING_NOISE_SUPPRESSION")
@@ -536,7 +568,11 @@ def main(argv: list[str] | None = None) -> int:
     report_path = Path(args.report)
     progress_path = Path(args.progress) if args.progress else None
 
+    current_phase = "STARTING"
+
     def mark(phase: str) -> None:
+        nonlocal current_phase
+        current_phase = phase
         if progress_path is None:
             return
         progress_path.parent.mkdir(parents=True, exist_ok=True)
@@ -557,6 +593,17 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError as exc:
         report = {"ok": False, "error_code": "ERR_PROVIDER_AUDACITY_PIPE_UNAVAILABLE", "category": "EXTERNAL_DEPENDENCY", "message": str(exc)}
         rc = 3
+    except AudacityCommandError as exc:
+        report = {
+            "ok": False,
+            "error_code": "ERR_PROVIDER_AUDACITY_COMMAND_FAILED",
+            "category": "EXTERNAL_DEPENDENCY",
+            "message": str(exc),
+            "command_id": exc.command_id,
+            "phase": current_phase,
+            "reply_sha256": exc.reply_sha256,
+        }
+        rc = 4
     except Exception as exc:
         report = {"ok": False, "error_code": "ERR_PROVIDER_AUDACITY_OPENVINO_WORKER_FAILED", "category": "EXTERNAL_DEPENDENCY", "message": str(exc)}
         rc = 4

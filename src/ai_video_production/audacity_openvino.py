@@ -125,7 +125,12 @@ class AudacityOpenVinoService:
             category = ProductErrorCategory(category_name)
         except ValueError:
             category = ProductErrorCategory.EXTERNAL_DEPENDENCY
-        raise ProductError(code if code.startswith("ERR_") else "ERR_PROVIDER_AUDACITY_OPENVINO_FAILED", str(report.get("message") or "Audacity/OpenVINO operation failed"), category, retryable=category in {ProductErrorCategory.TIMEOUT, ProductErrorCategory.TRANSIENT, ProductErrorCategory.EXTERNAL_DEPENDENCY})
+        details = {
+            key: report[key]
+            for key in ("command_id", "phase", "reply_sha256")
+            if isinstance(report.get(key), str)
+        }
+        raise ProductError(code if code.startswith("ERR_") else "ERR_PROVIDER_AUDACITY_OPENVINO_FAILED", str(report.get("message") or "Audacity/OpenVINO operation failed"), category, retryable=category in {ProductErrorCategory.TIMEOUT, ProductErrorCategory.TRANSIENT, ProductErrorCategory.EXTERNAL_DEPENDENCY}, details=details)
 
     def _source(self, request: AudioAiRequest) -> tuple[AssetRecord, Path]:
         asset = self.store.get_asset(request.source_asset_id)

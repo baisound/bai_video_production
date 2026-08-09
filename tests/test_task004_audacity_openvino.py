@@ -430,6 +430,42 @@ def test_audacity_export_preserves_stereo_capability():
     assert "NumChannels=2" in pipe.commands[-1]
 
 
+def test_audacity_windows_paths_use_forward_slashes_and_fail_fast_when_too_long():
+    import ai_video_production.audacity_openvino_worker as worker
+
+    assert worker._audacity_file_argument(Path(r"D:\BAI\source.wav"), os_name="nt") == "D:/BAI/source.wav"
+    with pytest.raises(ValueError, match="Windows safety limit"):
+        worker._audacity_file_argument(Path("D:/" + "x" * 260), os_name="nt")
+
+
+def test_audacity_command_failure_retains_safe_command_identity_and_hash():
+    import ai_video_production.audacity_openvino_worker as worker
+
+    pipe = worker.AudacityPipe()
+    pipe._to = io.StringIO()
+    pipe._from = io.StringIO("BatchCommand finished: Failed\r\n\r\n")
+    with pytest.raises(worker.AudacityCommandError) as exc:
+        pipe.command('Import2: Filename="D:/BAI/source.wav"')
+    assert exc.value.command_id == "Import2"
+    assert exc.value.reply_sha256.startswith("sha256:")
+    assert "D:/BAI" not in str(exc.value)
+
+
+def test_import_progress_distinguishes_import2_from_selection(monkeypatch):
+    import ai_video_production.audacity_openvino_worker as worker
+
+    phases = []
+    commands = []
+    class Pipe:
+        def command(self, command):
+            commands.append(command)
+            return ""
+    monkeypatch.setattr(worker.os, "name", "nt")
+    worker._import(Pipe(), Path("D:/BAI/source.wav"), progress=phases.append)
+    assert phases == ["SENDING_IMPORT2", "IMPORT2_COMPLETED", "SELECTING_IMPORTED_SOURCE", "IMPORTED_SOURCE_SELECTED"]
+    assert 'Filename="D:/BAI/source.wav"' in commands[0]
+
+
 def test_audacity_ambiguous_in_progress_operation_fails_closed_without_replay(tmp_path):
     from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 

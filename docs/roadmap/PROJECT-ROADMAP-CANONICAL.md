@@ -24,10 +24,10 @@
 - TASK-003 `Asset Registry / Ingest / Path Resolver`: **COMPLETED**
   - package `0.3.0`; secure allowlisted source ingest, SHA-256/dedupe, rights metadata, immutable `asset://` promotion, SQLite v2, concurrency-safe `source-manifest`, recovery/Evidence PASS
 - TASK-004 `Media Normalization + Local Visual/Audio AI Runtime Foundation`: **CAPABILITY VERIFIED / LIVE BEHAVIORAL EVIDENCE PENDING**
-  - package `0.4.6`; exact timebase/VFR inspection, CFR proxy, 48 kHz analysis audio
+  - package `0.4.7`; exact timebase/VFR inspection, CFR proxy, 48 kHz analysis audio
   - ComfyUI local image/video runtime boundary, Character Identity, MiniMax H3 Production Brief / SingleFrame / Spectrum / Foley contracts
   - Audacity/OpenVINO external local Audio AI boundary; Noise Suppression + verified-runtime 2-stem Music Separation executable, 4-stem fail-closed until scriptable mode exists
-  - local regression `249/249 PASS`; ComfyUI + Audacity/OpenVINO capability Evidence accepted; Attempt 06 stopped before Audacity mutation on a Product-side Windows timestamp-only ingest false positive now corrected in 0.4.6; bounded OpenVINO behavioral Evidence rerun remains before formal completion
+  - local regression `250/250 PASS`; ComfyUI + Audacity/OpenVINO capability Evidence accepted; Attempt 07 stopped before Audacity mutation because Windows low-level media ingest treated `0x1A` as EOF without `O_BINARY`; corrected in 0.4.7; bounded OpenVINO behavioral Evidence rerun remains before formal completion
 - TASK-005以降: **NOT_STARTED / NOT_AUTHORIZED**
 - TASK-004完了後の標準推奨次ルート: `TASK-022` を早期確立し、その後SRT/字幕・フィラー/無音Cut・SE/BGM/ナレーション生成配置をediting-firstで前倒し。Owner判断による再優先化を許容する
 

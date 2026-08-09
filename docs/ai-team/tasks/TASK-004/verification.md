@@ -2,17 +2,17 @@
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
 - Completion status: `LIVE_BEHAVIORAL_EVIDENCE_PENDING`
-- Package: `0.4.6`
+- Package: `0.4.7`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
 
-- `python -m pytest -q`: **249 / 249 PASS**
+- `python -m pytest -q`: **250 / 250 PASS**
 - `python -m compileall -q src tests`: PASS
 - `git diff --check`: PASS
 - wheel build with `pip wheel --no-deps --no-build-isolation`: PASS
-- wheel SHA-256: `e580b4fe17699d2e6b987edd05ee0f6bbfd1906c86dafbb2a47ed405ad773d37`
-- installed-wheel package version: `0.4.6`
+- wheel SHA-256: `a87beed109e0ac6641fefb25d519b625eea1fa6507bfea04552edfe0e1e48366`
+- installed-wheel package version: `0.4.7`
 - packaged TASK-004 schema resources: PASS
 - installed-wheel golden media ingest + forced CFR proxy (`30000/1001`) + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
 - installed-wheel unavailable-ComfyUI diagnostic: expected fail-closed `ERR_PROVIDER_COMFY_UNREACHABLE`, exit 2
@@ -133,3 +133,13 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 - Regression adds a Windows-like timestamp-drift success case and a mismatch fail-closed case.
 - Full local regression after corrective: **249 / 249 PASS**.
 - Behavioral Evidence remains pending and must be rerun with package 0.4.6; capability Evidence remains accepted.
+
+## Behavioral Evidence Attempt 07 — package 0.4.6 returned / package 0.4.7 corrective
+
+- Returned report again failed before Audacity/OpenVINO dispatch: `ERR_INPUT_SOURCE_CHANGED_DURING_INGEST`, `reason=SIZE_CHANGED`, before/after size `576044`, copied size `143`.
+- The returned synthetic noise WAV is actually `576044` bytes and its first byte `0x1A` occurs at zero-based offset `143`, exactly equal to the copied-size boundary.
+- Root cause: TASK-003 low-level media ingest used `os.open`/`os.read` without `O_BINARY`. Python documents `O_BINARY` as required for binary mode on Windows; Microsoft CRT documents that translated text mode interprets CTRL+Z (`0x1A`) as EOF.
+- Package 0.4.7 ORs `getattr(os, "O_BINARY", 0)` into both the source read descriptor and staging write descriptor. Existing `O_NOFOLLOW`, size/checksum, same-open-handle revalidation and atomic publication contracts remain intact.
+- Regression adds a Windows-style injected `O_BINARY` flag and verifies both media descriptors receive it.
+- Full local regression after corrective: **250 / 250 PASS**.
+- Capability Evidence remains accepted. Behavioral Evidence must be rerun on package 0.4.7; no external effect was executed in Attempt 07.

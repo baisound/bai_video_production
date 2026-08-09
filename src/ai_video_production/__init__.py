@@ -49,7 +49,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.4.6"
+__version__ = "0.4.7"
 
 __all__ = [
     "ActorKind", "ApprovedSegment", "AssetIngestRequest", "AssetIngestResult", "AssetIngestService",

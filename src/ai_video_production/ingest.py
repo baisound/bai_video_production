@@ -178,13 +178,17 @@ class AssetIngestService:
         staging.parent.mkdir(parents=True, exist_ok=True)
         staging.unlink(missing_ok=True)
 
-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        # Windows CRT file descriptors default to translated text mode unless
+        # O_BINARY is requested. Binary media commonly contains 0x1A (CTRL+Z),
+        # which text mode interprets as EOF; always opt into untranslated mode.
+        binary_flag = getattr(os, "O_BINARY", 0)
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | binary_flag
         source_fd = os.open(source, flags)
         try:
             before = os.fstat(source_fd)
             if not stat.S_ISREG(before.st_mode):
                 raise ProductError("ERR_INPUT_SOURCE_NOT_FILE", "ingest source must be a regular file", ProductErrorCategory.VALIDATION)
-            out_fd = os.open(staging, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            out_fd = os.open(staging, os.O_WRONLY | os.O_CREAT | os.O_EXCL | binary_flag, 0o600)
             digest = hashlib.sha256()
             copied = 0
             try:

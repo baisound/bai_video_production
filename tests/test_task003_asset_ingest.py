@@ -337,6 +337,35 @@ def test_completed_idempotent_replay_is_valid_after_job_advances(tmp_path):
 
 
 
+def test_low_level_ingest_opens_media_in_binary_mode_when_platform_exposes_flag(tmp_path, monkeypatch):
+    service, _store, _resolver, source_root, *_rest, job = make_service(tmp_path)
+    source = source_root / "ctrl-z.wav"
+    with wave.open(str(source), "wb") as out:
+        out.setnchannels(1)
+        out.setsampwidth(2)
+        out.setframerate(8000)
+        out.writeframes((b"\x1a\x00\x00\x00" * 2000))
+
+    real_open = os.open
+    fake_binary = 1 << 29
+    observed: list[tuple[Path, int]] = []
+
+    def recording_open(path, flags, mode=0o777):
+        observed.append((Path(path), flags))
+        return real_open(path, flags & ~fake_binary, mode)
+
+    monkeypatch.setattr("ai_video_production.ingest.os.O_BINARY", fake_binary, raising=False)
+    monkeypatch.setattr("ai_video_production.ingest.os.open", recording_open)
+
+    result = service.ingest(request(job.job_id, source, "windows-binary-mode"))
+
+    assert result.operation.status == "COMPLETED"
+    source_flags = [flags for path, flags in observed if path == source]
+    staging_flags = [flags for path, flags in observed if path.name.endswith(".part")]
+    assert source_flags and all(flags & fake_binary for flags in source_flags)
+    assert staging_flags and all(flags & fake_binary for flags in staging_flags)
+
+
 def test_timestamp_only_source_metadata_drift_revalidates_content_and_succeeds(tmp_path, monkeypatch):
     service, store, _resolver, source_root, *_rest, job = make_service(tmp_path)
     source = source_root / "fresh-windows-like.wav"

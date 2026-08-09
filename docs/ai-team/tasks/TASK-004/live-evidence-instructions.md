@@ -114,3 +114,9 @@ For the capability-accepted target, use the standalone final-gate procedure in `
 Attempt 06 did not reach Audacity. It failed in the isolated Product `ASSET_INGEST` step for the freshly generated synthetic noise WAV with `ERR_INPUT_SOURCE_CHANGED_DURING_INGEST`; no Asset or external audio-AI operation was committed. Package 0.4.6 changes only the timestamp-drift branch of source-stability validation: size drift remains an immediate failure, while `mtime_ns`-only drift triggers full SHA-256/size revalidation through the same open source handle. Byte mismatch still fails closed.
 
 Use `behavior-evidence-instructions.md` and rerun the same behavioral probe on package `0.4.6`. Do not repeat the already accepted capability probe unless the target runtime changes.
+
+## Package 0.4.7 — Attempt 07 binary-I/O corrective
+
+Attempt 07 again stopped before Audacity mutation. The returned synthetic noise WAV is 576044 bytes, but Asset Ingest copied 143 bytes; the first `0x1A` byte in that exact file is at offset 143. On Windows the low-level CRT descriptor was therefore in translated text mode and interpreted CTRL+Z as EOF. Package 0.4.7 adds `O_BINARY` to both source and staging media descriptors, with a regression test pinning the flag contract. Existing content-mutation and containment Safety Floors are unchanged.
+
+Use `behavior-evidence-instructions.md` and rerun the same behavioral probe on package `0.4.7`. Do not repeat the already accepted capability probe unless the target runtime changes.

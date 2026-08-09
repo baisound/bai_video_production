@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-004_CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
+`TASK-004_COMPLETED`
 
 ## Purpose
 
@@ -87,9 +87,9 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed: `TASK-003 — Asset Registry / Ingest / Path Resolver`
-- Active Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- TASK-004: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
+- Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
+- Active Task: `NONE`
+- TASK-004: `COMPLETED`
 - Package: `0.4.9`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review

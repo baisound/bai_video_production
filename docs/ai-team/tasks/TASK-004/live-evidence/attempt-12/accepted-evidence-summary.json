@@ -1,0 +1,42 @@
+{
+  "accepted": true,
+  "job_id": "JOB-01KZJYVBZ14AVCWYMP3RKGZVBK",
+  "package": "0.4.9",
+  "probe_kind": "TASK004_AUDACITY_OPENVINO_SYNTHETIC_BEHAVIOR",
+  "probe_ok": true,
+  "noise_suppression": {
+    "status": "PASS",
+    "operation_status": "COMPLETED",
+    "command_id": "OpenvinoNoiseSuppression",
+    "output_checksum": "sha256:914994ee20363148c720fa8efe549dd7e812e4b7b8c03e9b38cf2beb3578c0ee"
+  },
+  "music_separation_2_stem": {
+    "status": "PASS",
+    "operation_status": "COMPLETED",
+    "command_id": "OpenvinoMusicSeparation",
+    "parameter_strategy": "INTEL_RUNTIME_DEFAULT_2_STEM",
+    "roles": ["instrumental", "vocals"],
+    "output_checksums": [
+      "sha256:c860d367df0d1310956e2951c6db6312eba9e405364885d11d46a55889202b44",
+      "sha256:0d31cc04b067f428ac1a3707b783abcc7402f2bbd53a2ea0ba32d50100f62bdf"
+    ]
+  },
+  "music_separation_4_stem": {
+    "status": "NOT_LIVE_VERIFIED",
+    "completion_blocking": false,
+    "reason": "The verified Intel effect descriptor exposes no scriptable separation-mode parameter."
+  },
+  "database_summary": {
+    "operations_completed": 4,
+    "operations_failed": 0,
+    "source_assets": 2,
+    "derived_assets": 3,
+    "committed_manifests": 4
+  },
+  "safety": {
+    "synthetic_inputs_only": true,
+    "user_media_used": false,
+    "requires_empty_audacity_project": true,
+    "canonical_product_assets_are_isolated_under_probe_runtime": true
+  }
+}

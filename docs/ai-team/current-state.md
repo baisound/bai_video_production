@@ -4,11 +4,11 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-004_CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
-- Last Completed Task: `TASK-003 — Asset Registry / Ingest / Path Resolver`
-- Active Consumer Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
+- Project Status: `TASK-004_COMPLETED`
+- Last Completed Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
+- Active Consumer Task: `NONE`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
-- TASK-004 Status: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
+- TASK-004 Status: `COMPLETED`
 - Package: `0.4.9`
 - Next Consumer Task: `NONE AUTHORIZED`
 
@@ -56,13 +56,11 @@
 - absent ComfyUI/Audacity runtimes: structured fail-closed diagnostics PASS
 - wheel SHA-256: `a87beed109e0ac6641fefb25d519b625eea1fa6507bfea04552edfe0e1e48366`
 
-## Remaining TASK-004 gate
+## Final TASK-004 Evidence
 
-Target-machine **capability Evidence is now accepted** for both ComfyUI and Audacity/OpenVINO. Audacity Attempt 05 proved all five targeted OpenVINO effects live-reachable with an empty project and completed worker execution.
+Target-machine capability Evidence is accepted for ComfyUI and Audacity/OpenVINO. The final package 0.4.9 behavioral run completed Noise Suppression and the provable Intel-default 2-stem Music Separation path. It published one noise-suppressed Asset and the complete `instrumental`/`vocals` pair with committed Manifests and verified checksums. All four probe database operations completed without error.
 
-Formal completion still requires bounded behavioral Evidence for the two TASK-004 executable audio targets: OpenVINO Noise Suppression and the provable 2-stem Music Separation path. Attempt 07 again stopped **before any Audacity mutation** at `ASSET_INGEST`. The returned WAV is 576044 bytes, the Product copied 143 bytes, and the first `0x1A` byte in that exact WAV is at offset 143. This identifies Windows CRT text-mode EOF translation rather than source mutation. Package 0.4.7 adds `O_BINARY` to low-level source and staging media descriptors while preserving `O_NOFOLLOW`, size checks, checksum validation and same-open-handle mutation revalidation. Rerun `tools/windows/run-task004-audacity-openvino-behavior-probe.ps1` on package 0.4.7 with Audacity open on an empty project.
-
-4-stem Music Separation is now explicitly `NOT_SCRIPTABLE_ON_VERIFIED_RUNTIME` rather than falsely claimed: the live descriptor exposes no separation-mode parameter, so 0.4.7 fails closed for `4_STEM` until a future runtime/provider exposes a scriptable mode.
+4-stem Music Separation remains explicitly `NOT_SCRIPTABLE_ON_VERIFIED_RUNTIME`: the live descriptor exposes no separation-mode parameter, so the Product fails closed until a future runtime/provider exposes a scriptable mode.
 
 ## Roadmap
 

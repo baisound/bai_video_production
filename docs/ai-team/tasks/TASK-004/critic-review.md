@@ -2,7 +2,8 @@
 
 - Review result: `APPROVED_FOR_LIVE_CAPABILITY_EVIDENCE`
 - Blocking findings remaining: `0`
-- Task completion: `NOT YET — TARGET RUNTIME EVIDENCE PENDING`
+- Task completion at review time: `TARGET RUNTIME EVIDENCE PENDING`
+- Final disposition: `CLOSED BY ACCEPTED PACKAGE 0.4.9 BEHAVIORAL EVIDENCE`
 
 ## Blocking findings found and resolved
 

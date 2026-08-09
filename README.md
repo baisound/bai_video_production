@@ -6,9 +6,9 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 
 - Product design baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
-- Last completed Consumer TASK: `TASK-003 — Asset Registry / Ingest / Path Resolver`
-- Active Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- TASK-004 stage: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE` / package `0.4.9`
+- Last completed Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
+- Active Consumer TASK: `NONE`
+- TASK-004 stage: `COMPLETED` / package `0.4.9`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -95,4 +95,4 @@ Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS an
 
 TASK-004 package `0.4.9` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and verified-runtime 2-stem Music Separation; 4-stem fails closed until a scriptable mode is exposed. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
 
-Attempt 10 reached Audacity from the short `D:\BAI` checkout and isolated a first-command failure. Package 0.4.9 normalizes Windows file arguments to Audacity-compatible forward slashes, rejects overlong paths before dispatch, and preserves the exact failed command, phase, and sanitized response hash. Target-Windows behavioral rerun remains.
+Package 0.4.9 completed the target-Windows behavioral run. OpenVINO Noise Suppression and the provable Intel-default 2-stem Music Separation path both passed with canonical derived Assets, committed Manifests and verified checksums. TASK-004 is complete.

@@ -1,7 +1,7 @@
 # TASK-004 — Verification Record
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
-- Completion status: `LIVE_BEHAVIORAL_EVIDENCE_PENDING`
+- Completion status: `COMPLETED`
 - Package: `0.4.9`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
@@ -148,6 +148,16 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 
 - `ERR_PROVIDER_FFPROBE_NOT_FOUND` occurred before Asset publication or Audacity dispatch.
 - Package 0.4.8 adds bounded Windows ffprobe discovery and explicit executable overrides; mandatory validation remains fail-closed.
+
+## Final Behavioral Evidence — package 0.4.9
+
+- Returned archive: `task004-live-evidence-behavior(6).zip`.
+- Top-level result: `ok=true`.
+- Noise Suppression: `PASS`; operation `COMPLETED`; one validated derived AUDIO Asset and committed Manifest.
+- Music Separation 2-stem: `PASS`; operation `COMPLETED`; complete `instrumental` and `vocals` Assets and committed Manifest.
+- Database: four operations `COMPLETED`, zero failed; two source Assets, three derived Assets, four committed Manifests.
+- Safety: deterministic synthetic inputs only, no user media, empty Audacity project required, isolated Product runtime paths.
+- Decision: `ACCEPTED_FOR_TASK_COMPLETION`.
 
 ## Behavioral Evidence Attempts 09–10 — package 0.4.9 corrective
 

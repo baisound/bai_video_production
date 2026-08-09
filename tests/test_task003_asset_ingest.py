@@ -347,12 +347,16 @@ def test_low_level_ingest_opens_media_in_binary_mode_when_platform_exposes_flag(
         out.writeframes((b"\x1a\x00\x00\x00" * 2000))
 
     real_open = os.open
-    fake_binary = 1 << 29
+    real_binary = getattr(os, "O_BINARY", 0)
+    sentinel_binary = 1 << 29
+    fake_binary = real_binary | sentinel_binary
     observed: list[tuple[Path, int]] = []
 
     def recording_open(path, flags, mode=0o777):
         observed.append((Path(path), flags))
-        return real_open(path, flags & ~fake_binary, mode)
+        # Remove only the injected sentinel. On real Windows the actual
+        # O_BINARY flag must remain set or this test would recreate CTRL+Z EOF.
+        return real_open(path, flags & ~sentinel_binary, mode)
 
     monkeypatch.setattr("ai_video_production.ingest.os.O_BINARY", fake_binary, raising=False)
     monkeypatch.setattr("ai_video_production.ingest.os.open", recording_open)
@@ -362,8 +366,8 @@ def test_low_level_ingest_opens_media_in_binary_mode_when_platform_exposes_flag(
     assert result.operation.status == "COMPLETED"
     source_flags = [flags for path, flags in observed if path == source]
     staging_flags = [flags for path, flags in observed if path.name.endswith(".part")]
-    assert source_flags and all(flags & fake_binary for flags in source_flags)
-    assert staging_flags and all(flags & fake_binary for flags in staging_flags)
+    assert source_flags and all(flags & sentinel_binary for flags in source_flags)
+    assert staging_flags and all(flags & sentinel_binary for flags in staging_flags)
 
 
 def test_timestamp_only_source_metadata_drift_revalidates_content_and_succeeds(tmp_path, monkeypatch):

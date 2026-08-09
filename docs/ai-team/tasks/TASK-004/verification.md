@@ -1,8 +1,8 @@
 # TASK-004 — Verification Record
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
-- Completion status: `COMPLETED`
-- Package: `0.4.9`
+- Completion status: `CORRECTIVE_AWAITING_WINDOWS_REGRESSION`
+- Package: `0.4.10`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
@@ -158,6 +158,14 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 - Database: four operations `COMPLETED`, zero failed; two source Assets, three derived Assets, four committed Manifests.
 - Safety: deterministic synthetic inputs only, no user media, empty Audacity project required, isolated Product runtime paths.
 - Decision: `ACCEPTED_FOR_TASK_COMPLETION`.
+
+## Native Windows Full Regression — package 0.4.9 / package 0.4.10 corrective
+
+- Result: `251 passed, 2 failed`; compileall PASS.
+- Binary-mode regression test replaced the real Windows `O_BINARY` value with a sentinel and therefore recreated CTRL+Z text-mode EOF inside its own test double.
+- Concurrent Evidence path resolution observed equivalent `C:\...` and `\\?\C:\...` canonical spellings and rejected the latter lexically.
+- Package 0.4.10 preserves the actual `O_BINARY` bit while observing a separate sentinel and compares normalized Win32/extended-length paths with component-aware `ntpath.commonpath` containment.
+- Final completion is withheld until the full Windows suite passes.
 
 ## Behavioral Evidence Attempts 09–10 — package 0.4.9 corrective
 

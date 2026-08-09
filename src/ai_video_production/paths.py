@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import ntpath
+import os
 from pathlib import Path, PureWindowsPath
 import re
 from typing import Literal
@@ -10,6 +12,32 @@ from .ids import IdKind, validate_id
 
 _DRIVE_OR_UNC = re.compile(r"^(?:[A-Za-z]:|\\\\)")
 _OBJECT_ROOT = re.compile(r"^[a-z][a-z0-9+.-]*://[^/].*$", re.I)
+
+
+def _windows_canonical_key(path: str | Path) -> str:
+    """Normalize equivalent Win32 and extended-length path spellings."""
+    value = ntpath.normcase(ntpath.normpath(str(path)))
+    if value.startswith("\\\\?\\unc\\"):
+        return "\\\\" + value[8:]
+    if value.startswith("\\\\?\\"):
+        return value[4:]
+    return value
+
+
+def _is_canonically_contained(root: Path, candidate: Path, *, os_name: str | None = None) -> bool:
+    name = os.name if os_name is None else os_name
+    if name == "nt":
+        root_key = _windows_canonical_key(root)
+        candidate_key = _windows_canonical_key(candidate)
+        try:
+            return ntpath.commonpath((root_key, candidate_key)) == root_key
+        except ValueError:
+            return False
+    try:
+        candidate.relative_to(root)
+        return True
+    except ValueError:
+        return False
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,10 +125,8 @@ class LogicalPathResolver:
 
         root = mapping.wsl_root.resolve(strict=False)
         candidate = (root / relative).resolve(strict=False)
-        try:
-            candidate.relative_to(root)
-        except ValueError as exc:
-            raise ProductError("ERR_SECURITY_PATH_DENIED", "resolved path escapes allowlisted root", ProductErrorCategory.SECURITY) from exc
+        if not _is_canonically_contained(root, candidate):
+            raise ProductError("ERR_SECURITY_PATH_DENIED", "resolved path escapes allowlisted root", ProductErrorCategory.SECURITY)
         return candidate
 
 
@@ -145,12 +171,9 @@ class SourcePathPolicy:
             raise ProductError("ERR_INPUT_SOURCE_NOT_FILE", "ingest source must be a regular file", ProductErrorCategory.VALIDATION)
         allowed = False
         for root in self.allowed_roots:
-            try:
-                resolved.relative_to(root)
+            if _is_canonically_contained(root, resolved):
                 allowed = True
                 break
-            except ValueError:
-                continue
         if not allowed:
             raise ProductError(
                 "ERR_SECURITY_PATH_DENIED",

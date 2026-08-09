@@ -4,12 +4,12 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-004_COMPLETED`
-- Last Completed Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Consumer Task: `NONE`
+- Project Status: `TASK-004_CORRECTIVE_AWAITING_WINDOWS_REGRESSION`
+- Last Completed Task: `TASK-003 — Asset Registry / Ingest / Path Resolver`
+- Active Consumer Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
-- TASK-004 Status: `COMPLETED`
-- Package: `0.4.9`
+- TASK-004 Status: `CORRECTIVE_AWAITING_WINDOWS_REGRESSION`
+- Package: `0.4.10`
 - Next Consumer Task: `NONE AUTHORIZED`
 
 ## TASK-004 implemented scope
@@ -59,6 +59,8 @@
 ## Final TASK-004 Evidence
 
 Target-machine capability Evidence is accepted for ComfyUI and Audacity/OpenVINO. The final package 0.4.9 behavioral run completed Noise Suppression and the provable Intel-default 2-stem Music Separation path. It published one noise-suppressed Asset and the complete `instrumental`/`vocals` pair with committed Manifests and verified checksums. All four probe database operations completed without error.
+
+The first full native-Windows regression then returned `251 passed, 2 failed`. Package 0.4.10 corrects the Windows-only test double so it preserves the real CRT `O_BINARY` bit, and normalizes equivalent Win32/extended-length canonical paths before containment comparison. Completion is withheld until this regression reruns cleanly.
 
 4-stem Music Separation remains explicitly `NOT_SCRIPTABLE_ON_VERIFIED_RUNTIME`: the live descriptor exposes no separation-mode parameter, so the Product fails closed until a future runtime/provider exposes a scriptable mode.
 

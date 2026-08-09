@@ -53,9 +53,9 @@ def test_task004_packaged_schema_matches_canonical():
     assert canonical == packaged
 
 
-def test_package_version_is_049():
+def test_package_version_is_0410():
     import ai_video_production
-    assert ai_video_production.__version__ == "0.4.9"
+    assert ai_video_production.__version__ == "0.4.10"
 
 
 def test_task004_manifest_replay_repairs_missing_evidence_index_without_duplicate_jsonl(tmp_path):

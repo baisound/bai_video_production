@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-004_COMPLETED`
+`TASK-004_CORRECTIVE_AWAITING_WINDOWS_REGRESSION`
 
 ## Purpose
 
@@ -89,8 +89,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - Active Task: `NONE`
-- TASK-004: `COMPLETED`
-- Package: `0.4.9`
+- TASK-004: `CORRECTIVE_AWAITING_WINDOWS_REGRESSION`
+- Package: `0.4.10`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4

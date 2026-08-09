@@ -1,11 +1,11 @@
 # TASK-004 — Final Judge Decision
 
-- Decision: `APPROVED / COMPLETED`
-- Package: `0.4.9`
+- Decision: `REOPENED / CORRECTIVE VERIFICATION REQUIRED`
+- Package: `0.4.10`
 - Date: 2026-08-09
 - Blocking findings: `0`
 
-The implementation, prior full regression baseline, corrective targeted checks, accepted ComfyUI/Audacity capability Evidence, and final Windows Audacity/OpenVINO behavioral Evidence satisfy the bounded TASK-004 acceptance contract.
+The target Audacity/OpenVINO behavioral Evidence remains accepted. A later native-Windows full regression exposed two platform-only failures, so completion approval is withheld until package 0.4.10 passes the same suite.
 
 The final behavioral run proves executable Noise Suppression and the verified-runtime 2-stem Music Separation path, complete derived-Asset publication, committed Manifests, checksummed media output, and synthetic/empty-project safety. Four-stem remains explicitly non-scriptable on the verified runtime and fails closed; no unsupported capability is claimed.
 

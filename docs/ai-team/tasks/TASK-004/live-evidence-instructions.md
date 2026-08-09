@@ -66,6 +66,6 @@ powershell -ExecutionPolicy Bypass -File .\tools\windows\run-task004-local-ai-ca
 
 If discovery still times out, `task004-live-evidence/_runtime/audacity/work/progress.json` records the last completed discovery phase (`OPENING_PIPE`, `PIPE_CONNECTED`, `DISCOVERING_COMMANDS`, `COMMANDS_DISCOVERED`, `DISCOVERING_TRACKS`, `TRACKS_DISCOVERED`). This is diagnostic Evidence only and does not authorize or execute an OpenVINO audio effect.
 
-## Windows transport note for package 0.4.2
+## Windows transport notes for package 0.4.3
 
-Package 0.4.2 corrects the Windows `mod-script-pipe` command terminator to Audacity's required `CRLF + NUL` framing. If package 0.4.1 produced `Audacity response did not contain JSON`, install/use 0.4.2 and rerun the Audacity-only probe; do not reinstall Audacity or OpenVINO solely for that error.
+Package 0.4.2 corrected the Windows `mod-script-pipe` command terminator to Audacity's required `CRLF + NUL` framing. Package 0.4.3 additionally follows Audacity's own response-delimiter behavior: leading blank lines are ignored until response content is observed, and only the blank line after content terminates a response. If package 0.4.2 still produced `Audacity response did not contain JSON` at `DISCOVERING_COMMANDS`, install/use 0.4.3 and rerun the Audacity-only probe; do not reinstall Audacity or OpenVINO solely for that error.

@@ -228,12 +228,21 @@ class AudacityPipe:
         self._to.flush()
         lines: list[str] = []
         reply_bytes = 0
+        content_seen = False
         while True:
             line = self._from.readline()
             if line == "":
                 break
             if line in {"\n", "\r\n"}:
-                break
+                # Audacity may prefix a mod-script-pipe response with one or more
+                # blank lines. Its own pipe_test.py only treats a blank line as
+                # the response delimiter after payload/status content has been
+                # observed. Do the same so GetInfo JSON is not discarded before
+                # it is read.
+                if content_seen:
+                    break
+                continue
+            content_seen = True
             reply_bytes += len(line.encode("utf-8", errors="replace"))
             if reply_bytes > self.max_reply_bytes or len(lines) >= self.max_reply_lines:
                 raise RuntimeError("Audacity response exceeded the configured safety limit")

@@ -86,6 +86,33 @@ def test_audacity_command_builder_blocks_command_injection():
     with pytest.raises(ValueError): build_command("Import2",{"Filename":"x\"\nRemoveTracks:"})
 
 
+
+
+def test_audacity_pipe_ignores_leading_blank_lines_before_json_response():
+    pipe = AudacityPipe()
+    pipe._to = io.StringIO()
+    pipe._from = io.StringIO(
+        "\r\n\r\n[{\"id\":\"OVNS\",\"name\":\"OpenVINO Noise Suppression\"}]\r\n"
+        "BatchCommand finished: OK\r\n\r\n"
+    )
+    reply = pipe.command("GetInfo: Type=Commands Format=JSON")
+    assert _json_ids(reply) == ["OVNS"]
+    assert "BatchCommand finished: OK" in reply
+
+
+def test_audacity_pipe_still_terminates_on_blank_line_after_content():
+    pipe = AudacityPipe()
+    pipe._to = io.StringIO()
+    pipe._from = io.StringIO("first\r\n\r\nsecond-response\r\n\r\n")
+    assert pipe.command("Message: Text=first") == "first\r\n"
+    assert pipe.command("Message: Text=second") == "second-response\r\n"
+
+
+def _json_ids(reply):
+    import ai_video_production.audacity_openvino_worker as worker
+    value = worker._extract_json(reply)
+    return [item.get("id") for item in value]
+
 def test_noise_suppression_registers_derived_audio_and_manifest(tmp_path):
     service,store,resolver,job,source=make_env(tmp_path,noise_runner)
     result=service.process(AudioAiRequest(job.job_id,source.asset_id,"ns",AudioAiOperation.NOISE_SUPPRESSION,True))

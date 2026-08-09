@@ -159,6 +159,14 @@ class AudacityOpenVinoService:
             "parameter_names": sorted(str(key) for key in parameters),
             "parameters_sha256": sha256_bytes(canonical_json_bytes(parameters)),
         }
+        strategy = effect.get("parameter_strategy")
+        if isinstance(strategy, str) and strategy in {
+            "RUNTIME_DEFAULTS",
+            "EXPLICIT_DISCOVERED_PARAMETERS",
+            "DISCOVERED_MODE_PARAMETER",
+            "INTEL_RUNTIME_DEFAULT_2_STEM",
+        }:
+            summary["parameter_strategy"] = strategy
         for key, value in parameters.items():
             if "device" in str(key).lower() and isinstance(value, str) and value.strip().upper() in {"CPU", "GPU", "NPU", "AUTO"}:
                 summary["device"] = value.strip().upper()
@@ -302,7 +310,36 @@ class AudacityOpenVinoService:
             return AudioAiResult(operation, tuple(published), tuple(roles), manifest.manifest.uri, manifest.evidence_uri, capability_summary)
         except Exception as exc:
             code = exc.code if isinstance(exc, ProductError) else "ERR_INTERNAL_LOCAL_AUDIO_AI_FAILED"
-            self.store.update_operation_status(operation.operation_id, "FAILED", last_error_code=code)
+            # A worker timeout after the first Audacity mutation may mean the external
+            # effect/import/export completed even though Product never received a
+            # durable result.  Do not convert that ambiguous state to FAILED because
+            # FAILED is replayable.  Keep it PARTIAL so the next identical request
+            # requires explicit reconciliation instead of blindly repeating work.
+            ambiguous_external_state = False
+            if isinstance(exc, ProductError) and exc.code == "ERR_PROVIDER_AUDACITY_OPENVINO_TIMEOUT":
+                details = exc.details if isinstance(exc.details, dict) else {}
+                progress = details.get("progress") if isinstance(details.get("progress"), dict) else {}
+                phase = str(progress.get("phase") or "")
+                ambiguous_external_state = phase in {
+                    "IMPORTING_SOURCE",
+                    "SOURCE_IMPORTED",
+                    "APPLYING_NOISE_SUPPRESSION",
+                    "NOISE_SUPPRESSION_APPLIED",
+                    "EXPORTING_NOISE_SUPPRESSION",
+                    "NOISE_SUPPRESSION_EXPORTED",
+                    "APPLYING_MUSIC_SEPARATION",
+                    "MUSIC_SEPARATION_APPLIED",
+                    "MUSIC_SEPARATION_TRACKS_DISCOVERED",
+                    "EXPORTING_MUSIC_SEPARATION_STEM",
+                    "MUSIC_SEPARATION_EXPORTED",
+                    "CLEANING_AUDACITY_PROJECT",
+                    "AUDACITY_PROJECT_CLEANED",
+                }
+            self.store.update_operation_status(
+                operation.operation_id,
+                "PARTIAL" if ambiguous_external_state else "FAILED",
+                last_error_code=code,
+            )
             if isinstance(exc, ProductError):
                 raise
             raise ProductError("ERR_INTERNAL_LOCAL_AUDIO_AI_FAILED", "local audio AI processing failed unexpectedly", ProductErrorCategory.INTERNAL, operation_id=operation.operation_id) from exc

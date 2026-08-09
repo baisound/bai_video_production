@@ -54,3 +54,12 @@ def test_sandbox_runner_keeps_fail_closed_acknowledgement_and_sandbox_prefix():
     assert "'^BAI_CAPABILITY_PROBE_[A-Za-z0-9_-]+$'" in text
     assert '--probe-assets-dir $assetDir' in text
     assert 'Probe assets retained:' in text
+
+
+def test_task004_audacity_behavior_runner_is_synthetic_and_bounded():
+    text = (ROOT / 'tools/windows/run-task004-audacity-openvino-behavior-probe.ps1').read_text(encoding='utf-8')
+    assert 'synthetic probe audio only' in text
+    assert 'current Audacity project MUST be empty' in text
+    assert '--timeout-seconds $TimeoutSeconds' in text
+    assert 'task004-live-evidence-behavior' in text
+    assert 'do not modify or reinstall audacity/openvino' in text.lower()

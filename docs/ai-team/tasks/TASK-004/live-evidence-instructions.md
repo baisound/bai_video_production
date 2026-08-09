@@ -74,3 +74,37 @@ Package 0.4.2 corrected the Windows `mod-script-pipe` command terminator to Auda
 ## Targeted OpenVINO discovery in package 0.4.4
 
 Package 0.4.4 replaces normal `GetInfo: Type=Commands Format=JSON` enumeration with bounded `Help` queries for the five OpenVINO capabilities understood by TASK-004. This avoids loading/enumerating unrelated Waves, iZotope, FabFilter and other installed effects during the capability probe. Missing Whisper/Music Generation/Super Resolution effects are reported as unavailable; they do not prevent a capability PASS when the Audacity scripting boundary itself is healthy. Noise Suppression and Music Separation remain the TASK-004 executable OpenVINO targets.
+
+
+## Capability gate result — Attempt 05
+
+The target Audacity/OpenVINO capability gate has passed. Attempt 05 returned all five bounded OpenVINO features as available and reached `EXECUTION_COMPLETE`. Do not repeat capability discovery unless the target runtime is later changed or upgraded.
+
+## Package 0.4.5 — synthetic behavioral Evidence
+
+Package 0.4.5 adds the next and final Audacity/OpenVINO live gate for TASK-004. The probe executes only the two audio operations owned by this task and uses deterministic locally generated probe audio; it does not read client or production audio.
+
+Preconditions:
+
+1. install the package with `python -m pip install -e .`;
+2. start Audacity with `mod-script-pipe` and OpenVINO enabled;
+3. keep the active Audacity project completely empty;
+4. ComfyUI does not need to be running for this probe.
+
+From the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-task004-audacity-openvino-behavior-probe.ps1 -TimeoutSeconds 1800
+```
+
+The runner writes only under `task004-live-evidence-behavior/`. On PASS, return that directory as a ZIP. On failure, do not reinstall or reconfigure Audacity/OpenVINO solely because of the probe result; return the Evidence directory for review.
+
+The probe executes:
+
+1. OpenVINO Noise Suppression using runtime defaults;
+2. OpenVINO Music Separation using the verified Intel runtime's no-parameter **2-stem** default;
+3. ffprobe/checksum/output-role QA and isolated TASK-003/TASK-004 Asset + Manifest publication.
+
+The verified runtime exposes no scriptable Music Separation mode parameter. Therefore package 0.4.5 intentionally does **not** behavior-probe or claim 4-stem automation. A `4_STEM` Product request fails closed until a runtime/provider exposes a provable scriptable mode.
+
+For the capability-accepted target, use the standalone final-gate procedure in `behavior-evidence-instructions.md`. Package 0.4.5 also records execution phases around the first Audacity mutation. If a timeout occurs at or after `IMPORTING_SOURCE`, the Product operation is kept `PARTIAL` and an identical retry is blocked pending Evidence review/reconciliation.

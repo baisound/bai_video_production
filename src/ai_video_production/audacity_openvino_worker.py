@@ -129,12 +129,23 @@ def validate_effect_parameters(descriptor: dict[str, Any], supplied: dict[str, A
     return result
 
 
-def separation_parameters(descriptor: dict[str, Any], mode: str, supplied: dict[str, Any]) -> dict[str, Any]:
+def separation_parameters(descriptor: dict[str, Any], mode: str, supplied: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    """Resolve scriptable separation parameters without pretending UI-only state is scriptable.
+
+    Intel's Audacity OpenVINO Music Separation effect currently exposes no
+    automatable parameters through Audacity Help/GetCommandDefinition, while
+    its implementation initializes the separation-mode selector to index 0 and
+    defines index 0 as the 2-stem Instrumental/Vocals mode.  Therefore the
+    no-parameter command is a provable 2-stem default for the exact Intel
+    effect, but 4-stem is not safely selectable through mod-script-pipe on this
+    runtime contract.
+    """
     result = validate_effect_parameters(descriptor, supplied)
     if supplied:
-        return result
+        return result, "EXPLICIT_DISCOVERED_PARAMETERS"
     wanted = "2" if mode == "2_STEM" else "4"
-    for param in _parameter_descriptors(descriptor):
+    params = _parameter_descriptors(descriptor)
+    for param in params:
         name = _param_name(param)
         if not name:
             continue
@@ -145,7 +156,15 @@ def separation_parameters(descriptor: dict[str, Any], mode: str, supplied: dict[
             text = _normalize(str(choice))
             if wanted in text and "stem" in text:
                 result[name] = choice
-                return result
+                return result, "DISCOVERED_MODE_PARAMETER"
+
+    command_id = (_command_id(descriptor) or "").casefold()
+    effect_name = str(descriptor.get("name") or "").casefold()
+    exact_intel_effect = command_id == "openvinomusicseparation" and effect_name == "openvino music separation"
+    if exact_intel_effect and not params and mode == "2_STEM":
+        return {}, "INTEL_RUNTIME_DEFAULT_2_STEM"
+    if exact_intel_effect and not params and mode == "4_STEM":
+        raise RuntimeError("OpenVINO Music Separation 4-stem mode is UI-only on this Audacity runtime and is not safely script-selectable")
     raise ValueError("runtime did not expose a provable 2-stem/4-stem parameter; supply explicit discovered parameters")
 
 
@@ -413,43 +432,98 @@ def execute(
             return capabilities
         if tracks_before:
             return {"ok": False, "error_code": "ERR_AUDIO_RUNTIME_EXISTING_PROJECT_PROTECTED", "category": "SECURITY", "capabilities": capabilities}
+        if operation == "NOISE_SUPPRESSION":
+            descriptor = features["NOISE_SUPPRESSION"]
+            if descriptor is None or not (command_id := _command_id(descriptor)):
+                return {"ok": False, "error_code": "ERR_PROVIDER_OPENVINO_EFFECT_UNAVAILABLE", "category": "NOT_SUPPORTED", "feature": "NOISE_SUPPRESSION", "capabilities": capabilities}
+            params = validate_effect_parameters(descriptor, dict(request.get("effect_parameters") or {}))
+            parameter_strategy = "EXPLICIT_DISCOVERED_PARAMETERS" if params else "RUNTIME_DEFAULTS"
+            mode = None
+        elif operation == "MUSIC_SEPARATION":
+            descriptor = features["MUSIC_SEPARATION"]
+            if descriptor is None or not (command_id := _command_id(descriptor)):
+                return {"ok": False, "error_code": "ERR_PROVIDER_OPENVINO_EFFECT_UNAVAILABLE", "category": "NOT_SUPPORTED", "feature": "MUSIC_SEPARATION", "capabilities": capabilities}
+            mode = request.get("separation_mode")
+            if mode not in {"2_STEM", "4_STEM"}:
+                raise ValueError("separation_mode must be 2_STEM or 4_STEM")
+            try:
+                params, parameter_strategy = separation_parameters(descriptor, mode, dict(request.get("effect_parameters") or {}))
+            except RuntimeError as exc:
+                return {
+                    "ok": False,
+                    "error_code": "ERR_PROVIDER_OPENVINO_4_STEM_NOT_SCRIPTABLE",
+                    "category": "NOT_SUPPORTED",
+                    "message": str(exc),
+                    "feature": "MUSIC_SEPARATION",
+                    "capabilities": capabilities,
+                }
+        else:
+            raise ValueError("unsupported worker operation")
+
+        # Only after all side-effect-free capability/parameter validation passes
+        # may the worker touch the empty Audacity project.
         source = Path(request["source_path"])
         output_dir = Path(request["output_dir"])
         output_dir.mkdir(parents=True, exist_ok=True)
         if not source.is_file():
             raise FileNotFoundError("source_path is missing")
         try:
+            mark("PREFLIGHT_VALIDATED")
+            mark("IMPORTING_SOURCE")
             _import(pipe, source)
+            mark("SOURCE_IMPORTED")
             if operation == "NOISE_SUPPRESSION":
-                descriptor = features["NOISE_SUPPRESSION"]
-                if descriptor is None or not (command_id := _command_id(descriptor)):
-                    return {"ok": False, "error_code": "ERR_PROVIDER_OPENVINO_EFFECT_UNAVAILABLE", "category": "NOT_SUPPORTED", "feature": "NOISE_SUPPRESSION", "capabilities": capabilities}
-                params = validate_effect_parameters(descriptor, dict(request.get("effect_parameters") or {}))
+                mark("APPLYING_NOISE_SUPPRESSION")
                 pipe.command(build_command(command_id, params))
+                mark("NOISE_SUPPRESSION_APPLIED")
                 output = output_dir / "noise-suppressed.wav"
+                mark("EXPORTING_NOISE_SUPPRESSION")
                 _export(pipe, output)
-                return {"ok": True, "operation": operation, "outputs": [{"role": "noise_suppressed", "path": str(output)}], "effect": {"command_id": command_id, "parameters": params}, "capabilities": capabilities}
-            if operation == "MUSIC_SEPARATION":
-                descriptor = features["MUSIC_SEPARATION"]
-                if descriptor is None or not (command_id := _command_id(descriptor)):
-                    return {"ok": False, "error_code": "ERR_PROVIDER_OPENVINO_EFFECT_UNAVAILABLE", "category": "NOT_SUPPORTED", "feature": "MUSIC_SEPARATION", "capabilities": capabilities}
-                mode = request.get("separation_mode")
-                if mode not in {"2_STEM", "4_STEM"}:
-                    raise ValueError("separation_mode must be 2_STEM or 4_STEM")
-                params = separation_parameters(descriptor, mode, dict(request.get("effect_parameters") or {}))
-                pipe.command(build_command(command_id, params))
-                tracks_after = _tracks(pipe)
-                stems = _find_stems(tracks_after, mode)
-                outputs: list[dict[str, str]] = []
-                for role, index in stems.items():
-                    pipe.command(build_command("SelectTracks", {"Track": index, "TrackCount": 1, "Mode": "Set"}))
-                    output = output_dir / f"stem-{role}.wav"
-                    _export(pipe, output)
-                    outputs.append({"role": role, "path": str(output)})
-                return {"ok": True, "operation": operation, "outputs": outputs, "effect": {"command_id": command_id, "parameters": params}, "capabilities": capabilities, "stems": stems}
-            raise ValueError("unsupported worker operation")
+                mark("NOISE_SUPPRESSION_EXPORTED")
+                return {
+                    "ok": True,
+                    "operation": operation,
+                    "outputs": [{"role": "noise_suppressed", "path": str(output)}],
+                    "effect": {
+                        "command_id": command_id,
+                        "parameters": params,
+                        "parameter_strategy": parameter_strategy,
+                    },
+                    "capabilities": capabilities,
+                }
+
+            assert operation == "MUSIC_SEPARATION" and mode in {"2_STEM", "4_STEM"}
+            mark("APPLYING_MUSIC_SEPARATION")
+            pipe.command(build_command(command_id, params))
+            mark("MUSIC_SEPARATION_APPLIED")
+            tracks_after = _tracks(pipe)
+            mark("MUSIC_SEPARATION_TRACKS_DISCOVERED")
+            stems = _find_stems(tracks_after, mode)
+            outputs: list[dict[str, str]] = []
+            for role, index in stems.items():
+                pipe.command(build_command("SelectTracks", {"Track": index, "TrackCount": 1, "Mode": "Set"}))
+                output = output_dir / f"stem-{role}.wav"
+                mark("EXPORTING_MUSIC_SEPARATION_STEM")
+                _export(pipe, output)
+                outputs.append({"role": role, "path": str(output)})
+            mark("MUSIC_SEPARATION_EXPORTED")
+            return {
+                "ok": True,
+                "operation": operation,
+                "outputs": outputs,
+                "effect": {
+                    "command_id": command_id,
+                    "parameters": params,
+                    "parameter_strategy": parameter_strategy,
+                },
+                "capabilities": capabilities,
+                "stems": stems,
+            }
         finally:
+            mark("CLEANING_AUDACITY_PROJECT")
             _remove_all_tracks(pipe)
+            mark("AUDACITY_PROJECT_CLEANED")
+
 
 
 def main(argv: list[str] | None = None) -> int:

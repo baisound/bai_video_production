@@ -28,13 +28,14 @@ Verified on 2026-08-09 against current primary documentation/repositories before
 
 - Intel's official repository is GPL-3.0 and provides Music Separation, Noise Suppression, MusicGen, Whisper Transcription and Audio Super Resolution; processing is local and OpenVINO can use supported CPU/GPU/NPU devices.
 - Current Noise Suppression documentation states its purpose is removing background noise from spoken audio.
-- Music Separation documentation exposes 2-stem and 4-stem separation workflows.
+- Music Separation documentation/UI exposes 2-stem and 4-stem workflows. The Intel effect source initializes `m_separationModeSelectionChoice = 0`, registers `(2 Stem) Instrumental, Vocals` as choice 0 and `(4 Stem) Drums, Bass, Vocals, Others` as choice 1. On the verified target, Audacity `Help` returns an empty scriptable `params` array for this effect. TASK-004 therefore treats the no-parameter 2-stem default as provable but does not claim the UI-only 4-stem selector is scriptable.
+- The Intel Music Separation source names generated tracks with `Instrumental`/`Vocals` in the 2-stem branch and `Drums`/`Bass`/`Other Instruments`/`Vocals` in the 4-stem branch; Product output-role mapping uses those semantic suffixes rather than fixed output positions.
 - Product Core does not copy/link GPL plugin source. It integrates an installed local runtime through an external process boundary.
 
 ## Audacity scripting
 
 - Audacity official documentation states `mod-script-pipe` can drive Audacity externally through named pipes and is disabled by default until enabled in Modules preferences.
-- Audacity scripting reference exposes commands used to inspect/select/import/effect/export state.
+- Audacity scripting reference exposes commands used to inspect/select/import/effect/export state. Audacity's `Export2` implementation calls `ExportTaskBuilder.SetRange(..., selectedOnly=true)`, supporting Product's per-selected-stem export strategy.
 - Audacity warns of security implications when external processes can control the application; TASK-004 therefore keeps it local-only and requires an empty/sandbox project before mutation.
 - Command/effect availability can vary with installed modules/version, so the OpenVINO Adapter discovers effect descriptors dynamically instead of freezing one private implementation ID.
 

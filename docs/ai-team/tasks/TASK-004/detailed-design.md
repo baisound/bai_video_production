@@ -144,7 +144,7 @@ Before any effect:
 3. require zero existing tracks; otherwise fail `ERR_AUDIO_RUNTIME_EXISTING_PROJECT_PROTECTED`;
 4. import only a Product-controlled WAV/source file;
 5. select the imported track/time range;
-6. invoke an effect command discovered from `GetInfo: Type=Commands Format=JSON`;
+6. invoke an effect command discovered through bounded Audacity `Help` lookup for the five TASK-004 OpenVINO command IDs;
 7. export only to Product-owned staging;
 8. remove the sandbox tracks on completion/failure where safely possible.
 
@@ -152,15 +152,17 @@ No real/client Audacity project is modified by an authorized BAI operation.
 
 ## 18. Dynamic OpenVINO effect discovery
 
-Audacity command IDs and plugin parameters may change between versions. The provider therefore does not assume one permanent scripting ID. `GetInfo: Type=Commands` is parsed and matched by normalized action/name strings for:
+Normal discovery is intentionally bounded. Audacity derives script command IDs from effect symbols with its `GetSquashedName` rule, so TASK-004 queries the five OpenVINO command IDs it understands through side-effect-free `Help: Command=... Format=JSON` calls rather than enumerating the user's entire plugin inventory. The bounded targets are:
 
-- OpenVINO Noise Suppression;
-- OpenVINO Music Separation;
-- OpenVINO Whisper Transcription;
-- OpenVINO Music Generation;
-- OpenVINO Super Resolution.
+- `OpenvinoNoiseSuppression`;
+- `OpenvinoMusicSeparation`;
+- `OpenvinoWhisperTranscription`;
+- `OpenvinoMusicGeneration`;
+- `OpenvinoSuperResolution`.
 
-The discovered command descriptor and parameter schema are retained in capability Evidence. Executable Noise Suppression / Music Separation calls use either caller-supplied parameters validated against discovered names or conservative discovered defaults. Unknown requested parameters are rejected before effect execution.
+The returned descriptor is retained in capability Evidence and its `id` must match the requested command. `GetInfo: Type=Commands` remains diagnostic/fallback code only. Unknown caller-supplied effect parameters are rejected before execution.
+
+Target Attempt 05 proved all five commands live-reachable. The returned Intel OpenVINO descriptors expose empty `params` arrays. Product code therefore distinguishes **scriptable parameters** from **UI-only effect state** and does not pretend that every visible Audacity control can be selected through `mod-script-pipe`.
 
 ## 19. Noise Suppression operation
 
@@ -168,7 +170,9 @@ Noise Suppression imports one source track into the empty sandbox, applies the d
 
 ## 20. Music Separation operation
 
-Music Separation imports one source track and invokes OpenVINO Music Separation in caller-selected `2_STEM` or `4_STEM` mode. After execution, `GetInfo: Type=Tracks` identifies newly generated tracks. Expected stem roles are mapped by normalized track-name suffixes (Vocals/Instrumental or Drums/Bass/Other/Vocals), not by blind positional assumptions. Each stem is individually selected/exported as WAV, validated and published as a canonical AUDIO Asset.
+Music Separation imports one source track and invokes the discovered Intel OpenVINO Music Separation effect. After execution, `GetInfo: Type=Tracks` identifies newly generated tracks. Expected stem roles are mapped by normalized track-name suffixes rather than blind positional assumptions, and `Export2` is used with Audacity's selected-only export path for each selected stem.
+
+The target runtime's live `Help` descriptor contains no scriptable mode parameter. Intel's effect implementation initializes `m_separationModeSelectionChoice = 0`, defines choice 0 as `(2 Stem) Instrumental, Vocals`, and choice 1 as `(4 Stem) Drums, Bass, Vocals, Others`. Therefore Product 0.4.5 allows the exact Intel effect's **no-parameter 2-stem runtime default** and records `parameter_strategy=INTEL_RUNTIME_DEFAULT_2_STEM`. It does **not** silently claim 4-stem automation: when the runtime exposes no scriptable separation-mode parameter, a `4_STEM` request fails `ERR_PROVIDER_OPENVINO_4_STEM_NOT_SCRIPTABLE`. A future plugin/runtime that exposes a provable mode parameter may re-enable 4-stem through the generic discovered-parameter path.
 
 If expected stems cannot be proved, no stem set is declared complete. All reported stem descriptors, containment, media structure, checksums and the complete expected role set are validated as a batch **before any stem is published**; this prevents a failed partial separation from leaving a subset of stems as producer outputs.
 
@@ -282,4 +286,4 @@ For ComfyUI-backed operations:
 4. only after output validation/publication is the operation marked `COMPLETED` with canonical Asset result reference;
 5. changed request payload under the same idempotency key is an integrity conflict.
 
-The same principle applies to Audacity/OpenVINO; where the external runtime lacks a stable resumable job identifier, an ambiguous post-dispatch crash fails closed for reconciliation rather than automatically repeating a destructive/expensive effect.
+The same principle applies to Audacity/OpenVINO; where the external runtime lacks a stable resumable job identifier, an ambiguous post-dispatch crash fails closed for reconciliation rather than automatically repeating a destructive/expensive effect. Worker phase Evidence is written before the first project mutation and around import/effect/export/cleanup; a timeout at or after `IMPORTING_SOURCE` persists the Product operation as `PARTIAL`, while a timeout proven to occur before that boundary may remain replayable `FAILED`.

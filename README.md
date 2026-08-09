@@ -8,7 +8,7 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 - Active Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- TASK-004 stage: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE` / package `0.4.2`
+- TASK-004 stage: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE` / package `0.4.5`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -79,7 +79,7 @@ Final local verification: `81 / 81` tests PASS, compileall PASS, wheel/installed
 - Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.2.docx`
 - External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.2.docx`
 
-TASK-003 is complete. TASK-004 implementation is locally complete and is awaiting target ComfyUI/Audacity capability Evidence. After TASK-004 closes, TASK-022 remains the default editing-first recommendation unless the Owner reprioritizes; later TASKs remain not authorized until explicit Owner instruction.
+TASK-003 is complete. TASK-004 ComfyUI and Audacity/OpenVINO capability Evidence is accepted; only bounded OpenVINO Noise Suppression + verified 2-stem Music Separation behavioral Evidence remains before final closure. After TASK-004 closes, TASK-022 remains the default editing-first recommendation unless the Owner reprioritizes; later TASKs remain not authorized until explicit Owner instruction.
 
 
 ## TASK-003 Secure Asset Ingest
@@ -93,6 +93,6 @@ Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS an
 
 ## TASK-004 Media + Local AI Runtime Foundation
 
-TASK-004 package `0.4.2` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and 2/4-stem Music Separation. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
+TASK-004 package `0.4.5` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and verified-runtime 2-stem Music Separation; 4-stem fails closed until a scriptable mode is exposed. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
 
-Local DEV-4 verification is `233 / 233` tests PASS, compileall/diff-check PASS, wheel build PASS, and repository-external installed-wheel golden normalization using real ffmpeg/ffprobe PASS. Target ComfyUI/Audacity capabilities remain an explicit live-Evidence gate; absence is reported as structured fail-closed diagnostics rather than a fabricated PASS.
+Local DEV-4 verification is `247 / 247` tests PASS and compileall/diff-check PASS. Target ComfyUI and Audacity/OpenVINO capability Evidence is accepted. The remaining TASK-004 gate is synthetic behavioral execution for OpenVINO Noise Suppression and 2-stem Music Separation; no perceptual-quality claim is implied by that probe.

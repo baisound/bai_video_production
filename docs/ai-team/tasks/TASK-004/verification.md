@@ -1,22 +1,23 @@
 # TASK-004 — Verification Record
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
-- Completion status: `LIVE_CAPABILITY_EVIDENCE_PENDING`
-- Package: `0.4.4`
+- Completion status: `LIVE_BEHAVIORAL_EVIDENCE_PENDING`
+- Package: `0.4.5`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
 
-- `python -m pytest -q`: **238 / 238 PASS**
+- `python -m pytest -q`: **247 / 247 PASS**
 - `python -m compileall -q src tests`: PASS
 - `git diff --check`: PASS
 - wheel build with `pip wheel --no-deps --no-build-isolation`: PASS
-- wheel SHA-256: `794b7898adb3bc531825e7333287b95ecf2a14924d62f04a057a5c7ce13fd779`
-- installed-wheel package version: `0.4.4`
+- wheel SHA-256: `2e5b5a10c6ab8d72a12f43699a1972e048c06dfa13a7387d58d6c2e7f110ad6b`
+- installed-wheel package version: `0.4.5`
 - packaged TASK-004 schema resources: PASS
 - installed-wheel golden media ingest + forced CFR proxy + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
 - installed-wheel unavailable-ComfyUI diagnostic: expected fail-closed `ERR_PROVIDER_COMFY_UNREACHABLE`, exit 2
 - installed-wheel unavailable-Audacity diagnostic: expected fail-closed `ERR_PROVIDER_AUDACITY_PIPE_UNAVAILABLE`, exit 2
+- installed-wheel new synthetic behavioral-probe CLI smoke: generated isolated 48 kHz probe inputs, failed closed on absent local Audacity pipe with exit 2, and retained structured partial Evidence rather than reporting PASS
 
 ## Covered contracts
 
@@ -50,7 +51,7 @@
 - external GPL runtime boundary with no copied plugin implementation;
 - bounded targeted OpenVINO effect capability discovery through Audacity `Help`;
 - empty/sandbox-project safety gate;
-- Noise Suppression and complete 2/4-stem Music Separation contracts;
+- Noise Suppression and complete 2-stem Music Separation contract; verified-runtime 4-stem request fails closed unless a scriptable mode parameter is exposed;
 - output containment, media QA and batch-preflight publication;
 - request-bound idempotency;
 - ambiguous `IN_PROGRESS` external state fails closed instead of replaying Audacity work.
@@ -102,3 +103,22 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 - `GetInfo: Type=Tracks Format=JSON` remains in use because the empty/sandbox-project safety gate requires current track state. The global `GetInfo: Type=Commands` query is retained only as a diagnostic helper and is no longer used by normal capability or execution discovery.
 - JSON extraction is now contract-typed: array callers ignore unrelated JSON objects, and object callers ignore unrelated arrays. A mismatched `Help` descriptor ID fails closed.
 - Full regression is **238 / 238 PASS**, compileall PASS, `git diff --check` PASS, wheel build PASS, and installed-wheel import/protocol-contract smoke PASS. Live target capability Evidence must still be rerun before TASK-004 can close.
+
+
+## Live capability PASS — Attempt 05 / package 0.4.4
+
+- Returned target Evidence reports `connected=true`, `ok=true`, `current_track_count=0`, and worker phase `EXECUTION_COMPLETE`.
+- All five bounded OpenVINO commands are live-available: Noise Suppression, Music Separation, Whisper Transcription, Music Generation, and Super Resolution.
+- Each live `Help` descriptor returned the expected command ID and OpenVINO name.
+- The live descriptors expose `params: []`. This is now treated as a runtime contract fact, not as an invitation to invent parameter names.
+- Capability discovery gate is closed. The remaining audio gate is behavioral execution of Noise Suppression and 2-stem Music Separation using synthetic probe media.
+
+## Behavioral-probe corrective design — package 0.4.5
+
+- Intel's Music Separation implementation initializes `m_separationModeSelectionChoice` to `0`, pushes `(2 Stem) Instrumental, Vocals` as choice 0 and `(4 Stem) Drums, Bass, Vocals, Others` as choice 1, but the verified Audacity `Help` descriptor exposes no scriptable mode parameter.
+- Product 0.4.5 therefore records the exact no-parameter Intel path as `INTEL_RUNTIME_DEFAULT_2_STEM`; this is eligible for live behavioral proof.
+- A 4-stem request on this verified runtime fails `ERR_PROVIDER_OPENVINO_4_STEM_NOT_SCRIPTABLE` instead of depending on mutable GUI state or inventing an unsupported script parameter.
+- `tools/windows/run-task004-audacity-openvino-behavior-probe.ps1` generates deterministic local stereo 48 kHz probe WAVs, uses an isolated temporary Product job, requires the Audacity project to be empty, executes Noise Suppression then 2-stem Music Separation through the production adapter, and writes `audacity-openvino-behavior.json`.
+- The behavioral probe uses no client/user media and makes no perceptual-quality claim; it proves only executable runtime behavior, output structure, Asset publication/manifest integration and fail-closed safety boundaries.
+- Full regression after this change: **247 / 247 PASS**.
+- DEV-4 replay Critic additionally pins worker execution phases. A timeout observed at or after `IMPORTING_SOURCE` is recorded as `PARTIAL`, so a repeated identical request fails `ERR_STATE_AUDACITY_RECONCILIATION_REQUIRED` instead of blindly replaying external AI work; a timeout proven to occur before the first Audacity mutation remains `FAILED`/retryable.

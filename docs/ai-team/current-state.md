@@ -4,12 +4,12 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-004_IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
+- Project Status: `TASK-004_CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
 - Last Completed Task: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 - Active Consumer Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
-- TASK-004 Status: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
-- Package: `0.4.1`
+- TASK-004 Status: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
+- Package: `0.4.5`
 - Next Consumer Task: `NONE AUTHORIZED`
 
 ## TASK-004 implemented scope
@@ -40,26 +40,29 @@
 
 - Audacity `mod-script-pipe` external Runtime boundary;
 - Intel OpenVINO capability discovery without copying GPL plugin code;
-- Noise Suppression and 2/4-stem Music Separation contracts;
+- Noise Suppression and verified-runtime 2-stem Music Separation contract; 4-stem is fail-closed until scriptable mode is available;
 - output containment, complete sibling QA before publication and derived AUDIO Asset registration;
 - ambiguous external state fails closed instead of automatically replaying Audacity work.
+- worker phase Evidence distinguishes pre-dispatch timeout from post-dispatch ambiguity; post-dispatch timeout is persisted as `PARTIAL` and blocks blind replay.
 
 ## Current verification
 
-- `pytest`: `229 / 229 PASS`
+- `pytest`: `247 / 247 PASS`
 - `compileall`: PASS
 - `git diff --check`: PASS
-- package `0.4.1` wheel build: PASS
+- package `0.4.5` wheel build: PASS
 - installed-wheel packaged schemas: PASS
 - installed-wheel real ffmpeg/ffprobe golden normalization: PASS
 - absent ComfyUI/Audacity runtimes: structured fail-closed diagnostics PASS
-- wheel SHA-256: `69ccf086b2346c6e0e79f6fe8adcd7a1f0658abded50cd80beef6e1f28855009`
+- wheel SHA-256: `2e5b5a10c6ab8d72a12f43699a1972e048c06dfa13a7387d58d6c2e7f110ad6b`
 
 ## Remaining TASK-004 gate
 
-Target-machine live capability Evidence is still required before formal completion. The current build environment does not contain the Owner's ComfyUI/MiniMax/FLUX/SD/Audacity/OpenVINO installation, therefore no live provider-support or performance claim is fabricated.
+Target-machine **capability Evidence is now accepted** for both ComfyUI and Audacity/OpenVINO. Audacity Attempt 05 proved all five targeted OpenVINO effects live-reachable with an empty project and completed worker execution.
 
-Run `tools/windows/run-task004-local-ai-capability-probes.ps1` on the target Windows machine and return `task004-live-evidence/` for final DEV-4 review.
+Formal completion still requires bounded behavioral Evidence for the two TASK-004 executable audio targets: OpenVINO Noise Suppression and the provable 2-stem Music Separation path. Package 0.4.5 adds `tools/windows/run-task004-audacity-openvino-behavior-probe.ps1`, which uses only deterministic synthetic probe audio and an isolated Product job. It must be run with Audacity open on an empty project.
+
+4-stem Music Separation is now explicitly `NOT_SCRIPTABLE_ON_VERIFIED_RUNTIME` rather than falsely claimed: the live descriptor exposes no separation-mode parameter, so 0.4.5 fails closed for `4_STEM` until a future runtime/provider exposes a scriptable mode.
 
 ## Roadmap
 

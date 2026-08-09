@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-004_IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
+`TASK-004_CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
 
 ## Purpose
 
@@ -72,7 +72,7 @@ Consumer Project Repository root. Machine-specific absolute paths are not canoni
 - TASK-001: `DEV-4 FOUNDATION CRITICAL` / score 25 / COMPLETED
 - TASK-002: `DEV-4 FOUNDATION CRITICAL` / score 22 / COMPLETED
 - TASK-003: `DEV-4 FOUNDATION CRITICAL` / score 33 / COMPLETED
-- TASK-004: `DEV-4 FOUNDATION CRITICAL` / score 25 / implementation complete, target local-runtime Evidence pending
+- TASK-004: `DEV-4 FOUNDATION CRITICAL` / score 25 / capability verified, bounded target behavioral Evidence pending
 
 TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Identity、MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley、Audacity OpenVINO外部Runtime境界を含むためSafety Floorを下げない。
 
@@ -89,10 +89,10 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 - Last Completed: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 - Active Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- TASK-004: `IMPLEMENTATION_COMPLETE_AWAITING_LIVE_CAPABILITY_EVIDENCE`
-- Package: `0.4.1`
-- Local verification: `229 / 229 PASS`, compileall PASS, wheel PASS, installed-wheel golden normalization PASS
-- Target-machine Gate: ComfyUI capability Evidence + Audacity/OpenVINO capability Evidence + final DEV-4 Judge review
+- TASK-004: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
+- Package: `0.4.5`
+- Local verification: `247 / 247 PASS`, compileall PASS; capability Evidence accepted on the target runtime
+- Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
 - Next Consumer Task: `NONE AUTHORIZED`; editing-first recommendation after TASK-004 is TASK-022 unless Owner reprioritizes
 - OS-internal TASK-016 remains unrelated and untouched.
@@ -101,4 +101,4 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 Taskは、選択DEV Profileの要求、実装、必要Test、blocking finding解消、内部文書同期、Completion Evidenceが揃った場合のみ完了する。
 
-Local Test PASSや「implementation complete」をtarget runtime capability PASSまたはOwner Authorization for later TASKへ読み替えない。
+Local Test PASSやCapability PASSを、まだ未実施のBehavioral EvidenceまたはOwner Authorization for later TASKへ読み替えない。

@@ -117,12 +117,51 @@ def test_effect_parameter_validation_rejects_unknown():
 
 def test_separation_parameter_is_derived_only_from_provable_choice():
     descriptor={"id":"Effect","params":[{"name":"Separation Mode","choices":["2 Stem - Vocals/Instrumental","4 Stem - Drums/Bass/Other/Vocals"],"default":"2 Stem - Vocals/Instrumental"}]}
-    assert "4 Stem" in separation_parameters(descriptor,"4_STEM",{})["Separation Mode"]
+    params, strategy = separation_parameters(descriptor,"4_STEM",{})
+    assert "4 Stem" in params["Separation Mode"]
+    assert strategy == "DISCOVERED_MODE_PARAMETER"
 
 
 def test_separation_parameter_fail_closed_when_runtime_contract_unclear():
     descriptor={"id":"Effect","params":[{"name":"Device","choices":["CPU","GPU"]}]}
     with pytest.raises(ValueError): separation_parameters(descriptor,"2_STEM",{})
+
+
+def test_intel_openvino_live_descriptor_uses_proven_runtime_default_for_two_stem_only():
+    descriptor={"id":"OpenvinoMusicSeparation","name":"OpenVINO Music Separation","params":[]}
+    params, strategy = separation_parameters(descriptor,"2_STEM",{})
+    assert params == {}
+    assert strategy == "INTEL_RUNTIME_DEFAULT_2_STEM"
+    with pytest.raises(RuntimeError, match="4-stem mode is UI-only"):
+        separation_parameters(descriptor,"4_STEM",{})
+
+
+def test_worker_reports_four_stem_not_scriptable_for_live_intel_descriptor(monkeypatch):
+    import ai_video_production.audacity_openvino_worker as worker
+    commands=[]
+    class FakePipe:
+        def __enter__(self): return self
+        def __exit__(self,*a): return None
+        def command(self, command):
+            commands.append(command)
+            if command.startswith("Help:"):
+                m=re.search(r'Command="([^"]+)"',command); assert m
+                cid=m.group(1)
+                if cid == "OpenvinoMusicSeparation":
+                    return json.dumps({"id":cid,"name":"OpenVINO Music Separation","params":[]})+"\n\n"
+                if cid == "OpenvinoNoiseSuppression":
+                    return json.dumps({"id":cid,"name":"OpenVINO Noise Suppression","params":[]})+"\n\n"
+                return "Command not found\n\n"
+            if "Type=Tracks" in command:
+                return "[]\n\n"
+            raise AssertionError(command)
+    source=Path("source.wav")
+    monkeypatch.setattr(worker,"AudacityPipe",FakePipe)
+    report=worker.execute({"operation":"MUSIC_SEPARATION","source_path":str(source),"output_dir":"out","separation_mode":"4_STEM","effect_parameters":{}})
+    assert report["ok"] is False
+    assert report["error_code"] == "ERR_PROVIDER_OPENVINO_4_STEM_NOT_SCRIPTABLE"
+    assert report["category"] == "NOT_SUPPORTED"
+    assert not any(command.startswith("Import2:") for command in commands)
 
 
 def test_audacity_command_builder_blocks_command_injection():
@@ -416,3 +455,61 @@ def test_audacity_ambiguous_in_progress_operation_fails_closed_without_replay(tm
 
     assert exc.value.code == "ERR_STATE_AUDACITY_RECONCILIATION_REQUIRED"
     assert calls == []
+
+
+def test_safe_effect_summary_preserves_bounded_parameter_strategy():
+    summary = AudacityOpenVinoService._safe_effect_summary({
+        "effect": {
+            "command_id": "OpenvinoMusicSeparation",
+            "parameters": {},
+            "parameter_strategy": "INTEL_RUNTIME_DEFAULT_2_STEM",
+        }
+    })
+    assert summary["parameter_strategy"] == "INTEL_RUNTIME_DEFAULT_2_STEM"
+    assert summary["parameter_names"] == []
+
+
+def test_audacity_post_dispatch_timeout_is_partial_and_blocks_blind_replay(tmp_path):
+    calls=[]
+    def runner(request, work_root, timeout):
+        calls.append(1)
+        raise ProductError(
+            "ERR_PROVIDER_AUDACITY_OPENVINO_TIMEOUT",
+            "timed out after external effect dispatch",
+            "TIMEOUT",
+            details={"progress":{"phase":"APPLYING_NOISE_SUPPRESSION"}},
+        )
+    service,store,_resolver,job,source=make_env(tmp_path,runner)
+    req=AudioAiRequest(job.job_id,source.asset_id,"timeout-after-dispatch",AudioAiOperation.NOISE_SUPPRESSION,True)
+    with pytest.raises(ProductError) as first:
+        service.process(req)
+    assert first.value.code == "ERR_PROVIDER_AUDACITY_OPENVINO_TIMEOUT"
+    with pytest.raises(ProductError) as second:
+        service.process(req)
+    assert second.value.code == "ERR_STATE_AUDACITY_RECONCILIATION_REQUIRED"
+    assert calls == [1]
+
+
+def test_audacity_pre_dispatch_timeout_remains_failed_not_ambiguous(tmp_path):
+    from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
+
+    def runner(request, work_root, timeout):
+        raise ProductError(
+            "ERR_PROVIDER_AUDACITY_OPENVINO_TIMEOUT",
+            "timed out before any Audacity mutation",
+            "TIMEOUT",
+            details={"progress":{"phase":"DISCOVERING_TRACKS"}},
+        )
+    service,store,_resolver,job,source=make_env(tmp_path,runner)
+    req=AudioAiRequest(job.job_id,source.asset_id,"timeout-before-dispatch",AudioAiOperation.NOISE_SUPPRESSION,True)
+    with pytest.raises(ProductError):
+        service.process(req)
+    fingerprint=sha256_bytes(canonical_json_bytes({
+        "operation": req.operation.value,
+        "source_asset_id": source.asset_id,
+        "source_checksum": source.checksum,
+        "separation_mode": None,
+        "effect_parameters": {},
+    })).removeprefix("sha256:")
+    operation,_=store.reserve_operation(job.job_id,f"LOCAL_AUDIO_{req.operation.value}:{fingerprint}",req.idempotency_key)
+    assert store.get_operation(operation.operation_id).status == "FAILED"

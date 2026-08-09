@@ -8,7 +8,7 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-003 — Asset Registry / Ingest / Path Resolver`
 - Active Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- TASK-004 stage: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE` / package `0.4.8`
+- TASK-004 stage: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE` / package `0.4.9`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -93,6 +93,6 @@ Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS an
 
 ## TASK-004 Media + Local AI Runtime Foundation
 
-TASK-004 package `0.4.8` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and verified-runtime 2-stem Music Separation; 4-stem fails closed until a scriptable mode is exposed. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
+TASK-004 package `0.4.9` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and verified-runtime 2-stem Music Separation; 4-stem fails closed until a scriptable mode is exposed. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
 
-Local DEV-4 verification is `250 / 250` PASS. Attempt 08 passed prior binary ingest correction but stopped before Audacity dispatch because `ffprobe.exe` was not discoverable. Package 0.4.8 resolves explicit, environment, PATH and bounded standard Windows candidates and injects the absolute path into mandatory media validation. Target-Windows behavioral rerun remains.
+Attempt 10 reached Audacity from the short `D:\BAI` checkout and isolated a first-command failure. Package 0.4.9 normalizes Windows file arguments to Audacity-compatible forward slashes, rejects overlong paths before dispatch, and preserves the exact failed command, phase, and sanitized response hash. Target-Windows behavioral rerun remains.

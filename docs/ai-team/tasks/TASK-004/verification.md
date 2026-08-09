@@ -2,7 +2,7 @@
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
 - Completion status: `LIVE_BEHAVIORAL_EVIDENCE_PENDING`
-- Package: `0.4.8`
+- Package: `0.4.9`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
@@ -12,7 +12,7 @@
 - `git diff --check`: PASS
 - wheel build with `pip wheel --no-deps --no-build-isolation`: PASS
 - wheel SHA-256: `a87beed109e0ac6641fefb25d519b625eea1fa6507bfea04552edfe0e1e48366`
-- installed-wheel package version: `0.4.8`
+- installed-wheel package version: `0.4.9`
 - packaged TASK-004 schema resources: PASS
 - installed-wheel golden media ingest + forced CFR proxy (`30000/1001`) + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
 - installed-wheel unavailable-ComfyUI diagnostic: expected fail-closed `ERR_PROVIDER_COMFY_UNREACHABLE`, exit 2
@@ -148,4 +148,10 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 
 - `ERR_PROVIDER_FFPROBE_NOT_FOUND` occurred before Asset publication or Audacity dispatch.
 - Package 0.4.8 adds bounded Windows ffprobe discovery and explicit executable overrides; mandatory validation remains fail-closed.
+
+## Behavioral Evidence Attempts 09–10 — package 0.4.9 corrective
+
+- Attempt 09 stalled at `IMPORTING_SOURCE` with a legacy-Windows-length repository path and was manually interrupted.
+- Attempt 10 used `D:\BAI\ai-video-production`, completed the bounded runner, and returned a first-command Audacity failure.
+- Package 0.4.9 converts Windows file arguments to forward-slash form for mod-script-pipe, rejects paths longer than 259 characters before dispatch, and records the failed command ID, precise phase, and sanitized reply SHA-256.
 - Explicit-path integration reached the Audacity boundary; full local regression: **250 / 250 PASS**.

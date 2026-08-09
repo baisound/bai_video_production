@@ -9,7 +9,7 @@
 - Active Consumer Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
-- Package: `0.4.8`
+- Package: `0.4.9`
 - Next Consumer Task: `NONE AUTHORIZED`
 
 ## TASK-004 implemented scope

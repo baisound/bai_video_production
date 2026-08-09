@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import math
+import re
 from pathlib import Path, PureWindowsPath
 import wave
 
@@ -14,7 +15,9 @@ from ai_video_production import (
     SeparationMode, SQLiteProductStore, SourcePathPolicy,
 )
 from ai_video_production.audacity_openvino_worker import (
-    AudacityPipe, _command_eol_for_os_name, _export, build_command, discover_features, separation_parameters, validate_effect_parameters,
+    AudacityPipe, OPENVINO_FEATURE_COMMAND_IDS, _command_eol_for_os_name, _export,
+    _extract_json_of_type, build_command, discover_features, discover_openvino_features,
+    separation_parameters, validate_effect_parameters,
 )
 
 
@@ -62,6 +65,48 @@ def test_feature_discovery_uses_openvino_semantics_not_position():
     assert found["NOISE_SUPPRESSION"]["id"] == "OVNS"
     assert found["MUSIC_SEPARATION"]["id"] == "OVMS"
     assert all(found[k] is not None for k in found)
+
+
+def test_targeted_openvino_discovery_uses_help_without_global_command_enumeration():
+    descriptors = {
+        "OpenvinoNoiseSuppression": {"id":"OpenvinoNoiseSuppression","name":"OpenVINO Noise Suppression"},
+        "OpenvinoMusicSeparation": {"id":"OpenvinoMusicSeparation","name":"OpenVINO Music Separation"},
+        "OpenvinoSuperResolution": {"id":"OpenvinoSuperResolution","name":"OpenVINO Super Resolution"},
+    }
+
+    class Pipe:
+        def __init__(self):
+            self.commands = []
+        def command(self, command):
+            self.commands.append(command)
+            assert "Type=Commands" not in command
+            for command_id, descriptor in descriptors.items():
+                if f'Command="{command_id}"' in command:
+                    return json.dumps(descriptor) + "\nHelp finished: OK\n\n"
+            return "Command not found\nHelp finished: OK\n\n"
+
+    pipe = Pipe()
+    found = discover_openvino_features(pipe)
+    assert found["NOISE_SUPPRESSION"]["id"] == "OpenvinoNoiseSuppression"
+    assert found["MUSIC_SEPARATION"]["id"] == "OpenvinoMusicSeparation"
+    assert found["AUDIO_SUPER_RESOLUTION"]["id"] == "OpenvinoSuperResolution"
+    assert found["WHISPER_TRANSCRIPTION"] is None
+    assert found["MUSIC_GENERATION"] is None
+    assert len(pipe.commands) == len(OPENVINO_FEATURE_COMMAND_IDS)
+
+
+def test_typed_json_extraction_skips_unrelated_object_before_required_array():
+    reply = '{"diagnostic":"third-party"}\n[{"id":"OpenvinoNoiseSuppression"}]\nBatchCommand finished: OK\n'
+    value = _extract_json_of_type(reply, list)
+    assert value == [{"id":"OpenvinoNoiseSuppression"}]
+
+
+def test_targeted_help_descriptor_mismatch_fails_closed():
+    class Pipe:
+        def command(self, command):
+            return '{"id":"DifferentCommand","name":"OpenVINO Noise Suppression"}\n\n'
+    with pytest.raises(ValueError, match="descriptor id mismatch"):
+        discover_openvino_features(Pipe())
 
 
 def test_effect_parameter_validation_rejects_unknown():
@@ -209,35 +254,46 @@ def test_worker_timeout_reports_current_phase_and_discards_stale_progress(tmp_pa
 
     def fake_run(command, **kwargs):
         assert not progress.exists()
-        progress.write_text('{"phase":"DISCOVERING_COMMANDS"}', encoding="utf-8")
+        progress.write_text('{"phase":"DISCOVERING_OPENVINO_COMMANDS"}', encoding="utf-8")
         raise subprocess.TimeoutExpired(command, kwargs["timeout"])
 
     monkeypatch.setattr(adapter.subprocess, "run", fake_run)
     with pytest.raises(ProductError) as exc:
         service._run_worker({"operation":"CAPABILITY"}, work, 120)
     assert exc.value.code == "ERR_PROVIDER_AUDACITY_OPENVINO_TIMEOUT"
-    assert exc.value.details == {"timeout_seconds":120, "progress":{"phase":"DISCOVERING_COMMANDS"}}
+    assert exc.value.details == {"timeout_seconds":120, "progress":{"phase":"DISCOVERING_OPENVINO_COMMANDS"}}
 
-def test_worker_execute_reports_discovery_phases(monkeypatch):
+def test_worker_execute_reports_targeted_discovery_phases(monkeypatch):
     import ai_video_production.audacity_openvino_worker as worker
 
     phases = []
+    commands = []
     class FakePipe:
         def __enter__(self): return self
         def __exit__(self, *args): return None
         def command(self, command):
-            if "Type=Commands" in command:
-                return '[{"id":"OVNS","name":"OpenVINO Noise Suppression"}]\n\n'
+            commands.append(command)
+            assert "Type=Commands" not in command
             if "Type=Tracks" in command:
                 return '[]\n\n'
+            if command.startswith("Help:"):
+                match = re.search(r'Command="([^"]+)"', command)
+                assert match
+                command_id = match.group(1)
+                if command_id == "OpenvinoNoiseSuppression":
+                    return json.dumps({"id":command_id,"name":"OpenVINO Noise Suppression"}) + "\n\n"
+                return "Command not found\n\n"
             raise AssertionError(command)
 
     monkeypatch.setattr(worker, "AudacityPipe", FakePipe)
     report = worker.execute({"operation":"CAPABILITY"}, progress=phases.append)
     assert report["connected"] is True
+    assert report["features"]["NOISE_SUPPRESSION"]["available"] is True
+    assert report["features"]["MUSIC_SEPARATION"]["available"] is False
+    assert not any("Type=Commands" in command for command in commands)
     assert phases == [
-        "OPENING_PIPE", "PIPE_CONNECTED", "DISCOVERING_COMMANDS",
-        "COMMANDS_DISCOVERED", "DISCOVERING_TRACKS", "TRACKS_DISCOVERED",
+        "OPENING_PIPE", "PIPE_CONNECTED", "DISCOVERING_OPENVINO_COMMANDS",
+        "OPENVINO_COMMANDS_DISCOVERED", "DISCOVERING_TRACKS", "TRACKS_DISCOVERED",
     ]
 
 def test_audio_ai_denied_derivative_rights_fails_before_worker(tmp_path):

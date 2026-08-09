@@ -2,17 +2,17 @@
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
 - Completion status: `LIVE_CAPABILITY_EVIDENCE_PENDING`
-- Package: `0.4.3`
+- Package: `0.4.4`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
 
-- `python -m pytest -q`: **235 / 235 PASS**
+- `python -m pytest -q`: **238 / 238 PASS**
 - `python -m compileall -q src tests`: PASS
 - `git diff --check`: PASS
 - wheel build with `pip wheel --no-deps --no-build-isolation`: PASS
-- wheel SHA-256: `1f60eee9721466d3ad7be997650b0bec42c1b113459ed9ce67ee892fa9a0f979`
-- installed-wheel package version: `0.4.3`
+- wheel SHA-256: `794b7898adb3bc531825e7333287b95ecf2a14924d62f04a057a5c7ce13fd779`
+- installed-wheel package version: `0.4.4`
 - packaged TASK-004 schema resources: PASS
 - installed-wheel golden media ingest + forced CFR proxy + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
 - installed-wheel unavailable-ComfyUI diagnostic: expected fail-closed `ERR_PROVIDER_COMFY_UNREACHABLE`, exit 2
@@ -48,7 +48,7 @@
 ### Audacity / OpenVINO boundary
 
 - external GPL runtime boundary with no copied plugin implementation;
-- dynamic effect capability discovery;
+- bounded targeted OpenVINO effect capability discovery through Audacity `Help`;
 - empty/sandbox-project safety gate;
 - Noise Suppression and complete 2/4-stem Music Separation contracts;
 - output containment, media QA and batch-preflight publication;
@@ -91,3 +91,14 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 - Product 0.4.3 tracks whether nonblank content has been observed, skips leading blank lines, and terminates only on the post-content blank delimiter. Bounded byte/line limits and the external supervisor timeout remain unchanged.
 - Two regression tests pin leading-blank tolerance and multi-response delimiter behavior.
 - Full regression is **235 / 235 PASS** before target rerun. Live capability evidence remains pending; no OpenVINO effect execution is claimed by this patch.
+
+
+## Live evidence corrective patch (0.4.4)
+
+- Attempt 04 on package 0.4.3 reached `DISCOVERING_COMMANDS` and parsed JSON, but the value was not the top-level array required by the `GetInfo: Type=Commands Format=JSON` contract. This confirms the previous framing/delimiter fixes advanced transport but whole-inventory command discovery remained unreliable on the target runtime.
+- Audacity source defines `GetInfo` Commands as a top-level array, but the command walks every enabled Effect/AudacityCommand and materializes each command definition. That work is unnecessary for TASK-004, which only needs a bounded OpenVINO capability set.
+- Intel's OpenVINO effects declare stable internal symbols (`OpenVINO Noise Suppression`, `OpenVINO Music Separation`, `OpenVINO Whisper Transcription`, `OpenVINO Music Generation`, `OpenVINO Super Resolution`). Audacity derives script command identifiers from those symbols with its `GetSquashedName` rule.
+- Product 0.4.4 therefore probes only `OpenvinoNoiseSuppression`, `OpenvinoMusicSeparation`, `OpenvinoWhisperTranscription`, `OpenvinoMusicGeneration`, and `OpenvinoSuperResolution` via Audacity's side-effect-free `Help` command. Missing optional effects are reported unavailable rather than failing the capability probe.
+- `GetInfo: Type=Tracks Format=JSON` remains in use because the empty/sandbox-project safety gate requires current track state. The global `GetInfo: Type=Commands` query is retained only as a diagnostic helper and is no longer used by normal capability or execution discovery.
+- JSON extraction is now contract-typed: array callers ignore unrelated JSON objects, and object callers ignore unrelated arrays. A mismatched `Help` descriptor ID fails closed.
+- Full regression is **238 / 238 PASS**, compileall PASS, `git diff --check` PASS, wheel build PASS, and installed-wheel import/protocol-contract smoke PASS. Live target capability Evidence must still be rerun before TASK-004 can close.

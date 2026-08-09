@@ -58,14 +58,19 @@ Zip the `task004-live-evidence/` directory and return it for final DEV-4 live-ev
 
 ## Audacity/OpenVINO capability timeout
 
-The live capability probe uses a dedicated Audacity discovery timeout of **120 seconds** by default because `GetInfo: Type=Commands Format=JSON` may enumerate a large installed effect set. The timeout is configurable without changing Product execution timeouts:
+The live capability probe uses a dedicated Audacity discovery timeout of **120 seconds** by default. Package 0.4.4 no longer enumerates the complete installed effect set; it performs five bounded OpenVINO `Help` lookups plus the small track-state query, while retaining the conservative supervisor timeout for plugin/model initialization variance. The timeout is configurable without changing Product execution timeouts:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\windows\run-task004-local-ai-capability-probes.ps1 -SkipComfyUI -AudacityTimeoutSeconds 120
 ```
 
-If discovery still times out, `task004-live-evidence/_runtime/audacity/work/progress.json` records the last completed discovery phase (`OPENING_PIPE`, `PIPE_CONNECTED`, `DISCOVERING_COMMANDS`, `COMMANDS_DISCOVERED`, `DISCOVERING_TRACKS`, `TRACKS_DISCOVERED`). This is diagnostic Evidence only and does not authorize or execute an OpenVINO audio effect.
+If discovery still times out, `task004-live-evidence/_runtime/audacity/work/progress.json` records the last completed discovery phase (`OPENING_PIPE`, `PIPE_CONNECTED`, `DISCOVERING_OPENVINO_COMMANDS`, `OPENVINO_COMMANDS_DISCOVERED`, `DISCOVERING_TRACKS`, `TRACKS_DISCOVERED`). This is diagnostic Evidence only and does not authorize or execute an OpenVINO audio effect.
 
 ## Windows transport notes for package 0.4.3
 
 Package 0.4.2 corrected the Windows `mod-script-pipe` command terminator to Audacity's required `CRLF + NUL` framing. Package 0.4.3 additionally follows Audacity's own response-delimiter behavior: leading blank lines are ignored until response content is observed, and only the blank line after content terminates a response. If package 0.4.2 still produced `Audacity response did not contain JSON` at `DISCOVERING_COMMANDS`, install/use 0.4.3 and rerun the Audacity-only probe; do not reinstall Audacity or OpenVINO solely for that error.
+
+
+## Targeted OpenVINO discovery in package 0.4.4
+
+Package 0.4.4 replaces normal `GetInfo: Type=Commands Format=JSON` enumeration with bounded `Help` queries for the five OpenVINO capabilities understood by TASK-004. This avoids loading/enumerating unrelated Waves, iZotope, FabFilter and other installed effects during the capability probe. Missing Whisper/Music Generation/Super Resolution effects are reported as unavailable; they do not prevent a capability PASS when the Audacity scripting boundary itself is healthy. Noise Suppression and Music Separation remain the TASK-004 executable OpenVINO targets.

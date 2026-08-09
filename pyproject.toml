@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-video-production"
-version = "0.4.3"
+version = "0.4.4"
 description = "AI video production foundation with secure ingest, media normalization, and local AI runtime adapters"
 requires-python = ">=3.11"
 dependencies = [

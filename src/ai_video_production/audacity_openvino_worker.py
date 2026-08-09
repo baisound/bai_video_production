@@ -19,6 +19,18 @@ FEATURE_TERMS = {
     "AUDIO_SUPER_RESOLUTION": (("openvino", "super", "resolution"),),
 }
 
+# Audacity exposes effect commands by squashing the effect's internal symbol to
+# CamelCase.  Intel's OpenVINO effects use the symbols below, so capability
+# discovery can query only the five relevant commands instead of enumerating the
+# user's entire effect/plugin inventory with GetInfo Type=Commands.
+OPENVINO_FEATURE_COMMAND_IDS = {
+    "NOISE_SUPPRESSION": ("OpenvinoNoiseSuppression",),
+    "MUSIC_SEPARATION": ("OpenvinoMusicSeparation",),
+    "WHISPER_TRANSCRIPTION": ("OpenvinoWhisperTranscription",),
+    "MUSIC_GENERATION": ("OpenvinoMusicGeneration",),
+    "AUDIO_SUPER_RESOLUTION": ("OpenvinoSuperResolution",),
+}
+
 
 def _normalize(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
@@ -185,6 +197,28 @@ def _extract_json(reply: str) -> Any:
     raise ValueError("Audacity response did not contain JSON")
 
 
+def _extract_json_of_type(reply: str, expected_type: type) -> Any:
+    """Extract the first complete JSON value of the requested top-level type.
+
+    Audacity appends a textual BatchCommand status after command output.  Some
+    third-party effects can also emit unrelated JSON-ish text while loading.
+    Callers that know the contract (array for GetInfo, object for Help) must not
+    accept the wrong JSON value merely because it appeared first in the reply.
+    """
+    decoder = json.JSONDecoder()
+    for i, ch in enumerate(reply):
+        if ch not in "[{":
+            continue
+        try:
+            value, _end = decoder.raw_decode(reply[i:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(value, expected_type):
+            return value
+    expected = "array" if expected_type is list else "object" if expected_type is dict else expected_type.__name__
+    raise ValueError(f"Audacity response did not contain a JSON {expected}")
+
+
 class AudacityPipe:
     def __init__(self, *, max_reply_bytes: int = 16 * 1024 * 1024, max_reply_lines: int = 200000) -> None:
         if not 1024 <= max_reply_bytes <= 64 * 1024 * 1024:
@@ -255,16 +289,47 @@ class AudacityPipe:
 
 
 def _commands(pipe: AudacityPipe) -> list[dict[str, Any]]:
-    value = _extract_json(pipe.command("GetInfo: Type=Commands Format=JSON"))
-    if not isinstance(value, list):
-        raise ValueError("GetInfo Commands did not return a JSON array")
+    # Retained as a diagnostic/fallback helper.  The live OpenVINO capability
+    # path intentionally avoids this unbounded inventory query.
+    value = _extract_json_of_type(pipe.command("GetInfo: Type=Commands Format=JSON"), list)
     return [x for x in value if isinstance(x, dict)]
 
 
+def _help_descriptor(pipe: AudacityPipe, command_id: str) -> dict[str, Any] | None:
+    reply = pipe.command(build_command("Help", {"Command": command_id, "Format": "JSON"}))
+    if "command not found" in reply.lower():
+        return None
+    try:
+        descriptor = _extract_json_of_type(reply, dict)
+    except ValueError as exc:
+        raise ValueError(f"Help for {command_id} did not return a JSON object") from exc
+    actual = _command_id(descriptor)
+    if not actual or actual.casefold() != command_id.casefold():
+        raise ValueError(f"Help descriptor id mismatch for {command_id}")
+    return descriptor
+
+
+def discover_openvino_features(pipe: AudacityPipe) -> dict[str, dict[str, Any] | None]:
+    """Discover only the bounded OpenVINO effects TASK-004 understands.
+
+    This deliberately uses Audacity's side-effect-free Help command instead of
+    GetInfo Type=Commands.  The latter instantiates/enumerates every installed
+    effect and was unreliable on a plugin-heavy target while also doing far more
+    work than the Product needs for capability evidence.
+    """
+    found: dict[str, dict[str, Any] | None] = {}
+    for feature, candidate_ids in OPENVINO_FEATURE_COMMAND_IDS.items():
+        descriptor = None
+        for command_id in candidate_ids:
+            descriptor = _help_descriptor(pipe, command_id)
+            if descriptor is not None:
+                break
+        found[feature] = descriptor
+    return found
+
+
 def _tracks(pipe: AudacityPipe) -> list[dict[str, Any]]:
-    value = _extract_json(pipe.command("GetInfo: Type=Tracks Format=JSON"))
-    if not isinstance(value, list):
-        raise ValueError("GetInfo Tracks did not return a JSON array")
+    value = _extract_json_of_type(pipe.command("GetInfo: Type=Tracks Format=JSON"), list)
     return [x for x in value if isinstance(x, dict)]
 
 
@@ -312,8 +377,7 @@ def _export(pipe: AudacityPipe, path: Path) -> None:
     pipe.command(build_command("Export2", {"Filename": str(path), "NumChannels": 2}))
 
 
-def _report_capabilities(commands: list[dict[str, Any]], tracks: list[dict[str, Any]]) -> dict[str, Any]:
-    features = discover_features(commands)
+def _report_capabilities(features: dict[str, dict[str, Any] | None], tracks: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "connected": True,
         "current_track_count": len(tracks),
@@ -338,18 +402,17 @@ def execute(
     mark("OPENING_PIPE")
     with AudacityPipe() as pipe:
         mark("PIPE_CONNECTED")
-        mark("DISCOVERING_COMMANDS")
-        commands = _commands(pipe)
-        mark("COMMANDS_DISCOVERED")
+        mark("DISCOVERING_OPENVINO_COMMANDS")
+        features = discover_openvino_features(pipe)
+        mark("OPENVINO_COMMANDS_DISCOVERED")
         mark("DISCOVERING_TRACKS")
         tracks_before = _tracks(pipe)
         mark("TRACKS_DISCOVERED")
-        capabilities = _report_capabilities(commands, tracks_before)
+        capabilities = _report_capabilities(features, tracks_before)
         if operation == "CAPABILITY":
             return capabilities
         if tracks_before:
             return {"ok": False, "error_code": "ERR_AUDIO_RUNTIME_EXISTING_PROJECT_PROTECTED", "category": "SECURITY", "capabilities": capabilities}
-        features = discover_features(commands)
         source = Path(request["source_path"])
         output_dir = Path(request["output_dir"])
         output_dir.mkdir(parents=True, exist_ok=True)

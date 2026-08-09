@@ -108,3 +108,9 @@ The probe executes:
 The verified runtime exposes no scriptable Music Separation mode parameter. Therefore package 0.4.5 intentionally does **not** behavior-probe or claim 4-stem automation. A `4_STEM` Product request fails closed until a runtime/provider exposes a provable scriptable mode.
 
 For the capability-accepted target, use the standalone final-gate procedure in `behavior-evidence-instructions.md`. Package 0.4.5 also records execution phases around the first Audacity mutation. If a timeout occurs at or after `IMPORTING_SOURCE`, the Product operation is kept `PARTIAL` and an identical retry is blocked pending Evidence review/reconciliation.
+
+## Package 0.4.6 — Attempt 06 ingest corrective
+
+Attempt 06 did not reach Audacity. It failed in the isolated Product `ASSET_INGEST` step for the freshly generated synthetic noise WAV with `ERR_INPUT_SOURCE_CHANGED_DURING_INGEST`; no Asset or external audio-AI operation was committed. Package 0.4.6 changes only the timestamp-drift branch of source-stability validation: size drift remains an immediate failure, while `mtime_ns`-only drift triggers full SHA-256/size revalidation through the same open source handle. Byte mismatch still fails closed.
+
+Use `behavior-evidence-instructions.md` and rerun the same behavioral probe on package `0.4.6`. Do not repeat the already accepted capability probe unless the target runtime changes.

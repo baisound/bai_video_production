@@ -1,0 +1,10 @@
+{
+  "error": {
+    "category": "DATA_INTEGRITY",
+    "code": "ERR_INPUT_SOURCE_CHANGED_DURING_INGEST",
+    "details": {},
+    "message": "source file changed while it was being ingested",
+    "retryable": false
+  },
+  "ok": false
+}

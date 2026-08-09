@@ -29,6 +29,10 @@ ffmpeg/ffprobe run with fixed argv, `shell=False`, `-nostdin`, bounded timeout a
 
 Evidence stores sanitized command templates and stderr hash/tail with raw paths removed, executable version and QA results.
 
+### Fresh-source ingest stability on Windows
+
+TASK-003 source ingest remains the canonical admission boundary for TASK-004 synthetic/runtime inputs. Size drift during the streaming copy is an immediate `DATA_INTEGRITY` failure. A last-write timestamp drift **without size drift** is treated as a metadata warning rather than standalone proof that bytes changed: the Product rewinds and re-hashes the **same already-open regular-file handle** and requires the second-pass checksum and byte count to exactly equal the staged-copy checksum/size. If that content revalidation disagrees, ingest still fails `ERR_INPUT_SOURCE_CHANGED_DURING_INGEST`. The source path is not reopened, so revalidation cannot silently switch to a replacement path target. This is the package 0.4.6 corrective for Attempt 06 and preserves the source-mutation Safety Floor while tolerating Windows timestamp finalization/approximation behavior.
+
 ## 5. Time mapping handoff
 
 TASK-004 emits a whole-file affine mapping (`source_start_us`, `normalized_start_us`, source/normalized durations and exact rates). It proves normalization provenance but does not implement edit/cut mapping. TASK-022 owns exact timeline/edit mapping.
@@ -172,7 +176,7 @@ Noise Suppression imports one source track into the empty sandbox, applies the d
 
 Music Separation imports one source track and invokes the discovered Intel OpenVINO Music Separation effect. After execution, `GetInfo: Type=Tracks` identifies newly generated tracks. Expected stem roles are mapped by normalized track-name suffixes rather than blind positional assumptions, and `Export2` is used with Audacity's selected-only export path for each selected stem.
 
-The target runtime's live `Help` descriptor contains no scriptable mode parameter. Intel's effect implementation initializes `m_separationModeSelectionChoice = 0`, defines choice 0 as `(2 Stem) Instrumental, Vocals`, and choice 1 as `(4 Stem) Drums, Bass, Vocals, Others`. Therefore Product 0.4.5 allows the exact Intel effect's **no-parameter 2-stem runtime default** and records `parameter_strategy=INTEL_RUNTIME_DEFAULT_2_STEM`. It does **not** silently claim 4-stem automation: when the runtime exposes no scriptable separation-mode parameter, a `4_STEM` request fails `ERR_PROVIDER_OPENVINO_4_STEM_NOT_SCRIPTABLE`. A future plugin/runtime that exposes a provable mode parameter may re-enable 4-stem through the generic discovered-parameter path.
+The target runtime's live `Help` descriptor contains no scriptable mode parameter. Intel's effect implementation initializes `m_separationModeSelectionChoice = 0`, defines choice 0 as `(2 Stem) Instrumental, Vocals`, and choice 1 as `(4 Stem) Drums, Bass, Vocals, Others`. Therefore Product 0.4.6 allows the exact Intel effect's **no-parameter 2-stem runtime default** and records `parameter_strategy=INTEL_RUNTIME_DEFAULT_2_STEM`. It does **not** silently claim 4-stem automation: when the runtime exposes no scriptable separation-mode parameter, a `4_STEM` request fails `ERR_PROVIDER_OPENVINO_4_STEM_NOT_SCRIPTABLE`. A future plugin/runtime that exposes a provable mode parameter may re-enable 4-stem through the generic discovered-parameter path.
 
 If expected stems cannot be proved, no stem set is declared complete. All reported stem descriptors, containment, media structure, checksums and the complete expected role set are validated as a batch **before any stem is published**; this prevents a failed partial separation from leaving a subset of stems as producer outputs.
 

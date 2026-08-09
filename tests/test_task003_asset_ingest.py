@@ -335,6 +335,68 @@ def test_completed_idempotent_replay_is_valid_after_job_advances(tmp_path):
     assert replay.operation.operation_id == first.operation.operation_id
 
 
+
+
+def test_timestamp_only_source_metadata_drift_revalidates_content_and_succeeds(tmp_path, monkeypatch):
+    service, store, _resolver, source_root, *_rest, job = make_service(tmp_path)
+    source = source_root / "fresh-windows-like.wav"
+    write_wav(source)
+
+    real_fstat = os.fstat
+    calls = 0
+
+    def fstat_with_one_timestamp_drift(fd):
+        nonlocal calls
+        snapshot = real_fstat(fd)
+        calls += 1
+        if calls == 2:
+            class DriftedStat:
+                st_mode = snapshot.st_mode
+                st_size = snapshot.st_size
+                st_mtime_ns = snapshot.st_mtime_ns + 1
+            return DriftedStat()
+        return snapshot
+
+    monkeypatch.setattr("ai_video_production.ingest.os.fstat", fstat_with_one_timestamp_drift)
+    result = service.ingest(request(job.job_id, source, "timestamp-drift"))
+
+    assert result.operation.status == "COMPLETED"
+    assert len(store.list_assets(job.job_id)) == 1
+    assert calls >= 4  # before/after plus same-handle content revalidation
+
+
+def test_timestamp_drift_with_content_revalidation_mismatch_still_fails_closed(tmp_path, monkeypatch):
+    service, store, _resolver, source_root, *_rest, job = make_service(tmp_path)
+    source = source_root / "mutated.wav"
+    write_wav(source)
+
+    real_fstat = os.fstat
+    calls = 0
+
+    def fstat_with_one_timestamp_drift(fd):
+        nonlocal calls
+        snapshot = real_fstat(fd)
+        calls += 1
+        if calls == 2:
+            class DriftedStat:
+                st_mode = snapshot.st_mode
+                st_size = snapshot.st_size
+                st_mtime_ns = snapshot.st_mtime_ns + 1
+            return DriftedStat()
+        return snapshot
+
+    monkeypatch.setattr("ai_video_production.ingest.os.fstat", fstat_with_one_timestamp_drift)
+    monkeypatch.setattr(service, "_hash_open_source_fd", lambda _fd: ("sha256:" + "0" * 64, source.stat().st_size))
+
+    with pytest.raises(ProductError) as exc:
+        service.ingest(request(job.job_id, source, "timestamp-drift-mismatch"))
+
+    assert exc.value.code == "ERR_INPUT_SOURCE_CHANGED_DURING_INGEST"
+    assert exc.value.category.value == "DATA_INTEGRITY"
+    assert exc.value.details["reason"] == "CONTENT_REVALIDATION_MISMATCH"
+    assert store.list_assets(job.job_id) == ()
+
+
 def test_empty_source_asset_is_rejected(tmp_path):
     service, store, _resolver, source_root, *_rest, job = make_service(tmp_path)
     source = source_root / "empty.bin"; source.write_bytes(b"")

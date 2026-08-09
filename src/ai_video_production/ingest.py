@@ -30,7 +30,7 @@ from .serialization import canonical_json_bytes, sha256_bytes, sha256_json
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, OperationRecord, SQLiteProductStore
 
-_INGEST_VERSION = "0.3.0"
+_INGEST_VERSION = "0.3.1"
 _SAFE_SUFFIX = re.compile(r"^\.[A-Za-z0-9]{1,10}$")
 _PROBE_TYPES = {
     AssetType.VIDEO,
@@ -157,6 +157,20 @@ class AssetIngestService:
         except OSError:
             pass
 
+    @staticmethod
+    def _hash_open_source_fd(source_fd: int) -> tuple[str, int]:
+        """Re-hash an already opened regular file without reopening its path."""
+        os.lseek(source_fd, 0, os.SEEK_SET)
+        digest = hashlib.sha256()
+        counted = 0
+        while True:
+            chunk = os.read(source_fd, 4 * 1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+            counted += len(chunk)
+        return "sha256:" + digest.hexdigest(), counted
+
     def _copy_to_target_local_stage(self, source: Path, operation_id: str, job_id: str) -> tuple[Path, str, int]:
         staging_uri = f"asset://{job_id}/.staging/{operation_id}.part"
         staging = self.resolver.resolve(staging_uri)
@@ -189,20 +203,57 @@ class AssetIngestService:
                 os.fsync(out_fd)
             finally:
                 os.close(out_fd)
+
             after = os.fstat(source_fd)
+            checksum = "sha256:" + digest.hexdigest()
+
+            # Size drift is always a hard integrity failure.  A last-write-time
+            # drift alone is not sufficient proof of content mutation on all
+            # filesystems (notably Windows immediately after a producer closes
+            # a file), so revalidate the bytes through the *same opened handle*.
+            if before.st_size != after.st_size or copied != after.st_size:
+                raise ProductError(
+                    "ERR_INPUT_SOURCE_CHANGED_DURING_INGEST",
+                    "source file changed while it was being ingested",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={
+                        "reason": "SIZE_CHANGED",
+                        "before_size": before.st_size,
+                        "after_size": after.st_size,
+                        "copied_size": copied,
+                    },
+                )
+
+            if before.st_mtime_ns != after.st_mtime_ns:
+                verify_before = os.fstat(source_fd)
+                verification_checksum, verification_size = self._hash_open_source_fd(source_fd)
+                verify_after = os.fstat(source_fd)
+                if (
+                    verify_before.st_size != verify_after.st_size
+                    or verification_size != copied
+                    or verify_after.st_size != copied
+                    or verification_checksum != checksum
+                ):
+                    raise ProductError(
+                        "ERR_INPUT_SOURCE_CHANGED_DURING_INGEST",
+                        "source file changed while it was being ingested",
+                        ProductErrorCategory.DATA_INTEGRITY,
+                        details={
+                            "reason": "CONTENT_REVALIDATION_MISMATCH",
+                            "before_size": before.st_size,
+                            "after_size": after.st_size,
+                            "copied_size": copied,
+                            "verification_size": verification_size,
+                            "before_mtime_ns": before.st_mtime_ns,
+                            "after_mtime_ns": after.st_mtime_ns,
+                        },
+                    )
         except Exception:
             staging.unlink(missing_ok=True)
             raise
         finally:
             os.close(source_fd)
 
-        if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns) or copied != after.st_size:
-            staging.unlink(missing_ok=True)
-            raise ProductError(
-                "ERR_INPUT_SOURCE_CHANGED_DURING_INGEST",
-                "source file changed while it was being ingested",
-                ProductErrorCategory.DATA_INTEGRITY,
-            )
         if copied == 0:
             staging.unlink(missing_ok=True)
             raise ProductError(
@@ -210,7 +261,6 @@ class AssetIngestService:
                 "empty files are not accepted as source assets",
                 ProductErrorCategory.VALIDATION,
             )
-        checksum = "sha256:" + digest.hexdigest()
         self._inject("after_stage_copy", staging)
         return staging, checksum, copied
 

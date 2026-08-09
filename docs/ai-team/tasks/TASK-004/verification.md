@@ -2,19 +2,19 @@
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
 - Completion status: `LIVE_BEHAVIORAL_EVIDENCE_PENDING`
-- Package: `0.4.5`
+- Package: `0.4.6`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
 
-- `python -m pytest -q`: **247 / 247 PASS**
+- `python -m pytest -q`: **249 / 249 PASS**
 - `python -m compileall -q src tests`: PASS
 - `git diff --check`: PASS
 - wheel build with `pip wheel --no-deps --no-build-isolation`: PASS
-- wheel SHA-256: `2e5b5a10c6ab8d72a12f43699a1972e048c06dfa13a7387d58d6c2e7f110ad6b`
-- installed-wheel package version: `0.4.5`
+- wheel SHA-256: `e580b4fe17699d2e6b987edd05ee0f6bbfd1906c86dafbb2a47ed405ad773d37`
+- installed-wheel package version: `0.4.6`
 - packaged TASK-004 schema resources: PASS
-- installed-wheel golden media ingest + forced CFR proxy + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
+- installed-wheel golden media ingest + forced CFR proxy (`30000/1001`) + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
 - installed-wheel unavailable-ComfyUI diagnostic: expected fail-closed `ERR_PROVIDER_COMFY_UNREACHABLE`, exit 2
 - installed-wheel unavailable-Audacity diagnostic: expected fail-closed `ERR_PROVIDER_AUDACITY_PIPE_UNAVAILABLE`, exit 2
 - installed-wheel new synthetic behavioral-probe CLI smoke: generated isolated 48 kHz probe inputs, failed closed on absent local Audacity pipe with exit 2, and retained structured partial Evidence rather than reporting PASS
@@ -122,3 +122,14 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 - The behavioral probe uses no client/user media and makes no perceptual-quality claim; it proves only executable runtime behavior, output structure, Asset publication/manifest integration and fail-closed safety boundaries.
 - Full regression after this change: **247 / 247 PASS**.
 - DEV-4 replay Critic additionally pins worker execution phases. A timeout observed at or after `IMPORTING_SOURCE` is recorded as `PARTIAL`, so a repeated identical request fails `ERR_STATE_AUDACITY_RECONCILIATION_REQUIRED` instead of blindly replaying external AI work; a timeout proven to occur before the first Audacity mutation remains `FAILED`/retryable.
+
+## Behavioral Evidence Attempt 06 — package 0.4.5 returned / package 0.4.6 corrective
+
+- Returned archive SHA-256: `4d777fdf1266031262353469a56223ff4722d93e79ffb9033807de6e3d3fde23`.
+- Top-level report: `ERR_INPUT_SOURCE_CHANGED_DURING_INGEST` / `DATA_INTEGRITY`.
+- Runtime database contains exactly one operation: `ASSET_INGEST` for `task004-live-noise-source`, status `FAILED`; `assets` is empty. No Audacity/OpenVINO operation was dispatched, so this is not an OpenVINO behavioral failure.
+- Root corrective: TASK-003 ingest previously treated any `mtime_ns` drift as content mutation. For freshly generated Windows media that is too strict as a content-identity signal.
+- Package 0.4.6 keeps size drift as an immediate hard failure. Timestamp-only drift triggers a second complete SHA-256 pass over the **same open source handle**; only byte-identical content is accepted. Content/checksum/size disagreement still fails `ERR_INPUT_SOURCE_CHANGED_DURING_INGEST`.
+- Regression adds a Windows-like timestamp-drift success case and a mismatch fail-closed case.
+- Full local regression after corrective: **249 / 249 PASS**.
+- Behavioral Evidence remains pending and must be rerun with package 0.4.6; capability Evidence remains accepted.

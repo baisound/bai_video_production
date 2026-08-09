@@ -3,7 +3,7 @@
 - Status: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE`
 - Authorization: `OWNER_AUTHORIZED_IMPLEMENTATION`
 - Historical alias: `VIDEO-TASK-004`
-- Package target: `0.4.5`
+- Package target: `0.4.6`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Adaptive score: `25`
 - Scope amendments: `OWNER_AUTHORIZED` — Local Image AI (Stable Diffusion / FLUX), Character Identity, H3 Production Brief, H3 Single-Frame Transform, Spectrum optional acceleration and H3 Foley/SFX experimental provider are included before TASK completion.
@@ -70,7 +70,7 @@ TASK-004 has four bounded execution lanes plus one cross-cutting admission/evide
 - GPL-3.0 Intel OpenVINO Audacity plugin code is NOT copied into BAI Core;
 - Audacity `mod-script-pipe` is treated as an external local runtime boundary;
 - runtime capability discovery is performed through bounded Audacity `Help` queries for Product-known OpenVINO effect command identifiers; the Product does not enumerate the user's complete third-party effect inventory during normal capability probing;
-- Noise Suppression and Music Separation (2-stem/4-stem) are executable provider operations;
+- Noise Suppression and verified-runtime Music Separation **2-stem** are executable provider operations; 4-stem fails closed until a scriptable mode is exposed;
 - provider runs only against an empty/sandbox Audacity project and fails closed if existing tracks are detected;
 - outputs are exported to a Product-owned staging directory, media/checksum validated, and registered as canonical derived AUDIO Assets;
 - OpenVINO device/model/effect-command provenance and Evidence are retained;

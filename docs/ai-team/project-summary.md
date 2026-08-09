@@ -14,7 +14,7 @@ The product analyzes source media, creates auditable edit intelligence and safel
 
 ## Active TASK-004 checkpoint
 
-TASK-004 package `0.4.5` has accepted target-runtime ComfyUI and Audacity/OpenVINO capability Evidence and now awaits bounded OpenVINO behavioral Evidence. It establishes:
+TASK-004 package `0.4.6` has accepted target-runtime ComfyUI and Audacity/OpenVINO capability Evidence and now awaits bounded OpenVINO behavioral Evidence. It establishes:
 
 - exact timebase/proxy/48 kHz media normalization;
 - shared safe derived-Asset publication;
@@ -33,7 +33,7 @@ These are prerequisites for the editing-first SRT/subtitle, filler/cut, SE/BGM/n
 - TASK-002: COMPLETED
 - TASK-003: COMPLETED / DEV-4 score 33
 - TASK-004: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE` / DEV-4 score 25
-- package: `0.4.5`
-- `pytest`: `247 / 247 PASS`
+- package: `0.4.6`
+- `pytest`: `249 / 249 PASS`
 - wheel + installed-wheel golden normalization: PASS
-- target ComfyUI/Audacity live capability Evidence: ACCEPTED; synthetic OpenVINO behavioral Evidence: PENDING
+- target ComfyUI/Audacity live capability Evidence: ACCEPTED; Attempt 06 stopped before Audacity mutation on a Windows timestamp-only source-ingest false positive; package 0.4.6 corrective implemented; synthetic OpenVINO behavioral Evidence: RERUN PENDING

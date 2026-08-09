@@ -2,7 +2,7 @@
 
 - Verification status: `LOCAL_IMPLEMENTATION_VERIFIED`
 - Completion status: `LIVE_BEHAVIORAL_EVIDENCE_PENDING`
-- Package: `0.4.7`
+- Package: `0.4.8`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 
 ## Local verification
@@ -12,7 +12,7 @@
 - `git diff --check`: PASS
 - wheel build with `pip wheel --no-deps --no-build-isolation`: PASS
 - wheel SHA-256: `a87beed109e0ac6641fefb25d519b625eea1fa6507bfea04552edfe0e1e48366`
-- installed-wheel package version: `0.4.7`
+- installed-wheel package version: `0.4.8`
 - packaged TASK-004 schema resources: PASS
 - installed-wheel golden media ingest + forced CFR proxy (`30000/1001`) + 48 kHz PCM analysis-audio normalization using real `ffmpeg`/`ffprobe`: PASS
 - installed-wheel unavailable-ComfyUI diagnostic: expected fail-closed `ERR_PROVIDER_COMFY_UNREACHABLE`, exit 2
@@ -143,3 +143,9 @@ Target-machine capability Evidence is collected with `tools/windows/run-task004-
 - Regression adds a Windows-style injected `O_BINARY` flag and verifies both media descriptors receive it.
 - Full local regression after corrective: **250 / 250 PASS**.
 - Capability Evidence remains accepted. Behavioral Evidence must be rerun on package 0.4.7; no external effect was executed in Attempt 07.
+
+## Behavioral Evidence Attempt 08 — package 0.4.7 returned / package 0.4.8 corrective
+
+- `ERR_PROVIDER_FFPROBE_NOT_FOUND` occurred before Asset publication or Audacity dispatch.
+- Package 0.4.8 adds bounded Windows ffprobe discovery and explicit executable overrides; mandatory validation remains fail-closed.
+- Explicit-path integration reached the Audacity boundary; full local regression: **250 / 250 PASS**.

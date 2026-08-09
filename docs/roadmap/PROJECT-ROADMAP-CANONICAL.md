@@ -24,7 +24,7 @@
 - TASK-003 `Asset Registry / Ingest / Path Resolver`: **COMPLETED**
   - package `0.3.0`; secure allowlisted source ingest, SHA-256/dedupe, rights metadata, immutable `asset://` promotion, SQLite v2, concurrency-safe `source-manifest`, recovery/Evidence PASS
 - TASK-004 `Media Normalization + Local Visual/Audio AI Runtime Foundation`: **CAPABILITY VERIFIED / LIVE BEHAVIORAL EVIDENCE PENDING**
-  - package `0.4.7`; exact timebase/VFR inspection, CFR proxy, 48 kHz analysis audio
+  - package `0.4.8`; exact timebase/VFR inspection, CFR proxy, 48 kHz analysis audio
   - ComfyUI local image/video runtime boundary, Character Identity, MiniMax H3 Production Brief / SingleFrame / Spectrum / Foley contracts
   - Audacity/OpenVINO external local Audio AI boundary; Noise Suppression + verified-runtime 2-stem Music Separation executable, 4-stem fail-closed until scriptable mode exists
   - local regression `250/250 PASS`; ComfyUI + Audacity/OpenVINO capability Evidence accepted; Attempt 07 stopped before Audacity mutation because Windows low-level media ingest treated `0x1A` as EOF without `O_BINARY`; corrected in 0.4.7; bounded OpenVINO behavioral Evidence rerun remains before formal completion

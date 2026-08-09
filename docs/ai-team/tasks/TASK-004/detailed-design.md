@@ -35,6 +35,8 @@ TASK-003 source ingest remains the canonical admission boundary for TASK-004 syn
 
 Package 0.4.7 adds an independent Windows binary-I/O requirement to that same boundary. Any low-level descriptor used to read or stage arbitrary media bytes MUST include `os.O_BINARY` when the platform exposes it (`getattr(os, "O_BINARY", 0)`). Windows CRT text mode interprets byte `0x1A` as EOF on input and may translate line endings on output; therefore `O_BINARY` is required on both the source descriptor and the `.staging/*.part` descriptor. This does not relax mutation detection, path containment, symlink rejection or checksum requirements. On Unix-like platforms the added flag resolves to zero.
 
+Package 0.4.8 resolves a concrete Windows `ffprobe.exe` from explicit, environment, PATH, ffmpeg-sibling or bounded package-manager locations and injects its absolute path into fixed-argv validation. Validation is never bypassed.
+
 ## 5. Time mapping handoff
 
 TASK-004 emits a whole-file affine mapping (`source_start_us`, `normalized_start_us`, source/normalized durations and exact rates). It proves normalization provenance but does not implement edit/cut mapping. TASK-022 owns exact timeline/edit mapping.

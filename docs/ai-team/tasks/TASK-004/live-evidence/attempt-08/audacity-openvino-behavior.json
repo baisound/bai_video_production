@@ -1,0 +1,10 @@
+{
+  "error": {
+    "category": "EXTERNAL_DEPENDENCY",
+    "code": "ERR_PROVIDER_FFPROBE_NOT_FOUND",
+    "details": {},
+    "message": "ffprobe executable is not available",
+    "retryable": false
+  },
+  "ok": false
+}

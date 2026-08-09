@@ -28,12 +28,13 @@ def test_synthetic_music_probe_differs_from_noise_probe(tmp_path):
 def test_behavior_cli_returns_failure_exit_when_structured_probe_report_is_not_ok(tmp_path, monkeypatch, capsys):
     import json
     import ai_video_production.audacity_openvino_behavior_cli as cli
-    monkeypatch.setattr(cli, "_run", lambda evidence_root, timeout_seconds: {
-        "ok": False,
-        "noise_suppression": {"status": "PASS"},
-        "music_separation_2_stem": {"status": "FAIL"},
-    })
-    rc = cli.main(["--evidence-root", str(tmp_path), "--timeout-seconds", "30"])
+    observed = {}
+    def fake_run(evidence_root, timeout_seconds, ffprobe_executable):
+        observed["ffprobe_executable"] = ffprobe_executable
+        return {"ok": False, "noise_suppression": {"status": "PASS"}, "music_separation_2_stem": {"status": "FAIL"}}
+    monkeypatch.setattr(cli, "_run", fake_run)
+    rc = cli.main(["--evidence-root", str(tmp_path), "--timeout-seconds", "30", "--ffprobe-executable", "C:/tools/ffprobe.exe"])
     assert rc == 2
+    assert observed["ffprobe_executable"] == "C:/tools/ffprobe.exe"
     report = json.loads((tmp_path / "audacity-openvino-behavior.json").read_text(encoding="utf-8"))
     assert report["ok"] is False

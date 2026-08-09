@@ -13,6 +13,7 @@ from .audacity_openvino import AudioAiOperation, AudioAiRequest, AudacityOpenVin
 from .derived_assets import sha256_file
 from .errors import ProductError
 from .ingest import AssetIngestRequest, AssetIngestService
+from .media_probe import FFprobeMediaProbe
 from .paths import LogicalPathResolver, PathMapping, SourcePathPolicy
 from .profile import ProfileSnapshot
 from .store import SQLiteProductStore
@@ -80,7 +81,7 @@ def _asset_summary(asset) -> dict[str, object]:
     }
 
 
-def _run(evidence_root: Path, timeout_seconds: int) -> dict[str, object]:
+def _run(evidence_root: Path, timeout_seconds: int, ffprobe_executable: str = "ffprobe") -> dict[str, object]:
     runtime = evidence_root / "_runtime" / "audacity-openvino-behavior"
     if runtime.exists():
         shutil.rmtree(runtime)
@@ -106,6 +107,7 @@ def _run(evidence_root: Path, timeout_seconds: int) -> dict[str, object]:
         store=store,
         resolver=resolver,
         source_policy=SourcePathPolicy((incoming.resolve(),)),
+        media_probe=FFprobeMediaProbe(ffprobe_executable),
     )
     noise_asset = ingest.ingest(AssetIngestRequest(
         job.job_id,
@@ -206,6 +208,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="TASK-004 Audacity/OpenVINO synthetic behavioral probe")
     parser.add_argument("--evidence-root", required=True)
     parser.add_argument("--timeout-seconds", type=int, default=1800)
+    parser.add_argument("--ffprobe-executable", default="ffprobe")
     args = parser.parse_args(argv)
     if not 30 <= args.timeout_seconds <= 7200:
         parser.error("--timeout-seconds must be 30-7200")
@@ -213,7 +216,7 @@ def main(argv: list[str] | None = None) -> int:
     evidence_root.mkdir(parents=True, exist_ok=True)
     report_path = evidence_root / "audacity-openvino-behavior.json"
     try:
-        report = _run(evidence_root, args.timeout_seconds)
+        report = _run(evidence_root, args.timeout_seconds, args.ffprobe_executable)
         rc = 0 if report.get("ok") is True else 2
     except ProductError as exc:
         report = {"ok": False, "error": exc.to_envelope()["error"]}

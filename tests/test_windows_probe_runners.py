@@ -63,3 +63,7 @@ def test_task004_audacity_behavior_runner_is_synthetic_and_bounded():
     assert '--timeout-seconds $TimeoutSeconds' in text
     assert 'task004-live-evidence-behavior' in text
     assert 'do not modify or reinstall audacity/openvino' in text.lower()
+    assert 'Resolve-FFprobeExecutable' in text
+    assert 'BAI_FFPROBE_EXECUTABLE' in text
+    assert '--ffprobe-executable $ffprobe' in text
+    assert 'will not bypass canonical media validation' in text

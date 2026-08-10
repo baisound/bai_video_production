@@ -451,7 +451,7 @@ def test_audacity_command_failure_retains_safe_command_identity_and_hash():
     assert "D:/BAI" not in str(exc.value)
 
 
-def test_import_progress_distinguishes_import2_from_selection(monkeypatch):
+def test_import_progress_distinguishes_import2_from_selection():
     import ai_video_production.audacity_openvino_worker as worker
 
     phases = []
@@ -460,8 +460,7 @@ def test_import_progress_distinguishes_import2_from_selection(monkeypatch):
         def command(self, command):
             commands.append(command)
             return ""
-    monkeypatch.setattr(worker.os, "name", "nt")
-    worker._import(Pipe(), Path("D:/BAI/source.wav"), progress=phases.append)
+    worker._import(Pipe(), Path("D:/BAI/source.wav"), progress=phases.append, os_name="nt")
     assert phases == ["SENDING_IMPORT2", "IMPORT2_COMPLETED", "SELECTING_IMPORTED_SOURCE", "IMPORTED_SOURCE_SELECTED"]
     assert 'Filename="D:/BAI/source.wav"' in commands[0]
 

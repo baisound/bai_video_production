@@ -1,7 +1,7 @@
 # TASK-030 — OSS Public Repository Readiness
 
 - Status: `IMPLEMENTED_AWAITING_GITHUB_CI`
-- Package: `0.6.6`
+- Package: `0.6.7`
 - Scope: public documentation, governance, community health, CI/security automation, packaging metadata, structural regression tests
 
 ## Outcome
@@ -11,6 +11,8 @@ The repository now has a truthful public entry point, MIT license, contribution 
 Package 0.6.5 corrects the canonical hosted repository URL to `https://github.com/baisound/bai_video_production` across badges, package metadata, citation and community links, and adds a regression test for that identity.
 
 Package 0.6.6 corrects the first hosted CI run: all six Python/OS jobs reached pytest, but 66 media normalization tests failed because neither `ffmpeg` nor `ffprobe` existed on a fresh runner. CI now provisions and verifies both executables before installing and testing the package.
+
+Package 0.6.7 corrects the remaining Ubuntu/Python 3.11-only failure. Five matrix jobs passed after 0.6.6. The final job exposed a test that mutated process-global `os.name` to emulate Windows; pytest then attempted to build `WindowsPath` on Linux while formatting a failure. The worker now exposes a narrow `os_name` path-formatting seam, and the test no longer changes global interpreter state.
 
 The README describes the intended public value: reducing the technical and financial barrier to safe video production while retaining human control, provider choice, rights/provenance and reproducibility. It explicitly labels this as an Alpha-stage objective rather than claiming demonstrated adoption.
 

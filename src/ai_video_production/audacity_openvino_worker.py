@@ -414,10 +414,16 @@ def _audacity_file_argument(path: Path, *, os_name: str | None = None) -> str:
     return value
 
 
-def _import(pipe: AudacityPipe, path: Path, *, progress: Callable[[str], None] | None = None) -> None:
+def _import(
+    pipe: AudacityPipe,
+    path: Path,
+    *,
+    progress: Callable[[str], None] | None = None,
+    os_name: str | None = None,
+) -> None:
     mark = progress or (lambda _phase: None)
     mark("SENDING_IMPORT2")
-    pipe.command(build_command("Import2", {"Filename": _audacity_file_argument(path)}))
+    pipe.command(build_command("Import2", {"Filename": _audacity_file_argument(path, os_name=os_name)}))
     mark("IMPORT2_COMPLETED")
     mark("SELECTING_IMPORTED_SOURCE")
     pipe.command("SelectAll:")

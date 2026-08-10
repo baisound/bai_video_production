@@ -6,6 +6,11 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.6.7] - 2026-08-10
+
+- Removed process-global `os.name` mutation from the Audacity Windows import regression test.
+- Added an explicit OS-name seam so Linux/Python 3.11 pytest never attempts to instantiate `WindowsPath`.
+
 ## [0.6.6] - 2026-08-10
 
 - Provisioned and verified FFmpeg/ffprobe on Linux and Windows GitHub-hosted CI runners.

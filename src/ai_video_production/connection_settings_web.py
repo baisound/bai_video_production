@@ -24,7 +24,7 @@ from .credential_vault import CredentialVault, WindowsCredentialManagerStore
 
 
 MAX_REQUEST_BYTES = 64 * 1024
-PRODUCT_VERSION = "0.16.3"
+PRODUCT_VERSION = "0.16.4"
 
 
 _HTML = r"""<!doctype html>

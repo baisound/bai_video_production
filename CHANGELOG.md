@@ -6,6 +6,12 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.16.4] - 2026-08-11
+
+- Replaced the Windows native SRT dialog foreground-owner C# compilation path with a top-most cursor-monitor WinForms owner, avoiding the `System.Windows.Forms` `Add-Type -TypeDefinition` failure observed on native Windows.
+- Added an ASCII/Base64 dialog result protocol and `-OutputFormat Text` boundary so PowerShell CLIXML and Windows code-page mojibake are never rendered into the browser status panel.
+- Added regression coverage for Open/Save success, cancel, bounded PowerShell failure, malformed protocol data, and raw-CLIXML suppression.
+
 ## [0.16.3] - 2026-08-11
 
 - Corrected Subtitle Workspace relative insertion so a cue placed between neighboring subtitles uses a strict 1 ms inner margin (for example `...300` / `...600` becomes `...301`–`...599`).

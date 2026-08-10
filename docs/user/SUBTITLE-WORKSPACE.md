@@ -8,7 +8,7 @@ python -c "import ai_video_production; print(ai_video_production.__version__)"
 powershell -ExecutionPolicy Bypass -File .\tools\windows\run-subtitle-workspace.ps1
 ```
 
-版番号が`0.16.3`ならブラウザで字幕Workspaceが開きます。作業内容は既定でRepository直下の`subtitle-workspace.json`に保存されます。
+版番号が`0.16.4`ならブラウザで字幕Workspaceが開きます。作業内容は既定でRepository直下の`subtitle-workspace.json`に保存されます。
 
 1. 既存SRTは「ファイルを選択…」からWindowsのファイル選択ダイアログを開き、対象SRTを選びます。パスの手入力は通常不要です。
 2. 「SRTを読込」を押します。すでに字幕があるWorkspaceを置き換える場合は確認が表示されます。
@@ -20,6 +20,6 @@ powershell -ExecutionPolicy Bypass -File .\tools\windows\run-subtitle-workspace.
 
 読み込み／書き出しのパス欄へ直接入力する方法も上級者向けに残しています。ボタン押下時にパスが空なら、対応するWindowsダイアログが自動的に開きます。
 
-「AI誤字・脱字チェックを許可」は既定OFFです。0.16.3でもONにしただけではAI通信や課金は始まらず、設定を保存するだけです。
+「AI誤字・脱字チェックを許可」は既定OFFです。0.16.4でもONにしただけではAI通信や課金は始まらず、設定を保存するだけです。
 
 ファイル選択／Save Asダイアログはクリック時点のWindowsフォアグラウンドウィンドウをOwnerとして開きます。ローカルサーバーへ接続できない場合は、画面上のステータス欄に再起動と再読み込みを促すエラーを表示します。

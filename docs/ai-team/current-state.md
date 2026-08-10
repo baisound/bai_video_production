@@ -4,13 +4,13 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-006_SLICE_C_SUBTITLE_WORKSPACE_IMPLEMENTED`
+- Project Status: `TASK_006_V0_16_4_RELEASED_NEXT_SLICE_READY`
 - Last Completed Task: `TASK-022 — Timeline Mapping Service`
 - Active Consumer Task: `TASK-006 — ASR / Transcript / Subtitle`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.16.3` (Windows interaction corrective candidate; native verification pending)
-- Next Consumer Task: `TASK-006 large-media chunk/checkpoint slice / Resolve subtitle placement`
+- Package: `0.16.4` (FORMAL RELEASE COMPLETE; PR #9 / merge `11b165a3fb9dfc800e73f33287c4b9830edd430a`)
+- Next Consumer Task: `TASK-006 Slice D — large-media chunk/checkpoint + canonical Resolve subtitle-placement handoff`
 
 ## TASK-004 implemented scope
 
@@ -47,8 +47,9 @@
 
 ## Current verification
 
-- TASK-006 v0.16.3 automated full regression: `396 / 396 PASS`; `compileall` PASS; `git diff --check` PASS. Native Windows foreground/dialog acceptance remains pending.
-- TASK-006 Windows interaction corrective candidate `0.16.3`: foreground-owned native SRT dialogs, strict relative insertion timing, visible export Evidence and local-server disconnect feedback implemented; full regression and native Windows verification are release gates
+- TASK-006 v0.16.4 formal release: `402 / 402 PASS`; `compileall` PASS; `git diff --check` PASS; `git fsck --full` PASS; native Windows Subtitle Workspace/Open/Save validation PASS.
+- v0.17.0 development-governance baseline: BAI Development OS `1.0.0` / Architecture `Ver.2.28 CURRENT_CANONICAL`, Level A Governance Only, with no Product runtime dependency. Migration baseline is completed before TASK-006 Slice D feature code.
+- TASK-006 Windows interaction corrective `0.16.4`: native SRT dialog failure/CLIXML leakage corrected, strict relative insertion timing and visible export/server-disconnect feedback accepted on Windows
 - TASK-006 corrective package `0.16.1`: Windows CRLF fixture writes exact bytes; production SRT behavior unchanged
 - TASK-006 Slice C package `0.16.0`: planned narration/ASR/SRT intake, revisioned local review GUI, row editing and atomic SRT export implemented
 

@@ -6,6 +6,15 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.15.0] - 2026-08-10
+
+- Added TASK-027 Slice A1 Production Blueprint and validated Scene Ledger contracts derived from 11 real production design documents.
+- Added stable PERSON/SPACE/PROMPT/ASSET/AUDIO reference registration with explicit planned/available/locked state.
+- Added real-capture-first asset strategy and complete frame-range coverage validation.
+- Added A/B/C visual-generation risk classification and fail-closed dense-UI rules requiring locked references, static cameras and post-composited text.
+- Added scene-level narration, dialogue, SFX, BGM, sound-logo and final-hold planning.
+- Routed narration timing, mix comparison, continuity QA and hypothesis-based learning findings into their canonical future Tasks without copying private source documents.
+
 ## [0.14.0] - 2026-08-10
 
 - Added the optional FasterWhisper local ASR adapter and end-user Transcript/SRT CLI.

@@ -65,6 +65,11 @@ from .faster_whisper_asr import (
     FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService,
     TranscriptionPublication,
 )
+from .production_blueprint import (
+    AssetSourceStrategy, BlueprintReference, BlueprintScene, CameraMotion,
+    GenerationRisk, ProductionBlueprint, ReferenceKind, ReferenceStatus,
+    SceneAudioPlan,
+)
 from .errors import ProductError, ProductErrorCategory
 from .ids import IdKind, generate_id, validate_id, validate_project_id, validate_schema_id
 from .h3_acceleration import H3AccelerationContract, H3AccelerationMode, SPECTRUM_CLASS_TYPE
@@ -86,7 +91,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.14.0"
+__version__ = "0.15.0"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
@@ -117,6 +122,9 @@ __all__ = [
     "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment",
     "FasterWhisperConfig", "FasterWhisperProvider", "LocalTranscriptionService",
     "TranscriptionPublication",
+    "AssetSourceStrategy", "BlueprintReference", "BlueprintScene", "CameraMotion",
+    "GenerationRisk", "ProductionBlueprint", "ReferenceKind", "ReferenceStatus",
+    "SceneAudioPlan",
     "merge_allowed_overrides", "validate_id", "validate_project_id", "validate_schema_id",
     "AudioAiOperation", "AudioAiRequest", "AudioAiResult", "AudacityOpenVinoService", "SeparationMode",
     "CharacterIdentityProfile", "CharacterIdentityService", "CharacterReferenceBundle",

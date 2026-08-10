@@ -186,6 +186,14 @@ powershell -ExecutionPolicy Bypass -File .\tools\windows\run-task006-faster-whis
 
 [TASK-006詳細設計 / Detailed design](docs/ai-team/tasks/TASK-006/detailed-design.md)
 
+## 新規動画のScene設計 / New-production blueprint
+
+実制作資料11点から一般化した`ProductionBlueprint`により、全体尺、Scene範囲、PERSON／SPACE／ASSET参照、素材の調達方法、Camera、Narration／SE／BGMを生成前に検証できます。実素材を優先し、密な日本語UI・表・数値を含むSceneでは、Locked参照・固定Camera・後段文字組版を必須にして文字崩れを予防します。
+
+The validated Production Blueprint captures exact Scene timing, stable references, real-first sourcing, camera risk and per-Scene audio intent before generation. Dense text/UI scenes fail closed unless they use a locked reference, static camera and post-composited text.
+
+[TASK-027 Production Blueprint詳細設計](docs/ai-team/tasks/TASK-027/production-blueprint-detailed-design.md) / [実制作ナレッジ取込記録](docs/ai-team/knowledge/real-production-workflow-intake-2026-08-10.md)
+
 ## Provider configuration
 
 設定例：

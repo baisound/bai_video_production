@@ -1,6 +1,6 @@
 # TASK-034 — OS-backed Credential Onboarding Detailed Design
 
-- Package: `0.12.0`
+- Package: `0.12.1`
 - Implementation date: 2026-08-10
 - Native Evidence due: 2026-08-24
 - Beginner usability integration due: 2026-08-31
@@ -30,7 +30,8 @@ flowchart TD
 ## Threat boundaries
 
 - The server binds only to `127.0.0.1`; Host allowlisting, random CSRF token, restrictive CSP, `no-store`, frame denial and a 64 KiB request cap remain active.
-- The secret necessarily exists briefly in the local browser field and loopback request. The field uses password rendering, disables browser credential autofill, and is cleared after every attempt.
+- The secret necessarily exists briefly in the local browser field and loopback request. The field uses password rendering and is cleared after every attempt.
+- Each Route uses a unique HTML `id`, `name`, and `section-<route> current-password` autocomplete scope. This allows an explicitly saved browser password-manager entry to be selected again on every row without merging the rows. The value remains masked and is cleared after the operation.
 - The API maps Route ID to its internal reference server-side. A caller cannot select an arbitrary vault target.
 - The Windows target is `BAI.VideoProduction/<sha256(reference)>`; Provider and reference names are not exposed by the target.
 - The Windows generic credential blob is bounded to 2560 UTF-8 bytes. Blank, NUL-containing and oversized values fail closed.

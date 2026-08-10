@@ -90,7 +90,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - Active Task: `TASK-034 — OS-backed Credential Onboarding`
 - TASK-004: `COMPLETED`
-- Package: `0.12.0`
+- Package: `0.12.1`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
@@ -107,7 +107,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Native settings Evidence: package 0.10.0 Windows save/reload and stale revision 3 versus saved revision 4 conflict behavior accepted; multi-user usability review remains
 - Catalog editor: package 0.11.0 adds safe Provider/Model candidate add/edit/disable with truthful implementation status and no Provider execution path
 - Native Catalog Evidence: package 0.11.0 add/edit/disable behavior accepted on Windows
-- Credential onboarding: package 0.12.0 stores API keys in Windows Credential Manager behind opaque targets and exposes status only; Provider connectivity is not executed
+- Credential onboarding: package 0.12.1 stores API keys in Windows Credential Manager behind opaque targets, exposes status only, and gives every row an independent password-manager lookup identity; Provider connectivity is not executed
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

@@ -6,6 +6,11 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.12.1] - 2026-08-10
+
+- Fixed API-key re-registration suggestions so every credential row has an independent password-manager section, ID, and name instead of only the first row being recognized.
+- Changed the credential input hint from new-password suppression to route-scoped current-password lookup while retaining password masking and post-operation clearing.
+
 ## [0.12.0] - 2026-08-10
 
 - Added API-key onboarding from the loopback settings screen into the current user's Windows Credential Manager.

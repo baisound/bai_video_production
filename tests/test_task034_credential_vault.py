@@ -140,3 +140,12 @@ def test_http_credential_round_trip_never_echoes_secret(tmp_path: Path) -> None:
         server.shutdown()
         thread.join(timeout=5)
         server.server_close()
+
+
+def test_each_credential_row_has_unique_password_manager_identity() -> None:
+    from ai_video_production.connection_settings_web import _HTML
+
+    assert "input.autocomplete=`section-${fieldKey} current-password`" in _HTML
+    assert "input.id=`credential-${fieldKey}`" in _HTML
+    assert "input.name=`credential-${fieldKey}`" in _HTML
+    assert "input.autocomplete='new-password'" not in _HTML

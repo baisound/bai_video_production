@@ -103,7 +103,7 @@ def test_screen_is_local_bilingual_and_never_exposes_credential_reference(live_s
         assert response.headers["X-Frame-Options"] == "DENY"
         assert "default-src 'none'" in response.headers["Content-Security-Policy"]
     assert "AI Connection 設定" in html
-    assert "BAI Video Production v0.15.0 —" in html
+    assert "BAI Video Production v0.15.1 —" in html
     assert "Saving here never starts paid APIs" in html
     form = _get_json(url + "api/form")
     serialized = json.dumps(form)

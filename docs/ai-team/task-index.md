@@ -7,7 +7,7 @@
 | TASK-003 | Asset Registry / Ingest / Path Resolver | COMPLETED | COMPLETED WITH AUTHORIZED IMPLEMENTATION | DEV-4 / score 33 | Package 0.3.0; secure canonical source ingest, rights/checksum, Path Resolver, source-manifest |
 | TASK-004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 / score 25 | Package 0.4.7; 250 tests; ComfyUI + Audacity/OpenVINO capability PASS; Attempt 07 failed before Audacity mutation because Windows low-level media ingest lacked `O_BINARY`; corrected and regression-pinned; Noise Suppression + 2-stem behavioral Evidence rerun pending; 4-stem fails closed on verified runtime because mode is UI-only |
 | TASK-005,007..021 | Remaining product roadmap tasks | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Canonical identities defined in project roadmap |
-| TASK-006 | ASR / Transcript / Subtitle | SLICE_B_FASTER_WHISPER_LOCAL_ASR_IMPLEMENTED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.14.0 local real-media FasterWhisper Transcript/SRT; Resolve placement Slice C next |
+| TASK-006 | ASR / Transcript / Subtitle | NATIVE_ASR_PASS_REVIEW_CORRECTIVE_PLANNED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Native FasterWhisper PASS; 1 ms SRT corrective plus dictionary, GUI review, default-off AI typo/omission suggestions and human approval planned before Resolve |
 | TASK-014 | Voice TTS / Owner Narration | DESIGN_RECORDED_ADAPTER_FOUNDATION_EXISTS | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Existing ElevenLabs Pro owner-trained voice; private Voice Profile; read-only ownership/capability probe; timed TTS and 48 kHz Asset flow planned; paid probe remains explicit |
 | TASK-023..026 | Remaining External-SKILL additions (collision-resolved) | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Prospective canonical re-numbering; historical documents unchanged |
 | TASK-022 | Timeline Mapping Service | COMPLETED | COMPLETED_WITH_OWNER_VERIFICATION | DEV-4 | Package 0.5.0; exact affine/NTSC/end-exclusive mapping, speed/gap, deterministic Plan/schema; native Windows 263/263 PASS |
@@ -23,8 +23,8 @@
 
 ## Roadmap authority
 
-`docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` is the current Project-level roadmap. Ver.1.4 preserves Owner-directed editing-first prioritization while recording TASK-004's expanded runtime foundation. The roadmap is planning authority, not Owner Authorization for later TASKs.
+`docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` is the current Project-level roadmap. Ver.1.5 records Owner-directed editing-first prioritization, production Blueprint intake and optional professional-audio expansion. The roadmap is planning authority, not Owner Authorization for later TASKs.
 
 ## Route control
 
-TASK-004 is completed. Owner-directed continuation authorized TASK-027 through TASK-034 and the editing-first TASK-006 Slice A recorded above. Proposed later work remains unauthorized until Owner instruction; a configured credential never authorizes Provider execution or GO.
+TASK-004 is completed. Owner-directed continuation authorized TASK-027 through TASK-034 and the editing-first TASK-006 slices recorded above. Proposed later work remains unauthorized until Owner instruction; a configured credential or enabled AI proofreading setting never authorizes Provider execution, suggestion acceptance or GO.

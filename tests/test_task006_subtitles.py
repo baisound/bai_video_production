@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from ai_video_production import (
-    EditSegment, FrameRate, SrtRenderer, SubtitlePlanningService,
+    EditSegment, FrameRate, SrtRenderer, SubtitleCue, SubtitlePlan, SubtitlePlanningService,
     TimelineMappingService, TranscriptManifest, TranscriptSegment,
 )
 from ai_video_production.ids import IdKind, generate_id
@@ -111,6 +111,25 @@ def test_adjacent_microsecond_segments_remain_non_overlapping_at_ntsc_rate() -> 
     )
     plan = SubtitlePlanningService.build(transcript, timeline)
     assert plan.cues[0].timeline_end_frame == plan.cues[1].timeline_start_frame
+
+
+def test_srt_adjacent_ntsc_cues_do_not_overlap_after_millisecond_rounding() -> None:
+    asset = _asset()
+    plan = SubtitlePlan(asset, FrameRate(30000, 1001), "ja", (
+        SubtitleCue("cue-a", "seg-a", 7, 128, "前"),
+        SubtitleCue("cue-b", "seg-b", 128, 386, "後"),
+    ))
+    rendered = SrtRenderer.render(plan)
+    assert "00:00:00,233 --> 00:00:04,269" in rendered
+    assert "00:00:04,270 --> 00:00:12,880" in rendered
+
+
+def test_srt_single_ntsc_cue_keeps_safe_ceil_end() -> None:
+    asset = _asset()
+    plan = SubtitlePlan(asset, FrameRate(30000, 1001), "ja", (
+        SubtitleCue("cue", "seg", 0, 30, "一つ"),
+    ))
+    assert "00:00:00,000 --> 00:00:01,001" in SrtRenderer.render(plan)
 
 
 def test_transcript_and_subtitle_schemas_validate_and_are_packaged() -> None:

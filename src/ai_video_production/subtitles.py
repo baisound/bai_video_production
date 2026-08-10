@@ -218,9 +218,12 @@ class SubtitlePlanningService:
         return SubtitlePlan(transcript.source_asset_id, timeline.timeline_rate, transcript.language, tuple(cues))
 
 
-def _srt_timestamp(frame: int, rate: FrameRate, *, end: bool) -> str:
+def _srt_milliseconds(frame: int, rate: FrameRate, *, end: bool) -> int:
     milliseconds = Fraction(frame * rate.denominator * 1000, rate.numerator)
-    value = _ceil(milliseconds) if end else _floor(milliseconds)
+    return _ceil(milliseconds) if end else _floor(milliseconds)
+
+
+def _format_srt_timestamp(value: int) -> str:
     hours, remainder = divmod(value, 3_600_000)
     minutes, remainder = divmod(remainder, 60_000)
     seconds, millis = divmod(remainder, 1000)
@@ -232,7 +235,16 @@ class SrtRenderer:
     def render(plan: SubtitlePlan) -> str:
         blocks = []
         for index, cue in enumerate(plan.cues, 1):
-            start = _srt_timestamp(cue.timeline_start_frame, plan.timeline_rate, end=False)
-            end = _srt_timestamp(cue.timeline_end_frame, plan.timeline_rate, end=True)
+            start_ms = _srt_milliseconds(cue.timeline_start_frame, plan.timeline_rate, end=False)
+            end_ms = _srt_milliseconds(cue.timeline_end_frame, plan.timeline_rate, end=True)
+            if index < len(plan.cues):
+                next_start_ms = _srt_milliseconds(
+                    plan.cues[index].timeline_start_frame, plan.timeline_rate, end=False
+                )
+                end_ms = min(end_ms, next_start_ms - 1)
+            if end_ms < start_ms:
+                raise ValueError("SRT millisecond resolution cannot represent a non-overlapping cue")
+            start = _format_srt_timestamp(start_ms)
+            end = _format_srt_timestamp(end_ms)
             blocks.append(f"{index}\n{start} --> {end}\n{cue.text}")
         return "\n\n".join(blocks) + ("\n" if blocks else "")

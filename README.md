@@ -152,6 +152,14 @@ python -m compileall -q src tests
 
 通常CIは有料API、ComfyUI、Audacity、Resolveを実行しません。実機Evidence Probeは、明示的な手順と安全条件を確認した場合だけ実行してください。
 
+### APIキーを安全に登録する / Secure API-key onboarding
+
+WindowsではAI Connection設定画面の **APIキーの安全な保管 / Secure credentials** から、Model候補に必要なキーをWindows Credential Managerへ保存・削除できます。キーはProjectの設定JSONへ保存されず、画面には登録済みかどうかだけが表示されます。この操作だけで外部API、課金、生成、編集は始まりません。
+
+On Windows, the local AI Connection screen can store or delete each required key in Windows Credential Manager. Project JSON and browser responses never contain the key; the screen exposes registration status only. This action does not contact a Provider or start billing, generation, or editing.
+
+詳細と確認手順 / Design and verification: [`docs/ai-team/tasks/TASK-034/`](docs/ai-team/tasks/TASK-034/)
+
 ## Five-minute demo
 
 API Key、ネットワーク、有料AI、実メディアを使わず、Provider capability routingと正確なNTSC Timeline Mappingを確認できます。

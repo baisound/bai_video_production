@@ -30,6 +30,7 @@ gantt
 | UI-01 | 2026-08-24 | Maintainer | Native Windows screenshot, keyboard save/reload, conflict message, no paid call | package 0.10.0 |
 | UI-02 | 2026-08-31 | Maintainer + consenting users | 2–3 users complete mode selection, Model selection and safe save; blockers recorded | UI-01 |
 | UI-03 | 2026-08-24 | Maintainer | Catalog add/edit/disable screenshot with adapter status and no secret input | package 0.11.0 |
+| UI-04 | 2026-08-24 | Maintainer | Credential register/reload/delete status and opaque Windows target; no secret in Evidence | package 0.12.0 |
 | OSS-04 | 2026-09-15 | Product + Maintainer | one non-sensitive real-video report with baseline, time, corrections, cost and limitations | Editing MVP |
 | OSS-05 | 2026-09-30 | Maintainer + consenting users | 2–3 anonymized installation/workflow records | usable installation + relevant MVP |
 | OSS-06 | 2026-09-30 | Maintainer | application draft refreshed with measured repository/adoption values | OSS-01–05 |

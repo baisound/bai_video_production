@@ -39,4 +39,8 @@ Open **Provider & model catalog** at the bottom to add or edit a candidate. Ente
 
 If a conflict appears, another screen saved a newer revision. Reload, review the new settings, and save again. This prevents an older screen from silently overwriting newer work.
 
-OS-backed API-key onboarding, generation, and editing are not available in this screen yet.
+Open **Secure credentials**, enter a key for the required Model, and press **Save**. On Windows it is stored in Windows Credential Manager and is never returned to the browser or written to Project settings JSON. The screen shows only **Registered** and never redisplays the key. Press **Delete** when it is no longer needed.
+
+Save/delete does not contact a Provider and cannot prove key validity, permissions, quota, balance, or Model support. It never starts billing, generation, or editing. Never include a key in screenshots, Issues, logs, or Evidence.
+
+Live credential validation, generation, and editing are not available from this screen yet.

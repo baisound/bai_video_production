@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.12.0] - 2026-08-10
+
+- Added API-key onboarding from the loopback settings screen into the current user's Windows Credential Manager.
+- Added opaque hashed credential targets, UTF-8/size validation, save/read/status/delete operations, and fail-closed non-Windows behavior.
+- Exposed registration state only; secret values and internal credential references remain absent from settings JSON and browser responses.
+- Added bilingual safety copy and regression tests proving that credential mutations never start Provider calls, billing, generation, or editing.
+
 ## [0.11.0] - 2026-08-10
 
 - Added a local Provider/Model Catalog editor for safe add, edit, and disable operations without JSON editing.

@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import secrets
+import os
 import threading
 from typing import Any, Sequence
 from urllib.parse import urlsplit
@@ -19,6 +20,7 @@ from .connection_settings_store import (
     ConnectionSettingsStore,
 )
 from .errors import ProductError, ProductErrorCategory
+from .credential_vault import CredentialVault, WindowsCredentialManagerStore
 
 
 MAX_REQUEST_BYTES = 64 * 1024
@@ -48,6 +50,10 @@ _HTML = r"""<!doctype html>
   <div class="notice"><strong>安全について：</strong> この画面の保存操作だけでは、API課金、素材生成、動画編集は始まりません。開始には別の「GO」確認が必要です。<br><span lang="en">Saving here never starts paid APIs, generation, or editing. A separate GO approval is required.</span></div>
   <div id="cards" class="grid" aria-live="polite"></div>
   <div class="actions"><button id="save" type="button">設定を保存 / Save settings</button><span id="message" role="status"></span></div>
+  <details class="card" id="credentials"><summary>APIキーの安全な保管 / Secure credentials</summary>
+    <p class="help">APIキーは設定JSONへ保存せず、Windows Credential Managerへ保管します。登録・削除だけでは外部API、課金、生成は始まりません。 / Keys are stored in Windows Credential Manager, never in the settings JSON. Save/delete never calls a provider.</p>
+    <div id="credential-list" class="catalog-list"></div><span id="credential-message" role="status"></span>
+  </details>
   <details class="card" id="catalog"><summary>Provider・Model候補 / Provider &amp; model catalog</summary>
     <p class="help">候補の登録は実行Adapterの完成を意味しません。APIキーはここへ入力しないでください。 / Catalog registration does not mean its execution adapter is implemented. Never enter an API key here.</p>
     <div class="fields">
@@ -67,7 +73,7 @@ _HTML = r"""<!doctype html>
   <footer>Local-only screen — BAI Video Production <span id="revision"></span></footer>
 </main>
 <script nonce="__NONCE__">const CSRF=__CSRF_JSON__;
-const cards=document.getElementById('cards'), save=document.getElementById('save'), message=document.getElementById('message'),catMessage=document.getElementById('catalog-message');let form;
+const cards=document.getElementById('cards'), save=document.getElementById('save'), message=document.getElementById('message'),catMessage=document.getElementById('catalog-message'),credentialMessage=document.getElementById('credential-message');let form;
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n}
 function routeText(r){return `${r.provider_family} / ${r.model_id} / ${r.cost_class}${r.credential_required?' / Credential required':''}`}
 function options(select,values){select.replaceChildren();values.forEach(v=>{const o=el('option',v);o.value=v;select.append(o)})}
@@ -75,10 +81,12 @@ function allRoutes(){return form.workloads.flatMap(w=>w.routes.map(r=>({...r,wor
 function resetCatalog(){document.getElementById('cat-route').disabled=false;document.getElementById('cat-workload').disabled=false;document.getElementById('cat-route').value='';document.getElementById('cat-provider').value='';document.getElementById('cat-model').value='';document.getElementById('cat-capabilities').value='';document.getElementById('cat-credential').checked=false;document.getElementById('cat-enabled').checked=true;catMessage.textContent=''}
 function editRoute(r){document.getElementById('catalog').open=true;document.getElementById('cat-route').value=r.route_id;document.getElementById('cat-route').disabled=true;document.getElementById('cat-workload').value=r.workload;document.getElementById('cat-workload').disabled=true;document.getElementById('cat-family').value=r.provider_family;document.getElementById('cat-provider').value=r.provider_id;document.getElementById('cat-model').value=r.model_id;document.getElementById('cat-cost').value=r.cost_class;document.getElementById('cat-reasoning').value=r.reasoning_effort;document.getElementById('cat-capabilities').value=r.capabilities.join(',');document.getElementById('cat-credential').checked=r.credential_required;document.getElementById('cat-enabled').checked=r.enabled;document.getElementById('cat-route').scrollIntoView({behavior:'smooth',block:'center'})}
 function renderCatalog(){const o=form.catalog_options;options(document.getElementById('cat-workload'),o.workloads);options(document.getElementById('cat-family'),o.provider_families);options(document.getElementById('cat-cost'),o.cost_classes);options(document.getElementById('cat-reasoning'),o.reasoning_efforts);const list=document.getElementById('catalog-list');list.replaceChildren();allRoutes().forEach(r=>{const row=el('div',undefined,'catalog-row');const text=el('div',`${r.workload} — ${r.provider_family} / ${r.model_id} — ${r.implementation_status}${r.enabled?'':' — DISABLED'}`);const b=el('button','編集 / Edit');b.type='button';b.addEventListener('click',()=>editRoute(r));row.append(text,b);list.append(row)})}
+function renderCredentials(){const list=document.getElementById('credential-list');list.replaceChildren();const required=allRoutes().filter(r=>r.credential_required);if(!form.credential_onboarding_supported){list.append(el('p','このOSでは画面登録を利用できません。Windowsで起動してください。 / Credential onboarding is available on Windows.','help'));return}if(!required.length){list.append(el('p','APIキーが必要な候補はありません。 / No route requires a key.','help'));return}required.forEach(r=>{const row=el('div',undefined,'catalog-row');const box=el('div');box.append(el('strong',`${r.provider_family} / ${r.model_id}`),el('p',r.credential_configured?'登録済み / Registered':'未登録 / Not registered',r.credential_configured?'success':'help'));const controls=el('div',undefined,'checks');const input=el('input');input.type='password';input.autocomplete='new-password';input.placeholder='API key';input.setAttribute('aria-label',`${r.model_id} API key`);const put=el('button','保管 / Save');const del=el('button','削除 / Delete','secondary');del.disabled=!r.credential_configured;put.addEventListener('click',()=>changeCredential(r.route_id,input,put,'PUT'));del.addEventListener('click',()=>changeCredential(r.route_id,input,del,'DELETE'));controls.append(input,put,del);row.append(box,controls);list.append(row)})}
+async function changeCredential(routeId,input,button,method){button.disabled=true;credentialMessage.className='';credentialMessage.textContent=method==='PUT'?'保管しています…':'削除しています…';const payload=method==='PUT'?{route_id:routeId,secret:input.value}:{route_id:routeId};try{const res=await fetch('/api/credentials',{method,headers:{'Content-Type':'application/json','X-BAI-CSRF':CSRF},body:JSON.stringify(payload)});input.value='';const data=await res.json();if(!res.ok)throw new Error(data.message||data.error_code||'Credential操作に失敗しました');render(data.form);credentialMessage.className='success';credentialMessage.textContent=method==='PUT'?'安全に保管しました。外部APIは呼んでいません。 / Stored; no provider call.':'削除しました。外部APIは呼んでいません。 / Deleted; no provider call.'}catch(e){input.value='';credentialMessage.className='error';credentialMessage.textContent=e.message}finally{button.disabled=false}}
 function render(data){form=data;cards.replaceChildren();document.getElementById('revision').textContent=`Revision ${data.revision}`;
  data.workloads.forEach(w=>{const card=el('section',undefined,'card');card.dataset.workload=w.workload;const head=el('div',undefined,'card-head');head.append(el('h2',`${w.label.ja} / ${w.label.en}`),el('span',w.status_message.ja+' / '+w.status_message.en,`badge ${w.status}`));card.append(head);
  const fields=el('div',undefined,'fields');const modeBox=el('div');const ml=el('label','利用方法 / Usage mode');ml.htmlFor=`mode-${w.workload}`;const mode=el('select');mode.id=ml.htmlFor;mode.dataset.kind='mode';w.mode_options.forEach(v=>{const o=el('option',v);o.value=v;o.selected=v===w.selection_mode;mode.append(o)});const mh=el('p',w.mode_help[w.selection_mode].ja+' / '+w.mode_help[w.selection_mode].en,'help');mode.addEventListener('change',()=>mh.textContent=w.mode_help[mode.value].ja+' / '+w.mode_help[mode.value].en);modeBox.append(ml,mode,mh);
- const routeBox=el('div');const rl=el('label','優先Model / Preferred model');rl.htmlFor=`route-${w.workload}`;const route=el('select');route.id=rl.htmlFor;route.dataset.kind='route';const none=el('option','候補なし / No configured route');none.value='';route.append(none);w.routes.forEach(r=>{const o=el('option',routeText(r));o.value=r.route_id;o.selected=r.route_id===w.preferred_route_id;route.append(o)});route.disabled=w.routes.length===0;const rh=el('p',w.routes.length?`${w.routes.length} candidate(s) configured`:'下のCatalogから候補を追加できます / Add a candidate in the catalog below','route-meta');routeBox.append(rl,route,rh);fields.append(modeBox,routeBox);card.append(fields);cards.append(card)});renderCatalog()}
+ const routeBox=el('div');const rl=el('label','優先Model / Preferred model');rl.htmlFor=`route-${w.workload}`;const route=el('select');route.id=rl.htmlFor;route.dataset.kind='route';const none=el('option','候補なし / No configured route');none.value='';route.append(none);w.routes.forEach(r=>{const o=el('option',routeText(r));o.value=r.route_id;o.selected=r.route_id===w.preferred_route_id;route.append(o)});route.disabled=w.routes.length===0;const rh=el('p',w.routes.length?`${w.routes.length} candidate(s) configured`:'下のCatalogから候補を追加できます / Add a candidate in the catalog below','route-meta');routeBox.append(rl,route,rh);fields.append(modeBox,routeBox);card.append(fields);cards.append(card)});renderCatalog();renderCredentials()}
 async function load(){const res=await fetch('/api/form',{cache:'no-store'});if(!res.ok)throw new Error('設定を読み込めませんでした');render(await res.json())}
 save.addEventListener('click',async()=>{save.disabled=true;message.className='';message.textContent='保存しています…';const modes={},preferred={};cards.querySelectorAll('.card').forEach(c=>{modes[c.dataset.workload]=c.querySelector('[data-kind=mode]').value;preferred[c.dataset.workload]=c.querySelector('[data-kind=route]').value||null});try{const res=await fetch('/api/settings',{method:'PUT',headers:{'Content-Type':'application/json','X-BAI-CSRF':CSRF},body:JSON.stringify({revision:form.revision,workload_modes:modes,preferred_route_ids:preferred})});const data=await res.json();if(!res.ok)throw new Error(data.message||data.error_code||'保存できませんでした');render(data);message.className='success';message.textContent='保存しました。生成は開始されていません。 / Saved; generation has not started.'}catch(e){message.className='error';message.textContent=e.message}finally{save.disabled=false}});
 document.getElementById('catalog-new').addEventListener('click',resetCatalog);
@@ -94,12 +102,16 @@ class ConnectionSettingsWebService:
         profile: AiConnectionProfile,
         revision: int,
         availability: ConnectionAvailability,
+        credential_vault: CredentialVault | None = None,
     ) -> None:
         self.settings_path = settings_path
         self.profile = profile
         self.revision = revision
         self.availability = availability
+        self.credential_vault = credential_vault
         self._lock = threading.Lock()
+        if credential_vault is not None:
+            self._refresh_availability_unlocked()
 
     @classmethod
     def from_paths(
@@ -108,6 +120,7 @@ class ConnectionSettingsWebService:
         profile_path: str | Path | None,
         *,
         available_credential_refs: frozenset[str] = frozenset(),
+        credential_vault: CredentialVault | None = None,
     ) -> "ConnectionSettingsWebService":
         if any(not ref.startswith("credential://") for ref in available_credential_refs):
             raise ValueError("--credential-ready accepts credential:// references, never secret values")
@@ -121,7 +134,7 @@ class ConnectionSettingsWebService:
             raw = json.loads(Path(profile_path).read_text(encoding="utf-8"))
             profile, revision = AiConnectionProfile.from_dict(raw), 0
         route_ids = frozenset(route.route_id for route in profile.routes if route.enabled)
-        return cls(settings, profile, revision, ConnectionAvailability(route_ids, available_credential_refs))
+        return cls(settings, profile, revision, ConnectionAvailability(route_ids, available_credential_refs), credential_vault)
 
     def form(self) -> dict[str, object]:
         with self._lock:
@@ -129,13 +142,54 @@ class ConnectionSettingsWebService:
 
     def _form_unlocked(self) -> dict[str, object]:
         preflight = AiConnectionSettingsService.preflight(self.profile, self.availability)
-        return ConnectionSettingsFormBuilder.build(self.profile, preflight, revision=self.revision)
+        form = ConnectionSettingsFormBuilder.build(self.profile, preflight, revision=self.revision)
+        form["credential_onboarding_supported"] = self.credential_vault is not None
+        ready = self.availability.available_credential_refs
+        for workload in form["workloads"]:
+            for route in workload["routes"]:
+                source = next(item for item in self.profile.routes if item.route_id == route["route_id"])
+                route["credential_configured"] = source.credential_ref in ready if source.credential_ref else False
+        return form
 
     def _refresh_availability_unlocked(self) -> None:
+        ready = set(self.availability.available_credential_refs)
+        if self.credential_vault is not None:
+            ready = {
+                route.credential_ref for route in self.profile.routes
+                if route.credential_ref is not None and self.credential_vault.contains(route.credential_ref)
+            }
         self.availability = ConnectionAvailability(
             frozenset(route.route_id for route in self.profile.routes if route.enabled),
-            self.availability.available_credential_refs,
+            frozenset(ready),
         )
+
+    def _credential_route_unlocked(self, route_id: Any):
+        if not isinstance(route_id, str):
+            raise ValueError("route_id must be text")
+        route = next((item for item in self.profile.routes if item.route_id == route_id), None)
+        if route is None or route.credential_ref is None:
+            raise ValueError("route does not require a credential")
+        if self.credential_vault is None:
+            raise ProductError("ERR_CREDENTIAL_VAULT_UNSUPPORTED", "Credential onboarding is unavailable on this OS", ProductErrorCategory.EXTERNAL_DEPENDENCY)
+        return route
+
+    def save_credential(self, payload: Any) -> dict[str, object]:
+        if not isinstance(payload, dict) or set(payload) != {"route_id", "secret"}:
+            raise ValueError("request must contain route_id and secret")
+        with self._lock:
+            route = self._credential_route_unlocked(payload["route_id"])
+            self.credential_vault.write(route.credential_ref, payload["secret"])
+            self._refresh_availability_unlocked()
+            return {"ok": True, "route_id": route.route_id, "credential_configured": True, "provider_call_started": False, "form": self._form_unlocked()}
+
+    def delete_credential(self, payload: Any) -> dict[str, object]:
+        if not isinstance(payload, dict) or set(payload) != {"route_id"}:
+            raise ValueError("request must contain route_id")
+        with self._lock:
+            route = self._credential_route_unlocked(payload["route_id"])
+            deleted = self.credential_vault.delete(route.credential_ref)
+            self._refresh_availability_unlocked()
+            return {"ok": True, "route_id": route.route_id, "deleted": deleted, "credential_configured": False, "provider_call_started": False, "form": self._form_unlocked()}
 
     def update(self, payload: Any) -> dict[str, object]:
         if not isinstance(payload, dict) or set(payload) != {
@@ -246,7 +300,7 @@ def launch_server(
 
         def do_PUT(self) -> None:  # noqa: N802
             path = urlsplit(self.path).path
-            if not self._allowed_host() or path not in {"/api/settings", "/api/catalog"}:
+            if not self._allowed_host() or path not in {"/api/settings", "/api/catalog", "/api/credentials"}:
                 self._json(404, {"error_code": "ERR_SETTINGS_NOT_FOUND", "message": "Not found"})
                 return
             if self.headers.get("X-BAI-CSRF") != csrf:
@@ -264,8 +318,32 @@ def launch_server(
                 return
             try:
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
-                result = service.update(payload) if path == "/api/settings" else service.update_catalog(payload)
+                if path == "/api/settings":
+                    result = service.update(payload)
+                elif path == "/api/catalog":
+                    result = service.update_catalog(payload)
+                else:
+                    result = service.save_credential(payload)
                 self._json(200, result)
+            except ProductError as exc:
+                self._json(409, {"error_code": exc.code, "message": exc.message})
+            except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+                self._json(400, {"error_code": "ERR_SETTINGS_INPUT", "message": str(exc)})
+
+        def do_DELETE(self) -> None:  # noqa: N802
+            path = urlsplit(self.path).path
+            if not self._allowed_host() or path != "/api/credentials":
+                self._json(404, {"error_code": "ERR_SETTINGS_NOT_FOUND", "message": "Not found"})
+                return
+            if self.headers.get("X-BAI-CSRF") != csrf or self.headers.get_content_type() != "application/json":
+                self._json(403, {"error_code": "ERR_SETTINGS_CSRF", "message": "Security validation failed"})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+                if not 0 < length <= MAX_REQUEST_BYTES:
+                    raise ValueError("Request size is invalid")
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                self._json(200, service.delete_credential(payload))
             except ProductError as exc:
                 self._json(409, {"error_code": exc.code, "message": exc.message})
             except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
@@ -292,10 +370,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if not 0 <= args.port <= 65535:
         parser.error("--port must be 0-65535")
+    vault = WindowsCredentialManagerStore() if os.name == "nt" else None
     service = ConnectionSettingsWebService.from_paths(
         args.settings,
         args.profile if not args.settings.exists() else None,
         available_credential_refs=frozenset(args.credential_ready),
+        credential_vault=vault,
     )
     server, thread, url = launch_server(service, port=args.port)
     print(json.dumps({"ok": True, "url": url, "settings": str(service.settings_path), "paid_call_started": False}))

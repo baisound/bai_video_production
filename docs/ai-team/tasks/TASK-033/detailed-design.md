@@ -1,6 +1,6 @@
 # TASK-033 — Provider and Model Catalog Editor Detailed Design
 
-- Status: `CATALOG_EDITOR_IMPLEMENTED_AWAITING_NATIVE_EVIDENCE`
+- Status: `NATIVE_WINDOWS_PASS`
 - Package: `0.11.0`
 - Implementation date: 2026-08-10
 
@@ -73,7 +73,7 @@ Catalog presence and execution support are different facts:
 |---|---|---|
 | Domain and safe form projection | 2026-08-10 | add/edit/disable, status, secret-exclusion tests |
 | Local API and browser form | 2026-08-12 | CSRF/revision mutation, no execution path, JavaScript syntax |
-| Native Windows Catalog Evidence | 2026-08-24 | add one example candidate, edit Model, disable it, reload and screenshot |
+| Native Windows Catalog Evidence | 2026-08-24 | PASS 2026-08-10: add, edit and disable screenshots accepted |
 | Beginner usability integration | 2026-08-31 | Catalog task included in the 2–3-person TASK-032 review |
 
 Use [`native-windows-evidence-template.md`](native-windows-evidence-template.md) for a secret-free, repeatable add/edit/disable check.

@@ -4,13 +4,13 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-033_PROVIDER_MODEL_CATALOG_IMPLEMENTED_AWAITING_NATIVE_EVIDENCE`
+- Project Status: `TASK-034_CREDENTIAL_ONBOARDING_IMPLEMENTED_AWAITING_NATIVE_EVIDENCE`
 - Last Completed Task: `TASK-022 — Timeline Mapping Service`
-- Active Consumer Task: `TASK-033 — Provider and Model Catalog Editor`
+- Active Consumer Task: `TASK-034 — OS-backed Credential Onboarding`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.11.0`
-- Next Consumer Task: `TASK-033 native Windows Catalog Evidence (due 2026-08-24)`
+- Package: `0.12.0`
+- Next Consumer Task: `TASK-034 native Windows Credential Evidence (due 2026-08-24)`
 
 ## TASK-004 implemented scope
 
@@ -47,6 +47,8 @@
 
 ## Current verification
 
+- TASK-034 package `0.12.0`: OS vault, safe API/UI, opaque target, save/delete and secret-exclusion tests PASS; native Windows Evidence pending
+- TASK-033 native Windows: add `demo-video-route`, edit to `demo-model-v2`, disable and truthful adapter status display PASS
 - TASK-033 package `0.11.0`: Catalog add/edit/disable, implementation status, API mutation and secret-exclusion tests PASS
 - TASK-032 native Windows: save/reload PASS; stale revision 3 rejected after revision 4 save PASS; 2–3-person usability review pending
 - TASK-032 package `0.10.0`: local GUI/API, CSRF, Host, conflict and secret-exclusion tests PASS

@@ -78,7 +78,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.12.1"
+__version__ = "0.12.2"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",

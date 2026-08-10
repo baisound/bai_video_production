@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.12.2] - 2026-08-10
+
+- Linked the Catalog and Secure credentials projections explicitly: enabled credential-required routes appear in the active key list, while other routes do not.
+- Added a retained-key cleanup section for disabled routes instead of silently deleting secrets or presenting disabled Models as active.
+- Prevented removing `Credential required` while a key remains stored, avoiding an unreachable orphaned Windows credential.
+- Added visible Catalog credential status and end-to-end add/disable/delete/unrequire regression coverage.
+
 ## [0.12.1] - 2026-08-10
 
 - Fixed API-key re-registration suggestions so every credential row has an independent password-manager section, ID, and name instead of only the first row being recognized.

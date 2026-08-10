@@ -1,6 +1,6 @@
 # TASK-034 — OS-backed Credential Onboarding Detailed Design
 
-- Package: `0.12.1`
+- Package: `0.12.2`
 - Implementation date: 2026-08-10
 - Native Evidence due: 2026-08-24
 - Beginner usability integration due: 2026-08-31
@@ -55,6 +55,18 @@ sequenceDiagram
     L->>W: CredDelete opaque target
     L-->>U: Not registered; provider_call_started=false
 ```
+
+## Catalog linkage
+
+| Catalog state | Secure credentials behavior |
+|---|---|
+| Enabled + Credential required | appears immediately in the active list |
+| Enabled + no Credential required | does not appear |
+| Disabled + no stored key | does not appear |
+| Disabled + stored key | appears only in the retained-key cleanup section |
+| Turn Credential required off while a key exists | rejected; delete the stored key first |
+
+Disabling a Catalog candidate never silently deletes a secret. This preserves recoverability while preventing disabled Models from looking active. Physical Catalog deletion remains unavailable because candidate history is intentionally retained.
 
 The native implementation follows Microsoft Win32 [`CredWriteW`](https://learn.microsoft.com/windows/win32/api/wincred/nf-wincred-credwritew), [`CredReadW`](https://learn.microsoft.com/windows/win32/api/wincred/nf-wincred-credreadw), [`CredDeleteW`](https://learn.microsoft.com/windows/win32/api/wincred/nf-wincred-creddeletew), and `CredFree` ownership rules. Provider execution can consume the same vault through its existing `resolve(reference)` boundary in a later integration task.
 

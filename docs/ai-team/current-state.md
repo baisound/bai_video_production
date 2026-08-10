@@ -9,7 +9,7 @@
 - Active Consumer Task: `TASK-034 — OS-backed Credential Onboarding`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.12.1`
+- Package: `0.12.2`
 - Next Consumer Task: `TASK-034 native Windows Credential Evidence (due 2026-08-24)`
 
 ## TASK-004 implemented scope
@@ -47,7 +47,7 @@
 
 ## Current verification
 
-- TASK-034 package `0.12.1`: OS vault, safe API/UI, per-Route password-manager lookup, save/delete and secret-exclusion tests PASS; native Windows Evidence pending
+- TASK-034 package `0.12.2`: Catalog lifecycle linkage, retained-key cleanup, OS vault, per-Route password-manager lookup and secret-exclusion tests PASS; native Windows Evidence pending
 - TASK-033 native Windows: add `demo-video-route`, edit to `demo-model-v2`, disable and truthful adapter status display PASS
 - TASK-033 package `0.11.0`: Catalog add/edit/disable, implementation status, API mutation and secret-exclusion tests PASS
 - TASK-032 native Windows: save/reload PASS; stale revision 3 rejected after revision 4 save PASS; 2–3-person usability review pending

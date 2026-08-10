@@ -43,4 +43,6 @@ Open **Secure credentials**, enter a key for the required Model, and press **Sav
 
 Save/delete does not contact a Provider and cannot prove key validity, permissions, quota, balance, or Model support. It never starts billing, generation, or editing. Never include a key in screenshots, Issues, logs, or Evidence.
 
+An enabled Catalog candidate marked **Credential required** is added here automatically. Disabling it removes it from the active list, but a stored key is not silently destroyed: it remains under **Retained keys for disabled routes** until explicitly deleted. You cannot turn off **Credential required** while that key remains stored.
+
 Live credential validation, generation, and editing are not available from this screen yet.

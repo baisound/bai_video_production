@@ -149,3 +149,51 @@ def test_each_credential_row_has_unique_password_manager_identity() -> None:
     assert "input.id=`credential-${fieldKey}`" in _HTML
     assert "input.name=`credential-${fieldKey}`" in _HTML
     assert "input.autocomplete='new-password'" not in _HTML
+
+
+def _catalog_payload(revision: int, *, enabled: bool = True, credential_required: bool = True) -> dict:
+    return {
+        "revision": revision,
+        "entry": {
+            "route_id": "catalog-video", "workload": "VIDEO",
+            "provider_family": "RUNWAY", "provider_id": "runway",
+            "model_id": "configured-video", "cost_class": "CLOUD_PAID_AI",
+            "reasoning_effort": "none", "capabilities": ["TEXT_TO_VIDEO"],
+            "credential_required": credential_required, "enabled": enabled,
+        },
+    }
+
+
+def test_catalog_and_credential_projection_are_linked(tmp_path: Path) -> None:
+    service = _service(tmp_path, WindowsCredentialManagerStore(FakeBackend()))
+    added = service.update_catalog(_catalog_payload(0))
+    video = next(item for item in added["workloads"] if item["workload"] == "VIDEO")
+    route = next(item for item in video["routes"] if item["route_id"] == "catalog-video")
+    assert route["enabled"] is True
+    assert route["credential_required"] is True
+    assert route["credential_configured"] is False
+
+    service.save_credential({"route_id": "catalog-video", "secret": "retained-test-key"})
+    disabled = service.update_catalog(_catalog_payload(1, enabled=False))
+    route = next(
+        item for workload in disabled["workloads"] for item in workload["routes"]
+        if item["route_id"] == "catalog-video"
+    )
+    assert route["enabled"] is False
+    assert route["credential_configured"] is True
+
+
+def test_catalog_cannot_orphan_stored_credential_when_requirement_is_removed(tmp_path: Path) -> None:
+    service = _service(tmp_path, WindowsCredentialManagerStore(FakeBackend()))
+    service.update_catalog(_catalog_payload(0))
+    service.save_credential({"route_id": "catalog-video", "secret": "must-delete-first"})
+    with pytest.raises(ProductError) as error:
+        service.update_catalog(_catalog_payload(1, credential_required=False))
+    assert error.value.code == "ERR_CATALOG_CREDENTIAL_RETAINED"
+    service.delete_credential({"route_id": "catalog-video"})
+    result = service.update_catalog(_catalog_payload(1, credential_required=False))
+    route = next(
+        item for workload in result["workloads"] for item in workload["routes"]
+        if item["route_id"] == "catalog-video"
+    )
+    assert route["credential_required"] is False

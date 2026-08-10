@@ -17,7 +17,7 @@ import webbrowser
 from .subtitle_workspace import SrtWorkspaceCodec, SubtitleWorkspace, SubtitleWorkspaceStore
 
 
-PRODUCT_VERSION = "0.16.0"
+PRODUCT_VERSION = "0.16.1"
 MAX_REQUEST_BYTES = 256 * 1024
 
 _HTML = r"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

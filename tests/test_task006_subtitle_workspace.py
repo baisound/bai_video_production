@@ -51,7 +51,13 @@ def test_insert_update_delete_preserve_raw_text_and_increment_revision() -> None
 
 def test_srt_import_handles_bom_multiline_missing_sequence_and_exports(tmp_path: Path) -> None:
     source = tmp_path / "input.srt"
-    source.write_text("\ufeff1\r\n00:00:00,000 --> 00:00:01,000\r\n一行目\r\n二行目\r\n\r\n00:00:01.001 --> 00:00:02,000\r\n後\r\n", encoding="utf-8")
+    # Write exact bytes: text-mode newline translation would turn embedded CRLF
+    # into CRCRLF on Windows and create a different, malformed fixture.
+    source.write_bytes(
+        b"\xef\xbb\xbf" +
+        "1\r\n00:00:00,000 --> 00:00:01,000\r\n一行目\r\n二行目\r\n\r\n"
+        "00:00:01.001 --> 00:00:02,000\r\n後\r\n".encode("utf-8")
+    )
     workspace = SrtWorkspaceCodec.import_path(source)
     assert [x.text for x in workspace.cues] == ["一行目\n二行目", "後"]
     assert all(x.origin is SubtitleOrigin.SRT_IMPORT for x in workspace.cues)

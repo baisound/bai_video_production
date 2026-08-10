@@ -6,6 +6,11 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.16.1] - 2026-08-10
+
+- Corrected the SRT CRLF regression fixture to write exact UTF-8 BOM bytes on Windows, preventing text-mode newline translation from producing malformed `CRCRLF` test data.
+- Confirmed that the production SRT parser was not the failure source; runtime behavior and the 0.16.0 Subtitle Workspace contract are unchanged.
+
 ## [0.16.0] - 2026-08-10
 
 - Added a local Subtitle Workspace GUI for editing planned narration, ASR transcripts and imported SRT without provider execution.

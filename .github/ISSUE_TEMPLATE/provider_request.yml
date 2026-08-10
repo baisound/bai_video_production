@@ -1,0 +1,29 @@
+name: Provider or model integration
+description: Request a model/provider without coupling workloads to a vendor family.
+title: "[Provider]: "
+labels: [integration]
+body:
+  - type: input
+    attributes:
+      label: Provider and exact model
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Capabilities
+      options:
+        - label: Planning or script
+        - label: Image
+        - label: Video
+        - label: Speech or sound effect
+        - label: Music
+  - type: textarea
+    attributes:
+      label: Official API documentation and terms
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Why this integration benefits users
+    validations:
+      required: true

@@ -1,0 +1,22 @@
+name: Feature request
+description: Propose a user outcome or production workflow improvement.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    attributes:
+      label: Problem and users affected
+      description: Explain the unmet need and who benefits.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed outcome
+      description: Describe the result, not only a preferred implementation.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Safety, rights, and privacy considerations
+    validations:
+      required: true

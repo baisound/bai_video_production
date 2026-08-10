@@ -1,112 +1,152 @@
-# AI動画制作自動化システム
+# BAI Video Production
 
-BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-production` のConsumer Repositoryです。
+[![CI](https://github.com/baisound/ai-video-production/actions/workflows/ci.yml/badge.svg)](https://github.com/baisound/ai-video-production/actions/workflows/ci.yml)
+[![Security](https://github.com/baisound/ai-video-production/actions/workflows/security.yml/badge.svg)](https://github.com/baisound/ai-video-production/actions/workflows/security.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
-## Current baseline
+動画素材の安全な取り込み、正規化、AI Provider選択、ローカル／クラウド生成、正確なTimeline Mapping、DaVinci Resolve連携を段階的に自動化するPython基盤です。
 
-- Product design baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
-- BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
-- Last completed Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Consumer TASK: `TASK-028 — AI Connection Provider / Model Routing`
-- TASK-004 stage: `COMPLETED` / package `0.4.10`
-- TASK-022 stage: `COMPLETED` / package `0.5.0` / native Windows `263 passed`
-- TASK-028 stage: `CAPABILITY_REGISTRY_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION` / package `0.6.3`
-- TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
-- BAI Development OS Core: external / not copied into this repository
-- DistributedOS: disabled
+> **Project status: Alpha**
+>
+> 現在は基盤・Provider境界・Timeline Mappingを実装中です。「動画を投入するだけで完成動画が得られる」一般利用者向け製品版ではありません。未実装機能は実装済みとして表示しません。
 
-## TASK-001 implementation
+## Why this project exists
 
-TASK-001 establishes the product-domain foundation used by later video-processing tasks:
+動画自動化は、AI生成だけでなく、素材の権利、時刻精度、外部API費用、再試行、生成履歴、NLE上の人間の編集を一体で扱う必要があります。本プロジェクトは、AI判断と決定論的処理を分離し、元素材を破壊せず、結果を監査・再生成・手動修正できる共通基盤を目指します。
 
-- immutable product IDs
-- Production Job State Machine with optimistic concurrency and checkpoint-gated resume
-- Canonical Manifest Envelope and JSON Schema contracts
-- Asset Registry minimum contract and rights gating
-- Logical URI / Path Resolver boundary
-- atomic canonical JSON writer
-- Product Error Envelope
-- append-only Evidence and Checkpoint contracts
-- Profile Snapshot / Product Plugin boundary
-- Timeline ownership conflict guard
-- SQLite WAL foundation store and operation idempotency
-- external reference-code static inspection boundary
+## Expected public impact
 
-Media processing, Resolve control, FFmpeg, ASR, AI generation and publishing are intentionally outside TASK-001.
+動画制作能力は、教育、地域文化、研究成果、福祉、非営利活動、小規模事業の情報発信を左右します。しかし現状のAI動画制作は、複数Provider、専門的なNLE操作、高い制作費、権利確認、機密素材の外部送信リスクを利用者自身がつなぎ合わせる必要があります。この複雑さは、資金や専門人材の少ない個人・組織ほど大きな障壁になります。
 
-## Local verification
+BAI Video Productionは、その障壁を下げるための共有可能な公共基盤を目指します。
+
+- 特定Providerへ固定せず、予算・品質・プライバシーに応じてlocal、free、paid AIを選べるようにする。
+- 人間の編集を置き換えるのではなく、提案・生成・配置を自動化し、素材差し替えと最終判断を人間に残す。
+- 権利、同意、費用、来歴、再現性を後付けではなく制作工程の中心に置く。
+- 失敗や中断を安全に再開できる共通仕様を公開し、同じ難題を各開発者がゼロから解き直す重複を減らす。
+- 将来は、良い人間編集をEvidenceと評価指標から学び、悪い操作を無条件に模倣しない、検証可能な改善ループを構築する。
+
+成功を「生成本数」だけでは測りません。制作時間と費用の削減、手動修正可能性、失敗後の回復率、権利情報の充足率、local処理率、再現可能性、利用者・Contributor・下流統合の増加を公開指標として追跡する方針です。現在はAlpha段階であり、この社会的効果は目標です。実利用のEvidenceを集め、実証できた値だけを公開します。
+
+## Current capabilities
+
+- Canonical Asset Registry、rights/checksum、Logical Path Resolver
+- ffprobeを利用したMedia inspection、CFR Proxy、48 kHz analysis audio
+- 正確な有理数Timebaseとsource-to-Timeline mapping
+- DaVinci Resolve capability probeとAutomation-owned Timeline境界
+- ComfyUI画像・動画生成のローカルRuntime境界
+- Audacity/OpenVINO Noise Suppression・2-stem separation境界
+- OpenAI、Anthropic、Googleのtext-capability adapter
+- ElevenLabs TTS・SE・音楽生成adapter
+- SunoAPI.org非同期音楽生成adapter
+- Provider固定用途ではなく、正確なModel Capabilityに基づくRouting
+- CredentialをProfile、Manifest、Evidenceへ埋め込まない実行境界
+
+詳細な進捗は[PROJECT.md](PROJECT.md)と[Canonical Roadmap](docs/roadmap/PROJECT-ROADMAP-CANONICAL.md)を参照してください。
+
+## Not implemented yet
+
+- 一般利用者向け統合GUI
+- 既存動画のASR、無音／フィラーCut、字幕配置の完成E2E
+- 新規動画の企画から素材生成・Resolve組立までの完成E2E
+- Runway、Luma、Kling、MiniMax等の全Adapter
+- 自動公開
+
+Provider Catalogへの掲載は、Adapter実装済みを意味しません。実装状態は`IMPLEMENTED / LOCAL_RUNTIME / PLANNED_ADAPTER`で区別します。
+
+## Architecture principles
+
+1. Canonical Manifestを正本とし、NLE Projectだけを正本にしない。
+2. 元素材と人間所有Timelineを破壊しない。
+3. AI提案と決定論的実行を分離する。
+4. Model Capability、費用、locality、credential、availabilityを実行前に検証する。
+5. 外部Jobはidempotency、checkpoint、Evidenceで安全に再開する。
+6. 権利、プライバシー、API費用、公開安全性をProduct要件として扱う。
+
+## Requirements
+
+- Python 3.11以上
+- Windows 10/11を主要な実行対象として検証
+- FFmpeg／ffprobe：Media処理機能で必要
+- DaVinci Resolve Studio：Resolve連携機能で必要
+- ComfyUI、Audacity/OpenVINO：該当するローカルAI機能でのみ必要
+- 各クラウドProviderのAccount/API Key：利用するProviderだけ必要
+
+外部Runtime、Model、API Keyは同梱せず、自動インストールしません。
+
+## Installation
 
 ```bash
-python -m pytest -q
-python -m compileall -q src tests
-python -m pip wheel . --no-deps --no-build-isolation --wheel-dir /tmp/ai-video-wheel
+git clone https://github.com/baisound/ai-video-production.git
+cd ai-video-production
+python -m venv .venv
 ```
 
-The isolated wheel build may require network access for build dependencies. The verified offline/container route uses `--no-build-isolation` and the already-installed build backend.
+Windows PowerShell：
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+## Verification
+
+```powershell
+python -c "import ai_video_production; print(ai_video_production.__version__)"
+python -m pytest -q
+python -m compileall -q src tests
+```
+
+通常CIは有料API、ComfyUI、Audacity、Resolveを実行しません。実機Evidence Probeは、明示的な手順と安全条件を確認した場合だけ実行してください。
+
+## Provider configuration
+
+設定例：
+
+- [AI Connection profile](profiles/ai-connection-creator.example.json)
+- [External media profile](profiles/external-media-providers.example.json)
+
+API KeyそのものはProfileへ保存せず、`credential://...`参照と環境変数等のCredential Storeを使用します。外部メディア生成はCredentialに加えて`authorization://...`の権利承認参照を要求します。
 
 ## Repository layout
 
 ```text
-.bai-os/project.json          Consumer adapter only
-PROJECT.md                    Project canonical overview
-src/ai_video_production/      Product foundation source
-schemas/                      Product JSON Schemas
-profiles/                     Product profile fixtures
-tests/                       Product tests
-docs/design/                 Product design documents
-docs/ai-team/tasks/          Project-local TASK / Evidence
-references/external-skill/   Owner-provided reference-only code archives
+src/ai_video_production/   Product source
+tests/                     Offline-first regression tests
+schemas/                   Canonical JSON Schemas
+profiles/                  Secret-free configuration examples
+tools/                     Windows/WSL helper commands
+docs/                      Design, roadmap and task evidence
+.github/                   CI, security and contribution templates
 ```
 
-## Governance boundary
+## Security and privacy
 
-BAI Development OS internal TASK numbering is independent from this repository. OS-internal `TASK-016` is not implemented or authorized by this project. A recommended next Consumer task is not started until Owner instruction is given.
+脆弱性の詳細を公開Issueへ投稿しないでください。[SECURITY.md](SECURITY.md)の非公開報告手順を利用してください。API Key、Authorization Header、Cookie、署名URL、個人情報、未公開素材をIssue、Pull Request、ログ、Evidenceへ含めないでください。
 
+## External services and rights
 
-## TASK-002 Resolve Capability Spike
+本プロジェクトはOpenAI、Anthropic、Google、ElevenLabs、Suno、SunoAPI.org、Runway、Luma AI、Stability AI、Replicate、fal.ai、MiniMax、Kling、Black Forest Labs、ComfyUI、Audacity、OpenVINO、FFmpeg、Blackmagic Design／DaVinci Resolveの公式製品ではなく、各社から承認・後援されたものではありません。
 
-TASK-002 is **COMPLETED**. Target-machine live evidence was collected from **DaVinci Resolve Studio 21.0.2.4** through the Windows PROGRAMDATA scripting bridge. The final isolated sandbox run measured `15 SUPPORTED / 1 LIMITED / 7 PROBE_REQUIRED / 0 UNSUPPORTED`, including Project save/export, Media Pool/Bin access, generated WAV import, Timeline creation/append and marker placement.
+利用者は、各Provider／Model／素材の利用規約、料金、商用利用条件、著作権、肖像・音声同意、プライバシー、地域法令を確認する責任があります。外部サービス名とModel名は互換性説明のために使用します。
 
-WSL2-to-Windows authenticated HTTP/JSON also passed the required topology checks: unauthenticated rejection, authenticated roundtrip and same-endpoint restart/reconnect. The measured WSL2 result was p50 `1.255 ms` / p95 `1.699 ms` across 16 round trips. The Final IPC ADR therefore selects authenticated HTTP/JSON as the primary WSL2→Windows transport. Windows Named Pipe remains a Windows-local optimization candidate.
+## Contributing
 
-Package `0.2.4` retains the generated probe WAV and `.drp` under the Evidence directory instead of deleting them at process exit, and restricts Sandbox Project names to a path-safe grammar. The Owner explicitly waived another live run solely to confirm the post-run visual online state; this is not a TASK-002 completion gate.
+[CONTRIBUTING.md](CONTRIBUTING.md)を確認してください。大きな変更は実装前にIssueで目的と境界を共有し、1 Pull Requestを1目的に限定してください。[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)がすべてのProject spaceに適用されます。
 
-The default capability runner remains read-only. Historical Attempt 01/02/03 Evidence is preserved under `docs/ai-team/tasks/TASK-002/evidence/`. Subtitle mutation, relink and render mutations remain `PROBE_REQUIRED` until the later owning TASK actually needs those capabilities.
+## Governance and releases
 
-Final local verification: `81 / 81` tests PASS, compileall PASS, wheel/installed-package verification PASS.
+- Maintainer責任と意思決定：[GOVERNANCE.md](GOVERNANCE.md)
+- Version履歴：[CHANGELOG.md](CHANGELOG.md)
+- サポート範囲：[SUPPORT.md](SUPPORT.md)
+- 第三者コンポーネント：[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
-## Project Roadmap
+## License
 
-- Canonical design roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` (Ver.1.4 editing-first priority)
-- Design-level DOCX: `docs/design/roadmap/AI動画制作自動化システム_全体開発ロードマップ_設計レベル版_Ver1.2.docx`
-- External-facing overview: `docs/design/public/AI動画制作自動化システム_外向けプロジェクト概要_ロードマップ_Ver1.2.docx`
+本Repositoryで独自に提供するコードと文書は、個別表示がない限り[MIT License](LICENSE.md)で公開します。第三者Runtime、Model、依存パッケージ、素材、商標にはそれぞれの条件が適用されます。
 
-TASK-003 is complete. TASK-004 ComfyUI and Audacity/OpenVINO capability Evidence is accepted; only bounded OpenVINO Noise Suppression + verified 2-stem Music Separation behavioral Evidence remains before final closure. After TASK-004 closes, TASK-022 remains the default editing-first recommendation unless the Owner reprioritizes; later TASKs remain not authorized until explicit Owner instruction.
+## English summary
 
-
-## TASK-003 Secure Asset Ingest
-
-TASK-003 is **COMPLETED** in package `0.3.0`. It implements explicit source-root authorization, symlink/path escape refusal, fixed-argv ffprobe inspection, streamed SHA-256, Job-local dedupe/rights conflict review, deterministic `asset://` targets, atomic target-local promotion, read-only canonical source assets, extended rights metadata, additive SQLite schema v2, concurrency-safe versioned source manifests, append-only Evidence and idempotent/partial/hard-crash recovery.
-
-Raw machine source paths are intentionally boundary-only and are not written to successful canonical Asset/Manifest/Evidence output. Normalization/proxy/time-map processing remains TASK-004.
-
-Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS and a repository-external installed-wheel ingest using a real generated WAV + ffprobe PASS.
-
-
-## TASK-004 Media + Local AI Runtime Foundation
-
-TASK-004 package `0.4.10` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and verified-runtime 2-stem Music Separation; 4-stem fails closed until a scriptable mode is exposed. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
-
-Package 0.4.9 completed the target-Windows behavioral run. Package 0.4.10 then corrected the native-Windows binary-flag test and extended-length path containment boundary. Final native-Windows verification passed `255 / 255` tests and compileall; TASK-004 is complete.
-
-## TASK-022 Timeline Mapping Service
-
-Package 0.5.0 adds exact source/normalized Asset range to Timeline frame mapping. It uses rational arithmetic, end-exclusive ranges, FLOOR starts, CEIL ends, explicit gaps and playback-rate rationals; it rejects ambiguous normalization bindings, invalid ranges, duplicate placements and overlaps. The deterministic schema-validated Plan is shared by existing-video editing and TASK-027 new-video creation. Native-Windows verification passed `263 / 263`; TASK-022 is complete.
-
-## TASK-028 AI Connection Provider / Model Routing
-
-Package 0.6.0 added unified routing for planning, video, image, audio and music and passed 273/273 on native Windows. Package 0.6.1 adds non-billable-by-default OpenAI Responses, Anthropic Messages and Google Gemini Interactions planning adapters, runtime-only credential resolution, bounded allowlisted transport, normalized responses and route diagnostics. The GUI settings surface remains the next UI slice.
-
-Package 0.6.2 adds ElevenLabs TTS, sound-effect and music generation and SunoAPI asynchronous music submission. It also exposes Runway, Luma, Stability AI, Replicate, fal.ai, MiniMax and Kling as explicitly planned provider entries so GUI and future adapters share one capability catalog without claiming unfinished integrations.
-
-Package 0.6.3 removes provider-to-purpose locking. Exact models declare their supported workloads and capabilities, and a generic capability registry dispatches `(provider, capability)` adapters. OpenAI, Anthropic, Google or any other provider can therefore be used for image, video, audio or music when the selected model and installed adapter support it.
+BAI Video Production is an alpha-stage Python foundation for auditable video automation: secure asset ingest, media normalization, exact timeline mapping, local and cloud AI provider routing, and safe DaVinci Resolve integration. It is not yet an end-user one-click editor. External runtimes, models, credentials, and paid services are not bundled or invoked by ordinary CI.

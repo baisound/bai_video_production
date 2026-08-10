@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software in research or a public project, please cite it using this metadata."
+title: "BAI Video Production"
+type: software
+authors:
+  - name: "baisound"
+repository-code: "https://github.com/baisound/ai-video-production"
+url: "https://github.com/baisound/ai-video-production"
+license: MIT
+version: "0.6.4"
+date-released: 2026-08-10

@@ -16,3 +16,8 @@ jobs/
 .DS_Store
 .vscode/
 .idea/
+.env
+.env.*
+!.env.example
+*.log
+/task*-live-evidence*/

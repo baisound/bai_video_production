@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.15.1] - 2026-08-10
+
+- Corrected adjacent NTSC SRT cues so millisecond floor/ceil conversion cannot create a 1 ms overlap at a shared end-exclusive frame boundary.
+- Preserved safe ceil-end behavior for isolated/final cues and added native-Evidence-shaped regression fixtures.
+- Recorded the successful Windows FasterWhisper run and designed immutable Raw Transcript, prioritized dictionaries, GUI review and a default-off AI typo/omission suggestion gate.
+- Added TASK-014 owner-trained ElevenLabs narration design and TASK-035 REAPER/iZotope/Resolve audio round-trip design.
+
 ## [0.15.0] - 2026-08-10
 
 - Added TASK-027 Slice A1 Production Blueprint and validated Scene Ledger contracts derived from 11 real production design documents.

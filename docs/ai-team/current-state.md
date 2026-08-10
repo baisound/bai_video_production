@@ -9,7 +9,7 @@
 - Active Consumer Task: `TASK-006 — ASR / Transcript / Subtitle`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.15.0`
+- Package: `0.15.1`
 - Next Consumer Task: `TASK-023 FasterWhisper Provider / TASK-006 Slice B (target 2026-08-17)`
 
 ## TASK-004 implemented scope
@@ -49,7 +49,10 @@
 
 - TASK-006 Slice A package `0.13.0`: Transcript/Subtitle schemas, cut-aware exact mapping and deterministic NTSC SRT tests PASS
 - TASK-006 Slice B package `0.14.0`: optional FasterWhisper local ASR, explicit model-download gate, Transcript/SRT publication and text-free report tests PASS
+- TASK-006 native Windows Evidence: `small` Japanese CPU/int8 produced 10 Segments locally; Native ASR PASS. One mistranscription and adjacent SRT 1 ms render overlaps require Slice C corrective/review work. Correction order is dictionary, GUI human review, default-off opt-in AI typo/omission proposal, then human approval.
 - TASK-027 Slice A1 package `0.15.0`: real-production-evidence-derived Production Blueprint, Scene Ledger, Reference Registry, source-priority and dense-text generation gates implemented
+- TASK-035 design intake: optional REAPER audio-finishing/Resolve round-trip recorded; native ReaScript Plan/QA bridge precedes any third-party MCP or iZotope Assistant automation
+- TASK-014 design intake: owner's existing ElevenLabs Pro trained voice will be used through a private Voice Profile and timed TTS path; no retraining/upload or paid call is authorized by configuration alone
 - TASK-034 native Windows package `0.12.2`: Catalog/Credential lifecycle and per-row Password Manager behavior PASS
 - TASK-034 package `0.12.2`: Catalog lifecycle linkage, retained-key cleanup, OS vault, per-Route password-manager lookup and secret-exclusion tests PASS
 - TASK-033 native Windows: add `demo-video-route`, edit to `demo-model-v2`, disable and truthful adapter status display PASS

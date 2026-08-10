@@ -22,6 +22,7 @@ flowchart TD
 3. Timeline Mapping Plan owns exact placement intent.
 4. NLE projects are execution targets, not the only source of truth.
 5. Evidence explains operations but never replaces canonical state.
+6. REAPER and other DAW projects are execution/handoff targets; accepted renders return through the Asset Registry before Resolve placement.
 
 ## Security boundaries
 
@@ -33,6 +34,12 @@ flowchart TD
 | Edit plan → Resolve | explicit ownership, idempotency, mutation authorization |
 | Retry → external runtime | persisted operation identity, ambiguous-state fail-closed |
 | Human action → learning | hypothesis and metrics, holdout, no blind imitation |
+| Audio Plan → DAW | dry-run, automation ownership, snapshot/undo, plugin allowlist |
+| DAW render → Resolve | contained output, media/QA/checksum, canonical Asset, explicit placement |
+
+## Optional professional-audio round-trip
+
+TASK-035 adds a native ReaScript bridge beneath the same canonical Plan and Evidence rules. MCP may later expose allowlisted commands conversationally, but it does not own authorization, product state or unrestricted DAW access. Plugin discovery, insertion, generic parameter control, preset application and an iZotope Assistant invocation are separate capability levels; success at one level never implies the next.
 
 ## Provider integration contract
 

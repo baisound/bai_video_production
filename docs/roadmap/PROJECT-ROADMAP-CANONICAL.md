@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.4
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.5
 
 - Project: `ai-video-production`
 - Date: 2026-08-09
@@ -60,6 +60,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | P2 Editing Analysis MVP | ASR・SRT・字幕・無音/フィラー/言い直しCut候補を優先生成。Scene解析は並列化可能 | 006, 023, 024, 005 | Editing Analysis Manifest再現性 PASS |
 | P3 Edit Intelligence | Candidate Graph、Multimodal、DBD Profile | 007, 008, 009 | Edit Plan品質/再現性 Gate |
 | P4 Resolve Editing MVP | 元動画Cut、SRT/字幕Track、SE/BGM/ナレーションをResolveへ配置し、Render QA、人間Handoff | 010, 011, 012, 026 | **Technical MVP** |
+| P4A Optional Audio Finishing | REAPERで音声Sessionを再現し、mix/stemをQA後にResolveへ戻す | 035 | Auditable audio round-trip |
 | P5 Generative Enhancement | TASK-004で確立したLocal AI Runtime上にAI SE/BGM/ナレーション/生成映像の創作判断・高度化を追加 | 013, 014 | Rights/Cost/QA Gate |
 | P6 Safety & Variants | Privacy、Storage GC、縦動画/Remotion | 016, 017, 018 | **Production Pilot** |
 | P7 Learning & Operations | YouTube Feedback、自動調整、統合Dashboard | 015, 019, 021 | Operable learning loop |
@@ -76,7 +77,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 003 | Asset Registry / Ingest / Path Resolver | Ingest API, rights, checksum, path mapping | 001 | DEV-4 / score 33 | COMPLETED |
 | 004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | exact timebase/proxy/48k, ComfyUI image/H3, Character Identity, SingleFrame/Spectrum/Foley, Audacity OpenVINO, minimum admission/Evidence | 003 | DEV-4 / score 25 | COMPLETED |
 | 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | NOT STARTED |
-| 006 | ASR / Subtitle | Transcript/SRT, VAD, dictionary, review gate; Resolve字幕配置用canonical subtitle plan | 004 | DEV-3/4候補 | SLICE B FASTERWHISPER LOCAL ASR IMPLEMENTED |
+| 006 | ASR / Subtitle | Transcript/SRT、VAD、非重複SRT Corrective、不変Raw Transcript、優先辞書、GUI人間Review、既定OFFのAI誤字・脱字候補、承認Gate、Resolve字幕配置用canonical subtitle plan | 004,028（外部AI補正時） | DEV-3/4候補 | NATIVE ASR PASS / SLICE C REVIEW CORRECTIVE PLANNED |
 | 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3候補 | NOT STARTED |
 | 008 | Multimodal Scoring | audio/visual/OCR feature fusion | 007 | DEV-3候補 | NOT STARTED |
 | 009 | DBDProfilePlugin | DBD HUD/chase/event profile | 008 | DEV-3候補 | NOT STARTED |
@@ -84,7 +85,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4候補 | NOT STARTED |
 | 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3候補 | NOT STARTED |
 | 013 | AI SE / BGM / Video Orchestration | TASK-004 local-runtime基盤を利用したSE/BGM/Video生成のProvider選択・創作制御・rights/cost/evidence。内容連動選定は007依存 | 004; 007は内容連動時 | DEV-4候補 | NOT STARTED |
-| 014 | Voice TTS / Narration | ナレーション/自声TTS asset、dictionary、consent/retention。ユーザー指定原稿からの生成は003後に前倒し可 | 003; 自動原稿生成は006/007 | DEV-4 | NOT STARTED |
+| 014 | Voice TTS / Owner Narration | ElevenLabsの既存Owner Voice Profile、read-only capability/ownership probe、timed TTS、dictionary、consent/retention、48 kHz canonical narration。ユーザー指定原稿からの生成は003後に前倒し可 | 003,028; 自動原稿生成は006/007; 配置は026 | DEV-4 | DESIGN RECORDED / ADAPTER FOUNDATION EXISTS |
 | 015 | YouTube Feedback | performance ingest, feedback features | 008 | DEV-3候補 | NOT STARTED |
 | 016 | Privacy Guard | PII/notification/NG detection + redaction plan | 003,006 | DEV-4 | NOT STARTED |
 | 017 | Storage Lifecycle / GC | archive, retention, legal hold, staged delete | 003,018 | DEV-4 | NOT STARTED |
@@ -98,6 +99,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4候補 | SLICE A1 PRODUCTION BLUEPRINT FOUNDATION IMPLEMENTED |
+| 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
 
 ## 6. Namespace Collision Resolution
 
@@ -148,13 +150,14 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-010 Resolve Assembly MVPを拡張し、元動画Cut + SRT/字幕配置をE2E化
 - TASK-011 Render QA/Loudness
 - TASK-012 Manual Handoff/Cubase
+- TASK-035 REAPER Audio Finishing Bridgeはこの時点から任意導入可能。Technical MVPを阻害せず、音響仕上げとResolve round-tripを高度化する
 
 ここを最初の明確な**「動画を投入して、Cut済み・字幕付きの自動編集Timelineを得る」完成点**とする。
 
 ### Wave 4 — 音声演出を前倒し
 
 - TASK-013 SE/BGM/Video orchestration（TASK-004で生成Runtime基盤は先行済み。TASK-007完了を待たず、ユーザー指定Prompt/Assetによる生成sliceは前倒し可）
-- TASK-014 ナレーション/TTS生成slice（ユーザー指定原稿は早期実装可）
+- TASK-014 ElevenLabs Owner Voice narration（既存の本人学習済み音声を利用。read-only probe→有料Preview→timed full render→48 kHz Assetの順で前倒し可）
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed
 - TASK-010へAudio placementを統合
 
@@ -192,6 +195,16 @@ Production PilotではTASK-016/017/021を必須Gate候補とする。
 - TASK-019 Profile Auto-Tuner
 - TASK-029 Human Edit Learning / Federated Knowledge Evolution（Owner-local適応、任意Cloud集約、署名付きKnowledge PackのGit release）
 - TASK-025 Premiere Adapter（必要時のみ）
+
+### Optional Professional Audio Route — REAPER / iZotope
+
+- TASK-035 Slice A–B: REAPER実機Capability Probe、deterministic DAW Session Plan、dry-run diff
+- Slice C–D: track/item/route/FX構築、48 kHz mix/stem render、loudness/true-peak/silence QA
+- Slice E: canonical Audio Assetとして登録し、TASK-010 Gateway経由でResolveへ明示配置
+- Slice F: Ozone/Nectar/Neutronを検出→挿入→parameter/preset→Assistantの段階で個別検証
+- Slice G: 必要な場合のみ、同じallowlisted commandを公開するlocal MCP facadeを追加
+
+CubaseはTASK-012のmanual handoff候補として残す。REAPERを自動化基盤に採用してもCubase Projectを自動変換するとは約束しない。第三者MCPのツール数やCubase対応範囲は固定仕様にせず、実装・version・license・securityを個別に検証する。
 
 ## 8. Cross-cutting Safety Floors
 

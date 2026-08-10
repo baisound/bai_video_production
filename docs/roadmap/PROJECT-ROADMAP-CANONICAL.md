@@ -76,7 +76,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 003 | Asset Registry / Ingest / Path Resolver | Ingest API, rights, checksum, path mapping | 001 | DEV-4 / score 33 | COMPLETED |
 | 004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | exact timebase/proxy/48k, ComfyUI image/H3, Character Identity, SingleFrame/Spectrum/Foley, Audacity OpenVINO, minimum admission/Evidence | 003 | DEV-4 / score 25 | COMPLETED |
 | 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | NOT STARTED |
-| 006 | ASR / Subtitle | Transcript/SRT, VAD, dictionary, review gate; Resolve字幕配置用canonical subtitle plan | 004 | DEV-3/4候補 | NOT STARTED |
+| 006 | ASR / Subtitle | Transcript/SRT, VAD, dictionary, review gate; Resolve字幕配置用canonical subtitle plan | 004 | DEV-3/4候補 | SLICE A TRANSCRIPT/SRT FOUNDATION IMPLEMENTED |
 | 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3候補 | NOT STARTED |
 | 008 | Multimodal Scoring | audio/visual/OCR feature fusion | 007 | DEV-3候補 | NOT STARTED |
 | 009 | DBDProfilePlugin | DBD HUD/chase/event profile | 008 | DEV-3候補 | NOT STARTED |

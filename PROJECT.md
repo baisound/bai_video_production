@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-034_CREDENTIAL_ONBOARDING_IMPLEMENTED_AWAITING_NATIVE_EVIDENCE`
+`TASK-006_SLICE_A_TRANSCRIPT_SRT_FOUNDATION_IMPLEMENTED`
 
 ## Purpose
 
@@ -88,9 +88,9 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Task: `TASK-034 — OS-backed Credential Onboarding`
+- Active Task: `TASK-006 — ASR / Transcript / Subtitle`
 - TASK-004: `COMPLETED`
-- Package: `0.12.2`
+- Package: `0.13.0`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
@@ -108,6 +108,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Catalog editor: package 0.11.0 adds safe Provider/Model candidate add/edit/disable with truthful implementation status and no Provider execution path
 - Native Catalog Evidence: package 0.11.0 add/edit/disable behavior accepted on Windows
 - Credential onboarding: package 0.12.2 links enabled credential-required Catalog candidates to active key rows, retains disabled-route keys in an explicit cleanup section, prevents orphaning, and provides per-Route password-manager lookup; Provider connectivity is not executed
+- Native Credential Evidence: package 0.12.2 Catalog linkage, retained-key cleanup and per-row Password Manager behavior accepted on Windows
+- Subtitle foundation: package 0.13.0 adds provider-neutral Transcript and Subtitle contracts, cut-aware exact frame mapping and deterministic SRT; real ASR and Resolve placement remain subsequent slices
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

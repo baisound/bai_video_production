@@ -1,9 +1,9 @@
 # TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation
 
-- Status: `CORRECTIVE_AWAITING_WINDOWS_REGRESSION`
+- Status: `COMPLETED`
 - Authorization: `OWNER_AUTHORIZED_IMPLEMENTATION`
 - Historical alias: `VIDEO-TASK-004`
-- Corrective package: `0.4.10`
+- Completed package: `0.4.10`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Adaptive score: `25`
 - Scope amendments: `OWNER_AUTHORIZED` — Local Image AI (Stable Diffusion / FLUX), Character Identity, H3 Production Brief, H3 Single-Frame Transform, Spectrum optional acceleration and H3 Foley/SFX experimental provider are included before TASK completion.

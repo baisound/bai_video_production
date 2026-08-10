@@ -8,7 +8,7 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - Active Consumer TASK: `NONE`
-- TASK-004 stage: `CORRECTIVE_AWAITING_WINDOWS_REGRESSION` / package `0.4.10`
+- TASK-004 stage: `COMPLETED` / package `0.4.10`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -95,4 +95,4 @@ Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS an
 
 TASK-004 package `0.4.10` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and verified-runtime 2-stem Music Separation; 4-stem fails closed until a scriptable mode is exposed. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
 
-Package 0.4.9 completed the target-Windows behavioral run. The subsequent full Windows regression exposed two platform-only failures: the binary-flag test replaced the real `O_BINARY`, and concurrent path resolution compared equivalent `C:\...` and `\\?\C:\...` spellings as different roots. Package 0.4.10 preserves the real binary flag in the test and canonicalizes extended-length Windows paths without relaxing containment. Final completion awaits the Windows regression rerun.
+Package 0.4.9 completed the target-Windows behavioral run. Package 0.4.10 then corrected the native-Windows binary-flag test and extended-length path containment boundary. Final native-Windows verification passed `255 / 255` tests and compileall; TASK-004 is complete.

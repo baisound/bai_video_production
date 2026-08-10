@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-004_CORRECTIVE_AWAITING_WINDOWS_REGRESSION`
+`TASK-004_COMPLETED`
 
 ## Purpose
 
@@ -72,7 +72,7 @@ Consumer Project Repository root. Machine-specific absolute paths are not canoni
 - TASK-001: `DEV-4 FOUNDATION CRITICAL` / score 25 / COMPLETED
 - TASK-002: `DEV-4 FOUNDATION CRITICAL` / score 22 / COMPLETED
 - TASK-003: `DEV-4 FOUNDATION CRITICAL` / score 33 / COMPLETED
-- TASK-004: `DEV-4 FOUNDATION CRITICAL` / score 25 / capability verified, bounded target behavioral Evidence pending
+- TASK-004: `DEV-4 FOUNDATION CRITICAL` / score 25 / completed on package 0.4.10 with accepted target behavioral Evidence and `255 / 255` native-Windows regression PASS
 
 TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Identity、MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley、Audacity OpenVINO外部Runtime境界を含むためSafety Floorを下げない。
 
@@ -89,7 +89,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - Active Task: `NONE`
-- TASK-004: `CORRECTIVE_AWAITING_WINDOWS_REGRESSION`
+- TASK-004: `COMPLETED`
 - Package: `0.4.10`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review

@@ -18,6 +18,8 @@ The production transport accepts only the three compiled HTTPS origins, bounds r
 
 ElevenLabs supports `AUDIO/TTS`, `AUDIO/SFX` and `MUSIC/MUSIC_GENERATION` through exact configured model and voice IDs. Binary output is bounded and returned for the canonical Asset publication layer; it is not silently written to arbitrary paths. SunoAPI submits `MUSIC/MUSIC_GENERATION` as an external asynchronous task and returns a normalized provider task ID for later callback/poll reconciliation. Callback origins must be HTTPS.
 
+The owner's existing ElevenLabs trained voice is represented by a private local `VoiceProfile` owned by TASK-014. The route chooses provider/model/capability; it does not embed the raw private `voice_id`, consent record or training media in the shared model catalog. A future read-only adapter may enumerate owned/verified voices and subscription capability, but it must allowlist fields and must never persist a raw account response or returned credential material.
+
 External media calls require `authorization://...` rights approval in addition to credentials. Automated tests use injected transports and cannot reach a paid endpoint. Provider catalog status is an explicit contract: `IMPLEMENTED`, `LOCAL_RUNTIME` or `PLANNED_ADAPTER`.
 
 ## Capability-first correction

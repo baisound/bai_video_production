@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-032_INTERACTIVE_SETTINGS_IMPLEMENTED_AWAITING_NATIVE_EVIDENCE`
+`TASK-033_PROVIDER_MODEL_CATALOG_IMPLEMENTED_AWAITING_NATIVE_EVIDENCE`
 
 ## Purpose
 
@@ -88,9 +88,9 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Task: `TASK-032 — AI Connection Settings UI Foundation`
+- Active Task: `TASK-033 — Provider and Model Catalog Editor`
 - TASK-004: `COMPLETED`
-- Package: `0.10.0`
+- Package: `0.11.0`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
@@ -104,6 +104,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Connection settings: package 0.8.0 adds a secret-free five-workload preflight projection for the future low-literacy GUI; persistence and interactive UI have dated completion gates
 - Settings persistence: package 0.9.0 adds atomic checksummed storage, revision-conflict protection, 0.8 migration and a bilingual GUI-neutral form; interactive UI remains due 2026-08-24
 - Interactive settings: package 0.10.0 adds a loopback-only bilingual screen for five workload modes and preferred configured Models; native Windows screenshot and usability Evidence remain
+- Native settings Evidence: package 0.10.0 Windows save/reload and stale revision 3 versus saved revision 4 conflict behavior accepted; multi-user usability review remains
+- Catalog editor: package 0.11.0 adds safe Provider/Model candidate add/edit/disable with truthful implementation status and no Provider execution path
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.11.0] - 2026-08-10
+
+- Added a local Provider/Model Catalog editor for safe add, edit, and disable operations without JSON editing.
+- Added truthful `IMPLEMENTED`, `LOCAL_RUNTIME`, and `PLANNED_ADAPTER` labels so configuration never implies execution support.
+- Added generated internal credential references while excluding keys, tokens, references, endpoints, headers, and arbitrary settings from the browser contract.
+- Reused atomic revision storage, CSRF, Host, CSP, and bounded-request protections and added Catalog regression coverage.
+
 ## [0.10.0] - 2026-08-10
 
 - Added a responsive bilingual AI Connection settings screen served exclusively on local loopback.

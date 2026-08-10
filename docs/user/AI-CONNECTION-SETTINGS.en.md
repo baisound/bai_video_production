@@ -35,6 +35,8 @@ flowchart TD
 
 The screen reports configured readiness, not a live Provider probe. Actual generation still requires capability checks and a separate GO approval.
 
+Open **Provider & model catalog** at the bottom to add or edit a candidate. Enter safe identifiers, workload, Provider family, exact Model, cost class, and comma-separated capabilities. Check **Credential required** when appropriate, but never enter an API key. `IMPLEMENTED`, `LOCAL_RUNTIME`, and `PLANNED_ADAPTER` distinguish executable boundaries from configuration-only candidates. Disable an obsolete candidate instead of deleting it.
+
 If a conflict appears, another screen saved a newer revision. Reload, review the new settings, and save again. This prevents an older screen from silently overwriting newer work.
 
-API-key entry, adding new Provider/Model candidates, generation, and editing are not available in this screen yet. Developers currently add candidates through the Profile contract.
+OS-backed API-key onboarding, generation, and editing are not available in this screen yet.

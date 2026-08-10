@@ -31,6 +31,7 @@ flowchart LR
 | `GET` | `/` | Responsive bilingual HTML screen |
 | `GET` | `/api/form` | Secret-free form projection and revision |
 | `PUT` | `/api/settings` | Validates selections, checks revision and atomically saves |
+| `PUT` | `/api/catalog` | Adds or updates safe route metadata; never accepts secrets/endpoints |
 
 The PUT body is:
 
@@ -55,4 +56,4 @@ Unknown workloads, cross-workload route IDs, missing workload modes, stale revis
 
 ## Remaining UI work
 
-Credential onboarding must use an OS credential store and must never add secret values to this JSON contract. Adding Provider/Model candidates needs a separate catalog/editor contract. Native Windows screenshot Evidence and the 2–3-person scripted usability review remain required before TASK-032 completion.
+Catalog mutation is implemented by `ConnectionCatalogEditor`; Route ID/workload are immutable, unknown fields fail closed, and disable replaces destructive deletion. Credential onboarding must use an OS credential store and must never add secret values to this JSON contract. The 2–3-person scripted usability review remains required before TASK-032 completion.

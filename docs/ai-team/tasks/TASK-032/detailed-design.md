@@ -1,6 +1,6 @@
 # TASK-032 — AI Connection Settings UI Foundation
 
-- Status: `INTERACTIVE_SCREEN_IMPLEMENTED_AWAITING_NATIVE_SCREENSHOT_USABILITY`
+- Status: `NATIVE_WINDOWS_PASS_USABILITY_PENDING`
 - Package: `0.10.0`
 - Target dates: API 2026-08-10; first interactive settings screen 2026-08-24; usability review 2026-08-31
 
@@ -101,7 +101,7 @@ Security gates include loopback-only binding, Host validation, random CSRF token
 |---|---|---|
 | Safe Preflight API | 2026-08-10 | all workloads projected; no secret reference; deterministic hash tests |
 | Settings persistence contract | 2026-08-17 | **Completed 2026-08-10**: schema, migration, atomic save, rollback and conflict tests |
-| Interactive screen | 2026-08-24 | **Code completed 2026-08-10**: responsive controls, keyboard-native HTML, error/help text, no execution path; native Windows screenshot Evidence pending |
+| Interactive screen | 2026-08-24 | **PASS 2026-08-10**: native Windows render/save/reload and stale revision 3 versus saved revision 4 conflict Evidence accepted |
 | Low-literacy usability review | 2026-08-31 | three scripted tasks completed by 2–3 consenting reviewers; blockers recorded |
 
 ## Next implementation slice

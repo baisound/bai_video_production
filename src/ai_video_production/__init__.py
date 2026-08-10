@@ -24,7 +24,7 @@ from .connection_settings import (
     WorkloadSettingsStatus,
 )
 from .connection_settings_store import (
-    ConnectionSettingsEditor, ConnectionSettingsFormBuilder, ConnectionSettingsLoadResult,
+    ConnectionCatalogEditor, ConnectionSettingsEditor, ConnectionSettingsFormBuilder, ConnectionSettingsLoadResult,
     ConnectionSettingsRecord, ConnectionSettingsSaveResult, ConnectionSettingsStore,
 )
 from .provider_execution import (
@@ -77,14 +77,14 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.10.0"
+__version__ = "0.11.0"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
     "ModelRoute", "ProviderFamily", "ReasoningEffort", "SelectionMode",
     "AiConnectionSettingsService", "SettingsPreflightReport", "SettingsRouteStatus",
     "WorkloadSettingsStatus",
-    "ConnectionSettingsEditor", "ConnectionSettingsFormBuilder", "ConnectionSettingsLoadResult",
+    "ConnectionCatalogEditor", "ConnectionSettingsEditor", "ConnectionSettingsFormBuilder", "ConnectionSettingsLoadResult",
     "ConnectionSettingsRecord", "ConnectionSettingsSaveResult", "ConnectionSettingsStore",
     "AiProviderExecutionService", "AnthropicMessagesAdapter", "EnvironmentCredentialStore",
     "GoogleInteractionsAdapter", "OpenAiResponsesAdapter", "RouteDiagnostic", "RouteDiagnosticStatus",

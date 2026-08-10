@@ -136,6 +136,34 @@ def test_valid_save_persists_modes_and_returns_new_revision(live_screen) -> None
     assert planning["selected_route_id"] == "local"
 
 
+def test_catalog_api_adds_candidate_without_execution_or_secret_exposure(live_screen) -> None:
+    _service, settings, _server, url = live_screen
+    with urlopen(url) as response:
+        html = response.read().decode("utf-8")
+    token = json.loads(re.search(r"const CSRF=(\"[^\"]+\")", html).group(1))
+    entry = {
+        "route_id": "runway-video", "workload": "VIDEO",
+        "provider_family": "RUNWAY", "provider_id": "runway",
+        "model_id": "configured-runway-model", "cost_class": "CLOUD_PAID_AI",
+        "reasoning_effort": "none", "capabilities": ["TEXT_TO_VIDEO"],
+        "credential_required": True, "enabled": True,
+    }
+    request = Request(
+        url + "api/catalog",
+        data=json.dumps({"revision": 0, "entry": entry}).encode(),
+        method="PUT",
+        headers={"Content-Type": "application/json", "X-BAI-CSRF": token},
+    )
+    with urlopen(request) as response:
+        result = json.loads(response.read())
+    assert result["revision"] == 1
+    video = next(item for item in result["workloads"] if item["workload"] == "VIDEO")
+    added = next(item for item in video["routes"] if item["route_id"] == "runway-video")
+    assert added["implementation_status"] == "PLANNED_ADAPTER"
+    assert "credential://" not in json.dumps(result)
+    assert json.loads(settings.read_text())["profile"]["routes"][-1]["credential_ref"].startswith("credential://")
+
+
 def test_save_rejects_missing_csrf_and_stale_revision(live_screen) -> None:
     service, _settings, _server, url = live_screen
     form = service.form()

@@ -9,7 +9,7 @@ from ai_video_production import (
     AiConnectionSettingsService,
     AiWorkload,
     ConnectionAvailability,
-    ConnectionSettingsFormBuilder,
+    ConnectionCatalogEditor, ConnectionSettingsFormBuilder,
     ConnectionSettingsStore,
     CostClass,
     ModelRoute,
@@ -138,6 +138,57 @@ def test_form_rejects_profile_preflight_mismatch() -> None:
     )
     with pytest.raises(ValueError, match="do not match"):
         ConnectionSettingsFormBuilder.build(value, preflight)
+
+
+def catalog_entry(**overrides) -> dict:
+    value = {
+        "route_id": "luma-video",
+        "workload": "VIDEO",
+        "provider_family": "LUMA",
+        "provider_id": "luma",
+        "model_id": "configured-video-model",
+        "cost_class": "CLOUD_PAID_AI",
+        "reasoning_effort": "none",
+        "capabilities": ["TEXT_TO_VIDEO"],
+        "credential_required": True,
+        "enabled": True,
+    }
+    value.update(overrides)
+    return value
+
+
+def test_catalog_adds_safe_planned_route_without_secret_value() -> None:
+    edited = ConnectionCatalogEditor.upsert(profile(), catalog_entry())
+    route = next(item for item in edited.routes if item.route_id == "luma-video")
+    assert route.credential_ref == "credential://catalog/luma-video"
+    preflight = AiConnectionSettingsService.preflight(
+        edited, ConnectionAvailability(frozenset(item.route_id for item in edited.routes))
+    )
+    form = ConnectionSettingsFormBuilder.build(edited, preflight)
+    video = next(item for item in form["workloads"] if item["workload"] == "VIDEO")
+    assert video["routes"][0]["implementation_status"] == "PLANNED_ADAPTER"
+    assert "credential://" not in json.dumps(form)
+
+
+def test_catalog_updates_metadata_and_disables_without_deleting_route() -> None:
+    added = ConnectionCatalogEditor.upsert(profile(), catalog_entry())
+    edited = ConnectionCatalogEditor.upsert(
+        added, catalog_entry(model_id="new-model", enabled=False)
+    )
+    route = next(item for item in edited.routes if item.route_id == "luma-video")
+    assert route.model_id == "new-model"
+    assert route.enabled is False
+    assert route.credential_ref == "credential://catalog/luma-video"
+
+
+def test_catalog_rejects_workload_change_and_embedded_secret_fields() -> None:
+    added = ConnectionCatalogEditor.upsert(profile(), catalog_entry())
+    with pytest.raises(ValueError, match="workload cannot change"):
+        ConnectionCatalogEditor.upsert(added, catalog_entry(workload="IMAGE"))
+    entry = catalog_entry()
+    entry["api_key"] = "secret"
+    with pytest.raises(ValueError, match="incomplete or unknown"):
+        ConnectionCatalogEditor.upsert(profile(), entry)
 
 
 def test_store_schema_is_packaged_and_matches_canonical(tmp_path: Path) -> None:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-video-production"
-version = "0.15.1"
+version = "0.16.4"
 description = "Open, provider-neutral orchestration for safe and reproducible AI video production"
 readme = "README.md"
 license = { file = "LICENSE.md" }
@@ -40,6 +40,7 @@ ai-video-openvino-audio-behavior-probe = "ai_video_production.audacity_openvino_
 ai-video-quickstart = "ai_video_production.quickstart_cli:main"
 ai-video-settings = "ai_video_production.connection_settings_web:main"
 ai-video-transcribe = "ai_video_production.transcription_cli:main"
+ai-video-subtitle-workspace = "ai_video_production.subtitle_workspace_web:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]

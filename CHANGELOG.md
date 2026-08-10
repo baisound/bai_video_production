@@ -6,6 +6,38 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.16.4] - 2026-08-11
+
+- Replaced the Windows native SRT dialog foreground-owner C# compilation path with a top-most cursor-monitor WinForms owner, avoiding the `System.Windows.Forms` `Add-Type -TypeDefinition` failure observed on native Windows.
+- Added an ASCII/Base64 dialog result protocol and `-OutputFormat Text` boundary so PowerShell CLIXML and Windows code-page mojibake are never rendered into the browser status panel.
+- Added regression coverage for Open/Save success, cancel, bounded PowerShell failure, malformed protocol data, and raw-CLIXML suppression.
+
+## [0.16.3] - 2026-08-11
+
+- Corrected Subtitle Workspace relative insertion so a cue placed between neighboring subtitles uses a strict 1 ms inner margin (for example `...300` / `...600` becomes `...301`–`...599`).
+- Added prominent import/export/action feedback; successful SRT export now reports its resolved destination path and byte count.
+- Added explicit local-server disconnect feedback so stale browser pages no longer make controls appear silently dead.
+- Changed Windows Open/Save dialog launch to use the foreground window as the native owner with a top-most fallback for multi-monitor/fullscreen workflows.
+
+## [0.16.2] - 2026-08-11
+
+- Added Windows-native Open/Save dialogs to the Subtitle Workspace so operators can choose an SRT file and destination without typing filesystem paths.
+- Kept manual path entry for advanced use, added a replacement confirmation before importing over an existing workspace, and preserved the loopback/CSRF boundary.
+- Added deterministic dialog-service tests without opening a real native window during automated regression.
+
+## [0.16.1] - 2026-08-10
+
+- Corrected the SRT CRLF regression fixture to write exact UTF-8 BOM bytes on Windows, preventing text-mode newline translation from producing malformed `CRCRLF` test data.
+- Confirmed that the production SRT parser was not the failure source; runtime behavior and the 0.16.0 Subtitle Workspace contract are unchanged.
+
+## [0.16.0] - 2026-08-10
+
+- Added a local Subtitle Workspace GUI for editing planned narration, ASR transcripts and imported SRT without provider execution.
+- Added stable cue identity, immutable source wording, revisioned JSON persistence and insert/update/delete operations.
+- Added bounded streaming SRT import, atomic SRT export and a default-off AI typo/omission permission gate that never calls an AI by itself.
+- Added pull-request release-metadata checks requiring CHANGELOG updates for product changes and consistent package/GUI/citation versions.
+- Documented truthful large-media limits: SRT text is streamed, while multi-GB media transcription still requires the future chunk/checkpoint slice.
+
 ## [0.15.1] - 2026-08-10
 
 - Corrected adjacent NTSC SRT cues so millisecond floor/ceil conversion cannot create a 1 ms overlap at a shared end-exclusive frame boundary.

@@ -1,8 +1,11 @@
 # TASK-006 — ASR / Transcript / Subtitle
 
-- Status: `NATIVE_ASR_PASS / SRT_CORRECTIVE_IMPLEMENTED / REVIEW_GUI_PLANNED`
+- Status: `NATIVE_ASR_PASS / SUBTITLE_WORKSPACE_IMPLEMENTED / RESOLVE_PLACEMENT_PLANNED`
 - Initial local-ASR package: `0.14.0`
 - Corrective package: `0.15.1`
+- Review Workspace package: `0.16.0`
+- Windows test-fixture corrective package: `0.16.1`
+- Windows interaction corrective candidate: `0.16.3` (native verification pending)
 - Authorization: Owner-directed editing-first continuation
 - Dependencies: TASK-003 Asset identity, TASK-004 normalized media, TASK-022 Timeline Mapping
 
@@ -10,4 +13,10 @@ Slice A establishes the provider-neutral Transcript source of truth, cut-aware S
 
 Slice B connects TASK-023 FasterWhisper as the first local ASR Provider and adds an end-user CLI/Windows launcher that writes `transcript.json`, `subtitles.srt`, and a text-free operational report. Model download requires an explicit flag and inference remains local. Native Windows Evidence confirmed successful local transcription and exposed a 1 ms SRT-render boundary overlap requiring correction.
 
-Package `0.15.1` corrects non-overlapping SRT rendering. Before Resolve placement, Slice C adds the remaining review foundation: immutable Raw Transcript, prioritized correction dictionaries, GUI human review and versioned approval. The default-off `AI誤字・脱字チェック` may propose corrections only after explicit execution; it cannot overwrite or approve canonical subtitle text. Resolve Assembly consumes only an approved revision.
+Package `0.15.1` corrects non-overlapping SRT rendering. Package `0.16.0` adds Slice C's shared Subtitle Workspace for planned narration, ASR and imported SRT, preserving immutable source wording with revisioned row editing. The default-off `AI誤字・脱字チェック` stores permission only and cannot call a Provider, overwrite text or approve a revision. Dictionary correction, AI proposals, large-media chunk/checkpoint execution and Resolve placement remain separate bounded slices.
+
+Package `0.16.1` changes only the cross-platform SRT test fixture. Python text-mode output translated embedded CRLF into CRCRLF on Windows, so the fixture now writes explicit UTF-8 BOM bytes. No production parser behavior changed.
+
+Candidate package `0.16.2` corrects a usability defect discovered before broader Windows acceptance: SRT import/export no longer requires manual path typing. Explicit operator clicks can open Windows-native Open/Save dialogs through the loopback application; direct path entry remains available for advanced operation. Existing workspace replacement still requires an explicit confirmation in the browser. The dialog path does not upload media or authorize AI/provider execution.
+
+Candidate package `0.16.3` folds the first Windows acceptance feedback back into Slice C. Native Open/Save dialogs are owned by the foreground Windows window with a top-most fallback, relative insert operations are computed in the backend with a strict 1 ms margin from neighboring cue boundaries, export responses include the resolved path and byte count for visible success Evidence, and network failures are surfaced as an explicit local-server-disconnected status instead of appearing as dead controls.

@@ -173,9 +173,9 @@ Get-Content .\quickstart-output.json
 
 ## 字幕編集基盤 / Subtitle editing foundation
 
-FasterWhisperを使い、実際の音声・動画からTranscriptとSRTをローカル生成できます。モデル取得は明示許可制で、推論素材は外部APIへ送信しません。Cut後に残った音声区間を正確なTimeline frameへ再配置し、`0.15.1`では隣接NTSC字幕のミリ秒境界も重ならないよう修正しました。DaVinci Resolveへの字幕配置は次のAssembly Sliceで接続します。
+FasterWhisperを使い、実際の音声・動画からTranscriptとSRTをローカル生成できます。モデル取得は明示許可制で、推論素材は外部APIへ送信しません。`0.16.0`では、企画時のナレーション予定、ASR結果、持込SRTを同じ字幕Workspaceで扱い、行の追加・挿入・修正・削除とSRT書出しができます。DaVinci Resolveへの字幕配置は次のAssembly Sliceで接続します。
 
-The provider-neutral Transcript and Subtitle Plan receive real-media local FasterWhisper output and render deterministic, non-overlapping SRT at adjacent NTSC boundaries. Model download is explicit; inference media stays local. DaVinci Resolve subtitle placement remains the next bounded slice.
+The provider-neutral Transcript and Subtitle Plan receive real-media local FasterWhisper output and render deterministic, non-overlapping SRT. Version 0.16.0 adds one local review workspace for planned narration, ASR and imported SRT with row-level editing. DaVinci Resolve subtitle placement remains the next bounded slice.
 
 ```powershell
 python -m pip install -e ".[asr]"
@@ -184,7 +184,13 @@ powershell -ExecutionPolicy Bypass -File .\tools\windows\run-task006-faster-whis
 
 出力先には`transcript.json`、`subtitles.srt`、本文を含まない`transcription-report.json`が作成されます。初回取得後は`-AllowModelDownload`を外して実行できます。
 
-今後の字幕Review GUIでは、Raw Transcriptを保持したまま固有表現辞書と人間修正を優先し、既定OFFの`AI誤字・脱字チェック`を必要時だけ実行できる設計です。ONにしてもAI候補は自動採用されず、送信内容・Model・費用を確認して人間が採否を決定します。
+字幕Workspaceは次で起動します。既定の`AI誤字・脱字チェック`はOFFで、0.16.0ではONにしても許可状態を保存するだけです。AI通信、課金、本文の自動変更は行いません。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-subtitle-workspace.ps1
+```
+
+数GB動画の安定処理は、分割・Checkpoint・空き容量検査を追加する次Sliceまで保証しません。詳細は[字幕Workspace利用手順](docs/user/SUBTITLE-WORKSPACE.md)と[0.16.0詳細設計](docs/design/TASK-006_SUBTITLE-WORKSPACE_詳細設計_Ver1.0.md)を参照してください。
 
 [TASK-006詳細設計 / Detailed design](docs/ai-team/tasks/TASK-006/detailed-design.md)
 

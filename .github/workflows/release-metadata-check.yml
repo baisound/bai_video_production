@@ -1,0 +1,21 @@
+name: Release metadata check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  changelog-and-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require changelog and consistent versions
+        run: >-
+          python tools/ci/check-release-metadata.py
+          --base "${{ github.event.pull_request.base.sha }}"
+          --head "${{ github.event.pull_request.head.sha }}"
+          --actor "${{ github.actor }}"

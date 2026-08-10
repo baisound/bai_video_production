@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_public_repository_documents_exist_and_are_nonempty() -> None:
     required = {
-        "README.md", "LICENSE.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md",
+        "README.md", "README.en.md", "LICENSE.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md",
         "SECURITY.md", "GOVERNANCE.md", "SUPPORT.md", "CHANGELOG.md",
         "THIRD_PARTY_NOTICES.md", "CITATION.cff",
     }
@@ -40,12 +40,22 @@ def test_license_and_project_metadata_are_public_ready() -> None:
 
 
 def test_readme_local_markdown_links_resolve() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    links = re.findall(r"\[[^]]+\]\(([^)]+)\)", readme)
-    local_links = [link for link in links if "://" not in link and not link.startswith("#")]
-    assert local_links
-    for link in local_links:
-        assert (ROOT / link.split("#", 1)[0]).exists(), link
+    for name in ("README.md", "README.en.md"):
+        readme = (ROOT / name).read_text(encoding="utf-8")
+        links = re.findall(r"\[[^]]+\]\(([^)]+)\)", readme)
+        local_links = [link for link in links if "://" not in link and not link.startswith("#")]
+        assert local_links
+        for link in local_links:
+            assert (ROOT / link.split("#", 1)[0]).exists(), f"{name}: {link}"
+
+
+def test_japanese_and_english_readmes_link_to_each_other() -> None:
+    japanese = (ROOT / "README.md").read_text(encoding="utf-8")
+    english = (ROOT / "README.en.md").read_text(encoding="utf-8")
+    assert "[English](README.en.md)" in japanese
+    assert "[日本語](README.md)" in english
+    for required in ("Expected public impact", "Architecture", "Five-minute"):
+        assert required in english
 
 
 def test_github_community_health_files_exist() -> None:

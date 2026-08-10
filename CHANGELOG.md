@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.7.0] - 2026-08-10
+
+- Added GitHub-rendered architecture and roadmap visuals plus a credential-free five-minute demo.
+- Added complete Japanese/English public README navigation and equivalent English project, impact, safety and contribution guidance.
+- Added guarded GitHub Release and PyPI Trusted Publishing workflows.
+- Added monthly release-readiness automation, good-first-issue intake and measurable adoption/impact protocols.
+
 ## [0.6.7] - 2026-08-10
 
 - Removed process-global `os.name` mutation from the Audacity Windows import regression test.

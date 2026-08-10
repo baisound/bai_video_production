@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-030_OSS_READINESS_IMPLEMENTED_AWAITING_GITHUB_CI`
+`TASK-031_OSS_ADOPTION_FOUNDATION_IMPLEMENTED_CONTINUOUS_EXECUTION`
 
 ## Purpose
 
@@ -88,9 +88,9 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Task: `TASK-030 — OSS Public Repository Readiness`
+- Active Task: `TASK-031 — OSS Adoption, Demonstration and Impact Evidence`
 - TASK-004: `COMPLETED`
-- Package: `0.6.7`
+- Package: `0.7.0`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
@@ -100,6 +100,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Repository URL corrective: package 0.6.5 binds all public metadata and GitHub community links to `https://github.com/baisound/bai_video_production`; the first push and Security workflow succeeded
 - CI corrective: package 0.6.6 provisions FFmpeg/ffprobe on every Ubuntu and Windows matrix runner before executing the media-dependent regression suite
 - Python 3.11 CI corrective: package 0.6.7 replaces process-global OS mutation with explicit Audacity path-platform injection; five other matrix jobs already passed
+- OSS adoption: package 0.7.0 adds truthful architecture/roadmap visuals, five-minute offline demo, guarded release/PyPI automation and Evidence gates for real video pilots, early adopters and contributors
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

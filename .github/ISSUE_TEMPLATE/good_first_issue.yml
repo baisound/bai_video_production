@@ -1,0 +1,23 @@
+name: Good first issue proposal
+description: Suggest a bounded documentation, fixture, test, or adapter-catalog contribution.
+title: "[Good first issue]: "
+labels: ["good first issue"]
+body:
+  - type: textarea
+    attributes:
+      label: Small contributor outcome
+      description: State one result that can be reviewed independently.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Acceptance checks
+      description: List documentation or offline tests that prove completion.
+    validations:
+      required: true
+  - type: checkboxes
+    attributes:
+      label: Safety boundary
+      options:
+        - label: This contribution requires no credential, paid API, private media, or destructive NLE action.
+          required: true

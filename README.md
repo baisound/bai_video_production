@@ -1,11 +1,22 @@
 # BAI Video Production
 
+**日本語** | [English](README.en.md)
+
 [![CI](https://github.com/baisound/bai_video_production/actions/workflows/ci.yml/badge.svg)](https://github.com/baisound/bai_video_production/actions/workflows/ci.yml)
 [![Security](https://github.com/baisound/bai_video_production/actions/workflows/security.yml/badge.svg)](https://github.com/baisound/bai_video_production/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
 動画素材の安全な取り込み、正規化、AI Provider選択、ローカル／クラウド生成、正確なTimeline Mapping、DaVinci Resolve連携を段階的に自動化するPython基盤です。
+
+## はじめに読むページ
+
+| 読む人 | ページ | 内容 |
+|---|---|---|
+| 初めて見る方・非開発者 | [やさしい導入ガイド](docs/user/GETTING-STARTED.md) | 何ができるか、費用・安全性、5分Demo、困った時 |
+| 利用を検討する方 | [機能と開発状況](PROJECT.md) | 実装済み／未実装、現在地、次の到達点 |
+| 開発者・Contributor | [開発者Architecture Guide](docs/developer/ARCHITECTURE.md) | Data flow、責任境界、Adapter、Test、変更手順 |
+| OSS活動を確認する方 | [公開準備Schedule](docs/oss/PUBLIC-READINESS-SCHEDULE.md) | 期限、Evidence、採択準備、実利用Gate |
 
 > **Project status: Alpha**
 >
@@ -64,6 +75,34 @@ Provider Catalogへの掲載は、Adapter実装済みを意味しません。実
 5. 外部Jobはidempotency、checkpoint、Evidenceで安全に再開する。
 6. 権利、プライバシー、API費用、公開安全性をProduct要件として扱う。
 
+## Architecture overview
+
+```mermaid
+flowchart TD
+    UI["GUI / CLI intent"] --> PLAN["AI proposal + human approval"]
+    PLAN --> ASSET["Canonical Assets + rights"]
+    ASSET --> ROUTE["Model capability routing"]
+    ROUTE --> EXEC["Local / cloud adapters"]
+    EXEC --> MAP["Exact timeline mapping"]
+    MAP --> NLE["Automation-owned Resolve timeline"]
+    NLE --> QA["QA + human handoff"]
+    QA --> EVIDENCE["Manifest / Evidence / learning"]
+```
+
+AIは企画・候補・生成を担当し、決定論的ServiceがAsset、時間軸、状態、再試行を管理します。人間の承認前に外部費用やNLE書込を開始しない構成を目指します。
+
+## Roadmap at a glance
+
+```mermaid
+flowchart LR
+    A["Foundation\ncomplete"] --> B["Analysis\nASR / cuts"]
+    B --> C["Editing MVP\nResolve assembly"]
+    C --> D["Production pilot\nprivacy / operations"]
+    D --> E["Learning loop\nverified improvement"]
+```
+
+現在はFoundationとTimeline Mapping、Provider境界まで実装済みです。次の主要到達点は、既存動画からCut・字幕付きResolve Timelineを得るEditing MVPです。
+
 ## Requirements
 
 - Python 3.11以上
@@ -101,6 +140,17 @@ python -m compileall -q src tests
 
 通常CIは有料API、ComfyUI、Audacity、Resolveを実行しません。実機Evidence Probeは、明示的な手順と安全条件を確認した場合だけ実行してください。
 
+## Five-minute demo
+
+API Key、ネットワーク、有料AI、実メディアを使わず、Provider capability routingと正確なNTSC Timeline Mappingを確認できます。
+
+```powershell
+ai-video-quickstart --output .\quickstart-output.json
+Get-Content .\quickstart-output.json
+```
+
+詳しい期待値と、このDemoがまだ証明しない範囲は[Five-minute demo](docs/quickstart/FIVE-MINUTE-DEMO.md)を参照してください。
+
 ## Provider configuration
 
 設定例：
@@ -136,6 +186,8 @@ docs/                      Design, roadmap and task evidence
 
 [CONTRIBUTING.md](CONTRIBUTING.md)を確認してください。大きな変更は実装前にIssueで目的と境界を共有し、1 Pull Requestを1目的に限定してください。[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)がすべてのProject spaceに適用されます。
 
+初めてのContributionでは、`good first issue`のうちCredential、有料API、非公開素材、NLE書込を必要としないDocumentation・Fixture・Offline testを推奨します。
+
 ## Governance and releases
 
 - Maintainer責任と意思決定：[GOVERNANCE.md](GOVERNANCE.md)
@@ -147,6 +199,6 @@ docs/                      Design, roadmap and task evidence
 
 本Repositoryで独自に提供するコードと文書は、個別表示がない限り[MIT License](LICENSE.md)で公開します。第三者Runtime、Model、依存パッケージ、素材、商標にはそれぞれの条件が適用されます。
 
-## English summary
+## English documentation
 
-BAI Video Production is an alpha-stage Python foundation for auditable video automation: secure asset ingest, media normalization, exact timeline mapping, local and cloud AI provider routing, and safe DaVinci Resolve integration. It is not yet an end-user one-click editor. External runtimes, models, credentials, and paid services are not bundled or invoked by ordinary CI.
+The complete English README, including public impact, architecture, quickstart, safety and contribution guidance, is available in [README.en.md](README.en.md).

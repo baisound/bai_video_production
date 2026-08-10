@@ -10,7 +10,7 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - Active Consumer TASK: `TASK-028 — AI Connection Provider / Model Routing`
 - TASK-004 stage: `COMPLETED` / package `0.4.10`
 - TASK-022 stage: `COMPLETED` / package `0.5.0` / native Windows `263 passed`
-- TASK-028 stage: `ROUTING_CORE_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION` / package `0.6.0`
+- TASK-028 stage: `PROVIDER_EXECUTION_SLICE_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION` / package `0.6.1`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -105,4 +105,4 @@ Package 0.5.0 adds exact source/normalized Asset range to Timeline frame mapping
 
 ## TASK-028 AI Connection Provider / Model Routing
 
-Package 0.6.0 adds a unified settings and routing core for planning, video, image, audio and music. Each workload can select AI, free, automatic, offline-only or disabled policy and then bind exact provider/model/reasoning settings. Resolution honors cost/locality, availability, credentials, capabilities and priority. Secrets are never embedded in profiles. Provider HTTP adapters and the GUI settings surface remain subsequent slices.
+Package 0.6.0 added unified routing for planning, video, image, audio and music and passed 273/273 on native Windows. Package 0.6.1 adds non-billable-by-default OpenAI Responses, Anthropic Messages and Google Gemini Interactions planning adapters, runtime-only credential resolution, bounded allowlisted transport, normalized responses and route diagnostics. The GUI settings surface remains the next UI slice.

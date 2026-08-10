@@ -1,7 +1,7 @@
 # TASK-028 — AI Connection Provider / Model Routing
 
-- Status: `ROUTING CORE IMPLEMENTED / NATIVE WINDOWS REGRESSION PENDING`
-- Package: `0.6.0`
+- Status: `PROVIDER EXECUTION SLICE IMPLEMENTED / NATIVE WINDOWS REGRESSION PENDING`
+- Package: `0.6.1`
 - Governance: `DEV-4 EXTERNAL PROVIDER AND COST CONTROL`
 - Authorization: Owner-requested implementation
 
@@ -23,7 +23,7 @@
 
 ## Boundary
 
-This slice implements the configuration and resolver contract. Provider-specific HTTP clients, credential-store integrations and the GUI settings panel are subsequent adapter/UI slices. Those components must execute only the route returned by this resolver.
+Package 0.6.1 adds planning-text execution adapters for OpenAI Responses, Anthropic Messages and Google Gemini Interactions, a bounded allowlisted HTTP transport, environment-backed credential references, normalized results and GUI-facing route diagnostics. Live calls remain opt-in and are not run during repository tests. Image/video/audio/music execution continues through their owning runtime adapters; the GUI settings panel is the next UI slice.
 
 ## Acceptance
 

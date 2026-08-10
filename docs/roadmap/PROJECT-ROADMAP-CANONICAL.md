@@ -190,6 +190,7 @@ Production PilotではTASK-016/017/021を必須Gate候補とする。
 
 - TASK-015 YouTube Feedback
 - TASK-019 Profile Auto-Tuner
+- TASK-029 Human Edit Learning / Federated Knowledge Evolution（Owner-local適応、任意Cloud集約、署名付きKnowledge PackのGit release）
 - TASK-025 Premiere Adapter（必要時のみ）
 
 ## 8. Cross-cutting Safety Floors

@@ -19,6 +19,11 @@ from .ai_connections import (
     AiConnectionProfile, AiConnectionResolver, AiWorkload, ConnectionAvailability,
     CostClass, ModelRoute, ProviderFamily, ReasoningEffort, SelectionMode,
 )
+from .provider_execution import (
+    AiProviderExecutionService, AnthropicMessagesAdapter, EnvironmentCredentialStore,
+    GoogleInteractionsAdapter, OpenAiResponsesAdapter, RouteDiagnostic,
+    RouteDiagnosticStatus, TextGenerationRequest, TextGenerationResult, UrllibJsonTransport,
+)
 from .checkpoint import CheckpointRecord, ResumeContext, assert_resume_compatible
 
 from .audacity_openvino import AudioAiOperation, AudioAiRequest, AudioAiResult, AudacityOpenVinoService, SeparationMode
@@ -54,11 +59,14 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
     "ModelRoute", "ProviderFamily", "ReasoningEffort", "SelectionMode",
+    "AiProviderExecutionService", "AnthropicMessagesAdapter", "EnvironmentCredentialStore",
+    "GoogleInteractionsAdapter", "OpenAiResponsesAdapter", "RouteDiagnostic", "RouteDiagnosticStatus",
+    "TextGenerationRequest", "TextGenerationResult", "UrllibJsonTransport",
     "ActorKind", "ApprovedSegment", "AssetIngestRequest", "AssetIngestResult", "AssetIngestService",
     "AssetRecord", "AssetType", "AudioRightsStatus", "CapabilityStatus", "CheckpointRecord",
     "FFprobeMediaProbe", "IdKind", "JobStateService", "LogicalPathResolver", "ManifestEnvelope",

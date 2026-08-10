@@ -9,6 +9,8 @@ python -m pytest -q
 python -m compileall -q src tests
 ```
 
-Expected package version: `0.6.0`. Expected current suite: `273 passed`.
+Expected package version: `0.6.1`. Expected current suite: `284 passed`.
+
+Owner verification for package 0.6.0: `273 passed in 29.91s` and compileall PASS. The routing-core Windows Gate is accepted.
 
 This is a repository regression test and does not create a behavior Evidence directory.

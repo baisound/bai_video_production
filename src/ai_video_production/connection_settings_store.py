@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from .ai_connections import AiConnectionProfile, AiWorkload, SelectionMode
+from .ai_connections import (
+    AiConnectionProfile, AiWorkload, CostClass, ModelRoute, ProviderFamily,
+    ReasoningEffort, SelectionMode,
+)
 from .atomic import AtomicJsonWriter, AtomicWriteResult, FailureInjector
 from .connection_settings import SettingsPreflightReport
 from .errors import ProductError, ProductErrorCategory
@@ -165,6 +168,17 @@ class ConnectionSettingsFormBuilder:
         "DISABLED": ("使用しない設定です", "This workload is disabled"),
         "BLOCKED": ("設定が不足しています。詳細を確認してください", "Setup is incomplete; review the details"),
     }
+    _IMPLEMENTATION_STATUS = {
+        ProviderFamily.OPENAI: "IMPLEMENTED",
+        ProviderFamily.ANTHROPIC: "IMPLEMENTED",
+        ProviderFamily.GOOGLE: "IMPLEMENTED",
+        ProviderFamily.ELEVENLABS: "IMPLEMENTED",
+        ProviderFamily.SUNO_API: "IMPLEMENTED",
+        ProviderFamily.COMFYUI: "LOCAL_RUNTIME",
+        ProviderFamily.AUDACITY_OPENVINO: "LOCAL_RUNTIME",
+        ProviderFamily.LOCAL_OPEN_SOURCE: "LOCAL_RUNTIME",
+        ProviderFamily.NON_AI_LIBRARY: "LOCAL_RUNTIME",
+    }
 
     @classmethod
     def build(
@@ -183,10 +197,11 @@ class ConnectionSettingsFormBuilder:
             ja, en = cls._LABELS[workload]
             status_ja, status_en = cls._STATUS_HELP[status.status.value]
             routes = []
-            for route in sorted(
+            configured_routes = sorted(
                 (item for item in profile.routes if item.workload is workload),
                 key=lambda item: (item.priority, item.route_id),
-            ):
+            )
+            for route in configured_routes:
                 routes.append({
                     "route_id": route.route_id,
                     "provider_family": route.provider_family.value,
@@ -197,6 +212,9 @@ class ConnectionSettingsFormBuilder:
                     "capabilities": list(route.capabilities),
                     "credential_required": route.credential_ref is not None,
                     "enabled": route.enabled,
+                    "implementation_status": cls._IMPLEMENTATION_STATUS.get(
+                        route.provider_family, "PLANNED_ADAPTER"
+                    ),
                 })
             workloads.append({
                 "workload": workload.value,
@@ -211,6 +229,7 @@ class ConnectionSettingsFormBuilder:
                 "status_message": {"ja": status_ja, "en": status_en},
                 "error_code": status.error_code,
                 "selected_route_id": status.selected_route_id,
+                "preferred_route_id": configured_routes[0].route_id if configured_routes else None,
                 "routes": routes,
             })
         return {
@@ -221,4 +240,113 @@ class ConnectionSettingsFormBuilder:
             "save_does_not_authorize_generation": True,
             "workloads": workloads,
             "preflight_sha256": preflight.to_dict()["report_sha256"],
+            "catalog_options": {
+                "workloads": [item.value for item in AiWorkload],
+                "provider_families": [item.value for item in ProviderFamily],
+                "cost_classes": [item.value for item in CostClass],
+                "reasoning_efforts": [item.value for item in ReasoningEffort],
+            },
         }
+
+
+class ConnectionSettingsEditor:
+    """Apply the narrow set of edits authorized for the first settings screen."""
+
+    @staticmethod
+    def apply(
+        profile: AiConnectionProfile,
+        *,
+        workload_modes: Mapping[str, str],
+        preferred_route_ids: Mapping[str, str | None],
+    ) -> AiConnectionProfile:
+        known_workloads = {item.value: item for item in AiWorkload}
+        if set(workload_modes) != set(known_workloads):
+            raise ValueError("workload_modes must contain every workload exactly once")
+        if not set(preferred_route_ids).issubset(known_workloads):
+            raise ValueError("preferred_route_ids contains an unknown workload")
+
+        modes = {
+            known_workloads[key]: SelectionMode(value)
+            for key, value in workload_modes.items()
+        }
+        preferred: dict[AiWorkload, str] = {}
+        route_owners = {route.route_id: route.workload for route in profile.routes}
+        for key, route_id in preferred_route_ids.items():
+            workload = known_workloads[key]
+            if route_id is None:
+                continue
+            if route_owners.get(route_id) is not workload:
+                raise ValueError("preferred route does not belong to workload")
+            preferred[workload] = route_id
+
+        routes = []
+        for route in profile.routes:
+            selected = preferred.get(route.workload)
+            if selected is None:
+                routes.append(route)
+            elif route.route_id == selected:
+                routes.append(replace(route, priority=0))
+            else:
+                routes.append(replace(route, priority=max(1, route.priority)))
+        return AiConnectionProfile(
+            profile.profile_id,
+            profile.profile_version,
+            profile.default_mode,
+            tuple(routes),
+            modes,
+        )
+
+
+class ConnectionCatalogEditor:
+    """Add or update safe route metadata without accepting secrets or endpoints."""
+
+    _FIELDS = {
+        "route_id", "workload", "provider_family", "provider_id", "model_id",
+        "cost_class", "reasoning_effort", "capabilities", "credential_required",
+        "enabled",
+    }
+
+    @classmethod
+    def upsert(cls, profile: AiConnectionProfile, entry: Mapping[str, object]) -> AiConnectionProfile:
+        if set(entry) != cls._FIELDS:
+            raise ValueError("catalog entry fields are incomplete or unknown")
+        if not isinstance(entry["credential_required"], bool) or not isinstance(entry["enabled"], bool):
+            raise ValueError("catalog booleans are invalid")
+        capabilities = entry["capabilities"]
+        if not isinstance(capabilities, list) or any(not isinstance(item, str) for item in capabilities):
+            raise ValueError("capabilities must be a string list")
+        route_id = entry["route_id"]
+        if not isinstance(route_id, str):
+            raise ValueError("route_id must be a string")
+        existing = next((route for route in profile.routes if route.route_id == route_id), None)
+        workload = AiWorkload(entry["workload"])
+        if existing is not None and existing.workload is not workload:
+            raise ValueError("route workload cannot change after creation")
+        credential_ref = None
+        if entry["credential_required"]:
+            credential_ref = existing.credential_ref if existing and existing.credential_ref else f"credential://catalog/{route_id.casefold()}"
+        route = ModelRoute(
+            route_id=route_id,
+            workload=workload,
+            provider_family=ProviderFamily(entry["provider_family"]),
+            provider_id=entry["provider_id"],
+            model_id=entry["model_id"],
+            cost_class=CostClass(entry["cost_class"]),
+            priority=existing.priority if existing else 100,
+            reasoning_effort=ReasoningEffort(entry["reasoning_effort"]),
+            credential_ref=credential_ref,
+            endpoint_ref=existing.endpoint_ref if existing else None,
+            capabilities=tuple(capabilities),
+            settings=existing.settings if existing else {},
+            enabled=entry["enabled"],
+        )
+        routes = tuple(route if item.route_id == route_id else item for item in profile.routes)
+        if existing is None:
+            routes += (route,)
+        return AiConnectionProfile(
+            profile.profile_id,
+            profile.profile_version,
+            profile.default_mode,
+            routes,
+            profile.workload_modes,
+        )

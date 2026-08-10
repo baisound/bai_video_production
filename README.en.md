@@ -54,13 +54,23 @@ This impact is an objective, not a claim of demonstrated scale. We intend to pub
 - routing based on exact model capabilities rather than fixed provider purposes
 - a secret-free settings preflight API covering planning, video, image, audio, and music
 - a bilingual GUI-neutral settings contract with atomic save, integrity checks, conflict protection, and legacy migration
+- a local bilingual screen for editing five workload modes and preferred configured models
+- a GUI Catalog for adding, editing, and disabling Provider/Model candidates with truthful adapter status
 - execution boundaries that keep credentials out of profiles, manifests, and evidence
 
 See [PROJECT.md](PROJECT.md) and the [Canonical Roadmap](docs/roadmap/PROJECT-ROADMAP-CANONICAL.md) for detailed status.
 
+After installation, start the AI Connection settings screen with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-ai-connection-settings.ps1
+```
+
+See the [beginner screen guide](docs/user/AI-CONNECTION-SETTINGS.en.md) and [developer contract](docs/developer/AI-CONNECTION-SETTINGS-WEB.md).
+
 ## Not implemented yet
 
-- integrated end-user GUI
+- integrated production GUI beyond the implemented AI Connection settings screen
 - completed existing-video ASR, silence/filler cuts, and subtitle placement E2E
 - completed new-video planning, generation, and Resolve assembly E2E
 - every catalogued Runway, Luma, Kling, MiniMax, and other adapter

@@ -54,13 +54,23 @@ BAI Video Productionは、その障壁を下げるための共有可能な公共
 - Provider固定用途ではなく、正確なModel Capabilityに基づくRouting
 - 企画・動画・画像・音声・音楽を一覧化する秘密情報なしのSettings Preflight API
 - 原子的保存、破損検出、競合防止、旧形式移行を備えた日英GUI中立Settings契約
+- 5用途の利用方法と優先Modelを変更できるローカル専用の日英Settings画面
+- Provider・Model候補をGUIから追加・編集・無効化し、Adapter実装状態を区別するCatalog
 - CredentialをProfile、Manifest、Evidenceへ埋め込まない実行境界
 
 詳細な進捗は[PROJECT.md](PROJECT.md)と[Canonical Roadmap](docs/roadmap/PROJECT-ROADMAP-CANONICAL.md)を参照してください。
 
+AI Connection設定画面は、インストール後に次のコマンドで起動できます。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-ai-connection-settings.ps1
+```
+
+初心者向け手順は[AI Connection設定画面の使い方](docs/user/AI-CONNECTION-SETTINGS.md)、実装・安全境界は[Developer Contract](docs/developer/AI-CONNECTION-SETTINGS-WEB.md)を参照してください。
+
 ## Not implemented yet
 
-- 一般利用者向け統合GUI
+- 動画制作全体を操作する一般利用者向け統合GUI（AI Connection設定画面のみ実装済み）
 - 既存動画のASR、無音／フィラーCut、字幕配置の完成E2E
 - 新規動画の企画から素材生成・Resolve組立までの完成E2E
 - Runway、Luma、Kling、MiniMax等の全Adapter
@@ -141,6 +151,14 @@ python -m compileall -q src tests
 ```
 
 通常CIは有料API、ComfyUI、Audacity、Resolveを実行しません。実機Evidence Probeは、明示的な手順と安全条件を確認した場合だけ実行してください。
+
+### APIキーを安全に登録する / Secure API-key onboarding
+
+WindowsではAI Connection設定画面の **APIキーの安全な保管 / Secure credentials** から、Model候補に必要なキーをWindows Credential Managerへ保存・削除できます。キーはProjectの設定JSONへ保存されず、画面には登録済みかどうかだけが表示されます。この操作だけで外部API、課金、生成、編集は始まりません。
+
+On Windows, the local AI Connection screen can store or delete each required key in Windows Credential Manager. Project JSON and browser responses never contain the key; the screen exposes registration status only. This action does not contact a Provider or start billing, generation, or editing.
+
+詳細と確認手順 / Design and verification: [`docs/ai-team/tasks/TASK-034/`](docs/ai-team/tasks/TASK-034/)
 
 ## Five-minute demo
 

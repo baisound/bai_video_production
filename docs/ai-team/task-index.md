@@ -14,7 +14,9 @@
 | TASK-029 | Human Edit Learning / Federated Knowledge Evolution | PROPOSED | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Human action Evidence → hypothesis/multi-metric evaluation → Owner-local learning; opt-in anonymized cloud aggregation; signed Git-versioned Knowledge Packs |
 | TASK-030 | OSS Public Repository Readiness | IMPLEMENTED_AWAITING_GITHUB_CI | OWNER_DIRECTED_IMPLEMENTATION | DEV-2 | 0.6.6 fixed runner media dependencies; 0.6.7 removes global OS mutation after 5/6 matrix jobs passed |
 | TASK-031 | OSS Adoption, Demonstration and Impact Evidence | FOUNDATION_IMPLEMENTED_CONTINUOUS_EXECUTION | OWNER_DIRECTED_IMPLEMENTATION | DEV-2 | 0.7.0 architecture/roadmap visuals, five-minute demo, release/PyPI workflows, contributor and real-impact Evidence gates |
-| TASK-032 | AI Connection Settings UI Foundation | PERSISTENCE_IMPLEMENTED_UI_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.9.0 atomic settings store, 0.8 migration and bilingual form contract; UI due 08/24, usability review due 08/31 |
+| TASK-032 | AI Connection Settings UI Foundation | NATIVE_WINDOWS_PASS_USABILITY_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.10.0 native save/reload/conflict Evidence accepted; 2–3-person usability review due 08/31 |
+| TASK-033 | Provider and Model Catalog Editor | NATIVE_WINDOWS_PASS | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.11.0 safe add/edit/disable Evidence accepted 2026-08-10 |
+| TASK-034 | OS-backed Credential Onboarding | IMPLEMENTED_AWAITING_NATIVE_WINDOWS_EVIDENCE | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.12.2 Catalog linkage, retained-key cleanup and per-Route password-manager lookup; native Evidence due 08/24 |
 
 ## Roadmap authority
 
@@ -22,4 +24,4 @@
 
 ## Route control
 
-TASK-004 remains the only active authorized Consumer TASK until target local-runtime Evidence is reviewed and a final Judge decision closes it. No later Consumer TASK is started or authorized without Owner instruction.
+TASK-004 is completed. Owner-directed continuation authorized TASK-027 through TASK-034 design/implementation slices recorded above. Proposed later work remains unauthorized until Owner instruction; a configured credential never authorizes Provider execution or GO.

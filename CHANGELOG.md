@@ -6,6 +6,39 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.12.2] - 2026-08-10
+
+- Linked the Catalog and Secure credentials projections explicitly: enabled credential-required routes appear in the active key list, while other routes do not.
+- Added a retained-key cleanup section for disabled routes instead of silently deleting secrets or presenting disabled Models as active.
+- Prevented removing `Credential required` while a key remains stored, avoiding an unreachable orphaned Windows credential.
+- Added visible Catalog credential status and end-to-end add/disable/delete/unrequire regression coverage.
+
+## [0.12.1] - 2026-08-10
+
+- Fixed API-key re-registration suggestions so every credential row has an independent password-manager section, ID, and name instead of only the first row being recognized.
+- Changed the credential input hint from new-password suppression to route-scoped current-password lookup while retaining password masking and post-operation clearing.
+
+## [0.12.0] - 2026-08-10
+
+- Added API-key onboarding from the loopback settings screen into the current user's Windows Credential Manager.
+- Added opaque hashed credential targets, UTF-8/size validation, save/read/status/delete operations, and fail-closed non-Windows behavior.
+- Exposed registration state only; secret values and internal credential references remain absent from settings JSON and browser responses.
+- Added bilingual safety copy and regression tests proving that credential mutations never start Provider calls, billing, generation, or editing.
+
+## [0.11.0] - 2026-08-10
+
+- Added a local Provider/Model Catalog editor for safe add, edit, and disable operations without JSON editing.
+- Added truthful `IMPLEMENTED`, `LOCAL_RUNTIME`, and `PLANNED_ADAPTER` labels so configuration never implies execution support.
+- Added generated internal credential references while excluding keys, tokens, references, endpoints, headers, and arbitrary settings from the browser contract.
+- Reused atomic revision storage, CSRF, Host, CSP, and bounded-request protections and added Catalog regression coverage.
+
+## [0.10.0] - 2026-08-10
+
+- Added a responsive bilingual AI Connection settings screen served exclusively on local loopback.
+- Added interactive mode and preferred configured-model selection across planning, video, image, audio, and music.
+- Added a narrow mutation contract with revision conflict checks, random CSRF protection, Host validation, restrictive CSP, JSON/size limits, and no Provider execution path.
+- Added a Windows launcher plus beginner and developer guides with diagrams, safety explanations, and truthful remaining gates.
+
 ## [0.9.0] - 2026-08-10
 
 - Added atomic, checksummed AI Connection settings persistence with optimistic revision checks.

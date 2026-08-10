@@ -173,9 +173,16 @@ Get-Content .\quickstart-output.json
 
 ## 字幕編集基盤 / Subtitle editing foundation
 
-TranscriptをProvider固有形式から分離し、Cut後に残った音声区間だけを正確なTimeline frameへ再配置してSRTを決定論的に生成する基盤を実装しています。実動画の音声認識は次のFasterWhisper Slice、DaVinci Resolveへの字幕配置はその後のAssembly Sliceで接続します。
+FasterWhisperを使い、実際の音声・動画からTranscriptとSRTをローカル生成できます。モデル取得は明示許可制で、推論素材は外部APIへ送信しません。Cut後に残った音声区間を正確なTimeline frameへ再配置する基盤も含みます。DaVinci Resolveへの字幕配置は次のAssembly Sliceで接続します。
 
-The provider-neutral Transcript and Subtitle Plan map surviving speech through exact cut ranges and render deterministic SRT. Real-media FasterWhisper transcription and DaVinci Resolve subtitle placement are the next bounded slices.
+The provider-neutral Transcript and Subtitle Plan now receive real-media local FasterWhisper output and render deterministic SRT. Model download is explicit; inference media stays local. DaVinci Resolve subtitle placement remains the next bounded slice.
+
+```powershell
+python -m pip install -e ".[asr]"
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-task006-faster-whisper-transcription.ps1 -MediaPath ".\sample.mp4" -OutputDirectory ".\task006-transcription-output" -Model small -Language ja -Device cpu -AllowModelDownload
+```
+
+出力先には`transcript.json`、`subtitles.srt`、本文を含まない`transcription-report.json`が作成されます。初回取得後は`-AllowModelDownload`を外して実行できます。
 
 [TASK-006詳細設計 / Detailed design](docs/ai-team/tasks/TASK-006/detailed-design.md)
 

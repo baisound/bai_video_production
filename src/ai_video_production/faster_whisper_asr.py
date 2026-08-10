@@ -1,0 +1,212 @@
+"""Local FasterWhisper adapter and deterministic Transcript/SRT publication."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
+import hashlib
+import importlib
+from pathlib import Path
+import re
+from typing import Any, Callable, Iterable
+
+from .atomic import AtomicJsonWriter
+from .errors import ProductError, ProductErrorCategory
+from .ids import IdKind, generate_id
+from .subtitles import (
+    AsrRequest, SrtRenderer, SubtitlePlanningService, TranscriptManifest,
+    TranscriptSegment,
+)
+from .timebase import FrameRate
+from .timeline_mapping import EditSegment, TimelineMappingService
+
+
+ModelFactory = Callable[..., Any]
+
+
+@dataclass(frozen=True, slots=True)
+class FasterWhisperConfig:
+    model: str = "small"
+    device: str = "auto"
+    compute_type: str = "int8"
+    beam_size: int = 5
+    vad_filter: bool = True
+    allow_model_download: bool = False
+    cache_directory: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.model or "\x00" in self.model:
+            raise ValueError("model must be non-empty text")
+        if self.device not in {"auto", "cpu", "cuda"}:
+            raise ValueError("device must be auto, cpu, or cuda")
+        if not self.compute_type or "\x00" in self.compute_type:
+            raise ValueError("compute_type must be non-empty text")
+        if not 1 <= self.beam_size <= 20:
+            raise ValueError("beam_size must be 1-20")
+        if self.cache_directory is not None and "\x00" in self.cache_directory:
+            raise ValueError("cache_directory is invalid")
+
+
+def _microseconds(value: Any, *, end: bool) -> int:
+    try:
+        seconds = Decimal(str(value))
+    except Exception as exc:
+        raise ValueError("FasterWhisper returned an invalid timestamp") from exc
+    if not seconds.is_finite() or seconds < 0:
+        raise ValueError("FasterWhisper returned an invalid timestamp")
+    rounding = ROUND_CEILING if end else ROUND_FLOOR
+    return int((seconds * 1_000_000).to_integral_value(rounding=rounding))
+
+
+def _default_model_factory() -> ModelFactory:
+    try:
+        module = importlib.import_module("faster_whisper")
+    except ImportError as exc:
+        raise ProductError(
+            "ERR_FASTER_WHISPER_NOT_INSTALLED",
+            "FasterWhisper is not installed. Run: python -m pip install -e .[asr]",
+            ProductErrorCategory.EXTERNAL_DEPENDENCY,
+        ) from exc
+    return module.WhisperModel
+
+
+class FasterWhisperProvider:
+    provider_id = "faster-whisper"
+
+    def __init__(self, config: FasterWhisperConfig, *, model_factory: ModelFactory | None = None) -> None:
+        self.config = config
+        self.model_id = (
+            config.model if re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,127}", config.model)
+            else f"local-model-{hashlib.sha256(config.model.encode('utf-8')).hexdigest()[:12]}"
+        )
+        self._model_factory = model_factory
+
+    def transcribe(self, request: AsrRequest) -> TranscriptManifest:
+        source = Path(request.media_path).expanduser().resolve()
+        if not source.exists() or not source.is_file():
+            raise ProductError(
+                "ERR_ASR_MEDIA_NOT_FOUND", "Input media must be an existing regular file",
+                ProductErrorCategory.VALIDATION,
+            )
+        factory = self._model_factory or _default_model_factory()
+        kwargs: dict[str, Any] = {
+            "device": self.config.device,
+            "compute_type": self.config.compute_type,
+            "local_files_only": not self.config.allow_model_download,
+        }
+        if self.config.cache_directory is not None:
+            kwargs["download_root"] = str(Path(self.config.cache_directory).expanduser().resolve())
+        try:
+            model = factory(self.config.model, **kwargs)
+            raw_segments, info = model.transcribe(
+                str(source), language=request.language, beam_size=self.config.beam_size,
+                vad_filter=self.config.vad_filter,
+            )
+            segments = self._segments(raw_segments)
+        except ProductError:
+            raise
+        except Exception as exc:
+            message = "FasterWhisper transcription failed"
+            if not self.config.allow_model_download:
+                message += "; install/cache the model or rerun with --allow-model-download"
+            raise ProductError(
+                "ERR_FASTER_WHISPER_EXECUTION", message,
+                ProductErrorCategory.EXTERNAL_DEPENDENCY,
+                details={"exception_type": type(exc).__name__},
+            ) from exc
+        language = request.language or getattr(info, "language", None) or "und"
+        return TranscriptManifest(
+            request.source_asset_id, language, self.provider_id, self.model_id, segments
+        )
+
+    @staticmethod
+    def _segments(raw_segments: Iterable[Any]) -> tuple[TranscriptSegment, ...]:
+        output: list[TranscriptSegment] = []
+        previous_end = 0
+        for raw in raw_segments:
+            text = str(getattr(raw, "text", "")).strip()
+            if not text:
+                continue
+            start = max(previous_end, _microseconds(getattr(raw, "start"), end=False))
+            end = _microseconds(getattr(raw, "end"), end=True)
+            if end <= start:
+                continue
+            output.append(TranscriptSegment(f"seg-{len(output) + 1:06d}", start, end, text))
+            previous_end = end
+        return tuple(output)
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptionPublication:
+    output_directory: Path
+    transcript_path: Path
+    subtitle_path: Path
+    report_path: Path
+    transcript: TranscriptManifest
+
+
+class LocalTranscriptionService:
+    """Publish private Transcript/SRT plus text-free operational evidence."""
+
+    @staticmethod
+    def run(
+        media_path: str | Path,
+        output_directory: str | Path,
+        *,
+        provider: FasterWhisperProvider,
+        source_asset_id: str | None = None,
+        language: str | None = None,
+        timeline_rate: FrameRate = FrameRate(30000, 1001),
+    ) -> TranscriptionPublication:
+        asset_id = source_asset_id or generate_id(IdKind.ASSET)
+        output = Path(output_directory).expanduser().resolve()
+        transcript = provider.transcribe(AsrRequest(asset_id, str(media_path), language))
+        if transcript.segments:
+            duration_us = max(item.end_us for item in transcript.segments)
+            timeline = TimelineMappingService.build(
+                [EditSegment("uncut-source", asset_id, 0, duration_us)],
+                timeline_rate=timeline_rate,
+            )
+        else:
+            timeline = TimelineMappingService.build([], timeline_rate=timeline_rate)
+        plan = SubtitlePlanningService.build(transcript, timeline)
+        output.mkdir(parents=True, exist_ok=True)
+        transcript_path = output / "transcript.json"
+        subtitle_path = output / "subtitles.srt"
+        report_path = output / "transcription-report.json"
+        AtomicJsonWriter.write(transcript_path, transcript.to_dict())
+        LocalTranscriptionService._atomic_text(subtitle_path, SrtRenderer.render(plan))
+        report = {
+            "report_version": "1.0.0",
+            "ok": True,
+            "source_asset_id": asset_id,
+            "provider_id": transcript.provider_id,
+            "model_id": transcript.model_id,
+            "language": transcript.language,
+            "segment_count": len(transcript.segments),
+            "subtitle_cue_count": len(plan.cues),
+            "transcript_file": transcript_path.name,
+            "subtitle_file": subtitle_path.name,
+            "transcript_text_in_report": False,
+            "network_used_for_inference": False,
+            "model_download_authorized": provider.config.allow_model_download,
+        }
+        AtomicJsonWriter.write(report_path, report)
+        return TranscriptionPublication(output, transcript_path, subtitle_path, report_path, transcript)
+
+    @staticmethod
+    def _atomic_text(path: Path, value: str) -> None:
+        import os
+        import tempfile
+
+        fd, name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+        temporary = Path(name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write(value)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise

@@ -6,6 +6,14 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.14.0] - 2026-08-10
+
+- Added the optional FasterWhisper local ASR adapter and end-user Transcript/SRT CLI.
+- Added explicit model-download authorization with local-files-only default behavior.
+- Added atomic private Transcript/SRT publication and a schema-validated text-free operational report.
+- Added NTSC adjacent-cue normalization and failure cleanup regression coverage.
+- Separated the product version from the AI Connection Settings revision in the local GUI footer.
+
 ## [0.13.0] - 2026-08-10
 
 - Added the TASK-006 transcript and subtitle foundation with provider-neutral ASR contracts and checksummed canonical Manifests.

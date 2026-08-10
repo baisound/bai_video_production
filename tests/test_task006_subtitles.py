@@ -100,6 +100,19 @@ def test_empty_plan_renders_empty_srt() -> None:
     assert SrtRenderer.render(plan) == ""
 
 
+def test_adjacent_microsecond_segments_remain_non_overlapping_at_ntsc_rate() -> None:
+    asset = _asset()
+    transcript = TranscriptManifest(asset, "ja", "fixture", "model", (
+        TranscriptSegment("a", 100_000, 1_250_000, "前"),
+        TranscriptSegment("b", 1_250_000, 2_000_000, "後"),
+    ))
+    timeline = TimelineMappingService.build(
+        [EditSegment("clip", asset, 0, 2_000_000)], timeline_rate=FrameRate(30000, 1001)
+    )
+    plan = SubtitlePlanningService.build(transcript, timeline)
+    assert plan.cues[0].timeline_end_frame == plan.cues[1].timeline_start_frame
+
+
 def test_transcript_and_subtitle_schemas_validate_and_are_packaged() -> None:
     asset = _asset()
     transcript = _transcript(asset)

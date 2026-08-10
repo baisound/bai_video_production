@@ -4,13 +4,13 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-006_SLICE_B_FASTER_WHISPER_LOCAL_ASR_IMPLEMENTED`
+- Project Status: `TASK-006_SLICE_C_SUBTITLE_WORKSPACE_IMPLEMENTED`
 - Last Completed Task: `TASK-022 — Timeline Mapping Service`
 - Active Consumer Task: `TASK-006 — ASR / Transcript / Subtitle`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.15.1`
-- Next Consumer Task: `TASK-023 FasterWhisper Provider / TASK-006 Slice B (target 2026-08-17)`
+- Package: `0.16.0`
+- Next Consumer Task: `TASK-006 large-media chunk/checkpoint slice / Resolve subtitle placement`
 
 ## TASK-004 implemented scope
 
@@ -46,6 +46,8 @@
 - worker phase Evidence distinguishes pre-dispatch timeout from post-dispatch ambiguity; post-dispatch timeout is persisted as `PARTIAL` and blocks blind replay.
 
 ## Current verification
+
+- TASK-006 Slice C package `0.16.0`: planned narration/ASR/SRT intake, revisioned local review GUI, row editing and atomic SRT export implemented
 
 - TASK-006 Slice A package `0.13.0`: Transcript/Subtitle schemas, cut-aware exact mapping and deterministic NTSC SRT tests PASS
 - TASK-006 Slice B package `0.14.0`: optional FasterWhisper local ASR, explicit model-download gate, Transcript/SRT publication and text-free report tests PASS

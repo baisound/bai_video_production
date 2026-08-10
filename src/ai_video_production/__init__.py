@@ -65,6 +65,10 @@ from .faster_whisper_asr import (
     FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService,
     TranscriptionPublication,
 )
+from .subtitle_workspace import (
+    NarrationCue, SrtWorkspaceCodec, SubtitleOrigin, SubtitleReviewState,
+    SubtitleWorkspace, SubtitleWorkspaceStore, WorkspaceCue,
+)
 from .production_blueprint import (
     AssetSourceStrategy, BlueprintReference, BlueprintScene, CameraMotion,
     GenerationRisk, ProductionBlueprint, ReferenceKind, ReferenceStatus,
@@ -91,7 +95,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.15.1"
+__version__ = "0.16.0"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
@@ -122,6 +126,8 @@ __all__ = [
     "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment",
     "FasterWhisperConfig", "FasterWhisperProvider", "LocalTranscriptionService",
     "TranscriptionPublication",
+    "NarrationCue", "SrtWorkspaceCodec", "SubtitleOrigin", "SubtitleReviewState",
+    "SubtitleWorkspace", "SubtitleWorkspaceStore", "WorkspaceCue",
     "AssetSourceStrategy", "BlueprintReference", "BlueprintScene", "CameraMotion",
     "GenerationRisk", "ProductionBlueprint", "ReferenceKind", "ReferenceStatus",
     "SceneAudioPlan",

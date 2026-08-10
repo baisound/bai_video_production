@@ -6,6 +6,14 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.16.0] - 2026-08-10
+
+- Added a local Subtitle Workspace GUI for editing planned narration, ASR transcripts and imported SRT without provider execution.
+- Added stable cue identity, immutable source wording, revisioned JSON persistence and insert/update/delete operations.
+- Added bounded streaming SRT import, atomic SRT export and a default-off AI typo/omission permission gate that never calls an AI by itself.
+- Added pull-request release-metadata checks requiring CHANGELOG updates for product changes and consistent package/GUI/citation versions.
+- Documented truthful large-media limits: SRT text is streamed, while multi-GB media transcription still requires the future chunk/checkpoint slice.
+
 ## [0.15.1] - 2026-08-10
 
 - Corrected adjacent NTSC SRT cues so millisecond floor/ceil conversion cannot create a 1 ms overlap at a shared end-exclusive frame boundary.

@@ -53,6 +53,7 @@ BAI Video Productionは、その障壁を下げるための共有可能な公共
 - SunoAPI.org非同期音楽生成adapter
 - Provider固定用途ではなく、正確なModel Capabilityに基づくRouting
 - 企画・動画・画像・音声・音楽を一覧化する秘密情報なしのSettings Preflight API
+- 原子的保存、破損検出、競合防止、旧形式移行を備えた日英GUI中立Settings契約
 - CredentialをProfile、Manifest、Evidenceへ埋め込まない実行境界
 
 詳細な進捗は[PROJECT.md](PROJECT.md)と[Canonical Roadmap](docs/roadmap/PROJECT-ROADMAP-CANONICAL.md)を参照してください。

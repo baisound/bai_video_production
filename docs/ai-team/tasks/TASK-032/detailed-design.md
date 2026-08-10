@@ -1,7 +1,7 @@
 # TASK-032 — AI Connection Settings UI Foundation
 
-- Status: `PREFLIGHT_API_IMPLEMENTED_UI_PENDING`
-- Package: `0.8.0`
+- Status: `PERSISTENCE_IMPLEMENTED_UI_PENDING`
+- Package: `0.9.0`
 - Target dates: API 2026-08-10; first interactive settings screen 2026-08-24; usability review 2026-08-31
 
 ## User outcome
@@ -55,15 +55,34 @@ stateDiagram-v2
 
 Saving connection settings must never equal authorizing a paid generation or Resolve mutation.
 
+## Persistence boundary implemented in 0.9.0
+
+```mermaid
+flowchart TD
+    F["Bilingual form draft"] --> P["Safe preflight"]
+    P --> S["Explicit Save"]
+    S --> C{"Revision unchanged?"}
+    C -->|Yes| A["Atomic checksummed replace"]
+    C -->|No| B["Conflict: reload required"]
+    A --> G["Saved, not authorized"]
+    G --> GO["Separate GO approval"]
+```
+
+`ConnectionSettingsStore` saves a `1.0.0` envelope containing only the revision and validated `AiConnectionProfile`. `document_sha256` protects the whole envelope while the nested `profile_sha256` protects the profile. Existing files require an exact `expected_revision`; this prevents one open screen from silently overwriting a newer edit made elsewhere.
+
+The write uses a temporary sibling file, filesystem flush, parse-and-contract validation and atomic replace. Failure before replace leaves the previous settings byte-for-byte unchanged. A raw `AiConnectionProfile` document from 0.8.0 is readable as revision zero and is converted only after the user explicitly saves it.
+
+`ConnectionSettingsFormBuilder` exposes Japanese and English workload labels, simple explanations for every selection mode, current status messages, and safe Provider/Model metadata. It excludes credential references, endpoint references, route settings, environment variables and secret values.
+
 ## Acceptance gates
 
 | Gate | Due | Evidence |
 |---|---|---|
 | Safe Preflight API | 2026-08-10 | all workloads projected; no secret reference; deterministic hash tests |
-| Settings persistence contract | 2026-08-17 | schema, migration, atomic save, rollback tests |
+| Settings persistence contract | 2026-08-17 | **Completed 2026-08-10**: schema, migration, atomic save, rollback and conflict tests |
 | Interactive screen | 2026-08-24 | screenshot, keyboard operation, error/help text, no paid call |
 | Low-literacy usability review | 2026-08-31 | three scripted tasks completed by 2–3 consenting reviewers; blockers recorded |
 
 ## Next implementation slice
 
-Add a persistence service and GUI-neutral form schema, then bind it to the chosen desktop/web UI technology. GUI technology selection must consider Windows packaging, accessibility, local-only operation, secret storage integration and future dashboard reuse.
+Bind the implemented GUI-neutral form and persistence services to the first interactive screen. GUI technology selection must consider Windows packaging, accessibility, local-only operation, secret storage integration and future dashboard reuse. The screen must demonstrate save/reload/conflict handling without making a paid Provider call.

@@ -4,13 +4,13 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-032_AI_CONNECTION_SETTINGS_PREFLIGHT_IMPLEMENTED_UI_PENDING`
+- Project Status: `TASK-032_AI_CONNECTION_SETTINGS_PERSISTENCE_IMPLEMENTED_UI_PENDING`
 - Last Completed Task: `TASK-022 — Timeline Mapping Service`
 - Active Consumer Task: `TASK-032 — AI Connection Settings UI Foundation`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.8.0`
-- Next Consumer Task: `TASK-032 settings persistence contract and GUI-neutral form schema (due 2026-08-17)`
+- Package: `0.9.0`
+- Next Consumer Task: `TASK-032 interactive settings screen (due 2026-08-24)`
 
 ## TASK-004 implemented scope
 
@@ -47,6 +47,8 @@
 
 ## Current verification
 
+- TASK-032 package `0.9.0`: `330 / 330 PASS`, compileall PASS, diff-check PASS
+- Settings persistence: atomic rollback, stale-write conflict, checksum tamper, 0.8 migration and secret-free bilingual form PASS
 - `pytest`: `250 / 250 PASS`
 - `compileall`: PASS
 - `git diff --check`: PASS

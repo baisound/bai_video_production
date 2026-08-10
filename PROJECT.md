@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-032_AI_CONNECTION_SETTINGS_PREFLIGHT_IMPLEMENTED_UI_PENDING`
+`TASK-032_AI_CONNECTION_SETTINGS_PERSISTENCE_IMPLEMENTED_UI_PENDING`
 
 ## Purpose
 
@@ -90,7 +90,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - Active Task: `TASK-032 — AI Connection Settings UI Foundation`
 - TASK-004: `COMPLETED`
-- Package: `0.8.0`
+- Package: `0.9.0`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
@@ -102,6 +102,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Python 3.11 CI corrective: package 0.6.7 replaces process-global OS mutation with explicit Audacity path-platform injection; five other matrix jobs already passed
 - OSS adoption: package 0.7.0 adds truthful architecture/roadmap visuals, five-minute offline demo, guarded release/PyPI automation and Evidence gates for real video pilots, early adopters and contributors
 - Connection settings: package 0.8.0 adds a secret-free five-workload preflight projection for the future low-literacy GUI; persistence and interactive UI have dated completion gates
+- Settings persistence: package 0.9.0 adds atomic checksummed storage, revision-conflict protection, 0.8 migration and a bilingual GUI-neutral form; interactive UI remains due 2026-08-24
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

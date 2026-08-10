@@ -53,6 +53,7 @@ This impact is an objective, not a claim of demonstrated scale. We intend to pub
 - SunoAPI.org asynchronous music adapter
 - routing based on exact model capabilities rather than fixed provider purposes
 - a secret-free settings preflight API covering planning, video, image, audio, and music
+- a bilingual GUI-neutral settings contract with atomic save, integrity checks, conflict protection, and legacy migration
 - execution boundaries that keep credentials out of profiles, manifests, and evidence
 
 See [PROJECT.md](PROJECT.md) and the [Canonical Roadmap](docs/roadmap/PROJECT-ROADMAP-CANONICAL.md) for detailed status.

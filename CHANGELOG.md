@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.9.0] - 2026-08-10
+
+- Added atomic, checksummed AI Connection settings persistence with optimistic revision checks.
+- Added safe migration from the 0.8 raw profile document and fail-closed handling for damaged or unsupported data.
+- Added a bilingual GUI-neutral form contract with five workloads, plain-language mode/status help, exact safe model metadata, and no credential or endpoint references.
+- Added power-loss rollback, stale-write, migration, integrity, schema-packaging, and secret-exclusion regression tests.
+
 ## [0.8.0] - 2026-08-10
 
 - Added a GUI-safe, secret-free AI Connection settings preflight across planning, video, image, audio, and music.

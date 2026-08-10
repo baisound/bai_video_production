@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/connection-settings-store.schema.json",
+  "title": "AI Connection Settings Store",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "revision", "profile", "document_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "revision": {"type": "integer", "minimum": 1},
+    "profile": {
+      "type": "object",
+      "required": ["schema_version", "profile_id", "profile_version", "default_mode", "workload_modes", "routes", "profile_sha256"]
+    },
+    "document_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

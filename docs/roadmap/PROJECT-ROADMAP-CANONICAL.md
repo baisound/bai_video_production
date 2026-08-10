@@ -97,6 +97,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3候補 | NOT STARTED |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
+| 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4候補 | PROPOSED / NOT AUTHORIZED |
 
 ## 6. Namespace Collision Resolution
 
@@ -172,6 +173,15 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-017 Storage Lifecycle/GC
 - TASK-018 Smart Reframe/Remotion
 - TASK-021 Integrated Dashboard
+
+### Parallel Product Route — 新規動画の一気通貫制作
+
+- TASK-027 Slice A: GUIのNew Videoフォーム、AI制作設計提案、修正・比較、Storyboard、Cost/Rights Preflight、明示的`GO`承認
+- TASK-027 Slice B: TASK-004/013を使う画像・動画素材生成、ユーザー素材の採用、Asset Slot単位の差し替えと影響範囲限定再生成
+- TASK-027 Slice C: TASK-013/014/026を使うSE・BGM・ナレーション生成と配置
+- TASK-027 Slice D: TASK-022/010を使うAutomation-owned Resolve Timelineへの一括組立、QA、手動編集Handoff
+
+このルートは既存動画編集を置き換えない。`EDIT_EXISTING_VIDEO`と`NEW_VIDEO_CREATION`は入口を分離し、Canonical Asset/Edit Plan/Timeline Mapping/Resolve QAを共有する。Slice AはTASK-022設計と並行着手可能だが、外部生成とResolve書込は依存TASKおよび明示的な人間承認を満たすまで実行しない。
 
 Production PilotではTASK-016/017/021を必須Gate候補とする。
 

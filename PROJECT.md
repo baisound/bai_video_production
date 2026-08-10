@@ -95,6 +95,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
 - Next Consumer Task: `NONE AUTHORIZED`; editing-first recommendation after TASK-004 is TASK-022 unless Owner reprioritizes
+- New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-006_SLICE_A_TRANSCRIPT_SRT_FOUNDATION_IMPLEMENTED`
+`TASK_006_V0_16_4_RELEASED_NEXT_SLICE_READY`
 
 ## Purpose
 
@@ -28,8 +28,7 @@ Consumer Project Repository root. Machine-specific absolute paths are not canoni
 ## BAI Development OS Integration
 
 - OS Version Baseline: `1.0.0`
-- Architecture Baseline: `Ver.2.27 CURRENT_CANONICAL`
-- Planned development-governance baseline from Product `0.17.0`: `BAI Development OS 1.0.0 / Architecture Ver.2.28 CURRENT_CANONICAL`
+- Development Governance Baseline from Product `0.17.0`: `BAI Development OS 1.0.0 / Architecture Ver.2.28 CURRENT_CANONICAL`
 - Adapter: `.bai-os/project.json`
 - Bootstrap Governance Level: `Level A — Governance Only`
 - TASK-001 decision: remain `Level A — Governance Only`; runtime-assisted BAI dependency is not justified for the product foundation
@@ -110,11 +109,11 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
+- Last Completed: `TASK-022 — Timeline Mapping Service`
 - Active Task: `TASK-006 — ASR / Transcript / Subtitle`
 - TASK-004: `COMPLETED`
-- Package: `0.13.0`
-- Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
+- Package: `0.16.4` (formal public release; PR #9 / merge commit `11b165a3fb9dfc800e73f33287c4b9830edd430a`)
+- Current release verification: `402 / 402 PASS`, compileall PASS, `git diff --check` PASS, `git fsck --full` PASS; native Windows Subtitle Workspace/Open/Save validation PASS
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
@@ -133,6 +132,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Credential onboarding: package 0.12.2 links enabled credential-required Catalog candidates to active key rows, retains disabled-route keys in an explicit cleanup section, prevents orphaning, and provides per-Route password-manager lookup; Provider connectivity is not executed
 - Native Credential Evidence: package 0.12.2 Catalog linkage, retained-key cleanup and per-row Password Manager behavior accepted on Windows
 - Subtitle foundation: package 0.13.0 adds provider-neutral Transcript and Subtitle contracts, cut-aware exact frame mapping and deterministic SRT; real ASR and Resolve placement remain subsequent slices
+- Subtitle Workspace release: package 0.16.4 completes the v0.16.x review-workspace line including local FasterWhisper/Transcript/SRT flow, revisioned subtitle editing, Windows-native Open/Save interaction corrective and runtime workspace privacy hygiene
+- Next bounded Product development: TASK-006 Slice D — large-media chunk/checkpoint transcription plus a canonical Resolve subtitle-placement handoff. TASK-006 does not perform the actual Resolve write; that remains TASK-010 ownership.
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

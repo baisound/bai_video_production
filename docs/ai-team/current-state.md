@@ -9,7 +9,7 @@
 - Active Consumer Task: `TASK-006 — ASR / Transcript / Subtitle`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.16.1`
+- Package: `0.16.2` (Windows UI corrective candidate; native verification pending)
 - Next Consumer Task: `TASK-006 large-media chunk/checkpoint slice / Resolve subtitle placement`
 
 ## TASK-004 implemented scope
@@ -47,6 +47,7 @@
 
 ## Current verification
 
+- TASK-006 UI corrective candidate `0.16.2`: Windows-native SRT Open/Save dialog path added; automated dialog contract and Subtitle Workspace regression PASS; native Windows dialog verification pending
 - TASK-006 corrective package `0.16.1`: Windows CRLF fixture writes exact bytes; production SRT behavior unchanged
 - TASK-006 Slice C package `0.16.0`: planned narration/ASR/SRT intake, revisioned local review GUI, row editing and atomic SRT export implemented
 

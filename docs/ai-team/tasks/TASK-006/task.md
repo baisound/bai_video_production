@@ -5,6 +5,7 @@
 - Corrective package: `0.15.1`
 - Review Workspace package: `0.16.0`
 - Windows test-fixture corrective package: `0.16.1`
+- Windows file-dialog UX corrective candidate: `0.16.2` (native verification pending)
 - Authorization: Owner-directed editing-first continuation
 - Dependencies: TASK-003 Asset identity, TASK-004 normalized media, TASK-022 Timeline Mapping
 
@@ -15,3 +16,5 @@ Slice B connects TASK-023 FasterWhisper as the first local ASR Provider and adds
 Package `0.15.1` corrects non-overlapping SRT rendering. Package `0.16.0` adds Slice C's shared Subtitle Workspace for planned narration, ASR and imported SRT, preserving immutable source wording with revisioned row editing. The default-off `AI誤字・脱字チェック` stores permission only and cannot call a Provider, overwrite text or approve a revision. Dictionary correction, AI proposals, large-media chunk/checkpoint execution and Resolve placement remain separate bounded slices.
 
 Package `0.16.1` changes only the cross-platform SRT test fixture. Python text-mode output translated embedded CRLF into CRCRLF on Windows, so the fixture now writes explicit UTF-8 BOM bytes. No production parser behavior changed.
+
+Candidate package `0.16.2` corrects a usability defect discovered before broader Windows acceptance: SRT import/export no longer requires manual path typing. Explicit operator clicks can open Windows-native Open/Save dialogs through the loopback application; direct path entry remains available for advanced operation. Existing workspace replacement still requires an explicit confirmation in the browser. The dialog path does not upload media or authorize AI/provider execution.

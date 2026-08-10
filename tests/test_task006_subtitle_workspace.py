@@ -1,11 +1,14 @@
 from pathlib import Path
+import json
+import re
+from urllib import error, request
 
 import pytest
 
 from ai_video_production.subtitle_workspace import (
     NarrationCue, SrtWorkspaceCodec, SubtitleOrigin, SubtitleWorkspace, SubtitleWorkspaceStore,
 )
-from ai_video_production.subtitle_workspace_web import SubtitleWorkspaceWebService
+from ai_video_production.subtitle_workspace_web import SubtitleWorkspaceWebService, launch_server
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.ids import IdKind, generate_id
 
@@ -100,3 +103,79 @@ def test_web_service_import_and_export_srt(tmp_path: Path) -> None:
     result = service.apply({"revision": 0, "operation": "import_srt", "path": str(source)})
     result = service.apply({"revision": result["revision"], "operation": "export_srt", "path": str(target)})
     assert target.read_text(encoding="utf-8") == "1\n00:00:00,000 --> 00:00:01,000\n字幕\n"
+
+
+class _FakeDialog:
+    def __init__(self, open_path: str | None, save_path: str | None) -> None:
+        self.open_path = open_path
+        self.save_path = save_path
+        self.calls: list[str] = []
+
+    def choose_open_srt(self) -> str | None:
+        self.calls.append("open")
+        return self.open_path
+
+    def choose_save_srt(self) -> str | None:
+        self.calls.append("save")
+        return self.save_path
+
+
+def test_web_service_native_dialog_contract_is_explicit_and_non_mutating(tmp_path: Path) -> None:
+    fake = _FakeDialog(r"C:\字幕\input.srt", r"D:\出力\edited.srt")
+    service = SubtitleWorkspaceWebService(tmp_path / "workspace.json", file_dialog=fake)
+    before = service.form()
+
+    opened = service.choose_path("open_srt")
+    saved = service.choose_path("save_srt")
+
+    assert opened == {"path": r"C:\字幕\input.srt", "cancelled": False}
+    assert saved == {"path": r"D:\出力\edited.srt", "cancelled": False}
+    assert fake.calls == ["open", "save"]
+    assert service.form() == before
+
+
+def test_web_service_native_dialog_cancel_and_unknown_kind(tmp_path: Path) -> None:
+    service = SubtitleWorkspaceWebService(
+        tmp_path / "workspace.json",
+        file_dialog=_FakeDialog(None, None),
+    )
+    assert service.choose_path("open_srt") == {"path": None, "cancelled": True}
+    assert service.choose_path("save_srt") == {"path": None, "cancelled": True}
+    with pytest.raises(ValueError, match="unsupported dialog kind"):
+        service.choose_path("folder")
+
+
+def test_loopback_dialog_endpoint_requires_csrf_and_returns_selected_path(tmp_path: Path) -> None:
+    fake = _FakeDialog(r"C:\字幕\input.srt", None)
+    service = SubtitleWorkspaceWebService(tmp_path / "workspace.json", file_dialog=fake)
+    server, thread, url = launch_server(service, port=0)
+    try:
+        html = request.urlopen(url, timeout=3).read().decode("utf-8")
+        token_match = re.search(r"const CSRF=(\"[^\"]+\")", html)
+        assert token_match is not None
+        csrf = json.loads(token_match.group(1))
+
+        body = json.dumps({"kind": "open_srt"}).encode("utf-8")
+        bad = request.Request(
+            url + "api/dialog",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json", "X-BAI-CSRF": "wrong"},
+        )
+        with pytest.raises(error.HTTPError) as exc_info:
+            request.urlopen(bad, timeout=3)
+        assert exc_info.value.code == 400
+
+        good = request.Request(
+            url + "api/dialog",
+            data=body,
+            method="POST",
+            headers={"Content-Type": "application/json", "X-BAI-CSRF": csrf},
+        )
+        result = json.loads(request.urlopen(good, timeout=3).read().decode("utf-8"))
+        assert result == {"path": r"C:\字幕\input.srt", "cancelled": False}
+        assert service.form()["revision"] == 0
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)

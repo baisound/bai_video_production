@@ -6,6 +6,12 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.16.2] - 2026-08-11
+
+- Added Windows-native Open/Save dialogs to the Subtitle Workspace so operators can choose an SRT file and destination without typing filesystem paths.
+- Kept manual path entry for advanced use, added a replacement confirmation before importing over an existing workspace, and preserved the loopback/CSRF boundary.
+- Added deterministic dialog-service tests without opening a real native window during automated regression.
+
 ## [0.16.1] - 2026-08-10
 
 - Corrected the SRT CRLF regression fixture to write exact UTF-8 BOM bytes on Windows, preventing text-mode newline translation from producing malformed `CRCRLF` test data.

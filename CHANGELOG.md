@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.10.0] - 2026-08-10
+
+- Added a responsive bilingual AI Connection settings screen served exclusively on local loopback.
+- Added interactive mode and preferred configured-model selection across planning, video, image, audio, and music.
+- Added a narrow mutation contract with revision conflict checks, random CSRF protection, Host validation, restrictive CSP, JSON/size limits, and no Provider execution path.
+- Added a Windows launcher plus beginner and developer guides with diagrams, safety explanations, and truthful remaining gates.
+
 ## [0.9.0] - 2026-08-10
 
 - Added atomic, checksummed AI Connection settings persistence with optimistic revision checks.

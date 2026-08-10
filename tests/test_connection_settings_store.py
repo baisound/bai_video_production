@@ -123,6 +123,7 @@ def test_form_is_bilingual_complete_and_secret_free() -> None:
     assert planning["status_message"]["ja"] == "準備できています"
     assert planning["mode_help"]["OFFLINE_ONLY"]["en"].startswith("Use options")
     assert planning["routes"][0]["model_id"] == "gpt-5-demo"
+    assert planning["preferred_route_id"] == "openai-plan"
     serialized = json.dumps(form, ensure_ascii=False)
     assert "credential://" not in serialized
     assert "api_key" not in serialized

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 from pathlib import Path
 from typing import Any, Mapping
@@ -183,10 +183,11 @@ class ConnectionSettingsFormBuilder:
             ja, en = cls._LABELS[workload]
             status_ja, status_en = cls._STATUS_HELP[status.status.value]
             routes = []
-            for route in sorted(
+            configured_routes = sorted(
                 (item for item in profile.routes if item.workload is workload),
                 key=lambda item: (item.priority, item.route_id),
-            ):
+            )
+            for route in configured_routes:
                 routes.append({
                     "route_id": route.route_id,
                     "provider_family": route.provider_family.value,
@@ -211,6 +212,7 @@ class ConnectionSettingsFormBuilder:
                 "status_message": {"ja": status_ja, "en": status_en},
                 "error_code": status.error_code,
                 "selected_route_id": status.selected_route_id,
+                "preferred_route_id": configured_routes[0].route_id if configured_routes else None,
                 "routes": routes,
             })
         return {
@@ -222,3 +224,51 @@ class ConnectionSettingsFormBuilder:
             "workloads": workloads,
             "preflight_sha256": preflight.to_dict()["report_sha256"],
         }
+
+
+class ConnectionSettingsEditor:
+    """Apply the narrow set of edits authorized for the first settings screen."""
+
+    @staticmethod
+    def apply(
+        profile: AiConnectionProfile,
+        *,
+        workload_modes: Mapping[str, str],
+        preferred_route_ids: Mapping[str, str | None],
+    ) -> AiConnectionProfile:
+        known_workloads = {item.value: item for item in AiWorkload}
+        if set(workload_modes) != set(known_workloads):
+            raise ValueError("workload_modes must contain every workload exactly once")
+        if not set(preferred_route_ids).issubset(known_workloads):
+            raise ValueError("preferred_route_ids contains an unknown workload")
+
+        modes = {
+            known_workloads[key]: SelectionMode(value)
+            for key, value in workload_modes.items()
+        }
+        preferred: dict[AiWorkload, str] = {}
+        route_owners = {route.route_id: route.workload for route in profile.routes}
+        for key, route_id in preferred_route_ids.items():
+            workload = known_workloads[key]
+            if route_id is None:
+                continue
+            if route_owners.get(route_id) is not workload:
+                raise ValueError("preferred route does not belong to workload")
+            preferred[workload] = route_id
+
+        routes = []
+        for route in profile.routes:
+            selected = preferred.get(route.workload)
+            if selected is None:
+                routes.append(route)
+            elif route.route_id == selected:
+                routes.append(replace(route, priority=0))
+            else:
+                routes.append(replace(route, priority=max(1, route.priority)))
+        return AiConnectionProfile(
+            profile.profile_id,
+            profile.profile_version,
+            profile.default_mode,
+            tuple(routes),
+            modes,
+        )

@@ -1,7 +1,7 @@
 # TASK-032 — AI Connection Settings UI Foundation
 
-- Status: `PERSISTENCE_IMPLEMENTED_UI_PENDING`
-- Package: `0.9.0`
+- Status: `INTERACTIVE_SCREEN_IMPLEMENTED_AWAITING_NATIVE_SCREENSHOT_USABILITY`
+- Package: `0.10.0`
 - Target dates: API 2026-08-10; first interactive settings screen 2026-08-24; usability review 2026-08-31
 
 ## User outcome
@@ -74,15 +74,38 @@ The write uses a temporary sibling file, filesystem flush, parse-and-contract va
 
 `ConnectionSettingsFormBuilder` exposes Japanese and English workload labels, simple explanations for every selection mode, current status messages, and safe Provider/Model metadata. It excludes credential references, endpoint references, route settings, environment variables and secret values.
 
+## Interactive screen implemented in 0.10.0
+
+The first UI is a dependency-free, responsive local web screen served only on `127.0.0.1`. It edits all five workload modes and the preferred route already defined for each workload. A bilingual beginner explanation remains visible above the controls, and the save confirmation explicitly states that generation has not started.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant B as Local browser
+    participant S as Settings service
+    participant F as Atomic file
+    U->>B: choose mode and Model
+    B->>S: PUT selections + revision + CSRF
+    S->>S: validate known workloads/routes
+    S->>F: atomic save if revision matches
+    F-->>S: new revision
+    S-->>B: safe form projection
+    B-->>U: saved; generation not started
+```
+
+Security gates include loopback-only binding, Host validation, random CSRF token, restrictive CSP, same-origin fetch, JSON-only requests, 64 KiB request limit and a narrow selection DTO. The HTTP layer has no Provider execution, media generation, Resolve or shell dependency.
+
 ## Acceptance gates
 
 | Gate | Due | Evidence |
 |---|---|---|
 | Safe Preflight API | 2026-08-10 | all workloads projected; no secret reference; deterministic hash tests |
 | Settings persistence contract | 2026-08-17 | **Completed 2026-08-10**: schema, migration, atomic save, rollback and conflict tests |
-| Interactive screen | 2026-08-24 | screenshot, keyboard operation, error/help text, no paid call |
+| Interactive screen | 2026-08-24 | **Code completed 2026-08-10**: responsive controls, keyboard-native HTML, error/help text, no execution path; native Windows screenshot Evidence pending |
 | Low-literacy usability review | 2026-08-31 | three scripted tasks completed by 2–3 consenting reviewers; blockers recorded |
 
 ## Next implementation slice
 
-Bind the implemented GUI-neutral form and persistence services to the first interactive screen. GUI technology selection must consider Windows packaging, accessibility, local-only operation, secret storage integration and future dashboard reuse. The screen must demonstrate save/reload/conflict handling without making a paid Provider call.
+Run the screen on native Windows, capture truthful screenshot Evidence and complete the scripted usability review with 2–3 consenting reviewers. Credential onboarding and Provider/Model catalog editing remain separate follow-up contracts; secret values must use an OS credential store rather than this settings file.
+
+Use [`native-windows-evidence-template.md`](native-windows-evidence-template.md) so every reviewer performs the same save, reload, keyboard, stale-tab conflict and safe-stop checks without sharing secrets or private media.

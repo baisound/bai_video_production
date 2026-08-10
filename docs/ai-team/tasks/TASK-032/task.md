@@ -1,8 +1,8 @@
 # TASK-032 — AI Connection Settings UI Foundation
 
-- Status: `PERSISTENCE_IMPLEMENTED_UI_PENDING`
-- Package: `0.9.0`
+- Status: `INTERACTIVE_SCREEN_IMPLEMENTED_AWAITING_NATIVE_SCREENSHOT_USABILITY`
+- Package: `0.10.0`
 - Dependency: TASK-028 model-capability routing
 - Public-documentation dependency: TASK-031 beginner/developer guides
 
-The preflight and persistence slices are implemented. Settings now have an atomic checksummed envelope, revision-conflict detection, a raw-profile migration path and a bilingual GUI-neutral form projection. The interactive screen remains the next authorized slice under the dates and gates in `detailed-design.md`.
+The preflight, persistence, and first interactive-screen slices are implemented. The local bilingual screen safely edits workload modes and preferred configured routes without executing a Provider. Native Windows screenshot Evidence and the low-literacy usability review remain under the dates and gates in `detailed-design.md`.

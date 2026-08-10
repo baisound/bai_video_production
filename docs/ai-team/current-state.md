@@ -4,13 +4,13 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-030_OSS_READINESS_IMPLEMENTED_AWAITING_GITHUB_PUBLICATION_AND_CI`
+- Project Status: `TASK-030_OSS_READINESS_IMPLEMENTED_AWAITING_GITHUB_CI`
 - Last Completed Task: `TASK-022 — Timeline Mapping Service`
 - Active Consumer Task: `TASK-030 — OSS Public Repository Readiness`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.6.5`
-- Next Consumer Task: `TASK-028 provider adapter and GUI settings slices after publication verification`
+- Package: `0.6.6`
+- Next Consumer Task: `TASK-028 provider adapter and GUI settings slices after hosted CI verification`
 
 ## TASK-004 implemented scope
 

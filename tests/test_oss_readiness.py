@@ -66,6 +66,9 @@ def test_ci_is_offline_first_and_cross_platform() -> None:
     assert "ubuntu-latest" in ci and "windows-latest" in ci
     assert "python -m pytest -q" in ci
     assert "python -m compileall -q src tests" in ci
+    assert "sudo apt-get update && sudo apt-get install --yes ffmpeg" in ci
+    assert "choco install ffmpeg --yes --no-progress" in ci
+    assert "ffprobe -version" in ci
     assert "behavior-probe" not in ci
 
 

@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-030_OSS_READINESS_IMPLEMENTED_AWAITING_GITHUB_PUBLICATION_AND_CI`
+`TASK-030_OSS_READINESS_IMPLEMENTED_AWAITING_GITHUB_CI`
 
 ## Purpose
 
@@ -90,14 +90,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - Active Task: `TASK-030 — OSS Public Repository Readiness`
 - TASK-004: `COMPLETED`
-- Package: `0.6.5`
+- Package: `0.6.6`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
-- OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; hosted GitHub publication/settings and CI remain external gates
-- Repository URL corrective: package 0.6.5 binds all public metadata and GitHub community links to `https://github.com/baisound/bai_video_production`; OAuth `workflow` scope and first successful push/CI remain external gates
+- OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
+- Repository URL corrective: package 0.6.5 binds all public metadata and GitHub community links to `https://github.com/baisound/bai_video_production`; the first push and Security workflow succeeded
+- CI corrective: package 0.6.6 provisions FFmpeg/ffprobe on every Ubuntu and Windows matrix runner before executing the media-dependent regression suite
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

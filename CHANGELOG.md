@@ -6,6 +6,11 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.6.6] - 2026-08-10
+
+- Provisioned and verified FFmpeg/ffprobe on Linux and Windows GitHub-hosted CI runners.
+- Corrected the six-job CI failure caused by missing media executables rather than a product regression.
+
 ## [0.6.5] - 2026-08-10
 
 - Corrected every public repository URL to `baisound/bai_video_production`.

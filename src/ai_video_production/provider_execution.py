@@ -45,7 +45,12 @@ class UrllibJsonTransport:
         self.max_response_bytes = max_response_bytes
 
     def post_json(self, url: str, *, headers: Mapping[str, str], body: Mapping[str, Any], timeout_seconds: int) -> Mapping[str, Any]:
-        if url not in {OpenAiResponsesAdapter.endpoint, AnthropicMessagesAdapter.endpoint, GoogleInteractionsAdapter.endpoint}:
+        if url not in {
+            OpenAiResponsesAdapter.endpoint,
+            AnthropicMessagesAdapter.endpoint,
+            GoogleInteractionsAdapter.endpoint,
+            "https://api.sunoapi.org/api/v1/generate",
+        }:
             raise ProductError("ERR_SECURITY_PROVIDER_ENDPOINT", "provider endpoint is not allowlisted", ProductErrorCategory.SECURITY)
         request = Request(url, data=json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode("utf-8"), method="POST", headers=dict(headers))
         try:

@@ -13,3 +13,9 @@ The GUI should expose a global default and per-workload overrides, then provider
 `AiProviderExecutionService` resolves a `PLANNING` route requiring `TEXT_GENERATION`, selects exactly one registered family adapter, resolves its credential only at execution time, and returns a provider-neutral text result. OpenAI uses the Responses endpoint, Anthropic uses Messages, and Google uses Gemini Interactions. Model identifiers are never silently substituted.
 
 The production transport accepts only the three compiled HTTPS origins, bounds response size and timeout, normalizes HTTP/network/JSON failures, and never places response bodies or credentials in Product errors. Repository tests inject a fake transport, so they cannot make billable calls. Route diagnostics distinguish disabled, unavailable, missing-credential, missing-adapter and ready states for GUI preflight.
+
+## External media providers
+
+ElevenLabs supports `AUDIO/TTS`, `AUDIO/SFX` and `MUSIC/MUSIC_GENERATION` through exact configured model and voice IDs. Binary output is bounded and returned for the canonical Asset publication layer; it is not silently written to arbitrary paths. SunoAPI submits `MUSIC/MUSIC_GENERATION` as an external asynchronous task and returns a normalized provider task ID for later callback/poll reconciliation. Callback origins must be HTTPS.
+
+External media calls require `authorization://...` rights approval in addition to credentials. Automated tests use injected transports and cannot reach a paid endpoint. Provider catalog status is an explicit contract: `IMPLEMENTED`, `LOCAL_RUNTIME` or `PLANNED_ADAPTER`.

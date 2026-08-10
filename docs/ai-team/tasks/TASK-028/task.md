@@ -1,7 +1,7 @@
 # TASK-028 — AI Connection Provider / Model Routing
 
 - Status: `PROVIDER EXECUTION SLICE IMPLEMENTED / NATIVE WINDOWS REGRESSION PENDING`
-- Package: `0.6.1`
+- Package: `0.6.2`
 - Governance: `DEV-4 EXTERNAL PROVIDER AND COST CONTROL`
 - Authorization: Owner-requested implementation
 
@@ -24,6 +24,8 @@
 ## Boundary
 
 Package 0.6.1 adds planning-text execution adapters for OpenAI Responses, Anthropic Messages and Google Gemini Interactions, a bounded allowlisted HTTP transport, environment-backed credential references, normalized results and GUI-facing route diagnostics. Live calls remain opt-in and are not run during repository tests. Image/video/audio/music execution continues through their owning runtime adapters; the GUI settings panel is the next UI slice.
+
+Package 0.6.2 adds concrete ElevenLabs TTS, sound-effect and music binary adapters plus SunoAPI asynchronous music submission. Every external media request requires a rights authorization reference; credentials are runtime-only; reviewed origins, response size and timeouts are bounded. Runway, Luma, Stability AI, Replicate, fal.ai, MiniMax and Kling are included in the canonical provider catalog as `PLANNED_ADAPTER`, never misreported as implemented.
 
 ## Acceptance
 

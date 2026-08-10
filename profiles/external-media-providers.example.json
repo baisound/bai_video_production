@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0.0",
+  "profile_id": "external-media-example",
+  "profile_version": "1.0.0",
+  "default_mode": "AI",
+  "workload_modes": {
+    "AUDIO": "AI",
+    "MUSIC": "AI"
+  },
+  "routes": [
+    {
+      "route_id": "elevenlabs-tts",
+      "workload": "AUDIO",
+      "provider_family": "ELEVENLABS",
+      "provider_id": "elevenlabs",
+      "model_id": "eleven_multilingual_v2",
+      "cost_class": "CLOUD_PAID_AI",
+      "priority": 10,
+      "reasoning_effort": "none",
+      "credential_ref": "credential://elevenlabs/default",
+      "endpoint_ref": null,
+      "capabilities": ["TTS"],
+      "settings": {},
+      "enabled": true
+    },
+    {
+      "route_id": "elevenlabs-sfx",
+      "workload": "AUDIO",
+      "provider_family": "ELEVENLABS",
+      "provider_id": "elevenlabs",
+      "model_id": "eleven_text_to_sound_v2",
+      "cost_class": "CLOUD_PAID_AI",
+      "priority": 20,
+      "reasoning_effort": "none",
+      "credential_ref": "credential://elevenlabs/default",
+      "endpoint_ref": null,
+      "capabilities": ["SFX"],
+      "settings": {},
+      "enabled": true
+    },
+    {
+      "route_id": "suno-music",
+      "workload": "MUSIC",
+      "provider_family": "SUNO_API",
+      "provider_id": "sunoapi-org",
+      "model_id": "V5",
+      "cost_class": "CLOUD_PAID_AI",
+      "priority": 10,
+      "reasoning_effort": "none",
+      "credential_ref": "credential://suno-api/default",
+      "endpoint_ref": null,
+      "capabilities": ["MUSIC_GENERATION"],
+      "settings": {},
+      "enabled": true
+    }
+  ],
+  "profile_sha256": "sha256:2a2871ffd249a45df6f9ff88715473d9b707398c3b07ecc4d1f08120bc6eb436"
+}

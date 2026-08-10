@@ -24,6 +24,12 @@ from .provider_execution import (
     GoogleInteractionsAdapter, OpenAiResponsesAdapter, RouteDiagnostic,
     RouteDiagnosticStatus, TextGenerationRequest, TextGenerationResult, UrllibJsonTransport,
 )
+from .external_media_providers import (
+    BinaryResponse, ElevenLabsMediaAdapter, ElevenLabsMusicRequest,
+    ElevenLabsSoundEffectRequest, ElevenLabsTtsRequest, ExternalMediaJob,
+    ProviderCatalogEntry, ProviderIntegrationStatus, SunoApiMusicAdapter,
+    SunoMusicRequest, UrllibBinaryTransport, builtin_media_provider_catalog,
+)
 from .checkpoint import CheckpointRecord, ResumeContext, assert_resume_compatible
 
 from .audacity_openvino import AudioAiOperation, AudioAiRequest, AudioAiResult, AudacityOpenVinoService, SeparationMode
@@ -59,7 +65,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
@@ -67,6 +73,10 @@ __all__ = [
     "AiProviderExecutionService", "AnthropicMessagesAdapter", "EnvironmentCredentialStore",
     "GoogleInteractionsAdapter", "OpenAiResponsesAdapter", "RouteDiagnostic", "RouteDiagnosticStatus",
     "TextGenerationRequest", "TextGenerationResult", "UrllibJsonTransport",
+    "BinaryResponse", "ElevenLabsMediaAdapter", "ElevenLabsMusicRequest",
+    "ElevenLabsSoundEffectRequest", "ElevenLabsTtsRequest", "ExternalMediaJob",
+    "ProviderCatalogEntry", "ProviderIntegrationStatus", "SunoApiMusicAdapter",
+    "SunoMusicRequest", "UrllibBinaryTransport", "builtin_media_provider_catalog",
     "ActorKind", "ApprovedSegment", "AssetIngestRequest", "AssetIngestResult", "AssetIngestService",
     "AssetRecord", "AssetType", "AudioRightsStatus", "CapabilityStatus", "CheckpointRecord",
     "FFprobeMediaProbe", "IdKind", "JobStateService", "LogicalPathResolver", "ManifestEnvelope",

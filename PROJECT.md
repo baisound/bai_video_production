@@ -29,11 +29,25 @@ Consumer Project Repository root. Machine-specific absolute paths are not canoni
 
 - OS Version Baseline: `1.0.0`
 - Architecture Baseline: `Ver.2.27 CURRENT_CANONICAL`
+- Planned development-governance baseline from Product `0.17.0`: `BAI Development OS 1.0.0 / Architecture Ver.2.28 CURRENT_CANONICAL`
 - Adapter: `.bai-os/project.json`
 - Bootstrap Governance Level: `Level A — Governance Only`
 - TASK-001 decision: remain `Level A — Governance Only`; runtime-assisted BAI dependency is not justified for the product foundation
 - BAI OS Core / shared Roles / OS-owned Tasks / Registry are not copied into this repository
-- Product runtime does not depend on BAI OS unless an authorized Task explicitly approves that dependency
+- BAI Development OS is a development-time governance/tooling foundation only. It is not a Product runtime dependency.
+
+## Non-Negotiable Product Goal — Standalone Application
+
+Canonical invariant: `STANDALONE_APPLICATION_REQUIRED`
+
+BAI Video Productionの最終成果物は、BAI Development OSから独立してインストール・起動・実行・更新・利用できる単体アプリケーションでなければならない。BAI Development OSは開発時に設計、Critic/Judge、Knowledge、Context/Cost Guard、Integration/Security/Release等の能力を必要に応じて利用するための共通開発基盤であり、完成Productの実行環境ではない。
+
+- Product runtimeはBAI Development OS repository、package、Registry、Role、OS-owned Task、Evidence store、Context PackまたはOS内部Serviceの存在を要求してはならない。
+- 開発中にBAI Development OSのSubsystemを利用しても、Product実行時に必要なCapabilityはProduct所有の実装・Adapter・明示的なProduct dependencyとして成立させる。
+- BAI Development OSの更新・停止・削除・未接続によって、完成したBAI Video Productionの通常利用が停止してはならない。
+- 0.17.0以降のOS差し替えは「開発方法の更新」であり、「Product runtimeへのOS組込み」ではない。
+- 将来の設計、Refactor、Provider統合、配布方式の判断は、このStandalone Application要件を弱めてはならない。
+- この要件と衝突する提案は、TASK認可の有無にかかわらず最終Product設計として採用しない。
 
 ## Product Design Baseline
 

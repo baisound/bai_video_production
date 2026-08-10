@@ -57,6 +57,10 @@ from .derived_assets import DerivedAssetPublisher, DerivedAssetSpec
 from .normalization import MediaNormalizationService, NormalizationProfile, NormalizationRequest, NormalizationResult
 from .timebase import FFprobeTimingProbe, FrameRate, FrameRounding, TimingInspection, TimingKind
 from .timeline_mapping import AffineTimeMap, EditSegment, TimelineMappingPlan, TimelineMappingService, TimelinePlacement
+from .subtitles import (
+    AsrProvider, AsrRequest, SrtRenderer, SubtitleCue, SubtitlePlan,
+    SubtitlePlanningService, TranscriptManifest, TranscriptSegment,
+)
 from .errors import ProductError, ProductErrorCategory
 from .ids import IdKind, generate_id, validate_id, validate_project_id, validate_schema_id
 from .h3_acceleration import H3AccelerationContract, H3AccelerationMode, SPECTRUM_CLASS_TYPE
@@ -78,7 +82,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.12.2"
+__version__ = "0.13.0"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
@@ -105,6 +109,8 @@ __all__ = [
     "ProfileSnapshot", "ResumeContext", "RetentionClass", "ResolveCapabilityProbe", "ResolveModuleLoader",
     "RightsStatus", "SQLiteProductStore", "SourcePathPolicy", "TimelineOwner", "TimelineRef",
     "TimelineWriteGuard", "assert_resume_compatible", "authorize_mutation_probe", "generate_id",
+    "AsrProvider", "AsrRequest", "SrtRenderer", "SubtitleCue", "SubtitlePlan",
+    "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment",
     "merge_allowed_overrides", "validate_id", "validate_project_id", "validate_schema_id",
     "AudioAiOperation", "AudioAiRequest", "AudioAiResult", "AudacityOpenVinoService", "SeparationMode",
     "CharacterIdentityProfile", "CharacterIdentityService", "CharacterReferenceBundle",

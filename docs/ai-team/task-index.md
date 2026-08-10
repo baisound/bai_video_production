@@ -6,7 +6,8 @@
 | TASK-002 | Resolve Capability Spike | COMPLETED | COMPLETED WITH AUTHORIZED IMPLEMENTATION | DEV-4 / score 22 | Resolve 21.0.2.4 sandbox mutation PASS; WSL2→Windows authenticated HTTP/restart PASS; Final IPC ADR accepted |
 | TASK-003 | Asset Registry / Ingest / Path Resolver | COMPLETED | COMPLETED WITH AUTHORIZED IMPLEMENTATION | DEV-4 / score 33 | Package 0.3.0; secure canonical source ingest, rights/checksum, Path Resolver, source-manifest |
 | TASK-004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 / score 25 | Package 0.4.7; 250 tests; ComfyUI + Audacity/OpenVINO capability PASS; Attempt 07 failed before Audacity mutation because Windows low-level media ingest lacked `O_BINARY`; corrected and regression-pinned; Noise Suppression + 2-stem behavioral Evidence rerun pending; 4-stem fails closed on verified runtime because mode is UI-only |
-| TASK-005..021 | Product roadmap tasks | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Canonical identities defined in project roadmap |
+| TASK-005,007..021 | Remaining product roadmap tasks | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Canonical identities defined in project roadmap |
+| TASK-006 | ASR / Transcript / Subtitle | SLICE_A_TRANSCRIPT_SRT_FOUNDATION_IMPLEMENTED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.13.0 provider-neutral Transcript, cut-aware Subtitle Plan and deterministic SRT; FasterWhisper Slice B next |
 | TASK-023..026 | Remaining External-SKILL additions (collision-resolved) | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Prospective canonical re-numbering; historical documents unchanged |
 | TASK-022 | Timeline Mapping Service | COMPLETED | COMPLETED_WITH_OWNER_VERIFICATION | DEV-4 | Package 0.5.0; exact affine/NTSC/end-exclusive mapping, speed/gap, deterministic Plan/schema; native Windows 263/263 PASS |
 | TASK-027 | AI Video Creation Studio / New Production Orchestrator | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | GUI intent → AI proposal/revision → GO → generation/orchestration → replaceable Asset slots → Resolve assembly |
@@ -16,7 +17,7 @@
 | TASK-031 | OSS Adoption, Demonstration and Impact Evidence | FOUNDATION_IMPLEMENTED_CONTINUOUS_EXECUTION | OWNER_DIRECTED_IMPLEMENTATION | DEV-2 | 0.7.0 architecture/roadmap visuals, five-minute demo, release/PyPI workflows, contributor and real-impact Evidence gates |
 | TASK-032 | AI Connection Settings UI Foundation | NATIVE_WINDOWS_PASS_USABILITY_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.10.0 native save/reload/conflict Evidence accepted; 2–3-person usability review due 08/31 |
 | TASK-033 | Provider and Model Catalog Editor | NATIVE_WINDOWS_PASS | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.11.0 safe add/edit/disable Evidence accepted 2026-08-10 |
-| TASK-034 | OS-backed Credential Onboarding | IMPLEMENTED_AWAITING_NATIVE_WINDOWS_EVIDENCE | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.12.2 Catalog linkage, retained-key cleanup and per-Route password-manager lookup; native Evidence due 08/24 |
+| TASK-034 | OS-backed Credential Onboarding | NATIVE_WINDOWS_PASS | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.12.2 Catalog linkage, retained-key cleanup and per-Route password-manager lookup confirmed |
 
 ## Roadmap authority
 
@@ -24,4 +25,4 @@
 
 ## Route control
 
-TASK-004 is completed. Owner-directed continuation authorized TASK-027 through TASK-034 design/implementation slices recorded above. Proposed later work remains unauthorized until Owner instruction; a configured credential never authorizes Provider execution or GO.
+TASK-004 is completed. Owner-directed continuation authorized TASK-027 through TASK-034 and the editing-first TASK-006 Slice A recorded above. Proposed later work remains unauthorized until Owner instruction; a configured credential never authorizes Provider execution or GO.

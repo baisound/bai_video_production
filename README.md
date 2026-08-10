@@ -171,6 +171,14 @@ Get-Content .\quickstart-output.json
 
 詳しい期待値と、このDemoがまだ証明しない範囲は[Five-minute demo](docs/quickstart/FIVE-MINUTE-DEMO.md)を参照してください。
 
+## 字幕編集基盤 / Subtitle editing foundation
+
+TranscriptをProvider固有形式から分離し、Cut後に残った音声区間だけを正確なTimeline frameへ再配置してSRTを決定論的に生成する基盤を実装しています。実動画の音声認識は次のFasterWhisper Slice、DaVinci Resolveへの字幕配置はその後のAssembly Sliceで接続します。
+
+The provider-neutral Transcript and Subtitle Plan map surviving speech through exact cut ranges and render deterministic SRT. Real-media FasterWhisper transcription and DaVinci Resolve subtitle placement are the next bounded slices.
+
+[TASK-006詳細設計 / Detailed design](docs/ai-team/tasks/TASK-006/detailed-design.md)
+
 ## Provider configuration
 
 設定例：

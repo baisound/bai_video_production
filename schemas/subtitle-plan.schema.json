@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/subtitle-plan.schema.json",
+  "type": "object",
+  "required": ["plan_version", "source_asset_id", "timeline_rate", "language", "cues", "plan_sha256"],
+  "properties": {
+    "plan_version": {"const": "1.0.0"},
+    "source_asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "timeline_rate": {
+      "type": "object",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": {"type": "integer", "minimum": 1},
+        "denominator": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "language": {"type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"},
+    "cues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["cue_id", "source_segment_id", "timeline_range_frames", "text"],
+        "properties": {
+          "cue_id": {"type": "string", "minLength": 1, "maxLength": 257},
+          "source_segment_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "timeline_range_frames": {
+            "type": "object",
+            "required": ["start", "end_exclusive"],
+            "properties": {
+              "start": {"type": "integer", "minimum": 0},
+              "end_exclusive": {"type": "integer", "minimum": 1}
+            },
+            "additionalProperties": false
+          },
+          "text": {"type": "string", "minLength": 1, "maxLength": 10000}
+        },
+        "additionalProperties": false
+      }
+    },
+    "plan_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "additionalProperties": false
+}

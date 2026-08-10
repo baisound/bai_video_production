@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.13.0] - 2026-08-10
+
+- Added the TASK-006 transcript and subtitle foundation with provider-neutral ASR contracts and checksummed canonical Manifests.
+- Added exact cut-aware subtitle mapping through TASK-022 Timeline placements, including deterministic splitting and retiming across kept source ranges.
+- Added NTSC-safe SRT rendering using rational frame conversion with floor-start/ceil-end boundaries and normalized multiline text.
+- Added packaged JSON Schemas and regression fixtures for validation, overlap rejection, cut removal, split cues, empty plans and deterministic hashes.
+
 ## [0.12.2] - 2026-08-10
 
 - Linked the Catalog and Secure credentials projections explicitly: enabled credential-required routes appear in the active key list, while other routes do not.

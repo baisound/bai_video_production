@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-004_COMPLETED`
+`TASK-022_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
 
 ## Purpose
 
@@ -88,13 +88,13 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Task: `NONE`
+- Active Task: `TASK-022 — Timeline Mapping Service`
 - TASK-004: `COMPLETED`
-- Package: `0.4.10`
+- Package: `0.5.0`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
-- Next Consumer Task: `NONE AUTHORIZED`; editing-first recommendation after TASK-004 is TASK-022 unless Owner reprioritizes
+- Current Consumer Task: `TASK-022 OWNER_AUTHORIZED / IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

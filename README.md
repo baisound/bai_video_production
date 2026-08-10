@@ -7,8 +7,9 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - Product design baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Consumer TASK: `NONE`
+- Active Consumer TASK: `TASK-022 — Timeline Mapping Service`
 - TASK-004 stage: `COMPLETED` / package `0.4.10`
+- TASK-022 stage: `IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION` / package `0.5.0`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -96,3 +97,7 @@ Final verification: `110 / 110` tests PASS, compileall PASS, wheel build PASS an
 TASK-004 package `0.4.10` implements exact rational timebase/VFR inspection, CFR proxy + 48 kHz analysis-audio normalization, shared derived-Asset publication, local ComfyUI image/video adapters, Character Identity, MiniMax H3 Production Brief/SingleFrame/Spectrum/Foley contracts, and an external Audacity/OpenVINO boundary for Noise Suppression and verified-runtime 2-stem Music Separation; 4-stem fails closed until a scriptable mode is exposed. Third-party runtimes/models/custom nodes are not bundled or automatically installed.
 
 Package 0.4.9 completed the target-Windows behavioral run. Package 0.4.10 then corrected the native-Windows binary-flag test and extended-length path containment boundary. Final native-Windows verification passed `255 / 255` tests and compileall; TASK-004 is complete.
+
+## TASK-022 Timeline Mapping Service
+
+Package 0.5.0 adds exact source/normalized Asset range to Timeline frame mapping. It uses rational arithmetic, end-exclusive ranges, FLOOR starts, CEIL ends, explicit gaps and playback-rate rationals; it rejects ambiguous normalization bindings, invalid ranges, duplicate placements and overlaps. The deterministic schema-validated Plan is shared by existing-video editing and TASK-027 new-video creation. Native-Windows full regression remains before formal completion.

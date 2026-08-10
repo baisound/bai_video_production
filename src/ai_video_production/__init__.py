@@ -28,6 +28,7 @@ from .comfyui import (
 from .derived_assets import DerivedAssetPublisher, DerivedAssetSpec
 from .normalization import MediaNormalizationService, NormalizationProfile, NormalizationRequest, NormalizationResult
 from .timebase import FFprobeTimingProbe, FrameRate, FrameRounding, TimingInspection, TimingKind
+from .timeline_mapping import AffineTimeMap, EditSegment, TimelineMappingPlan, TimelineMappingService, TimelinePlacement
 from .errors import ProductError, ProductErrorCategory
 from .ids import IdKind, generate_id, validate_id, validate_project_id, validate_schema_id
 from .h3_acceleration import H3AccelerationContract, H3AccelerationMode, SPECTRUM_CLASS_TYPE
@@ -49,7 +50,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.4.10"
+__version__ = "0.5.0"
 
 __all__ = [
     "ActorKind", "ApprovedSegment", "AssetIngestRequest", "AssetIngestResult", "AssetIngestService",
@@ -70,6 +71,7 @@ __all__ = [
     "LocalVideoGenerationService", "VideoGenerationMode",
     "DerivedAssetPublisher", "DerivedAssetSpec", "MediaNormalizationService", "NormalizationProfile",
     "NormalizationRequest", "NormalizationResult", "FFprobeTimingProbe", "FrameRate", "FrameRounding",
+    "AffineTimeMap", "EditSegment", "TimelineMappingPlan", "TimelineMappingService", "TimelinePlacement",
     "TimingInspection", "TimingKind",
     "H3AccelerationContract", "H3AccelerationMode", "SPECTRUM_CLASS_TYPE",
     "H3FoleyDurationTier", "H3FoleyMode", "H3FoleyRequest", "H3FoleyResult", "H3FoleyService",

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/timeline-mapping-plan.schema.json",
+  "type": "object",
+  "required": ["plan_version", "timeline_rate", "timeline_origin_frame", "timeline_end_frame", "duration_frames", "placements", "plan_sha256"],
+  "properties": {
+    "plan_version": {"const": "1.0.0"},
+    "timeline_rate": {
+      "type": "object",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": {"type": "integer", "minimum": 1},
+        "denominator": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "timeline_origin_frame": {"type": "integer", "minimum": 0},
+    "timeline_end_frame": {"type": "integer", "minimum": 0},
+    "duration_frames": {"type": "integer", "minimum": 0},
+    "placements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["placement_id", "source_asset_id", "mapped_asset_id", "source_range_us", "mapped_range_us", "timeline_range_frames", "playback_rate"],
+        "properties": {
+          "placement_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "source_asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+          "mapped_asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+          "source_range_us": {"$ref": "#/$defs/rangeUs"},
+          "mapped_range_us": {"$ref": "#/$defs/rangeUs"},
+          "timeline_range_frames": {"$ref": "#/$defs/rangeFrames"},
+          "playback_rate": {"$ref": "#/$defs/rational"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "plan_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "rangeUs": {
+      "type": "object",
+      "required": ["start", "end_exclusive"],
+      "properties": {
+        "start": {"type": "integer", "minimum": 0},
+        "end_exclusive": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "rangeFrames": {
+      "type": "object",
+      "required": ["start", "end_exclusive"],
+      "properties": {
+        "start": {"type": "integer", "minimum": 0},
+        "end_exclusive": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "rational": {
+      "type": "object",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": {"type": "integer", "minimum": 1},
+        "denominator": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

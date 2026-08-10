@@ -4,12 +4,12 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-004_COMPLETED`
+- Project Status: `TASK-022_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
 - Last Completed Task: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Consumer Task: `NONE`
+- Active Consumer Task: `TASK-022 — Timeline Mapping Service`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.4.10`
+- Package: `0.5.0`
 - Next Consumer Task: `NONE AUTHORIZED`
 
 ## TASK-004 implemented scope
@@ -67,6 +67,8 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 ## Roadmap
 
 Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4. Owner-directed editing-first priority remains in force. TASK-004 moved local image/video/audio generation foundations forward while preserving TASK-022/010/026 ownership of exact Timeline placement.
+
+TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 
 ## Safety boundaries
 

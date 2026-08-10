@@ -19,3 +19,9 @@ The production transport accepts only the three compiled HTTPS origins, bounds r
 ElevenLabs supports `AUDIO/TTS`, `AUDIO/SFX` and `MUSIC/MUSIC_GENERATION` through exact configured model and voice IDs. Binary output is bounded and returned for the canonical Asset publication layer; it is not silently written to arbitrary paths. SunoAPI submits `MUSIC/MUSIC_GENERATION` as an external asynchronous task and returns a normalized provider task ID for later callback/poll reconciliation. Callback origins must be HTTPS.
 
 External media calls require `authorization://...` rights approval in addition to credentials. Automated tests use injected transports and cannot reach a paid endpoint. Provider catalog status is an explicit contract: `IMPLEMENTED`, `LOCAL_RUNTIME` or `PLANNED_ADAPTER`.
+
+## Capability-first correction
+
+Provider family is an authentication/API grouping, not a purpose classification. The exact model descriptor owns supported capabilities and workloads. A Google model may be configured for planning, image or video; an OpenAI model may be configured for text, image, video or audio; another family follows the same rule. Availability requires all four conditions: the route declares the capability, the model catalog confirms it, an adapter binding exists for `(provider family, capability)`, and runtime/credential availability passes.
+
+The generic request/result envelope is media-neutral and rejects embedded credentials. Adapter output must match the selected route, model, workload and capability or the registry raises a data-integrity error. Existing planning text execution remains compatible through `TextCapabilityAdapter` while future media adapters use the same registry.

@@ -203,7 +203,7 @@ class ProviderIntegrationStatus(str, Enum):
 @dataclass(frozen=True, slots=True)
 class ProviderCatalogEntry:
     family: ProviderFamily
-    workloads: tuple[AiWorkload, ...]
+    adapter_workloads: tuple[AiWorkload, ...]
     capabilities: tuple[str, ...]
     status: ProviderIntegrationStatus
 

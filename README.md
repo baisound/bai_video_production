@@ -10,7 +10,7 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - Active Consumer TASK: `TASK-028 — AI Connection Provider / Model Routing`
 - TASK-004 stage: `COMPLETED` / package `0.4.10`
 - TASK-022 stage: `COMPLETED` / package `0.5.0` / native Windows `263 passed`
-- TASK-028 stage: `EXTERNAL_MEDIA_SLICE_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION` / package `0.6.2`
+- TASK-028 stage: `CAPABILITY_REGISTRY_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION` / package `0.6.3`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -108,3 +108,5 @@ Package 0.5.0 adds exact source/normalized Asset range to Timeline frame mapping
 Package 0.6.0 added unified routing for planning, video, image, audio and music and passed 273/273 on native Windows. Package 0.6.1 adds non-billable-by-default OpenAI Responses, Anthropic Messages and Google Gemini Interactions planning adapters, runtime-only credential resolution, bounded allowlisted transport, normalized responses and route diagnostics. The GUI settings surface remains the next UI slice.
 
 Package 0.6.2 adds ElevenLabs TTS, sound-effect and music generation and SunoAPI asynchronous music submission. It also exposes Runway, Luma, Stability AI, Replicate, fal.ai, MiniMax and Kling as explicitly planned provider entries so GUI and future adapters share one capability catalog without claiming unfinished integrations.
+
+Package 0.6.3 removes provider-to-purpose locking. Exact models declare their supported workloads and capabilities, and a generic capability registry dispatches `(provider, capability)` adapters. OpenAI, Anthropic, Google or any other provider can therefore be used for image, video, audio or music when the selected model and installed adapter support it.

@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-028_EXTERNAL_MEDIA_SLICE_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
+`TASK-028_CAPABILITY_REGISTRY_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
 
 ## Purpose
 
@@ -90,12 +90,12 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
 - Active Task: `TASK-028 — AI Connection Provider / Model Routing`
 - TASK-004: `COMPLETED`
-- Package: `0.6.2`
+- Package: `0.6.3`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
-- AI routing: package 0.6.0 native-Windows `273 / 273 PASS`; TASK-028 package 0.6.2 adds planning and ElevenLabs/SunoAPI media execution; GUI settings and remaining catalog adapters are subsequent slices
+- AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

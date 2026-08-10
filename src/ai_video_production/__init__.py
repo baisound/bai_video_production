@@ -30,6 +30,10 @@ from .external_media_providers import (
     ProviderCatalogEntry, ProviderIntegrationStatus, SunoApiMusicAdapter,
     SunoMusicRequest, UrllibBinaryTransport, builtin_media_provider_catalog,
 )
+from .capability_execution import (
+    CapabilityExecutionRegistry, CapabilityExecutionRequest, CapabilityExecutionResult,
+    ModelCapabilityCatalog, ModelCapabilityDescriptor, TextCapabilityAdapter,
+)
 from .checkpoint import CheckpointRecord, ResumeContext, assert_resume_compatible
 
 from .audacity_openvino import AudioAiOperation, AudioAiRequest, AudioAiResult, AudacityOpenVinoService, SeparationMode
@@ -65,7 +69,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
@@ -77,6 +81,8 @@ __all__ = [
     "ElevenLabsSoundEffectRequest", "ElevenLabsTtsRequest", "ExternalMediaJob",
     "ProviderCatalogEntry", "ProviderIntegrationStatus", "SunoApiMusicAdapter",
     "SunoMusicRequest", "UrllibBinaryTransport", "builtin_media_provider_catalog",
+    "CapabilityExecutionRegistry", "CapabilityExecutionRequest", "CapabilityExecutionResult",
+    "ModelCapabilityCatalog", "ModelCapabilityDescriptor", "TextCapabilityAdapter",
     "ActorKind", "ApprovedSegment", "AssetIngestRequest", "AssetIngestResult", "AssetIngestService",
     "AssetRecord", "AssetType", "AudioRightsStatus", "CapabilityStatus", "CheckpointRecord",
     "FFprobeMediaProbe", "IdKind", "JobStateService", "LogicalPathResolver", "ManifestEnvelope",

@@ -36,6 +36,15 @@ Consumer Project Repository root. Machine-specific absolute paths are not canoni
 - BAI OS Core / shared Roles / OS-owned Tasks / Registry are not copied into this repository
 - BAI Development OS is a development-time governance/tooling foundation only. It is not a Product runtime dependency.
 
+### Ownership Boundary
+
+Canonical invariant: `OWNERSHIP_NOT_PATH_BASED`
+
+- `docs/ai-team/` というパス名だけでBAI Development OS所有とは判断しない。OwnershipはRepositoryと文書責務で判断する。
+- このBAI Video Production repository内の `PROJECT.md`、`docs/ai-team/**`、Product Task / Design / Evidence、`src/**`、`tests/**` はProduct-ownedであり、Product実装結果と同期して必要に応じて更新する。
+- BAI Development OS repository側のRegistry、OS Core、shared Roles、OS-owned Tasks、OS-owned Evidence等はOS-ownedであり、Consumer ProjectのProduct変更として勝手に編集・複製しない。
+- BAI Development OS CoreをこのProduct repositoryへ丸ごとコピーしてOwnership境界を曖昧にしない。
+
 ## Non-Negotiable Product Goal — Standalone Application
 
 Canonical invariant: `STANDALONE_APPLICATION_REQUIRED`

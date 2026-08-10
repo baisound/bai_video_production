@@ -1,12 +1,14 @@
 # TASK-030 — OSS Public Repository Readiness
 
 - Status: `IMPLEMENTED_AWAITING_GITHUB_PUBLICATION_AND_CI`
-- Package: `0.6.4`
+- Package: `0.6.5`
 - Scope: public documentation, governance, community health, CI/security automation, packaging metadata, structural regression tests
 
 ## Outcome
 
 The repository now has a truthful public entry point, MIT license, contribution and conduct rules, vulnerability reporting policy, governance/support/release records, third-party notices, citation metadata, GitHub issue/PR templates, cross-platform CI, dependency auditing, secret scanning and dependency update automation.
+
+Package 0.6.5 corrects the canonical hosted repository URL to `https://github.com/baisound/bai_video_production` across badges, package metadata, citation and community links, and adds a regression test for that identity.
 
 The README describes the intended public value: reducing the technical and financial barrier to safe video production while retaining human control, provider choice, rights/provenance and reproducibility. It explicitly labels this as an Alpha-stage objective rather than claiming demonstrated adoption.
 

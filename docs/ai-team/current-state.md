@@ -9,7 +9,7 @@
 - Active Consumer Task: `TASK-030 — OSS Public Repository Readiness`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.6.4`
+- Package: `0.6.5`
 - Next Consumer Task: `TASK-028 provider adapter and GUI settings slices after publication verification`
 
 ## TASK-004 implemented scope

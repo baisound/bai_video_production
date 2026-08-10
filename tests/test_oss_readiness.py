@@ -22,6 +22,14 @@ def test_package_and_citation_versions_match() -> None:
     assert f'version: "{ai_video_production.__version__}"' in citation
 
 
+def test_public_metadata_uses_canonical_repository_url() -> None:
+    canonical = "https://github.com/baisound/bai_video_production"
+    files = ["README.md", "pyproject.toml", "CITATION.cff", ".github/ISSUE_TEMPLATE/config.yml"]
+    combined = "\n".join((ROOT / path).read_text(encoding="utf-8") for path in files)
+    assert canonical in combined
+    assert "https://github.com/baisound/ai-video-production" not in combined
+
+
 def test_license_and_project_metadata_are_public_ready() -> None:
     license_text = (ROOT / "LICENSE.md").read_text(encoding="utf-8")
     project = (ROOT / "pyproject.toml").read_text(encoding="utf-8")

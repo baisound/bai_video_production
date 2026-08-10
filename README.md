@@ -1,7 +1,7 @@
 # BAI Video Production
 
-[![CI](https://github.com/baisound/ai-video-production/actions/workflows/ci.yml/badge.svg)](https://github.com/baisound/ai-video-production/actions/workflows/ci.yml)
-[![Security](https://github.com/baisound/ai-video-production/actions/workflows/security.yml/badge.svg)](https://github.com/baisound/ai-video-production/actions/workflows/security.yml)
+[![CI](https://github.com/baisound/bai_video_production/actions/workflows/ci.yml/badge.svg)](https://github.com/baisound/bai_video_production/actions/workflows/ci.yml)
+[![Security](https://github.com/baisound/bai_video_production/actions/workflows/security.yml/badge.svg)](https://github.com/baisound/bai_video_production/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/)
 
@@ -78,7 +78,7 @@ Provider Catalogへの掲載は、Adapter実装済みを意味しません。実
 ## Installation
 
 ```bash
-git clone https://github.com/baisound/ai-video-production.git
+git clone https://github.com/baisound/bai_video_production.git
 cd ai-video-production
 python -m venv .venv
 ```

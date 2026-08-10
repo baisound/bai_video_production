@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-video-production"
-version = "0.6.4"
+version = "0.6.5"
 description = "Open, provider-neutral orchestration for safe and reproducible AI video production"
 readme = "README.md"
 license = { file = "LICENSE.md" }
@@ -25,10 +25,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/baisound/ai-video-production"
-Repository = "https://github.com/baisound/ai-video-production"
-Issues = "https://github.com/baisound/ai-video-production/issues"
-Changelog = "https://github.com/baisound/ai-video-production/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/baisound/bai_video_production"
+Repository = "https://github.com/baisound/bai_video_production"
+Issues = "https://github.com/baisound/bai_video_production/issues"
+Changelog = "https://github.com/baisound/bai_video_production/blob/main/CHANGELOG.md"
 
 [project.scripts]
 ai-video-resolve-probe = "ai_video_production.resolve_probe_cli:main"

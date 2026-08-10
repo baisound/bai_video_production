@@ -12,7 +12,7 @@
 | TASK-027 | AI Video Creation Studio / New Production Orchestrator | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | GUI intent → AI proposal/revision → GO → generation/orchestration → replaceable Asset slots → Resolve assembly |
 | TASK-028 | AI Connection Provider / Model Routing | CAPABILITY_REGISTRY_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 | 0.6.2 external media 293/293 PASS; 0.6.3 removes provider-purpose locking and adds exact model capability catalog plus generic execution registry; 305-test Windows gate pending |
 | TASK-029 | Human Edit Learning / Federated Knowledge Evolution | PROPOSED | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Human action Evidence → hypothesis/multi-metric evaluation → Owner-local learning; opt-in anonymized cloud aggregation; signed Git-versioned Knowledge Packs |
-| TASK-030 | OSS Public Repository Readiness | IMPLEMENTED_AWAITING_GITHUB_PUBLICATION_AND_CI | OWNER_DIRECTED_IMPLEMENTATION | DEV-2 | 0.6.4 public README/license/community health, CI/security automation, packaging metadata and impact-evidence plan |
+| TASK-030 | OSS Public Repository Readiness | IMPLEMENTED_AWAITING_GITHUB_PUBLICATION_AND_CI | OWNER_DIRECTED_IMPLEMENTATION | DEV-2 | 0.6.4 OSS baseline; 0.6.5 canonical `baisound/bai_video_production` URL corrective; first push/CI pending |
 
 ## Roadmap authority
 

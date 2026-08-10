@@ -6,6 +6,11 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.6.5] - 2026-08-10
+
+- Corrected every public repository URL to `baisound/bai_video_production`.
+- Added a regression check that prevents the former repository URL from returning.
+
 ## [0.6.4] - 2026-08-10
 
 - Added OSS public documentation, MIT license, governance, security and contribution policies.

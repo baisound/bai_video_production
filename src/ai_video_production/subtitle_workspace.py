@@ -133,6 +133,49 @@ class SubtitleWorkspace:
         values = list(self.cues); values.insert(index, cue)
         return self._next(values)
 
+    def insert_relative(self, cue_id: str | None, position: str, text: str = "新しい字幕") -> "SubtitleWorkspace":
+        """Insert a cue strictly inside the requested visible gap.
+
+        UI insertion deliberately keeps a one-millisecond margin from both
+        neighboring subtitle boundaries.  For example, a gap bounded by
+        ``...300`` and ``...600`` becomes ``...301`` through ``...599``.
+        This makes the meaning of "before" and "after" visible and avoids
+        reusing a neighboring cue's timestamp in hand-authored SRT.
+        """
+        if position == "append":
+            if cue_id is not None:
+                raise ValueError("append does not accept cue_id")
+            if not self.cues:
+                return self.insert(0, 0, 1000, text)
+            start_ms = self.cues[-1].end_ms + 1
+            return self.insert(len(self.cues), start_ms, start_ms + 1000, text)
+
+        if position not in {"before", "after"}:
+            raise ValueError("insert position is invalid")
+        if not cue_id:
+            raise ValueError("cue_id is required")
+
+        try:
+            cue_index = next(i for i, cue in enumerate(self.cues) if cue.cue_id == cue_id)
+        except StopIteration as exc:
+            raise ValueError("cue_id was not found") from exc
+
+        index = cue_index if position == "before" else cue_index + 1
+        left_boundary = self.cues[index - 1].end_ms if index else -1
+        right_boundary = self.cues[index].start_ms if index < len(self.cues) else None
+
+        if right_boundary is None:
+            start_ms = left_boundary + 1
+            return self.insert(index, start_ms, start_ms + 1000, text)
+
+        start_ms = max(0, left_boundary + 1)
+        end_ms = right_boundary - 1
+        if end_ms <= start_ms:
+            raise ValueError(
+                "挿入できる空き時間がありません。前後字幕の間に2msを超える空きを作ってください。"
+            )
+        return self.insert(index, start_ms, end_ms, text)
+
     def update(self, cue_id: str, *, start_ms: int, end_ms: int, text: str,
                approved: bool = False) -> "SubtitleWorkspace":
         values = list(self.cues)

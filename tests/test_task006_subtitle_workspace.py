@@ -179,3 +179,78 @@ def test_loopback_dialog_endpoint_requires_csrf_and_returns_selected_path(tmp_pa
         server.shutdown()
         server.server_close()
         thread.join(timeout=3)
+
+
+def test_relative_insert_uses_strict_millisecond_gap_between_neighbors() -> None:
+    workspace = SubtitleWorkspace.from_narration((
+        NarrationCue(0, 300, "前"),
+        NarrationCue(600, 900, "後"),
+    ))
+
+    inserted = workspace.insert_relative(workspace.cues[0].cue_id, "after")
+
+    assert len(inserted.cues) == 3
+    assert (inserted.cues[1].start_ms, inserted.cues[1].end_ms) == (301, 599)
+    assert inserted.cues[1].text == "新しい字幕"
+    assert inserted.cues[2].text == "後"
+
+
+def test_relative_insert_before_and_append_are_visibly_ordered() -> None:
+    workspace = SubtitleWorkspace.from_narration((
+        NarrationCue(300, 600, "基準"),
+    ))
+
+    before = workspace.insert_relative(workspace.cues[0].cue_id, "before", "前追加")
+    assert [(cue.start_ms, cue.end_ms, cue.text) for cue in before.cues] == [
+        (0, 299, "前追加"),
+        (300, 600, "基準"),
+    ]
+
+    appended = before.insert_relative(None, "append", "末尾追加")
+    assert (appended.cues[-1].start_ms, appended.cues[-1].end_ms) == (601, 1601)
+    assert appended.cues[-1].text == "末尾追加"
+
+
+def test_relative_insert_rejects_gap_without_strict_room() -> None:
+    workspace = SubtitleWorkspace.from_narration((
+        NarrationCue(0, 300, "前"),
+        NarrationCue(302, 600, "後"),
+    ))
+    with pytest.raises(ValueError, match="挿入できる空き時間"):
+        workspace.insert_relative(workspace.cues[0].cue_id, "after")
+
+
+def test_web_service_relative_insert_contract_and_export_evidence(tmp_path: Path) -> None:
+    target = tmp_path / "exported.srt"
+    service = SubtitleWorkspaceWebService(tmp_path / "workspace.json")
+    result = service.apply({"revision": 0, "operation": "insert", "index": 0,
+                            "start_ms": 0, "end_ms": 300, "text": "前"})
+    result = service.apply({"revision": result["revision"], "operation": "insert", "index": 1,
+                            "start_ms": 600, "end_ms": 900, "text": "後"})
+    result = service.apply({"revision": result["revision"], "operation": "insert_relative",
+                            "cue_id": result["cues"][0]["cue_id"], "position": "after",
+                            "text": "間"})
+    assert (result["cues"][1]["start_ms"], result["cues"][1]["end_ms"]) == (301, 599)
+
+    exported = service.apply({"revision": result["revision"], "operation": "export_srt",
+                              "path": str(target)})
+    assert exported["exported_path"] == str(target.resolve())
+    assert exported["exported_bytes"] == target.stat().st_size
+    assert exported["exported_bytes"] > 0
+
+
+def test_workspace_html_exposes_prominent_status_and_server_disconnect_guidance(tmp_path: Path) -> None:
+    service = SubtitleWorkspaceWebService(tmp_path / "workspace.json", file_dialog=_FakeDialog(None, None))
+    server, thread, url = launch_server(service, port=0)
+    try:
+        html = request.urlopen(url, timeout=3).read().decode("utf-8")
+        assert 'id="msg" class="notice" role="status" aria-live="polite"' in html
+        assert "SRT書き出し成功" in html
+        assert "exported_path" in html and "exported_bytes" in html
+        assert "ローカルサーバーに接続できません" in html
+        assert "insert_relative" in html
+        assert "insertionRange" not in html
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=3)

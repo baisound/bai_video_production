@@ -21,6 +21,58 @@ class NativeFileDialogUnavailable(RuntimeError):
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
+_OWNER_BOOTSTRAP = r"""
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+
+public sealed class BaiForegroundOwner : IWin32Window
+{
+    public IntPtr Handle { get; private set; }
+    public BaiForegroundOwner(IntPtr handle) { Handle = handle; }
+}
+
+public static class BaiUser32
+{
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+}
+'@
+
+function Show-BaiDialog([System.Windows.Forms.FileDialog]$Dialog) {
+    # The HTTP request is triggered by a browser click. Capture the foreground
+    # window at dialog-launch time so the native picker is owned by the window
+    # the operator is actually using, including multi-monitor setups.
+    $foreground = [BaiUser32]::GetForegroundWindow()
+    if ($foreground -ne [IntPtr]::Zero) {
+        $owner = [BaiForegroundOwner]::new($foreground)
+        return $Dialog.ShowDialog($owner)
+    }
+
+    # Defensive fallback for rare cases where Windows reports no foreground
+    # window. A temporary top-most owner keeps the picker visible instead of
+    # silently opening behind a fullscreen application.
+    $fallback = New-Object System.Windows.Forms.Form
+    $fallback.ShowInTaskbar = $false
+    $fallback.TopMost = $true
+    $fallback.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+    $fallback.Size = New-Object System.Drawing.Size(1, 1)
+    $fallback.Opacity = 0
+    try {
+        $fallback.Show()
+        $fallback.Activate()
+        return $Dialog.ShowDialog($fallback)
+    }
+    finally {
+        $fallback.Close()
+        $fallback.Dispose()
+    }
+}
+"""
+
 
 @dataclass(slots=True)
 class WindowsNativeFileDialog:
@@ -63,9 +115,9 @@ class WindowsNativeFileDialog:
 
     def choose_open_srt(self) -> str | None:
         return self._run(
-            r"""
+            _OWNER_BOOTSTRAP
+            + r"""
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Windows.Forms
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding = $utf8
 $dialog = New-Object System.Windows.Forms.OpenFileDialog
@@ -74,7 +126,8 @@ $dialog.Filter = 'SRT subtitle (*.srt)|*.srt|All files (*.*)|*.*'
 $dialog.Multiselect = $false
 $dialog.CheckFileExists = $true
 $dialog.CheckPathExists = $true
-if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+$dialog.RestoreDirectory = $true
+if ((Show-BaiDialog $dialog) -eq [System.Windows.Forms.DialogResult]::OK) {
     [Console]::Out.Write($dialog.FileName)
 }
 """
@@ -82,9 +135,9 @@ if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
 
     def choose_save_srt(self) -> str | None:
         return self._run(
-            r"""
+            _OWNER_BOOTSTRAP
+            + r"""
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Windows.Forms
 $utf8 = New-Object System.Text.UTF8Encoding($false)
 [Console]::OutputEncoding = $utf8
 $dialog = New-Object System.Windows.Forms.SaveFileDialog
@@ -94,7 +147,8 @@ $dialog.DefaultExt = 'srt'
 $dialog.AddExtension = $true
 $dialog.OverwritePrompt = $true
 $dialog.CheckPathExists = $true
-if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+$dialog.RestoreDirectory = $true
+if ((Show-BaiDialog $dialog) -eq [System.Windows.Forms.DialogResult]::OK) {
     [Console]::Out.Write($dialog.FileName)
 }
 """

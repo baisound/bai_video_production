@@ -31,6 +31,9 @@ def test_native_dialog_uses_fixed_encoded_powershell_script() -> None:
     script = base64.b64decode(args[5]).decode("utf-16le")
     assert "OpenFileDialog" in script
     assert "CheckFileExists = $true" in script
+    assert "GetForegroundWindow" in script
+    assert "ShowDialog($owner)" in script
+    assert "$fallback.TopMost = $true" in script
     assert "C:\\work\\字幕.srt" not in script
 
 

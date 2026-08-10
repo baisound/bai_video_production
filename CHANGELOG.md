@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.16.3] - 2026-08-11
+
+- Corrected Subtitle Workspace relative insertion so a cue placed between neighboring subtitles uses a strict 1 ms inner margin (for example `...300` / `...600` becomes `...301`–`...599`).
+- Added prominent import/export/action feedback; successful SRT export now reports its resolved destination path and byte count.
+- Added explicit local-server disconnect feedback so stale browser pages no longer make controls appear silently dead.
+- Changed Windows Open/Save dialog launch to use the foreground window as the native owner with a top-most fallback for multi-monitor/fullscreen workflows.
+
 ## [0.16.2] - 2026-08-11
 
 - Added Windows-native Open/Save dialogs to the Subtitle Workspace so operators can choose an SRT file and destination without typing filesystem paths.

@@ -5,7 +5,7 @@
 - Corrective package: `0.15.1`
 - Review Workspace package: `0.16.0`
 - Windows test-fixture corrective package: `0.16.1`
-- Windows file-dialog UX corrective candidate: `0.16.2` (native verification pending)
+- Windows interaction corrective candidate: `0.16.3` (native verification pending)
 - Authorization: Owner-directed editing-first continuation
 - Dependencies: TASK-003 Asset identity, TASK-004 normalized media, TASK-022 Timeline Mapping
 
@@ -18,3 +18,5 @@ Package `0.15.1` corrects non-overlapping SRT rendering. Package `0.16.0` adds S
 Package `0.16.1` changes only the cross-platform SRT test fixture. Python text-mode output translated embedded CRLF into CRCRLF on Windows, so the fixture now writes explicit UTF-8 BOM bytes. No production parser behavior changed.
 
 Candidate package `0.16.2` corrects a usability defect discovered before broader Windows acceptance: SRT import/export no longer requires manual path typing. Explicit operator clicks can open Windows-native Open/Save dialogs through the loopback application; direct path entry remains available for advanced operation. Existing workspace replacement still requires an explicit confirmation in the browser. The dialog path does not upload media or authorize AI/provider execution.
+
+Candidate package `0.16.3` folds the first Windows acceptance feedback back into Slice C. Native Open/Save dialogs are owned by the foreground Windows window with a top-most fallback, relative insert operations are computed in the backend with a strict 1 ms margin from neighboring cue boundaries, export responses include the resolved path and byte count for visible success Evidence, and network failures are surfaced as an explicit local-server-disconnected status instead of appearing as dead controls.

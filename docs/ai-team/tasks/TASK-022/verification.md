@@ -1,7 +1,14 @@
 # TASK-022 — Verification
 
 - Package: `0.5.0`
-- Status: `LOCAL_TARGETED_VERIFIED / NATIVE_WINDOWS_FULL_REGRESSION_PENDING`
+- Status: `COMPLETED / NATIVE_WINDOWS_FULL_REGRESSION_PASS`
+
+## Owner native-Windows result — 2026-08-10
+
+- package version: `0.5.0`
+- pytest: `263 passed in 28.98s`
+- compileall: PASS
+- decision: native-Windows regression Gate PASS; TASK-022 completed
 
 ## Completed checks
 
@@ -15,4 +22,4 @@
 
 ## Native Windows gate
 
-Run the complete suite after installing package 0.5.0. Expected test count is `263`. TASK-022 remains incomplete until that run and compileall pass.
+Completed on the Owner machine: `263 / 263 PASS` and compileall PASS.

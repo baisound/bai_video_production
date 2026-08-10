@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/ai-connection-profile.schema.json",
+  "type": "object",
+  "required": ["schema_version", "profile_id", "profile_version", "default_mode", "workload_modes", "routes", "profile_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "profile_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "profile_version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "default_mode": {"$ref": "#/$defs/mode"},
+    "workload_modes": {
+      "type": "object",
+      "propertyNames": {"enum": ["PLANNING", "VIDEO", "IMAGE", "AUDIO", "MUSIC"]},
+      "additionalProperties": {"$ref": "#/$defs/mode"}
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["route_id", "workload", "provider_family", "provider_id", "model_id", "cost_class", "priority", "reasoning_effort", "credential_ref", "endpoint_ref", "capabilities", "settings", "enabled"],
+        "properties": {
+          "route_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "workload": {"enum": ["PLANNING", "VIDEO", "IMAGE", "AUDIO", "MUSIC"]},
+          "provider_family": {"enum": ["OPENAI", "ANTHROPIC", "GOOGLE", "COMFYUI", "AUDACITY_OPENVINO", "LOCAL_OPEN_SOURCE", "NON_AI_LIBRARY", "OTHER"]},
+          "provider_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "model_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "cost_class": {"enum": ["CLOUD_PAID_AI", "CLOUD_FREE_TIER_AI", "LOCAL_FREE_AI", "LOCAL_LICENSED_AI", "NON_AI_FREE"]},
+          "priority": {"type": "integer", "minimum": 0, "maximum": 10000},
+          "reasoning_effort": {"enum": ["none", "low", "medium", "high", "xhigh", "max"]},
+          "credential_ref": {"type": ["string", "null"]},
+          "endpoint_ref": {"type": ["string", "null"]},
+          "capabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}},
+          "settings": {"type": "object"},
+          "enabled": {"type": "boolean"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "profile_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "mode": {"enum": ["AI", "FREE", "AUTO", "OFFLINE_ONLY", "DISABLED"]}
+  },
+  "additionalProperties": false
+}

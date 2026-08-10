@@ -176,6 +176,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 
 ### Parallel Product Route — 新規動画の一気通貫制作
 
+- TASK-028: 企画・動画・画像・音声・音楽ごとのAI/free/offline方針と、OpenAI/Anthropic/Google/local/otherの具体的Provider・Model・reasoning設定を統一するConnection Provider基盤
 - TASK-027 Slice A: GUIのNew Videoフォーム、AI制作設計提案、修正・比較、Storyboard、Cost/Rights Preflight、明示的`GO`承認
 - TASK-027 Slice B: TASK-004/013を使う画像・動画素材生成、ユーザー素材の採用、Asset Slot単位の差し替えと影響範囲限定再生成
 - TASK-027 Slice C: TASK-013/014/026を使うSE・BGM・ナレーション生成と配置

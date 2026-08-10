@@ -7,9 +7,10 @@ BAI Development OS **Consumer Project Mode** 上で開発する `ai-video-produc
 - Product design baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - BAI Development OS baseline: package `1.0.0` / Architecture `Ver.2.27 CURRENT_CANONICAL`
 - Last completed Consumer TASK: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Consumer TASK: `TASK-022 — Timeline Mapping Service`
+- Active Consumer TASK: `TASK-028 — AI Connection Provider / Model Routing`
 - TASK-004 stage: `COMPLETED` / package `0.4.10`
-- TASK-022 stage: `IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION` / package `0.5.0`
+- TASK-022 stage: `COMPLETED` / package `0.5.0` / native Windows `263 passed`
+- TASK-028 stage: `ROUTING_CORE_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION` / package `0.6.0`
 - TASK-004 governance: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - BAI Development OS Core: external / not copied into this repository
 - DistributedOS: disabled
@@ -100,4 +101,8 @@ Package 0.4.9 completed the target-Windows behavioral run. Package 0.4.10 then c
 
 ## TASK-022 Timeline Mapping Service
 
-Package 0.5.0 adds exact source/normalized Asset range to Timeline frame mapping. It uses rational arithmetic, end-exclusive ranges, FLOOR starts, CEIL ends, explicit gaps and playback-rate rationals; it rejects ambiguous normalization bindings, invalid ranges, duplicate placements and overlaps. The deterministic schema-validated Plan is shared by existing-video editing and TASK-027 new-video creation. Native-Windows full regression remains before formal completion.
+Package 0.5.0 adds exact source/normalized Asset range to Timeline frame mapping. It uses rational arithmetic, end-exclusive ranges, FLOOR starts, CEIL ends, explicit gaps and playback-rate rationals; it rejects ambiguous normalization bindings, invalid ranges, duplicate placements and overlaps. The deterministic schema-validated Plan is shared by existing-video editing and TASK-027 new-video creation. Native-Windows verification passed `263 / 263`; TASK-022 is complete.
+
+## TASK-028 AI Connection Provider / Model Routing
+
+Package 0.6.0 adds a unified settings and routing core for planning, video, image, audio and music. Each workload can select AI, free, automatic, offline-only or disabled policy and then bind exact provider/model/reasoning settings. Resolution honors cost/locality, availability, credentials, capabilities and priority. Secrets are never embedded in profiles. Provider HTTP adapters and the GUI settings surface remain subsequent slices.

@@ -1,0 +1,14 @@
+# TASK-028 Verification
+
+Local structural verification covers compilation, schema equality and resolver behavior. Native Windows release gate:
+
+```powershell
+python -m pip install -e ".[dev]"
+python -c "import ai_video_production; print(ai_video_production.__version__)"
+python -m pytest -q
+python -m compileall -q src tests
+```
+
+Expected package version: `0.6.0`. Expected current suite: `273 passed`.
+
+This is a repository regression test and does not create a behavior Evidence directory.

@@ -1,6 +1,6 @@
 # TASK-022 — Timeline Mapping Service
 
-- Status: `IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
+- Status: `COMPLETED`
 - Authorization: `OWNER_AUTHORIZED_IMPLEMENTATION — 2026-08-10`
 - Package: `0.5.0`
 - Governance: `DEV-4 TIMELINE INTEGRITY`

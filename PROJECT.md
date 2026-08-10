@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK-022_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
+`TASK-028_ROUTING_CORE_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
 
 ## Purpose
 
@@ -88,13 +88,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed: `TASK-004 — Media Normalization + Local Visual/Audio AI Runtime Foundation`
-- Active Task: `TASK-022 — Timeline Mapping Service`
+- Active Task: `TASK-028 — AI Connection Provider / Model Routing`
 - TASK-004: `COMPLETED`
-- Package: `0.5.0`
+- Package: `0.6.0`
 - Local verification: `250 / 250 PASS`, compileall PASS; capability Evidence accepted; Windows timestamp, binary-I/O and ffprobe discovery correctives covered
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4
-- Current Consumer Task: `TASK-022 OWNER_AUTHORIZED / IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`
+- TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
+- AI routing: `TASK-028 OWNER_AUTHORIZED / ROUTING_CORE_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION`; provider adapters and GUI settings remain subsequent slices
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

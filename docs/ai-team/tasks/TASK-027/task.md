@@ -70,6 +70,7 @@ Every scene element uses a stable semantic slot such as `SCENE-03/HERO_VIDEO`, `
 ## Orchestration
 
 - TASK-004 supplies local image/video/audio runtime adapters, Character Identity and structured H3 briefs.
+- TASK-028 supplies the per-workload AI/free/offline and exact provider/model routing policy used by proposal and generation adapters.
 - TASK-013 owns creative/provider orchestration for generated image/video/SE/BGM Assets.
 - TASK-014 owns narration/TTS and consent/voice contracts.
 - TASK-022 owns exact source/Asset-to-Timeline mapping.

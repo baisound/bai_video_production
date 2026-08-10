@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "profile_id": "creator-example",
+  "profile_version": "1.0.0",
+  "default_mode": "AUTO",
+  "workload_modes": {
+    "AUDIO": "FREE",
+    "IMAGE": "FREE",
+    "MUSIC": "FREE",
+    "PLANNING": "AI",
+    "VIDEO": "FREE"
+  },
+  "routes": [
+    {"route_id":"planning-openai","workload":"PLANNING","provider_family":"OPENAI","provider_id":"openai","model_id":"gpt-5-sol","cost_class":"CLOUD_PAID_AI","priority":10,"reasoning_effort":"medium","credential_ref":"credential://openai/default","endpoint_ref":null,"capabilities":["PROPOSAL","SCRIPT"],"settings":{},"enabled":true},
+    {"route_id":"planning-claude","workload":"PLANNING","provider_family":"ANTHROPIC","provider_id":"anthropic","model_id":"claude-configured-model","cost_class":"CLOUD_PAID_AI","priority":20,"reasoning_effort":"medium","credential_ref":"credential://anthropic/default","endpoint_ref":null,"capabilities":["PROPOSAL","SCRIPT"],"settings":{},"enabled":true},
+    {"route_id":"planning-gemini","workload":"PLANNING","provider_family":"GOOGLE","provider_id":"google","model_id":"gemini-configured-model","cost_class":"CLOUD_FREE_TIER_AI","priority":30,"reasoning_effort":"medium","credential_ref":"credential://google/default","endpoint_ref":null,"capabilities":["PROPOSAL","SCRIPT"],"settings":{},"enabled":true},
+    {"route_id":"image-local","workload":"IMAGE","provider_family":"COMFYUI","provider_id":"comfyui","model_id":"configured-image-workflow","cost_class":"LOCAL_FREE_AI","priority":10,"reasoning_effort":"none","credential_ref":null,"endpoint_ref":"endpoint://comfyui/local","capabilities":["TEXT_TO_IMAGE"],"settings":{},"enabled":true},
+    {"route_id":"video-local","workload":"VIDEO","provider_family":"COMFYUI","provider_id":"comfyui","model_id":"configured-video-workflow","cost_class":"LOCAL_FREE_AI","priority":10,"reasoning_effort":"none","credential_ref":null,"endpoint_ref":"endpoint://comfyui/local","capabilities":["IMAGE_TO_VIDEO"],"settings":{},"enabled":true},
+    {"route_id":"audio-local","workload":"AUDIO","provider_family":"AUDACITY_OPENVINO","provider_id":"audacity-openvino","model_id":"configured-audio-workflow","cost_class":"LOCAL_FREE_AI","priority":10,"reasoning_effort":"none","credential_ref":null,"endpoint_ref":"endpoint://audacity/local","capabilities":["DENOISE"],"settings":{},"enabled":true},
+    {"route_id":"music-library","workload":"MUSIC","provider_family":"NON_AI_LIBRARY","provider_id":"local-library","model_id":"royalty-cleared-library","cost_class":"NON_AI_FREE","priority":10,"reasoning_effort":"none","credential_ref":null,"endpoint_ref":"endpoint://library/local","capabilities":["BGM"],"settings":{},"enabled":true}
+  ],
+  "profile_sha256": "sha256:01adda9afc6566cd8ac4f02c917ec6d55f62d27acd151b64acb85cf598aefda5"
+}

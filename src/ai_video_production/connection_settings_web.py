@@ -24,6 +24,7 @@ from .credential_vault import CredentialVault, WindowsCredentialManagerStore
 
 
 MAX_REQUEST_BYTES = 64 * 1024
+PRODUCT_VERSION = "0.15.0"
 
 
 _HTML = r"""<!doctype html>
@@ -70,7 +71,7 @@ _HTML = r"""<!doctype html>
     <div class="actions"><button id="catalog-save" type="button">候補を保存 / Save candidate</button><button id="catalog-new" class="secondary" type="button">新規入力 / New</button><span id="catalog-message" role="status"></span></div>
     <div id="catalog-list" class="catalog-list"></div>
   </details>
-  <footer>Local-only screen — BAI Video Production <span id="revision"></span></footer>
+  <footer>Local-only screen — BAI Video Production v__PRODUCT_VERSION__ — <span id="revision"></span></footer>
 </main>
 <script nonce="__NONCE__">const CSRF=__CSRF_JSON__;
 const cards=document.getElementById('cards'), save=document.getElementById('save'), message=document.getElementById('message'),catMessage=document.getElementById('catalog-message'),credentialMessage=document.getElementById('credential-message');let form;
@@ -304,7 +305,9 @@ def launch_server(
                 return
             path = urlsplit(self.path).path
             if path == "/":
-                html = _HTML.replace("__NONCE__", csrf).replace("__CSRF_JSON__", json.dumps(csrf))
+                html = (_HTML.replace("__NONCE__", csrf)
+                        .replace("__CSRF_JSON__", json.dumps(csrf))
+                        .replace("__PRODUCT_VERSION__", PRODUCT_VERSION))
                 data = html.encode("utf-8")
                 self._headers(200, "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(data)))

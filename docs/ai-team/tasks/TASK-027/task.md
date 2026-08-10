@@ -1,6 +1,6 @@
 # TASK-027 — AI Video Creation Studio / New Production Orchestrator
 
-- Status: `PROPOSED / NOT AUTHORIZED`
+- Status: `SLICE_A1_PRODUCTION_BLUEPRINT_FOUNDATION_IMPLEMENTED`
 - Governance candidate: `DEV-4 PRODUCT ORCHESTRATION CRITICAL`
 - Product route: `NEW_VIDEO_CREATION`
 
@@ -138,4 +138,4 @@ Reusable channel/series templates, multi-format variants, learned proposal defau
 - Slice D requires TASK-022 and TASK-010.
 - Full Production readiness also requires TASK-011/012 and the applicable TASK-020 resource controls.
 
-TASK-027 is proposed by Owner direction but is not implementation-authorized by this document alone.
+Owner supplied real production design evidence and explicitly authorized continued detailed design and development. Slice A1 is implemented in package `0.15.0`; later external generation and Resolve mutation remain separately gated by `GO` and their dependency Tasks.

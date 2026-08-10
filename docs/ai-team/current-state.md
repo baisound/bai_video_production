@@ -4,12 +4,12 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-006_SLICE_A_TRANSCRIPT_SRT_FOUNDATION_IMPLEMENTED`
+- Project Status: `TASK-006_SLICE_B_FASTER_WHISPER_LOCAL_ASR_IMPLEMENTED`
 - Last Completed Task: `TASK-022 — Timeline Mapping Service`
 - Active Consumer Task: `TASK-006 — ASR / Transcript / Subtitle`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.13.0`
+- Package: `0.15.0`
 - Next Consumer Task: `TASK-023 FasterWhisper Provider / TASK-006 Slice B (target 2026-08-17)`
 
 ## TASK-004 implemented scope
@@ -48,6 +48,8 @@
 ## Current verification
 
 - TASK-006 Slice A package `0.13.0`: Transcript/Subtitle schemas, cut-aware exact mapping and deterministic NTSC SRT tests PASS
+- TASK-006 Slice B package `0.14.0`: optional FasterWhisper local ASR, explicit model-download gate, Transcript/SRT publication and text-free report tests PASS
+- TASK-027 Slice A1 package `0.15.0`: real-production-evidence-derived Production Blueprint, Scene Ledger, Reference Registry, source-priority and dense-text generation gates implemented
 - TASK-034 native Windows package `0.12.2`: Catalog/Credential lifecycle and per-row Password Manager behavior PASS
 - TASK-034 package `0.12.2`: Catalog lifecycle linkage, retained-key cleanup, OS vault, per-Route password-manager lookup and secret-exclusion tests PASS
 - TASK-033 native Windows: add `demo-video-route`, edit to `demo-model-v2`, disable and truthful adapter status display PASS

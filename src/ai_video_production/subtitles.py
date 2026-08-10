@@ -202,7 +202,12 @@ class SubtitlePlanningService:
                 end_frame = placement.timeline_start_frame + _ceil(
                     Fraction((end - placement.source_start_us) * timeline_duration, source_duration)
                 )
+                if cues:
+                    start_frame = max(start_frame, cues[-1].timeline_end_frame)
                 end_frame = max(start_frame + 1, end_frame)
+                if start_frame >= placement.timeline_end_frame:
+                    continue
+                end_frame = min(end_frame, placement.timeline_end_frame)
                 cues.append(SubtitleCue(
                     f"{placement.placement_id}-{segment.segment_id}",
                     segment.segment_id,

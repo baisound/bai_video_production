@@ -29,6 +29,19 @@
 7. 製品共通知識は複数Owner・複数案件で再現し、Reviewと署名を経てKnowledge Packとしてreleaseする。
 8. 新Packは段階適用し、品質低下時は以前のGit versionへrollbackする。
 
+## Real-production hypotheses registered for future evaluation
+
+Owner提供の11制作資料から、次を「正解」ではなく検証対象の初期仮説として登録する。
+
+- 実素材優先は、ブランド信頼性を上げつつ生成コストと再修正を減らす。
+- 密な日本語UIをLocked／Static／post-compositeにすると文字化け再生成率が下がる。
+- 仮ナレーション実尺からSRTと一本化WAVを作ると手動配置時間と同期ずれが減る。
+- Scene末尾HoldはScene間接続の不安定さと視認不足を減らす。
+- Full Mix／Stem候補を同条件で比較すると、単一手法固定より採用後の再修正が減る。
+- RAW／処理後の比較と複数再生環境評価は、音響処理の過剰適用を減らす。
+
+評価時は動画種別、文字密度、Provider、再生環境を条件として保持し、単一作品の成功だけでKnowledge Packへ昇格しない。
+
 ## Scoring model
 
 単一の総合点だけで自動採用しない。候補スコアは少なくとも、品質改善、再修正削減、時間短縮、QA適合、ユーザー採用、権利・安全、サンプル信頼度を別軸で保持する。Safety/Rights違反は加重点で相殺できないHard Gateとする。重みは動画種別とOwner Profileごとにversion管理する。

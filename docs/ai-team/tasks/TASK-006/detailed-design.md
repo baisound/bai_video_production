@@ -1,6 +1,6 @@
 # TASK-006 — Transcript and Subtitle Foundation Detailed Design
 
-- Package: `0.13.0`
+- Package: `0.14.0`
 - Implementation date: 2026-08-10
 - FasterWhisper Slice B target: 2026-08-17
 - Native sample transcription target: 2026-08-24
@@ -10,7 +10,41 @@
 
 ASRの出力を特定Provider固有JSONのまま扱わず、素材・言語・Model・区間・本文を持つ共通Transcriptへ変換できます。動画のCut後は、残った部分だけを正確なTimeline frameへ再配置し、標準SRTを同じ結果から何度でも生成できます。
 
-Slice Aだけでは音声認識を実行しません。実動画から字幕を作る操作はFasterWhisper接続後に提供します。
+Slice BではFasterWhisperを任意依存として接続し、実動画・音声からTranscriptとSRTをローカル生成できます。DaVinci Resolveへの配置はSlice Cで提供します。
+
+## Slice B local transcription
+
+```mermaid
+flowchart TD
+    I["Audio / video file"] --> F["FasterWhisper local ASR"]
+    F --> T["Private transcript.json"]
+    T --> P["Identity Subtitle Plan"]
+    P --> S["subtitles.srt"]
+    F --> R["Text-free report"]
+```
+
+- `faster-whisper`は`.[asr]`任意依存とし、通常インストールを重くしません。
+- 既定では`local_files_only=True`で、モデル未配置時に勝手にネットワーク取得しません。
+- `--allow-model-download`またはPowerShellの`-AllowModelDownload`がある場合だけ、選択モデルの取得を許可します。
+- 推論時の音声・Transcriptは外部へ送信しません。モデル取得許可は推論データ送信の許可ではありません。
+- Transcript本文は`transcript.json`と`subtitles.srt`だけに保存し、`transcription-report.json`には件数と実行条件のみを記録します。
+- 隣接区間はNTSC丸め後も重ならないよう、フレーム境界を単調化します。
+- 入力検証や依存関係エラーでは、空の成果物フォルダを残しません。
+
+### User commands
+
+```powershell
+python -m pip install -e ".[asr]"
+powershell -ExecutionPolicy Bypass -File .\tools\windows\run-task006-faster-whisper-transcription.ps1 `
+  -MediaPath ".\sample.mp4" `
+  -OutputDirectory ".\task006-transcription-output" `
+  -Model small `
+  -Language ja `
+  -Device cpu `
+  -AllowModelDownload
+```
+
+2回目以降、モデルがキャッシュ済みなら`-AllowModelDownload`を外して完全ローカルで実行できます。
 
 ## Data flow
 
@@ -27,7 +61,7 @@ flowchart TD
 
 | Contract | Purpose | Safety rule |
 |---|---|---|
-| `AsrRequest` | future Provider input boundary | Asset ID required; execution not implemented in Slice A |
+| `AsrRequest` | Provider input boundary | Asset ID and existing regular media file required |
 | `TranscriptSegment` | end-exclusive microsecond speech range | ordered, non-overlapping, no NUL, bounded text |
 | `TranscriptManifest` | Provider-neutral transcript source of truth | Provider/Model/language provenance and deterministic hash |
 | `SubtitleCue` | cut-adjusted Timeline range | at least one frame, ordered and non-overlapping |
@@ -59,8 +93,9 @@ sequenceDiagram
 
 - Transcript text can contain sensitive speech and must not be placed in public Evidence by default.
 - Provider secrets, environment variables and machine paths are absent from both schemas.
-- Slice A performs no subprocess, network, Provider, billing, model download or Resolve mutation.
-- A future Provider runner must use allowlisted Asset paths, bounded timeouts, model/license declaration and explicit local/cloud egress status.
+- Slice B performs local inference and no paid API or Resolve mutation.
+- Model download is denied by default and must be explicitly authorized; selected model licenses remain the user's review responsibility.
+- Native process cancellation and bounded worker isolation remain a follow-up hardening item before unattended batch execution.
 
 ## Acceptance gates
 
@@ -68,6 +103,6 @@ sequenceDiagram
 |---|---|---|
 | Canonical Transcript and Subtitle schemas | 2026-08-10 | schema/package/hash/validation tests |
 | Cut-aware exact mapper and SRT | 2026-08-10 | NTSC, removed range, split cue, multiline fixtures |
-| FasterWhisper local Provider | 2026-08-17 | pinned optional dependency, model/cache/license/admission contract |
-| Native sample transcription | 2026-08-24 | non-sensitive short media, Transcript, SRT and timing review |
+| FasterWhisper local Provider | 2026-08-10 | pinned optional dependency, model/cache/download admission contract |
+| Native Windows sample transcription | 2026-08-17 | non-sensitive short media, Transcript, SRT and timing review |
 | Resolve subtitle placement | 2026-08-31 | automation-owned track import/placement and idempotent rerun Evidence |

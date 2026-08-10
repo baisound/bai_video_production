@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/transcription-report.schema.json",
+  "title": "BAI Local Transcription Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version", "ok", "source_asset_id", "provider_id", "model_id",
+    "language", "segment_count", "subtitle_cue_count", "transcript_file",
+    "subtitle_file", "transcript_text_in_report", "network_used_for_inference",
+    "model_download_authorized"
+  ],
+  "properties": {
+    "report_version": {"const": "1.0.0"},
+    "ok": {"const": true},
+    "source_asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "provider_id": {"const": "faster-whisper"},
+    "model_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "language": {"type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"},
+    "segment_count": {"type": "integer", "minimum": 0},
+    "subtitle_cue_count": {"type": "integer", "minimum": 0},
+    "transcript_file": {"const": "transcript.json"},
+    "subtitle_file": {"const": "subtitles.srt"},
+    "transcript_text_in_report": {"const": false},
+    "network_used_for_inference": {"const": false},
+    "model_download_authorized": {"type": "boolean"}
+  }
+}

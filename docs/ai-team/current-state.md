@@ -4,13 +4,13 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK-031_OSS_ADOPTION_FOUNDATION_IMPLEMENTED_CONTINUOUS_EXECUTION`
+- Project Status: `TASK-032_AI_CONNECTION_SETTINGS_PREFLIGHT_IMPLEMENTED_UI_PENDING`
 - Last Completed Task: `TASK-022 — Timeline Mapping Service`
-- Active Consumer Task: `TASK-031 — OSS Adoption, Demonstration and Impact Evidence`
+- Active Consumer Task: `TASK-032 — AI Connection Settings UI Foundation`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.7.0`
-- Next Consumer Task: `TASK-028 provider adapter and GUI settings slices after hosted CI verification`
+- Package: `0.8.0`
+- Next Consumer Task: `TASK-032 settings persistence contract and GUI-neutral form schema (due 2026-08-17)`
 
 ## TASK-004 implemented scope
 

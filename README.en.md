@@ -52,6 +52,7 @@ This impact is an objective, not a claim of demonstrated scale. We intend to pub
 - ElevenLabs TTS, sound-effect, and music adapters
 - SunoAPI.org asynchronous music adapter
 - routing based on exact model capabilities rather than fixed provider purposes
+- a secret-free settings preflight API covering planning, video, image, audio, and music
 - execution boundaries that keep credentials out of profiles, manifests, and evidence
 
 See [PROJECT.md](PROJECT.md) and the [Canonical Roadmap](docs/roadmap/PROJECT-ROADMAP-CANONICAL.md) for detailed status.

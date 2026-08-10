@@ -6,6 +6,12 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.8.0] - 2026-08-10
+
+- Added a GUI-safe, secret-free AI Connection settings preflight across planning, video, image, audio, and music.
+- Reports selected exact model metadata, cost/locality class, credential readiness, disabled/blocked state, normalized errors, and a deterministic hash without executing a provider.
+- Added a dated detailed design for persistence, interactive settings UI, and low-literacy usability review.
+
 ## [0.7.0] - 2026-08-10
 
 - Added GitHub-rendered architecture and roadmap visuals plus a credential-free five-minute demo.

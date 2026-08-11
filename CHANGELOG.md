@@ -1,8 +1,10 @@
 # Changelog
 
-このProjectはSemantic Versioningを基本とします。詳細な変更履歴は注釈付きGit TagとCommit logを参照してください。
+??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+
+- Registered `BVP-KNOWLEDGE-REFIMG-001` and the future TASK-013 Scene-Compatible Reference / Shot Feasibility Gate detailed design; documentation only, no runtime behavior change.
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 

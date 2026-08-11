@@ -10,7 +10,7 @@
 | TASK-006 | ASR / Transcript / Subtitle | SLICE_D_RELEASED_V0.17.0 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Native FasterWhisper, Subtitle Workspace, resumable large-media transcription and canonical Resolve subtitle handoff released; actual Resolve mutation remains TASK-010 |
 | TASK-014 | Voice TTS / Owner Narration | DESIGN_RECORDED_ADAPTER_FOUNDATION_EXISTS | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Existing ElevenLabs Pro owner-trained voice; private Voice Profile; read-only ownership/capability probe; timed TTS and 48 kHz Asset flow planned; paid probe remains explicit |
 | TASK-023 | FasterWhisper Fast Local Provider | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Existing TASK-006 provider/cache/evidence capability materially overlaps this historical External-SKILL item; formal reconciliation remains separate |
-| TASK-024 | Silence / Filler / Disfluency Cut Candidate Worker | SLICE_A_RELEASE_CANDIDATE_VALIDATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.18.0 candidate validated on Windows: 433 pass + 1 intentional skip, real-WAV FFmpeg/CLI PASS, native GUI regression PASS; no auto cut |
+| TASK-024 | Silence / Filler / Disfluency Cut Candidate Worker | RELEASED_V0.18.0 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | v0.18.0 formal release complete: 433 pass + 1 intentional skip, real-WAV FFmpeg/CLI PASS, native GUI regression PASS; no auto cut |
 | TASK-025..026 | Remaining External-SKILL additions (collision-resolved) | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Premiere adapter and Audio Placement remain later work |
 | TASK-022 | Timeline Mapping Service | COMPLETED | COMPLETED_WITH_OWNER_VERIFICATION | DEV-4 | Package 0.5.0; exact affine/NTSC/end-exclusive mapping, speed/gap, deterministic Plan/schema; native Windows 263/263 PASS |
 | TASK-027 | AI Video Creation Studio / New Production Orchestrator | SLICE_A1_PRODUCTION_BLUEPRINT_FOUNDATION_IMPLEMENTED | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 candidate | 0.15.0 validated Scene Ledger, Reference Registry, real-first strategy and text-risk gates; GUI proposal/GO next |
@@ -30,3 +30,11 @@
 ## Route control
 
 TASK-004 is completed. Owner-directed continuation authorized TASK-027 through TASK-034 and the editing-first TASK-006 slices recorded above. Proposed later work remains unauthorized until Owner instruction; a configured credential or enabled AI proofreading setting never authorizes Provider execution, suggestion acceptance or GO.
+
+## Registered Future Design / Knowledge Intake
+
+| Knowledge / Design | Future Owner | Status | Contract |
+|---|---|---|---|
+| `BVP-KNOWLEDGE-REFIMG-001` Scene-Compatible Reference Image Rule | TASK-013 | DESIGN_REGISTERED / IMPLEMENTATION_NOT_AUTHORIZED | Character identity, Room master and Scene Shot composition remain separate reference roles; Shot Feasibility must PASS before Start/End generation; DIRECT_CONTINUATION reuses exact previous End Asset |
+
+This registration does not change editing-first execution order and does not reopen TASK-004.

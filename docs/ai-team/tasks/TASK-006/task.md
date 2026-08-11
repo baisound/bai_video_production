@@ -1,11 +1,12 @@
 # TASK-006 — ASR / Transcript / Subtitle
 
-- Status: `NATIVE_ASR_PASS / SUBTITLE_WORKSPACE_IMPLEMENTED / RESOLVE_PLACEMENT_PLANNED`
+- Status: `V0_16_4_RELEASED / SLICE_D_AUTHORIZED / DESIGN_NEXT`
 - Initial local-ASR package: `0.14.0`
 - Corrective package: `0.15.1`
 - Review Workspace package: `0.16.0`
 - Windows test-fixture corrective package: `0.16.1`
-- Windows interaction corrective candidate: `0.16.3` (native verification pending)
+- Windows interaction corrective release: `0.16.4` (native Windows acceptance PASS)
+- Next slice governance: `DEV-3` — resumable large-media state + downstream NLE handoff contract
 - Authorization: Owner-directed editing-first continuation
 - Dependencies: TASK-003 Asset identity, TASK-004 normalized media, TASK-022 Timeline Mapping
 
@@ -19,4 +20,6 @@ Package `0.16.1` changes only the cross-platform SRT test fixture. Python text-m
 
 Candidate package `0.16.2` corrects a usability defect discovered before broader Windows acceptance: SRT import/export no longer requires manual path typing. Explicit operator clicks can open Windows-native Open/Save dialogs through the loopback application; direct path entry remains available for advanced operation. Existing workspace replacement still requires an explicit confirmation in the browser. The dialog path does not upload media or authorize AI/provider execution.
 
-Candidate package `0.16.3` folds the first Windows acceptance feedback back into Slice C. Native Open/Save dialogs are owned by the foreground Windows window with a top-most fallback, relative insert operations are computed in the backend with a strict 1 ms margin from neighboring cue boundaries, export responses include the resolved path and byte count for visible success Evidence, and network failures are surfaced as an explicit local-server-disconnected status instead of appearing as dead controls.
+Package `0.16.4` completes the Windows interaction corrective. Native Open/Save dialogs, strict relative insertion timing, visible export Evidence, bounded native-dialog error handling, CLIXML suppression and local-server-disconnected feedback passed the formal release gates and native Windows acceptance.
+
+Slice D is the next authorized bounded continuation: resumable large-media chunk/checkpoint transcription plus a canonical Resolve subtitle-placement handoff. TASK-006 owns planning/publication only; actual DaVinci Resolve subtitle-track mutation remains TASK-010-owned.

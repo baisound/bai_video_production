@@ -4,14 +4,14 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TASK_006_SLICE_D_IMPLEMENTED_VALIDATION_PENDING`
-- Last Completed Task: `TASK-022 — Timeline Mapping Service`
-- Active Consumer Task: `TASK-006 — ASR / Transcript / Subtitle`
+- Project Status: `TASK_024_SLICE_A_RELEASE_CANDIDATE_VALIDATED`
+- Last Completed Task: `TASK-006 Slice D — Resumable ASR / Resolve Subtitle Handoff (v0.17.0)`
+- Active Consumer Task: `TASK-024 — Silence / Filler / Disfluency Cut Candidate Worker`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.16.4` (FORMAL RELEASE COMPLETE; PR #9 / merge `11b165a3fb9dfc800e73f33287c4b9830edd430a`)
-- Development Candidate: `0.17.0` (TASK-006 Slice D implemented; validation pending)
-- Next Consumer Task: `TASK-006 Slice D focused/full validation and release gates`
+- Package: `0.17.0` (FORMAL RELEASE COMPLETE; PR #12 / merge `edb12f1cfd6c6912c030f62e4c685801f7d15084`)
+- Development Candidate: `0.18.0` (TASK-024 Slice A Windows release-candidate validation PASS)
+- Next Consumer Task: `TASK-024 Slice A commit / PR / CI / merge / v0.18.0 tag`
 
 ## TASK-004 implemented scope
 
@@ -48,7 +48,8 @@
 
 ## Current verification
 
-- TASK-006 Slice D package `0.17.0` candidate: implementation present; focused/full regression pending. No Resolve mutation is implemented in TASK-006.
+- TASK-006 Slice D package `0.17.0`: formal release complete; Windows full regression `415 passed, 1 intentional skip`, compileall/diff-check/fsck PASS, GitHub Actions all green. No Resolve mutation is implemented in TASK-006.
+- TASK-024 Slice A package `0.18.0` candidate: Windows release-candidate validation PASS — `433 passed, 1 intentional skip`, compileall/diff-check/fsck PASS, real-WAV CLI/FFmpeg candidate generation PASS, Subtitle Workspace/Open-dialog/Cancel PASS, AI Connection Settings launch PASS. Formal release still requires protected-branch PR/CI/merge/tag.
 - TASK-006 v0.16.4 formal release: `402 / 402 PASS`; `compileall` PASS; `git diff --check` PASS; `git fsck --full` PASS; native Windows Subtitle Workspace/Open/Save validation PASS.
 - v0.17.0 development-governance baseline: BAI Development OS `1.0.0` / Architecture `Ver.2.28 CURRENT_CANONICAL`, Level A Governance Only, with no Product runtime dependency. Migration baseline is completed before TASK-006 Slice D feature code.
 - TASK-006 Windows interaction corrective `0.16.4`: native SRT dialog failure/CLIXML leakage corrected, strict relative insertion timing and visible export/server-disconnect feedback accepted on Windows
@@ -88,7 +89,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.4. Owner-directed editing-first priority remains in force. TASK-004 moved local image/video/audio generation foundations forward while preserving TASK-022/010/026 ownership of exact Timeline placement.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.6. Owner-directed editing-first priority remains in force. TASK-004 moved local image/video/audio generation foundations forward while preserving TASK-022/010/026 ownership of exact Timeline placement.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

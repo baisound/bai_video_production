@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.18.0] - 2026-08-12
+
+- Added TASK-024 review-only silence/filler/disfluency cut-candidate analysis on normalized PCM audio and optional canonical Transcript input.
+- Added fixed-argv FFmpeg `silencedetect`, transcript Keep Blocks, conservative filler-only and exact-adjacent-repeat candidates, and fail-closed overlap/integrity bounds.
+- Added deterministic text-free Cut Candidate Manifest/report with explicit TASK-007 planning ownership, TASK-010 execution ownership, and `auto_apply_authorized=false`.
+- Added `ai-video-cut-candidates`, canonical/package JSON Schema, user documentation, and focused privacy/integrity/CLI regression coverage.
+
 ## [0.17.0] - 2026-08-11
 
 - Added resumable chunk/checkpoint transcription for large media with bounded overlap, explicit resume/restart semantics, source/config/plan integrity checks, and private local work state.

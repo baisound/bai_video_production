@@ -1,0 +1,203 @@
+{
+  "$id": "https://github.com/baisound/bai_video_production/schemas/cut-candidate-manifest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "analysis_audio_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "analysis_sample_rate": {
+      "maximum": 192000,
+      "minimum": 8000,
+      "type": "integer"
+    },
+    "auto_apply_authorized": {
+      "const": false
+    },
+    "candidates": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "const": "REVIEW_ONLY"
+          },
+          "auto_apply_authorized": {
+            "const": false
+          },
+          "candidate_id": {
+            "pattern": "^cut-[0-9]{6}$",
+            "type": "string"
+          },
+          "evidence_codes": {
+            "items": {
+              "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+              "type": "string"
+            },
+            "maxItems": 16,
+            "minItems": 1,
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "SILENCE",
+              "FILLER",
+              "REPEATED_UTTERANCE"
+            ]
+          },
+          "range_us": {
+            "additionalProperties": false,
+            "properties": {
+              "end_exclusive": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "start": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "start",
+              "end_exclusive"
+            ],
+            "type": "object"
+          },
+          "source_segment_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+              "type": "string"
+            },
+            "maxItems": 16,
+            "type": "array"
+          },
+          "strength_score": {
+            "maximum": 100,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "candidate_id",
+          "kind",
+          "range_us",
+          "strength_score",
+          "evidence_codes",
+          "source_segment_ids",
+          "action",
+          "auto_apply_authorized"
+        ],
+        "type": "object"
+      },
+      "maxItems": 100000,
+      "type": "array"
+    },
+    "config_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "downstream_execution_owner": {
+      "const": "TASK-010"
+    },
+    "downstream_plan_owner": {
+      "const": "TASK-007"
+    },
+    "keep_blocks": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "keep_id": {
+            "pattern": "^keep-[0-9]{6}$",
+            "type": "string"
+          },
+          "range_us": {
+            "additionalProperties": false,
+            "properties": {
+              "end_exclusive": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "start": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "start",
+              "end_exclusive"
+            ],
+            "type": "object"
+          },
+          "reason": {
+            "const": "SPEECH_CONTENT"
+          },
+          "source_segment_ids": {
+            "items": {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$",
+              "type": "string"
+            },
+            "maxItems": 100000,
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "keep_id",
+          "range_us",
+          "reason",
+          "source_segment_ids"
+        ],
+        "type": "object"
+      },
+      "maxItems": 100000,
+      "type": "array"
+    },
+    "manifest_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "manifest_version": {
+      "const": "1.0.0"
+    },
+    "source_asset_id": {
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$",
+      "type": "string"
+    },
+    "source_duration_us": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "task_owner": {
+      "const": "TASK-024"
+    },
+    "transcript_manifest_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "transcript_text_in_manifest": {
+      "const": false
+    }
+  },
+  "required": [
+    "manifest_version",
+    "task_owner",
+    "downstream_plan_owner",
+    "downstream_execution_owner",
+    "source_asset_id",
+    "analysis_audio_sha256",
+    "analysis_sample_rate",
+    "source_duration_us",
+    "config_sha256",
+    "transcript_manifest_sha256",
+    "transcript_text_in_manifest",
+    "auto_apply_authorized",
+    "candidates",
+    "keep_blocks",
+    "manifest_sha256"
+  ],
+  "title": "TASK-024 Cut Candidate Manifest",
+  "type": "object"
+}

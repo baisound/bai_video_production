@@ -76,6 +76,11 @@ from .subtitle_workspace import (
 from .resolve_subtitle_handoff import (
     ResolveSubtitleHandoffService, ResolveSubtitlePlacement, ResolveSubtitlePlacementPlan,
 )
+from .cut_candidates import (
+    CutCandidate, CutCandidateAnalyzer, CutCandidateConfig, CutCandidateKind,
+    CutCandidateManifest, CutCandidatePublication, CutCandidatePublicationService,
+    FfmpegSilenceDetector, KeepBlock, SilenceRange, load_transcript_manifest,
+)
 from .production_blueprint import (
     AssetSourceStrategy, BlueprintReference, BlueprintScene, CameraMotion,
     GenerationRisk, ProductionBlueprint, ReferenceKind, ReferenceStatus,
@@ -102,7 +107,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.17.0"
+__version__ = "0.18.0"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
@@ -138,6 +143,9 @@ __all__ = [
     "NarrationCue", "SrtWorkspaceCodec", "SubtitleOrigin", "SubtitleReviewState",
     "SubtitleWorkspace", "SubtitleWorkspaceStore", "WorkspaceCue",
     "ResolveSubtitleHandoffService", "ResolveSubtitlePlacement", "ResolveSubtitlePlacementPlan",
+    "CutCandidate", "CutCandidateAnalyzer", "CutCandidateConfig", "CutCandidateKind",
+    "CutCandidateManifest", "CutCandidatePublication", "CutCandidatePublicationService",
+    "FfmpegSilenceDetector", "KeepBlock", "SilenceRange", "load_transcript_manifest",
     "AssetSourceStrategy", "BlueprintReference", "BlueprintScene", "CameraMotion",
     "GenerationRisk", "ProductionBlueprint", "ReferenceKind", "ReferenceStatus",
     "SceneAudioPlan",

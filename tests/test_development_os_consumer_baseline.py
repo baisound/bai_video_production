@@ -20,14 +20,32 @@ def test_development_os_adapter_is_governance_only_and_external() -> None:
     assert "bai-development-os" not in pyproject
 
 
-def test_product_canonical_docs_pin_v0164_and_architecture_228() -> None:
+def test_product_canonical_docs_keep_release_candidate_consistent_with_architecture_228() -> None:
+    import re
+
     project = (ROOT / "PROJECT.md").read_text(encoding="utf-8")
     current = (ROOT / "docs" / "ai-team" / "current-state.md").read_text(encoding="utf-8")
 
     assert "STANDALONE_APPLICATION_REQUIRED" in project
     assert "OWNERSHIP_NOT_PATH_BASED" in project
     assert "Architecture Ver.2.28" in project
-    assert "Package: `0.16.4`" in project
-    assert "Package: `0.16.4`" in current
-    assert "402 / 402 PASS" in current
-    assert "TASK-006 Slice D" in current
+
+    package_pattern = re.compile(r"- Package: `([0-9]+\.[0-9]+\.[0-9]+)`")
+    candidate_pattern = re.compile(r"- Development Candidate: `([0-9]+\.[0-9]+\.[0-9]+)`")
+
+    project_package = package_pattern.search(project)
+    current_package = package_pattern.search(current)
+    project_candidate = candidate_pattern.search(project)
+    current_candidate = candidate_pattern.search(current)
+
+    assert project_package is not None
+    assert current_package is not None
+    assert project_candidate is not None
+    assert current_candidate is not None
+
+    assert project_package.group(1) == current_package.group(1)
+    assert project_candidate.group(1) == current_candidate.group(1)
+
+    formal = tuple(int(part) for part in project_package.group(1).split("."))
+    candidate = tuple(int(part) for part in project_candidate.group(1).split("."))
+    assert candidate > formal

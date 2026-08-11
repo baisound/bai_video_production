@@ -8,7 +8,7 @@ import hashlib
 import importlib
 from pathlib import Path
 import re
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Mapping
 
 from .atomic import AtomicJsonWriter
 from .errors import ProductError, ProductErrorCategory
@@ -80,14 +80,11 @@ class FasterWhisperProvider:
             else f"local-model-{hashlib.sha256(config.model.encode('utf-8')).hexdigest()[:12]}"
         )
         self._model_factory = model_factory
+        self._loaded_model: Any | None = None
 
-    def transcribe(self, request: AsrRequest) -> TranscriptManifest:
-        source = Path(request.media_path).expanduser().resolve()
-        if not source.exists() or not source.is_file():
-            raise ProductError(
-                "ERR_ASR_MEDIA_NOT_FOUND", "Input media must be an existing regular file",
-                ProductErrorCategory.VALIDATION,
-            )
+    def _model(self) -> Any:
+        if self._loaded_model is not None:
+            return self._loaded_model
         factory = self._model_factory or _default_model_factory()
         kwargs: dict[str, Any] = {
             "device": self.config.device,
@@ -96,8 +93,18 @@ class FasterWhisperProvider:
         }
         if self.config.cache_directory is not None:
             kwargs["download_root"] = str(Path(self.config.cache_directory).expanduser().resolve())
+        self._loaded_model = factory(self.config.model, **kwargs)
+        return self._loaded_model
+
+    def transcribe(self, request: AsrRequest) -> TranscriptManifest:
+        source = Path(request.media_path).expanduser().resolve()
+        if not source.exists() or not source.is_file():
+            raise ProductError(
+                "ERR_ASR_MEDIA_NOT_FOUND", "Input media must be an existing regular file",
+                ProductErrorCategory.VALIDATION,
+            )
         try:
-            model = factory(self.config.model, **kwargs)
+            model = self._model()
             raw_segments, info = model.transcribe(
                 str(source), language=request.language, beam_size=self.config.beam_size,
                 vad_filter=self.config.vad_filter,
@@ -159,8 +166,25 @@ class LocalTranscriptionService:
         timeline_rate: FrameRate = FrameRate(30000, 1001),
     ) -> TranscriptionPublication:
         asset_id = source_asset_id or generate_id(IdKind.ASSET)
-        output = Path(output_directory).expanduser().resolve()
         transcript = provider.transcribe(AsrRequest(asset_id, str(media_path), language))
+        return LocalTranscriptionService.publish(
+            transcript,
+            output_directory,
+            timeline_rate=timeline_rate,
+            model_download_authorized=provider.config.allow_model_download,
+        )
+
+    @staticmethod
+    def publish(
+        transcript: TranscriptManifest,
+        output_directory: str | Path,
+        *,
+        timeline_rate: FrameRate = FrameRate(30000, 1001),
+        model_download_authorized: bool = False,
+        operational_metadata: Mapping[str, object] | None = None,
+    ) -> TranscriptionPublication:
+        asset_id = transcript.source_asset_id
+        output = Path(output_directory).expanduser().resolve()
         if transcript.segments:
             duration_us = max(item.end_us for item in transcript.segments)
             timeline = TimelineMappingService.build(
@@ -176,7 +200,7 @@ class LocalTranscriptionService:
         report_path = output / "transcription-report.json"
         AtomicJsonWriter.write(transcript_path, transcript.to_dict())
         LocalTranscriptionService._atomic_text(subtitle_path, SrtRenderer.render(plan))
-        report = {
+        report: dict[str, object] = {
             "report_version": "1.0.0",
             "ok": True,
             "source_asset_id": asset_id,
@@ -189,8 +213,26 @@ class LocalTranscriptionService:
             "subtitle_file": subtitle_path.name,
             "transcript_text_in_report": False,
             "network_used_for_inference": False,
-            "model_download_authorized": provider.config.allow_model_download,
+            "model_download_authorized": bool(model_download_authorized),
         }
+        if operational_metadata:
+            allowed = {"execution_mode", "chunk_count", "resumed_chunk_count"}
+            unknown = set(operational_metadata) - allowed
+            if unknown:
+                raise ValueError(f"unsupported operational metadata: {sorted(unknown)}")
+            mode = operational_metadata.get("execution_mode")
+            if mode is not None and (
+                not isinstance(mode, str)
+                or not re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", mode)
+            ):
+                raise ValueError("execution_mode is invalid")
+            for name in ("chunk_count", "resumed_chunk_count"):
+                value = operational_metadata.get(name)
+                if value is not None and (
+                    not isinstance(value, int) or isinstance(value, bool) or value < 0
+                ):
+                    raise ValueError(f"{name} must be a non-negative integer")
+            report.update(dict(operational_metadata))
         AtomicJsonWriter.write(report_path, report)
         return TranscriptionPublication(output, transcript_path, subtitle_path, report_path, transcript)
 

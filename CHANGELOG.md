@@ -6,6 +6,13 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.17.0] - 2026-08-11
+
+- Added resumable chunk/checkpoint transcription for large media with bounded overlap, explicit resume/restart semantics, source/config/plan integrity checks, and private local work state.
+- Reused one FasterWhisper model instance across chunk calls while preserving the existing one-shot transcription path and explicit model-download gate.
+- Added a deterministic, private Resolve subtitle-placement handoff plan with exact frame mapping, explicit timeline origin, approval readiness, collision fail-closed behavior, and TASK-010 execution ownership.
+- Added focused regression coverage for resume integrity, private reports/checkpoints, model reuse, and Resolve handoff determinism.
+
 ## [0.16.4] - 2026-08-11
 
 - Replaced the Windows native SRT dialog foreground-owner C# compilation path with a top-most cursor-monitor WinForms owner, avoiding the `System.Windows.Forms` `Add-Type -TypeDefinition` failure observed on native Windows.

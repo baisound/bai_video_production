@@ -24,3 +24,9 @@ jobs/
 
 # Local subtitle review workspace state; may contain user transcript text.
 /subtitle-workspace.json
+
+# Private resumable ASR work state; partials may contain transcript text.
+.bai-transcription-work/
+
+# Private Resolve subtitle-placement handoff; contains subtitle text.
+.bai-resolve-handoff/

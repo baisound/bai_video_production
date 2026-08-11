@@ -8,6 +8,7 @@ from pathlib import Path
 
 from .errors import ProductError
 from .faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService
+from .large_media_transcription import ChunkedTranscriptionConfig, ResumableTranscriptionService
 from .timebase import FrameRate
 
 
@@ -24,6 +25,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-vad", action="store_true")
     parser.add_argument("--allow-model-download", action="store_true", help="Authorize network model download when not cached")
     parser.add_argument("--cache-dir", type=Path)
+    parser.add_argument("--chunk-seconds", type=int, help="Enable resumable bounded large-media transcription")
+    parser.add_argument("--chunk-overlap-seconds", type=int, default=2)
+    parser.add_argument("--resume", action="store_true", help="Resume verified unfinished chunk state")
+    parser.add_argument("--restart", action="store_true", help="Explicitly discard unfinished chunk state")
+    parser.add_argument("--ffmpeg-executable", default="ffmpeg")
+    parser.add_argument("--ffprobe-executable", default="ffprobe")
     parser.add_argument("--timeline-rate", default="30000/1001")
     return parser
 
@@ -37,13 +44,37 @@ def main(argv: list[str] | None = None) -> int:
             allow_model_download=args.allow_model_download,
             cache_directory=str(args.cache_dir) if args.cache_dir else None,
         )
-        result = LocalTranscriptionService.run(
-            args.media, args.output_dir,
-            provider=FasterWhisperProvider(config),
-            source_asset_id=args.source_asset_id,
-            language=args.language,
-            timeline_rate=FrameRate.parse(args.timeline_rate),
-        )
+        provider = FasterWhisperProvider(config)
+        timeline_rate = FrameRate.parse(args.timeline_rate)
+        if args.chunk_seconds is None:
+            if args.resume or args.restart:
+                raise ValueError("--resume/--restart require --chunk-seconds")
+            result = LocalTranscriptionService.run(
+                args.media,
+                args.output_dir,
+                provider=provider,
+                source_asset_id=args.source_asset_id,
+                language=args.language,
+                timeline_rate=timeline_rate,
+            )
+        else:
+            chunk_config = ChunkedTranscriptionConfig(
+                chunk_seconds=args.chunk_seconds,
+                overlap_seconds=args.chunk_overlap_seconds,
+                ffmpeg_executable=args.ffmpeg_executable,
+                ffprobe_executable=args.ffprobe_executable,
+            )
+            result = ResumableTranscriptionService.run(
+                args.media,
+                args.output_dir,
+                provider=provider,
+                config=chunk_config,
+                source_asset_id=args.source_asset_id,
+                language=args.language,
+                timeline_rate=timeline_rate,
+                resume=args.resume,
+                restart=args.restart,
+            )
         print(json.dumps({
             "ok": True,
             "output_directory": str(result.output_directory),

@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 
 import pytest
 
+import ai_video_production
 from ai_video_production import (
     AiConnectionProfile, AiWorkload, CostClass, ModelRoute, ProviderFamily,
     ReasoningEffort, SelectionMode,
@@ -103,7 +104,7 @@ def test_screen_is_local_bilingual_and_never_exposes_credential_reference(live_s
         assert response.headers["X-Frame-Options"] == "DENY"
         assert "default-src 'none'" in response.headers["Content-Security-Policy"]
     assert "AI Connection 設定" in html
-    assert "BAI Video Production v0.16.4 —" in html
+    assert f"BAI Video Production v{ai_video_production.__version__} —" in html
     assert "Saving here never starts paid APIs" in html
     form = _get_json(url + "api/form")
     serialized = json.dumps(form)

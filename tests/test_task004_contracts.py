@@ -53,9 +53,14 @@ def test_task004_packaged_schema_matches_canonical():
     assert canonical == packaged
 
 
-def test_package_version_is_063():
+def test_package_version_matches_pyproject():
+    import tomllib
     import ai_video_production
-    assert ai_video_production.__version__ == "0.16.4"
+
+    project = tomllib.loads(
+        (Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    assert ai_video_production.__version__ == project["project"]["version"]
 
 
 def test_task004_manifest_replay_repairs_missing_evidence_index_without_duplicate_jsonl(tmp_path):

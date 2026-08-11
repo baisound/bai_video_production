@@ -65,9 +65,16 @@ from .faster_whisper_asr import (
     FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService,
     TranscriptionPublication,
 )
+from .large_media_transcription import (
+    ChunkedTranscriptionConfig, FfmpegAudioChunkExtractor, ResumableTranscriptionService,
+    TranscriptionCheckpoint, TranscriptionChunk, build_chunk_plan,
+)
 from .subtitle_workspace import (
     NarrationCue, SrtWorkspaceCodec, SubtitleOrigin, SubtitleReviewState,
     SubtitleWorkspace, SubtitleWorkspaceStore, WorkspaceCue,
+)
+from .resolve_subtitle_handoff import (
+    ResolveSubtitleHandoffService, ResolveSubtitlePlacement, ResolveSubtitlePlacementPlan,
 )
 from .production_blueprint import (
     AssetSourceStrategy, BlueprintReference, BlueprintScene, CameraMotion,
@@ -95,7 +102,7 @@ from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
 
-__version__ = "0.16.4"
+__version__ = "0.17.0"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
@@ -126,8 +133,11 @@ __all__ = [
     "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment",
     "FasterWhisperConfig", "FasterWhisperProvider", "LocalTranscriptionService",
     "TranscriptionPublication",
+    "ChunkedTranscriptionConfig", "FfmpegAudioChunkExtractor", "ResumableTranscriptionService",
+    "TranscriptionCheckpoint", "TranscriptionChunk", "build_chunk_plan",
     "NarrationCue", "SrtWorkspaceCodec", "SubtitleOrigin", "SubtitleReviewState",
     "SubtitleWorkspace", "SubtitleWorkspaceStore", "WorkspaceCue",
+    "ResolveSubtitleHandoffService", "ResolveSubtitlePlacement", "ResolveSubtitlePlacementPlan",
     "AssetSourceStrategy", "BlueprintReference", "BlueprintScene", "CameraMotion",
     "GenerationRisk", "ProductionBlueprint", "ReferenceKind", "ReferenceStatus",
     "SceneAudioPlan",

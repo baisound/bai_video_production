@@ -21,3 +21,6 @@ jobs/
 !.env.example
 *.log
 /task*-live-evidence*/
+
+# Local subtitle review workspace state; may contain user transcript text.
+/subtitle-workspace.json

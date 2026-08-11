@@ -38,7 +38,7 @@ Consumer Project Repository root. Machine-specific absolute paths are not canoni
 
 ### Repository Ownership Boundary — Must Read
 
-Canonical invariant: `PROJECT_OS_OWNERSHIP_BOUNDARY`
+Canonical invariant: `OWNERSHIP_NOT_PATH_BASED`
 
 このRepository内のProduct固有ファイルはBAI Video Production自身が所有する。パス名に`ai-team`を含むことだけを理由にBAI Development OS所有と判断してはならない。変更可否はパス名ではなくOwnershipで判断する。
 

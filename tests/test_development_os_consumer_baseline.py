@@ -20,7 +20,7 @@ def test_development_os_adapter_is_governance_only_and_external() -> None:
     assert "bai-development-os" not in pyproject
 
 
-def test_product_canonical_docs_keep_release_candidate_consistent_with_architecture_228() -> None:
+def test_product_canonical_docs_keep_release_state_consistent_with_architecture_228() -> None:
     import re
 
     project = (ROOT / "PROJECT.md").read_text(encoding="utf-8")
@@ -31,7 +31,7 @@ def test_product_canonical_docs_keep_release_candidate_consistent_with_architect
     assert "Architecture Ver.2.28" in project
 
     package_pattern = re.compile(r"- Package: `([0-9]+\.[0-9]+\.[0-9]+)`")
-    candidate_pattern = re.compile(r"- Development Candidate: `([0-9]+\.[0-9]+\.[0-9]+)`")
+    candidate_pattern = re.compile(r"- Development Candidate: `([^`]+)`")
 
     project_package = package_pattern.search(project)
     current_package = package_pattern.search(current)
@@ -42,10 +42,14 @@ def test_product_canonical_docs_keep_release_candidate_consistent_with_architect
     assert current_package is not None
     assert project_candidate is not None
     assert current_candidate is not None
-
     assert project_package.group(1) == current_package.group(1)
     assert project_candidate.group(1) == current_candidate.group(1)
 
+    candidate = project_candidate.group(1)
+    if candidate == "NONE":
+        return
+
+    assert re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", candidate)
     formal = tuple(int(part) for part in project_package.group(1).split("."))
-    candidate = tuple(int(part) for part in project_candidate.group(1).split("."))
-    assert candidate > formal
+    candidate_version = tuple(int(part) for part in candidate.split("."))
+    assert candidate_version > formal

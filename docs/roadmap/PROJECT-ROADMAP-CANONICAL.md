@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.6
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.7
 
 - Project: `ai-video-production`
 - Date: 2026-08-12
@@ -30,7 +30,7 @@
   - local regression baseline `250/250 PASS`; ComfyUI + Audacity/OpenVINO capability Evidence accepted; final Windows behavioral Evidence passed Noise Suppression and verified-runtime 2-stem Music Separation with canonical derived Assets and committed Manifests
 - TASK-005,007以降の未着手TASK: **NOT_STARTED / NOT_AUTHORIZED**（個別にOwner認可する）
 - TASK-006 Slice D: **v0.17.0 RELEASED** — resumable large-media transcription + Resolve subtitle handoff
-- TASK-024 Slice A: **0.18.0 RELEASE CANDIDATE VALIDATED** — review-only silence/filler/disfluency Cut Candidate Worker; formal release requires PR/CI/merge/tag
+- TASK-024 Slice A: **v0.18.0 RELEASED** — review-only silence/filler/disfluency Cut Candidate Worker
 - TASK-004完了後の標準推奨次ルート: `TASK-022` を早期確立し、その後SRT/字幕・フィラー/無音Cut・SE/BGM/ナレーション生成配置をediting-firstで前倒し。Owner判断による再優先化を許容する
 
 ## 3. MVP定義
@@ -97,7 +97,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 021 | Integrated Dashboard / Operations | job/evidence/alerts/ops UI | Evidence contracts | DEV-3候補 | NOT STARTED |
 | 022 | Timeline Mapping Service | exact frame/time mapping, schema, golden fixtures | 001,003,004 | DEV-4 | IMPLEMENTED / WINDOWS REGRESSION PENDING |
 | 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | NOT STARTED |
-| 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | SLICE A RELEASE CANDIDATE VALIDATED |
+| 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4候補 | SLICE A1 PRODUCTION BLUEPRINT FOUNDATION IMPLEMENTED |
@@ -247,3 +247,37 @@ DBD/Multimodal/AI生成/縦動画がProfileで交換可能。
 - TASK依存変更は`docs/ai-team/task-index.md`と本書を同時更新する。
 - TASK開始はOwner指示を必要とし、ロードマップ掲載だけでは認可されない。
 - Ownerが編集系機能の前倒しを指定した場合は、依存関係・Safety Floor・先行contractを確認し、可能なら最小prerequisiteまたは部分sliceで前倒しする。前倒し不可の場合は理由と解除条件を開始前に明示する。
+
+## Ver.1.7 Addendum — Scene-Compatible Reference Design Knowledge
+
+### Decision
+
+`BVP-KNOWLEDGE-REFIMG-001` is registered as reusable Product design knowledge. Character identity and Room identity may both look correct while the requested shot remains physically contradictory, causing generative models to invent desks, move furniture or reinterpret subject placement.
+
+### Ownership
+
+- TASK-004 remains completed Runtime Foundation and is not reopened.
+- TASK-013 owns future `SHOT FEASIBILITY / SCENE-COMPATIBLE REFERENCE GATE` implementation and generation-request orchestration.
+- TASK-003 remains Asset/checksum/rights authority.
+- TASK-007 may provide content/Edit Plan context where creative selection is context-dependent.
+- Timeline mutation remains outside this design.
+
+### Required future TASK-013 scope
+
+1. Provider-neutral Scene Reference Metadata.
+2. Separate Character Identity, Room Master, Scene Shot Composition and Style Tone roles.
+3. Fail-closed Shot Feasibility assessment.
+4. Scene Asset Matrix lifecycle.
+5. Start Frame Gate before provider execution.
+6. End Frame only after Start approval.
+7. `DIRECT_CONTINUATION` exact previous-End Asset/checksum reuse.
+8. No editorial overlay text baked into generation assets.
+9. Structured/hash Evidence by default; no raw prompt body by default.
+10. Human-reviewed physical-feasibility floor until an automatic evaluator is separately proven.
+
+### Sequence impact
+
+No immediate execution-wave change. Editing-first remains prioritized. This addendum prevents the design from being lost before TASK-013 starts; it does not authorize TASK-013 implementation.
+
+Detailed design:
+`docs/ai-team/tasks/TASK-013/scene-compatible-reference-gate-detailed-design.md`

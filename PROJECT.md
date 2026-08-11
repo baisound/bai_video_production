@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK_024_SLICE_A_RELEASE_CANDIDATE_VALIDATED`
+`V0_18_0_RELEASED_SCENE_REFERENCE_DESIGN_REGISTERED`
 
 ## Purpose
 
@@ -109,14 +109,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed: `TASK-006 Slice D — Resumable ASR / Resolve Subtitle Handoff (v0.17.0)`
-- Active Task: `TASK-024 — Silence / Filler / Disfluency Cut Candidate Worker`
+- Last Completed: `TASK-024 Slice A — Review-only Cut Candidate Worker (v0.18.0)`
+- Active Task: `NONE — v0.18.0 released; next implementation task not yet activated`
 - TASK-004: `COMPLETED`
-- Package: `0.17.0` (formal public release; PR #12 / merge commit `edb12f1cfd6c6912c030f62e4c685801f7d15084`)
-- Development Candidate: `0.18.0` (TASK-024 Slice A Windows release-candidate validation PASS)
-- Current release verification: v0.18.0 candidate `433 passed, 1 intentional skip`; compileall PASS; `git diff --check` PASS; `git fsck --full` PASS; Windows real-WAV TASK-024 CLI/FFmpeg evidence PASS; Subtitle Workspace/Open-dialog/Cancel PASS; AI Connection Settings launch PASS
+- Package: `0.18.0` (formal public release; PR #13 / merge commit `d6e7ec080145d930a073c2120952546d4af5d7cf` / tag `v0.18.0`)
+- Development Candidate: `NONE`
+- Current release verification: v0.18.0 `433 passed, 1 intentional skip`; compileall/diff-check/fsck PASS; real-WAV TASK-024 CLI/FFmpeg PASS; Subtitle Workspace/Open-dialog/Cancel PASS; AI Connection Settings launch PASS; PR #13 CI green. PR #11 is post-release dependency maintenance and is not part of tag v0.18.0.
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.6
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.7
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -144,3 +144,10 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 Taskは、選択DEV Profileの要求、実装、必要Test、blocking finding解消、内部文書同期、Completion Evidenceが揃った場合のみ完了する。
 
 Local Test PASSやCapability PASSを、まだ未実施のBehavioral EvidenceまたはOwner Authorization for later TASKへ読み替えない。
+
+## Registered Product Design Knowledge
+
+- `BVP-KNOWLEDGE-REFIMG-001 — Scene-Compatible Reference Image Design Rule` is formally registered from the Product Promotion workflow.
+- Future implementation owner: `TASK-013`; registration does not authorize TASK-013 and does not reopen TASK-004.
+- Required future Gate: `SHOT FEASIBILITY / SCENE-COMPATIBLE REFERENCE` before generated Start/End Frame production.
+- `DIRECT_CONTINUATION` requires exact previous-End Asset reuse rather than perceptually similar regeneration.

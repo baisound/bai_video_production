@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK_006_SLICE_D_IMPLEMENTED_VALIDATION_PENDING`
+`TASK_024_SLICE_A_RELEASE_CANDIDATE_VALIDATED`
 
 ## Purpose
 
@@ -109,14 +109,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed: `TASK-022 — Timeline Mapping Service`
-- Active Task: `TASK-006 — ASR / Transcript / Subtitle`
+- Last Completed: `TASK-006 Slice D — Resumable ASR / Resolve Subtitle Handoff (v0.17.0)`
+- Active Task: `TASK-024 — Silence / Filler / Disfluency Cut Candidate Worker`
 - TASK-004: `COMPLETED`
-- Package: `0.16.4` (formal public release; PR #9 / merge commit `11b165a3fb9dfc800e73f33287c4b9830edd430a`)
-- Development Candidate: `0.17.0` (TASK-006 Slice D implemented; validation pending)
-- Current release verification: `402 / 402 PASS`, compileall PASS, `git diff --check` PASS, `git fsck --full` PASS; native Windows Subtitle Workspace/Open/Save validation PASS
+- Package: `0.17.0` (formal public release; PR #12 / merge commit `edb12f1cfd6c6912c030f62e4c685801f7d15084`)
+- Development Candidate: `0.18.0` (TASK-024 Slice A Windows release-candidate validation PASS)
+- Current release verification: v0.18.0 candidate `433 passed, 1 intentional skip`; compileall PASS; `git diff --check` PASS; `git fsck --full` PASS; Windows real-WAV TASK-024 CLI/FFmpeg evidence PASS; Subtitle Workspace/Open-dialog/Cancel PASS; AI Connection Settings launch PASS
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.5
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.6
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -134,7 +134,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Native Credential Evidence: package 0.12.2 Catalog linkage, retained-key cleanup and per-row Password Manager behavior accepted on Windows
 - Subtitle foundation: package 0.13.0 adds provider-neutral Transcript and Subtitle contracts, cut-aware exact frame mapping and deterministic SRT; real ASR and Resolve placement remain subsequent slices
 - Subtitle Workspace release: package 0.16.4 completes the v0.16.x review-workspace line including local FasterWhisper/Transcript/SRT flow, revisioned subtitle editing, Windows-native Open/Save interaction corrective and runtime workspace privacy hygiene
-- Current bounded Product development: TASK-006 Slice D candidate `0.17.0` implements large-media chunk/checkpoint transcription plus a canonical Resolve subtitle-placement handoff. Validation is pending; TASK-006 does not perform the actual Resolve write, which remains TASK-010 ownership.
+- TASK-006 Slice D: v0.17.0 formal release completed with large-media chunk/checkpoint transcription and canonical Resolve subtitle-placement handoff; actual Resolve write remains TASK-010 ownership.
+- Current bounded Product development: TASK-024 Slice A candidate `0.18.0` generates review-only silence/filler/exact-repeat Cut Candidates and protected Keep Blocks. It does not mutate media or Resolve; TASK-007 owns final Cut Plan and TASK-010 owns execution.
 - New-production route: `TASK-027 PROPOSED / NOT AUTHORIZED`; GUI intent → AI production proposal/revision → explicit GO → generated/supplied replaceable Asset slots → automated Resolve assembly
 - OS-internal TASK-016 remains unrelated and untouched.
 

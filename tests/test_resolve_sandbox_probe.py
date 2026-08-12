@@ -154,3 +154,51 @@ def test_sandbox_probe_stops_after_creation_if_created_project_identity_is_unver
             probe_assets_dir=tmp_path / 'assets',
         )
     assert exc.value.code == 'ERR_RESOLVE_SANDBOX_IDENTITY_UNVERIFIED'
+
+def test_sandbox_probe_resolves_relative_asset_paths_before_resolve_api_calls(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+    observed: dict[str, str] = {}
+
+    class AbsolutePathMediaPool(MediaPool):
+        def ImportMedia(self, paths):
+            assert paths
+            observed["import"] = paths[0]
+            assert Path(paths[0]).is_absolute()
+            return [object()]
+
+    class AbsolutePathProject(Project):
+        def __init__(self, name):
+            self.name = name
+            self.pool = AbsolutePathMediaPool()
+
+    class AbsolutePathProjectManager(ProjectManager):
+        def CreateProject(self, name):
+            self.current = AbsolutePathProject(name)
+            return self.current
+
+        def ExportProject(self, name, path):
+            observed["export"] = path
+            assert Path(path).is_absolute()
+            Path(path).write_bytes(b"fake-drp")
+            return True
+
+    class AbsolutePathResolve(Resolve):
+        def __init__(self):
+            self.pm = AbsolutePathProjectManager()
+
+    report = run_resolve_sandbox_probe(
+        AbsolutePathResolve(),
+        module_source_kind="TEST",
+        sandbox_project="BAI_CAPABILITY_PROBE_RELATIVE_PATH",
+        probe_assets_dir=Path("relative-probe-assets"),
+    )
+
+    rows = caps(report)
+
+    assert rows["project.snapshot"]["status"] == "SUPPORTED"
+    assert rows["media.import"]["status"] == "SUPPORTED"
+    assert Path(observed["export"]).is_absolute()
+    assert Path(observed["import"]).is_absolute()
+    assert (tmp_path / "relative-probe-assets" / "sandbox.drp").is_file()
+    assert (tmp_path / "relative-probe-assets" / "task002_probe.wav").is_file()

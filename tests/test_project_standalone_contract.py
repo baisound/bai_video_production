@@ -17,3 +17,24 @@ def test_project_defines_os_product_ownership_by_responsibility_not_path() -> No
     assert "`docs/ai-team/` というパス名だけでBAI Development OS所有とは判断しない" in project
     assert "Product-owned" in project
     assert "OS-owned" in project
+
+def test_project_requires_unified_desktop_application_contract() -> None:
+    project = (Path(__file__).resolve().parents[1] / "PROJECT.md").read_text(encoding="utf-8")
+
+    assert "UNIFIED_DESKTOP_APPLICATION_REQUIRED" in project
+    assert "SINGLE_USER_FACING_ENTRYPOINT_REQUIRED" in project
+    assert "CAPABILITY_UI_INTEGRATION_REQUIRED" in project
+    assert "BAI Video Production.exe" in project
+    assert "Unified Application Integration" in project
+    assert "BACKEND_CAPABILITY_ONLY" in project
+    assert "SHELL_INTEGRATED" in project
+    assert "NATIVE_VALIDATED" in project
+
+
+def test_project_does_not_treat_cli_or_localhost_ui_as_final_product_ux() -> None:
+    project = (Path(__file__).resolve().parents[1] / "PROJECT.md").read_text(encoding="utf-8")
+
+    assert "CLI / localhost Web UI" in project
+    assert "DEVELOPER_DIAGNOSTIC_INTERFACE" in project
+    assert "TRANSITIONAL_INTERNAL_UI" in project
+    assert "通常ユーザーにterminal" in project

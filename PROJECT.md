@@ -116,7 +116,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Development Candidate: `NONE`
 - Current release verification: v0.18.0 `433 passed, 1 intentional skip`; compileall/diff-check/fsck PASS; real-WAV TASK-024 CLI/FFmpeg PASS; Subtitle Workspace/Open-dialog/Cancel PASS; AI Connection Settings launch PASS; PR #13 CI green. PR #11 is post-release dependency maintenance and is not part of tag v0.18.0.
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.7
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.8
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -151,3 +151,35 @@ Local Test PASSやCapability PASSを、まだ未実施のBehavioral Evidenceま�
 - Future implementation owner: `TASK-013`; registration does not authorize TASK-013 and does not reopen TASK-004.
 - Required future Gate: `SHOT FEASIBILITY / SCENE-COMPATIBLE REFERENCE` before generated Start/End Frame production.
 - `DIRECT_CONTINUATION` requires exact previous-End Asset reuse rather than perceptually similar regeneration.
+
+## Non-Negotiable Product Goal — Unified Desktop Application
+
+Canonical invariants:
+
+- `UNIFIED_DESKTOP_APPLICATION_REQUIRED`
+- `SINGLE_USER_FACING_ENTRYPOINT_REQUIRED`
+- `CAPABILITY_UI_INTEGRATION_REQUIRED`
+
+BAI Video Production の最終Productは、機能ごとに別々のアプリ・CLI・localhost Web UIをユーザーが個別起動する集合体ではない。
+
+最終ユーザーは **BAI Video Production.exe** を1つのProduct entrypointとして起動し、Project / Media / Edit / Subtitle / Audio / Generative AI / Review / QA / Export / External NLE Integrationを同一Desktop Application Shellから横断して扱えること。
+
+内部Service、Worker、Provider、CLI、local HTTP service、WebView、GPU worker、adapter processは許可する。ただし通常ユーザーにterminal、localhost URL、PID、port、Python environment、worker lifecycleの手動管理を要求してはならない。
+
+CLI / localhost Web UI は `DEVELOPER_DIAGNOSTIC_INTERFACE` または `TRANSITIONAL_INTERNAL_UI` として残せるが、User-facing Capabilityの最終UXをそれだけで完了扱いしてはならない。
+
+User-facing / Operator-facing Taskの詳細設計には `Unified Application Integration` を必須とし、User Entry Point、Shell/Workspace Location、Project/Asset context、progress/success/failure、Open/Save、review/approval、worker lifecycle、recovery、external app interaction、native Windows acceptanceを定義する。
+
+Capability integration state:
+
+- `BACKEND_CAPABILITY_ONLY`
+- `INTEGRATION_DESIGNED`
+- `SHELL_INTEGRATED`
+- `NATIVE_VALIDATED`
+
+Backend capability completionとUnified Desktop UX completionを混同しない。
+
+Canonical details:
+
+- `docs/ai-team/architecture/PRODUCT-ARCH-001-unified-desktop-application.md`
+- `docs/ai-team/architecture/UNIFIED-APPLICATION-INTEGRATION-CONTRACT.md`

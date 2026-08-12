@@ -22,7 +22,6 @@ def test_native_case_matrix_covers_30_60_and_fractional_source_rates():
         "60/1",
         "30000/1001",
     ]
-    assert all(item.timeline_rate == FrameRate(30) for item in cases)
     assert len({item.asset_id for item in cases}) == len(cases)
 
 
@@ -33,7 +32,7 @@ def test_native_case_builds_approved_edit_and_deterministic_assembly():
         FrameRate(60),
     )
     edit = build_task010_edit_plan(case)
-    edit2, assembly = build_task010_assembly_plan(case)
+    edit2, assembly = build_task010_assembly_plan(case, timeline_rate=FrameRate(30))
     assert edit.to_dict() == edit2.to_dict()
     assert edit.ready_for_assembly is True
     assert [(row.start_us, row.end_us) for row in edit.keep_ranges] == [

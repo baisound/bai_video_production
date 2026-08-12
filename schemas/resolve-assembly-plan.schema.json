@@ -4,7 +4,7 @@
   "additionalProperties": false,
   "properties": {
     "assembly_plan_version": {
-      "const": "1.1.0"
+      "const": "1.2.0"
     },
     "assembly_sha256": {
       "pattern": "^sha256:[0-9a-f]{64}$",
@@ -111,6 +111,80 @@
     },
     "timeline_ownership": {
       "const": "AUTOMATION_OWNED"
+    },
+    "subtitle_cues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "KEEP",
+              "DROP_CUT"
+            ]
+          },
+          "cue_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "source_range_frames": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "end_exclusive": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "start",
+              "end_exclusive"
+            ]
+          },
+          "timeline_range_frames": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "start": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "end_exclusive": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "start",
+                  "end_exclusive"
+                ]
+              }
+            ]
+          },
+          "text_sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "cue_id",
+          "source_range_frames",
+          "timeline_range_frames",
+          "text_sha256",
+          "action"
+        ]
+      }
     }
   },
   "required": [
@@ -124,6 +198,7 @@
     "timeline_mapping",
     "subtitle_plan_sha256",
     "subtitle_ready",
+    "subtitle_cues",
     "audio_placements",
     "expected_duration_frames",
     "idempotency_required",

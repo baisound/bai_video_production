@@ -42,7 +42,6 @@ class Task010NativeCase:
     case_id: str
     asset_id: str
     source_rate: FrameRate
-    timeline_rate: FrameRate = FrameRate(30)
     source_duration_us: int = 4_000_000
     cut_start_us: int = 1_000_000
     cut_end_us: int = 2_000_000
@@ -59,17 +58,17 @@ class Task010NativeCase:
 def task010_native_cases() -> tuple[Task010NativeCase, ...]:
     return (
         Task010NativeCase(
-            "SRC30_TL30",
+            "SRC30_PROJECT_RATE",
             "ASSET-00000000000000000000000001",
             FrameRate(30),
         ),
         Task010NativeCase(
-            "SRC60_TL30",
+            "SRC60_PROJECT_RATE",
             "ASSET-00000000000000000000000002",
             FrameRate(60),
         ),
         Task010NativeCase(
-            "SRC30000_1001_TL30",
+            "SRC30000_1001_PROJECT_RATE",
             "ASSET-00000000000000000000000003",
             FrameRate(30_000, 1_001),
         ),
@@ -104,9 +103,13 @@ def build_task010_edit_plan(case: Task010NativeCase, *, approved_by: str = "nati
     )
 
 
-def build_task010_assembly_plan(case: Task010NativeCase) -> tuple[EditPlan, ResolveAssemblyPlan]:
+def build_task010_assembly_plan(
+    case: Task010NativeCase,
+    *,
+    timeline_rate: FrameRate,
+) -> tuple[EditPlan, ResolveAssemblyPlan]:
     edit_plan = build_task010_edit_plan(case)
-    return edit_plan, ResolveAssemblyService.compile(edit_plan, timeline_rate=case.timeline_rate)
+    return edit_plan, ResolveAssemblyService.compile(edit_plan, timeline_rate=timeline_rate)
 
 
 def _sha256_file(path: Path) -> str:
@@ -391,8 +394,9 @@ class Task010NativeGateRunner:
         self._generate_source(case, source)
         source_probe = self._probe_source(source, case.source_rate)
 
-        edit_plan, assembly_plan = build_task010_assembly_plan(case)
         adapter = ResolveScriptingAssemblyAdapter(self.loader)
+        timeline_rate = adapter.current_project_timeline_rate()
+        edit_plan, assembly_plan = build_task010_assembly_plan(case, timeline_rate=timeline_rate)
         before = _timeline_count(project)
 
         first = ResolveAssemblyService.execute(
@@ -457,7 +461,7 @@ class Task010NativeGateRunner:
         return {
             "case_id": case.case_id,
             "source_rate": case.source_rate.to_rational(),
-            "timeline_rate": case.timeline_rate.to_rational(),
+            "timeline_rate": timeline_rate.to_rational(),
             "source_duration_us": case.source_duration_us,
             "cut_range_us": {
                 "start": case.cut_start_us,
@@ -506,7 +510,11 @@ class Task010NativeGateRunner:
             f"ASSET-000000000000000000000000{asset_suffix}",
             FrameRate(30),
         )
-        _, plan = build_task010_assembly_plan(case)
+        adapter = ResolveScriptingAssemblyAdapter(self.loader)
+        _, plan = build_task010_assembly_plan(
+            case,
+            timeline_rate=adapter.current_project_timeline_rate(),
+        )
         return case, plan
 
     def _run_partial_gate(self, source: Path) -> dict[str, Any]:
@@ -597,6 +605,67 @@ class Task010NativeGateRunner:
             ProductErrorCategory.DATA_INTEGRITY,
         )
 
+    @staticmethod
+    def _find_media_pool_item_by_path(media_pool: Any, source: Path) -> Any | None:
+        target = source.resolve()
+        get_root = getattr(media_pool, "GetRootFolder", None)
+        if not callable(get_root):
+            return None
+        try:
+            root = get_root()
+        except Exception:
+            return None
+        if root is None:
+            return None
+
+        stack = [root]
+        seen: set[int] = set()
+        while stack:
+            folder = stack.pop()
+            identity = id(folder)
+            if identity in seen:
+                continue
+            seen.add(identity)
+
+            get_clips = getattr(folder, "GetClipList", None)
+            try:
+                clips = get_clips() if callable(get_clips) else []
+            except Exception:
+                clips = []
+            if isinstance(clips, dict):
+                clip_iter = clips.values()
+            elif isinstance(clips, (list, tuple)):
+                clip_iter = clips
+            else:
+                clip_iter = ()
+
+            for clip in clip_iter:
+                get_prop = getattr(clip, "GetClipProperty", None)
+                if not callable(get_prop):
+                    continue
+                try:
+                    value = get_prop("File Path")
+                except Exception:
+                    continue
+                if not isinstance(value, str) or not value.strip():
+                    continue
+                try:
+                    observed = Path(value).expanduser().resolve()
+                except (OSError, RuntimeError, ValueError):
+                    continue
+                if observed == target:
+                    return clip
+
+            get_subfolders = getattr(folder, "GetSubFolderList", None)
+            try:
+                subfolders = get_subfolders() if callable(get_subfolders) else []
+            except Exception:
+                subfolders = []
+            if isinstance(subfolders, (list, tuple)):
+                stack.extend(subfolders)
+
+        return None
+
     def _run_linked_av_semantic_probe(self, source: Path, source_rate: FrameRate) -> dict[str, Any]:
         """Probe Resolve's optional-mediaType semantics without changing product code.
 
@@ -618,13 +687,17 @@ class Task010NativeGateRunner:
             )
 
         imported = import_media([str(source.resolve())])
-        if not isinstance(imported, (list, tuple)) or len(imported) != 1:
+        media_item = (
+            imported[0]
+            if isinstance(imported, (list, tuple)) and len(imported) == 1
+            else self._find_media_pool_item_by_path(media_pool, source)
+        )
+        if media_item is None:
             raise ProductError(
                 "ERR_TASK010_NATIVE_AV_PROBE_IMPORT_FAILED",
-                "A/V semantic probe could not import the generated source",
+                "A/V semantic probe could neither import nor reuse the generated source",
                 ProductErrorCategory.EXTERNAL_DEPENDENCY,
             )
-        media_item = imported[0]
         seed = sha256_bytes(canonical_json_bytes({"source_sha256": _sha256_file(source), "probe": "LINKED_AV"}))
         timeline_name = "BAI_NATIVE_AV_" + seed.split(":", 1)[1][:12].upper()
 
@@ -693,7 +766,7 @@ class Task010NativeGateRunner:
         source_dir.mkdir(parents=True, exist_ok=True)
 
         cases = [self._run_case(case, source_dir=source_dir) for case in task010_native_cases()]
-        canonical_source = source_dir / "src30_tl30.mp4"
+        canonical_source = source_dir / "src30_project_rate.mp4"
         partial = self._run_partial_gate(canonical_source)
         conflict = self._run_conflict_gate(canonical_source)
         linked_av = self._run_linked_av_semantic_probe(canonical_source, FrameRate(30))

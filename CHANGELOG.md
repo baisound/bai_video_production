@@ -17,6 +17,7 @@
 - Added model-free/network-free `ai-video-faster-whisper-evidence` as a developer/diagnostic CLI; final user entrypoint remains BAI Video Production.exe -> Subtitle Workspace.
 - Registered TASK-023 as `INTEGRATION_DESIGNED` under PRODUCT-ARCH-001; no Shell integration is claimed by this slice.
 - Explicitly deferred final transcript-result caching, word-level timestamp schema expansion and recognition-semantic retuning.
+- Finalized TASK-023 validation for v0.19.0: 444 passed, 1 intentional skip; compileall/diff-check PASS; Windows real-media diagnostic evidence PASS with no model load, inference, network use, source/cache path leakage, or transcript-text leakage.
 
 ## [0.18.0] - 2026-08-12
 

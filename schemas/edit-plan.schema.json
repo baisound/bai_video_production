@@ -1,0 +1,276 @@
+{
+  "$defs": {
+    "plannedRange": {
+      "additionalProperties": false,
+      "properties": {
+        "duration_us": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "range_id": {
+          "type": "string"
+        },
+        "range_us": {
+          "additionalProperties": false,
+          "properties": {
+            "end_exclusive": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "start": {
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "start",
+            "end_exclusive"
+          ],
+          "type": "object"
+        },
+        "source_candidate_ids": {
+          "items": {
+            "pattern": "^cut-[0-9]{6}$",
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "range_id",
+        "range_us",
+        "duration_us",
+        "source_candidate_ids"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/baisound/bai_video_production/schemas/edit-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval_state": {
+      "enum": [
+        "DRAFT",
+        "APPROVED"
+      ]
+    },
+    "approved_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "automatic_external_write_authorized": {
+      "const": false
+    },
+    "candidate_graph": {
+      "additionalProperties": false,
+      "properties": {
+        "edges": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "from",
+              "to"
+            ],
+            "type": "object"
+          },
+          "maxItems": 100001,
+          "type": "array"
+        },
+        "nodes": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "candidate_id": {
+                "pattern": "^cut-[0-9]{6}$",
+                "type": "string"
+              },
+              "effective_range_us": {
+                "additionalProperties": false,
+                "properties": {
+                  "end_exclusive": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "start": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "start",
+                  "end_exclusive"
+                ],
+                "type": "object"
+              },
+              "evidence_codes": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "final_decision": {
+                "enum": [
+                  "REVIEW",
+                  "CUT",
+                  "KEEP"
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "SILENCE",
+                  "FILLER",
+                  "REPEATED_UTTERANCE"
+                ]
+              },
+              "proposed_decision": {
+                "enum": [
+                  "REVIEW",
+                  "CUT",
+                  "KEEP"
+                ]
+              },
+              "range_us": {
+                "additionalProperties": false,
+                "properties": {
+                  "end_exclusive": {
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "start": {
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "start",
+                  "end_exclusive"
+                ],
+                "type": "object"
+              },
+              "strength_score": {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "candidate_id",
+              "kind",
+              "range_us",
+              "strength_score",
+              "evidence_codes",
+              "proposed_decision",
+              "final_decision",
+              "effective_range_us"
+            ],
+            "type": "object"
+          },
+          "maxItems": 100000,
+          "type": "array"
+        }
+      },
+      "required": [
+        "nodes",
+        "edges"
+      ],
+      "type": "object"
+    },
+    "cut_ranges": {
+      "items": {
+        "$ref": "#/$defs/plannedRange"
+      },
+      "type": "array"
+    },
+    "downstream_execution_owner": {
+      "const": "TASK-010"
+    },
+    "keep_ranges": {
+      "items": {
+        "$ref": "#/$defs/plannedRange"
+      },
+      "type": "array"
+    },
+    "plan_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "plan_version": {
+      "const": "1.0.0"
+    },
+    "projected_duration_us": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ready_for_assembly": {
+      "type": "boolean"
+    },
+    "source_asset_id": {
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$",
+      "type": "string"
+    },
+    "source_candidate_manifest_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "source_duration_us": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "target_duration_us": {
+      "minimum": 1,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "target_met": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "task_owner": {
+      "const": "TASK-007"
+    },
+    "unresolved_candidate_ids": {
+      "items": {
+        "pattern": "^cut-[0-9]{6}$",
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "plan_version",
+    "task_owner",
+    "downstream_execution_owner",
+    "source_asset_id",
+    "source_duration_us",
+    "source_candidate_manifest_sha256",
+    "target_duration_us",
+    "candidate_graph",
+    "keep_ranges",
+    "cut_ranges",
+    "unresolved_candidate_ids",
+    "projected_duration_us",
+    "target_met",
+    "approval_state",
+    "approved_by",
+    "ready_for_assembly",
+    "automatic_external_write_authorized",
+    "plan_sha256"
+  ],
+  "title": "TASK-007 Candidate Clip Graph / Edit Plan",
+  "type": "object"
+}

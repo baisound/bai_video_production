@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+- Implemented the TASK-007 -> TASK-010 -> TASK-011 -> TASK-012 editing Technical MVP backend/application-service vertical slice: human-approved Edit Plan, Automation-owned Resolve assembly, rendered-artifact QA/loudness and deterministic EDITOR_WORK/Cubase round-trip.
+- Added strict external-write/idempotency/partial-state gates for Resolve and require probed source/normalized media FPS instead of substituting Timeline FPS for source-frame conversion.
+- Added canonical/package schemas and 17 focused regression tests; full automated regression is 462/462 PASS. All four capabilities remain `INTEGRATION_DESIGNED`; Unified Desktop and real Windows/Resolve/Cubase native validation remain future gates.
+
 - Registered `PRODUCT-ARCH-001`: BAI Video Production final UX is one unified Desktop Application; CLI/localhost surfaces are internal/transitional and every future user-facing Task must define Shell integration.
 
 - Registered `BVP-KNOWLEDGE-REFIMG-001` and the future TASK-013 Scene-Compatible Reference / Shot Feasibility Gate detailed design; documentation only, no runtime behavior change.

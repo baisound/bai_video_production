@@ -106,6 +106,19 @@ from .resolve_capabilities import CapabilityStatus, ProbeMode, ResolveCapability
 from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
 from .store import ManifestRecord, SQLiteProductStore
+from .edit_plan import (
+    CandidateGraphEdge, CandidateGraphNode, CandidateReviewDecision, EditDecision,
+    EditPlan, EditPlanService, PlannedRange,
+)
+from .resolve_assembly import (
+    AudioPlacement, ResolveAssemblyPlan, ResolveAssemblyResult, ResolveAssemblyService,
+    ResolveAssetBindings, ResolveScriptingAssemblyAdapter,
+)
+from .render_qa import (
+    FfmpegLoudnessAnalyzer, LoudnessMeasurement, LoudnessProfile, RenderQAReport, RenderQAService,
+)
+from .manual_handoff import EditorHandoffManifest, EditorHandoffService, HandoffFile
+from .technical_mvp import TechnicalMvpApplicationService
 
 __version__ = "0.19.0"
 
@@ -167,4 +180,11 @@ __all__ = [
     "H3ProductionBriefPlan", "H3ReferenceBinding", "H3ReferenceKind", "H3ReferenceRole",
     "H3Shot", "H3VisibleRetention", "H3SingleFrameContract", "H3SingleFrameMode",
     "H3SingleFrameRequest", "H3SingleFrameResult", "H3SingleFrameService",
+    "CandidateGraphEdge", "CandidateGraphNode", "CandidateReviewDecision", "EditDecision",
+    "EditPlan", "EditPlanService", "PlannedRange",
+    "AudioPlacement", "ResolveAssemblyPlan", "ResolveAssemblyResult", "ResolveAssemblyService",
+    "ResolveAssetBindings", "ResolveScriptingAssemblyAdapter",
+    "FfmpegLoudnessAnalyzer", "LoudnessMeasurement", "LoudnessProfile", "RenderQAReport",
+    "RenderQAService", "EditorHandoffManifest", "EditorHandoffService", "HandoffFile",
+    "TechnicalMvpApplicationService",
 ]

@@ -1,0 +1,130 @@
+{
+  "$id": "https://github.com/baisound/bai_video_production/schemas/resolve-assembly-plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "assembly_plan_version": {
+      "const": "1.0.0"
+    },
+    "assembly_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "audio_placements": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_id": {
+            "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$",
+            "type": "string"
+          },
+          "timeline_range_frames": {
+            "additionalProperties": false,
+            "properties": {
+              "end_exclusive": {
+                "minimum": 1,
+                "type": "integer"
+              },
+              "start": {
+                "minimum": 0,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "start",
+              "end_exclusive"
+            ],
+            "type": "object"
+          },
+          "track_index": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_id",
+          "track_index",
+          "timeline_range_frames"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "expected_duration_frames": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "external_write_requires_explicit_authorization": {
+      "const": true
+    },
+    "idempotency_required": {
+      "const": true
+    },
+    "source_asset_id": {
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$",
+      "type": "string"
+    },
+    "source_edit_plan_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "subtitle_plan_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "subtitle_ready": {
+      "type": "boolean"
+    },
+    "task_owner": {
+      "const": "TASK-010"
+    },
+    "timeline_mapping": {
+      "properties": {
+        "plan_sha256": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "plan_version": {
+          "const": "1.0.0"
+        }
+      },
+      "required": [
+        "plan_version",
+        "plan_sha256"
+      ],
+      "type": "object"
+    },
+    "timeline_name": {
+      "pattern": "^BAI_AUTO_[A-F0-9]{12}$",
+      "type": "string"
+    },
+    "timeline_ownership": {
+      "const": "AUTOMATION_OWNED"
+    }
+  },
+  "required": [
+    "assembly_plan_version",
+    "task_owner",
+    "source_asset_id",
+    "source_edit_plan_sha256",
+    "timeline_name",
+    "timeline_ownership",
+    "timeline_mapping",
+    "subtitle_plan_sha256",
+    "subtitle_ready",
+    "audio_placements",
+    "expected_duration_frames",
+    "idempotency_required",
+    "external_write_requires_explicit_authorization",
+    "assembly_sha256"
+  ],
+  "title": "TASK-010 Resolve Assembly Plan",
+  "type": "object"
+}

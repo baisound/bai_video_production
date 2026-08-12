@@ -1,0 +1,115 @@
+{
+  "$id": "https://github.com/baisound/bai_video_production/schemas/render-qa-report.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "artifact_size_bytes": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "checks": {
+      "items": {
+        "properties": {
+          "check": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PASS",
+              "FAIL"
+            ]
+          }
+        },
+        "required": [
+          "check",
+          "status"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "duration_tolerance_frames": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "expected_duration_frames": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "loudness": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "loudness_profile": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "media_probe": {
+      "type": "object"
+    },
+    "render_path_persisted": {
+      "const": false
+    },
+    "report_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "report_version": {
+      "const": "1.0.0"
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "FAIL"
+      ]
+    },
+    "task_owner": {
+      "const": "TASK-011"
+    },
+    "timeline_rate": {
+      "additionalProperties": false,
+      "properties": {
+        "denominator": {
+          "minimum": 1,
+          "type": "integer"
+        },
+        "numerator": {
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "report_version",
+    "task_owner",
+    "artifact_sha256",
+    "artifact_size_bytes",
+    "media_probe",
+    "loudness",
+    "loudness_profile",
+    "expected_duration_frames",
+    "timeline_rate",
+    "duration_tolerance_frames",
+    "checks",
+    "status",
+    "render_path_persisted",
+    "report_sha256"
+  ],
+  "title": "TASK-011 Render QA Report",
+  "type": "object"
+}

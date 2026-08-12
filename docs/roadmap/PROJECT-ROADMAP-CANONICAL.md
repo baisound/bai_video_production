@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.9
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.10
 
 - Project: `ai-video-production`
 - Date: 2026-08-12
@@ -80,12 +80,12 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | exact timebase/proxy/48k, ComfyUI image/H3, Character Identity, SingleFrame/Spectrum/Foley, Audacity OpenVINO, minimum admission/Evidence | 003 | DEV-4 / score 25 | COMPLETED |
 | 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | NOT STARTED |
 | 006 | ASR / Subtitle | Transcript/SRT、VAD、非重複SRT Corrective、不変Raw Transcript、優先辞書、GUI人間Review、既定OFFのAI誤字・脱字候補、承認Gate、Resolve字幕配置用canonical subtitle plan | 004,028（外部AI補正時） | DEV-3/4候補 | SLICE D RELEASED v0.17.0 |
-| 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3候補 | NOT STARTED |
+| 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3 | IMPLEMENTED / AUTOMATED VALIDATED / INTEGRATION_DESIGNED |
 | 008 | Multimodal Scoring | audio/visual/OCR feature fusion | 007 | DEV-3候補 | NOT STARTED |
 | 009 | DBDProfilePlugin | DBD HUD/chase/event profile | 008 | DEV-3候補 | NOT STARTED |
-| 010 | Resolve Assembly MVP | 元動画Cut、Subtitle Track/SRT配置、Audio asset配置を含むGateway/Controller, AUTO_ASSEMBLY, idempotency。字幕配置/basic assembly sliceは007前に先行可 | 002,003,022; Cut plan反映は007 | DEV-4 | NOT STARTED |
-| 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4候補 | NOT STARTED |
-| 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3候補 | NOT STARTED |
+| 010 | Resolve Assembly MVP | 元動画Cut、Subtitle Track/SRT配置、Audio asset配置を含むGateway/Controller, AUTO_ASSEMBLY, idempotency。字幕配置/basic assembly sliceは007前に先行可 | 002,003,022; Cut plan反映は007 | DEV-4 | IMPLEMENTED / NATIVE RESOLVE VALIDATION PENDING / INTEGRATION_DESIGNED |
+| 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4 | ARTIFACT QA IMPLEMENTED / NATIVE RENDER VALIDATION PENDING / INTEGRATION_DESIGNED |
+| 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3 | IMPLEMENTED / NATIVE HANDOFF VALIDATION PENDING / INTEGRATION_DESIGNED |
 | 013 | AI SE / BGM / Video Orchestration | TASK-004 local-runtime基盤を利用したSE/BGM/Video生成のProvider選択・創作制御・rights/cost/evidence。内容連動選定は007依存 | 004; 007は内容連動時 | DEV-4候補 | NOT STARTED |
 | 014 | Voice TTS / Owner Narration | ElevenLabsの既存Owner Voice Profile、read-only capability/ownership probe、timed TTS、dictionary、consent/retention、48 kHz canonical narration。ユーザー指定原稿からの生成は003後に前倒し可 | 003,028; 自動原稿生成は006/007; 配置は026 | DEV-4 | DESIGN RECORDED / ADAPTER FOUNDATION EXISTS |
 | 015 | YouTube Feedback | performance ingest, feedback features | 008 | DEV-3候補 | NOT STARTED |
@@ -376,3 +376,18 @@ TASK-006 remains Transcript/SRT and actual-ASR contract owner. TASK-023 owns for
 `COMPLETE / INTEGRATION_DESIGNED`
 
 Validation evidence: `444 passed, 1 intentional skip`; compileall/diff-check PASS; Windows real-media diagnostic evidence PASS. This completes TASK-023 without claiming `SHELL_INTEGRATED` or desktop `NATIVE_VALIDATED`.
+
+
+## Ver.1.10 Addendum — Editing Technical MVP TASK-007/010/011/012
+
+Owner instruction on 2026-08-12 authorizes a contiguous implementation wave for TASK-007 -> TASK-010 -> TASK-011 -> TASK-012. The bounded implementation establishes the first code-level Technical MVP pipeline from review-only Cut Candidates to an approved Edit Plan, Automation-owned Resolve assembly, rendered-artifact QA and deterministic EDITOR_WORK handoff.
+
+Canonical safety decisions:
+
+- TASK-007 candidate scores are proposal strength only and never authorize destructive cuts; per-candidate human review plus plan-level approval remains mandatory.
+- TASK-010 mutates only deterministic `BAI_AUTO_*` Timelines after explicit external-write authorization. A matching assembly marker makes replay a no-op; partial/conflicting deterministic state fails closed.
+- Source/normalized media frame rate is an independent binding and may not be replaced by Timeline FPS when translating source time ranges to Resolve source frames.
+- TASK-011 implements rendered-artifact QA with configurable loudness/true-peak profiles; the default profile is not a universal delivery standard.
+- TASK-012 creates QA-gated `EDITOR_WORK_*` packages and a bounded 48 kHz PCM Cubase round-trip; it does not claim automatic Cubase project conversion.
+- All four tasks exit this automated development slice at `INTEGRATION_DESIGNED`. `SHELL_INTEGRATED` and `NATIVE_VALIDATED` require later Unified Desktop and real Windows/Resolve/Cubase Evidence.
+- TASK-026 retains ownership of advanced/creative audio placement and bed-generation logic; TASK-010 only executes a supplied generic placement contract.

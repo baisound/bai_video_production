@@ -26,6 +26,12 @@
 | TASK-033 | Provider and Model Catalog Editor | NATIVE_WINDOWS_PASS | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.11.0 safe add/edit/disable Evidence accepted 2026-08-10 |
 | TASK-034 | OS-backed Credential Onboarding | NATIVE_WINDOWS_PASS | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.12.2 Catalog linkage, retained-key cleanup and per-Route password-manager lookup confirmed |
 | TASK-035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | PROPOSED | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Native ReaScript bridge first; iZotope Ozone/Nectar/Neutron capability levels; verified mix/stem Assets back to Resolve; optional MCP facade only after security review |
+| TASK-036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | PROPOSED | OWNER_PRIORITY_AFTER_NATIVE_BACKEND_GATE | DEV-4 candidate | One-EXE minimum editing E2E; closes INTEGRATION_DESIGNED -> SHELL_INTEGRATED/NATIVE_VALIDATED gap for editing flow |
+| TASK-037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | Extends TASK-003 with Scene Asset Slot, Candidate Version, lifecycle, LOCK/STALE and dependency graph; does not reopen ingest authority |
+| TASK-038 | Audit Workspace / Candidate Quality Loop | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | AI/Human separate review, dimension scores/findings, Failure Codes, alternate use, regeneration, compare/history and final lock |
+| TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | DIRECT_CONTINUATION exact Asset/hash, End->Start graph, Character/Space continuity and Human-resolved Stale propagation |
+| TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | Prompt Entity/Version, provider profile, input/output identity, parent Candidate, Keep Conditions and failure-driven regeneration routes |
+| TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PROPOSED | NOT_AUTHORIZED | DEV-3/4 candidate | VFX/generated-media audio policy, non-destructive strip derivative, review/lock lanes and TASK-026 placement-plan UX |
 
 ## Roadmap authority
 
@@ -40,6 +46,7 @@ TASK-004 is completed. Owner-directed continuation authorized TASK-027 through T
 | Knowledge / Design | Future Owner | Status | Contract |
 |---|---|---|---|
 | `BVP-KNOWLEDGE-REFIMG-001` Scene-Compatible Reference Image Rule | TASK-013 | DESIGN_REGISTERED / IMPLEMENTATION_NOT_AUTHORIZED | Character identity, Room master and Scene Shot composition remain separate reference roles; Shot Feasibility must PASS before Start/End generation; DIRECT_CONTINUATION reuses exact previous End Asset |
+| `PRODUCT-CONTROL-001` Production Control Plane | TASK-036..041 + existing owners | DESIGN_REGISTERED / ROADMAP_CANONICAL | Plan -> Scene -> Asset Slot -> Candidate -> Audit -> Human Decision -> Lock traceability; no silent overwrite; Reject != Delete; LOCK/STALE; regeneration Evidence |
 
 This registration does not change editing-first execution order and does not reopen TASK-004.
 
@@ -49,5 +56,6 @@ This registration does not change editing-first execution order and does not reo
 |---|---|---|---|
 | `PRODUCT-ARCH-001` Unified Desktop Application | CANONICAL | All Product TASKs | Final Product is one BAI Video Production Desktop Application entrypoint; user-facing capabilities must define Shell integration |
 | Unified Application Integration Contract | CANONICAL | User/Operator-facing TASKs | Detailed design must define entrypoint, workspace, context, progress/error/recovery, file UX, worker lifecycle and native acceptance |
+| `PRODUCT-CONTROL-001` Production Control Plane | CANONICAL | Planning/Generation/Asset/Audit/Continuity/Audio/Knowledge flows | Human Final Authority; Plan-to-Asset traceability; Evidence by default; version-not-overwrite; Reject != Delete; LOCK/STALE; no silent auto-fix |
 
 These contracts do not allocate a new TASK number and do not change existing TASK ownership.

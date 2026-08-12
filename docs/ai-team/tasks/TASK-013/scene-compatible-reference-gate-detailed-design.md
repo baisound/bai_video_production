@@ -369,3 +369,69 @@ Do not store by default:
 This design may be registered now without changing runtime behavior or editing-first execution order.
 
 Implementation remains unauthorized until TASK-013 is explicitly selected and its implementation slice passes the normal Builder/Critic/Judge gate.
+
+## 18. Promotion Team Intake Addendum Ver.1.1
+
+The 2026-08-12 Promotion Team production/audit handoff strengthens this future design without changing TASK ownership.
+
+### 18.1 Required planning sequence
+
+For character-in-space shots, the canonical planning order becomes:
+
+`Scene Intent -> Visibility Contract -> Task Axis -> Depth Order -> Final Camera -> Empty Final Shot Reference -> Character Injection -> Identity/Geometry QA`
+
+Camera is a consequence of Task Axis and Visibility Contract. The actor must not be rotated unnaturally merely to satisfy camera-facing preference.
+
+### 18.2 Additional hard checks
+
+`ShotFeasibilityAssessment` shall add or explicitly map:
+
+- `task_axis_valid`
+- `depth_order_valid`
+- `occlusion_valid`
+- `furniture_integrity_valid`
+- `room_anchor_integrity_valid`
+- `production_gear_absent`
+- `character_identity_valid` after Character Injection
+
+A new desk/table required only to make the shot possible is a structural failure, not a Prompt wording issue.
+
+### 18.3 Two-stage generation
+
+Stage A: generate and approve the person-less Final Shot Reference.
+
+Stage B: inject the Character Identity into the approved shot reference without redesigning the room.
+
+Stage C: run Identity / Geometry / Prop / Task Axis QA before promoting the result to canonical Start Frame.
+
+### 18.4 Failure escalation
+
+Repeated identical structural Failure Code two or more consecutive times must stop Prompt micro-edit retries.
+
+The routing action becomes one of:
+
+- `RETURN_TO_VISIBILITY_CONTRACT`
+- `RETURN_TO_TASK_AXIS`
+- `RETURN_TO_DEPTH_ORDER`
+- `RETURN_TO_FINAL_CAMERA`
+- `REBUILD_FINAL_SHOT_REFERENCE`
+
+### 18.5 P01/P14 regression fixture
+
+The Promotion evidence provides a concrete regression fixture:
+
+`Camera -> Monitor foreground -> Desk/Notebook -> C01 -> S01 Background`
+
+For that fixture, Monitor behind C01 is a hard FAIL even if aesthetic quality is high.
+
+This fixture is a test example, not a universal depth order for unrelated Scenes.
+
+### 18.6 Audit handoff
+
+TASK-013 does not own the general audit system.
+
+Generation results emit structured reference/gate/failure Evidence to TASK-038, where AI/Human review, alternate-use classification and regeneration decisions are managed.
+
+TASK-040 owns Prompt Version / regeneration routing contracts.
+
+TASK-037 owns Asset Slot / Candidate Version / Lock / Stale relationships.

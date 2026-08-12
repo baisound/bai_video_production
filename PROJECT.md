@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_19_0_RELEASE_READY`
+`TECHNICAL_MVP_007_012_AUTOMATED_VALIDATED_NATIVE_GATES_PENDING`
 
 ## Purpose
 
@@ -110,13 +110,13 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed: `TASK-024 Slice A — Review-only Cut Candidate Worker (v0.18.0)`
-- Active Task: `NONE`
+- Active Task: `TASK-007 / TASK-010 / TASK-011 / TASK-012 — contiguous Technical MVP validation`
 - TASK-004: `COMPLETED`
-- Package: `0.18.0` (formal public release; PR #13 / merge commit `d6e7ec080145d930a073c2120952546d4af5d7cf` / tag `v0.18.0`)
-- Development Candidate: `NONE`
-- Current release verification: v0.18.0 `433 passed, 1 intentional skip`; compileall/diff-check/fsck PASS; real-WAV TASK-024 CLI/FFmpeg PASS; Subtitle Workspace/Open-dialog/Cancel PASS; AI Connection Settings launch PASS; PR #13 CI green. PR #11 is post-release dependency maintenance and is not part of tag v0.18.0.
+- Package: `0.19.0` (formal public release; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
+- Development Candidate: `NONE` (TASK-007/010/011/012 are an unreleased implementation wave; no package candidate has been authorized)
+- Current release verification: v0.19.0 formal GitHub Release exists; TASK-023 release validation recorded `444 passed, 1 intentional skip` with compileall/diff-check and native Windows real-media diagnostic PASS. Post-v0.19.0 TASK-007/010/011/012 implementation is not yet a release.
 - Target-machine Gate: synthetic OpenVINO Noise Suppression + 2-stem Music Separation behavioral Evidence + final DEV-4 Judge review
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.8
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.10
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -183,6 +183,15 @@ Canonical details:
 
 - `docs/ai-team/architecture/PRODUCT-ARCH-001-unified-desktop-application.md`
 - `docs/ai-team/architecture/UNIFIED-APPLICATION-INTEGRATION-CONTRACT.md`
+
+## TASK-007 / 010 / 011 / 012 Technical MVP Candidate
+
+- TASK-007 compiles TASK-024 review-only candidates into a deterministic human-approved Edit Plan.
+- TASK-010 compiles that plan through TASK-022 and can write only an Automation-owned `BAI_AUTO_*` Resolve Timeline after explicit external-write authorization; source/normalized FPS is mandatory for source-frame conversion.
+- TASK-011 verifies rendered artifacts using checksum, media/duration checks and configurable loudness/true-peak policy.
+- TASK-012 creates deterministic QA-gated `EDITOR_WORK_*` handoff packages and a bounded 48 kHz PCM Cubase return contract.
+- All four capabilities are `INTEGRATION_DESIGNED`; this work does not claim `SHELL_INTEGRATED` or `NATIVE_VALIDATED`.
+- Package version remains 0.19.0 until a separately authorized release candidate is created.
 
 ## TASK-023 Completed Bounded Development
 

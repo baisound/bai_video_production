@@ -4,14 +4,25 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_19_0_RELEASE_READY`
+- Project Status: `TECHNICAL_MVP_007_012_AUTOMATED_VALIDATED_NATIVE_GATES_PENDING`
 - Last Completed Task: `TASK-024 Slice A — Review-only Cut Candidate Worker (v0.18.0)`
-- Active Consumer Task: `NONE`
+- Active Consumer Task: `TASK-007 / TASK-010 / TASK-011 / TASK-012 — contiguous Technical MVP validation`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.18.0` (FORMAL RELEASE COMPLETE; PR #13 / merge `d6e7ec080145d930a073c2120952546d4af5d7cf` / tag `v0.18.0`)
-- Development Candidate: `NONE`
-- Next Consumer Task: `TASK-007 — Candidate Clip Graph / Cut Plan`
+- Package: `0.19.0` (FORMAL RELEASE COMPLETE; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
+- Development Candidate: `NONE` (TASK-007/010/011/012 are an unreleased implementation wave; no package candidate has been authorized)
+- Next Consumer Task: `TASK-007/010/011/012 automated closure -> native Windows/Resolve/Cubase acceptance -> Unified Desktop Shell integration`
+
+## TASK-007 / 010 / 011 / 012 Technical MVP candidate
+
+- TASK-007: deterministic Candidate Graph, target-duration proposal ranking, explicit CUT/KEEP review, bounded override, protected Keep Blocks, second-stage plan approval and canonical Edit Plan hash. No automatic external-write authorization.
+- TASK-010: approved Edit Plan -> TASK-022 exact mapping -> deterministic `BAI_AUTO_*` Resolve assembly, explicit external-write authorization, marker-based idempotency and partial/conflict fail-closed behavior. Source/normalized FPS is mandatory for source-frame conversion.
+- TASK-011: render artifact checksum/media/duration verification plus configurable LUFS/true-peak QA; no absolute render path persisted in QA report.
+- TASK-012: QA-gated deterministic `EDITOR_WORK_*` package, relative-path/checksum manifest and bounded 48 kHz PCM Cubase return. No automatic Cubase project conversion claim.
+- Cross-task Application Service: `TechnicalMvpApplicationService` preserves the 007 -> 010 -> 011 -> 012 orchestration boundary for future Unified Desktop Shell wiring.
+- Current integration state: `INTEGRATION_DESIGNED`; no `SHELL_INTEGRATED` or `NATIVE_VALIDATED` claim.
+- Native gates still required: real Resolve source-range semantics, SRT import behavior, optional audio placement, Resolve render flow, Windows dialogs/focus and Cubase round-trip.
+- Automated validation: pre-change baseline `445 / 445 PASS`; post-change full regression `462 / 462 PASS`; compileall PASS; `git diff --check` PASS.
 
 ## TASK-004 implemented scope
 

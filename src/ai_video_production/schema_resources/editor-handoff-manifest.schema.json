@@ -1,0 +1,112 @@
+{
+  "$id": "https://github.com/baisound/bai_video_production/schemas/editor-handoff-manifest.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "absolute_paths_persisted": {
+      "const": false
+    },
+    "assembly_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "cubase_roundtrip": {
+      "additionalProperties": false,
+      "properties": {
+        "automatic_project_conversion_promised": {
+          "const": false
+        },
+        "canonical_return_manifest": {
+          "const": "AUDIO_ROUNDTRIP/audio-roundtrip-return.json"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "export_directory": {
+          "const": "AUDIO_ROUNDTRIP/EXPORT"
+        },
+        "return_directory": {
+          "const": "AUDIO_ROUNDTRIP/RETURN"
+        }
+      },
+      "required": [
+        "enabled",
+        "export_directory",
+        "return_directory",
+        "canonical_return_manifest",
+        "automatic_project_conversion_promised"
+      ],
+      "type": "object"
+    },
+    "edit_plan_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "editor_work_root": {
+      "const": "."
+    },
+    "files": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "relative_path": {
+            "pattern": "^(?!/)(?!.*\\.\\./).+$",
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^sha256:[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "size_bytes": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "role",
+          "relative_path",
+          "sha256",
+          "size_bytes"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "handoff_id": {
+      "pattern": "^EDITOR_WORK_[A-F0-9]{12}$",
+      "type": "string"
+    },
+    "handoff_version": {
+      "const": "1.0.0"
+    },
+    "manifest_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "render_qa_report_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "task_owner": {
+      "const": "TASK-012"
+    }
+  },
+  "required": [
+    "handoff_version",
+    "task_owner",
+    "handoff_id",
+    "editor_work_root",
+    "edit_plan_sha256",
+    "assembly_sha256",
+    "render_qa_report_sha256",
+    "files",
+    "cubase_roundtrip",
+    "absolute_paths_persisted",
+    "manifest_sha256"
+  ],
+  "title": "TASK-012 EDITOR_WORK Handoff Manifest",
+  "type": "object"
+}

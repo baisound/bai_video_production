@@ -1,5 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.10
-
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.11
 - Project: `ai-video-production`
 - Date: 2026-08-12
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -391,3 +390,154 @@ Canonical safety decisions:
 - TASK-012 creates QA-gated `EDITOR_WORK_*` packages and a bounded 48 kHz PCM Cubase round-trip; it does not claim automatic Cubase project conversion.
 - All four tasks exit this automated development slice at `INTEGRATION_DESIGNED`. `SHELL_INTEGRATED` and `NATIVE_VALIDATED` require later Unified Desktop and real Windows/Resolve/Cubase Evidence.
 - TASK-026 retains ownership of advanced/creative audio placement and bed-generation logic; TASK-010 only executes a supplied generic placement contract.
+
+## Ver.1.11 Addendum — Promotion Knowledge Intake / Production Control Plane
+
+### Decision
+
+The 2026-08-12 Promotion Team handoff establishes a Product-level `Production Control Plane` requirement.
+
+This is not an optional management feature. Planning contracts, Asset-to-Scene traceability, Candidate audit, Human final authority, LOCK/STALE propagation, Continuity and regeneration Evidence are now canonical Product design concerns.
+
+`PRODUCT-ARCH-001` remains the Unified Desktop Application architecture.
+`PRODUCT-CONTROL-001` becomes the cross-cutting production-control architecture inside that application.
+
+### Canonical principles
+
+1. `HUMAN_FINAL_AUTHORITY`
+2. `PLAN_TO_ASSET_TRACEABILITY`
+3. `EVIDENCE_BY_DEFAULT`
+4. `GENERATE_AFTER_FEASIBILITY`
+5. `VERSION_DO_NOT_OVERWRITE`
+6. `REJECT_IS_NOT_DELETE`
+7. `AUDIO_VISUAL_SEPARATION`
+8. `LOCK_AND_STALE`
+9. `NO_SILENT_AUTO_FIX`
+
+### Existing TASK ownership refinement
+
+- TASK-003 remains immutable ingest/checksum/rights authority and is not reopened.
+- TASK-013 keeps Shot Feasibility / Scene-Compatible Reference admission ownership.
+- TASK-027 expands its next Planning slice to Master Brief, Message/Claims, Scene Contract, Asset Matrix and Feasibility review orchestration.
+- TASK-026 remains Audio placement/bed execution-plan owner.
+- TASK-021 remains full Dashboard/Operations owner.
+- TASK-029 becomes the downstream Good/Bad/Human-Override knowledge-evolution owner after structured Audit Evidence exists.
+- TASK-017 remains physical retention/purge authority, so `REJECT != DELETE` does not mean indefinite storage.
+
+### New TASK reservations
+
+| TASK | Name | Primary output | Depends on | Initial status |
+|---|---|---|---|---|
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | one-EXE editing E2E, workspace integration, native Windows acceptance | 006,007,010,011,012,022,024 | PROPOSED / OWNER PRIORITY AFTER NATIVE BACKEND GATE |
+| 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Asset Slot, Candidate Version, lifecycle, Lock/Stale, dependency graph | 003,027 foundation | PROPOSED |
+| 038 | Audit Workspace / Candidate Quality Loop | AI/Human audit, scores/findings, alternate use, regen, compare, lock | 037 | PROPOSED |
+| 039 | Continuity Map / Boundary Integrity & Stale Propagation | exact End->Start continuity, impact graph, Human resolution | 037,013 contracts | PROPOSED |
+| 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt Version, provider profile, parent Candidate, Keep Conditions, failure routing | 028,037,038 | PROPOSED |
+| 041 | Audio Workspace / Embedded Audio Separation & Placement UX | audio lanes, candidate review/lock, non-destructive strip policy, TASK-026 UX | 003,026,037 | PROPOSED |
+
+### Re-based execution order
+
+This addendum supersedes Section 7 execution-wave order where the two conflict. Existing TASK IDs and safety ownership remain unchanged.
+
+#### R0 — Current: Editing Native Gate
+
+1. TASK-010 native Assembly semantics
+2. source A/V preservation
+3. subtitle native semantics
+4. TASK-011 real Render QA/native gate
+5. TASK-012 native EDITOR_WORK/Cubase gate
+
+Exit: `BACKEND_NATIVE_EDITING_MVP_PASS`
+
+#### R1 — Minimum user-facing Editing MVP
+
+- TASK-036
+
+Required final E2E:
+
+`Open Project -> Media -> Transcribe -> Subtitle -> Cut Review -> Approve -> Resolve Apply -> QA -> EDITOR_WORK`
+
+No PowerShell/JSON is required for the final user acceptance route.
+
+Exit: `MINIMUM_EDITING_PRODUCT_MVP_PASS`
+
+#### R2 — Production Control Plane Foundation
+
+1. TASK-037 Asset Registry 2 / Scene Asset Slot
+2. TASK-038 Audit Workspace / Candidate Quality Loop
+3. TASK-027 Planning Workspace minimum / Scene Contract
+
+Exit requires traceability:
+
+`Plan -> Scene -> Asset Slot -> Candidate -> Audit -> Human Decision -> Locked Asset`
+
+#### R3 — Generation-safe control loop
+
+Parallelizable after R2 contracts stabilize:
+
+- TASK-013 Shot Feasibility / Scene-Compatible Reference Gate
+- TASK-039 Continuity Map / Stale propagation
+- TASK-040 Prompt Registry / Generation Evidence
+- TASK-027 Generation Queue integration
+
+High-cost generation admission requires:
+
+`PLAN_APPROVED + FEASIBILITY_PASS + REQUIRED_INPUT_LOCKED`
+
+Repeated identical structural Failure Code >= 2 must stop Prompt micro-tuning and route back to Task Axis / Camera / Reference design.
+
+#### R4 — Audio and generative production
+
+- TASK-013 SE/BGM/Video orchestration
+- TASK-014 Owner Narration
+- TASK-026 placement/bed
+- TASK-041 Audio Workspace
+- TASK-010 execution integration
+
+VFX visual and audio policy must remain separable. Strip operations are non-destructive derived-Asset operations.
+
+#### R5 — Production Pilot Safety
+
+- TASK-016
+- TASK-017
+- TASK-020 completion
+- TASK-021
+- TASK-018
+
+#### R6 — Knowledge / Learning
+
+- TASK-029 consumes Human Override, Failure Pattern, Prompt Fix, alternate-use and continuity Evidence.
+- Automatic policy promotion remains gated by evaluation/rollback/Human authorization.
+
+#### R7 — Optional expansion
+
+- TASK-008,009,015,019,025,035 as needed.
+
+### Milestone correction
+
+#### M3A Backend Editing Technical MVP
+
+Canonical Edit Plan -> real Resolve Assembly -> real Render QA -> Human Handoff is native validated.
+
+#### M3B Minimum Editing Product MVP
+
+M3A plus TASK-036 unified Desktop E2E.
+
+Product-facing claims that “minimum editing is complete” require M3B, not backend service completion alone.
+
+#### M4 Production Control Plane Ready
+
+Planning, Asset Slot, Audit, Human decision, Continuity and Prompt/Generation Evidence are traceable and recoverable.
+
+### Source-intake normalization decisions
+
+- Promotion score thresholds are initial configurable policy, not hard authority.
+- Provider-specific Midjourney weights/parameters remain Provider Profile data, not Product Core rules.
+- The supplied Audit CSV is a seed/import-export contract; TASK-038 should normalize persistence instead of adopting one 51-column database table.
+- Prompt bodies may exist in a project-private Prompt Registry under retention/privacy policy; general Evidence should store Prompt IDs/versions/hashes by default.
+- Rejected/alternate Assets remain logically traceable; physical purge is governed by TASK-017.
+- Proposed screens are workspaces/subviews inside `BAI Video Production.exe`, not separate final applications.
+
+Detailed cross-cutting design:
+
+`docs/ai-team/product-design/PRODUCTION-CONTROL-001.md`

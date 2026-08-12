@@ -115,6 +115,9 @@ def test_adapter_uses_source_rate_and_writes_idempotency_marker(tmp_path: Path):
     assert adapter.applied_hash(plan.timeline_name) == plan.to_dict()["assembly_sha256"]
     # First kept second maps to 60 source frames, while the timeline remains 30 fps.
     assert project.media_pool.append_rows[0]["endFrame"] == 59
+    # Primary source placement must no longer request video-only mediaType=1.
+    assert "mediaType" not in project.media_pool.append_rows[0]
+    assert "mediaType" not in project.media_pool.append_rows[1]
 
 
 def test_existing_deterministic_timeline_without_marker_fails_closed(tmp_path: Path):

@@ -407,6 +407,23 @@ class Task010NativeGateRunner:
             adapter=adapter,
             plan=assembly_plan,
         )
+        expected_keep_items = len(assembly_plan.timeline_mapping.placements)
+        video_count = timeline_evidence["video_track_1_item_count"]
+        audio_count = timeline_evidence["audio_track_1_item_count"]
+        if video_count is not None and video_count < expected_keep_items:
+            raise ProductError(
+                "ERR_TASK010_NATIVE_SOURCE_VIDEO_NOT_PRESERVED",
+                "native product assembly did not retain every planned source video keep range",
+                ProductErrorCategory.DATA_INTEGRITY,
+                details={"case_id": case.case_id},
+            )
+        if audio_count is not None and audio_count < expected_keep_items:
+            raise ProductError(
+                "ERR_TASK010_NATIVE_SOURCE_AUDIO_NOT_PRESERVED",
+                "native product assembly did not retain linked source audio for every keep range",
+                ProductErrorCategory.DATA_INTEGRITY,
+                details={"case_id": case.case_id},
+            )
         replay = ResolveAssemblyService.execute(
             assembly_plan,
             adapter=adapter,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
@@ -16,6 +17,12 @@ from .timeline_mapping import EditSegment, TimelineMappingPlan, TimelineMappingS
 
 
 _AUTOMATION_PREFIX = "BAI_AUTO_"
+
+
+class SourceMediaPlacementMode(str, Enum):
+    """Primary source media placement semantics."""
+
+    LINKED_AV = "LINKED_AV"
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +53,7 @@ class AudioPlacement:
 class ResolveAssemblyPlan:
     source_asset_id: str
     source_edit_plan_sha256: str
+    source_media_mode: SourceMediaPlacementMode
     timeline_name: str
     timeline_mapping: TimelineMappingPlan
     subtitle_plan_sha256: str | None
@@ -58,10 +66,11 @@ class ResolveAssemblyPlan:
 
     def to_dict(self) -> dict[str, Any]:
         body: dict[str, Any] = {
-            "assembly_plan_version": "1.0.0",
+            "assembly_plan_version": "1.1.0",
             "task_owner": "TASK-010",
             "source_asset_id": self.source_asset_id,
             "source_edit_plan_sha256": self.source_edit_plan_sha256,
+            "source_media_mode": self.source_media_mode.value,
             "timeline_name": self.timeline_name,
             "timeline_ownership": "AUTOMATION_OWNED",
             "timeline_mapping": self.timeline_mapping.to_dict(),
@@ -173,9 +182,11 @@ class ResolveAssemblyService:
                     ProductErrorCategory.DATA_INTEGRITY,
                 )
 
+        source_media_mode = SourceMediaPlacementMode.LINKED_AV
         preliminary = {
             "source_asset_id": edit_plan.source_asset_id,
             "source_edit_plan_sha256": edit_dict["plan_sha256"],
+            "source_media_mode": source_media_mode.value,
             "timeline_mapping_sha256": mapping.to_dict()["plan_sha256"],
             "subtitle_plan_sha256": subtitle_hash,
             "audio_placements": [item.to_dict() for item in audio_placements],
@@ -185,6 +196,7 @@ class ResolveAssemblyService:
         return ResolveAssemblyPlan(
             source_asset_id=edit_plan.source_asset_id,
             source_edit_plan_sha256=edit_dict["plan_sha256"],
+            source_media_mode=source_media_mode,
             timeline_name=timeline_name,
             timeline_mapping=mapping,
             subtitle_plan_sha256=subtitle_hash,
@@ -383,29 +395,37 @@ class ResolveScriptingAssemblyAdapter:
                 ProductErrorCategory.EXTERNAL_DEPENDENCY,
             )
 
-        append_items: list[dict[str, Any]] = []
+        if plan.source_media_mode is not SourceMediaPlacementMode.LINKED_AV:
+            raise ProductError(
+                "ERR_RESOLVE_SOURCE_MEDIA_MODE_UNSUPPORTED",
+                "TASK-010 currently supports only linked source video/audio placement",
+                ProductErrorCategory.NOT_SUPPORTED,
+                details={"source_media_mode": plan.source_media_mode.value},
+            )
+
+        # Resolve 21 native Evidence proved mediaType=1 is video-only.  Omitting
+        # mediaType preserves the source item's linked video and audio.  Append
+        # each keep range separately so every range gets an independent API ack.
         for placement in plan.timeline_mapping.placements:
             source_start = source_frame_rate.us_to_frame(placement.mapped_start_us, rounding=FrameRounding.FLOOR)
             source_end_exclusive = source_frame_rate.us_to_frame(placement.mapped_end_us, rounding=FrameRounding.CEIL)
             if source_end_exclusive <= source_start:
                 source_end_exclusive = source_start + 1
-            append_items.append(
-                {
-                    "mediaPoolItem": media_item,
-                    "startFrame": source_start,
-                    # Resolve AppendToTimeline uses an inclusive source end frame.
-                    "endFrame": source_end_exclusive - 1,
-                    "recordFrame": placement.timeline_start_frame,
-                    "mediaType": 1,
-                }
-            )
-        appended = append(append_items)
-        if append_items and (not isinstance(appended, (list, tuple)) or len(appended) != len(append_items)):
-            raise ProductError(
-                "ERR_RESOLVE_VIDEO_ASSEMBLY_FAILED",
-                "Resolve did not confirm every planned video placement",
-                ProductErrorCategory.EXTERNAL_DEPENDENCY,
-            )
+            row = {
+                "mediaPoolItem": media_item,
+                "startFrame": source_start,
+                # Resolve AppendToTimeline uses an inclusive source end frame.
+                "endFrame": source_end_exclusive - 1,
+                "recordFrame": placement.timeline_start_frame,
+            }
+            appended = append([row])
+            if not isinstance(appended, (list, tuple)) or not appended:
+                raise ProductError(
+                    "ERR_RESOLVE_VIDEO_ASSEMBLY_FAILED",
+                    "Resolve did not confirm a planned linked source A/V placement",
+                    ProductErrorCategory.EXTERNAL_DEPENDENCY,
+                    details={"placement_id": placement.placement_id},
+                )
 
         subtitle_status = "NOT_REQUESTED"
         if plan.subtitle_plan_sha256 is not None:

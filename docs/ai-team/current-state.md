@@ -89,7 +89,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.7. Owner-directed editing-first priority remains in force. TASK-004 moved local image/video/audio generation foundations forward while preserving TASK-022/010/026 ownership of exact Timeline placement.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.8. Owner-directed editing-first priority remains in force. TASK-004 moved local image/video/audio generation foundations forward while preserving TASK-022/010/026 ownership of exact Timeline placement.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 
@@ -109,3 +109,13 @@ TASK-022 is now implemented with exact rational source/normalized-to-Timeline ma
 - Detailed future implementation design: `docs/ai-team/tasks/TASK-013/scene-compatible-reference-gate-detailed-design.md`.
 - Design registration only; no TASK-013 runtime implementation is authorized.
 - Editing-first task order is unchanged.
+
+## Cross-cutting Product Architecture — Unified Desktop Application
+
+- `PRODUCT-ARCH-001` registered as canonical Product architecture.
+- Final user-facing Product: one BAI Video Production Desktop Application entrypoint.
+- CLI / localhost Web UI remain internal/transitional/diagnostic unless explicitly integrated.
+- Existing backend capabilities are not automatically classified as `SHELL_INTEGRATED`.
+- Every future relevant detailed design must include `Unified Application Integration`.
+- No runtime/package change is created by this architecture registration.
+- TASK-023 resumes only after this architecture change is merged; its design must name Subtitle Workspace as the final user-facing integration location.

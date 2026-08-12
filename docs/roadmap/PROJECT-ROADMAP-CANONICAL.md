@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.7
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.8
 
 - Project: `ai-video-production`
 - Date: 2026-08-12
@@ -281,3 +281,55 @@ No immediate execution-wave change. Editing-first remains prioritized. This adde
 
 Detailed design:
 `docs/ai-team/tasks/TASK-013/scene-compatible-reference-gate-detailed-design.md`
+
+## Ver.1.8 Addendum — Unified Desktop Application Architecture
+
+### Decision
+
+`PRODUCT-ARCH-001` is now canonical.
+
+BAI Video Production is not a final collection of independent feature tools. The target Product is one unified Desktop Application with a single user-facing entrypoint.
+
+### Mandatory interpretation of existing TASKs
+
+Service/Provider/Worker/CLI completion is backend capability completion. It is not automatically final Product UX completion.
+
+Examples:
+
+- TASK-006 FasterWhisper / Subtitle services -> final user workflow belongs in unified Subtitle Workspace.
+- TASK-024 Cut Candidate Worker -> final user workflow belongs in unified Edit Workspace.
+- TASK-013 Generative providers -> final user workflow belongs in unified Generative Workspace / Settings.
+- TASK-010 Resolve execution -> final invocation/status/error UX belongs in the unified Application Shell.
+
+### Design Gate
+
+Every future user-facing/operator-facing detailed design must define `Unified Application Integration`.
+
+Required minimum:
+
+1. User Entry Point
+2. Shell / Workspace Location
+3. Project / Asset / Timeline context
+4. Primary workflow
+5. Running / success / failure UX
+6. review / approval
+7. file Open / Save / Import / Export UX
+8. settings/provider configuration
+9. background worker lifecycle
+10. recovery/retry
+11. external NLE interaction
+12. native Windows acceptance
+13. CLI / localhost fallback role
+14. integration state at Task exit
+
+### Integration lifecycle
+
+`BACKEND_CAPABILITY_ONLY -> INTEGRATION_DESIGNED -> SHELL_INTEGRATED -> NATIVE_VALIDATED`
+
+### Sequence impact
+
+No current TASK dependency is removed or reordered by this architecture-only insertion.
+
+TASK-023 remains next after this documentation merge, but its design/implementation record must comply with PRODUCT-ARCH-001.
+
+The previously prepared pre-architecture TASK-023 applier is superseded and must not be applied after this merge; regenerate/rebase it against Roadmap Ver.1.8.

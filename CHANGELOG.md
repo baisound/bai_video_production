@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Registered `PRODUCT-ARCH-001`: BAI Video Production final UX is one unified Desktop Application; CLI/localhost surfaces are internal/transitional and every future user-facing Task must define Shell integration.
+
 - Registered `BVP-KNOWLEDGE-REFIMG-001` and the future TASK-013 Scene-Compatible Reference / Shot Feasibility Gate detailed design; documentation only, no runtime behavior change.
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.

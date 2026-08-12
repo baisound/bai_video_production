@@ -38,3 +38,12 @@ TASK-004 is completed. Owner-directed continuation authorized TASK-027 through T
 | `BVP-KNOWLEDGE-REFIMG-001` Scene-Compatible Reference Image Rule | TASK-013 | DESIGN_REGISTERED / IMPLEMENTATION_NOT_AUTHORIZED | Character identity, Room master and Scene Shot composition remain separate reference roles; Shot Feasibility must PASS before Start/End generation; DIRECT_CONTINUATION reuses exact previous End Asset |
 
 This registration does not change editing-first execution order and does not reopen TASK-004.
+
+## Cross-Cutting Product Architecture Contracts
+
+| Contract | Status | Applies To | Requirement |
+|---|---|---|---|
+| `PRODUCT-ARCH-001` Unified Desktop Application | CANONICAL | All Product TASKs | Final Product is one BAI Video Production Desktop Application entrypoint; user-facing capabilities must define Shell integration |
+| Unified Application Integration Contract | CANONICAL | User/Operator-facing TASKs | Detailed design must define entrypoint, workspace, context, progress/error/recovery, file UX, worker lifecycle and native acceptance |
+
+These contracts do not allocate a new TASK number and do not change existing TASK ownership.

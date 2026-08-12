@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.8
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.9
 
 - Project: `ai-video-production`
 - Date: 2026-08-12
@@ -96,7 +96,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 020 | Resource Admission / Monitoring | VRAM/CPU/disk/network admission + metrics | 001,004 | DEV-4候補 | NOT STARTED |
 | 021 | Integrated Dashboard / Operations | job/evidence/alerts/ops UI | Evidence contracts | DEV-3候補 | NOT STARTED |
 | 022 | Timeline Mapping Service | exact frame/time mapping, schema, golden fixtures | 001,003,004 | DEV-4 | IMPLEMENTED / WINDOWS REGRESSION PENDING |
-| 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | NOT STARTED |
+| 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | RECONCILIATION IMPLEMENTED / VALIDATION PENDING |
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
@@ -333,3 +333,44 @@ No current TASK dependency is removed or reordered by this architecture-only ins
 TASK-023 remains next after this documentation merge, but its design/implementation record must comply with PRODUCT-ARCH-001.
 
 The previously prepared pre-architecture TASK-023 applier is superseded and must not be applied after this merge; regenerate/rebase it against Roadmap Ver.1.8.
+
+## Ver.1.9 Addendum — TASK-023 FasterWhisper Provider Reconciliation
+
+### Decision
+
+TASK-023 is implemented as a reconciliation slice over the existing TASK-006 FasterWhisper provider. No duplicate provider or second Transcript contract is introduced.
+
+### Reused capability
+
+- local FasterWhisper inference;
+- explicit model-download gate;
+- optional model cache directory;
+- process-local loaded-model reuse;
+- one-shot transcription;
+- resumable large-media private checkpoint/chunk state;
+- atomic Transcript/SRT/report publication;
+- text-free operational report.
+
+### TASK-023 additions
+
+- deterministic source/config execution identity;
+- path-minimized provider reconciliation evidence;
+- model-free/network-free `ai-video-faster-whisper-evidence` diagnostic CLI;
+- explicit deferral of word-level timestamp schema, final transcript result cache and recognition-semantic retuning.
+
+### Unified Application Integration
+
+- Canonical architecture: `PRODUCT-ARCH-001`.
+- Final user entrypoint: `BAI Video Production.exe`.
+- Final workspace: `Subtitle Workspace`.
+- Diagnostic CLI classification: `DEVELOPER_DIAGNOSTIC_INTERFACE`.
+- This slice exits no higher than `INTEGRATION_DESIGNED`.
+- A future Shell integration slice is still required before `SHELL_INTEGRATED` / `NATIVE_VALIDATED`.
+
+### Ownership
+
+TASK-006 remains Transcript/SRT and actual-ASR contract owner. TASK-023 owns formal local-provider reconciliation/evidence only. TASK-007 remains the next editing-intelligence route after reconciliation validation.
+
+### Status
+
+`RECONCILIATION IMPLEMENTED / VALIDATION PENDING`

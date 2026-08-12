@@ -32,7 +32,7 @@ class FasterWhisperConfig:
     beam_size: int = 5
     vad_filter: bool = True
     allow_model_download: bool = False
-    cache_directory: str | None = None
+    cache_directory: str | Path | None = None
 
     def __post_init__(self) -> None:
         if not self.model or "\x00" in self.model:
@@ -43,7 +43,7 @@ class FasterWhisperConfig:
             raise ValueError("compute_type must be non-empty text")
         if not 1 <= self.beam_size <= 20:
             raise ValueError("beam_size must be 1-20")
-        if self.cache_directory is not None and "\x00" in self.cache_directory:
+        if self.cache_directory is not None and "\x00" in str(self.cache_directory):
             raise ValueError("cache_directory is invalid")
 
 

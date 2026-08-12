@@ -10,6 +10,14 @@
 
 - Integrated end-user GUI and complete automatic editing workflow remain under development.
 
+## [0.19.0] - 2026-08-12
+
+- Reconciled TASK-023 with the existing TASK-006 FasterWhisper provider instead of creating a duplicate ASR implementation.
+- Added deterministic source/config execution identity and path-minimized, text-free provider reconciliation evidence.
+- Added model-free/network-free `ai-video-faster-whisper-evidence` as a developer/diagnostic CLI; final user entrypoint remains BAI Video Production.exe -> Subtitle Workspace.
+- Registered TASK-023 as `INTEGRATION_DESIGNED` under PRODUCT-ARCH-001; no Shell integration is claimed by this slice.
+- Explicitly deferred final transcript-result caching, word-level timestamp schema expansion and recognition-semantic retuning.
+
 ## [0.18.0] - 2026-08-12
 
 - Added TASK-024 review-only silence/filler/disfluency cut-candidate analysis on normalized PCM audio and optional canonical Transcript input.

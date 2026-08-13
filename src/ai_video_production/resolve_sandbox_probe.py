@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 import time
@@ -158,7 +158,7 @@ def run_resolve_sandbox_probe(
         _update_row(report, "project.save", status=CapabilityStatus.SUPPORTED if ok and value is not False else CapabilityStatus.PROBE_REQUIRED,
                     elapsed_ms=elapsed, return_kind=_kind(value), notes=["Saved isolated sandbox Project." if ok and value is not False else "SaveProject failed."], error_type=error)
 
-    probe_assets_dir = Path(probe_assets_dir)
+    probe_assets_dir = Path(probe_assets_dir).expanduser().resolve()
     probe_assets_dir.mkdir(parents=True, exist_ok=True)
     tmpdir = probe_assets_dir
     export_path = tmpdir / "sandbox.drp"

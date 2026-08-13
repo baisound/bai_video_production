@@ -1,0 +1,72 @@
+{
+  "absolute_paths_persisted": false,
+  "claims": {
+    "desktop_runtime_spike_pass": false,
+    "desktop_shell_native_ux_pass": false,
+    "minimum_editing_product_mvp_pass": false,
+    "native_validated": false,
+    "shell_integrated": false
+  },
+  "gate": "TASK036_WINDOWS_NATIVE_W0_W1_PHASE_G",
+  "operation_id": "BVP-PHASEG-TASK036-PACKAGING-20260813-01",
+  "paid_provider_execution": false,
+  "report_sha256": "sha256:b9fd8b100bc7f6a89d2adef32a3f51fd34e20ebac0ba73aac5d31d29d2407f31",
+  "report_version": "1.0.0",
+  "source_branch": "feature/task-007-012-native-validation",
+  "source_head_baseline": "26045adda380d0396d5cbdb86dc673524ce99bf7",
+  "status": "PARTIAL",
+  "task_owner": "TASK-036",
+  "w0_packaging": {
+    "bundle": {
+      "file_count": 306,
+      "jsonschema_bundled": true,
+      "one_dir_bytes": 32436771,
+      "packaging_definition_sha256": "sha256:3ac53f830e7386771d5e6f4a93eb4932b7aa480e35761f2718b12ff9d6d51a64"
+    },
+    "clean_user_profile": "NOT_TESTED",
+    "dependency_inventory": "PASS",
+    "executable": {
+      "bytes": 5701746,
+      "sha256": "sha256:e4376d8ee58731b128984d415efb16da9da623f7fb28266724d9fe5620a4055a"
+    },
+    "installed_webview2_runtime": "151.0.4129.78",
+    "launch": "PASS",
+    "long_path_characterization": {
+      "exe_path_length_166": "PASS",
+      "exe_path_length_245": "FAIL_PACKAGED_INTERNAL_PATH_TOO_LONG",
+      "status": "SUPPORTED_LIMIT_REQUIRES_POLICY"
+    },
+    "missing_webview2_recovery": "NOT_TESTED",
+    "normal_close_owned_process_cleanup": "PASS",
+    "renderer": "EDGECHROMIUM_WEBVIEW2",
+    "second_launch": {
+      "instance_count": 2,
+      "shared_port_collision": false,
+      "status": "PASS_MULTIPLE_INSTANCE_CHARACTERIZED"
+    },
+    "status": "PARTIAL",
+    "terminal_required": false,
+    "unicode_install_path": "PASS"
+  },
+  "w1_native_shell_ux": {
+    "accessibility": {
+      "dialog_result_status_not_color_only": true,
+      "screen_reader_smoke": "NOT_TESTED",
+      "visible_keyboard_focus": "PASS"
+    },
+    "dialog_controls_reachable_from_html": true,
+    "dialog_result_visible_at_scaled_viewport": true,
+    "dialogs": {
+      "handoff_folder_cancel_focus_return": "PASS",
+      "media_cancel_focus_return": "PASS",
+      "media_fixture_selection": "PASS_NO_OPERATION_STARTED",
+      "project_folder_cancel_focus_return": "PASS"
+    },
+    "dpi_matrix": "PARTIAL",
+    "status": "PARTIAL"
+  },
+  "w2_minimum_editing_e2e": {
+    "real_backend_shell_binding": false,
+    "status": "BLOCKED_NOT_WIRED"
+  }
+}

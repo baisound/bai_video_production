@@ -22,6 +22,13 @@ jobs/
 *.log
 /task*-live-evidence*/
 
+# TASK-036 Phase G packaging smoke outputs; retain only the path-free JSON report.
+/evidence/native/phase-g-task036-packaging-*/build/
+/evidence/native/phase-g-task036-packaging-*/dist/
+/evidence/native/phase-g-task036-packaging-*/unicode-install/
+/evidence/native/phase-g-task036-packaging-*/long-install/
+/evidence/native/phase-g-task036-packaging-*/long-install-pass/
+
 # Local subtitle review workspace state; may contain user transcript text.
 /subtitle-workspace.json
 

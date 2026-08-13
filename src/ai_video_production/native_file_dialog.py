@@ -226,3 +226,94 @@ class WindowsNativeFileDialog:
 """
             + _POWERSHELL_EPILOGUE
         )
+
+
+    def choose_open_media(self) -> str | None:
+        """Choose one local media source for TASK-036 ingest.
+
+        The selected host path is returned only to the local caller.  It is not
+        persisted by this dialog boundary and is never interpolated into the
+        PowerShell program.
+        """
+        return self._run(
+            _POWERSHELL_PREAMBLE
+            + r"""
+    $owner = $null
+    $dialog = $null
+    try {
+        $owner = New-BaiDialogOwner
+        $dialog = New-Object System.Windows.Forms.OpenFileDialog
+        $dialog.Title = '動画・音声・画像を選択 / Select media'
+        $dialog.Filter = 'Media files|*.mp4;*.mov;*.mkv;*.avi;*.webm;*.m4v;*.wav;*.mp3;*.m4a;*.flac;*.aac;*.ogg;*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tif;*.tiff|Video files|*.mp4;*.mov;*.mkv;*.avi;*.webm;*.m4v|Audio files|*.wav;*.mp3;*.m4a;*.flac;*.aac;*.ogg|Image files|*.png;*.jpg;*.jpeg;*.webp;*.bmp;*.tif;*.tiff|All files (*.*)|*.*'
+        $dialog.Multiselect = $false
+        $dialog.CheckFileExists = $true
+        $dialog.CheckPathExists = $true
+        $dialog.RestoreDirectory = $true
+        if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
+            Write-BaiResult 'BAI_DIALOG_OK' $dialog.FileName
+        }
+        else {
+            [Console]::Out.Write('BAI_DIALOG_CANCEL')
+        }
+    }
+    finally {
+        if ($null -ne $dialog) { $dialog.Dispose() }
+        if ($null -ne $owner) { $owner.Close(); $owner.Dispose() }
+    }
+"""
+            + _POWERSHELL_EPILOGUE
+        )
+
+    def choose_project_folder(self) -> str | None:
+        """Choose an existing local Project folder for the desktop shell."""
+        return self._run(
+            _POWERSHELL_PREAMBLE
+            + r"""
+    $owner = $null
+    $dialog = $null
+    try {
+        $owner = New-BaiDialogOwner
+        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+        $dialog.Description = 'BAI Video Production プロジェクトフォルダーを選択 / Select Project folder'
+        $dialog.ShowNewFolderButton = $true
+        if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
+            Write-BaiResult 'BAI_DIALOG_OK' $dialog.SelectedPath
+        }
+        else {
+            [Console]::Out.Write('BAI_DIALOG_CANCEL')
+        }
+    }
+    finally {
+        if ($null -ne $dialog) { $dialog.Dispose() }
+        if ($null -ne $owner) { $owner.Close(); $owner.Dispose() }
+    }
+"""
+            + _POWERSHELL_EPILOGUE
+        )
+
+    def choose_handoff_folder(self) -> str | None:
+        """Choose an existing destination folder for deterministic EDITOR_WORK."""
+        return self._run(
+            _POWERSHELL_PREAMBLE
+            + r"""
+    $owner = $null
+    $dialog = $null
+    try {
+        $owner = New-BaiDialogOwner
+        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+        $dialog.Description = 'EDITOR_WORK の出力先を選択 / Choose EDITOR_WORK destination'
+        $dialog.ShowNewFolderButton = $true
+        if ($dialog.ShowDialog($owner) -eq [System.Windows.Forms.DialogResult]::OK) {
+            Write-BaiResult 'BAI_DIALOG_OK' $dialog.SelectedPath
+        }
+        else {
+            [Console]::Out.Write('BAI_DIALOG_CANCEL')
+        }
+    }
+    finally {
+        if ($null -ne $dialog) { $dialog.Dispose() }
+        if ($null -ne $owner) { $owner.Close(); $owner.Dispose() }
+    }
+"""
+            + _POWERSHELL_EPILOGUE
+        )

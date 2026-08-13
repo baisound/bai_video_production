@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai-video-production://task-039/continuity-map.schema.json",
+  "title": "TASK-039 Continuity Map / Resolution Registry",
+  "type": "object",
+  "required": ["registry_version", "task_owner", "edges", "resolutions", "automatic_regeneration_started", "registry_sha256"],
+  "properties": {
+    "registry_version": {"const": "1.0.0"},
+    "task_owner": {"const": "TASK-039"},
+    "edges": {"type": "array", "items": {"$ref": "#/$defs/ContinuityEdge"}},
+    "resolutions": {"type": "array", "items": {"$ref": "#/$defs/ContinuityResolution"}},
+    "automatic_regeneration_started": {"const": false},
+    "registry_sha256": {"$ref": "#/$defs/Sha256"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+    "Sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "ContinuityEdge": {
+      "type": "object",
+      "required": [
+        "edge_id", "from_scene_id", "from_slot_id", "from_candidate_id", "from_asset_id", "from_asset_sha256",
+        "to_scene_id", "to_slot_id", "boundary_type", "character_contract_refs", "space_contract_refs"
+      ],
+      "properties": {
+        "edge_id": {"$ref": "#/$defs/Id"},
+        "from_scene_id": {"$ref": "#/$defs/Id"},
+        "from_slot_id": {"$ref": "#/$defs/Id"},
+        "from_candidate_id": {"$ref": "#/$defs/Id"},
+        "from_asset_id": {"$ref": "#/$defs/Id"},
+        "from_asset_sha256": {"$ref": "#/$defs/Sha256"},
+        "to_scene_id": {"$ref": "#/$defs/Id"},
+        "to_slot_id": {"$ref": "#/$defs/Id"},
+        "boundary_type": {"enum": ["DIRECT_CONTINUATION", "SOFT_CONTINUITY", "DISCONTINUOUS"]},
+        "character_contract_refs": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "uniqueItems": true},
+        "space_contract_refs": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "uniqueItems": true}
+      },
+      "additionalProperties": false
+    },
+    "ContinuityResolution": {
+      "type": "object",
+      "required": [
+        "edge_id", "target_asset_id", "target_asset_sha256", "status", "validation_status",
+        "human_approved_by", "reason_code"
+      ],
+      "properties": {
+        "edge_id": {"$ref": "#/$defs/Id"},
+        "target_asset_id": {"$ref": "#/$defs/Id"},
+        "target_asset_sha256": {"$ref": "#/$defs/Sha256"},
+        "status": {"enum": ["PASS", "HUMAN_APPROVED", "FAIL", "HUMAN_REVIEW_REQUIRED"]},
+        "validation_status": {"enum": ["PASS", "FAIL", "HUMAN_REVIEW_REQUIRED"]},
+        "human_approved_by": {"anyOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]},
+        "reason_code": {"anyOf": [{"type": "string", "minLength": 1, "maxLength": 200}, {"type": "null"}]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

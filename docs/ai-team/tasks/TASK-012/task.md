@@ -1,6 +1,6 @@
 # TASK-012 — Manual Handoff / Cubase
 
-- Status: `IMPLEMENTED / AUTOMATED_VALIDATED / INTEGRATION_DESIGNED`
+- Status: `IMPLEMENTED / AUTOMATED_VALIDATED / NATIVE_VALIDATED / INTEGRATION_DESIGNED`
 - Governance: `DEV-3`
 - Authorization: `OWNER_DIRECTED_IMPLEMENTATION`
 - Wave: Technical MVP contiguous editing wave, 2026-08-12
@@ -25,3 +25,7 @@ Re-hash render at handoff to detect post-QA changes. Persist relative paths only
 ## Exit rule
 
 Headless capability may reach `IMPLEMENTED`, but Product completion remains `INTEGRATION_DESIGNED` until Unified Desktop Shell wiring exists, and external Windows/Resolve/Cubase behavior may not be labeled `NATIVE_VALIDATED` until real-machine Evidence passes.
+
+## Phase G native acceptance — 2026-08-13
+
+A dedicated Cubase 13 Project imported the real TASK-011-derived audio and exported a stereo 48 kHz 24-bit PCM return. Registration and final native gate passed with exact checksum and zero duration delta. TASK-012 backend is `NATIVE_VALIDATED`; automatic Cubase Project conversion remains explicitly false.

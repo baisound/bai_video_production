@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai-video-production://task-041/audio-workspace.schema.json",
+  "title": "TASK-041 Audio Workspace Contract Draft",
+  "type": "object",
+  "required": ["contract_version", "candidate_decisions", "derived_assets", "placement_reviews"],
+  "properties": {
+    "contract_version": {"const": "0.9.0-draft"},
+    "candidate_decisions": {"type": "array", "items": {"$ref": "#/$defs/AudioCandidateDecision"}},
+    "derived_assets": {"type": "array", "items": {"$ref": "#/$defs/AudioDerivedAsset"}},
+    "placement_reviews": {"type": "array", "items": {"$ref": "#/$defs/PlacementReview"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Id": {"type": "string", "minLength": 1, "maxLength": 180},
+    "Sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "AudioCandidateDecision": {
+      "type": "object",
+      "required": ["decision_id", "candidate_id", "audio_slot_kind", "decision", "actor_id"],
+      "properties": {
+        "decision_id": {"$ref": "#/$defs/Id"},
+        "candidate_id": {"$ref": "#/$defs/Id"},
+        "audio_slot_kind": {"enum": ["SOURCE_AUDIO", "VFX_EMBEDDED_AUDIO", "SE", "BGM", "NARRATION", "MIX_STEM", "FINAL_MIX"]},
+        "decision": {"enum": ["ACCEPT", "REJECT", "ALTERNATE_USE", "STRIP_AUDIO", "NEEDS_REVIEW"]},
+        "actor_id": {"$ref": "#/$defs/Id"},
+        "reason_codes": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "uniqueItems": true}
+      },
+      "additionalProperties": false
+    },
+    "AudioDerivedAsset": {
+      "type": "object",
+      "required": ["derived_asset_id", "source_asset_id", "source_sha256", "derived_sha256", "derivation_type"],
+      "properties": {
+        "derived_asset_id": {"$ref": "#/$defs/Id"},
+        "source_asset_id": {"$ref": "#/$defs/Id"},
+        "source_sha256": {"$ref": "#/$defs/Sha256"},
+        "derived_sha256": {"$ref": "#/$defs/Sha256"},
+        "derivation_type": {"enum": ["AUDIO_STRIPPED_VIDEO", "AUDIO_ONLY", "NORMALIZED_AUDIO", "MIX_STEM"]},
+        "destructive_source_write": {"const": false}
+      },
+      "additionalProperties": false
+    },
+    "PlacementReview": {
+      "type": "object",
+      "required": ["review_id", "candidate_id", "timeline_start_frame", "duration_frames", "track_role", "decision"],
+      "properties": {
+        "review_id": {"$ref": "#/$defs/Id"},
+        "candidate_id": {"$ref": "#/$defs/Id"},
+        "timeline_start_frame": {"type": "integer", "minimum": 0},
+        "duration_frames": {"type": "integer", "minimum": 1},
+        "track_role": {"enum": ["SOURCE", "SE", "BGM", "NARRATION", "MIX_STEM"]},
+        "gain_db": {"type": ["number", "null"], "minimum": -120, "maximum": 24},
+        "decision": {"enum": ["REVIEW", "ACCEPT", "REJECT", "ALTERNATE_USE"]}
+      },
+      "additionalProperties": false
+    }
+  }
+}

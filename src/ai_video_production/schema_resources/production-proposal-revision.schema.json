@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/production-proposal-revision.schema.json",
+  "title": "TASK-027 Production Proposal Revision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proposal_version",
+    "task_owner",
+    "proposal_id",
+    "revision",
+    "parent_proposal_sha256",
+    "intent_sha256",
+    "blueprint",
+    "sections",
+    "provider_policy",
+    "estimated_cost_range",
+    "rights_warnings",
+    "human_editable",
+    "go_approved",
+    "provider_execution_started",
+    "proposal_sha256"
+  ],
+  "properties": {
+    "proposal_version": {
+      "const": "1.0.0"
+    },
+    "task_owner": {
+      "const": "TASK-027"
+    },
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9._-]{2,63}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "parent_proposal_sha256": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "intent_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "blueprint": {
+      "type": "object"
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "section_id",
+          "kind",
+          "title",
+          "body"
+        ],
+        "properties": {
+          "section_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "provider_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "policy_version",
+        "policy_sha256"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "policy_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "estimated_cost_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min",
+        "max",
+        "currency"
+      ],
+      "properties": {
+        "min": {
+          "type": "string"
+        },
+        "max": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string",
+          "pattern": "^[A-Z]{3}$"
+        }
+      }
+    },
+    "rights_warnings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "human_editable": {
+      "const": true
+    },
+    "go_approved": {
+      "const": false
+    },
+    "provider_execution_started": {
+      "const": false
+    },
+    "proposal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

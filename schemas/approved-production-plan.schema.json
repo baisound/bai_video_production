@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/approved-production-plan.schema.json",
+  "title": "TASK-027 Approved Production Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approved_plan_version",
+    "task_owner",
+    "plan_id",
+    "proposal_id",
+    "proposal_revision",
+    "proposal_sha256",
+    "intent_sha256",
+    "blueprint_id",
+    "blueprint_sha256",
+    "provider_policy",
+    "reference_bindings",
+    "cost_ceiling",
+    "currency",
+    "approved_by",
+    "rights_warnings_acknowledged",
+    "human_go_approved",
+    "provider_execution_started",
+    "resolve_mutation_started",
+    "publish_authorized",
+    "approved_plan_sha256"
+  ],
+  "properties": {
+    "approved_plan_version": {
+      "const": "1.0.0"
+    },
+    "task_owner": {
+      "const": "TASK-027"
+    },
+    "plan_id": {
+      "type": "string",
+      "pattern": "^PLAN-[A-F0-9]{16}$"
+    },
+    "proposal_id": {
+      "type": "string"
+    },
+    "proposal_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "proposal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "intent_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "blueprint_id": {
+      "type": "string"
+    },
+    "blueprint_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "provider_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "policy_version",
+        "policy_sha256"
+      ],
+      "properties": {
+        "policy_id": {
+          "type": "string"
+        },
+        "policy_version": {
+          "type": "string"
+        },
+        "policy_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "reference_bindings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reference_id",
+          "asset_id",
+          "asset_sha256"
+        ],
+        "properties": {
+          "reference_id": {
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "asset_sha256": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "cost_ceiling": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "approved_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rights_warnings_acknowledged": {
+      "type": "boolean"
+    },
+    "human_go_approved": {
+      "const": true
+    },
+    "provider_execution_started": {
+      "const": false
+    },
+    "resolve_mutation_started": {
+      "const": false
+    },
+    "publish_authorized": {
+      "const": false
+    },
+    "approved_plan_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

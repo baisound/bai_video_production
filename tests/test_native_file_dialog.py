@@ -90,3 +90,42 @@ def test_native_dialog_rejects_malformed_protocol_payload() -> None:
 
     with pytest.raises(native.NativeFileDialogUnavailable, match="invalid response"):
         native.WindowsNativeFileDialog(runner=runner, platform_name="nt").choose_open_srt()
+
+
+def test_native_media_dialog_uses_fixed_media_filter_without_path_interpolation() -> None:
+    captured = {}
+
+    def runner(args, **kwargs):
+        captured["args"] = args
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout=protocol("ok", r"C:\media\朝活.mp4"), stderr=b"")
+
+    result = native.WindowsNativeFileDialog(runner=runner, platform_name="nt").choose_open_media()
+    assert result == r"C:\media\朝活.mp4"
+    script = base64.b64decode(captured["args"][7]).decode("utf-16le")
+    assert "OpenFileDialog" in script
+    assert "Media files" in script
+    assert "*.mp4" in script
+    assert "Multiselect = $false" in script
+    assert r"C:\media\朝活.mp4" not in script
+
+
+def test_native_project_folder_dialog_is_folder_browser() -> None:
+    captured = {}
+
+    def runner(args, **kwargs):
+        captured["args"] = args
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout=protocol("ok", r"C:\BAI\Projects\DbD"), stderr=b"")
+
+    result = native.WindowsNativeFileDialog(runner=runner, platform_name="nt").choose_project_folder()
+    assert result == r"C:\BAI\Projects\DbD"
+    script = base64.b64decode(captured["args"][7]).decode("utf-16le")
+    assert "FolderBrowserDialog" in script
+    assert "ShowNewFolderButton = $true" in script
+    assert "SelectedPath" in script
+
+
+def test_native_handoff_folder_cancel_is_not_error() -> None:
+    def runner(args, **kwargs):
+        return subprocess.CompletedProcess(args=args, returncode=0, stdout=protocol("cancel"), stderr=b"")
+
+    assert native.WindowsNativeFileDialog(runner=runner, platform_name="nt").choose_handoff_folder() is None

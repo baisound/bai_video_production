@@ -52,6 +52,9 @@ def test_compile_uses_task022_mapping_and_automation_owned_timeline():
     assert len(plan.timeline_mapping.placements) == 2
     assert plan.expected_duration_frames == 90
     assert plan.to_dict()["timeline_ownership"] == "AUTOMATION_OWNED"
+    assert plan.to_dict()["assembly_plan_version"] == "1.3.0"
+    assert plan.to_dict()["record_frame_basis"] == "RESOLVE_TIMELINE_START_RELATIVE"
+    assert plan.to_dict()["source_media_mode"] == "LINKED_AV"
     assert plan.to_dict()["external_write_requires_explicit_authorization"] is True
 
 

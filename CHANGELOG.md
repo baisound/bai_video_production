@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+- Completed Phase G backend native Evidence: real Resolve assembly/linked A/V/edit-aware subtitle semantics, real Resolve render QA and real Cubase 13 48 kHz PCM round-trip pass without broadening external-write or paid-provider authority.
+- Corrected Resolve Timeline-start-relative record placement, localized completed-render status handling and WebView2 runtime version discovery; assembly-plan contract is now `1.3.0` with an explicit record-frame basis.
+- Advanced TASK-036 native hardening with reachable allowlisted file/folder dialogs, visible path-selection status and a reproducible PyInstaller one-dir Windows bundle. W0/W1 remain partial and W2 real backend Shell E2E remains blocked, so no minimum editing Product completion claim is made.
+- Final local Phase G regression: Windows `778 passed, 1 intentional OS skip`; WSL2 Ubuntu `779 passed`; compileall and authoritative Windows diff-check PASS.
+
 - Implemented the TASK-007 -> TASK-010 -> TASK-011 -> TASK-012 editing Technical MVP backend/application-service vertical slice: human-approved Edit Plan, Automation-owned Resolve assembly, rendered-artifact QA/loudness and deterministic EDITOR_WORK/Cubase round-trip.
 - Added strict external-write/idempotency/partial-state gates for Resolve and require probed source/normalized media FPS instead of substituting Timeline FPS for source-frame conversion.
 - Added canonical/package schemas and 17 focused regression tests; full automated regression is 462/462 PASS. All four capabilities remain `INTEGRATION_DESIGNED`; Unified Desktop and real Windows/Resolve/Cubase native validation remain future gates.

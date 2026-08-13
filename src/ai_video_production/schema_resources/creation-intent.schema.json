@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/creation-intent.schema.json",
+  "title": "TASK-027 Creation Intent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent_version",
+    "task_owner",
+    "intent_id",
+    "revision",
+    "purpose",
+    "audience",
+    "platform",
+    "aspect_ratio",
+    "target_duration_seconds",
+    "style_tone",
+    "story_message",
+    "language",
+    "free_text",
+    "budget_ceiling",
+    "currency",
+    "rights_constraints",
+    "credential_values_embedded",
+    "provider_execution_started",
+    "intent_sha256"
+  ],
+  "properties": {
+    "intent_version": {
+      "const": "1.0.0"
+    },
+    "task_owner": {
+      "const": "TASK-027"
+    },
+    "intent_id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9._-]{2,63}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "audience": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "platform": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "aspect_ratio": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,3}:[1-9][0-9]{0,3}$"
+    },
+    "target_duration_seconds": {
+      "type": "string",
+      "pattern": "^[0-9]+(?:\\.[0-9]+)?$"
+    },
+    "style_tone": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "story_message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "language": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 32
+    },
+    "free_text": {
+      "type": "string",
+      "maxLength": 16000
+    },
+    "budget_ceiling": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "rights_constraints": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1000
+      }
+    },
+    "credential_values_embedded": {
+      "const": false
+    },
+    "provider_execution_started": {
+      "const": false
+    },
+    "intent_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

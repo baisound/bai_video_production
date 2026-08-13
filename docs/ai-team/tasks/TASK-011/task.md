@@ -1,6 +1,6 @@
 # TASK-011 — Render QA / Loudness
 
-- Status: `IMPLEMENTED / AUTOMATED_VALIDATED / INTEGRATION_DESIGNED`
+- Status: `IMPLEMENTED / AUTOMATED_VALIDATED / NATIVE_VALIDATED / INTEGRATION_DESIGNED`
 - Governance: `DEV-3/4`
 - Authorization: `OWNER_DIRECTED_IMPLEMENTATION`
 - Wave: Technical MVP contiguous editing wave, 2026-08-12
@@ -25,3 +25,7 @@ Fixed-argv FFmpeg/ffprobe only; no shell. QA result persists no render absolute 
 ## Exit rule
 
 Headless capability may reach `IMPLEMENTED`, but Product completion remains `INTEGRATION_DESIGNED` until Unified Desktop Shell wiring exists, and external Windows/Resolve/Cubase behavior may not be labeled `NATIVE_VALIDATED` until real-machine Evidence passes.
+
+## Phase G native acceptance — 2026-08-13
+
+Real Resolve Render Queue completed the exact Automation-owned Timeline and produced a 72/72-frame H.264/AAC artifact. Structural, duration and unchanged default loudness/true-peak checks passed. TASK-011 backend is `NATIVE_VALIDATED`; the report persists no host render path or transient render-job ID.

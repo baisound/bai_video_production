@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai-video-production://task-038/audit-workspace.schema.json",
+  "title": "TASK-038 Audit Workspace Contract Draft",
+  "type": "object",
+  "required": ["contract_version", "audit_records", "human_decisions"],
+  "properties": {
+    "contract_version": {"const": "0.9.0-draft"},
+    "audit_records": {"type": "array", "items": {"$ref": "#/$defs/AuditRecord"}},
+    "human_decisions": {"type": "array", "items": {"$ref": "#/$defs/HumanDecision"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Id": {"type": "string", "minLength": 1, "maxLength": 160},
+    "Sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "Finding": {
+      "type": "object",
+      "required": ["finding_id", "dimension", "severity", "code", "summary"],
+      "properties": {
+        "finding_id": {"$ref": "#/$defs/Id"},
+        "dimension": {"enum": ["CONTRACT", "IDENTITY", "GEOMETRY", "CONTINUITY", "TECHNICAL", "AUDIO", "COMPOSITION", "POLICY"]},
+        "severity": {"enum": ["INFO", "WARNING", "ERROR", "CRITICAL"]},
+        "code": {"$ref": "#/$defs/Id"},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "critical_violation": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "AuditRecord": {
+      "type": "object",
+      "required": ["audit_id", "candidate_id", "asset_sha256", "auditor_kind", "contract_refs", "dimension_scores", "findings", "failure_codes", "record_sha256"],
+      "properties": {
+        "audit_id": {"$ref": "#/$defs/Id"},
+        "candidate_id": {"$ref": "#/$defs/Id"},
+        "asset_sha256": {"$ref": "#/$defs/Sha256"},
+        "auditor_kind": {"enum": ["AI", "HUMAN"]},
+        "auditor_id": {"$ref": "#/$defs/Id"},
+        "auditor_version": {"type": ["string", "null"]},
+        "contract_refs": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "uniqueItems": true},
+        "dimension_scores": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0, "maximum": 100}},
+        "findings": {"type": "array", "items": {"$ref": "#/$defs/Finding"}},
+        "failure_codes": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "uniqueItems": true},
+        "alternate_use_proposals": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "record_sha256": {"$ref": "#/$defs/Sha256"}
+      },
+      "additionalProperties": false
+    },
+    "HumanDecision": {
+      "type": "object",
+      "required": ["decision_id", "candidate_id", "audit_refs", "decision", "actor_id"],
+      "properties": {
+        "decision_id": {"$ref": "#/$defs/Id"},
+        "candidate_id": {"$ref": "#/$defs/Id"},
+        "audit_refs": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "minItems": 1, "uniqueItems": true},
+        "decision": {"enum": ["ACCEPT", "REJECT", "ALTERNATE_USE", "NEEDS_REGENERATION"]},
+        "reason_codes": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "uniqueItems": true},
+        "notes": {"type": ["string", "null"], "maxLength": 4000},
+        "actor_id": {"$ref": "#/$defs/Id"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

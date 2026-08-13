@@ -110,13 +110,13 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-010 / TASK-011 / TASK-012 backend native acceptance`
-- Active Task: `TASK-036 Phase G native desktop hardening + release integration`
+- Active Task: `TASK-036 H2 W0/W1 remainder — PARKED pending exact resume conditions`
 - TASK-004: `COMPLETED`
-- Package: `0.19.0`
-- Release State: `RELEASE_CANDIDATE / PR_MERGE_PENDING`; latest formal public release remains GitHub Release `v0.19.0` until the ordered merge/tag/release gates complete
-- Development Candidate: `0.20.0` (`stable`; exact release decision established by TASK-018 Phase G)
-- Current release verification: TASK-010 real Resolve assembly/linked A/V/subtitle semantics, TASK-011 real Resolve render QA, TASK-012 real Cubase 48 kHz PCM round-trip and TASK-036 W2 packaged native `Open Project -> ... -> EDITOR_WORK` have PASS Evidence. TASK-036 W0/W1 remains partial with its remainder formally parked to H2; no post-v0.19.0 release claim is made.
-- Target-machine Gate: post-W2 conversation-free restart, final Pilot Context Cost and exact `0.20.0` release decision PASS; release metadata regression/CI/PR integration remains, with parked W0/W1 limitations explicit
+- Package: `0.20.0`
+- Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.0` targets exact main SHA `1fc8bae6ee5bf0c63c1c7d92e21e1eb6dd966c88`
+- Development Candidate: `NONE`
+- Current release verification: TASK-010 real Resolve assembly/linked A/V/subtitle semantics, TASK-011 real Resolve render QA, TASK-012 real Cubase 48 kHz PCM round-trip and TASK-036 W2 packaged native `Open Project -> ... -> EDITOR_WORK` have PASS Evidence. PR #20 passed `9 / 9`, merged, and the annotated `v0.20.0`/formal Release published verified wheel/source assets. TASK-036 W0/W1 remains partial with its remainder formally parked to H2.
+- Target-machine Gate: Phase G, bounded `v0.20.0` release integration and BAI Development OS H2/I1 closure PASS; overall TASK-036/M3B completion remains unclaimed
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13 Addendum II
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices

@@ -77,7 +77,9 @@ def test_ci_is_offline_first_and_cross_platform() -> None:
     assert "python -m pytest -q" in ci
     assert "python -m compileall -q src tests" in ci
     assert "sudo apt-get update && sudo apt-get install --yes ffmpeg" in ci
-    assert "choco install ffmpeg --yes --no-progress" in ci
+    assert "https://packages.chocolatey.org/ffmpeg.8.1.2.nupkg" in ci
+    assert "6c5746c8f0da8334d367131012ec1280bdd490651e108c35e19933587b06aed8" in ci
+    assert 'choco install ffmpeg --version=8.1.2 --source="$env:RUNNER_TEMP" --yes --no-progress' in ci
     assert "ffprobe -version" in ci
     assert "behavior-probe" not in ci
 

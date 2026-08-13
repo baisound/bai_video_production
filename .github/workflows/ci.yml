@@ -33,7 +33,7 @@ jobs:
           $package = Join-Path $env:RUNNER_TEMP "ffmpeg.8.1.2.nupkg"
           curl.exe --silent --show-error --fail --location `
             --output $package `
-            "https://community.chocolatey.org/api/v2/package/ffmpeg/8.1.2"
+            "https://packages.chocolatey.org/ffmpeg.8.1.2.nupkg"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $expected = "6c5746c8f0da8334d367131012ec1280bdd490651e108c35e19933587b06aed8"
           $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $package).Hash.ToLowerInvariant()

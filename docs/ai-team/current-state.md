@@ -4,14 +4,14 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_W2_PACKAGED_NATIVE_E2E_PASS`
+- Project Status: `BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_PARKED_TO_H2_W2_PACKAGED_NATIVE_E2E_PASS`
 - Last Completed Task: `TASK-024 Slice A — Review-only Cut Candidate Worker (v0.18.0)`
 - Active Consumer Task: `TASK-036 Phase G native desktop hardening + release integration`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.19.0` (FORMAL RELEASE COMPLETE; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
 - Development Candidate: `NONE` (Phase G work remains unreleased; exact release version decision pending and no release metadata finalized)
-- Next Consumer Task: `TASK-036 remaining W0/W1 acceptance or explicit parking -> conversation-free restart -> Pilot Context Cost -> exact release decision -> CI/PR integration`
+- Next Consumer Task: `post-W2 conversation-free restart -> final Pilot Context Cost -> exact release decision -> release metadata/CI/PR integration`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -23,7 +23,8 @@
 - Current backend integration state: TASK-010/011/012 are `NATIVE_VALIDATED / INTEGRATION_DESIGNED`; no `SHELL_INTEGRATED` Product claim.
 - Native PASS: real Resolve source-range/linked-A/V/idempotency/conflict semantics, edit-aware subtitle semantics, real Resolve render artifact QA and real Cubase 48 kHz PCM return.
 - TASK-036 W2 PASS: the packaged trusted launcher completed real Windows `Media ingest -> local FasterWhisper -> Subtitle -> Cut Review/Approve -> Resolve apply -> TASK-011 native Render QA -> atomic EDITOR_WORK`; the final UI state was `NONE` and no host path was persisted in public status/Evidence.
-- TASK-036 remaining: clean-profile, missing-WebView2 recovery, full DPI/accessibility matrix and supported install-path policy remain W0/W1 gates. Conversation-free restart and Pilot Context Cost Evidence also remain before exact release decision.
+- TASK-036 W0/W1 decision: the clean-profile, missing-WebView2, long-path, full DPI/mixed-monitor and screen-reader remainder is formally `PARKED_TO_PHASE_H2`; none of those cases is promoted to PASS. The bounded release environment requires installed WebView2 and a normal local install path.
+- TASK-036 remaining Phase G gate: post-W2 conversation-free restart and final Pilot Context Cost Evidence remain before the exact release decision.
 - Automated validation: WSL2 Ubuntu `805 passed`; focused atomic handoff/launcher/runtime `25 passed`; packaged Windows native W2 E2E PASS. PR CI remains the hosted cross-platform gate.
 
 ## TASK-004 implemented scope
@@ -102,7 +103,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13. Owner-directed editing-first priority remains in force. TASK-036 W2 has packaged native E2E Evidence; M3B/Product completion remains unclaimed until the remaining W0/W1 and Phase G restart/Context Cost boundaries are closed or formally parked.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13 Addendum II. Owner-directed editing-first priority remains in force. TASK-036 W2 has packaged native E2E Evidence and the W0/W1 remainder is formally parked to H2; M3B/Product completion remains unclaimed. Phase G now continues with post-W2 restart, final Context Cost and exact release decision.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

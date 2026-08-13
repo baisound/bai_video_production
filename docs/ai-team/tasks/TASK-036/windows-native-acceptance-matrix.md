@@ -1,7 +1,7 @@
 # TASK-036 — Windows Native Acceptance Matrix Ver.1.0
 
 - Date: 2026-08-14
-- Status: `W0_PARTIAL / W1_PARTIAL / W2_PACKAGED_NATIVE_E2E_PASS`
+- Status: `W0_PARTIAL_PARKED_TO_H2 / W1_PARTIAL_PARKED_TO_H2 / W2_PACKAGED_NATIVE_E2E_PASS`
 - Purpose: prevent a shell from being declared complete based only on browser/headless tests.
 
 ## 1. Gate levels
@@ -171,3 +171,7 @@ R0 backend native gates are closed for TASK-010/011/012. TASK-036 real Windows e
 W0 remains partial because clean-profile and missing-WebView2 recovery are untested and path length 245 fails at an internal packaged DLL path. W1 remains partial because the complete DPI/mixed-monitor/accessibility matrix is unfinished.
 
 W2 passed on 2026-08-14. The trusted packaged launcher completed native media ingest, cached/network-free local FasterWhisper, Subtitle, explicit Human plan approval, exact sandbox Resolve apply, TASK-011 native Render QA and atomic TASK-012 EDITOR_WORK in one session. The final Shell action was `NONE`. Conversation-free restart and Pilot Context Cost remain Phase G closure Evidence and do not broaden the accepted W0/W1 scope.
+
+## 10. Formal W0/W1 parking — 2026-08-14
+
+Clean-profile startup, missing-WebView2 recovery, long-path mitigation, the full DPI/mixed-monitor matrix and Windows screen-reader smoke are `PARKED_TO_PHASE_H2`. They remain unpassed. The release-support boundary is installed WebView2, a normal local install path and the tested single-monitor viewports. W2 remains accepted independently; overall TASK-036 completion remains unclaimed.

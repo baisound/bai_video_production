@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_W2_PACKAGED_NATIVE_E2E_PASS`
+`BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_PARKED_TO_H2_W2_PACKAGED_NATIVE_E2E_PASS`
 
 ## Purpose
 
@@ -114,9 +114,9 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - TASK-004: `COMPLETED`
 - Package: `0.19.0` (formal public release; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
 - Development Candidate: `NONE` (Phase G work remains unreleased; exact release version decision is pending and package/latest formal release remains `0.19.0`)
-- Current release verification: TASK-010 real Resolve assembly/linked A/V/subtitle semantics, TASK-011 real Resolve render QA, TASK-012 real Cubase 48 kHz PCM round-trip and TASK-036 W2 packaged native `Open Project -> ... -> EDITOR_WORK` have PASS Evidence. TASK-036 W0/W1 remains partial; no post-v0.19.0 release claim is made.
-- Target-machine Gate: complete or explicitly park TASK-036 clean-profile/WebView2-recovery/DPI/accessibility/install-path acceptance, then conversation-free restart, Pilot Context Cost, exact release decision and CI/PR integration
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13
+- Current release verification: TASK-010 real Resolve assembly/linked A/V/subtitle semantics, TASK-011 real Resolve render QA, TASK-012 real Cubase 48 kHz PCM round-trip and TASK-036 W2 packaged native `Open Project -> ... -> EDITOR_WORK` have PASS Evidence. TASK-036 W0/W1 remains partial with its remainder formally parked to H2; no post-v0.19.0 release claim is made.
+- Target-machine Gate: post-W2 conversation-free restart, final Pilot Context Cost, exact release decision and CI/PR integration; parked W0/W1 limitations must remain explicit
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13 Addendum II
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

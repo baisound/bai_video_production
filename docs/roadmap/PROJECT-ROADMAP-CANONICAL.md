@@ -592,3 +592,15 @@ Continuation order is now:
 3. make the exact release decision from repository state;
 4. finalize release metadata only if that decision authorizes it;
 5. rerun regression/CI, merge through PR, verify exact main SHA, then tag and publish a GitHub Release.
+
+### Ver.1.13 Addendum II — TASK-036 W0/W1 Formal Parking
+
+This addendum completes the first continuation item above without promoting the parked cases to PASS.
+
+- W0 remains `PARTIAL`; clean-profile startup, missing-WebView2 recovery and long-path mitigation are `PARKED_TO_PHASE_H2`.
+- W1 remains `PARTIAL`; the full DPI/mixed-monitor and screen-reader matrix is `PARKED_TO_PHASE_H2`.
+- the bounded release environment requires an installed WebView2 Runtime and a normal local install path; executable path length `166` passed and `245` failed;
+- evidenced single-monitor viewports are `1600x900` and `1366x768`; wider accessibility/display claims are prohibited;
+- W2 remains `PACKAGED_NATIVE_E2E_PASS`.
+
+TASK-036 overall `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS` and `MINIMUM_EDITING_PRODUCT_MVP_PASS` remain unclaimed. The next Phase G unit is the post-W2 conversation-free restart, followed by final Pilot Context Cost and the exact release decision.

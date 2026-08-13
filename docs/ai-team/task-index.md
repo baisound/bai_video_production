@@ -28,7 +28,7 @@
 | TASK-035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | PROPOSED | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Native ReaScript bridge first; iZotope Ozone/Nectar/Neutron capability levels; verified mix/stem Assets back to Resolve; optional MCP facade only after security review |
 | TASK-036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | COMPLETE_MINIMUM_EDITING_PRODUCT_MVP_PASS_RELEASED_0_20_1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native route PASS; PR #22 9/9, exact main SHA, annotated v0.20.1 and stable GitHub Release complete |
 | TASK-037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | COMPLETE_R2_PRODUCT_PROMOTION | COMPLETED_WITH_OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | PR #24 passed 9/9 and merged at exact main 045bd7ed; durable Application Service and Desktop Production Control workspace complete; no release at this checkpoint |
-| TASK-038 | Audit Workspace / Candidate Quality Loop | LOCAL_GATE_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Durable exact two-store Human decision/recovery and user-facing Audit history/actions pass locally; PR/hosted closure pending |
+| TASK-038 | Audit Workspace / Candidate Quality Loop | COMPLETE_R2_PRODUCT_PROMOTION | COMPLETED_WITH_OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | PR #26 passed 9/9 and merged at exact main 9a999645; durable two-store Human decision/recovery and user-facing Audit history/actions complete; no release at this checkpoint |
 | TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | DIRECT_CONTINUATION exact Asset/hash, End->Start graph, Character/Space continuity and Human-resolved Stale propagation |
 | TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | Prompt Entity/Version, provider profile, input/output identity, parent Candidate, Keep Conditions and failure-driven regeneration routes |
 | TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PROPOSED | NOT_AUTHORIZED | DEV-3/4 candidate | VFX/generated-media audio policy, non-destructive strip derivative, review/lock lanes and TASK-026 placement-plan UX |
@@ -39,7 +39,7 @@
 
 ## Route control
 
-TASK-004, TASK-036 and TASK-037 are completed. TASK-038 is now formally active on its dedicated branch from exact TASK-037 closure main SHA; TASK-027 minimum follows after its Gate. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037 and TASK-038 are completed. The Owner-routed R2 continuation advances next to TASK-027 Planning Workspace minimum on its own dedicated branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

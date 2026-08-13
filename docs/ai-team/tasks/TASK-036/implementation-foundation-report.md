@@ -1,11 +1,13 @@
 # TASK-036 — Desktop Shell Foundation Implementation Report
 
 - Date: 2026-08-13
-- Status: `FOUNDATION_IMPLEMENTED / AUTOMATED_VALIDATED / NATIVE_LAYOUT_SPIKE_PENDING`
+- Status: `FOUNDATION_IMPLEMENTED / AUTOMATED_VALIDATED / PHASE_G_NATIVE_W0_W1_PARTIAL`
 - Scope: transport-neutral shell authority boundary + native layout spike only
 - Product wiring: NOT CLAIMED
-- Native Windows validation: PENDING
-- One-EXE packaging: PENDING
+- Native Windows validation: PARTIAL — see `phase-g-native-acceptance-report.md`
+- One-dir Windows packaging: REAL LAUNCH PASS / W0 REMAINS PARTIAL
+
+> Phase G supersession note: the original foundation snapshot below is retained as implementation history. Native dialogs and reproducible one-dir packaging have since been added and executed; the current truth is `phase-g-native-acceptance-report.md` and `windows-native-acceptance-matrix.md`.
 
 ## Implemented
 

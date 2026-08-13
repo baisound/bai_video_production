@@ -1,6 +1,6 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.11
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.12
 - Project: `ai-video-production`
-- Date: 2026-08-12
+- Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
 - Product Design Baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - Governance: BAI Development OS Consumer Project Mode
@@ -541,3 +541,28 @@ Planning, Asset Slot, Audit, Human decision, Continuity and Prompt/Generation Ev
 Detailed cross-cutting design:
 
 `docs/ai-team/product-design/PRODUCTION-CONTROL-001.md`
+
+## Ver.1.12 Addendum — Phase G Native Consumer Pilot Checkpoint
+
+This addendum supersedes stale native-pending statements in earlier sections without changing TASK identities or safety ownership.
+
+### Current position
+
+- M3A `Backend Editing Technical MVP`: **NATIVE EVIDENCE PASS / RELEASE INTEGRATION PENDING**.
+- TASK-010: real Resolve assembly, linked A/V, source-rate conversion, idempotency/conflict handling and edit-aware subtitle semantics PASS.
+- TASK-011: real Resolve Render Queue and artifact video/audio/duration/loudness/true-peak QA PASS.
+- TASK-012: real deterministic EDITOR_WORK and Cubase 13 stereo 48 kHz 24-bit PCM return PASS.
+- TASK-036 W0/W1: **PARTIAL**. Native WebView2 window/layout, reachable native dialogs, focus return and packaged one-dir launch pass; clean-profile, missing-runtime recovery, full DPI/accessibility and install-path policy remain.
+- TASK-036 W2: **BLOCKED_NOT_WIRED**. `MINIMUM_EDITING_PRODUCT_MVP_PASS` remains unclaimed.
+
+### Phase G continuation order
+
+1. preserve the accepted TASK-010/011/012 Evidence and complete Consumer regression/CI;
+2. close or explicitly park remaining TASK-036 W0/W1 cases with bounded recovery;
+3. wire and run TASK-036 W2 conversation-free minimum-editing E2E;
+4. capture conversation-free restart and Pilot Context Cost Evidence;
+5. make the exact release-version decision from repository state;
+6. finalize release metadata on the work branch, rerun regression/CI and open a PR;
+7. merge only after all required checks are green, verify the exact main merge SHA, then create the annotated tag and GitHub Release.
+
+No direct main push, force push, paid Provider execution, ambiguous human-owned Project mutation or release claim beyond accepted Evidence is permitted.

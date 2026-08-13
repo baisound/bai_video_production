@@ -40,3 +40,20 @@ def test_windows_probe_does_not_treat_webview2_runtime_as_pywebview(tmp_path: Pa
     assert report.webview2_runtime_candidates
     assert report.pywebview_available is False
     assert report.ready_to_launch_layout_spike is False
+
+def test_windows_probe_ignores_non_version_directories_and_sorts_versions_numerically(tmp_path: Path):
+    application = tmp_path / "pf" / "Microsoft" / "EdgeWebView" / "Application"
+    older = application / "9.0.0.0"
+    newest = application / "10.0.0.0"
+    older.mkdir(parents=True)
+    newest.mkdir()
+    (application / "SetupMetrics").mkdir()
+
+    report = Task036NativeProbe(
+        platform_name="Windows",
+        environ={"PROGRAMFILES": str(tmp_path / "pf")},
+        module_finder=lambda name: object() if name == "webview" else None,
+    ).run()
+
+    assert report.webview2_runtime_candidates == (str(newest),)
+    assert report.ready_to_launch_layout_spike is True

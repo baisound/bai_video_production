@@ -4,7 +4,7 @@
   "additionalProperties": false,
   "properties": {
     "assembly_plan_version": {
-      "const": "1.2.0"
+      "const": "1.3.0"
     },
     "assembly_sha256": {
       "pattern": "^sha256:[0-9a-f]{64}$",
@@ -59,6 +59,9 @@
     },
     "idempotency_required": {
       "const": true
+    },
+    "record_frame_basis": {
+      "const": "RESOLVE_TIMELINE_START_RELATIVE"
     },
     "source_asset_id": {
       "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$",
@@ -189,6 +192,7 @@
   },
   "required": [
     "assembly_plan_version",
+    "record_frame_basis",
     "task_owner",
     "source_asset_id",
     "source_edit_plan_sha256",

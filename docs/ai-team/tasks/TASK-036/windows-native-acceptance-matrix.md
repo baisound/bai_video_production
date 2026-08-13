@@ -1,7 +1,7 @@
 # TASK-036 — Windows Native Acceptance Matrix Ver.0.9
 
 - Date: 2026-08-13
-- Status: `DESIGN_AHEAD / EXECUTION_AFTER_R0_AND_TASK036_IMPLEMENTATION_AUTHORIZATION`
+- Status: `W0_PARTIAL / W1_PARTIAL / W2_BLOCKED_NOT_WIRED`
 - Purpose: prevent a shell from being declared complete based only on browser/headless tests.
 
 ## 1. Gate levels
@@ -162,3 +162,9 @@ Do not keep a toolkit merely because implementation work has already been spent 
 - W2 PASS: `MINIMUM_EDITING_PRODUCT_MVP_PASS`
 
 W0/W1 must not be described as minimum editing Product completion.
+
+## 9. Phase G execution checkpoint — 2026-08-13
+
+R0 backend native gates are closed for TASK-010/011/012. TASK-036 real Windows execution now proves packaged WebView2 launch, HTML-reachable native chooser controls, focus return, multi-instance characterization, Unicode install-path launch and owned-process cleanup.
+
+W0 remains partial because clean-profile and missing-WebView2 recovery are untested and path length 245 fails at an internal packaged DLL path. W1 remains partial because the complete DPI/mixed-monitor/accessibility matrix is unfinished. W2 remains blocked because the real backend minimum-editing route is not wired through the Shell.

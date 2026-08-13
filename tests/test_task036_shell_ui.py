@@ -89,6 +89,18 @@ def test_html_includes_cut_overlay_and_human_review_controls():
     assert "KEEP/CUTは明示的なHuman Decision" in HTML
 
 
+def test_html_exposes_native_chooser_controls_without_starting_product_operations():
+    assert 'id="chooseProjectButton"' in HTML
+    assert 'id="chooseMediaButton"' in HTML
+    assert 'id="chooseHandoffButton"' in HTML
+    assert 'id="dialogStatus"' in HTML
+    assert 'aria-live="polite"' in HTML
+    assert "choose_project_folder" in HTML
+    assert "choose_media_source" in HTML
+    assert "choose_handoff_folder" in HTML
+    assert "操作は未開始" in HTML
+
+
 def test_integrated_bridge_plan_approval_advances_workflow_stage():
     from ai_video_production.desktop_editing_application import Task036EditingApplication
 

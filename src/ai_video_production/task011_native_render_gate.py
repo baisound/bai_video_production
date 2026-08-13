@@ -327,6 +327,21 @@ class Task011NativeRenderGateRunner:
             except Exception:
                 pass
 
+    @staticmethod
+    def _completed_job_status(job_status: dict[str, Any]) -> str | None:
+        raw = str(job_status.get("JobStatus", "")).strip()
+        if raw.casefold() in {"complete", "completed"}:
+            return "Complete"
+        candidates = {raw}
+        for source_encoding in ("cp1250", "cp1252", "latin-1"):
+            try:
+                candidates.add(raw.encode(source_encoding).decode("cp932"))
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                continue
+        if candidates.intersection({"完了", "完了済み"}):
+            return "Complete"
+        return None
+
     def _render_dir(self) -> Path:
         root = self.request.evidence_root.expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True)
@@ -526,14 +541,15 @@ class Task011NativeRenderGateRunner:
                 "Resolve returned an invalid render job status payload",
                 ProductErrorCategory.DATA_INTEGRITY,
             )
-        status_text = str(job_status.get("JobStatus", "")).strip()
-        if status_text.casefold() not in {"complete", "completed"}:
+        completed_status = self._completed_job_status(job_status)
+        if completed_status is None:
             raise ProductError(
                 "ERR_TASK011_NATIVE_RENDER_JOB_NOT_COMPLETE",
                 "Resolve render job did not finish in a completed state",
                 ProductErrorCategory.EXTERNAL_DEPENDENCY,
-                details={"job_status": status_text or "UNKNOWN"},
+                details={"job_status": str(job_status.get("JobStatus", "")).strip() or "UNKNOWN"},
             )
+        status_text = completed_status
 
         artifact = self._single_artifact(render_dir)
         qa = self.qa_service.verify(

@@ -23,6 +23,8 @@ from .timeline_mapping import EditSegment, TimelineMappingPlan, TimelineMappingS
 
 
 _AUTOMATION_PREFIX = "BAI_AUTO_"
+_ASSEMBLY_PLAN_VERSION = "1.3.0"
+_RECORD_FRAME_BASIS = "RESOLVE_TIMELINE_START_RELATIVE"
 
 
 class SourceMediaPlacementMode(str, Enum):
@@ -73,7 +75,8 @@ class ResolveAssemblyPlan:
 
     def to_dict(self) -> dict[str, Any]:
         body: dict[str, Any] = {
-            "assembly_plan_version": "1.2.0",
+            "assembly_plan_version": _ASSEMBLY_PLAN_VERSION,
+            "record_frame_basis": _RECORD_FRAME_BASIS,
             "task_owner": "TASK-010",
             "source_asset_id": self.source_asset_id,
             "source_edit_plan_sha256": self.source_edit_plan_sha256,
@@ -202,6 +205,7 @@ class ResolveAssemblyService:
             "subtitle_plan_sha256": subtitle_hash,
             "subtitle_cues": [item.to_dict() for item in subtitle_cues],
             "audio_placements": [item.to_dict() for item in audio_placements],
+            "record_frame_basis": _RECORD_FRAME_BASIS,
         }
         name_hash = sha256_bytes(canonical_json_bytes(preliminary)).split(":", 1)[1][:12]
         timeline_name = f"{_AUTOMATION_PREFIX}{name_hash.upper()}"
@@ -406,6 +410,41 @@ class ResolveScriptingAssemblyAdapter:
         return self._object_timeline_rate(project, label="Resolve Project")
 
     @staticmethod
+    def _timeline_start_frame(timeline: Any) -> int:
+        get_start = getattr(timeline, "GetStartFrame", None)
+        if not callable(get_start):
+            raise ProductError(
+                "ERR_RESOLVE_TIMELINE_START_API_UNAVAILABLE",
+                "Automation Timeline does not expose GetStartFrame for record-frame alignment",
+                ProductErrorCategory.NOT_SUPPORTED,
+            )
+        try:
+            value = get_start()
+        except Exception as exc:
+            raise ProductError(
+                "ERR_RESOLVE_TIMELINE_START_READ_FAILED",
+                "Automation Timeline start frame could not be read",
+                ProductErrorCategory.EXTERNAL_DEPENDENCY,
+            ) from exc
+        if not isinstance(value, (int, float)):
+            raise ProductError(
+                "ERR_RESOLVE_TIMELINE_START_INVALID",
+                "Automation Timeline returned an invalid start frame",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return int(value)
+
+    @staticmethod
+    def _resolve_record_frame(*, timeline_start: int, plan_origin: int, planned_frame: int) -> int:
+        if planned_frame < plan_origin:
+            raise ProductError(
+                "ERR_RESOLVE_PLANNED_FRAME_BEFORE_ORIGIN",
+                "planned Timeline frame precedes the declared Timeline origin",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return timeline_start + planned_frame - plan_origin
+
+    @staticmethod
     def _verify_subtitle_semantics(timeline: Any, *, plan: ResolveAssemblyPlan) -> None:
         expected = [cue for cue in plan.subtitle_cues if cue.action is SubtitleEditAction.KEEP]
         get_track_count = getattr(timeline, "GetTrackCount", None)
@@ -560,6 +599,8 @@ class ResolveScriptingAssemblyAdapter:
                 details={"planned": planned_rate.to_rational(), "observed": created_rate.to_rational()},
             )
 
+        timeline_start = self._timeline_start_frame(timeline)
+        plan_origin = plan.timeline_mapping.timeline_origin_frame
         if plan.source_media_mode is not SourceMediaPlacementMode.LINKED_AV:
             raise ProductError(
                 "ERR_RESOLVE_SOURCE_MEDIA_MODE_UNSUPPORTED",
@@ -581,7 +622,11 @@ class ResolveScriptingAssemblyAdapter:
                 "startFrame": source_start,
                 # Resolve AppendToTimeline uses an inclusive source end frame.
                 "endFrame": source_end_exclusive - 1,
-                "recordFrame": placement.timeline_start_frame,
+                "recordFrame": self._resolve_record_frame(
+                    timeline_start=timeline_start,
+                    plan_origin=plan_origin,
+                    planned_frame=placement.timeline_start_frame,
+                ),
             }
             appended = append([row])
             if not isinstance(appended, (list, tuple)) or not appended:
@@ -606,7 +651,7 @@ class ResolveScriptingAssemblyAdapter:
                         "derived SRT did not import as exactly one Media Pool item",
                         ProductErrorCategory.EXTERNAL_DEPENDENCY,
                     )
-                appended_subtitles = append([{"mediaPoolItem": imported_subtitles[0], "recordFrame": 0}])
+                appended_subtitles = append([{"mediaPoolItem": imported_subtitles[0], "recordFrame": timeline_start}])
                 if not isinstance(appended_subtitles, (list, tuple)) or not appended_subtitles:
                     raise ProductError(
                         "ERR_RESOLVE_SUBTITLE_APPEND_FAILED",
@@ -644,7 +689,11 @@ class ResolveScriptingAssemblyAdapter:
                     "mediaPoolItem": audio_items[item.asset_id],
                     "startFrame": 0,
                     "endFrame": item.duration_frames - 1,
-                    "recordFrame": item.timeline_start_frame,
+                    "recordFrame": self._resolve_record_frame(
+                        timeline_start=timeline_start,
+                        plan_origin=plan_origin,
+                        planned_frame=item.timeline_start_frame,
+                    ),
                     "mediaType": 2,
                     "trackIndex": item.track_index,
                 }

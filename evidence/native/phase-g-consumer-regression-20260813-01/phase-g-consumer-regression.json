@@ -1,0 +1,46 @@
+{
+  "absolute_paths_persisted": false,
+  "gate": "PHASE_G_CONSUMER_FULL_REGRESSION",
+  "native_gate_summary": {
+    "TASK-010": "PASS",
+    "TASK-011": "PASS",
+    "TASK-012": "PASS",
+    "TASK-036": "BLOCKED_PARTIAL"
+  },
+  "paid_provider_execution": false,
+  "report_sha256": "sha256:a3bb9d0e9750c49df8f493f4686a7bd0d65c98370af93dee0cbf5325a42286f3",
+  "report_version": "1.0.0",
+  "source_branch": "feature/task-007-012-native-validation",
+  "source_head_baseline": "26045adda380d0396d5cbdb86dc673524ce99bf7",
+  "status": "PASS",
+  "task_owner": "TASK-018",
+  "windows": {
+    "compileall": "PASS",
+    "git_diff_check": "PASS",
+    "pytest": {
+      "duration_seconds": 76.06,
+      "failed": 0,
+      "passed": 778,
+      "skip_reason": "non-Windows contract",
+      "skipped": 1
+    },
+    "python": "3.12"
+  },
+  "wsl2_ubuntu": {
+    "compileall": "PASS",
+    "environment_dependencies_added": [
+      "python3-venv",
+      "ffmpeg"
+    ],
+    "git_diff_check": "NOT_AUTHORITATIVE_NTFS_CRLF_INTERPRETATION",
+    "pytest": {
+      "duration_seconds": 46.77,
+      "failed": 0,
+      "passed": 779,
+      "skipped": 0
+    },
+    "python": "3.12.3",
+    "repository_mutated_by_environment_setup": false,
+    "status": "PASS"
+  }
+}

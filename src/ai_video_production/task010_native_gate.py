@@ -35,6 +35,7 @@ from .timebase import FrameRate
 
 _SANDBOX_RE = re.compile(r"^BAI_CAPABILITY_PROBE_[A-Za-z0-9_-]+$")
 _SHA = lambda ch: "sha256:" + ch * 64
+_NATIVE_FIXTURE_AUDIO_GAIN_DB = "1.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,6 +275,11 @@ class Task010NativeGateRunner:
             "lavfi",
             "-i",
             f"sine=frequency=1000:sample_rate=48000:duration={seconds}",
+            # This is a deterministic gate fixture, not a production-content
+            # transform. The explicit gain keeps the real Resolve render
+            # inside TASK-011's default -16 LUFS +/-2 LU acceptance profile.
+            "-af",
+            f"volume={_NATIVE_FIXTURE_AUDIO_GAIN_DB}dB",
             "-c:v",
             "libx264",
             "-preset",
@@ -378,6 +384,22 @@ class Task010NativeGateRunner:
         end_fn = getattr(timeline, "GetEndFrame", None)
         start = start_fn() if callable(start_fn) else None
         end = end_fn() if callable(end_fn) else None
+        if isinstance(start, (int, float)) and isinstance(end, (int, float)):
+            # Resolve 21 returns either inclusive or exclusive Timeline end
+            # semantics depending on the source-rate conversion path. Accept
+            # only the two exact representations of the same planned extent.
+            observed_extent = int(end) - int(start)
+            accepted_extents = {plan.expected_duration_frames - 1, plan.expected_duration_frames}
+            if observed_extent not in accepted_extents:
+                raise ProductError(
+                    "ERR_TASK010_NATIVE_TIMELINE_DURATION_MISMATCH",
+                    "Automation Timeline extent does not match the deterministic assembly duration",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={
+                        "expected_duration_frames": plan.expected_duration_frames,
+                        "observed_timeline_extent": observed_extent,
+                    },
+                )
         return {
             "timeline_name": plan.timeline_name,
             "assembly_sha256": expected_hash,

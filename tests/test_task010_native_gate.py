@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -88,3 +89,24 @@ def test_native_gate_requires_exact_current_sandbox(tmp_path: Path):
     with pytest.raises(ProductError) as exc:
         runner._project()
     assert exc.value.code == "ERR_TASK010_NATIVE_SANDBOX_MISMATCH"
+
+def test_native_fixture_uses_explicit_default_qa_compatible_gain(tmp_path: Path):
+    runner = Task010NativeGateRunner(
+        sandbox_project="BAI_CAPABILITY_PROBE_FIXTURE_GAIN",
+        evidence_root=tmp_path / "evidence",
+    )
+    observed: list[str] = []
+
+    def fake_run(argv: list[str], *, timeout_seconds: int = 120):
+        observed.extend(argv)
+        Path(argv[-1]).write_bytes(b"fixture")
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    runner._run = fake_run  # type: ignore[method-assign]
+    target = tmp_path / "fixture.mp4"
+    runner._generate_source(task010_native_cases()[0], target)
+
+    filter_index = observed.index("-af")
+    assert observed[filter_index + 1] == "volume=1.0dB"
+    assert filter_index > observed.index("sine=frequency=1000:sample_rate=48000:duration=4.000000")
+    assert target.read_bytes() == b"fixture"

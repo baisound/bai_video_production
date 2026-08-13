@@ -12,6 +12,7 @@ import importlib.util
 import os
 from pathlib import Path
 import platform
+import re
 from typing import Any, Callable, Mapping
 
 
@@ -72,7 +73,15 @@ class Task036NativeProbe:
         for root in roots:
             if not root.is_dir():
                 continue
-            versions = sorted((item for item in root.iterdir() if item.is_dir()), key=lambda p: p.name, reverse=True)
+            versions = sorted(
+                (
+                    item
+                    for item in root.iterdir()
+                    if item.is_dir() and re.fullmatch(r"\d+(?:\.\d+)*", item.name)
+                ),
+                key=lambda path: tuple(int(part) for part in path.name.split(".")),
+                reverse=True,
+            )
             if versions:
                 found.append(str(versions[0]))
             else:

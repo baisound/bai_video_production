@@ -23,7 +23,7 @@ class FakeTimeline:
 
 
 class FakeProject:
-    def __init__(self, artifact_factory, *, name="BAI_CAPABILITY_PROBE_TASK011_TEST", timelines=None):
+    def __init__(self, artifact_factory, *, name="BAI_CAPABILITY_PROBE_TASK011_TEST", timelines=None, job_status="Complete"):
         self.name = name
         self.timelines = timelines or [FakeTimeline(TIMELINE)]
         self.artifact_factory = artifact_factory
@@ -31,6 +31,7 @@ class FakeProject:
         self.selected = None
         self.started = False
         self.stopped = False
+        self.job_status = job_status
 
     def GetName(self):
         return self.name
@@ -66,7 +67,7 @@ class FakeProject:
         return False
 
     def GetRenderJobStatus(self, job_id):
-        return {"JobStatus": "Complete", "CompletionPercentage": 100}
+        return {"JobStatus": self.job_status, "CompletionPercentage": 100}
 
     def StopRendering(self):
         self.stopped = True
@@ -263,3 +264,14 @@ def test_task011_native_gate_best_effort_stops_if_progress_query_fails_after_dis
     assert exc.value.code == "ERR_TASK011_NATIVE_RENDER_PROGRESS_FAILED"
     assert project.started is True
     assert project.stopped is True
+
+
+def test_task011_native_gate_accepts_cp932_status_mojibake_from_localized_resolve(tmp_path: Path):
+    # CP932 bytes for Japanese "完了" decoded through CP1250 by the bridge.
+    project = FakeProject(one_artifact, job_status="Š®—ą")
+    qa = FakeQA()
+    gate = Task011NativeRenderGateRunner(request(tmp_path), loader=FakeLoader(project), qa_service=qa)
+    report = gate.run(explicit_external_write_authorization=True, output_path=tmp_path / "report.json")
+    assert report["status"] == "PASS"
+    assert report["render_job"]["status"] == "Complete"
+    assert len(qa.calls) == 1

@@ -31,15 +31,16 @@ def approved_plan():
 
 
 class Timeline:
-    def __init__(self, name: str, marker_hash: str | None = None, timeline_rate: str = "30"):
+    def __init__(self, name: str, marker_hash: str | None = None, timeline_rate: str = "30", start_frame: int = 86_400):
         self.name = name
         self.timeline_rate = timeline_rate
+        self.start_frame = start_frame
         self.markers = {}
         if marker_hash:
             self.markers[0] = {"name": "BAI AUTO ASSEMBLY", "customData": marker_hash}
     def GetName(self): return self.name
     def GetMarkers(self): return self.markers
-    def GetStartFrame(self): return 0
+    def GetStartFrame(self): return self.start_frame
     def GetSetting(self, key): return self.timeline_rate if key == "timelineFrameRate" else ""
     def AddMarker(self, frame, color, name, note, duration, custom):
         self.markers[frame] = {"name": name, "customData": custom}
@@ -122,6 +123,11 @@ def test_adapter_uses_source_rate_and_writes_idempotency_marker(tmp_path: Path):
     # Primary source placement must no longer request video-only mediaType=1.
     assert "mediaType" not in project.media_pool.append_rows[0]
     assert "mediaType" not in project.media_pool.append_rows[1]
+    # Resolve Timelines commonly start at 01:00:00:00. Planned frames are
+    # relative to the Plan origin and must be offset by the real start frame.
+    assert [row["recordFrame"] for row in project.media_pool.append_rows] == [86_400, 86_430]
+    assert plan.to_dict()["assembly_plan_version"] == "1.3.0"
+    assert plan.to_dict()["record_frame_basis"] == "RESOLVE_TIMELINE_START_RELATIVE"
 
 
 def test_existing_deterministic_timeline_without_marker_fails_closed(tmp_path: Path):

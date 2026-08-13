@@ -4,14 +4,14 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `TECHNICAL_MVP_007_012_AUTOMATED_VALIDATED_NATIVE_GATES_PENDING`
+- Project Status: `BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL`
 - Last Completed Task: `TASK-024 Slice A — Review-only Cut Candidate Worker (v0.18.0)`
-- Active Consumer Task: `TASK-007 / TASK-010 / TASK-011 / TASK-012 — contiguous Technical MVP validation`
+- Active Consumer Task: `TASK-036 Phase G native desktop hardening + release integration`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.19.0` (FORMAL RELEASE COMPLETE; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
-- Development Candidate: `NONE` (TASK-007/010/011/012 are an unreleased implementation wave; no package candidate has been authorized)
-- Next Consumer Task: `TASK-007/010/011/012 automated closure -> native Windows/Resolve/Cubase acceptance -> Unified Desktop Shell integration`
+- Development Candidate: `NONE` (Phase G work remains unreleased; exact release version decision pending and no release metadata finalized)
+- Next Consumer Task: `TASK-036 remaining W0/W1/W2 acceptance -> conversation-free restart -> exact release decision -> CI/PR integration`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -20,9 +20,10 @@
 - TASK-011: render artifact checksum/media/duration verification plus configurable LUFS/true-peak QA; no absolute render path persisted in QA report.
 - TASK-012: QA-gated deterministic `EDITOR_WORK_*` package, relative-path/checksum manifest and bounded 48 kHz PCM Cubase return. No automatic Cubase project conversion claim.
 - Cross-task Application Service: `TechnicalMvpApplicationService` preserves the 007 -> 010 -> 011 -> 012 orchestration boundary for future Unified Desktop Shell wiring.
-- Current integration state: `INTEGRATION_DESIGNED`; no `SHELL_INTEGRATED` or `NATIVE_VALIDATED` claim.
-- Native gates still required: real Resolve source-range semantics, SRT import behavior, optional audio placement, Resolve render flow, Windows dialogs/focus and Cubase round-trip.
-- Automated validation: pre-change baseline `445 / 445 PASS`; post-change full regression `462 / 462 PASS`; compileall PASS; `git diff --check` PASS.
+- Current backend integration state: TASK-010/011/012 are `NATIVE_VALIDATED / INTEGRATION_DESIGNED`; no `SHELL_INTEGRATED` Product claim.
+- Native PASS: real Resolve source-range/linked-A/V/idempotency/conflict semantics, edit-aware subtitle semantics, real Resolve render artifact QA and real Cubase 48 kHz PCM return.
+- TASK-036 partial: WebView2 native window/layout, allowlisted native dialog controls, focus return, packaged one-dir EXE, multi-instance characterization, Unicode install path and owned-process cleanup PASS. Clean-profile, missing-WebView2 recovery, full DPI/accessibility matrix and W2 real backend Shell E2E remain incomplete.
+- Automated validation: Windows `778 passed, 1 intentional OS skip`; WSL2 Ubuntu `779 passed`; compileall PASS on both environments; Windows `git diff --check` PASS.
 
 ## TASK-004 implemented scope
 
@@ -100,7 +101,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.8. Owner-directed editing-first priority remains in force. TASK-004 moved local image/video/audio generation foundations forward while preserving TASK-022/010/026 ownership of exact Timeline placement.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.12. Owner-directed editing-first priority remains in force. Phase G closes M3A backend native Evidence while TASK-036 W2 remains the M3B completion boundary.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

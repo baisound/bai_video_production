@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.17
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.18
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -654,3 +654,9 @@ TASK-037's local implementation gate passes. The existing Asset Slot/Candidate/L
 Windows full regression passes `825 / 825` executed tests with one intentional non-Windows skip. Cross-process CAS serialization, stale-confirmation rejection, tamper rejection and exact project scope are covered. No paid Provider, automatic regeneration, physical delete or Resolve/Cubase mutation is introduced.
 
 Formal closure remains conditional on hosted PR checks, exact `main` merge verification and branch cleanup. No package, Tag or Release change is selected at this TASK-037 checkpoint. After closure, TASK-038 starts on its own branch and promotes the existing Audit Foundation into user-facing Candidate Quality decisions.
+
+### Ver.1.18 Addendum IX — TASK-037 Hosted Closure
+
+TASK-037 is complete. PR #24 exact head `fa71e046bf9d377d52b1845f70f2c38e21ee373f` passed `9 / 9` hosted checks and merged at exact main SHA `045bd7ed53293fd195a4993586d965bc1094ddac`. The implementation branch was deleted remotely and locally. The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R2 checkpoint.
+
+The next Owner-routed unit is TASK-038 Audit Workspace / Candidate Quality Loop. It starts from the exact TASK-037 closure SHA on a new dedicated branch and promotes the existing Candidate Audit Foundation into user-facing Human decisions. TASK-027 Planning Workspace minimum follows only after the TASK-038 Gate.

@@ -111,7 +111,8 @@ def test_html_exposes_allowlisted_post_review_workflow_action():
     assert "compile_resolve_assembly" in HTML
     assert "prepare_resolve_apply" in HTML
     assert "apply_resolve_assembly" in HTML
-    assert "prepare_native_render_gate" in HTML
+    assert "prepare_native_render_confirmation" in HTML
+    assert "execute_native_render" in HTML
     assert "bind_runtime_render_qa" in HTML
     assert "create_editor_handoff" in HTML
 

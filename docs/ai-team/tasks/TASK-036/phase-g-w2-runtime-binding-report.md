@@ -16,6 +16,8 @@ The native pywebview Shell can now continue from Human-approved Cut Review throu
 - the bridge exposes only fixed allowlisted operations;
 - Resolve compile is non-mutating;
 - Resolve apply uses the existing Shell one-shot confirmation bound to the exact Project, Timeline, Edit Plan and Assembly identities;
+- TASK-011 native render now has a second exact one-shot confirmation bound to the applied Assembly, sandbox Project, Automation Timeline, expected duration/rate and a Python-only Evidence destination;
+- only the trusted native-render port can authorize the existing TASK-011 runner, and successful execution binds the exact Render QA identity and runtime-only artifact path back into the same desktop session;
 - JavaScript passes only the one-shot `confirmation_id` for apply and cannot replace the target, adapter or source path;
 - Render QA and EDITOR_WORK creation consume only trusted objects/paths already bound in the Python runtime;
 - no host path is returned by workflow status.
@@ -37,14 +39,16 @@ Therefore `SHELL_INTEGRATED`, TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE
 
 - focused workflow/runtime/Shell/Resolve/post/package tests: `26 passed`;
 - focused trusted TASK-003/006/024 pre-edit and runtime-factory composition tests after Critic correction: `20 passed`;
+- focused TASK-011 render-authority/Shell/post-Resolve/native-runner tests: `31 passed`;
 - Windows full regression: `782 passed, 1 skipped` (the skip is the intentional non-Windows contract test);
-- WSL2 Ubuntu full regression after the pre-edit composition and Critic correction: `789 passed`;
+- WSL2 Ubuntu full regression after the TASK-011 render-authority integration: `791 passed`;
 - corrected one-dir package built with PyInstaller `6.22.0` and the project virtual environment;
-- updated packaged EXE SHA-256: `1acfa06a081da90cd12e3ab7f29a2b2b943cab5a87d6f02e39f4d2f7f674f5da`;
+- updated packaged EXE SHA-256: `159cc735d71541859190080f8048e198121aeb0b1971e5d0d7cfa05042337a60`;
 - packaged native top-level window launch and normal close: `PASS`;
-- the frozen module graph contains `task036_pre_edit_runtime`, `task036_product_ports`, `task036_workflow_runtime` and the pywebview hooks.
+- the frozen module graph contains `task036_pre_edit_runtime`, `task036_product_ports`, `task036_workflow_runtime`, `task036_native_render_port`, the TASK-011 native runner and the pywebview hooks.
 
 Machine-readable Evidence:
 
 - `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-runtime-binding.json`;
-- `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-pre-edit-composition.json`.
+- `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-pre-edit-composition.json`;
+- `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-render-authority-integration.json`.

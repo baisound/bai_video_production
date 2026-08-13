@@ -32,6 +32,7 @@ from .task036_product_ports import (
     Task036LocalTranscriptionPort,
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
+from .production_control_application import Task037ProductionControlApplication
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
 
@@ -405,6 +406,10 @@ def build_trusted_launch(
         native_dialog=dialog,
         pre_edit_runtime=pre_edit,
         workflow_runtime_factory=downstream,
+        production_control=Task037ProductionControlApplication(
+            project_root=configuration.project_root,
+            project_id=configuration.project_id,
+        ),
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)
 

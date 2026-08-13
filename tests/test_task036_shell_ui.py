@@ -128,6 +128,74 @@ def test_html_has_keyboard_focus_and_screen_reader_landmarks():
     assert ".main{grid-template-columns:1fr}" in HTML
 
 
+def test_html_promotes_production_control_without_task038_authority_shortcut():
+    assert 'data-w="PRODUCTION_CONTROL"' in HTML
+    assert 'id="productionWorkspace"' in HTML
+    assert 'id="productionSlots"' in HTML
+    assert "production_snapshot" in HTML
+    assert "production_prepare_lock" in HTML
+    assert "production_apply_lock" in HTML
+    assert "expected_snapshot_sha256:model.snapshot_sha256" in HTML
+    assert "prepared.asset_sha256" in HTML
+    assert "textContent=`${candidate.candidate_id}" in HTML
+    assert "production_accept" not in HTML
+    assert "production_reject" not in HTML
+
+
+def test_production_bridge_is_unavailable_until_trusted_project_binding():
+    service = ShellApplicationService(product_version="0.19.0")
+    bridge = Task036ShellBridge(service)
+    assert bridge.production_snapshot({}) == {"available": False}
+    with pytest.raises(ProductError) as exc:
+        bridge.production_prepare_lock({
+            "slot_id": "slot-1",
+            "candidate_id": "candidate-1",
+            "expected_snapshot_sha256": "sha256:" + "a" * 64,
+        })
+    assert exc.value.code == "ERR_TASK037_PRODUCTION_CONTROL_NOT_BOUND"
+
+
+def test_production_bridge_routes_only_exact_lock_confirmation_contract():
+    class ProductionControlStub:
+        def __init__(self):
+            self.prepared = None
+            self.applied = None
+
+        def snapshot(self):
+            return {"snapshot_sha256": "sha256:" + "a" * 64, "slots": []}
+
+        def prepare_lock(self, **values):
+            self.prepared = values
+            return {"confirmation_id": "lock-1", **values}
+
+        def apply_lock(self, *, confirmation_id):
+            self.applied = confirmation_id
+            return {"locked": True}
+
+    control = ProductionControlStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.19.0"),
+        production_control=control,
+    )
+    snapshot = bridge.production_snapshot({})
+    assert snapshot["available"] is True
+    prepared = bridge.production_prepare_lock({
+        "slot_id": "slot-1",
+        "candidate_id": "candidate-1",
+        "expected_snapshot_sha256": snapshot["snapshot_sha256"],
+    })
+    assert control.prepared == {
+        "slot_id": "slot-1",
+        "candidate_id": "candidate-1",
+        "expected_snapshot_sha256": snapshot["snapshot_sha256"],
+    }
+    assert bridge.production_apply_lock({"confirmation_id": prepared["confirmation_id"]}) == {"locked": True}
+    assert control.applied == "lock-1"
+    with pytest.raises(ProductError) as exc:
+        bridge.production_apply_lock({"confirmation_id": "lock-1", "force": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
 def test_integrated_bridge_plan_approval_advances_workflow_stage():
     from ai_video_production.desktop_editing_application import Task036EditingApplication
 

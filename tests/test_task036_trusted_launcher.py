@@ -13,6 +13,7 @@ from ai_video_production.task036_trusted_launcher import (
     _resolve_asset_bindings,
     build_trusted_launch,
 )
+from ai_video_production.production_control_application import Task037ProductionControlApplication
 
 
 class DialogBackend:
@@ -117,6 +118,14 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     public = json.dumps([launch.bridge.snapshot(), launch.bridge.workflow_status()])
     assert str(config.project_root) not in public
     assert str(config.analysis_source_path) not in public
+    assert isinstance(launch.bridge.production_control, Task037ProductionControlApplication)
+    assert launch.bridge.production_control.project_root == config.project_root
+    assert launch.bridge.production_control.project_id == config.project_id
+    production = launch.bridge.production_snapshot({})
+    assert production["available"] is True
+    assert production["project_id"] == config.project_id
+    assert production["provider_execution_started"] is False
+    assert production["resolve_mutation_started"] is False
 
 
 def test_trusted_resolve_bindings_use_managed_derived_subtitle_path(tmp_path: Path):

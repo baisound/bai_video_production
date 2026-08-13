@@ -23,6 +23,7 @@ class WorkspaceId(str, Enum):
     SUBTITLE = "SUBTITLE"
     REVIEW = "REVIEW"
     EXPORT = "EXPORT"
+    PRODUCTION_CONTROL = "PRODUCTION_CONTROL"
 
 
 class CommandCategory(str, Enum):
@@ -65,6 +66,11 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "handoff.open_folder": ShellCommandSpec("handoff.open_folder", CommandCategory.READ_ONLY),
     "settings.read": ShellCommandSpec("settings.read", CommandCategory.READ_ONLY, False),
     "settings.update": ShellCommandSpec("settings.update", CommandCategory.LOCAL_DURABLE, False),
+    "production.snapshot": ShellCommandSpec("production.snapshot", CommandCategory.READ_ONLY),
+    "production.candidate.register": ShellCommandSpec("production.candidate.register", CommandCategory.LOCAL_DURABLE),
+    "production.candidate.ready_for_audit": ShellCommandSpec("production.candidate.ready_for_audit", CommandCategory.LOCAL_DURABLE),
+    "production.lock.prepare": ShellCommandSpec("production.lock.prepare", CommandCategory.READ_ONLY),
+    "production.lock.apply": ShellCommandSpec("production.lock.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

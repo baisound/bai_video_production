@@ -36,6 +36,19 @@ def test_open_project_sets_media_workspace_and_context_revision():
     assert "render.start" in shell.available_commands()
 
 
+def test_production_control_workspace_and_commands_are_explicitly_allowlisted():
+    shell = service()
+    shell.open_project_context(project_id="p1", display_name="Project 1")
+    shell.set_workspace(WorkspaceId.PRODUCTION_CONTROL)
+    snapshot = shell.snapshot().to_dict()
+    assert snapshot["current_workspace"] == "PRODUCTION_CONTROL"
+    assert "production.snapshot" in snapshot["available_commands"]
+    assert "production.candidate.register" in snapshot["available_commands"]
+    assert "production.candidate.ready_for_audit" in snapshot["available_commands"]
+    assert "production.lock.prepare" in snapshot["available_commands"]
+    assert "production.lock.apply" in snapshot["available_commands"]
+
+
 def test_unknown_command_fails_closed():
     shell = service()
     shell.open_project_context(project_id="p1", display_name="Project 1")

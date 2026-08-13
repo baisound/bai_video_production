@@ -28,7 +28,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install --yes ffmpeg
       - name: Install FFmpeg on Windows
         if: runner.os == 'Windows'
-        run: choco install ffmpeg --yes --no-progress
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP "ffmpeg.8.1.2.nupkg"
+          curl.exe --silent --show-error --fail --location `
+            --output $package `
+            "https://community.chocolatey.org/api/v2/package/ffmpeg/8.1.2"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $expected = "6c5746c8f0da8334d367131012ec1280bdd490651e108c35e19933587b06aed8"
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $package).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "FFmpeg package checksum mismatch" }
+          choco install ffmpeg --version=8.1.2 --source="$env:RUNNER_TEMP" --yes --no-progress
       - name: Verify media executables
         run: |
           ffmpeg -version

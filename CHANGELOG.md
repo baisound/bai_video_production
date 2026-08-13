@@ -7,6 +7,7 @@
 - Promoted the existing TASK-037 Asset Slot / Candidate / LOCK / STALE Foundation into the unified Desktop Shell through a durable project-scoped Production Control Application Service and `制作管理` workspace.
 - Restricted Slot installation to Human-approved Plans, preserved TASK-038 Human ACCEPT/REJECT ownership, and added exact one-shot Candidate LOCK confirmation bound to snapshot, Slot revision and Asset SHA-256.
 - Serialized Production Control compare-and-swap publication across local processes and added concurrency, stale-confirmation, tamper, project-scope and Shell regression coverage without adding Provider/NLE execution or physical deletion.
+- Hardened Windows CI against Chocolatey search-index outages by downloading the pinned FFmpeg 8.1.2 package directly and verifying its exact SHA-256 before local installation.
 
 ## [0.20.1] - 2026-08-14
 

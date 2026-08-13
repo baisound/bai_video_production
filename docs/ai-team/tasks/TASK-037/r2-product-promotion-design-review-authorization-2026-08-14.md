@@ -57,6 +57,7 @@ Safety floors:
 - focused TASK-037, Production Control Store and Shell tests under `tests/`
 - TASK-037 Product documents and Product state/roadmap/task index files
 - `CHANGELOG.md` only for the required unreleased Product-change record; package/version fields remain unchanged
+- `.github/workflows/ci.yml` only if hosted validation exposes an infrastructure blocker that prevents the authorized matrix from reaching Product tests
 
 Release metadata, native Resolve/Cubase projects, raw `evidence/`, paid Provider adapters and BAI Development OS runtime files are not allowed in this implementation unit.
 

@@ -1,0 +1,48 @@
+{
+  "absolute_paths_persisted": false,
+  "branch": "feature/task-036-phase-g-w2",
+  "external_mutation_performed": false,
+  "gate": "TASK036_W2_DOWNSTREAM_RUNTIME_BINDING",
+  "native_package": {
+    "bundle_bytes": 32451144,
+    "bundle_files": 306,
+    "exe_sha256": "sha256:370938272d23c6f7a9ab34ef62beaac7be4bf1fdf59514ea9c0091085c5e1934",
+    "exe_size_bytes": 5715709,
+    "normal_close": "PASS",
+    "pyinstaller": "6.22.0",
+    "pywebview_module_included": true,
+    "top_level_window": "PASS",
+    "workflow_module_frozen": true
+  },
+  "paid_provider_execution": false,
+  "product_completion_claimed": false,
+  "report_version": "1.0.0",
+  "runtime_contract": {
+    "adapter_from_javascript": false,
+    "external_write_confirmation": "EXACT_ONE_SHOT",
+    "host_path_from_javascript": false,
+    "host_path_in_status": false,
+    "resolve_target_from_javascript": false,
+    "trusted_python_runtime_binding": true
+  },
+  "semantic_report_sha256": "sha256:7989aca837ba67695db8983cc1fba630085950ec90e35447989aa8db79cd5ee4",
+  "status": "W2_DOWNSTREAM_RUNTIME_BOUND_FULL_E2E_PENDING",
+  "tests": {
+    "focused": {
+      "passed": 26
+    },
+    "windows": {
+      "passed": 782,
+      "skipped": 1
+    },
+    "wsl2_ubuntu": {
+      "passed": 783,
+      "skipped": 0
+    }
+  },
+  "unresolved": [
+    "PROJECT_MEDIA_TRANSCRIBE_SUBTITLE_CUT_COMPOSITION",
+    "REAL_NATIVE_RENDER_TO_TRUSTED_QA_BINDING",
+    "PACKAGED_CONVERSATION_FREE_FULL_E2E"
+  ]
+}

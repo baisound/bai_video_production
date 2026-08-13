@@ -1,7 +1,7 @@
 # TASK-036 — Windows Native Acceptance Matrix Ver.0.9
 
 - Date: 2026-08-13
-- Status: `W0_PARTIAL / W1_PARTIAL / W2_BLOCKED_NOT_WIRED`
+- Status: `W0_PARTIAL / W1_PARTIAL / W2_DOWNSTREAM_RUNTIME_BOUND_FULL_E2E_PENDING`
 - Purpose: prevent a shell from being declared complete based only on browser/headless tests.
 
 ## 1. Gate levels

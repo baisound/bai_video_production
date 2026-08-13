@@ -553,7 +553,7 @@ This addendum supersedes stale native-pending statements in earlier sections wit
 - TASK-011: real Resolve Render Queue and artifact video/audio/duration/loudness/true-peak QA PASS.
 - TASK-012: real deterministic EDITOR_WORK and Cubase 13 stereo 48 kHz 24-bit PCM return PASS.
 - TASK-036 W0/W1: **PARTIAL**. Native WebView2 window/layout, reachable native dialogs, focus return and packaged one-dir launch pass; clean-profile, missing-runtime recovery, full DPI/accessibility and install-path policy remain.
-- TASK-036 W2: **BLOCKED_NOT_WIRED**. `MINIMUM_EDITING_PRODUCT_MVP_PASS` remains unclaimed.
+- TASK-036 W2: **DOWNSTREAM_RUNTIME_BOUND / FULL_E2E_PENDING**. Human-approved Cut Review now reaches fixed trusted TASK-010/011/012 runtime bindings, but Project/Media/Transcribe/Subtitle/Cut composition and packaged full E2E remain. `MINIMUM_EDITING_PRODUCT_MVP_PASS` remains unclaimed.
 
 ### Phase G continuation order
 

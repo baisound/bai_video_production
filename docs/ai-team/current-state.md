@@ -4,14 +4,14 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL`
+- Project Status: `BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_W2_DOWNSTREAM_BOUND`
 - Last Completed Task: `TASK-024 Slice A — Review-only Cut Candidate Worker (v0.18.0)`
 - Active Consumer Task: `TASK-036 Phase G native desktop hardening + release integration`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.19.0` (FORMAL RELEASE COMPLETE; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
 - Development Candidate: `NONE` (Phase G work remains unreleased; exact release version decision pending and no release metadata finalized)
-- Next Consumer Task: `TASK-036 remaining W0/W1/W2 acceptance -> conversation-free restart -> exact release decision -> CI/PR integration`
+- Next Consumer Task: `TASK-036 Project/Media/Transcribe/Subtitle/Cut composition + remaining W0/W1/W2 native acceptance -> exact release decision -> CI/PR integration`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 

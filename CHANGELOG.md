@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Promoted the TASK-027 persisted Planning Foundation into a unified Desktop `企画` workspace with complete Proposal/Scene Contract review, exact Human GO and a separate Approved Plan -> Production Control installation confirmation.
+- Serialized cross-process Proposal CAS publication and preserved strict boundaries: GO starts no Provider, paid execution, Budget reservation, Resolve/Cubase mutation or publish operation.
 - Promoted TASK-038 Audit Workspace into a durable project-scoped Application Service with exact Human decision confirmation, prepared two-store transactions and explicit fail-closed crash recovery.
 - Added user-facing immutable Audit history, AI/Human identity, dimensions, findings, Failure Codes, alternate-use proposals and separate ACCEPT/REJECT/ALTERNATE_USE/NEEDS_REGENERATION actions to the unified `制作管理` workspace; Reject is not Delete and regeneration never starts automatically.
 - Promoted the existing TASK-037 Asset Slot / Candidate / LOCK / STALE Foundation into the unified Desktop Shell through a durable project-scoped Production Control Application Service and `制作管理` workspace.

@@ -36,6 +36,7 @@ from .production_proposal import (
 )
 from .serialization import canonical_json_bytes, sha256_bytes
 from .timebase import FrameRate
+from .production_control_store import _exclusive_snapshot_lock
 
 
 _MAX_BYTES = 16 * 1024 * 1024
@@ -236,17 +237,18 @@ class ProductionProposalSnapshotStore:
         expected_previous_snapshot_sha256: str | None = None,
     ) -> AtomicWriteResult:
         target = Path(path)
-        if target.is_symlink():
-            raise ProductError("ERR_PROPOSAL_SNAPSHOT_FILE_INVALID", "Refusing to replace a symlink Production Proposal snapshot", ProductErrorCategory.SECURITY)
-        if target.exists():
-            if not target.is_file():
-                raise ProductError("ERR_PROPOSAL_SNAPSHOT_FILE_INVALID", "Production Proposal snapshot target must be a regular file", ProductErrorCategory.VALIDATION)
-            if expected_previous_snapshot_sha256 is None:
-                raise ProductError("ERR_PROPOSAL_SNAPSHOT_CAS_REQUIRED", "Replacing a Production Proposal snapshot requires its exact previous checksum", ProductErrorCategory.AUTHORIZATION)
-            current = _body(ProductionProposalSnapshotStore.load(target))["snapshot_sha256"]
-            if current != expected_previous_snapshot_sha256:
-                raise ProductError("ERR_PROPOSAL_SNAPSHOT_REVISION_CONFLICT", "Production Proposal snapshot changed before save; reload before retry", ProductErrorCategory.STATE, details={"current_snapshot_sha256": current})
-        elif expected_previous_snapshot_sha256 is not None:
-            raise ProductError("ERR_PROPOSAL_SNAPSHOT_PREVIOUS_MISSING", "Expected previous Production Proposal snapshot does not exist", ProductErrorCategory.STATE)
-        document = _body(registry)
-        return AtomicJsonWriter.write(target, document, validator=lambda value: _parse(value))
+        with _exclusive_snapshot_lock(target):
+            if target.is_symlink():
+                raise ProductError("ERR_PROPOSAL_SNAPSHOT_FILE_INVALID", "Refusing to replace a symlink Production Proposal snapshot", ProductErrorCategory.SECURITY)
+            if target.exists():
+                if not target.is_file():
+                    raise ProductError("ERR_PROPOSAL_SNAPSHOT_FILE_INVALID", "Production Proposal snapshot target must be a regular file", ProductErrorCategory.VALIDATION)
+                if expected_previous_snapshot_sha256 is None:
+                    raise ProductError("ERR_PROPOSAL_SNAPSHOT_CAS_REQUIRED", "Replacing a Production Proposal snapshot requires its exact previous checksum", ProductErrorCategory.AUTHORIZATION)
+                current = _body(ProductionProposalSnapshotStore.load(target))["snapshot_sha256"]
+                if current != expected_previous_snapshot_sha256:
+                    raise ProductError("ERR_PROPOSAL_SNAPSHOT_REVISION_CONFLICT", "Production Proposal snapshot changed before save; reload before retry", ProductErrorCategory.STATE, details={"current_snapshot_sha256": current})
+            elif expected_previous_snapshot_sha256 is not None:
+                raise ProductError("ERR_PROPOSAL_SNAPSHOT_PREVIOUS_MISSING", "Expected previous Production Proposal snapshot does not exist", ProductErrorCategory.STATE)
+            document = _body(registry)
+            return AtomicJsonWriter.write(target, document, validator=lambda value: _parse(value))

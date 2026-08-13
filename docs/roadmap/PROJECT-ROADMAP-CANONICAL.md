@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.21
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.23
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -680,3 +680,15 @@ Windows full regression passes `833 / 833` executed tests with one intentional n
 TASK-038 is complete. PR #26 exact head `d756bdb80c7d0a3cee20f432abc99c390c902077` passed all `9 / 9` hosted checks and merged at exact main SHA `9a999645f36a55595eeca89347162aaba3a730a0`. The implementation branch was deleted remotely and locally.
 
 The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R2 checkpoint. The next Owner-routed unit is TASK-027 Planning Workspace minimum / Scene Contract, starting from the exact TASK-038 closure main on a new dedicated branch.
+
+### Ver.1.22 Addendum XIII — TASK-027 Planning Workspace Minimum Kickoff
+
+TASK-027 Planning Workspace minimum is active from exact TASK-038 closure main `12aa9a790e9c60705deaa13d0dcaf6b4e919c68c` on `codex/task-027-planning-workspace-minimum`. The existing Creation Intent, Proposal revision, Scene Ledger, Human GO, Approved Plan and Plan -> Scene -> Slot foundations will be promoted rather than recreated.
+
+The bounded Product unit adds a durable project-scoped Planning Application and `企画` workspace for persisted Proposal/Scene review, exact Human GO and a separate exact Approved Plan -> TASK-037 Production Control installation. It does not call a Provider, authorize paid execution, reserve Budget, mutate Resolve/Cubase, create Candidates, make Audit decisions or LOCK Assets.
+
+### Ver.1.23 Addendum XIV — TASK-027 Planning Workspace Minimum Local Gate
+
+TASK-027's bounded R2 Planning Workspace minimum local gate passes. The unified Desktop `企画` workspace now displays persisted Creation Intent, Proposal revision/history, cost/rights/provider policy and complete Scene Contract cards. Exact Human GO persists the immutable Approved Production Plan. A second confirmation installs only that exact Plan into TASK-037 Production Control, preserving Plan -> Scene -> Asset Slot trace.
+
+Windows full regression passes `842 / 842` executed tests with one intentional non-Windows skip. Concurrent Proposal publication, stale/replayed confirmation, restart and project-scope controls pass. Windows and WSL2 compile gates and diff check pass. Formal closure remains conditional on hosted PR checks, exact `main` merge and branch cleanup. No package, Tag or Release is selected at this checkpoint, and the full multi-slice TASK-027 product is not claimed complete.

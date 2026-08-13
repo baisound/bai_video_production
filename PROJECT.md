@@ -110,7 +110,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-038 — R2 Audit Product Promotion / PR #26 9 of 9 PASS / exact main 9a999645f36a55595eeca89347162aaba3a730a0`
-- Active Task: `NONE — TASK-027 Planning Workspace minimum dedicated kickoff is next`
+- Active Task: `TASK-027 — R2 Planning Workspace minimum local PASS / hosted PR closure pending`
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
@@ -137,7 +137,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Subtitle Workspace release: package 0.16.4 completes the v0.16.x review-workspace line including local FasterWhisper/Transcript/SRT flow, revisioned subtitle editing, Windows-native Open/Save interaction corrective and runtime workspace privacy hygiene
 - TASK-006 Slice D: v0.17.0 formal release completed with large-media chunk/checkpoint transcription and canonical Resolve subtitle-placement handoff; actual Resolve write remains TASK-010 ownership.
 - Current bounded Product development: TASK-024 Slice A candidate `0.18.0` generates review-only silence/filler/exact-repeat Cut Candidates and protected Keep Blocks. It does not mutate media or Resolve; TASK-007 owns final Cut Plan and TASK-010 owns execution.
-- R2 route: `TASK-037 COMPLETE / TASK-038 COMPLETE`; durable Human decisions, interrupted-write recovery and user-facing Audit history/actions are merged. TASK-027 Planning Workspace minimum is next on a dedicated branch.
+- R2 route: `TASK-037 COMPLETE / TASK-038 COMPLETE / TASK-027 MINIMUM LOCAL_GATE_PASS_HOSTED_PENDING`; persisted Proposal/Scene review, Human GO and separate Plan-to-Slot installation pass locally.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

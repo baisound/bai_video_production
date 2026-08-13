@@ -149,6 +149,19 @@ def test_html_promotes_production_control_without_task038_authority_shortcut():
     assert "innerHTML" not in HTML
 
 
+def test_html_promotes_planning_scene_contract_with_separate_go_and_install():
+    assert 'data-w="PLANNING"' in HTML
+    assert 'id="planningWorkspace"' in HTML
+    assert "planning_snapshot" in HTML
+    assert "planning_prepare_go" in HTML
+    assert "planning_approve_go" in HTML
+    assert "planning_prepare_install_plan" in HTML
+    assert "planning_apply_install_plan" in HTML
+    assert "Provider/課金/Resolveは開始しません" in HTML
+    assert "生成・課金・Resolve操作は開始しません" in HTML
+    assert "innerHTML" not in HTML
+
+
 def test_production_bridge_is_unavailable_until_trusted_project_binding():
     service = ShellApplicationService(product_version="0.19.0")
     bridge = Task036ShellBridge(service)
@@ -244,6 +257,56 @@ def test_audit_bridge_routes_only_exact_human_confirmation_and_recovery_contract
     assert bridge.audit_apply_recovery({"action": "COMPLETE"}) == {"recovered": "COMPLETE"}
     with pytest.raises(ProductError) as exc:
         bridge.audit_apply_human_decision({"confirmation_id": "x", "actor_id": "owner", "force": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
+    class PlanningApplicationStub:
+        def __init__(self):
+            self.go = None
+            self.approved = None
+            self.install = None
+            self.installed = None
+
+        def snapshot(self, *, proposal_id=None):
+            return {"selected_proposal_id": proposal_id, "proposal_ids": []}
+
+        def prepare_go(self, **values):
+            self.go = values
+            return {"confirmation_id": "go", **values}
+
+        def approve_go(self, **values):
+            self.approved = values
+            return {"approved": True}
+
+        def prepare_install_plan(self, **values):
+            self.install = values
+            return {"confirmation_id": "install", **values}
+
+        def apply_install_plan(self, **values):
+            self.installed = values
+            return {"installed": True}
+
+    planning = PlanningApplicationStub()
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.20.1"), planning_application=planning)
+    assert bridge.planning_snapshot({"proposal_id": "proposal-1"})["selected_proposal_id"] == "proposal-1"
+    prepared = bridge.planning_prepare_go({
+        "proposal_id": "proposal-1", "proposal_revision": 1, "reference_bindings": [],
+        "cost_ceiling": "10", "rights_warnings_acknowledged": False,
+        "expected_snapshot_sha256": "sha256:" + "a" * 64,
+    })
+    assert planning.go["proposal_revision"] == 1
+    bridge.planning_approve_go({"confirmation_id": prepared["confirmation_id"], "approved_by": "owner"})
+    assert planning.approved == {"confirmation_id": "go", "approved_by": "owner"}
+    install = bridge.planning_prepare_install_plan({
+        "plan_id": "plan-1",
+        "expected_proposal_snapshot_sha256": "sha256:" + "a" * 64,
+        "expected_production_snapshot_sha256": "sha256:" + "b" * 64,
+    })
+    bridge.planning_apply_install_plan({"confirmation_id": install["confirmation_id"]})
+    assert planning.installed == {"confirmation_id": "install"}
+    with pytest.raises(ProductError) as exc:
+        bridge.planning_prepare_go({"proposal_id": "x", "proposal_revision": True, "reference_bindings": [], "cost_ceiling": "1", "rights_warnings_acknowledged": False, "expected_snapshot_sha256": "x"})
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 

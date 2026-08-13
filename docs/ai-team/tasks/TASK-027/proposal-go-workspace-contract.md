@@ -1,7 +1,7 @@
 # TASK-027 — Proposal Revision / Planning Workspace / Human GO Contract
 
 - Date: 2026-08-13
-- Status: `SLICE_A2_FOUNDATION_IMPLEMENTED / AUTOMATED_VALIDATED`
+- Status: `R2_PLANNING_WORKSPACE_MINIMUM_LOCAL_GATE_PASS / HOSTED_PR_PENDING`
 - External provider execution: NOT STARTED
 - Resolve mutation: NOT STARTED
 - Publish authority: NOT GRANTED
@@ -89,4 +89,4 @@ The snapshot does not grant provider execution, Resolve mutation or publishing a
 
 ## Native/UI status
 
-This is headless/Application-Service foundation. The final New Video wizard/Proposal editor is a future Product shell integration and must follow the same Vrew/Premiere/Resolve professional UI direction and Human Authority rules.
+The persisted Proposal/Scene review, exact Human GO and separate Approved Plan -> Production Control installation minimum is now integrated into the unified Desktop `企画` workspace. AI proposal generation/edit authoring and later execution slices remain future Product work. Local validation passes; hosted PR closure remains pending.

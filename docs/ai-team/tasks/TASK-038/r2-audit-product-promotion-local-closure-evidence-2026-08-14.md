@@ -56,6 +56,8 @@ The Ubuntu distribution still has no installed pytest, so no new WSL pytest PASS
 
 The in-app browser visual harness again failed before page creation because its local kernel asset path was unavailable. No new visual PASS is claimed. Safe DOM construction, responsive Audit markup, exact confirmation text and bridge allowlisting are covered by automated tests; previously accepted TASK-036 native visual Evidence is not rewritten.
 
+The first hosted CI run found one canonical-document contract error, not a Product-code failure: `Development Candidate` had been populated with a TASK label even though that field accepts only a semantic release version or `NONE`. Because this checkpoint selects no release, `PROJECT.md` and `current-state.md` now consistently retain `NONE`. The exact contract test and the full Windows regression then passed locally again.
+
 ## Claim and release boundary
 
 The local implementation gate passes. Formal TASK-038 completion still requires a dedicated PR, all hosted checks, exact `main` merge verification and branch cleanup.

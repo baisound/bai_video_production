@@ -11,7 +11,7 @@
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
-- Development Candidate: `TASK-038 R2 Audit Product Promotion`
+- Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Next Consumer Task: `complete TASK-038 hosted closure; then TASK-027 Planning Workspace minimum`
 

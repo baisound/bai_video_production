@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_W2_SERVICES_COMPOSED`
+`BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_W2_PACKAGED_NATIVE_E2E_PASS`
 
 ## Purpose
 
@@ -114,9 +114,9 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - TASK-004: `COMPLETED`
 - Package: `0.19.0` (formal public release; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
 - Development Candidate: `NONE` (Phase G work remains unreleased; exact release version decision is pending and package/latest formal release remains `0.19.0`)
-- Current release verification: TASK-010 real Resolve assembly/linked A/V/subtitle semantics, TASK-011 real Resolve render QA and TASK-012 real Cubase 48 kHz PCM round-trip have native PASS Evidence. TASK-036 packaged WebView2 W0/W1 is partial and W2 remains blocked; no post-v0.19.0 release claim is made.
-- Target-machine Gate: complete TASK-036 clean-profile/WebView2-recovery/DPI/accessibility/W2 acceptance, then exact release decision and CI/PR integration
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.12
+- Current release verification: TASK-010 real Resolve assembly/linked A/V/subtitle semantics, TASK-011 real Resolve render QA, TASK-012 real Cubase 48 kHz PCM round-trip and TASK-036 W2 packaged native `Open Project -> ... -> EDITOR_WORK` have PASS Evidence. TASK-036 W0/W1 remains partial; no post-v0.19.0 release claim is made.
+- Target-machine Gate: complete or explicitly park TASK-036 clean-profile/WebView2-recovery/DPI/accessibility/install-path acceptance, then conversation-free restart, Pilot Context Cost, exact release decision and CI/PR integration
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

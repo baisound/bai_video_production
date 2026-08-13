@@ -1,0 +1,65 @@
+{
+  "absolute_paths_persisted": false,
+  "branch": "feature/task-036-phase-g-w2",
+  "external_mutation_performed": true,
+  "gate": "TASK036_W2_PACKAGED_NATIVE_E2E",
+  "native_package": {
+    "bundle_bytes": 250926594,
+    "bundle_files": 461,
+    "exe_sha256": "sha256:2978e9f4ff649566b072ae8c3803924d11da22a597c0585c19521fb4cf4bcf84",
+    "exe_size_bytes": 10255611,
+    "faster_whisper_frozen": true,
+    "normal_close": "PASS",
+    "pyinstaller": "6.22.0",
+    "top_level_window": "PASS",
+    "trusted_launch_configuration_private": true
+  },
+  "paid_provider_execution": false,
+  "product_completion_claimed": false,
+  "report_version": "1.0.0",
+  "route": {
+    "assembly_sha256": "sha256:5328d0dc54de156ffa821f3b85503bec76133bfb88e6cd12f3acbce58f037983",
+    "cut_candidate_count": 0,
+    "cut_manifest_sha256": "sha256:8dc2c715ec6ceb5ba514195541c85ce9a5ac0036f568f019b4b479507852a21e",
+    "editor_work_file_count": 4,
+    "editor_work_id": "EDITOR_WORK_4E36CD0D60C6",
+    "editor_work_manifest_sha256": "sha256:9077791c0bd2752af76d1d6431a5e41649d0d301d0886ec778ff447550cf2090",
+    "human_plan_decision": "CUT_0_KEEP_1_APPROVED",
+    "local_asr": {
+      "model_download_authorized": false,
+      "model_id": "local-model-df3b2b4a94e6",
+      "network_used_for_inference": false,
+      "provider_id": "faster-whisper"
+    },
+    "render_artifact_sha256": "sha256:1ee0cf6f6d12811047919725d4361a1a643ab4076186af2911dca112028c8384",
+    "render_artifact_size_bytes": 4811824,
+    "render_expected_frames": 96,
+    "render_observed_frames": 95,
+    "render_qa_report_sha256": "sha256:42316407347d99b6cc3894128ee331d143108d02e240d78c9c5e2efc6b8b0855",
+    "render_report_sha256": "sha256:e4ca381994565cbf618e68c6f24c3ca05d8d13647a60c04f9f19d704a7c29986",
+    "resolve_project": "BAI_CAPABILITY_PROBE_PHASEG_TASK010_FIX4_20260813",
+    "resolve_timeline": "BAI_AUTO_A9AD30E48C30",
+    "source_file_name": "src30_project_rate.mp4",
+    "source_frame_rate": "30/1",
+    "source_sha256": "sha256:65b9db7d5b6f6f5ce3bbc26b3e21bc166fc9adc05e0b3fc0104c44b6ef53e528",
+    "timeline_rate": "24/1",
+    "ui_next_recommended_action": "NONE"
+  },
+  "semantic_report_sha256": "sha256:34c87c23fa2e2a7c0612a964a7d47eaf3c89f1815363c7679ed1c5bb918a2948",
+  "status": "W2_PACKAGED_NATIVE_E2E_PASS",
+  "tests": {
+    "focused_atomic_handoff": {
+      "passed": 25
+    },
+    "wsl2_ubuntu_full": {
+      "passed": 805,
+      "skipped": 0
+    }
+  },
+  "unresolved": [
+    "TASK036_W0_W1_CLEAN_PROFILE_WEBVIEW2_RECOVERY_DPI_ACCESSIBILITY_INSTALL_PATH",
+    "PHASE_G_CONVERSATION_FREE_RESTART_EVIDENCE",
+    "PHASE_G_PILOT_CONTEXT_COST_REPORT",
+    "EXACT_RELEASE_DECISION"
+  ]
+}

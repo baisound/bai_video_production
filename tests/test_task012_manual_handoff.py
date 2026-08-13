@@ -103,3 +103,29 @@ def test_cubase_return_rejects_wrong_sample_rate(tmp_path: Path):
     with pytest.raises(ProductError) as exc:
         EditorHandoffService.register_cubase_return(root, returned, expected_duration_us=3_000_000)
     assert exc.value.code == "ERR_HANDOFF_AUDIO_RETURN_SAMPLE_RATE"
+
+
+def test_invalid_optional_source_is_rejected_before_editor_work_publication(tmp_path: Path):
+    render = tmp_path / "master.mp4"
+    render.write_bytes(b"master-render")
+    empty_subtitle = tmp_path / "empty.srt"
+    empty_subtitle.write_bytes(b"")
+    destination = tmp_path / "handoff"
+    with pytest.raises(ProductError) as exc:
+        EditorHandoffService.prepare(
+            destination,
+            edit_plan=approved_plan(),
+            assembly_result=ResolveAssemblyResult(
+                "sha256:" + "c" * 64,
+                "BAI_AUTO_TEST",
+                "APPLIED",
+                False,
+                "ALL_CUES_DROPPED_BY_EDIT",
+                "NOT_REQUESTED",
+            ),
+            render_qa=qa_for(render),
+            render_path=render,
+            subtitle_srt_path=empty_subtitle,
+        )
+    assert exc.value.code == "ERR_HANDOFF_SOURCE_INVALID"
+    assert not destination.exists()

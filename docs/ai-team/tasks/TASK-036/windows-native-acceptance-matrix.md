@@ -1,7 +1,7 @@
-# TASK-036 — Windows Native Acceptance Matrix Ver.0.9
+# TASK-036 — Windows Native Acceptance Matrix Ver.1.0
 
-- Date: 2026-08-13
-- Status: `W0_PARTIAL / W1_PARTIAL / W2_APPLICATION_SERVICES_COMPOSED_PACKAGED_E2E_PENDING`
+- Date: 2026-08-14
+- Status: `W0_PARTIAL / W1_PARTIAL / W2_PACKAGED_NATIVE_E2E_PASS`
 - Purpose: prevent a shell from being declared complete based only on browser/headless tests.
 
 ## 1. Gate levels
@@ -18,7 +18,7 @@ Proves dialogs, focus, DPI, lifecycle and recovery.
 
 Proves the complete customer-visible editing flow with real Resolve integration.
 
-Only W2 can close TASK-036 as `NATIVE_VALIDATED`.
+W2 is necessary but not sufficient to close TASK-036 as `NATIVE_VALIDATED`; the required W0/W1 runtime and native-UX gates must also pass or be formally parked by an explicit release decision.
 
 ## 2. Environment inventory recorded for every run
 
@@ -159,7 +159,8 @@ Do not keep a toolkit merely because implementation work has already been spent 
 
 - W0 PASS: `DESKTOP_RUNTIME_SPIKE_PASS`
 - W1 PASS: `DESKTOP_SHELL_NATIVE_UX_PASS`
-- W2 PASS: `MINIMUM_EDITING_PRODUCT_MVP_PASS`
+- W2 route PASS: `W2_PACKAGED_NATIVE_E2E_PASS`
+- W0 + W1 + W2 closure PASS: `MINIMUM_EDITING_PRODUCT_MVP_PASS`
 
 W0/W1 must not be described as minimum editing Product completion.
 
@@ -167,4 +168,6 @@ W0/W1 must not be described as minimum editing Product completion.
 
 R0 backend native gates are closed for TASK-010/011/012. TASK-036 real Windows execution now proves packaged WebView2 launch, HTML-reachable native chooser controls, focus return, multi-instance characterization, Unicode install-path launch and owned-process cleanup.
 
-W0 remains partial because clean-profile and missing-WebView2 recovery are untested and path length 245 fails at an internal packaged DLL path. W1 remains partial because the complete DPI/mixed-monitor/accessibility matrix is unfinished. W2 Application Services are now composed through trusted Python-only ports, but the trusted packaged launcher and real packaged full E2E are unfinished.
+W0 remains partial because clean-profile and missing-WebView2 recovery are untested and path length 245 fails at an internal packaged DLL path. W1 remains partial because the complete DPI/mixed-monitor/accessibility matrix is unfinished.
+
+W2 passed on 2026-08-14. The trusted packaged launcher completed native media ingest, cached/network-free local FasterWhisper, Subtitle, explicit Human plan approval, exact sandbox Resolve apply, TASK-011 native Render QA and atomic TASK-012 EDITOR_WORK in one session. The final Shell action was `NONE`. Conversation-free restart and Pilot Context Cost remain Phase G closure Evidence and do not broaden the accepted W0/W1 scope.

@@ -7,6 +7,7 @@ from PyInstaller.utils.hooks import collect_all
 
 repository = Path(SPECPATH).parent
 webview_data, webview_binaries, webview_hiddenimports = collect_all("webview")
+asr_data, asr_binaries, asr_hiddenimports = collect_all("faster_whisper")
 schema_directory = repository / "src" / "ai_video_production" / "schema_resources"
 product_data = [
     (str(path), "ai_video_production/schema_resources")
@@ -16,9 +17,9 @@ product_data = [
 analysis = Analysis(
     [str(repository / "packaging" / "task036_windows_entry.py")],
     pathex=[str(repository / "src")],
-    binaries=webview_binaries,
-    datas=webview_data + product_data,
-    hiddenimports=webview_hiddenimports,
+    binaries=webview_binaries + asr_binaries,
+    datas=webview_data + asr_data + product_data,
+    hiddenimports=webview_hiddenimports + asr_hiddenimports,
     noarchive=False,
 )
 python_archive = PYZ(analysis.pure)

@@ -18,5 +18,8 @@ def test_task036_pyinstaller_definition_is_one_dir_and_path_portable():
     assert 'name="BAI Video Production"' in spec
     assert "console=False" in spec
     assert 'collect_all("webview")' in spec
+    assert 'collect_all("faster_whisper")' in spec
+    assert "asr_binaries" in spec
+    assert "asr_hiddenimports" in spec
     assert 'schema_directory.glob("*.json")' in spec
     assert "D:\\" not in spec

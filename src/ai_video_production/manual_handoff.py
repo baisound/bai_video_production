@@ -7,6 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import tempfile
 import wave
 from typing import Any, Iterable
 
@@ -133,7 +134,8 @@ class EditorHandoffService:
             "render_qa_report_sha256": qa_dict["report_sha256"],
         }
         handoff_id = "EDITOR_WORK_" + sha256_bytes(canonical_json_bytes(seed)).split(":", 1)[1][:12].upper()
-        root = Path(destination_root).resolve() / handoff_id
+        destination = Path(destination_root).resolve()
+        root = destination / handoff_id
         if root.exists():
             raise ProductError(
                 "ERR_HANDOFF_DESTINATION_EXISTS",
@@ -141,60 +143,73 @@ class EditorHandoffService:
                 ProductErrorCategory.STATE,
                 details={"handoff_id": handoff_id},
             )
-        (root / "MANIFESTS").mkdir(parents=True)
-        (root / "RENDER").mkdir()
-        (root / "SUBTITLES").mkdir()
-        (root / "RESOLVE").mkdir()
-        (root / "AUDIO_ROUNDTRIP" / "EXPORT").mkdir(parents=True)
-        (root / "AUDIO_ROUNDTRIP" / "RETURN").mkdir()
-
-        AtomicJsonWriter.write(root / "MANIFESTS" / "edit-plan.json", edit_dict)
-        AtomicJsonWriter.write(root / "MANIFESTS" / "resolve-assembly-report.json", assembly_result.to_dict())
-        AtomicJsonWriter.write(root / "MANIFESTS" / "render-qa.json", qa_dict)
-
-        files: list[HandoffFile] = []
-
-        def register_existing(role: str, relative: str) -> None:
-            target = root / relative
-            files.append(HandoffFile(role, relative.replace("\\", "/"), _sha256_file(target), target.stat().st_size))
-
-        register_existing("EDIT_PLAN", "MANIFESTS/edit-plan.json")
-        register_existing("RESOLVE_ASSEMBLY_REPORT", "MANIFESTS/resolve-assembly-report.json")
-        register_existing("RENDER_QA", "MANIFESTS/render-qa.json")
-
-        render_target = root / "RENDER" / render.name
-        shutil.copy2(render, render_target)
-        register_existing("RENDER_MASTER", f"RENDER/{render.name}")
-
-        if subtitle_srt_path is not None:
-            subtitle = _safe_source(subtitle_srt_path, label="subtitle SRT")
-            target = root / "SUBTITLES" / subtitle.name
-            shutil.copy2(subtitle, target)
-            register_existing("SUBTITLE_SRT", f"SUBTITLES/{subtitle.name}")
-
-        if resolve_project_snapshot_path is not None:
-            snapshot = _safe_source(resolve_project_snapshot_path, label="Resolve project snapshot")
-            target = root / "RESOLVE" / snapshot.name
-            shutil.copy2(snapshot, target)
-            register_existing("RESOLVE_PROJECT_SNAPSHOT", f"RESOLVE/{snapshot.name}")
-
-        exports = tuple(audio_roundtrip_exports)
-        for index, item in enumerate(exports, start=1):
-            audio = _safe_source(item, label="audio round-trip export")
-            name = f"{index:02d}_{audio.name}"
-            target = root / "AUDIO_ROUNDTRIP" / "EXPORT" / name
-            shutil.copy2(audio, target)
-            register_existing("AUDIO_ROUNDTRIP_EXPORT", f"AUDIO_ROUNDTRIP/EXPORT/{name}")
-
-        manifest = EditorHandoffManifest(
-            handoff_id=handoff_id,
-            edit_plan_sha256=edit_dict["plan_sha256"],
-            assembly_sha256=assembly_result.assembly_sha256,
-            render_qa_report_sha256=qa_dict["report_sha256"],
-            files=tuple(files),
-            cubase_roundtrip_enabled=bool(exports),
+        subtitle = _safe_source(subtitle_srt_path, label="subtitle SRT") if subtitle_srt_path is not None else None
+        snapshot = (
+            _safe_source(resolve_project_snapshot_path, label="Resolve project snapshot")
+            if resolve_project_snapshot_path is not None
+            else None
         )
-        AtomicJsonWriter.write(root / "editor-handoff-manifest.json", manifest.to_dict())
+        exports = tuple(_safe_source(item, label="audio round-trip export") for item in audio_roundtrip_exports)
+
+        destination.mkdir(parents=True, exist_ok=True)
+        staging = Path(tempfile.mkdtemp(prefix=f".{handoff_id}.", dir=destination))
+        published = False
+        try:
+            (staging / "MANIFESTS").mkdir()
+            (staging / "RENDER").mkdir()
+            (staging / "SUBTITLES").mkdir()
+            (staging / "RESOLVE").mkdir()
+            (staging / "AUDIO_ROUNDTRIP" / "EXPORT").mkdir(parents=True)
+            (staging / "AUDIO_ROUNDTRIP" / "RETURN").mkdir()
+
+            AtomicJsonWriter.write(staging / "MANIFESTS" / "edit-plan.json", edit_dict)
+            AtomicJsonWriter.write(staging / "MANIFESTS" / "resolve-assembly-report.json", assembly_result.to_dict())
+            AtomicJsonWriter.write(staging / "MANIFESTS" / "render-qa.json", qa_dict)
+
+            files: list[HandoffFile] = []
+
+            def register_existing(role: str, relative: str) -> None:
+                target = staging / relative
+                files.append(HandoffFile(role, relative.replace("\\", "/"), _sha256_file(target), target.stat().st_size))
+
+            register_existing("EDIT_PLAN", "MANIFESTS/edit-plan.json")
+            register_existing("RESOLVE_ASSEMBLY_REPORT", "MANIFESTS/resolve-assembly-report.json")
+            register_existing("RENDER_QA", "MANIFESTS/render-qa.json")
+
+            render_target = staging / "RENDER" / render.name
+            shutil.copy2(render, render_target)
+            register_existing("RENDER_MASTER", f"RENDER/{render.name}")
+
+            if subtitle is not None:
+                target = staging / "SUBTITLES" / subtitle.name
+                shutil.copy2(subtitle, target)
+                register_existing("SUBTITLE_SRT", f"SUBTITLES/{subtitle.name}")
+
+            if snapshot is not None:
+                target = staging / "RESOLVE" / snapshot.name
+                shutil.copy2(snapshot, target)
+                register_existing("RESOLVE_PROJECT_SNAPSHOT", f"RESOLVE/{snapshot.name}")
+
+            for index, audio in enumerate(exports, start=1):
+                name = f"{index:02d}_{audio.name}"
+                target = staging / "AUDIO_ROUNDTRIP" / "EXPORT" / name
+                shutil.copy2(audio, target)
+                register_existing("AUDIO_ROUNDTRIP_EXPORT", f"AUDIO_ROUNDTRIP/EXPORT/{name}")
+
+            manifest = EditorHandoffManifest(
+                handoff_id=handoff_id,
+                edit_plan_sha256=edit_dict["plan_sha256"],
+                assembly_sha256=assembly_result.assembly_sha256,
+                render_qa_report_sha256=qa_dict["report_sha256"],
+                files=tuple(files),
+                cubase_roundtrip_enabled=bool(exports),
+            )
+            AtomicJsonWriter.write(staging / "editor-handoff-manifest.json", manifest.to_dict())
+            staging.replace(root)
+            published = True
+        finally:
+            if not published and staging.exists():
+                shutil.rmtree(staging)
         return root, manifest
 
     @staticmethod

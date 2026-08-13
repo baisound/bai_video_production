@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.12
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.13
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -566,3 +566,29 @@ This addendum supersedes stale native-pending statements in earlier sections wit
 7. merge only after all required checks are green, verify the exact main merge SHA, then create the annotated tag and GitHub Release.
 
 No direct main push, force push, paid Provider execution, ambiguous human-owned Project mutation or release claim beyond accepted Evidence is permitted.
+
+## Ver.1.13 Addendum — TASK-036 W2 Packaged Native E2E Checkpoint
+
+This addendum supersedes the W2-pending statement in Ver.1.12 without changing TASK identities, release authority or remaining W0/W1 gates.
+
+### Accepted W2 position
+
+- the private trusted launcher configuration is read only by the Python host and cannot be supplied or replaced by WebView JavaScript;
+- the Windows package includes the local FasterWhisper runtime and completed cached, network-free inference with model download disabled;
+- one packaged session completed `Media -> Transcribe -> Subtitle -> Cut Review -> Approve -> Resolve Apply -> Native Render QA -> EDITOR_WORK`;
+- Resolve mutation was limited to sandbox Project `BAI_CAPABILITY_PROBE_PHASEG_TASK010_FIX4_20260813` and Automation-owned Timeline `BAI_AUTO_A9AD30E48C30` after exact one-shot confirmation;
+- TASK-011 native Render QA passed video, audio, duration, LUFS and true-peak checks;
+- TASK-012 published `EDITOR_WORK_4E36CD0D60C6` atomically with a relative-path/checksum manifest and final Shell action `NONE`;
+- WSL2 Ubuntu full regression passed `805 / 805`.
+
+### Remaining Phase G boundary
+
+W2 is `PACKAGED_NATIVE_E2E_PASS`, but TASK-036 as a whole remains active. Clean-profile startup, missing-WebView2 recovery, the full DPI/accessibility matrix and supported install-path policy remain W0/W1 gates. Conversation-free restart Evidence, Pilot Context Cost and the exact release decision also remain. Therefore overall TASK-036 `NATIVE_VALIDATED` and `MINIMUM_EDITING_PRODUCT_MVP_PASS` are not yet claimed.
+
+Continuation order is now:
+
+1. complete or formally park the bounded W0/W1 remainder;
+2. capture conversation-free restart and Pilot Context Cost Evidence;
+3. make the exact release decision from repository state;
+4. finalize release metadata only if that decision authorizes it;
+5. rerun regression/CI, merge through PR, verify exact main SHA, then tag and publish a GitHub Release.

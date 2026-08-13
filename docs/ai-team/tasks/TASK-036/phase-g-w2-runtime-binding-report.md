@@ -1,7 +1,7 @@
 # TASK-036 Phase G W2 Runtime Binding Report
 
-- Date: 2026-08-13
-- Status: `W2_APPLICATION_SERVICES_COMPOSED / PACKAGED_FULL_E2E_PENDING`
+- Date: 2026-08-14
+- Status: `W2_PACKAGED_NATIVE_E2E_PASS`
 - Product completion claim: **NOT MADE**
 
 ## Implemented boundary
@@ -26,29 +26,31 @@ The native pywebview Shell can now continue from Human-approved Cut Review throu
 
 The Shell now has one stage-aware `Continue` action. It displays the exact `next_recommended_action` and invokes only the corresponding allowlisted bridge operation. External Resolve apply still presents the exact Python-created target confirmation before consuming the one-shot token.
 
-## Remaining W2 gaps
+## Packaged native E2E acceptance
 
-- Project identity/loading and the trusted Product Service ports are not yet bound into the packaged runtime entrypoint;
-- the packaged entrypoint still launches the bounded demo composition rather than the trusted Phase G Project configuration;
-- real native render execution must return a trusted TASK-011 QA report before binding;
-- final packaged conversation-free `Open Project -> ... -> EDITOR_WORK` has not run.
+- the packaged CLI selects a private trusted launch configuration from an explicit argument or host environment; the WebView never receives it;
+- nested configuration keys and types are exact, explicit symlinks are rejected, all durable outputs remain under the private Project root, and only `BAI_CAPABILITY_PROBE_*` Resolve targets are accepted;
+- FasterWhisper/CTranslate2/ONNX/PyAV are frozen into the Windows bundle; the accepted run used a cached local model with network use and model download both false;
+- the accepted 30fps source was reviewed and mapped to the real 24fps Resolve Project, producing Automation-owned Timeline `BAI_AUTO_A9AD30E48C30` with the exact assembly marker;
+- TASK-011 wrote a new native render and returned PASS QA for video, audio, duration, loudness and true peak;
+- empty 0-cue subtitle output was truthfully omitted from handoff rather than treated as a non-empty Asset;
+- EDITOR_WORK is now preflighted and published atomically from a private staging directory, preventing a failed optional source from exposing a partial canonical handoff;
+- final packaged UI state was `NONE` after atomic `EDITOR_WORK_4E36CD0D60C6` publication.
 
-Therefore `SHELL_INTEGRATED`, TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS` and `MINIMUM_EDITING_PRODUCT_MVP_PASS` remain unclaimed.
+The W2 workflow gate is `SHELL_INTEGRATED / PACKAGED_NATIVE_E2E_PASS`. Overall TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS` and `MINIMUM_EDITING_PRODUCT_MVP_PASS` remain unclaimed because W0/W1 acceptance, conversation-free restart, Pilot Context Cost and exact release decision remain.
 
 ## Verification
 
-- focused workflow/runtime/Shell/Resolve/post/package tests: `26 passed`;
-- focused trusted TASK-003/006/024 pre-edit and runtime-factory composition tests after Critic correction: `20 passed`;
-- focused TASK-011 render-authority/Shell/post-Resolve/native-runner tests: `31 passed`;
-- Windows full regression: `782 passed, 1 skipped` (the skip is the intentional non-Windows contract test);
-- WSL2 Ubuntu full regression after the TASK-011 render-authority integration: `791 passed`;
+- focused atomic handoff/launcher/runtime tests: `25 passed`;
+- WSL2 Ubuntu full regression: `805 passed`;
 - corrected one-dir package built with PyInstaller `6.22.0` and the project virtual environment;
-- updated packaged EXE SHA-256: `159cc735d71541859190080f8048e198121aeb0b1971e5d0d7cfa05042337a60`;
-- packaged native top-level window launch and normal close: `PASS`;
-- the frozen module graph contains `task036_pre_edit_runtime`, `task036_product_ports`, `task036_workflow_runtime`, `task036_native_render_port`, the TASK-011 native runner and the pywebview hooks.
+- updated packaged EXE SHA-256: `2978e9f4ff649566b072ae8c3803924d11da22a597c0585c19521fb4cf4bcf84`;
+- package: `461` files / `250926594` bytes; packaged native top-level window launch, real W2 E2E and normal close: `PASS`;
+- the frozen module graph contains the trusted launcher, FasterWhisper runtime, pre-edit/Product ports, workflow/native-render runtime, TASK-011 runner and pywebview hooks.
 
 Machine-readable Evidence:
 
 - `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-runtime-binding.json`;
 - `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-pre-edit-composition.json`;
 - `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-render-authority-integration.json`.
+- `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-packaged-native-e2e.json`.

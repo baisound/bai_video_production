@@ -11,6 +11,7 @@
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.0`
+- Development Candidate: `NONE`
 - Release commit: `1fc8bae6ee5bf0c63c1c7d92e21e1eb6dd966c88`
 - Next Consumer Task: `TASK-036 H2 W0/W1 only when its clean-profile/runtime/display/accessibility/path resume conditions are available; otherwise Owner-routed roadmap selection`
 

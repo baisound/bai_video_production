@@ -612,3 +612,15 @@ The independent post-W2 conversation-free restart passed at Consumer HEAD `b30da
 The exact release decision is `0.20.0 / v0.20.0 / stable`. Release metadata may now be finalized on the feature branch. The remaining order is regression and hosted CI, PR #20 merge, exact main merge SHA verification, annotated tag on that SHA, GitHub Release and branch cleanup.
 
 The release must retain the W0/W1 limitations. Overall TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS`, `MINIMUM_EDITING_PRODUCT_MVP_PASS` and M3B completion remain unclaimed.
+
+### Ver.1.13 Addendum IV — v0.20.0 Release Publication
+
+The bounded Phase G release integration is complete:
+
+- PR #20 exact head `3e43b550ad3eb1db9c6b51843c0051d692c1732c` passed `9 / 9` hosted checks and merged at exact main SHA `1fc8bae6ee5bf0c63c1c7d92e21e1eb6dd966c88`;
+- isolated WSL2 regression passed `805 / 805`;
+- annotated tag `v0.20.0` dereferences to that exact main SHA;
+- stable GitHub Release `BAI Video Production v0.20.0` and the formal Release workflow published verified wheel/source assets;
+- the release branch was deleted locally/remotely while raw local `evidence/` remained preserved and untracked.
+
+TASK-036 W0/W1 remains `PARTIAL / PARKED_TO_PHASE_H2`. Overall TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS`, `MINIMUM_EDITING_PRODUCT_MVP_PASS` and M3B completion remain unclaimed. H2 may resume only when the exact clean-profile, missing-WebView2, long-path, DPI/mixed-monitor or screen-reader condition in the parking decision is available; otherwise the next Product route requires an Owner roadmap decision.

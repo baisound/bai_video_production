@@ -9,9 +9,10 @@
 - Active Consumer Task: `TASK-036 Phase G native desktop hardening + release integration`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.19.0` (FORMAL RELEASE COMPLETE; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
-- Development Candidate: `NONE` (Phase G work remains unreleased; exact release version decision pending and no release metadata finalized)
-- Next Consumer Task: `post-W2 conversation-free restart -> final Pilot Context Cost -> exact release decision -> release metadata/CI/PR integration`
+- Package: `0.19.0`
+- Release State: `RELEASE_CANDIDATE / PR_MERGE_PENDING`; latest formal GitHub Release remains `v0.19.0`
+- Development Candidate: `0.20.0` (`stable`; exact Phase G release decision established)
+- Next Consumer Task: `release metadata regression/CI -> PR #20 merge -> exact main SHA -> annotated v0.20.0 tag -> GitHub Release -> branch cleanup`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -24,7 +25,7 @@
 - Native PASS: real Resolve source-range/linked-A/V/idempotency/conflict semantics, edit-aware subtitle semantics, real Resolve render artifact QA and real Cubase 48 kHz PCM return.
 - TASK-036 W2 PASS: the packaged trusted launcher completed real Windows `Media ingest -> local FasterWhisper -> Subtitle -> Cut Review/Approve -> Resolve apply -> TASK-011 native Render QA -> atomic EDITOR_WORK`; the final UI state was `NONE` and no host path was persisted in public status/Evidence.
 - TASK-036 W0/W1 decision: the clean-profile, missing-WebView2, long-path, full DPI/mixed-monitor and screen-reader remainder is formally `PARKED_TO_PHASE_H2`; none of those cases is promoted to PASS. The bounded release environment requires installed WebView2 and a normal local install path.
-- TASK-036 remaining Phase G gate: post-W2 conversation-free restart and final Pilot Context Cost Evidence remain before the exact release decision.
+- Phase G closure gates: post-W2 conversation-free restart PASS; final Pilot Context Cost `11,888` estimated tokens PASS; exact release decision `0.20.0 / v0.20.0 / stable` PASS. Release integration remains.
 - Automated validation: WSL2 Ubuntu `805 passed`; focused atomic handoff/launcher/runtime `25 passed`; packaged Windows native W2 E2E PASS. PR CI remains the hosted cross-platform gate.
 
 ## TASK-004 implemented scope

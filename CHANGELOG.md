@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-08-14
+
 - Formally parked the remaining TASK-036 clean-profile, missing-WebView2, long-path, full DPI/mixed-monitor and screen-reader cases to Phase H2 without promoting them to PASS; the bounded release environment and unsupported claims are explicit.
 - Completed Phase G backend native Evidence: real Resolve assembly/linked A/V/edit-aware subtitle semantics, real Resolve render QA and real Cubase 13 48 kHz PCM round-trip pass without broadening external-write or paid-provider authority.
 - Corrected Resolve Timeline-start-relative record placement, localized completed-render status handling and WebView2 runtime version discovery; assembly-plan contract is now `1.3.0` with an explicit record-frame basis.

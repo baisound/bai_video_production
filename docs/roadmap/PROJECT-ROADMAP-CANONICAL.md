@@ -604,3 +604,11 @@ This addendum completes the first continuation item above without promoting the 
 - W2 remains `PACKAGED_NATIVE_E2E_PASS`.
 
 TASK-036 overall `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS` and `MINIMUM_EDITING_PRODUCT_MVP_PASS` remain unclaimed. The next Phase G unit is the post-W2 conversation-free restart, followed by final Pilot Context Cost and the exact release decision.
+
+### Ver.1.13 Addendum III — Phase G Release Decision
+
+The independent post-W2 conversation-free restart passed at Consumer HEAD `b30da2298a47cad49d650133b6ab2ccf78f11c29`. Final Pilot Context Cost is `11,888` estimated input tokens, a reduction of `12,327` / `50.91%` from the W2 checkpoint; provider/cached/output/billed values are unavailable and remain `null`.
+
+The exact release decision is `0.20.0 / v0.20.0 / stable`. Release metadata may now be finalized on the feature branch. The remaining order is regression and hosted CI, PR #20 merge, exact main merge SHA verification, annotated tag on that SHA, GitHub Release and branch cleanup.
+
+The release must retain the W0/W1 limitations. Overall TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS`, `MINIMUM_EDITING_PRODUCT_MVP_PASS` and M3B completion remain unclaimed.

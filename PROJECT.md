@@ -112,10 +112,11 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Last Completed Gate: `TASK-010 / TASK-011 / TASK-012 backend native acceptance`
 - Active Task: `TASK-036 Phase G native desktop hardening + release integration`
 - TASK-004: `COMPLETED`
-- Package: `0.19.0` (formal public release; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
-- Development Candidate: `NONE` (Phase G work remains unreleased; exact release version decision is pending and package/latest formal release remains `0.19.0`)
+- Package: `0.19.0`
+- Release State: `RELEASE_CANDIDATE / PR_MERGE_PENDING`; latest formal public release remains GitHub Release `v0.19.0` until the ordered merge/tag/release gates complete
+- Development Candidate: `0.20.0` (`stable`; exact release decision established by TASK-018 Phase G)
 - Current release verification: TASK-010 real Resolve assembly/linked A/V/subtitle semantics, TASK-011 real Resolve render QA, TASK-012 real Cubase 48 kHz PCM round-trip and TASK-036 W2 packaged native `Open Project -> ... -> EDITOR_WORK` have PASS Evidence. TASK-036 W0/W1 remains partial with its remainder formally parked to H2; no post-v0.19.0 release claim is made.
-- Target-machine Gate: post-W2 conversation-free restart, final Pilot Context Cost, exact release decision and CI/PR integration; parked W0/W1 limitations must remain explicit
+- Target-machine Gate: post-W2 conversation-free restart, final Pilot Context Cost and exact `0.20.0` release decision PASS; release metadata regression/CI/PR integration remains, with parked W0/W1 limitations explicit
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13 Addendum II
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
@@ -191,7 +192,7 @@ Canonical details:
 - TASK-011 verifies rendered artifacts using checksum, media/duration checks and configurable loudness/true-peak policy.
 - TASK-012 creates deterministic QA-gated `EDITOR_WORK_*` handoff packages and a bounded 48 kHz PCM Cubase return contract.
 - All four capabilities are `INTEGRATION_DESIGNED`; this work does not claim `SHELL_INTEGRATED` or `NATIVE_VALIDATED`.
-- Package version remains 0.19.0 until a separately authorized release candidate is created.
+- Package metadata is finalized as the authorized `0.20.0` release candidate; it is not a formal release until PR merge, exact main SHA verification, annotated tag and GitHub Release complete.
 
 ## TASK-023 Completed Bounded Development
 

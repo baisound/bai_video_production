@@ -1,7 +1,7 @@
 # TASK-036 — Windows Native Acceptance Matrix Ver.1.0
 
 - Date: 2026-08-14
-- Status: `W0_PARTIAL_PARKED_TO_H2 / W1_PARTIAL_PARKED_TO_H2 / W2_PACKAGED_NATIVE_E2E_PASS`
+- Status: `W0_PASS / W1_PASS / W2_PACKAGED_NATIVE_E2E_PASS / MINIMUM_EDITING_PRODUCT_MVP_PASS`
 - Purpose: prevent a shell from being declared complete based only on browser/headless tests.
 
 ## 1. Gate levels
@@ -175,3 +175,7 @@ W2 passed on 2026-08-14. The trusted packaged launcher completed native media in
 ## 10. Formal W0/W1 parking — 2026-08-14
 
 Clean-profile startup, missing-WebView2 recovery, long-path mitigation, the full DPI/mixed-monitor matrix and Windows screen-reader smoke are `PARKED_TO_PHASE_H2`. They remain unpassed. The release-support boundary is installed WebView2, a normal local install path and the tested single-monitor viewports. W2 remains accepted independently; overall TASK-036 completion remains unclaimed.
+
+## 11. Phase H2 W0/W1 closure — 2026-08-14
+
+The parked remainder was resumed and closed on the v0.20.1 candidate. Clean-profile packaged launch, isolated missing-WebView2 native recovery, an enforced proven 166-character executable-path policy, real three-monitor movement, Windows Narrator/UI Automation semantics and the increased-scale responsive layout contract pass. W0 is `DESKTOP_RUNTIME_SPIKE_PASS`; W1 is `DESKTOP_SHELL_NATIVE_UX_PASS`; W2 remains `W2_PACKAGED_NATIVE_E2E_PASS`. The combined gate is `MINIMUM_EDITING_PRODUCT_MVP_PASS`.

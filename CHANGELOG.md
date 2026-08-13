@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-08-14
+
+- Closed the TASK-036 H2 Windows runtime remainder with clean-profile packaged launch, actual three-monitor movement, Windows UI Automation and Narrator semantic-label smoke Evidence.
+- Added a fail-closed packaged startup preflight with a native actionable WebView2 recovery dialog and an explicit maximum supported executable-path policy instead of an opaque frozen-app failure.
+- Fixed the desktop renderer to EdgeChromium/WebView2, added visible keyboard focus, skip navigation, semantic editing/timeline labels and a narrow high-scale responsive layout.
+- Added repeatable Windows gates for clean-profile/display/accessibility and isolated missing-WebView2 recovery without uninstalling or modifying the host runtime.
+
 ## [0.20.0] - 2026-08-14
 
 - Formally parked the remaining TASK-036 clean-profile, missing-WebView2, long-path, full DPI/mixed-monitor and screen-reader cases to Phase H2 without promoting them to PASS; the bounded release environment and unsupported claims are explicit.

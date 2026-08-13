@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_task036_windows_entry_uses_product_cli_without_duplicating_shell_logic():
     entry = (ROOT / "packaging" / "task036_windows_entry.py").read_text(encoding="utf-8")
-    assert "from ai_video_production.task036_shell_cli import main" in entry
+    assert "from ai_video_production.task036_packaged_entry import packaged_main" in entry
     assert "run_native_layout_spike" not in entry
 
 

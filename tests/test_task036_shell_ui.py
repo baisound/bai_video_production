@@ -117,6 +117,17 @@ def test_html_exposes_allowlisted_post_review_workflow_action():
     assert "create_editor_handoff" in HTML
 
 
+def test_html_has_keyboard_focus_and_screen_reader_landmarks():
+    assert "button:focus-visible" in HTML
+    assert 'class="skip-link"' in HTML
+    assert "applyAccessibility()" in HTML
+    assert "映像プレビュー" in HTML
+    assert "編集タイムライン" in HTML
+    assert "候補をカットする" in HTML
+    assert "@media(max-width:900px)" in HTML
+    assert ".main{grid-template-columns:1fr}" in HTML
+
+
 def test_integrated_bridge_plan_approval_advances_workflow_stage():
     from ai_video_production.desktop_editing_application import Task036EditingApplication
 

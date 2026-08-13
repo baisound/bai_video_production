@@ -140,6 +140,13 @@ def test_html_promotes_production_control_without_task038_authority_shortcut():
     assert "textContent=`${candidate.candidate_id}" in HTML
     assert "production_accept" not in HTML
     assert "production_reject" not in HTML
+    assert "audit_snapshot" in HTML
+    assert "audit_prepare_human_decision" in HTML
+    assert "audit_apply_human_decision" in HTML
+    assert "audit_apply_recovery" in HTML
+    assert "AI /" not in HTML
+    assert "LOCKは別操作です" in HTML
+    assert "innerHTML" not in HTML
 
 
 def test_production_bridge_is_unavailable_until_trusted_project_binding():
@@ -193,6 +200,50 @@ def test_production_bridge_routes_only_exact_lock_confirmation_contract():
     assert control.applied == "lock-1"
     with pytest.raises(ProductError) as exc:
         bridge.production_apply_lock({"confirmation_id": "lock-1", "force": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_audit_bridge_routes_only_exact_human_confirmation_and_recovery_contracts():
+    class AuditApplicationStub:
+        def __init__(self):
+            self.prepared = None
+            self.applied = None
+            self.recovered = None
+
+        def snapshot(self):
+            return {"project_id": "project-1", "workspace": {"candidates": []}, "recovery": {"required": False}}
+
+        def prepare_human_decision(self, **values):
+            self.prepared = values
+            return {"confirmation_id": "audit-confirm-1", **values}
+
+        def apply_human_decision(self, **values):
+            self.applied = values
+            return {"decision": "saved"}
+
+        def apply_recovery(self, *, action):
+            self.recovered = action
+            return {"recovered": action}
+
+    audit = AuditApplicationStub()
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.20.1"), audit_application=audit)
+    assert bridge.audit_snapshot({})["available"] is True
+    prepared = bridge.audit_prepare_human_decision({
+        "candidate_id": "candidate-1",
+        "decision": "ACCEPT",
+        "expected_production_snapshot_sha256": "sha256:" + "a" * 64,
+        "expected_audit_snapshot_sha256": "sha256:" + "b" * 64,
+    })
+    assert audit.prepared["candidate_id"] == "candidate-1"
+    bridge.audit_apply_human_decision({
+        "confirmation_id": prepared["confirmation_id"],
+        "actor_id": "owner",
+        "notes": "reviewed",
+    })
+    assert audit.applied == {"confirmation_id": "audit-confirm-1", "actor_id": "owner", "notes": "reviewed"}
+    assert bridge.audit_apply_recovery({"action": "COMPLETE"}) == {"recovered": "COMPLETE"}
+    with pytest.raises(ProductError) as exc:
+        bridge.audit_apply_human_decision({"confirmation_id": "x", "actor_id": "owner", "force": True})
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 

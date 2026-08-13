@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK037_R2_PRODUCT_PROMOTION_COMPLETE`
+- Project Status: `V0_20_1_RELEASED / TASK038_LOCAL_GATE_PASS_HOSTED_PENDING`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE — TASK-038 dedicated kickoff is next`
+- Active Consumer Task: `TASK-038 — local implementation PASS / hosted PR closure pending`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
-- Development Candidate: `NONE`
+- Development Candidate: `TASK-038 R2 Audit Product Promotion`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `TASK-038 Audit Workspace / Candidate Quality Loop; then TASK-027 Planning Workspace minimum`
+- Next Consumer Task: `complete TASK-038 hosted closure; then TASK-027 Planning Workspace minimum`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -105,7 +105,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.18 Addendum IX. TASK-036 W0/W1/W2, M3B and v0.20.1 publication pass. TASK-037 is complete at exact main `045bd7ed53293fd195a4993586d965bc1094ddac`; TASK-038 is the next dedicated Owner-routed unit, followed by TASK-027 minimum after its Gate.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.20 Addendum XI. TASK-038 local Product promotion passes `833 PASS / 1 intentional skip`; hosted PR closure remains pending. TASK-027 minimum follows only after exact TASK-038 merge/cleanup.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

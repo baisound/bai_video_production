@@ -1,7 +1,7 @@
 # TASK-038 — Audit Workspace Application Service Contract Ver.1.0
 
 - Date: 2026-08-13
-- Status: `APPLICATION_SERVICE_FOUNDATION_PASS / USER_WORKSPACE_NATIVE_PENDING`
+- Status: `R2_PRODUCT_PROMOTED_LOCAL_GATE_PASS / HOSTED_PR_PENDING`
 - UI direction: Vrew/Premiere/Resolve-class NLE workspace, not a generic AI dashboard.
 
 ## Canonical layout
@@ -55,3 +55,11 @@ If a new Audit is added or Candidate bytes/state change after confirmation previ
 - decision confirmation summarizes exact Candidate/Audit state;
 - screen does not rely on color alone;
 - selected Candidate synchronizes with Generative AI / Scene / Continuity workspaces through canonical IDs.
+
+## R2 Product promotion implementation — 2026-08-14
+
+The accepted projection and decision boundary are now connected to the unified Desktop `制作管理` drawer. Full immutable Audit history, AI/Human auditor identity, dimension scores, findings, Failure Codes, Critical state and alternate-use proposals remain visible beside the exact Candidate.
+
+Human decisions are durable across `candidate-audit.json` and `production-control.json` through a prepared transaction record. Interrupted writes block ordinary actions and require an explicit exact recovery action. Unknown mixed state has no automatic recovery path. ACCEPT does not perform TASK-037 LOCK, Reject does not Delete, and NEEDS_REGENERATION does not start generation.
+
+Local validation passes; hosted PR closure remains pending.

@@ -47,6 +47,10 @@ def test_production_control_workspace_and_commands_are_explicitly_allowlisted():
     assert "production.candidate.ready_for_audit" in snapshot["available_commands"]
     assert "production.lock.prepare" in snapshot["available_commands"]
     assert "production.lock.apply" in snapshot["available_commands"]
+    assert "audit.snapshot" in snapshot["available_commands"]
+    assert "audit.decision.prepare" in snapshot["available_commands"]
+    assert "audit.decision.apply" in snapshot["available_commands"]
+    assert "audit.recovery.apply" in snapshot["available_commands"]
 
 
 def test_unknown_command_fails_closed():

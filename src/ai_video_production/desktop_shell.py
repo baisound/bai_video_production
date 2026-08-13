@@ -71,6 +71,10 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "production.candidate.ready_for_audit": ShellCommandSpec("production.candidate.ready_for_audit", CommandCategory.LOCAL_DURABLE),
     "production.lock.prepare": ShellCommandSpec("production.lock.prepare", CommandCategory.READ_ONLY),
     "production.lock.apply": ShellCommandSpec("production.lock.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "audit.snapshot": ShellCommandSpec("audit.snapshot", CommandCategory.READ_ONLY),
+    "audit.decision.prepare": ShellCommandSpec("audit.decision.prepare", CommandCategory.READ_ONLY),
+    "audit.decision.apply": ShellCommandSpec("audit.decision.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "audit.recovery.apply": ShellCommandSpec("audit.recovery.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

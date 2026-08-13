@@ -14,6 +14,7 @@ from ai_video_production.task036_trusted_launcher import (
     build_trusted_launch,
 )
 from ai_video_production.production_control_application import Task037ProductionControlApplication
+from ai_video_production.audit_application import Task038AuditApplication
 
 
 class DialogBackend:
@@ -121,6 +122,9 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert isinstance(launch.bridge.production_control, Task037ProductionControlApplication)
     assert launch.bridge.production_control.project_root == config.project_root
     assert launch.bridge.production_control.project_id == config.project_id
+    assert isinstance(launch.bridge.audit_application, Task038AuditApplication)
+    assert launch.bridge.audit_application.project_root == config.project_root
+    assert launch.bridge.audit_application.project_id == config.project_id
     production = launch.bridge.production_snapshot({})
     assert production["available"] is True
     assert production["project_id"] == config.project_id

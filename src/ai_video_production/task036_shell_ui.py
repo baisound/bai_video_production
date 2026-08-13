@@ -8,7 +8,7 @@ shape before the real workflow is connected.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, Callable
 
 from .cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
 from .desktop_editing_application import Task036EditingApplication
@@ -17,6 +17,8 @@ from .desktop_shell import ShellApplicationService, WorkspaceId
 from .desktop_shell_projection import DesktopEditingProjectionService, EditingProjection
 from .task036_view_model import Task036DesktopViewModel
 from .task036_native_dialog import Task036NativeDialogService
+from .task036_pre_edit_runtime import Task036PreEditRuntime
+from .task036_workflow_runtime import Task036WorkflowRuntime
 from .errors import ProductError, ProductErrorCategory
 
 
@@ -30,7 +32,7 @@ button,select{font:inherit;color:inherit}.app{height:100vh;display:grid;grid-tem
 .top{display:flex;align-items:center;gap:8px;padding:0 14px;border-bottom:1px solid var(--line);background:#0c1015}.brand{font-weight:700}.project{color:#cdd3dd}.spacer{flex:1}.workspace{background:transparent;border:0;padding:9px 10px;border-bottom:2px solid transparent;cursor:pointer}.workspace.active{border-color:var(--accent);color:#fff}.action{background:#181d24;border:1px solid #303844;border-radius:6px;padding:7px 12px}.dialog-status{position:fixed;z-index:20;top:54px;right:16px;max-width:min(420px,calc(100vw - 32px));padding:7px 10px;border:1px solid #394553;border-radius:6px;background:#111820ee;color:#d7deea;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 5px 18px #0008}.main{min-height:0;display:grid;grid-template-columns:320px minmax(420px,1fr) 330px;gap:8px;padding:8px}.panel{min-width:0;min-height:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}.panel-title{height:38px;display:flex;align-items:center;padding:0 12px;border-bottom:1px solid var(--line);font-weight:650}.tabs{display:flex;gap:4px;padding:8px;border-bottom:1px solid var(--line)}.tab{border:0;background:transparent;color:var(--muted);padding:7px 9px}.tab.active{background:#1a2535;color:#fff;border-radius:5px}.rows{height:calc(100% - 82px);overflow:auto}.row{display:grid;grid-template-columns:80px 1fr auto;gap:8px;padding:10px 12px;border-bottom:1px solid #1c222b}.row:hover{background:#171d25}.time{font-variant-numeric:tabular-nums;color:#aeb7c4}.status{font-size:11px;color:#8fb3ff}.viewer{display:grid;grid-template-rows:minmax(0,1fr) 54px;background:#07090b}.screen{margin:10px;background:radial-gradient(circle at 50% 20%,#354653 0,#1c2b32 25%,#0c1115 65%);border:1px solid #20262e;border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}.screen:before{content:"";position:absolute;inset:0;background:linear-gradient(140deg,transparent 0 42%,rgba(255,255,255,.06) 43% 44%,transparent 45% 100%)}.tc{position:absolute;bottom:18px;background:#050607cc;padding:6px 12px;border-radius:5px;font:28px/1 monospace}.controls{display:flex;align-items:center;gap:16px;padding:0 14px;border-top:1px solid var(--line);color:#c7ced8}.scrub{height:4px;background:#353c47;flex:1;border-radius:3px;overflow:hidden}.scrub i{display:block;width:31%;height:100%;background:var(--accent)}.inspector{padding:12px}.field{margin-bottom:14px}.field label{display:block;color:#aab3c0;margin-bottom:6px}.value{background:#0d1116;border:1px solid #2a313b;border-radius:6px;padding:9px}.hint{color:var(--muted);font-size:12px}.timeline{margin:0 8px 8px;display:grid;grid-template-columns:116px minmax(0,1fr);grid-template-rows:30px repeat(6,44px);border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0e1217}.ruler{grid-column:2;border-bottom:1px solid var(--line);background:#12171d;position:relative}.ruler:after{content:"00:00        00:20        00:40        01:00        01:20";position:absolute;left:12px;right:10px;top:7px;color:#85909f;word-spacing:55px;font-size:10px}.track-name{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:13px 10px;color:#aeb7c4;background:#10151a}.track{border-bottom:1px solid var(--line);position:relative;overflow:hidden}.clip{position:absolute;top:5px;bottom:5px;border-radius:4px;padding:7px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.video{left:1%;width:94%;background:#25303a;border:1px solid #3b4f63}.sub1{left:2%;width:17%;background:#54389a}.sub2{left:20%;width:16%;background:#5e3da8}.sub3{left:37%;width:23%;background:#6742b4}.audio{left:1%;width:94%;background:#165942}.se{left:8%;width:32%;background:#275b87}.narr{left:42%;width:44%;background:#9a5428}.cut{background:#6c2f35;border:1px solid #b45a64}.review-actions{display:flex;gap:8px;margin-top:12px}.review-actions button{flex:1}.review-actions button:disabled{opacity:.4;cursor:not-allowed}.selection{outline:2px solid #8fb3ff;outline-offset:-2px}.progress-note{margin-top:10px;color:#aab3c0}.approve{margin-top:12px;width:100%}.playhead{position:absolute;left:31%;top:0;bottom:0;width:2px;background:#e75f51;z-index:5}.timeline-wrap{position:relative;grid-column:1/-1;display:contents}@media(max-width:1320px){.top .action{padding-inline:8px}}@media(max-width:1150px){.main{grid-template-columns:250px minmax(360px,1fr) 270px}.app{grid-template-rows:46px minmax(0,1fr) 250px}}
 </style></head>
 <body><div class="app">
-<header class="top"><div class="brand">BAI Video Production</div><div class="project" id="projectName">プロジェクト未選択</div><button class="workspace active" data-w="EDIT">編集</button><button class="workspace" data-w="SUBTITLE">字幕</button><button class="workspace" data-w="REVIEW">レビュー</button><button class="workspace" data-w="EXPORT">書き出し</button><div class="spacer"></div><span id="dialogStatus" class="dialog-status" role="status" aria-live="polite">選択操作なし</span><span id="job">待機中</span><button class="action" id="chooseProjectButton" aria-label="プロジェクトフォルダーを選択">プロジェクト</button><button class="action" id="chooseMediaButton" aria-label="メディアファイルを選択">メディア</button><button class="action" id="chooseHandoffButton" aria-label="EDITOR WORK保存先を選択">保存先</button></header>
+<header class="top"><div class="brand">BAI Video Production</div><div class="project" id="projectName">プロジェクト未選択</div><button class="workspace active" data-w="EDIT">編集</button><button class="workspace" data-w="SUBTITLE">字幕</button><button class="workspace" data-w="REVIEW">レビュー</button><button class="workspace" data-w="EXPORT">書き出し</button><div class="spacer"></div><span id="dialogStatus" class="dialog-status" role="status" aria-live="polite">選択操作なし</span><span id="job">待機中</span><button class="action" id="workflowActionButton" aria-label="次の編集工程を実行" disabled>Continue</button><button class="action" id="chooseProjectButton" aria-label="プロジェクトフォルダーを選択">プロジェクト</button><button class="action" id="chooseMediaButton" aria-label="メディアファイルを選択">メディア</button><button class="action" id="chooseHandoffButton" aria-label="EDITOR WORK保存先を選択">保存先</button></header>
 <section class="main">
 <aside class="panel"><div class="panel-title">文字起こし / カット候補</div><div class="tabs"><button class="tab active">文字起こし</button><button class="tab">候補</button><button class="tab">検索</button></div><div class="rows" id="transcriptRows">
 <div class="row"><div class="time">00:00:00</div><div>みなさん こんにちは バイサウンドです</div><div class="status">未確認</div></div>
@@ -49,11 +51,12 @@ async function call(name,args){if(!window.pywebview?.api) return null; try{retur
 function renderRows(vm){const host=document.querySelector('#transcriptRows');if(!host||!vm?.transcript_rows?.length)return;host.replaceChildren();for(const item of vm.transcript_rows){const row=document.createElement('div');row.className='row';const time=document.createElement('div');time.className='time';time.textContent=item.start_label;const text=document.createElement('div');text.textContent=item.text;const status=document.createElement('div');status.className='status';status.textContent=item.review_state;row.append(time,text,status);host.append(row)}}
 function renderTimeline(vm){if(!vm?.timeline_tracks)return;for(const [track,blocks] of Object.entries(vm.timeline_tracks)){const host=document.querySelector(`[data-track="${CSS.escape(track)}"]`);if(!host)continue;host.replaceChildren();for(const item of blocks){const clip=document.createElement('div');clip.className='clip '+(item.block_type==='SUBTITLE'?'sub1':item.block_type.includes('CUT')?'cut':'video');clip.style.left=item.left_percent+'%';clip.style.width=Math.max(item.width_percent,.4)+'%';clip.textContent=item.label;clip.title=`${item.start_label} – ${item.end_label} | ${item.state}`;if(item.block_type==='CUT_CANDIDATE'&&item.source_ids?.length){clip.dataset.candidate=item.source_ids[0];clip.addEventListener('click',async()=>{await call('select_candidate',{candidate_id:clip.dataset.candidate});await refresh()})}host.append(clip)}}}
 function renderReview(review){const keep=document.querySelector('#keepButton'),cut=document.querySelector('#cutButton'),approve=document.querySelector('#approvePlanButton');if(!review?.available){keep.disabled=cut.disabled=approve.disabled=true;document.querySelector('#reviewProgress').textContent='カット候補データ未接続';return}const selected=review.candidates?.find(x=>x.selected);document.querySelector('#reviewSelection').textContent=selected?selected.candidate_id:'カット候補を選択';document.querySelector('#reviewSuggestion').textContent=selected?`${selected.kind} / 強度 ${selected.strength_score}`:'候補を選択すると理由を表示します';document.querySelector('#reviewRange').textContent=selected?`${selected.start_us} – ${selected.end_us} μs`:'—';document.querySelector('#reviewState').textContent=selected?selected.review_state:'Human Review Required';document.querySelector('#reviewProgress').textContent=`確認済み ${review.reviewed_count} / ${review.candidates.length}　未確認 ${review.unresolved_count}`;keep.disabled=cut.disabled=!selected;approve.disabled=review.unresolved_count!==0||!!review.approved_plan;document.querySelectorAll('[data-candidate]').forEach(el=>el.classList.toggle('selection',selected&&el.dataset.candidate===selected.candidate_id))}
-async function refresh(){const vm=await call('view_model');const x=vm?.shell||await call('snapshot');if(!x)return;const p=x.project;document.querySelector('#projectName').textContent=p?p.display_name:'プロジェクト未選択';document.querySelector('#job').textContent=x.active_jobs?.length?`${x.active_jobs.length} job`:'待機中';document.querySelectorAll('.workspace').forEach(b=>b.classList.toggle('active',b.dataset.w===x.current_workspace));if(vm){renderRows(vm);renderTimeline(vm)}const review=await call('review_snapshot');if(review)renderReview(review)}
+async function refresh(){const vm=await call('view_model');const x=vm?.shell||await call('snapshot');if(!x)return;const p=x.project;document.querySelector('#projectName').textContent=p?p.display_name:'プロジェクト未選択';document.querySelector('#job').textContent=x.active_jobs?.length?`${x.active_jobs.length} job`:'待機中';document.querySelectorAll('.workspace').forEach(b=>b.classList.toggle('active',b.dataset.w===x.current_workspace));if(vm){renderRows(vm);renderTimeline(vm)}const review=await call('review_snapshot');if(review)renderReview(review);const runtime=await call('workflow_status');const action=document.querySelector('#workflowActionButton');action.disabled=!runtime?.available||!['media.choose_and_ingest','transcription.start','subtitle.save','cut_candidates.generate','resolve.assembly.prepare','resolve.assembly.apply','render.start','render.qa.inspect','handoff.create'].includes(runtime.next_recommended_action);action.textContent=runtime?.next_recommended_action||'Continue'}
 document.querySelectorAll('.workspace').forEach(b=>b.addEventListener('click',async()=>{await call('set_workspace',{workspace:b.dataset.w});await refresh()}));
 document.querySelector('#keepButton').addEventListener('click',async()=>{const review=await call('review_snapshot');const selected=review?.candidates?.find(x=>x.selected);if(selected){await call('review_candidate',{candidate_id:selected.candidate_id,decision:'KEEP'});await refresh()}});
 document.querySelector('#cutButton').addEventListener('click',async()=>{const review=await call('review_snapshot');const selected=review?.candidates?.find(x=>x.selected);if(selected){await call('review_candidate',{candidate_id:selected.candidate_id,decision:'CUT'});await refresh()}});
 document.querySelector('#approvePlanButton').addEventListener('click',async()=>{const p=await call('prepare_edit_plan_approval');if(!p)return;const ok=window.confirm(`編集プランを承認しますか？\nCUT: ${p.cut_count} / KEEP: ${p.keep_count}`);if(ok){await call('approve_edit_plan',{confirmation_id:p.confirmation_id,draft_plan_sha256:p.draft_plan_sha256,approved_by:'desktop-owner'});await refresh()}});
+document.querySelector('#workflowActionButton').addEventListener('click',async()=>{const runtime=await call('workflow_status');if(!runtime?.available)return;let result=null;if(runtime.next_recommended_action==='media.choose_and_ingest')result=await call('choose_and_ingest_media',{});else if(runtime.next_recommended_action==='transcription.start')result=await call('run_local_transcription',{});else if(runtime.next_recommended_action==='subtitle.save')result=await call('create_runtime_subtitle_workspace',{});else if(runtime.next_recommended_action==='cut_candidates.generate')result=await call('generate_runtime_cut_candidates',{});else if(runtime.next_recommended_action==='resolve.assembly.prepare')result=await call('compile_resolve_assembly',{});else if(runtime.next_recommended_action==='resolve.assembly.apply'){const p=await call('prepare_resolve_apply',{});if(p&&window.confirm(`DaVinci Resolveへ適用しますか？\nProject: ${p.target_project}\nTimeline: ${p.target_timeline}`))result=await call('apply_resolve_assembly',{confirmation_id:p.confirmation_id})}else if(runtime.next_recommended_action==='render.start'){const p=await call('prepare_native_render_confirmation',{});if(p&&window.confirm(`DaVinci Resolveで書き出しますか？\nProject: ${p.target_project}\nTimeline: ${p.target_timeline}\nDestination: ${p.destination}`))result=await call('execute_native_render',{confirmation_id:p.confirmation_id})}else if(runtime.next_recommended_action==='render.qa.inspect')result=await call('bind_runtime_render_qa',{});else if(runtime.next_recommended_action==='handoff.create')result=await call('create_editor_handoff',{});const status=document.querySelector('#dialogStatus');status.textContent=result?'工程を完了しました':'工程を完了できませんでした';await refresh()});
 async function chooseAndReport(method,label){const status=document.querySelector('#dialogStatus');status.textContent=`${label}を選択中`;const result=await call(method,{});if(!result){status.textContent=`${label}を選択できませんでした`;return}status.textContent=result.selected?`${label}を選択しました（操作は未開始）`:`${label}の選択をキャンセルしました`}
 document.querySelector('#chooseProjectButton').addEventListener('click',()=>chooseAndReport('choose_project_folder','プロジェクト'));
 document.querySelector('#chooseMediaButton').addEventListener('click',()=>chooseAndReport('choose_media_source','メディア'));
@@ -73,6 +76,9 @@ class Task036ShellBridge:
         review: Task036ReviewFacade | None = None,
         application: Task036EditingApplication | None = None,
         native_dialog: Task036NativeDialogService | None = None,
+        pre_edit_runtime: Task036PreEditRuntime | None = None,
+        workflow_runtime: Task036WorkflowRuntime | None = None,
+        workflow_runtime_factory: Callable[[Task036EditingApplication], Task036WorkflowRuntime] | None = None,
     ) -> None:
         if application is not None and application.shell is not service:
             raise ValueError("integrated application must use the supplied Shell service")
@@ -81,6 +87,22 @@ class Task036ShellBridge:
         self.review = review
         self.application = application
         self.native_dialog = native_dialog
+        if pre_edit_runtime is not None and pre_edit_runtime.coordinator.shell is not service:
+            raise ValueError("pre-edit runtime must use the supplied Shell service")
+        self.pre_edit_runtime = pre_edit_runtime
+        if workflow_runtime is not None and workflow_runtime.application is not application:
+            raise ValueError("workflow runtime must use the supplied integrated application")
+        if workflow_runtime is not None and workflow_runtime_factory is not None:
+            raise ValueError("bind either a workflow runtime or a trusted runtime factory, not both")
+        self.workflow_runtime = workflow_runtime
+        self.workflow_runtime_factory = workflow_runtime_factory
+
+    def _current_application(self) -> Task036EditingApplication | None:
+        if self.application is not None:
+            return self.application
+        if self.pre_edit_runtime is not None:
+            return self.pre_edit_runtime.application
+        return None
 
     def _require_native_dialog(self) -> Task036NativeDialogService:
         if self.native_dialog is None:
@@ -90,6 +112,115 @@ class Task036ShellBridge:
                 ProductErrorCategory.STATE,
             )
         return self.native_dialog
+
+    def _require_workflow_runtime(self) -> Task036WorkflowRuntime:
+        if self.workflow_runtime is None:
+            raise ProductError(
+                "ERR_TASK036_WORKFLOW_RUNTIME_NOT_BOUND",
+                "Trusted minimum-editing runtime is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self.workflow_runtime
+
+    @staticmethod
+    def _empty_args(args: Any, operation: str) -> None:
+        if args not in (None, {}):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                f"{operation} request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+
+    def workflow_status(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "workflow status")
+        if self.workflow_runtime is not None:
+            return self.workflow_runtime.status()
+        if self.pre_edit_runtime is not None:
+            status = self.pre_edit_runtime.status()
+            if status["next_recommended_action"] not in {
+                "media.choose_and_ingest",
+                "transcription.start",
+                "subtitle.save",
+                "cut_candidates.generate",
+                "edit_plan.approve",
+            }:
+                status["available"] = False
+                status["post_review_runtime_bound"] = False
+            return status
+        return {"available": False}
+
+    def choose_and_ingest_media(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "media choose and ingest")
+        if self.pre_edit_runtime is None:
+            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+        return self.pre_edit_runtime.choose_and_ingest_media()
+
+    def run_local_transcription(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "local transcription")
+        if self.pre_edit_runtime is None:
+            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+        return self.pre_edit_runtime.run_local_transcription()
+
+    def create_runtime_subtitle_workspace(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Subtitle Workspace creation")
+        if self.pre_edit_runtime is None:
+            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+        return self.pre_edit_runtime.create_subtitle_workspace()
+
+    def generate_runtime_cut_candidates(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Cut Candidate generation")
+        if self.pre_edit_runtime is None:
+            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+        result = self.pre_edit_runtime.generate_cut_candidates()
+        application = self.pre_edit_runtime.application
+        if application is not None and self.workflow_runtime_factory is not None:
+            runtime = self.workflow_runtime_factory(application)
+            if runtime.application is not application:
+                raise ValueError("trusted runtime factory returned a different editing application")
+            self.workflow_runtime = runtime
+        return result
+
+    def compile_resolve_assembly(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Resolve assembly compile")
+        return self._require_workflow_runtime().compile_resolve_assembly()
+
+    def prepare_resolve_apply(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Resolve apply preparation")
+        return self._require_workflow_runtime().prepare_resolve_apply()
+
+    def apply_resolve_assembly(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Resolve apply request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_workflow_runtime().apply_resolve_assembly(str(args["confirmation_id"]))
+
+    def prepare_native_render_gate(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "native render preparation")
+        return self._require_workflow_runtime().prepare_native_render_gate()
+
+    def prepare_native_render_confirmation(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "native render confirmation")
+        return self._require_workflow_runtime().prepare_native_render_confirmation()
+
+    def execute_native_render(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "native render request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_workflow_runtime().execute_native_render(str(args["confirmation_id"]))
+
+    def bind_runtime_render_qa(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Render QA binding")
+        return self._require_workflow_runtime().bind_runtime_render_qa()
+
+    def create_editor_handoff(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "EDITOR_WORK creation")
+        return self._require_workflow_runtime().create_editor_handoff()
 
     def choose_media_source(self, args: Any = None) -> dict[str, Any]:
         if args not in (None, {}):
@@ -110,8 +241,9 @@ class Task036ShellBridge:
         return self.service.snapshot().to_dict()
 
     def view_model(self, _args: Any = None) -> dict[str, Any]:
-        if self.application is not None:
-            return self.application.view_model()
+        application = self._current_application()
+        if application is not None:
+            return application.view_model()
         return Task036DesktopViewModel(self.service.snapshot(), self.projection).to_dict()
 
     def set_workspace(self, args: Any) -> dict[str, Any]:
@@ -121,13 +253,15 @@ class Task036ShellBridge:
         return self.service.snapshot().to_dict()
 
     def review_snapshot(self, _args: Any = None) -> dict[str, Any]:
-        review = self.application.review if self.application is not None else self.review
+        application = self._current_application()
+        review = application.review if application is not None else self.review
         if review is None:
             return {"available": False}
         return {"available": True, **review.snapshot()}
 
     def select_candidate(self, args: Any) -> dict[str, Any]:
-        review = self.application.review if self.application is not None else self.review
+        application = self._current_application()
+        review = application.review if application is not None else self.review
         if review is None:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         if not isinstance(args, dict) or set(args) != {"candidate_id"}:
@@ -135,7 +269,8 @@ class Task036ShellBridge:
         return review.select_candidate(str(args["candidate_id"]))
 
     def review_candidate(self, args: Any) -> dict[str, Any]:
-        review = self.application.review if self.application is not None else self.review
+        application = self._current_application()
+        review = application.review if application is not None else self.review
         if review is None:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         allowed = {"candidate_id", "decision", "override_start_us", "override_end_us"}
@@ -151,20 +286,22 @@ class Task036ShellBridge:
     def prepare_edit_plan_approval(self, args: Any = None) -> dict[str, Any]:
         if args not in (None, {}):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "plan approval preview request is invalid", ProductErrorCategory.VALIDATION)
-        review = self.application.review if self.application is not None else self.review
+        application = self._current_application()
+        review = application.review if application is not None else self.review
         if review is None:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         return review.prepare_plan_approval()
 
     def approve_edit_plan(self, args: Any) -> dict[str, Any]:
-        review = self.application.review if self.application is not None else self.review
+        application = self._current_application()
+        review = application.review if application is not None else self.review
         if review is None:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         required = {"confirmation_id", "draft_plan_sha256", "approved_by"}
         if not isinstance(args, dict) or set(args) != required:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "plan approval request is invalid", ProductErrorCategory.VALIDATION)
-        if self.application is not None:
-            return self.application.approve_edit_plan(
+        if application is not None:
+            return application.approve_edit_plan(
                 confirmation_id=str(args["confirmation_id"]),
                 draft_plan_sha256=str(args["draft_plan_sha256"]),
                 approved_by=str(args["approved_by"]),
@@ -176,7 +313,7 @@ class Task036ShellBridge:
         )
 
 
-def run_native_layout_spike(*, product_version: str = "0.19.0") -> None:
+def run_native_layout_spike(*, product_version: str = "0.20.0") -> None:
     """Launch the native layout spike when optional pywebview is installed.
 
     This function does not install dependencies and does not mutate Product data.

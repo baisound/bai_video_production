@@ -1,0 +1,74 @@
+{
+  "decision_version": "1.0.0",
+  "decision_id": "BVP-PHASEG-TASK036-W0-W1-PARK-20260814-01",
+  "task_id": "TASK-036",
+  "consumer_head": "77a2cc9bd4ea1fa17d489d6523367f5a8171a35b",
+  "decision": "W0_W1_REMAINDER_FORMALLY_PARKED_TO_PHASE_H2",
+  "w0_status": "PARTIAL_REMAINDER_PARKED_TO_H2",
+  "w1_status": "PARTIAL_REMAINDER_PARKED_TO_H2",
+  "w2_status": "PACKAGED_NATIVE_E2E_PASS",
+  "overall_claims": {
+    "native_validated": false,
+    "desktop_shell_native_ux_pass": false,
+    "minimum_editing_product_mvp_pass": false
+  },
+  "accepted_scope": {
+    "webview2_present_launch": true,
+    "native_dialogs_and_focus": true,
+    "unicode_short_install_path": true,
+    "tested_executable_path_length": 166,
+    "tested_single_monitor_viewports": [
+      "1600x900",
+      "1366x768"
+    ],
+    "w2_packaged_native_route": true
+  },
+  "release_limitations": {
+    "webview2_runtime_required": true,
+    "missing_runtime_recovery_claimed": false,
+    "long_path_245_supported": false,
+    "full_dpi_mixed_monitor_claimed": false,
+    "screen_reader_compatibility_claimed": false
+  },
+  "parked_cases": [
+    {
+      "case": "CLEAN_USER_PROFILE_STARTUP",
+      "target_phase": "PHASE_H2",
+      "resume_condition": "DISPOSABLE_WINDOWS_PROFILE_AVAILABLE"
+    },
+    {
+      "case": "MISSING_WEBVIEW2_RECOVERY",
+      "target_phase": "PHASE_H2",
+      "resume_condition": "ISOLATED_DISPOSABLE_RUNTIME_ENVIRONMENT_AVAILABLE"
+    },
+    {
+      "case": "FULL_DPI_AND_MIXED_MONITOR_MATRIX",
+      "target_phase": "PHASE_H2",
+      "resume_condition": "REQUIRED_DISPLAY_TOPOLOGY_AVAILABLE"
+    },
+    {
+      "case": "WINDOWS_SCREEN_READER_SMOKE",
+      "target_phase": "PHASE_H2",
+      "resume_condition": "ACCESSIBILITY_TEST_SESSION_AVAILABLE"
+    },
+    {
+      "case": "LONG_INSTALL_PATH_POLICY_OR_MITIGATION",
+      "target_phase": "PHASE_H2",
+      "resume_condition": "PATH_POLICY_OR_BOOTSTRAP_MITIGATION_DESIGNED"
+    }
+  ],
+  "source_evidence": [
+    {
+      "path": "evidence/native/phase-g-task036-packaging-20260813-01/task036-w0-w1-evidence.json",
+      "sha256": "sha256:9b78f42540e1ec89d7aeca5f6cd6da7ee468b8a4fb55be2624eb92126f3f3aec"
+    },
+    {
+      "path": "evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-packaged-native-e2e.json",
+      "sha256": "sha256:eeb7f233541e772b77646a5ac29690fe88e80bc72460893f4cfff98807ac39f9"
+    }
+  ],
+  "next_phase_g_unit": "POST_W2_CONVERSATION_FREE_RESTART",
+  "absolute_paths_persisted": false,
+  "paid_provider_execution": false,
+  "tag_or_release_created": false
+}

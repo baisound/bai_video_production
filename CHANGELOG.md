@@ -4,10 +4,15 @@
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-08-14
+
+- Formally parked the remaining TASK-036 clean-profile, missing-WebView2, long-path, full DPI/mixed-monitor and screen-reader cases to Phase H2 without promoting them to PASS; the bounded release environment and unsupported claims are explicit.
 - Completed Phase G backend native Evidence: real Resolve assembly/linked A/V/edit-aware subtitle semantics, real Resolve render QA and real Cubase 13 48 kHz PCM round-trip pass without broadening external-write or paid-provider authority.
 - Corrected Resolve Timeline-start-relative record placement, localized completed-render status handling and WebView2 runtime version discovery; assembly-plan contract is now `1.3.0` with an explicit record-frame basis.
-- Advanced TASK-036 native hardening with reachable allowlisted file/folder dialogs, visible path-selection status and a reproducible PyInstaller one-dir Windows bundle. W0/W1 remain partial and W2 real backend Shell E2E remains blocked, so no minimum editing Product completion claim is made.
-- Final local Phase G regression: Windows `778 passed, 1 intentional OS skip`; WSL2 Ubuntu `779 passed`; compileall and authoritative Windows diff-check PASS.
+- Completed the TASK-036 W2 packaged native route from trusted Project launch through ingest, cached local FasterWhisper, Subtitle, Human Cut Review/approval, exact Resolve apply, TASK-011 native Render QA and atomic TASK-012 EDITOR_WORK. Host paths, provider settings, analysis audio, adapters, Resolve targets and external-write authority remain Python-only launch bindings; overall Product completion remains unclaimed while W0/W1 and Phase G closure gates remain.
+- Added exact one-shot TASK-011 native-render authorization bound to the applied Assembly, sandbox Project, Automation Timeline, duration/rate contract and Python-only Evidence destination; successful execution binds the exact QA identity without exposing the render path to JavaScript.
+- Added strict private launch-config validation, frozen FasterWhisper/CTranslate2/ONNX/PyAV into the PyInstaller one-dir package, bound the required managed edit-aware SRT path and made EDITOR_WORK publication atomic after complete optional-source preflight.
+- Latest Phase G regression: WSL2 Ubuntu `805 passed`; focused atomic handoff/launcher/runtime `25 passed`. The updated 461-file PyInstaller bundle passes trusted native launch, real W2 E2E and normal close; hosted PR CI remains required.
 
 - Implemented the TASK-007 -> TASK-010 -> TASK-011 -> TASK-012 editing Technical MVP backend/application-service vertical slice: human-approved Edit Plan, Automation-owned Resolve assembly, rendered-artifact QA/loudness and deterministic EDITOR_WORK/Cubase round-trip.
 - Added strict external-write/idempotency/partial-state gates for Resolve and require probed source/normalized media FPS instead of substituting Timeline FPS for source-frame conversion.

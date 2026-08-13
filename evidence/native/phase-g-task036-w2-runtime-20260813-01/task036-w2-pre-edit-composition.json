@@ -1,0 +1,40 @@
+{
+  "absolute_paths_persisted": false,
+  "branch": "feature/task-036-phase-g-w2",
+  "external_mutation_performed": false,
+  "gate": "TASK036_W2_PRE_EDIT_APPLICATION_SERVICE_COMPOSITION",
+  "javascript_boundary": {
+    "analysis_audio_from_javascript": false,
+    "host_path_from_javascript": false,
+    "ingest_rights_from_javascript": false,
+    "paid_or_download_authorization_from_javascript": false,
+    "product_port_from_javascript": false,
+    "provider_configuration_from_javascript": false
+  },
+  "paid_provider_execution": false,
+  "product_completion_claimed": false,
+  "report_version": "1.0.0",
+  "semantic_report_sha256": "sha256:c465c868c2a9c0d11e175634d14ebdecd1ae4079b6252a4bfcd801ba8e214ece",
+  "services": [
+    "TASK-003_ASSET_INGEST",
+    "TASK-006_LOCAL_TRANSCRIPTION",
+    "SUBTITLE_WORKSPACE",
+    "TASK-024_CUT_CANDIDATES",
+    "TASK-007_HUMAN_CUT_REVIEW"
+  ],
+  "status": "APPLICATION_SERVICES_COMPOSED_PACKAGED_E2E_PENDING",
+  "tests": {
+    "focused": {
+      "passed": 20
+    },
+    "wsl2_ubuntu_full": {
+      "passed": 789,
+      "skipped": 0
+    }
+  },
+  "unresolved": [
+    "TRUSTED_PACKAGED_PROJECT_LAUNCHER_BINDING",
+    "REAL_INTEGRATED_RENDER_TO_QA_EXECUTION",
+    "PACKAGED_CONVERSATION_FREE_FULL_E2E"
+  ]
+}

@@ -8,7 +8,7 @@ reimplement TASK-003.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Protocol
 
@@ -39,6 +39,13 @@ class Task036MediaWorkflowFacade:
     coordinator: DesktopEditingCoordinator
     native_dialog: Task036NativeDialogService
     ingest_port: MediaIngestPort
+    _runtime_source_path: Path | None = field(default=None, init=False, repr=False)
+
+    @property
+    def runtime_source_path(self) -> Path | None:
+        """Return the ephemeral source path only to the trusted Python runtime."""
+
+        return self._runtime_source_path
 
     def choose_and_ingest(self) -> dict[str, Any]:
         selection = self.native_dialog.choose_media_source()
@@ -70,6 +77,7 @@ class Task036MediaWorkflowFacade:
             identity = self.ingest_port.ingest_local_media(source_path)
             runtime["identity"] = identity
             self.coordinator.bind_source(asset_id=identity.asset_id, asset_sha256=identity.asset_sha256)
+            self._runtime_source_path = source_path
             return {
                 "asset_id": identity.asset_id,
                 "asset_sha256": identity.asset_sha256,

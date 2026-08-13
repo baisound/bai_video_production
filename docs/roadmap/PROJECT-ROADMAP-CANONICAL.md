@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.12
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.13
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -553,7 +553,7 @@ This addendum supersedes stale native-pending statements in earlier sections wit
 - TASK-011: real Resolve Render Queue and artifact video/audio/duration/loudness/true-peak QA PASS.
 - TASK-012: real deterministic EDITOR_WORK and Cubase 13 stereo 48 kHz 24-bit PCM return PASS.
 - TASK-036 W0/W1: **PARTIAL**. Native WebView2 window/layout, reachable native dialogs, focus return and packaged one-dir launch pass; clean-profile, missing-runtime recovery, full DPI/accessibility and install-path policy remain.
-- TASK-036 W2: **BLOCKED_NOT_WIRED**. `MINIMUM_EDITING_PRODUCT_MVP_PASS` remains unclaimed.
+- TASK-036 W2: **APPLICATION_SERVICES_COMPOSED / PACKAGED_FULL_E2E_PENDING**. Trusted TASK-003/006/024 pre-edit ports now promote into Human Cut Review and the approved review reaches fixed TASK-010/011/012 runtime bindings. Trusted packaged-launcher binding, real integrated render-to-QA execution and packaged full E2E remain. `MINIMUM_EDITING_PRODUCT_MVP_PASS` remains unclaimed.
 
 ### Phase G continuation order
 
@@ -566,3 +566,49 @@ This addendum supersedes stale native-pending statements in earlier sections wit
 7. merge only after all required checks are green, verify the exact main merge SHA, then create the annotated tag and GitHub Release.
 
 No direct main push, force push, paid Provider execution, ambiguous human-owned Project mutation or release claim beyond accepted Evidence is permitted.
+
+## Ver.1.13 Addendum — TASK-036 W2 Packaged Native E2E Checkpoint
+
+This addendum supersedes the W2-pending statement in Ver.1.12 without changing TASK identities, release authority or remaining W0/W1 gates.
+
+### Accepted W2 position
+
+- the private trusted launcher configuration is read only by the Python host and cannot be supplied or replaced by WebView JavaScript;
+- the Windows package includes the local FasterWhisper runtime and completed cached, network-free inference with model download disabled;
+- one packaged session completed `Media -> Transcribe -> Subtitle -> Cut Review -> Approve -> Resolve Apply -> Native Render QA -> EDITOR_WORK`;
+- Resolve mutation was limited to sandbox Project `BAI_CAPABILITY_PROBE_PHASEG_TASK010_FIX4_20260813` and Automation-owned Timeline `BAI_AUTO_A9AD30E48C30` after exact one-shot confirmation;
+- TASK-011 native Render QA passed video, audio, duration, LUFS and true-peak checks;
+- TASK-012 published `EDITOR_WORK_4E36CD0D60C6` atomically with a relative-path/checksum manifest and final Shell action `NONE`;
+- WSL2 Ubuntu full regression passed `805 / 805`.
+
+### Remaining Phase G boundary
+
+W2 is `PACKAGED_NATIVE_E2E_PASS`, but TASK-036 as a whole remains active. Clean-profile startup, missing-WebView2 recovery, the full DPI/accessibility matrix and supported install-path policy remain W0/W1 gates. Conversation-free restart Evidence, Pilot Context Cost and the exact release decision also remain. Therefore overall TASK-036 `NATIVE_VALIDATED` and `MINIMUM_EDITING_PRODUCT_MVP_PASS` are not yet claimed.
+
+Continuation order is now:
+
+1. complete or formally park the bounded W0/W1 remainder;
+2. capture conversation-free restart and Pilot Context Cost Evidence;
+3. make the exact release decision from repository state;
+4. finalize release metadata only if that decision authorizes it;
+5. rerun regression/CI, merge through PR, verify exact main SHA, then tag and publish a GitHub Release.
+
+### Ver.1.13 Addendum II — TASK-036 W0/W1 Formal Parking
+
+This addendum completes the first continuation item above without promoting the parked cases to PASS.
+
+- W0 remains `PARTIAL`; clean-profile startup, missing-WebView2 recovery and long-path mitigation are `PARKED_TO_PHASE_H2`.
+- W1 remains `PARTIAL`; the full DPI/mixed-monitor and screen-reader matrix is `PARKED_TO_PHASE_H2`.
+- the bounded release environment requires an installed WebView2 Runtime and a normal local install path; executable path length `166` passed and `245` failed;
+- evidenced single-monitor viewports are `1600x900` and `1366x768`; wider accessibility/display claims are prohibited;
+- W2 remains `PACKAGED_NATIVE_E2E_PASS`.
+
+TASK-036 overall `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS` and `MINIMUM_EDITING_PRODUCT_MVP_PASS` remain unclaimed. The next Phase G unit is the post-W2 conversation-free restart, followed by final Pilot Context Cost and the exact release decision.
+
+### Ver.1.13 Addendum III — Phase G Release Decision
+
+The independent post-W2 conversation-free restart passed at Consumer HEAD `b30da2298a47cad49d650133b6ab2ccf78f11c29`. Final Pilot Context Cost is `11,888` estimated input tokens, a reduction of `12,327` / `50.91%` from the W2 checkpoint; provider/cached/output/billed values are unavailable and remain `null`.
+
+The exact release decision is `0.20.0 / v0.20.0 / stable`. Release metadata may now be finalized on the feature branch. The remaining order is regression and hosted CI, PR #20 merge, exact main merge SHA verification, annotated tag on that SHA, GitHub Release and branch cleanup.
+
+The release must retain the W0/W1 limitations. Overall TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS`, `MINIMUM_EDITING_PRODUCT_MVP_PASS` and M3B completion remain unclaimed.

@@ -1,0 +1,36 @@
+{
+  "absolute_paths_persisted": false,
+  "branch": "feature/task-036-phase-g-w2",
+  "external_mutation_performed": false,
+  "gate": "TASK036_W2_TASK011_RENDER_AUTHORITY_INTEGRATION",
+  "native_render_executed": false,
+  "paid_provider_execution": false,
+  "product_completion_claimed": false,
+  "report_version": "1.0.0",
+  "runtime_contract": {
+    "assembly_identity_bound": true,
+    "duration_and_rate_bound": true,
+    "evidence_destination_from_javascript": false,
+    "external_write_confirmation": "EXACT_ONE_SHOT",
+    "render_artifact_path_exposed_to_javascript": false,
+    "resolve_target_from_javascript": false,
+    "sandbox_project_and_timeline_bound": true,
+    "trusted_task011_runner_reused": true
+  },
+  "semantic_report_sha256": "sha256:dcb7e01162228168cd8e8294f799e5bd536322a1fcb465420a756f05cea3caf2",
+  "status": "RENDER_AUTHORITY_ROUTE_AUTOMATED_PASS_REAL_NATIVE_EXECUTION_PENDING",
+  "tests": {
+    "focused": {
+      "passed": 31
+    },
+    "wsl2_ubuntu_full": {
+      "passed": 791,
+      "skipped": 0
+    }
+  },
+  "unresolved": [
+    "TRUSTED_PACKAGED_PROJECT_LAUNCHER_BINDING",
+    "REAL_INTEGRATED_TASK011_RENDER_EXECUTION",
+    "PACKAGED_CONVERSATION_FREE_FULL_E2E"
+  ]
+}

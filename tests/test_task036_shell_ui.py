@@ -101,6 +101,22 @@ def test_html_exposes_native_chooser_controls_without_starting_product_operation
     assert "操作は未開始" in HTML
 
 
+def test_html_exposes_allowlisted_post_review_workflow_action():
+    assert 'id="workflowActionButton"' in HTML
+    assert "workflow_status" in HTML
+    assert "choose_and_ingest_media" in HTML
+    assert "run_local_transcription" in HTML
+    assert "create_runtime_subtitle_workspace" in HTML
+    assert "generate_runtime_cut_candidates" in HTML
+    assert "compile_resolve_assembly" in HTML
+    assert "prepare_resolve_apply" in HTML
+    assert "apply_resolve_assembly" in HTML
+    assert "prepare_native_render_confirmation" in HTML
+    assert "execute_native_render" in HTML
+    assert "bind_runtime_render_qa" in HTML
+    assert "create_editor_handoff" in HTML
+
+
 def test_integrated_bridge_plan_approval_advances_workflow_stage():
     from ai_video_production.desktop_editing_application import Task036EditingApplication
 

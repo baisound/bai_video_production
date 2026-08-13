@@ -4,14 +4,15 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL`
+- Project Status: `BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_PARKED_TO_H2_W2_PACKAGED_NATIVE_E2E_PASS`
 - Last Completed Task: `TASK-024 Slice A — Review-only Cut Candidate Worker (v0.18.0)`
 - Active Consumer Task: `TASK-036 Phase G native desktop hardening + release integration`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.19.0` (FORMAL RELEASE COMPLETE; GitHub Release `v0.19.0` published 2026-08-12; TASK-023 COMPLETE / INTEGRATION_DESIGNED)
-- Development Candidate: `NONE` (Phase G work remains unreleased; exact release version decision pending and no release metadata finalized)
-- Next Consumer Task: `TASK-036 remaining W0/W1/W2 acceptance -> conversation-free restart -> exact release decision -> CI/PR integration`
+- Package: `0.19.0`
+- Release State: `RELEASE_CANDIDATE / PR_MERGE_PENDING`; latest formal GitHub Release remains `v0.19.0`
+- Development Candidate: `0.20.0` (`stable`; exact Phase G release decision established)
+- Next Consumer Task: `release metadata regression/CI -> PR #20 merge -> exact main SHA -> annotated v0.20.0 tag -> GitHub Release -> branch cleanup`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -22,8 +23,10 @@
 - Cross-task Application Service: `TechnicalMvpApplicationService` preserves the 007 -> 010 -> 011 -> 012 orchestration boundary for future Unified Desktop Shell wiring.
 - Current backend integration state: TASK-010/011/012 are `NATIVE_VALIDATED / INTEGRATION_DESIGNED`; no `SHELL_INTEGRATED` Product claim.
 - Native PASS: real Resolve source-range/linked-A/V/idempotency/conflict semantics, edit-aware subtitle semantics, real Resolve render artifact QA and real Cubase 48 kHz PCM return.
-- TASK-036 partial: WebView2 native window/layout, allowlisted native dialog controls, focus return, packaged one-dir EXE, multi-instance characterization, Unicode install path and owned-process cleanup PASS. Clean-profile, missing-WebView2 recovery, full DPI/accessibility matrix and W2 real backend Shell E2E remain incomplete.
-- Automated validation: Windows `778 passed, 1 intentional OS skip`; WSL2 Ubuntu `779 passed`; compileall PASS on both environments; Windows `git diff --check` PASS.
+- TASK-036 W2 PASS: the packaged trusted launcher completed real Windows `Media ingest -> local FasterWhisper -> Subtitle -> Cut Review/Approve -> Resolve apply -> TASK-011 native Render QA -> atomic EDITOR_WORK`; the final UI state was `NONE` and no host path was persisted in public status/Evidence.
+- TASK-036 W0/W1 decision: the clean-profile, missing-WebView2, long-path, full DPI/mixed-monitor and screen-reader remainder is formally `PARKED_TO_PHASE_H2`; none of those cases is promoted to PASS. The bounded release environment requires installed WebView2 and a normal local install path.
+- Phase G closure gates: post-W2 conversation-free restart PASS; final Pilot Context Cost `11,888` estimated tokens PASS; exact release decision `0.20.0 / v0.20.0 / stable` PASS. Release integration remains.
+- Automated validation: WSL2 Ubuntu `805 passed`; focused atomic handoff/launcher/runtime `25 passed`; packaged Windows native W2 E2E PASS. PR CI remains the hosted cross-platform gate.
 
 ## TASK-004 implemented scope
 
@@ -101,7 +104,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.12. Owner-directed editing-first priority remains in force. Phase G closes M3A backend native Evidence while TASK-036 W2 remains the M3B completion boundary.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13 Addendum II. Owner-directed editing-first priority remains in force. TASK-036 W2 has packaged native E2E Evidence and the W0/W1 remainder is formally parked to H2; M3B/Product completion remains unclaimed. Phase G now continues with post-W2 restart, final Context Cost and exact release decision.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

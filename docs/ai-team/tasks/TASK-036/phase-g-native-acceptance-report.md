@@ -1,7 +1,7 @@
 # TASK-036 — Phase G Native Acceptance Report
 
-- Date: 2026-08-13
-- Status: `W0_PARTIAL / W1_PARTIAL / W2_BLOCKED_NOT_WIRED`
+- Date: 2026-08-14
+- Status: `W0_PARTIAL_PARKED_TO_H2 / W1_PARTIAL_PARKED_TO_H2 / W2_PACKAGED_NATIVE_E2E_PASS`
 - Product completion claim: **NOT MADE**
 
 ## Passed in the real Windows environment
@@ -25,11 +25,17 @@
 - missing-WebView2 recovery/bootstrap is not yet tested;
 - the full 100/125/150/200% DPI and mixed-monitor matrix is incomplete;
 - Windows screen-reader smoke is incomplete;
-- W2 does not yet bind the native Shell to the real TASK-003/006/007/010/011/012 end-to-end route.
+- W2 now passes in the real packaged Windows application: trusted launch, TASK-003 ingest, cached TASK-006 FasterWhisper with no network/model download, Subtitle Workspace, TASK-024 candidates, Human plan approval, exact TASK-010 Resolve apply, TASK-011 native Render QA and atomic TASK-012 EDITOR_WORK all completed in one Shell session; final `next_recommended_action` was `NONE`.
 
-Therefore `DESKTOP_RUNTIME_SPIKE_PASS`, `DESKTOP_SHELL_NATIVE_UX_PASS`, `SHELL_INTEGRATED`, `NATIVE_VALIDATED` for TASK-036 and `MINIMUM_EDITING_PRODUCT_MVP_PASS` remain unclaimed.
+W2 is now `SHELL_INTEGRATED / PACKAGED_NATIVE_E2E_PASS` at the scoped workflow gate. Overall TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS` and `MINIMUM_EDITING_PRODUCT_MVP_PASS` remain unclaimed until the W0/W1 findings and Phase G restart/Context Cost boundaries are closed or formally parked.
+
+## W0/W1 disposition — 2026-08-14
+
+The remaining clean-profile, missing-WebView2, long-path, full DPI/mixed-monitor and screen-reader cases are formally `PARKED_TO_PHASE_H2`. Parking does not convert them to PASS. The bounded release environment requires installed WebView2 and a normal local install path; executable path length `166` passed and `245` failed. See `phase-g-w0-w1-parking-decision-2026-08-14.md`.
 
 ## Evidence
 
 - `evidence/native/phase-g-task036-20260813-01/task036-native-shell-phase-g.json`
 - `evidence/native/phase-g-task036-packaging-20260813-01/task036-w0-w1-evidence.json`
+- `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-packaged-native-e2e.json`
+- `evidence/native/phase-g-task036-w0-w1-parking-20260814-01/task036-w0-w1-parking-decision.json`

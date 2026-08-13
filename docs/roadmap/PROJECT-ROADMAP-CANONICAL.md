@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.20
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.21
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -674,3 +674,9 @@ TASK-038's local implementation gate passes. The unified `制作管理` workspac
 Human decisions are persisted through an exact prepared two-store transaction. Restart after interruption requires an explicit exact completion/abandon/finalize action; unknown mixed state remains blocked. Reject does not Delete, NEEDS_REGENERATION does not start a Provider, and ACCEPT remains separate from TASK-037 LOCK.
 
 Windows full regression passes `833 / 833` executed tests with one intentional non-Windows skip. Windows and WSL2 compile gates and diff check pass. Formal closure remains conditional on hosted PR checks, exact `main` merge verification and branch cleanup. No package, Tag or Release is selected at this TASK-038 checkpoint. TASK-027 Planning Workspace minimum follows after closure on a new dedicated branch.
+
+### Ver.1.21 Addendum XII — TASK-038 Hosted Closure
+
+TASK-038 is complete. PR #26 exact head `d756bdb80c7d0a3cee20f432abc99c390c902077` passed all `9 / 9` hosted checks and merged at exact main SHA `9a999645f36a55595eeca89347162aaba3a730a0`. The implementation branch was deleted remotely and locally.
+
+The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R2 checkpoint. The next Owner-routed unit is TASK-027 Planning Workspace minimum / Scene Contract, starting from the exact TASK-038 closure main on a new dedicated branch.

@@ -104,6 +104,10 @@ def test_html_exposes_native_chooser_controls_without_starting_product_operation
 def test_html_exposes_allowlisted_post_review_workflow_action():
     assert 'id="workflowActionButton"' in HTML
     assert "workflow_status" in HTML
+    assert "choose_and_ingest_media" in HTML
+    assert "run_local_transcription" in HTML
+    assert "create_runtime_subtitle_workspace" in HTML
+    assert "generate_runtime_cut_candidates" in HTML
     assert "compile_resolve_assembly" in HTML
     assert "prepare_resolve_apply" in HTML
     assert "apply_resolve_assembly" in HTML

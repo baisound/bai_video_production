@@ -4,13 +4,15 @@
   "external_mutation_performed": false,
   "gate": "TASK036_W2_DOWNSTREAM_RUNTIME_BINDING",
   "native_package": {
-    "bundle_bytes": 32451144,
-    "bundle_files": 306,
-    "exe_sha256": "sha256:370938272d23c6f7a9ab34ef62beaac7be4bf1fdf59514ea9c0091085c5e1934",
-    "exe_size_bytes": 5715709,
+    "bundle_bytes": 46206047,
+    "bundle_files": 317,
+    "exe_sha256": "sha256:1acfa06a081da90cd12e3ab7f29a2b2b943cab5a87d6f02e39f4d2f7f674f5da",
+    "exe_size_bytes": 5903678,
     "normal_close": "PASS",
     "pyinstaller": "6.22.0",
     "pywebview_module_included": true,
+    "task036_pre_edit_runtime_frozen": true,
+    "task036_product_ports_frozen": true,
     "top_level_window": "PASS",
     "workflow_module_frozen": true
   },
@@ -25,7 +27,7 @@
     "resolve_target_from_javascript": false,
     "trusted_python_runtime_binding": true
   },
-  "semantic_report_sha256": "sha256:7989aca837ba67695db8983cc1fba630085950ec90e35447989aa8db79cd5ee4",
+  "semantic_report_sha256": "sha256:2894bab92820b7a094b5a526ab1127b2d62f2cb77571bd80029f5b400e5c1af9",
   "status": "W2_DOWNSTREAM_RUNTIME_BOUND_FULL_E2E_PENDING",
   "tests": {
     "focused": {

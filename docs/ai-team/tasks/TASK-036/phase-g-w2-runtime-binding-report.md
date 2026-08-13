@@ -1,13 +1,17 @@
 # TASK-036 Phase G W2 Runtime Binding Report
 
 - Date: 2026-08-13
-- Status: `W2_DOWNSTREAM_RUNTIME_BOUND / FULL_E2E_PENDING`
+- Status: `W2_APPLICATION_SERVICES_COMPOSED / PACKAGED_FULL_E2E_PENDING`
 - Product completion claim: **NOT MADE**
 
 ## Implemented boundary
 
 The native pywebview Shell can now continue from Human-approved Cut Review through the existing TASK-010/011/012 Application Services without accepting adapters, host paths, Resolve targets or external-write authority from JavaScript.
 
+- a trusted pre-edit runtime composes TASK-003 ingest, TASK-006 local transcription, Subtitle Workspace creation and TASK-024 Cut Candidate generation;
+- completed Cut Candidates dynamically promote the same coordinator into the Human Cut Review application without replacing Project/source/transcript identity;
+- existing Product Service ports receive rights, local model, output directories and normalized analysis-audio bindings only from Python at launch;
+- JavaScript cannot supply a source path, provider/model setting, analysis WAV, Product port or paid/download authorization;
 - the trusted desktop composition root binds the exact Resolve adapter, source binding, frame rate, sandbox Project and runtime-only render/handoff inputs before launch;
 - the bridge exposes only fixed allowlisted operations;
 - Resolve compile is non-mutating;
@@ -22,8 +26,8 @@ The Shell now has one stage-aware `Continue` action. It displays the exact `next
 
 ## Remaining W2 gaps
 
-- Project open, media ingest, local transcription, Subtitle Workspace and Cut Candidate generation are not yet composed into the packaged runtime entrypoint;
-- the packaged entrypoint still launches the bounded demo composition unless a trusted W2 runtime is supplied;
+- Project identity/loading and the trusted Product Service ports are not yet bound into the packaged runtime entrypoint;
+- the packaged entrypoint still launches the bounded demo composition rather than the trusted Phase G Project configuration;
 - real native render execution must return a trusted TASK-011 QA report before binding;
 - final packaged conversation-free `Open Project -> ... -> EDITOR_WORK` has not run.
 
@@ -32,11 +36,15 @@ Therefore `SHELL_INTEGRATED`, TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE
 ## Verification
 
 - focused workflow/runtime/Shell/Resolve/post/package tests: `26 passed`;
+- focused trusted TASK-003/006/024 pre-edit and runtime-factory composition tests after Critic correction: `20 passed`;
 - Windows full regression: `782 passed, 1 skipped` (the skip is the intentional non-Windows contract test);
-- WSL2 Ubuntu full regression: `783 passed`;
+- WSL2 Ubuntu full regression after the pre-edit composition and Critic correction: `789 passed`;
 - corrected one-dir package built with PyInstaller `6.22.0` and the project virtual environment;
-- packaged EXE SHA-256: `370938272d23c6f7a9ab34ef62beaac7be4bf1fdf59514ea9c0091085c5e1934`;
+- updated packaged EXE SHA-256: `1acfa06a081da90cd12e3ab7f29a2b2b943cab5a87d6f02e39f4d2f7f674f5da`;
 - packaged native top-level window launch and normal close: `PASS`;
-- the frozen module graph contains `task036_workflow_runtime` and the pywebview hooks.
+- the frozen module graph contains `task036_pre_edit_runtime`, `task036_product_ports`, `task036_workflow_runtime` and the pywebview hooks.
 
-Machine-readable Evidence: `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-runtime-binding.json`.
+Machine-readable Evidence:
+
+- `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-runtime-binding.json`;
+- `evidence/native/phase-g-task036-w2-runtime-20260813-01/task036-w2-pre-edit-composition.json`.

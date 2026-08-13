@@ -1,7 +1,7 @@
 # TASK-036 — Windows Native Acceptance Matrix Ver.0.9
 
 - Date: 2026-08-13
-- Status: `W0_PARTIAL / W1_PARTIAL / W2_DOWNSTREAM_RUNTIME_BOUND_FULL_E2E_PENDING`
+- Status: `W0_PARTIAL / W1_PARTIAL / W2_APPLICATION_SERVICES_COMPOSED_PACKAGED_E2E_PENDING`
 - Purpose: prevent a shell from being declared complete based only on browser/headless tests.
 
 ## 1. Gate levels
@@ -167,4 +167,4 @@ W0/W1 must not be described as minimum editing Product completion.
 
 R0 backend native gates are closed for TASK-010/011/012. TASK-036 real Windows execution now proves packaged WebView2 launch, HTML-reachable native chooser controls, focus return, multi-instance characterization, Unicode install-path launch and owned-process cleanup.
 
-W0 remains partial because clean-profile and missing-WebView2 recovery are untested and path length 245 fails at an internal packaged DLL path. W1 remains partial because the complete DPI/mixed-monitor/accessibility matrix is unfinished. W2 remains blocked because the real backend minimum-editing route is not wired through the Shell.
+W0 remains partial because clean-profile and missing-WebView2 recovery are untested and path length 245 fails at an internal packaged DLL path. W1 remains partial because the complete DPI/mixed-monitor/accessibility matrix is unfinished. W2 Application Services are now composed through trusted Python-only ports, but the trusted packaged launcher and real packaged full E2E are unfinished.

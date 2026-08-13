@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`TASK036_MINIMUM_EDITING_PRODUCT_MVP_PASS_V0_20_1_RELEASE_CANDIDATE`
+`V0_20_1_RELEASED_TASK036_MINIMUM_EDITING_PRODUCT_MVP_PASS`
 
 ## Purpose
 
@@ -110,14 +110,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-010 / TASK-011 / TASK-012 backend native acceptance`
-- Active Task: `TASK-036 v0.20.1 release finalization`
+- Active Task: `NONE — TASK-036 complete; next task requires Owner roadmap routing`
 - TASK-004: `COMPLETED`
-- Package: `0.20.0`
-- Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.0` targets exact main SHA `1fc8bae6ee5bf0c63c1c7d92e21e1eb6dd966c88`
-- Development Candidate: `0.20.1`
-- Current release verification: v0.20.0 remains the formal release. TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route now pass; the v0.20.1 patch candidate closes the remaining native Shell startup and UX gaps.
-- Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS`; exact `0.20.1 / v0.20.1 / stable` release finalization is active
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.14 Addendum V
+- Package: `0.20.1`
+- Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
+- Development Candidate: `NONE`
+- Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
+- Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.15 Addendum VI
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -191,7 +191,7 @@ Canonical details:
 - TASK-010 compiles that plan through TASK-022 and can write only an Automation-owned `BAI_AUTO_*` Resolve Timeline after explicit external-write authorization; source/normalized FPS is mandatory for source-frame conversion.
 - TASK-011 verifies rendered artifacts using checksum, media/duration checks and configurable loudness/true-peak policy.
 - TASK-012 creates deterministic QA-gated `EDITOR_WORK_*` handoff packages and a bounded 48 kHz PCM Cubase return contract.
-- All four capabilities are `INTEGRATION_DESIGNED`; this work does not claim `SHELL_INTEGRATED` or `NATIVE_VALIDATED`.
+- The original backend slice reached `INTEGRATION_DESIGNED`; TASK-036 v0.20.1 now makes the accepted TASK-007/010/011/012 route `SHELL_INTEGRATED / NATIVE_VALIDATED`.
 - Package metadata is finalized as the authorized `0.20.0` release candidate; it is not a formal release until PR merge, exact main SHA verification, annotated tag and GitHub Release complete.
 
 ## TASK-023 Completed Bounded Development
@@ -200,8 +200,8 @@ Canonical details:
 - Existing TASK-006 `FasterWhisperProvider` remains the only canonical local ASR provider.
 - TASK-023 adds deterministic execution identity and model-free/path-minimized reconciliation evidence only.
 - `PRODUCT-ARCH-001` integration target is `BAI Video Production.exe -> Subtitle Workspace`.
-- This slice is `INTEGRATION_DESIGNED`; it does not claim `SHELL_INTEGRATED`.
+- The original 0.19.0 slice was `INTEGRATION_DESIGNED`; TASK-036 v0.20.1 now integrates this accepted local ASR route into the Shell.
 - The CLI is `DEVELOPER_DIAGNOSTIC_INTERFACE`, not final Product UX.
 - Recognition output semantics, Transcript/SRT contracts, word timestamps and final transcript-result caching are unchanged.
 - Final validation: `444 passed, 1 intentional skip`; compileall/diff-check PASS; Windows real-media diagnostic evidence PASS with no model load, inference, network use, source/cache path leakage, or transcript-text leakage.
-- Final TASK-023 state: `COMPLETE / INTEGRATION_DESIGNED`; `SHELL_INTEGRATED` and desktop `NATIVE_VALIDATED` remain future work.
+- Final TASK-023 capability state remains `COMPLETE`; TASK-036 W2 supplies the later `SHELL_INTEGRATED / NATIVE_VALIDATED` Product Evidence.

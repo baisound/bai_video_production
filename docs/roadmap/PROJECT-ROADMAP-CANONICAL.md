@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.18
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.20
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -660,3 +660,17 @@ Formal closure remains conditional on hosted PR checks, exact `main` merge verif
 TASK-037 is complete. PR #24 exact head `fa71e046bf9d377d52b1845f70f2c38e21ee373f` passed `9 / 9` hosted checks and merged at exact main SHA `045bd7ed53293fd195a4993586d965bc1094ddac`. The implementation branch was deleted remotely and locally. The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R2 checkpoint.
 
 The next Owner-routed unit is TASK-038 Audit Workspace / Candidate Quality Loop. It starts from the exact TASK-037 closure SHA on a new dedicated branch and promotes the existing Candidate Audit Foundation into user-facing Human decisions. TASK-027 Planning Workspace minimum follows only after the TASK-038 Gate.
+
+### Ver.1.19 Addendum X — TASK-038 Audit Product Promotion Kickoff
+
+TASK-038 is active from exact closure main SHA `66446cf01ad5210ce196bc2803a5ffb18a37139c` on `codex/task-038-audit-product-promotion`. The accepted immutable Audit, AI/Human separation, Human decision and Production lifecycle Foundation will be promoted rather than recreated.
+
+The critical implementation unit adds a project-scoped durable two-store Application Service, explicit interrupted-decision recovery and user-facing Candidate Audit history/actions inside the existing `制作管理` drawer. ACCEPT/REJECT/ALTERNATE_USE/NEEDS_REGENERATION remain explicit Human decisions; Reject is not Delete, regeneration does not start automatically, and Candidate decision remains separate from TASK-037 LOCK.
+
+### Ver.1.20 Addendum XI — TASK-038 Local Product Promotion Gate
+
+TASK-038's local implementation gate passes. The unified `制作管理` workspace now exposes immutable Audit identity/history, AI/Human separation, scores, findings, Failure Codes, Critical state, alternate-use proposals and explicit Human Candidate decisions.
+
+Human decisions are persisted through an exact prepared two-store transaction. Restart after interruption requires an explicit exact completion/abandon/finalize action; unknown mixed state remains blocked. Reject does not Delete, NEEDS_REGENERATION does not start a Provider, and ACCEPT remains separate from TASK-037 LOCK.
+
+Windows full regression passes `833 / 833` executed tests with one intentional non-Windows skip. Windows and WSL2 compile gates and diff check pass. Formal closure remains conditional on hosted PR checks, exact `main` merge verification and branch cleanup. No package, Tag or Release is selected at this TASK-038 checkpoint. TASK-027 Planning Workspace minimum follows after closure on a new dedicated branch.

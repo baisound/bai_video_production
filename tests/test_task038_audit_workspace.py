@@ -48,6 +48,10 @@ def test_projection_keeps_ai_score_separate_from_human_authority():
     assert row["human_decision"] is None
     assert row["available_human_actions"] == ["ACCEPT", "REJECT", "ALTERNATE_USE", "NEEDS_REGENERATION"]
     assert row["ai_score_is_human_decision"] is False
+    assert row["audit_history"][0]["auditor_kind"] == "AI"
+    assert row["audit_history"][0]["auditor_id"] == "vision-judge"
+    assert row["audit_history"][0]["findings"][0]["code"] == "DEPTH_REVERSED"
+    assert row["human_decision_record"] is None
 
 
 def test_one_shot_accept_confirmation_drives_production_only_after_apply():

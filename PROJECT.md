@@ -110,7 +110,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-037 — R2 Product Promotion / PR #24 9 of 9 PASS / exact main 045bd7ed53293fd195a4993586d965bc1094ddac`
-- Active Task: `NONE — TASK-038 dedicated kickoff is next`
+- Active Task: `TASK-038 — local implementation PASS / hosted PR closure pending`
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
@@ -137,7 +137,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Subtitle Workspace release: package 0.16.4 completes the v0.16.x review-workspace line including local FasterWhisper/Transcript/SRT flow, revisioned subtitle editing, Windows-native Open/Save interaction corrective and runtime workspace privacy hygiene
 - TASK-006 Slice D: v0.17.0 formal release completed with large-media chunk/checkpoint transcription and canonical Resolve subtitle-placement handoff; actual Resolve write remains TASK-010 ownership.
 - Current bounded Product development: TASK-024 Slice A candidate `0.18.0` generates review-only silence/filler/exact-repeat Cut Candidates and protected Keep Blocks. It does not mutate media or Resolve; TASK-007 owns final Cut Plan and TASK-010 owns execution.
-- R2 route: `TASK-037 COMPLETE`; exact PR #24/main closure is recorded. TASK-038 is the next Owner-routed dedicated branch; TASK-027 minimum follows after its Gate.
+- R2 route: `TASK-037 COMPLETE / TASK-038 LOCAL_GATE_PASS_HOSTED_PENDING`; durable Human decisions, interrupted-write recovery and user-facing Audit history/actions pass locally. TASK-027 minimum follows after hosted closure.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

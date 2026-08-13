@@ -41,6 +41,8 @@ class AuditWorkspaceCandidateRow:
     human_decision: str | None
     regeneration_requested: bool
     available_human_actions: tuple[str, ...]
+    audit_history: tuple[dict[str, Any], ...]
+    human_decision_record: dict[str, Any] | None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -60,6 +62,8 @@ class AuditWorkspaceCandidateRow:
             "human_decision": self.human_decision,
             "regeneration_requested": self.regeneration_requested,
             "available_human_actions": list(self.available_human_actions),
+            "audit_history": [dict(item) for item in self.audit_history],
+            "human_decision_record": None if self.human_decision_record is None else dict(self.human_decision_record),
             "ai_score_is_human_decision": False,
         }
 
@@ -138,6 +142,8 @@ class Task038AuditWorkspaceProjection:
                 human_decision=None if decision is None else decision.value,
                 regeneration_requested=decision is HumanCandidateDecision.NEEDS_REGENERATION,
                 available_human_actions=actions,
+                audit_history=tuple(item.to_dict() for item in candidate_audits),
+                human_decision_record=None if not decisions else decisions[0].to_dict(),
             ))
         body: dict[str, Any] = {
             "projection_version": "1.0.0",

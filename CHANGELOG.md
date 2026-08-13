@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Promoted TASK-038 Audit Workspace into a durable project-scoped Application Service with exact Human decision confirmation, prepared two-store transactions and explicit fail-closed crash recovery.
+- Added user-facing immutable Audit history, AI/Human identity, dimensions, findings, Failure Codes, alternate-use proposals and separate ACCEPT/REJECT/ALTERNATE_USE/NEEDS_REGENERATION actions to the unified `制作管理` workspace; Reject is not Delete and regeneration never starts automatically.
 - Promoted the existing TASK-037 Asset Slot / Candidate / LOCK / STALE Foundation into the unified Desktop Shell through a durable project-scoped Production Control Application Service and `制作管理` workspace.
 - Restricted Slot installation to Human-approved Plans, preserved TASK-038 Human ACCEPT/REJECT ownership, and added exact one-shot Candidate LOCK confirmation bound to snapshot, Slot revision and Asset SHA-256.
 - Serialized Production Control compare-and-swap publication across local processes and added concurrency, stale-confirmation, tamper, project-scope and Shell regression coverage without adding Provider/NLE execution or physical deletion.

@@ -33,6 +33,7 @@ from .task036_product_ports import (
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
 from .production_control_application import Task037ProductionControlApplication
+from .audit_application import Task038AuditApplication
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
 
@@ -407,6 +408,10 @@ def build_trusted_launch(
         pre_edit_runtime=pre_edit,
         workflow_runtime_factory=downstream,
         production_control=Task037ProductionControlApplication(
+            project_root=configuration.project_root,
+            project_id=configuration.project_id,
+        ),
+        audit_application=Task038AuditApplication(
             project_root=configuration.project_root,
             project_id=configuration.project_id,
         ),

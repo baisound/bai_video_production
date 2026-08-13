@@ -17,7 +17,7 @@
 | TASK-024 | Silence / Filler / Disfluency Cut Candidate Worker | RELEASED_V0.18.0_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Review-only cut candidates remain non-mutating; TASK-036 W2 Human Cut Review Shell route PASS |
 | TASK-025..026 | Remaining External-SKILL additions (collision-resolved) | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Premiere adapter and Audio Placement remain later work |
 | TASK-022 | Timeline Mapping Service | COMPLETED | COMPLETED_WITH_OWNER_VERIFICATION | DEV-4 | Package 0.5.0; exact affine/NTSC/end-exclusive mapping, speed/gap, deterministic Plan/schema; native Windows 263/263 PASS |
-| TASK-027 | AI Video Creation Studio / New Production Orchestrator | SLICE_A1_PRODUCTION_BLUEPRINT_FOUNDATION_IMPLEMENTED | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 candidate | 0.15.0 validated Scene Ledger, Reference Registry, real-first strategy and text-risk gates; GUI proposal/GO next |
+| TASK-027 | AI Video Creation Studio / New Production Orchestrator | R2_PLANNING_WORKSPACE_MINIMUM_LOCAL_GATE_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Persisted Proposal/Scene Contract review, exact Human GO and separate Approved Plan -> TASK-037 Slot installation pass locally; no Provider/NLE execution |
 | TASK-028 | AI Connection Provider / Model Routing | CAPABILITY_REGISTRY_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 | 0.6.2 external media 293/293 PASS; 0.6.3 removes provider-purpose locking and adds exact model capability catalog plus generic execution registry; 305-test Windows gate pending |
 | TASK-029 | Human Edit Learning / Federated Knowledge Evolution | PROPOSED | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Human action Evidence → hypothesis/multi-metric evaluation → Owner-local learning; opt-in anonymized cloud aggregation; signed Git-versioned Knowledge Packs |
 | TASK-030 | OSS Public Repository Readiness | IMPLEMENTED_AWAITING_GITHUB_CI | OWNER_DIRECTED_IMPLEMENTATION | DEV-2 | 0.6.6 fixed runner media dependencies; 0.6.7 removes global OS mutation after 5/6 matrix jobs passed |
@@ -39,7 +39,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037 and TASK-038 are completed. The Owner-routed R2 continuation advances next to TASK-027 Planning Workspace minimum on its own dedicated branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037 and TASK-038 are completed. TASK-027 Planning Workspace minimum is active on its dedicated branch from exact TASK-038 closure main. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

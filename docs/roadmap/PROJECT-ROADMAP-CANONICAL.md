@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.13
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.17
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -634,3 +634,23 @@ W0 is `DESKTOP_RUNTIME_SPIKE_PASS`, W1 is `DESKTOP_SHELL_NATIVE_UX_PASS` and W2 
 ### Ver.1.15 Addendum VI — TASK-036 v0.20.1 Release Publication
 
 TASK-036 release finalization is complete. PR #22 exact head `916609467b2c4fc28e8e4a80ccdfbb8f6b62ff1d` passed `9 / 9` hosted checks and merged at exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`. Annotated tag `v0.20.1` dereferences to that SHA. The stable GitHub Release and its formal workflow passed and published verified wheel/source assets. TASK-036 and M3B remain `MINIMUM_EDITING_PRODUCT_MVP_PASS`; the next Product task requires Owner roadmap routing on a new dedicated branch.
+
+### Ver.1.16 Addendum VII — R2 Existing Foundation Product Promotion
+
+The Owner-routed post-TASK-036 continuation activates R2 in canonical order:
+
+1. TASK-037 Asset Registry 2 / Scene Asset Slot;
+2. TASK-038 Audit Workspace / Candidate Quality Loop;
+3. TASK-027 Planning Workspace minimum / Scene Contract.
+
+This is not a greenfield restart. Current `main` already contains the domain, persistence and cross-store Foundation for Asset Slot/Candidate, LOCK/STALE, Audit, Continuity, Prompt Registry, Production Dashboard and crash-safe recovery. R2 promotes that Foundation into the user-facing Production Control Plane.
+
+TASK-037 is the only active implementation unit at this checkpoint. It must add a durable project-scoped Application Service and bounded Desktop Production Control commands while preserving TASK-003 media ownership and TASK-038 Human decision ownership. Paid generation, automatic regeneration, physical delete and Resolve/Cubase mutation remain outside this unit. TASK-038 and TASK-027 minimum each require their own subsequent branch and Gate.
+
+### Ver.1.17 Addendum VIII — TASK-037 Local Product Promotion Gate
+
+TASK-037's local implementation gate passes. The existing Asset Slot/Candidate/LOCK/STALE Foundation now has a durable project-scoped Application Service and a `制作管理` workspace in the unified Desktop Shell. Slot installation is restricted to an existing Human-approved Plan. Candidate history is append-only, TASK-038 retains ACCEPT/REJECT authority, and Human LOCK is bound to the exact snapshot, Slot revision, Candidate and Asset checksum through a one-shot confirmation.
+
+Windows full regression passes `825 / 825` executed tests with one intentional non-Windows skip. Cross-process CAS serialization, stale-confirmation rejection, tamper rejection and exact project scope are covered. No paid Provider, automatic regeneration, physical delete or Resolve/Cubase mutation is introduced.
+
+Formal closure remains conditional on hosted PR checks, exact `main` merge verification and branch cleanup. No package, Tag or Release change is selected at this TASK-037 checkpoint. After closure, TASK-038 starts on its own branch and promotes the existing Audit Foundation into user-facing Candidate Quality decisions.

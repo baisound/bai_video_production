@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import threading
+import time
 
 import pytest
 
 from ai_video_production.errors import ProductError
+from ai_video_production.atomic import AtomicJsonWriter
 from ai_video_production.production_control import (
     AssetCandidate,
     CandidateLifecycle,
@@ -65,6 +68,57 @@ def test_compare_and_swap_rejects_stale_writer(tmp_path: Path):
     with pytest.raises(ProductError) as exc:
         ProductionControlSnapshotStore.save(path, registry, expected_previous_snapshot_sha256="sha256:" + "b" * 64)
     assert exc.value.code == "ERR_PRODUCTION_SNAPSHOT_REVISION_CONFLICT"
+
+
+def test_concurrent_first_writers_are_serialized_before_cas_check(tmp_path: Path, monkeypatch):
+    path = tmp_path / "production-control.json"
+    first_inside_writer = threading.Event()
+    release_first = threading.Event()
+    second_started = threading.Event()
+    write_calls = 0
+    calls_guard = threading.Lock()
+    original_write = AtomicJsonWriter.write
+
+    def delayed_write(*args, **kwargs):
+        nonlocal write_calls
+        with calls_guard:
+            index = write_calls
+            write_calls += 1
+        if index == 0:
+            first_inside_writer.set()
+            assert release_first.wait(timeout=3)
+        return original_write(*args, **kwargs)
+
+    monkeypatch.setattr(AtomicJsonWriter, "write", staticmethod(delayed_write))
+    outcomes = []
+
+    def save(registry, *, announce=False):
+        if announce:
+            second_started.set()
+        try:
+            ProductionControlSnapshotStore.save(path, registry)
+            outcomes.append("PASS")
+        except ProductError as exc:
+            outcomes.append(exc.code)
+
+    first = populated_registry()
+    second = populated_registry()
+    second.add_slot(SceneAssetSlot("slot:SC02:VIDEO", "project-1", "SC02", SlotKind.VIDEO, True))
+    thread_one = threading.Thread(target=save, args=(first,))
+    thread_two = threading.Thread(target=save, args=(second,), kwargs={"announce": True})
+    thread_one.start()
+    assert first_inside_writer.wait(timeout=3)
+    thread_two.start()
+    assert second_started.wait(timeout=3)
+    time.sleep(0.1)
+    assert write_calls == 1
+    release_first.set()
+    thread_one.join(timeout=3)
+    thread_two.join(timeout=3)
+    assert not thread_one.is_alive()
+    assert not thread_two.is_alive()
+    assert sorted(outcomes) == ["ERR_PRODUCTION_SNAPSHOT_CAS_REQUIRED", "PASS"]
+    assert write_calls == 1
 
 
 def test_exact_previous_checksum_allows_atomic_replacement(tmp_path: Path):

@@ -6,14 +6,14 @@
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
 - Project Status: `V0_20_1_RELEASED / TASK036_MINIMUM_EDITING_PRODUCT_MVP_PASS`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE — TASK-036 complete; next task requires Owner roadmap routing`
+- Active Consumer Task: `TASK-037 — LOCAL_GATE_PASS / HOSTED_PR_PENDING`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `Owner-routed roadmap selection; create a dedicated branch for the selected task`
+- Next Consumer Task: `TASK-038 after TASK-037 Gate; then TASK-027 Planning Workspace minimum`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -105,7 +105,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.15 Addendum VI. Owner-directed editing-first priority remains in force. TASK-036 W0/W1/W2, M3B and v0.20.1 formal release publication pass.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.17 Addendum VIII. TASK-036 W0/W1/W2, M3B and v0.20.1 publication pass. Owner-routed R2 is active in order TASK-037 -> TASK-038 -> TASK-027 minimum; TASK-037 local implementation gate passes and hosted PR closure is pending.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

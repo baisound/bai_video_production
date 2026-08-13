@@ -27,7 +27,7 @@
 | TASK-034 | OS-backed Credential Onboarding | NATIVE_WINDOWS_PASS | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | 0.12.2 Catalog linkage, retained-key cleanup and per-Route password-manager lookup confirmed |
 | TASK-035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | PROPOSED | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Native ReaScript bridge first; iZotope Ozone/Nectar/Neutron capability levels; verified mix/stem Assets back to Resolve; optional MCP facade only after security review |
 | TASK-036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | COMPLETE_MINIMUM_EDITING_PRODUCT_MVP_PASS_RELEASED_0_20_1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native route PASS; PR #22 9/9, exact main SHA, annotated v0.20.1 and stable GitHub Release complete |
-| TASK-037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | Extends TASK-003 with Scene Asset Slot, Candidate Version, lifecycle, LOCK/STALE and dependency graph; does not reopen ingest authority |
+| TASK-037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | LOCAL_GATE_PASS_HOSTED_PR_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Durable Application Service and Desktop Production Control workspace pass local gates; TASK-038 retains ACCEPT/REJECT authority; hosted PR closure remains |
 | TASK-038 | Audit Workspace / Candidate Quality Loop | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | AI/Human separate review, dimension scores/findings, Failure Codes, alternate use, regeneration, compare/history and final lock |
 | TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | DIRECT_CONTINUATION exact Asset/hash, End->Start graph, Character/Space continuity and Human-resolved Stale propagation |
 | TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | Prompt Entity/Version, provider profile, input/output identity, parent Candidate, Keep Conditions and failure-driven regeneration routes |
@@ -39,7 +39,7 @@
 
 ## Route control
 
-TASK-004 is completed. Owner-directed continuation authorized TASK-027 through TASK-034 and the editing-first TASK-006 slices recorded above. Proposed later work remains unauthorized until Owner instruction; a configured credential or enabled AI proofreading setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004 and TASK-036 are completed. The 2026-08-14 Owner-routed continuation activates R2 in canonical order: TASK-037, then TASK-038, then TASK-027 minimum. Only TASK-037 is currently implementation-authorized; later R2 tasks activate on their own dedicated branch after the preceding Gate. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

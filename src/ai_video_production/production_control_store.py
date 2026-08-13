@@ -7,9 +7,11 @@ compare-and-swap checksum before replacement.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
+import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from .atomic import AtomicJsonWriter, AtomicWriteResult
 from .errors import ProductError, ProductErrorCategory
@@ -30,6 +32,49 @@ from .serialization import canonical_json_bytes, sha256_bytes
 
 
 _MAX_SNAPSHOT_BYTES = 16 * 1024 * 1024
+
+
+@contextmanager
+def _exclusive_snapshot_lock(target: Path) -> Iterator[None]:
+    """Serialize the CAS check and replace across local Product processes."""
+
+    lock_path = target.with_name(f".{target.name}.lock")
+    if lock_path.is_symlink() or (lock_path.exists() and not lock_path.is_file()):
+        raise ProductError(
+            "ERR_PRODUCTION_SNAPSHOT_LOCK_INVALID",
+            "Production-control lock must be a regular non-symlink file",
+            ProductErrorCategory.SECURITY,
+        )
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+b") as handle:
+        handle.seek(0, os.SEEK_END)
+        if handle.tell() == 0:
+            handle.write(b"0")
+            handle.flush()
+        handle.seek(0)
+        locked = False
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            locked = True
+            yield
+        finally:
+            if locked:
+                handle.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
 def _body(registry: ProductionControlRegistry) -> dict[str, Any]:
@@ -151,31 +196,32 @@ class ProductionControlSnapshotStore:
         expected_previous_snapshot_sha256: str | None = None,
     ) -> AtomicWriteResult:
         target = Path(path)
-        if target.is_symlink():
-            raise ProductError("ERR_PRODUCTION_SNAPSHOT_FILE_INVALID", "Refusing to replace a symlink snapshot path", ProductErrorCategory.SECURITY)
-        if target.exists():
-            if not target.is_file():
-                raise ProductError("ERR_PRODUCTION_SNAPSHOT_FILE_INVALID", "Snapshot target must be a regular file", ProductErrorCategory.VALIDATION)
-            if expected_previous_snapshot_sha256 is None:
+        with _exclusive_snapshot_lock(target):
+            if target.is_symlink():
+                raise ProductError("ERR_PRODUCTION_SNAPSHOT_FILE_INVALID", "Refusing to replace a symlink snapshot path", ProductErrorCategory.SECURITY)
+            if target.exists():
+                if not target.is_file():
+                    raise ProductError("ERR_PRODUCTION_SNAPSHOT_FILE_INVALID", "Snapshot target must be a regular file", ProductErrorCategory.VALIDATION)
+                if expected_previous_snapshot_sha256 is None:
+                    raise ProductError(
+                        "ERR_PRODUCTION_SNAPSHOT_CAS_REQUIRED",
+                        "Replacing an existing snapshot requires its exact previous checksum",
+                        ProductErrorCategory.AUTHORIZATION,
+                    )
+                current = ProductionControlSnapshotStore.snapshot(ProductionControlSnapshotStore.load(target))["snapshot_sha256"]
+                if current != expected_previous_snapshot_sha256:
+                    raise ProductError(
+                        "ERR_PRODUCTION_SNAPSHOT_REVISION_CONFLICT",
+                        "Production-control snapshot changed before save; reload before retry",
+                        ProductErrorCategory.STATE,
+                        details={"current_snapshot_sha256": current},
+                    )
+            elif expected_previous_snapshot_sha256 is not None:
                 raise ProductError(
-                    "ERR_PRODUCTION_SNAPSHOT_CAS_REQUIRED",
-                    "Replacing an existing snapshot requires its exact previous checksum",
-                    ProductErrorCategory.AUTHORIZATION,
-                )
-            current = ProductionControlSnapshotStore.snapshot(ProductionControlSnapshotStore.load(target))["snapshot_sha256"]
-            if current != expected_previous_snapshot_sha256:
-                raise ProductError(
-                    "ERR_PRODUCTION_SNAPSHOT_REVISION_CONFLICT",
-                    "Production-control snapshot changed before save; reload before retry",
+                    "ERR_PRODUCTION_SNAPSHOT_PREVIOUS_MISSING",
+                    "Expected previous snapshot does not exist",
                     ProductErrorCategory.STATE,
-                    details={"current_snapshot_sha256": current},
                 )
-        elif expected_previous_snapshot_sha256 is not None:
-            raise ProductError(
-                "ERR_PRODUCTION_SNAPSHOT_PREVIOUS_MISSING",
-                "Expected previous snapshot does not exist",
-                ProductErrorCategory.STATE,
-            )
 
-        document = _body(registry)
-        return AtomicJsonWriter.write(target, document, validator=lambda value: _parse(value))
+            document = _body(registry)
+            return AtomicJsonWriter.write(target, document, validator=lambda value: _parse(value))

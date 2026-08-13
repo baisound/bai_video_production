@@ -6,8 +6,8 @@
 
 - Completed Phase G backend native Evidence: real Resolve assembly/linked A/V/edit-aware subtitle semantics, real Resolve render QA and real Cubase 13 48 kHz PCM round-trip pass without broadening external-write or paid-provider authority.
 - Corrected Resolve Timeline-start-relative record placement, localized completed-render status handling and WebView2 runtime version discovery; assembly-plan contract is now `1.3.0` with an explicit record-frame basis.
-- Advanced TASK-036 native hardening with reachable allowlisted file/folder dialogs, visible path-selection status and a reproducible PyInstaller one-dir Windows bundle. W0/W1 remain partial and W2 real backend Shell E2E remains blocked, so no minimum editing Product completion claim is made.
-- Final local Phase G regression: Windows `778 passed, 1 intentional OS skip`; WSL2 Ubuntu `779 passed`; compileall and authoritative Windows diff-check PASS.
+- Advanced TASK-036 W2 from a layout-only Shell to composed trusted TASK-003/006/024 pre-edit and TASK-010/011/012 post-review Application Service bindings. Host paths, provider settings, analysis audio, adapters, Resolve targets and external-write authority remain Python-only launch bindings; packaged full E2E and Product completion remain unclaimed.
+- Latest Phase G regression: WSL2 Ubuntu `789 passed`; the earlier downstream Windows checkpoint passed `782` with one intentional non-Windows skip. The updated PyInstaller one-dir bundle includes the pre-edit/Product-port/post-review runtime graph and passes native top-level-window launch and normal close.
 
 - Implemented the TASK-007 -> TASK-010 -> TASK-011 -> TASK-012 editing Technical MVP backend/application-service vertical slice: human-approved Edit Plan, Automation-owned Resolve assembly, rendered-artifact QA/loudness and deterministic EDITOR_WORK/Cubase round-trip.
 - Added strict external-write/idempotency/partial-state gates for Resolve and require probed source/normalized media FPS instead of substituting Timeline FPS for source-frame conversion.

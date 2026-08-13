@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_0_RELEASED / TASK036_MINIMUM_EDITING_PRODUCT_MVP_PASS / V0_20_1_RELEASE_CANDIDATE`
-- Last Completed Release Unit: `TASK-036 Phase G bounded native integration — v0.20.0`
-- Active Consumer Task: `TASK-036 v0.20.1 release finalization`
+- Project Status: `V0_20_1_RELEASED / TASK036_MINIMUM_EDITING_PRODUCT_MVP_PASS`
+- Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
+- Active Consumer Task: `NONE — TASK-036 complete; next task requires Owner roadmap routing`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.20.0`
-- Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.0`
-- Development Candidate: `0.20.1`
-- Release commit: `1fc8bae6ee5bf0c63c1c7d92e21e1eb6dd966c88`
-- Next Consumer Task: `TASK-036 v0.20.1 PR -> all-green -> main merge -> annotated tag -> GitHub Release`
+- Package: `0.20.1`
+- Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
+- Development Candidate: `NONE`
+- Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
+- Next Consumer Task: `Owner-routed roadmap selection; create a dedicated branch for the selected task`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -22,12 +22,12 @@
 - TASK-011: render artifact checksum/media/duration verification plus configurable LUFS/true-peak QA; no absolute render path persisted in QA report.
 - TASK-012: QA-gated deterministic `EDITOR_WORK_*` package, relative-path/checksum manifest and bounded 48 kHz PCM Cubase return. No automatic Cubase project conversion claim.
 - Cross-task Application Service: `TechnicalMvpApplicationService` preserves the 007 -> 010 -> 011 -> 012 orchestration boundary for future Unified Desktop Shell wiring.
-- Current backend integration state: TASK-010/011/012 are `NATIVE_VALIDATED / INTEGRATION_DESIGNED`; no `SHELL_INTEGRATED` Product claim.
+- Current integration state: TASK-010/011/012 are `NATIVE_VALIDATED / SHELL_INTEGRATED` through the accepted TASK-036 W2 route.
 - Native PASS: real Resolve source-range/linked-A/V/idempotency/conflict semantics, edit-aware subtitle semantics, real Resolve render artifact QA and real Cubase 48 kHz PCM return.
 - TASK-036 W2 PASS: the packaged trusted launcher completed real Windows `Media ingest -> local FasterWhisper -> Subtitle -> Cut Review/Approve -> Resolve apply -> TASK-011 native Render QA -> atomic EDITOR_WORK`; the final UI state was `NONE` and no host path was persisted in public status/Evidence.
 - TASK-036 W0/W1 H2 closure: clean-profile packaged launch, isolated missing-WebView2 recovery, enforced long-path policy, actual three-monitor movement, increased-scale responsive layout and Windows Narrator/UI Automation semantics PASS. Overall TASK-036 and M3B reach `MINIMUM_EDITING_PRODUCT_MVP_PASS`.
 - Phase G closure gates: post-W2 conversation-free restart PASS; final Pilot Context Cost `11,888` estimated tokens PASS; exact release decision `0.20.0 / v0.20.0 / stable` PASS; release integration PASS.
-- Automated validation: final v0.20.1 candidate WSL2 Ubuntu `810 / 810`; Windows clean-profile/three-monitor/Narrator/WebView2-recovery gates PASS; packaged Windows native W2 E2E remains accepted; PR #20 hosted checks `9 / 9 PASS` for v0.20.0.
+- Automated validation: final v0.20.1 WSL2 Ubuntu `810 / 810`; Windows clean-profile/three-monitor/Narrator/WebView2-recovery gates PASS; packaged Windows native W2 E2E remains accepted; PR #22 hosted checks `9 / 9 PASS`; Release workflow PASS.
 
 ## TASK-004 implemented scope
 
@@ -105,7 +105,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.14 Addendum V. Owner-directed editing-first priority remains in force. TASK-036 W0/W1/W2 and M3B pass; v0.20.1 patch release finalization is active.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.15 Addendum VI. Owner-directed editing-first priority remains in force. TASK-036 W0/W1/W2, M3B and v0.20.1 formal release publication pass.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 
@@ -141,8 +141,8 @@ TASK-022 is now implemented with exact rational source/normalized-to-Timeline ma
 - Existing TASK-006 FasterWhisper local provider/cache/download-gate/model-reuse/resumable-transcription capabilities are reused.
 - New 0.19.0 candidate adds deterministic execution identity and a model-free/network-free evidence CLI.
 - PRODUCT-ARCH-001 target: `BAI Video Production.exe -> Subtitle Workspace`.
-- Integration state for this slice: `INTEGRATION_DESIGNED`, not `SHELL_INTEGRATED`.
+- Historical 0.19.0 slice state was `INTEGRATION_DESIGNED`; TASK-036 v0.20.1 now integrates the accepted local ASR route into the Shell.
 - CLI classification: `DEVELOPER_DIAGNOSTIC_INTERFACE`.
 - No second provider, no recognition-semantic change, no word-level schema expansion and no public transcript-result cache.
 - Validation complete: `444 passed, 1 intentional skip`; compileall/diff-check PASS; native Windows evidence CLI PASS on a real local source.
-- Final TASK-023 state: `COMPLETE / INTEGRATION_DESIGNED`; no claim of `SHELL_INTEGRATED` or desktop `NATIVE_VALIDATED`.
+- Final TASK-023 capability state remains `COMPLETE`; its accepted local ASR route is now `SHELL_INTEGRATED / NATIVE_VALIDATED` through TASK-036 W2.

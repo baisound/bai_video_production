@@ -630,3 +630,7 @@ TASK-036 W0/W1 remains `PARTIAL / PARKED_TO_PHASE_H2`. Overall TASK-036 `NATIVE_
 TASK-036 H2 resumed the five parked W0/W1 cases. The v0.20.1 candidate now provides fail-closed packaged startup diagnostics, native missing-WebView2 recovery, an enforced long-path support limit, explicit EdgeChromium selection, accessibility semantics and a high-scale responsive layout. Native Evidence passes clean-profile launch, actual three-monitor movement, Windows UI Automation/Narrator semantics, isolated missing-WebView2 recovery and safe owned-process exit. Full regression is `810 / 810 PASS`.
 
 W0 is `DESKTOP_RUNTIME_SPIKE_PASS`, W1 is `DESKTOP_SHELL_NATIVE_UX_PASS` and W2 remains `W2_PACKAGED_NATIVE_E2E_PASS`. TASK-036 and M3B therefore reach `MINIMUM_EDITING_PRODUCT_MVP_PASS`. The exact patch release decision is `0.20.1 / v0.20.1 / stable`; publication still requires PR all-green, exact main merge SHA verification, annotated tag and GitHub Release.
+
+### Ver.1.15 Addendum VI — TASK-036 v0.20.1 Release Publication
+
+TASK-036 release finalization is complete. PR #22 exact head `916609467b2c4fc28e8e4a80ccdfbb8f6b62ff1d` passed `9 / 9` hosted checks and merged at exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`. Annotated tag `v0.20.1` dereferences to that SHA. The stable GitHub Release and its formal workflow passed and published verified wheel/source assets. TASK-036 and M3B remain `MINIMUM_EDITING_PRODUCT_MVP_PASS`; the next Product task requires Owner roadmap routing on a new dedicated branch.

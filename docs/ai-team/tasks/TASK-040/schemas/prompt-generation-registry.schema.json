@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai-video-production://task-040/prompt-generation-registry.schema.json",
+  "title": "TASK-040 Prompt / Generation Evidence Contract Draft",
+  "type": "object",
+  "required": ["contract_version", "prompts", "attempts"],
+  "properties": {
+    "contract_version": {"const": "0.9.0-draft"},
+    "prompts": {"type": "array", "items": {"$ref": "#/$defs/PromptEntity"}},
+    "attempts": {"type": "array", "items": {"$ref": "#/$defs/GenerationAttempt"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "Id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "Sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "PromptEntity": {
+      "type": "object",
+      "required": ["prompt_id", "prompt_version", "purpose", "body_sha256", "provider_profile_id", "provider_profile_version", "keep_conditions"],
+      "properties": {
+        "prompt_id": {"$ref": "#/$defs/Id"},
+        "prompt_version": {"type": "integer", "minimum": 1},
+        "purpose": {"type": "string", "minLength": 1, "maxLength": 200},
+        "scene_id": {"anyOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]},
+        "slot_id": {"anyOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]},
+        "body_ref": {"type": ["string", "null"], "maxLength": 1000},
+        "body_sha256": {"$ref": "#/$defs/Sha256"},
+        "provider_profile_id": {"$ref": "#/$defs/Id"},
+        "provider_profile_version": {"type": "string", "minLength": 1},
+        "input_asset_hashes": {"type": "array", "items": {"$ref": "#/$defs/Sha256"}, "uniqueItems": true},
+        "keep_conditions": {"type": "array", "items": {"type": "string", "minLength": 1}, "maxItems": 100}
+      },
+      "additionalProperties": false
+    },
+    "GenerationAttempt": {
+      "type": "object",
+      "required": ["generation_job_id", "slot_id", "prompt_id", "prompt_version", "prompt_sha256", "provider_id", "model_id", "strategy_level", "result", "failure_codes"],
+      "properties": {
+        "generation_job_id": {"$ref": "#/$defs/Id"},
+        "slot_id": {"$ref": "#/$defs/Id"},
+        "prompt_id": {"$ref": "#/$defs/Id"},
+        "prompt_version": {"type": "integer", "minimum": 1},
+        "prompt_sha256": {"$ref": "#/$defs/Sha256"},
+        "provider_id": {"$ref": "#/$defs/Id"},
+        "model_id": {"$ref": "#/$defs/Id"},
+        "provider_profile_version": {"type": ["string", "null"]},
+        "input_asset_hashes": {"type": "array", "items": {"$ref": "#/$defs/Sha256"}, "uniqueItems": true},
+        "output_candidate_id": {"anyOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]},
+        "parent_attempt_id": {"anyOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]},
+        "strategy_level": {"type": "integer", "minimum": 0, "maximum": 6},
+        "result": {"enum": ["PASS", "FAIL", "CANCELLED", "HUMAN_REQUIRED"]},
+        "failure_codes": {"type": "array", "items": {"$ref": "#/$defs/Id"}, "uniqueItems": true},
+        "cost": {"type": ["number", "null"], "minimum": 0},
+        "latency_ms": {"type": ["integer", "null"], "minimum": 0}
+      },
+      "additionalProperties": false
+    }
+  }
+}

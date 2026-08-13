@@ -1,0 +1,149 @@
+from __future__ import annotations
+
+import pytest
+
+from ai_video_production.desktop_shell import ShellApplicationService
+from ai_video_production.errors import ProductError
+from ai_video_production.task036_shell_ui import HTML, Task036ShellBridge
+
+
+def test_ui_is_professional_nle_layout_not_chat_first():
+    assert "TIMELINE" not in HTML  # track labels are Japanese/product-specific, not a placeholder title
+    assert "文字起こし / カット候補" in HTML
+    assert "インスペクタ / AI" in HTML
+    assert "A3　ナレーション" in HTML
+    assert "BAI Video Production" in HTML
+    assert "window.pywebview.api" in HTML
+    assert "chat" not in HTML.lower()
+
+
+def test_bridge_exposes_snapshot_and_workspace_only():
+    service = ShellApplicationService(product_version="0.19.0")
+    service.open_project_context(project_id="p1", display_name="Project 1")
+    bridge = Task036ShellBridge(service)
+    snapshot = bridge.snapshot()
+    assert snapshot["project"]["project_id"] == "p1"
+    changed = bridge.set_workspace({"workspace": "EDIT"})
+    assert changed["current_workspace"] == "EDIT"
+    assert not hasattr(bridge, "exec")
+    assert not hasattr(bridge, "open_file")
+
+
+def test_bridge_rejects_extra_request_fields():
+    service = ShellApplicationService(product_version="0.19.0")
+    bridge = Task036ShellBridge(service)
+    with pytest.raises(ProductError) as exc:
+        bridge.set_workspace({"workspace": "EDIT", "command": "whoami"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def _review_bridge():
+    from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
+    from ai_video_production.desktop_editing_review import ReviewWorkspaceState, Task036ReviewFacade
+
+    h = lambda ch: "sha256:" + ch * 64
+    manifest = CutCandidateManifest(
+        source_asset_id="ASSET-00000000000000000000000000",
+        analysis_audio_sha256=h("1"),
+        analysis_sample_rate=48_000,
+        source_duration_us=5_000_000,
+        config_sha256=h("2"),
+        transcript_manifest_sha256=h("3"),
+        candidates=(CutCandidate("cut-000001", CutCandidateKind.SILENCE, 1_000_000, 1_500_000, 90, ("SILENCE",)),),
+        keep_blocks=(),
+    )
+    service = ShellApplicationService(product_version="0.19.0", token_factory=iter(("review", "approve")).__next__)
+    service.open_project_context(project_id="p1", display_name="Project 1")
+    review = Task036ReviewFacade(service, ReviewWorkspaceState(manifest))
+    return Task036ShellBridge(service, review=review)
+
+
+def test_bridge_cut_review_is_allowlisted_and_stateful():
+    bridge = _review_bridge()
+    selected = bridge.select_candidate({"candidate_id": "cut-000001"})
+    assert selected["selected_candidate_id"] == "cut-000001"
+    result = bridge.review_candidate({"candidate_id": "cut-000001", "decision": "KEEP"})
+    assert result["review"]["unresolved_count"] == 0
+    prepared = bridge.prepare_edit_plan_approval({})
+    assert prepared["cut_count"] == 0
+    approved = bridge.approve_edit_plan({
+        "confirmation_id": prepared["confirmation_id"],
+        "draft_plan_sha256": prepared["draft_plan_sha256"],
+        "approved_by": "owner",
+    })
+    assert approved["review"]["approved_plan"]["approval_state"] == "APPROVED"
+
+
+def test_bridge_rejects_arbitrary_fields_on_review_methods():
+    bridge = _review_bridge()
+    with pytest.raises(ProductError) as exc:
+        bridge.select_candidate({"candidate_id": "cut-000001", "exec": "whoami"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_html_includes_cut_overlay_and_human_review_controls():
+    assert 'data-track="CUT_OVERLAY"' in HTML
+    assert 'id="keepButton"' in HTML
+    assert 'id="cutButton"' in HTML
+    assert 'id="approvePlanButton"' in HTML
+    assert "KEEP/CUTは明示的なHuman Decision" in HTML
+
+
+def test_integrated_bridge_plan_approval_advances_workflow_stage():
+    from ai_video_production.desktop_editing_application import Task036EditingApplication
+
+    source_bridge = _review_bridge()
+    values = iter(("review-1", "approve"))
+    app = Task036EditingApplication.create(
+        product_version="0.19.0",
+        project_id="project-1",
+        display_name="Project 1",
+        source_asset_sha256="sha256:" + "9" * 64,
+        cut_manifest=source_bridge.review.state.manifest,
+        token_factory=lambda: next(values),
+    )
+    bridge = Task036ShellBridge(app.shell, application=app)
+    bridge.review_candidate({"candidate_id": "cut-000001", "decision": "CUT"})
+    prepared = bridge.prepare_edit_plan_approval()
+    result = bridge.approve_edit_plan({
+        "confirmation_id": prepared["confirmation_id"],
+        "draft_plan_sha256": prepared["draft_plan_sha256"],
+        "approved_by": "owner",
+    })
+    assert "resolve.assembly.prepare" in result["available_commands"]
+    vm = bridge.view_model()
+    assert vm["shell"]["next_recommended_action"] == "resolve.assembly.prepare"
+
+
+def test_bridge_native_dialog_methods_are_allowlisted_and_do_not_start_operations(tmp_path):
+    from ai_video_production.task036_native_dialog import Task036NativeDialogService
+
+    media = tmp_path / "source.mp4"
+    media.write_bytes(b"media")
+    project = tmp_path / "project"; project.mkdir()
+    handoff = tmp_path / "handoff"; handoff.mkdir()
+
+    class Backend:
+        def choose_open_media(self): return str(media)
+        def choose_project_folder(self): return str(project)
+        def choose_handoff_folder(self): return str(handoff)
+
+    service = ShellApplicationService(product_version="0.19.0")
+    bridge = Task036ShellBridge(service, native_dialog=Task036NativeDialogService(Backend()))
+    selected = bridge.choose_media_source({})
+    assert selected["selected"] is True
+    assert selected["operation_started"] is False
+    assert selected["persisted_to_product_state"] is False
+    assert bridge.choose_project_folder()["path_kind"] == "DIRECTORY"
+    assert bridge.choose_handoff_folder()["host_path"] == str(handoff)
+
+
+def test_bridge_native_dialog_rejects_unbound_or_extra_fields():
+    service = ShellApplicationService(product_version="0.19.0")
+    bridge = Task036ShellBridge(service)
+    with pytest.raises(ProductError) as exc:
+        bridge.choose_media_source()
+    assert exc.value.code == "ERR_TASK036_NATIVE_DIALOG_NOT_BOUND"
+    with pytest.raises(ProductError) as exc:
+        bridge.choose_project_folder({"path": "C:/unsafe"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"

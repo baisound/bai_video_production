@@ -45,6 +45,8 @@ Corrections applied during the bounded review:
 - Python `compileall`: PASS;
 - `git diff --check`: PASS.
 
+The first hosted metadata check correctly rejected the PR because Product code changed without an Unreleased changelog entry. The required `CHANGELOG.md` entry was added without changing package/version metadata. Initial Ubuntu 3.11/3.12/3.13 and both Security jobs passed. Initial Windows jobs stopped before Product tests because the GitHub runner's Chocolatey source could not provide or expose `ffmpeg`; this external runner failure is rerun after the changelog correction and is not recorded as a Product PASS.
+
 WSL2 Ubuntu discovery found Python `3.12.3`, but the distribution has no installed pytest. Reusing Windows site-packages is invalid because the compiled `rpds` extension has no Linux binary, so WSL collection was not claimed as PASS. No dependency was installed or downloaded. The target Windows regression is the accepted local gate for this Windows Desktop Product unit.
 
 The in-app browser visual harness could not initialize because its local kernel asset path was unavailable. Therefore no new native visual PASS is claimed. The Production Control markup, responsive drawer, keyboard-accessible controls, safe `textContent` rendering and exact lock interaction are covered by automated Shell tests. TASK-036's previously accepted native visual evidence is not rewritten.

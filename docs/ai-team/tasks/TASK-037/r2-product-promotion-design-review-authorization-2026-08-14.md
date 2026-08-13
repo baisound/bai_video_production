@@ -56,6 +56,7 @@ Safety floors:
 - `src/ai_video_production/task036_shell_ui.py`
 - focused TASK-037, Production Control Store and Shell tests under `tests/`
 - TASK-037 Product documents and Product state/roadmap/task index files
+- `CHANGELOG.md` only for the required unreleased Product-change record; package/version fields remain unchanged
 
 Release metadata, native Resolve/Cubase projects, raw `evidence/`, paid Provider adapters and BAI Development OS runtime files are not allowed in this implementation unit.
 

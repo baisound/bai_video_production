@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`BACKEND_NATIVE_EDITING_MVP_PASS_DESKTOP_W0_W1_PARTIAL_PARKED_TO_H2_W2_PACKAGED_NATIVE_E2E_PASS`
+`TASK036_MINIMUM_EDITING_PRODUCT_MVP_PASS_V0_20_1_RELEASE_CANDIDATE`
 
 ## Purpose
 
@@ -110,14 +110,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-010 / TASK-011 / TASK-012 backend native acceptance`
-- Active Task: `TASK-036 H2 W0/W1 remainder — PARKED pending exact resume conditions`
+- Active Task: `TASK-036 v0.20.1 release finalization`
 - TASK-004: `COMPLETED`
 - Package: `0.20.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.0` targets exact main SHA `1fc8bae6ee5bf0c63c1c7d92e21e1eb6dd966c88`
-- Development Candidate: `NONE`
-- Current release verification: TASK-010 real Resolve assembly/linked A/V/subtitle semantics, TASK-011 real Resolve render QA, TASK-012 real Cubase 48 kHz PCM round-trip and TASK-036 W2 packaged native `Open Project -> ... -> EDITOR_WORK` have PASS Evidence. PR #20 passed `9 / 9`, merged, and the annotated `v0.20.0`/formal Release published verified wheel/source assets. TASK-036 W0/W1 remains partial with its remainder formally parked to H2.
-- Target-machine Gate: Phase G, bounded `v0.20.0` release integration and BAI Development OS H2/I1 closure PASS; overall TASK-036/M3B completion remains unclaimed
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.13 Addendum II
+- Development Candidate: `0.20.1`
+- Current release verification: v0.20.0 remains the formal release. TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route now pass; the v0.20.1 patch candidate closes the remaining native Shell startup and UX gaps.
+- Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS`; exact `0.20.1 / v0.20.1 / stable` release finalization is active
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.14 Addendum V
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

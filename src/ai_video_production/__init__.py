@@ -120,7 +120,7 @@ from .render_qa import (
 from .manual_handoff import EditorHandoffManifest, EditorHandoffService, HandoffFile
 from .technical_mvp import TechnicalMvpApplicationService
 
-__version__ = "0.20.0"
+__version__ = "0.20.1"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",

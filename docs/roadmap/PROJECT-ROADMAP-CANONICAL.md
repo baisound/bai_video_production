@@ -624,3 +624,9 @@ The bounded Phase G release integration is complete:
 - the release branch was deleted locally/remotely while raw local `evidence/` remained preserved and untracked.
 
 TASK-036 W0/W1 remains `PARTIAL / PARKED_TO_PHASE_H2`. Overall TASK-036 `NATIVE_VALIDATED`, `DESKTOP_SHELL_NATIVE_UX_PASS`, `MINIMUM_EDITING_PRODUCT_MVP_PASS` and M3B completion remain unclaimed. H2 may resume only when the exact clean-profile, missing-WebView2, long-path, DPI/mixed-monitor or screen-reader condition in the parking decision is available; otherwise the next Product route requires an Owner roadmap decision.
+
+### Ver.1.14 Addendum V — TASK-036 H2 Closure and v0.20.1 Candidate
+
+TASK-036 H2 resumed the five parked W0/W1 cases. The v0.20.1 candidate now provides fail-closed packaged startup diagnostics, native missing-WebView2 recovery, an enforced long-path support limit, explicit EdgeChromium selection, accessibility semantics and a high-scale responsive layout. Native Evidence passes clean-profile launch, actual three-monitor movement, Windows UI Automation/Narrator semantics, isolated missing-WebView2 recovery and safe owned-process exit. Full regression is `810 / 810 PASS`.
+
+W0 is `DESKTOP_RUNTIME_SPIKE_PASS`, W1 is `DESKTOP_SHELL_NATIVE_UX_PASS` and W2 remains `W2_PACKAGED_NATIVE_E2E_PASS`. TASK-036 and M3B therefore reach `MINIMUM_EDITING_PRODUCT_MVP_PASS`. The exact patch release decision is `0.20.1 / v0.20.1 / stable`; publication still requires PR all-green, exact main merge SHA verification, annotated tag and GitHub Release.

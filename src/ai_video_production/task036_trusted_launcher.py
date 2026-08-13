@@ -366,7 +366,7 @@ def build_trusted_launch(
         configuration.cut_output,
     )
     coordinator = DesktopEditingCoordinator.create(
-        product_version="0.20.0",
+        product_version="0.20.1",
         project_id=configuration.project_id,
         display_name=configuration.display_name,
     )
@@ -427,4 +427,4 @@ def run_trusted_native_shell(config_path: str | Path) -> None:
         height=900,
         min_size=(1100, 700),
     )
-    webview.start()
+    webview.start(gui="edgechromium")

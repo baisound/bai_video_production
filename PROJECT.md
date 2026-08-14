@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK_044_DESIGN_HOSTED_CLOSED_P_NLE_1_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_TASK_044_P_NLE_1_HOSTED_CLOSED_P_NLE_2_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -118,7 +118,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Development Candidate: `NONE`; P-NLE-1 does not preselect a package version
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.65 Addendum LIX
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.66 Addendum LX
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

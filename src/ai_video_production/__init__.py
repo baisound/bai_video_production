@@ -163,6 +163,12 @@ from .interactive_timeline import (
     TimelineWindowProjection, TimelineWindowProjector,
 )
 from .interactive_timeline_projection import InteractiveTimelineProjectionService
+from .interactive_timeline_edit import (
+    SnapAnchor, SnapDecision, SnapKind, TimelineEditCommand, TimelineEditHistory,
+    TimelineEditKind, TimelineEditProjector, TimelineEditRevision, TimelineSnapService,
+)
+from .interactive_timeline_store import TimelineEditSnapshotStore, parse_timeline_edit_history
+from .interactive_timeline_application import Task044TimelineEditApplication
 
 __version__ = "0.20.1"
 
@@ -256,5 +262,8 @@ __all__ = [
     "TimelineFocusKind", "TimelineInteractionReducer", "TimelineInteractionState",
     "TimelineMediaKind", "TimelineTrack", "TimelineTrackRole", "TimelineViewport",
     "TimelineWindowProjection", "TimelineWindowProjector",
+    "SnapAnchor", "SnapDecision", "SnapKind", "TimelineEditCommand", "TimelineEditHistory",
+    "TimelineEditKind", "TimelineEditProjector", "TimelineEditRevision", "TimelineSnapService",
+    "TimelineEditSnapshotStore", "parse_timeline_edit_history", "Task044TimelineEditApplication",
     "InteractiveTimelineProjectionService",
 ]

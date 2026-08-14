@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.65
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.66
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -1560,3 +1560,36 @@ Python 3.12 regression passes `1083 passed, 1 skipped`. Critic closes selection,
 seek, enum/frame validation, paging and compatibility risks with unresolved
 Critical/High `0 / 0`. Hosted CI remains required. After merge and cleanup,
 fresh-main P-NLE-2 semantic editing/history becomes next.
+
+## Addendum LX — TASK-044 P-NLE-2 Timeline Edit and History Gate
+
+P-NLE-1 PR #69 passed hosted `9 / 9`, merged at exact main
+`ab41b2105914488d1d96ca3b3f8997a09d53337a`, and completed remote branch and
+dedicated checkout cleanup. Fresh-main AUTONOMY selected
+`BVP-TASK-044-P-NLE-2 / IMPLEMENTATION`.
+
+P-NLE-2 adds exact-frame trim-start, trim-end and move proposals with deterministic
+labeled snap candidates. Track add/remove is checked against exact topology;
+required, missing and non-empty tracks fail closed. Every accepted semantic edit
+appends a checksum-linked Timeline revision bound to the exact upstream Timeline
+hash and commits its child state with the next Product Manifest through the
+TASK-043 coordinated save path.
+
+Undo and Redo append explicit inverse/replay Timeline revisions and compensating
+TASK-043 Project command records; no prior record is rewritten. Because the
+Project command store is deliberately outside the Manifest checksum graph, a
+checksum-closed recovery intent bridges the post-Manifest finalization window.
+Reopen completes only the exact expected result state, discards only an exact
+uncommitted source state, and parks any third-state conflict for Human review.
+
+Shell edit/track prepare operations are read-only and apply operations require
+Human final authority. IN/OUT remains local reversible session state until a
+future export/edit explicitly applies it. No Provider, paid, media, native,
+TASK-010, Resolve, Cubase, Production Deploy, version, Tag or Release operation
+is introduced.
+
+Focused P-NLE-2/P-NLE-1/TASK-043 compatibility passes `50 / 50`; full Windows
+Python 3.12 regression passes `1090 passed, 1 skipped`. Critic closes track
+topology, strict frame typing, stale-CAS and split-finalization recovery risks with
+unresolved Critical/High `0 / 0`. Hosted CI remains required. After merge and
+cleanup, fresh-main P-NLE-3 durable Export Queue composition becomes next.

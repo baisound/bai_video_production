@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Promoted TASK-027 Generation Queue admission into a durable unified Desktop workspace derived only from exact Approved Plan, Feasibility, LOCK/STALE, Continuity and Prompt/Profile Evidence.
+- Added one-shot, append-only, restart-safe Queue records with unique required-input proof and invariant `EXECUTION_NOT_AUTHORIZED`; no Provider call, paid authorization, Budget reservation or Candidate creation is exposed.
 - Promoted TASK-040 Prompt/Generation Evidence into a durable project-scoped Application and unified Desktop workspace with immutable Prompt versions, completed Attempt import and explicit Human-routed regeneration Prompt registration.
 - Added strict Prompt persistence/CAS, exact parent/Profile/input/output lineage, recoverable PASS Prompt/Production binding and TASK-038 recovery interlock without Provider calls, paid execution, Candidate creation or NLE mutation.
 - Promoted TASK-039 Continuity into the unified Desktop `連続性` workspace with exact locked END_FRAME -> START_FRAME identity, production-derived target inspection, non-overridable DIRECT_CONTINUATION and separate one-shot SOFT_CONTINUITY Human approval.

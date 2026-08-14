@@ -19,6 +19,7 @@ from ai_video_production.planning_application import Task027PlanningApplication
 from ai_video_production.generation_safety_application import Task013GenerationSafetyApplication
 from ai_video_production.continuity_application import Task039ContinuityApplication
 from ai_video_production.prompt_evidence_application import Task040PromptEvidenceApplication
+from ai_video_production.generation_queue_application import Task027GenerationQueueApplication
 
 
 class DialogBackend:
@@ -155,6 +156,16 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert prompt_evidence["available"] is True
     assert prompt_evidence["provider_execution_started"] is False
     assert prompt_evidence["candidate_creation_started"] is False
+    assert isinstance(launch.bridge.generation_queue_application, Task027GenerationQueueApplication)
+    assert launch.bridge.generation_queue_application.production_control is launch.bridge.production_control
+    assert launch.bridge.generation_queue_application.planning_application is launch.bridge.planning_application
+    assert launch.bridge.generation_queue_application.generation_safety_application is launch.bridge.generation_safety_application
+    assert launch.bridge.generation_queue_application.continuity_application is launch.bridge.continuity_application
+    assert launch.bridge.generation_queue_application.prompt_evidence_application is launch.bridge.prompt_evidence_application
+    queue = launch.bridge.generation_queue_snapshot({})
+    assert queue["available"] is True
+    assert queue["provider_execution_started"] is False
+    assert queue["paid_execution_authorized"] is False
     production = launch.bridge.production_snapshot({})
     assert production["available"] is True
     assert production["project_id"] == config.project_id

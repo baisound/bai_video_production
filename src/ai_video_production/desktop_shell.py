@@ -28,6 +28,7 @@ class WorkspaceId(str, Enum):
     GENERATION_SAFETY = "GENERATION_SAFETY"
     CONTINUITY = "CONTINUITY"
     PROMPT_EVIDENCE = "PROMPT_EVIDENCE"
+    GENERATION_QUEUE = "GENERATION_QUEUE"
 
 
 class CommandCategory(str, Enum):
@@ -103,6 +104,9 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "prompt_evidence.regeneration.prepare": ShellCommandSpec("prompt_evidence.regeneration.prepare", CommandCategory.READ_ONLY),
     "prompt_evidence.regeneration.apply": ShellCommandSpec("prompt_evidence.regeneration.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
     "prompt_evidence.recovery.apply": ShellCommandSpec("prompt_evidence.recovery.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "generation_queue.snapshot": ShellCommandSpec("generation_queue.snapshot", CommandCategory.READ_ONLY),
+    "generation_queue.prepare": ShellCommandSpec("generation_queue.prepare", CommandCategory.READ_ONLY),
+    "generation_queue.apply": ShellCommandSpec("generation_queue.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

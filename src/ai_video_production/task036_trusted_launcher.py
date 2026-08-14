@@ -38,6 +38,7 @@ from .planning_application import Task027PlanningApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .prompt_evidence_application import Task040PromptEvidenceApplication
+from .generation_queue_application import Task027GenerationQueueApplication
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
 
@@ -419,6 +420,23 @@ def build_trusted_launch(
         project_root=configuration.project_root,
         project_id=configuration.project_id,
     )
+    generation_safety_application = Task013GenerationSafetyApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+        planning_application=planning_application,
+        audit_application=audit_application,
+    )
+    continuity_application = Task039ContinuityApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+        production_control=production_control,
+    )
+    prompt_evidence_application = Task040PromptEvidenceApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+        production_control=production_control,
+        audit_application=audit_application,
+    )
     bridge = Task036ShellBridge(
         coordinator.shell,
         native_dialog=dialog,
@@ -427,22 +445,17 @@ def build_trusted_launch(
         production_control=production_control,
         audit_application=audit_application,
         planning_application=planning_application,
-        generation_safety_application=Task013GenerationSafetyApplication(
+        generation_safety_application=generation_safety_application,
+        continuity_application=continuity_application,
+        prompt_evidence_application=prompt_evidence_application,
+        generation_queue_application=Task027GenerationQueueApplication(
             project_root=configuration.project_root,
             project_id=configuration.project_id,
+            production_control=production_control,
             planning_application=planning_application,
-            audit_application=audit_application,
-        ),
-        continuity_application=Task039ContinuityApplication(
-            project_root=configuration.project_root,
-            project_id=configuration.project_id,
-            production_control=production_control,
-        ),
-        prompt_evidence_application=Task040PromptEvidenceApplication(
-            project_root=configuration.project_root,
-            project_id=configuration.project_id,
-            production_control=production_control,
-            audit_application=audit_application,
+            generation_safety_application=generation_safety_application,
+            continuity_application=continuity_application,
+            prompt_evidence_application=prompt_evidence_application,
         ),
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

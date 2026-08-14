@@ -128,6 +128,17 @@ def test_html_has_keyboard_focus_and_screen_reader_landmarks():
     assert ".main{grid-template-columns:1fr}" in HTML
 
 
+def test_html_exposes_generation_queue_admission_without_execution_command():
+    assert 'data-w="GENERATION_QUEUE"' in HTML
+    assert 'id="generationQueueWorkspace"' in HTML
+    assert "generation_queue_snapshot" in HTML
+    assert "generation_queue_prepare" in HTML
+    assert "generation_queue_apply" in HTML
+    assert "EXECUTION_NOT_AUTHORIZED" in HTML
+    assert "generation_queue_dispatch" not in HTML
+    assert "Provider呼出し・課金・Budget予約・Candidate作成" in HTML
+
+
 def test_html_promotes_production_control_without_task038_authority_shortcut():
     assert 'data-w="PRODUCTION_CONTROL"' in HTML
     assert 'id="productionWorkspace"' in HTML

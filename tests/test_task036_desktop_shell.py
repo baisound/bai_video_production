@@ -217,3 +217,13 @@ def test_close_guard_blocks_non_cancellable_active_job():
     result = shell.close_guard()
     assert result["can_close_immediately"] is False
     assert result["unsafe_job_ids"] == ["j1"]
+
+
+def test_generation_queue_commands_are_allowlisted_without_provider_dispatch():
+    shell = service()
+    assert shell.command_spec("generation_queue.snapshot").category.value == "READ_ONLY"
+    assert shell.command_spec("generation_queue.prepare").category.value == "READ_ONLY"
+    assert shell.command_spec("generation_queue.apply").category.value == "HUMAN_FINAL_AUTHORITY"
+    assert not any("dispatch" in name for name in (
+        "generation_queue.snapshot", "generation_queue.prepare", "generation_queue.apply",
+    ))

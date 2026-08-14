@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_TARGET_AUDITED`
+- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_LOCAL_GATE / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-013 target audit complete — bounded local ComfyUI native adapter implementation is next on a dedicated branch`
+- Active Consumer Task: `TASK-013 local ComfyUI native adapter local gate passed — contained native completion is parked at an unsafe-runtime/recovery boundary`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `TASK-013 DEV-4 package-owned body-free MiniMax H3 local/free T2V adapter and contained native Evidence`
+- Next Consumer Task: `TASK-013 hosted adapter closure, then a separately reviewed safe native-runtime route; never replay the preserved uncertain execution automatically`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -80,6 +80,10 @@
 - TASK-014 design intake: owner's existing ElevenLabs Pro trained voice will be used through a private Voice Profile and timed TTS path; no retraining/upload or paid call is authorized by configuration alone
 - TASK-013 R4 local generation execution control is hosted-closed: PR #38 final head `ff1cbed` passed `9 / 9` and merged at exact main `1614832b`; next is exact real local adapter target audit, while live generation and Candidate/Audit binding remain unclaimed
 - TASK-013 exact target audit passed: loopback ComfyUI `0.31.0`, `837` node classes, RTX 4070 SUPER, all four native H3 model files/classes and isolated Product-owned runtime roots were verified; the operator Prompt/workflow remains private and no generation was queued
+- TASK-013 concrete local adapter local gate passed: package-owned body-free workflow, exact `LOCAL_FREE_AI / TEXT_TO_VIDEO` authority, exact `127.0.0.1`/model/node/resource/runtime checks, durable prompt-id journal, exact output containment and opt-in trusted-launch composition pass `35 / 35` final focused and `919 / 919` full WSL2 regression
+- Native attempt 01 queued exact Comfy prompt `91cb547f-1056-44a5-a2b5-9ddfd0c5621a`, loaded the real native H3 model path and failed at `SamplerCustomAdvanced` with `hostbuf_file_reader_read failed`; no output was published
+- Native attempt 02 queued exact Comfy prompt `f92c56e4-4fd8-44fc-b347-d7d4acdfed8b` under legacy low-VRAM flags and was externally interrupted by the Owner-confirmed Windows force restart after the host froze. Its journal remains `QUEUED`, the parent state is recovery-required, and automatic replay is prohibited
+- Product runtime policy now rejects `--disable-dynamic-vram`, `--lowvram`, `--highvram`, `--novram`, `--gpu-only` and `--cpu` before dispatch. Native H3 completion is `PARKED_TO_SAFE_RUNTIME_REVIEW`, not PASS
 - TASK-034 native Windows package `0.12.2`: Catalog/Credential lifecycle and per-row Password Manager behavior PASS
 - TASK-034 package `0.12.2`: Catalog lifecycle linkage, retained-key cleanup, OS vault, per-Route password-manager lookup and secret-exclusion tests PASS
 - TASK-033 native Windows: add `demo-video-route`, edit to `demo-model-v2`, disable and truthful adapter status display PASS
@@ -107,7 +111,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.40 Addendum XXXI. R3 control-loop promotion is complete, TASK-013 local execution control is hosted-closed and the exact free/local ComfyUI native target audit authorizes the next bounded adapter branch. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.41 Addendum XXXII. R3 control-loop promotion is complete and the TASK-013 exact local/free adapter passes its local Product gate. Native H3 completion is parked at the recorded runtime/recovery boundary; hosted adapter closure may proceed independently. Stable Product release remains `v0.20.1`.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

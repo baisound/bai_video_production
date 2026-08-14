@@ -12,6 +12,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .ai_connections import ConnectionAvailability
+from .comfyui import ComfyEndpointPolicy, ComfyUIClient
+from .creative_generation_execution_application import Task013CreativeGenerationExecutionApplication
 from .desktop_editing_coordinator import DesktopEditingCoordinator
 from .desktop_post_resolve_workflow import Task036PostResolveWorkflowFacade
 from .desktop_resolve_workflow import Task036ResolveWorkflowFacade
@@ -39,6 +42,10 @@ from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
+from .local_comfy_generation_port import (
+    LocalComfyGenerationConfig, LocalComfyTextToVideoPort,
+    MINIMAX_H3_NATIVE_WORKFLOW_SHA256, default_minimax_h3_workflow_path,
+)
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
 
@@ -103,6 +110,7 @@ class Task036LaunchConfiguration:
     source_frame_rate: FrameRate
     asr_config: FasterWhisperConfig
     asr_language: str | None
+    local_generation: LocalComfyGenerationConfig | None
 
     @classmethod
     def load(cls, path: str | Path) -> "Task036LaunchConfiguration":
@@ -134,11 +142,14 @@ class Task036LaunchConfiguration:
 
     @classmethod
     def from_dict(cls, raw: Any) -> "Task036LaunchConfiguration":
-        if not isinstance(raw, dict) or raw.get("launch_config_version") != "1.0.0":
+        if not isinstance(raw, dict) or raw.get("launch_config_version") not in {"1.0.0", "1.1.0"}:
             raise ValueError("unsupported launch_config_version")
+        version = raw["launch_config_version"]
         allowed = {
             "launch_config_version", "project", "paths", "ingest", "asr", "resolve",
         }
+        if version == "1.1.0":
+            allowed.add("local_generation")
         if set(raw) != allowed:
             raise ValueError("launch configuration contains unknown or missing sections")
         project = raw["project"]
@@ -212,6 +223,55 @@ class Task036LaunchConfiguration:
         def project_path(name: str) -> Path:
             return _contained(project_root, _path(paths[name], field=name), field=name)
 
+        local_generation_config: LocalComfyGenerationConfig | None = None
+        if version == "1.1.0":
+            local_generation = raw["local_generation"]
+            if not isinstance(local_generation, dict):
+                raise ValueError("local_generation must be an object")
+            _require_exact_keys(
+                local_generation,
+                {
+                    "endpoint", "comfy_output_root", "project_output_root", "staging_root",
+                    "dispatch_journal_root", "route_id", "provider_id", "model_id",
+                    "width", "height", "length", "steps", "poll_interval_seconds",
+                    "completion_timeout_seconds", "max_output_bytes",
+                },
+                name="local_generation",
+            )
+            local_roots = {
+                name: _contained(
+                    project_root,
+                    _path(local_generation[name], field=f"local_generation.{name}"),
+                    field=f"local_generation.{name}",
+                )
+                for name in ("comfy_output_root", "project_output_root", "staging_root", "dispatch_journal_root")
+            }
+            if any(path.is_symlink() or not path.is_dir() for path in local_roots.values()):
+                raise ValueError("local_generation roots must be existing regular project directories")
+            try:
+                endpoint = ComfyEndpointPolicy().authorize(
+                    _required_text(local_generation["endpoint"], field="local_generation.endpoint", maximum=500)
+                )
+            except ProductError as exc:
+                raise ValueError("local_generation.endpoint is not an authorized local origin") from exc
+            local_generation_config = LocalComfyGenerationConfig(
+                endpoint=endpoint,
+                workflow_path=default_minimax_h3_workflow_path(),
+                workflow_sha256=MINIMAX_H3_NATIVE_WORKFLOW_SHA256,
+                comfy_output_root=local_roots["comfy_output_root"],
+                project_output_root=local_roots["project_output_root"],
+                staging_root=local_roots["staging_root"],
+                dispatch_journal_root=local_roots["dispatch_journal_root"],
+                route_id=_required_text(local_generation["route_id"], field="local_generation.route_id"),
+                provider_id=_required_text(local_generation["provider_id"], field="local_generation.provider_id"),
+                model_id=_required_text(local_generation["model_id"], field="local_generation.model_id"),
+                width=local_generation["width"], height=local_generation["height"],
+                length=local_generation["length"], steps=local_generation["steps"],
+                poll_interval_seconds=local_generation["poll_interval_seconds"],
+                completion_timeout_seconds=local_generation["completion_timeout_seconds"],
+                max_output_bytes=local_generation["max_output_bytes"],
+            )
+
         analysis_source = _path(paths["analysis_source_path"], field="analysis_source_path")
         if analysis_source.is_symlink() or not analysis_source.is_file():
             raise ValueError("analysis_source_path must be an existing regular file")
@@ -284,6 +344,7 @@ class Task036LaunchConfiguration:
             source_frame_rate=FrameRate.parse(str(resolve["source_frame_rate"])),
             asr_config=asr_config,
             asr_language=None if language is None else language.strip(),
+            local_generation=local_generation_config,
         )
 
 
@@ -327,6 +388,7 @@ def build_trusted_launch(
     native_dialog: Task036NativeDialogService | None = None,
     asr_provider: FasterWhisperProvider | None = None,
     resolve_adapter: ResolveScriptingAssemblyAdapter | None = None,
+    comfy_client: ComfyUIClient | None = None,
 ) -> Task036TrustedLaunch:
     for directory in (
         configuration.asset_root,
@@ -437,6 +499,28 @@ def build_trusted_launch(
         production_control=production_control,
         audit_application=audit_application,
     )
+    generation_queue_application = Task027GenerationQueueApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+        production_control=production_control,
+        planning_application=planning_application,
+        generation_safety_application=generation_safety_application,
+        continuity_application=continuity_application,
+        prompt_evidence_application=prompt_evidence_application,
+    )
+    generation_execution_application = None
+    if configuration.local_generation is not None:
+        local_client = comfy_client or ComfyUIClient(configuration.local_generation.endpoint)
+        local_port = LocalComfyTextToVideoPort(config=configuration.local_generation, client=local_client)
+        generation_execution_application = Task013CreativeGenerationExecutionApplication(
+            project_root=configuration.project_root,
+            project_id=configuration.project_id,
+            generation_queue=generation_queue_application,
+            execution_port=local_port,
+            availability_factory=lambda: ConnectionAvailability(
+                frozenset({configuration.local_generation.route_id})
+            ),
+        )
     bridge = Task036ShellBridge(
         coordinator.shell,
         native_dialog=dialog,
@@ -448,15 +532,8 @@ def build_trusted_launch(
         generation_safety_application=generation_safety_application,
         continuity_application=continuity_application,
         prompt_evidence_application=prompt_evidence_application,
-        generation_queue_application=Task027GenerationQueueApplication(
-            project_root=configuration.project_root,
-            project_id=configuration.project_id,
-            production_control=production_control,
-            planning_application=planning_application,
-            generation_safety_application=generation_safety_application,
-            continuity_application=continuity_application,
-            prompt_evidence_application=prompt_evidence_application,
-        ),
+        generation_queue_application=generation_queue_application,
+        generation_execution_application=generation_execution_application,
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)
 

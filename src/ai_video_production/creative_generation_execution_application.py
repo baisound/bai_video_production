@@ -433,6 +433,8 @@ class Task013CreativeGenerationExecutionApplication:
             ):
                 raise ProductError("ERR_GENERATION_EXECUTION_RESULT_MISMATCH", "Local execution result identity differs from the authorized route", ProductErrorCategory.DATA_INTEGRITY)
         except ProductError as exc:
+            if exc.details.get("execution_state_uncertain") is True:
+                raise
             with _exclusive_snapshot_lock(self.snapshot_path):
                 store = self._load()
                 failed = self._event_base(revision=store["revision"] + 1, execution_id=execution_id, entry=entry, profile_sha=profile_sha, route=route, workload=workload, capability=capability)

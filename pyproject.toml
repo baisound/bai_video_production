@@ -60,4 +60,4 @@ testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.setuptools.package-data]
-ai_video_production = ["schema_resources/*.json"]
+ai_video_production = ["schema_resources/*.json", "workflow_resources/*.json"]

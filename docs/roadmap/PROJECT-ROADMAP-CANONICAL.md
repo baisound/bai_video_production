@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.36
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.41
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -802,3 +802,11 @@ This closure does not claim a live local generation. The next TASK-013 unit begi
 The renewed target audit selects the installed free/local MiniMax H3 native graph behind loopback ComfyUI `0.31.0` as the exact next adapter. The target exposes `837` node classes and the required diffusion model, text encoder, video/audio VAEs and native H3 graph on an RTX 4070 SUPER. A contained capability probe used only repository-ignored `runtime/` input/output/user/temp roots and did not queue a generation.
 
 The operator workflow is valid and establishes the technical topology, but its Prompt and notes remain private and the file will not be copied into the Product. Installed cloud/API Hailuo templates are explicitly rejected for the `LOCAL_FREE_AI` route. The authorized implementation will ship a new body-free API workflow, accept only exact local/free `TEXT_TO_VIDEO`, preserve no-replay recovery, publish only to a project-contained `project-output://` root and keep trusted-launch composition opt-in/fail-closed. Candidate/Audit/Prompt Attempt binding remains a separate post-native slice. Stable release remains `v0.20.1`; no Tag or Release is selected.
+
+### Ver.1.41 Addendum XXXII — TASK-013 Local Comfy Native Adapter Local Gate / Native Runtime Parking
+
+The bounded TASK-013 concrete adapter passes its local Product gate. It ships a checksum-bound body-free MiniMax H3 API workflow, accepts only the exact credential-free `LOCAL_FREE_AI / TEXT_TO_VIDEO` route, validates loopback endpoint, installed nodes/models, resource floors and exact Product-owned Comfy runtime roots, durably records the Comfy prompt identity and publishes only one verified video below `project-output://generated/<execution-id>/`. Trusted-launch composition is explicit in launch configuration `1.1.0`; legacy `1.0.0` remains fail-closed. Post-dispatch uncertainty remains recovery-required and cannot be replayed automatically.
+
+Final exact adapter/controller/launcher regression passes `35 / 35`; full WSL2 regression passes `919 / 919`. A contained real H3 attempt reached the GPU and native model path but attempt 01 failed at `SamplerCustomAdvanced` with `hostbuf_file_reader_read failed`. Attempt 02 used legacy low-VRAM flags, was externally interrupted by the Owner-confirmed Windows force restart after the host froze and remains durably `QUEUED / RECOVERY_REQUIRED`; it is not rewritten as Product failure or replayed. No generated output, Candidate, Audit acceptance, paid call, Tag or Release is claimed.
+
+The Product now rejects legacy `--disable-dynamic-vram`, `--lowvram`, `--highvram`, `--novram`, `--gpu-only` and `--cpu` modes before dispatch. Contained native H3 completion is therefore `PARKED_TO_SAFE_RUNTIME_REVIEW`. This parking does not block hosted review of the fail-closed adapter implementation, but Candidate/TASK-040 Attempt binding remains blocked until a separately reviewed safe native run produces verified contained output. Stable release remains `v0.20.1`.

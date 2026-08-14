@@ -177,6 +177,21 @@ def test_uncertain_interruption_remains_recovery_required_without_auto_retry(tmp
     assert state["available_queue_entries"] == []
 
 
+def test_structured_uncertain_port_error_remains_recovery_required(tmp_path: Path):
+    uncertain = ProductError(
+        "ERR_GENERATION_COMFY_TIMEOUT_UNCERTAIN", "uncertain", ProductErrorCategory.STATE,
+        details={"execution_state_uncertain": True, "automatic_retry_allowed": False},
+    )
+    app, queue, port = fixture(tmp_path, failure=uncertain)
+    prepare(app, queue)
+    with pytest.raises(ProductError) as exc:
+        app.apply_execution(confirmation_id="execution-confirm")
+    assert exc.value is uncertain
+    assert [event["state"] for event in app.snapshot()["events"]] == ["DISPATCHING"]
+    assert app.snapshot()["recovery"]["required"] is True
+    assert port.calls and len(port.calls) == 1
+
+
 def test_confirmation_is_consumed_before_stale_queue_revalidation(tmp_path: Path):
     app, queue, port = fixture(tmp_path)
     prepare(app, queue)

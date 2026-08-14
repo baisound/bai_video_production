@@ -26,6 +26,7 @@ class WorkspaceId(str, Enum):
     PRODUCTION_CONTROL = "PRODUCTION_CONTROL"
     PLANNING = "PLANNING"
     GENERATION_SAFETY = "GENERATION_SAFETY"
+    CONTINUITY = "CONTINUITY"
 
 
 class CommandCategory(str, Enum):
@@ -85,6 +86,14 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "generation_safety.snapshot": ShellCommandSpec("generation_safety.snapshot", CommandCategory.READ_ONLY),
     "generation_safety.review.prepare": ShellCommandSpec("generation_safety.review.prepare", CommandCategory.READ_ONLY),
     "generation_safety.review.apply": ShellCommandSpec("generation_safety.review.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "continuity.snapshot": ShellCommandSpec("continuity.snapshot", CommandCategory.READ_ONLY),
+    "continuity.edge.prepare": ShellCommandSpec("continuity.edge.prepare", CommandCategory.READ_ONLY),
+    "continuity.edge.apply": ShellCommandSpec("continuity.edge.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "continuity.inspect": ShellCommandSpec("continuity.inspect", CommandCategory.LOCAL_DURABLE),
+    "continuity.soft.prepare": ShellCommandSpec("continuity.soft.prepare", CommandCategory.READ_ONLY),
+    "continuity.soft.apply": ShellCommandSpec("continuity.soft.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "continuity.stale.propagate": ShellCommandSpec("continuity.stale.propagate", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "continuity.recovery.apply": ShellCommandSpec("continuity.recovery.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

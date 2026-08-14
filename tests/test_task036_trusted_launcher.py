@@ -17,6 +17,7 @@ from ai_video_production.production_control_application import Task037Production
 from ai_video_production.audit_application import Task038AuditApplication
 from ai_video_production.planning_application import Task027PlanningApplication
 from ai_video_production.generation_safety_application import Task013GenerationSafetyApplication
+from ai_video_production.continuity_application import Task039ContinuityApplication
 
 
 class DialogBackend:
@@ -136,6 +137,14 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert launch.bridge.generation_safety_application.project_id == config.project_id
     assert launch.bridge.generation_safety_application.planning_application is launch.bridge.planning_application
     assert launch.bridge.generation_safety_application.audit_application is launch.bridge.audit_application
+    assert isinstance(launch.bridge.continuity_application, Task039ContinuityApplication)
+    assert launch.bridge.continuity_application.project_root == config.project_root
+    assert launch.bridge.continuity_application.project_id == config.project_id
+    assert launch.bridge.continuity_application.production_control is launch.bridge.production_control
+    continuity = launch.bridge.continuity_snapshot({})
+    assert continuity["available"] is True
+    assert continuity["provider_execution_started"] is False
+    assert continuity["resolve_mutation_started"] is False
     production = launch.bridge.production_snapshot({})
     assert production["available"] is True
     assert production["project_id"] == config.project_id

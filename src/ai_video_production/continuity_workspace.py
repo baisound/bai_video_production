@@ -179,6 +179,9 @@ class Task039ContinuityWorkspaceService:
                 "Continuity Human approval confirmation is missing or already used",
                 ProductErrorCategory.AUTHORIZATION,
             )
+        # Human-final tokens are one-shot even when current state is stale.
+        # A failed token must never become valid after later state restoration.
+        pending.consumed = True
         edge = self.continuity.edges.get(pending.edge_id)
         resolution = self.continuity.resolutions.get(pending.edge_id)
         if edge is None or resolution is None:
@@ -207,7 +210,6 @@ class Task039ContinuityWorkspaceService:
                 "Continuity target changed after Human confirmation was prepared",
                 ProductErrorCategory.AUTHORIZATION,
             )
-        pending.consumed = True
         approved = self.continuity.human_approve_soft(pending.edge_id, approved_by=approved_by)
         return {
             "resolution": approved.to_dict(),

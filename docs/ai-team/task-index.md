@@ -30,7 +30,7 @@
 | TASK-036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | COMPLETE_MINIMUM_EDITING_PRODUCT_MVP_PASS_RELEASED_0_20_1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native route PASS; PR #22 9/9, exact main SHA, annotated v0.20.1 and stable GitHub Release complete |
 | TASK-037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | COMPLETE_R2_PRODUCT_PROMOTION | COMPLETED_WITH_OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | PR #24 passed 9/9 and merged at exact main 045bd7ed; durable Application Service and Desktop Production Control workspace complete; no release at this checkpoint |
 | TASK-038 | Audit Workspace / Candidate Quality Loop | COMPLETE_R2_PRODUCT_PROMOTION | COMPLETED_WITH_OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | PR #26 passed 9/9 and merged at exact main 9a999645; durable two-store Human decision/recovery and user-facing Audit history/actions complete; no release at this checkpoint |
-| TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | DIRECT_CONTINUATION exact Asset/hash, End->Start graph, Character/Space continuity and Human-resolved Stale propagation |
+| TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | R3_LOCAL_GATE_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Recoverable exact two-store Application/Desktop workspace passes 869-test local gate; hosted PR/merge/cleanup pending; no regeneration |
 | TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | Prompt Entity/Version, provider profile, input/output identity, parent Candidate, Keep Conditions and failure-driven regeneration routes |
 | TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PROPOSED | NOT_AUTHORIZED | DEV-3/4 candidate | VFX/generated-media audio policy, non-destructive strip derivative, review/lock lanes and TASK-026 placement-plan UX |
 
@@ -40,7 +40,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038, TASK-013 R3 Product promotion and the bounded TASK-027 Planning Workspace minimum are completed. TASK-039 Continuity Map / STALE propagation is next on a dedicated branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038, TASK-013 R3 Product promotion and the bounded TASK-027 Planning Workspace minimum are completed. TASK-039 Continuity Map / STALE Product promotion passes its local gate and awaits hosted closure on its dedicated branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

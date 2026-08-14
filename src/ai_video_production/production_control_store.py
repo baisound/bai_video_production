@@ -155,7 +155,14 @@ def _parse(document: dict[str, Any]) -> ProductionControlRegistry:
     for slot in slots.values():
         if slot.locked_candidate_id is not None:
             candidate = candidates.get(slot.locked_candidate_id)
-            if candidate is None or candidate.slot_id != slot.slot_id or candidate.lifecycle_state is not CandidateLifecycle.LOCKED:
+            expected_lifecycle = (
+                CandidateLifecycle.STALE if slot.status is SlotStatus.STALE else CandidateLifecycle.LOCKED
+            )
+            if (
+                candidate is None
+                or candidate.slot_id != slot.slot_id
+                or candidate.lifecycle_state is not expected_lifecycle
+            ):
                 raise ProductError("ERR_PRODUCTION_SNAPSHOT_LOCK_INCONSISTENT", "Locked Slot/Candidate relationship is inconsistent", ProductErrorCategory.DATA_INTEGRITY)
 
     registry = ProductionControlRegistry()

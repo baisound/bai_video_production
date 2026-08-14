@@ -394,9 +394,9 @@ class ProductionControlRegistry:
             )
         self.edges[edge.edge_id] = edge
 
-    def mark_stale(self, root: EntityRef) -> StalePropagationResult:
+    def mark_stale(self, root: EntityRef, *, include_root: bool = False) -> StalePropagationResult:
         adjacency = self._adjacency()
-        queue = list(adjacency.get(root.key, ()))
+        queue = ([root] if include_root else []) + list(adjacency.get(root.key, ()))
         seen: set[str] = set()
         affected: list[EntityRef] = []
         while queue:

@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK013_R3_PRODUCT_PROMOTION_COMPLETE / TASK039_NEXT`
+- Project Status: `V0_20_1_RELEASED / TASK013_R3_COMPLETE / TASK039_R3_LOCAL_GATE_PASS`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE — TASK-013 R3 Generation Safety hosted closure complete`
+- Active Consumer Task: `TASK-039 — R3 Continuity Product hosted closure pending`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `TASK-039 Continuity Map / STALE propagation on a new branch`
+- Next Consumer Task: `complete TASK-039 hosted PR/merge/branch cleanup; then TASK-040 on a new branch`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -105,7 +105,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.27 Addendum XVIII. TASK-013 PR #30 passed `9 / 9` and merged at exact main `be8ea573fde1c3d4f7abe1a73887b6633d73ef32`. TASK-039 is next; stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.29 Addendum XX. TASK-039 passes its local Product gate at `869 / 869`; hosted PR checks, exact main merge and branch cleanup remain. TASK-040 starts only after that closure. Stable Product release remains `v0.20.1`.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

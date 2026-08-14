@@ -90,6 +90,20 @@ def test_stale_propagates_transitively_without_regeneration():
     assert result.to_dict()["automatic_regeneration_started"] is False
 
 
+def test_stale_can_include_changed_locked_root_without_breaking_trace():
+    registry = ProductionControlRegistry()
+    registry.add_slot(SceneAssetSlot("slot-root", "project-1", "SC01", SlotKind.END_FRAME, True))
+    registry.add_candidate(AssetCandidate("candidate-root", "slot-root", "asset-root", SHA, 1))
+    registry.transition_candidate("candidate-root", CandidateLifecycle.READY_FOR_AUDIT)
+    registry.transition_candidate("candidate-root", CandidateLifecycle.ACCEPTED)
+    slot = registry.slots["slot-root"]
+    registry.lock_candidate(slot_id=slot.slot_id, candidate_id="candidate-root", expected_revision=slot.revision)
+    result = registry.mark_stale(EntityRef(EntityType.SLOT, "slot-root"), include_root=True)
+    assert result.affected[0] == EntityRef(EntityType.SLOT, "slot-root")
+    assert registry.slots["slot-root"].status is SlotStatus.STALE
+    assert registry.candidates["candidate-root"].lifecycle_state is CandidateLifecycle.STALE
+
+
 def test_candidate_registration_automatically_binds_slot_dependency_for_stale_propagation():
     registry = registry_with_slot()
     registry.add_candidate(candidate())

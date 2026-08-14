@@ -36,6 +36,7 @@ from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
+from .continuity_application import Task039ContinuityApplication
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
 
@@ -430,6 +431,11 @@ def build_trusted_launch(
             project_id=configuration.project_id,
             planning_application=planning_application,
             audit_application=audit_application,
+        ),
+        continuity_application=Task039ContinuityApplication(
+            project_root=configuration.project_root,
+            project_id=configuration.project_id,
+            production_control=production_control,
         ),
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

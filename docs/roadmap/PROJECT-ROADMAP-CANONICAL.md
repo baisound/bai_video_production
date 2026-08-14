@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.61
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.62
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -179,7 +179,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
 - TASK-042 V6 Product Workflow: **P-V6-4 DESIGN HOSTED CLOSED / IMPLEMENTATION WAITS FOR TASK-043**
-- TASK-043 Product Project / Migration / Recovery: **P-FND-2 HOSTED CLOSED / P-FND-3 LOCAL PASS HOSTED PENDING**
+- TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **ALLOCATED / DEPENDENCY WAIT**
 - TASK-045 V6 Native Acceptance / Release Closure: **ALLOCATED / DEPENDENCY WAIT**
 
@@ -1438,3 +1438,33 @@ tamper boundaries are closed with unresolved Critical/High `0 / 0`. Hosted full
 regression/security remains required. P-FND-4 durable Product jobs / Export Queue
 foundation is next after hosted closure. Stable release remains `v0.20.1`; this
 foundation checkpoint creates no Tag or Release.
+
+## Addendum LVI — TASK-043 P-FND-4 Durable Product Job Gate
+
+P-FND-3 PR #65 passed all hosted `9 / 9` checks, merged at exact main
+`19febe3e00de92b18948e93740a0e3080b63d1b1`, and completed remote/local branch
+cleanup. The final TASK-043 implementation unit adds closed, checksummed
+`.bai-project/jobs.json` truth for Product-local background and Export work.
+Operation identity is deterministic over allowlisted local kind, public target
+identity and exact input hashes; repeated enqueue returns the existing record.
+
+The CAS state machine covers QUEUED/PREFLIGHT/READY/DISPATCHING/RUNNING and typed
+terminal/Human states. A restart while DISPATCHING or RUNNING produces UNKNOWN
+with explicit reconcile actions and never returns to READY or dispatches again
+automatically. UNKNOWN success requires externally proven result identity plus
+the exact `ACCEPT_PROVEN_SUCCESS` action. Cost values remain nullable truth with
+explicit currency/source when known; null is never rewritten as zero.
+
+Job kinds are restricted to Product-local EXPORT/analysis/transcode/index/
+maintenance work. The store explicitly states that it does not replace TASK-027
+Generation Queue and does not authorize Provider, paid or external replay. Shell
+`job.enqueue`, `job.cancel` and `job.reconcile` have explicit authority categories;
+the durable-to-Shell projection is read-only and UNKNOWN becomes WAITING_HUMAN.
+
+Focused P-FND-4/TASK-043/Shell tests pass `90 / 90`; full Windows Python 3.12
+regression passes `1061 passed, 1 skipped`; compileall passes. Critic corrections
+for cross-Project store substitution, Provider-job ownership and Shell authority
+close with unresolved Critical/High `0 / 0`. Hosted CI remains required. After
+hosted merge and cleanup, TASK-043 reaches hosted foundation closure and TASK-042
+P-V6-4 implementation re-audit becomes next. Stable release remains `v0.20.1`;
+this backend foundation checkpoint creates no Tag or Release.

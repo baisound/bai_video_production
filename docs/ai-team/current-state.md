@@ -6,14 +6,14 @@
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
 - Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-013 adapter hosted closure complete — contained native completion is parked at the recorded unsafe-runtime/recovery boundary`
+- Active Consumer Task: `NONE`; TASK-013 contained native completion is parked at the recorded unsafe-runtime/recovery boundary
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `TASK-013 separately reviewed safe native-runtime resumption decision; never replay the preserved uncertain execution automatically`
+- Next Consumer Decision Gate: `TASK-013 separately reviewed safe native-runtime resumption decision; never replay the preserved uncertain execution automatically`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -68,6 +68,7 @@
 - TASK-024 Slice A package `0.18.0`: FORMAL RELEASE COMPLETE — PR #13 merged, annotated tag `v0.18.0` published, Windows/native validation and CI PASS.
 - TASK-006 v0.16.4 formal release: `402 / 402 PASS`; `compileall` PASS; `git diff --check` PASS; `git fsck --full` PASS; native Windows Subtitle Workspace/Open/Save validation PASS.
 - v0.17.0 development-governance baseline: BAI Development OS `1.0.0` / Architecture `Ver.2.28 CURRENT_CANONICAL`, Level A Governance Only, with no Product runtime dependency. Migration baseline is completed before TASK-006 Slice D feature code.
+- Post-v0.20.1 R2-R4 governance provenance: BAI Development OS `v1.1.0` / Architecture `Ver.2.29` governed the later bounded Product work; the OS remains external development tooling and is not a Product runtime dependency.
 - TASK-006 Windows interaction corrective `0.16.4`: native SRT dialog failure/CLIXML leakage corrected, strict relative insertion timing and visible export/server-disconnect feedback accepted on Windows
 - TASK-006 corrective package `0.16.1`: Windows CRLF fixture writes exact bytes; production SRT behavior unchanged
 - TASK-006 Slice C package `0.16.0`: planned narration/ASR/SRT intake, revisioned local review GUI, row editing and atomic SRT export implemented
@@ -78,7 +79,7 @@
 - TASK-027 Slice A1 package `0.15.0`: real-production-evidence-derived Production Blueprint, Scene Ledger, Reference Registry, source-priority and dense-text generation gates implemented
 - TASK-035 design intake: optional REAPER audio-finishing/Resolve round-trip recorded; native ReaScript Plan/QA bridge precedes any third-party MCP or iZotope Assistant automation
 - TASK-014 design intake: owner's existing ElevenLabs Pro trained voice will be used through a private Voice Profile and timed TTS path; no retraining/upload or paid call is authorized by configuration alone
-- TASK-013 R4 local generation execution control is hosted-closed: PR #38 final head `ff1cbed` passed `9 / 9` and merged at exact main `1614832b`; next is exact real local adapter target audit, while live generation and Candidate/Audit binding remain unclaimed
+- TASK-013 R4 local generation execution control is hosted-closed: PR #38 final head `ff1cbed` passed `9 / 9` and merged at exact main `1614832b`; the subsequent exact local adapter target audit and fail-closed adapter implementation are also complete, while native generation and Candidate/Audit binding remain unclaimed
 - TASK-013 exact target audit passed: loopback ComfyUI `0.31.0`, `837` node classes, RTX 4070 SUPER, all four native H3 model files/classes and isolated Product-owned runtime roots were verified; the operator Prompt/workflow remains private and no generation was queued
 - TASK-013 concrete local adapter local gate passed: package-owned body-free workflow, exact `LOCAL_FREE_AI / TEXT_TO_VIDEO` authority, exact `127.0.0.1`/model/node/resource/runtime checks, durable prompt-id journal, exact output containment and opt-in trusted-launch composition pass `35 / 35` final focused and `919 / 919` full WSL2 regression
 - TASK-013 adapter hosted closure passed: PR #41 exact head `ff481147080518f44865c88ad0a8caffadd96947` passed all `9 / 9` hosted checks and merged at exact main `74d6b5af0c6de66168f5ab6ab63a6a049b11acd4`; the implementation branch was deleted remotely and locally
@@ -112,9 +113,9 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.42 Addendum XXXIII. R3 control-loop promotion is complete and the TASK-013 exact local/free adapter is hosted-closed at exact main `74d6b5af`. Native H3 completion remains parked at the recorded runtime/recovery boundary pending a separately reviewed safe resumption decision. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.42 Addendum XXXIII. R3 control-loop promotion is complete and the TASK-013 exact local/free adapter implementation is hosted-closed at `74d6b5af`; closure-document PR #42 passed `9 / 9` and produced current main `7d6486059c468009042e4c186d54b566d6e1477e`. Native H3 completion remains parked at the recorded runtime/recovery boundary pending a separately reviewed safe resumption decision. Stable Product release remains `v0.20.1`.
 
-TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
+TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 
 ## Safety boundaries
 
@@ -129,9 +130,9 @@ TASK-022 is now implemented with exact rational source/normalized-to-Timeline ma
 ## Registered Design Knowledge
 
 - `BVP-KNOWLEDGE-REFIMG-001` imported from the 2026-08-12 Product Promotion workflow.
-- Detailed future implementation design: `docs/ai-team/tasks/TASK-013/scene-compatible-reference-gate-detailed-design.md`.
-- Design registration only; no TASK-013 runtime implementation is authorized.
-- Editing-first task order is unchanged.
+- Remaining detailed implementation design: `docs/ai-team/tasks/TASK-013/scene-compatible-reference-gate-detailed-design.md`.
+- The separate R3 Shot Feasibility / Visual Compliance Product promotion is complete. Unimplemented Scene-Compatible Reference slices remain design-only and require their own authorization.
+- This Knowledge registration does not authorize a native retry, Candidate/Audit binding or another R4 slice.
 
 ## Cross-cutting Product Architecture — Unified Desktop Application
 

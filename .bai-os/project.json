@@ -17,5 +17,5 @@
     "package": "python -m pip wheel . --no-deps --no-build-isolation --wheel-dir /tmp/ai-video-wheel"
   },
   "project_evidence_root": "docs/ai-team/tasks",
-  "notes": "BAI Development OS 1.0.0 / Architecture Ver.2.28 is the development-governance baseline from Product v0.17.0. BAI Development OS core remains external and is never a Product runtime dependency. Product-owned evidence remains in this repository. OS-internal TASK-016/017 remain unrelated and untouched."
+  "notes": "BAI Development OS 1.0.0 / Architecture Ver.2.28 is the adapter compatibility and historical migration baseline from Product v0.17.0. Post-v0.20.1 R2-R4 work used BAI Development OS v1.1.0 / Architecture Ver.2.29 as external development governance. BAI Development OS core remains external and is never a Product runtime dependency. Product-owned evidence remains in this repository. OS-internal TASK-016/017 remain unrelated and untouched."
 }

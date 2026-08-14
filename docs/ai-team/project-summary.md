@@ -1,39 +1,49 @@
 # AI Video Production — Project Summary
 
-`ai-video-production` is a Consumer Project built on BAI Development OS governance without copying OS Core into the repository.
+`ai-video-production` is a standalone Consumer Product developed under external BAI Development OS governance. BAI Development OS is not copied into the repository and is not a Product runtime dependency.
 
-The product analyzes source media, creates auditable edit intelligence and safely assembles human-finishable timelines around DaVinci Resolve.
+## Current identity
 
-## Completed foundation
+- Product package: `0.20.1`
+- Stable formal Release: `v0.20.1`
+- Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
+- Current main: `7d6486059c468009042e4c186d54b566d6e1477e`
+- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
+- Active implementation branch: `NONE`
 
-**TASK-001** completed IDs, Product Job state/recovery, manifests, schemas, base Asset/rights, Logical URI, atomic persistence, Evidence/Checkpoint, ownership, profiles/plugins, SQLite and idempotency.
+Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
 
-**TASK-002** completed DaVinci Resolve Studio 21.0.2.4 capability verification and the WSL2→Windows authenticated HTTP/JSON IPC architecture.
+## Completed Product scope
 
-**TASK-003** completed secure source Asset ingestion: allowlisted source boundary, ffprobe/SHA-256, rights metadata, immutable `asset://` promotion, SQLite v2, concurrency-safe source manifests and crash/idempotency recovery.
+- TASK-001 through TASK-004 Product and local-runtime foundations are complete.
+- TASK-022 Timeline Mapping is complete with native-Windows `263 / 263 PASS`.
+- TASK-006, TASK-007, TASK-010, TASK-011, TASK-012, TASK-023 and TASK-024 form the accepted unified editing route.
+- TASK-036 W0/W1/W2 and M3B are complete as `MINIMUM_EDITING_PRODUCT_MVP_PASS`, released in `v0.20.1`.
+- R2 Product Control promotion is complete across TASK-037, TASK-038 and the bounded TASK-027 Planning Workspace minimum.
+- R3 Generation-safe control-loop promotion is complete across TASK-013, TASK-039, TASK-040 and the bounded TASK-027 Generation Queue integration.
+- R4 TASK-013 restart-safe local execution control and the exact local/free MiniMax H3 ComfyUI adapter are hosted-closed.
 
-## Active TASK-004 checkpoint
+## Current parked boundary
 
-TASK-004 package `0.4.8` has accepted target-runtime ComfyUI and Audacity/OpenVINO capability Evidence and now awaits bounded OpenVINO behavioral Evidence. It establishes:
+Native H3 completion is not PASS. Attempt 01 failed in the real sampler path at `SamplerCustomAdvanced`; attempt 02 ended at an Owner-confirmed Windows force restart and remains durably `QUEUED / RECOVERY_REQUIRED`. Automatic replay is prohibited, and unsafe legacy low-VRAM modes are rejected before dispatch.
 
-- exact timebase/proxy/48 kHz media normalization;
-- shared safe derived-Asset publication;
-- ComfyUI local Image/Video AI boundary for FLUX/Stable Diffusion/MiniMax H3;
-- Character Identity and H3 Production Brief foundations;
-- optional H3 SingleFrame and Spectrum contracts;
-- H3 Foley/SFX generation contract with community-experimental modes clearly separated;
-- Audacity/OpenVINO external local Audio AI boundary for Noise Suppression and Music Separation;
-- minimum resource/license/admission Evidence and crash-safe external dispatch rules.
+No contained generated output, TASK-037 Candidate, TASK-040 Attempt binding, TASK-038 Human Audit acceptance, TASK-013 overall completion or R4 overall completion is claimed. A third native attempt requires a separately reviewed safe-runtime route.
 
-These are prerequisites for the editing-first SRT/subtitle, filler/cut, SE/BGM/narration and Resolve placement route.
+## Remaining Product scope
+
+- full multi-slice TASK-027 production orchestration;
+- remaining TASK-013 native generation and post-native Candidate/Audit binding;
+- TASK-014 Owner Narration, TASK-026 Audio Placement and TASK-041 Audio Workspace;
+- later unreached roadmap Tasks and any new roadmap selected through the Owner process.
+
+## Governance boundary
+
+The adapter compatibility and historical migration baseline remains BAI Development OS `1.0.0 / Architecture Ver.2.28`. Post-`v0.20.1` R2-R4 work used BAI Development OS `v1.1.0 / Architecture Ver.2.29` as external development governance. Product implementation, Product Evidence and Product roadmap authority remain in this repository.
 
 ## Current verification
 
-- TASK-001: COMPLETED
-- TASK-002: COMPLETED
-- TASK-003: COMPLETED / DEV-4 score 33
-- TASK-004: `CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE` / DEV-4 score 25
-- package: `0.4.8`
-- `pytest`: `250 / 250 PASS`
-- wheel + installed-wheel golden normalization: PASS
-- target ComfyUI/Audacity live capability Evidence: ACCEPTED; Attempt 07 stopped before Audacity mutation because Windows low-level media descriptors were not opened with `O_BINARY`; package 0.4.7 corrective implemented and regression-pinned; synthetic OpenVINO behavioral Evidence: RERUN PENDING
+- PR #42 exact head `a6858de5b617abfc591af866e17096b7fb0d4159`: `9 / 9 PASS`
+- PR #42 exact merge/current main: `7d6486059c468009042e4c186d54b566d6e1477e`
+- R4 adapter focused regression: `35 / 35 PASS`
+- full WSL2 regression at adapter closure: `919 / 919 PASS`
+- latest stable Release: `v0.20.1`

@@ -27,8 +27,9 @@ Consumer Project Repository root. Machine-specific absolute paths are not canoni
 
 ## BAI Development OS Integration
 
-- OS Version Baseline: `1.0.0`
-- Development Governance Baseline from Product `0.17.0`: `BAI Development OS 1.0.0 / Architecture Ver.2.28 CURRENT_CANONICAL`
+- Adapter compatibility baseline: `1.0.0`
+- Historical migration baseline from Product `0.17.0`: `BAI Development OS 1.0.0 / Architecture Ver.2.28`
+- Current post-`v0.20.1` R2-R4 development-governance authority: `BAI Development OS v1.1.0 / Architecture Ver.2.29`; this updates development procedure only and introduces no Product runtime dependency
 - Adapter: `.bai-os/project.json`
 - Bootstrap Governance Level: `Level A — Governance Only`
 - TASK-001 decision: remain `Level A — Governance Only`; runtime-assisted BAI dependency is not justified for the product foundation
@@ -109,8 +110,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-013 — R4 local Comfy adapter / PR #41 9 of 9 PASS / exact main 74d6b5af0c6de66168f5ab6ab63a6a049b11acd4`
-- Active Task: `TASK-013 adapter hosted closure complete — native H3 completion remains parked pending separately reviewed safe runtime resumption`
+- Last Completed Gate: `TASK-013 — R4 local Comfy adapter hosted closure / implementation PR #41 9 of 9 PASS at 74d6b5af0c6de66168f5ab6ab63a6a049b11acd4 / closure PR #42 9 of 9 PASS at current main 7d6486059c468009042e4c186d54b566d6e1477e`
+- Active Task: `NONE`; TASK-013 native H3 completion is parked pending a separately reviewed safe-runtime resumption decision
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
@@ -149,7 +150,7 @@ Local Test PASSやCapability PASSを、まだ未実施のBehavioral Evidenceま�
 ## Registered Product Design Knowledge
 
 - `BVP-KNOWLEDGE-REFIMG-001 — Scene-Compatible Reference Image Design Rule` is formally registered from the Product Promotion workflow.
-- Future implementation owner: `TASK-013`; registration does not authorize TASK-013 and does not reopen TASK-004.
+- Remaining Scene-Compatible Reference slices remain owned by `TASK-013`; this registration does not authorize those unimplemented slices or reopen TASK-004. The separate R3 Shot Feasibility / Visual Compliance Product promotion is already complete.
 - Required future Gate: `SHOT FEASIBILITY / SCENE-COMPATIBLE REFERENCE` before generated Start/End Frame production.
 - `DIRECT_CONTINUATION` requires exact previous-End Asset reuse rather than perceptually similar regeneration.
 
@@ -192,7 +193,7 @@ Canonical details:
 - TASK-011 verifies rendered artifacts using checksum, media/duration checks and configurable loudness/true-peak policy.
 - TASK-012 creates deterministic QA-gated `EDITOR_WORK_*` handoff packages and a bounded 48 kHz PCM Cubase return contract.
 - The original backend slice reached `INTEGRATION_DESIGNED`; TASK-036 v0.20.1 now makes the accepted TASK-007/010/011/012 route `SHELL_INTEGRATED / NATIVE_VALIDATED`.
-- Package metadata is finalized as the authorized `0.20.0` release candidate; it is not a formal release until PR merge, exact main SHA verification, annotated tag and GitHub Release complete.
+- Historical `0.20.0` release-candidate metadata completed its release route and was superseded by the formal stable `v0.20.1` release. Later R2-R4 development on current main is integrated development and does not claim a newer Product release.
 
 ## TASK-023 Completed Bounded Development
 

@@ -1,6 +1,6 @@
 # AI動画制作自動化システム — Project Roadmap Canonical Ver.1.42
 - Project: `ai-video-production`
-- Date: 2026-08-13
+- Date: 2026-08-14
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
 - Product Design Baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - Governance: BAI Development OS Consumer Project Mode
@@ -27,10 +27,14 @@
   - ComfyUI local image/video runtime boundary, Character Identity, MiniMax H3 Production Brief / SingleFrame / Spectrum / Foley contracts
   - Audacity/OpenVINO external local Audio AI boundary; Noise Suppression + verified-runtime 2-stem Music Separation executable, 4-stem fail-closed until scriptable mode exists
   - local regression baseline `250/250 PASS`; ComfyUI + Audacity/OpenVINO capability Evidence accepted; final Windows behavioral Evidence passed Noise Suppression and verified-runtime 2-stem Music Separation with canonical derived Assets and committed Manifests
-- TASK-005,007以降の未着手TASK: **NOT_STARTED / NOT_AUTHORIZED**（個別にOwner認可する）
 - TASK-006 Slice D: **v0.17.0 RELEASED** — resumable large-media transcription + Resolve subtitle handoff
 - TASK-024 Slice A: **v0.18.0 RELEASED** — review-only silence/filler/disfluency Cut Candidate Worker
-- TASK-004完了後の標準推奨次ルート: `TASK-022` を早期確立し、その後SRT/字幕・フィラー/無音Cut・SE/BGM/ナレーション生成配置をediting-firstで前倒し。Owner判断による再優先化を許容する
+- TASK-022: **COMPLETED** — native-Windows `263 / 263 PASS`
+- TASK-007/010/011/012 + TASK-036: **SHELL_INTEGRATED / NATIVE_VALIDATED / MINIMUM_EDITING_PRODUCT_MVP_PASS**; stable Release `v0.20.1`
+- R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
+- R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
+- R4 current boundary: TASK-013 restart-safe execution control and exact local/free ComfyUI adapter are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
+- Current main: `7d6486059c468009042e4c186d54b566d6e1477e`; stable Product release remains `v0.20.1`; no active implementation branch
 
 ## 3. MVP定義
 
@@ -79,13 +83,13 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | exact timebase/proxy/48k, ComfyUI image/H3, Character Identity, SingleFrame/Spectrum/Foley, Audacity OpenVINO, minimum admission/Evidence | 003 | DEV-4 / score 25 | COMPLETED |
 | 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | NOT STARTED |
 | 006 | ASR / Subtitle | Transcript/SRT、VAD、非重複SRT Corrective、不変Raw Transcript、優先辞書、GUI人間Review、既定OFFのAI誤字・脱字候補、承認Gate、Resolve字幕配置用canonical subtitle plan | 004,028（外部AI補正時） | DEV-3/4候補 | SLICE D RELEASED v0.17.0 |
-| 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3 | IMPLEMENTED / AUTOMATED VALIDATED / INTEGRATION_DESIGNED |
+| 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3 | IMPLEMENTED / AUTOMATED VALIDATED / SHELL INTEGRATED |
 | 008 | Multimodal Scoring | audio/visual/OCR feature fusion | 007 | DEV-3候補 | NOT STARTED |
 | 009 | DBDProfilePlugin | DBD HUD/chase/event profile | 008 | DEV-3候補 | NOT STARTED |
-| 010 | Resolve Assembly MVP | 元動画Cut、Subtitle Track/SRT配置、Audio asset配置を含むGateway/Controller, AUTO_ASSEMBLY, idempotency。字幕配置/basic assembly sliceは007前に先行可 | 002,003,022; Cut plan反映は007 | DEV-4 | IMPLEMENTED / NATIVE RESOLVE VALIDATION PENDING / INTEGRATION_DESIGNED |
-| 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4 | ARTIFACT QA IMPLEMENTED / NATIVE RENDER VALIDATION PENDING / INTEGRATION_DESIGNED |
-| 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3 | IMPLEMENTED / NATIVE HANDOFF VALIDATION PENDING / INTEGRATION_DESIGNED |
-| 013 | AI SE / BGM / Video Orchestration | TASK-004 local-runtime基盤を利用したSE/BGM/Video生成のProvider選択・創作制御・rights/cost/evidence。内容連動選定は007依存 | 004; 007は内容連動時 | DEV-4候補 | NOT STARTED |
+| 010 | Resolve Assembly MVP | 元動画Cut、Subtitle Track/SRT配置、Audio asset配置を含むGateway/Controller, AUTO_ASSEMBLY, idempotency。字幕配置/basic assembly sliceは007前に先行可 | 002,003,022; Cut plan反映は007 | DEV-4 | NATIVE VALIDATED / SHELL INTEGRATED |
+| 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4 | NATIVE VALIDATED / SHELL INTEGRATED |
+| 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3 | NATIVE VALIDATED / SHELL INTEGRATED |
+| 013 | AI SE / BGM / Video Orchestration | TASK-004 local-runtime基盤を利用したSE/BGM/Video生成のProvider選択・創作制御・rights/cost/evidence。内容連動選定は007依存 | 004; 007は内容連動時 | DEV-4 | R3 PROMOTION COMPLETE / R4 ADAPTER HOSTED CLOSED / NATIVE RUNTIME PARKED |
 | 014 | Voice TTS / Owner Narration | ElevenLabsの既存Owner Voice Profile、read-only capability/ownership probe、timed TTS、dictionary、consent/retention、48 kHz canonical narration。ユーザー指定原稿からの生成は003後に前倒し可 | 003,028; 自動原稿生成は006/007; 配置は026 | DEV-4 | DESIGN RECORDED / ADAPTER FOUNDATION EXISTS |
 | 015 | YouTube Feedback | performance ingest, feedback features | 008 | DEV-3候補 | NOT STARTED |
 | 016 | Privacy Guard | PII/notification/NG detection + redaction plan | 003,006 | DEV-4 | NOT STARTED |
@@ -94,13 +98,19 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 019 | Profile Auto-Tuner | holdout evaluation, rollback, promotion gate | 008,015 | DEV-3/4候補 | NOT STARTED |
 | 020 | Resource Admission / Monitoring | VRAM/CPU/disk/network admission + metrics | 001,004 | DEV-4候補 | NOT STARTED |
 | 021 | Integrated Dashboard / Operations | job/evidence/alerts/ops UI | Evidence contracts | DEV-3候補 | NOT STARTED |
-| 022 | Timeline Mapping Service | exact frame/time mapping, schema, golden fixtures | 001,003,004 | DEV-4 | IMPLEMENTED / WINDOWS REGRESSION PENDING |
+| 022 | Timeline Mapping Service | exact frame/time mapping, schema, golden fixtures | 001,003,004 | DEV-4 | COMPLETED / NATIVE WINDOWS 263 OF 263 PASS |
 | 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | COMPLETE |
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
-| 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4候補 | SLICE A1 PRODUCTION BLUEPRINT FOUNDATION IMPLEMENTED |
+| 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | R2 PLANNING MINIMUM + R3 GENERATION QUEUE COMPLETE / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E | 003,006,007,010,011,012,024 | DEV-4 | COMPLETE / M3B PASS / RELEASED v0.20.1 |
+| 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
+| 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
+| 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
+| 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
+| 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-3/4候補 | PROPOSED / NOT AUTHORIZED |
 
 ## 6. Namespace Collision Resolution
 
@@ -131,36 +141,39 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 3. `PREREQUISITE_FIRST` — 最小の依存TASK/contractだけ先行すれば前倒し可能。
 4. `BLOCKED` — Safety Floorまたは未確定contractにより現時点では前倒し不可。
 
-### Wave 1 — 現在
+### Wave 1 — Foundation完了
 
-1. TASK-001〜003: **COMPLETED**。
-2. TASK-004: **実装完了・target local-runtime Evidence待ち**。Timebase/Normalizationに加えLocal Image/Video/Audio AI foundationを前倒し済み。
-3. TASK-004 final live capability Gate完了後、TASK-022: Timeline Mappingを早期確立。
+1. TASK-001〜004: **COMPLETED**。
+2. TASK-004 target local-runtime behavioral Evidence: **PASS**。
+3. TASK-022 Timeline Mapping: **COMPLETED / native-Windows 263 / 263 PASS**。
 
-### Wave 2 — 編集価値を最短で出す
+### Wave 2 — Editing Analysis主要slice完了
 
-- TASK-006 ASR/SRT + canonical subtitle plan
-- TASK-023 FasterWhisper Provider
-- TASK-024 Silence/Filler/Disfluency Cut Candidate
-- TASK-010のSubtitle Track / basic Cut assembly vertical slice
-- TASK-005 Scene Boundaryは上記と並列化し、SRT/フィラーCutの初回価値提供を待たせない
+- TASK-006 ASR/SRT + canonical subtitle plan: **v0.17.0 RELEASED / SHELL INTEGRATED**
+- TASK-023 FasterWhisper Provider: **COMPLETE / SHELL INTEGRATED**
+- TASK-024 Silence/Filler/Disfluency Cut Candidate: **v0.18.0 RELEASED / SHELL INTEGRATED**
+- TASK-010 Subtitle Track / basic Cut assembly vertical slice: **NATIVE VALIDATED / SHELL INTEGRATED**
+- TASK-005 Scene Boundary: **NOT STARTED**; completed Editing Analysis routes do not depend on falsely claiming this later enhancement
 
-### Wave 3 — Cut PlanとResolve編集統合
+### Wave 3 — Cut PlanとResolve編集統合完了
 
-- TASK-007 Candidate Clip Graph / Cut Plan
-- TASK-010 Resolve Assembly MVPを拡張し、元動画Cut + SRT/字幕配置をE2E化
-- TASK-011 Render QA/Loudness
-- TASK-012 Manual Handoff/Cubase
-- TASK-035 REAPER Audio Finishing Bridgeはこの時点から任意導入可能。Technical MVPを阻害せず、音響仕上げとResolve round-tripを高度化する
+- TASK-007 Candidate Clip Graph / Cut Plan: **SHELL INTEGRATED**
+- TASK-010 Resolve Assembly MVP: **NATIVE VALIDATED / SHELL INTEGRATED**
+- TASK-011 Render QA/Loudness: **NATIVE VALIDATED / SHELL INTEGRATED**
+- TASK-012 Manual Handoff/Cubase: **NATIVE VALIDATED / SHELL INTEGRATED**
+- TASK-036 W0/W1/W2: **MINIMUM_EDITING_PRODUCT_MVP_PASS / v0.20.1 RELEASED**
+- TASK-035 REAPER Audio Finishing Bridge: **PROPOSED / DESIGN RECORDED**; Technical MVP完了条件ではない
 
 ここを最初の明確な**「動画を投入して、Cut済み・字幕付きの自動編集Timelineを得る」完成点**とする。
 
-### Wave 4 — 音声演出を前倒し
+### Wave 4 — Generative/Audio現在位置
 
-- TASK-013 SE/BGM/Video orchestration（TASK-004で生成Runtime基盤は先行済み。TASK-007完了を待たず、ユーザー指定Prompt/Assetによる生成sliceは前倒し可）
-- TASK-014 ElevenLabs Owner Voice narration（既存の本人学習済み音声を利用。read-only probe→有料Preview→timed full render→48 kHz Assetの順で前倒し可）
-- TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed
-- TASK-010へAudio placementを統合
+- TASK-013 R3 Generation Safety: **COMPLETE**
+- TASK-013 R4 execution control + exact local/free ComfyUI adapter: **HOSTED CLOSED**
+- TASK-013 native H3 completion: **PARKED_TO_SAFE_RUNTIME_REVIEW**; automatic replay prohibited
+- TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
+- TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
+- TASK-041 Audio Workspace: **PROPOSED / NOT AUTHORIZED**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -814,5 +827,7 @@ The Product now rejects legacy `--disable-dynamic-vram`, `--lowvram`, `--highvra
 ### Ver.1.42 Addendum XXXIII — TASK-013 Local Comfy Native Adapter Hosted Closure
 
 The bounded fail-closed adapter implementation is hosted-closed. PR #41 exact head `ff481147080518f44865c88ad0a8caffadd96947` passed all `9 / 9` GitHub checks and merged at exact main SHA `74d6b5af0c6de66168f5ab6ab63a6a049b11acd4`. The implementation branch was deleted remotely and locally.
+
+The append-only hosted-closure documentation PR #42 exact head `a6858de5b617abfc591af866e17096b7fb0d4159` also passed all `9 / 9` checks and produced current main `7d6486059c468009042e4c186d54b566d6e1477e`. This later documentation merge does not change the implementation merge identity or create a newer Product release.
 
 This closure confirms the reviewed adapter code and packaging, not a successful native H3 generation. Attempt 01 remains a known sampler/runtime failure and attempt 02 remains an Owner-confirmed external force-restart boundary with durable `QUEUED / RECOVERY_REQUIRED`; neither may be replayed automatically. Candidate/TASK-040 Attempt binding remains blocked until a separately reviewed safe native runtime produces a contained, media-verified output. Stable release remains `v0.20.1`; no package version, Tag or GitHub Release is created for this bounded closure.

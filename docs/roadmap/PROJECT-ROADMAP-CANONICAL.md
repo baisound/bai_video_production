@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.48
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.49
 - Project: `ai-video-production`
 - Date: 2026-08-14
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-0 merged through PR #49 at exact main `7be3de1a8b75dc6d88ec985ab49a2cd373f4549a`; P-V6-1A is local PASS / hosted pending. Stable Product release remains `v0.20.1`
+- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-0 merged through PR #49 at exact main `7be3de1a8b75dc6d88ec985ab49a2cd373f4549a`; P-V6-1A passed PR #50 `9 / 9` and merged at exact main `694e9933d93c2d0e320486d1afa81f85e7574940`. P-V6-1B review is next. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -111,7 +111,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | P-V6-1A LOCAL PASS / HOSTED PENDING / CURRENT OWNER MAXIMUM |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | P-V6-1A HOSTED CLOSED / P-V6-1B REVIEW NEXT / CURRENT OWNER MAXIMUM |
 
 ## 6. Namespace Collision Resolution
 
@@ -175,7 +175,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
-- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-1A LOCAL PASS / HOSTED PENDING**
+- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-1A HOSTED CLOSED / P-V6-1B REVIEW NEXT**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -967,3 +967,17 @@ byte equality and diff validation pass. Two Critic cycles close direct-construct
 type safety and preview-forgery resistance; unresolved Critical/High are `0 / 0`.
 The hosted Gate and exact main merge remain pending. Package/release stays
 `0.20.1` / `v0.20.1`; no external execution occurred.
+
+## Addendum XLI — TASK-042 P-V6-1A Hosted Closure
+
+PR #50 exact head `cd983bbab34258b81b61807a224a331ad8cb961f` passed all
+nine required checks and merged at exact main
+`694e9933d93c2d0e320486d1afa81f85e7574940`. The remote/local implementation
+branch and clean dedicated clone were removed. P-V6-1A is therefore
+`HOSTED_CLOSED`.
+
+This closure does not widen claims: v1 remains unchanged/readable, migration is
+preview-only, and store/Proposal/GO/UI/Provider/native/paid integration remains
+unstarted. P-V6-1B is the next bounded review from fresh exact main. TASK-013
+Native H3 remains parked with automatic replay prohibited. Package/release
+remains `0.20.1` / `v0.20.1`.

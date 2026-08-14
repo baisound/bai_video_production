@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.64
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.65
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 P-V6-4 is hosted-closed through PR #67 at exact main `19f1a94f11a783f475141af015351f64aff1b7d8`. TASK-044 practical NLE/Export current-main design is local PASS and hosted-pending; native compatibility/release closure remains TASK-045. Stable Product release remains `v0.20.1`.
+- Current insertion: TASK-044 Design is hosted-closed through PR #68 at exact main `f8b901c143f6a4987cacb46429cf0caf85aa2ab7`. P-NLE-1 Timeline semantic projection is local PASS and hosted-pending; native compatibility/release closure remains TASK-045. Stable Product release remains `v0.20.1`.
 
 ## 3. MVP定義
 
@@ -113,7 +113,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
-| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | DESIGN LOCAL PASS / HOSTED PENDING |
+| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | DESIGN HOSTED CLOSED / P-NLE-1 LOCAL PASS / HOSTED PENDING |
 | 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
 
 ## 6. Namespace Collision Resolution
@@ -180,7 +180,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
-- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **DESIGN LOCAL PASS / HOSTED PENDING**
+- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **DESIGN HOSTED CLOSED / P-NLE-1 LOCAL PASS / HOSTED PENDING**
 - TASK-045 V6 Native Acceptance / Release Closure: **ALLOCATED / DEPENDENCY WAIT**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
@@ -1534,3 +1534,29 @@ Two Critic cycles close two Critical and ten High findings with unresolved
 Critical/High `0 / 0`. P-NLE-1 implementation becomes runnable only after this
 design passes hosted checks, merges to main, exact SHA and branch/checkout cleanup
 are verified, and a fresh main checkout reselects it.
+
+## Addendum LIX — TASK-044 P-NLE-1 Timeline Projection Gate
+
+TASK-044 Design PR #68 passed hosted `9 / 9`, merged at exact main
+`f8b901c143f6a4987cacb46429cf0caf85aa2ab7` and completed remote branch and
+dedicated checkout cleanup. Fresh-main AUTONOMY selected
+`BVP-TASK-044-P-NLE-1 / IMPLEMENTATION`.
+
+P-NLE-1 adds a transport-neutral frame-authoritative Timeline read model with
+dynamic semantic tracks, exact source lineage, generic clip selection, distinct
+Cut Candidate review identity and separate seek commands. One rational
+pixels-per-second transform drives frame-to-pixel projection. Horizontal frame
+and vertical track windows return deterministic pages capped at 2,000 clips; a
+10,000-clip/two-hour-class fixture cannot become one unbounded DOM payload.
+
+Released TASK-036 microsecond blocks adapt through explicit floor/ceil conversion,
+and TASK-042 Audio Plan lanes adapt as dynamic audio tracks without becoming a
+second truth. New Shell commands are read-only or local reversible. No trim,
+Product-semantic edit, Project save, Export job, JavaScript UI, Provider, paid,
+media, TASK-010, Resolve or Cubase mutation is included.
+
+Focused P-NLE-1/TASK-036/TASK-042 compatibility passes `42 / 42`; full Windows
+Python 3.12 regression passes `1083 passed, 1 skipped`. Critic closes selection,
+seek, enum/frame validation, paging and compatibility risks with unresolved
+Critical/High `0 / 0`. Hosted CI remains required. After merge and cleanup,
+fresh-main P-NLE-2 semantic editing/history becomes next.

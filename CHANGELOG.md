@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-044 P-NLE-1 frame-authoritative dynamic Timeline projection with strict selection/seek separation, rational viewport transforms and bounded 10,000-clip windowing. It is read/reversible only and starts no external mutation.
 - Allocated TASK-044 implementation into four bounded units for frame-authoritative Timeline interaction, semantic editing/history, durable Export Queue composition and existing Shell/UI native acceptance. This design checkpoint adds no runtime, external execution or release authority.
 - Added TASK-042 P-V6-4 frame-authoritative Timeline Audio: append-only plans, proposal-only SRT conflict handling, first-class AMBIENCE, exact TASK-037/041/026 proof binding and TASK-043 coordinated Product Project persistence. Provider, paid, native, media and release authority remain false.
 - Added TASK-043 P-FND-4 durable Product-local Job/Export Queue foundation: deterministic operation identity, CAS state transitions, bounded cost truth, restart-to-UNKNOWN recovery without automatic replay, typed reconciliation and read-only TASK-036 Shell projection. It neither replaces TASK-027 Generation Queue nor authorizes Provider/paid/external execution.

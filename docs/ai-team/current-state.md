@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_042_P_V6_3_HOSTED_CLOSED / CLOSURE_SYNC_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_042_P_V6_4_DESIGN_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-042 / P-V6-3 HOSTED_CLOSED / CLOSURE_SYNC_LOCAL_PASS_HOSTED_PENDING`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-042 / P-V6-4 DESIGN_LOCAL_PASS / HOSTED_PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`; TASK-042 P-V6-2 selects no package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `P-V6-3 Closure Sync PR all-green/main merge (new cadence merge 1/2) -> exact SHA and cleanup -> fresh-main P-V6-4 Design; TASK-013 native resumption remains parked and the preserved uncertain execution must never be replayed automatically`
+- Next Consumer Decision Gate: `P-V6-4 Design PR all-green/main merge (cadence merge 2/2) -> exact SHA and cleanup -> AUTONOMY -> fresh-main P-V6-4 Implementation selection; TASK-013 native and TASK-014 paid execution remain parked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.58 Addendum L. P-V6-3 Implementation PR #59 passed `9 / 9`, merged at exact main `7ac291f1a572b5513ecb681d9c3e87ccc0e52f38`, and completed branch/clone cleanup as cadence `2 / 2`. Fresh-main AUTONOMY selected the docs-only P-V6-3 Closure Sync; P-V6-4 Design remains dependency-waiting until it is hosted. The v2 Queue corrective, immutable Prompt compilation/TASK-040 binding, secret-free Provider/Model readiness, append-only Quick intent CAS/restart and read-only adoption projection are hosted. Provider execution, media derivation, Candidate/Audit/Lock mutation, TASK-026 compilation and Resolve/Cubase mutation remain false. Native H3 and paid TASK-014 execution remain parked. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.59 Addendum LI. P-V6-3 Closure Sync PR #60 merged at exact main `c6a5cb108032709615ab99856890d0a3709d7d5d` and completed branch/clone cleanup as cadence `1 / 2`. Fresh-main AUTONOMY selected P-V6-4 Design. Current audit and two Critic cycles define Blueprint v2 frames as the only timing authority, SRT as an explicit proposal/conflict surface, first-class ambience and exact reuse of TASK-037/041/026/014 without a second Audio placement registry. Implementation remains not started until the design is hosted-closed and reselected. Provider/paid/native/media/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

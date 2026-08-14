@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK_042_P_V6_4_HOSTED_CLOSED_TASK_044_DESIGN_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_TASK_044_DESIGN_HOSTED_CLOSED_P_NLE_1_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-042 P-V6-4 hosted closure: PR #67 merged at exact main 19f1a94f11a783f475141af015351f64aff1b7d8`
-- Active Task: `TASK-044 — INTERACTIVE TIMELINE / UNIFIED NLE / EXPORT QUEUE DESIGN LOCAL PASS / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Last Completed Gate: `TASK-044 Design hosted closure: PR #68 merged at exact main f8b901c143f6a4987cacb46429cf0caf85aa2ab7`
+- Active Task: `TASK-044 — P-NLE-1 FRAME-AUTHORITATIVE TIMELINE PROJECTION LOCAL PASS / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Development Candidate: `NONE`; TASK-044 design does not preselect a package version
+- Development Candidate: `NONE`; P-NLE-1 does not preselect a package version
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.64 Addendum LVIII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.65 Addendum LIX
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -154,6 +154,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - TASK-043 P-FND-3 PR #65 passed hosted `9 / 9` and merged at exact main `19febe3e00de92b18948e93740a0e3080b63d1b1`. Final P-FND-4 durable Product Job/Export Queue foundation now passes local focused `90 / 90`, full regression `1061 passed, 1 skipped` and compileall; hosted closure remains pending.
 - TASK-043 P-FND-4 PR #66 passed hosted `9 / 9`, merged at exact main `10eae32b2e6a2f9ad7080961fed7b3d2b39f423b` and completed branch cleanup. Fresh-main P-V6-4 implements frame-authoritative Timeline Audio, SRT conflicts, AMBIENCE, exact current TASK-037/041/026 proof and TASK-043 coordinated Project persistence. Focused `32 / 32` and full `1070 passed, 1 skipped` pass; hosted closure is pending.
 - TASK-042 P-V6-4 PR #67 passed hosted `9 / 9`, merged at exact main `19f1a94f11a783f475141af015351f64aff1b7d8` and completed branch/checkout cleanup. Fresh-main TASK-044 audit/design splits practical NLE work into P-NLE-1 semantic projection, P-NLE-2 editing/history, P-NLE-3 Export Queue and P-NLE-4 Shell/UI/native acceptance; two Critic cycles close at `0 / 0` unresolved Critical/High. Design hosted closure is pending.
+- TASK-044 Design PR #68 passed hosted `9 / 9`, merged at exact main `f8b901c143f6a4987cacb46429cf0caf85aa2ab7` and completed branch/checkout cleanup. Fresh-main P-NLE-1 implements frame-authoritative dynamic tracks/clips, exact selection/seek/Candidate-review separation, rational viewport projection and bounded 10,000-clip pages. Focused `42 / 42` and full `1083 passed, 1 skipped` pass; hosted closure is pending.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

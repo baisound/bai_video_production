@@ -156,6 +156,13 @@ from .timeline_audio import (
 )
 from .timeline_audio_store import TimelineAudioHistory, TimelineAudioSnapshotStore
 from .timeline_audio_application import Task042TimelineAudioApplication
+from .interactive_timeline import (
+    InteractiveTimeline, InteractiveTimelineClip, TimelineFitMode,
+    TimelineFocusKind, TimelineInteractionReducer, TimelineInteractionState,
+    TimelineMediaKind, TimelineTrack, TimelineTrackRole, TimelineViewport,
+    TimelineWindowProjection, TimelineWindowProjector,
+)
+from .interactive_timeline_projection import InteractiveTimelineProjectionService
 
 __version__ = "0.20.1"
 
@@ -245,4 +252,9 @@ __all__ = [
     "NarrationCueOrigin", "SrtProposal", "SrtProposalService", "SrtProposalState",
     "TimelineAudioPlan", "TimelineAudioRole", "TimelinePlacementBinding",
     "TimelineAudioHistory", "TimelineAudioSnapshotStore", "Task042TimelineAudioApplication",
+    "InteractiveTimeline", "InteractiveTimelineClip", "TimelineFitMode",
+    "TimelineFocusKind", "TimelineInteractionReducer", "TimelineInteractionState",
+    "TimelineMediaKind", "TimelineTrack", "TimelineTrackRole", "TimelineViewport",
+    "TimelineWindowProjection", "TimelineWindowProjector",
+    "InteractiveTimelineProjectionService",
 ]

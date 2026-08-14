@@ -114,6 +114,10 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "job.enqueue": ShellCommandSpec("job.enqueue", CommandCategory.LOCAL_DURABLE),
     "job.cancel": ShellCommandSpec("job.cancel", CommandCategory.LOCAL_DURABLE),
     "job.reconcile": ShellCommandSpec("job.reconcile", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "timeline.snapshot": ShellCommandSpec("timeline.snapshot", CommandCategory.READ_ONLY),
+    "timeline.selection.update": ShellCommandSpec("timeline.selection.update", CommandCategory.LOCAL_REVERSIBLE),
+    "timeline.seek": ShellCommandSpec("timeline.seek", CommandCategory.LOCAL_REVERSIBLE),
+    "timeline.viewport.update": ShellCommandSpec("timeline.viewport.update", CommandCategory.LOCAL_REVERSIBLE),
 }
 
 

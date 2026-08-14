@@ -35,7 +35,7 @@
 | TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PRODUCT_PROMOTION_HOSTED_CLOSED_FUTURE_SLICES_REMAIN | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Durable project application and unified Desktop `音声` workspace passed focused 64/64, full WSL2 932/932 and PR #47 hosted 9/9; exact main merge 8dd6434a. Provider, paid execution, derived-media write, TASK-026 compile and Resolve/Cubase remain unstarted. |
 | TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_4_HOSTED_CLOSED | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | P-V6-4 PR #67 hosted 9/9 and merged at exact main 19f1a94f; branch/checkout cleanup passed. P-V6-5/6 are split into TASK-044/045. |
 | TASK-043 | Unified Product Project / Migration / Recovery Foundation | HOSTED_CLOSED | OWNER_MAXIMUM_MAJOR_REFACTOR | DEV-4 | Final P-FND-4 PR #66 hosted 9/9 and merged at exact main 10eae32b; branch cleanup passed. |
-| TASK-044 | Interactive Timeline / Unified NLE / Export Queue | DESIGN_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_AFTER_TASK_043_AND_P_V6_4 | DEV-4 | Dependencies hosted-closed; four-unit current-main Builder design and two Critic cycles pass locally. |
+| TASK-044 | Interactive Timeline / Unified NLE / Export Queue | DESIGN_HOSTED_CLOSED_P_NLE_1_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_AFTER_TASK_043_AND_P_V6_4 | DEV-4 | Design PR #68 merged at f8b901c; P-NLE-1 passes focused 42/42 and full 1083 passed, 1 skipped; hosted pending. |
 | TASK-045 | V6 Native Acceptance / Compatibility / Release Closure | ALLOCATED_DEPENDENCY_WAIT | OWNER_MAXIMUM_RELEASE_CLOSURE | DEV-4 | Old-project migration corpus, recovery, native UX/full regression and exact SemVer/Tag/Release decision. |
 
 ## Roadmap authority

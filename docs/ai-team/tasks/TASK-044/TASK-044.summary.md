@@ -3,9 +3,9 @@
 - Name: Interactive Timeline / Unified NLE / Export Queue
 - Priority: `OWNER_MAXIMUM / CURRENT_RUNNABLE`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `CURRENT-MAIN AUDIT / BUILDER DESIGN / CRITIC LOCAL PASS`
-- Current Gate: `DESIGN_LOCAL_PASS / HOSTED_PENDING`
-- Source baseline: `19f1a94f11a783f475141af015351f64aff1b7d8`
+- Current Phase: `P-NLE-1 TIMELINE SEMANTIC PROJECTION IMPLEMENTATION LOCAL PASS`
+- Current Gate: `IMPLEMENTATION_PASS / HOSTED_PENDING`
+- Source baseline: `f8b901c143f6a4987cacb46429cf0caf85aa2ab7`
 - Prerequisites: TASK-043 and TASK-042 P-V6-4 `HOSTED_CLOSED`
 - Stable release: `v0.20.1`; no development version selected
 
@@ -18,4 +18,11 @@ branch after the previous hosted closure.
 Provider, paid execution, new credentials, Production Deploy and TASK-044 release
 operations are not authorized. Native interaction is limited to the P-NLE-4
 sandbox acceptance gate. Exact version/Tag/Release remains TASK-045 ownership.
+
+Design PR #68 passed hosted `9 / 9`, merged at exact main
+`f8b901c143f6a4987cacb46429cf0caf85aa2ab7` and completed branch/checkout cleanup.
+Fresh-main P-NLE-1 implements frame-authoritative tracks/clips, selection/seek
+separation, rational viewport transform, bounded 10,000-clip windowing and exact
+TASK-036/TASK-042 read adapters. Focused `42 / 42` and full
+`1083 passed, 1 skipped` pass locally; hosted closure is pending.
 

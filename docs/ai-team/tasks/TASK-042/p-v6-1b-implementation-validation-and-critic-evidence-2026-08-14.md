@@ -18,7 +18,7 @@
 5. `build-windows-exe.bat` reuses `packaging/task036_shell.spec`, chooses `BVP_BUILD_PYTHON`/`.venv`/PATH in order, validates dependencies and never installs them silently.
 6. `builds/.gitkeep` preserves the requested output directory while generated content stays ignored.
 7. `docs/windows/BUILDING-WINDOWS-EXE.md` and the Installation-adjacent README section document setup, output, verification, cleanup and boundaries.
-8. README explains AUTONOMY in plain language with ordinary two-merge, Human Gate parking and Windows build examples plus copyable Codex prompts.
+8. README explains AUTONOMY in plain language from Repository open through Queue exhaustion, minimal Context loading, non-bypassable Gates, Session Rotation and the standard start prompt. Ten examples cover ordinary two-merge, Human Gate parking, Windows build, continue-all, Design-Ahead, single-Task, non-system blocking, conversation-free handoff, new-requirement roadmap intake and overnight checkpoints.
 
 ## Validation
 

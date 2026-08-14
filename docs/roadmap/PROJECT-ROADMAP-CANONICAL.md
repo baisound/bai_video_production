@@ -1031,9 +1031,10 @@ The existing TASK-036 one-dir package definition is exposed through
 never silently installs dependencies, and writes only ignored output beneath
 `builds/`. The tracked placeholder, pinned Windows build extras, root Windows
 guide and README Installation section make the workflow reproducible. README's
-AUTONOMY section explains the two-main-merge cadence, cleanup/fresh-clone rule,
-Human Gate parking and three copyable examples without creating Product runtime
-dependency or external execution authority.
+AUTONOMY section explains startup through Queue exhaustion, minimal Context
+loading, the two-main-merge cadence, cleanup/fresh-clone rule, Human Gate
+parking, Session Rotation, a standard prompt and ten copyable examples without
+creating Product runtime dependency or external execution authority.
 
 Focused v1/v2 and build-contract regression passes `26 / 26`; full Windows
 regression passes `946 / 946` with one intentional platform skip. An isolated

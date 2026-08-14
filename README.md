@@ -256,6 +256,55 @@ docs/                      Design, roadmap and task evidence
 
 AUTONOMYは、BAI Development OSのルールに従い「次にどの開発作業を選び、どこまで自走してよいか」を決める仕組みです。BAI VIDEO PRODUCTION本体が勝手に動画制作、Provider利用、課金、Resolve/Cubase操作を始める機能ではありません。BVPは単独でも動作し、Development OSは開発時のGovernanceとして使います。
 
+### 実際の起動から終了まで
+
+今後の基本的な使い方は次のとおりです。
+
+1. CodexでBAI Development OSの対象Repositoryを開きます。
+2. 必要なら最新の引継ぎパックを渡します。
+3. 「BAI Development OS Autonomous Development Modeで開始」と指示します。
+4. Codex自身にCurrent State、Authority、Git、Autonomous Queueを確認させます。
+5. 認可済みで依存関係上安全なRunnable Taskを自走させます。
+6. Human Gateに到達したTaskだけをParkします。
+7. 他に安全なRunnable Taskがあれば続行させます。
+8. Contextが重くなったらHandoffを作り、Session Rotationします。
+9. 認可済みRunnable Taskが無くなった時点で終了します。
+
+AUTONOMYはRepositoryを最初から全部読む方式ではありません。原則として `Handoff → Current State → Authority → Current Task → Development Profile → 対象Source → 関連Test` の順に、現在のTaskに必要な最小Contextだけを読みます。引継ぎ資料はAuthorityそのものではなくInput Evidenceとして扱い、現在のcheckoutと照合してSource of Truthを決めます。
+
+次の操作へ到達しても、自動では突破しません。
+
+- Human Final Authority
+- 実機または外部アプリへの変更
+- 有料Provider実行
+- 破壊操作
+- Credential入力
+- ReleaseまたはDeploy
+- Authority競合
+- 人間によるUX Acceptance
+
+この場合は該当Taskだけを止めます。`TASK_BLOCKED != SYSTEM_BLOCKED` として、他に認可済みRunnable Taskがあればそちらへ進みます。
+
+### 一番よく使う標準の開始指示
+
+```text
+BAI Development OS Autonomous Development Modeで作業を開始してください。
+
+最初に現在のBAI Development OS Governance、Current State、Task Authority、Human Gate、Autonomous Queue、実際のGit checkout / branch / worktreeを確認し、現在のSource of Truthを確定してください。
+
+引継ぎ資料は正しいものと仮定せず、現行Repositoryと照合してください。既存実装・不足要件・矛盾・古い情報がないか確認した上で進めてください。
+
+認可済みかつ依存関係上安全なRunnable Taskについて、必要な詳細設計 → Critic → 修正 → 実装 → focused tests → 必要なfull regression → Evidence → checkpointまで自走してください。
+
+Human Gate、実機操作、有料Provider、Credential、Release / Deploy、破壊操作などに到達したTaskは、そのTaskだけParkしてください。他に認可済みRunnable Taskがあれば継続してください。
+
+Repository全文を毎回読み込まず、現在のTaskに必要な最小Contextだけを取得してください。未知のローカル変更は保護し、git add .、force push、reset --hard、protected mainへの直接pushは行わないでください。
+
+Contextが大きくなった場合は安全なAtomic Unitを完了した後、Current State / Next Action / Human Gates / Autonomous Queue / Context Costを更新し、Conversation-freeで再開可能なHandoffを作成してSession Rotationしてください。
+
+認可済みRunnable Taskが無くなるかHuman Authority以外で安全に続行不能になるまで進めてください。
+```
+
 ### 基本の流れ
 
 1. 作業ブランチで設計または実装し、テストを通してPull Requestを作ります。
@@ -304,6 +353,128 @@ Codexへの依頼例:
 AUTONOMYがWindows build-contractを選んだことを確認してからfresh cloneしてください。
 build-windows-exe.batの静的テストと全回帰を実施し、依存が揃っていれば実EXEもビルドしてください。
 生成物はbuilds/からstageせず、PRはソース、テスト、文書だけに限定してください。
+```
+
+### 使用例4：できるところまで全部進める
+
+```text
+AUTONOMYで開発を継続してください。
+
+現在地点をBootstrapで確認し、Autonomous Queueから次の認可済みRunnable Taskを選択してください。
+
+1つ終わったら、依存関係上安全で認可済みの次Taskへ進んで構いません。詳細設計、Critic、実装、Test、Evidence、checkpointまで可能な範囲を自走してください。
+
+Human Gateが必要なTaskはParkし、他に進めるTaskがあればそちらを進めてください。
+
+Release、Deploy、有料Provider、実機外部アプリ変更、Credential、破壊操作は勝手に実行しないでください。
+
+認可済みで安全に進められる作業が無くなるまで続けてください。
+```
+
+これは「次の次、次の次の次まで進めて」に相当する指示です。
+
+### 使用例5：今日は設計だけ先まで進める
+
+AUTONOMYは必ず実装まで進むモードではありません。
+
+```text
+AUTONOMYのDesign-Ahead Modeとして進めてください。
+
+現在の実装Taskは変更せず、認可されている範囲で後続Taskの詳細設計を先行してください。
+
+各TaskについてCurrent implementationを確認し、既存機能を再実装しないようにした上で、詳細設計 → Critic Review → 修正版詳細設計まで進めてください。
+
+Implementation Authorizationが無いTaskはコード変更しないでください。
+
+設計上の不足、ロードマップ変更が必要な場合、Task Candidate / Roadmap Impactとして明示してください。
+```
+
+### 使用例6：このTASKだけを自走して完成させる
+
+```text
+TASK-XXXをAUTONOMYで完走してください。
+
+TASK-XXXのCurrent Gate、Authority、Allowed Files、依存関係、既存実装、関連Testを最初に確認してください。
+
+認可された範囲で詳細設計 → Critic → 実装 → focused tests → full regression → Evidence → Judge/checkpointまで進めてください。
+
+TASK-XXX以外へ勝手に実装範囲を広げないでください。ただしTASK-XXXを完了するために別Taskが必要だと判明した場合は実装せず、Dependency / Roadmap Candidateとして報告してください。
+
+Human Gateに達した場合は安全な状態でParkしてください。
+```
+
+### 使用例7：人間待ちになっても全体を止めない
+
+```text
+AUTONOMYで継続してください。
+
+Human Gateが発生しても全体を停止しないでください。
+
+TASK_BLOCKED != SYSTEM_BLOCKED を適用し、該当Taskだけ READY_FOR_HUMAN_GATE としてParkしてください。
+
+その後、依存関係上安全で認可済みの別Taskが存在する場合は、自動的にそちらへ移動してください。
+
+最後に、完了Task、Human Gate待ちTask、次のRunnable Task、Ownerに必要な操作を明確にしてください。
+```
+
+### 使用例8：長くなったチャットを引継いで続ける
+
+```text
+現在のAUTONOMY Sessionを安全にRotationしてください。
+
+今のAtomic Unitを中途半端な状態で切らず、必要なTestとdiff確認まで完了してください。
+
+その後、Current State、HEAD / branch / worktree、完了Task、In Progress、Human Gates、Autonomous Queue、Next Action、Context Cost、読み込む必要がある最小Contextを含むConversation-free Handoffを作成してください。
+
+次のCodex Sessionが前の会話を一切知らなくても再開可能な状態にしてください。
+```
+
+会話履歴ではなく、Repository内のCurrent StateとHandoffを再開の正本にするのがSession Rotationの要点です。
+
+### 使用例9：新しい要件を取り込みロードマップも変える
+
+```text
+AUTONOMYで新規要件を取り込んでください。
+
+添付の要件・引継ぎ資料はAuthorityではなくInput Evidenceとして扱ってください。
+
+まずCurrent mainと照合し、既に実装済み、部分実装、修正で対応、Contract Migration必要、新機能必要、不要/重複、不明に分類してください。
+
+引継ぎに書かれていない不足要件もCritic視点で探してください。
+
+新機能が必要ならRoadmap Impactを分析し、現在のロードマップのどこへ入れるべきか提案してください。
+
+全詳細設計が完成してCriticを通るまでは、新規機能の実装へ進まないでください。
+
+実装認可済み範囲だけ、その後AUTONOMYで実装・Test・Evidenceまで進めてください。
+```
+
+### 使用例10：夜間に安全な単位で長時間進める
+
+```text
+今夜はAUTONOMYで長時間実行してください。
+
+現在のGovernanceとAuthorityの範囲内で、認可済みRunnable Taskを順次進めてください。
+
+Taskごとに詳細設計、Critic、実装、Test、Evidenceを完結させ、中途半端な変更を大量に残さないでください。
+
+Human Gateが必要ならそのTaskだけParkし、別のRunnable Taskへ移ってください。
+
+Contextが非効率になったらSession Rotationしてください。
+
+Release / Tag / Deploy / Paid Provider / Credential / destructive operation / native external mutationは実行しないでください。
+
+朝までに進められるだけ進めるのではなく、安全なCheckpointを単位として進められるだけ進めてください。
+
+最終報告には、完了、Park、未着手、次のHuman操作をまとめてください。
+```
+
+### 短い指示でも開始できる
+
+BAI Development OSのAUTONOMY Root Promptが正式に読み込まれていれば、安全規則を毎回すべて繰り返す必要はありません。次の短い指示を標準として使えます。
+
+```text
+BAI Development OS AUTONOMYで開始。Current Stateから認可済みRunnable Taskを自走し、Human GateはPark、他があれば継続。
 ```
 
 ### AUTONOMYを止める条件

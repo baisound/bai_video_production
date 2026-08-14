@@ -41,6 +41,11 @@ def test_windows_build_dependencies_and_user_docs_are_explicit() -> None:
     assert readme.index("### Windows EXE build") < readme.index("## Verification")
     assert "## AUTONOMYを使った開発" in readme
     assert readme.count("Codexへの依頼例") >= 3
+    assert "Handoff → Current State → Authority → Current Task → Development Profile → 対象Source → 関連Test" in readme
+    assert "TASK_BLOCKED != SYSTEM_BLOCKED" in readme
+    assert "### 一番よく使う標準の開始指示" in readme
+    assert "### 使用例10：夜間に安全な単位で長時間進める" in readme
+    assert "Conversation-free Handoff" in readme
     assert "build-windows-exe.bat" in guide
     assert "Tag、GitHub Release、Deploy" in guide
 

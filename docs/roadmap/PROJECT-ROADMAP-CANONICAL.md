@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.63
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.64
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-043 is hosted-closed through PR #66 at exact main `10eae32b2e6a2f9ad7080961fed7b3d2b39f423b`. P-V6-4 Timeline Audio implementation is local PASS and hosted-pending. Practical NLE/Export remains TASK-044 and native compatibility/release closure remains TASK-045. Stable Product release remains `v0.20.1`.
+- Current insertion: TASK-042 P-V6-4 is hosted-closed through PR #67 at exact main `19f1a94f11a783f475141af015351f64aff1b7d8`. TASK-044 practical NLE/Export current-main design is local PASS and hosted-pending; native compatibility/release closure remains TASK-045. Stable Product release remains `v0.20.1`.
 
 ## 3. MVP定義
 
@@ -111,9 +111,9 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 IMPLEMENTATION LOCAL PASS / HOSTED PENDING |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
-| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
+| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | DESIGN LOCAL PASS / HOSTED PENDING |
 | 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
 
 ## 6. Namespace Collision Resolution
@@ -178,9 +178,9 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
-- TASK-042 V6 Product Workflow: **P-V6-4 IMPLEMENTATION LOCAL PASS / HOSTED PENDING**
+- TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
-- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **ALLOCATED / DEPENDENCY WAIT**
+- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **DESIGN LOCAL PASS / HOSTED PENDING**
 - TASK-045 V6 Native Acceptance / Release Closure: **ALLOCATED / DEPENDENCY WAIT**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
@@ -1497,3 +1497,40 @@ P-V6-4 closure. This foundation unit adds no interactive NLE claim, Provider,
 paid, native, media, TASK-010, Resolve or Cubase execution and creates no version,
 Tag or Release. After hosted merge and cleanup, TASK-044 current-main audit/design
 is next.
+
+## Addendum LVIII — TASK-044 Practical NLE and Export Queue Design Gate
+
+P-V6-4 PR #67 passed hosted `9 / 9`, merged at exact main
+`19f1a94f11a783f475141af015351f64aff1b7d8` and completed remote branch and
+dedicated checkout cleanup. TASK-043 and TASK-042 P-V6-4 prerequisites are now
+hosted-closed. Fresh-main AUTONOMY selects TASK-044 design as the current maximum
+runnable unit.
+
+Current audit confirms that the Product has one Shell, static Timeline blocks,
+Cut Candidate review, exact frame contracts, Timeline Audio, aggregate Project
+save/recovery and durable Product jobs. It does not yet have dynamic track truth,
+generic clip selection/seek separation, a shared frame viewport, trim/snap/IN-OUT,
+a closed Export preparation contract, virtualized large-Timeline UI or complete
+NLE keyboard/Narrator semantics.
+
+Implementation is split into four hosted Atomic Units:
+
+1. P-NLE-1 frame-authoritative semantic projection, interaction reducer and
+   deterministic 10,000-item windowing;
+2. P-NLE-2 trim/snap/IN-OUT and track edits through append-only Project history;
+3. P-NLE-3 Project/Timeline/Assembly/preset-bound durable Export Queue with
+   stale/UNKNOWN/no-replay recovery;
+4. P-NLE-4 one existing Shell/UI integration and sandboxed Windows interaction
+   acceptance.
+
+Generic clip click selects; seek is a distinct ruler/lane/playhead command and
+Cut Candidate click retains TASK-007 review meaning. Export enqueue grants no
+external authority. Execute All iterates exact per-job authorization, durable
+records contain no host output path, and interrupted external dispatch is UNKNOWN
+without automatic replay. Provider/paid/new credential/Production Deploy remain
+unauthorized. Version, Tag and Release remain TASK-045 ownership.
+
+Two Critic cycles close two Critical and ten High findings with unresolved
+Critical/High `0 / 0`. P-NLE-1 implementation becomes runnable only after this
+design passes hosted checks, merges to main, exact SHA and branch/checkout cleanup
+are verified, and a fresh main checkout reselects it.

@@ -54,6 +54,10 @@ from .comfyui import (
     VisualModelFamily, authorize_image_runtime_license, builtin_image_model_profile,
 )
 from .derived_assets import DerivedAssetPublisher, DerivedAssetSpec
+from .local_comfy_generation_port import (
+    LocalComfyGenerationConfig, LocalComfyTextToVideoPort,
+    MINIMAX_H3_NATIVE_WORKFLOW_SHA256, default_minimax_h3_workflow_path,
+)
 from .normalization import MediaNormalizationService, NormalizationProfile, NormalizationRequest, NormalizationResult
 from .timebase import FFprobeTimingProbe, FrameRate, FrameRounding, TimingInspection, TimingKind
 from .timeline_mapping import AffineTimeMap, EditSegment, TimelineMappingPlan, TimelineMappingService, TimelinePlacement
@@ -170,6 +174,8 @@ __all__ = [
     "LocalImageModelProfile", "RuntimeLicenseState", "VisualModelFamily", "authorize_image_runtime_license",
     "builtin_image_model_profile", "LocalVideoGenerationRequest", "LocalVideoGenerationResult",
     "LocalVideoGenerationService", "VideoGenerationMode",
+    "LocalComfyGenerationConfig", "LocalComfyTextToVideoPort",
+    "MINIMAX_H3_NATIVE_WORKFLOW_SHA256", "default_minimax_h3_workflow_path",
     "DerivedAssetPublisher", "DerivedAssetSpec", "MediaNormalizationService", "NormalizationProfile",
     "NormalizationRequest", "NormalizationResult", "FFprobeTimingProbe", "FrameRate", "FrameRounding",
     "AffineTimeMap", "EditSegment", "TimelineMappingPlan", "TimelineMappingService", "TimelinePlacement",

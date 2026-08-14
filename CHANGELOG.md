@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added a fail-closed TASK-013 local ComfyUI MiniMax H3 text-to-video adapter with a checksum-bound body-free workflow, exact local/free route and runtime-policy checks, durable no-replay dispatch journal, contained verified output publication and opt-in trusted-launch composition. The bounded native probe exposed a runtime failure/recovery boundary and does not claim a completed generation.
 - Added TASK-013 restart-safe local generation execution control: exact current Queue re-derivation, private Prompt checksum verification, credential-free `LOCAL_FREE_AI` routing, durable pre-side-effect `DISPATCHING`, no automatic replay and optional unified Queue UI; live adapters, paid routes and Candidate publication remain excluded.
 - Promoted TASK-027 Generation Queue admission into a durable unified Desktop workspace derived only from exact Approved Plan, Feasibility, LOCK/STALE, Continuity and Prompt/Profile Evidence.
 - Added one-shot, append-only, restart-safe Queue records with unique required-input proof and invariant `EXECUTION_NOT_AUTHORIZED`; no Provider call, paid authorization, Budget reservation or Candidate creation is exposed.

@@ -11,7 +11,7 @@
 | TASK-010 | Resolve Assembly MVP | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Real Resolve 21 assembly/linked A/V/idempotency/conflict/edit-aware subtitle semantics and TASK-036 W2 Shell route PASS |
 | TASK-011 | Render QA / Loudness | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3/4 | Real Resolve render queue/artifact/video/audio/duration/LUFS/true-peak QA and TASK-036 W2 Shell route PASS; path-free report |
 | TASK-012 | Manual Handoff / Cubase | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Real deterministic EDITOR_WORK, Cubase 13 48 kHz PCM return and TASK-036 W2 Shell route PASS; no automatic Cubase project conversion claim |
-| TASK-013 | Shot Feasibility / Visual Compliance / Creative Orchestration | R4_LOCAL_COMFY_NATIVE_TARGET_AUDITED_IMPLEMENTATION_NEXT | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Exact loopback ComfyUI 0.31.0 / native MiniMax H3 target and isolated roots verified; next branch implements a package-owned body-free local/free T2V port; paid routes/Candidate binding remain excluded |
+| TASK-013 | Shot Feasibility / Visual Compliance / Creative Orchestration | R4_LOCAL_COMFY_ADAPTER_LOCAL_GATE_NATIVE_RUNTIME_PARKED | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Body-free exact local/free T2V port and trusted-launch composition pass 35 final focused / 919 full tests; real H3 attempt 01 failed in SamplerCustomAdvanced and attempt 02 was externally interrupted by an Owner-confirmed force restart; uncertain prompt is not replayable and unsafe legacy low-VRAM flags are rejected before dispatch; hosted closure may proceed while safe native completion remains parked |
 | TASK-006 | ASR / Transcript / Subtitle | SLICE_D_RELEASED_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Native FasterWhisper, Subtitle Workspace, resumable transcription, Resolve subtitle handoff and TASK-036 W2 Shell route PASS |
 | TASK-014 | Voice TTS / Owner Narration | DESIGN_RECORDED_ADAPTER_FOUNDATION_EXISTS | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Existing ElevenLabs Pro owner-trained voice; private Voice Profile; read-only ownership/capability probe; timed TTS and 48 kHz Asset flow planned; paid probe remains explicit |
 | TASK-023 | FasterWhisper Fast Local Provider | COMPLETE_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Existing TASK-006 provider is canonical; deterministic identity/diagnostic CLI retained; TASK-036 W2 local ASR Shell route PASS; no duplicate provider or ASR semantic change |
@@ -40,7 +40,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control is hosted-closed and its exact native ComfyUI target audit is complete; the next branch implements the bounded local/free adapter. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control is hosted-closed and its exact local/free ComfyUI adapter passes its local gate. Native H3 completion remains parked at a recorded safe-stop boundary and is not a Product PASS. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

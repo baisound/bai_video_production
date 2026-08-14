@@ -48,6 +48,19 @@ class ResolveAdapter:
         raise AssertionError("Resolve must not mutate during launch")
 
 
+class ComfyClient:
+    endpoint = "http://127.0.0.1:8188"
+
+    def object_info(self):
+        raise AssertionError("ComfyUI must not be inspected during launch")
+
+    def system_stats(self):
+        raise AssertionError("ComfyUI must not be inspected during launch")
+
+    def queue(self, workflow, *, client_id):
+        raise AssertionError("ComfyUI must not execute during launch")
+
+
 def config_document(tmp_path: Path) -> tuple[Path, dict]:
     project = tmp_path / "private-project"
     source_root = tmp_path / "incoming"
@@ -171,6 +184,76 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert production["project_id"] == config.project_id
     assert production["provider_execution_started"] is False
     assert production["resolve_mutation_started"] is False
+
+
+def test_v11_launch_explicitly_composes_bounded_local_generation_without_execution(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    roots = {name: project / name for name in ("comfy-output", "generation-output", "generation-stage", "generation-journal")}
+    for root in roots.values():
+        root.mkdir()
+    raw["launch_config_version"] = "1.1.0"
+    raw["local_generation"] = {
+        "endpoint": "http://127.0.0.1:8188",
+        "comfy_output_root": str(roots["comfy-output"]),
+        "project_output_root": str(roots["generation-output"]),
+        "staging_root": str(roots["generation-stage"]),
+        "dispatch_journal_root": str(roots["generation-journal"]),
+        "route_id": "local-video",
+        "provider_id": "comfy",
+        "model_id": "minimax-h3-native",
+        "width": 832,
+        "height": 480,
+        "length": 124,
+        "steps": 20,
+        "poll_interval_seconds": 1.0,
+        "completion_timeout_seconds": 3600,
+        "max_output_bytes": 16 * 1024**3,
+    }
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    config = Task036LaunchConfiguration.load(path)
+    assert config.local_generation is not None
+    launch = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        comfy_client=ComfyClient(),
+    )
+    assert launch.bridge.generation_execution_application is not None
+    snapshot = launch.bridge.generation_execution_snapshot({})
+    assert snapshot["available"] is True
+    assert snapshot["events"] == []
+    assert snapshot["paid_execution_authorized"] is False
+    assert not any(roots["generation-output"].iterdir())
+
+
+def test_v11_local_generation_rejects_non_loopback_or_out_of_project_root(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    roots = {name: project / name for name in ("comfy-output", "generation-output", "generation-stage", "generation-journal")}
+    for root in roots.values():
+        root.mkdir()
+    raw["launch_config_version"] = "1.1.0"
+    raw["local_generation"] = {
+        "endpoint": "https://example.com:8188",
+        "comfy_output_root": str(roots["comfy-output"]),
+        "project_output_root": str(roots["generation-output"]),
+        "staging_root": str(roots["generation-stage"]),
+        "dispatch_journal_root": str(roots["generation-journal"]),
+        "route_id": "local-video", "provider_id": "comfy", "model_id": "minimax-h3-native",
+        "width": 832, "height": 480, "length": 124, "steps": 20,
+        "poll_interval_seconds": 1.0, "completion_timeout_seconds": 3600,
+        "max_output_bytes": 16 * 1024**3,
+    }
+    with pytest.raises(ValueError):
+        Task036LaunchConfiguration.from_dict(raw)
+    raw["local_generation"]["endpoint"] = "http://127.0.0.1:8188"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    raw["local_generation"]["project_output_root"] = str(outside)
+    with pytest.raises(ValueError):
+        Task036LaunchConfiguration.from_dict(raw)
 
 
 def test_trusted_resolve_bindings_use_managed_derived_subtitle_path(tmp_path: Path):

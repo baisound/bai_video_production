@@ -3,9 +3,9 @@
 ## Identity
 
 - Product: `BAI VIDEO PRODUCTION`
-- Priority: `OWNER_MAXIMUM / CURRENT_HIGHEST`
+- Priority: `OWNER_MAXIMUM / AFTER_TASK_043_FOUNDATION`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `ACTIVE / P-V6-4_DESIGN_LOCAL_PASS / HOSTED_PENDING / IMPLEMENTATION_NOT_STARTED`
+- Status: `ACTIVE / P-V6-4_DESIGN_HOSTED_CLOSED / IMPLEMENTATION_DEPENDENCY_WAIT_TASK_043`
 - Owner direction: insert this route before any TASK-013 Native H3 resumption decision, merge the roadmap change, then continue in the accepted implementation order.
 
 ## Goal
@@ -19,8 +19,8 @@ Promote the already-built Planning, Production Control, Audit, Continuity, Promp
 3. `P-V6-2` WORLD LOCK projection and frame-reference integration.
 4. `P-V6-3` Visual Prompt / provider-model / Quick Generate control.
 5. `P-V6-4` Project Timeline audio / narration / BGM / SE / ambience.
-6. `P-V6-5` Unified Desktop NLE / navigation / Export Queue.
-7. `P-V6-6` native UX, migration, recovery and full regression closure.
+6. `P-V6-5` responsibility transferred to TASK-044 Unified Desktop NLE / navigation / Export Queue.
+7. `P-V6-6` responsibility transferred to TASK-045 native UX, migration, recovery and release closure.
 8. Separate Owner decision for TASK-013 Native H3 resume.
 
 ## Reused ownership

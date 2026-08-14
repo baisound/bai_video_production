@@ -1,12 +1,12 @@
 # TASK-042 Summary
 
 - Name: Product Workflow V6 Integration / Frame-bound Reference & Production UX
-- Priority: `OWNER_MAXIMUM / CURRENT_HIGHEST`
+- Priority: `OWNER_MAXIMUM / AFTER_TASK_043_FOUNDATION`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `P-V6-4 TIMELINE AUDIO DESIGN`
-- Current Gate: `P-V6-4 DESIGN_LOCAL_PASS / HOSTED_PENDING`
+- Current Phase: `P-V6-4 TIMELINE AUDIO IMPLEMENTATION DEPENDENCY WAIT`
+- Current Gate: `DESIGN_HOSTED_CLOSED / WAIT_TASK_043`
 - Implementation: `P-V6-1A COMPLETE / P-V6-1B COMPLETE / P-V6-2 HOSTED_CLOSED / P-V6-3 HOSTED_CLOSED`
-- Current main baseline: `7ac291f1a572b5513ecb681d9c3e87ccc0e52f38`
+- Current main baseline: `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`
 - TASK-013 Native H3: `PARKED / NO_REPLAY`
 - TASK-041: `PRODUCT_PROMOTION_HOSTED_CLOSED / REUSE_FOUNDATION`
 - Stable release: `v0.20.1`; no new version selected
@@ -32,3 +32,5 @@ P-V6-3 Design PR #58 exact head `0067fcc8e306a1799ccc7afeeae2638b9bb19e3b` passe
 P-V6-3 Implementation PR #59 exact head `d33807287c7ccc86b5055bd6b4575c88b7e9d41b` passed `9 / 9`, merged at exact main `7ac291f1a572b5513ecb681d9c3e87ccc0e52f38`, and completed remote branch/dedicated clone cleanup as cadence `2 / 2`. Fresh-main Bootstrap selected current checkout with checksum `sha256:06013802d64a0bd9a29806f7ecd1660239e79013ef975843bf868814e1d3c520`; Queue selected `BVP-TASK-042-P-V6-3-CLOSURE-SYNC / IMPLEMENTATION` with checksum `sha256:0c5f78b3c564dc896805de5fb53ebdf0172093fc504cdbb62167d1af4493b17c`. P-V6-4 Design was dependency-waiting until this docs-only closure sync was hosted. Stable release remained `v0.20.1`; no Provider/native/media/Candidate/Audit/Lock, Tag, Release or Deploy operation was started.
 
 P-V6-3 Closure Sync PR #60 merged at exact main `c6a5cb108032709615ab99856890d0a3709d7d5d` and completed remote branch/dedicated clone cleanup as cadence `1 / 2`. Fresh-main Bootstrap selected current checkout with checksum `sha256:b1c1709c4b00fbac5887de9fe1f3ae5deab816d13277575ac1816ba6b4342cdc`; Queue selected `BVP-TASK-042-P-V6-4-DESIGN / DESIGN_ONLY` with checksum `sha256:23e42b59c3a95ceb41e2f92af06f128d7ded8ff5b847458d4438419cbc114015`. Current audit, DEV-4 re-decision, frame-authoritative Timeline Audio/SRT conflict model, first-class ambience, exact TASK-037/041/026/014 reuse, Allowed Files and two Critic cycles are local PASS. P-V6-4 implementation remains not started until hosted design closure and fresh-main AUTONOMY reselection. Stable release remains `v0.20.1`.
+
+P-V6-4 Design PR #61 merged at exact main `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`; the design is hosted-closed. The replacement `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` Owner Directive then re-audited Product persistence and split the remaining route: TASK-043 now provides the Project/migration/recovery prerequisite, TASK-044 owns the practical NLE/Export Queue and TASK-045 owns native/release closure. P-V6-4 implementation is preserved but dependency-waiting. Two untracked old-checkout implementation files are protected as `UNVERIFIED` WIP, not current-main truth.

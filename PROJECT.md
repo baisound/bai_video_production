@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-041 — Audio Workspace Product promotion hosted closure: PR #47 exact head 3785e44 passed 9 of 9 and merged at exact main 8dd6434a; Provider/TASK-026/Resolve/Cubase execution remain false`
-- Active Task: `TASK-042 — Product Workflow V6 Integration / P-V6-4 DESIGN LOCAL PASS / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Last Completed Gate: `TASK-042 P-V6-4 Design hosted closure: PR #61 merged at exact main 6784a44e; implementation is dependency-waiting behind TASK-043`
+- Active Task: `TASK-043 — Unified Product Project / Migration / Recovery Foundation / DESIGN REVIEW`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Development Candidate: `NONE`; TASK-042 P-V6-2 selects no package version
+- Development Candidate: `NONE`; TASK-043 foundation does not preselect a package version
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.59 Addendum LI
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.60 Addendum LII
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -149,6 +149,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - P-V6-3 Design PR #58 exact head `0067fcc8e306a1799ccc7afeeae2638b9bb19e3b` passed `9 / 9`, merged at exact main `c78ed0141b0849b3a5d1b2229b87c320697b4980`, and completed branch/clone cleanup as cadence merge `1 / 2`. Fresh-main AUTONOMY selected `BVP-TASK-042-P-V6-3-IMPLEMENTATION / IMPLEMENTATION`. Immutable Prompt compilation, secret-free Provider/Model readiness, append-only Quick intent CAS/restart/adoption projection and the v2 Queue persistence corrective are locally implemented with Critic unresolved Critical/High `0 / 0`; hosted implementation closure remains pending. No Provider/native/media/Candidate/Audit/Lock or release operation was started. Stable release remains `v0.20.1`.
 - P-V6-3 Implementation PR #59 exact head `d33807287c7ccc86b5055bd6b4575c88b7e9d41b` passed `9 / 9`, merged at exact main `7ac291f1a572b5513ecb681d9c3e87ccc0e52f38`, and completed remote branch/dedicated clone cleanup as cadence merge `2 / 2`. Fresh-main AUTONOMY selected `BVP-TASK-042-P-V6-3-CLOSURE-SYNC / IMPLEMENTATION`; P-V6-4 Design is dependency-waiting until this docs-only sync is hosted. Stable release remains `v0.20.1`.
 - P-V6-3 Closure Sync PR #60 merged at exact main `c6a5cb108032709615ab99856890d0a3709d7d5d` and completed remote branch/dedicated clone cleanup as cadence merge `1 / 2`. Fresh-main AUTONOMY selected `BVP-TASK-042-P-V6-4-DESIGN / DESIGN_ONLY`. The current-main audit, DEV-4 re-decision, Timeline-authoritative/SRT-conflict design, exact TASK-041 reuse, first-class ambience, Allowed Files and two Critic cycles are local PASS. Implementation remains not started until hosted design closure and fresh-main reselection. Stable release remains `v0.20.1`.
+- P-V6-4 Design PR #61 merged at exact main `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`. Under the replacement `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` Directive, TASK-043 is now the prerequisite Project/migration/recovery foundation; TASK-042 P-V6-4 waits for it, TASK-044 owns practical NLE/Export Queue, and TASK-045 owns native compatibility/release closure. Stable release remains `v0.20.1`.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

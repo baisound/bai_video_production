@@ -854,3 +854,19 @@ is called only by an explicit bridge operation, never by snapshot/UI refresh.
 Hosted closure remains pending. The previous uncertain prompt remains
 non-replayable, native H3 remains `PARKED_TO_SAFE_RUNTIME_REVIEW`, and stable
 release remains `v0.20.1`.
+
+## Addendum XXXVI — TASK-013 Safe Runtime Readiness Preflight Hosted Closure
+
+The bounded read-only readiness capability is hosted-closed. PR #45 exact head
+`f0d3a95cd5f582f9a695ce46ecebf6955f52b046` passed all `9 / 9` GitHub checks
+and merged at exact main SHA
+`fac1a2fb53c3c5c439c3b1cf6c55f10d4bbf3f57`. The implementation branch was
+deleted remotely, a clean fresh clone at the merge SHA was verified, and the
+prior cycle clone was removed.
+
+This hosted closure confirms only explicit read-only runtime inspection. It
+does not authorize or claim generation dispatch, a journal/output, host/GPU
+stability under generation load, a third native attempt, Candidate/Audit
+binding, TASK-013 completion or R4 completion. The previous uncertain prompt
+remains non-replayable, native H3 remains `PARKED_TO_SAFE_RUNTIME_REVIEW`, and
+stable release remains `v0.20.1`.

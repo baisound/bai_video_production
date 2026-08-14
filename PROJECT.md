@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED_SAFE_RUNTIME_READINESS_PREFLIGHT_LOCAL_PASS_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED_SAFE_RUNTIME_READINESS_PREFLIGHT_HOSTED_CLOSED_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-013 — read-only safe-runtime readiness preflight local gate: focused 55 of 55 and full WSL2 926 of 926 PASS; dispatch, journal creation, execution authorization and Native Gate satisfaction remain false`
-- Active Task: `TASK-013-SAFE-RUNTIME-READINESS-PREFLIGHT`; local implementation is complete and hosted closure is pending while native H3 remains parked
+- Last Completed Gate: `TASK-013 — read-only safe-runtime readiness preflight hosted closure: PR #45 exact head f0d3a95 passed 9 of 9 and merged at exact main fac1a2fb; dispatch, journal creation, execution authorization and Native Gate satisfaction remain false`
+- Active Task: `NONE`; TASK-013 native H3 completion remains parked behind HG-BVP-TASK013-NATIVE-003
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Development Candidate: `NONE`
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.42 Addendum XXXIII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.44 Addendum XXXVI
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.58
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.59
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-3 Implementation is hosted-closed at exact main `7ac291f1a572b5513ecb681d9c3e87ccc0e52f38`; fresh-main AUTONOMY selected its docs-only Closure Sync, with P-V6-4 Design dependency-waiting. Stable Product release remains `v0.20.1`
+- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-3 Closure Sync PR #60 merged at exact main `c6a5cb108032709615ab99856890d0a3709d7d5d`; fresh-main AUTONOMY selected P-V6-4 Design, which is local PASS/hosted pending. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -111,7 +111,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | P-V6-3 HOSTED CLOSED / CLOSURE SYNC LOCAL PASS / CURRENT OWNER MAXIMUM |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,014,026,028,032..034 | DEV-4 | P-V6-4 DESIGN LOCAL PASS / HOSTED PENDING / CURRENT OWNER MAXIMUM |
 
 ## 6. Namespace Collision Resolution
 
@@ -175,7 +175,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
-- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-3 HOSTED CLOSED / CLOSURE SYNC LOCAL PASS**
+- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-4 DESIGN LOCAL PASS / HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1271,3 +1271,48 @@ secret-free Provider/Model readiness, Quick intent CAS/restart and read-only
 adoption. It adds no Provider/native/media/Candidate/Audit/Lock authority. The
 Closure Sync becomes cadence merge `1 / 2` only after hosted green, exact main
 verification and cleanup; a fresh main clone then continues P-V6-4 Design.
+
+## Addendum LI — P-V6-4 Timeline Audio Design Gate
+
+P-V6-3 Closure Sync PR #60 merged at exact main
+`c6a5cb108032709615ab99856890d0a3709d7d5d`. Its remote branch and dedicated
+clone were removed, completing cadence merge `1 / 2`. Fresh-main Handoff
+Bootstrap selected the current checkout with checksum
+`sha256:b1c1709c4b00fbac5887de9fe1f3ae5deab816d13277575ac1816ba6b4342cdc`.
+Autonomous Queue selected `BVP-TASK-042-P-V6-4-DESIGN / DESIGN_ONLY` with
+checksum
+`sha256:23e42b59c3a95ceb41e2f92af06f128d7ded8ff5b847458d4438419cbc114015`.
+
+Current-main audit confirms that Blueprint v2 exact frames remain the Project
+Timeline authority; TASK-037 remains Candidate/LOCK/STALE truth; TASK-041
+remains Audio placement review/Human-decision truth; TASK-026 remains placement
+compiler; TASK-014 remains narration planning and separately gated paid
+execution. P-V6-4 creates no second Audio Asset, Candidate, placement, Provider
+or job registry.
+
+The design resolves the previously open SRT authority question: Master SRT is a
+derived/editable proposal over canonical frame cues. It never moves Scene
+boundaries. Import or edit produces a new proposal with deterministic rational
+frame conversion and explicit conflicts. Blueprint checksum/rate/range changes
+make the current Timeline plan stale and require a new append-only plan revision.
+
+Timeline Audio supports whole/range BGM, cue-based SE, range ambience and
+optional Scene narration across explicit parallel lanes. AMBIENCE is added as a
+first-class compatible role through the existing TASK-037/041/026 lifecycle.
+Each TASK-041 review created from the Timeline binds exact plan/revision/item/
+Blueprint identity. Human decision and TASK-026 compilation fail closed after
+any binding or Candidate drift. Unsupported stretch/crossfade/fade/gain remains
+a visible feature gap and is never silently dropped.
+
+Two Critic cycles close SRT dual-authority, duplicate placement truth,
+ambience-role ambiguity, stale-review replay, partial multi-store mutation,
+frame/ms drift, private narration leakage and paid/native overclaim risks with
+unresolved Critical/High `0 / 0`. Exact Allowed Files exclude Desktop Shell/UI,
+Provider adapters, credentials, generated-media writes, TASK-010/Resolve/Cubase
+mutation, package/version, Tag, Release and Deploy.
+
+P-V6-4 implementation remains `NOT_STARTED` until this exact design passes
+hosted checks, merges to main, exact SHA and branch/clone cleanup are verified,
+and fresh-main AUTONOMY selects the implementation unit. That hosted design
+closure completes cadence merge `2 / 2` and returns control to AUTONOMY. Stable
+release remains `v0.20.1`.

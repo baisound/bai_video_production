@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_042_P_V6_1A_HOSTED_CLOSED / P_V6_1B_REVIEW_NEXT / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_042_P_V6_1B_DESIGN_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-042 / P-V6-1A HOSTED_CLOSED / P-V6-1B DESIGN_AND_ALLOWED_FILES_REVIEW_NEXT`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-042 / P-V6-1B DESIGN_AND_ALLOWED_FILES_LOCAL_PASS`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`; TASK-042 P-V6-1A selects no package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `closure-sync PR -> exact main verification -> fresh-main P-V6-1B design/Allowed Files review for Proposal/GO/store integration; TASK-013 native resumption remains later and the preserved uncertain execution must never be replayed automatically`
+- Next Consumer Decision Gate: `P-V6-1B design PR all-green/main merge (AUTONOMY merge 1/2) -> fresh-main implementation Queue re-evaluation -> bounded Proposal/GO/store plus Windows EXE build contract; TASK-013 native resumption remains later and the preserved uncertain execution must never be replayed automatically`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.49 Addendum XLI. TASK-042 P-V6-1A is hosted-closed: PR #50 passed `9 / 9` and merged at exact main `694e9933d93c2d0e320486d1afa81f85e7574940`. P-V6-1B design/Allowed Files review is next. R3 control-loop, TASK-013 readiness and the bounded TASK-041 Audio Workspace Product promotion remain hosted-closed; Provider execution, media derivation, TASK-026 compilation and Resolve/Cubase mutation remain false. Native H3 and paid TASK-014 execution remain parked. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.50 Addendum XLII. TASK-042 P-V6-1A is hosted-closed at exact main `694e9933d93c2d0e320486d1afa81f85e7574940`; closure sync produced current design baseline `99d21a5542b0ab10b8ce4f1e5a0eea879cffc2eb`. P-V6-1B design/Allowed Files are local PASS and hosted pending. R3 control-loop, TASK-013 readiness and TASK-041 remain hosted-closed; Provider execution, media derivation, TASK-026 compilation and Resolve/Cubase mutation remain false. Native H3 and paid TASK-014 execution remain parked. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

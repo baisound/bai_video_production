@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_AUDIT_NEXT`
+`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_TARGET_AUDITED`
 
 ## Purpose
 
@@ -110,14 +110,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-039 — R3 Continuity Product promotion / PR #32 9 of 9 PASS / exact main a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b`
-- Active Task: `NONE — R4 Audio & Generative Production begins only after a new-branch current-state audit`
+- Active Task: `TASK-013 target audit complete — local ComfyUI native adapter implementation is next on a dedicated branch`
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Development Candidate: `NONE`
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.36 Addendum XXVII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.40 Addendum XXXI
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -137,7 +137,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Subtitle Workspace release: package 0.16.4 completes the v0.16.x review-workspace line including local FasterWhisper/Transcript/SRT flow, revisioned subtitle editing, Windows-native Open/Save interaction corrective and runtime workspace privacy hygiene
 - TASK-006 Slice D: v0.17.0 formal release completed with large-media chunk/checkpoint transcription and canonical Resolve subtitle-placement handoff; actual Resolve write remains TASK-010 ownership.
 - Current bounded Product development: TASK-024 Slice A candidate `0.18.0` generates review-only silence/filler/exact-repeat Cut Candidates and protected Keep Blocks. It does not mutate media or Resolve; TASK-007 owns final Cut Plan and TASK-010 owns execution.
-- R2/R3 route is complete. R4 TASK-013 bounded local execution control is hosted-closed at exact main `1614832b` after `9 / 9`; real local adapter target audit and contained native execution Evidence remain next.
+- R2/R3 route is complete. R4 TASK-013 bounded local execution control is hosted-closed at exact main `1614832b` after `9 / 9`; the exact loopback ComfyUI/native MiniMax H3 target audit is complete, and the next branch implements the body-free local/free adapter before contained native Evidence.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_AUDIT_NEXT`
+- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_TARGET_AUDITED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE — R4 Audio & Generative Production current-state audit is next on a dedicated branch`
+- Active Consumer Task: `TASK-013 target audit complete — bounded local ComfyUI native adapter implementation is next on a dedicated branch`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `R4 current-state audit and exact TASK/DEV Profile decision; no paid execution implied`
+- Next Consumer Task: `TASK-013 DEV-4 package-owned body-free MiniMax H3 local/free T2V adapter and contained native Evidence`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -79,6 +79,7 @@
 - TASK-035 design intake: optional REAPER audio-finishing/Resolve round-trip recorded; native ReaScript Plan/QA bridge precedes any third-party MCP or iZotope Assistant automation
 - TASK-014 design intake: owner's existing ElevenLabs Pro trained voice will be used through a private Voice Profile and timed TTS path; no retraining/upload or paid call is authorized by configuration alone
 - TASK-013 R4 local generation execution control is hosted-closed: PR #38 final head `ff1cbed` passed `9 / 9` and merged at exact main `1614832b`; next is exact real local adapter target audit, while live generation and Candidate/Audit binding remain unclaimed
+- TASK-013 exact target audit passed: loopback ComfyUI `0.31.0`, `837` node classes, RTX 4070 SUPER, all four native H3 model files/classes and isolated Product-owned runtime roots were verified; the operator Prompt/workflow remains private and no generation was queued
 - TASK-034 native Windows package `0.12.2`: Catalog/Credential lifecycle and per-row Password Manager behavior PASS
 - TASK-034 package `0.12.2`: Catalog lifecycle linkage, retained-key cleanup, OS vault, per-Route password-manager lookup and secret-exclusion tests PASS
 - TASK-033 native Windows: add `demo-video-route`, edit to `demo-model-v2`, disable and truthful adapter status display PASS
@@ -106,7 +107,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.36 Addendum XXVII. TASK-027 Queue PR #36 passed `9 / 9` and merged at exact main `ac9524c9016fae1fb422619c6e16fc7ae15e42f3`; its implementation branch was deleted remotely and locally. R3 control-loop promotion is complete and R4 audit is next. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.40 Addendum XXXI. R3 control-loop promotion is complete, TASK-013 local execution control is hosted-closed and the exact free/local ComfyUI native target audit authorizes the next bounded adapter branch. Stable Product release remains `v0.20.1`.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

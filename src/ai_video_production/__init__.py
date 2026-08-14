@@ -123,6 +123,17 @@ from .render_qa import (
 )
 from .manual_handoff import EditorHandoffManifest, EditorHandoffService, HandoffFile
 from .technical_mvp import TechnicalMvpApplicationService
+from .product_project import (
+    ProductProjectManifest, ProjectChildBinding, ProjectTimebase,
+    parse_product_project_manifest, validate_project_relative_path,
+)
+from .product_project_store import ProductProjectManifestStore
+from .project_migration import (
+    BindingCompatibility, BindingMigrationPlan, CompatibilityState,
+    MigrationRegistry, MigrationTransition, ProjectCompatibilityInspector,
+    ProjectCompatibilityReport, ProjectMigrationPlan, ProjectMigrationPlanner,
+    SupportedFormatRange,
+)
 
 __version__ = "0.20.1"
 
@@ -193,4 +204,10 @@ __all__ = [
     "FfmpegLoudnessAnalyzer", "LoudnessMeasurement", "LoudnessProfile", "RenderQAReport",
     "RenderQAService", "EditorHandoffManifest", "EditorHandoffService", "HandoffFile",
     "TechnicalMvpApplicationService",
+    "ProductProjectManifest", "ProjectChildBinding", "ProjectTimebase",
+    "parse_product_project_manifest", "validate_project_relative_path",
+    "ProductProjectManifestStore", "BindingCompatibility", "BindingMigrationPlan",
+    "CompatibilityState", "MigrationRegistry", "MigrationTransition",
+    "ProjectCompatibilityInspector", "ProjectCompatibilityReport",
+    "ProjectMigrationPlan", "ProjectMigrationPlanner", "SupportedFormatRange",
 ]

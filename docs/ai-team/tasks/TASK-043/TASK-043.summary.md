@@ -3,10 +3,10 @@
 - Name: Unified Product Project / Migration / Recovery Foundation
 - Priority: `OWNER_MAXIMUM / MAJOR_REFACTOR_FOUNDATION`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `CURRENT-MAIN AUDIT / ROADMAP REBUILD / FULL DESIGN`
-- Current Gate: `DESIGN_REVIEW`
-- Implementation: `NOT_STARTED`
-- Current main baseline: `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`
+- Current Phase: `P-FND-1 PROJECT MANIFEST / COMPATIBILITY / MIGRATION PLAN`
+- Current Gate: `LOCAL_SMOKE_PASS / HOSTED_PENDING`
+- Implementation: `P-FND-1 LOCAL COMPLETE / P-FND-2..4 NOT STARTED`
+- Current main baseline: `b7500fa4f7cb4339ddde6aa4800d56c9bcb4d94e`
 - Stable release: `v0.20.1`
 - Release candidate: `UNDECIDED`; foundation-only checkpoints are not releases
 - TASK-013 Native H3: `PARKED / NO_REPLAY`
@@ -27,4 +27,12 @@ current-main checkout:
 
 They may be salvaged only after the new Project contract is accepted and focused
 tests prove compatibility. They must not be deleted or committed implicitly.
+
+Roadmap/design PR #62 passed hosted `9 / 9` and merged at exact main
+`b7500fa4f7cb4339ddde6aa4800d56c9bcb4d94e`; its remote/local design branch
+cleanup passed. Fresh-main implementation added P-FND-1 Project Manifest,
+compatibility inspection and read-only migration planning. WSL2 compile/schema/
+smoke passed; hosted full regression is pending. No migration apply, Project data
+mutation outside the new manifest fixture, Provider/native operation or release
+was performed.
 

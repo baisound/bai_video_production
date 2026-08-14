@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_043_MAJOR_REFACTOR_DESIGN_REVIEW / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_043_P_FND_1_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-043 / MAJOR REFACTOR FOUNDATION / DESIGN REVIEW`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-043 / P-FND-1 LOCAL PASS / HOSTED PENDING`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`; TASK-043 foundation does not preselect a package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `TASK-043 roadmap/design hosted closure -> clean-main implementation selection -> Project Manifest/migration/recovery foundation; TASK-013 native and TASK-014 paid execution remain parked`
+- Next Consumer Decision Gate: `P-FND-1 PR all-green/main merge/exact SHA/cleanup -> clean-main P-FND-2 save journal and recovery; TASK-013 native and TASK-014 paid execution remain parked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 

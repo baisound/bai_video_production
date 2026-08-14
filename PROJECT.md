@@ -111,7 +111,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-042 P-V6-4 Design hosted closure: PR #61 merged at exact main 6784a44e; implementation is dependency-waiting behind TASK-043`
-- Active Task: `TASK-043 — Unified Product Project / Migration / Recovery Foundation / DESIGN REVIEW`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Task: `TASK-043 — Unified Product Project / P-FND-1 LOCAL PASS / HOSTED PENDING`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`

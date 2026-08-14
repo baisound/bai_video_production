@@ -1374,3 +1374,24 @@ Release and annotated Tag are Owner-authorized after required gates; Production
 Deploy, paid Provider, new credential input, destructive migration and the
 unknown-state Native H3 replay remain Human Gates. Stable release remains
 `v0.20.1`.
+
+## Addendum LIII — TASK-043 P-FND-1 Project Contract Implementation Gate
+
+Roadmap/design PR #62 passed hosted `9 / 9` and merged at exact main
+`b7500fa4f7cb4339ddde6aa4800d56c9bcb4d94e`; remote/local design branch cleanup
+passed. A clean-main implementation branch then added the closed versioned
+Product Project Manifest, exact child-store path/version/checksum bindings, atomic
+CAS persistence, supported-format inspection and deterministic read-only migration
+path/plan.
+
+The Project contract embeds no domain payload, secret, media or execution
+authority. It rejects traversal, drive/absolute paths, the reserved control
+directory, case-colliding children, symlinks, checksum drift and unsupported newer
+formats. Migration planning remains read-only and distinguishes lossless local
+plans from Human-Gated or blocked paths; apply is absent.
+
+WSL2 Python 3.12 compile/schema/smoke passes. Local pytest is unavailable without
+changing the host; hosted full regression/compile/security is required before
+closure. Implementation Critic unresolved Critical/High is `0 / 0`. P-FND-2 save
+journal and crash recovery remain not started. No package version, Tag, Release,
+Provider/native/media/Resolve/Cubase or Deploy operation is performed.

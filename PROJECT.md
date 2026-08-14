@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK_042_V6_PRODUCT_WORKFLOW_ROADMAP_PROMOTION_PENDING_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_TASK_042_P_V6_1A_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -111,14 +111,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-041 — Audio Workspace Product promotion hosted closure: PR #47 exact head 3785e44 passed 9 of 9 and merged at exact main 8dd6434a; Provider/TASK-026/Resolve/Cubase execution remain false`
-- Active Task: `TASK-042 — Product Workflow V6 Integration / P-V6-0 ROADMAP PROMOTION`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
+- Active Task: `TASK-042 — Product Workflow V6 Integration / P-V6-1A BLUEPRINT V2 CONTRACT LOCAL PASS`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Development Candidate: `NONE`; TASK-042 P-V6-0 changes design/roadmap only and selects no package version
+- Development Candidate: `NONE`; TASK-042 P-V6-1A selects no package version
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.47 Addendum XXXIX
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.48 Addendum XL
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -140,7 +140,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Current bounded Product development: TASK-024 Slice A candidate `0.18.0` generates review-only silence/filler/exact-repeat Cut Candidates and protected Keep Blocks. It does not mutate media or Resolve; TASK-007 owns final Cut Plan and TASK-010 owns execution.
 - R2/R3 route is complete. R4 TASK-013 now has a hosted-closed package-owned body-free local/free adapter, exact runtime-policy enforcement, no-replay recovery and opt-in trusted-launch composition. The current bounded unit adds an explicit read-only readiness preflight that checks node/model availability, resources and exact runtime identity while fixing dispatch, journal creation, execution authorization and Native Gate satisfaction to false. Native completion remains parked: attempt 01 failed in the real sampler path and attempt 02 was externally interrupted by the Owner-confirmed Windows force restart with durable `QUEUED / RECOVERY_REQUIRED`.
 - R4 TASK-041 Audio Workspace Product promotion is hosted-closed: exact Production/audio snapshot binding, crash-safe CAS, one-shot Human placement decisions and the unified Desktop `音声` workspace passed PR #47 `9 / 9` and merged at exact main `8dd6434a`. It records review intent only and starts no Provider, paid call, derived-media write, TASK-026 compile, Resolve or Cubase operation.
-- TASK-042 is the Owner-directed current highest-priority Product route. It inserts V6 Blueprint/frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio and Unified Shell/Export integration before any TASK-013 Native H3 resume decision. P-V6-0 is documentation/design only; P-V6-1A source work begins only after the roadmap PR merges.
+- TASK-042 is the Owner-directed current highest-priority Product route. P-V6-0 merged through PR #49 at exact main `7be3de1a`. P-V6-1A now has a standalone closed Blueprint v2 contract and read-only v1 migration preview at local Gate PASS; hosted checks/merge remain pending. It performs no legacy Project write, Proposal/GO integration, UI, Provider, native or paid execution.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

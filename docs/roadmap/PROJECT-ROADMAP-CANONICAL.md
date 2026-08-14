@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.47
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.48
 - Project: `ai-video-production`
 - Date: 2026-08-14
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 V6 Product Workflow Reconciliation is the Owner-maximum route before Native H3 resume. Audit/design baseline main is `8d055773f3966e301badff28e565ffcf26578721`. Stable Product release remains `v0.20.1`
+- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-0 merged through PR #49 at exact main `7be3de1a8b75dc6d88ec985ab49a2cd373f4549a`; P-V6-1A is local PASS / hosted pending. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -111,7 +111,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | ROADMAP PROMOTION PENDING / CURRENT OWNER MAXIMUM |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | P-V6-1A LOCAL PASS / HOSTED PENDING / CURRENT OWNER MAXIMUM |
 
 ## 6. Namespace Collision Resolution
 
@@ -175,7 +175,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
-- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-0 ROADMAP PROMOTION**
+- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-1A LOCAL PASS / HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -944,3 +944,26 @@ closed Blueprint v2 contract and read-only migration preview. It may not change
 v1 meaning, write a legacy Project, integrate Proposal/GO, add UI, call a
 Provider, resume native generation, perform paid/external operations or select
 a release. Later slices require the previous Gate and new exact Allowed Files.
+
+## Addendum XL — TASK-042 P-V6-1A Blueprint v2 Contract Local Gate
+
+P-V6-0 passed all nine hosted checks and PR #49 merged at exact main
+`7be3de1a8b75dc6d88ec985ab49a2cd373f4549a`. Its remote/local branch and clean
+dedicated clone were removed, then P-V6-1A started from a fresh clone of that
+exact main.
+
+P-V6-1A adds a separate closed `ProductionBlueprint 2.0.0` contract with
+independent Start/End Character 0..N, Space 0..1 and Composition 0..1 identity
+bindings. Existing v1 source and schema remain unchanged/readable. The new
+public parser accepts exactly v1 or v2, rejects unknown versions/fields and
+verifies the document checksum. Migration is deterministic read-only Evidence:
+every legacy Scene remains `NEEDS_FRAME_BINDING_REVIEW`, preserves legacy IDs,
+binds the exact source checksum and grants no write, GO, Provider or native
+authority. Apply/store/Proposal/GO/UI integration is absent and remains P-V6-1B.
+
+Focused tests pass `8 / 8`; full Windows regression passes `939 / 939` with one
+documented platform skip. Windows and WSL2 compileall, canonical/package schema
+byte equality and diff validation pass. Two Critic cycles close direct-constructor
+type safety and preview-forgery resistance; unresolved Critical/High are `0 / 0`.
+The hosted Gate and exact main merge remain pending. Package/release stays
+`0.20.1` / `v0.20.1`; no external execution occurred.

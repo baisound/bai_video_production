@@ -33,7 +33,7 @@
 | TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #32 passed 9/9 and merged at exact main a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b; recoverable Desktop Continuity; no regeneration |
 | TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #34 passed 9/9 and merged at exact main 87619fabe8c9ad7c8db0f5823176fd54cf7a7ae2; recoverable Desktop Prompt/Attempt Evidence and Human-routed next version; no Provider execution |
 | TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PRODUCT_PROMOTION_HOSTED_CLOSED_FUTURE_SLICES_REMAIN | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Durable project application and unified Desktop `音声` workspace passed focused 64/64, full WSL2 932/932 and PR #47 hosted 9/9; exact main merge 8dd6434a. Provider, paid execution, derived-media write, TASK-026 compile and Resolve/Cubase remain unstarted. |
-| TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | ALLOCATED_ROADMAP_PROMOTION_PENDING | OWNER_MAXIMUM_PRIORITY_ROADMAP_AND_POST_MERGE_P_V6_1A | DEV-4 | New cross-cutting requirement set: Blueprint v2/Start-End binding, WORLD LOCK projection, Visual Prompt, Timeline audio, Quick Generate, Unified Shell/NLE/Export. TASK-013 Native H3 stays parked. |
+| TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_1A_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | P-V6-0 merged in PR #49 at exact main 7be3de1a. Standalone Blueprint v2/frame binding and read-only unresolved v1 migration preview pass locally; no store/GO/UI/external execution. TASK-013 Native H3 stays parked. |
 
 ## Roadmap authority
 
@@ -41,7 +41,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control, its exact local/free ComfyUI adapter and the bounded TASK-041 Audio Workspace Product promotion are hosted-closed. TASK-042 is now the current maximum-priority route before any Native H3 resume; first source work is limited to the post-roadmap-merge P-V6-1A contract slice. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control, its exact local/free ComfyUI adapter and the bounded TASK-041 Audio Workspace Product promotion are hosted-closed. TASK-042 is the current maximum-priority route before any Native H3 resume; P-V6-1A is local PASS and hosted pending. P-V6-1B requires exact main plus its own review/Allowed Files. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

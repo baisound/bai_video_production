@@ -3,9 +3,9 @@
 - Name: Interactive Timeline / Unified NLE / Export Queue
 - Priority: `OWNER_MAXIMUM / CURRENT_RUNNABLE`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `P-NLE-2 TIMELINE EDIT/HISTORY IMPLEMENTATION LOCAL PASS`
+- Current Phase: `P-NLE-3 DURABLE EXPORT QUEUE IMPLEMENTATION LOCAL PASS`
 - Current Gate: `IMPLEMENTATION_PASS / HOSTED_PENDING`
-- Source baseline: `ab41b2105914488d1d96ca3b3f8997a09d53337a`
+- Source baseline: `a6bb252f36f4d3a8aca0175eb35c0ab44a7b91e8`
 - Prerequisites: TASK-043 and TASK-042 P-V6-4 `HOSTED_CLOSED`
 - Stable release: `v0.20.1`; no development version selected
 
@@ -19,11 +19,11 @@ Provider, paid execution, new credentials, Production Deploy and TASK-044 releas
 operations are not authorized. Native interaction is limited to the P-NLE-4
 sandbox acceptance gate. Exact version/Tag/Release remains TASK-045 ownership.
 
-P-NLE-1 PR #69 passed hosted `9 / 9`, merged at exact main
-`ab41b2105914488d1d96ca3b3f8997a09d53337a` and completed cleanup. Fresh-main
-P-NLE-2 implements exact-frame trim/move/snap and checked track changes as
-append-only Timeline revisions through TASK-043 Project save. Compensating
-Undo/Redo and a durable post-Manifest command-history recovery close the split
-finalization interruption window. Focused `50 / 50` and full
-`1090 passed, 1 skipped` pass locally; hosted closure is pending.
+P-NLE-2 PR #70 passed hosted `9 / 9`, merged at exact main
+`a6bb252f36f4d3a8aca0175eb35c0ab44a7b91e8` and completed cleanup. Fresh-main
+P-NLE-3 composes exact Export preparation over TASK-043 durable jobs. Public
+state contains no host path; stale input parks, DISPATCHING precedes side effects,
+restart becomes UNKNOWN, success binds Render QA and Execute All never grants
+blanket authority. Focused `43 / 43` and full `1097 passed, 1 skipped` pass
+locally; hosted closure is pending.
 

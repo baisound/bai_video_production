@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.66
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.67
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -1593,3 +1593,33 @@ Python 3.12 regression passes `1090 passed, 1 skipped`. Critic closes track
 topology, strict frame typing, stale-CAS and split-finalization recovery risks with
 unresolved Critical/High `0 / 0`. Hosted CI remains required. After merge and
 cleanup, fresh-main P-NLE-3 durable Export Queue composition becomes next.
+
+## Addendum LXI — TASK-044 P-NLE-3 Durable Export Queue Gate
+
+P-NLE-2 PR #70 passed hosted `9 / 9`, merged at exact main
+`a6bb252f36f4d3a8aca0175eb35c0ab44a7b91e8`, and completed remote branch and
+dedicated checkout cleanup. Fresh-main AUTONOMY selected
+`BVP-TASK-044-P-NLE-3 / IMPLEMENTATION`.
+
+P-NLE-3 adds a checksum-closed Export preparation binding the exact Project
+Manifest/product version, Timeline revision/hash, Edit/Assembly plan hashes,
+preset and frame/audio output contract. Public and durable records carry only a
+logical output identity. The launcher-private host destination exists only at
+apply time and is never persisted.
+
+TASK-043 durable jobs provide deterministic idempotent enqueue and CAS state.
+Preflight revalidates all exact inputs; changed truth parks as reprepare-required.
+Each job requires its own one-shot confirmation. DISPATCHING is durable before
+the callback that can mutate Resolve/render state; restart becomes UNKNOWN and
+never automatically replays. Success requires an exact result identity plus a
+passing Render QA checksum. Execute All produces separate confirmation work
+items and grants no blanket authority. Cancel remains limited to side-effect-free
+states.
+
+Focused P-NLE-3/TASK-043 tests pass `43 / 43`; full Windows Python 3.12 passes
+`1097 passed, 1 skipped`; compileall and diff validation pass. Critic findings for
+Windows path leakage, stale preflight, dispatch ordering, QA-unproven success and
+blanket authority close with unresolved Critical/High `0 / 0`. No real external
+execution or release operation occurred. Hosted CI remains required. After merge
+and cleanup, fresh-main P-NLE-4 Shell/UI and sandboxed Windows acceptance becomes
+next.

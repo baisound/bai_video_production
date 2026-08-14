@@ -43,6 +43,13 @@ def all_human_pass():
         "required_visible_coexists": CheckState.PASS,
         "prohibited_change_not_required": CheckState.PASS,
         "shot_reference_matches_final_camera": CheckState.PASS,
+        "task_axis_valid": CheckState.PASS,
+        "depth_order_valid": CheckState.PASS,
+        "occlusion_valid": CheckState.PASS,
+        "furniture_integrity_valid": CheckState.PASS,
+        "room_anchor_integrity_valid": CheckState.PASS,
+        "production_gear_absent": CheckState.PASS,
+        "character_identity_valid": CheckState.PASS,
     }
 
 
@@ -56,6 +63,15 @@ def test_human_reviewed_structural_pass_becomes_generation_ready():
     assessment = ShotFeasibilityGate.assess(spec(), human_reviewed_checks=all_human_pass())
     assert assessment.status is AssessmentStatus.PASS
     ShotFeasibilityGate.require_generation_ready(assessment)
+    assert assessment.to_dict()["reference_spec_sha256"] == spec().to_dict()["reference_spec_sha256"]
+    assert assessment.to_dict()["assessment_sha256"] == assessment.to_dict()["assessment_sha256"]
+
+
+def test_promotion_checks_are_required_and_partial_review_never_passes():
+    checks = all_human_pass()
+    checks.pop("depth_order_valid")
+    assessment = ShotFeasibilityGate.assess(spec(), human_reviewed_checks=checks)
+    assert assessment.status is AssessmentStatus.REVIEW_REQUIRED
 
 
 def test_required_new_desk_fails_gate_even_when_other_checks_pass():

@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / R2_PRODUCT_PROMOTION_COMPLETE / R3_TASK013_NEXT`
+- Project Status: `V0_20_1_RELEASED / TASK013_R3_PRODUCT_PROMOTION_LOCAL_GATE_PASS_HOSTED_PENDING`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE — TASK-027 R2 Planning Workspace minimum hosted closure complete`
+- Active Consumer Task: `TASK-013 — R3 Generation Safety Product promotion local PASS / hosted closure pending`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `R3 current-state audit -> TASK-013 Shot Feasibility / Visual Compliance`
+- Next Consumer Task: `complete TASK-013 hosted closure; then TASK-039 on a new branch`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -105,7 +105,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.24 Addendum XV. TASK-027 Planning Workspace minimum passed `842 PASS / 1 intentional skip`, PR #28 passed `9 / 9`, and exact main merge SHA is `91d76febeaa3588b6c07914c32d9da151278004a`. R2 Product promotion is complete; R3 begins with a current-state audit and TASK-013.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.26 Addendum XVII. TASK-013 Generation Safety Product promotion passes the local gate with `854 PASS / 1 intentional skip`; hosted PR closure remains pending. Stable Product release remains `v0.20.1`.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

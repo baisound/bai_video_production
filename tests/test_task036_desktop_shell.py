@@ -56,6 +56,9 @@ def test_production_control_workspace_and_commands_are_explicitly_allowlisted():
     assert "planning.go.apply" in snapshot["available_commands"]
     assert "planning.install.prepare" in snapshot["available_commands"]
     assert "planning.install.apply" in snapshot["available_commands"]
+    assert "generation_safety.snapshot" in snapshot["available_commands"]
+    assert "generation_safety.review.prepare" in snapshot["available_commands"]
+    assert "generation_safety.review.apply" in snapshot["available_commands"]
 
 
 def test_planning_workspace_is_explicit_shell_workspace():
@@ -63,6 +66,13 @@ def test_planning_workspace_is_explicit_shell_workspace():
     shell.open_project_context(project_id="p1", display_name="Project 1")
     shell.set_workspace(WorkspaceId.PLANNING)
     assert shell.snapshot().current_workspace is WorkspaceId.PLANNING
+
+
+def test_generation_safety_workspace_is_explicit_shell_workspace():
+    shell = service()
+    shell.open_project_context(project_id="p1", display_name="Project 1")
+    shell.set_workspace(WorkspaceId.GENERATION_SAFETY)
+    assert shell.snapshot().current_workspace is WorkspaceId.GENERATION_SAFETY
 
 
 def test_unknown_command_fails_closed():

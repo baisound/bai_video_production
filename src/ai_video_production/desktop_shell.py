@@ -25,6 +25,7 @@ class WorkspaceId(str, Enum):
     EXPORT = "EXPORT"
     PRODUCTION_CONTROL = "PRODUCTION_CONTROL"
     PLANNING = "PLANNING"
+    GENERATION_SAFETY = "GENERATION_SAFETY"
 
 
 class CommandCategory(str, Enum):
@@ -81,6 +82,9 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "planning.go.apply": ShellCommandSpec("planning.go.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
     "planning.install.prepare": ShellCommandSpec("planning.install.prepare", CommandCategory.READ_ONLY),
     "planning.install.apply": ShellCommandSpec("planning.install.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "generation_safety.snapshot": ShellCommandSpec("generation_safety.snapshot", CommandCategory.READ_ONLY),
+    "generation_safety.review.prepare": ShellCommandSpec("generation_safety.review.prepare", CommandCategory.READ_ONLY),
+    "generation_safety.review.apply": ShellCommandSpec("generation_safety.review.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

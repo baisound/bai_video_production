@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.24
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.26
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -700,3 +700,17 @@ The bounded TASK-027 R2 Planning Workspace minimum is complete. PR #28 exact hea
 This closes the R2 Product-promotion sequence: TASK-037 Asset Registry 2, TASK-038 Audit Workspace and the TASK-027 Planning Workspace minimum are now user-facing through the unified Desktop Shell. The full multi-slice TASK-027 is not claimed complete. Provider/paid execution, Generation Queue integration and external NLE mutation remain outside this closure.
 
 The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R2 checkpoint. R3 begins with a current-state audit and TASK-013 Shot Feasibility / Visual Compliance on a new dedicated branch. The routed R3 sequence then continues through TASK-039 Continuity Map / STALE propagation, TASK-040 Prompt Registry / Generation Evidence and the TASK-027 Generation Queue integration slice. Generation admission must ultimately require `PLAN_APPROVED + FEASIBILITY_PASS + REQUIRED_INPUT_LOCKED`.
+
+### Ver.1.25 Addendum XVI — TASK-013 R3 Product Promotion Kickoff
+
+TASK-013 R3 Product promotion is active from exact R2 closure main `cc893ee064f8935334dc0c5202a17d244577540a` on `codex/task-013-r3-feasibility-product-promotion`. The current checkout already contains the fail-closed Shot Feasibility, Visual Compliance, adaptive structural-failure escalation and TASK-038 Audit binding foundations; this unit promotes them rather than recreating them.
+
+The bounded Product unit adds the Promotion hard checks, deterministic assessment identity, durable exact Approved-Plan-bound Human review and a user-facing Generation Safety workspace. It executes no Provider, paid call, Budget reservation, Candidate generation, Resolve/Cubase mutation or publishing. TASK-038 retains Human Candidate decision authority, and the complete high-cost admission conjunction remains incomplete until later R3 owners supply locked-input and queue integration Evidence.
+
+### Ver.1.26 Addendum XVII — TASK-013 R3 Local Product Gate
+
+TASK-013 Generation Safety passes its local Product gate. The unified Desktop `生成安全` workspace now records the complete structured Human feasibility review only against the exact current Approved Plan, Blueprint, Planning snapshot and Scene. Promotion hard checks, deterministic nested identities, append-only atomic persistence, one-shot confirmation, restart, stale/tamper/project-scope and concurrent-writer controls pass.
+
+The existing structured Visual Compliance path is now bound to durable TASK-038 Audit persistence. Visual PASS remains Evidence rather than Human ACCEPT, critical FAIL does not automatically REJECT, and no regeneration starts. Windows full regression passes `854 / 854` executed tests with one intentional non-Windows skip. Windows/WSL2 compile, UI JavaScript syntax and diff checks pass. Formal closure remains conditional on hosted PR checks, exact `main` merge and branch cleanup.
+
+The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is selected at this checkpoint. After hosted closure, TASK-039 Continuity Map / STALE propagation begins on its own branch. The final `PLAN_APPROVED + FEASIBILITY_PASS + REQUIRED_INPUT_LOCKED` Product admission is not yet claimed.

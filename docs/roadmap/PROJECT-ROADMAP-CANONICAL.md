@@ -790,3 +790,9 @@ The bounded unit adds a body-private, restart-safe and no-replay execution contr
 The bounded TASK-013 execution-control Product gate passes locally. Every stored Queue entry is re-derived from current Product Evidence before use; private Prompt bytes are project-contained and checksum-verified; the exact Human-approved Profile selects only a credential-free `LOCAL_FREE_AI` route. One-shot apply persists `DISPATCHING` before the injected port call, terminally records known completion/failure and leaves uncertain interruption as `RECOVERY_REQUIRED` without automatic replay.
 
 Focused TASK-013/TASK-027/TASK-036 regression passes `58 / 58`; full WSL2 regression passes `904 / 904`; Windows/WSL2 compile, embedded JavaScript and diff gates pass. Validation uses a fake injected port and does not claim live ComfyUI/H3 execution or generated-media quality. Hosted checks, exact main merge and branch cleanup remain before formal closure. Stable release stays `v0.20.1`; no package, Tag or Release is selected.
+
+### Ver.1.39 Addendum XXX — TASK-013 R4 Local Execution Control Hosted Closure
+
+The bounded TASK-013 R4 execution-control foundation is complete. PR #38 exact final head `ff1cbeda707dd40f77f23ccae2c535aafe357b55` passed all `9 / 9` hosted checks and merged at exact main SHA `1614832b52183278ec403623c4a4c6c0d1e96ddc`. Its implementation branch was deleted remotely and locally.
+
+This closure does not claim a live local generation. The next TASK-013 unit begins with a renewed target audit for exact local Provider family, endpoint, workflow, input staging and output containment before trusted-launch composition. Candidate/Audit/Prompt Attempt binding follows only after contained native output exists. Stable release remains `v0.20.1`; no package, Tag or Release is created at this checkpoint.

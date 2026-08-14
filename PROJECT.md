@@ -137,7 +137,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Subtitle Workspace release: package 0.16.4 completes the v0.16.x review-workspace line including local FasterWhisper/Transcript/SRT flow, revisioned subtitle editing, Windows-native Open/Save interaction corrective and runtime workspace privacy hygiene
 - TASK-006 Slice D: v0.17.0 formal release completed with large-media chunk/checkpoint transcription and canonical Resolve subtitle-placement handoff; actual Resolve write remains TASK-010 ownership.
 - Current bounded Product development: TASK-024 Slice A candidate `0.18.0` generates review-only silence/filler/exact-repeat Cut Candidates and protected Keep Blocks. It does not mutate media or Resolve; TASK-007 owns final Cut Plan and TASK-010 owns execution.
-- R2/R3 route: TASK-037/TASK-038/TASK-027 Planning and TASK-013/TASK-039/TASK-040/TASK-027 Generation Queue Product promotions are complete. R4 TASK-013 bounded local execution control passes its local gate with `904 / 904`; hosted closure and live adapter target audit remain.
+- R2/R3 route is complete. R4 TASK-013 bounded local execution control is hosted-closed at exact main `1614832b` after `9 / 9`; real local adapter target audit and contained native execution Evidence remain next.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

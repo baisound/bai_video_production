@@ -78,7 +78,7 @@
 - TASK-027 Slice A1 package `0.15.0`: real-production-evidence-derived Production Blueprint, Scene Ledger, Reference Registry, source-priority and dense-text generation gates implemented
 - TASK-035 design intake: optional REAPER audio-finishing/Resolve round-trip recorded; native ReaScript Plan/QA bridge precedes any third-party MCP or iZotope Assistant automation
 - TASK-014 design intake: owner's existing ElevenLabs Pro trained voice will be used through a private Voice Profile and timed TTS path; no retraining/upload or paid call is authorized by configuration alone
-- TASK-013 R4 local generation execution control passes its bounded local Product gate: exact current Queue re-derivation, private Prompt checksum, credential-free `LOCAL_FREE_AI`, durable pre-side-effect `DISPATCHING`, terminal/no-replay recovery and optional unified Queue UI pass `904 / 904`; live ComfyUI/H3 composition and Candidate/Audit binding remain unclaimed
+- TASK-013 R4 local generation execution control is hosted-closed: PR #38 final head `ff1cbed` passed `9 / 9` and merged at exact main `1614832b`; next is exact real local adapter target audit, while live generation and Candidate/Audit binding remain unclaimed
 - TASK-034 native Windows package `0.12.2`: Catalog/Credential lifecycle and per-row Password Manager behavior PASS
 - TASK-034 package `0.12.2`: Catalog lifecycle linkage, retained-key cleanup, OS vault, per-Route password-manager lookup and secret-exclusion tests PASS
 - TASK-033 native Windows: add `demo-video-route`, edit to `demo-model-v2`, disable and truthful adapter status display PASS

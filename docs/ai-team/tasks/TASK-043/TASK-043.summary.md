@@ -3,10 +3,10 @@
 - Name: Unified Product Project / Migration / Recovery Foundation
 - Priority: `OWNER_MAXIMUM / MAJOR_REFACTOR_FOUNDATION`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `P-FND-1 PROJECT MANIFEST / COMPATIBILITY / MIGRATION PLAN`
-- Current Gate: `LOCAL_SMOKE_PASS / HOSTED_PENDING`
-- Implementation: `P-FND-1 LOCAL COMPLETE / P-FND-2..4 NOT STARTED`
-- Current main baseline: `b7500fa4f7cb4339ddde6aa4800d56c9bcb4d94e`
+- Current Phase: `P-FND-2 COORDINATED SAVE / RECOVERY`
+- Current Gate: `LOCAL_FAILURE_INJECTION_PASS / HOSTED_PENDING`
+- Implementation: `P-FND-1 HOSTED CLOSED / P-FND-2 LOCAL COMPLETE / P-FND-3..4 NOT STARTED`
+- Current main baseline: `e2930baa2cd66e92514e538e2834e89a8119d19f`
 - Stable release: `v0.20.1`
 - Release candidate: `UNDECIDED`; foundation-only checkpoints are not releases
 - TASK-013 Native H3: `PARKED / NO_REPLAY`
@@ -35,4 +35,11 @@ compatibility inspection and read-only migration planning. WSL2 compile/schema/
 smoke passed; hosted full regression is pending. No migration apply, Project data
 mutation outside the new manifest fixture, Provider/native operation or release
 was performed.
+
+P-FND-1 PR #63 passed hosted `9 / 9`, merged at exact main
+`e2930baa2cd66e92514e538e2834e89a8119d19f`, and completed remote/local branch
+cleanup. P-FND-2 adds a Project-scoped save journal, child-first/manifest-last
+commit, injected-crash COMPLETE/ROLLBACK/FINALIZE and pending-recovery refusal.
+Local compile/schema/failure-injection smoke and implementation Critic pass;
+hosted checks remain pending.
 

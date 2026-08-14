@@ -111,14 +111,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-042 P-V6-4 Design hosted closure: PR #61 merged at exact main 6784a44e; implementation is dependency-waiting behind TASK-043`
-- Active Task: `TASK-043 — Unified Product Project / P-FND-1 LOCAL PASS / HOSTED PENDING`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Task: `TASK-043 — Unified Product Project / P-FND-2 LOCAL FAILURE-INJECTION PASS / HOSTED PENDING`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Development Candidate: `NONE`; TASK-043 foundation does not preselect a package version
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.60 Addendum LII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.60 Addendum LIV
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

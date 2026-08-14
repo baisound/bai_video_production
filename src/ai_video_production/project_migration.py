@@ -5,11 +5,10 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum
-import hashlib
 from pathlib import Path
 from typing import Iterable, Mapping
 
-from .product_project import ProductProjectManifest, ProjectChildBinding
+from .product_project import ProductProjectManifest, ProjectChildBinding, sha256_file_exact
 from .schema_contracts import SemVer
 from .serialization import canonical_json_bytes, sha256_bytes
 
@@ -182,7 +181,7 @@ class ProjectCompatibilityInspector:
                     state = CompatibilityState.SECURITY_REJECTED
                 else:
                     try:
-                        actual = _sha256_file(resolved)
+                        actual = sha256_file_exact(resolved)
                     except OSError:
                         state = CompatibilityState.SECURITY_REJECTED
                     else:
@@ -360,11 +359,3 @@ def _plan_state(plans: list[BindingMigrationPlan], blockers: list[str]) -> str:
     if plans:
         return "READY_FOR_COPY_ON_WRITE_APPLY"
     return "NO_MIGRATION_REQUIRED"
-
-
-def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return "sha256:" + digest.hexdigest()

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/project-save-journal.schema.json",
+  "title": "BAI Video Production Project Save Journal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "journal_version",
+    "transaction_id",
+    "project_id",
+    "source_manifest_sha256",
+    "target_manifest",
+    "state",
+    "entries",
+    "journal_revision",
+    "created_at",
+    "updated_at",
+    "last_error_code",
+    "authority",
+    "journal_sha256"
+  ],
+  "properties": {
+    "journal_version": {"const": "1.0.0"},
+    "transaction_id": {"type": "string", "pattern": "^save-[0-9a-f]{64}$"},
+    "project_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$"},
+    "source_manifest_sha256": {"$ref": "#/$defs/checksum"},
+    "target_manifest": {"$ref": "product-project-manifest.schema.json"},
+    "state": {"enum": ["PREPARING", "STAGED", "VALIDATED", "COMMITTING", "RECOVERY_REQUIRED", "COMMITTED", "ABANDONED"]},
+    "entries": {"type": "array", "maxItems": 256, "items": {"$ref": "#/$defs/entry"}},
+    "journal_revision": {"type": "integer", "minimum": 1},
+    "created_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "updated_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "last_error_code": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^ERR_[A-Z0-9_]+$"}]},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["external_replay_authorized", "migration_apply_authorized"],
+      "properties": {
+        "external_replay_authorized": {"const": false},
+        "migration_apply_authorized": {"const": false}
+      }
+    },
+    "journal_sha256": {"$ref": "#/$defs/checksum"}
+  },
+  "$defs": {
+    "checksum": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?![A-Za-z]:)(?!\\.bai-project(?:/|$))(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\)[^\\u0000]{1,512}$"
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relative_path", "before_sha256", "target_sha256", "staged_relative_path", "backup_relative_path", "committed"],
+      "properties": {
+        "relative_path": {"$ref": "#/$defs/relativePath"},
+        "before_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/checksum"}]},
+        "target_sha256": {"$ref": "#/$defs/checksum"},
+        "staged_relative_path": {"$ref": "#/$defs/relativePath"},
+        "backup_relative_path": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/relativePath"}]},
+        "committed": {"type": "boolean"}
+      }
+    }
+  }
+}

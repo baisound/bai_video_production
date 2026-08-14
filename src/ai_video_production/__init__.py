@@ -125,9 +125,12 @@ from .manual_handoff import EditorHandoffManifest, EditorHandoffService, Handoff
 from .technical_mvp import TechnicalMvpApplicationService
 from .product_project import (
     ProductProjectManifest, ProjectChildBinding, ProjectTimebase,
-    parse_product_project_manifest, validate_project_relative_path,
+    parse_product_project_manifest, sha256_file_exact, validate_project_relative_path,
 )
 from .product_project_store import ProductProjectManifestStore
+from .project_save import (
+    ProductProjectSaveCoordinator, ProjectSaveState,
+)
 from .project_migration import (
     BindingCompatibility, BindingMigrationPlan, CompatibilityState,
     MigrationRegistry, MigrationTransition, ProjectCompatibilityInspector,
@@ -205,9 +208,10 @@ __all__ = [
     "RenderQAService", "EditorHandoffManifest", "EditorHandoffService", "HandoffFile",
     "TechnicalMvpApplicationService",
     "ProductProjectManifest", "ProjectChildBinding", "ProjectTimebase",
-    "parse_product_project_manifest", "validate_project_relative_path",
+    "parse_product_project_manifest", "sha256_file_exact", "validate_project_relative_path",
     "ProductProjectManifestStore", "BindingCompatibility", "BindingMigrationPlan",
     "CompatibilityState", "MigrationRegistry", "MigrationTransition",
     "ProjectCompatibilityInspector", "ProjectCompatibilityReport",
     "ProjectMigrationPlan", "ProjectMigrationPlanner", "SupportedFormatRange",
+    "ProductProjectSaveCoordinator", "ProjectSaveState",
 ]

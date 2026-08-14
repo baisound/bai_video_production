@@ -99,21 +99,39 @@ class ProductProjectManifestStore:
     ) -> AtomicWriteResult:
         target = _manifest_path(project_root, create_control_dir=True)
         with _exclusive_project_lock(target):
-            if target.is_symlink() or (target.exists() and not target.is_file()):
-                raise ProductError("ERR_PROJECT_FORMAT_FILE_INVALID", "Refusing an invalid Project manifest target", ProductErrorCategory.SECURITY)
-            if target.exists():
-                if expected_previous_manifest_sha256 is None:
-                    raise ProductError("ERR_PROJECT_SAVE_CAS_REQUIRED", "Replacing a Project manifest requires its exact checksum", ProductErrorCategory.AUTHORIZATION)
-                current = ProductProjectManifestStore.load(project_root)
-                if current.project_manifest_sha256 != expected_previous_manifest_sha256:
-                    raise ProductError("ERR_PROJECT_SAVE_REVISION_CONFLICT", "Project manifest changed before save", ProductErrorCategory.STATE, details={"current_manifest_sha256": current.project_manifest_sha256})
-                if manifest.project_id != current.project_id or manifest.created_at != current.created_at:
-                    raise ProductError("ERR_PROJECT_SAVE_IDENTITY_CONFLICT", "Project identity or creation timestamp cannot change", ProductErrorCategory.STATE)
-                if manifest.project_revision != current.project_revision + 1:
-                    raise ProductError("ERR_PROJECT_SAVE_REVISION_INVALID", "Project revision must advance exactly once", ProductErrorCategory.STATE)
-            elif expected_previous_manifest_sha256 is not None:
-                raise ProductError("ERR_PROJECT_SAVE_PREVIOUS_MISSING", "Expected previous Project manifest does not exist", ProductErrorCategory.STATE)
-            elif manifest.project_revision != 1:
-                raise ProductError("ERR_PROJECT_SAVE_REVISION_INVALID", "First Project manifest revision must be 1", ProductErrorCategory.STATE)
-            return AtomicJsonWriter.write(target, manifest.to_dict(), validator=parse_product_project_manifest)
+            return ProductProjectManifestStore._save_unlocked(
+                project_root,
+                manifest,
+                expected_previous_manifest_sha256=expected_previous_manifest_sha256,
+            )
+
+    @staticmethod
+    def _save_unlocked(
+        project_root: str | Path,
+        manifest: ProductProjectManifest,
+        *,
+        expected_previous_manifest_sha256: str | None,
+    ) -> AtomicWriteResult:
+        """Save while the caller holds the Project lock.
+
+        This is package-internal and exists for the multi-store save coordinator.
+        """
+        target = _manifest_path(project_root, create_control_dir=True)
+        if target.is_symlink() or (target.exists() and not target.is_file()):
+            raise ProductError("ERR_PROJECT_FORMAT_FILE_INVALID", "Refusing an invalid Project manifest target", ProductErrorCategory.SECURITY)
+        if target.exists():
+            if expected_previous_manifest_sha256 is None:
+                raise ProductError("ERR_PROJECT_SAVE_CAS_REQUIRED", "Replacing a Project manifest requires its exact checksum", ProductErrorCategory.AUTHORIZATION)
+            current = ProductProjectManifestStore.load(project_root)
+            if current.project_manifest_sha256 != expected_previous_manifest_sha256:
+                raise ProductError("ERR_PROJECT_SAVE_REVISION_CONFLICT", "Project manifest changed before save", ProductErrorCategory.STATE, details={"current_manifest_sha256": current.project_manifest_sha256})
+            if manifest.project_id != current.project_id or manifest.created_at != current.created_at:
+                raise ProductError("ERR_PROJECT_SAVE_IDENTITY_CONFLICT", "Project identity or creation timestamp cannot change", ProductErrorCategory.STATE)
+            if manifest.project_revision != current.project_revision + 1:
+                raise ProductError("ERR_PROJECT_SAVE_REVISION_INVALID", "Project revision must advance exactly once", ProductErrorCategory.STATE)
+        elif expected_previous_manifest_sha256 is not None:
+            raise ProductError("ERR_PROJECT_SAVE_PREVIOUS_MISSING", "Expected previous Project manifest does not exist", ProductErrorCategory.STATE)
+        elif manifest.project_revision != 1:
+            raise ProductError("ERR_PROJECT_SAVE_REVISION_INVALID", "First Project manifest revision must be 1", ProductErrorCategory.STATE)
+        return AtomicJsonWriter.write(target, manifest.to_dict(), validator=parse_product_project_manifest)
 

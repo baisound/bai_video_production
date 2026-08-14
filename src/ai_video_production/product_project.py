@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import hashlib
 from pathlib import PurePosixPath, PureWindowsPath
+from pathlib import Path
 import re
 from typing import Any, Iterable, Mapping
 
@@ -54,6 +56,14 @@ def validate_project_relative_path(value: str) -> str:
     if canonical != value:
         raise ValueError("relative_path must already be canonical")
     return value
+
+
+def sha256_file_exact(path: str | Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            digest.update(chunk)
+    return "sha256:" + digest.hexdigest()
 
 
 @dataclass(frozen=True, slots=True)

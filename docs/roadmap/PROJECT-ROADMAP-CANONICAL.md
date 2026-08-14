@@ -1395,3 +1395,22 @@ changing the host; hosted full regression/compile/security is required before
 closure. Implementation Critic unresolved Critical/High is `0 / 0`. P-FND-2 save
 journal and crash recovery remain not started. No package version, Tag, Release,
 Provider/native/media/Resolve/Cubase or Deploy operation is performed.
+
+## Addendum LIV — TASK-043 P-FND-2 Coordinated Save/Recovery Gate
+
+P-FND-1 PR #63 passed hosted `9 / 9`, merged at exact main
+`e2930baa2cd66e92514e538e2834e89a8119d19f`, and completed branch cleanup. The
+next clean-main unit adds Project-scoped save locking, deterministic transaction
+identity, staged children/backups, source revalidation, child-first/manifest-last
+commit and a checksummed recovery journal.
+
+Failure injection proves typed COMPLETE and ROLLBACK before Manifest commit and
+FINALIZE after Manifest commit. A pending transaction blocks a new save; binding
+removal remains a migration/Human Gate; no external operation is replayed.
+Transaction-scoped internal paths and exact target-child validation prevent a
+tampered journal from redirecting recovery or falsely finalizing changed data.
+
+Local compile/schema/failure-injection smoke passes and implementation Critic has
+unresolved Critical/High `0 / 0`. Hosted full regression/compile/security remains
+required. P-FND-3 Undo/Redo, Autosave and Backup retention is next. Stable release
+remains `v0.20.1`; this foundation checkpoint creates no Tag or Release.

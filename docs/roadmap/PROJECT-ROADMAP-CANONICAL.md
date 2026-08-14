@@ -796,3 +796,9 @@ Focused TASK-013/TASK-027/TASK-036 regression passes `58 / 58`; full WSL2 regres
 The bounded TASK-013 R4 execution-control foundation is complete. PR #38 exact final head `ff1cbeda707dd40f77f23ccae2c535aafe357b55` passed all `9 / 9` hosted checks and merged at exact main SHA `1614832b52183278ec403623c4a4c6c0d1e96ddc`. Its implementation branch was deleted remotely and locally.
 
 This closure does not claim a live local generation. The next TASK-013 unit begins with a renewed target audit for exact local Provider family, endpoint, workflow, input staging and output containment before trusted-launch composition. Candidate/Audit/Prompt Attempt binding follows only after contained native output exists. Stable release remains `v0.20.1`; no package, Tag or Release is created at this checkpoint.
+
+### Ver.1.40 Addendum XXXI — TASK-013 R4 Local ComfyUI Native Target Audit
+
+The renewed target audit selects the installed free/local MiniMax H3 native graph behind loopback ComfyUI `0.31.0` as the exact next adapter. The target exposes `837` node classes and the required diffusion model, text encoder, video/audio VAEs and native H3 graph on an RTX 4070 SUPER. A contained capability probe used only repository-ignored `runtime/` input/output/user/temp roots and did not queue a generation.
+
+The operator workflow is valid and establishes the technical topology, but its Prompt and notes remain private and the file will not be copied into the Product. Installed cloud/API Hailuo templates are explicitly rejected for the `LOCAL_FREE_AI` route. The authorized implementation will ship a new body-free API workflow, accept only exact local/free `TEXT_TO_VIDEO`, preserve no-replay recovery, publish only to a project-contained `project-output://` root and keep trusted-launch composition opt-in/fail-closed. Candidate/Audit/Prompt Attempt binding remains a separate post-native slice. Stable release remains `v0.20.1`; no Tag or Release is selected.

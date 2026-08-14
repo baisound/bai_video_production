@@ -176,6 +176,23 @@ def test_html_promotes_generation_safety_without_provider_or_human_accept_shortc
     assert "innerHTML" not in HTML
 
 
+def test_html_promotes_continuity_without_regeneration_or_direct_override_shortcut():
+    assert 'data-w="CONTINUITY"' in HTML
+    assert 'id="continuityWorkspace"' in HTML
+    assert "continuity_snapshot" in HTML
+    assert "continuity_prepare_edge" in HTML
+    assert "continuity_apply_edge" in HTML
+    assert "continuity_inspect" in HTML
+    assert "continuity_prepare_soft_approval" in HTML
+    assert "continuity_apply_soft_approval" in HTML
+    assert "continuity_propagate_stale" in HTML
+    assert "continuity_apply_recovery" in HTML
+    assert "Human override for DIRECT: NO" in HTML
+    assert "continuity_regenerate" not in HTML
+    assert "continuity_direct_override" not in HTML
+    assert "innerHTML" not in HTML
+
+
 def test_production_bridge_is_unavailable_until_trusted_project_binding():
     service = ShellApplicationService(product_version="0.19.0")
     bridge = Task036ShellBridge(service)
@@ -364,6 +381,74 @@ def test_generation_safety_bridge_routes_only_exact_two_step_review_contract():
         bridge.generation_safety_prepare_review({
             "spec": {}, "human_reviewed_checks": {}, "blocking_reasons": "NONE",
             "expected_planning_snapshot_sha256": "x", "expected_safety_snapshot_sha256": "y",
+        })
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_continuity_bridge_routes_only_exact_recoverable_contracts():
+    class ContinuityStub:
+        def __init__(self):
+            self.calls = []
+
+        def snapshot(self):
+            return {"project_id": "project-1", "workspace": {"edges": []}, "recovery": {"required": False}}
+
+        def prepare_register_edge(self, **values):
+            self.calls.append(("prepare", values))
+            return {"confirmation_id": "edge-confirm", **values}
+
+        def apply_register_edge(self, **values):
+            self.calls.append(("apply", values))
+            return {"saved": True}
+
+        def inspect_locked_target(self, **values):
+            self.calls.append(("inspect", values))
+            return {"inspected": True}
+
+        def prepare_soft_approval(self, **values):
+            self.calls.append(("soft-prepare", values))
+            return {"confirmation_id": "soft-confirm"}
+
+        def apply_soft_approval(self, **values):
+            self.calls.append(("soft-apply", values))
+            return {"approved": True}
+
+        def propagate_stale(self, **values):
+            self.calls.append(("stale", values))
+            return {"stale": True}
+
+        def apply_recovery(self, **values):
+            self.calls.append(("recovery", values))
+            return {"recovered": True}
+
+    app = ContinuityStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.20.1"),
+        continuity_application=app,
+    )
+    assert bridge.continuity_snapshot({})["available"] is True
+    hashes = {
+        "expected_production_snapshot_sha256": "sha256:" + "a" * 64,
+        "expected_continuity_snapshot_sha256": "sha256:" + "b" * 64,
+    }
+    prepared = bridge.continuity_prepare_edge({
+        "edge_id": "edge-1", "from_slot_id": "slot-end", "to_slot_id": "slot-start",
+        "boundary_type": "DIRECT_CONTINUATION", "character_contract_refs": ["char-1"],
+        "space_contract_refs": ["space-1"], **hashes,
+    })
+    assert app.calls[-1][1]["character_contract_refs"] == ("char-1",)
+    assert bridge.continuity_apply_edge({"confirmation_id": prepared["confirmation_id"]}) == {"saved": True}
+    bridge.continuity_inspect({"edge_id": "edge-1", **hashes})
+    soft = bridge.continuity_prepare_soft_approval({"edge_id": "edge-1", **hashes})
+    bridge.continuity_apply_soft_approval({"confirmation_id": soft["confirmation_id"], "approved_by": "owner"})
+    bridge.continuity_propagate_stale({"root_slot_id": "slot-end", **hashes})
+    bridge.continuity_apply_recovery({"action": "COMPLETE"})
+    assert [name for name, _ in app.calls] == ["prepare", "apply", "inspect", "soft-prepare", "soft-apply", "stale", "recovery"]
+    with pytest.raises(ProductError) as exc:
+        bridge.continuity_prepare_edge({
+            "edge_id": True, "from_slot_id": "slot-end", "to_slot_id": "slot-start",
+            "boundary_type": "DIRECT_CONTINUATION", "character_contract_refs": [],
+            "space_contract_refs": [], **hashes,
         })
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 

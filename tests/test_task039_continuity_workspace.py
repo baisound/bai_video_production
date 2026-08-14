@@ -72,3 +72,6 @@ def test_confirmation_stales_if_locked_target_changes():
     with pytest.raises(ProductError) as exc:
         service.apply_soft_approval(confirmation_id="soft", approved_by="owner")
     assert exc.value.code == "ERR_CONTINUITY_WORKSPACE_CONFIRMATION_STALE"
+    with pytest.raises(ProductError) as exc:
+        service.apply_soft_approval(confirmation_id="soft", approved_by="owner")
+    assert exc.value.code == "ERR_CONTINUITY_WORKSPACE_CONFIRMATION_INVALID"

@@ -11,6 +11,7 @@ from .continuity_map import ContinuityBoundaryType, ContinuityEdge
 from .continuity_registry import ContinuityRegistry, ContinuityResolution
 from .errors import ProductError, ProductErrorCategory
 from .serialization import canonical_json_bytes, sha256_bytes
+from .production_control_store import _exclusive_snapshot_lock
 
 
 _MAX_BYTES = 4 * 1024 * 1024
@@ -65,6 +66,8 @@ def _parse(document: dict[str, Any]) -> ContinuityRegistry:
             )
             if resolution.edge_id not in value.edges:
                 raise ValueError("resolution references unknown edge")
+            if resolution.edge_id in value.resolutions:
+                raise ValueError("duplicate continuity resolution identity")
             value.resolutions[resolution.edge_id] = resolution
     except (KeyError, TypeError, ValueError) as exc:
         raise ProductError(
@@ -129,39 +132,40 @@ class ContinuityRegistryStore:
         expected_previous_registry_sha256: str | None = None,
     ) -> AtomicWriteResult:
         target = Path(path)
-        if target.is_symlink():
-            raise ProductError(
-                "ERR_CONTINUITY_STORE_FILE_INVALID",
-                "Refusing to replace a symlink continuity registry",
-                ProductErrorCategory.SECURITY,
-            )
-        if target.exists():
-            if not target.is_file():
+        with _exclusive_snapshot_lock(target):
+            if target.is_symlink():
                 raise ProductError(
                     "ERR_CONTINUITY_STORE_FILE_INVALID",
-                    "Continuity registry target must be a regular file",
-                    ProductErrorCategory.VALIDATION,
+                    "Refusing to replace a symlink continuity registry",
+                    ProductErrorCategory.SECURITY,
                 )
-            if expected_previous_registry_sha256 is None:
+            if target.exists():
+                if not target.is_file():
+                    raise ProductError(
+                        "ERR_CONTINUITY_STORE_FILE_INVALID",
+                        "Continuity registry target must be a regular file",
+                        ProductErrorCategory.VALIDATION,
+                    )
+                if expected_previous_registry_sha256 is None:
+                    raise ProductError(
+                        "ERR_CONTINUITY_STORE_CAS_REQUIRED",
+                        "Replacing an existing continuity registry requires its exact previous checksum",
+                        ProductErrorCategory.AUTHORIZATION,
+                    )
+                current = ContinuityRegistryStore.load_document(target)["registry_sha256"]
+                if current != expected_previous_registry_sha256:
+                    raise ProductError(
+                        "ERR_CONTINUITY_STORE_REVISION_CONFLICT",
+                        "Continuity registry changed before save; reload before retry",
+                        ProductErrorCategory.STATE,
+                    )
+            elif expected_previous_registry_sha256 is not None:
                 raise ProductError(
-                    "ERR_CONTINUITY_STORE_CAS_REQUIRED",
-                    "Replacing an existing continuity registry requires its exact previous checksum",
-                    ProductErrorCategory.AUTHORIZATION,
-                )
-            current = ContinuityRegistryStore.load_document(target)["registry_sha256"]
-            if current != expected_previous_registry_sha256:
-                raise ProductError(
-                    "ERR_CONTINUITY_STORE_REVISION_CONFLICT",
-                    "Continuity registry changed before save; reload before retry",
+                    "ERR_CONTINUITY_STORE_PREVIOUS_MISSING",
+                    "Expected previous continuity registry does not exist",
                     ProductErrorCategory.STATE,
                 )
-        elif expected_previous_registry_sha256 is not None:
-            raise ProductError(
-                "ERR_CONTINUITY_STORE_PREVIOUS_MISSING",
-                "Expected previous continuity registry does not exist",
-                ProductErrorCategory.STATE,
-            )
-        return AtomicJsonWriter.write(target, registry.to_dict(), validator=lambda value: _parse(value))
+            return AtomicJsonWriter.write(target, registry.to_dict(), validator=lambda value: _parse(value))
 
     @staticmethod
     def recover(path: str | Path) -> ContinuityRegistry:

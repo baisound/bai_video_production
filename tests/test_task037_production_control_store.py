@@ -52,6 +52,22 @@ def test_snapshot_round_trip_is_deterministic_and_preserves_locked_trace(tmp_pat
     assert loaded.locked_asset_trace("slot:SC01:VIDEO")["asset_sha256"] == SHA
 
 
+def test_stale_locked_trace_round_trip_preserves_candidate_and_root_cause(tmp_path: Path):
+    path = tmp_path / "production-control.json"
+    registry = populated_registry()
+    registry.mark_stale(EntityRef(EntityType.PLAN, "plan-1"))
+    previous = ProductionControlSnapshotStore.snapshot(populated_registry())["snapshot_sha256"]
+    # First publication does not need CAS; the expected value documents that
+    # the in-memory change is derived from the accepted locked baseline.
+    assert previous.startswith("sha256:")
+    ProductionControlSnapshotStore.save(path, registry)
+    loaded = ProductionControlSnapshotStore.load(path)
+    assert loaded.slots["slot:SC01:VIDEO"].status.value == "STALE"
+    assert loaded.slots["slot:SC01:VIDEO"].locked_candidate_id == "candidate-1"
+    assert loaded.candidates["candidate-1"].lifecycle_state is CandidateLifecycle.STALE
+    assert loaded.slots["slot:SC01:VIDEO"].stale_root_cause_ref == "plan-1"
+
+
 def test_existing_snapshot_requires_compare_and_swap_checksum(tmp_path: Path):
     path = tmp_path / "production-control.json"
     registry = populated_registry()

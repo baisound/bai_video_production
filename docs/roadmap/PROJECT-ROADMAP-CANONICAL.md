@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.27
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.29
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -720,3 +720,17 @@ The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release 
 TASK-013 R3 Generation Safety Product promotion is complete. PR #30 exact head `b2ba2306f7511d725520adc0ae5ebdcb742ab180` passed all `9 / 9` hosted checks and merged at exact main SHA `be8ea573fde1c3d4f7abe1a73887b6633d73ef32`. The implementation branch was deleted remotely and locally.
 
 The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R3 checkpoint. The next Owner-routed unit is TASK-039 Continuity Map / STALE propagation, starting from exact TASK-013 closure main on a new dedicated branch. It promotes the existing Continuity Registry, crash-safe Store, Production dependency binding and Human soft-continuity review rather than recreating them.
+
+### Ver.1.28 Addendum XIX — TASK-039 R3 Product Promotion Kickoff
+
+TASK-039 R3 Product promotion is active from exact TASK-013 closure main `0ef7bfde85783f3f73c502c03ab5fce72c2a52c9` on `codex/task-039-r3-continuity-product-promotion`. The existing Continuity Edge/Registry/Store/Workspace, exact DIRECT_CONTINUATION identity, Human SOFT_CONTINUITY approval and TASK-037 STALE graph foundations will be promoted rather than recreated.
+
+The bounded Product unit adds serialized CAS, recoverable exact two-store Edge registration, production-derived target inspection, restart-safe Human soft approval and a user-facing `連続性` workspace. It does not call a Provider, regenerate, delete media, clear prior Human decisions, mutate Resolve/Cubase or publish output.
+
+### Ver.1.29 Addendum XX — TASK-039 R3 Local Product Gate
+
+TASK-039 Continuity Product promotion passes its local Product gate. The unified Desktop `連続性` workspace now registers exact locked END_FRAME -> START_FRAME Edges through a one-shot Human confirmation, inspects only the exact current locked target Candidate, preserves non-overridable DIRECT_CONTINUATION identity and exposes separate SOFT_CONTINUITY Human approval.
+
+Edge registration is a prepared, checksum-bound two-store transaction across `continuity-registry.json` and TASK-037 `production-control.json`. Restart classifies exact OLD/NEW combinations and exposes only bounded COMPLETE/ABANDON/FINALIZE recovery; unknown mixtures remain blocked. Continuity and Production CAS publication are locally serialized, confirmation tokens are consumed before stale revalidation, and changed roots plus downstream dependencies become STALE without deleting Evidence or starting regeneration.
+
+The final local regression passes `869 / 869`. Focused TASK-039/TASK-037/TASK-036 integration passes `88 / 88`; Windows and WSL2 compile, Desktop JavaScript syntax and diff checks pass. Hosted PR checks, exact main merge verification and branch cleanup remain before formal TASK-039 closure. Stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is selected at this checkpoint. TASK-040 starts only after hosted closure on a new branch.

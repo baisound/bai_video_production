@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_042_P_V6_2_IMPLEMENTATION_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_042_P_V6_2_HOSTED_CLOSED / CLOSURE_SYNC_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-042 / P-V6-2 IMPLEMENTATION_LOCAL_PASS_HOSTED_PENDING`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-042 / P-V6-2 HOSTED_CLOSED / CLOSURE_SYNC_LOCAL_PASS_HOSTED_PENDING`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`; TASK-042 P-V6-2 selects no package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `P-V6-2 Implementation PR all-green/main merge (new cadence merge 1/2) -> exact SHA and cleanup -> fresh-main bounded hosted Closure Sync (merge 2/2) -> return to AUTONOMY; TASK-013 native resumption remains parked and the preserved uncertain execution must never be replayed automatically`
+- Next Consumer Decision Gate: `P-V6-2 Closure Sync PR all-green/main merge (cadence merge 2/2) -> exact SHA and cleanup -> return to AUTONOMY -> fresh-main P-V6-3 selection if authorized; TASK-013 native resumption remains parked and the preserved uncertain execution must never be replayed automatically`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.54 Addendum XLVI. P-V6-2 Design PR #55 passed all `9 / 9` checks, merged at exact main `6a4a6a5e28705950d0ba6457c38d9b8d119fe944`, and completed branch/clone cleanup. Fresh-main AUTONOMY selected P-V6-2 implementation. Exact TASK-037-backed WORLD LOCK, v2 Plan/Trace/Planning, transitive STALE, restart recovery and v2 Queue proof are local PASS; Windows full regression is `960 / 960`, Critic unresolved Critical/High `0 / 0`, and hosted implementation remains pending. R3 control-loop, TASK-013 readiness and TASK-041 remain hosted-closed; Provider execution, media derivation, TASK-026 compilation and Resolve/Cubase mutation remain false. Native H3 and paid TASK-014 execution remain parked. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.55 Addendum XLVII. P-V6-2 implementation PR #56 exact head `e3ab3dc3f32bfbad42f72a8d65c0d43b896f5fd3` passed all `9 / 9` checks and merged at exact main `4c77ad08172de05cf07ba3374a879fafca4bf2fd`; remote branch/dedicated clone cleanup passed. Fresh-main AUTONOMY selected the bounded P-V6-2 Closure Sync, while P-V6-3 waits for its hosted merge. R3 control-loop, TASK-013 readiness and TASK-041 remain hosted-closed; Provider execution, media derivation, TASK-026 compilation and Resolve/Cubase mutation remain false. Native H3 and paid TASK-014 execution remain parked. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

@@ -18,7 +18,7 @@
 | TASK-024 | Silence / Filler / Disfluency Cut Candidate Worker | RELEASED_V0.18.0_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Review-only cut candidates remain non-mutating; TASK-036 W2 Human Cut Review Shell route PASS |
 | TASK-025..026 | Remaining External-SKILL additions (collision-resolved) | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Premiere adapter and Audio Placement remain later work |
 | TASK-022 | Timeline Mapping Service | COMPLETED | COMPLETED_WITH_OWNER_VERIFICATION | DEV-4 | Package 0.5.0; exact affine/NTSC/end-exclusive mapping, speed/gap, deterministic Plan/schema; native Windows 263/263 PASS |
-| TASK-027 | AI Video Creation Studio / New Production Orchestrator | R2_PLANNING_COMPLETE_R3_QUEUE_LOCAL_GATE_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | 893/893 full and 71/71 focused PASS; durable exact Evidence-derived Desktop Queue admission; execution remains unauthorized |
+| TASK-027 | AI Video Creation Studio / New Production Orchestrator | R2_PLANNING_AND_R3_GENERATION_QUEUE_COMPLETE_FUTURE_SLICES_REMAIN | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Queue PR #36 passed 9/9 and merged at exact main ac9524c; durable Evidence-derived admission complete; execution remains unauthorized |
 | TASK-028 | AI Connection Provider / Model Routing | CAPABILITY_REGISTRY_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 | 0.6.2 external media 293/293 PASS; 0.6.3 removes provider-purpose locking and adds exact model capability catalog plus generic execution registry; 305-test Windows gate pending |
 | TASK-029 | Human Edit Learning / Federated Knowledge Evolution | PROPOSED | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Human action Evidence → hypothesis/multi-metric evaluation → Owner-local learning; opt-in anonymized cloud aggregation; signed Git-versioned Knowledge Packs |
 | TASK-030 | OSS Public Repository Readiness | IMPLEMENTED_AWAITING_GITHUB_CI | OWNER_DIRECTED_IMPLEMENTATION | DEV-2 | 0.6.6 fixed runner media dependencies; 0.6.7 removes global OS mutation after 5/6 matrix jobs passed |
@@ -40,7 +40,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and the bounded TASK-027 Planning Workspace minimum are completed. TASK-027 Generation Queue integration passes its local Product Gate and awaits hosted closure. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 Audio & Generative Production begins with a current-state audit on a new branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

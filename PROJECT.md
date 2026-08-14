@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK013_R3_COMPLETE_TASK039_LOCAL_GATE_PASS`
+`V0_20_1_RELEASED_TASK039_R3_COMPLETE`
 
 ## Purpose
 
@@ -109,15 +109,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-039 — R3 Continuity Product local gate / 869 of 869 PASS / hosted PR pending`
-- Active Task: `TASK-039 — R3 Continuity Map / STALE Product promotion hosted closure`
+- Last Completed Gate: `TASK-039 — R3 Continuity Product promotion / PR #32 9 of 9 PASS / exact main a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b`
+- Active Task: `NONE — TASK-040 begins only on a new dedicated branch after current-state audit`
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Development Candidate: `NONE`
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.29 Addendum XX
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.30 Addendum XXI
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

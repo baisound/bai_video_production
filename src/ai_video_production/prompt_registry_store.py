@@ -15,6 +15,7 @@ from .prompt_registry import (
     GenerationAttempt,
     GenerationResult,
     PromptEntity,
+    PromptCompilationBinding,
     PromptGenerationRegistry,
     RegenerationStrategy,
 )
@@ -31,6 +32,19 @@ _PROMPT_FIELDS = {
     "prompt_id", "prompt_version", "purpose", "scene_id", "slot_id", "body_ref",
     "body_sha256", "provider_profile_id", "provider_profile_version", "input_asset_hashes",
     "keep_conditions", "prompt_body_embedded_in_general_evidence",
+}
+_COMPILED_PROMPT_FIELDS = _PROMPT_FIELDS | {"compilation_binding"}
+_COMPILATION_BINDING_FIELDS = {
+    "compilation_version", "compilation_manifest_ref", "compilation_sha256",
+    "source_ja_ref", "source_ja_sha256", "normalized_ja_ref", "normalized_ja_sha256",
+    "runtime_en_ref", "runtime_en_sha256", "negative_prompt_ref", "negative_prompt_sha256",
+    "proofreading_state", "manual_english_override_state", "director_sha256",
+    "blueprint_world_lock_sha256", "narration_intent_sha256", "music_direction_sha256",
+    "se_intent_sha256", "ambience_intent_sha256", "generate_bgm", "generate_se",
+    "generate_ambience", "provider_profile_id", "provider_profile_version",
+    "provider_profile_sha256", "selected_route_id", "required_capabilities",
+    "input_asset_hashes", "scene_id", "slot_id", "prompt_bodies_embedded",
+    "provider_execution_started",
 }
 _ATTEMPT_FIELDS = {
     "generation_job_id", "slot_id", "prompt_id", "prompt_version", "prompt_sha256",
@@ -71,12 +85,23 @@ def _parse(document: dict[str, Any]) -> PromptGenerationRegistry:
         for row in prompt_rows:
             if (
                 not isinstance(row, dict)
-                or set(row) != _PROMPT_FIELDS
+                or (set(row) != _PROMPT_FIELDS and set(row) != _COMPILED_PROMPT_FIELDS)
                 or isinstance(row["prompt_version"], bool)
                 or not isinstance(row["prompt_version"], int)
                 or not isinstance(row["input_asset_hashes"], list)
                 or not isinstance(row["keep_conditions"], list)
                 or row["prompt_body_embedded_in_general_evidence"] is not False
+                or (
+                    "compilation_binding" in row
+                    and (
+                        not isinstance(row["compilation_binding"], dict)
+                        or set(row["compilation_binding"]) != _COMPILATION_BINDING_FIELDS
+                        or row["compilation_binding"]["prompt_bodies_embedded"] is not False
+                        or row["compilation_binding"]["provider_execution_started"] is not False
+                        or not isinstance(row["compilation_binding"]["required_capabilities"], list)
+                        or not isinstance(row["compilation_binding"]["input_asset_hashes"], list)
+                    )
+                )
             ):
                 raise TypeError("Prompt row fields are invalid")
         for row in attempt_rows:
@@ -104,6 +129,20 @@ def _parse(document: dict[str, Any]) -> PromptGenerationRegistry:
                 slot_id=row.get("slot_id"),
                 body_ref=row.get("body_ref"),
                 input_asset_hashes=tuple(row.get("input_asset_hashes", [])),
+                compilation_binding=(
+                    None
+                    if "compilation_binding" not in row
+                    else PromptCompilationBinding(
+                        **{
+                            **{
+                                key: value for key, value in row["compilation_binding"].items()
+                                if key not in {"prompt_bodies_embedded", "provider_execution_started"}
+                            },
+                            "required_capabilities": tuple(row["compilation_binding"]["required_capabilities"]),
+                            "input_asset_hashes": tuple(row["compilation_binding"]["input_asset_hashes"]),
+                        }
+                    )
+                ),
             )
             for row in prompt_rows
         ]

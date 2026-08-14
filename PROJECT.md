@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK_042_P_V6_3_DESIGN_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_TASK_042_P_V6_3_IMPLEMENTATION_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -111,14 +111,14 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 ## Current Consumer Task State
 
 - Last Completed Gate: `TASK-041 — Audio Workspace Product promotion hosted closure: PR #47 exact head 3785e44 passed 9 of 9 and merged at exact main 8dd6434a; Provider/TASK-026/Resolve/Cubase execution remain false`
-- Active Task: `TASK-042 — Product Workflow V6 Integration / P-V6-3 DESIGN LOCAL PASS / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
+- Active Task: `TASK-042 — Product Workflow V6 Integration / P-V6-3 IMPLEMENTATION LOCAL PASS / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Development Candidate: `NONE`; TASK-042 P-V6-2 selects no package version
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.56 Addendum XLVIII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.57 Addendum XLIX
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -146,6 +146,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - P-V6-2 Design PR #55 passed `9 / 9`, merged at exact main `6a4a6a5e28705950d0ba6457c38d9b8d119fe944`, and completed remote branch/dedicated clone cleanup. Fresh-main AUTONOMY selected `BVP-TASK-042-P-V6-2-IMPLEMENTATION / IMPLEMENTATION`. Exact TASK-037-backed WORLD LOCK projection, v2 Production Control/Planning/Trace, transitive STALE/restart recovery and v2 Queue proof passed Windows `960 / 960`; v1 remains compatible and implementation Critic is unresolved Critical/High `0 / 0`.
 - P-V6-2 implementation is hosted-closed. PR #56 exact head `e3ab3dc3f32bfbad42f72a8d65c0d43b896f5fd3` passed `9 / 9` and merged at exact main `4c77ad08172de05cf07ba3374a879fafca4bf2fd`; its remote branch and dedicated implementation clone were removed. Fresh-main BAI Development OS Handoff Bootstrap selected the current checkout over the stale handoff, and Queue selected `BVP-TASK-042-P-V6-2-CLOSURE-SYNC / IMPLEMENTATION`. This documentation-only sync is cadence merge `2 / 2` when hosted; after cleanup control returns to AUTONOMY before P-V6-3. Stable release remains `v0.20.1`.
 - Closure Sync PR #57 exact head `34bedb48591e713475b438f4b5074d581cd73fd2` passed `9 / 9`, merged at exact main `92ff6938b9def12161d8635048ad3714315ed9d4`, and completed branch/clone cleanup as cadence merge `2 / 2`. Fresh-main AUTONOMY then selected `BVP-TASK-042-P-V6-3-DESIGN / DESIGN_ONLY`. The current audit, DEV-4 re-decision, immutable Prompt/Provider projection/Quick authority design, P-V6-2 Queue persistence corrective, exact Allowed Files and two Critic cycles are local PASS. Implementation remains not started until this design is hosted-closed and reselected. Stable release remains `v0.20.1`.
+- P-V6-3 Design PR #58 exact head `0067fcc8e306a1799ccc7afeeae2638b9bb19e3b` passed `9 / 9`, merged at exact main `c78ed0141b0849b3a5d1b2229b87c320697b4980`, and completed branch/clone cleanup as cadence merge `1 / 2`. Fresh-main AUTONOMY selected `BVP-TASK-042-P-V6-3-IMPLEMENTATION / IMPLEMENTATION`. Immutable Prompt compilation, secret-free Provider/Model readiness, append-only Quick intent CAS/restart/adoption projection and the v2 Queue persistence corrective are locally implemented with Critic unresolved Critical/High `0 / 0`; hosted implementation closure remains pending. No Provider/native/media/Candidate/Audit/Lock or release operation was started. Stable release remains `v0.20.1`.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

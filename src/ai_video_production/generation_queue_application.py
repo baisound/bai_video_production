@@ -147,7 +147,18 @@ class Task027GenerationQueueApplication:
             if any(
                 not isinstance(item["asset_sha256"], str)
                 or not _SHA_RE.fullmatch(item["asset_sha256"])
-                or item["proof_kind"] not in {"HUMAN_GO_REFERENCE", "LOCKED_CURRENT_CANDIDATE"}
+                or item["proof_kind"] not in {
+                    "HUMAN_GO_REFERENCE",
+                    "LOCKED_CURRENT_CANDIDATE",
+                    "WORLD_LOCKED_CURRENT_CANDIDATE",
+                }
+                or (
+                    item["proof_kind"] == "WORLD_LOCKED_CURRENT_CANDIDATE"
+                    and any(
+                        not isinstance(item[name], str) or not item[name]
+                        for name in ("reference_id", "slot_id", "candidate_id", "asset_id")
+                    )
+                )
                 for item in entry["input_bindings"]
             ):
                 raise ProductError("ERR_QUEUE_ENTRY_INVALID", "Generation Queue input proof identity is invalid", ProductErrorCategory.DATA_INTEGRITY)

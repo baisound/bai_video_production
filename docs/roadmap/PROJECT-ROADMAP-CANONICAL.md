@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.29
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.30
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -734,3 +734,9 @@ TASK-039 Continuity Product promotion passes its local Product gate. The unified
 Edge registration is a prepared, checksum-bound two-store transaction across `continuity-registry.json` and TASK-037 `production-control.json`. Restart classifies exact OLD/NEW combinations and exposes only bounded COMPLETE/ABANDON/FINALIZE recovery; unknown mixtures remain blocked. Continuity and Production CAS publication are locally serialized, confirmation tokens are consumed before stale revalidation, and changed roots plus downstream dependencies become STALE without deleting Evidence or starting regeneration.
 
 The final local regression passes `869 / 869`. Focused TASK-039/TASK-037/TASK-036 integration passes `88 / 88`; Windows and WSL2 compile, Desktop JavaScript syntax and diff checks pass. Hosted PR checks, exact main merge verification and branch cleanup remain before formal TASK-039 closure. Stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is selected at this checkpoint. TASK-040 starts only after hosted closure on a new branch.
+
+### Ver.1.30 Addendum XXI — TASK-039 R3 Hosted Closure
+
+TASK-039 Continuity Product promotion is complete. PR #32 exact head `b40443ee24812ef8c3cef7e51b7c5e4500b33f08` passed all `9 / 9` hosted checks and merged at exact main SHA `a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b`. The implementation branch was deleted remotely and locally.
+
+The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R3 checkpoint. The next Owner-routed unit is TASK-040 Prompt Registry / Generation Evidence, beginning with current-checkout audit and formal DEV-4 re-decision on a new dedicated branch. It must promote the existing Prompt Entity/version, Candidate lineage, failure-driven regeneration planning and immutable next-version draft foundations rather than recreate them. TASK-027 Generation Queue integration and the complete high-cost admission conjunction remain later work.

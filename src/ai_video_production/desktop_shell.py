@@ -118,6 +118,11 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "timeline.selection.update": ShellCommandSpec("timeline.selection.update", CommandCategory.LOCAL_REVERSIBLE),
     "timeline.seek": ShellCommandSpec("timeline.seek", CommandCategory.LOCAL_REVERSIBLE),
     "timeline.viewport.update": ShellCommandSpec("timeline.viewport.update", CommandCategory.LOCAL_REVERSIBLE),
+    "timeline.in_out.update": ShellCommandSpec("timeline.in_out.update", CommandCategory.LOCAL_REVERSIBLE),
+    "timeline.edit.prepare": ShellCommandSpec("timeline.edit.prepare", CommandCategory.READ_ONLY),
+    "timeline.edit.apply": ShellCommandSpec("timeline.edit.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "timeline.track.prepare": ShellCommandSpec("timeline.track.prepare", CommandCategory.READ_ONLY),
+    "timeline.track.apply": ShellCommandSpec("timeline.track.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

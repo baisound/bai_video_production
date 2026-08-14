@@ -1,0 +1,25 @@
+{
+  "context_cost_schema_version": "1.0.0",
+  "record_id": "CCR-BVP-TASK042-PV63-CLOSURE-SYNC-001",
+  "task_id": "BVP-TASK-042-P-V6-3-CLOSURE-SYNC",
+  "session_id": "autonomy-post-pr59",
+  "phase": "HOSTED_CLOSURE_SYNC",
+  "recorded_at": "2026-08-15T03:15:00.000Z",
+  "confidence": "CHARACTER_HEURISTIC",
+  "sources": [
+    {"source_id":"project","source_type":"REPOSITORY_FILE","path_or_ref":"PROJECT.md","sha256":"sha256:8faa088036c86446b129936145e6ba04cea49586dcf5d3333ee84a4df55bd426","estimated_tokens":2200,"observed_tokens":null,"selected_reason":"CRITICAL_BOOTSTRAP","mandatory":true,"cacheable":true,"changed_since_previous_session":true,"used_in_decision":true,"used_in_patch":true,"duplicate_of":null,"stale":false,"trust_level":"CANONICAL_GOVERNANCE"},
+    {"source_id":"current-state","source_type":"REPOSITORY_FILE","path_or_ref":"docs/ai-team/current-state.md","sha256":"sha256:b3f2fd9469e9f5ba005c634d40fe7f0c5cc0aafd775fd4409b2447359658bb79","estimated_tokens":1700,"observed_tokens":null,"selected_reason":"CRITICAL_BOOTSTRAP","mandatory":true,"cacheable":true,"changed_since_previous_session":true,"used_in_decision":true,"used_in_patch":true,"duplicate_of":null,"stale":false,"trust_level":"CANONICAL_GOVERNANCE"},
+    {"source_id":"task-index","source_type":"REPOSITORY_FILE","path_or_ref":"docs/ai-team/task-index.md","sha256":"sha256:a21f191d2492a21f0fdceae1ecf1ca552b0b2d2358cca13f0d09e74ff8940a0a","estimated_tokens":1400,"observed_tokens":null,"selected_reason":"CRITICAL_BOOTSTRAP","mandatory":true,"cacheable":true,"changed_since_previous_session":true,"used_in_decision":true,"used_in_patch":true,"duplicate_of":null,"stale":false,"trust_level":"CANONICAL_GOVERNANCE"},
+    {"source_id":"task-summary","source_type":"REPOSITORY_FILE","path_or_ref":"docs/ai-team/tasks/TASK-042/TASK-042.summary.md","sha256":"sha256:ea8d5f2a80158d2725fe2e33bf6f38b0e9b0e8b2139a4ab72b166f3b1b12a020","estimated_tokens":1200,"observed_tokens":null,"selected_reason":"CRITICAL_BOOTSTRAP","mandatory":true,"cacheable":true,"changed_since_previous_session":true,"used_in_decision":true,"used_in_patch":true,"duplicate_of":null,"stale":false,"trust_level":"AUTHORIZED_TASK"},
+    {"source_id":"roadmap","source_type":"REPOSITORY_FILE","path_or_ref":"docs/roadmap/PROJECT-ROADMAP-CANONICAL.md","sha256":"sha256:671242ac77b3c0f342ec172b455a2182c0d0939d908d2333383ad0cd1f2060e5","estimated_tokens":4000,"observed_tokens":null,"selected_reason":"CRITICAL_BOOTSTRAP","mandatory":true,"cacheable":true,"changed_since_previous_session":true,"used_in_decision":true,"used_in_patch":true,"duplicate_of":null,"stale":false,"trust_level":"CANONICAL_GOVERNANCE"},
+    {"source_id":"closure-evidence","source_type":"REPOSITORY_FILE","path_or_ref":"docs/ai-team/tasks/TASK-042/p-v6-3-hosted-closure-and-autonomy-reselection-evidence-2026-08-15.md","sha256":"sha256:b13384b88fdbbddb25ac4796597cf1afe9474233e7ab83dca43ae3fde8fc0027","estimated_tokens":5400,"observed_tokens":null,"selected_reason":"CURRENT_TASK_RELEVANT","mandatory":true,"cacheable":true,"changed_since_previous_session":true,"used_in_decision":true,"used_in_patch":true,"duplicate_of":null,"stale":false,"trust_level":"AUTHORIZED_TASK"}
+  ],
+  "usage": {"estimated_input_tokens":15900,"observed_input_tokens":null,"observed_cached_input_tokens":null,"observed_output_tokens":null,"billed_tokens":null},
+  "quality_gate": {"status":"PASS","gate_id":"P_V6_3_CLOSURE_SYNC_LOCAL_PASS"},
+  "efficiency": {"status":"AVAILABLE","score":100,"formula":"useful_ratio*(1-duplicate_ratio)*(1-stale_ratio)*100"},
+  "metrics": {"source_count":6,"estimated_input_tokens":15900,"duplicate_tokens":0,"stale_tokens":0,"useful_tokens":15900,"avoidable_tokens":0,"duplicate_ratio":0,"stale_ratio":0,"useful_ratio":1,"avoidable_ratio":0},
+  "overfetch_policy": {"warning_ratio":0.1,"major_ratio":0.25,"critical_ratio":0.5,"critical_repeat_count":2},
+  "repeated_overfetch_count": 0,
+  "findings": [],
+  "content_checksum": "sha256:fcbe113abb9fed5c6e608b11a7196a6f055a51873f3acbdff8ccd526f1f569e8"
+}

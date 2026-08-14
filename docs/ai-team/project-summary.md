@@ -7,8 +7,8 @@
 - Product package: `0.20.1`
 - Stable formal Release: `v0.20.1`
 - Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Current development main: `fac1a2fb53c3c5c439c3b1cf6c55f10d4bbf3f57` (PR #45 read-only readiness preflight merge)
-- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_AUDIO_WORKSPACE_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
+- Current development main: `8dd6434a65115d88641d0942b08788a9eceda279` (PR #47 TASK-041 Audio Workspace Product promotion merge)
+- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_AUDIO_WORKSPACE_PRODUCT_PROMOTION_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
 - Active implementation branch: `NONE`
 
 Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
@@ -24,7 +24,7 @@ Current main is newer than the stable release because bounded R2-R4 Product deve
 - R4 TASK-013 restart-safe local execution control and the exact local/free MiniMax H3 ComfyUI adapter are hosted-closed.
 - TASK-013 incident-derived safe-runtime launch-flag hardening rejects every force-restart memory flag and assignment form before durable reservation or external queue side effects.
 - TASK-013 now exposes a hosted-closed explicit read-only runtime readiness preflight through the Product application/Shell bridge. PR #45 exact head `f0d3a95` passed `9 / 9` and merged at `fac1a2fb`; it reuses the real pre-dispatch checks but cannot queue, create a journal/output, authorize execution or satisfy the Native Gate.
-- TASK-041 Audio Workspace now has a local-gated Product Application and unified Desktop workspace for durable placement review and exact Human decisions over accepted/locked SE/BGM/NARRATION Candidates. Provider, paid execution, media-byte writes, TASK-026 compilation and Resolve/Cubase mutation remain separate and unstarted.
+- TASK-041 Audio Workspace Product promotion is hosted-closed. PR #47 exact head `3785e44a` passed all `9 / 9` checks and merged at exact main `8dd6434a`; the Product Application and unified Desktop workspace provide durable placement review and exact Human decisions over accepted/locked SE/BGM/NARRATION Candidates. Provider, paid execution, media-byte writes, TASK-026 compilation and Resolve/Cubase mutation remain separate and unstarted.
 
 ## Current parked boundary
 
@@ -36,7 +36,7 @@ No contained generated output, TASK-037 Candidate, TASK-040 Attempt binding, TAS
 
 - full multi-slice TASK-027 production orchestration;
 - remaining TASK-013 native generation and post-native Candidate/Audit binding;
-- TASK-014 Owner Narration, TASK-026 Audio Placement and TASK-041 Audio Workspace;
+- TASK-014 Owner Narration, TASK-026 Audio Placement compilation/execution and later TASK-041 audio-processing slices;
 - later unreached roadmap Tasks and any new roadmap selected through the Owner process.
 
 ## Governance boundary
@@ -45,6 +45,9 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 
 ## Current verification
 
+- PR #47 exact head `3785e44a211b8c4d81005060bc8a1faff161870d`: `9 / 9 PASS`; exact main merge `8dd6434a65115d88641d0942b08788a9eceda279`
+- TASK-041 focused regression: `64 / 64 PASS`
+- TASK-041 full WSL2 regression: `932 / 932 PASS`
 - PR #42 exact head `a6858de5b617abfc591af866e17096b7fb0d4159`: `9 / 9 PASS`
 - PR #43 exact merge/hardening base main: `21228d15e207fb76c5367c28968430789f682885`
 - safe-runtime focused regression: `39 / 39 PASS`

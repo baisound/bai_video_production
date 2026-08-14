@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+import math
 import re
 from typing import Any, Iterable
 
@@ -63,26 +64,32 @@ class PromptEntity:
 
     def __post_init__(self) -> None:
         _id(self.prompt_id, "prompt_id")
-        if self.prompt_version < 1:
+        if isinstance(self.prompt_version, bool) or not isinstance(self.prompt_version, int) or self.prompt_version < 1:
             raise ValueError("prompt_version must be >= 1")
-        if not self.purpose.strip() or len(self.purpose) > 200:
+        if not isinstance(self.purpose, str) or not self.purpose.strip() or len(self.purpose) > 200:
             raise ValueError("purpose is invalid")
         _sha(self.body_sha256, "body_sha256")
         _id(self.provider_profile_id, "provider_profile_id")
-        if not self.provider_profile_version.strip() or len(self.provider_profile_version) > 100:
+        if not isinstance(self.provider_profile_version, str) or not self.provider_profile_version.strip() or len(self.provider_profile_version) > 100:
             raise ValueError("provider_profile_version is invalid")
-        if not self.keep_conditions:
+        if not isinstance(self.keep_conditions, tuple) or not self.keep_conditions:
             raise ValueError("keep_conditions must not be empty")
         for item in self.keep_conditions:
-            if not item.strip() or len(item) > 1000 or "\x00" in item:
+            if not isinstance(item, str) or not item.strip() or len(item) > 1000 or "\x00" in item:
                 raise ValueError("keep condition is invalid")
+        if len(set(self.keep_conditions)) != len(self.keep_conditions):
+            raise ValueError("keep_conditions must be unique")
         for name, value in (("scene_id", self.scene_id), ("slot_id", self.slot_id)):
             if value is not None:
                 _id(value, name)
-        if self.body_ref is not None and (not self.body_ref.strip() or len(self.body_ref) > 1000):
+        if self.body_ref is not None and (not isinstance(self.body_ref, str) or not self.body_ref.strip() or len(self.body_ref) > 1000):
             raise ValueError("body_ref is invalid")
+        if not isinstance(self.input_asset_hashes, tuple):
+            raise ValueError("input_asset_hashes must be a tuple")
         for value in self.input_asset_hashes:
             _sha(value, "input_asset_hash")
+        if len(set(self.input_asset_hashes)) != len(self.input_asset_hashes):
+            raise ValueError("input_asset_hashes must be unique")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -129,20 +136,51 @@ class GenerationAttempt:
             ("model_id", self.model_id),
         ):
             _id(value, name)
-        if self.prompt_version < 1:
+        if isinstance(self.prompt_version, bool) or not isinstance(self.prompt_version, int) or self.prompt_version < 1:
             raise ValueError("prompt_version must be >= 1")
         _sha(self.prompt_sha256, "prompt_sha256")
+        if not isinstance(self.strategy_level, RegenerationStrategy):
+            raise ValueError("strategy_level is invalid")
+        if not isinstance(self.result, GenerationResult):
+            raise ValueError("result is invalid")
+        if not isinstance(self.failure_codes, tuple):
+            raise ValueError("failure_codes must be a tuple")
         for value in self.failure_codes:
             _id(value, "failure_code")
+        if len(set(self.failure_codes)) != len(self.failure_codes):
+            raise ValueError("failure_codes must be unique")
         for name, value in (("output_candidate_id", self.output_candidate_id), ("parent_attempt_id", self.parent_attempt_id)):
             if value is not None:
                 _id(value, name)
+        if self.provider_profile_version is not None and (
+            not isinstance(self.provider_profile_version, str)
+            or not self.provider_profile_version.strip()
+            or len(self.provider_profile_version) > 100
+        ):
+            raise ValueError("provider_profile_version is invalid")
+        if not isinstance(self.input_asset_hashes, tuple):
+            raise ValueError("input_asset_hashes must be a tuple")
         for value in self.input_asset_hashes:
             _sha(value, "input_asset_hash")
-        if self.cost is not None and (isinstance(self.cost, bool) or self.cost < 0):
+        if len(set(self.input_asset_hashes)) != len(self.input_asset_hashes):
+            raise ValueError("input_asset_hashes must be unique")
+        if self.cost is not None and (
+            isinstance(self.cost, bool)
+            or not isinstance(self.cost, (int, float))
+            or not math.isfinite(float(self.cost))
+            or self.cost < 0
+        ):
             raise ValueError("cost must be non-negative or null")
-        if self.latency_ms is not None and (isinstance(self.latency_ms, bool) or self.latency_ms < 0):
+        if self.latency_ms is not None and (
+            isinstance(self.latency_ms, bool)
+            or not isinstance(self.latency_ms, int)
+            or self.latency_ms < 0
+        ):
             raise ValueError("latency_ms must be non-negative or null")
+        if self.result is GenerationResult.PASS and self.output_candidate_id is None:
+            raise ValueError("PASS generation Attempt requires output_candidate_id")
+        if self.result is not GenerationResult.PASS and self.output_candidate_id is not None:
+            raise ValueError("Only PASS generation Attempt may name output_candidate_id")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -236,10 +274,18 @@ class PromptGenerationRegistry:
                 "GenerationAttempt input Asset hashes do not match the registered Prompt version",
                 ProductErrorCategory.DATA_INTEGRITY,
             )
-        if attempt.provider_profile_version is not None and attempt.provider_profile_version != prompt.provider_profile_version:
+        if attempt.provider_profile_version != prompt.provider_profile_version:
             raise ProductError(
                 "ERR_GENERATION_PROFILE_VERSION_MISMATCH",
                 "GenerationAttempt provider profile version does not match the registered Prompt",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if attempt.output_candidate_id is not None and any(
+            item.output_candidate_id == attempt.output_candidate_id for item in self.attempts.values()
+        ):
+            raise ProductError(
+                "ERR_GENERATION_OUTPUT_CANDIDATE_CONFLICT",
+                "Production Candidate is already owned by another Generation Attempt",
                 ProductErrorCategory.DATA_INTEGRITY,
             )
         if attempt.parent_attempt_id is not None:
@@ -250,6 +296,18 @@ class PromptGenerationRegistry:
                 raise ProductError(
                     "ERR_GENERATION_PARENT_SLOT_MISMATCH",
                     "Regeneration parent attempt belongs to a different Slot",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            if parent.prompt_id != attempt.prompt_id or parent.prompt_version > attempt.prompt_version:
+                raise ProductError(
+                    "ERR_GENERATION_PARENT_PROMPT_LINEAGE",
+                    "Regeneration parent Prompt lineage is incompatible with this Attempt",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            if parent.strategy_level > attempt.strategy_level:
+                raise ProductError(
+                    "ERR_GENERATION_PARENT_STRATEGY_REGRESSION",
+                    "Regeneration strategy must not move backwards from its parent Attempt",
                     ProductErrorCategory.DATA_INTEGRITY,
                 )
         self.attempts[attempt.generation_job_id] = attempt

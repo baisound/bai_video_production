@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.30
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.32
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -740,3 +740,17 @@ The final local regression passes `869 / 869`. Focused TASK-039/TASK-037/TASK-03
 TASK-039 Continuity Product promotion is complete. PR #32 exact head `b40443ee24812ef8c3cef7e51b7c5e4500b33f08` passed all `9 / 9` hosted checks and merged at exact main SHA `a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b`. The implementation branch was deleted remotely and locally.
 
 The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R3 checkpoint. The next Owner-routed unit is TASK-040 Prompt Registry / Generation Evidence, beginning with current-checkout audit and formal DEV-4 re-decision on a new dedicated branch. It must promote the existing Prompt Entity/version, Candidate lineage, failure-driven regeneration planning and immutable next-version draft foundations rather than recreate them. TASK-027 Generation Queue integration and the complete high-cost admission conjunction remain later work.
+
+### Ver.1.31 Addendum XXII — TASK-040 R3 Product Promotion Kickoff
+
+TASK-040 R3 Product promotion is active from exact TASK-039 closure main `90998626642cd179c73027a9c4c1f8370a623c43` on `codex/task-040-r3-prompt-evidence-product-promotion`. The current checkout already contains Prompt Entity/version, Prompt/Attempt persistence, PASS output -> TASK-037 Candidate binding, Human NEEDS_REGENERATION planning and immutable next-Prompt draft foundations; this unit promotes them rather than recreating them.
+
+The bounded Product unit adds strict durable parsing and serialized CAS, exact parent-lineage escalation, recoverable Prompt/Production publication for PASS output Evidence, project-scoped one-shot Prompt/Attempt/regeneration operations and a user-facing Prompt Evidence workspace. It imports or records metadata only; it does not call a Provider, spend credits, create media/Candidates, mutate Resolve/Cubase or authorize the later TASK-027 Generation Queue.
+
+### Ver.1.32 Addendum XXIII — TASK-040 R3 Local Product Gate
+
+TASK-040 Prompt Evidence Product promotion passes its local Product Gate. The unified Desktop Prompt Evidence workspace now registers immutable body-free Prompt metadata, imports completed Generation Attempt Evidence, binds one PASS Attempt to one existing TASK-037 Candidate through a recoverable Prompt/Production transaction and registers the next Prompt version only after a durable TASK-038 Human `NEEDS_REGENERATION` decision.
+
+Strict restart parsing, domain reserialization, cross-process CAS, exact project/Slot/Profile/input scope, unique output ownership, non-regressing parent lineage, exact Audit recovery interlock and bounded two-store recovery pass. Full WSL2 regression is `885 / 885`; focused TASK-040/TASK-036 integration is `84 / 84`; Windows/WSL2 compile, Desktop JavaScript syntax and diff gates pass.
+
+Hosted PR checks, exact main merge verification and branch cleanup remain before formal TASK-040 closure. Stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is selected at this checkpoint. TASK-027 Generation Queue integration remains a separate later branch and no Provider or paid execution authority is granted here.

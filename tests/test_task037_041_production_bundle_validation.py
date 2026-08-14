@@ -41,7 +41,7 @@ def bundle():
 
     prompts = PromptGenerationRegistry()
     prompts.add_prompt(PromptEntity("prompt-1", 1, "frame", PSHA, "profile-1", "v1", ("keep",), slot_id="slot-from"))
-    prompts.add_attempt(GenerationAttempt("job-pass", "slot-from", "prompt-1", 1, PSHA, "provider", "model", RegenerationStrategy.TEXT_PROMPT, GenerationResult.FAIL))
+    prompts.add_attempt(GenerationAttempt("job-pass", "slot-from", "prompt-1", 1, PSHA, "provider", "model", RegenerationStrategy.TEXT_PROMPT, GenerationResult.FAIL, provider_profile_version="v1"))
 
     continuity = ContinuityRegistry()
     edge = ContinuityEdge("cont-1", "scene-1", "slot-from", "candidate-from", "asset-shared", SHA1, "scene-2", "slot-to", ContinuityBoundaryType.DIRECT_CONTINUATION)
@@ -100,6 +100,7 @@ def test_pass_generation_output_can_be_required_to_exist_in_production():
     prompts.add_attempt(GenerationAttempt(
         "job-missing", "slot-from", "prompt-2", 1, PSHA, "provider", "model",
         RegenerationStrategy.TEXT_PROMPT, GenerationResult.PASS, (), output_candidate_id="candidate-missing",
+        provider_profile_version="v1",
     ))
     with pytest.raises(ProductError) as exc:
         ProductionBundleValidator.validate(production=production, audits=audits, prompts=prompts, continuity=continuity, audio=audio)

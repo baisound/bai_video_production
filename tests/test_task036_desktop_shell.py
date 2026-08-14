@@ -67,6 +67,14 @@ def test_production_control_workspace_and_commands_are_explicitly_allowlisted():
     assert "continuity.soft.apply" in snapshot["available_commands"]
     assert "continuity.stale.propagate" in snapshot["available_commands"]
     assert "continuity.recovery.apply" in snapshot["available_commands"]
+    assert "prompt_evidence.snapshot" in snapshot["available_commands"]
+    assert "prompt_evidence.prompt.prepare" in snapshot["available_commands"]
+    assert "prompt_evidence.prompt.apply" in snapshot["available_commands"]
+    assert "prompt_evidence.attempt.prepare" in snapshot["available_commands"]
+    assert "prompt_evidence.attempt.apply" in snapshot["available_commands"]
+    assert "prompt_evidence.regeneration.prepare" in snapshot["available_commands"]
+    assert "prompt_evidence.regeneration.apply" in snapshot["available_commands"]
+    assert "prompt_evidence.recovery.apply" in snapshot["available_commands"]
 
 
 def test_planning_workspace_is_explicit_shell_workspace():
@@ -88,6 +96,13 @@ def test_continuity_workspace_is_explicit_shell_workspace():
     shell.open_project_context(project_id="p1", display_name="Project 1")
     shell.set_workspace(WorkspaceId.CONTINUITY)
     assert shell.snapshot().current_workspace is WorkspaceId.CONTINUITY
+
+
+def test_prompt_evidence_workspace_is_explicit_shell_workspace():
+    shell = service()
+    shell.open_project_context(project_id="p1", display_name="Project 1")
+    shell.set_workspace(WorkspaceId.PROMPT_EVIDENCE)
+    assert shell.snapshot().current_workspace is WorkspaceId.PROMPT_EVIDENCE
 
 
 def test_unknown_command_fails_closed():

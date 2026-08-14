@@ -27,6 +27,7 @@ class WorkspaceId(str, Enum):
     PLANNING = "PLANNING"
     GENERATION_SAFETY = "GENERATION_SAFETY"
     CONTINUITY = "CONTINUITY"
+    PROMPT_EVIDENCE = "PROMPT_EVIDENCE"
 
 
 class CommandCategory(str, Enum):
@@ -94,6 +95,14 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "continuity.soft.apply": ShellCommandSpec("continuity.soft.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
     "continuity.stale.propagate": ShellCommandSpec("continuity.stale.propagate", CommandCategory.HUMAN_FINAL_AUTHORITY),
     "continuity.recovery.apply": ShellCommandSpec("continuity.recovery.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "prompt_evidence.snapshot": ShellCommandSpec("prompt_evidence.snapshot", CommandCategory.READ_ONLY),
+    "prompt_evidence.prompt.prepare": ShellCommandSpec("prompt_evidence.prompt.prepare", CommandCategory.READ_ONLY),
+    "prompt_evidence.prompt.apply": ShellCommandSpec("prompt_evidence.prompt.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "prompt_evidence.attempt.prepare": ShellCommandSpec("prompt_evidence.attempt.prepare", CommandCategory.READ_ONLY),
+    "prompt_evidence.attempt.apply": ShellCommandSpec("prompt_evidence.attempt.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "prompt_evidence.regeneration.prepare": ShellCommandSpec("prompt_evidence.regeneration.prepare", CommandCategory.READ_ONLY),
+    "prompt_evidence.regeneration.apply": ShellCommandSpec("prompt_evidence.regeneration.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "prompt_evidence.recovery.apply": ShellCommandSpec("prompt_evidence.recovery.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

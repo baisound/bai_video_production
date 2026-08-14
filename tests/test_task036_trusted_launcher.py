@@ -18,6 +18,7 @@ from ai_video_production.audit_application import Task038AuditApplication
 from ai_video_production.planning_application import Task027PlanningApplication
 from ai_video_production.generation_safety_application import Task013GenerationSafetyApplication
 from ai_video_production.continuity_application import Task039ContinuityApplication
+from ai_video_production.prompt_evidence_application import Task040PromptEvidenceApplication
 
 
 class DialogBackend:
@@ -145,6 +146,15 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert continuity["available"] is True
     assert continuity["provider_execution_started"] is False
     assert continuity["resolve_mutation_started"] is False
+    assert isinstance(launch.bridge.prompt_evidence_application, Task040PromptEvidenceApplication)
+    assert launch.bridge.prompt_evidence_application.project_root == config.project_root
+    assert launch.bridge.prompt_evidence_application.project_id == config.project_id
+    assert launch.bridge.prompt_evidence_application.production_control is launch.bridge.production_control
+    assert launch.bridge.prompt_evidence_application.audit_application is launch.bridge.audit_application
+    prompt_evidence = launch.bridge.prompt_evidence_snapshot({})
+    assert prompt_evidence["available"] is True
+    assert prompt_evidence["provider_execution_started"] is False
+    assert prompt_evidence["candidate_creation_started"] is False
     production = launch.bridge.production_snapshot({})
     assert production["available"] is True
     assert production["project_id"] == config.project_id

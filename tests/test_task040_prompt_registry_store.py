@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -22,11 +23,11 @@ def registry() -> PromptGenerationRegistry:
     ))
     value.add_attempt(GenerationAttempt(
         "job-2", "slot-1", "prompt-1", 1, SHA, "provider-1", "model-1", RegenerationStrategy.TEXT_PROMPT,
-        GenerationResult.FAIL, ("DEPTH_ORDER",)
+        GenerationResult.FAIL, ("DEPTH_ORDER",), provider_profile_version="v1"
     ))
     value.add_attempt(GenerationAttempt(
         "job-1", "slot-1", "prompt-1", 1, SHA, "provider-1", "model-1", RegenerationStrategy.PROMPT_RESTRUCTURE,
-        GenerationResult.FAIL, ("DEPTH_ORDER",), parent_attempt_id="job-2"
+        GenerationResult.FAIL, ("DEPTH_ORDER",), parent_attempt_id="job-2", provider_profile_version="v1"
     ))
     return value
 
@@ -67,3 +68,44 @@ def test_existing_prompt_snapshot_requires_compare_and_swap(tmp_path: Path):
     with pytest.raises(ProductError) as exc:
         PromptRegistrySnapshotStore.save(path, value)
     assert exc.value.code == "ERR_PROMPT_SNAPSHOT_CAS_REQUIRED"
+
+
+def test_prompt_snapshot_rejects_unknown_record_field_even_with_valid_checksum(tmp_path: Path):
+    path = tmp_path / "prompt.json"
+    doc = PromptRegistrySnapshotStore.snapshot(registry())
+    doc["prompts"][0]["unknown"] = "must fail closed"
+    body = {key: value for key, value in doc.items() if key != "snapshot_sha256"}
+    doc["snapshot_sha256"] = sha256_bytes(canonical_json_bytes(body))
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    with pytest.raises(ProductError) as exc:
+        PromptRegistrySnapshotStore.load(path)
+    assert exc.value.code == "ERR_PROMPT_SNAPSHOT_INVALID"
+
+
+def test_prompt_snapshot_serializes_concurrent_compare_and_swap(tmp_path: Path):
+    path = tmp_path / "prompt.json"
+    initial = registry()
+    PromptRegistrySnapshotStore.save(path, initial)
+    old_sha = PromptRegistrySnapshotStore.snapshot(initial)["snapshot_sha256"]
+
+    def variant(body_char: str) -> PromptGenerationRegistry:
+        value = registry()
+        value.add_prompt(PromptEntity(
+            "prompt-1", 2, "scene frame revision", "sha256:" + body_char * 64,
+            "profile-1", "v1", ("monitor foreground",), scene_id="scene-1",
+            slot_id="slot-1", body_ref="project-private://prompts/prompt-1/v2",
+        ))
+        return value
+
+    def save(value: PromptGenerationRegistry) -> str:
+        try:
+            PromptRegistrySnapshotStore.save(
+                path, value, expected_previous_snapshot_sha256=old_sha,
+            )
+            return "PASS"
+        except ProductError as exc:
+            return exc.code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(save, (variant("d"), variant("e"))))
+    assert sorted(results) == ["ERR_PROMPT_SNAPSHOT_REVISION_CONFLICT", "PASS"]

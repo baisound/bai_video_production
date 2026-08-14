@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK039_R3_COMPLETE`
+- Project Status: `V0_20_1_RELEASED / TASK039_R3_COMPLETE / TASK040_R3_LOCAL_GATE_PASS_HOSTED_PENDING`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE — TASK-040 kickoff is next on a dedicated branch`
+- Active Consumer Task: `TASK-040 — local Product Gate PASS; hosted PR/merge closure pending`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `TASK-040 Prompt Registry / Generation Evidence current-state audit, DEV Profile and formal kickoff on a new branch`
+- Next Consumer Task: `close TASK-040 through hosted checks/exact main merge; then TASK-027 Generation Queue integration slice on a new branch`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -105,7 +105,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.30 Addendum XXI. TASK-039 PR #32 passed `9 / 9`, merged at exact main `a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b`, and its implementation branch was deleted remotely and locally. TASK-040 is next on a new branch. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.32 Addendum XXIII. TASK-040 local Product Gate passes `885 / 885` full regression and `84 / 84` focused integration; hosted PR/merge closure is pending. Stable Product release remains `v0.20.1`.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

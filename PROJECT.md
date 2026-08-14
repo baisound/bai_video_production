@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK_042_P_V6_1B_HOSTED_CLOSED_CLOSURE_SYNC_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_TASK_042_P_V6_2_DESIGN_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -141,7 +141,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - R2/R3 route is complete. R4 TASK-013 now has a hosted-closed package-owned body-free local/free adapter, exact runtime-policy enforcement, no-replay recovery and opt-in trusted-launch composition. The current bounded unit adds an explicit read-only readiness preflight that checks node/model availability, resources and exact runtime identity while fixing dispatch, journal creation, execution authorization and Native Gate satisfaction to false. Native completion remains parked: attempt 01 failed in the real sampler path and attempt 02 was externally interrupted by the Owner-confirmed Windows force restart with durable `QUEUED / RECOVERY_REQUIRED`.
 - R4 TASK-041 Audio Workspace Product promotion is hosted-closed: exact Production/audio snapshot binding, crash-safe CAS, one-shot Human placement decisions and the unified Desktop `音声` workspace passed PR #47 `9 / 9` and merged at exact main `8dd6434a`. It records review intent only and starts no Provider, paid call, derived-media write, TASK-026 compile, Resolve or Cubase operation.
 - TASK-042 is the Owner-directed current highest-priority Product route. P-V6-0 merged through PR #49 at exact main `7be3de1a`; P-V6-1A passed PR #50 `9 / 9` and merged at exact main `694e9933`. P-V6-1B design PR #52 passed `9 / 9` and merged at exact main `cbf27b29`; its branch and design clone were removed before a fresh implementation clone was created.
-- P-V6-1B implementation is hosted-closed. PR #53 exact head `c0df2e24eccf4ba4e854b73bbb3d711509199f35` passed all `9 / 9` checks and merged at exact main `5413a85bcbb0c66599a2650b281cb9f57b19d6a2`; its remote branch and dedicated implementation clone were removed. Proposal/GO/snapshot accept exact Blueprint v1/v2, the Windows EXE build contract and README AUTONOMY guide are on main, and v2 Production Control/generation remains fail-closed until P-V6-2. The two-merge cadence returned to AUTONOMY, which selected this bounded Closure Sync. After this sync merges as cadence merge `1 / 2`, P-V6-2 Design is the next dependency-eligible Queue candidate from a fresh main clone.
+- P-V6-1B implementation is hosted-closed. PR #53 exact head `c0df2e24eccf4ba4e854b73bbb3d711509199f35` passed all `9 / 9` checks and merged at exact main `5413a85bcbb0c66599a2650b281cb9f57b19d6a2`; its remote branch and dedicated implementation clone were removed. Proposal/GO/snapshot accept exact Blueprint v1/v2, the Windows EXE build contract and README AUTONOMY guide are on main. Closure Sync PR #54 exact head `89ce567503b22a5e851ad66407e0a57598e79d05` then passed `9 / 9`, merged at exact main `f5ad4cdfa564285e9fe7a5fcf4516f1b92cae0a4`, and completed branch/clone cleanup as cadence merge `1 / 2`.
+- Fresh-main Handoff Bootstrap and Autonomous Queue selected `BVP-TASK-042-P-V6-2-DESIGN / DESIGN_ONLY`. The P-V6-2 current-main audit, DEV-4 re-decision, exact Allowed Files, Builder design and two Critic cycles are locally complete; implementation is not started. This design PR is cadence merge `2 / 2`; after hosted merge/cleanup, control must return to AUTONOMY before a fresh implementation clone is created. The design reuses TASK-037 as the only Candidate/LOCK/STALE truth and keeps Native H3, Provider/paid execution and release operations parked.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

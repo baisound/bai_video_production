@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-043 P-FND-3: append-only compensating Undo/Redo history with explicit STALE targets, quiescent/debounced Autosave, bounded verified Backup retention, restore preview and CAS-safe restore as a new Project revision. External replay, Evidence deletion and private credential/token capture remain prohibited.
 - Added TASK-043 P-FND-2 coordinated save/recovery: transaction-scoped staging and backup, child-first/manifest-last CAS commit, interruption journal, deterministic COMPLETE/ROLLBACK/FINALIZE, and fail-closed pending-recovery behavior.
 - Added TASK-043 P-FND-1: a closed versioned Product Project Manifest, exact child-store bindings, CAS persistence, compatibility inspection and deterministic read-only migration planning. Migration apply, external execution and release behavior remain unchanged.
 - Rebuilt the post-v0.20.1 roadmap under the replacement `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` Owner Directive: synchronized P-V6-4 Design PR #61 hosted closure, allocated TASK-043 Product Project/migration/recovery foundation, and split practical NLE/Export and native release closure into TASK-044/045. This checkpoint changes governance/design only and does not claim runtime capability or a new release.

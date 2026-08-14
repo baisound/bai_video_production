@@ -131,6 +131,12 @@ from .product_project_store import ProductProjectManifestStore
 from .project_save import (
     ProductProjectSaveCoordinator, ProjectSaveState,
 )
+from .project_history import (
+    ProductProjectAutosaveCoordinator, ProductProjectBackupStore,
+    ProjectAutosavePolicy, ProjectAutosaveResult, ProjectBackupPreview,
+    ProjectCommandAction, ProjectCommandHistory, ProjectCommandHistoryStore,
+    ProjectCommandRecord, parse_project_command_history,
+)
 from .project_migration import (
     BindingCompatibility, BindingMigrationPlan, CompatibilityState,
     MigrationRegistry, MigrationTransition, ProjectCompatibilityInspector,
@@ -214,4 +220,8 @@ __all__ = [
     "ProjectCompatibilityInspector", "ProjectCompatibilityReport",
     "ProjectMigrationPlan", "ProjectMigrationPlanner", "SupportedFormatRange",
     "ProductProjectSaveCoordinator", "ProjectSaveState",
+    "ProductProjectAutosaveCoordinator", "ProductProjectBackupStore",
+    "ProjectAutosavePolicy", "ProjectAutosaveResult", "ProjectBackupPreview",
+    "ProjectCommandAction", "ProjectCommandHistory", "ProjectCommandHistoryStore",
+    "ProjectCommandRecord", "parse_project_command_history",
 ]

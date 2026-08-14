@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_043_P_FND_2_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_043_P_FND_3_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-043 / P-FND-2 LOCAL FAILURE-INJECTION PASS / HOSTED PENDING`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-043 / P-FND-3 LOCAL HISTORY-AUTOSAVE-BACKUP PASS / HOSTED PENDING`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`; TASK-043 foundation does not preselect a package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `P-FND-2 PR all-green/main merge/exact SHA/cleanup -> clean-main P-FND-3 Undo/Redo, Autosave and Backup; TASK-013 native and TASK-014 paid execution remain parked`
+- Next Consumer Decision Gate: `P-FND-3 PR all-green/main merge/exact SHA/cleanup -> clean-main P-FND-4 durable Product jobs / Export Queue foundation; TASK-013 native and TASK-014 paid execution remain parked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.60 Addendum LIV. P-V6-4 Design PR #61 is hosted-closed. TASK-043 P-FND-1 PR #63 passed `9 / 9` and merged at exact main `e2930baa2cd66e92514e538e2834e89a8119d19f`; P-FND-2 coordinated save/recovery passes local compile/schema/failure-injection gates and awaits hosted checks. TASK-042 P-V6-4, TASK-044 interactive Timeline/Export Queue and TASK-045 native/release closure remain dependency-waiting. Provider/paid/native/media/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.61 Addendum LV. P-V6-4 Design PR #61 is hosted-closed. TASK-043 P-FND-2 PR #64 passed hosted `9 / 9` and merged at exact main `3ba4df947ab2939ef7daed030a3ee69a3c31f07a`; P-FND-3 append-only compensating history, quiescent/debounced Autosave and verified bounded Backup/restore pass local focused `55 / 55`, full regression `1042 passed, 1 skipped` and compileall, with hosted checks pending. TASK-042 P-V6-4, TASK-044 interactive Timeline/Export Queue and TASK-045 native/release closure remain dependency-waiting. Provider/paid/native/media/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

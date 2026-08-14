@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.60
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.61
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -179,7 +179,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
 - TASK-042 V6 Product Workflow: **P-V6-4 DESIGN HOSTED CLOSED / IMPLEMENTATION WAITS FOR TASK-043**
-- TASK-043 Product Project / Migration / Recovery: **CURRENT OWNER MAXIMUM / DESIGN REVIEW**
+- TASK-043 Product Project / Migration / Recovery: **P-FND-2 HOSTED CLOSED / P-FND-3 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **ALLOCATED / DEPENDENCY WAIT**
 - TASK-045 V6 Native Acceptance / Release Closure: **ALLOCATED / DEPENDENCY WAIT**
 
@@ -1414,3 +1414,27 @@ Local compile/schema/failure-injection smoke passes and implementation Critic ha
 unresolved Critical/High `0 / 0`. Hosted full regression/compile/security remains
 required. P-FND-3 Undo/Redo, Autosave and Backup retention is next. Stable release
 remains `v0.20.1`; this foundation checkpoint creates no Tag or Release.
+
+## Addendum LV — TASK-043 P-FND-3 History/Autosave/Backup Gate
+
+P-FND-2 PR #64 passed all hosted `9 / 9` checks, merged at exact main
+`3ba4df947ab2939ef7daed030a3ee69a3c31f07a`, and completed remote/local branch
+cleanup. The next clean-main unit adds an append-only Project command history in
+which Undo/Redo are new compensating records. History stores identities, Manifest
+hashes and explicit STALE targets only; it stores no command payload, credential,
+private Prompt body, external replay authority or Evidence-deletion authority.
+
+Autosave uses the accepted coordinated save path only after bounded debounce and
+quiescence gates, then retains bounded Manifest checkpoints. Backup creation
+copies only checksum-bound Project children into a contained snapshot, validates
+closed metadata and size/path bounds, and rotates an explicit bounded set. Restore
+requires an exact previewed current Manifest checksum and creates a new revision
+through the normal CAS save transaction; binding-set changes and newer-state
+conflicts become Human review instead of destructive overwrite.
+
+Focused TASK-043 tests pass `55 / 55`; full Windows Python 3.12 regression passes
+`1042 passed, 1 skipped`; compileall passes. Critic findings for metadata/path/size
+tamper boundaries are closed with unresolved Critical/High `0 / 0`. Hosted full
+regression/security remains required. P-FND-4 durable Product jobs / Export Queue
+foundation is next after hosted closure. Stable release remains `v0.20.1`; this
+foundation checkpoint creates no Tag or Release.

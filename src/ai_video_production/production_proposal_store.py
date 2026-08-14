@@ -14,17 +14,8 @@ from typing import Any
 
 from .atomic import AtomicJsonWriter, AtomicWriteResult
 from .errors import ProductError, ProductErrorCategory
-from .production_blueprint import (
-    AssetSourceStrategy,
-    BlueprintReference,
-    BlueprintScene,
-    CameraMotion,
-    GenerationRisk,
-    ProductionBlueprint,
-    ReferenceKind,
-    ReferenceStatus,
-    SceneAudioPlan,
-)
+from .production_blueprint import ProductionBlueprint
+from .production_blueprint_v2 import ProductionBlueprintV2, parse_production_blueprint_document
 from .production_proposal import (
     ApprovedProductionPlan,
     CreationIntent,
@@ -35,7 +26,6 @@ from .production_proposal import (
     ReferenceAssetBinding,
 )
 from .serialization import canonical_json_bytes, sha256_bytes
-from .timebase import FrameRate
 from .production_control_store import _exclusive_snapshot_lock
 
 
@@ -57,48 +47,8 @@ def _body(registry: ProductionProposalRegistry) -> dict[str, Any]:
     return body
 
 
-def _blueprint(row: dict[str, Any]) -> ProductionBlueprint:
-    references = tuple(
-        BlueprintReference(
-            reference_id=item["reference_id"],
-            kind=ReferenceKind(item["kind"]),
-            status=ReferenceStatus(item["status"]),
-            filename=item.get("filename"),
-        )
-        for item in row["references"]
-    )
-    scenes = []
-    for item in row["scenes"]:
-        audio = item["audio"]
-        scenes.append(BlueprintScene(
-            scene_id=item["scene_id"],
-            start_frame=int(item["range_frames"]["start"]),
-            end_frame=int(item["range_frames"]["end_exclusive"]),
-            narrative_role=item["narrative_role"],
-            source_strategy=AssetSourceStrategy(item["source_strategy"]),
-            generation_risk=GenerationRisk(item["generation_risk"]),
-            camera_motion=CameraMotion(item["camera_motion"]),
-            reference_ids=tuple(item["reference_ids"]),
-            audio=SceneAudioPlan(
-                narration=bool(audio.get("narration", False)),
-                dialogue=bool(audio.get("dialogue", False)),
-                sound_effects=tuple(audio.get("sound_effects", [])),
-                bgm=bool(audio.get("bgm", True)),
-                sound_logo=bool(audio.get("sound_logo", False)),
-            ),
-            locked_reference=bool(item.get("locked_reference", False)),
-            post_composite_text=bool(item.get("post_composite_text", False)),
-            final_hold_frames=int(item.get("final_hold_frames", 0)),
-        ))
-    rate = row["timeline_rate"]
-    return ProductionBlueprint(
-        blueprint_id=row["blueprint_id"],
-        title=row["title"],
-        timeline_rate=FrameRate(int(rate["numerator"]), int(rate["denominator"])),
-        target_duration_frames=int(row["target_duration_frames"]),
-        references=references,
-        scenes=tuple(scenes),
-    )
+def _blueprint(row: dict[str, Any]) -> ProductionBlueprint | ProductionBlueprintV2:
+    return parse_production_blueprint_document(row)
 
 
 def _parse(document: dict[str, Any]) -> ProductionProposalRegistry:

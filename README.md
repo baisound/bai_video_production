@@ -142,6 +142,19 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
+### Windows EXE build
+
+WindowsクライアントをEXEにする場合は、ビルド用の依存を明示的にインストールしてから、ルートのバッチを実行します。
+
+```powershell
+python -m pip install -e ".[windows-build]"
+.\build-windows-exe.bat
+```
+
+出力は `builds\BAI Video Production\BAI Video Production.exe` です。one-dir形式なので、EXEだけではなく `BAI Video Production` フォルダー全体を一緒に使用してください。バッチは依存の自動インストール、署名、Tag、Release、Deployを行いません。
+
+前提条件、Pythonの選択方法、作り直し方、エラー対処は [Windows EXEビルド手順](docs/windows/BUILDING-WINDOWS-EXE.md) を参照してください。
+
 ## Verification
 
 ```powershell
@@ -238,6 +251,64 @@ docs/                      Design, roadmap and task evidence
 [CONTRIBUTING.md](CONTRIBUTING.md)を確認してください。大きな変更は実装前にIssueで目的と境界を共有し、1 Pull Requestを1目的に限定してください。[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)がすべてのProject spaceに適用されます。
 
 初めてのContributionでは、`good first issue`のうちCredential、有料API、非公開素材、NLE書込を必要としないDocumentation・Fixture・Offline testを推奨します。
+
+## AUTONOMYを使った開発
+
+AUTONOMYは、BAI Development OSのルールに従い「次にどの開発作業を選び、どこまで自走してよいか」を決める仕組みです。BAI VIDEO PRODUCTION本体が勝手に動画制作、Provider利用、課金、Resolve/Cubase操作を始める機能ではありません。BVPは単独でも動作し、Development OSは開発時のGovernanceとして使います。
+
+### 基本の流れ
+
+1. 作業ブランチで設計または実装し、テストを通してPull Requestを作ります。
+2. GitHub Actionsがすべて緑になったらmainへマージします。
+3. mainの正確なmerge SHAを確認し、リモート作業ブランチとローカル作業cloneを片付けます。
+4. この完了を「mainマージ1回」と数えます。OPEN、失敗、未確認のPRは数えません。
+5. mainマージが2回完了した時点で、BAI Development OSのQueueへ戻ります。
+6. AUTONOMYが選んだTask、Authority、Allowed Filesを確認し、対象mainから新しくcloneして次の開発を始めます。
+
+Human Gateが必要な操作に着いた場合は、その操作だけをParkします。別の安全で独立した作業がある場合は、AUTONOMYが選択した範囲内で続行できます。AUTONOMYは既存の権限を広げず、mainへの直接push、force push、有料Providerの無断実行、曖昧なユーザープロジェクトへの書き込みを許可しません。
+
+### 使用例1：設計と実装を2回のマージで進める
+
+- 1回目: Builder Design、Critic Review、Final Planを文書化して設計PRをmainへマージします。
+- 2回目: fresh cloneで認可済み設計を実装し、回帰テスト後に実装PRをmainへマージします。
+- 後処理後: 2回に達したためDevelopment OS Queueへ戻り、次のTaskを再判定します。
+
+Codexへの依頼例:
+
+```text
+BAI Development OSのAUTONOMYを使って、現在のmainと直近2回のmergeを確認してください。
+Queueが選んだTaskについて、まずDESIGN_ONLYで設計PRまで進めてください。
+mainマージと後処理後はfresh cloneし、認可済みならIMPLEMENTATIONを進めてください。
+2回目のmainマージ後は、必ず再びAUTONOMYへ戻ってください。
+```
+
+### 使用例2：Human Gateだけを止める
+
+たとえば実DaVinci Resolveプロジェクトへの書き込みが対象不明なら、そのNative Gateは `PARKED` にします。一方、オフラインテストや文書同期など、対象が明確で独立した作業は止めずに進められます。
+
+Codexへの依頼例:
+
+```text
+AUTONOMYで次の作業を選び、Human Gateが必要な外部操作だけParkしてください。
+Provider課金、Resolve/Cubaseへのwrite、Production Activationは実行しないでください。
+独立して安全なローカル実装とテストがあれば継続してください。
+```
+
+### 使用例3：Windows EXEビルド作業を進める
+
+ビルド契約の実装はローカルで検証できます。依存取得にネットワークが必要な場合や、GUIでEXEを実行する段階は環境条件として分けて記録します。ビルド成功はRelease完了を意味しません。
+
+Codexへの依頼例:
+
+```text
+AUTONOMYがWindows build-contractを選んだことを確認してからfresh cloneしてください。
+build-windows-exe.batの静的テストと全回帰を実施し、依存が揃っていれば実EXEもビルドしてください。
+生成物はbuilds/からstageせず、PRはソース、テスト、文書だけに限定してください。
+```
+
+### AUTONOMYを止める条件
+
+テスト失敗、同期元の不一致、未許可ファイルへの変更、権限不明、課金やProduction writeの可能性、復旧対象が曖昧な削除がある場合は、その時点で止めてEvidenceを残します。また、Ownerが「切りの良いところで切断」と指示した場合は、現在の安全なcheckpointと後処理を完了してからAUTONOMYへ新しい作業を選ばせません。
 
 ## Governance and releases
 

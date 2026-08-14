@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .errors import ProductError, ProductErrorCategory
 from .production_blueprint import ProductionBlueprint
+from .production_blueprint_v2 import ProductionBlueprintV2
 from .production_control import (
     DependencyEdge,
     DependencyKind,
@@ -34,7 +35,7 @@ class ApprovedPlanVerifier:
         *,
         proposal_registry: ProductionProposalRegistry,
         plan_id: str,
-        blueprint: ProductionBlueprint,
+        blueprint: ProductionBlueprint | ProductionBlueprintV2,
     ) -> ApprovedProductionPlan:
         plan = proposal_registry.approved_plans.get(plan_id)
         if plan is None:
@@ -74,6 +75,16 @@ class ApprovedPlanVerifier:
         return plan
 
 
+def _require_v1_production_control(blueprint: ProductionBlueprint | ProductionBlueprintV2) -> ProductionBlueprint:
+    if not isinstance(blueprint, ProductionBlueprint):
+        raise ProductError(
+            "ERR_BLUEPRINT_V2_PRODUCTION_CONTROL_NOT_INTEGRATED",
+            "Blueprint v2 is Human-GO verifiable but requires P-V6-2 WORLD LOCK integration before Production Control or generation admission",
+            ProductErrorCategory.AUTHORIZATION,
+        )
+    return blueprint
+
+
 class ApprovedPlanProductionControlInstaller:
     @classmethod
     def compile(
@@ -81,7 +92,7 @@ class ApprovedPlanProductionControlInstaller:
         *,
         proposal_registry: ProductionProposalRegistry,
         plan_id: str,
-        blueprint: ProductionBlueprint,
+        blueprint: ProductionBlueprint | ProductionBlueprintV2,
         project_id: str,
     ) -> BlueprintControlPlan:
         ApprovedPlanVerifier.require_current(
@@ -89,7 +100,7 @@ class ApprovedPlanProductionControlInstaller:
             plan_id=plan_id,
             blueprint=blueprint,
         )
-        return BlueprintProductionControlCompiler.compile(blueprint, project_id=project_id)
+        return BlueprintProductionControlCompiler.compile(_require_v1_production_control(blueprint), project_id=project_id)
 
     @classmethod
     def install(
@@ -97,7 +108,7 @@ class ApprovedPlanProductionControlInstaller:
         *,
         proposal_registry: ProductionProposalRegistry,
         plan_id: str,
-        blueprint: ProductionBlueprint,
+        blueprint: ProductionBlueprint | ProductionBlueprintV2,
         project_id: str,
         production_registry: ProductionControlRegistry,
     ) -> BlueprintControlPlan:
@@ -106,6 +117,7 @@ class ApprovedPlanProductionControlInstaller:
             plan_id=plan_id,
             blueprint=blueprint,
         )
+        blueprint = _require_v1_production_control(blueprint)
         control_plan = BlueprintProductionControlCompiler.compile(blueprint, project_id=project_id)
         BlueprintProductionControlCompiler.install(control_plan, production_registry)
         # Keep the Blueprint trace while adding the true Human-approved Plan node.
@@ -132,7 +144,7 @@ class ApprovedPlanGenerationAdmissionService:
         *,
         proposal_registry: ProductionProposalRegistry,
         plan_id: str,
-        blueprint: ProductionBlueprint,
+        blueprint: ProductionBlueprint | ProductionBlueprintV2,
         scene_id: str,
         slot_id: str,
         feasibility: ShotFeasibilityAssessment,
@@ -147,6 +159,7 @@ class ApprovedPlanGenerationAdmissionService:
             plan_id=plan_id,
             blueprint=blueprint,
         )
+        _require_v1_production_control(blueprint)
         if plan.provider_policy.policy_sha256 != prompt_provider_policy_sha256:
             raise ProductError(
                 "ERR_APPROVED_PLAN_PROVIDER_POLICY_MISMATCH",
@@ -195,7 +208,7 @@ class BudgetedApprovedPlanGenerationAdmissionService:
         plan_id = kwargs.get("plan_id")
         proposal_registry = kwargs.get("proposal_registry")
         blueprint = kwargs.get("blueprint")
-        if not isinstance(proposal_registry, ProductionProposalRegistry) or not isinstance(blueprint, ProductionBlueprint):
+        if not isinstance(proposal_registry, ProductionProposalRegistry) or not isinstance(blueprint, (ProductionBlueprint, ProductionBlueprintV2)):
             raise TypeError("proposal_registry and blueprint are required")
         plan = ApprovedPlanVerifier.require_current(
             proposal_registry=proposal_registry,

@@ -20,6 +20,7 @@ from .production_blueprint import (
     ProductionBlueprint,
     ReferenceStatus,
 )
+from .production_blueprint_v2 import ProductionBlueprintV2
 from .serialization import canonical_json_bytes, sha256_bytes
 
 
@@ -30,6 +31,7 @@ _ASPECT_RE = re.compile(r"^[1-9][0-9]{0,3}:[1-9][0-9]{0,3}$")
 _LANGUAGE_RE = re.compile(r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$")
 
 TokenFactory = Callable[[], str]
+BlueprintContract = ProductionBlueprint | ProductionBlueprintV2
 
 
 def _decimal(value: Decimal | str | int | float, *, field: str, minimum: Decimal = Decimal("0")) -> Decimal:
@@ -203,7 +205,7 @@ class ProductionProposalRevision:
     proposal_id: str
     revision: int
     intent_sha256: str
-    blueprint: ProductionBlueprint
+    blueprint: BlueprintContract
     sections: tuple[ProposalSection, ...]
     provider_policy: ProviderPolicyBinding
     estimated_cost_min: Decimal = Decimal("0")
@@ -213,6 +215,8 @@ class ProductionProposalRevision:
     parent_proposal_sha256: str | None = None
 
     def __post_init__(self) -> None:
+        if not isinstance(self.blueprint, (ProductionBlueprint, ProductionBlueprintV2)):
+            raise ValueError("blueprint must be an exact ProductionBlueprint v1 or v2")
         if not _ID_RE.fullmatch(self.proposal_id):
             raise ValueError("proposal_id is invalid")
         if self.revision < 1:
@@ -422,23 +426,41 @@ class ProductionGoApprovalService:
         self._confirmations: dict[str, _GoConfirmation] = {}
 
     @staticmethod
-    def _required_reference_ids(blueprint: ProductionBlueprint) -> set[str]:
-        return {
-            item.reference_id
-            for item in blueprint.references
-            if item.status in {ReferenceStatus.AVAILABLE, ReferenceStatus.LOCKED}
-        }
+    def _required_reference_bindings(blueprint: BlueprintContract) -> dict[str, tuple[str, str] | None]:
+        if isinstance(blueprint, ProductionBlueprint):
+            return {
+                item.reference_id: None
+                for item in blueprint.references
+                if item.status in {ReferenceStatus.AVAILABLE, ReferenceStatus.LOCKED}
+            }
+        required: dict[str, tuple[str, str]] = {}
+        for scene in blueprint.scenes:
+            for frame_name, intent in (
+                ("START", scene.start_frame_intent),
+                ("END", scene.end_frame_intent),
+            ):
+                prefix = f"{scene.scene_id}:{frame_name}"
+                for index, item in enumerate(intent.binding.character_locks):
+                    required[f"{prefix}:CHARACTER:{index}"] = (item.asset_id, item.asset_sha256)
+                if intent.binding.space_lock is not None:
+                    item = intent.binding.space_lock
+                    required[f"{prefix}:SPACE"] = (item.asset_id, item.asset_sha256)
+                if intent.binding.composition_lock is not None:
+                    item = intent.binding.composition_lock
+                    required[f"{prefix}:COMPOSITION"] = (item.asset_id, item.asset_sha256)
+        return required
 
     @classmethod
     def _validate_reference_bindings(
         cls,
-        blueprint: ProductionBlueprint,
+        blueprint: BlueprintContract,
         bindings: tuple[ReferenceAssetBinding, ...],
     ) -> None:
         ids = [item.reference_id for item in bindings]
         if len(ids) != len(set(ids)):
             raise ProductError("ERR_PRODUCTION_GO_REFERENCE_DUPLICATE", "GO reference bindings contain duplicate reference IDs", ProductErrorCategory.DATA_INTEGRITY)
-        expected = cls._required_reference_ids(blueprint)
+        expected_bindings = cls._required_reference_bindings(blueprint)
+        expected = set(expected_bindings)
         actual = set(ids)
         if actual != expected:
             raise ProductError(
@@ -447,6 +469,20 @@ class ProductionGoApprovalService:
                 ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
                 details={"missing": sorted(expected - actual), "unexpected": sorted(actual - expected)},
             )
+        if isinstance(blueprint, ProductionBlueprintV2):
+            actual_bindings = {item.reference_id: (item.asset_id, item.asset_sha256) for item in bindings}
+            mismatched = sorted(
+                reference_id
+                for reference_id, identity in expected_bindings.items()
+                if actual_bindings[reference_id] != identity
+            )
+            if mismatched:
+                raise ProductError(
+                    "ERR_PRODUCTION_GO_FRAME_BINDING_IDENTITY_MISMATCH",
+                    "GO frame bindings must match every exact Blueprint v2 Asset identity and checksum",
+                    ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                    details={"mismatched": mismatched},
+                )
 
     def prepare_go(
         self,

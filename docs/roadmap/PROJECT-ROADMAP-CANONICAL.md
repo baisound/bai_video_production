@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.50
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.51
 - Project: `ai-video-production`
 - Date: 2026-08-14
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-1A is hosted-closed; P-V6-1B design is local PASS/hosted pending from exact main `99d21a5542b0ab10b8ce4f1e5a0eea879cffc2eb`. Stable Product release remains `v0.20.1`
+- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-1B design is hosted-closed at exact main `cbf27b29ddab08050df4804c160501ff4586bb11`; implementation is local PASS/hosted pending. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -111,7 +111,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | P-V6-1B DESIGN LOCAL PASS / HOSTED PENDING / CURRENT OWNER MAXIMUM |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | P-V6-1B IMPLEMENTATION LOCAL PASS / HOSTED PENDING / CURRENT OWNER MAXIMUM |
 
 ## 6. Namespace Collision Resolution
 
@@ -175,7 +175,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
-- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-1B DESIGN LOCAL PASS / HOSTED PENDING**
+- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-1B IMPLEMENTATION LOCAL PASS / HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1006,3 +1006,40 @@ setup, command, output, verification, cleanup and troubleshooting. README also
 explains AUTONOMY as development governance, the two-merge switch, fresh-clone
 rule, Human Gate parking and multiple operator examples. BVP runtime does not
 import BAI Development OS.
+
+## Addendum XLIII — P-V6-1B Implementation Local Gate
+
+Design PR #52 exact head `f3d99fe07a74974d0e95a925f1c72b67054e86f3`
+passed all `9 / 9` hosted checks and merged at exact main
+`cbf27b29ddab08050df4804c160501ff4586bb11`. Its remote/local branch and
+dedicated design clone were removed. BAI Development OS Queue then selected
+`BVP-TASK-042-P-V6-1B / IMPLEMENTATION` with checksum
+`sha256:6a44e3fee803b247d899278c8ad137a024a8f5aebd3b090022b4333eb4cc2f95`,
+and implementation began from a fresh clone of that exact main.
+
+Existing Proposal and crash-safe snapshot records now accept the exact
+`ProductionBlueprint | ProductionBlueprintV2` union. Human GO for v2 requires
+every deterministic Scene/START-or-END/role path and the exact Asset ID plus
+checksum already protected by the Blueprint hash. Missing, extra or changed
+bindings fail closed. Approved Plan identity verification accepts v2, but
+Production Control compile/install and Generation admission reject it with an
+explicit P-V6-2 integration error. Candidate LOCK/CURRENT is therefore not
+inferred from Human GO.
+
+The existing TASK-036 one-dir package definition is exposed through
+`build-windows-exe.bat`. The batch chooses an explicit Python, validates but
+never silently installs dependencies, and writes only ignored output beneath
+`builds/`. The tracked placeholder, pinned Windows build extras, root Windows
+guide and README Installation section make the workflow reproducible. README's
+AUTONOMY section explains the two-main-merge cadence, cleanup/fresh-clone rule,
+Human Gate parking and three copyable examples without creating Product runtime
+dependency or external execution authority.
+
+Focused v1/v2 and build-contract regression passes `26 / 26`; full Windows
+regression passes `946 / 946` with one intentional platform skip. An isolated
+Windows 11 / Python 3.12.4 / PyInstaller 6.22.0 run produced the expected
+one-dir EXE, and Git ignore checks exclude its EXE and work files. No Provider,
+paid execution, Resolve/Cubase mutation, production activation, Tag or Release
+occurred. Hosted implementation checks, exact main merge and cleanup remain.
+That merge is cadence merge `2 / 2`; after it, control must return to AUTONOMY
+before P-V6-2 or any other Product unit is selected.

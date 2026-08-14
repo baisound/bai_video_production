@@ -47,6 +47,11 @@ ai-video-faster-whisper-evidence = "ai_video_production.faster_whisper_reconcili
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
 asr = ["faster-whisper>=1.2.1,<2"]
+windows-build = [
+  "pyinstaller==6.22.0",
+  "pywebview==6.2.1",
+  "faster-whisper>=1.2.1,<2",
+]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

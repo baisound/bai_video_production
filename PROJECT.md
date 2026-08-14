@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED_SAFE_RUNTIME_FLAG_HARDENING_PASS_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED_SAFE_RUNTIME_READINESS_PREFLIGHT_LOCAL_PASS_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,8 +110,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-013 — R4 local Comfy adapter hosted closure / implementation PR #41 9 of 9 PASS at 74d6b5af0c6de66168f5ab6ab63a6a049b11acd4 / closure PR #42 9 of 9 PASS / incident-derived safe-runtime flag hardening local gate 39 of 39 and full 923 of 923 PASS in the containing change`
-- Active Task: `NONE`; TASK-013 native H3 completion is parked pending a separately reviewed safe-runtime resumption decision
+- Last Completed Gate: `TASK-013 — read-only safe-runtime readiness preflight local gate: focused 55 of 55 and full WSL2 926 of 926 PASS; dispatch, journal creation, execution authorization and Native Gate satisfaction remain false`
+- Active Task: `TASK-013-SAFE-RUNTIME-READINESS-PREFLIGHT`; local implementation is complete and hosted closure is pending while native H3 remains parked
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
@@ -138,7 +138,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Subtitle Workspace release: package 0.16.4 completes the v0.16.x review-workspace line including local FasterWhisper/Transcript/SRT flow, revisioned subtitle editing, Windows-native Open/Save interaction corrective and runtime workspace privacy hygiene
 - TASK-006 Slice D: v0.17.0 formal release completed with large-media chunk/checkpoint transcription and canonical Resolve subtitle-placement handoff; actual Resolve write remains TASK-010 ownership.
 - Current bounded Product development: TASK-024 Slice A candidate `0.18.0` generates review-only silence/filler/exact-repeat Cut Candidates and protected Keep Blocks. It does not mutate media or Resolve; TASK-007 owns final Cut Plan and TASK-010 owns execution.
-- R2/R3 route is complete. R4 TASK-013 now has a hosted-closed package-owned body-free local/free adapter, exact runtime-policy enforcement, no-replay recovery and opt-in trusted-launch composition. PR #41 exact head `ff481147` passed `9 / 9` and merged at exact main `74d6b5af`; its implementation branch was deleted locally and remotely. Native completion remains parked: attempt 01 failed in the real sampler path and attempt 02 was externally interrupted by the Owner-confirmed Windows force restart with durable `QUEUED / RECOVERY_REQUIRED`. Unsafe legacy low-VRAM flags are rejected before dispatch.
+- R2/R3 route is complete. R4 TASK-013 now has a hosted-closed package-owned body-free local/free adapter, exact runtime-policy enforcement, no-replay recovery and opt-in trusted-launch composition. The current bounded unit adds an explicit read-only readiness preflight that checks node/model availability, resources and exact runtime identity while fixing dispatch, journal creation, execution authorization and Native Gate satisfaction to false. Native completion remains parked: attempt 01 failed in the real sampler path and attempt 02 was externally interrupted by the Owner-confirmed Windows force restart with durable `QUEUED / RECOVERY_REQUIRED`.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

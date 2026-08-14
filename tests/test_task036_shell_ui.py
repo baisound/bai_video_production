@@ -601,6 +601,12 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
         def __init__(self): self.calls = []
         def snapshot(self):
             return {"project_id": "project-1", "execution_snapshot_sha256": "sha256:" + "2" * 64, "recovery": {"required": False}}
+        def runtime_preflight(self):
+            self.calls.append(("preflight", {})); return {
+                "result": "SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED",
+                "dispatch_performed": False,
+                "execution_authorized": False,
+            }
         def prepare_execution(self, **values):
             self.calls.append(("prepare", values)); return {"confirmation_id": "confirm-local"}
         def apply_execution(self, **values):
@@ -614,6 +620,9 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
     )
     combined = bridge.generation_queue_snapshot({})
     assert combined["execution_control"]["available"] is True
+    readiness = bridge.generation_execution_preflight({})
+    assert readiness["result"] == "SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED"
+    assert readiness["dispatch_performed"] is False
     prepared = bridge.generation_execution_prepare({
         "queue_entry_id": "QUEUE-1",
         "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,
@@ -622,7 +631,7 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
     assert prepared["confirmation_id"] == "confirm-local"
     result = bridge.generation_execution_apply({"confirmation_id": "confirm-local"})
     assert result["events"][0]["state"] == "COMPLETED"
-    assert [name for name, _ in execution.calls] == ["prepare", "apply"]
+    assert [name for name, _ in execution.calls] == ["preflight", "prepare", "apply"]
     with pytest.raises(ProductError) as exc:
         bridge.generation_execution_prepare({
             "queue_entry_id": "QUEUE-1", "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,

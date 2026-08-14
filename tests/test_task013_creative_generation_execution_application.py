@@ -12,6 +12,7 @@ from ai_video_production.ai_connections import (
 from ai_video_production.connection_settings_store import ConnectionSettingsStore
 from ai_video_production.creative_generation_execution_application import (
     LocalGenerationExecutionResult,
+    LocalGenerationRuntimeReadiness,
     Task013CreativeGenerationExecutionApplication,
 )
 from ai_video_production.errors import ProductError, ProductErrorCategory
@@ -52,6 +53,12 @@ class FakePort:
     def __init__(self, *, failure: BaseException | None = None):
         self.calls = []
         self.failure = failure
+
+    def preflight(self):
+        return LocalGenerationRuntimeReadiness(
+            "local-video", "comfy", "model-v1", "sha256:" + "8" * 64,
+            13, "DEFAULT_DYNAMIC_VRAM_INCIDENT_HARDENED_V1",
+        )
 
     def execute(self, route, request):
         self.calls.append((route, request))
@@ -107,6 +114,18 @@ def prepare(app: Task013CreativeGenerationExecutionApplication, queue: QueueStub
         expected_queue_snapshot_sha256=state["queue_snapshot_sha256"],
         expected_execution_snapshot_sha256=state["execution_snapshot_sha256"],
     )
+
+
+def test_runtime_preflight_is_explicit_read_only_and_creates_no_project_state(tmp_path: Path):
+    app, _queue, port = fixture(tmp_path)
+    result = app.runtime_preflight()
+    assert result["result"] == "SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED"
+    assert result["execution_authorized"] is False
+    assert result["dispatch_performed"] is False
+    assert result["journal_created"] is False
+    assert result["native_gate_satisfied"] is False
+    assert port.calls == []
+    assert not app.snapshot_path.exists()
 
 
 def test_local_execution_is_confirmed_body_private_and_restart_durable(tmp_path: Path):

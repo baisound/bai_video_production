@@ -8,7 +8,7 @@
 - Stable formal Release: `v0.20.1`
 - Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Hardening base main: `21228d15e207fb76c5367c28968430789f682885` (PR #43 documentation synchronization merge)
-- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / SAFE_RUNTIME_FLAG_HARDENING_PASS / NATIVE_RUNTIME_PARKED`
+- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / SAFE_RUNTIME_READINESS_PREFLIGHT_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
 - Active implementation branch: `NONE`
 
 Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
@@ -23,6 +23,7 @@ Current main is newer than the stable release because bounded R2-R4 Product deve
 - R3 Generation-safe control-loop promotion is complete across TASK-013, TASK-039, TASK-040 and the bounded TASK-027 Generation Queue integration.
 - R4 TASK-013 restart-safe local execution control and the exact local/free MiniMax H3 ComfyUI adapter are hosted-closed.
 - TASK-013 incident-derived safe-runtime launch-flag hardening rejects every force-restart memory flag and assignment form before durable reservation or external queue side effects.
+- TASK-013 now exposes an explicit read-only runtime readiness preflight through the Product application/Shell bridge. It reuses the real pre-dispatch checks but cannot queue, create a journal/output, authorize execution or satisfy the Native Gate; local regression is `55 / 55` focused and `926 / 926` full WSL2.
 
 ## Current parked boundary
 

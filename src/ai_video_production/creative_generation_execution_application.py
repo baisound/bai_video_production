@@ -100,7 +100,53 @@ class LocalGenerationExecutionResult:
             raise ValueError("latency_ms is invalid")
 
 
+@dataclass(frozen=True, slots=True)
+class LocalGenerationRuntimeReadiness:
+    route_id: str
+    provider_id: str
+    model_id: str
+    workflow_sha256: str
+    required_class_count: int
+    runtime_policy: str
+
+    def __post_init__(self) -> None:
+        for value, name in (
+            (self.route_id, "route_id"),
+            (self.provider_id, "provider_id"),
+            (self.model_id, "model_id"),
+            (self.runtime_policy, "runtime_policy"),
+        ):
+            if not isinstance(value, str) or not _ROUTE_VALUE_RE.fullmatch(value):
+                raise ValueError(f"{name} is invalid")
+        if not _SHA_RE.fullmatch(self.workflow_sha256):
+            raise ValueError("workflow_sha256 is invalid")
+        if isinstance(self.required_class_count, bool) or not isinstance(self.required_class_count, int) or self.required_class_count <= 0:
+            raise ValueError("required_class_count must be positive")
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "readiness_version": "1.0.0",
+            "task_owner": "TASK-013",
+            "result": "SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED",
+            "route_id": self.route_id,
+            "provider_id": self.provider_id,
+            "model_id": self.model_id,
+            "workflow_sha256": self.workflow_sha256,
+            "required_class_count": self.required_class_count,
+            "runtime_policy": self.runtime_policy,
+            "read_only": True,
+            "resource_admission_passed": True,
+            "runtime_identity_passed": True,
+            "dispatch_performed": False,
+            "journal_created": False,
+            "execution_authorized": False,
+            "native_gate_satisfied": False,
+        }
+
+
 class LocalGenerationExecutionPort(Protocol):
+    def preflight(self) -> LocalGenerationRuntimeReadiness: ...
+
     def execute(
         self,
         route: ModelRoute,
@@ -356,6 +402,17 @@ class Task013CreativeGenerationExecutionApplication:
             "paid_execution_authorized": False, "candidate_creation_authorized": False, "resolve_mutation_started": False,
         }
 
+    def runtime_preflight(self) -> dict[str, Any]:
+        """Inspect the bound local runtime without creating execution Authority."""
+        readiness = self.execution_port.preflight()
+        if not isinstance(readiness, LocalGenerationRuntimeReadiness):
+            raise ProductError(
+                "ERR_GENERATION_PREFLIGHT_RESULT",
+                "Local runtime preflight returned an invalid result",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return readiness.as_dict()
+
     def prepare_execution(self, *, queue_entry_id: str, expected_queue_snapshot_sha256: str, expected_execution_snapshot_sha256: str) -> dict[str, Any]:
         store = self._load()
         queue, entry, route, profile_sha, _prompt_text, _workload, capability, media_kind = self._derive(queue_entry_id)
@@ -455,5 +512,6 @@ class Task013CreativeGenerationExecutionApplication:
 
 __all__ = [
     "LocalGenerationExecutionPort", "LocalGenerationExecutionRequest",
-    "LocalGenerationExecutionResult", "Task013CreativeGenerationExecutionApplication",
+    "LocalGenerationExecutionResult", "LocalGenerationRuntimeReadiness",
+    "Task013CreativeGenerationExecutionApplication",
 ]

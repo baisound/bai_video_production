@@ -708,6 +708,10 @@ class Task036ShellBridge:
             return {"available": False}
         return {"available": True, **self.generation_execution_application.snapshot()}
 
+    def generation_execution_preflight(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Generation execution preflight")
+        return self._require_generation_execution_application().runtime_preflight()
+
     def generation_execution_prepare(self, args: Any) -> dict[str, Any]:
         required = {"queue_entry_id", "expected_queue_snapshot_sha256", "expected_execution_snapshot_sha256"}
         if not isinstance(args, dict) or set(args) != required or not all(isinstance(args[name], str) for name in required):

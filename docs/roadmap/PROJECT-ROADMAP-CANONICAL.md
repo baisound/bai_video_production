@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.35
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.36
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -772,3 +772,9 @@ The bounded unit derives queue admission only from exact durable Product Evidenc
 TASK-027 Generation Queue integration passes its local Product Gate. Exact Approved Plan, current durable Feasibility PASS, Production target, Prompt/Profile, every required input hash and non-CUT Continuity resolution are re-derived from Product stores at preparation and apply. The append-only queue record is restart-safe and remains `ADMISSION_READY / EXECUTION_NOT_AUTHORIZED`.
 
 The unified Desktop `生成Queue` workspace exposes admission candidates, blockers and immutable Evidence without any dispatch command. Full WSL2 regression passes `893 / 893`; focused TASK-027/TASK-036 integration passes `71 / 71`; Windows/WSL2 compile, JavaScript and diff gates pass. Hosted checks, exact main merge and branch cleanup remain. Stable release stays `v0.20.1`; no package, Tag or Release is selected.
+
+### Ver.1.36 Addendum XXVII — TASK-027 R3 Generation Queue Hosted Closure
+
+The bounded TASK-027 Generation Queue integration is complete. PR #36 exact head `7ede711f3cb42150f38b48c8b6c2210d861b8c20` passed all `9 / 9` hosted checks and merged at exact main SHA `ac9524c9016fae1fb422619c6e16fc7ae15e42f3`. The implementation branch was deleted remotely and locally.
+
+This closes the routed R3 control-loop promotion sequence across TASK-013, TASK-039, TASK-040 and TASK-027 Queue admission. Provider execution remains unimplemented in this Queue Product layer and separately authorized. Stable release remains `v0.20.1`; no package, Tag or Release is created. R4 Audio & Generative Production starts only after a new-branch current-state audit and formal exact owner/profile decision.

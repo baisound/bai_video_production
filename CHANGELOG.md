@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-044 P-NLE-3 checksum-bound durable Export Queue composition with logical-only output identities, exact stale preflight, per-job external confirmation, DISPATCHING-before-side-effect recovery, Render QA-bound success and no blanket Execute All authority.
 - Added TASK-044 P-NLE-2 exact-frame trim/move/snap and checked track edits as append-only Product Project revisions, with compensating Undo/Redo and interruption-safe TASK-043 command-history finalization. It starts no provider, native or external mutation.
 - Added TASK-044 P-NLE-1 frame-authoritative dynamic Timeline projection with strict selection/seek separation, rational viewport transforms and bounded 10,000-clip windowing. It is read/reversible only and starts no external mutation.
 - Allocated TASK-044 implementation into four bounded units for frame-authoritative Timeline interaction, semantic editing/history, durable Export Queue composition and existing Shell/UI native acceptance. This design checkpoint adds no runtime, external execution or release authority.

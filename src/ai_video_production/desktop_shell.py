@@ -123,6 +123,14 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "timeline.edit.apply": ShellCommandSpec("timeline.edit.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
     "timeline.track.prepare": ShellCommandSpec("timeline.track.prepare", CommandCategory.READ_ONLY),
     "timeline.track.apply": ShellCommandSpec("timeline.track.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "export.snapshot": ShellCommandSpec("export.snapshot", CommandCategory.READ_ONLY),
+    "export.prepare": ShellCommandSpec("export.prepare", CommandCategory.READ_ONLY),
+    "export.enqueue": ShellCommandSpec("export.enqueue", CommandCategory.LOCAL_DURABLE),
+    "export.preflight": ShellCommandSpec("export.preflight", CommandCategory.LOCAL_DURABLE),
+    "export.dispatch.prepare": ShellCommandSpec("export.dispatch.prepare", CommandCategory.READ_ONLY),
+    "export.dispatch.apply": ShellCommandSpec("export.dispatch.apply", CommandCategory.EXTERNAL_MUTATION),
+    "export.cancel": ShellCommandSpec("export.cancel", CommandCategory.LOCAL_DURABLE),
+    "export.reconcile": ShellCommandSpec("export.reconcile", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

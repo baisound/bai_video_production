@@ -169,6 +169,8 @@ from .interactive_timeline_edit import (
 )
 from .interactive_timeline_store import TimelineEditSnapshotStore, parse_timeline_edit_history
 from .interactive_timeline_application import Task044TimelineEditApplication
+from .export_queue import ExportAuthorityClass, ExportDispatchResult, ExportOutputContract, ExportPreparation, ExportPreset
+from .export_queue_application import ExportQueueApplication
 
 __version__ = "0.20.1"
 
@@ -266,4 +268,6 @@ __all__ = [
     "TimelineEditKind", "TimelineEditProjector", "TimelineEditRevision", "TimelineSnapService",
     "TimelineEditSnapshotStore", "parse_timeline_edit_history", "Task044TimelineEditApplication",
     "InteractiveTimelineProjectionService",
+    "ExportAuthorityClass", "ExportDispatchResult", "ExportOutputContract", "ExportPreparation", "ExportPreset",
+    "ExportQueueApplication",
 ]

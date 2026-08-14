@@ -29,6 +29,7 @@ from .comfyui import (
 from .creative_generation_execution_application import (
     LocalGenerationExecutionRequest,
     LocalGenerationExecutionResult,
+    LocalGenerationRuntimeReadiness,
 )
 from .derived_assets import sha256_file
 from .errors import ProductError, ProductErrorCategory
@@ -56,6 +57,8 @@ _REQUIRED_CLASSES = frozenset({
     "SamplerCustomAdvanced", "VAEDecode", "VAEDecodeAudio", "CreateVideo", "SaveVideo",
 })
 MINIMAX_H3_NATIVE_WORKFLOW_SHA256 = "sha256:1a1d2a6108c5fe94df006f3c9177832db51302d4135b1e502e2c71afef2194f8"
+_RUNTIME_POLICY = "DEFAULT_DYNAMIC_VRAM_INCIDENT_HARDENED_V1"
+_PREFLIGHT_PROMPT = "BAI TASK-013 READINESS PREFLIGHT - NO DISPATCH"
 
 
 class MediaProbe(Protocol):
@@ -336,6 +339,33 @@ class LocalComfyTextToVideoPort:
         if not matches:
             raise ProductError("ERR_GENERATION_COMFY_RUNTIME_OUTPUT", "ComfyUI runtime output root differs from the Product-owned root", ProductErrorCategory.SECURITY)
 
+    def _inspect_runtime(self, workflow: dict[str, Any]) -> None:
+        object_info = self.client.object_info()
+        assert_workflow_supported(workflow, object_info)
+        assert_workflow_inputs_available(workflow, object_info)
+        stats = self.client.system_stats()
+        admit_comfy_resources(stats, self.resource_policy, staging_root=self.staging_root)
+        self._authorize_runtime(stats)
+
+    def preflight(self) -> LocalGenerationRuntimeReadiness:
+        """Perform body-free, read-only runtime inspection without dispatch state."""
+        workflow = render_workflow_placeholders(self.workflow, {
+            "PROMPT": _PREFLIGHT_PROMPT,
+            "SEED": 0,
+            "WIDTH": self.config.width, "HEIGHT": self.config.height,
+            "LENGTH": self.config.length, "STEPS": self.config.steps,
+            "OUTPUT_PREFIX": "bai-task013-preflight/no-dispatch",
+        })
+        self._inspect_runtime(workflow)
+        return LocalGenerationRuntimeReadiness(
+            route_id=self.config.route_id,
+            provider_id=self.config.provider_id,
+            model_id=self.config.model_id,
+            workflow_sha256=self.config.workflow_sha256,
+            required_class_count=len(_REQUIRED_CLASSES),
+            runtime_policy=_RUNTIME_POLICY,
+        )
+
     @staticmethod
     def _uncertain(code: str, message: str, *, prompt_id: str | None = None) -> ProductError:
         details: dict[str, Any] = {"execution_state_uncertain": True, "automatic_retry_allowed": False}
@@ -400,12 +430,7 @@ class LocalComfyTextToVideoPort:
             "LENGTH": self.config.length, "STEPS": self.config.steps,
             "OUTPUT_PREFIX": f"bai-task013/{request.execution_id}/result",
         })
-        object_info = self.client.object_info()
-        assert_workflow_supported(workflow, object_info)
-        assert_workflow_inputs_available(workflow, object_info)
-        stats = self.client.system_stats()
-        admit_comfy_resources(stats, self.resource_policy, staging_root=self.staging_root)
-        self._authorize_runtime(stats)
+        self._inspect_runtime(workflow)
         journal_path, journal = self._reserve(route, request)
         started = self._monotonic()
         try:

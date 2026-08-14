@@ -129,6 +129,43 @@ def test_packaged_workflow_is_body_free_and_checksum_bound():
     assert sha256_bytes(canonical_json_bytes(value)) == MINIMAX_H3_NATIVE_WORKFLOW_SHA256
 
 
+def test_runtime_preflight_is_read_only_body_free_and_execution_parked(tmp_path: Path):
+    port, client, _route, request, roots = fixture(tmp_path)
+    result = port.preflight().as_dict()
+    assert result["result"] == "SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED"
+    assert result["read_only"] is True
+    assert result["resource_admission_passed"] is True
+    assert result["runtime_identity_passed"] is True
+    assert result["dispatch_performed"] is False
+    assert result["journal_created"] is False
+    assert result["execution_authorized"] is False
+    assert result["native_gate_satisfied"] is False
+    assert client.queued == 0
+    assert client.workflow is None
+    assert list(roots["journal"].iterdir()) == []
+    assert list(roots["project-output"].iterdir()) == []
+    assert list(roots["comfy-output"].iterdir()) == []
+    assert request.prompt_text not in json.dumps(result)
+
+
+def test_runtime_preflight_rejects_unsafe_runtime_without_side_effect(tmp_path: Path):
+    port, client, _route, _request, roots = fixture(tmp_path)
+    original = client.system_stats
+
+    def unsafe_stats():
+        value = original()
+        value["system"]["argv"].append("--disable-async-offload")
+        return value
+
+    client.system_stats = unsafe_stats
+    with pytest.raises(ProductError) as exc:
+        port.preflight()
+    assert exc.value.code == "ERR_GENERATION_COMFY_RUNTIME_UNSAFE"
+    assert client.queued == 0
+    assert list(roots["journal"].iterdir()) == []
+    assert list(roots["project-output"].iterdir()) == []
+
+
 def test_local_native_port_publishes_one_verified_body_private_video(tmp_path: Path):
     probe = Probe()
     port, client, route, request, roots = fixture(tmp_path, probe=probe)

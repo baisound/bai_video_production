@@ -837,3 +837,20 @@ This closure confirms the reviewed adapter code and packaging, not a successful 
 BAI Development OS Autonomous Queue parks the exact native H3 execution behind `HG-BVP-TASK013-NATIVE-003` while selecting the independent repository-only `TASK-013-SAFE-RUNTIME-HARDENING` unit. The adapter now rejects all four memory-related flags observed in the Owner-confirmed force-restart attempt: `--disable-dynamic-vram`, `--disable-async-offload`, `--disable-pinned-memory` and `--lowvram`. Assignment-form variants are also rejected before journal reservation and before queue side effects.
 
 The bounded local gate passes focused `39 / 39`, full WSL2 `923 / 923` and compileall. This does not authorize or claim a third native attempt. The prior uncertain prompt remains non-replayable, native H3 remains `PARKED_TO_SAFE_RUNTIME_REVIEW`, and stable release remains `v0.20.1`.
+
+## Addendum XXXV — TASK-013 Safe Runtime Readiness Preflight Local Gate
+
+BAI Development OS Autonomous Queue selected the independent
+`TASK-013-SAFE-RUNTIME-READINESS-PREFLIGHT` unit and continued to park exact
+native H3 execution behind `HG-BVP-TASK013-NATIVE-003`. The Product now exposes
+an explicit application/Shell preflight that uses a body-free sentinel and the
+same node/model, resource-admission and exact runtime-identity checks as the
+real dispatch path.
+
+The bounded local gate passes focused `55 / 55` and full WSL2 `926 / 926`.
+The preflight queues no workflow, creates no dispatch journal or generated
+output, grants no execution Authority and does not satisfy the Native Gate. It
+is called only by an explicit bridge operation, never by snapshot/UI refresh.
+Hosted closure remains pending. The previous uncertain prompt remains
+non-replayable, native H3 remains `PARKED_TO_SAFE_RUNTIME_REVIEW`, and stable
+release remains `v0.20.1`.

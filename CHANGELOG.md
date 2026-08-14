@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-013 restart-safe local generation execution control: exact current Queue re-derivation, private Prompt checksum verification, credential-free `LOCAL_FREE_AI` routing, durable pre-side-effect `DISPATCHING`, no automatic replay and optional unified Queue UI; live adapters, paid routes and Candidate publication remain excluded.
 - Promoted TASK-027 Generation Queue admission into a durable unified Desktop workspace derived only from exact Approved Plan, Feasibility, LOCK/STALE, Continuity and Prompt/Profile Evidence.
 - Added one-shot, append-only, restart-safe Queue records with unique required-input proof and invariant `EXECUTION_NOT_AUTHORIZED`; no Provider call, paid authorization, Budget reservation or Candidate creation is exposed.
 - Promoted TASK-040 Prompt/Generation Evidence into a durable project-scoped Application and unified Desktop workspace with immutable Prompt versions, completed Attempt import and explicit Human-routed regeneration Prompt registration.

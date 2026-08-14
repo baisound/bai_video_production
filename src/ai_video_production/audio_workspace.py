@@ -8,6 +8,7 @@ import re
 from typing import Any
 
 from .errors import ProductError, ProductErrorCategory
+from .timeline_audio import TimelinePlacementBinding
 
 
 _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,179}")
@@ -31,6 +32,7 @@ class AudioSlotKind(str, Enum):
     VFX_EMBEDDED_AUDIO = "VFX_EMBEDDED_AUDIO"
     SE = "SE"
     BGM = "BGM"
+    AMBIENCE = "AMBIENCE"
     NARRATION = "NARRATION"
     MIX_STEM = "MIX_STEM"
     FINAL_MIX = "FINAL_MIX"
@@ -120,19 +122,20 @@ class PlacementReview:
     track_role: str
     decision: PlacementDecision = PlacementDecision.REVIEW
     gain_db: float | None = None
+    timeline_binding: TimelinePlacementBinding | None = None
 
     def __post_init__(self) -> None:
         _id(self.review_id, "review_id")
         _id(self.candidate_id, "candidate_id")
         if self.timeline_start_frame < 0 or self.duration_frames < 1:
             raise ValueError("placement frame range is invalid")
-        if self.track_role not in {"SOURCE", "SE", "BGM", "NARRATION", "MIX_STEM"}:
+        if self.track_role not in {"SOURCE", "SE", "BGM", "AMBIENCE", "NARRATION", "MIX_STEM"}:
             raise ValueError("track_role is invalid")
         if self.gain_db is not None and not -120.0 <= self.gain_db <= 24.0:
             raise ValueError("gain_db must be -120..24")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "review_id": self.review_id,
             "candidate_id": self.candidate_id,
             "timeline_start_frame": self.timeline_start_frame,
@@ -141,6 +144,9 @@ class PlacementReview:
             "gain_db": self.gain_db,
             "decision": self.decision.value,
         }
+        if self.timeline_binding is not None:
+            value["timeline_binding"] = self.timeline_binding.to_dict()
+        return value
 
 
 class AudioWorkspaceRegistry:
@@ -176,6 +182,7 @@ class AudioWorkspaceRegistry:
             current.track_role,
             decision,
             current.gain_db,
+            current.timeline_binding,
         )
         self.placements[review_id] = updated
         return updated

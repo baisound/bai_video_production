@@ -16,6 +16,7 @@ from .audio_workspace import AudioWorkspaceRegistry, PlacementDecision, Placemen
 from .audio_workspace_store import AudioWorkspaceSnapshotStore
 from .errors import ProductError, ProductErrorCategory
 from .production_control import CandidateLifecycle, ProductionControlRegistry, SlotKind
+from .timeline_audio import TimelinePlacementBinding
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import ProductionControlSnapshotStore, _exclusive_snapshot_lock
 from .serialization import canonical_json_bytes, sha256_bytes
@@ -228,6 +229,7 @@ class Task041AudioWorkspaceApplication:
     _ROLE_BY_SLOT = {
         SlotKind.SE: "SE",
         SlotKind.BGM: "BGM",
+        SlotKind.AMBIENCE: "AMBIENCE",
         SlotKind.NARRATION: "NARRATION",
     }
 
@@ -431,6 +433,7 @@ class Task041AudioWorkspaceApplication:
         duration_frames: int,
         track_role: str,
         gain_db: float | None,
+        timeline_binding: TimelinePlacementBinding | None = None,
         expected_production_snapshot_sha256: str,
         expected_audio_snapshot_sha256: str,
     ) -> dict[str, Any]:
@@ -451,6 +454,7 @@ class Task041AudioWorkspaceApplication:
             duration_frames,
             track_role,
             gain_db=gain_db,
+            timeline_binding=timeline_binding,
         )
         candidate, _ = self._require_audio_candidate(
             production,

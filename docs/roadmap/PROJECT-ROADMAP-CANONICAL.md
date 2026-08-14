@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.62
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.63
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: P-V6-4 Design PR #61 is hosted-closed at exact main `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`. The replacement `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` Owner Directive inserts TASK-043 Product Project/Migration/Recovery before P-V6-4 implementation, transfers practical NLE/Export to TASK-044 and transfers native compatibility/release closure to TASK-045. Stable Product release remains `v0.20.1`.
+- Current insertion: TASK-043 is hosted-closed through PR #66 at exact main `10eae32b2e6a2f9ad7080961fed7b3d2b39f423b`. P-V6-4 Timeline Audio implementation is local PASS and hosted-pending. Practical NLE/Export remains TASK-044 and native compatibility/release closure remains TASK-045. Stable Product release remains `v0.20.1`.
 
 ## 3. MVP定義
 
@@ -111,8 +111,8 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 DESIGN HOSTED CLOSED / IMPLEMENTATION WAITS FOR TASK-043 |
-| 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | ACTIVE / CURRENT OWNER MAXIMUM / DESIGN REVIEW |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 IMPLEMENTATION LOCAL PASS / HOSTED PENDING |
+| 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
 | 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
 
@@ -178,7 +178,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
-- TASK-042 V6 Product Workflow: **P-V6-4 DESIGN HOSTED CLOSED / IMPLEMENTATION WAITS FOR TASK-043**
+- TASK-042 V6 Product Workflow: **P-V6-4 IMPLEMENTATION LOCAL PASS / HOSTED PENDING**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **ALLOCATED / DEPENDENCY WAIT**
 - TASK-045 V6 Native Acceptance / Release Closure: **ALLOCATED / DEPENDENCY WAIT**
@@ -1468,3 +1468,32 @@ close with unresolved Critical/High `0 / 0`. Hosted CI remains required. After
 hosted merge and cleanup, TASK-043 reaches hosted foundation closure and TASK-042
 P-V6-4 implementation re-audit becomes next. Stable release remains `v0.20.1`;
 this backend foundation checkpoint creates no Tag or Release.
+
+## Addendum LVII — TASK-042 P-V6-4 Timeline Audio Implementation Gate
+
+P-FND-4 PR #66 passed hosted `9 / 9`, merged at exact main
+`10eae32b2e6a2f9ad7080961fed7b3d2b39f423b` and completed remote/local branch
+cleanup. Fresh-main AUTONOMY selected
+`BVP-TASK-042-P-V6-4-IMPLEMENTATION / IMPLEMENTATION` after re-auditing the
+hosted Design against TASK-043.
+
+The implementation establishes an append-only, frame-authoritative Timeline
+Audio history for BGM, SE, NARRATION and AMBIENCE. SRT remains proposal-only and
+reports deterministic frame conversion deltas and explicit Scene, Timeline and
+narration-lane conflicts. Whole-Timeline music covers the exact Timeline, parallel
+lanes are explicit, and crossfade overlap requires one transition group.
+
+Timeline Audio is stored as a TASK-043 Product Project child. Plan and Project
+Manifest commit together through coordinated save/recovery. Every command
+revalidates Project identity, Manifest, timebase, Blueprint checksum, exact
+TASK-037 SlotKind, locked Candidate and Asset checksum. An accepted TASK-041
+placement may carry exact current Timeline proof into TASK-026; stale revisions
+and unsupported STRETCH fail closed instead of silently changing output.
+
+Focused Timeline/Audio compatibility tests pass `32 / 32`; full Windows Python
+3.12 regression passes `1070 passed, 1 skipped`; compile validation passes.
+Unresolved Critical/High findings are `0 / 0`. Hosted CI remains required before
+P-V6-4 closure. This foundation unit adds no interactive NLE claim, Provider,
+paid, native, media, TASK-010, Resolve or Cubase execution and creates no version,
+Tag or Release. After hosted merge and cleanup, TASK-044 current-main audit/design
+is next.

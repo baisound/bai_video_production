@@ -41,6 +41,7 @@ class SlotKind(str, Enum):
     VFX = "VFX"
     SE = "SE"
     BGM = "BGM"
+    AMBIENCE = "AMBIENCE"
     NARRATION = "NARRATION"
     OTHER = "OTHER"
 

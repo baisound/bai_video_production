@@ -148,6 +148,14 @@ from .project_migration import (
     ProjectCompatibilityReport, ProjectMigrationPlan, ProjectMigrationPlanner,
     SupportedFormatRange,
 )
+from .timeline_audio import (
+    AudioCue as TimelineAudioCue, AudioFitPolicy, AudioRange, AudioSourceBinding,
+    AudioSourceIntent, ImportedSrtCue, MusicPlan, NarrationCue as TimelineNarrationCue,
+    NarrationCueOrigin, SrtProposal, SrtProposalService, SrtProposalState,
+    TimelineAudioPlan, TimelineAudioRole, TimelinePlacementBinding,
+)
+from .timeline_audio_store import TimelineAudioHistory, TimelineAudioSnapshotStore
+from .timeline_audio_application import Task042TimelineAudioApplication
 
 __version__ = "0.20.1"
 
@@ -232,4 +240,9 @@ __all__ = [
     "DurableProductJob", "DurableProductJobCollection", "DurableProductJobService",
     "DurableProductJobState", "DurableProductJobStore", "durable_job_shell_projection",
     "parse_durable_product_job", "parse_durable_product_job_collection",
+    "TimelineAudioCue", "AudioFitPolicy", "AudioRange", "AudioSourceBinding",
+    "AudioSourceIntent", "ImportedSrtCue", "MusicPlan", "TimelineNarrationCue",
+    "NarrationCueOrigin", "SrtProposal", "SrtProposalService", "SrtProposalState",
+    "TimelineAudioPlan", "TimelineAudioRole", "TimelinePlacementBinding",
+    "TimelineAudioHistory", "TimelineAudioSnapshotStore", "Task042TimelineAudioApplication",
 ]

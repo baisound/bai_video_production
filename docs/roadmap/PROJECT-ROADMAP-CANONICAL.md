@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.23
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.24
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -692,3 +692,11 @@ The bounded Product unit adds a durable project-scoped Planning Application and 
 TASK-027's bounded R2 Planning Workspace minimum local gate passes. The unified Desktop `企画` workspace now displays persisted Creation Intent, Proposal revision/history, cost/rights/provider policy and complete Scene Contract cards. Exact Human GO persists the immutable Approved Production Plan. A second confirmation installs only that exact Plan into TASK-037 Production Control, preserving Plan -> Scene -> Asset Slot trace.
 
 Windows full regression passes `842 / 842` executed tests with one intentional non-Windows skip. Concurrent Proposal publication, stale/replayed confirmation, restart and project-scope controls pass. Windows and WSL2 compile gates and diff check pass. Formal closure remains conditional on hosted PR checks, exact `main` merge and branch cleanup. No package, Tag or Release is selected at this checkpoint, and the full multi-slice TASK-027 product is not claimed complete.
+
+### Ver.1.24 Addendum XV — TASK-027 Planning Workspace Minimum Hosted Closure
+
+The bounded TASK-027 R2 Planning Workspace minimum is complete. PR #28 exact head `52df9ecbf426a65a853c2d0d4da84fa5dd08a58e` passed all `9 / 9` hosted checks and merged at exact main SHA `91d76febeaa3588b6c07914c32d9da151278004a`. The implementation branch was deleted remotely and locally.
+
+This closes the R2 Product-promotion sequence: TASK-037 Asset Registry 2, TASK-038 Audit Workspace and the TASK-027 Planning Workspace minimum are now user-facing through the unified Desktop Shell. The full multi-slice TASK-027 is not claimed complete. Provider/paid execution, Generation Queue integration and external NLE mutation remain outside this closure.
+
+The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R2 checkpoint. R3 begins with a current-state audit and TASK-013 Shot Feasibility / Visual Compliance on a new dedicated branch. The routed R3 sequence then continues through TASK-039 Continuity Map / STALE propagation, TASK-040 Prompt Registry / Generation Evidence and the TASK-027 Generation Queue integration slice. Generation admission must ultimately require `PLAN_APPROVED + FEASIBILITY_PASS + REQUIRED_INPUT_LOCKED`.

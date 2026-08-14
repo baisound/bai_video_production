@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_AUDIO_WORKSPACE_PRODUCT_PROMOTION_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_042_V6_PRODUCT_WORKFLOW_ROADMAP_PROMOTION_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-042 / P-V6-0 ROADMAP_RECONCILIATION_AND_FULL_DESIGN`; TASK-013 native H3 and TASK-014 paid narration remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
-- Development Candidate: `NONE`
+- Development Candidate: `NONE`; TASK-042 P-V6-0 changes design/roadmap only and selects no package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `fresh-main Autonomous Queue re-audit; TASK-013 native resumption remains separately reviewed and the preserved uncertain execution must never be replayed automatically`
+- Next Consumer Decision Gate: `TASK-042 roadmap PR all-green/main merge -> fresh-main P-V6-1A Blueprint v2 and migration-preview contract; TASK-013 native resumption remains later and the preserved uncertain execution must never be replayed automatically`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.46 Addendum XXXVIII. R3 control-loop, TASK-013 readiness and the bounded TASK-041 Audio Workspace Product promotion are hosted-closed. PR #47 passed `9 / 9` and merged at exact main `8dd6434a`; Provider execution, media derivation, TASK-026 compilation and Resolve/Cubase mutation remain false. Native H3 and paid TASK-014 execution remain parked. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.47 Addendum XXXIX. TASK-042 is inserted as the current Owner-maximum V6 Product Workflow route before any Native H3 resume. R3 control-loop, TASK-013 readiness and the bounded TASK-041 Audio Workspace Product promotion remain hosted-closed; Provider execution, media derivation, TASK-026 compilation and Resolve/Cubase mutation remain false. Native H3 and paid TASK-014 execution remain parked. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

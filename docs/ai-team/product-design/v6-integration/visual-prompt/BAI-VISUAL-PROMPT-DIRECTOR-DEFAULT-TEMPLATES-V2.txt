@@ -1,0 +1,77 @@
+=== START FRAME TEMPLATE V2 ===
+
+[SHOT_ROLE] = START FRAME.
+
+Create a single image for AI video generation that depicts [SUBJECT_IDENTITY] in [LOCATION_TYPE / SPACE_STRUCTURE], at the moment just before [PRIMARY_ACTION]. The image must feel like a real slice of ongoing life, built from the subject’s habits, movement, possessions, and immediate purpose rather than from decorative atmosphere.
+
+Use the provided reference inputs as follows:
+- [REFERENCE_IMAGE_A_ROLE]
+- [REFERENCE_IMAGE_B_ROLE]
+- [REFERENCE_IMAGE_C_ROLE]
+- [REFERENCE_IMAGE_D_ROLE]
+- [REFERENCE_IMAGE_E_ROLE]
+- [REFERENCE_IMAGE_F_ROLE]
+
+Reference usage policy: [REFERENCE_USAGE_POLICY].
+Keep the subject consistent in: [IDENTITY_LOCK_SCOPE].
+Keep the environment consistent in: [ENVIRONMENT_LOCK_SCOPE].
+Maintain continuity across paired or adjacent frames in: [CONTINUITY_LOCK_SCOPE].
+Allow natural variation only in: [ALLOWED_VARIATION_SCOPE].
+Reference priority order: [REFERENCE_PRIORITY_ORDER].
+
+The subject is currently [NOW_ACTION], with a clear non-camera-related objective. A short time earlier, they were [BEFORE_ACTION], and physical traces of that recent activity remain visible in specific, realistic ways: [ACTION_TRACES]. Show those traces only where they would naturally appear according to body position, object position, movement direction, and gravity.
+
+The subject wears [WARDROBE_DESCRIPTION], chosen as believable personal clothing for their age, body, lifestyle, taste, and budget sense. Their hair, skin, sleeves, hems, wrinkles, posture, and hand tension should reflect the immediate action and the time just before the shot: [SUBJECT_STATE_DETAILS].
+
+Include only necessary belongings that clearly belong to this person and support the action: [OWNED_OBJECTS]. Each visible object should appear in a realistic place based on actual use and daily movement paths: [OBJECT_PLACEMENT_LOGIC]. Do not add extra props for mood.
+
+The surrounding space is [SPACE_DETAILS]. Only part of the larger world is visible; let the rest continue naturally off-screen through cropping, occlusion, shadow, blur, or partial framing. Background elements that are visible should be limited to [VISIBLE_BACKGROUND_ELEMENTS].
+
+Off-screen context should subtly influence the subject’s body direction or eye line: [OFFSCREEN_CONTEXT].
+
+Lighting must come from real sources in the space: [LIGHT_SOURCES_AND_DIRECTION]. Do not light the whole scene evenly; preserve natural falloff, contrast, and localized brightness.
+
+The camera is held or operated by [PHOTOGRAPHER_IDENTITY], who is photographing this moment because [PHOTOGRAPHER_REASON]. Use [CAMERA_HEIGHT_AND_DISTANCE], [LENS_DESCRIPTION], and [EXPOSURE_FEEL]. Frame the subject from [FRAMING_DESCRIPTION], keeping the highest priority on [VISUAL_PRIORITY].
+
+This is the start frame, so the image should preserve a poised, pre-transition state: the body, gaze, and object relationships should clearly suggest that the next motion will be [NEXT_EXPECTED_MOTION], but the motion has not yet resolved.
+
+Output one cohesive natural-language prompt only.
+
+=== END FRAME TEMPLATE V2 ===
+
+[SHOT_ROLE] = END FRAME.
+
+Create a single image for AI video generation that depicts [SUBJECT_IDENTITY] in [LOCATION_TYPE / SPACE_STRUCTURE], immediately after [PRIMARY_ACTION] has already taken place. The image must feel like a real slice of ongoing life, built from the subject’s habits, movement, possessions, and immediate purpose rather than from decorative atmosphere.
+
+Use the provided reference inputs as follows:
+- [REFERENCE_IMAGE_A_ROLE]
+- [REFERENCE_IMAGE_B_ROLE]
+- [REFERENCE_IMAGE_C_ROLE]
+- [REFERENCE_IMAGE_D_ROLE]
+- [REFERENCE_IMAGE_E_ROLE]
+- [REFERENCE_IMAGE_F_ROLE]
+
+Reference usage policy: [REFERENCE_USAGE_POLICY].
+Keep the subject consistent in: [IDENTITY_LOCK_SCOPE].
+Keep the environment consistent in: [ENVIRONMENT_LOCK_SCOPE].
+Maintain continuity across paired or adjacent frames in: [CONTINUITY_LOCK_SCOPE].
+Allow natural variation only in: [ALLOWED_VARIATION_SCOPE].
+Reference priority order: [REFERENCE_PRIORITY_ORDER].
+
+The subject has just completed or passed through [COMPLETED_ACTION], and is now in the brief settling moment of [NOW_ACTION_AFTER]. A short time earlier, they were [BEFORE_ACTION_FOR_END], and the resulting physical traces remain visible in specific, realistic ways: [ACTION_RESULT_TRACES]. Show those traces only where they would naturally appear according to body position, object position, movement direction, and gravity.
+
+The subject wears [WARDROBE_DESCRIPTION], chosen as believable personal clothing for their age, body, lifestyle, taste, and budget sense. Their hair, skin, sleeves, hems, wrinkles, posture, and hand relaxation or residual tension should reflect what just happened: [SUBJECT_STATE_DETAILS_AFTER].
+
+Include only necessary belongings that clearly belong to this person and support the finished moment: [OWNED_OBJECTS_AFTER]. Each visible object should appear in a realistic place based on actual use and daily movement paths: [OBJECT_PLACEMENT_LOGIC_AFTER]. Do not add extra props for mood.
+
+The surrounding space is [SPACE_DETAILS]. Only part of the larger world is visible; let the rest continue naturally off-screen through cropping, occlusion, shadow, blur, or partial framing. Background elements that are visible should be limited to [VISIBLE_BACKGROUND_ELEMENTS].
+
+Off-screen context should subtly influence the subject’s body direction or eye line: [OFFSCREEN_CONTEXT_AFTER].
+
+Lighting must come from real sources in the space: [LIGHT_SOURCES_AND_DIRECTION]. If the action changed a light-emitting object or opening in the scene, reflect that naturally in the result.
+
+The camera is held or operated by [PHOTOGRAPHER_IDENTITY], who is photographing this moment because [PHOTOGRAPHER_REASON]. Use [CAMERA_HEIGHT_AND_DISTANCE], [LENS_DESCRIPTION], and [EXPOSURE_FEEL]. Frame the subject from [FRAMING_DESCRIPTION], keeping the highest priority on [VISUAL_PRIORITY].
+
+This is the end frame, so the image should preserve a settled, post-transition state: the body, gaze, and object relationships should clearly show that [JUST_COMPLETED_RESULT] has already happened, while suggesting that the subject will next move on to [NEXT_AFTER_ACTION].
+
+Output one cohesive natural-language prompt only.

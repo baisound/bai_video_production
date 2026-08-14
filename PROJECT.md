@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_ADAPTER_LOCAL_GATE_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -109,15 +109,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-039 — R3 Continuity Product promotion / PR #32 9 of 9 PASS / exact main a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b`
-- Active Task: `TASK-013 local ComfyUI native adapter local gate passed — native H3 completion is safely parked at the recorded runtime/recovery boundary`
+- Last Completed Gate: `TASK-013 — R4 local Comfy adapter / PR #41 9 of 9 PASS / exact main 74d6b5af0c6de66168f5ab6ab63a6a049b11acd4`
+- Active Task: `TASK-013 adapter hosted closure complete — native H3 completion remains parked pending separately reviewed safe runtime resumption`
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Development Candidate: `NONE`
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.41 Addendum XXXII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.42 Addendum XXXIII
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -137,7 +137,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Subtitle Workspace release: package 0.16.4 completes the v0.16.x review-workspace line including local FasterWhisper/Transcript/SRT flow, revisioned subtitle editing, Windows-native Open/Save interaction corrective and runtime workspace privacy hygiene
 - TASK-006 Slice D: v0.17.0 formal release completed with large-media chunk/checkpoint transcription and canonical Resolve subtitle-placement handoff; actual Resolve write remains TASK-010 ownership.
 - Current bounded Product development: TASK-024 Slice A candidate `0.18.0` generates review-only silence/filler/exact-repeat Cut Candidates and protected Keep Blocks. It does not mutate media or Resolve; TASK-007 owns final Cut Plan and TASK-010 owns execution.
-- R2/R3 route is complete. R4 TASK-013 now has a package-owned body-free local/free adapter, exact runtime-policy enforcement, no-replay recovery and opt-in trusted-launch composition. Final exact adapter/controller/launcher regression is `35 / 35` and full WSL2 regression is `919 / 919`. A contained native attempt reached the real GPU/model path but did not produce output; the second attempt was externally interrupted by the Owner-confirmed Windows force restart and remains `QUEUED / RECOVERY_REQUIRED`. Unsafe legacy low-VRAM flags are now rejected before dispatch, so native completion is parked pending a separately reviewed safe runtime route.
+- R2/R3 route is complete. R4 TASK-013 now has a hosted-closed package-owned body-free local/free adapter, exact runtime-policy enforcement, no-replay recovery and opt-in trusted-launch composition. PR #41 exact head `ff481147` passed `9 / 9` and merged at exact main `74d6b5af`; its implementation branch was deleted locally and remotely. Native completion remains parked: attempt 01 failed in the real sampler path and attempt 02 was externally interrupted by the Owner-confirmed Windows force restart with durable `QUEUED / RECOVERY_REQUIRED`. Unsafe legacy low-VRAM flags are rejected before dispatch.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

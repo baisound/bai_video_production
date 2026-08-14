@@ -7,8 +7,10 @@ separately authorized at the later TASK-013/028 execution boundary.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any, Iterable
 
+from .blueprint_v2_world_lock import BlueprintV2WorldLockService
 from .errors import ProductError, ProductErrorCategory
 from .production_blueprint import ProductionBlueprint
 from .production_blueprint_v2 import ProductionBlueprintV2
@@ -75,16 +77,6 @@ class ApprovedPlanVerifier:
         return plan
 
 
-def _require_v1_production_control(blueprint: ProductionBlueprint | ProductionBlueprintV2) -> ProductionBlueprint:
-    if not isinstance(blueprint, ProductionBlueprint):
-        raise ProductError(
-            "ERR_BLUEPRINT_V2_PRODUCTION_CONTROL_NOT_INTEGRATED",
-            "Blueprint v2 is Human-GO verifiable but requires P-V6-2 WORLD LOCK integration before Production Control or generation admission",
-            ProductErrorCategory.AUTHORIZATION,
-        )
-    return blueprint
-
-
 class ApprovedPlanProductionControlInstaller:
     @classmethod
     def compile(
@@ -94,13 +86,27 @@ class ApprovedPlanProductionControlInstaller:
         plan_id: str,
         blueprint: ProductionBlueprint | ProductionBlueprintV2,
         project_id: str,
+        production_registry: ProductionControlRegistry | None = None,
     ) -> BlueprintControlPlan:
-        ApprovedPlanVerifier.require_current(
+        plan = ApprovedPlanVerifier.require_current(
             proposal_registry=proposal_registry,
             plan_id=plan_id,
             blueprint=blueprint,
         )
-        return BlueprintProductionControlCompiler.compile(_require_v1_production_control(blueprint), project_id=project_id)
+        if isinstance(blueprint, ProductionBlueprintV2):
+            if production_registry is None:
+                raise ProductError(
+                    "ERR_BLUEPRINT_V2_WORLD_LOCK_REGISTRY_REQUIRED",
+                    "Blueprint v2 compilation requires the exact current Production Control registry",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            BlueprintV2WorldLockService.require_current(
+                blueprint=blueprint,
+                approved_plan=plan,
+                registry=production_registry,
+                project_id=project_id,
+            )
+        return BlueprintProductionControlCompiler.compile(blueprint, project_id=project_id)
 
     @classmethod
     def install(
@@ -117,21 +123,43 @@ class ApprovedPlanProductionControlInstaller:
             plan_id=plan_id,
             blueprint=blueprint,
         )
-        blueprint = _require_v1_production_control(blueprint)
-        control_plan = BlueprintProductionControlCompiler.compile(blueprint, project_id=project_id)
-        BlueprintProductionControlCompiler.install(control_plan, production_registry)
+        control_plan = cls.compile(
+            proposal_registry=proposal_registry,
+            plan_id=plan_id,
+            blueprint=blueprint,
+            project_id=project_id,
+            production_registry=production_registry,
+        )
+        # Apply the complete graph to an isolated copy.  A conflict/cycle can
+        # therefore never leave the caller-visible registry partially changed.
+        working = deepcopy(production_registry)
+        BlueprintProductionControlCompiler.install(control_plan, working)
+        if isinstance(blueprint, ProductionBlueprintV2):
+            for edge in BlueprintV2WorldLockService.dependency_edges(
+                blueprint=blueprint,
+                approved_plan=plan,
+                registry=production_registry,
+                project_id=project_id,
+            ):
+                working.add_dependency(edge)
         # Keep the Blueprint trace while adding the true Human-approved Plan node.
         # This lets PRODUCT-CONTROL-001 prove Approved Plan -> Scene -> Slot, rather
         # than treating an unapproved Blueprint alone as final Plan authority.
         approved_plan_sha = plan.to_dict()["approved_plan_sha256"]
         for scene in blueprint.scenes:
-            production_registry.add_dependency(DependencyEdge(
+            working.add_dependency(DependencyEdge(
                 edge_id=f"dep:approved:{plan.plan_id}:{scene.scene_id}",
                 from_ref=EntityRef(EntityType.PLAN, plan.plan_id),
                 to_ref=EntityRef(EntityType.SCENE, scene.scene_id),
                 dependency_kind=DependencyKind.USES,
                 from_hash=approved_plan_sha,
             ))
+        production_registry.slots.clear()
+        production_registry.slots.update(working.slots)
+        production_registry.candidates.clear()
+        production_registry.candidates.update(working.candidates)
+        production_registry.edges.clear()
+        production_registry.edges.update(working.edges)
         return control_plan
 
 
@@ -159,7 +187,27 @@ class ApprovedPlanGenerationAdmissionService:
             plan_id=plan_id,
             blueprint=blueprint,
         )
-        _require_v1_production_control(blueprint)
+        required_inputs = tuple(dict.fromkeys(required_input_slot_ids))
+        if isinstance(blueprint, ProductionBlueprintV2):
+            target = production_registry.slots.get(slot_id)
+            existing_projects = {
+                production_registry.slots[row.slot_id].project_id
+                for row in BlueprintV2WorldLockService.requirements(blueprint)
+                if row.slot_id in production_registry.slots
+            }
+            project_id = target.project_id if target is not None else (
+                next(iter(existing_projects)) if len(existing_projects) == 1 else "unknown-project"
+            )
+            BlueprintV2WorldLockService.require_current(
+                blueprint=blueprint,
+                approved_plan=plan,
+                registry=production_registry,
+                project_id=project_id,
+            )
+            required_inputs = tuple(dict.fromkeys((
+                *required_inputs,
+                *(row.slot_id for row in BlueprintV2WorldLockService.requirements(blueprint)),
+            )))
         if plan.provider_policy.policy_sha256 != prompt_provider_policy_sha256:
             raise ProductError(
                 "ERR_APPROVED_PLAN_PROVIDER_POLICY_MISMATCH",
@@ -171,7 +219,7 @@ class ApprovedPlanGenerationAdmissionService:
             slot_id=slot_id,
             plan_approved=True,
             feasibility=feasibility,
-            required_input_slot_ids=required_input_slot_ids,
+            required_input_slot_ids=required_inputs,
             registry=production_registry,
             cost_authorized=explicit_paid_execution_authorization,
             cost_required=cost_required,

@@ -21,6 +21,7 @@ from .production_control import (
 )
 from .production_control_store import ProductionControlSnapshotStore
 from .production_blueprint import ProductionBlueprint
+from .production_blueprint_v2 import ProductionBlueprintV2
 from .production_proposal import ProductionProposalRegistry
 from .task037_production_workspace import Task037ProductionWorkspaceProjection
 
@@ -135,7 +136,7 @@ class Task037ProductionControlApplication:
         *,
         proposal_registry: ProductionProposalRegistry,
         plan_id: str,
-        blueprint: ProductionBlueprint,
+        blueprint: ProductionBlueprint | ProductionBlueprintV2,
         expected_snapshot_sha256: str,
     ) -> dict[str, Any]:
         registry, current_sha, persisted = self._load()

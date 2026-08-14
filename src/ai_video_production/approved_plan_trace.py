@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from .approved_plan_orchestration import ApprovedPlanVerifier
+from .blueprint_v2_world_lock import BlueprintV2WorldLockService
 from .errors import ProductError, ProductErrorCategory
 from .production_control import DependencyKind, EntityType, ProductionControlRegistry
+from .production_blueprint_v2 import ProductionBlueprintV2
 from .production_orchestrator import BlueprintProductionControlCompiler
 from .production_proposal import ProductionProposalRegistry
 from .serialization import canonical_json_bytes, sha256_bytes
@@ -20,6 +22,7 @@ class ApprovedPlanTraceReport:
     project_id: str
     scene_count: int
     slot_count: int
+    world_lock_binding_count: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -34,6 +37,8 @@ class ApprovedPlanTraceReport:
             "human_go_proven": True,
             "automatic_generation_started": False,
         }
+        if self.world_lock_binding_count is not None:
+            body["world_lock_binding_count"] = self.world_lock_binding_count
         body["report_sha256"] = sha256_bytes(canonical_json_bytes(body))
         return body
 
@@ -84,8 +89,27 @@ class ApprovedPlanTraceValidator:
                 ProductErrorCategory.DATA_INTEGRITY,
             )
         blueprint = matching[0].blueprint
-        ApprovedPlanVerifier.require_current(proposal_registry=proposals, plan_id=plan_id, blueprint=blueprint)
+        current_plan = ApprovedPlanVerifier.require_current(
+            proposal_registry=proposals,
+            plan_id=plan_id,
+            blueprint=blueprint,
+        )
         expected = BlueprintProductionControlCompiler.compile(blueprint, project_id=project_id)
+        world_lock = None
+        world_edges = ()
+        if isinstance(blueprint, ProductionBlueprintV2):
+            world_lock = BlueprintV2WorldLockService.require_current(
+                blueprint=blueprint,
+                approved_plan=current_plan,
+                registry=production,
+                project_id=project_id,
+            )
+            world_edges = BlueprintV2WorldLockService.dependency_edges(
+                blueprint=blueprint,
+                approved_plan=current_plan,
+                registry=production,
+                project_id=project_id,
+            )
 
         for slot in expected.slots:
             current = production.slots.get(slot.slot_id)
@@ -158,4 +182,21 @@ class ApprovedPlanTraceValidator:
                     details={"slot_id": slot.slot_id},
                 )
 
-        return ApprovedPlanTraceReport(plan.plan_id, blueprint.blueprint_id, project_id, len(blueprint.scenes), len(expected.slots))
+        for expected_edge in world_edges:
+            current = production.edges.get(expected_edge.edge_id)
+            if current != expected_edge:
+                raise ProductError(
+                    "ERR_APPROVED_PLAN_TRACE_WORLD_LOCK_EDGE_MISSING",
+                    "Blueprint v2 WORLD LOCK Candidate -> Scene dependency is missing or changed",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={"edge_id": expected_edge.edge_id},
+                )
+
+        return ApprovedPlanTraceReport(
+            plan.plan_id,
+            blueprint.blueprint_id,
+            project_id,
+            len(blueprint.scenes),
+            len(expected.slots),
+            None if world_lock is None else int(world_lock["binding_count"]),
+        )

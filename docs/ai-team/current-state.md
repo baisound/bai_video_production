@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK027_R2_PLANNING_MINIMUM_LOCAL_GATE_PASS_HOSTED_PENDING`
+- Project Status: `V0_20_1_RELEASED / R2_PRODUCT_PROMOTION_COMPLETE / R3_TASK013_NEXT`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-027 — R2 Planning Workspace minimum local PASS / hosted PR closure pending`
+- Active Consumer Task: `NONE — TASK-027 R2 Planning Workspace minimum hosted closure complete`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `complete TASK-027 hosted closure; then reevaluate R3 from canonical state`
+- Next Consumer Task: `R3 current-state audit -> TASK-013 Shot Feasibility / Visual Compliance`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -105,7 +105,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.23 Addendum XIV. TASK-027 Planning Workspace minimum local Product gate passes `842 PASS / 1 intentional skip`; hosted PR closure remains pending.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.24 Addendum XV. TASK-027 Planning Workspace minimum passed `842 PASS / 1 intentional skip`, PR #28 passed `9 / 9`, and exact main merge SHA is `91d76febeaa3588b6c07914c32d9da151278004a`. R2 Product promotion is complete; R3 begins with a current-state audit and TASK-013.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

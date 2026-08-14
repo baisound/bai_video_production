@@ -5,7 +5,7 @@
 - Product: `BAI VIDEO PRODUCTION`
 - Priority: `OWNER_MAXIMUM / CURRENT_HIGHEST`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `ALLOCATED / P-V6-0_LOCAL_GATE_PASS / HOSTED_ROADMAP_GATE_PENDING`
+- Status: `ACTIVE / P-V6-1A_LOCAL_PASS / HOSTED_GATE_PENDING`
 - Owner direction: insert this route before any TASK-013 Native H3 resumption decision, merge the roadmap change, then continue in the accepted implementation order.
 
 ## Goal

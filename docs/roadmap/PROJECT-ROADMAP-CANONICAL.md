@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.26
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.27
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -714,3 +714,9 @@ TASK-013 Generation Safety passes its local Product gate. The unified Desktop `�
 The existing structured Visual Compliance path is now bound to durable TASK-038 Audit persistence. Visual PASS remains Evidence rather than Human ACCEPT, critical FAIL does not automatically REJECT, and no regeneration starts. Windows full regression passes `854 / 854` executed tests with one intentional non-Windows skip. Windows/WSL2 compile, UI JavaScript syntax and diff checks pass. Formal closure remains conditional on hosted PR checks, exact `main` merge and branch cleanup.
 
 The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is selected at this checkpoint. After hosted closure, TASK-039 Continuity Map / STALE propagation begins on its own branch. The final `PLAN_APPROVED + FEASIBILITY_PASS + REQUIRED_INPUT_LOCKED` Product admission is not yet claimed.
+
+### Ver.1.27 Addendum XVIII — TASK-013 R3 Hosted Closure
+
+TASK-013 R3 Generation Safety Product promotion is complete. PR #30 exact head `b2ba2306f7511d725520adc0ae5ebdcb742ab180` passed all `9 / 9` hosted checks and merged at exact main SHA `be8ea573fde1c3d4f7abe1a73887b6633d73ef32`. The implementation branch was deleted remotely and locally.
+
+The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R3 checkpoint. The next Owner-routed unit is TASK-039 Continuity Map / STALE propagation, starting from exact TASK-013 closure main on a new dedicated branch. It promotes the existing Continuity Registry, crash-safe Store, Production dependency binding and Human soft-continuity review rather than recreating them.

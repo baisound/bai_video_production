@@ -11,7 +11,7 @@
 | TASK-010 | Resolve Assembly MVP | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Real Resolve 21 assembly/linked A/V/idempotency/conflict/edit-aware subtitle semantics and TASK-036 W2 Shell route PASS |
 | TASK-011 | Render QA / Loudness | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3/4 | Real Resolve render queue/artifact/video/audio/duration/LUFS/true-peak QA and TASK-036 W2 Shell route PASS; path-free report |
 | TASK-012 | Manual Handoff / Cubase | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Real deterministic EDITOR_WORK, Cubase 13 48 kHz PCM return and TASK-036 W2 Shell route PASS; no automatic Cubase project conversion claim |
-| TASK-013 | Shot Feasibility / Visual Compliance / Creative Orchestration | R3_PRODUCT_PROMOTION_LOCAL_GATE_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Exact Approved-Plan-bound durable Generation Safety review and Visual Compliance -> TASK-038 Audit pass locally at 854 tests; no Provider/paid/NLE execution |
+| TASK-013 | Shot Feasibility / Visual Compliance / Creative Orchestration | COMPLETE_R3_PRODUCT_PROMOTION | COMPLETED_WITH_OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | PR #30 passed 9/9 and merged at exact main be8ea573; durable Generation Safety and Visual Compliance -> TASK-038 Audit complete; no Provider/paid/NLE execution |
 | TASK-006 | ASR / Transcript / Subtitle | SLICE_D_RELEASED_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Native FasterWhisper, Subtitle Workspace, resumable transcription, Resolve subtitle handoff and TASK-036 W2 Shell route PASS |
 | TASK-014 | Voice TTS / Owner Narration | DESIGN_RECORDED_ADAPTER_FOUNDATION_EXISTS | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Existing ElevenLabs Pro owner-trained voice; private Voice Profile; read-only ownership/capability probe; timed TTS and 48 kHz Asset flow planned; paid probe remains explicit |
 | TASK-023 | FasterWhisper Fast Local Provider | COMPLETE_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Existing TASK-006 provider is canonical; deterministic identity/diagnostic CLI retained; TASK-036 W2 local ASR Shell route PASS; no duplicate provider or ASR semantic change |
@@ -40,7 +40,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038 and the bounded TASK-027 Planning Workspace minimum are completed. R2 Product promotion is closed. TASK-013 R3 Product promotion passes its local Gate and awaits hosted PR closure. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038, TASK-013 R3 Product promotion and the bounded TASK-027 Planning Workspace minimum are completed. TASK-039 Continuity Map / STALE propagation is next on a dedicated branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

@@ -33,7 +33,10 @@
 | TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #32 passed 9/9 and merged at exact main a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b; recoverable Desktop Continuity; no regeneration |
 | TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #34 passed 9/9 and merged at exact main 87619fabe8c9ad7c8db0f5823176fd54cf7a7ae2; recoverable Desktop Prompt/Attempt Evidence and Human-routed next version; no Provider execution |
 | TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PRODUCT_PROMOTION_HOSTED_CLOSED_FUTURE_SLICES_REMAIN | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Durable project application and unified Desktop `音声` workspace passed focused 64/64, full WSL2 932/932 and PR #47 hosted 9/9; exact main merge 8dd6434a. Provider, paid execution, derived-media write, TASK-026 compile and Resolve/Cubase remain unstarted. |
-| TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_4_DESIGN_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | P-V6-3 Closure Sync PR #60 merged at exact main c6a5cb10; cadence 1/2 cleanup passed. Fresh-main AUTONOMY selected P-V6-4 Design; Timeline authority/SRT conflict/TASK-041 reuse design and two Critic cycles pass locally. |
+| TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_4_DESIGN_HOSTED_CLOSED_DEPENDENCY_WAIT | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | P-V6-4 Design PR #61 merged at exact main 6784a44e; implementation waits for TASK-043 Project foundation. P-V6-5/6 are split into TASK-044/045. |
+| TASK-043 | Unified Product Project / Migration / Recovery Foundation | ACTIVE_DESIGN_REVIEW | OWNER_MAXIMUM_MAJOR_REFACTOR | DEV-4 | Versioned Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup and durable Product job foundation. |
+| TASK-044 | Interactive Timeline / Unified NLE / Export Queue | ALLOCATED_DEPENDENCY_WAIT | OWNER_MAXIMUM_AFTER_TASK_043_AND_P_V6_4 | DEV-4 | Promotes the minimum Shell into a practical NLE; depends on TASK-043 and TASK-042 P-V6-4. |
+| TASK-045 | V6 Native Acceptance / Compatibility / Release Closure | ALLOCATED_DEPENDENCY_WAIT | OWNER_MAXIMUM_RELEASE_CLOSURE | DEV-4 | Old-project migration corpus, recovery, native UX/full regression and exact SemVer/Tag/Release decision. |
 
 ## Roadmap authority
 
@@ -41,7 +44,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control, its exact local/free ComfyUI adapter and the bounded TASK-041 Audio Workspace Product promotion are hosted-closed. TASK-042 is the current maximum-priority route before any Native H3 resume. P-V6-3 is hosted-closed and its Closure Sync merged at exact main `c6a5cb10` as cadence `1 / 2`. Fresh-main P-V6-4 Design is local PASS/hosted pending; implementation is not started. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control, its exact local/free ComfyUI adapter and the bounded TASK-041 Audio Workspace Product promotion are hosted-closed. TASK-042 P-V6-4 Design is hosted-closed at exact main `6784a44e`, but its implementation now waits for TASK-043, which is the current maximum-priority runnable foundation under the replacement Owner Directive. TASK-044 and TASK-045 hold the former P-V6-5/6 responsibilities. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

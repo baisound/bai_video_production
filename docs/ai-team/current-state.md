@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_042_P_V6_4_DESIGN_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_043_MAJOR_REFACTOR_DESIGN_REVIEW / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-042 / P-V6-4 DESIGN_LOCAL_PASS / HOSTED_PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-043 / MAJOR REFACTOR FOUNDATION / DESIGN REVIEW`; TASK-042 P-V6-4 is hosted-designed and dependency-waiting, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
-- Development Candidate: `NONE`; TASK-042 P-V6-2 selects no package version
+- Development Candidate: `NONE`; TASK-043 foundation does not preselect a package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `P-V6-4 Design PR all-green/main merge (cadence merge 2/2) -> exact SHA and cleanup -> AUTONOMY -> fresh-main P-V6-4 Implementation selection; TASK-013 native and TASK-014 paid execution remain parked`
+- Next Consumer Decision Gate: `TASK-043 roadmap/design hosted closure -> clean-main implementation selection -> Project Manifest/migration/recovery foundation; TASK-013 native and TASK-014 paid execution remain parked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.59 Addendum LI. P-V6-3 Closure Sync PR #60 merged at exact main `c6a5cb108032709615ab99856890d0a3709d7d5d` and completed branch/clone cleanup as cadence `1 / 2`. Fresh-main AUTONOMY selected P-V6-4 Design. Current audit and two Critic cycles define Blueprint v2 frames as the only timing authority, SRT as an explicit proposal/conflict surface, first-class ambience and exact reuse of TASK-037/041/026/014 without a second Audio placement registry. Implementation remains not started until the design is hosted-closed and reselected. Provider/paid/native/media/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.60 Addendum LII. P-V6-4 Design PR #61 merged at exact main `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`; the earlier `HOSTED_PENDING` status is closed. The replacement Owner Directive `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` then re-audited current main and allocated TASK-043 Product Project/Migration/Recovery as the prerequisite before Timeline Audio and the practical NLE. TASK-044 owns interactive Timeline/Export Queue and TASK-045 owns native compatibility/release closure. Provider/paid/native/media/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

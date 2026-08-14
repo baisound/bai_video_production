@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.59
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.60
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-3 Closure Sync PR #60 merged at exact main `c6a5cb108032709615ab99856890d0a3709d7d5d`; fresh-main AUTONOMY selected P-V6-4 Design, which is local PASS/hosted pending. Stable Product release remains `v0.20.1`
+- Current insertion: P-V6-4 Design PR #61 is hosted-closed at exact main `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`. The replacement `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` Owner Directive inserts TASK-043 Product Project/Migration/Recovery before P-V6-4 implementation, transfers practical NLE/Export to TASK-044 and transfers native compatibility/release closure to TASK-045. Stable Product release remains `v0.20.1`.
 
 ## 3. MVP定義
 
@@ -111,7 +111,10 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,014,026,028,032..034 | DEV-4 | P-V6-4 DESIGN LOCAL PASS / HOSTED PENDING / CURRENT OWNER MAXIMUM |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 DESIGN HOSTED CLOSED / IMPLEMENTATION WAITS FOR TASK-043 |
+| 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | ACTIVE / CURRENT OWNER MAXIMUM / DESIGN REVIEW |
+| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
+| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
 
 ## 6. Namespace Collision Resolution
 
@@ -175,7 +178,10 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
-- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-4 DESIGN LOCAL PASS / HOSTED PENDING**
+- TASK-042 V6 Product Workflow: **P-V6-4 DESIGN HOSTED CLOSED / IMPLEMENTATION WAITS FOR TASK-043**
+- TASK-043 Product Project / Migration / Recovery: **CURRENT OWNER MAXIMUM / DESIGN REVIEW**
+- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **ALLOCATED / DEPENDENCY WAIT**
+- TASK-045 V6 Native Acceptance / Release Closure: **ALLOCATED / DEPENDENCY WAIT**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -925,7 +931,7 @@ Production Blueprint v2 with independently bound Start/End Character 0..N,
 Space 0..1 and Composition 0..1 references. Legacy v1 semantics remain readable
 and are never silently copied into both frames or rebound to an Approved Plan.
 
-The current ordered route is:
+The historical TASK-042-only ordered route was:
 
 ```text
 P-V6-0 current-main reconciliation / roadmap / full design
@@ -1316,3 +1322,55 @@ hosted checks, merges to main, exact SHA and branch/clone cleanup are verified,
 and fresh-main AUTONOMY selects the implementation unit. That hosted design
 closure completes cadence merge `2 / 2` and returns control to AUTONOMY. Stable
 release remains `v0.20.1`.
+
+## Addendum LII — Major Refactor / Product Project Foundation Rebuild
+
+P-V6-4 Design PR #61 merged at exact main
+`6784a44e6831daa2b3db8ff85e2abe7b197ba3de`; its earlier `HOSTED_PENDING`
+status is closed. The 2026-08-15 replacement Owner Directive
+`AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` supersedes earlier Owner cadence and
+implementation-order instructions while preserving repository safety, Human
+Authority and completed Evidence.
+
+A zero-based current-main audit confirms that the Product has strong independent
+domain stores, CAS/atomic writes and task-local recovery, but lacks one versioned
+reopenable Product Project envelope, general child-format migration, coordinated
+crash recovery, generic Undo/Redo, Autosave/Backup and durable Product
+background/Export jobs. The released TASK-036 minimum Shell also does not yet
+provide dynamic tracks, general clip seek, zoom/Fit/scroll, trim/snap/IN-OUT or a
+durable Export Queue. Visible static UI is not capability Evidence.
+
+The canonical dependency order is rebuilt as:
+
+```text
+TASK-043 Product Project / Migration / Recovery Foundation
+    -> TASK-042 P-V6-4 Timeline Audio implementation
+    -> TASK-044 Interactive Timeline / Unified NLE / Export Queue
+    -> TASK-045 V6 Native Acceptance / Compatibility / Release Closure
+    -> separate TASK-013 Native H3 re-evaluation
+```
+
+Addendum LII supersedes the post-P-V6-4 portion of this historical sequence by
+inserting TASK-043 and splitting P-V6-5/6 into TASK-044/045. Completed history
+and P-V6-4 design are not rewritten.
+
+TASK-042 P-V6-1..3 and P-V6-4 design remain valid history. P-V6-5 is split into
+TASK-044 and P-V6-6 into TASK-045 instead of being silently rewritten as already
+complete. TASK-043 references existing domain truth by version/hash and creates
+no second Candidate, Audit, LOCK/STALE, Prompt, Audio placement, Provider or
+Generation Queue registry.
+
+Two design Critic rounds close duplicate aggregate truth, destructive/in-place
+migration, Evidence-erasing Undo, sensitive Autosave, duplicate Generation Queue,
+child-save race, unknown external replay, restore overwrite and false UI/release
+claim risks with unresolved Critical/High `0 / 0`. TASK-043 implementation is
+authorized within its exact Allowed Files after hosted design closure. TASK-042
+P-V6-4, TASK-044 and TASK-045 remain dependency-waiting and must be re-audited
+against actual upstream Evidence.
+
+Foundation-only checkpoints are not releases. Exact SemVer is decided from the
+first meaningful integrated user-facing slice and compatibility/native Evidence.
+Release and annotated Tag are Owner-authorized after required gates; Production
+Deploy, paid Provider, new credential input, destructive migration and the
+unknown-state Native H3 replay remain Human Gates. Stable release remains
+`v0.20.1`.

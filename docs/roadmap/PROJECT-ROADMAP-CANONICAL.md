@@ -889,3 +889,19 @@ passes `932 / 932`; compileall and embedded JavaScript syntax pass. No Provider,
 paid request, derived-media byte write, TASK-026 compile, Resolve/Cubase
 mutation, Tag or Release occurred. Hosted checks, exact main merge and branch
 cleanup remain before formal closure. Stable release remains `v0.20.1`.
+
+## Addendum XXXVIII — TASK-041 Audio Workspace Product Promotion Hosted Closure
+
+The bounded TASK-041 Audio Workspace Product promotion is hosted-closed. PR #47
+exact head `3785e44a211b8c4d81005060bc8a1faff161870d` passed all `9 / 9`
+GitHub checks and merged at exact main SHA
+`8dd6434a65115d88641d0942b08788a9eceda279`. The implementation branch was
+deleted remotely, a clean fresh clone at the merge SHA was verified and the
+prior cycle clone was removed.
+
+This closure confirms only durable Audio placement review and exact Human
+decision UX for accepted/locked SE/BGM/NARRATION Candidates. It does not call a
+Provider, spend credits, create or strip media bytes, compile TASK-026, write
+Resolve, open or mutate Cubase, execute TASK-014 narration, satisfy Native H3,
+complete all future TASK-041 slices or close R4 overall. Stable release remains
+`v0.20.1`; no package, Tag or GitHub Release is created at this checkpoint.

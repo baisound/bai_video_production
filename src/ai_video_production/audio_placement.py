@@ -20,6 +20,7 @@ class AudioPlacementRole(str, Enum):
     SOURCE = "SOURCE"
     SE = "SE"
     BGM = "BGM"
+    AMBIENCE = "AMBIENCE"
     NARRATION = "NARRATION"
     MIX_STEM = "MIX_STEM"
 

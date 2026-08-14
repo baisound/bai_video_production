@@ -3,10 +3,10 @@
 - Name: Product Workflow V6 Integration / Frame-bound Reference & Production UX
 - Priority: `OWNER_MAXIMUM / AFTER_TASK_043_FOUNDATION`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `P-V6-4 TIMELINE AUDIO IMPLEMENTATION DEPENDENCY WAIT`
-- Current Gate: `DESIGN_HOSTED_CLOSED / WAIT_TASK_043`
-- Implementation: `P-V6-1A COMPLETE / P-V6-1B COMPLETE / P-V6-2 HOSTED_CLOSED / P-V6-3 HOSTED_CLOSED`
-- Current main baseline: `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`
+- Current Phase: `P-V6-4 TIMELINE AUDIO IMPLEMENTATION LOCAL PASS`
+- Current Gate: `IMPLEMENTATION_PASS / HOSTED_PENDING`
+- Implementation: `P-V6-1A COMPLETE / P-V6-1B COMPLETE / P-V6-2 HOSTED_CLOSED / P-V6-3 HOSTED_CLOSED / P-V6-4 LOCAL PASS`
+- Current main baseline: `10eae32b2e6a2f9ad7080961fed7b3d2b39f423b`
 - TASK-013 Native H3: `PARKED / NO_REPLAY`
 - TASK-041: `PRODUCT_PROMOTION_HOSTED_CLOSED / REUSE_FOUNDATION`
 - Stable release: `v0.20.1`; no new version selected
@@ -34,3 +34,5 @@ P-V6-3 Implementation PR #59 exact head `d33807287c7ccc86b5055bd6b4575c88b7e9d41
 P-V6-3 Closure Sync PR #60 merged at exact main `c6a5cb108032709615ab99856890d0a3709d7d5d` and completed remote branch/dedicated clone cleanup as cadence `1 / 2`. Fresh-main Bootstrap selected current checkout with checksum `sha256:b1c1709c4b00fbac5887de9fe1f3ae5deab816d13277575ac1816ba6b4342cdc`; Queue selected `BVP-TASK-042-P-V6-4-DESIGN / DESIGN_ONLY` with checksum `sha256:23e42b59c3a95ceb41e2f92af06f128d7ded8ff5b847458d4438419cbc114015`. Current audit, DEV-4 re-decision, frame-authoritative Timeline Audio/SRT conflict model, first-class ambience, exact TASK-037/041/026/014 reuse, Allowed Files and two Critic cycles are local PASS. P-V6-4 implementation remains not started until hosted design closure and fresh-main AUTONOMY reselection. Stable release remains `v0.20.1`.
 
 P-V6-4 Design PR #61 merged at exact main `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`; the design is hosted-closed. The replacement `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` Owner Directive then re-audited Product persistence and split the remaining route: TASK-043 now provides the Project/migration/recovery prerequisite, TASK-044 owns the practical NLE/Export Queue and TASK-045 owns native/release closure. P-V6-4 implementation is preserved but dependency-waiting. Two untracked old-checkout implementation files are protected as `UNVERIFIED` WIP, not current-main truth.
+
+TASK-043 P-FND-4 PR #66 passed hosted `9 / 9`, merged at exact main `10eae32b2e6a2f9ad7080961fed7b3d2b39f423b` and completed remote/local branch cleanup. Fresh-main AUTONOMY selected `BVP-TASK-042-P-V6-4-IMPLEMENTATION / IMPLEMENTATION`. The corrected implementation binds Timeline history into the TASK-043 Product Project save/recovery transaction, enforces exact Blueprint/timebase/Slot/locked-Candidate proof, adds first-class AMBIENCE and current Timeline proof through TASK-041 into TASK-026. Focused tests pass `32 / 32`; full Windows regression passes `1070 passed, 1 skipped`; unresolved Critical/High is `0 / 0`. Hosted implementation closure is pending and no Provider/paid/native/media/TASK-010/Resolve/Cubase or release operation started.

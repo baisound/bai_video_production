@@ -19,6 +19,7 @@ from .audio_workspace import (
 )
 from .errors import ProductError, ProductErrorCategory
 from .serialization import canonical_json_bytes, sha256_bytes
+from .timeline_audio import TimelinePlacementBinding
 
 
 _MAX_BYTES = 8 * 1024 * 1024
@@ -78,6 +79,7 @@ def _parse(document: dict[str, Any]) -> AudioWorkspaceRegistry:
                 track_role=row["track_role"],
                 decision=PlacementDecision(row["decision"]),
                 gain_db=row.get("gain_db"),
+                timeline_binding=None if row.get("timeline_binding") is None else TimelinePlacementBinding.from_dict(row["timeline_binding"]),
             )
             for row in document["placements"]
         )

@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK_042_P_V6_3_HOSTED_CLOSED_CLOSURE_SYNC_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_TASK_043_HOSTED_CLOSED_TASK_042_P_V6_4_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-043 P-FND-3 hosted closure: PR #65 merged at exact main 19febe3e00de92b18948e93740a0e3080b63d1b1`
-- Active Task: `TASK-043 — Unified Product Project / P-FND-4 LOCAL DURABLE-JOB/EXPORT-QUEUE FOUNDATION PASS / HOSTED PENDING`; TASK-042 P-V6-4 is hosted-designed and waits for final TASK-043 hosted closure, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Last Completed Gate: `TASK-043 hosted closure: PR #66 merged at exact main 10eae32b2e6a2f9ad7080961fed7b3d2b39f423b`
+- Active Task: `TASK-042 — P-V6-4 TIMELINE AUDIO IMPLEMENTATION LOCAL PASS / HOSTED PENDING`; TASK-044 waits for hosted closure, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Development Candidate: `NONE`; TASK-043 foundation does not preselect a package version
+- Development Candidate: `NONE`; P-V6-4 foundation does not preselect a package version
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.62 Addendum LVI
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.63 Addendum LVII
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -152,6 +152,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - P-V6-4 Design PR #61 merged at exact main `6784a44e6831daa2b3db8ff85e2abe7b197ba3de`. Under the replacement `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE` Directive, TASK-043 is now the prerequisite Project/migration/recovery foundation; TASK-042 P-V6-4 waits for it, TASK-044 owns practical NLE/Export Queue, and TASK-045 owns native compatibility/release closure. Stable release remains `v0.20.1`.
 - TASK-043 P-FND-2 PR #64 passed hosted `9 / 9` and merged at exact main `3ba4df947ab2939ef7daed030a3ee69a3c31f07a`. P-FND-3 command history/Autosave/Backup now passes local focused `55 / 55`, full regression `1042 passed, 1 skipped` and compileall; hosted closure remains pending.
 - TASK-043 P-FND-3 PR #65 passed hosted `9 / 9` and merged at exact main `19febe3e00de92b18948e93740a0e3080b63d1b1`. Final P-FND-4 durable Product Job/Export Queue foundation now passes local focused `90 / 90`, full regression `1061 passed, 1 skipped` and compileall; hosted closure remains pending.
+- TASK-043 P-FND-4 PR #66 passed hosted `9 / 9`, merged at exact main `10eae32b2e6a2f9ad7080961fed7b3d2b39f423b` and completed branch cleanup. Fresh-main P-V6-4 implements frame-authoritative Timeline Audio, SRT conflicts, AMBIENCE, exact current TASK-037/041/026 proof and TASK-043 coordinated Project persistence. Focused `32 / 32` and full `1070 passed, 1 skipped` pass; hosted closure is pending.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

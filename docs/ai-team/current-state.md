@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_043_P_FND_4_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_043_HOSTED_CLOSED / TASK_042_P_V6_4_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-043 / P-FND-4 LOCAL DURABLE-JOB/EXPORT-QUEUE FOUNDATION PASS / HOSTED PENDING`; TASK-042 P-V6-4 is hosted-designed and waits for this final TASK-043 hosted closure, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-042 / P-V6-4 TIMELINE AUDIO IMPLEMENTATION PASS / HOSTED PENDING`; TASK-043 is hosted-closed at exact main `10eae32b2e6a2f9ad7080961fed7b3d2b39f423b`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`; TASK-043 foundation does not preselect a package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `P-FND-4 PR all-green/main merge/exact SHA/cleanup -> TASK-043 hosted closure -> clean-main TASK-042 P-V6-4 implementation re-audit; TASK-013 native and TASK-014 paid execution remain parked`
+- Next Consumer Decision Gate: `P-V6-4 PR all-green/main merge/exact SHA/cleanup -> TASK-042 hosted closure -> clean-main TASK-044 current-main audit/design; TASK-013 native and TASK-014 paid execution remain parked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.62 Addendum LVI. P-V6-4 Design PR #61 is hosted-closed. TASK-043 P-FND-3 PR #65 passed hosted `9 / 9` and merged at exact main `19febe3e00de92b18948e93740a0e3080b63d1b1`; P-FND-4 durable Product-local Job/Export Queue truth, typed state machine, restart-to-UNKNOWN recovery and Shell authority projection pass local focused `90 / 90`, full regression `1061 passed, 1 skipped` and compileall, with hosted checks pending. TASK-042 P-V6-4, TASK-044 interactive Timeline/Export Queue and TASK-045 native/release closure remain dependency-waiting. Provider/paid/native/media/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.63 Addendum LVII. TASK-043 P-FND-4 PR #66 passed hosted `9 / 9`, merged at exact main `10eae32b2e6a2f9ad7080961fed7b3d2b39f423b` and completed branch cleanup. P-V6-4 now passes local focused `32 / 32`, full regression `1070 passed, 1 skipped` and compile validation: frame-authoritative Timeline Audio, SRT conflicts, AMBIENCE, exact TASK-037/041/026 binding and TASK-043 coordinated Project persistence are implemented. Hosted checks remain pending. TASK-044 waits for P-V6-4 hosted closure; TASK-045 remains dependency-waiting. Provider/paid/native/media/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

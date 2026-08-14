@@ -33,8 +33,8 @@
 - TASK-007/010/011/012 + TASK-036: **SHELL_INTEGRATED / NATIVE_VALIDATED / MINIMUM_EDITING_PRODUCT_MVP_PASS**; stable Release `v0.20.1`
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
-- R4 current boundary: TASK-013 restart-safe execution control and exact local/free ComfyUI adapter are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current main: `7d6486059c468009042e4c186d54b566d6e1477e`; stable Product release remains `v0.20.1`; no active implementation branch
+- R4 current boundary: TASK-013 restart-safe execution control and exact local/free ComfyUI adapter are **HOSTED_CLOSED**; incident-derived safe-runtime launch-flag hardening is **PASS**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
+- Hardening base main: `21228d15e207fb76c5367c28968430789f682885`; the containing Pull Request determines the next exact main. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -831,3 +831,9 @@ The bounded fail-closed adapter implementation is hosted-closed. PR #41 exact he
 The append-only hosted-closure documentation PR #42 exact head `a6858de5b617abfc591af866e17096b7fb0d4159` also passed all `9 / 9` checks and produced current main `7d6486059c468009042e4c186d54b566d6e1477e`. This later documentation merge does not change the implementation merge identity or create a newer Product release.
 
 This closure confirms the reviewed adapter code and packaging, not a successful native H3 generation. Attempt 01 remains a known sampler/runtime failure and attempt 02 remains an Owner-confirmed external force-restart boundary with durable `QUEUED / RECOVERY_REQUIRED`; neither may be replayed automatically. Candidate/TASK-040 Attempt binding remains blocked until a separately reviewed safe native runtime produces a contained, media-verified output. Stable release remains `v0.20.1`; no package version, Tag or GitHub Release is created for this bounded closure.
+
+## Addendum XXXIV — TASK-013 Safe Runtime Launch-Flag Hardening
+
+BAI Development OS Autonomous Queue parks the exact native H3 execution behind `HG-BVP-TASK013-NATIVE-003` while selecting the independent repository-only `TASK-013-SAFE-RUNTIME-HARDENING` unit. The adapter now rejects all four memory-related flags observed in the Owner-confirmed force-restart attempt: `--disable-dynamic-vram`, `--disable-async-offload`, `--disable-pinned-memory` and `--lowvram`. Assignment-form variants are also rejected before journal reservation and before queue side effects.
+
+The bounded local gate passes focused `39 / 39`, full WSL2 `923 / 923` and compileall. This does not authorize or claim a third native attempt. The prior uncertain prompt remains non-replayable, native H3 remains `PARKED_TO_SAFE_RUNTIME_REVIEW`, and stable release remains `v0.20.1`.

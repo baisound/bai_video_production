@@ -7,8 +7,8 @@
 - Product package: `0.20.1`
 - Stable formal Release: `v0.20.1`
 - Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Current main: `7d6486059c468009042e4c186d54b566d6e1477e`
-- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
+- Hardening base main: `21228d15e207fb76c5367c28968430789f682885` (PR #43 documentation synchronization merge)
+- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / SAFE_RUNTIME_FLAG_HARDENING_PASS / NATIVE_RUNTIME_PARKED`
 - Active implementation branch: `NONE`
 
 Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
@@ -22,6 +22,7 @@ Current main is newer than the stable release because bounded R2-R4 Product deve
 - R2 Product Control promotion is complete across TASK-037, TASK-038 and the bounded TASK-027 Planning Workspace minimum.
 - R3 Generation-safe control-loop promotion is complete across TASK-013, TASK-039, TASK-040 and the bounded TASK-027 Generation Queue integration.
 - R4 TASK-013 restart-safe local execution control and the exact local/free MiniMax H3 ComfyUI adapter are hosted-closed.
+- TASK-013 incident-derived safe-runtime launch-flag hardening rejects every force-restart memory flag and assignment form before durable reservation or external queue side effects.
 
 ## Current parked boundary
 
@@ -43,7 +44,9 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 ## Current verification
 
 - PR #42 exact head `a6858de5b617abfc591af866e17096b7fb0d4159`: `9 / 9 PASS`
-- PR #42 exact merge/current main: `7d6486059c468009042e4c186d54b566d6e1477e`
+- PR #43 exact merge/hardening base main: `21228d15e207fb76c5367c28968430789f682885`
+- safe-runtime focused regression: `39 / 39 PASS`
+- safe-runtime full WSL2 regression: `923 / 923 PASS`
 - R4 adapter focused regression: `35 / 35 PASS`
 - full WSL2 regression at adapter closure: `919 / 919 PASS`
 - latest stable Release: `v0.20.1`

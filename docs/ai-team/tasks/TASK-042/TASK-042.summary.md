@@ -3,10 +3,10 @@
 - Name: Product Workflow V6 Integration / Frame-bound Reference & Production UX
 - Priority: `OWNER_MAXIMUM / CURRENT_HIGHEST`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `P-V6-3 DESIGN`
-- Current Gate: `P-V6-3 DESIGN_LOCAL_PASS / HOSTED_DESIGN_PR_PENDING`
-- Implementation: `P-V6-1A COMPLETE / P-V6-1B COMPLETE / P-V6-2 HOSTED_CLOSED / P-V6-3 NOT_STARTED`
-- Current main baseline: `92ff6938b9def12161d8635048ad3714315ed9d4`
+- Current Phase: `P-V6-3 IMPLEMENTATION`
+- Current Gate: `P-V6-3 IMPLEMENTATION_LOCAL_PASS / HOSTED_IMPLEMENTATION_PR_PENDING`
+- Implementation: `P-V6-1A COMPLETE / P-V6-1B COMPLETE / P-V6-2 HOSTED_CLOSED / P-V6-3 LOCAL_COMPLETE_HOSTED_PENDING`
+- Current main baseline: `c78ed0141b0849b3a5d1b2229b87c320697b4980`
 - TASK-013 Native H3: `PARKED / NO_REPLAY`
 - TASK-041: `PRODUCT_PROMOTION_HOSTED_CLOSED / REUSE_FOUNDATION`
 - Stable release: `v0.20.1`; no new version selected
@@ -26,3 +26,5 @@ P-V6-2 Design PR #55 exact head `0b17e7b632c8326dc0882cb03082d1c2620139d5` passe
 At the pre-PR #57 checkpoint, P-V6-2 implementation was hosted-closed. PR #56 exact head `e3ab3dc3f32bfbad42f72a8d65c0d43b896f5fd3` passed `9 / 9` and merged at exact main `4c77ad08172de05cf07ba3374a879fafca4bf2fd`; the remote implementation branch and dedicated clone were removed. Fresh-main Bootstrap selected current checkout over the stale handoff with checksum `sha256:cbfa97e448ba9416c2f9220e5a8df89f4052aab95f3e2deeb60d142930b5b58b`; Queue selected `BVP-TASK-042-P-V6-2-CLOSURE-SYNC / IMPLEMENTATION` with checksum `sha256:c51a8f1be61128b054a2204c95faf33e66674250d29d5c0b1232e11fbdeb9614`. P-V6-3 was dependency-waiting until that documentation-only cadence merge `2 / 2`; Native H3 and OS TASK-017 remained individually parked. Stable release remained `v0.20.1`.
 
 Closure Sync PR #57 exact head `34bedb48591e713475b438f4b5074d581cd73fd2` passed `9 / 9`, merged at exact main `92ff6938b9def12161d8635048ad3714315ed9d4`, and completed remote branch/dedicated clone cleanup as cadence `2 / 2`. Fresh-main Bootstrap selected current checkout over the stale handoff with checksum `sha256:55b301345c5697d9812edd7aa9d4980dc0004f8c26cdfa8793208e175ebf41d8`; Queue selected `BVP-TASK-042-P-V6-3-DESIGN / DESIGN_ONLY` with checksum `sha256:9791617d02cf79ba4f0b9d4c61113edd68ce129988fd477cb39e3311b83c006a`. Current audit, DEV-4 re-decision, Prompt compilation/Provider projection/Quick authority design, v2 Queue persistence corrective, exact Allowed Files and two Critic cycles are local PASS. Implementation remains not started until hosted design closure and fresh-main AUTONOMY reselection. Stable release remains `v0.20.1`.
+
+P-V6-3 Design PR #58 exact head `0067fcc8e306a1799ccc7afeeae2638b9bb19e3b` passed `9 / 9`, merged at exact main `c78ed0141b0849b3a5d1b2229b87c320697b4980`, and completed remote branch/dedicated clone cleanup as cadence `1 / 2`. Fresh-main Bootstrap selected current checkout over the stale handoff with checksum `sha256:372f3851e24630d6a8873ab9d131b8ec37ed817c2abbfcd7f5dd0d6b6aaebf2c`; Queue selected `BVP-TASK-042-P-V6-3-IMPLEMENTATION / IMPLEMENTATION` with checksum `sha256:7632d2bbe88c9549f066ea6f3e1b039ba7c6a80c53144a9480ab0e30e8be894e`. The v2 Queue persistence corrective, immutable three-layer Prompt compilation/TASK-040 binding, secret-free Provider/Model projection, append-only Quick intent CAS/restart and read-only adoption projection are locally complete. Final full regression passes `987 / 987` with one intentional skip; implementation Critic is unresolved Critical/High `0 / 0`. Hosted implementation closure remains pending and no Provider/native/media/Candidate/Audit/Lock or release operation was started. Stable release remains `v0.20.1`.

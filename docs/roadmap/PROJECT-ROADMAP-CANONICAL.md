@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.56
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.57
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-2 and its Closure Sync are hosted-closed at exact main `92ff6938b9def12161d8635048ad3714315ed9d4`; fresh-main AUTONOMY selected P-V6-3 Design, whose immutable Prompt/Provider projection/Quick authority and Queue corrective design is local PASS/hosted pending. Stable Product release remains `v0.20.1`
+- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-3 Design is hosted-closed at exact main `c78ed0141b0849b3a5d1b2229b87c320697b4980`; fresh-main AUTONOMY selected P-V6-3 Implementation, whose Queue corrective, immutable Prompt compilation, secret-free Provider projection and Quick intent/CAS/adoption are local PASS/hosted pending. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -111,7 +111,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | P-V6-3 DESIGN LOCAL PASS / HOSTED PENDING / CURRENT OWNER MAXIMUM |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | P-V6-3 IMPLEMENTATION LOCAL PASS / HOSTED PENDING / CURRENT OWNER MAXIMUM |
 
 ## 6. Namespace Collision Resolution
 
@@ -175,7 +175,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
-- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-3 DESIGN LOCAL PASS / HOSTED PENDING**
+- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-3 IMPLEMENTATION LOCAL PASS / HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1218,3 +1218,31 @@ P-V6-3 implementation remains `NOT_STARTED` until this design passes hosted
 checks, merges, completes cleanup and fresh-main AUTONOMY selects it. This design
 becomes cadence merge `1 / 2` after hosted closure. Stable release remains
 `v0.20.1`.
+
+## Addendum XLIX — P-V6-3 Prompt / Provider / Quick Implementation Gate
+
+P-V6-3 Design PR #58 exact head
+`0067fcc8e306a1799ccc7afeeae2638b9bb19e3b` passed hosted `9 / 9`, merged at
+exact main `c78ed0141b0849b3a5d1b2229b87c320697b4980`, and completed remote
+branch/dedicated clone cleanup as cadence merge `1 / 2`. Fresh-main BAI
+Development OS Handoff Bootstrap selected the current checkout over the stale
+handoff and Autonomous Queue selected
+`BVP-TASK-042-P-V6-3-IMPLEMENTATION / IMPLEMENTATION`.
+
+Implementation now corrects the real Blueprint v2 Queue persist/restart defect,
+adds immutable private-body-free Visual Prompt compilation through the existing
+TASK-040 transaction, projects every Provider/Model readiness predicate without
+secrets or probes, and records append-only `QUICK_INTENT` authority with exact
+Prompt/Production/Quick CAS and restart behavior. Quick never claims Approved
+Plan or Human GO, never dispatches a Provider and never creates Candidate/Audit/
+Lock state. Output adoption remains a read-only projection over TASK-040/037/038
+truth. Uningested FILE authority and mismatched Prompt/reference hashes fail
+closed.
+
+Local focused and full gates pass and two implementation Critic cycles have
+unresolved Critical/High `0 / 0`. P-V6-3 becomes hosted-closed only after the
+exact implementation head passes hosted `9 / 9`, merges to main, the exact
+merge SHA is verified and remote branch/dedicated clone cleanup completes as
+cadence merge `2 / 2`. Fresh-main AUTONOMY must then reselect the next bounded
+unit. P-V6-4 remains dependency-waiting until that closure. Native H3 and OS
+TASK-017 remain task-locally parked. Stable release remains `v0.20.1`.

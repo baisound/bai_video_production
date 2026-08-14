@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -28,6 +30,7 @@ from ai_video_production.production_control import (
     SceneAssetSlot,
     SlotKind,
 )
+from ai_video_production.production_control_store import ProductionControlSnapshotStore
 from ai_video_production.production_orchestrator import GenerationQueueAdmissionService
 from ai_video_production.production_proposal import (
     ApprovedProductionPlan,
@@ -35,6 +38,7 @@ from ai_video_production.production_proposal import (
     ReferenceAssetBinding,
 )
 from ai_video_production.timebase import FrameRate
+from ai_video_production.shot_feasibility import CheckState, ShotFeasibilityAssessment
 
 
 H = lambda ch: "sha256:" + ch * 64
@@ -229,3 +233,139 @@ def test_v2_approved_admission_cannot_omit_world_lock_slots(monkeypatch) -> None
     assert result == "admission"
     assert captured["required_input_slot_ids"] == ("slot-ref-start", "slot-ref-end")
     assert captured["cost_authorized"] is False
+
+
+class _StubApplication:
+    def __init__(self, root: Path, value: dict) -> None:
+        self.project_root = root
+        self.project_id = "project-v2"
+        self.value = value
+
+    def snapshot(self) -> dict:
+        return self.value
+
+
+def _v2_queue_application(root: Path, *, token: str) -> Task027GenerationQueueApplication:
+    value = blueprint()
+    production_registry = registry(value)
+    production_path = root / "production-control.json"
+    if not production_path.exists():
+        ProductionControlSnapshotStore.save(production_path, production_registry)
+    production_snapshot = ProductionControlSnapshotStore.snapshot(production_registry)
+    production = _StubApplication(root, {
+        "snapshot_sha256": production_snapshot["snapshot_sha256"],
+        "slots": [
+            {
+                **slot.to_dict(),
+                "candidates": [
+                    candidate.to_dict()
+                    for candidate in production_registry.candidates.values()
+                    if candidate.slot_id == slot.slot_id
+                ],
+                "available_actions": [],
+            }
+            for slot in production_registry.slots.values()
+        ],
+    })
+    production.snapshot_path = production_path
+
+    approved = plan(value).to_dict()
+    planning = _StubApplication(root, {
+        "snapshot_sha256": H("1"),
+        "workspace": {
+            "go_status": "APPROVED",
+            "approved_plan": approved,
+            "blueprint": value.to_dict(),
+        },
+        "installation": {"status": "INSTALLED"},
+    })
+    checks = {
+        name: CheckState.PASS
+        for name in (
+            "subject_position_exists", "orientation_camera_compatible",
+            "required_visible_coexists", "prohibited_change_not_required",
+            "shot_reference_matches_final_camera", "task_axis_valid", "depth_order_valid",
+            "occlusion_valid", "furniture_integrity_valid", "room_anchor_integrity_valid",
+            "production_gear_absent", "character_identity_valid", "reference_roles_valid",
+            "continuity_contract_valid",
+        )
+    }
+    assessment = ShotFeasibilityAssessment(
+        "SC01", checks, "HUMAN_REVIEWED_STRUCTURED_ASSERTION", (), H("f"),
+    ).to_dict()
+    safety = _StubApplication(root, {
+        "safety_snapshot_sha256": H("2"),
+        "scenes": [{
+            "scene": {"scene_id": "SC01"},
+            "feasibility_status": "PASS",
+            "current_record": {
+                "record_id": "FEAS-1234567890ABCDEF12345678",
+                "assessment": assessment,
+                "reference_spec": {"continuity_type": "CUT", "start_asset_sha256": None},
+            },
+        }],
+    })
+    continuity = _StubApplication(root, {
+        "production_snapshot_sha256": production_snapshot["snapshot_sha256"],
+        "continuity_snapshot_sha256": H("3"),
+        "recovery": {"required": False},
+        "workspace": {"edges": []},
+    })
+    audit = _StubApplication(root, {
+        "production_snapshot_sha256": production_snapshot["snapshot_sha256"],
+        "audit_snapshot_sha256": H("4"),
+        "recovery": {"required": False},
+    })
+    prompts = _StubApplication(root, {
+        "production_snapshot_sha256": production_snapshot["snapshot_sha256"],
+        "prompt_snapshot_sha256": H("5"),
+        "audit_snapshot_sha256": H("4"),
+        "recovery": {"required": False},
+        "prompts": [{
+            "prompt_id": "prompt-v2", "prompt_version": 1, "scene_id": "SC01",
+            "slot_id": "slot:SC01:VIDEO", "body_sha256": H("6"),
+            "provider_profile_id": "policy", "provider_profile_version": "v1",
+            "input_asset_hashes": [H("a"), H("b")],
+        }],
+    })
+    prompts.audit_application = audit
+    return Task027GenerationQueueApplication(
+        project_root=root,
+        project_id="project-v2",
+        production_control=production,
+        planning_application=planning,
+        generation_safety_application=safety,
+        continuity_application=continuity,
+        prompt_evidence_application=prompts,
+        token_factory=lambda: token,
+    )
+
+
+def test_v2_queue_world_lock_proof_persists_and_reloads_after_restart(tmp_path: Path) -> None:
+    value = _v2_queue_application(tmp_path, token="confirm-v2")
+    sources = value._sources()
+    prepared = value.prepare_enqueue(
+        prompt_id="prompt-v2",
+        prompt_version=1,
+        expected_queue_snapshot_sha256=value.snapshot()["queue_snapshot_sha256"],
+        expected_upstream_snapshots={
+            "planning": sources["planning"]["snapshot_sha256"],
+            "generation_safety": sources["safety"]["safety_snapshot_sha256"],
+            "production": sources["production"]["snapshot_sha256"],
+            "continuity": sources["continuity"]["continuity_snapshot_sha256"],
+            "prompt": sources["prompts"]["prompt_snapshot_sha256"],
+            "audit": sources["audit"]["audit_snapshot_sha256"],
+        },
+    )
+    assert {row["proof_kind"] for row in prepared["entry"]["input_bindings"]} == {
+        "WORLD_LOCKED_CURRENT_CANDIDATE",
+    }
+    saved = value.apply_enqueue(confirmation_id="confirm-v2")
+    assert saved["entry_count"] == 1
+
+    reopened = _v2_queue_application(tmp_path, token="unused-after-restart")
+    snapshot = reopened.snapshot()
+    assert snapshot["entry_count"] == 1
+    assert snapshot["entries"][0] == reopened.require_current_entry(
+        queue_entry_id=snapshot["entries"][0]["queue_entry_id"],
+    )["entry"]

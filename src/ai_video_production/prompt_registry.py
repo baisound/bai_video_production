@@ -13,6 +13,7 @@ import re
 from typing import Any, Iterable
 
 from .errors import ProductError, ProductErrorCategory
+from .serialization import canonical_json_bytes, sha256_bytes
 
 
 _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,199}")
@@ -49,6 +50,163 @@ class RegenerationStrategy(int, Enum):
 
 
 @dataclass(frozen=True, slots=True)
+class PromptCompilationBinding:
+    compilation_version: str
+    compilation_manifest_ref: str
+    compilation_sha256: str
+    source_ja_ref: str
+    source_ja_sha256: str
+    normalized_ja_ref: str
+    normalized_ja_sha256: str
+    runtime_en_ref: str
+    runtime_en_sha256: str
+    negative_prompt_ref: str | None
+    negative_prompt_sha256: str | None
+    proofreading_state: str
+    manual_english_override_state: str
+    director_sha256: str
+    blueprint_world_lock_sha256: str
+    narration_intent_sha256: str
+    music_direction_sha256: str
+    se_intent_sha256: str
+    ambience_intent_sha256: str
+    generate_bgm: bool
+    generate_se: bool
+    generate_ambience: bool
+    provider_profile_id: str
+    provider_profile_version: str
+    provider_profile_sha256: str
+    selected_route_id: str
+    required_capabilities: tuple[str, ...]
+    input_asset_hashes: tuple[str, ...]
+    scene_id: str
+    slot_id: str
+
+    def __post_init__(self) -> None:
+        if self.compilation_version != "1.0.0":
+            raise ValueError("compilation_version is unsupported")
+        for name in (
+            "compilation_manifest_ref", "source_ja_ref", "normalized_ja_ref", "runtime_en_ref",
+        ):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.startswith("project-private://") or len(value) > 1000:
+                raise ValueError(f"{name} is invalid")
+        for name in (
+            "compilation_sha256", "source_ja_sha256", "normalized_ja_sha256", "runtime_en_sha256",
+            "director_sha256", "blueprint_world_lock_sha256", "narration_intent_sha256",
+            "music_direction_sha256", "se_intent_sha256", "ambience_intent_sha256",
+            "provider_profile_sha256",
+        ):
+            _sha(getattr(self, name), name)
+        if (self.negative_prompt_ref is None) != (self.negative_prompt_sha256 is None):
+            raise ValueError("negative Prompt identity is incomplete")
+        if self.negative_prompt_ref is not None:
+            if not self.negative_prompt_ref.startswith("project-private://") or len(self.negative_prompt_ref) > 1000:
+                raise ValueError("negative_prompt_ref is invalid")
+            _sha(self.negative_prompt_sha256, "negative_prompt_sha256")
+        if self.proofreading_state not in {"NOT_REQUESTED", "AI_PROOFREAD", "HUMAN_REVIEWED"}:
+            raise ValueError("proofreading_state is invalid")
+        if self.manual_english_override_state not in {"NONE", "ACTIVE"}:
+            raise ValueError("manual_english_override_state is invalid")
+        for name in ("generate_bgm", "generate_se", "generate_ambience"):
+            if not isinstance(getattr(self, name), bool):
+                raise ValueError(f"{name} must be boolean")
+        for name in ("provider_profile_id", "selected_route_id", "scene_id", "slot_id"):
+            _id(getattr(self, name), name)
+        if not isinstance(self.provider_profile_version, str) or not self.provider_profile_version.strip():
+            raise ValueError("provider_profile_version is invalid")
+        for name, values in (
+            ("required_capabilities", self.required_capabilities),
+            ("input_asset_hashes", self.input_asset_hashes),
+        ):
+            if not isinstance(values, tuple) or len(set(values)) != len(values):
+                raise ValueError(f"{name} is invalid")
+        if not self.required_capabilities or tuple(sorted(self.required_capabilities)) != self.required_capabilities:
+            raise ValueError("required_capabilities must be non-empty and sorted")
+        for capability in self.required_capabilities:
+            _id(capability, "required_capability")
+        for value in self.input_asset_hashes:
+            _sha(value, "input_asset_hash")
+
+    @classmethod
+    def from_manifest(cls, *, manifest_ref: str, manifest: dict[str, Any]) -> "PromptCompilationBinding":
+        expected = {
+            "compilation_version", "project_id", "scene_id", "slot_id", "source_ja_ref",
+            "source_ja_sha256", "normalized_ja_ref", "normalized_ja_sha256", "runtime_en_ref",
+            "runtime_en_sha256", "negative_prompt_ref", "negative_prompt_sha256",
+            "proofreading_state", "manual_english_override_state", "director_sha256",
+            "blueprint_world_lock_sha256", "narration_intent_sha256", "music_direction_sha256",
+            "se_intent_sha256", "ambience_intent_sha256", "generate_bgm", "generate_se",
+            "generate_ambience", "provider_profile_id", "provider_profile_version",
+            "provider_profile_sha256", "selected_route_id", "required_capabilities",
+            "input_asset_hashes", "prompt_bodies_embedded", "provider_execution_started",
+            "compilation_sha256",
+        }
+        if not isinstance(manifest, dict) or set(manifest) != expected:
+            raise ValueError("compilation manifest fields are invalid")
+        if manifest["prompt_bodies_embedded"] is not False or manifest["provider_execution_started"] is not False:
+            raise ValueError("compilation manifest violates authority boundary")
+        body = {key: value for key, value in manifest.items() if key != "compilation_sha256"}
+        if manifest["compilation_sha256"] != sha256_bytes(canonical_json_bytes(body)):
+            raise ValueError("compilation manifest checksum is invalid")
+        return cls(
+            compilation_version=manifest["compilation_version"],
+            compilation_manifest_ref=manifest_ref,
+            compilation_sha256=manifest["compilation_sha256"],
+            source_ja_ref=manifest["source_ja_ref"], source_ja_sha256=manifest["source_ja_sha256"],
+            normalized_ja_ref=manifest["normalized_ja_ref"], normalized_ja_sha256=manifest["normalized_ja_sha256"],
+            runtime_en_ref=manifest["runtime_en_ref"], runtime_en_sha256=manifest["runtime_en_sha256"],
+            negative_prompt_ref=manifest["negative_prompt_ref"], negative_prompt_sha256=manifest["negative_prompt_sha256"],
+            proofreading_state=manifest["proofreading_state"],
+            manual_english_override_state=manifest["manual_english_override_state"],
+            director_sha256=manifest["director_sha256"],
+            blueprint_world_lock_sha256=manifest["blueprint_world_lock_sha256"],
+            narration_intent_sha256=manifest["narration_intent_sha256"],
+            music_direction_sha256=manifest["music_direction_sha256"],
+            se_intent_sha256=manifest["se_intent_sha256"],
+            ambience_intent_sha256=manifest["ambience_intent_sha256"],
+            generate_bgm=manifest["generate_bgm"], generate_se=manifest["generate_se"],
+            generate_ambience=manifest["generate_ambience"],
+            provider_profile_id=manifest["provider_profile_id"],
+            provider_profile_version=manifest["provider_profile_version"],
+            provider_profile_sha256=manifest["provider_profile_sha256"],
+            selected_route_id=manifest["selected_route_id"],
+            required_capabilities=tuple(manifest["required_capabilities"]),
+            input_asset_hashes=tuple(manifest["input_asset_hashes"]),
+            scene_id=manifest["scene_id"], slot_id=manifest["slot_id"],
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "compilation_version": self.compilation_version,
+            "compilation_manifest_ref": self.compilation_manifest_ref,
+            "compilation_sha256": self.compilation_sha256,
+            "source_ja_ref": self.source_ja_ref, "source_ja_sha256": self.source_ja_sha256,
+            "normalized_ja_ref": self.normalized_ja_ref, "normalized_ja_sha256": self.normalized_ja_sha256,
+            "runtime_en_ref": self.runtime_en_ref, "runtime_en_sha256": self.runtime_en_sha256,
+            "negative_prompt_ref": self.negative_prompt_ref, "negative_prompt_sha256": self.negative_prompt_sha256,
+            "proofreading_state": self.proofreading_state,
+            "manual_english_override_state": self.manual_english_override_state,
+            "director_sha256": self.director_sha256,
+            "blueprint_world_lock_sha256": self.blueprint_world_lock_sha256,
+            "narration_intent_sha256": self.narration_intent_sha256,
+            "music_direction_sha256": self.music_direction_sha256,
+            "se_intent_sha256": self.se_intent_sha256,
+            "ambience_intent_sha256": self.ambience_intent_sha256,
+            "generate_bgm": self.generate_bgm, "generate_se": self.generate_se,
+            "generate_ambience": self.generate_ambience,
+            "provider_profile_id": self.provider_profile_id,
+            "provider_profile_version": self.provider_profile_version,
+            "provider_profile_sha256": self.provider_profile_sha256,
+            "selected_route_id": self.selected_route_id,
+            "required_capabilities": list(self.required_capabilities),
+            "input_asset_hashes": list(self.input_asset_hashes),
+            "scene_id": self.scene_id, "slot_id": self.slot_id,
+            "prompt_bodies_embedded": False, "provider_execution_started": False,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class PromptEntity:
     prompt_id: str
     prompt_version: int
@@ -61,6 +219,7 @@ class PromptEntity:
     slot_id: str | None = None
     body_ref: str | None = None
     input_asset_hashes: tuple[str, ...] = ()
+    compilation_binding: PromptCompilationBinding | None = None
 
     def __post_init__(self) -> None:
         _id(self.prompt_id, "prompt_id")
@@ -90,9 +249,21 @@ class PromptEntity:
             _sha(value, "input_asset_hash")
         if len(set(self.input_asset_hashes)) != len(self.input_asset_hashes):
             raise ValueError("input_asset_hashes must be unique")
+        if self.compilation_binding is not None:
+            binding = self.compilation_binding
+            if not isinstance(binding, PromptCompilationBinding):
+                raise ValueError("compilation_binding is invalid")
+            if self.body_ref != binding.runtime_en_ref or self.body_sha256 != binding.runtime_en_sha256:
+                raise ValueError("compiled Prompt body must equal runtime English identity")
+            if self.input_asset_hashes != binding.input_asset_hashes:
+                raise ValueError("compiled Prompt input Asset hashes differ from compilation")
+            if self.provider_profile_id != binding.provider_profile_id or self.provider_profile_version != binding.provider_profile_version:
+                raise ValueError("compiled Prompt Provider profile differs from compilation")
+            if self.scene_id != binding.scene_id or self.slot_id != binding.slot_id:
+                raise ValueError("compiled Prompt Scene/Slot differs from compilation")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        value = {
             "prompt_id": self.prompt_id,
             "prompt_version": self.prompt_version,
             "purpose": self.purpose,
@@ -106,6 +277,9 @@ class PromptEntity:
             "keep_conditions": list(self.keep_conditions),
             "prompt_body_embedded_in_general_evidence": False,
         }
+        if self.compilation_binding is not None:
+            value["compilation_binding"] = self.compilation_binding.to_dict()
+        return value
 
 
 @dataclass(frozen=True, slots=True)

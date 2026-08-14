@@ -27,6 +27,7 @@ from .prompt_registry import (
     GenerationAttempt,
     GenerationResult,
     PromptEntity,
+    PromptCompilationBinding,
     PromptGenerationRegistry,
     RegenerationStrategy,
 )
@@ -324,6 +325,7 @@ class Task040PromptEvidenceApplication:
         provider_profile_version: str, input_asset_hashes: tuple[str, ...],
         keep_conditions: tuple[str, ...], expected_prompt_snapshot_sha256: str,
         expected_production_snapshot_sha256: str,
+        compilation_binding: PromptCompilationBinding | None = None,
     ) -> dict[str, Any]:
         prompts, prompt_sha, _ = self._load_prompts()
         production, production_sha, _ = self._load_production()
@@ -338,6 +340,7 @@ class Task040PromptEvidenceApplication:
                 prompt_id, prompt_version, purpose, body_sha256, provider_profile_id,
                 provider_profile_version, keep_conditions, scene_id=scene_id, slot_id=slot_id,
                 body_ref=body_ref, input_asset_hashes=input_asset_hashes,
+                compilation_binding=compilation_binding,
             )
         except (TypeError, ValueError) as exc:
             raise ProductError("ERR_PROMPT_APPLICATION_PROMPT_INVALID", "Prompt metadata is invalid", ProductErrorCategory.VALIDATION) from exc

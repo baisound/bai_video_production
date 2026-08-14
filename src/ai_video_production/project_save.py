@@ -161,7 +161,12 @@ class ProjectSaveJournal:
             ProjectSaveState.PREPARING: {ProjectSaveState.STAGED, ProjectSaveState.RECOVERY_REQUIRED, ProjectSaveState.ABANDONED},
             ProjectSaveState.STAGED: {ProjectSaveState.VALIDATED, ProjectSaveState.RECOVERY_REQUIRED, ProjectSaveState.ABANDONED},
             ProjectSaveState.VALIDATED: {ProjectSaveState.COMMITTING, ProjectSaveState.RECOVERY_REQUIRED, ProjectSaveState.ABANDONED},
-            ProjectSaveState.COMMITTING: {ProjectSaveState.COMMITTING, ProjectSaveState.RECOVERY_REQUIRED, ProjectSaveState.COMMITTED},
+            ProjectSaveState.COMMITTING: {
+                ProjectSaveState.COMMITTING,
+                ProjectSaveState.RECOVERY_REQUIRED,
+                ProjectSaveState.COMMITTED,
+                ProjectSaveState.ABANDONED,
+            },
             ProjectSaveState.RECOVERY_REQUIRED: {ProjectSaveState.COMMITTING, ProjectSaveState.ABANDONED, ProjectSaveState.COMMITTED},
             ProjectSaveState.COMMITTED: set(),
             ProjectSaveState.ABANDONED: set(),

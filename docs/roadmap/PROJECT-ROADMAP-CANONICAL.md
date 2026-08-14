@@ -1,6 +1,6 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.52
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.53
 - Project: `ai-video-production`
-- Date: 2026-08-14
+- Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
 - Product Design Baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - Governance: BAI Development OS Consumer Project Mode
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-1B is hosted-closed at exact main `5413a85bcbb0c66599a2650b281cb9f57b19d6a2`; AUTONOMY-selected Closure Sync is local PASS/hosted pending. Stable Product release remains `v0.20.1`
+- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-1B Closure Sync is hosted-closed at exact main `f5ad4cdfa564285e9fe7a5fcf4516f1b92cae0a4`; fresh-main AUTONOMY selected P-V6-2 Design, whose current-main audit, DEV-4 Builder/Critic/Judge and exact Allowed Files are local PASS/hosted pending. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -1068,3 +1068,41 @@ all-green PR, exact main verification and branch/clone cleanup, a fresh-main
 Bootstrap/Queue evaluation may select `BVP-TASK-042-P-V6-2-DESIGN` in
 `DESIGN_ONLY` mode. It must audit current WORLD LOCK/Candidate/Scene foundations
 before designing and cannot implement P-V6-2 without a later exact authorization.
+
+## Addendum XLV — P-V6-2 WORLD LOCK Design Gate
+
+Closure Sync PR #54 exact head
+`89ce567503b22a5e851ad66407e0a57598e79d05` passed all `9 / 9` hosted checks
+and merged at exact main `f5ad4cdfa564285e9fe7a5fcf4516f1b92cae0a4`.
+Its remote branch and dedicated clone were removed. A fresh clone from that
+exact main passed Handoff Bootstrap with current checkout as Source of Truth,
+and Autonomous Queue selected `BVP-TASK-042-P-V6-2-DESIGN / DESIGN_ONLY`,
+checksum `sha256:3308c13fe176ee8b3a590912f73f26aaa75a4656786f40a9c63ec1061dc7c063`.
+Native H3 remains parked at its task-local Human Gate and OS TASK-017 remains
+unauthorized; neither blocks this design.
+
+The current implementation already has the necessary canonical truth: Blueprint
+v2 contains exact START/END Slot/Candidate/Asset bindings; TASK-037 owns official
+Candidate LOCK/CURRENT/STALE; TASK-038 owns Human decisions; TASK-039 owns exact
+DIRECT continuity; and existing stores own CAS/recovery. P-V6-2 therefore adds no
+second WORLD LOCK store. It defines a deterministic read-only projection that
+cross-checks every Human-GO frame path against the current project-scoped Slot,
+role, locked Candidate and exact Asset checksum before Production Control or
+generation admission can proceed.
+
+The implementation design adds only three reference Slot roles, enables v2 Plan
+installation after exact WORLD LOCK PASS, connects bound Candidates to Scenes so
+existing stale propagation reaches downstream outputs, and makes v2 Queue input
+proof require the exact Blueprint Slot/Candidate rather than GO-only hash
+identity. V1 behavior remains compatible. Planning confirmations bind Proposal
+and Production snapshot checksums, installation is preflighted without partial
+publication, restart derives the same projection from canonical stores, and
+ambiguous repeated hashes fail closed until P-V6-3 typed Prompt integration.
+
+Two Critic cycles close duplicate-truth, partial-mutation, stale-confirmation,
+hash-ambiguity, enum-compatibility and authority-consistency risks with unresolved
+Critical/High `0 / 0`. The exact Allowed Files exclude Shell UI, Provider/native
+runtime, media output, schema/version metadata, release and deploy changes.
+P-V6-2 implementation remains `NOT_STARTED` until this design PR passes all
+hosted checks, merges and completes cleanup. This design merge is cadence merge
+`2 / 2`; control then returns to AUTONOMY before a fresh implementation checkout.

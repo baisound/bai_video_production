@@ -3,10 +3,10 @@
 - Name: Unified Product Project / Migration / Recovery Foundation
 - Priority: `OWNER_MAXIMUM / MAJOR_REFACTOR_FOUNDATION`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `P-FND-3 COMMAND HISTORY / AUTOSAVE / BACKUP`
+- Current Phase: `P-FND-4 DURABLE PRODUCT JOB / EXPORT QUEUE FOUNDATION`
 - Current Gate: `LOCAL_FOCUSED_FULL_REGRESSION_PASS / HOSTED_PENDING`
-- Implementation: `P-FND-1..2 HOSTED CLOSED / P-FND-3 LOCAL COMPLETE / P-FND-4 NOT STARTED`
-- Current main baseline: `3ba4df947ab2939ef7daed030a3ee69a3c31f07a`
+- Implementation: `P-FND-1..3 HOSTED CLOSED / P-FND-4 LOCAL COMPLETE`
+- Current main baseline: `19febe3e00de92b18948e93740a0e3080b63d1b1`
 - Stable release: `v0.20.1`
 - Release candidate: `UNDECIDED`; foundation-only checkpoints are not releases
 - TASK-013 Native H3: `PARKED / NO_REPLAY`
@@ -46,4 +46,13 @@ cleanup. P-FND-3 adds bounded append-only compensating command history, explicit
 STALE targets, quiescent/debounced Autosave, verified Backup rotation/preview and
 CAS-safe restore as a new revision. Local focused `55 / 55`, full regression
 `1042 passed, 1 skipped` and compileall pass; hosted checks remain pending.
+
+P-FND-3 PR #65 passed hosted `9 / 9`, merged at exact main
+`19febe3e00de92b18948e93740a0e3080b63d1b1`, and completed remote/local branch
+cleanup. Final P-FND-4 adds deterministic Product-local background/Export job
+identity, CAS state transitions, restart-to-UNKNOWN recovery, typed Human
+reconciliation, bounded cost truth and TASK-036 Shell projection. It does not
+replace TASK-027 Generation Queue or authorize Provider/paid/external execution.
+Local focused `90 / 90`, full regression `1061 passed, 1 skipped` and compileall
+pass; hosted checks remain pending.
 

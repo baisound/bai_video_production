@@ -137,6 +137,11 @@ from .project_history import (
     ProjectCommandAction, ProjectCommandHistory, ProjectCommandHistoryStore,
     ProjectCommandRecord, parse_project_command_history,
 )
+from .durable_product_job import (
+    DurableProductJob, DurableProductJobCollection, DurableProductJobService,
+    DurableProductJobState, DurableProductJobStore, durable_job_shell_projection,
+    parse_durable_product_job, parse_durable_product_job_collection,
+)
 from .project_migration import (
     BindingCompatibility, BindingMigrationPlan, CompatibilityState,
     MigrationRegistry, MigrationTransition, ProjectCompatibilityInspector,
@@ -224,4 +229,7 @@ __all__ = [
     "ProjectAutosavePolicy", "ProjectAutosaveResult", "ProjectBackupPreview",
     "ProjectCommandAction", "ProjectCommandHistory", "ProjectCommandHistoryStore",
     "ProjectCommandRecord", "parse_project_command_history",
+    "DurableProductJob", "DurableProductJobCollection", "DurableProductJobService",
+    "DurableProductJobState", "DurableProductJobStore", "durable_job_shell_projection",
+    "parse_durable_product_job", "parse_durable_product_job_collection",
 ]

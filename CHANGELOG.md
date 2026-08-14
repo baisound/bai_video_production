@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-043 P-FND-4 durable Product-local Job/Export Queue foundation: deterministic operation identity, CAS state transitions, bounded cost truth, restart-to-UNKNOWN recovery without automatic replay, typed reconciliation and read-only TASK-036 Shell projection. It neither replaces TASK-027 Generation Queue nor authorizes Provider/paid/external execution.
 - Added TASK-043 P-FND-3: append-only compensating Undo/Redo history with explicit STALE targets, quiescent/debounced Autosave, bounded verified Backup retention, restore preview and CAS-safe restore as a new Project revision. External replay, Evidence deletion and private credential/token capture remain prohibited.
 - Added TASK-043 P-FND-2 coordinated save/recovery: transaction-scoped staging and backup, child-first/manifest-last CAS commit, interruption journal, deterministic COMPLETE/ROLLBACK/FINALIZE, and fail-closed pending-recovery behavior.
 - Added TASK-043 P-FND-1: a closed versioned Product Project Manifest, exact child-store bindings, CAS persistence, compatibility inspection and deterministic read-only migration planning. Migration apply, external execution and release behavior remain unchanged.

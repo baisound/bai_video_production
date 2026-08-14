@@ -227,3 +227,10 @@ def test_generation_queue_commands_are_allowlisted_without_provider_dispatch():
     assert not any("dispatch" in name for name in (
         "generation_queue.snapshot", "generation_queue.prepare", "generation_queue.apply",
     ))
+
+
+def test_durable_product_job_commands_have_explicit_shell_authority():
+    shell = service()
+    assert shell.command_spec("job.enqueue").category is CommandCategory.LOCAL_DURABLE
+    assert shell.command_spec("job.cancel").category is CommandCategory.LOCAL_DURABLE
+    assert shell.command_spec("job.reconcile").category is CommandCategory.HUMAN_FINAL_AUTHORITY

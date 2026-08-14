@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/durable-product-job.schema.json",
+  "title": "BAI Video Production Durable Product Job Store",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["store_version", "project_id", "store_revision", "jobs", "authority", "jobs_sha256"],
+  "properties": {
+    "store_version": {"const": "1.0.0"},
+    "project_id": {"$ref": "#/$defs/identity"},
+    "store_revision": {"type": "integer", "minimum": 1},
+    "jobs": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/job"}},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generation_queue_replaced", "provider_execution_authorized", "external_replay_authorized"],
+      "properties": {
+        "generation_queue_replaced": {"const": false},
+        "provider_execution_authorized": {"const": false},
+        "external_replay_authorized": {"const": false}
+      }
+    },
+    "jobs_sha256": {"$ref": "#/$defs/checksum"}
+  },
+  "$defs": {
+    "checksum": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "identity": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},
+    "cost": {"oneOf": [{"type": "null"}, {"type": "number", "minimum": 0}]},
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "job_id", "operation_identity", "kind", "target_identity", "input_hashes",
+        "state", "state_version", "attempt", "created_at", "updated_at", "unknown_since",
+        "recovery_actions", "result_ref", "error_code", "estimated_cost", "currency",
+        "estimate_source", "actual_cost", "authority", "job_sha256"
+      ],
+      "properties": {
+        "job_id": {"type": "string", "pattern": "^product-job-[0-9a-f]{64}$"},
+        "operation_identity": {"type": "string", "pattern": "^operation-[0-9a-f]{64}$"},
+        "kind": {"enum": ["EXPORT", "LOCAL_ANALYSIS", "LOCAL_TRANSCODE", "MEDIA_INDEX", "PROJECT_MAINTENANCE"]},
+        "target_identity": {"$ref": "#/$defs/identity"},
+        "input_hashes": {
+          "type": "object",
+          "maxProperties": 128,
+          "propertyNames": {"$ref": "#/$defs/identity"},
+          "additionalProperties": {"$ref": "#/$defs/checksum"}
+        },
+        "state": {"enum": ["QUEUED", "PREFLIGHT", "READY", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED", "UNKNOWN", "HUMAN_REQUIRED"]},
+        "state_version": {"type": "integer", "minimum": 1},
+        "attempt": {"type": "integer", "minimum": 0},
+        "created_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+        "updated_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+        "unknown_since": {"oneOf": [{"type": "null"}, {"type": "string", "format": "date-time", "pattern": "Z$"}]},
+        "recovery_actions": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {"enum": ["ACCEPT_PROVEN_SUCCESS", "MARK_FAILED", "REQUIRE_HUMAN", "CANCEL", "RESUME_PREFLIGHT"]}
+        },
+        "result_ref": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identity"}]},
+        "error_code": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^ERR_PRODUCT_JOB_[A-Z0-9_]+$"}]},
+        "estimated_cost": {"$ref": "#/$defs/cost"},
+        "currency": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^[A-Z]{3}$"}]},
+        "estimate_source": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identity"}]},
+        "actual_cost": {"$ref": "#/$defs/cost"},
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider_execution_authorized", "paid_execution_authorized", "external_replay_authorized"],
+          "properties": {
+            "provider_execution_authorized": {"const": false},
+            "paid_execution_authorized": {"const": false},
+            "external_replay_authorized": {"const": false}
+          }
+        },
+        "job_sha256": {"$ref": "#/$defs/checksum"}
+      }
+    }
+  }
+}

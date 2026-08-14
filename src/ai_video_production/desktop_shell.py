@@ -111,6 +111,9 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "generation_execution.snapshot": ShellCommandSpec("generation_execution.snapshot", CommandCategory.READ_ONLY),
     "generation_execution.prepare": ShellCommandSpec("generation_execution.prepare", CommandCategory.READ_ONLY),
     "generation_execution.apply": ShellCommandSpec("generation_execution.apply", CommandCategory.EXTERNAL_MUTATION),
+    "job.enqueue": ShellCommandSpec("job.enqueue", CommandCategory.LOCAL_DURABLE),
+    "job.cancel": ShellCommandSpec("job.cancel", CommandCategory.LOCAL_DURABLE),
+    "job.reconcile": ShellCommandSpec("job.reconcile", CommandCategory.HUMAN_FINAL_AUTHORITY),
 }
 
 

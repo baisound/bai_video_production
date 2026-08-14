@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK040_R3_COMPLETE / TASK027_GENERATION_QUEUE_NEXT`
+- Project Status: `V0_20_1_RELEASED / TASK040_R3_COMPLETE / TASK027_QUEUE_LOCAL_GATE_PASS_HOSTED_PENDING`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE — TASK-027 Generation Queue integration kickoff is next on a dedicated branch`
+- Active Consumer Task: `TASK-027 — Generation Queue local Product Gate PASS; hosted closure pending`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `TASK-027 Generation Queue integration current-state audit, DEV Profile and formal kickoff on a new branch`
+- Next Consumer Task: `close TASK-027 through hosted checks/exact main merge; then begin R4 current-state audit on a new branch`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -105,7 +105,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.33 Addendum XXIV. TASK-040 PR #34 passed `9 / 9` and merged at exact main `87619fabe8c9ad7c8db0f5823176fd54cf7a7ae2`; its implementation branch was deleted remotely and locally. TASK-027 Generation Queue integration is next on a new branch. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.35 Addendum XXVI. TASK-027 Generation Queue local Product Gate passes `893 / 893` full regression and `71 / 71` focused integration; hosted closure is pending. Stable Product release remains `v0.20.1`.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.33
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.35
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -760,3 +760,15 @@ Hosted PR checks, exact main merge verification and branch cleanup remain before
 TASK-040 Prompt Evidence Product promotion is complete. PR #34 exact head `8a42aef661b6ae8a9aa80ba68591c424d7b8781a` passed all `9 / 9` hosted checks and merged at exact main SHA `87619fabe8c9ad7c8db0f5823176fd54cf7a7ae2`. The implementation branch was deleted remotely and locally.
 
 The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R3 checkpoint. The next Owner-routed unit is the TASK-027 Generation Queue integration slice, beginning with current-checkout audit and formal DEV Profile re-decision on a new dedicated branch. It must promote existing queue/admission foundations rather than recreate them and must not treat Prompt Evidence, configured credentials or enabled Providers as paid execution authority.
+
+### Ver.1.34 Addendum XXV — TASK-027 R3 Generation Queue Integration Kickoff
+
+TASK-027 Generation Queue Product promotion is active from exact TASK-040 closure main `57fc224560c567a71b405c3c59bce3cd881c65d7` on `codex/task-027-r3-generation-queue-integration`. Existing Approved Plan, durable Feasibility, LOCK/STALE, Continuity, Prompt Evidence and provider-neutral admission foundations are the implementation Source of Truth.
+
+The bounded unit derives queue admission only from exact durable Product Evidence, uniquely proves every Prompt input through Human-GO references or LOCKED/CURRENT Candidates, persists a restart-safe one-shot-confirmed queue record and exposes it in the unified Desktop Shell. The result is `ADMISSION_READY / EXECUTION_NOT_AUTHORIZED`; no Provider call, paid authorization, Budget reservation, Candidate creation, Resolve/Cubase mutation or publishing is added.
+
+### Ver.1.35 Addendum XXVI — TASK-027 R3 Generation Queue Local Product Gate
+
+TASK-027 Generation Queue integration passes its local Product Gate. Exact Approved Plan, current durable Feasibility PASS, Production target, Prompt/Profile, every required input hash and non-CUT Continuity resolution are re-derived from Product stores at preparation and apply. The append-only queue record is restart-safe and remains `ADMISSION_READY / EXECUTION_NOT_AUTHORIZED`.
+
+The unified Desktop `生成Queue` workspace exposes admission candidates, blockers and immutable Evidence without any dispatch command. Full WSL2 regression passes `893 / 893`; focused TASK-027/TASK-036 integration passes `71 / 71`; Windows/WSL2 compile, JavaScript and diff gates pass. Hosted checks, exact main merge and branch cleanup remain. Stable release stays `v0.20.1`; no package, Tag or Release is selected.

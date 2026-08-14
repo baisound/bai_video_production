@@ -37,6 +37,7 @@ hardening. No Human Gate is satisfied or bypassed by this unit.
 - `src/ai_video_production/local_comfy_generation_port.py`
 - `tests/test_task013_local_comfy_generation_port.py`
 - `PROJECT.md`
+- `CHANGELOG.md`
 - `docs/ai-team/project-summary.md`
 - this design/review/authorization record
 - the paired local closure Evidence

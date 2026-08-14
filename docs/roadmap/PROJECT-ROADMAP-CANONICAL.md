@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.32
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.33
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -754,3 +754,9 @@ TASK-040 Prompt Evidence Product promotion passes its local Product Gate. The un
 Strict restart parsing, domain reserialization, cross-process CAS, exact project/Slot/Profile/input scope, unique output ownership, non-regressing parent lineage, exact Audit recovery interlock and bounded two-store recovery pass. Full WSL2 regression is `885 / 885`; focused TASK-040/TASK-036 integration is `84 / 84`; Windows/WSL2 compile, Desktop JavaScript syntax and diff gates pass.
 
 Hosted PR checks, exact main merge verification and branch cleanup remain before formal TASK-040 closure. Stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is selected at this checkpoint. TASK-027 Generation Queue integration remains a separate later branch and no Provider or paid execution authority is granted here.
+
+### Ver.1.33 Addendum XXIV — TASK-040 R3 Hosted Closure
+
+TASK-040 Prompt Evidence Product promotion is complete. PR #34 exact head `8a42aef661b6ae8a9aa80ba68591c424d7b8781a` passed all `9 / 9` hosted checks and merged at exact main SHA `87619fabe8c9ad7c8db0f5823176fd54cf7a7ae2`. The implementation branch was deleted remotely and locally.
+
+The stable Product release remains `v0.20.1`; no package, Tag or GitHub Release is created at this R3 checkpoint. The next Owner-routed unit is the TASK-027 Generation Queue integration slice, beginning with current-checkout audit and formal DEV Profile re-decision on a new dedicated branch. It must promote existing queue/admission foundations rather than recreate them and must not treat Prompt Evidence, configured credentials or enabled Providers as paid execution authority.

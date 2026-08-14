@@ -11,6 +11,7 @@ from typing import Any, Iterable
 
 from .errors import ProductError, ProductErrorCategory
 from .production_blueprint import AssetSourceStrategy, ProductionBlueprint
+from .production_blueprint_v2 import ProductionBlueprintV2
 from .production_control import (
     DependencyEdge,
     DependencyKind,
@@ -55,7 +56,12 @@ class BlueprintProductionControlCompiler:
         return f"slot:{scene_id}:{kind}{suffix}"
 
     @classmethod
-    def compile(cls, blueprint: ProductionBlueprint, *, project_id: str) -> BlueprintControlPlan:
+    def compile(
+        cls,
+        blueprint: ProductionBlueprint | ProductionBlueprintV2,
+        *,
+        project_id: str,
+    ) -> BlueprintControlPlan:
         if not project_id.strip():
             raise ValueError("project_id must be non-empty")
         slots: list[SceneAssetSlot] = []

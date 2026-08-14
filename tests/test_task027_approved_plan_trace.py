@@ -60,6 +60,7 @@ def test_approved_plan_trace_proves_go_blueprint_scene_slot_chain() -> None:
     assert report["human_go_proven"] is True
     assert report["scene_count"] == 1
     assert report["slot_count"] == 4
+    assert "world_lock_binding_count" not in report
     assert report["automatic_generation_started"] is False
 
 

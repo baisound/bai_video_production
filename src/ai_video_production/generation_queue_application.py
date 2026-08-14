@@ -233,7 +233,105 @@ class Task027GenerationQueueApplication:
         return value
 
     @staticmethod
-    def _input_proofs(prompt: Mapping[str, Any], plan: Mapping[str, Any], production: Mapping[str, Any]) -> tuple[list[dict[str, Any]], tuple[str, ...]]:
+    def _v2_world_bindings(
+        blueprint: Mapping[str, Any],
+        plan: Mapping[str, Any],
+        production: Mapping[str, Any],
+    ) -> list[dict[str, Any]]:
+        references = {
+            row["reference_id"]: (row["asset_id"], row["asset_sha256"])
+            for row in plan.get("reference_bindings", ())
+        }
+        slots = {row["slot_id"]: row for row in production["slots"]}
+        requirements: list[dict[str, Any]] = []
+        for scene in blueprint.get("scenes", ()):
+            for frame_name, key in (("START", "start_frame_intent"), ("END", "end_frame_intent")):
+                binding = scene[key]["binding"]
+                prefix = f"{scene['scene_id']}:{frame_name}"
+                rows = [
+                    (f"{prefix}:CHARACTER:{index}", item, "CHARACTER_REFERENCE")
+                    for index, item in enumerate(binding["character_locks"])
+                ]
+                if binding.get("space_lock") is not None:
+                    rows.append((f"{prefix}:SPACE", binding["space_lock"], "SPACE_REFERENCE"))
+                if binding.get("composition_lock") is not None:
+                    rows.append((f"{prefix}:COMPOSITION", binding["composition_lock"], "COMPOSITION_REFERENCE"))
+                for reference_id, expected, expected_slot_kind in rows:
+                    slot = slots.get(expected["slot_id"])
+                    candidate = None if slot is None else next(
+                        (
+                            row for row in slot["candidates"]
+                            if row["candidate_id"] == expected["candidate_id"]
+                        ),
+                        None,
+                    )
+                    current = (
+                        references.get(reference_id) == (expected["asset_id"], expected["asset_sha256"])
+                        and slot is not None
+                        and slot["slot_kind"] == expected_slot_kind
+                        and slot["status"] == "LOCKED"
+                        and slot["stale_state"] == "CURRENT"
+                        and slot["locked_candidate_id"] == expected["candidate_id"]
+                        and candidate is not None
+                        and candidate["lifecycle_state"] == "LOCKED"
+                        and candidate["asset_id"] == expected["asset_id"]
+                        and candidate["asset_sha256"] == expected["asset_sha256"]
+                    )
+                    if not current:
+                        raise ProductError(
+                            "ERR_QUEUE_WORLD_LOCK_NOT_CURRENT",
+                            "Blueprint v2 Queue admission requires each exact frame reference Candidate to be LOCKED/CURRENT",
+                            ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                            details={"reference_id": reference_id},
+                        )
+                    requirements.append({
+                        "reference_id": reference_id,
+                        "slot_id": expected["slot_id"],
+                        "candidate_id": expected["candidate_id"],
+                        "asset_id": expected["asset_id"],
+                        "asset_sha256": expected["asset_sha256"],
+                    })
+        if set(references) != {row["reference_id"] for row in requirements}:
+            raise ProductError(
+                "ERR_QUEUE_WORLD_LOCK_GO_REFERENCE_MISMATCH",
+                "Blueprint v2 Approved Plan reference set differs from exact frame bindings",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return requirements
+
+    @classmethod
+    def _input_proofs(
+        cls,
+        prompt: Mapping[str, Any],
+        plan: Mapping[str, Any],
+        production: Mapping[str, Any],
+        blueprint: Mapping[str, Any] | None = None,
+    ) -> tuple[list[dict[str, Any]], tuple[str, ...]]:
+        if blueprint is not None and blueprint.get("blueprint_version") == "2.0.0":
+            world = cls._v2_world_bindings(blueprint, plan, production)
+            proofs: list[dict[str, Any]] = []
+            required_slots: list[str] = []
+            for asset_sha in prompt["input_asset_hashes"]:
+                choices = [row for row in world if row["asset_sha256"] == asset_sha]
+                if len(choices) != 1:
+                    raise ProductError(
+                        "ERR_QUEUE_INPUT_PROOF_AMBIGUOUS",
+                        "Each Blueprint v2 Prompt input hash must resolve to exactly one typed WORLD LOCK frame binding",
+                        ProductErrorCategory.AUTHORIZATION,
+                        details={"asset_sha256": asset_sha, "match_count": len(choices)},
+                    )
+                row = choices[0]
+                proofs.append({
+                    "asset_sha256": asset_sha,
+                    "proof_kind": "WORLD_LOCKED_CURRENT_CANDIDATE",
+                    "reference_id": row["reference_id"],
+                    "slot_id": row["slot_id"],
+                    "candidate_id": row["candidate_id"],
+                    "asset_id": row["asset_id"],
+                })
+                required_slots.append(row["slot_id"])
+            return proofs, tuple(dict.fromkeys(required_slots))
+
         references = list(plan.get("reference_bindings", ()))
         locked = []
         for slot in production["slots"]:
@@ -279,7 +377,12 @@ class Task027GenerationQueueApplication:
             raise ProductError("ERR_QUEUE_FEASIBILITY_PASS_REQUIRED", "Queue admission requires current durable Feasibility PASS", ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
         record = scene["current_record"]
         assessment = self._assessment(record)
-        proofs, required_slots = self._input_proofs(prompt, plan, production)
+        proofs, required_slots = self._input_proofs(
+            prompt,
+            plan,
+            production,
+            workspace.get("blueprint"),
+        )
         continuity_proof: dict[str, Any] | None = None
         continuity_type = record["reference_spec"]["continuity_type"]
         if continuity_type != "CUT":

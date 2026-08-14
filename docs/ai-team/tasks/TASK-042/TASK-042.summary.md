@@ -3,10 +3,10 @@
 - Name: Product Workflow V6 Integration / Frame-bound Reference & Production UX
 - Priority: `OWNER_MAXIMUM / CURRENT_HIGHEST`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `P-V6-2 DESIGN`
-- Current Gate: `P-V6-2 DESIGN_LOCAL_PASS / HOSTED_DESIGN_PR_PENDING`
-- Implementation: `P-V6-1A COMPLETE / P-V6-1B COMPLETE`
-- Current main baseline: `f5ad4cdfa564285e9fe7a5fcf4516f1b92cae0a4`
+- Current Phase: `P-V6-2 IMPLEMENTATION`
+- Current Gate: `P-V6-2 IMPLEMENTATION_LOCAL_PASS / HOSTED_IMPLEMENTATION_PR_PENDING`
+- Implementation: `P-V6-1A COMPLETE / P-V6-1B COMPLETE / P-V6-2 LOCAL_COMPLETE_HOSTED_PENDING`
+- Current main baseline: `6a4a6a5e28705950d0ba6457c38d9b8d119fe944`
 - TASK-013 Native H3: `PARKED / NO_REPLAY`
 - TASK-041: `PRODUCT_PROMOTION_HOSTED_CLOSED / REUSE_FOUNDATION`
 - Stable release: `v0.20.1`; no new version selected
@@ -20,3 +20,5 @@ The BAI Development OS Autonomous Queue selected `BVP-TASK-042-P-V6-1B / DESIGN_
 P-V6-1B is hosted-closed. PR #53 exact head `c0df2e24eccf4ba4e854b73bbb3d711509199f35` passed `9 / 9` and merged at exact main `5413a85bcbb0c66599a2650b281cb9f57b19d6a2`; remote branch and dedicated implementation clone cleanup passed. The two-merge cadence returned to AUTONOMY. At that pre-merge checkpoint, Handoff Bootstrap selected current main over the stale handoff and Queue selected `BVP-TASK-042-P-V6-1B-CLOSURE-SYNC / IMPLEMENTATION` with checksum `sha256:28c69ac969a9cf820ea4bdd570e8b67e8d38b4ebb03ad269c2ab93bd1f7e9f7c`; P-V6-2 was dependency-waiting, Native H3 was Human-Gated and OS TASK-017 was unauthorized.
 
 Closure Sync PR #54 exact head `89ce567503b22a5e851ad66407e0a57598e79d05` passed `9 / 9` and merged at exact main `f5ad4cdfa564285e9fe7a5fcf4516f1b92cae0a4`; its remote branch and dedicated clone were removed. Fresh-main Handoff Bootstrap selected current checkout over the stale handoff, and Autonomous Queue selected `BVP-TASK-042-P-V6-2-DESIGN / DESIGN_ONLY` with checksum `sha256:3308c13fe176ee8b3a590912f73f26aaa75a4656786f40a9c63ec1061dc7c063`. The current-main audit, DEV-4 re-decision, exact Allowed Files, Builder design and two Critic cycles are locally complete. P-V6-2 implementation remains not started until this design PR is hosted-closed and AUTONOMY reselects it from a fresh main clone.
+
+P-V6-2 Design PR #55 exact head `0b17e7b632c8326dc0882cb03082d1c2620139d5` passed `9 / 9` and merged at exact main `6a4a6a5e28705950d0ba6457c38d9b8d119fe944`; its remote branch and dedicated clone were removed. The two-merge cadence returned to AUTONOMY, whose fresh-main Queue selected `BVP-TASK-042-P-V6-2-IMPLEMENTATION / IMPLEMENTATION` with checksum `sha256:9f3d976fa7b1f2379e4ecdfb07d00549ad323734d523fc4cae144875f937bebf`. WORLD LOCK now reuses exact TASK-037 LOCK/CURRENT/STALE truth, v2 Plan/Trace/Planning and Queue proof are integrated, full Windows regression passes `960 / 960`, and implementation Critic is unresolved Critical/High `0 / 0`. Hosted implementation checks/merge/cleanup remain pending; stable release remains `v0.20.1`.

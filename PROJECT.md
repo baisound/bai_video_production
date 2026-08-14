@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK_042_P_V6_2_DESIGN_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_TASK_042_P_V6_2_IMPLEMENTATION_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -115,7 +115,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Development Candidate: `NONE`; TASK-042 P-V6-1A selects no package version
+- Development Candidate: `NONE`; TASK-042 P-V6-2 selects no package version
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.52 Addendum XLIV
@@ -142,7 +142,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - R4 TASK-041 Audio Workspace Product promotion is hosted-closed: exact Production/audio snapshot binding, crash-safe CAS, one-shot Human placement decisions and the unified Desktop `音声` workspace passed PR #47 `9 / 9` and merged at exact main `8dd6434a`. It records review intent only and starts no Provider, paid call, derived-media write, TASK-026 compile, Resolve or Cubase operation.
 - TASK-042 is the Owner-directed current highest-priority Product route. P-V6-0 merged through PR #49 at exact main `7be3de1a`; P-V6-1A passed PR #50 `9 / 9` and merged at exact main `694e9933`. P-V6-1B design PR #52 passed `9 / 9` and merged at exact main `cbf27b29`; its branch and design clone were removed before a fresh implementation clone was created.
 - P-V6-1B implementation is hosted-closed. PR #53 exact head `c0df2e24eccf4ba4e854b73bbb3d711509199f35` passed all `9 / 9` checks and merged at exact main `5413a85bcbb0c66599a2650b281cb9f57b19d6a2`; its remote branch and dedicated implementation clone were removed. Proposal/GO/snapshot accept exact Blueprint v1/v2, the Windows EXE build contract and README AUTONOMY guide are on main. Closure Sync PR #54 exact head `89ce567503b22a5e851ad66407e0a57598e79d05` then passed `9 / 9`, merged at exact main `f5ad4cdfa564285e9fe7a5fcf4516f1b92cae0a4`, and completed branch/clone cleanup as cadence merge `1 / 2`.
-- Fresh-main Handoff Bootstrap and Autonomous Queue selected `BVP-TASK-042-P-V6-2-DESIGN / DESIGN_ONLY`. The P-V6-2 current-main audit, DEV-4 re-decision, exact Allowed Files, Builder design and two Critic cycles are locally complete; implementation is not started. This design PR is cadence merge `2 / 2`; after hosted merge/cleanup, control must return to AUTONOMY before a fresh implementation clone is created. The design reuses TASK-037 as the only Candidate/LOCK/STALE truth and keeps Native H3, Provider/paid execution and release operations parked.
+- At the P-V6-2 design checkpoint, fresh-main Handoff Bootstrap and Autonomous Queue selected `BVP-TASK-042-P-V6-2-DESIGN / DESIGN_ONLY`; implementation was not started at that historical point. The current-main audit, DEV-4 re-decision, exact Allowed Files, Builder design and two Critic cycles completed before Design PR #55 became cadence merge `2 / 2`. The design reuses TASK-037 as the only Candidate/LOCK/STALE truth and keeps Native H3, Provider/paid execution and release operations parked.
+- P-V6-2 Design PR #55 passed `9 / 9`, merged at exact main `6a4a6a5e28705950d0ba6457c38d9b8d119fe944`, and completed remote branch/dedicated clone cleanup. Fresh-main AUTONOMY selected `BVP-TASK-042-P-V6-2-IMPLEMENTATION / IMPLEMENTATION`. Exact TASK-037-backed WORLD LOCK projection, v2 Production Control/Planning/Trace, transitive STALE/restart recovery and v2 Queue proof are local PASS at Windows `960 / 960`; v1 remains compatible and implementation Critic is unresolved Critical/High `0 / 0`. Hosted implementation remains pending and stable release remains `v0.20.1`.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

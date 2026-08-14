@@ -14,9 +14,11 @@ from typing import Any, Callable, Iterable
 
 from .approved_plan_orchestration import ApprovedPlanProductionControlInstaller, ApprovedPlanVerifier
 from .approved_plan_trace import ApprovedPlanTraceValidator
+from .blueprint_v2_world_lock import BlueprintV2WorldLockService
 from .errors import ProductError, ProductErrorCategory
 from .planning_workspace import Task027PlanningWorkspaceProjection, Task027PlanningWorkspaceService
 from .production_control import EntityType, ProductionControlRegistry
+from .production_blueprint_v2 import ProductionBlueprintV2
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import ProductionControlSnapshotStore, _exclusive_snapshot_lock
 from .production_proposal import ProductionGoApprovalService, ProductionProposalRegistry, ReferenceAssetBinding
@@ -153,23 +155,74 @@ class Task027PlanningApplication:
         if plan_row is None:
             return {"status": "GO_REQUIRED", "trace": None, "production": production_workspace}
         plan_id = str(plan_row["plan_id"])
-        if not self.production_control.snapshot_path.exists():
-            return {"status": "NOT_INSTALLED", "trace": None, "production": production_workspace}
-        production = ProductionControlSnapshotStore.load(self.production_control.snapshot_path)
+        plan = registry.approved_plans[plan_id]
+        proposal = next(
+            item for item in registry.proposals[plan.proposal_id]
+            if item.revision == plan.proposal_revision
+        )
+        production = (
+            ProductionControlSnapshotStore.load(self.production_control.snapshot_path)
+            if self.production_control.snapshot_path.exists()
+            else ProductionControlRegistry()
+        )
         has_plan_edge = any(
             edge.from_ref.entity_type is EntityType.PLAN and edge.from_ref.entity_id == plan_id
             for edge in production.edges.values()
         )
         if not has_plan_edge:
+            world_lock = None
+            if isinstance(proposal.blueprint, ProductionBlueprintV2):
+                world_lock = BlueprintV2WorldLockService.project(
+                    blueprint=proposal.blueprint,
+                    approved_plan=plan,
+                    registry=production,
+                    project_id=self.project_id,
+                )
+                expected_slot_ids = {
+                    row.slot_id for row in BlueprintV2WorldLockService.requirements(proposal.blueprint)
+                }
+                unrelated = sorted(set(production.slots) - expected_slot_ids)
+                status = (
+                    "OTHER_PRODUCTION_STATE" if unrelated
+                    else "NOT_INSTALLED" if world_lock["status"] == "PASS"
+                    else "WORLD_LOCK_REQUIRED"
+                )
+                return {
+                    "status": status,
+                    "trace": None,
+                    "world_lock": world_lock,
+                    "unrelated_slot_ids": unrelated,
+                    "production": production_workspace,
+                }
             status = "NOT_INSTALLED" if not production.slots else "OTHER_PRODUCTION_STATE"
-            return {"status": status, "trace": None, "production": production_workspace}
+            return {"status": status, "trace": None, "world_lock": None, "production": production_workspace}
+        world_lock = None
+        if isinstance(proposal.blueprint, ProductionBlueprintV2):
+            world_lock = BlueprintV2WorldLockService.project(
+                blueprint=proposal.blueprint,
+                approved_plan=plan,
+                registry=production,
+                project_id=self.project_id,
+            )
+            if world_lock["status"] != "PASS":
+                return {
+                    "status": "WORLD_LOCK_STALE",
+                    "trace": None,
+                    "world_lock": world_lock,
+                    "production": production_workspace,
+                }
         trace = ApprovedPlanTraceValidator.validate(
             proposals=registry,
             plan_id=plan_id,
             production=production,
             project_id=self.project_id,
         )
-        return {"status": "INSTALLED", "trace": trace.to_dict(), "production": production_workspace}
+        return {
+            "status": "INSTALLED",
+            "trace": trace.to_dict(),
+            "world_lock": world_lock,
+            "production": production_workspace,
+        }
 
     def snapshot(self, *, proposal_id: str | None = None) -> dict[str, Any]:
         registry, snapshot_sha, persisted = self._load()
@@ -291,11 +344,24 @@ class Task027PlanningApplication:
             raise ProductError("ERR_PLANNING_APPLICATION_PLAN_ALREADY_INSTALLED", "Approved Plan is already installed exactly", ProductErrorCategory.STATE)
         if installation["status"] == "OTHER_PRODUCTION_STATE":
             raise ProductError("ERR_PLANNING_APPLICATION_PRODUCTION_NOT_EMPTY", "Existing Production Control state belongs to another/unbound Plan", ProductErrorCategory.STATE)
+        if installation["status"] == "WORLD_LOCK_REQUIRED":
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_WORLD_LOCK_REQUIRED",
+                "Blueprint v2 Plan installation requires every exact reference Candidate to be LOCKED/CURRENT",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                details=installation["world_lock"],
+            )
+        production_registry = (
+            ProductionControlSnapshotStore.load(self.production_control.snapshot_path)
+            if self.production_control.snapshot_path.exists()
+            else ProductionControlRegistry()
+        )
         ApprovedPlanProductionControlInstaller.compile(
             proposal_registry=registry,
             plan_id=plan_id,
             blueprint=proposal.blueprint,
             project_id=self.project_id,
+            production_registry=production_registry,
         )
         token = self._new_token(self._install_confirmations)
         self._install_confirmations[token] = _InstallConfirmation(
@@ -316,6 +382,7 @@ class Task027PlanningApplication:
             "blueprint_id": plan.blueprint_id,
             "blueprint_sha256": plan.blueprint_sha256,
             "scene_count": len(proposal.blueprint.scenes),
+            "world_lock": installation.get("world_lock"),
             "human_final_authority_required": True,
             "provider_execution_started": False,
             "resolve_mutation_started": False,

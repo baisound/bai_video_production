@@ -34,6 +34,9 @@ def _sha(value: str, name: str) -> str:
 class SlotKind(str, Enum):
     START_FRAME = "START_FRAME"
     END_FRAME = "END_FRAME"
+    CHARACTER_REFERENCE = "CHARACTER_REFERENCE"
+    SPACE_REFERENCE = "SPACE_REFERENCE"
+    COMPOSITION_REFERENCE = "COMPOSITION_REFERENCE"
     VIDEO = "VIDEO"
     VFX = "VFX"
     SE = "SE"

@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.53
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.54
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-1B Closure Sync is hosted-closed at exact main `f5ad4cdfa564285e9fe7a5fcf4516f1b92cae0a4`; fresh-main AUTONOMY selected P-V6-2 Design, whose current-main audit, DEV-4 Builder/Critic/Judge and exact Allowed Files are local PASS/hosted pending. Stable Product release remains `v0.20.1`
+- Current insertion: TASK-042 V6 Product Workflow is the Owner-maximum route before Native H3 resume. P-V6-2 Design is hosted-closed at exact main `6a4a6a5e28705950d0ba6457c38d9b8d119fe944`; fresh-main AUTONOMY selected its implementation, whose TASK-037-backed WORLD LOCK/Plan/Trace/Queue/recovery integration is local PASS/hosted pending. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -1106,3 +1106,47 @@ runtime, media output, schema/version metadata, release and deploy changes.
 P-V6-2 implementation remains `NOT_STARTED` until this design PR passes all
 hosted checks, merges and completes cleanup. This design merge is cadence merge
 `2 / 2`; control then returns to AUTONOMY before a fresh implementation checkout.
+
+## Addendum XLVI — P-V6-2 WORLD LOCK Implementation Local Gate
+
+P-V6-2 Design PR #55 exact head
+`0b17e7b632c8326dc0882cb03082d1c2620139d5` passed all `9 / 9` hosted checks
+and merged at exact main `6a4a6a5e28705950d0ba6457c38d9b8d119fe944`.
+Its remote branch and dedicated clone were removed. Because that merge completed
+cadence `2 / 2`, control returned to AUTONOMY. Fresh-main Handoff Bootstrap and
+Queue selected `BVP-TASK-042-P-V6-2-IMPLEMENTATION / IMPLEMENTATION`, checksum
+`sha256:9f3d976fa7b1f2379e4ecdfb07d00549ad323734d523fc4cae144875f937bebf`.
+
+Implementation adds only the three explicit reference Slot roles and a stateless
+WORLD LOCK projection over the immutable v2 Blueprint/Approved Plan and current
+TASK-037 registry. Every deterministic START/END frame path must resolve to the
+exact project-scoped role, Slot, official locked Candidate, Asset ID/checksum and
+CURRENT lifecycle. Human GO remains separate and never creates Lock. No second
+Candidate/Lock store exists.
+
+After exact WORLD LOCK PASS, v2 installs its existing Scene output Slots and
+Approved Plan/Blueprint trace. Candidate -> Scene edges connect the existing
+Slot -> Candidate and Scene -> output graph, so a changed reference stales all
+dependent outputs without deletion or regeneration. Complete installation is
+preflighted on an isolated registry copy; Proposal and Production checksums bind
+one-shot Planning confirmations. Restart reports WORLD_LOCK_REQUIRED or
+WORLD_LOCK_STALE rather than crashing or silently repairing state.
+
+Approved generation admission automatically requires all exact v2 reference
+Slots. Queue proof for v2 requires deterministic frame path, role, Slot,
+Candidate, Asset and checksum; GO-only references, stale/unlocked state, wrong
+roles and repeated-hash ambiguity fail closed. V1 Queue and Trace output remain
+compatible. TASK-039 DIRECT continuity stays exact and non-overridable.
+
+Focused gates pass `21 / 21`, `39 / 39`, `27 / 27`, `49 / 49` and post-Critic
+`29 / 29`. Final Windows full regression passes `960 / 960` with one intentional
+platform skip. Two implementation Critic cycles close v1 Trace output drift,
+stale restart visibility, Queue role revalidation, partial mutation and caller-
+omitted input risks with unresolved Critical/High `0 / 0`. Provider, paid,
+credential, native, media, physical-delete, Tag, Release and Deploy actions are
+all absent.
+
+This implementation is local PASS/hosted pending and becomes cadence merge
+`1 / 2` only after all hosted checks, exact main verification and cleanup. A
+fresh-main bounded hosted Closure Sync then records exact truth as merge `2 / 2`;
+after its cleanup, control returns to AUTONOMY before P-V6-3 selection.

@@ -187,7 +187,7 @@ def test_v2_go_requires_every_deterministic_frame_path_and_exact_asset_identity(
     assert identity.value.details == {"mismatched": ["SC01:START:CHARACTER:0"]}
 
 
-def test_v2_human_go_verifies_identity_but_production_control_remains_p_v6_2_blocked() -> None:
+def test_v2_human_go_verifies_identity_but_production_control_requires_current_world_lock() -> None:
     registry, blueprint, plan_id = _approve()
     plan = ApprovedPlanVerifier.require_current(
         proposal_registry=registry,
@@ -204,7 +204,7 @@ def test_v2_human_go_verifies_identity_but_production_control_remains_p_v6_2_blo
             blueprint=blueprint,
             project_id="project-v6",
         )
-    assert blocked.value.code == "ERR_BLUEPRINT_V2_PRODUCTION_CONTROL_NOT_INTEGRATED"
+    assert blocked.value.code == "ERR_BLUEPRINT_V2_WORLD_LOCK_REGISTRY_REQUIRED"
 
 
 def test_v2_proposal_and_approved_plan_snapshot_round_trip_with_cas(tmp_path: Path) -> None:

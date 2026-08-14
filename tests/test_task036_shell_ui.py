@@ -143,6 +143,18 @@ def test_html_exposes_queue_admission_and_separate_bounded_local_execution_contr
     assert "Provider呼出し・課金・Budget予約・Candidate作成" in HTML
 
 
+def test_html_promotes_audio_workspace_without_provider_or_nle_shortcut():
+    assert 'data-w="AUDIO_WORKSPACE"' in HTML
+    assert 'id="audioWorkspace"' in HTML
+    assert "audio_workspace_snapshot" in HTML
+    assert "audio_workspace_prepare_placement" in HTML
+    assert "audio_workspace_apply_placement" in HTML
+    assert "audio_workspace_prepare_decision" in HTML
+    assert "audio_workspace_apply_decision" in HTML
+    assert "TASK-026/Resolve/Cubaseは開始しません" in HTML
+    assert "audio_workspace_execute" not in HTML
+
+
 def test_html_promotes_production_control_without_task038_authority_shortcut():
     assert 'data-w="PRODUCTION_CONTROL"' in HTML
     assert 'id="productionWorkspace"' in HTML
@@ -636,4 +648,63 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
         bridge.generation_execution_prepare({
             "queue_entry_id": "QUEUE-1", "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,
         })
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_audio_workspace_bridge_is_allowlisted_and_keeps_execution_separate():
+    class AudioStub:
+        def __init__(self):
+            self.calls = []
+
+        def snapshot(self):
+            return {"project_id": "project-1", "task026_compile_started": False, "resolve_mutation_started": False}
+
+        def prepare_placement(self, **values):
+            self.calls.append(("prepare-placement", values))
+            return {"confirmation_id": "placement-confirm"}
+
+        def apply_placement(self, **values):
+            self.calls.append(("apply-placement", values))
+            return {"workspace": {"placements": []}}
+
+        def prepare_placement_decision(self, **values):
+            self.calls.append(("prepare-decision", values))
+            return {"confirmation_id": "decision-confirm"}
+
+        def apply_placement_decision(self, **values):
+            self.calls.append(("apply-decision", values))
+            return {"workspace": {"placements": [{"decision": "ACCEPT"}]}}
+
+    audio = AudioStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.20.1"),
+        audio_workspace_application=audio,
+    )
+    assert bridge.audio_workspace_snapshot({})["task026_compile_started"] is False
+    prepared = bridge.audio_workspace_prepare_placement({
+        "review_id": "review-1",
+        "candidate_id": "candidate-1",
+        "timeline_start_frame": 0,
+        "duration_frames": 120,
+        "track_role": "BGM",
+        "gain_db": -6.0,
+        "expected_production_snapshot_sha256": "sha256:" + "1" * 64,
+        "expected_audio_snapshot_sha256": "sha256:" + "2" * 64,
+    })
+    assert prepared["confirmation_id"] == "placement-confirm"
+    bridge.audio_workspace_apply_placement({"confirmation_id": "placement-confirm"})
+    decision = bridge.audio_workspace_prepare_decision({
+        "review_id": "review-1",
+        "decision": "ACCEPT",
+        "expected_production_snapshot_sha256": "sha256:" + "1" * 64,
+        "expected_audio_snapshot_sha256": "sha256:" + "2" * 64,
+    })
+    assert decision["confirmation_id"] == "decision-confirm"
+    result = bridge.audio_workspace_apply_decision({"confirmation_id": "decision-confirm"})
+    assert result["workspace"]["placements"][0]["decision"] == "ACCEPT"
+    assert [name for name, _ in audio.calls] == [
+        "prepare-placement", "apply-placement", "prepare-decision", "apply-decision",
+    ]
+    with pytest.raises(ProductError) as exc:
+        bridge.audio_workspace_prepare_placement({"review_id": "review-1"})
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"

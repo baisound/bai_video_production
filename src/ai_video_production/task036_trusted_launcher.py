@@ -42,6 +42,7 @@ from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
+from .audio_workspace_application import Task041AudioWorkspaceApplication
 from .local_comfy_generation_port import (
     LocalComfyGenerationConfig, LocalComfyTextToVideoPort,
     MINIMAX_H3_NATIVE_WORKFLOW_SHA256, default_minimax_h3_workflow_path,
@@ -508,6 +509,11 @@ def build_trusted_launch(
         continuity_application=continuity_application,
         prompt_evidence_application=prompt_evidence_application,
     )
+    audio_workspace_application = Task041AudioWorkspaceApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+        production_control=production_control,
+    )
     generation_execution_application = None
     if configuration.local_generation is not None:
         local_client = comfy_client or ComfyUIClient(configuration.local_generation.endpoint)
@@ -534,6 +540,7 @@ def build_trusted_launch(
         prompt_evidence_application=prompt_evidence_application,
         generation_queue_application=generation_queue_application,
         generation_execution_application=generation_execution_application,
+        audio_workspace_application=audio_workspace_application,
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)
 

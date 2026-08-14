@@ -8,7 +8,7 @@
 - Stable formal Release: `v0.20.1`
 - Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Current development main: `fac1a2fb53c3c5c439c3b1cf6c55f10d4bbf3f57` (PR #45 read-only readiness preflight merge)
-- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / SAFE_RUNTIME_READINESS_PREFLIGHT_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
+- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_AUDIO_WORKSPACE_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
 - Active implementation branch: `NONE`
 
 Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
@@ -24,6 +24,7 @@ Current main is newer than the stable release because bounded R2-R4 Product deve
 - R4 TASK-013 restart-safe local execution control and the exact local/free MiniMax H3 ComfyUI adapter are hosted-closed.
 - TASK-013 incident-derived safe-runtime launch-flag hardening rejects every force-restart memory flag and assignment form before durable reservation or external queue side effects.
 - TASK-013 now exposes a hosted-closed explicit read-only runtime readiness preflight through the Product application/Shell bridge. PR #45 exact head `f0d3a95` passed `9 / 9` and merged at `fac1a2fb`; it reuses the real pre-dispatch checks but cannot queue, create a journal/output, authorize execution or satisfy the Native Gate.
+- TASK-041 Audio Workspace now has a local-gated Product Application and unified Desktop workspace for durable placement review and exact Human decisions over accepted/locked SE/BGM/NARRATION Candidates. Provider, paid execution, media-byte writes, TASK-026 compilation and Resolve/Cubase mutation remain separate and unstarted.
 
 ## Current parked boundary
 

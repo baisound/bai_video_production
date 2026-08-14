@@ -4,9 +4,9 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / SAFE_RUNTIME_READINESS_PREFLIGHT_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_AUDIO_WORKSPACE_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `NONE`; TASK-013 contained native completion remains parked behind `HG-BVP-TASK013-NATIVE-003`
+- Active Consumer Task: `TASK-041-AUDIO-WORKSPACE-PRODUCT-PROMOTION`; local gate is complete and hosted closure is pending
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
@@ -86,6 +86,7 @@
 - TASK-013 safe-runtime launch-flag hardening passes its bounded local gate: all four memory flags observed in the Owner-confirmed force-restart attempt, including assignment forms, are rejected before journal reservation or queue side effects; focused `39 / 39`, full WSL2 `923 / 923` and compileall PASS. Native H3 remains parked.
 - TASK-013 safe-runtime readiness preflight passes its bounded local gate: explicit application/Shell invocation performs only body-free ComfyUI node/model, resource and exact runtime-identity inspection; focused `55 / 55` and full WSL2 `926 / 926` PASS. It queues nothing, creates no dispatch journal/output or execution Authority, and leaves Native H3 parked.
 - TASK-013 safe-runtime readiness preflight hosted closure passed: PR #45 exact head `f0d3a95cd5f582f9a695ce46ecebf6955f52b046` passed all `9 / 9` checks and merged at exact main `fac1a2fb53c3c5c439c3b1cf6c55f10d4bbf3f57`; the remote branch and prior cycle clone were removed and a clean exact-main fresh clone was verified.
+- TASK-041 Audio Workspace Product promotion local gate passed: project-scoped `audio-workspace.json`, exact Production/audio checksum binding, serialized CAS, one-shot Placement/Human decision confirmation, LOCK-only ACCEPT and unified Desktop/trusted-launch composition pass focused `64 / 64`, full WSL2 `932 / 932`, compileall and JavaScript syntax. Provider, paid execution, media derivation, TASK-026 compile and Resolve/Cubase mutation remain false.
 - Native attempt 01 queued exact Comfy prompt `91cb547f-1056-44a5-a2b5-9ddfd0c5621a`, loaded the real native H3 model path and failed at `SamplerCustomAdvanced` with `hostbuf_file_reader_read failed`; no output was published
 - Native attempt 02 queued exact Comfy prompt `f92c56e4-4fd8-44fc-b347-d7d4acdfed8b` under legacy low-VRAM flags and was externally interrupted by the Owner-confirmed Windows force restart after the host froze. Its journal remains `QUEUED`, the parent state is recovery-required, and automatic replay is prohibited
 - Product runtime policy now rejects `--disable-dynamic-vram`, `--disable-async-offload`, `--disable-pinned-memory`, `--lowvram`, `--highvram`, `--novram`, `--gpu-only` and `--cpu`, including assignment forms, before dispatch. Native H3 completion is `PARKED_TO_SAFE_RUNTIME_REVIEW`, not PASS
@@ -116,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.44 Addendum XXXVI. R3 control-loop promotion, the exact local/free adapter and the explicit read-only readiness preflight are hosted-closed. PR #45 passed `9 / 9` and merged at exact main `fac1a2fb`; no dispatch, journal or output occurred. Native H3 completion remains parked at the recorded runtime/recovery boundary pending a separately reviewed safe resumption decision. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.45 Addendum XXXVII. R3 control-loop and TASK-013 readiness work remain hosted-closed. TASK-041 Audio Workspace Product promotion passes its local gate with focused `64 / 64` and full WSL2 `932 / 932`; hosted closure remains pending. Native H3 and paid TASK-014 execution remain parked. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

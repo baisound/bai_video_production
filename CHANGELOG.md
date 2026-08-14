@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Promoted TASK-041 Audio Workspace into the unified Desktop Shell with project-scoped crash-safe placement review, exact Candidate/hash-bound one-shot Human decisions and trusted-launch composition, while keeping Provider, TASK-026, Resolve and Cubase execution separate.
 - Added an explicit TASK-013 read-only ComfyUI runtime readiness preflight through the Product application and Shell bridge; it reuses exact node/model/resource/runtime checks while creating no dispatch, journal, output, execution authorization or Native Gate claim.
 - Hardened the TASK-013 local ComfyUI pre-dispatch runtime guard to reject all memory flags observed in the Owner-confirmed force-restart attempt, including assignment forms, while keeping native H3 execution parked and non-replayable.
 - Added a fail-closed TASK-013 local ComfyUI MiniMax H3 text-to-video adapter with a checksum-bound body-free workflow, exact local/free route and runtime-policy checks, durable no-replay dispatch journal, contained verified output publication and opt-in trusted-launch composition. The bounded native probe exposed a runtime failure/recovery boundary and does not claim a completed generation.

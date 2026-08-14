@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.41
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.42
 - Project: `ai-video-production`
 - Date: 2026-08-13
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -810,3 +810,9 @@ The bounded TASK-013 concrete adapter passes its local Product gate. It ships a 
 Final exact adapter/controller/launcher regression passes `35 / 35`; full WSL2 regression passes `919 / 919`. A contained real H3 attempt reached the GPU and native model path but attempt 01 failed at `SamplerCustomAdvanced` with `hostbuf_file_reader_read failed`. Attempt 02 used legacy low-VRAM flags, was externally interrupted by the Owner-confirmed Windows force restart after the host froze and remains durably `QUEUED / RECOVERY_REQUIRED`; it is not rewritten as Product failure or replayed. No generated output, Candidate, Audit acceptance, paid call, Tag or Release is claimed.
 
 The Product now rejects legacy `--disable-dynamic-vram`, `--lowvram`, `--highvram`, `--novram`, `--gpu-only` and `--cpu` modes before dispatch. Contained native H3 completion is therefore `PARKED_TO_SAFE_RUNTIME_REVIEW`. This parking does not block hosted review of the fail-closed adapter implementation, but Candidate/TASK-040 Attempt binding remains blocked until a separately reviewed safe native run produces verified contained output. Stable release remains `v0.20.1`.
+
+### Ver.1.42 Addendum XXXIII — TASK-013 Local Comfy Native Adapter Hosted Closure
+
+The bounded fail-closed adapter implementation is hosted-closed. PR #41 exact head `ff481147080518f44865c88ad0a8caffadd96947` passed all `9 / 9` GitHub checks and merged at exact main SHA `74d6b5af0c6de66168f5ab6ab63a6a049b11acd4`. The implementation branch was deleted remotely and locally.
+
+This closure confirms the reviewed adapter code and packaging, not a successful native H3 generation. Attempt 01 remains a known sampler/runtime failure and attempt 02 remains an Owner-confirmed external force-restart boundary with durable `QUEUED / RECOVERY_REQUIRED`; neither may be replayed automatically. Candidate/TASK-040 Attempt binding remains blocked until a separately reviewed safe native runtime produces a contained, media-verified output. Stable release remains `v0.20.1`; no package version, Tag or GitHub Release is created for this bounded closure.

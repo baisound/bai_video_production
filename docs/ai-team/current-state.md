@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_LOCAL_GATE / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-013 local ComfyUI native adapter local gate passed — contained native completion is parked at an unsafe-runtime/recovery boundary`
+- Active Consumer Task: `TASK-013 adapter hosted closure complete — contained native completion is parked at the recorded unsafe-runtime/recovery boundary`
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Task: `TASK-013 hosted adapter closure, then a separately reviewed safe native-runtime route; never replay the preserved uncertain execution automatically`
+- Next Consumer Task: `TASK-013 separately reviewed safe native-runtime resumption decision; never replay the preserved uncertain execution automatically`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -81,6 +81,7 @@
 - TASK-013 R4 local generation execution control is hosted-closed: PR #38 final head `ff1cbed` passed `9 / 9` and merged at exact main `1614832b`; next is exact real local adapter target audit, while live generation and Candidate/Audit binding remain unclaimed
 - TASK-013 exact target audit passed: loopback ComfyUI `0.31.0`, `837` node classes, RTX 4070 SUPER, all four native H3 model files/classes and isolated Product-owned runtime roots were verified; the operator Prompt/workflow remains private and no generation was queued
 - TASK-013 concrete local adapter local gate passed: package-owned body-free workflow, exact `LOCAL_FREE_AI / TEXT_TO_VIDEO` authority, exact `127.0.0.1`/model/node/resource/runtime checks, durable prompt-id journal, exact output containment and opt-in trusted-launch composition pass `35 / 35` final focused and `919 / 919` full WSL2 regression
+- TASK-013 adapter hosted closure passed: PR #41 exact head `ff481147080518f44865c88ad0a8caffadd96947` passed all `9 / 9` hosted checks and merged at exact main `74d6b5af0c6de66168f5ab6ab63a6a049b11acd4`; the implementation branch was deleted remotely and locally
 - Native attempt 01 queued exact Comfy prompt `91cb547f-1056-44a5-a2b5-9ddfd0c5621a`, loaded the real native H3 model path and failed at `SamplerCustomAdvanced` with `hostbuf_file_reader_read failed`; no output was published
 - Native attempt 02 queued exact Comfy prompt `f92c56e4-4fd8-44fc-b347-d7d4acdfed8b` under legacy low-VRAM flags and was externally interrupted by the Owner-confirmed Windows force restart after the host froze. Its journal remains `QUEUED`, the parent state is recovery-required, and automatic replay is prohibited
 - Product runtime policy now rejects `--disable-dynamic-vram`, `--lowvram`, `--highvram`, `--novram`, `--gpu-only` and `--cpu` before dispatch. Native H3 completion is `PARKED_TO_SAFE_RUNTIME_REVIEW`, not PASS
@@ -111,7 +112,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.41 Addendum XXXII. R3 control-loop promotion is complete and the TASK-013 exact local/free adapter passes its local Product gate. Native H3 completion is parked at the recorded runtime/recovery boundary; hosted adapter closure may proceed independently. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.42 Addendum XXXIII. R3 control-loop promotion is complete and the TASK-013 exact local/free adapter is hosted-closed at exact main `74d6b5af`. Native H3 completion remains parked at the recorded runtime/recovery boundary pending a separately reviewed safe resumption decision. Stable Product release remains `v0.20.1`.
 
 TASK-022 is now implemented with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas. Native-Windows full regression is the remaining completion gate.
 

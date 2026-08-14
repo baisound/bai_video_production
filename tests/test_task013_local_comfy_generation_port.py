@@ -197,6 +197,36 @@ def test_runtime_rejects_legacy_low_vram_mode_before_dispatch(tmp_path: Path):
     assert list(roots["journal"].iterdir()) == []
 
 
+@pytest.mark.parametrize(
+    "unsafe_flag",
+    (
+        "--disable-async-offload",
+        "--disable-pinned-memory",
+        "--disable-dynamic-vram=true",
+        "--lowvram=true",
+    ),
+)
+def test_runtime_rejects_every_incident_memory_flag_and_assignment_form_before_dispatch(
+    tmp_path: Path,
+    unsafe_flag: str,
+):
+    port, client, route, request, roots = fixture(tmp_path)
+    original = client.system_stats
+
+    def unsafe_stats():
+        value = original()
+        value["system"]["argv"].append(unsafe_flag)
+        return value
+
+    client.system_stats = unsafe_stats
+    with pytest.raises(ProductError) as exc:
+        port.execute(route, request)
+    assert exc.value.code == "ERR_GENERATION_COMFY_RUNTIME_UNSAFE"
+    assert exc.value.details["prohibited_flags"] == [unsafe_flag]
+    assert client.queued == 0
+    assert list(roots["journal"].iterdir()) == []
+
+
 def test_runtime_output_root_must_match_product_owned_root(tmp_path: Path):
     port, client, route, request, roots = fixture(tmp_path)
     original = client.system_stats

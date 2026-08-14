@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED_NATIVE_RUNTIME_PARKED`
+`V0_20_1_RELEASED_R3_CONTROL_LOOP_COMPLETE_R4_LOCAL_COMFY_ADAPTER_HOSTED_CLOSED_SAFE_RUNTIME_FLAG_HARDENING_PASS_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,7 +110,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-013 — R4 local Comfy adapter hosted closure / implementation PR #41 9 of 9 PASS at 74d6b5af0c6de66168f5ab6ab63a6a049b11acd4 / closure PR #42 9 of 9 PASS at current main 7d6486059c468009042e4c186d54b566d6e1477e`
+- Last Completed Gate: `TASK-013 — R4 local Comfy adapter hosted closure / implementation PR #41 9 of 9 PASS at 74d6b5af0c6de66168f5ab6ab63a6a049b11acd4 / closure PR #42 9 of 9 PASS / incident-derived safe-runtime flag hardening local gate 39 of 39 and full 923 of 923 PASS in the containing change`
 - Active Task: `NONE`; TASK-013 native H3 completion is parked pending a separately reviewed safe-runtime resumption decision
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`

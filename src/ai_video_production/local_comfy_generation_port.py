@@ -40,6 +40,16 @@ from .serialization import canonical_json_bytes, sha256_bytes
 _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,199}")
 _SHA_RE = re.compile(r"sha256:[0-9a-f]{64}")
 _VIDEO_SUFFIXES = {".avi", ".mkv", ".mov", ".mp4", ".webm"}
+_PROHIBITED_RUNTIME_FLAGS = frozenset({
+    "--cpu",
+    "--disable-async-offload",
+    "--disable-dynamic-vram",
+    "--disable-pinned-memory",
+    "--gpu-only",
+    "--highvram",
+    "--lowvram",
+    "--novram",
+})
 _REQUIRED_CLASSES = frozenset({
     "UNETLoader", "CLIPLoader", "VAELoader", "MiniMaxH3ImageToVideo",
     "BasicGuider", "RandomNoise", "KSamplerSelect", "BasicScheduler",
@@ -294,11 +304,11 @@ class LocalComfyTextToVideoPort:
         argv = system.get("argv") if isinstance(system, dict) else None
         if not isinstance(argv, list) or not argv or any(not isinstance(item, str) for item in argv):
             raise ProductError("ERR_GENERATION_COMFY_RUNTIME_IDENTITY", "ComfyUI did not prove its exact launch identity", ProductErrorCategory.AUTHORIZATION)
-        prohibited = {
-            "--cpu", "--disable-dynamic-vram", "--gpu-only", "--highvram",
-            "--lowvram", "--novram",
-        }
-        present = sorted(prohibited.intersection(argv))
+        present = sorted({
+            item
+            for item in argv
+            if any(item == flag or item.startswith(f"{flag}=") for flag in _PROHIBITED_RUNTIME_FLAGS)
+        })
         if present:
             raise ProductError(
                 "ERR_GENERATION_COMFY_RUNTIME_UNSAFE",

@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/project-command-history.schema.json",
+  "title": "BAI Video Production Project Command History",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["history_version", "project_id", "records", "authority", "history_sha256"],
+  "properties": {
+    "history_version": {"const": "1.0.0"},
+    "project_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},
+    "records": {"type": "array", "maxItems": 2048, "items": {"$ref": "#/$defs/record"}},
+    "authority": {"$ref": "#/$defs/authority"},
+    "history_sha256": {"$ref": "#/$defs/checksum"}
+  },
+  "$defs": {
+    "checksum": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "identity": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},
+    "recordId": {"type": "string", "pattern": "^history-[0-9a-f]{64}$"},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_local_only", "external_replay_authorized", "evidence_deletion_authorized"],
+      "properties": {
+        "product_local_only": {"const": true},
+        "external_replay_authorized": {"const": false},
+        "evidence_deletion_authorized": {"const": false}
+      }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_id", "action", "command_kind", "target_identity",
+        "source_manifest_sha256", "result_manifest_sha256",
+        "source_revision", "result_revision", "compensates_record_id",
+        "stale_target_ids", "recorded_at", "authority", "record_sha256"
+      ],
+      "properties": {
+        "record_id": {"$ref": "#/$defs/recordId"},
+        "action": {"enum": ["APPLY", "UNDO", "REDO"]},
+        "command_kind": {"$ref": "#/$defs/identity"},
+        "target_identity": {"$ref": "#/$defs/identity"},
+        "source_manifest_sha256": {"$ref": "#/$defs/checksum"},
+        "result_manifest_sha256": {"$ref": "#/$defs/checksum"},
+        "source_revision": {"type": "integer", "minimum": 1},
+        "result_revision": {"type": "integer", "minimum": 2},
+        "compensates_record_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/recordId"}]},
+        "stale_target_ids": {"type": "array", "maxItems": 256, "uniqueItems": true, "items": {"$ref": "#/$defs/identity"}},
+        "recorded_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+        "authority": {"$ref": "#/$defs/authority"},
+        "record_sha256": {"$ref": "#/$defs/checksum"}
+      }
+    }
+  }
+}

@@ -3,10 +3,10 @@
 - Name: Unified Product Project / Migration / Recovery Foundation
 - Priority: `OWNER_MAXIMUM / MAJOR_REFACTOR_FOUNDATION`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Current Phase: `P-FND-2 COORDINATED SAVE / RECOVERY`
-- Current Gate: `LOCAL_FAILURE_INJECTION_PASS / HOSTED_PENDING`
-- Implementation: `P-FND-1 HOSTED CLOSED / P-FND-2 LOCAL COMPLETE / P-FND-3..4 NOT STARTED`
-- Current main baseline: `e2930baa2cd66e92514e538e2834e89a8119d19f`
+- Current Phase: `P-FND-3 COMMAND HISTORY / AUTOSAVE / BACKUP`
+- Current Gate: `LOCAL_FOCUSED_FULL_REGRESSION_PASS / HOSTED_PENDING`
+- Implementation: `P-FND-1..2 HOSTED CLOSED / P-FND-3 LOCAL COMPLETE / P-FND-4 NOT STARTED`
+- Current main baseline: `3ba4df947ab2939ef7daed030a3ee69a3c31f07a`
 - Stable release: `v0.20.1`
 - Release candidate: `UNDECIDED`; foundation-only checkpoints are not releases
 - TASK-013 Native H3: `PARKED / NO_REPLAY`
@@ -40,6 +40,10 @@ P-FND-1 PR #63 passed hosted `9 / 9`, merged at exact main
 `e2930baa2cd66e92514e538e2834e89a8119d19f`, and completed remote/local branch
 cleanup. P-FND-2 adds a Project-scoped save journal, child-first/manifest-last
 commit, injected-crash COMPLETE/ROLLBACK/FINALIZE and pending-recovery refusal.
-Local compile/schema/failure-injection smoke and implementation Critic pass;
-hosted checks remain pending.
+PR #64 passed hosted `9 / 9`, merged at exact main
+`3ba4df947ab2939ef7daed030a3ee69a3c31f07a`, and completed remote/local branch
+cleanup. P-FND-3 adds bounded append-only compensating command history, explicit
+STALE targets, quiescent/debounced Autosave, verified Backup rotation/preview and
+CAS-safe restore as a new revision. Local focused `55 / 55`, full regression
+`1042 passed, 1 skipped` and compileall pass; hosted checks remain pending.
 

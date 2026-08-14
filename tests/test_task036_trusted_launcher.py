@@ -20,6 +20,7 @@ from ai_video_production.generation_safety_application import Task013GenerationS
 from ai_video_production.continuity_application import Task039ContinuityApplication
 from ai_video_production.prompt_evidence_application import Task040PromptEvidenceApplication
 from ai_video_production.generation_queue_application import Task027GenerationQueueApplication
+from ai_video_production.audio_workspace_application import Task041AudioWorkspaceApplication
 
 
 class DialogBackend:
@@ -179,6 +180,13 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert queue["available"] is True
     assert queue["provider_execution_started"] is False
     assert queue["paid_execution_authorized"] is False
+    assert isinstance(launch.bridge.audio_workspace_application, Task041AudioWorkspaceApplication)
+    assert launch.bridge.audio_workspace_application.production_control is launch.bridge.production_control
+    audio = launch.bridge.audio_workspace_snapshot({})
+    assert audio["available"] is True
+    assert audio["provider_execution_started"] is False
+    assert audio["task026_compile_started"] is False
+    assert audio["resolve_mutation_started"] is False
     production = launch.bridge.production_snapshot({})
     assert production["available"] is True
     assert production["project_id"] == config.project_id

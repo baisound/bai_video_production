@@ -32,7 +32,7 @@
 | TASK-038 | Audit Workspace / Candidate Quality Loop | COMPLETE_R2_PRODUCT_PROMOTION | COMPLETED_WITH_OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | PR #26 passed 9/9 and merged at exact main 9a999645; durable two-store Human decision/recovery and user-facing Audit history/actions complete; no release at this checkpoint |
 | TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #32 passed 9/9 and merged at exact main a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b; recoverable Desktop Continuity; no regeneration |
 | TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #34 passed 9/9 and merged at exact main 87619fabe8c9ad7c8db0f5823176fd54cf7a7ae2; recoverable Desktop Prompt/Attempt Evidence and Human-routed next version; no Provider execution |
-| TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PROPOSED | NOT_AUTHORIZED | DEV-3/4 candidate | VFX/generated-media audio policy, non-destructive strip derivative, review/lock lanes and TASK-026 placement-plan UX |
+| TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PRODUCT_PROMOTION_LOCAL_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Existing domain/store/TASK-026 binding promoted into a durable project application and unified Desktop `音声` workspace; focused 64/64 and full WSL2 932/932 PASS. Provider, paid execution, derived-media write, TASK-026 compile and Resolve/Cubase remain unstarted. |
 
 ## Roadmap authority
 

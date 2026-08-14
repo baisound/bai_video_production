@@ -29,6 +29,7 @@ class WorkspaceId(str, Enum):
     CONTINUITY = "CONTINUITY"
     PROMPT_EVIDENCE = "PROMPT_EVIDENCE"
     GENERATION_QUEUE = "GENERATION_QUEUE"
+    AUDIO_WORKSPACE = "AUDIO_WORKSPACE"
 
 
 class CommandCategory(str, Enum):

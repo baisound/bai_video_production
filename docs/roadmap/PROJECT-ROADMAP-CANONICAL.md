@@ -33,7 +33,7 @@
 - TASK-007/010/011/012 + TASK-036: **SHELL_INTEGRATED / NATIVE_VALIDATED / MINIMUM_EDITING_PRODUCT_MVP_PASS**; stable Release `v0.20.1`
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
-- R4 current boundary: TASK-013 restart-safe execution control and exact local/free ComfyUI adapter are **HOSTED_CLOSED**; incident-derived safe-runtime launch-flag hardening is **PASS**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
+- R4 current boundary: TASK-013 local/free ComfyUI readiness is **HOSTED_CLOSED**; TASK-041 Audio Workspace Product promotion is **LOCAL_PASS / HOSTED_PENDING**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
 - Hardening base main: `21228d15e207fb76c5367c28968430789f682885`; the containing Pull Request determines the next exact main. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
@@ -110,7 +110,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
-| 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-3/4候補 | PROPOSED / NOT AUTHORIZED |
+| 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION LOCAL PASS / HOSTED PENDING |
 
 ## 6. Namespace Collision Resolution
 
@@ -173,7 +173,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-013 native H3 completion: **PARKED_TO_SAFE_RUNTIME_REVIEW**; automatic replay prohibited
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
-- TASK-041 Audio Workspace: **PROPOSED / NOT AUTHORIZED**
+- TASK-041 Audio Workspace: **PRODUCT PROMOTION LOCAL PASS / HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -870,3 +870,22 @@ stability under generation load, a third native attempt, Candidate/Audit
 binding, TASK-013 completion or R4 completion. The previous uncertain prompt
 remains non-replayable, native H3 remains `PARKED_TO_SAFE_RUNTIME_REVIEW`, and
 stable release remains `v0.20.1`.
+
+## Addendum XXXVII — TASK-041 Audio Workspace Product Promotion Local Gate
+
+BAI Development OS Autonomous Queue parked TASK-013 native H3 and TASK-014 paid
+Owner Narration while selecting the independent TASK-041 Product promotion.
+The existing Audio domain, crash-safe Store, Human placement-decision service
+and TASK-026 binding were promoted rather than recreated.
+
+The Product now has a project-scoped Audio Workspace application, exact
+Production/audio snapshot binding, serialized CAS, one-shot placement and Human
+decision confirmation, LOCK-only ACCEPT and a unified Desktop `音声` workspace
+composed by the trusted launcher. Only accepted/locked SE/BGM/NARRATION
+Candidates can enter placement review and Slot role mismatches fail closed.
+
+Focused TASK-041/TASK-036 regression passes `64 / 64`; full WSL2 regression
+passes `932 / 932`; compileall and embedded JavaScript syntax pass. No Provider,
+paid request, derived-media byte write, TASK-026 compile, Resolve/Cubase
+mutation, Tag or Release occurred. Hosted checks, exact main merge and branch
+cleanup remain before formal closure. Stable release remains `v0.20.1`.

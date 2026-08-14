@@ -353,6 +353,34 @@ class Task027GenerationQueueApplication:
             "candidate_created": False, "resolve_mutation_started": False,
         }
 
+    def require_current_entry(self, *, queue_entry_id: str) -> dict[str, Any]:
+        """Re-derive one stored entry from every current upstream source.
+
+        Queue Evidence is immutable, but execution consumers must not treat an
+        old admission as current after LOCK/STALE, Feasibility, Continuity,
+        Prompt/Profile or Approved Plan state changes.
+        """
+        queue = self._load()
+        entry = next((item for item in queue["entries"] if item["queue_entry_id"] == queue_entry_id), None)
+        if entry is None:
+            raise ProductError("ERR_QUEUE_ENTRY_NOT_FOUND", "Generation Queue entry does not exist", ProductErrorCategory.STATE)
+        current = self._derive(
+            prompt_id=entry["prompt_id"],
+            prompt_version=entry["prompt_version"],
+            queue_revision=entry["queue_revision"],
+        )
+        if current != entry:
+            raise ProductError(
+                "ERR_QUEUE_ENTRY_STALE",
+                "Generation Queue entry no longer matches current Product Evidence",
+                ProductErrorCategory.AUTHORIZATION,
+                details={"queue_entry_id": queue_entry_id},
+            )
+        return {
+            "queue_snapshot_sha256": queue["queue_snapshot_sha256"],
+            "entry": entry,
+        }
+
     def prepare_enqueue(
         self, *, prompt_id: str, prompt_version: int, expected_queue_snapshot_sha256: str,
         expected_upstream_snapshots: Mapping[str, str],

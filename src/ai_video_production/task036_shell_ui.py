@@ -27,6 +27,7 @@ from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
+from .creative_generation_execution_application import Task013CreativeGenerationExecutionApplication
 
 
 HTML = r'''<!doctype html>
@@ -97,6 +98,9 @@ document.querySelector('#chooseProjectButton').addEventListener('click',()=>choo
 document.querySelector('#chooseMediaButton').addEventListener('click',()=>chooseAndReport('choose_media_source','メディア'));
 document.querySelector('#chooseHandoffButton').addEventListener('click',()=>chooseAndReport('choose_handoff_folder','保存先'));
 function applyAccessibility(){const main=document.querySelector('main.viewer');if(main){main.id='editingCanvas';main.setAttribute('aria-label','映像プレビュー');main.tabIndex=0}const timeline=document.querySelector('section.timeline');if(timeline){timeline.setAttribute('role','region');timeline.setAttribute('aria-label','編集タイムライン')}const labels={keepButton:'候補を残す',cutButton:'候補をカットする',approvePlanButton:'編集プランを承認する'};for(const [id,label] of Object.entries(labels)){document.querySelector('#'+id)?.setAttribute('aria-label',label)}}
+async function prepareLocalGenerationExecution(model,item){const control=model.execution_control;const prepared=await call('generation_execution_prepare',{queue_entry_id:item.queue_entry_id,expected_queue_snapshot_sha256:control.queue_snapshot_sha256,expected_execution_snapshot_sha256:control.execution_snapshot_sha256});if(!prepared)return;const ok=window.confirm(`LOCAL Providerを実行しますか？\nScene/Slot: ${prepared.scene_id} / ${prepared.slot_id}\nRoute: ${prepared.route_id} / ${prepared.model_id}\nCost: ${prepared.cost_class}\n\nDISPATCHING後に中断しても自動再実行しません。有料Providerは使用しません。`);if(ok){await call('generation_execution_apply',{confirmation_id:prepared.confirmation_id});renderGenerationQueue(await call('generation_queue_snapshot'))}}
+const renderGenerationQueueAdmission=renderGenerationQueue;
+renderGenerationQueue=function(model){renderGenerationQueueAdmission(model);if(!model?.available)return;const control=model.execution_control,host=document.querySelector('#generationQueueContent'),summary=document.querySelector('#generationQueueSummary'),boundary=host.querySelector('.planning-warning');if(!control?.available){const unavailable=document.createElement('div');unavailable.className='production-meta planning-warning';unavailable.textContent='Local execution adapter is not configured. Admission Evidence remains non-executable.';host.append(unavailable);return}summary.textContent=`Admission ${model.entry_count} / Local execution ${control.latest_executions?.length||0}`;if(boundary)boundary.textContent='R4 local execution controlは、明示確認されたLOCAL_FREE_AIだけを実行します。有料Provider、Budget予約、Candidate作成、自動再生成、Resolve/Cubase操作は行いません。';if(control.recovery?.required){const recovery=document.createElement('div');recovery.className='audit-recovery';recovery.textContent='RECOVERY_REQUIRED: 中断したlocal dispatchは自動再実行しません。';host.append(recovery)}for(const item of control.available_queue_entries||[]){const card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`LOCAL EXECUTION READY · ${item.scene_id} / ${item.slot_id}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`${item.queue_entry_id}\nPrompt: ${item.prompt_id} v${item.prompt_version}\nPrompt body: private / hash-verified`;const button=document.createElement('button');button.className='action';button.textContent='Local Provider実行を確認';button.disabled=!!control.recovery?.required;button.addEventListener('click',()=>prepareLocalGenerationExecution(model,item));card.append(title,meta,button);host.append(card)}for(const event of control.latest_executions||[]){const card=document.createElement('section');card.className='planning-card';card.textContent=`${event.execution_id} · ${event.state} · ${event.route_id} / ${event.model_id}`;host.append(card)}}
 applyAccessibility();window.addEventListener('pywebviewready',refresh);setTimeout(refresh,300);
 </script></body></html>'''
 
@@ -122,6 +126,7 @@ class Task036ShellBridge:
         continuity_application: Task039ContinuityApplication | None = None,
         prompt_evidence_application: Task040PromptEvidenceApplication | None = None,
         generation_queue_application: Task027GenerationQueueApplication | None = None,
+        generation_execution_application: Task013CreativeGenerationExecutionApplication | None = None,
     ) -> None:
         if application is not None and application.shell is not service:
             raise ValueError("integrated application must use the supplied Shell service")
@@ -146,6 +151,7 @@ class Task036ShellBridge:
         self.continuity_application = continuity_application
         self.prompt_evidence_application = prompt_evidence_application
         self.generation_queue_application = generation_queue_application
+        self.generation_execution_application = generation_execution_application
 
     def _current_application(self) -> Task036EditingApplication | None:
         if self.application is not None:
@@ -664,7 +670,10 @@ class Task036ShellBridge:
         self._empty_args(args, "Generation Queue snapshot")
         if self.generation_queue_application is None:
             return {"available": False}
-        return {"available": True, **self.generation_queue_application.snapshot()}
+        execution = {"available": False}
+        if self.generation_execution_application is not None:
+            execution = {"available": True, **self.generation_execution_application.snapshot()}
+        return {"available": True, **self.generation_queue_application.snapshot(), "execution_control": execution}
 
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:
         required = {"prompt_id", "prompt_version", "expected_queue_snapshot_sha256", "expected_upstream_snapshots"}
@@ -687,6 +696,32 @@ class Task036ShellBridge:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation Queue apply request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_queue_application().apply_enqueue(confirmation_id=args["confirmation_id"])
+
+    def _require_generation_execution_application(self) -> Task013CreativeGenerationExecutionApplication:
+        if self.generation_execution_application is None:
+            raise ProductError("ERR_TASK013_GENERATION_EXECUTION_NOT_BOUND", "Local generation execution is not bound to this Shell", ProductErrorCategory.STATE)
+        return self.generation_execution_application
+
+    def generation_execution_snapshot(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Generation execution snapshot")
+        if self.generation_execution_application is None:
+            return {"available": False}
+        return {"available": True, **self.generation_execution_application.snapshot()}
+
+    def generation_execution_prepare(self, args: Any) -> dict[str, Any]:
+        required = {"queue_entry_id", "expected_queue_snapshot_sha256", "expected_execution_snapshot_sha256"}
+        if not isinstance(args, dict) or set(args) != required or not all(isinstance(args[name], str) for name in required):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution preparation request is invalid", ProductErrorCategory.VALIDATION)
+        return self._require_generation_execution_application().prepare_execution(
+            queue_entry_id=args["queue_entry_id"],
+            expected_queue_snapshot_sha256=args["expected_queue_snapshot_sha256"],
+            expected_execution_snapshot_sha256=args["expected_execution_snapshot_sha256"],
+        )
+
+    def generation_execution_apply(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution apply request is invalid", ProductErrorCategory.VALIDATION)
+        return self._require_generation_execution_application().apply_execution(confirmation_id=args["confirmation_id"])
 
     def review_snapshot(self, _args: Any = None) -> dict[str, Any]:
         application = self._current_application()

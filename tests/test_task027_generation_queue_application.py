@@ -135,9 +135,28 @@ def test_queue_entry_is_one_shot_restart_durable_and_execution_free(tmp_path: Pa
     assert saved["provider_execution_started"] is False
     reopened = app(tmp_path, token="next").snapshot()
     assert reopened["entries"][0]["prompt_id"] == "prompt-1"
+    assert reopened["entries"][0] == value.require_current_entry(
+        queue_entry_id=reopened["entries"][0]["queue_entry_id"],
+    )["entry"]
     with pytest.raises(ProductError) as exc:
         value.apply_enqueue(confirmation_id="queue-confirm")
     assert exc.value.code == "ERR_QUEUE_CONFIRMATION_INVALID"
+
+
+def test_execution_consumer_rejects_stored_queue_entry_after_upstream_drift(tmp_path: Path):
+    value = app(tmp_path)
+    state = value.snapshot()
+    value.prepare_enqueue(
+        prompt_id="prompt-1", prompt_version=1,
+        expected_queue_snapshot_sha256=state["queue_snapshot_sha256"],
+        expected_upstream_snapshots=expected(value),
+    )
+    saved = value.apply_enqueue(confirmation_id="queue-confirm")
+    queue_entry_id = saved["entries"][0]["queue_entry_id"]
+    value.prompt_evidence_application.value["prompt_snapshot_sha256"] = H("9")
+    with pytest.raises(ProductError) as exc:
+        value.require_current_entry(queue_entry_id=queue_entry_id)
+    assert exc.value.code == "ERR_QUEUE_ENTRY_STALE"
 
 
 def test_queue_apply_rejects_upstream_change_after_confirmation(tmp_path: Path):

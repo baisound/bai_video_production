@@ -107,6 +107,9 @@ _COMMAND_SPECS: dict[str, ShellCommandSpec] = {
     "generation_queue.snapshot": ShellCommandSpec("generation_queue.snapshot", CommandCategory.READ_ONLY),
     "generation_queue.prepare": ShellCommandSpec("generation_queue.prepare", CommandCategory.READ_ONLY),
     "generation_queue.apply": ShellCommandSpec("generation_queue.apply", CommandCategory.HUMAN_FINAL_AUTHORITY),
+    "generation_execution.snapshot": ShellCommandSpec("generation_execution.snapshot", CommandCategory.READ_ONLY),
+    "generation_execution.prepare": ShellCommandSpec("generation_execution.prepare", CommandCategory.READ_ONLY),
+    "generation_execution.apply": ShellCommandSpec("generation_execution.apply", CommandCategory.EXTERNAL_MUTATION),
 }
 
 

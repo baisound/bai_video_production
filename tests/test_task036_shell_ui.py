@@ -128,7 +128,7 @@ def test_html_has_keyboard_focus_and_screen_reader_landmarks():
     assert ".main{grid-template-columns:1fr}" in HTML
 
 
-def test_html_exposes_generation_queue_admission_without_execution_command():
+def test_html_exposes_queue_admission_and_separate_bounded_local_execution_control():
     assert 'data-w="GENERATION_QUEUE"' in HTML
     assert 'id="generationQueueWorkspace"' in HTML
     assert "generation_queue_snapshot" in HTML
@@ -136,6 +136,10 @@ def test_html_exposes_generation_queue_admission_without_execution_command():
     assert "generation_queue_apply" in HTML
     assert "EXECUTION_NOT_AUTHORIZED" in HTML
     assert "generation_queue_dispatch" not in HTML
+    assert "generation_execution_prepare" in HTML
+    assert "generation_execution_apply" in HTML
+    assert "LOCAL_FREE_AI" in HTML
+    assert "RECOVERY_REQUIRED" in HTML
     assert "Provider呼出し・課金・Budget予約・Candidate作成" in HTML
 
 
@@ -585,4 +589,42 @@ def test_bridge_native_dialog_rejects_unbound_or_extra_fields():
     assert exc.value.code == "ERR_TASK036_NATIVE_DIALOG_NOT_BOUND"
     with pytest.raises(ProductError) as exc:
         bridge.choose_project_folder({"path": "C:/unsafe"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority_separate():
+    class QueueStub:
+        def snapshot(self):
+            return {"project_id": "project-1", "queue_snapshot_sha256": "sha256:" + "1" * 64, "entries": []}
+
+    class ExecutionStub:
+        def __init__(self): self.calls = []
+        def snapshot(self):
+            return {"project_id": "project-1", "execution_snapshot_sha256": "sha256:" + "2" * 64, "recovery": {"required": False}}
+        def prepare_execution(self, **values):
+            self.calls.append(("prepare", values)); return {"confirmation_id": "confirm-local"}
+        def apply_execution(self, **values):
+            self.calls.append(("apply", values)); return {"events": [{"state": "COMPLETED"}]}
+
+    execution = ExecutionStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.20.1"),
+        generation_queue_application=QueueStub(),
+        generation_execution_application=execution,
+    )
+    combined = bridge.generation_queue_snapshot({})
+    assert combined["execution_control"]["available"] is True
+    prepared = bridge.generation_execution_prepare({
+        "queue_entry_id": "QUEUE-1",
+        "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,
+        "expected_execution_snapshot_sha256": "sha256:" + "2" * 64,
+    })
+    assert prepared["confirmation_id"] == "confirm-local"
+    result = bridge.generation_execution_apply({"confirmation_id": "confirm-local"})
+    assert result["events"][0]["state"] == "COMPLETED"
+    assert [name for name, _ in execution.calls] == ["prepare", "apply"]
+    with pytest.raises(ProductError) as exc:
+        bridge.generation_execution_prepare({
+            "queue_entry_id": "QUEUE-1", "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,
+        })
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"

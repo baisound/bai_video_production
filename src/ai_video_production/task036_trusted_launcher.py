@@ -37,6 +37,7 @@ from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
+from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
 
@@ -436,6 +437,12 @@ def build_trusted_launch(
             project_root=configuration.project_root,
             project_id=configuration.project_id,
             production_control=production_control,
+        ),
+        prompt_evidence_application=Task040PromptEvidenceApplication(
+            project_root=configuration.project_root,
+            project_id=configuration.project_id,
+            production_control=production_control,
+            audit_application=audit_application,
         ),
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

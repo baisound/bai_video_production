@@ -33,7 +33,7 @@
     },
     "GenerationAttempt": {
       "type": "object",
-      "required": ["generation_job_id", "slot_id", "prompt_id", "prompt_version", "prompt_sha256", "provider_id", "model_id", "strategy_level", "result", "failure_codes"],
+      "required": ["generation_job_id", "slot_id", "prompt_id", "prompt_version", "prompt_sha256", "provider_id", "model_id", "provider_profile_version", "strategy_level", "result", "failure_codes"],
       "properties": {
         "generation_job_id": {"$ref": "#/$defs/Id"},
         "slot_id": {"$ref": "#/$defs/Id"},

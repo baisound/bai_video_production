@@ -26,6 +26,7 @@ def prompt_registry(*, result=GenerationResult.PASS, output_candidate_id="candid
     r.add_attempt(GenerationAttempt(
         "job-1", "slot-1", "prompt-1", 1, PROMPT_SHA, "provider-1", "model-1",
         RegenerationStrategy.TEXT_PROMPT, result, (), output_candidate_id=output_candidate_id,
+        provider_profile_version="v1",
     ))
     return r
 

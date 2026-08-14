@@ -193,6 +193,22 @@ def test_html_promotes_continuity_without_regeneration_or_direct_override_shortc
     assert "innerHTML" not in HTML
 
 
+def test_html_promotes_prompt_evidence_without_provider_or_candidate_creation_shortcut():
+    assert 'data-w="PROMPT_EVIDENCE"' in HTML
+    assert 'id="promptEvidenceWorkspace"' in HTML
+    assert "prompt_evidence_snapshot" in HTML
+    assert "prompt_evidence_prepare_prompt" in HTML
+    assert "prompt_evidence_apply_prompt" in HTML
+    assert "prompt_evidence_prepare_attempt" in HTML
+    assert "prompt_evidence_apply_attempt" in HTML
+    assert "prompt_evidence_prepare_regeneration" in HTML
+    assert "prompt_evidence_apply_regeneration" in HTML
+    assert "prompt_evidence_apply_recovery" in HTML
+    assert "Provider実行・課金・Candidate作成・自動再生成・Human判断は行いません" in HTML
+    assert "prompt_evidence_execute" not in HTML
+    assert "innerHTML" not in HTML
+
+
 def test_production_bridge_is_unavailable_until_trusted_project_binding():
     service = ShellApplicationService(product_version="0.19.0")
     bridge = Task036ShellBridge(service)
@@ -449,6 +465,54 @@ def test_continuity_bridge_routes_only_exact_recoverable_contracts():
             "edge_id": True, "from_slot_id": "slot-end", "to_slot_id": "slot-start",
             "boundary_type": "DIRECT_CONTINUATION", "character_contract_refs": [],
             "space_contract_refs": [], **hashes,
+        })
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_prompt_evidence_bridge_routes_exact_import_only_contracts():
+    class PromptEvidenceStub:
+        def __init__(self): self.calls = []
+        def snapshot(self): return {"project_id": "project-1", "prompts": [], "recovery": {"required": False}}
+        def prepare_prompt(self, **values): self.calls.append(("prompt-prepare", values)); return {"confirmation_id": "p"}
+        def apply_prompt(self, **values): self.calls.append(("prompt-apply", values)); return {"saved": True}
+        def prepare_attempt(self, **values): self.calls.append(("attempt-prepare", values)); return {"confirmation_id": "a"}
+        def apply_attempt(self, **values): self.calls.append(("attempt-apply", values)); return {"saved": True}
+        def prepare_regeneration(self, **values): self.calls.append(("regen-prepare", values)); return {"confirmation_id": "r"}
+        def apply_regeneration(self, **values): self.calls.append(("regen-apply", values)); return {"saved": True}
+        def apply_recovery(self, **values): self.calls.append(("recovery", values)); return {"saved": True}
+
+    app = PromptEvidenceStub()
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.20.1"), prompt_evidence_application=app)
+    assert bridge.prompt_evidence_snapshot({})["available"] is True
+    hashes = {"expected_prompt_snapshot_sha256": "sha256:" + "1" * 64, "expected_production_snapshot_sha256": "sha256:" + "2" * 64}
+    prompt = bridge.prompt_evidence_prepare_prompt({
+        "prompt_id": "prompt-1", "prompt_version": 1, "purpose": "frame", "scene_id": "scene-1",
+        "slot_id": "slot-1", "body_ref": "project-private://p", "body_sha256": "sha256:" + "3" * 64,
+        "provider_profile_id": "profile", "provider_profile_version": "v1", "input_asset_hashes": [],
+        "keep_conditions": ["keep"], **hashes,
+    })
+    bridge.prompt_evidence_apply_prompt({"confirmation_id": prompt["confirmation_id"]})
+    attempt = bridge.prompt_evidence_prepare_attempt({
+        "generation_job_id": "job-1", "slot_id": "slot-1", "prompt_id": "prompt-1", "prompt_version": 1,
+        "provider_id": "provider", "model_id": "model", "strategy_level": 0, "result": "FAIL",
+        "failure_codes": ["DEPTH"], "output_candidate_id": None, "parent_attempt_id": None,
+        "cost": None, "latency_ms": 10, **hashes,
+    })
+    bridge.prompt_evidence_apply_attempt({"confirmation_id": attempt["confirmation_id"]})
+    regen = bridge.prompt_evidence_prepare_regeneration({
+        "candidate_id": "candidate-1", "new_body_sha256": "sha256:" + "4" * 64,
+        "new_body_ref": "project-private://p/v2", "provider_profile_id": None,
+        "provider_profile_version": None, "input_asset_hashes": None, "keep_conditions": None,
+        "repeated_failure_threshold": 2, "expected_audit_snapshot_sha256": "sha256:" + "5" * 64, **hashes,
+    })
+    bridge.prompt_evidence_apply_regeneration({"confirmation_id": regen["confirmation_id"]})
+    bridge.prompt_evidence_apply_recovery({"action": "COMPLETE"})
+    assert [name for name, _ in app.calls] == ["prompt-prepare", "prompt-apply", "attempt-prepare", "attempt-apply", "regen-prepare", "regen-apply", "recovery"]
+    with pytest.raises(ProductError) as exc:
+        bridge.prompt_evidence_prepare_attempt({
+            "generation_job_id": "job", "slot_id": "slot", "prompt_id": "prompt", "prompt_version": True,
+            "provider_id": "p", "model_id": "m", "strategy_level": 0, "result": "FAIL", "failure_codes": [],
+            "output_candidate_id": None, "parent_attempt_id": None, "cost": None, "latency_ms": None, **hashes,
         })
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 

@@ -28,10 +28,13 @@ def state(*, prior_same_failure: bool = False):
         prompts.add_attempt(GenerationAttempt(
             "job-prior", "slot-1", "prompt-1", 1, H("1"), "provider", "model",
             RegenerationStrategy.TEXT_PROMPT, GenerationResult.FAIL, ("DEPTH_REVERSED",),
+            provider_profile_version="v1",
         ))
     prompts.add_attempt(GenerationAttempt(
         "job-current", "slot-1", "prompt-1", 1, H("1"), "provider", "model",
         RegenerationStrategy.TEXT_PROMPT, GenerationResult.PASS, (), "candidate-1",
+        parent_attempt_id="job-prior" if prior_same_failure else None,
+        provider_profile_version="v1",
     ))
 
     audits = CandidateAuditRegistry()

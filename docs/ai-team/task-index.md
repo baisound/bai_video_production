@@ -31,7 +31,7 @@
 | TASK-037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | COMPLETE_R2_PRODUCT_PROMOTION | COMPLETED_WITH_OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | PR #24 passed 9/9 and merged at exact main 045bd7ed; durable Application Service and Desktop Production Control workspace complete; no release at this checkpoint |
 | TASK-038 | Audit Workspace / Candidate Quality Loop | COMPLETE_R2_PRODUCT_PROMOTION | COMPLETED_WITH_OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | PR #26 passed 9/9 and merged at exact main 9a999645; durable two-store Human decision/recovery and user-facing Audit history/actions complete; no release at this checkpoint |
 | TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #32 passed 9/9 and merged at exact main a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b; recoverable Desktop Continuity; no regeneration |
-| TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | PROPOSED | NOT_AUTHORIZED | DEV-4 candidate | Prompt Entity/Version, provider profile, input/output identity, parent Candidate, Keep Conditions and failure-driven regeneration routes |
+| TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | R3_LOCAL_GATE_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | 885/885 full and 84/84 focused PASS; recoverable Prompt/Production Evidence, Human-routed next version and Desktop workspace; no Provider execution |
 | TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PROPOSED | NOT_AUTHORIZED | DEV-3/4 candidate | VFX/generated-media audio policy, non-destructive strip derivative, review/lock lanes and TASK-026 placement-plan UX |
 
 ## Roadmap authority
@@ -40,7 +40,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038, TASK-013 R3 Product promotion, TASK-039 R3 Product promotion and the bounded TASK-027 Planning Workspace minimum are completed. TASK-040 Prompt Registry / Generation Evidence is next and must begin with a current-state audit on a new dedicated branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038, TASK-013 R3 Product promotion, TASK-039 R3 Product promotion and the bounded TASK-027 Planning Workspace minimum are completed. TASK-040 Prompt Registry / Generation Evidence passes its local Product Gate and awaits hosted closure on its dedicated branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

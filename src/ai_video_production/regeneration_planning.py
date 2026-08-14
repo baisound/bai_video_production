@@ -160,20 +160,28 @@ class HumanRegenerationPlanner:
         # still a Visual/Human failure, so it participates in the escalation
         # threshold even though GenerationAttempt.result is PASS.
         streak = 1
-        history = list(prompts.slot_attempts(candidate.slot_id))
-        try:
-            parent_index = next(i for i, item in enumerate(history) if item.generation_job_id == parent.generation_job_id)
-        except StopIteration as exc:  # defensive: registry lookup above should imply membership
-            raise ProductError(
-                "ERR_REGENERATION_PARENT_ATTEMPT_NOT_IN_SLOT_HISTORY",
-                "Parent generation Attempt is missing from Slot history",
-                ProductErrorCategory.DATA_INTEGRITY,
-            ) from exc
         target = set(failure_codes)
-        for previous in reversed(history[:parent_index]):
+        ancestor_id = parent.parent_attempt_id
+        seen = {parent.generation_job_id}
+        while ancestor_id is not None:
+            if ancestor_id in seen:
+                raise ProductError(
+                    "ERR_REGENERATION_PARENT_GRAPH_CYCLE",
+                    "Generation Attempt parent lineage contains a cycle",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            seen.add(ancestor_id)
+            previous = prompts.attempts.get(ancestor_id)
+            if previous is None or previous.slot_id != candidate.slot_id:
+                raise ProductError(
+                    "ERR_REGENERATION_PARENT_LINEAGE_BROKEN",
+                    "Generation Attempt parent lineage is missing or crosses Slot scope",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
             if not target.intersection(previous.failure_codes):
                 break
             streak += 1
+            ancestor_id = previous.parent_attempt_id
 
         next_level = int(parent.strategy_level)
         if streak >= repeated_failure_threshold:

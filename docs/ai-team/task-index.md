@@ -33,7 +33,7 @@
 | TASK-039 | Continuity Map / Boundary Integrity & Stale Propagation | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #32 passed 9/9 and merged at exact main a0bd5fb54c97dd13f4c20d059be327dc5b8d6e5b; recoverable Desktop Continuity; no regeneration |
 | TASK-040 | Prompt Registry / Generation Evidence & Regeneration Routing | COMPLETED_R3_PRODUCT_PROMOTION | CLOSED | DEV-4 | PR #34 passed 9/9 and merged at exact main 87619fabe8c9ad7c8db0f5823176fd54cf7a7ae2; recoverable Desktop Prompt/Attempt Evidence and Human-routed next version; no Provider execution |
 | TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PRODUCT_PROMOTION_HOSTED_CLOSED_FUTURE_SLICES_REMAIN | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Durable project application and unified Desktop `音声` workspace passed focused 64/64, full WSL2 932/932 and PR #47 hosted 9/9; exact main merge 8dd6434a. Provider, paid execution, derived-media write, TASK-026 compile and Resolve/Cubase remain unstarted. |
-| TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_3_IMPLEMENTATION_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | Design PR #58 passed 9/9 and merged at exact main c78ed014; cadence 1/2 cleanup passed. Fresh-main AUTONOMY selected P-V6-3 Implementation. Queue persistence, Prompt compilation, Provider/Model projection and Quick intent/CAS/adoption are local PASS; hosted implementation closure is pending. |
+| TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_3_HOSTED_CLOSED_CLOSURE_SYNC_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | Implementation PR #59 passed 9/9 and merged at exact main 7ac291f1; cadence 2/2 cleanup passed. Fresh-main AUTONOMY selected docs-only P-V6-3 Closure Sync; P-V6-4 Design is dependency-waiting. |
 
 ## Roadmap authority
 
@@ -41,7 +41,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control, its exact local/free ComfyUI adapter and the bounded TASK-041 Audio Workspace Product promotion are hosted-closed. TASK-042 is the current maximum-priority route before any Native H3 resume. P-V6-2 is hosted-closed; P-V6-3 Design is hosted-closed at exact main `c78ed014`, and fresh-main AUTONOMY selected its Implementation, now local PASS/hosted pending as cadence merge `2 / 2`. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control, its exact local/free ComfyUI adapter and the bounded TASK-041 Audio Workspace Product promotion are hosted-closed. TASK-042 is the current maximum-priority route before any Native H3 resume. P-V6-3 implementation is hosted-closed at exact main `7ac291f1`; docs-only Closure Sync is local PASS/hosted pending as new cadence merge `1 / 2`, with P-V6-4 Design dependency-waiting. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

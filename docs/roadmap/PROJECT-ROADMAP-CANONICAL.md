@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.42
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.47
 - Project: `ai-video-production`
 - Date: 2026-08-14
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -33,8 +33,8 @@
 - TASK-007/010/011/012 + TASK-036: **SHELL_INTEGRATED / NATIVE_VALIDATED / MINIMUM_EDITING_PRODUCT_MVP_PASS**; stable Release `v0.20.1`
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
-- R4 current boundary: TASK-013 local/free ComfyUI readiness is **HOSTED_CLOSED**; TASK-041 Audio Workspace Product promotion is **LOCAL_PASS / HOSTED_PENDING**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Hardening base main: `21228d15e207fb76c5367c28968430789f682885`; the containing Pull Request determines the next exact main. Stable Product release remains `v0.20.1`
+- R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
+- Current insertion: TASK-042 V6 Product Workflow Reconciliation is the Owner-maximum route before Native H3 resume. Audit/design baseline main is `8d055773f3966e301badff28e565ffcf26578721`. Stable Product release remains `v0.20.1`
 
 ## 3. MVP定義
 
@@ -110,7 +110,8 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
 | 040 | Prompt Registry / Generation Evidence & Regeneration Routing | Prompt/Attempt lineage and Human regeneration planning | 037,038,039 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
-| 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION LOCAL PASS / HOSTED PENDING |
+| 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
+| 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate, Unified Shell/NLE/Export | 027,036..041,013,028,032..034 | DEV-4 | ROADMAP PROMOTION PENDING / CURRENT OWNER MAXIMUM |
 
 ## 6. Namespace Collision Resolution
 
@@ -173,7 +174,8 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-013 native H3 completion: **PARKED_TO_SAFE_RUNTIME_REVIEW**; automatic replay prohibited
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
 - TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
-- TASK-041 Audio Workspace: **PRODUCT PROMOTION LOCAL PASS / HOSTED PENDING**
+- TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
+- TASK-042 V6 Product Workflow: **CURRENT OWNER MAXIMUM / P-V6-0 ROADMAP PROMOTION**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -905,3 +907,40 @@ Provider, spend credits, create or strip media bytes, compile TASK-026, write
 Resolve, open or mutate Cubase, execute TASK-014 narration, satisfy Native H3,
 complete all future TASK-041 slices or close R4 overall. Stable release remains
 `v0.20.1`; no package, Tag or GitHub Release is created at this checkpoint.
+
+## Addendum XXXIX — TASK-042 V6 Product Workflow Reconciliation and Integration
+
+The Owner inserts TASK-042 as the current maximum-priority Product route before
+any TASK-013 Native H3 resumption decision. A fresh clone verified live main
+`8d055773f3966e301badff28e565ffcf26578721`, package `0.20.1`, no active prior
+Consumer Task, TASK-041 hosted closure and the preserved TASK-013 uncertain
+execution/no-replay boundary. The older TASK007 checkout and its untracked
+native Evidence remain untouched.
+
+TASK-042 is a new cross-cutting requirement set and does not reopen historical
+TASK-036..041 completion. It reuses Planning, Candidate/LOCK/STALE, Audit,
+Continuity, Prompt/Attempt, Provider/Model, credential, Audio Placement Review,
+Background Job and Unified Shell foundations. The required major migration is
+Production Blueprint v2 with independently bound Start/End Character 0..N,
+Space 0..1 and Composition 0..1 references. Legacy v1 semantics remain readable
+and are never silently copied into both frames or rebound to an Approved Plan.
+
+The current ordered route is:
+
+```text
+P-V6-0 current-main reconciliation / roadmap / full design
+  -> P-V6-1 versioned Blueprint and frame-binding migration
+  -> P-V6-2 WORLD LOCK / scene-compatible reference integration
+  -> P-V6-3 Visual Prompt / generation / Quick authority
+  -> P-V6-4 Project Timeline audio / narration / BGM / SE / ambience
+  -> P-V6-5 Unified Desktop NLE / navigation / Export Queue
+  -> P-V6-6 native UX / migration / recovery / full regression
+  -> separate Owner decision for TASK-013 Native H3 resume
+```
+
+P-V6-0 changes design and Product Canonicals only. After its all-green PR is
+merged and exact main is verified, P-V6-1A is authorized only for a standalone
+closed Blueprint v2 contract and read-only migration preview. It may not change
+v1 meaning, write a legacy Project, integrate Proposal/GO, add UI, call a
+Provider, resume native generation, perform paid/external operations or select
+a release. Later slices require the previous Gate and new exact Allowed Files.

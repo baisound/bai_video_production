@@ -162,6 +162,20 @@ def test_html_promotes_planning_scene_contract_with_separate_go_and_install():
     assert "innerHTML" not in HTML
 
 
+def test_html_promotes_generation_safety_without_provider_or_human_accept_shortcut():
+    assert 'data-w="GENERATION_SAFETY"' in HTML
+    assert 'id="generationSafetyWorkspace"' in HTML
+    assert "generation_safety_snapshot" in HTML
+    assert "generation_safety_prepare_review" in HTML
+    assert "generation_safety_apply_review" in HTML
+    assert "expected_planning_snapshot_sha256:model.planning_snapshot_sha256" in HTML
+    assert "expected_safety_snapshot_sha256:model.safety_snapshot_sha256" in HTML
+    assert "Provider・課金・Candidate生成は開始しません" in HTML
+    assert "Human ACCEPT" in HTML
+    assert "generation_safety_execute" not in HTML
+    assert "innerHTML" not in HTML
+
+
 def test_production_bridge_is_unavailable_until_trusted_project_binding():
     service = ShellApplicationService(product_version="0.19.0")
     bridge = Task036ShellBridge(service)
@@ -307,6 +321,50 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
     assert planning.installed == {"confirmation_id": "install"}
     with pytest.raises(ProductError) as exc:
         bridge.planning_prepare_go({"proposal_id": "x", "proposal_revision": True, "reference_bindings": [], "cost_ceiling": "1", "rights_warnings_acknowledged": False, "expected_snapshot_sha256": "x"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_generation_safety_bridge_routes_only_exact_two_step_review_contract():
+    class GenerationSafetyStub:
+        def __init__(self):
+            self.prepared = None
+            self.applied = None
+
+        def snapshot(self):
+            return {"project_id": "project-1", "plan_status": "APPROVED", "scenes": []}
+
+        def prepare_feasibility(self, **values):
+            self.prepared = values
+            return {"confirmation_id": "safe-confirm", **values}
+
+        def apply_feasibility(self, **values):
+            self.applied = values
+            return {"saved": True}
+
+    safety = GenerationSafetyStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.20.1"),
+        generation_safety_application=safety,
+    )
+    assert bridge.generation_safety_snapshot({})["available"] is True
+    prepared = bridge.generation_safety_prepare_review({
+        "spec": {"scene_id": "SC01"},
+        "human_reviewed_checks": {"depth_order_valid": "PASS"},
+        "blocking_reasons": [],
+        "expected_planning_snapshot_sha256": "sha256:" + "a" * 64,
+        "expected_safety_snapshot_sha256": "sha256:" + "b" * 64,
+    })
+    assert safety.prepared["blocking_reasons"] == ()
+    assert bridge.generation_safety_apply_review({
+        "confirmation_id": prepared["confirmation_id"],
+        "reviewed_by": "owner",
+    }) == {"saved": True}
+    assert safety.applied == {"confirmation_id": "safe-confirm", "reviewed_by": "owner"}
+    with pytest.raises(ProductError) as exc:
+        bridge.generation_safety_prepare_review({
+            "spec": {}, "human_reviewed_checks": {}, "blocking_reasons": "NONE",
+            "expected_planning_snapshot_sha256": "x", "expected_safety_snapshot_sha256": "y",
+        })
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 

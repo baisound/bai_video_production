@@ -47,6 +47,9 @@ def feasibility():
         "subject_position_exists", "orientation_camera_compatible", "required_visible_coexists",
         "prohibited_change_not_required", "shot_reference_matches_final_camera",
         "reference_roles_valid", "continuity_contract_valid",
+        "task_axis_valid", "depth_order_valid", "occlusion_valid",
+        "furniture_integrity_valid", "room_anchor_integrity_valid",
+        "production_gear_absent", "character_identity_valid",
     )
     return ShotFeasibilityAssessment("SC01", {name: CheckState.PASS for name in names}, "TEST")
 

@@ -35,6 +35,7 @@ from .task036_shell_ui import HTML, Task036ShellBridge
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
+from .generation_safety_application import Task013GenerationSafetyApplication
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
 
@@ -407,20 +408,28 @@ def build_trusted_launch(
         project_root=configuration.project_root,
         project_id=configuration.project_id,
     )
+    planning_application = Task027PlanningApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+        production_control=production_control,
+    )
+    audit_application = Task038AuditApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+    )
     bridge = Task036ShellBridge(
         coordinator.shell,
         native_dialog=dialog,
         pre_edit_runtime=pre_edit,
         workflow_runtime_factory=downstream,
         production_control=production_control,
-        audit_application=Task038AuditApplication(
+        audit_application=audit_application,
+        planning_application=planning_application,
+        generation_safety_application=Task013GenerationSafetyApplication(
             project_root=configuration.project_root,
             project_id=configuration.project_id,
-        ),
-        planning_application=Task027PlanningApplication(
-            project_root=configuration.project_root,
-            project_id=configuration.project_id,
-            production_control=production_control,
+            planning_application=planning_application,
+            audit_application=audit_application,
         ),
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

@@ -43,6 +43,13 @@ def feasibility_pass():
         "required_visible_coexists": CheckState.PASS,
         "prohibited_change_not_required": CheckState.PASS,
         "shot_reference_matches_final_camera": CheckState.PASS,
+        "task_axis_valid": CheckState.PASS,
+        "depth_order_valid": CheckState.PASS,
+        "occlusion_valid": CheckState.PASS,
+        "furniture_integrity_valid": CheckState.PASS,
+        "room_anchor_integrity_valid": CheckState.PASS,
+        "production_gear_absent": CheckState.PASS,
+        "character_identity_valid": CheckState.PASS,
     }
     return ShotFeasibilityGate.assess(spec, human_reviewed_checks=checks)
 

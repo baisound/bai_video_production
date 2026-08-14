@@ -13,6 +13,7 @@ import re
 from typing import Any, Mapping
 
 from .errors import ProductError, ProductErrorCategory
+from .serialization import canonical_json_bytes, sha256_bytes
 
 
 _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,199}")
@@ -63,6 +64,13 @@ _REQUIRED_CHECKS = (
     "shot_reference_matches_final_camera",
     "reference_roles_valid",
     "continuity_contract_valid",
+    "task_axis_valid",
+    "depth_order_valid",
+    "occlusion_valid",
+    "furniture_integrity_valid",
+    "room_anchor_integrity_valid",
+    "production_gear_absent",
+    "character_identity_valid",
 )
 
 
@@ -111,7 +119,7 @@ class SceneGenerationReferenceSpec:
             _id(value, "contract code")
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "spec_version": "1.0.0",
             "task_owner": "TASK-013",
             "scene_id": self.scene_id,
@@ -132,6 +140,8 @@ class SceneGenerationReferenceSpec:
             "start_asset_sha256": self.start_asset_sha256,
             "prohibited_changes": list(self.prohibited_changes),
         }
+        body["reference_spec_sha256"] = sha256_bytes(canonical_json_bytes(body))
+        return body
 
 
 @dataclass(frozen=True, slots=True)
@@ -140,6 +150,7 @@ class ShotFeasibilityAssessment:
     checks: Mapping[str, CheckState]
     decision_source: str
     blocking_reasons: tuple[str, ...] = ()
+    reference_spec_sha256: str | None = None
 
     def __post_init__(self) -> None:
         _id(self.scene_id, "scene_id")
@@ -149,6 +160,8 @@ class ShotFeasibilityAssessment:
             raise ValueError("decision_source must be non-empty")
         for value in self.blocking_reasons:
             _id(value, "blocking_reason")
+        if self.reference_spec_sha256 is not None:
+            _sha(self.reference_spec_sha256, "reference_spec_sha256")
 
     @property
     def status(self) -> AssessmentStatus:
@@ -160,7 +173,7 @@ class ShotFeasibilityAssessment:
         return AssessmentStatus.PASS
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "assessment_version": "1.0.0",
             "task_owner": "TASK-013",
             "scene_id": self.scene_id,
@@ -168,8 +181,11 @@ class ShotFeasibilityAssessment:
             "checks": {key: self.checks[key].value for key in _REQUIRED_CHECKS},
             "decision_source": self.decision_source,
             "blocking_reasons": list(self.blocking_reasons),
+            "reference_spec_sha256": self.reference_spec_sha256,
             "automatic_geometry_proof_claimed": False,
         }
+        body["assessment_sha256"] = sha256_bytes(canonical_json_bytes(body))
+        return body
 
 
 class ShotFeasibilityGate:
@@ -228,6 +244,7 @@ class ShotFeasibilityGate:
             checks,
             "HUMAN_REVIEWED_STRUCTURED_ASSERTION" if human_reviewed_checks is not None else "DETERMINISTIC_CONTRACT_ONLY",
             tuple(dict.fromkeys(reasons)),
+            spec.to_dict()["reference_spec_sha256"],
         )
 
     @staticmethod

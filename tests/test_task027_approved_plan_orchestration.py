@@ -61,6 +61,13 @@ def feasibility() -> ShotFeasibilityAssessment:
             "shot_reference_matches_final_camera": CheckState.PASS,
             "reference_roles_valid": CheckState.PASS,
             "continuity_contract_valid": CheckState.PASS,
+            "task_axis_valid": CheckState.PASS,
+            "depth_order_valid": CheckState.PASS,
+            "occlusion_valid": CheckState.PASS,
+            "furniture_integrity_valid": CheckState.PASS,
+            "room_anchor_integrity_valid": CheckState.PASS,
+            "production_gear_absent": CheckState.PASS,
+            "character_identity_valid": CheckState.PASS,
         },
         "TEST",
     )

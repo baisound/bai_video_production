@@ -6,11 +6,12 @@
 | TASK-002 | Resolve Capability Spike | COMPLETED | COMPLETED WITH AUTHORIZED IMPLEMENTATION | DEV-4 / score 22 | Resolve 21.0.2.4 sandbox mutation PASS; WSL2→Windows authenticated HTTP/restart PASS; Final IPC ADR accepted |
 | TASK-003 | Asset Registry / Ingest / Path Resolver | COMPLETED | COMPLETED WITH AUTHORIZED IMPLEMENTATION | DEV-4 / score 33 | Package 0.3.0; secure canonical source ingest, rights/checksum, Path Resolver, source-manifest |
 | TASK-004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | CAPABILITY_VERIFIED_AWAITING_LIVE_BEHAVIORAL_EVIDENCE | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 / score 25 | Package 0.4.7; 250 tests; ComfyUI + Audacity/OpenVINO capability PASS; Attempt 07 failed before Audacity mutation because Windows low-level media ingest lacked `O_BINARY`; corrected and regression-pinned; Noise Suppression + 2-stem behavioral Evidence rerun pending; 4-stem fails closed on verified runtime because mode is UI-only |
-| TASK-005,008,009,013,015..021 | Remaining product roadmap tasks | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Canonical identities defined in project roadmap |
+| TASK-005,008,009,015..021 | Remaining product roadmap tasks | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Canonical identities defined in project roadmap |
 | TASK-007 | Candidate Clip Graph / Cut Plan | IMPLEMENTED_AUTOMATED_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Deterministic candidate graph + human CUT/KEEP review + second-stage plan approval; TASK-036 W2 Edit Workspace PASS; no automatic external write |
 | TASK-010 | Resolve Assembly MVP | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Real Resolve 21 assembly/linked A/V/idempotency/conflict/edit-aware subtitle semantics and TASK-036 W2 Shell route PASS |
 | TASK-011 | Render QA / Loudness | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3/4 | Real Resolve render queue/artifact/video/audio/duration/LUFS/true-peak QA and TASK-036 W2 Shell route PASS; path-free report |
 | TASK-012 | Manual Handoff / Cubase | NATIVE_VALIDATED_SHELL_INTEGRATED | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Real deterministic EDITOR_WORK, Cubase 13 48 kHz PCM return and TASK-036 W2 Shell route PASS; no automatic Cubase project conversion claim |
+| TASK-013 | Shot Feasibility / Visual Compliance / Creative Orchestration | R3_PRODUCT_PROMOTION_LOCAL_GATE_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Exact Approved-Plan-bound durable Generation Safety review and Visual Compliance -> TASK-038 Audit pass locally at 854 tests; no Provider/paid/NLE execution |
 | TASK-006 | ASR / Transcript / Subtitle | SLICE_D_RELEASED_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Native FasterWhisper, Subtitle Workspace, resumable transcription, Resolve subtitle handoff and TASK-036 W2 Shell route PASS |
 | TASK-014 | Voice TTS / Owner Narration | DESIGN_RECORDED_ADAPTER_FOUNDATION_EXISTS | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Existing ElevenLabs Pro owner-trained voice; private Voice Profile; read-only ownership/capability probe; timed TTS and 48 kHz Asset flow planned; paid probe remains explicit |
 | TASK-023 | FasterWhisper Fast Local Provider | COMPLETE_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Existing TASK-006 provider is canonical; deterministic identity/diagnostic CLI retained; TASK-036 W2 local ASR Shell route PASS; no duplicate provider or ASR semantic change |
@@ -39,7 +40,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038 and the bounded TASK-027 Planning Workspace minimum are completed. R2 Product promotion is closed. The next route is an R3 current-state audit followed by TASK-013 Shot Feasibility / Visual Compliance on a dedicated branch. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, TASK-037, TASK-038 and the bounded TASK-027 Planning Workspace minimum are completed. R2 Product promotion is closed. TASK-013 R3 Product promotion passes its local Gate and awaits hosted PR closure. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

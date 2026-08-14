@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_20_1_RELEASED_TASK013_R3_LOCAL_GATE_PASS_HOSTED_PENDING`
+`V0_20_1_RELEASED_TASK013_R3_COMPLETE_TASK039_NEXT`
 
 ## Purpose
 
@@ -109,15 +109,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-027 — bounded R2 Planning Workspace minimum / PR #28 9 of 9 PASS / exact main 91d76febeaa3588b6c07914c32d9da151278004a`
-- Active Task: `TASK-013 — R3 Generation Safety Product promotion local PASS / hosted closure pending`
+- Last Completed Gate: `TASK-013 — R3 Generation Safety Product promotion / PR #30 9 of 9 PASS / exact main be8ea573fde1c3d4f7abe1a73887b6633d73ef32`
+- Active Task: `NONE — TASK-039 Continuity Map / STALE propagation is next`
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Development Candidate: `NONE`
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.26 Addendum XVII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.27 Addendum XVIII
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

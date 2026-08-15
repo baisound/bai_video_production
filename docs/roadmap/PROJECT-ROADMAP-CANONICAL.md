@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.73
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.74
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-045 P-RC-3 PR #77 final head `c5cdff27e7c0918efa37876c064dcfd5a3deae76` passed hosted `9 / 9`, merged at exact release-code main `c38187ed54e3601c44411d9b8a128348b0d8a7b7` and completed release-branch/checkout cleanup. Annotated `v0.21.0`, Release workflow `31858212510`, stable GitHub Release, published-asset digests and fresh published-wheel install pass. A docs-only post-release Evidence sync is active before fresh-main AUTONOMY reselection.
+- Current insertion: TASK-045 post-release PR #78 head `8b3f59b0a966727c544a37465733659c6fb757d0` passed hosted `9 / 9`, merged at exact main `1956f6e04b0c6206f64333d719f41c567def0590` and completed branch/checkout cleanup. Fresh-main AUTONOMY selected TASK-027 P-ORCH-1 output adoption design: exact completed local execution -> canonical Asset -> Candidate -> Prompt Attempt/lineage -> READY_FOR_AUDIT, with no Provider replay, automatic Human decision, Lock or publication.
 
 ## 3. MVP定義
 
@@ -103,7 +103,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
-| 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | R2 PLANNING MINIMUM + R3 GENERATION QUEUE COMPLETE / FUTURE SLICES REMAIN |
+| 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 OUTPUT ADOPTION DESIGN LOCAL PASS / HOSTED PENDING / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
 | 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E | 003,006,007,010,011,012,024 | DEV-4 | COMPLETE / M3B PASS / RELEASED v0.20.1 |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
@@ -114,7 +114,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
-| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED PENDING |
+| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED CLOSED |
 
 ## 6. Namespace Collision Resolution
 
@@ -181,7 +181,8 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **HOSTED CLOSED / PR #72 / MAIN 6703c42a**
-- TASK-045 V6 Native Acceptance / Release Closure: **FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED PENDING**
+- TASK-045 V6 Native Acceptance / Release Closure: **FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED CLOSED**
+- TASK-027 P-ORCH-1 Generation Output Adoption: **DESIGN LOCAL PASS / HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1797,3 +1798,31 @@ execution, ambiguous or destructive Human-owned Project migration, credentials
 and Production Deploy remain parked or blocked. The post-release docs-only sync
 must pass its own PR before a fresh-main AUTONOMY audit selects any later
 Runnable Task; no post-0.21.0 version is preselected.
+
+## Addendum LXVIII — TASK-045 Hosted Sync Closure and TASK-027 P-ORCH-1 Design
+
+TASK-045 post-release Evidence PR #78 head
+`8b3f59b0a966727c544a37465733659c6fb757d0` passed hosted `9 / 9`, merged at
+exact main `1956f6e04b0c6206f64333d719f41c567def0590`, and completed remote
+branch and dedicated checkout cleanup. TASK-045 and the formal `v0.21.0`
+release are closed.
+
+Fresh-main AUTONOMY re-audited the replacement Owner Directive. Start/End frame
+binding, WORLD LOCK, Visual Prompt Director, Provider/Model projection,
+frame-authoritative Timeline Audio, Unified NLE and Export Queue are already
+implemented. Native H3 remains task-locally parked and paid narration remains a
+separate Human Gate. The highest safe missing Product integration is therefore
+TASK-027 `P-ORCH-1`: Human-confirmed adoption of an exact terminal local
+generation result into canonical TASK-003 Asset, TASK-037 Candidate and
+TASK-040 Prompt Attempt/lineage state, ending only at `READY_FOR_AUDIT`.
+
+The design requires a checksum-closed multi-phase recovery transaction,
+launcher-private output containment, canonical ingest, deterministic idempotent
+identities and exact current Queue/Prompt/Slot revalidation. It explicitly
+prohibits Provider replay, automatic Audit, ACCEPT/LOCK, publication,
+Resolve/Cubase mutation, credentials, paid execution and Production Deploy.
+Two Critic rounds close authority, partial-write recovery, path escape, byte
+drift, privacy and compatibility risks with unresolved Critical/High `0 / 0`.
+Implementation remains dependency-waiting until the design PR passes hosted
+checks, merges, cleans up and fresh-main selection confirms the same Source of
+Truth. No post-0.21.0 version is selected.

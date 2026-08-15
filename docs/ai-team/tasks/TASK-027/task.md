@@ -1,11 +1,12 @@
 # TASK-027 — AI Video Creation Studio / New Production Orchestrator
 
-- Status: `R2_PLANNING_MINIMUM_AND_R3_GENERATION_QUEUE_COMPLETE / FUTURE_SLICES_REMAIN`
+- Status: `P_ORCH_1_OUTPUT_ADOPTION_DESIGN_LOCAL_PASS_HOSTED_PENDING / FUTURE_SLICES_REMAIN`
 
 ## Current bounded completion
 
 - R2 Planning Workspace minimum is complete and user-facing through the unified Desktop Shell.
 - R3 Generation Queue integration is complete as `ADMISSION_READY / EXECUTION_NOT_AUTHORIZED`.
+- Post-v0.21 P-ORCH-1 is the active design for Human-confirmed adoption of an exact completed local execution into canonical Asset/Candidate/Prompt lineage and `READY_FOR_AUDIT`.
 - The full multi-slice TASK-027 Product remains incomplete; Provider execution, generated-Asset production, complete audio production and final Resolve assembly remain governed future slices.
 - Governance candidate: `DEV-4 PRODUCT ORCHESTRATION CRITICAL`
 - Product route: `NEW_VIDEO_CREATION`

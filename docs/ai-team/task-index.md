@@ -18,7 +18,7 @@
 | TASK-024 | Silence / Filler / Disfluency Cut Candidate Worker | RELEASED_V0.18.0_SHELL_INTEGRATED_V0.20.1 | OWNER_DIRECTED_IMPLEMENTATION | DEV-3 | Review-only cut candidates remain non-mutating; TASK-036 W2 Human Cut Review Shell route PASS |
 | TASK-025..026 | Remaining External-SKILL additions (collision-resolved) | NOT_STARTED | NOT_AUTHORIZED | Re-evaluate at kickoff | Premiere adapter and Audio Placement remain later work |
 | TASK-022 | Timeline Mapping Service | COMPLETED | COMPLETED_WITH_OWNER_VERIFICATION | DEV-4 | Package 0.5.0; exact affine/NTSC/end-exclusive mapping, speed/gap, deterministic Plan/schema; native Windows 263/263 PASS |
-| TASK-027 | AI Video Creation Studio / New Production Orchestrator | R2_PLANNING_AND_R3_GENERATION_QUEUE_COMPLETE_FUTURE_SLICES_REMAIN | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Queue PR #36 passed 9/9 and merged at exact main ac9524c; durable Evidence-derived admission complete; execution remains unauthorized |
+| TASK-027 | AI Video Creation Studio / New Production Orchestrator | P_ORCH_1_OUTPUT_ADOPTION_DESIGN_LOCAL_PASS_HOSTED_PENDING | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Planning/Queue are complete. Fresh-main 1956f6e selects Human-confirmed completed-output -> Asset/Candidate/Prompt lineage -> READY_FOR_AUDIT design; no replay, ACCEPT/LOCK or publish. |
 | TASK-028 | AI Connection Provider / Model Routing | CAPABILITY_REGISTRY_IMPLEMENTED_AWAITING_NATIVE_WINDOWS_REGRESSION | OWNER_AUTHORIZED_IMPLEMENTATION | DEV-4 | 0.6.2 external media 293/293 PASS; 0.6.3 removes provider-purpose locking and adds exact model capability catalog plus generic execution registry; 305-test Windows gate pending |
 | TASK-029 | Human Edit Learning / Federated Knowledge Evolution | PROPOSED | OWNER_DIRECTED_DESIGN | DEV-4 candidate | Human action Evidence → hypothesis/multi-metric evaluation → Owner-local learning; opt-in anonymized cloud aggregation; signed Git-versioned Knowledge Packs |
 | TASK-030 | OSS Public Repository Readiness | IMPLEMENTED_AWAITING_GITHUB_CI | OWNER_DIRECTED_IMPLEMENTATION | DEV-2 | 0.6.6 fixed runner media dependencies; 0.6.7 removes global OS mutation after 5/6 matrix jobs passed |
@@ -36,7 +36,7 @@
 | TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_4_HOSTED_CLOSED | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | P-V6-4 PR #67 hosted 9/9 and merged at exact main 19f1a94f; branch/checkout cleanup passed. P-V6-5/6 are split into TASK-044/045. |
 | TASK-043 | Unified Product Project / Migration / Recovery Foundation | HOSTED_CLOSED | OWNER_MAXIMUM_MAJOR_REFACTOR | DEV-4 | Final P-FND-4 PR #66 hosted 9/9 and merged at exact main 10eae32b; branch cleanup passed. |
 | TASK-044 | Interactive Timeline / Unified NLE / Export Queue | HOSTED_CLOSED | OWNER_MAXIMUM_AFTER_TASK_043_AND_P_V6_4 | DEV-4 | P-NLE-4 PR #72 head ac5b295 passed 9/9 and merged at exact main 6703c42; dynamic/keyboard-accessible Shell, bounded Timeline, per-job Export recovery and packaged Windows native gate integrated; cleanup passed. |
-| TASK-045 | V6 Native Acceptance / Compatibility / Release Closure | FORMAL_RELEASE_COMPLETE_POST_SYNC_HOSTED_PENDING_V0_21_0 | OWNER_MAXIMUM_RELEASE_CLOSURE | DEV-4 | P-RC-3 PR #77 head c5cdff27 passed 9/9 and merged at exact main c38187ed; annotated v0.21.0, Release workflow 31858212510, published assets and clean install pass. Docs-only post-release Evidence sync remains. |
+| TASK-045 | V6 Native Acceptance / Compatibility / Release Closure | FORMAL_RELEASE_COMPLETE_V0_21_0 | OWNER_MAXIMUM_RELEASE_CLOSURE | DEV-4 | P-RC-3 release is complete; post-release PR #78 passed 9/9, merged at exact main 1956f6e0 and completed branch/checkout cleanup. |
 
 ## Roadmap authority
 
@@ -44,7 +44,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, R2/R3 Product promotions, bounded TASK-027 Planning/Generation Queue, R4 local execution control and TASK-041 Audio Workspace promotion are completed or hosted-closed. TASK-043, TASK-042 P-V6-4, TASK-044 P-NLE-1..4 and TASK-045 P-RC-1/P-RC-2/P-RC-3 are complete; P-RC-3 exact release-code main is `c38187ed` and formal stable Release is `v0.21.0`. The docs-only post-release Evidence sync is active before fresh-main AUTONOMY reselection. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, R2/R3 Product promotions, bounded TASK-027 Planning/Generation Queue, R4 local execution control and TASK-041 Audio Workspace promotion are completed or hosted-closed. TASK-043, TASK-042 P-V6-4, TASK-044 P-NLE-1..4 and TASK-045 P-RC-1/P-RC-2/P-RC-3/post-release sync are complete; formal stable Release is `v0.21.0`. Fresh-main TASK-027 P-ORCH-1 output-adoption design is active. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

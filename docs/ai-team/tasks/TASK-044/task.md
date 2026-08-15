@@ -4,7 +4,7 @@
 
 - Priority: `OWNER_MAXIMUM / AFTER_TASK_043_AND_P_V6_4`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `ACTIVE / P-NLE-3_HOSTED_CLOSED / P-NLE-4_IMPLEMENTATION_AND_NATIVE_PASS_HOSTED_PENDING`
+- Status: `HOSTED_CLOSED / P-NLE-1..4 COMPLETE`
 - Depends on: TASK-043 and TASK-042 P-V6-4 — both `HOSTED_CLOSED`
 
 ## Goal
@@ -28,4 +28,12 @@ Queue. Reuse TASK-010/011/012 for external Resolve/render/handoff ownership.
 Focused interaction/state tests, long-project performance fixtures, Export Queue
 restart/idempotency tests, full regression and native Windows interaction
 acceptance pass. Release remains a TASK-045 decision.
+
+## Hosted closure
+
+P-NLE-4 PR #72 exact head `ac5b2956e0a0e881a4cf0a58f414eaab826c2fb2`
+passed hosted `9 / 9` and merged at exact main
+`6703c42a3aa06a563071f1a48dc7aab113f4dfe4`. Remote branch and dedicated
+checkout cleanup passed. TASK-044 is complete; package/version/Tag/Release remains
+TASK-045 ownership.
 

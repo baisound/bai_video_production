@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.68
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.69
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-044 P-NLE-3 is hosted-closed through PR #71 at exact main `c23083e6fa1f8513b14010ece1c2a92c51c47916`. P-NLE-4 Unified Shell/UI and bounded Windows native acceptance are local PASS and hosted-pending; compatibility/release closure remains TASK-045. Stable Product release remains `v0.20.1`.
+- Current insertion: TASK-044 P-NLE-4 PR #72 passed hosted `9 / 9`, merged at exact main `6703c42a3aa06a563071f1a48dc7aab113f4dfe4` and completed cleanup, so TASK-044 is hosted-closed. TASK-045 compatibility/native/release closure is active at its full-design gate. Stable Product release remains `v0.20.1`; exact next SemVer is undecided.
 
 ## 3. MVP定義
 
@@ -113,8 +113,8 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
-| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | P-NLE-3 HOSTED CLOSED / P-NLE-4 LOCAL NATIVE PASS / HOSTED PENDING |
-| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
+| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
+| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ACTIVE / DESIGN LOCAL PASS / HOSTED PENDING |
 
 ## 6. Namespace Collision Resolution
 
@@ -180,8 +180,8 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
-- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **P-NLE-3 HOSTED CLOSED / P-NLE-4 LOCAL NATIVE PASS / HOSTED PENDING**
-- TASK-045 V6 Native Acceptance / Release Closure: **ALLOCATED / DEPENDENCY WAIT**
+- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **HOSTED CLOSED / PR #72 / MAIN 6703c42a**
+- TASK-045 V6 Native Acceptance / Release Closure: **ACTIVE / FULL DESIGN + CRITIC LOCAL PASS / HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1662,3 +1662,34 @@ Critic closes minimum-width, user-entered checksum, missing Export actions and
 public controller exposure with unresolved Critical/High `0 / 0`. Hosted CI
 remains required. After merge and cleanup, TASK-045 compatibility/native/release
 audit and exact release decision becomes runnable.
+
+## Addendum LXIII — TASK-044 Hosted Closure and TASK-045 Release Closure Design
+
+P-NLE-4 PR #72 exact head `ac5b2956e0a0e881a4cf0a58f414eaab826c2fb2`
+passed hosted `9 / 9`, merged at exact main
+`6703c42a3aa06a563071f1a48dc7aab113f4dfe4`, and completed remote branch and
+dedicated checkout cleanup. TASK-044 is therefore hosted-closed. Stable Product
+release remains `v0.20.1`.
+
+Fresh-main TASK-045 audit confirms that Product Project inspection, read-only
+migration planning, journal recovery, Backup/restore, durable Export recovery and
+bounded 10,000-clip Timeline projection already exist. Existing focused
+compatibility/recovery/NLE tests pass `94 / 94`. Missing release-closure behavior
+is executable registered lossless migration, explicit no-manifest legacy discovery,
+a checked-in compatibility corpus and bounded large Asset Library paging.
+
+TASK-045 is split into three sequential Atomic Units:
+
+1. `P-RC-1` — compatibility corpus, legacy discovery, lossless copy-on-write
+   migration, backup/restore roundtrip and Asset paging;
+2. `P-RC-2` — two-hour/large-library performance, integrated packaged Windows,
+   clean-install and conversation-free restart acceptance, then exact SemVer;
+3. `P-RC-3` — release metadata PR, main merge, exact merge SHA, annotated Tag and
+   verified GitHub Release.
+
+Two Critic rounds close arbitrary migration execution, destructive overwrite,
+identity guessing, partial-success claims, unbounded Asset loading, stale native
+Evidence and premature SemVer selection with unresolved Critical/High `0 / 0`.
+Release/Tag is conditionally Owner-authorized only after P-RC-1/P-RC-2 pass.
+Production Deploy, paid Provider, credentials, ambiguous/destructive human-owned
+Project migration and TASK-013 native replay remain separate Human Gates.

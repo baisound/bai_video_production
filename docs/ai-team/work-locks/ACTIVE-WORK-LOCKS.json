@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 4,
+  "registry_revision": 5,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "a73dea0899e5eb8e70f69d986c7c47f8fd85445c",
+  "audit_base_main_sha": "9fc7e4f9bd707c650abac2c5a29d45791ed3448e",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -231,6 +231,144 @@
       "expiry_conditions": [
         "MAIN_SHA_DRIFT_BEFORE_IMPLEMENTATION_START",
         "PVS1A_BLOB_OR_SYMBOL_DRIFT",
+        "PATH_OR_OPEN_PR_OVERLAP",
+        "ALLOWED_FILES_MISMATCH",
+        "OWNER_AUTHORITY_REVOKED",
+        "TARGET_PR_MERGED_OR_CLOSED",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION"
+      ],
+      "release_conditions": [
+        "EXACT_5_FILE_IMPLEMENTATION_DIFF",
+        "SCHEMA_MIRROR_BYTE_PARITY",
+        "FOCUSED_SYNTHETIC_TESTS_PASS",
+        "WINDOWS_FULL_REGRESSION_PASS",
+        "WSL2_FULL_REGRESSION_PASS",
+        "CRITIC_AND_JUDGE_PASS",
+        "HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "SEPARATE_CHANGELOG_INTEGRATION_LOCK_IF_REQUIRED",
+        "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_SECURITY_PASS",
+        "LOCK_CLOSURE_RELEASE_RECORD_HOSTED"
+      ]
+    },
+    {
+      "lock_id": "BVP-LOCK-TASK048-PQC1A",
+      "owner_agent": "開発担当2",
+      "owner_thread_id": "01a00490-f4a3-7ab1-a3ea-fbda2ea50a02",
+      "umbrella_authority": "BVP-AUTH-20260815-VOICE-CONTRACT-LH-SEQ-R0",
+      "lock_host_authority": "BVP-AUTH-20260815-TASK048-PQC1A-LH0",
+      "task_unit": "TASK-048/P-QC-1A",
+      "phase": "PURE_METADATA_VOICE_QUALITY_CALIBRATION_CONTRACT_IMPLEMENTATION",
+      "branch": "codex/task-048-p-qc-1a-voice-quality-calibration-contract",
+      "base_sha": "9fc7e4f9bd707c650abac2c5a29d45791ed3448e",
+      "status": "ACTIVE",
+      "implementation_authority_state": "NOT_AUTHORIZED_AWAITING_SEPARATE_OWNER_DECISION",
+      "implementation_state": "NOT_STARTED",
+      "scope": "BODY_FREE_SCHEMA_HASH_CAS_COMPATIBILITY_POLICY_COVERAGE_CLASSIFICATION_PROJECTION_AND_SYNTHETIC_TESTS_ONLY",
+      "lock_hosting_evidence": {
+        "host_unit": "TASK-048/P-QC-1A-LH0",
+        "hosting_branch": "codex/task-048-pqc1a-lock-hosting",
+        "hosting_base_sha": "9fc7e4f9bd707c650abac2c5a29d45791ed3448e",
+        "evidence_doc": "docs/ai-team/work-locks/task048-pqc1a-lock-hosting-critic-judge-2026-08-15.md",
+        "expected_changed_files": 2,
+        "post_merge_main_presence_verification_required": true
+      },
+      "allowed_files": [
+        "docs/ai-team/tasks/TASK-048/p-qc-1a-implementation-readiness-and-evidence-2026-08-15.md",
+        "schemas/voice-quality-calibration.schema.json",
+        "src/ai_video_production/schema_resources/voice-quality-calibration.schema.json",
+        "src/ai_video_production/voice_quality_calibration.py",
+        "tests/test_task048_voice_quality_calibration_contract.py"
+      ],
+      "read_only_dependencies": [
+        "schemas/asset-record.schema.json",
+        "src/ai_video_production/schema_resources/asset-record.schema.json",
+        "src/ai_video_production/voice_profile_revision.py",
+        "schemas/voice-profile-revision.schema.json",
+        "schemas/durable-product-job.schema.json",
+        "src/ai_video_production/durable_product_job.py",
+        "docs/ai-team/tasks/TASK-048/task.md"
+      ],
+      "hosted_governance_dependencies": [
+        "BVP-LOCK-TASK046-PVS3A_ACTIVE_ON_MAIN_9FC7E4F9"
+      ],
+      "design_reference_only_not_hosted": [
+        "TASK-047/P-OBS-1",
+        "TASK-046/P-VS-3A_CONTRACT_IMPLEMENTATION",
+        "TASK-046/P-VS-3B",
+        "TASK-046/P-VS-4A"
+      ],
+      "canonical_serialized_types": [
+        "CaptureChainRevision",
+        "CalibrationProfileRevision",
+        "QualityPolicyRevision",
+        "AnalyzerProfileRevision",
+        "CalibrationSessionRevision",
+        "MeasurementInputRangeBinding",
+        "StagingToTask003AssetPromotionBinding",
+        "MetricInputSetBinding",
+        "MetricFact",
+        "MeasurementReceipt",
+        "QualityEvaluationReceipt",
+        "CaptureEvidenceBinding",
+        "RXDerivedQualityBinding",
+        "PrivacyPolicyBinding",
+        "HumanInputBinding",
+        "GainRecommendationRevision",
+        "AdditionalRecordingRecommendationRevision",
+        "DriftComparisonReceipt",
+        "DurationCoverageIndicator",
+        "ApprovedStyleLanguageEmotionCoverageIndicator",
+        "RawAcousticQualityCoverageIndicator",
+        "DatasetReadinessIndicator",
+        "ModelEvaluationReadinessIndicator"
+      ],
+      "structured_unresolved_dependencies": [
+        "TASK-047_P_OBS_1_CAPTURE_AND_STAGING_RECEIPT",
+        "TASK-003_FORMAL_ASSET_REVISION_MAPPING",
+        "TASK-020_RESOURCE_ADMISSION",
+        "CANONICAL_PRIVACY_POLICY",
+        "RX_ARTIFACT_AND_RENDER_OWNER",
+        "EXACT_INTERFACE_DRIVER_ENDPOINT_CAPABILITY"
+      ],
+      "real_calibration_prerequisites": [
+        "P_OBS_STAGING_CONTRACT_HOSTED",
+        "EXACT_HARDWARE_ENDPOINT_CHAIN_VERIFIED",
+        "OWNER_VOICE_CONSENT_AND_HUMAN_GATE",
+        "ANALYZER_AND_POLICY_HOSTED",
+        "PRIVACY_ENCRYPTION_RETENTION_VERIFIED",
+        "TASK003_ASSET_MAPPING_WHERE_REQUIRED"
+      ],
+      "denied_paths": [
+        "CHANGELOG.md",
+        ".github/**",
+        "src/ai_video_production/__init__.py",
+        "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json",
+        "SHARED_INTEGRATION_FILES",
+        "ALL_OTHER_PATHS"
+      ],
+      "denied_effects": [
+        "OWNER_VOICE_CALIBRATION_RECORDING",
+        "CAPTURE_OR_STAGING_WRITE",
+        "ASSET_PROMOTION_DELETE_OR_RETENTION_EFFECT",
+        "AUDIO_ACCESS_OR_ANALYZER_EXECUTION",
+        "OBS_RX_DEVICE_OR_HARDWARE_MUTATION",
+        "DATASET_TRAINING_MODEL_OR_PRODUCTION_EFFECT",
+        "DOWNLOAD_INSTALL_UPDATE_REPAIR_OR_UNINSTALL",
+        "UAC_EULA_PATH_ENV_REGISTRY_OR_RESTART",
+        "CLOUD_PAID_CREDENTIAL",
+        "RELEASE_DEPLOY"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING",
+      "prerequisites": [
+        "PVS3A_LH0_MERGED_READ_BACK_POST_MERGE_GREEN",
+        "PQC1A_R0_CRITICAL_HIGH_ZERO",
+        "FRESH_MAIN_EXACT_DEPENDENCY_BLOBS",
+        "EXACT_ALLOWED_FILES_5_AND_OVERLAP_ZERO",
+        "OWNER_LOCK_HOST_AUTHORIZATION_BVP_AUTH_20260815_TASK048_PQC1A_LH0"
+      ],
+      "expiry_conditions": [
+        "MAIN_SHA_DRIFT_BEFORE_IMPLEMENTATION_START",
+        "DEPENDENCY_BLOB_OR_SYMBOL_DRIFT",
         "PATH_OR_OPEN_PR_OVERLAP",
         "ALLOWED_FILES_MISMATCH",
         "OWNER_AUTHORITY_REVOKED",

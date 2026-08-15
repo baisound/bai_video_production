@@ -5,6 +5,17 @@
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Dependencies: `TASK-046`, `TASK-006/023`, `TASK-020`, `TASK-043`, `TASK-045`
 
+## Canonical P-OBS-1A design contract
+
+- Contract:
+  `p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-2026-08-15.md`
+- Provenance:
+  `p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-provenance.json`
+- Activation: design authority only when the exact contract and provenance are
+  read from `main` and their digests validate.
+- Implementation, native build/install/load, OBS launch/configuration/capture,
+  audio/device/Asset/Dataset mutation: `NOT_AUTHORIZED`.
+
 ## Goal
 
 Provide the minimum auditable OBS capture path required before production

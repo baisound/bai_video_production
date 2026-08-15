@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.86
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.87
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-046 P-VS-0 is hosted-closed by PR #90 at exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`, with hosted `9 / 9` and post-merge CI/Security PASS. TASK-036 P-UX-1C is active against the unchanged V6.1.1 mock. P-VS-1A is split out as a Shell-independent, body-free, non-executing VoiceProfile Backend that may develop in parallel under a disjoint hosted File Lock, but it may merge only after P-UX-1C hosted closure and fresh-main rebase. A successor canonical mock remains mandatory before P-VS-1B adds Voice Shell/TASK-014 integration. Overall visual parity and native Voice completion remain unclaimed.
+- Current insertion: TASK-046 P-VS-0 and the disjoint P-UX-1C/P-VS-1A Work Locks are hosted. TASK-036 P-UX-1C remains active against unchanged V6.1.1 and P-VS-1A remains separately bounded. Owner priority elevates TASK-047 P-OBS-1 minimum capture MVP to the P0 dependency for P-VS-3 production training-material recording and P-VS-4 fine-tuning. P-OBS-0 read-only installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may be separately authorized early; P-OBS-2 continuous/multi-source breadth remains later. Overall visual parity, native Voice, production recording and fine-tuning remain unclaimed.
 
 ## 3. MVP定義
 
@@ -115,8 +115,8 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
 | 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED CLOSED |
-| 046 | Voice Studio / Voice Dataset & Local Voice Profile | private VoiceProfile/Dataset, teleprompter, capture preflight, zero-shot/fine-tune admission, style coverage and Owner-only 60–90 s vertical slice | 003,006,014,020,022,023,026,036,037,041,043,044 | DEV-4 | P-VS-0 HOSTED CLOSED / P-VS-1A PARALLEL LOCK ACTIVE / P-VS-1B SUCCESSOR MOCK GATED |
-| 047 | OBS Voice Capture Integration | x64 OBS audio-filter Plugin, authenticated local IPC, Owner-mic consent, VAD/ASR/quality candidate and Dataset review | 006,020,023,043,046 | DEV-4 | FORMALLY ALLOCATED / DESIGN QUEUED AFTER VOICE VERTICAL SLICE |
+| 046 | Voice Studio / Voice Dataset & Local Voice Profile | private VoiceProfile/Dataset, teleprompter, capture preflight, zero-shot/fine-tune admission, style coverage and Owner-only 60–90 s vertical slice | 003,006,014,020,022,023,026,036,037,041,043,044,047 | DEV-4 | P-VS-0 HOSTED CLOSED / P-VS-1A PARALLEL LOCK ACTIVE / P-VS-1B SUCCESSOR MOCK GATED / P-VS-3 PRODUCTION RECORDING GATED BY P-OBS-1 |
+| 047 | OBS Voice Capture Integration | x64 OBS audio-filter Plugin, authenticated local IPC, selected-input capture session/segments, exact loss/recovery Evidence and later meeting/live breadth | 006,020,023,043,045,046 | DEV-4 | OWNER P0 RECORDING DEPENDENCY / P-OBS-0 DESIGN-PROBE SEPARATE / P-OBS-1 IMPLEMENTATION NOT AUTHORIZED / P-OBS-2 LATER |
 | 048 | Voice Quality Calibration | separate Calibration Dataset, Gold labels, versioned Analyzer/score profiles, threshold simulation, drift and Human decision trace | 014,038,041,046 | DEV-4 | FORMALLY ALLOCATED / DESIGN QUEUED AFTER VOICE VERTICAL SLICE |
 
 ## 6. Namespace Collision Resolution
@@ -2185,8 +2185,17 @@ because V6.1.1 is the Owner's absolute mock authority. The fixed order is:
    authorize P-VS-1B Shell/TASK-014 integration separately;
 6. after exact Model/Runtime/License and applicable Human gates, complete the
    Japanese, one-speaker, Local/free 60–90 second vertical slice;
-7. only then expand recording/fine-tuning, calibration, OBS, RX/REAPER,
-   Managed Runtime, broader Creative AI and locale gates.
+7. separately authorize and host P-OBS-0 installed-target inventory plus
+   separately sourced official SDK/Plugin Template identity/ABI/License/Build
+   probe when its contract is closed; this may occur earlier because it is
+   read-only;
+8. authorize and host P-OBS-1 minimum selected-input Capture MVP;
+9. only after P-OBS-1 hosted completion, exact-path probe PASS, recording
+   Consent, encrypted storage and Owner GO, begin P-VS-3 production recording
+   and then P-VS-4 fine-tuning;
+10. only then expand calibration, P-OBS-2 meeting/live continuous and
+   multi-source capture, RX/REAPER, Managed Runtime, broader Creative AI and
+   locale gates.
 
 Japanese is L1. English, Simplified Chinese, Korean and Taiwan Traditional
 Chinese are independent later gates requiring language/script processing,
@@ -2242,3 +2251,61 @@ This Addendum and its Lock Registry change Governance documents only. They do
 not authorize Model download/load/inference, recording, training, audio body
 storage, Credential, Cloud/paid Provider, external application mutation,
 Human ACCEPT/LOCK, version, Tag, Release or Deploy.
+
+## Addendum LXXXI - OBS Capture P0 Dependency for Production Voice Recording
+
+Owner decision dated `2026-08-15`: production training-material recording must
+not begin until the OBS Plugin minimum capture path is complete. TASK-036
+P-UX-1C and TASK-046 P-VS-1A continue under their existing disjoint Locks and
+are not interrupted by this dependency change.
+
+TASK-047 is split into three bounded units:
+
+1. `P-OBS-0` — read-only exact target Capability/SDK/ABI/License/Build probe
+   design for `E:\SteamLibrary\steamapps\common\OBS Studio\bin`, including the
+   Ver.1.2 baseline executable `bin\64bit\obs64.exe`. It uses read-only
+   inspection and synthetic contracts only. It changes no OBS configuration,
+   loads no Plugin and records no audio. Its implementation requires a separate
+   exact Allowed Files/operations Authorization even though it may be moved
+   forward after the contract is closed. Installed executable/module inventory,
+   hashes/version/architecture are distinct from the separately identified
+   official SDK/Plugin Template source/commit/headers/license; SDK identity is
+   never inferred from the installed `bin` tree.
+2. `P-OBS-1` — minimum production-recording Capture MVP: explicit user-selected
+   audio input, session/segment identity, start/pause/resume/stop,
+   48 kHz/24-bit/mono immutable raw staging, timestamps, missing-sample/overrun
+   and device Evidence, crash/restart recovery and review-before-Dataset. It is
+   the P0 dependency for P-VS-3 production recording and P-VS-4 fine-tuning.
+3. `P-OBS-2` — later continuous meeting/live capture, multiple Sources and
+   advanced learning proposals. It is not required for the first production
+   recording Gate. Automatic Dataset adoption and automatic training start are
+   permanently prohibited.
+
+P-OBS-1 implementation starts only after hosted contracts bind the existing
+VoiceProfile, P-VS-1A VoiceProfileRevision, TASK-046-owned recording-session,
+segment, Dataset-candidate/adoption truth and TASK-043 recovery truth. Its
+real-time callback copies only bounded native frames/minimum metadata through a
+non-blocking boundary. A non-real-time worker performs canonical
+48 kHz/24-bit/mono validation/conversion and preserves exact source-to-output
+sample lineage; Dataset storage/adoption remains outside TASK-047 ownership.
+
+P-VS-2 remains the owner-only local/free zero-shot 60–90 second Product slice;
+it does not authorize or require new production training-material recording.
+P-VS-3 may design contracts and synthetic fixtures before P-OBS-1, but real
+production recording starts only after all five conditions hold:
+
+- P-OBS-1 hosted completion;
+- P-OBS-0 exact-path probe PASS on the supported target;
+- explicit recording Consent for the Owner-selected input and purpose;
+- verified encrypted private staging/storage and recovery boundary;
+- explicit Owner GO for the bounded production recording Session.
+
+TASK-043 retains durable session/job/checkpoint/restart truth. TASK-045 retains
+native compatibility, Plugin/license/distribution and future release acceptance
+truth; stable `v0.21.0` is not reopened. OR-18, OR-25 and Q19 route through the
+P-OBS units. Q25 remains the independent Stable Audio SFX/ambience evaluation
+route and neither authorizes nor blocks OBS recording.
+
+This Addendum is design/governance only. It grants no OBS/Plugin mutation,
+capture, private audio persistence, Dataset adoption, training, external
+Provider, version, Tag, Release or Deploy authority.

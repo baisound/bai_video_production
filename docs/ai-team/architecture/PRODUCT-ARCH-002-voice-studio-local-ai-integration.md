@@ -1,7 +1,7 @@
 # PRODUCT-ARCH-002 — Voice Studio and Local AI Integration
 
 Date: 2026-08-15
-Status: `CANONICAL / P_VS_0_HOSTED_CLOSED / P_VS_1A_BACKEND_PARALLEL_LOCK_ACTIVE / P_VS_1B_MOCK_GATED`
+Status: `CANONICAL / P_VS_1A_PARALLEL_LOCK_ACTIVE / P_VS_1B_MOCK_GATED / P_OBS_1_PRODUCTION_RECORDING_P0_GATE`
 Exact base main: `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`
 
 ## Decision
@@ -30,8 +30,8 @@ TASK-026 Placement → TASK-022 exact frames → TASK-044 Timeline/Export
 
 | Truth | Owner |
 |---|---|
-| Voice Dataset, VoiceProfile and recording review | TASK-046 |
-| OBS capture candidate | TASK-047 |
+| Voice Dataset, VoiceProfile, recording review and Dataset adoption | TASK-046 |
+| OBS selected-input capture session, raw immutable staging and capture recovery Evidence | TASK-047 |
 | calibrated quality profile/trace | TASK-048 |
 | narration plan/render/publication | TASK-014 |
 | subtitle source/display revisions | TASK-006 |
@@ -90,8 +90,17 @@ EXE-only layout invention is prohibited.
    separately authorize P-VS-1B Shell/TASK-014 integration.
 6. Establish exact local model/runtime/license evidence.
 7. Run the Japanese owner-only local/free 60–90 second vertical slice.
-8. Add recording/fine-tuning/calibration, then OBS and optional finishing.
-9. Add broader Local Creative AI/Managed Runtime and locale gates only after
+8. Separately authorize P-OBS-0 read-only installed-target inventory plus
+   official SDK/Plugin Template identity/ABI/License/Build probe; it may move
+   earlier after its contract is closed.
+9. Host P-OBS-1 minimum selected-input Capture MVP before any P-VS-3
+   production training-material recording.
+10. Require P-OBS-1 hosted completion, exact-path probe PASS, recording
+   Consent, encrypted storage and Owner GO before P-VS-3 recording and P-VS-4
+   fine-tuning.
+11. Add calibration, P-OBS-2 meeting/live continuous and multi-source breadth,
+   then optional finishing.
+12. Add broader Local Creative AI/Managed Runtime and locale gates only after
    the vertical slice is traceable and recoverable.
 
 P-VS-1A does not store voice/audio bodies and does not download, load or invoke
@@ -100,3 +109,39 @@ an Engine. Its new domain type is `VoiceProfileRevision`; the existing
 must not be duplicated. P-VS-1B remains blocked by the successor-mock and separate
 Authorization gates. The hosted architecture therefore describes a future
 runtime boundary; it does not claim Voice Studio runtime implementation.
+
+## Production recording gate
+
+P-VS-2 is a zero-shot Product vertical slice and does not authorize collection
+of new production training material. P-VS-3 may define recording/session
+contracts and synthetic fixtures early, but real production capture requires
+all of the following:
+
+- P-OBS-1 hosted minimum Capture MVP completion;
+- P-OBS-0 PASS against
+  `E:\SteamLibrary\steamapps\common\OBS Studio\bin` and the exact supported
+  OBS executable/SDK/ABI/License/Build identity;
+- explicit recording Consent for the selected Owner input and purpose;
+- verified envelope-encrypted immutable raw staging and recovery boundary;
+- explicit Owner GO for the bounded Session.
+
+P-OBS-1 records no automatic Dataset decision. TASK-046 Human review must
+explicitly adopt eligible segments; adoption never starts training. P-OBS-2
+continuous meeting/live capture, multiple Sources and advanced proposals are
+later breadth and are not required for the first production-recording Gate.
+
+P-OBS-0 separates installed-target truth from development-source truth. The
+exact `bin` root proves only the installed executable/module inventory,
+versions, architecture and hashes. Official SDK/Plugin Template headers,
+documentation, source reference/commit and license identity require their own
+authorized acquisition and Evidence; they are not inferred from the install
+tree.
+
+Before P-OBS-1 implementation, hosted contracts must bind the existing
+`owner_narration.VoiceProfile`, the P-VS-1A `VoiceProfileRevision`,
+TASK-046-owned `VoiceRecordingSession`/segment/Dataset-candidate/adoption truth
+and TASK-043-owned durable recovery truth. The OBS real-time callback may only
+copy bounded native frames and minimum metadata through a non-blocking
+boundary. Canonical 48 kHz/24-bit/mono validation/conversion, encryption,
+analysis and persistence run outside the callback with exact source-to-output
+sample lineage.

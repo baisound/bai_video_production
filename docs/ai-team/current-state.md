@@ -4,18 +4,19 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_046_P_VS_0_HOSTED_CLOSED / TASK_036_P_UX_1C_ACTIVE / PARALLEL_WORK_LOCKS_HOSTED / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_21_0_RELEASED / TASK_036_P_UX_1C_ACTIVE / TASK_046_P_VS_1A_PARALLEL_RESERVED / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
 - Last Completed Consumer Gate: `TASK-046 P-VS-0 documentation-only intake`; PR #90 exact head `664722d0fac8cc0e79f7c424c6911f4651ceb303` passed hosted `9 / 9`, merged at exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`, and passed post-merge main CI/Security
-- Active Consumer Task: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE / codex/task-036-v611-packaged-native-closure`; the uncommitted WIP/Evidence remains protected, and implementation resumes only after `BVP-LOCK-TASK036-PUX1C` is read from main and `WIP_FILE_SHA256.txt` matches
+- Active Consumer Task: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE / codex/task-036-v611-packaged-native-closure`; `BVP-LOCK-TASK036-PUX1C` is hosted ACTIVE and the protected WIP/Evidence matched `WIP_FILE_SHA256.txt` `21 / 21`, so this route remains active without interruption
 - Parallel Reserved Consumer Task: `TASK-046 / P-VS-1A BODY-FREE VOICEPROFILE BACKEND / codex/task-046-p-vs-1a-body-free-backend`; `BVP-LOCK-TASK046-PVS1A` permits a fresh-main branch to develop only the non-executing body-free Backend, while its main merge waits for P-UX-1C hosted closure and fresh-main rebase
+- P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; TASK-047 is split into P-OBS-0 exact-path read/design/probe, P-OBS-1 minimum production-recording capture and later P-OBS-2 continuous/multi-source expansion. No production training-material recording or fine-tuning may start before P-OBS-1 hosted completion, exact OBS path probe PASS, recording Consent, encrypted storage and Owner GO
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `hosted Lock Registry -> P-UX-1C WIP hash match -> P-UX-1C native/full closure; in parallel P-VS-1A body-free Backend may develop on its isolated Lock but merges only after P-UX-1C hosted closure; successor canonical Voice mock -> P-VS-1B Shell/TASK-014 integration; Native Model/download/voice processing remains separately gated`
+- Next Consumer Decision Gate: `P-UX-1C native/full closure continues; in parallel P-VS-1A body-free Backend remains isolated and P-OBS-0 may receive a separate design/probe Authorization; successor mock -> P-VS-1B -> exact runtime/license -> P-VS-2 zero-shot vertical slice -> P-OBS-1 hosted minimum capture MVP -> Consent + encrypted storage + Owner GO -> P-VS-3 production recording/Dataset -> P-VS-4 fine-tuning; P-OBS-2 remains later`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -119,7 +120,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.86 Addendum LXXX. TASK-046 P-VS-0 is hosted-closed by PR #90 at exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`, with post-merge CI/Security PASS. TASK-036 P-UX-1C is the active V6.1.1 native-parity route. P-VS-1A is split out as a Shell-independent, voice-body-free, non-executing Backend that may develop in parallel under a disjoint hosted File Lock but may merge only after P-UX-1C hosted closure and fresh-main rebase. A successor canonical mock remains mandatory before P-VS-1B adds any Voice destination, Shell or TASK-014 integration. Overall visual parity and native Voice completion remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.87 Addendum LXXXI. TASK-036 P-UX-1C remains active and P-VS-1A remains separately locked. Owner priority now makes TASK-047 P-OBS-1 hosted completion the P0 dependency for P-VS-3 production training-material recording and P-VS-4 fine-tuning. P-OBS-0 may be separately authorized early for the read-only installed-target inventory at `E:\SteamLibrary\steamapps\common\OBS Studio\bin` plus separately sourced official SDK/Plugin Template identity, ABI/License/Build Evidence; the install tree does not prove SDK headers, configure OBS or authorize capture. P-OBS-2 continuous meeting/live and multi-source automation remains later. Overall visual parity, native Voice, production recording and fine-tuning remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

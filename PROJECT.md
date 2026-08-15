@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-045 P-RC-2 hosted closure: PR #76 final head 76644790 passed 9 / 9 and merged at exact main 84837e34a42234e23a544f54c8fe0c49aab8cacb; remote branch and dedicated checkout cleanup PASS`
-- Active Task: `TASK-045 / P-RC-3 RELEASE FINALIZATION / LOCAL GATES PASS / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Last Completed Gate: `TASK-045 P-RC-3 formal release: PR #77 final head c5cdff27 passed 9 / 9, merged at exact main c38187ed54e3601c44411d9b8a128348b0d8a7b7, annotated v0.21.0 and Release workflow 31858212510 PASS; published assets verified`
+- Active Task: `TASK-045 / POST-RELEASE EVIDENCE SYNC / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.21.0`
-- Release State: `V0_21_0_RELEASE_CANDIDATE / LOCAL_GATES_PASS / HOSTED_PENDING`; latest formal GitHub Release remains `v0.20.1` at exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Development Candidate: `NONE`; the current release identity is the exact MINOR decision `0.21.0 / v0.21.0 / stable`, with Tag and Release allowed only after P-RC-3 PR merge and exact main SHA verification; no post-0.21.0 candidate is selected
-- Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
+- Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
+- Development Candidate: `NONE`; no post-0.21.0 candidate is selected
+- Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.72 Addendum LXVI
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.73 Addendum LXVII
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -161,6 +161,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - TASK-045 Design PR #74 passed hosted `9 / 9` and merged at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062`. Fresh-main P-RC-1 implemented explicit legacy discovery, code-registered lossless copy-on-write migration with backup/reopen proof, additive schema v3 Asset keyset paging and a concurrent source-manifest pointer corrective; it was later hosted-closed by PR #75.
 - TASK-045 P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88`, and completed cleanup. P-RC-2 final candidate passes packaged synthetic Project open/reopen, Narrator/UIA, three displays, Timeline interaction, native picker cancel, conversation-free restart, clean install, Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`; exact release decision is `0.21.0 / v0.21.0 / stable`. It was hosted-closed by PR #76 as recorded next.
 - TASK-045 P-RC-2 PR #76 final head `76644790b8e154014af7e46b5efeef49b3d58789` passed hosted `9 / 9`, merged at exact main `84837e34a42234e23a544f54c8fe0c49aab8cacb`, and completed branch/checkout cleanup. Fresh-main `release/0.21.0` now owns P-RC-3 metadata, regression, PR/main, exact SHA, annotated Tag and verified GitHub Release.
+- TASK-045 P-RC-3 PR #77 final head `c5cdff27e7c0918efa37876c064dcfd5a3deae76` passed hosted `9 / 9`, merged at exact release-code main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`, and completed remote release-branch/release-checkout cleanup. Annotated `v0.21.0`, formal stable GitHub Release, bounded Release notes, workflow `31858212510` and published-asset verification pass. This docs-only post-release Evidence sync remains before fresh-main AUTONOMY reselection.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

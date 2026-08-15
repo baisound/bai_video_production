@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.72
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.73
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-045 P-RC-2 PR #76 final head `76644790b8e154014af7e46b5efeef49b3d58789` passed hosted `9 / 9`, merged at exact main `84837e34a42234e23a544f54c8fe0c49aab8cacb` and completed cleanup. Fresh-main P-RC-3 on `release/0.21.0` passes local metadata/full regression/build/install/packaged restart gates with exact `0.21.0 / v0.21.0 / stable`; PR/main/Tag/GitHub Release remain sequential gates. Stable formal Release remains `v0.20.1` until publication.
+- Current insertion: TASK-045 P-RC-3 PR #77 final head `c5cdff27e7c0918efa37876c064dcfd5a3deae76` passed hosted `9 / 9`, merged at exact release-code main `c38187ed54e3601c44411d9b8a128348b0d8a7b7` and completed release-branch/checkout cleanup. Annotated `v0.21.0`, Release workflow `31858212510`, stable GitHub Release, published-asset digests and fresh published-wheel install pass. A docs-only post-release Evidence sync is active before fresh-main AUTONOMY reselection.
 
 ## 3. MVP定義
 
@@ -114,7 +114,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
-| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ACTIVE / P-RC-2 HOSTED CLOSED / P-RC-3 LOCAL PASS / HOSTED PENDING / 0.21.0 DECIDED |
+| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED PENDING |
 
 ## 6. Namespace Collision Resolution
 
@@ -181,7 +181,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **HOSTED CLOSED / PR #72 / MAIN 6703c42a**
-- TASK-045 V6 Native Acceptance / Release Closure: **ACTIVE / P-RC-2 HOSTED CLOSED / P-RC-3 LOCAL PASS / HOSTED PENDING / 0.21.0 DECIDED**
+- TASK-045 V6 Native Acceptance / Release Closure: **FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1769,4 +1769,31 @@ WSL2 `1124 / 1124`, compileall, wheel/source distribution build, fresh wheel
 install with `pip check`, and the Windows one-dir EXE build. The exact release
 candidate EXE also passes isolated default UIA/Timeline/native-picker restart and
 owned v0.20.1 Project open/reopen with an unchanged Manifest. Hosted PR/main,
-exact merge SHA, annotated Tag and GitHub Release remain sequentially pending.
+exact merge SHA, annotated Tag and GitHub Release remained sequentially pending
+at that local checkpoint; Addendum LXVII records their later completion.
+
+## Addendum LXVII — TASK-045 P-RC-3 Formal v0.21.0 Release Closure
+
+P-RC-3 PR #77 final head
+`c5cdff27e7c0918efa37876c064dcfd5a3deae76` passed hosted `9 / 9`, merged at
+exact release-code main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`, and
+completed remote release-branch and dedicated release-checkout cleanup. The
+annotated `v0.21.0` Tag object
+`93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to that exact main
+commit.
+
+Repository Release workflow `31858212510` passed and published the stable,
+non-draft, non-prerelease GitHub Release. Published wheel SHA-256 is
+`2e69e3037a07d66c0a1d2ca10d42b693f3633aabef87a3d5db98f8049d3ad125`;
+published source-distribution SHA-256 is
+`e63e0489958c10f835f30160547eef372a116d4c83e8b08356d766d75be2a0a8`.
+Downloaded hashes match GitHub asset digests exactly. A fresh isolated Windows
+install from the published wheel, `pip check` and distribution/package version
+`0.21.0` pass.
+
+Release claims remain bounded to implemented, Native-validated and
+Hosted-validated Evidence. TASK-013 Native H3 completion, paid TASK-014
+execution, ambiguous or destructive Human-owned Project migration, credentials
+and Production Deploy remain parked or blocked. The post-release docs-only sync
+must pass its own PR before a fresh-main AUTONOMY audit selects any later
+Runnable Task; no post-0.21.0 version is preselected.

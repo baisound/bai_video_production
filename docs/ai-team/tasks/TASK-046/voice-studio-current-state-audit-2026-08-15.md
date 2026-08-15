@@ -101,5 +101,14 @@ conflict if the EXE were changed directly. Therefore:
 1. this Roadmap/Task intake is hosted as documentation only;
 2. TASK-036 P-UX-1C closes current V6.1.1 native parity;
 3. a reviewed successor mock revision precedes Voice Shell implementation;
-4. TASK-046/014 then advance the Japanese local/free 60–90 second slice before
-   recording breadth, OBS, RX, broad Creative AI or multilingual work.
+4. TASK-046/014 then advance the Japanese local/free 60–90 second zero-shot
+   slice before production training-material recording breadth;
+5. P-OBS-0 may receive a separate read-only exact-path probe Authorization;
+6. P-OBS-1 minimum Capture MVP must be hosted before P-VS-3 production
+   recording and P-VS-4 fine-tuning, together with Consent, encrypted storage
+   and Owner GO;
+7. P-OBS-2 meeting/live continuous and multi-source breadth, RX, broad Creative
+   AI and multilingual work remain later.
+
+This is a 2026-08-15 Owner priority amendment. It does not change the original
+audit facts or authorize OBS mutation/capture.

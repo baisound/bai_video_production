@@ -50,8 +50,11 @@ Timeline/Export Queue.
    slice through TASK-014, Asset/Candidate, Placement, Timeline, Export Queue
    and QA. Native execution needs exact model/license/runtime Evidence and the
    applicable explicit Human Gate.
-5. `P-VS-3` — 48 kHz/24-bit/mono teleprompter recording, preflight,
-   pause/resume/checkpoint and Dataset review.
+5. `P-VS-3` — 48 kHz/24-bit/mono production training-material recording,
+   preflight, pause/resume/checkpoint and Dataset review. Contract/synthetic
+   design may precede capture, but real recording requires P-OBS-1 hosted
+   completion, P-OBS-0 exact-path probe PASS, recording Consent, verified
+   encrypted storage and explicit Owner GO.
 6. `P-VS-4` — 30/60/90/120 minute fine-tuning revisions, exclusive resource
    mode, comparison and Production approval.
 7. `P-VS-5` — style coverage, Semantic Direction, recording-coach proposals,
@@ -80,4 +83,7 @@ P-VS-1B changes the Shell or connects TASK-014.
 - failure, cancel and restart never synthesize success or replay UNKNOWN work;
 - Human review remains required for Dataset adoption, VoiceProfile production
   approval, text changes, Candidate acceptance and commercial export;
+- P-OBS-1 capture completion never implies Dataset adoption or training start;
+- P-VS-3 production recording and P-VS-4 fine-tuning remain blocked until the
+  complete OBS/Consent/encryption/Owner Gate is satisfied;
 - no paid, Cloud, credential, external-app or release authority is inferred.

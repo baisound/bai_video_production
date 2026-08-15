@@ -1,21 +1,30 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 1,
+  "registry_revision": 2,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
+  "audit_base_main_sha": "5e9d8405b6d39f0e726689e4153de8bb8416bf0d",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
     "hosting_branch": "codex/parallel-lock-task036-task046",
     "operation": "DOCS_ONLY_LOCK_AND_ROADMAP_HOSTING"
   },
+  "priority_amendment": {
+    "date": "2026-08-15",
+    "decision": "PRODUCTION_TRAINING_MATERIAL_RECORDING_REQUIRES_P_OBS_1_HOSTED_COMPLETION",
+    "p_obs_0": "SEPARATE_READ_ONLY_DESIGN_PROBE_AUTHORIZATION_REQUIRED",
+    "p_obs_1": "P0_PRODUCTION_RECORDING_DEPENDENCY_IMPLEMENTATION_NOT_AUTHORIZED",
+    "p_obs_2": "LATER_CONTINUOUS_MULTI_SOURCE_BREADTH",
+    "existing_lock_effect": "TASK036_PUX1C_AND_TASK046_PVS1A_CONTINUE_UNCHANGED",
+    "implementation_authorization_implied": false
+  },
   "last_completed_gate": {
-    "task_unit": "TASK-046/P-VS-0",
+    "task_unit": "LOCK_AND_ROADMAP_HOSTING",
     "state": "HOSTED_CLOSED",
-    "pull_request": 90,
-    "head_sha": "664722d0fac8cc0e79f7c424c6911f4651ceb303",
-    "merge_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
+    "pull_request": 91,
+    "head_sha": "e8a0029b0fa8ad6ab13356780477e134feb1bc33",
+    "merge_sha": "5e9d8405b6d39f0e726689e4153de8bb8416bf0d",
     "hosted_checks": "9_OF_9_PASS",
     "post_merge_ci": "PASS",
     "post_merge_security": "PASS"
@@ -29,8 +38,14 @@
       "branch": "codex/task-036-v611-packaged-native-closure",
       "base_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
       "status": "ACTIVE",
-      "implementation_state": "PAUSED_PROTECTED_WIP_UNTIL_HOSTING_MERGE_AND_WIP_HASH_MATCH",
+      "implementation_state": "ACTIVE_PROTECTED_WIP_HASH_VERIFIED",
       "wip_hash_manifest": "BAI_VIDEO_PRODUCTION_PARALLEL_DEVELOPMENT_LOCK_HANDOFF_Ver1.0_2026-08-15/WIP_FILE_SHA256.txt",
+      "last_wip_hash_verification": {
+        "date": "2026-08-15",
+        "records": 21,
+        "mismatches": 0,
+        "result": "PASS"
+      },
       "allowed_files": [
         "src/ai_video_production/interactive_timeline.py",
         "src/ai_video_production/interactive_timeline_application.py",
@@ -112,13 +127,14 @@
     ".github/**"
   ],
   "integration_lock": {
-    "lock_id": "BVP-INTEGRATION-LOCK-PARALLEL-HOSTING-20260815",
+    "lock_id": "BVP-INTEGRATION-LOCK-TASK047-P0-ROADMAP-20260815",
     "owner_agent": "開発担当",
     "owner_thread_id": "019ff856-bb71-7da0-a6fd-088ae06b158f",
-    "branch": "codex/parallel-lock-task036-task046",
-    "base_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
-    "status": "RELEASED_BY_REGISTRY_HOSTING_MERGE",
-    "scope": "DOCS_ONLY_INITIAL_LOCK_AND_ROADMAP_HOSTING",
+    "branch": "codex/task-047-p0-recording-dependency-roadmap",
+    "base_sha": "5e9d8405b6d39f0e726689e4153de8bb8416bf0d",
+    "status": "ACTIVE_UNTIL_EXACT_MAIN_HOSTING_THEN_RELEASED",
+    "release_condition": "THIS_DOCS_ONLY_UNIT_EXACT_MAIN_MERGE_AND_POST_MERGE_CHECKS_PASS",
+    "scope": "DOCS_ONLY_TASK047_P0_RECORDING_DEPENDENCY_ROADMAP_SYNC",
     "allowed_files": [
       "PROJECT.md",
       "CHANGELOG.md",
@@ -128,11 +144,58 @@
       "docs/ai-team/architecture/PRODUCT-ARCH-002-voice-studio-local-ai-integration.md",
       "docs/ai-team/tasks/TASK-046/task.md",
       "docs/ai-team/tasks/TASK-046/p-vs-0-roadmap-intake-design-review-authorization-2026-08-15.md",
+      "docs/ai-team/tasks/TASK-046/voice-studio-current-state-audit-2026-08-15.md",
+      "docs/ai-team/tasks/TASK-046/voice-studio-requirements-task-crosswalk-2026-08-15.md",
       "docs/ai-team/tasks/TASK-046/voice-studio-acceptance-matrix-2026-08-15.md",
+      "docs/ai-team/tasks/TASK-046/voice-studio-60-90-second-vertical-slice-plan-2026-08-15.md",
+      "docs/ai-team/tasks/TASK-046/voice-studio-runtime-license-capability-probe-plan-2026-08-15.md",
+      "docs/ai-team/tasks/TASK-047/task.md",
+      "docs/ai-team/tasks/TASK-047/p-obs-priority-dependency-roadmap-audit-design-critic-judge-2026-08-15.md",
+      "docs/ai-team/tasks/TASK-043/task.md",
+      "docs/ai-team/tasks/TASK-045/task.md",
       "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json",
-      "docs/ai-team/work-locks/TASK-036_TASK-046_PARALLEL-ALLOCATION.md",
-      "docs/ai-team/work-locks/parallel-lock-roadmap-hosting-governance-evidence-2026-08-15.md"
+      "docs/ai-team/work-locks/TASK-036_TASK-046_PARALLEL-ALLOCATION.md"
     ]
+  },
+  "roadmap_dependency_gates": {
+    "P-OBS-0": {
+      "status": "DESIGN_PROBE_SEPARATE_AUTHORIZATION_REQUIRED",
+      "target_root": "E:\\SteamLibrary\\steamapps\\common\\OBS Studio\\bin",
+      "scope": "READ_ONLY_INSTALLED_TARGET_INVENTORY_PLUS_SEPARATE_OFFICIAL_SDK_TEMPLATE_SOURCE_IDENTITY_ABI_LICENSE_BUILD_AND_SYNTHETIC_CONTRACTS",
+      "installed_tree_does_not_prove_sdk_headers": true,
+      "denied": "PLUGIN_LOAD_INSTALL_OBS_MUTATION_CAPTURE_PRIVATE_BODY"
+    },
+    "P-OBS-1": {
+      "status": "P0_DEPENDENCY_IMPLEMENTATION_NOT_AUTHORIZED",
+      "scope": "MINIMUM_SELECTED_INPUT_RECOVERABLE_CAPTURE_MVP",
+      "implementation_prerequisites": [
+        "HOSTED_EXISTING_VOICE_PROFILE_IDENTITY_CONTRACT",
+        "HOSTED_P_VS_1A_VOICE_PROFILE_REVISION_REFERENCE_CONTRACT",
+        "HOSTED_TASK046_RECORDING_SESSION_SEGMENT_DATASET_CANDIDATE_ADOPTION_CONTRACT",
+        "HOSTED_TASK043_DURABLE_RECOVERY_BINDING"
+      ],
+      "realtime_callback_boundary": "BOUNDED_NATIVE_FRAME_AND_MINIMUM_METADATA_COPY_ONLY_NON_BLOCKING",
+      "canonical_conversion_boundary": "NON_REALTIME_48KHZ_24BIT_MONO_WITH_EXACT_SOURCE_SAMPLE_MAPPING",
+      "dataset_store_and_adoption_owner": "TASK-046",
+      "required_before": [
+        "TASK-046/P-VS-3_PRODUCTION_RECORDING",
+        "TASK-046/P-VS-4_FINE_TUNING"
+      ]
+    },
+    "P-OBS-2": {
+      "status": "LATER_NOT_REQUIRED_FOR_FIRST_PRODUCTION_RECORDING_GATE",
+      "scope": "CONTINUOUS_MEETING_LIVE_MULTI_SOURCE_AND_ADVANCED_PROPOSALS"
+    },
+    "TASK-046/P-VS-3_PRODUCTION_RECORDING": {
+      "status": "BLOCKED_UNTIL_ALL_REQUIRED_GATES",
+      "requires": [
+        "P_OBS_1_HOSTED_COMPLETION",
+        "P_OBS_0_EXACT_PATH_PROBE_PASS",
+        "RECORDING_CONSENT",
+        "VERIFIED_ENCRYPTED_STORAGE_AND_RECOVERY",
+        "OWNER_GO"
+      ]
+    }
   },
   "global_denied_operations": [
     "MODEL_DOWNLOAD_LOAD_OR_INFERENCE",
@@ -144,10 +207,17 @@
     "VERSION_TAG_RELEASE_OR_DEPLOY"
   ],
   "merge_order": [
-    "LOCK_AND_ROADMAP_HOSTING",
     "TASK-036/P-UX-1C_HOSTED_CLOSURE",
     "TASK-046/P-VS-1A_FRESH_MAIN_REBASE_AND_MERGE",
     "VOICE_SUCCESSOR_CANONICAL_MOCK",
-    "TASK-046/P-VS-1B_SEPARATE_AUTHORIZATION"
+    "TASK-046/P-VS-1B_SEPARATE_AUTHORIZATION",
+    "TASK-046/P-VS-2_ZERO_SHOT_VERTICAL_SLICE",
+    "TASK-047/P-OBS-1_SEPARATE_AUTHORIZATION_AND_HOSTED_COMPLETION",
+    "TASK-046/P-VS-3_PRODUCTION_RECORDING_AFTER_ALL_GATES",
+    "TASK-046/P-VS-4_FINE_TUNING",
+    "TASK-047/P-OBS-2_LATER"
+  ],
+  "parallel_safe_design_units": [
+    "TASK-047/P-OBS-0_CONTRACT_DESIGN_ONLY_AFTER_FRESH_MAIN_AUDIT"
   ]
 }

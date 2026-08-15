@@ -17,6 +17,11 @@ fine-tuning, OBS, RX, broad Creative AI or multilingual breadth.
 - 48 kHz canonical Cue/Master WAV;
 - existing Asset/Candidate/Human review/Placement/Timeline/Export/QA owners.
 
+This P-VS-2 zero-shot slice neither collects nor authorizes new production
+training material. P-OBS-1 is therefore not a prerequisite for this slice; it
+is the P0 prerequisite for subsequent P-VS-3 production recording and P-VS-4
+fine-tuning.
+
 ## Dependency graph
 
 ```mermaid

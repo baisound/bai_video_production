@@ -43,6 +43,13 @@ behavior. Paid/Cloud fallback is prohibited. UNKNOWN execution is not replayed.
 
 ## External applications
 
-OBS, RX 12, REAPER, Resolve and Cubase are separate later probes. A discovered
-path or installed product proves neither API capability nor authorization to
-change a real Project or setting.
+OBS P-OBS-0 is a separately authorized, read-only early probe candidate for
+`E:\SteamLibrary\steamapps\common\OBS Studio\bin`, the exact installed
+executable/modules/build, Plugin ABI/load/callback, IPC, build toolchain and
+GPL/distribution boundary. Official SDK/Plugin Template source, commit,
+headers, documentation and license are a separate read-only acquisition and
+Evidence route; their presence or identity is never inferred from `bin`.
+RX 12, REAPER, Resolve and Cubase remain separate
+later probes. A discovered path or installed product proves neither API
+capability nor authorization to load a Plugin, capture audio or change a real
+Project or setting.

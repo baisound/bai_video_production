@@ -53,14 +53,24 @@ The final sequence is:
    P-VS-1B Shell/TASK-014 integration.
 5. exact local voice Model/Runtime/License capability decision.
 6. P-VS-2 Japanese, owner-only, Local/free 60–90 second vertical slice.
-7. P-VS-3 recording/Dataset and P-VS-4 fine-tuning.
-8. TASK-048 quality calibration.
-9. TASK-047 OBS capture.
-10. TASK-035 RX 12/REAPER finishing.
-11. Managed Runtime, broader Local Creative AI and staged locale gates.
+7. P-OBS-0 read-only installed-target inventory plus separately sourced
+   official SDK/Plugin Template identity/ABI/License/Build probe may receive a
+   separate early Authorization after its contract is closed.
+8. P-OBS-1 minimum Capture MVP hosted completion.
+9. P-VS-3 production recording/Dataset only after P-OBS-1, exact-path PASS,
+   recording Consent, encrypted storage and Owner GO; then P-VS-4 fine-tuning.
+10. TASK-048 quality calibration.
+11. P-OBS-2 meeting/live continuous and multi-source breadth.
+12. TASK-035 RX 12/REAPER finishing.
+13. Managed Runtime, broader Local Creative AI and staged locale gates.
 
 This moves the vertical slice ahead of breadth while preserving the existing
 mock-authority route. It does not claim the native vertical slice complete.
+
+Owner priority amendment `2026-08-15`: the original sequence that placed OBS
+after production recording is superseded. P-OBS-1 is now the P0 technical
+dependency for production training-material capture, but it does not itself
+grant recording, Dataset adoption or training authority.
 
 ## Allowed Files — P-VS-0
 

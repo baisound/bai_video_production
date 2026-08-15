@@ -77,3 +77,12 @@ Deploy.
 
 P-VS-1A branch development may occur in parallel between steps 1 and 2; this
 does not change the main-merge order.
+
+## TASK-047 priority amendment does not interrupt these Locks
+
+The `2026-08-15` Owner decision makes TASK-047 P-OBS-1 the P0 dependency for
+later P-VS-3 production recording and P-VS-4 fine-tuning. It does not change,
+pause or overlap `BVP-LOCK-TASK036-PUX1C` or
+`BVP-LOCK-TASK046-PVS1A`. P-OBS-0/1 implementation has no ACTIVE File Lock in
+this Registry revision and requires a separate fresh-main Audit, exact Allowed
+Files/operations, two Critic corrections and Judge before any patch or probe.

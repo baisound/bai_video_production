@@ -5,7 +5,7 @@
 - Product: `BAI VIDEO PRODUCTION`
 - Priority: `OWNER_MAXIMUM / MAJOR_REFACTOR_FOUNDATION`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `ACTIVE / P-FND-3_HOSTED_CLOSED / P-FND-4_LOCAL_DURABLE_JOB_PASS_HOSTED_PENDING`
+- Status: `HOSTED_CLOSED / P-FND-4_DURABLE_PRODUCT_JOB_HOSTED_CLOSED`
 - Authority: Owner Directive `AUTONOMY_MAJOR_REFACTOR_CONTINUOUS_RELEASE`
 - Current main baseline: `19febe3e00de92b18948e93740a0e3080b63d1b1`
 
@@ -48,6 +48,9 @@ existing canonical domain stores without replacing their ownership:
 - Audio placement review remains TASK-041.
 - Shell command authority remains TASK-036.
 - Resolve mutation/render remains TASK-010/011 and is not authorized by this Task.
+- OBS capture ownership remains TASK-047. TASK-043 supplies only durable
+  session/job/checkpoint/recovery primitives and never converts a recovered
+  segment into Dataset adoption or training authority.
 
 ## Permanent boundaries
 
@@ -60,6 +63,10 @@ existing canonical domain stores without replacing their ownership:
   arbitrary host paths.
 - Recovery never replays external, Provider, paid, Resolve/Cubase or unknown-state
   operations automatically.
+- P-OBS-1 capture recovery must persist session/segment identity, incomplete or
+  UNKNOWN state, exact sample/drop counts and explicit reconciliation. Restart
+  never resumes recording, adopts a Dataset segment or starts training without
+  the applicable explicit authority.
 - Production Deploy, paid Provider execution, new credential input and destructive
   external operations remain unauthorized.
 

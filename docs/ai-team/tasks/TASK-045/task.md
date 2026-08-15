@@ -4,7 +4,7 @@
 
 - Priority: `OWNER_MAXIMUM / RELEASE_CLOSURE`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `FORMAL_RELEASE_COMPLETE / V0_21_0_RELEASED / POST_RELEASE_SYNC_HOSTED_PENDING`
+- Status: `FORMAL_RELEASE_COMPLETE / V0_21_0_RELEASED / POST_RELEASE_SYNC_HOSTED_CLOSED`
 - Depends on: TASK-043, TASK-042 P-V6-4 and TASK-044
 
 ## Goal
@@ -27,6 +27,13 @@ released without claims broader than Evidence.
 
 Paid Provider, TASK-013 Native H3 replay and Production Deploy are not release
 requirements and remain separate Human Gates.
+
+The stable `v0.21.0` release is not reopened by future OBS work. Any release
+that later includes P-OBS-1 must independently prove the exact supported OBS
+build/ABI/load/callback, Plugin/Core IPC separation, 48 kHz/24-bit/mono capture,
+device/drop/crash/restart behavior, private-data containment, GPL/source/
+notice/signing/distribution decision and clean install/upgrade/rollback. A
+P-OBS-0 path discovery or P-OBS-1 local test is not a Release authorization.
 
 ## Current execution plan
 

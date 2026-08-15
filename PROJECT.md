@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_21_0_RELEASED_TASK_026_P_AUDIO_1_HOSTED_CLOSED_TASK_036_P_UX_1_DESIGN_LOCAL_PASS_NATIVE_RUNTIME_PARKED`
+`V0_21_0_RELEASED_TASK_036_P_UX_1A_LOCAL_PASS_HOSTED_IMPLEMENTATION_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-026 P-AUDIO-1 implementation PR #86 head a907d199 passed 9 / 9, merged at exact main 0e457e697a8099eac885d7edb88d5e77b0eca431, and completed remote branch/checkout cleanup`
-- Active Task: `TASK-036 / P-UX-1 V6.1.1 MOCK-TO-EXE VISUAL CONVERGENCE DESIGN / codex/task-036-v611-mock-to-exe-visual-convergence`; current-main audit, DEV-4 re-decision, exact Allowed Files, Builder design and Critic review are local PASS while implementation waits for hosted design closure and fresh-main reselection
+- Last Completed Gate: `TASK-036 P-UX-1 design PR #87 passed hosted 9 / 9, merged at exact main b771b9acae67fcd0ee41218d70a011e387beb300, and completed remote branch/checkout cleanup`
+- Active Task: `TASK-036 / P-UX-1A V6.1.1 SHELL COMPOSITION IMPLEMENTATION / codex/task-036-v611-shell-composition-implementation`; exact base main `b771b9acae67fcd0ee41218d70a011e387beb300`; runtime composition, focused `46 / 46`, Windows `1162 passed, 1 skip`, WSL2 `1163 passed`, one-dir build and bounded native Home/Edit/Export/Settings inspection pass locally; hosted implementation closure is pending and overall visual parity remains unclaimed
 - TASK-004: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.82 Addendum LXXVI
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.83 Addendum LXXVII
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.82
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.83
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-026 P-AUDIO-1 is hosted-closed by PR #86 at exact main `0e457e697a8099eac885d7edb88d5e77b0eca431`, with branch/checkout cleanup complete. TASK-036 P-UX-1 V6.1.1 mock-to-EXE visual/interaction convergence is the active Owner P0; differential design passes locally and current visual parity is not claimed.
+- Current insertion: TASK-036 P-UX-1 differential design is hosted-closed by PR #87 at exact main `b771b9acae67fcd0ee41218d70a011e387beb300`, with branch/checkout cleanup complete. P-UX-1A V6.1.1 Shell composition is the active Owner P0 and passes locally across full Windows/WSL2 regression, one-dir build and bounded native Home/Edit/Export/Settings inspection. P-UX-1B/1C remain; overall visual parity is not claimed.
 
 ## 3. MVP定義
 
@@ -105,7 +105,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION IMPLEMENTATION LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1 DESIGN LOCAL PASS / HOSTED DESIGN PENDING |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1 DESIGN HOSTED CLOSED / P-UX-1A LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -2070,3 +2070,36 @@ exact main merge, cleanup and fresh-main reselection. Overall
 drags, scroll, menus, focus, supported viewport/DPI and accessibility Evidence
 passes. Provider/paid work, Credentials, Native H3 replay, Resolve/Cubase
 mutation, Production Deploy, version, Tag and Release remain blocked.
+
+## Addendum LXXVII - TASK-036 P-UX-1 Design Closure and P-UX-1A Local Gate
+
+TASK-036 P-UX-1 design PR #87 passed all hosted checks and merged at exact main
+`b771b9acae67fcd0ee41218d70a011e387beb300`. Its remote branch and dedicated
+checkout were removed before fresh-main AUTONOMY selected P-UX-1A on
+`codex/task-036-v611-shell-composition-implementation`.
+
+P-UX-1A replaces the packaged runtime view with a Product-owned V6.1.1 Shell
+composition while preserving the existing bridge, Application Services and
+durable stores. The canonical top menus, H/1..11/A/Q navigation, all primary
+workspaces, Edit three-pane/Timeline relationship, Home Recent/Direct layout,
+Export settings/External/Queue composition, Background Jobs and nine-category
+Settings dialog are present. Home uses the actual Project instead of the
+mock's sample Projects. Dynamic values remain bridge projections; mock random
+timers, demo records and front-end-only success are absent.
+
+Focused Shell/V6.1.1 checks pass `46 / 46`. Windows full regression passes
+`1162` with one intentional non-Windows skip, Ubuntu WSL2 passes `1163`,
+embedded JavaScript and Python compile pass, and the Windows one-dir build
+passes. The long development path fails closed under the existing install-path
+policy; the owned build launches from the dedicated short test path and native
+1600 x 900 inspection passes Home, Edit with actual `3/3` Track and `4/4` Clip
+projection, Export and Settings composition. Critic-found Home, Export and
+Settings divergences were corrected; unresolved Critical/High is `0 / 0`.
+
+P-UX-1A is therefore `LOCAL_PASS`, subject to hosted all-green closure. This
+does not claim overall `V6.1.1_VISUAL_PARITY_PASS`. P-UX-1B must connect the
+remaining truthfully disabled interactions and state transitions. P-UX-1C must
+complete the supported viewport/DPI, menus, keyboard, focus, accessibility and
+conversation-free packaged restart matrix. Native H3 replay, paid Provider,
+Credentials, Human ACCEPT/LOCK, Resolve/Cubase mutation, Production Deploy,
+version, Tag and Release remain blocked.

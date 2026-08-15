@@ -38,9 +38,10 @@ from .interactive_timeline import (
 )
 from .serialization import sha256_bytes
 from .timebase import FrameRate
+from .task036_shell_v611 import HTML as V611_HTML
 
 
-HTML = r'''<!doctype html>
+LEGACY_HTML = r'''<!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BAI Video Production</title>
 <style>
@@ -149,6 +150,10 @@ const renderGenerationQueueAdmission=renderGenerationQueue;
 renderGenerationQueue=function(model){renderGenerationQueueAdmission(model);if(!model?.available)return;const control=model.execution_control,adoption=model.output_adoption_control,host=document.querySelector('#generationQueueContent'),summary=document.querySelector('#generationQueueSummary'),boundary=host.querySelector('.planning-warning');if(!control?.available){const unavailable=document.createElement('div');unavailable.className='production-meta planning-warning';unavailable.textContent='Local execution adapter is not configured. Admission Evidence remains non-executable.';host.append(unavailable);return}summary.textContent=`Admission ${model.entry_count} / Local execution ${control.latest_executions?.length||0} / Audit candidates ${adoption?.latest_adoptions?.filter(x=>x.state==='READY_FOR_AUDIT').length||0}`;if(boundary)boundary.textContent='LOCAL_FREE_AI実行と、生成済み出力の監査候補登録は別の明示確認です。監査候補登録はProviderを再実行せず、課金・Human ACCEPT/LOCK・公開・NLE操作を行いません。';if(control.recovery?.required){const recovery=document.createElement('div');recovery.className='audit-recovery';recovery.textContent='RECOVERY_REQUIRED: 中断したlocal dispatchは自動再実行しません。';host.append(recovery)}for(const item of control.available_queue_entries||[]){const card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`LOCAL EXECUTION READY · ${item.scene_id} / ${item.slot_id}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`${item.queue_entry_id}\nPrompt: ${item.prompt_id} v${item.prompt_version}\nPrompt body: private / hash-verified`;const button=document.createElement('button');button.className='action';button.textContent='Local Provider実行を確認';button.disabled=!!control.recovery?.required;button.addEventListener('click',()=>prepareLocalGenerationExecution(model,item));card.append(title,meta,button);host.append(card)}if(adoption?.available){for(const item of adoption.recovery?.active||[]){const card=document.createElement('section');card.className='audit-recovery';card.textContent=`監査候補登録の再開待ち · ${item.adoption_id} / ${item.state}`;const button=document.createElement('button');button.className='action';button.textContent='残りだけ再開';button.addEventListener('click',()=>recoverGenerationOutputAdoption(item));card.append(button);host.append(card)}for(const item of adoption.eligible_completed_outputs||[]){const card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`COMPLETED OUTPUT · ${item.execution_id}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`Slot: ${item.slot_id}\nPrompt: ${item.prompt_id} v${item.prompt_version}\nMedia: ${item.media_kind}\nSHA: ${item.output_sha256}\nAdoption: ${item.adoption_status}`;const button=document.createElement('button');button.className='action';button.textContent=item.adoption_status==='READY'?'検証して監査候補へ登録':'Strategy/Parent binding待ち';button.disabled=!!adoption.recovery?.required||item.adoption_status!=='READY';button.addEventListener('click',()=>prepareGenerationOutputAdoption(model,item));card.append(title,meta,button);host.append(card)}}for(const event of control.latest_executions||[]){const card=document.createElement('section');card.className='planning-card';card.textContent=`${event.execution_id} · ${event.state} · ${event.route_id} / ${event.model_id}`;host.append(card)}}
 applyAccessibility();window.addEventListener('pywebviewready',refresh);setTimeout(refresh,300);
 </script></body></html>'''
+
+# The V6.1.1 Product template is intentionally isolated from the historical
+# functional spike.  The bridge below remains the single runtime Authority.
+HTML = V611_HTML
 
 
 class Task036ShellBridge:

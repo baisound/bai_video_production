@@ -728,3 +728,17 @@ Status:
 
 `OWNER_VISUAL_DIRECTION_RECORDED`
 `TASK036_UI_CONTRACT_READY`
+
+## 23. Owner V6.1.1 Superseding Visual Authority — 2026-08-15
+
+The checked-in
+`docs/ai-team/product-design/v6-integration/BVP-UI-MOCK-V6.1.1.html`
+supersedes any looser visual discretion in this historical contract. Its layout,
+navigation hierarchy, integrated panel relationships and interaction intent are
+the required packaged-EXE target. A functionally correct but materially
+different Shell is an acceptance failure.
+
+The mock's simulated data and front-end-only completion behavior are not
+runtime truth. P-UX-1 must connect the design to existing Product Application
+Services and preserve explicit Human/external-write Authority. Static parity is
+not sufficient; real packaged Windows interaction Evidence is required.

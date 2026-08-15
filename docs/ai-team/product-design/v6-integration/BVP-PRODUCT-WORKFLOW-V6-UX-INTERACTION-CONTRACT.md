@@ -1,8 +1,15 @@
 # BAI VIDEO PRODUCTION — V6.1.1 UX / Interaction Requirement Contract
-Status: `HANDOFF_REQUIREMENT_INPUT / REVALIDATE_BEFORE_CANONICAL`
+Status: `CANONICAL_OWNER_VISUAL_AND_INTERACTION_AUTHORITY / NATIVE_REVALIDATION_REQUIRED`
 Date: `2026-08-14`
 
 This file records the known UX requirements that must not be lost during detailed design.
+
+Owner update 2026-08-15: the checked-in `BVP-UI-MOCK-V6.1.1.html` is the
+absolute layout and interaction-intent Source of Truth for the packaged Product.
+Its demo data and simulated success behavior are not Product state and must be
+replaced by real Application Service projections. A materially different EXE
+layout or interaction model is an acceptance failure. Native packaged-EXE
+Evidence, rather than static HTML similarity, closes fidelity.
 
 ---
 
@@ -149,9 +156,11 @@ The exact command IDs and authority are detailed-design outputs.
 
 ---
 
-# 8. Mock limitations
+# 8. Mock authority and limitations
 
-The included V6.1.1 HTML is an interaction/reference artifact.
+The included V6.1.1 HTML is the canonical visual and interaction-intent
+artifact. Product code must preserve its information architecture, hierarchy,
+panel relationships and interaction semantics.
 
 Previous mock work demonstrated that:
 - syntax PASS can coexist with runtime scope defects;
@@ -160,3 +169,8 @@ Previous mock work demonstrated that:
 - scroll/ruler synchronization can be wrong.
 
 Therefore no mock audit replaces actual browser/native acceptance.
+
+The mock's illustrative records, random progress timers and front-end-only
+success messages must not be shipped as Product truth. Runtime controls must be
+bound to an authorized Product operation, navigate to a real surface, or be
+visibly disabled with an exact reason. Silent no-op controls are not accepted.

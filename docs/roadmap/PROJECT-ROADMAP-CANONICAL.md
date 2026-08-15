@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.81
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.82
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-026 P-AUDIO-1 implementation from exact design main `82e97e37b04c12c74fe213dbd0993e8b83e4c4d1` is local PASS and hosted implementation pending. Immediately after its all-green main merge and cleanup, Owner P0 requires TASK-036 P-UX-1 V6.1.1 mock-to-EXE visual/interaction convergence; current visual parity is not claimed.
+- Current insertion: TASK-026 P-AUDIO-1 is hosted-closed by PR #86 at exact main `0e457e697a8099eac885d7edb88d5e77b0eca431`, with branch/checkout cleanup complete. TASK-036 P-UX-1 V6.1.1 mock-to-EXE visual/interaction convergence is the active Owner P0; differential design passes locally and current visual parity is not claimed.
 
 ## 3. MVP定義
 
@@ -105,7 +105,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION IMPLEMENTATION LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1 OWNER P0 QUEUED AFTER TASK-026 |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1 DESIGN LOCAL PASS / HOSTED DESIGN PENDING |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -2036,3 +2036,37 @@ requires real packaged-EXE interaction and supported viewport/DPI checks; HTML
 syntax, DOM labels or historical TASK-036 functional Native Gates alone cannot
 claim visual parity. This Addendum queues that next unit but does not pre-claim
 its design, implementation or PASS.
+
+## Addendum LXXVI - TASK-026 Hosted Closure and TASK-036 P-UX-1 Differential Design
+
+TASK-026 P-AUDIO-1 PR #86 exact head
+`a907d199a0f70cf05dc24361f512d84cd71163f6` passed all `9 / 9` hosted checks
+and merged at exact main `0e457e697a8099eac885d7edb88d5e77b0eca431`.
+GitHub main matched that merge SHA, the remote work branch was absent, the
+dedicated checkout was clean and then removed, and a fresh main checkout was
+created for TASK-036. Stable Release remains `v0.21.0`.
+
+Fresh-main AUTONOMY selects `TASK-036 P-UX-1 / V6.1.1 MOCK-TO-EXE VISUAL
+CONVERGENCE`. The checked-in V6.1.1 mock is now the absolute packaged-EXE
+layout and interaction-intent authority. The implementation must preserve its
+top menus, stage navigation, integrated pages, Asset/Viewer/Inspector/Timeline
+relationships, Quick Generate, Settings, Background Jobs and Export Queue. A
+functionally correct but materially different Shell is an acceptance failure.
+
+The mock's example records, random progress timers and front-end-only success
+messages are not Product truth. P-UX-1 reuses the existing TASK-027/037/038/
+039/040/041/042/044/026 Application Services and stores. It adds no second
+Candidate, Lock, Prompt, Queue, Audio, Timeline or Project truth. Every runtime
+control must call an authorized operation, navigate to a real surface, or be
+visibly disabled with an exact reason; silent no-op and synthetic success are
+forbidden.
+
+The differential design defines P-UX-1A Shell composition, P-UX-1B interaction
+and state convergence, and P-UX-1C packaged native closure. DEV-4, exact Allowed
+Files, Builder design and Critic review pass locally with unresolved
+Critical/High `0 / 0`. Implementation waits for a hosted all-green design PR,
+exact main merge, cleanup and fresh-main reselection. Overall
+`V6.1.1_VISUAL_PARITY_PASS` remains unclaimed until real packaged-EXE clicks,
+drags, scroll, menus, focus, supported viewport/DPI and accessibility Evidence
+passes. Provider/paid work, Credentials, Native H3 replay, Resolve/Cubase
+mutation, Production Deploy, version, Tag and Release remain blocked.

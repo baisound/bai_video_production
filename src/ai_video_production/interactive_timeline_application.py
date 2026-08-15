@@ -10,7 +10,7 @@ from typing import Callable, Iterable
 
 from .atomic import AtomicJsonWriter
 from .errors import ProductError, ProductErrorCategory
-from .interactive_timeline import InteractiveTimeline, TimelineTrack
+from .interactive_timeline import InteractiveTimeline, TimelineTrack, timeline_track_category
 from .interactive_timeline_edit import (
     SnapAnchor,
     TimelineEditCommand,
@@ -213,7 +213,12 @@ class Task044TimelineEditApplication:
                              command_id: str, expected_project_manifest_sha256: str) -> dict[str, object]:
         projected, _ = TimelineEditProjector.apply(timeline, self._load(ProductProjectManifestStore.load(self.project_root)))
         track = next((item for item in projected.tracks if item.track_id == track_id), None)
-        if track is None or track.minimum_required or any(item.track_id == track_id for item in projected.clips):
+        category_count = 0 if track is None else sum(
+            timeline_track_category(item) is timeline_track_category(track)
+            for item in projected.tracks
+        )
+        if (track is None or track.minimum_required or category_count <= 1
+                or any(item.track_id == track_id for item in projected.clips)):
             raise ProductError("ERR_TIMELINE_TRACK_REMOVE_BLOCKED", "Required, missing or non-empty track cannot be removed", ProductErrorCategory.STATE)
         command = TimelineEditCommand(command_id, TimelineEditKind.REMOVE_TRACK,
                                       target_track_id=track_id, track=track)

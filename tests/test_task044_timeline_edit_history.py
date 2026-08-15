@@ -12,7 +12,9 @@ from ai_video_production.interactive_timeline import (
     InteractiveTimelineClip,
     TimelineMediaKind,
     TimelineTrack,
+    TimelineTrackCategory,
     TimelineTrackRole,
+    timeline_track_category,
 )
 from ai_video_production.interactive_timeline_application import Task044TimelineEditApplication
 from ai_video_production.interactive_timeline_edit import (
@@ -34,6 +36,7 @@ from ai_video_production.product_project import ProductProjectManifest, ProjectT
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.project_history import ProjectCommandAction, ProjectCommandHistoryStore
 from ai_video_production.serialization import sha256_bytes
+from ai_video_production.task044_nle_shell import Task044NleShellController
 from ai_video_production.timebase import FrameRate
 
 CREATED = "2026-08-15T00:00:00.000Z"
@@ -213,7 +216,68 @@ def test_track_guards_and_shell_authority_categories(tmp_path: Path) -> None:
             expected_project_manifest_sha256=current.project_manifest_sha256,
         )
     assert exc.value.code == "ERR_TIMELINE_TRACK_REMOVE_BLOCKED"
+    with pytest.raises(ProductError) as exc:
+        app.prepare_remove_track(
+            timeline=base, track_id="audio-spare", command_id="remove-last-audio",
+            expected_project_manifest_sha256=current.project_manifest_sha256,
+        )
+    assert exc.value.code == "ERR_TIMELINE_TRACK_REMOVE_BLOCKED"
+    added = TimelineTrack("audio-second", 2, TimelineTrackRole.AUDIO, TimelineMediaKind.AUDIO, "Audio 2")
+    inverse = TimelineEditCommand(
+        "add-audio", TimelineEditKind.ADD_TRACK, track=added,
+    ).inverse(command_id="undo-add-audio")
+    assert inverse.kind is TimelineEditKind.REMOVE_TRACK
+    assert inverse.track == added
+    controller = Task044NleShellController(timeline=base, edit_application=app)
+    prepared_add = controller.prepare_add_track({
+        "category": "VIDEO", "command_id": "add-video-two",
+        "expected_project_manifest_sha256": current.project_manifest_sha256,
+        "expected_timeline_sha256": base.timeline_sha256,
+    })
+    controller.apply_edit({"confirmation_id": prepared_add["confirmation_id"]})
+    after_add = ProductProjectManifestStore.load(tmp_path)
+    assert any(item["track_id"] == "V1" for item in controller.snapshot()["projection"]["tracks"])
+    prepared_remove = controller.prepare_remove_track({
+        "track_id": "V1", "command_id": "remove-video-two",
+        "expected_project_manifest_sha256": after_add.project_manifest_sha256,
+        "expected_timeline_sha256": base.timeline_sha256,
+    })
+    controller.apply_edit({"confirmation_id": prepared_remove["confirmation_id"]})
+    assert all(item["track_id"] != "V1" for item in controller.snapshot()["projection"]["tracks"])
     assert ShellApplicationService.command_spec("timeline.edit.prepare").category is CommandCategory.READ_ONLY
     assert ShellApplicationService.command_spec("timeline.edit.apply").category is CommandCategory.HUMAN_FINAL_AUTHORITY
     assert ShellApplicationService.command_spec("timeline.in_out.update").category is CommandCategory.LOCAL_REVERSIBLE
     assert ShellApplicationService.command_spec("timeline.track.apply").category is CommandCategory.HUMAN_FINAL_AUTHORITY
+
+
+def test_each_v6_track_category_keeps_its_last_track() -> None:
+    tracks = (
+        TimelineTrack("V1", 1, TimelineTrackRole.VIDEO, TimelineMediaKind.VIDEO, "Video"),
+        TimelineTrack("S1", 2, TimelineTrackRole.SUBTITLE, TimelineMediaKind.TEXT, "Subtitle"),
+        TimelineTrack("A1", 3, TimelineTrackRole.AUDIO, TimelineMediaKind.AUDIO, "Audio"),
+        TimelineTrack("SE1", 4, TimelineTrackRole.AUDIO, TimelineMediaKind.AUDIO, "SE"),
+        TimelineTrack("BGM1", 5, TimelineTrackRole.AUDIO, TimelineMediaKind.AUDIO, "BGM"),
+    )
+    expected = (
+        TimelineTrackCategory.VIDEO,
+        TimelineTrackCategory.SUBTITLE,
+        TimelineTrackCategory.AUDIO,
+        TimelineTrackCategory.SE,
+        TimelineTrackCategory.BGM,
+    )
+    assert tuple(timeline_track_category(track) for track in tracks) == expected
+    base = InteractiveTimeline(
+        "project-1", "timeline-categories", FrameRate(30, 1), 300, tracks, (),
+    )
+    for revision, track in enumerate(tracks, start=1):
+        history = TimelineEditHistory("project-1", f"history-{revision}")
+        history.append(TimelineEditRevision(
+            "project-1", f"history-{revision}", 1, base.timeline_sha256,
+            TimelineEditCommand(
+                f"remove-{track.track_id}", TimelineEditKind.REMOVE_TRACK,
+                target_track_id=track.track_id, track=track,
+            ),
+        ))
+        with pytest.raises(ProductError) as exc:
+            TimelineEditProjector.apply(base, history)
+        assert exc.value.code == "ERR_TIMELINE_TRACK_REMOVE_BLOCKED"

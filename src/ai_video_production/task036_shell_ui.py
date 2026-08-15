@@ -250,6 +250,18 @@ class Task036ShellBridge:
     def interactive_timeline_fit(self, args: Any) -> dict[str, Any]:
         return self._require_nle_controller().fit(args)
 
+    def interactive_timeline_update_track_state(self, args: Any) -> dict[str, Any]:
+        return self._require_nle_controller().update_track_state(args)
+
+    def interactive_timeline_update_track_height(self, args: Any) -> dict[str, Any]:
+        return self._require_nle_controller().update_track_height(args)
+
+    def interactive_timeline_prepare_add_track(self, args: Any) -> dict[str, object]:
+        return self._require_nle_controller().prepare_add_track(args)
+
+    def interactive_timeline_prepare_remove_track(self, args: Any) -> dict[str, object]:
+        return self._require_nle_controller().prepare_remove_track(args)
+
     def interactive_timeline_prepare_trim(self, args: Any) -> dict[str, Any]:
         return self._require_nle_controller().prepare_trim(args)
 
@@ -1110,4 +1122,4 @@ def run_native_layout_spike(*, product_version: str = "0.21.0") -> None:
         min_size=(760, 600),
     )
     # TASK-036 supports the Windows EdgeChromium/WebView2 renderer only.
-    webview.start(gui="edgechromium")
+    webview.start(gui="edgechromium", private_mode=True)

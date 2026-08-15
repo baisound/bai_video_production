@@ -1,0 +1,114 @@
+﻿{
+    "evidence_version":  "1.0.0",
+    "task":  "TASK-036",
+    "gate":  "P_UX_1C_PACKAGED_NATIVE_CLOSURE",
+    "timestamp_utc":  "2026-08-15T10:02:01.0412763Z",
+    "package_sha256":  "ee15487e237c630f750512322963eaed5e9632e4e79b4be6442464d2d134ac38",
+    "package_copied_to_owned_short_path":  true,
+    "pywebview_private_mode_explicit":  true,
+    "canonical_ui_contract":  "V6.1.1",
+    "visual":  {
+                   "captures":  [
+                                    {
+                                        "file":  "01-home.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "66ed81ec87df2aac665b91eb21475944956bd2be157d794c8cb50186516dda3c"
+                                    },
+                                    {
+                                        "file":  "02-file-menu.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "7f0e7e7aab9104ca644e739e7d600bb1eb1913e65aa4580ce41d3aa27b244527"
+                                    },
+                                    {
+                                        "file":  "03-settings-audio.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "b7d03f327a1d38da5b32de0cd8c6b9f64da84ae7752923f8183fe2f56c01e9b2"
+                                    },
+                                    {
+                                        "file":  "04-export.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "ead97a376518bf2ed453e12736fe086a6d729c0a10fe0207e8f8d260967cde75"
+                                    },
+                                    {
+                                        "file":  "05-edit-after-scrub.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "d222d59fe97eaf1b415afa28f78c17f8a6d00134133387d31a191419622c71bf"
+                                    }
+                                ],
+                   "text_scale_percent":  130,
+                   "monitor_dpi_and_text_scale_recorded_separately":  true,
+                   "mock_demo_state_used":  false,
+                   "product_projection_used":  true
+               },
+    "interaction":  {
+                        "initial_required_controls_present":  true,
+                        "concrete_file_menu_present":  true,
+                        "menu_escape_focus_restored":  true,
+                        "nine_settings_categories_present":  true,
+                        "settings_escape_focus_restored":  true,
+                        "timeline_zoom_changed_geometry":  true,
+                        "timeline_scroll_changed_geometry":  true,
+                        "timeline_native_pointer_scrub_changed_controller_value":  true,
+                        "canonical_track_controls_present":  true,
+                        "track_visibility_lock_mute_round_trip":  true,
+                        "track_height_python_round_trip":  true,
+                        "track_height_before":  44,
+                        "track_height_after":  52,
+                        "playhead_before":  0,
+                        "playhead_after":  228,
+                        "native_picker_cancelled_without_exit":  true
+                    },
+    "accessibility":  {
+                          "automation_root_name":  null,
+                          "semantic_button_count":  31,
+                          "visible_focus_css_contract_tested":  true,
+                          "ruler_accessible_name_present":  true,
+                          "playhead_range_value_present":  true
+                      },
+    "displays":  [
+                     {
+                         "device":  "\\\\.\\DISPLAY2",
+                         "primary":  false,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     },
+                     {
+                         "device":  "\\\\.\\DISPLAY3",
+                         "primary":  false,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     },
+                     {
+                         "device":  "\\\\.\\DISPLAY1",
+                         "primary":  true,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     }
+                 ],
+    "all_display_moves_passed":  true,
+    "restart":  {
+                    "private_mode_recreated_without_conversation":  true,
+                    "required_controls_present":  true,
+                    "first_owned_process_exit":  true,
+                    "second_owned_process_exit":  true,
+                    "conversation_free_restart_passed":  true
+                },
+    "provider_execution_started":  false,
+    "paid_execution_authorized":  false,
+    "credential_mutation_started":  false,
+    "human_accept_or_lock_started":  false,
+    "resolve_mutation_started":  false,
+    "cubase_mutation_started":  false,
+    "release_or_deploy_started":  false
+}

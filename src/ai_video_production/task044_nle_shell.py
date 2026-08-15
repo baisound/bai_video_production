@@ -11,7 +11,9 @@ from .export_queue import ExportPreparation
 from .export_queue_application import ExportQueueApplication
 from .interactive_timeline import (
     InteractiveTimeline, TimelineFitMode, TimelineInteractionReducer,
-    TimelineInteractionState, TimelineViewport, TimelineWindowProjector,
+    TimelineInteractionState, TimelineMediaKind, TimelineTrack,
+    TimelineTrackCategory, TimelineTrackRole, TimelineViewport,
+    TimelineWindowProjector, timeline_track_category,
 )
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_edit import SnapAnchor, SnapKind
@@ -35,6 +37,7 @@ class Task044NleShellController:
         self.edit_application = edit_application
         self.export_application = export_application
         self.export_preparations = dict(export_preparations or {})
+        self._track_presentation: dict[str, dict[str, object]] = {}
         self.interaction = TimelineInteractionState(timeline.project_id, timeline.timeline_sha256, 0)
         self.viewport = TimelineViewport.fit(
             start_frame=0, end_frame=timeline.duration_frames, viewport_width_px=1200,
@@ -69,6 +72,30 @@ class Task044NleShellController:
             ).project_manifest_sha256
         projection = TimelineWindowProjector.project(timeline, self.viewport,
                                                      clip_offset=offset, max_clips=maximum)
+        projection_payload = projection.to_dict(rate=timeline.timeline_rate)
+        for track_payload in projection_payload["tracks"]:
+            track = next(item for item in timeline.tracks if item.track_id == track_payload["track_id"])
+            state = self._track_presentation.setdefault(track.track_id, {
+                "visible": True, "locked": False, "muted": False,
+                "solo": False, "height": 44,
+            })
+            track_payload.update({
+                "category": timeline_track_category(track).value,
+                "visible": state["visible"],
+                "locked": state["locked"],
+                "muted": state["muted"],
+                "solo": state["solo"],
+                "height": state["height"],
+                "mute_solo_applicable": track.media_kind is TimelineMediaKind.AUDIO,
+                "remove_available": (
+                    self.edit_application is not None
+                    and not bool(state["locked"])
+                    and not any(item.track_id == track.track_id for item in timeline.clips)
+                    and sum(timeline_track_category(item) is timeline_track_category(track)
+                            for item in timeline.tracks) > 1
+                    and not track.minimum_required
+                ),
+            })
         return {"available": True, "task_owner": "TASK-044/P-NLE-4",
                 "timeline_id": timeline.timeline_id,
                 "timeline_sha256": self.timeline.timeline_sha256,
@@ -79,9 +106,112 @@ class Task044NleShellController:
                 "timeline_rate": {"numerator": timeline.timeline_rate.numerator,
                                   "denominator": timeline.timeline_rate.denominator},
                 "interaction": self.interaction.to_dict(),
-                "projection": projection.to_dict(rate=timeline.timeline_rate),
+                "projection": projection_payload,
+                "track_categories": [item.value for item in (
+                    TimelineTrackCategory.VIDEO, TimelineTrackCategory.SUBTITLE,
+                    TimelineTrackCategory.AUDIO, TimelineTrackCategory.SE,
+                    TimelineTrackCategory.BGM,
+                )],
+                "track_mutation_available": self.edit_application is not None,
                 "durable_state_in_javascript": False,
                 "external_mutation_started": False}
+
+    def update_track_state(self, args: Any) -> dict[str, Any]:
+        required = {"track_id", "state", "value", "expected_timeline_sha256"}
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Track state request is invalid", ProductErrorCategory.VALIDATION)
+        if args["expected_timeline_sha256"] != self.timeline.timeline_sha256:
+            raise ProductError("ERR_NLE_SHELL_TIMELINE_STALE", "Timeline changed; reload first", ProductErrorCategory.STATE)
+        track = next((item for item in self._effective_timeline().tracks if item.track_id == args["track_id"]), None)
+        if track is None:
+            raise ProductError("ERR_NLE_SHELL_TRACK_MISSING", "Timeline track is missing", ProductErrorCategory.STATE)
+        state_name = str(args["state"]).upper()
+        if state_name not in {"VISIBLE", "LOCKED", "MUTED", "SOLO", "HEIGHT"}:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Track state is not allowlisted", ProductErrorCategory.VALIDATION)
+        if state_name in {"MUTED", "SOLO"} and track.media_kind is not TimelineMediaKind.AUDIO:
+            raise ProductError("ERR_NLE_SHELL_TRACK_STATE_NOT_APPLICABLE", "Mute/Solo is available only for audio tracks", ProductErrorCategory.VALIDATION)
+        if state_name == "HEIGHT":
+            height = _frame(args["value"], "value", minimum=30)
+            if height > 92:
+                raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Track height is outside 30..92", ProductErrorCategory.VALIDATION)
+            value: object = height
+        else:
+            if not isinstance(args["value"], bool):
+                raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Track state value must be boolean", ProductErrorCategory.VALIDATION)
+            value = args["value"]
+        state = self._track_presentation.setdefault(track.track_id, {
+            "visible": True, "locked": False, "muted": False,
+            "solo": False, "height": 44,
+        })
+        state[state_name.lower()] = value
+        return self.snapshot()
+
+    def update_track_height(self, args: Any) -> dict[str, Any]:
+        required = {"height", "expected_timeline_sha256"}
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Track height request is invalid", ProductErrorCategory.VALIDATION)
+        if args["expected_timeline_sha256"] != self.timeline.timeline_sha256:
+            raise ProductError("ERR_NLE_SHELL_TIMELINE_STALE", "Timeline changed; reload first", ProductErrorCategory.STATE)
+        height = _frame(args["height"], "height", minimum=30)
+        if height > 92:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Track height is outside 30..92", ProductErrorCategory.VALIDATION)
+        for track in self._effective_timeline().tracks:
+            state = self._track_presentation.setdefault(track.track_id, {
+                "visible": True, "locked": False, "muted": False,
+                "solo": False, "height": 44,
+            })
+            state["height"] = height
+        return self.snapshot()
+
+    def prepare_add_track(self, args: Any) -> dict[str, object]:
+        required = {"category", "command_id", "expected_project_manifest_sha256", "expected_timeline_sha256"}
+        if self.edit_application is None:
+            raise ProductError("ERR_NLE_SHELL_EDIT_NOT_BOUND", "Timeline edit application is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Add-track request is invalid", ProductErrorCategory.VALIDATION)
+        if args["expected_timeline_sha256"] != self.timeline.timeline_sha256:
+            raise ProductError("ERR_NLE_SHELL_TIMELINE_STALE", "Timeline changed; reload first", ProductErrorCategory.STATE)
+        try:
+            category = TimelineTrackCategory(str(args["category"]))
+        except ValueError as exc:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Track category is invalid", ProductErrorCategory.VALIDATION) from exc
+        definitions = {
+            TimelineTrackCategory.VIDEO: ("V", 0, TimelineTrackRole.VIDEO, TimelineMediaKind.VIDEO, "Video"),
+            TimelineTrackCategory.SUBTITLE: ("S", 100, TimelineTrackRole.SUBTITLE, TimelineMediaKind.TEXT, "Subtitle"),
+            TimelineTrackCategory.AUDIO: ("A", 300, TimelineTrackRole.AUDIO, TimelineMediaKind.AUDIO, "Audio"),
+            TimelineTrackCategory.SE: ("SE", 400, TimelineTrackRole.AUDIO, TimelineMediaKind.AUDIO, "SE"),
+            TimelineTrackCategory.BGM: ("BGM", 500, TimelineTrackRole.AUDIO, TimelineMediaKind.AUDIO, "BGM"),
+        }
+        if category not in definitions:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Track category is not addable", ProductErrorCategory.VALIDATION)
+        prefix, order_base, role, media, label = definitions[category]
+        timeline = self._effective_timeline()
+        sequence = 1
+        existing = {item.track_id for item in timeline.tracks}
+        while f"{prefix}{sequence}" in existing:
+            sequence += 1
+        track = TimelineTrack(f"{prefix}{sequence}", order_base + sequence, role, media, f"{label} {sequence}")
+        return self.edit_application.prepare_add_track(
+            timeline=self.timeline, track=track, command_id=str(args["command_id"]),
+            expected_project_manifest_sha256=str(args["expected_project_manifest_sha256"]),
+        )
+
+    def prepare_remove_track(self, args: Any) -> dict[str, object]:
+        required = {"track_id", "command_id", "expected_project_manifest_sha256", "expected_timeline_sha256"}
+        if self.edit_application is None:
+            raise ProductError("ERR_NLE_SHELL_EDIT_NOT_BOUND", "Timeline edit application is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Remove-track request is invalid", ProductErrorCategory.VALIDATION)
+        if args["expected_timeline_sha256"] != self.timeline.timeline_sha256:
+            raise ProductError("ERR_NLE_SHELL_TIMELINE_STALE", "Timeline changed; reload first", ProductErrorCategory.STATE)
+        state = self._track_presentation.get(str(args["track_id"]), {})
+        if state.get("locked") is True:
+            raise ProductError("ERR_TIMELINE_TRACK_LOCKED", "Locked track cannot be removed", ProductErrorCategory.STATE)
+        return self.edit_application.prepare_remove_track(
+            timeline=self.timeline, track_id=str(args["track_id"]),
+            command_id=str(args["command_id"]),
+            expected_project_manifest_sha256=str(args["expected_project_manifest_sha256"]),
+        )
 
     def select(self, args: Any) -> dict[str, Any]:
         required = {"clip_id", "extend", "expected_timeline_sha256"}
@@ -182,6 +312,10 @@ class Task044NleShellController:
             raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Trim request is invalid", ProductErrorCategory.VALIDATION)
         if args["expected_timeline_sha256"] != self.timeline.timeline_sha256:
             raise ProductError("ERR_NLE_SHELL_TIMELINE_STALE", "Timeline changed; reload first", ProductErrorCategory.STATE)
+        projected = self._effective_timeline()
+        clip = next((item for item in projected.clips if item.clip_id == str(args["clip_id"])), None)
+        if clip is not None and self._track_presentation.get(clip.track_id, {}).get("locked") is True:
+            raise ProductError("ERR_TIMELINE_TRACK_LOCKED", "Locked track cannot be edited", ProductErrorCategory.STATE)
         anchors = (SnapAnchor("playhead", self.interaction.playhead_frame, SnapKind.PLAYHEAD, 0),)
         return self.edit_application.prepare_trim(
             timeline=self.timeline, clip_id=str(args["clip_id"]), edge=str(args["edge"]),

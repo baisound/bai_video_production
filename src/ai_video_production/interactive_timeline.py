@@ -35,6 +35,15 @@ class TimelineTrackRole(str, Enum):
     OVERLAY = "OVERLAY"
 
 
+class TimelineTrackCategory(str, Enum):
+    VIDEO = "VIDEO"
+    SUBTITLE = "SUBTITLE"
+    AUDIO = "AUDIO"
+    SE = "SE"
+    BGM = "BGM"
+    OVERLAY = "OVERLAY"
+
+
 class TimelineMediaKind(str, Enum):
     VIDEO = "VIDEO"
     AUDIO = "AUDIO"
@@ -79,6 +88,24 @@ class TimelineTrack:
         return {"track_id": self.track_id, "order": self.order, "role": self.role.value,
                 "media_kind": self.media_kind.value, "label": self.label,
                 "minimum_required": self.minimum_required}
+
+
+def timeline_track_category(track: TimelineTrack) -> TimelineTrackCategory:
+    """Map released track identities to the V6 UX category without changing their checksum schema."""
+    if not isinstance(track, TimelineTrack):
+        raise TypeError("track must be TimelineTrack")
+    if track.role is TimelineTrackRole.VIDEO:
+        return TimelineTrackCategory.VIDEO
+    if track.role is TimelineTrackRole.SUBTITLE:
+        return TimelineTrackCategory.SUBTITLE
+    if track.role is TimelineTrackRole.AUDIO:
+        identity = f"{track.track_id} {track.label}".upper()
+        if re.search(r"(^|[^A-Z])SE(?:[0-9:_ /-]|$)", identity):
+            return TimelineTrackCategory.SE
+        if re.search(r"(^|[^A-Z])BGM(?:[0-9:_ /-]|$)", identity):
+            return TimelineTrackCategory.BGM
+        return TimelineTrackCategory.AUDIO
+    return TimelineTrackCategory.OVERLAY
 
 
 @dataclass(frozen=True, slots=True)
@@ -338,5 +365,6 @@ class TimelineWindowProjector:
 
 __all__ = ["InteractiveTimeline", "InteractiveTimelineClip", "TimelineFitMode",
  "TimelineFocusKind", "TimelineInteractionReducer", "TimelineInteractionState",
- "TimelineMediaKind", "TimelineTrack", "TimelineTrackRole", "TimelineViewport",
- "TimelineWindowProjection", "TimelineWindowProjector"]
+ "TimelineMediaKind", "TimelineTrack", "TimelineTrackCategory", "TimelineTrackRole",
+ "TimelineViewport", "TimelineWindowProjection", "TimelineWindowProjector",
+ "timeline_track_category"]

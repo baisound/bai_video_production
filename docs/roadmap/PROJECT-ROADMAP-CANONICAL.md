@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.76
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.77
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -1878,3 +1878,33 @@ be adopted until TASK-027 persists an immutable Strategy/Parent binding rather
 than guessing Evidence. P-ORCH-2 is the next fresh-main audit/design candidate;
 it is not yet an implementation claim. Stable Release remains `v0.21.0` and no
 post-release version is selected.
+
+## Addendum LXXI - TASK-027 P-ORCH-1 Closure and P-ORCH-2 Binding Design
+
+P-ORCH-1 hosted-closure PR #81 exact head
+`a93b0691373129764051081021e60a9f836ce363` passed all hosted `9 / 9`
+checks, merged at exact main
+`4efb0b92855c4943b66b8670c102e447de915498`, and completed remote branch
+and clean dedicated checkout removal. A fresh exact-main clone selected
+P-ORCH-2 with no open PR or colliding remote TASK-027 branch.
+
+The current-main audit proves that regeneration Strategy exists only in the
+temporary Draft and the parent Attempt exists only in the temporary Plan. Both
+are lost when the new Prompt version is persisted. P-ORCH-2 therefore designs
+one immutable, checksum-bound TASK-040 Prompt regeneration binding containing
+the exact parent Prompt/Attempt, Strategy, reason codes and Plan checksum. New
+Queue entries copy and revalidate that canonical binding as deterministic
+execution lineage, and P-ORCH-1 adoption uses it for the exact PASS Attempt.
+
+Historical v1 Prompt/Queue data remains strictly readable. A later historical
+Prompt without exact lineage stays parked; no parent or Strategy is guessed.
+Two Critic rounds close loose caller authority, duplicate truth, generic
+unbound Prompt creation, Profile-switch bypass, format incompatibility,
+historical identity rewrite, cross-store staleness and crash recovery with
+unresolved Critical/High `0 / 0`.
+
+The design is `LOCAL_PASS / HOSTED_DESIGN_PR_AUTHORIZED`. Implementation waits
+for the all-green design PR, exact main merge, cleanup and fresh-main
+reselection. Provider dispatch/replay, paid work, Credentials, automatic Audit,
+ACCEPT/LOCK, publication, Resolve/Cubase mutation, Native H3 retry, Production
+Deploy, version change, Tag and Release remain outside this unit.

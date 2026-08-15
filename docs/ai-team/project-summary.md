@@ -7,9 +7,9 @@
 - Product package: `0.21.0`
 - Stable formal Release: `v0.21.0`
 - Release-code SHA: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Current development main: `66d97fd9d0bfbfebca339197fed2103011f56616` (PR #80 TASK-027 P-ORCH-1 implementation merge)
-- Current Product state: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_HOSTED_CLOSED / CLOSURE_SYNC_ACTIVE / NATIVE_RUNTIME_PARKED`
-- Active documentation branch: `codex/task-027-output-adoption-hosted-closure`
+- Current development main: `4efb0b92855c4943b66b8670c102e447de915498` (PR #81 TASK-027 P-ORCH-1 hosted-closure merge)
+- Current Product state: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_HOSTED_CLOSED / P_ORCH_2_DESIGN_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
+- Active documentation branch: `codex/task-027-strategy-parent-binding-design`
 
 The stable Tag identifies release-code commit `c38187ed`; current main is newer by hosted TASK-045 Evidence and TASK-027 design/implementation merges. The active branch records hosted closure only and selects no new release version.
 
@@ -37,7 +37,7 @@ No contained generated output, TASK-037 Candidate, TASK-040 Attempt binding, TAS
 
 ## Remaining Product scope
 
-- TASK-027 P-ORCH-2 exact Strategy/Parent Queue binding required before regenerated-Prompt output adoption;
+- TASK-027 P-ORCH-2 exact Strategy/Parent Queue binding implementation; its DEV-4 design/Critic is local-pass and waits for hosted design merge plus fresh-main reselection;
 - full multi-slice TASK-027 production orchestration;
 - remaining TASK-013 native generation and post-native Candidate/Audit binding;
 - TASK-014 Owner Narration, TASK-026 Audio Placement compilation/execution and later TASK-041 audio-processing slices;

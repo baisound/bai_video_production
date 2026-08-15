@@ -1,0 +1,555 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/voice-recording-session.schema.json",
+  "title": "TASK-046 P-VS-3A Body-free Recording Session Contract",
+  "oneOf": [
+    {"$ref": "#/$defs/voiceRecordingSessionRevision"},
+    {"$ref": "#/$defs/voiceSegmentAttemptRevision"},
+    {"$ref": "#/$defs/teleprompterCheckpointRevision"},
+    {"$ref": "#/$defs/datasetCandidateRevision"},
+    {"$ref": "#/$defs/datasetCandidateReviewDecision"}
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullableId": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/id"}]},
+    "nullableSha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "contractState": {
+      "enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]
+    },
+    "commonIdentity": {
+      "type": "object",
+      "required": ["recording_contract_version", "record_type", "task_owner"],
+      "properties": {
+        "recording_contract_version": {"const": "1.0.0"},
+        "task_owner": {"const": "TASK-046/P-VS-3A"}
+      }
+    },
+    "bodyAuthorityFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "audio_body_persisted", "script_body_persisted", "transcript_body_persisted",
+        "credential_value_persisted", "host_absolute_path_persisted",
+        "device_fingerprint_public", "dataset_mutation_authorized",
+        "training_start_authorized", "capture_dispatch_authorized"
+      ],
+      "properties": {
+        "audio_body_persisted": {"const": false},
+        "script_body_persisted": {"const": false},
+        "transcript_body_persisted": {"const": false},
+        "credential_value_persisted": {"const": false},
+        "host_absolute_path_persisted": {"const": false},
+        "device_fingerprint_public": {"const": false},
+        "dataset_mutation_authorized": {"const": false},
+        "training_start_authorized": {"const": false},
+        "capture_dispatch_authorized": {"const": false}
+      }
+    },
+    "consentReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consent_subject_ref", "consent_scope", "allowed_usage_classes", "state",
+        "subject_verified", "evidence_id", "evidence_sha256", "consent_sha256"
+      ],
+      "properties": {
+        "consent_subject_ref": {"$ref": "#/$defs/id"},
+        "consent_scope": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "allowed_usage_classes": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "state": {"enum": ["UNKNOWN", "ACTIVE", "REVOKED"]},
+        "subject_verified": {"type": "boolean"},
+        "evidence_id": {"$ref": "#/$defs/nullableId"},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "consent_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"state": {"const": "ACTIVE"}}},
+          "then": {"properties": {
+            "subject_verified": {"const": true},
+            "evidence_id": {"$ref": "#/$defs/id"},
+            "evidence_sha256": {"$ref": "#/$defs/sha256"}
+          }}
+        }
+      ]
+    },
+    "voiceProfileBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "voice_profile_id", "canonical_narration_profile_sha256", "revision",
+        "parent_revision_sha256", "voice_profile_revision_sha256", "consent"
+      ],
+      "properties": {
+        "voice_profile_id": {"$ref": "#/$defs/id"},
+        "canonical_narration_profile_sha256": {"$ref": "#/$defs/sha256"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "voice_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "consent": {"$ref": "#/$defs/consentReference"}
+      },
+      "allOf": [{
+        "if": {"properties": {"revision": {"const": 1}}},
+        "then": {"properties": {"parent_revision_sha256": {"type": "null"}}},
+        "else": {"properties": {"parent_revision_sha256": {"$ref": "#/$defs/sha256"}}}
+      }]
+    },
+    "approvedTextBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text_owner", "approved_text_revision_ref", "approved_text_revision_sha256",
+        "source_text_binding_sha256", "body_persisted"
+      ],
+      "properties": {
+        "text_owner": {"enum": ["TASK-006", "TASK-006/SRT"]},
+        "approved_text_revision_ref": {"$ref": "#/$defs/id"},
+        "approved_text_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "source_text_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "body_persisted": {"const": false}
+      }
+    },
+    "selectedSourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_state", "source_private_ref", "source_revision_sha256",
+        "public_opaque_ref", "source_class", "synthetic_non_biometric"
+      ],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "source_private_ref": {"$ref": "#/$defs/nullableId"},
+        "source_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "public_opaque_ref": {"$ref": "#/$defs/nullableId"},
+        "source_class": {
+          "oneOf": [{"type": "null"}, {"enum": ["SYNTHETIC_VIRTUAL", "OWNER_VOICE_PRIVATE", "PRODUCTION_SELECTED_SOURCE"]}]
+        },
+        "synthetic_non_biometric": {"oneOf": [{"type": "null"}, {"type": "boolean"}]}
+      }
+    },
+    "captureAdapterBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "adapter_ref", "adapter_ref_sha256", "probe_state", "evidence_sha256"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "adapter_ref": {"$ref": "#/$defs/nullableId"},
+        "adapter_ref_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "probe_state": {"oneOf": [{"type": "null"}, {"enum": ["PASS", "FAIL", "BLOCKED"]}]},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      }
+    },
+    "resourceAdmissionBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "contract_state", "receipt_ref", "receipt_sha256", "decision_state",
+        "resource_profile_ref", "resource_profile_sha256", "evidence_source_revision"
+      ],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "receipt_ref": {"$ref": "#/$defs/nullableId"},
+        "receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "decision_state": {"oneOf": [{"type": "null"}, {"enum": ["UNKNOWN", "ADMITTED", "DENIED"]}]},
+        "resource_profile_ref": {"$ref": "#/$defs/nullableId"},
+        "resource_profile_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "evidence_source_revision": {"$ref": "#/$defs/nullableId"}
+      }
+    },
+    "calibrationBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "contract_state", "analyzer_profile_ref", "analyzer_profile_sha256",
+        "calibration_receipt_ref", "calibration_receipt_sha256", "result",
+        "threshold_profile_revision", "capture_chain_sha256", "measured_at"
+      ],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "analyzer_profile_ref": {"$ref": "#/$defs/nullableId"},
+        "analyzer_profile_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "calibration_receipt_ref": {"$ref": "#/$defs/nullableId"},
+        "calibration_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "result": {"oneOf": [{"type": "null"}, {"enum": ["PASS", "FAIL", "UNKNOWN"]}]},
+        "threshold_profile_revision": {"$ref": "#/$defs/nullableId"},
+        "capture_chain_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "measured_at": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]}
+      }
+    },
+    "captureDurableJobBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "job_ref", "job_sha256", "checkpoint_ref", "checkpoint_sha256", "job_state"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "job_ref": {"$ref": "#/$defs/nullableId"},
+        "job_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "checkpoint_ref": {"$ref": "#/$defs/nullableId"},
+        "checkpoint_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "job_state": {"oneOf": [{"type": "null"}, {"type": "string", "minLength": 1}]}
+      }
+    },
+    "resultBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "policy_ref", "policy_ref_sha256", "result", "evidence_sha256"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "policy_ref": {"$ref": "#/$defs/nullableId"},
+        "policy_ref_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "result": {"oneOf": [{"type": "null"}, {"enum": ["PASS", "FAIL", "BLOCKED"]}]},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      }
+    },
+    "diskFloorBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "receipt_ref", "receipt_ref_sha256", "result", "evidence_sha256"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "receipt_ref": {"$ref": "#/$defs/nullableId"},
+        "receipt_ref_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "result": {"oneOf": [{"type": "null"}, {"enum": ["PASS", "FAIL", "BLOCKED"]}]},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      }
+    },
+    "ownerGoBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "decision_ref", "decision_ref_sha256", "decision", "evidence_sha256"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "decision_ref": {"$ref": "#/$defs/nullableId"},
+        "decision_ref_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "decision": {"oneOf": [{"type": "null"}, {"enum": ["GO", "FAIL", "BLOCKED"]}]},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      }
+    },
+    "consentCurrentEvaluation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["consent_snapshot_sha256", "current_evaluation_state", "current_evaluation_sha256", "evaluated_at"],
+      "properties": {
+        "consent_snapshot_sha256": {"$ref": "#/$defs/sha256"},
+        "current_evaluation_state": {"enum": ["PASS", "REVOKED", "MISMATCH", "UNKNOWN"]},
+        "current_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "evaluated_at": {"$ref": "#/$defs/timestamp"}
+      }
+    },
+    "executionAuthorizationBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "contract_state", "authorization_id", "authorization_revision", "authorization_sha256",
+        "authority_kind", "project_id", "recording_session_id", "session_revision_sha256",
+        "capture_mode", "readiness_evaluation_sha256", "selected_source_binding_sha256",
+        "consent_current_evaluation_sha256", "approved_text_binding_sha256", "scope",
+        "issued_at", "expires_at", "one_shot", "replay_policy", "evidence_ref", "evidence_sha256"
+      ],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "authorization_id": {"$ref": "#/$defs/nullableId"},
+        "authorization_revision": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "authorization_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "authority_kind": {"oneOf": [{"type": "null"}, {"enum": ["OWNER_HUMAN_GATE", "APPROVED_SYNTHETIC_TEST_AUTHORITY"]}]},
+        "project_id": {"$ref": "#/$defs/nullableId"},
+        "recording_session_id": {"$ref": "#/$defs/nullableId"},
+        "session_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "capture_mode": {"oneOf": [{"type": "null"}, {"enum": ["SYNTHETIC_CONTRACT_TEST", "OWNER_APPROVED_NON_DATASET_TECHNICAL_PROBE", "PRODUCTION_RECORDING"]}]},
+        "readiness_evaluation_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "selected_source_binding_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "consent_current_evaluation_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "approved_text_binding_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "scope": {"oneOf": [{"type": "null"}, {"enum": ["START", "RESUME"]}]},
+        "issued_at": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]},
+        "expires_at": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]},
+        "one_shot": {"oneOf": [{"type": "null"}, {"type": "boolean"}]},
+        "replay_policy": {"oneOf": [{"type": "null"}, {"enum": ["DENY_REPLAY", "SINGLE_USE_WITH_RECONCILIATION"]}]},
+        "evidence_ref": {"$ref": "#/$defs/nullableId"},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      }
+    },
+    "cancelDisposition": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "cancel_ack_state", "external_work_present", "retained_evidence_present",
+        "complete_candidate_present", "retained_evidence_ledger_sha256",
+        "retention_state", "encryption_recovery_state"
+      ],
+      "properties": {
+        "cancel_ack_state": {"enum": ["NOT_REQUESTED", "ACK_VERIFIED", "UNKNOWN"]},
+        "external_work_present": {"type": "boolean"},
+        "retained_evidence_present": {"type": "boolean"},
+        "complete_candidate_present": {"type": "boolean"},
+        "retained_evidence_ledger_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "retention_state": {"enum": ["NOT_APPLICABLE", "BOUND", "UNKNOWN"]},
+        "encryption_recovery_state": {"enum": ["NOT_APPLICABLE", "PASS", "UNKNOWN"]}
+      }
+    },
+    "captureEvidenceBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "receipt_ref", "receipt_ref_sha256", "capture_state", "evidence_sha256"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "receipt_ref": {"$ref": "#/$defs/nullableId"},
+        "receipt_ref_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "capture_state": {"oneOf": [{"type": "null"}, {"enum": ["CAPTURED", "FAIL", "BLOCKED"]}]},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      }
+    },
+    "assetBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "asset_binding_state", "asset_id", "asset_checksum_sha256",
+        "asset_record_evidence_sha256", "asset_revision_binding_ref",
+        "asset_revision_binding_sha256"
+      ],
+      "properties": {
+        "asset_binding_state": {"enum": ["UNBOUND_PENDING_TASK003", "BOUND"]},
+        "asset_id": {"$ref": "#/$defs/nullableId"},
+        "asset_checksum_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "asset_record_evidence_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "asset_revision_binding_ref": {"$ref": "#/$defs/nullableId"},
+        "asset_revision_binding_sha256": {"$ref": "#/$defs/nullableSha256"}
+      }
+    },
+    "teleprompterPlanBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["plan_id", "plan_revision", "plan_sha256", "approved_text_binding_sha256", "planned_minutes"],
+      "properties": {
+        "plan_id": {"$ref": "#/$defs/id"},
+        "plan_revision": {"type": "integer", "minimum": 1},
+        "plan_sha256": {"$ref": "#/$defs/sha256"},
+        "approved_text_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "planned_minutes": {"enum": [30, 60, 90, 120]}
+      }
+    },
+    "label": {
+      "type": "object", "additionalProperties": false,
+      "required": ["axis", "value", "source", "evidence_sha256"],
+      "properties": {
+        "axis": {"$ref": "#/$defs/id"},
+        "value": {"$ref": "#/$defs/id"},
+        "source": {"enum": ["AI_PROPOSAL", "OWNER_APPROVED"]},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "datasetAdoptionReceiptBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "contract_state", "approved_review_decision_sha256", "dataset_parent_revision_sha256",
+        "dataset_new_revision_sha256", "adoption_receipt_ref", "adoption_receipt_sha256",
+        "effect_operation_id", "idempotency_key"
+      ],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "approved_review_decision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "dataset_parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "dataset_new_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "adoption_receipt_ref": {"$ref": "#/$defs/nullableId"},
+        "adoption_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "effect_operation_id": {"$ref": "#/$defs/nullableId"},
+        "idempotency_key": {"$ref": "#/$defs/nullableId"}
+      }
+    },
+    "datasetCandidateReviewDecisionBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "decision_ref", "decision_ref_sha256", "decision", "evidence_sha256"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "decision_ref": {"$ref": "#/$defs/nullableId"},
+        "decision_ref_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "decision": {"oneOf": [{"type": "null"}, {"enum": ["APPROVE_FOR_ADOPTION", "REJECT", "RERECORD"]}]},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      }
+    },
+    "voiceRecordingSessionRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "recording_contract_version", "record_type", "task_owner", "project_id",
+        "recording_session_id", "revision", "parent_revision_sha256", "created_at", "state",
+        "capture_mode", "readiness_evaluation_state", "readiness_evaluation_sha256",
+        "production_admission", "operation_id", "voice_profile_binding", "approved_text_binding",
+        "selected_source_binding", "capture_adapter_binding", "resource_admission_binding",
+        "calibration_binding", "capture_durable_job_binding", "encryption_recovery_binding",
+        "disk_floor_binding", "owner_go_binding", "consent_current_evaluation",
+        "execution_authorization_binding", "cancel_disposition", "dataset_adoption_receipt_binding", "body_authority_flags",
+        "voice_recording_session_revision_sha256"
+      ],
+      "properties": {
+        "recording_contract_version": {"const": "1.0.0"},
+        "record_type": {"const": "VoiceRecordingSessionRevision"},
+        "task_owner": {"const": "TASK-046/P-VS-3A"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "recording_session_id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "state": {"enum": ["DRAFT", "PREFLIGHT_PENDING", "PREFLIGHT_BLOCKED", "READY", "CAPTURING", "PAUSED", "STOP_REQUESTED", "CAPTURED_CANDIDATE", "REVIEW_PENDING", "APPROVED_FOR_DATASET_ADOPTION", "ADOPTED_TO_DATASET", "REJECTED", "FAILED_KNOWN", "UNKNOWN", "CANCELLED", "CANCELLED_WITH_RETAINED_EVIDENCE"]},
+        "capture_mode": {"enum": ["SYNTHETIC_CONTRACT_TEST", "OWNER_APPROVED_NON_DATASET_TECHNICAL_PROBE", "PRODUCTION_RECORDING"]},
+        "readiness_evaluation_state": {"enum": ["NOT_EVALUATED", "TEST_READY", "TECHNICAL_PROBE_READY", "PRODUCTION_READY", "BLOCKED", "UNKNOWN"]},
+        "readiness_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "production_admission": {"type": "boolean"},
+        "operation_id": {"$ref": "#/$defs/id"},
+        "voice_profile_binding": {"$ref": "#/$defs/voiceProfileBinding"},
+        "approved_text_binding": {"$ref": "#/$defs/approvedTextBinding"},
+        "selected_source_binding": {"$ref": "#/$defs/selectedSourceBinding"},
+        "capture_adapter_binding": {"$ref": "#/$defs/captureAdapterBinding"},
+        "resource_admission_binding": {"$ref": "#/$defs/resourceAdmissionBinding"},
+        "calibration_binding": {"$ref": "#/$defs/calibrationBinding"},
+        "capture_durable_job_binding": {"$ref": "#/$defs/captureDurableJobBinding"},
+        "encryption_recovery_binding": {"$ref": "#/$defs/resultBinding"},
+        "disk_floor_binding": {"$ref": "#/$defs/diskFloorBinding"},
+        "owner_go_binding": {"$ref": "#/$defs/ownerGoBinding"},
+        "consent_current_evaluation": {"$ref": "#/$defs/consentCurrentEvaluation"},
+        "execution_authorization_binding": {"$ref": "#/$defs/executionAuthorizationBinding"},
+        "cancel_disposition": {"$ref": "#/$defs/cancelDisposition"},
+        "dataset_adoption_receipt_binding": {"$ref": "#/$defs/datasetAdoptionReceiptBinding"},
+        "body_authority_flags": {"$ref": "#/$defs/bodyAuthorityFlags"},
+        "voice_recording_session_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "voiceSegmentAttemptRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "recording_contract_version", "record_type", "task_owner", "project_id",
+        "recording_session_id", "segment_id", "attempt_id", "revision",
+        "parent_revision_sha256", "attempt_number", "parent_attempt_sha256", "cue_id",
+        "sentence_id", "source_text_binding_sha256", "sentence_start_anchor", "state",
+        "capture_receipt_binding", "asset_binding", "calibration_binding",
+        "consent_current_evaluation", "operation_id", "created_at", "body_authority_flags",
+        "voice_segment_attempt_revision_sha256"
+      ],
+      "properties": {
+        "recording_contract_version": {"const": "1.0.0"},
+        "record_type": {"const": "VoiceSegmentAttemptRevision"},
+        "task_owner": {"const": "TASK-046/P-VS-3A"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "recording_session_id": {"$ref": "#/$defs/id"},
+        "segment_id": {"$ref": "#/$defs/id"},
+        "attempt_id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "attempt_number": {"type": "integer", "minimum": 1},
+        "parent_attempt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "cue_id": {"$ref": "#/$defs/id"},
+        "sentence_id": {"$ref": "#/$defs/id"},
+        "source_text_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "sentence_start_anchor": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["PLANNED", "CAPTURING", "INCOMPLETE", "CAPTURED", "FAILED_KNOWN", "UNKNOWN", "CANCELLED_SAFE"]},
+        "capture_receipt_binding": {"$ref": "#/$defs/captureEvidenceBinding"},
+        "asset_binding": {"$ref": "#/$defs/assetBinding"},
+        "calibration_binding": {"$ref": "#/$defs/calibrationBinding"},
+        "consent_current_evaluation": {"$ref": "#/$defs/consentCurrentEvaluation"},
+        "operation_id": {"$ref": "#/$defs/id"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "body_authority_flags": {"$ref": "#/$defs/bodyAuthorityFlags"},
+        "voice_segment_attempt_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "teleprompterCheckpointRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "recording_contract_version", "record_type", "task_owner", "project_id",
+        "recording_session_id", "checkpoint_id", "revision", "parent_revision_sha256",
+        "plan_binding", "segment_id", "attempt_id", "attempt_number", "cue_id", "sentence_id",
+        "source_text_binding_sha256", "sentence_start_anchor", "scroll_position",
+        "last_completed_segment_id", "checkpoint_state", "created_at", "body_authority_flags",
+        "teleprompter_checkpoint_revision_sha256"
+      ],
+      "properties": {
+        "recording_contract_version": {"const": "1.0.0"},
+        "record_type": {"const": "TeleprompterCheckpointRevision"},
+        "task_owner": {"const": "TASK-046/P-VS-3A"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "recording_session_id": {"$ref": "#/$defs/id"},
+        "checkpoint_id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "plan_binding": {"$ref": "#/$defs/teleprompterPlanBinding"},
+        "segment_id": {"$ref": "#/$defs/id"},
+        "attempt_id": {"$ref": "#/$defs/id"},
+        "attempt_number": {"type": "integer", "minimum": 1},
+        "cue_id": {"$ref": "#/$defs/id"},
+        "sentence_id": {"$ref": "#/$defs/id"},
+        "source_text_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "sentence_start_anchor": {"type": "integer", "minimum": 0},
+        "scroll_position": {"type": "integer", "minimum": 0},
+        "last_completed_segment_id": {"$ref": "#/$defs/nullableId"},
+        "checkpoint_state": {"enum": ["CURRENT", "SUPERSEDED", "UNKNOWN"]},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "body_authority_flags": {"$ref": "#/$defs/bodyAuthorityFlags"},
+        "teleprompter_checkpoint_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "datasetCandidateRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "recording_contract_version", "record_type", "task_owner", "project_id",
+        "recording_session_id", "candidate_id", "revision", "parent_revision_sha256",
+        "state", "segment_attempt_id", "segment_attempt_revision_sha256",
+        "capture_receipt_binding", "asset_binding", "voice_profile_binding",
+        "consent_current_evaluation", "calibration_binding", "label_proposals",
+        "approved_labels", "review_decision_binding", "dataset_adoption_receipt_binding", "operation_id", "created_at",
+        "body_authority_flags", "dataset_candidate_revision_sha256"
+      ],
+      "properties": {
+        "recording_contract_version": {"const": "1.0.0"},
+        "record_type": {"const": "DatasetCandidateRevision"},
+        "task_owner": {"const": "TASK-046/P-VS-3A"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "recording_session_id": {"$ref": "#/$defs/id"},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "state": {"enum": ["CAPTURED_CANDIDATE", "REVIEW_PENDING", "APPROVED_FOR_ADOPTION", "ADOPTED_TO_DATASET", "REJECTED", "RERECORD", "UNKNOWN"]},
+        "segment_attempt_id": {"$ref": "#/$defs/id"},
+        "segment_attempt_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "capture_receipt_binding": {"$ref": "#/$defs/captureEvidenceBinding"},
+        "asset_binding": {"$ref": "#/$defs/assetBinding"},
+        "voice_profile_binding": {"$ref": "#/$defs/voiceProfileBinding"},
+        "consent_current_evaluation": {"$ref": "#/$defs/consentCurrentEvaluation"},
+        "calibration_binding": {"$ref": "#/$defs/calibrationBinding"},
+        "label_proposals": {"type": "array", "items": {"$ref": "#/$defs/label"}},
+        "approved_labels": {"type": "array", "items": {"$ref": "#/$defs/label"}},
+        "review_decision_binding": {"$ref": "#/$defs/datasetCandidateReviewDecisionBinding"},
+        "dataset_adoption_receipt_binding": {"$ref": "#/$defs/datasetAdoptionReceiptBinding"},
+        "operation_id": {"$ref": "#/$defs/id"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "body_authority_flags": {"$ref": "#/$defs/bodyAuthorityFlags"},
+        "dataset_candidate_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "datasetCandidateReviewDecision": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "recording_contract_version", "record_type", "task_owner", "project_id",
+        "recording_session_id", "review_decision_id", "revision", "parent_revision_sha256",
+        "candidate_id", "candidate_revision_sha256", "decision", "reviewer_kind",
+        "human_gate_evidence_ref", "human_gate_evidence_sha256", "asset_binding",
+        "consent_current_evaluation", "calibration_binding", "decided_at",
+        "training_start_authorized", "body_authority_flags",
+        "dataset_candidate_review_decision_sha256"
+      ],
+      "properties": {
+        "recording_contract_version": {"const": "1.0.0"},
+        "record_type": {"const": "DatasetCandidateReviewDecision"},
+        "task_owner": {"const": "TASK-046/P-VS-3A"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "recording_session_id": {"$ref": "#/$defs/id"},
+        "review_decision_id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "candidate_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "decision": {"enum": ["APPROVE_FOR_ADOPTION", "REJECT", "RERECORD"]},
+        "reviewer_kind": {"const": "OWNER"},
+        "human_gate_evidence_ref": {"$ref": "#/$defs/id"},
+        "human_gate_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "asset_binding": {"$ref": "#/$defs/assetBinding"},
+        "consent_current_evaluation": {"$ref": "#/$defs/consentCurrentEvaluation"},
+        "calibration_binding": {"$ref": "#/$defs/calibrationBinding"},
+        "decided_at": {"$ref": "#/$defs/timestamp"},
+        "training_start_authorized": {"const": false},
+        "body_authority_flags": {"$ref": "#/$defs/bodyAuthorityFlags"},
+        "dataset_candidate_review_decision_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

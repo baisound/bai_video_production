@@ -11,7 +11,7 @@
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
-- Development Candidate: `0.21.0 / v0.21.0 / stable`; package metadata remains `0.20.1` until fresh-main P-RC-3
+- Development Candidate: `0.21.0`; exact decision is `0.21.0 / v0.21.0 / stable`, while package metadata remains `0.20.1` until fresh-main P-RC-3
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
 - Next Consumer Decision Gate: `P-RC-2 PR all-green/main merge/exact SHA/cleanup -> fresh-main release/0.21.0 P-RC-3 metadata/regression/PR/main/Tag/GitHub Release; Production Deploy remains blocked`
 

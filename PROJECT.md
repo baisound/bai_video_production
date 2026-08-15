@@ -115,7 +115,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Development Candidate: `0.21.0 / v0.21.0 / stable`; exact MINOR decision is made from completed P-RC-1/2 compatibility/native/clean-install Evidence, but metadata remains `0.20.1` until fresh-main P-RC-3
+- Development Candidate: `0.21.0`; exact MINOR decision is `0.21.0 / v0.21.0 / stable` from completed P-RC-1/2 compatibility/native/clean-install Evidence, but metadata remains `0.20.1` until fresh-main P-RC-3
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.71 Addendum LXV

@@ -114,6 +114,16 @@ added.
 - P-RC-3 authority: `CONDITIONALLY_AUTHORIZED_AFTER_P_RC_2_HOSTED_CLOSURE`;
 - Production Deploy: `BLOCKED / NOT_PART_OF_RELEASE`.
 
+## Hosted CI corrective
+
+PR #76 initial head `b27f7bd4fb1a5b1e2e40a9a19fc490d66ea7f26f` passed
+release-metadata and both security jobs, but all six OS/Python test jobs rejected
+one canonical-document contract: `Development Candidate` must contain a plain
+SemVer, not the combined version/Tag/channel decision. `PROJECT.md` and
+`docs/ai-team/current-state.md` now retain `0.21.0` in that field and record
+`0.21.0 / v0.21.0 / stable` separately. Post-corrective full WSL2 regression is
+`1124 / 1124 PASS`. Hosted rerun remains required before merge.
+
 ## Final Critic / Judge
 
 - native Evidence is bound to one exact final EXE checksum and separated from

@@ -89,5 +89,6 @@ new-revision restore, integrated native rerun and deferred exact version decisio
 - P-RC-2: `DEPENDENCY_WAIT` until P-RC-1 hosted closure
 - P-RC-3 Release: `CONDITIONALLY_OWNER_AUTHORIZED` only after P-RC-1/P-RC-2 and
   exact release gates pass
-- Production Deploy, paid Provider, new credentials, destructive/ambiguous real
-  Project migration: `NOT_AUTHORIZED / HUMAN_GATE`
+- Credential input: `NOT_AUTHORIZED / HUMAN_GATE`
+- Production Deploy, paid Provider and destructive/ambiguous real Project
+  migration: `NOT_AUTHORIZED / HUMAN_GATE`

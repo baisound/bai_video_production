@@ -1691,5 +1691,6 @@ Two Critic rounds close arbitrary migration execution, destructive overwrite,
 identity guessing, partial-success claims, unbounded Asset loading, stale native
 Evidence and premature SemVer selection with unresolved Critical/High `0 / 0`.
 Release/Tag is conditionally Owner-authorized only after P-RC-1/P-RC-2 pass.
-Production Deploy, paid Provider, credentials, ambiguous/destructive human-owned
-Project migration and TASK-013 native replay remain separate Human Gates.
+Credential input is blocked. Production Deploy, paid Provider,
+ambiguous/destructive human-owned Project migration and TASK-013 native replay
+remain separate Human Gates.

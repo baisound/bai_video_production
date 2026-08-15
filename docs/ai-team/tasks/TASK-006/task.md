@@ -11,6 +11,15 @@
 - Authorization: Owner-directed editing-first continuation
 - Dependencies: TASK-003 Asset identity, TASK-004 normalized media, TASK-022 Timeline Mapping
 
+## Voice Studio integration responsibility — design allocated 2026-08-15
+
+TASK-006 retains Subtitle source/display revision ownership. A later bounded
+Voice integration unit adds Japanese readable reflow, non-destructive
+Subtitle/Normalized/TTS/Alignment text mapping, local speech-rate anomaly
+proposals and Human-reviewed Scene-aware revisions. TASK-014 owns narration
+generation and TASK-022 owns frame authority. This allocation changes no
+current runtime and does not rewrite approved Subtitle text.
+
 Slice A establishes the provider-neutral Transcript source of truth, cut-aware Subtitle Plan, and deterministic SRT output. It does not yet transcribe real media or write into DaVinci Resolve.
 
 Slice B connects TASK-023 FasterWhisper as the first local ASR Provider and adds an end-user CLI/Windows launcher that writes `transcript.json`, `subtitles.srt`, and a text-free operational report. Model download requires an explicit flag and inference remains local. Native Windows Evidence confirmed successful local transcription and exposed a 1 ms SRT-render boundary overlap requiring correction.

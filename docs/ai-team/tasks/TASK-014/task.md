@@ -86,3 +86,17 @@ The preferred API path returns speech plus character-level alignment. Alignment 
 - [Professional Voice Clone API guide](https://elevenlabs.io/docs/eleven-api/guides/how-to/voices/professional-voice-cloning)
 
 Exact plan entitlement, API model support, format availability and retention controls are checked live at execution time; this design does not infer them merely from the label `Pro`.
+
+## Voice Studio Local Primary extension — design allocated 2026-08-15
+
+TASK-014 remains the sole narration render/publication owner. TASK-046 supplies
+the private VoiceProfile/Dataset revision; TASK-014 adds local zero-shot and
+fine-tuned Engine adapters behind the existing deterministic plan, paid-
+execution gate and containment boundary. Local Primary does not remove the
+existing ElevenLabs opt-in path and does not authorize either path.
+
+The extension separates Subtitle, Normalized, TTS and Alignment text; compiles
+Engine-independent Semantic Direction; records Direction loss; stages 48 kHz
+Cue/Master WAV; uses measured alignment/duration; and publishes only after
+whole-output QA. Actual local Model download/generation and paid Cloud calls
+remain separately gated.

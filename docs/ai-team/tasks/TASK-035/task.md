@@ -121,3 +121,15 @@ Open live questions include exact iZotope FX identifiers, which parameters/prese
 - [iZotope Neutron product information](https://www.izotope.com/en/products/neutron.html)
 
 The installed documentation shipped with the exact REAPER, Resolve and iZotope versions is authoritative for live implementation. Community MCP repositories are discovery inputs only and must be pinned and separately reviewed before use.
+
+## Voice Studio / RX 12 extension — design allocated 2026-08-15
+
+RX 12 Standard is the intended Production Primary after installation and exact
+capability probe. RX 11 Standard, RX 10 Elements, RX 9 Audio Editor and RX 8
+plugins are compatibility/migration fallbacks and are never assumed equivalent
+to RX 12. Voice finishing preserves untreated WAV and publishes a new derived
+Asset/Revision only after 48 kHz, duration, peak/loudness, hash and Human review.
+
+Use of RX-processed audio as a training Dataset remains fail-closed until the
+applicable vendor terms are confirmed. No RX/REAPER/Resolve/Cubase Project,
+preset or setting is changed by this design allocation.

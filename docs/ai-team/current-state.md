@@ -4,17 +4,17 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_036_P_UX_1B_CORE_LOCAL_PASS / HOSTED_IMPLEMENTATION_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_21_0_RELEASED / TASK_046_P_VS_0_ROADMAP_INTAKE_LOCAL_PASS / HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
-- Last Completed Consumer Gate: `TASK-036 P-UX-1A implementation`; PR #88 passed hosted `9 / 9`, merged at exact main `35b91f29b39372ce38616d1d757b6ef43d68232b`, and completed remote branch/dedicated-checkout cleanup
-- Active Consumer Task: `TASK-036 / P-UX-1B V6.1.1 INTERACTION AND STATE CONVERGENCE / codex/task-036-v611-interaction-state-convergence`; exact base main `35b91f29b39372ce38616d1d757b6ef43d68232b`; explicit command registry, menu/focus behavior, nine Settings category tabs, real dual-queue Jobs projection and controller-authoritative Timeline scrub pass focused `50 / 50`, Windows full `1166 passed, 1 skip`, WSL2 full `1167 / 1167`, one-dir build and bounded native interaction locally; hosted implementation closure is pending
+- Last Completed Consumer Gate: `TASK-036 P-UX-1B implementation`; PR #89 passed hosted `9 / 9`, merged at exact main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`, passed post-merge main CI/Security, and completed remote branch/dedicated-checkout cleanup
+- Active Consumer Task: `TASK-046 / P-VS-0 VOICE STUDIO ROADMAP INTAKE / codex/task-046-voice-studio-roadmap-intake`; exact base main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`; package integrity, audit, OR-01..32/Q1..44 Crosswalk, TASK-046/047/048 allocation, DEV-4, Architecture, Allowed Files, Builder design, two Critic passes and Judge pass locally; documentation-only hosted closure is pending
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `P-UX-1B implementation PR -> hosted 9/9 -> exact main merge -> cleanup -> fresh-main Voice Studio Local AI handoff reconciliation; P-UX-1C remains required and Native H3 replay/Production Deploy remain blocked`
+- Next Consumer Decision Gate: `P-VS-0 documentation PR -> hosted 9/9 -> exact main merge -> cleanup -> fresh-main TASK-036 P-UX-1C native parity closure -> successor canonical Voice mock -> TASK-046 P-VS-1 body-free foundation; Native Model/download/voice processing remains separately gated`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -118,7 +118,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.84 Addendum LXXVIII. TASK-036 P-UX-1A is hosted-closed by PR #88 at exact main `35b91f29b39372ce38616d1d757b6ef43d68232b`, including remote branch/dedicated-checkout cleanup. P-UX-1B core now passes command registry, menu/focus, nine-category Settings tabs, dual Background Jobs projection, controller-authoritative Timeline scrub, focused `50 / 50`, Windows full `1166 passed, 1 skip`, WSL2 full `1167 / 1167`, one-dir build and bounded native interaction locally. The mock remains the absolute packaged-EXE layout and interaction-intent authority; all dynamic state comes from existing Product stores/Application Services and fake demo state is absent. Hosted P-UX-1B closure and P-UX-1C full native closure remain, so overall visual parity remains unclaimed. After the P-UX-1B main merge and cleanup, the Owner-supplied Voice Studio Local AI handoff is the next required current-main reconciliation. Provider/paid/media/TASK-010/Resolve/Cubase/Production Deploy remain blocked.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.85 Addendum LXXIX. TASK-036 P-UX-1B is hosted-closed by PR #89 at exact main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`, with post-merge CI/Security and cleanup complete. The Voice Studio Ver.1.2 intake is locally reconciled as TASK-046/047/048 plus bounded existing-Task extensions. P-UX-1C remains immediately before any Voice Shell change; a successor canonical mock must precede the Voice top-level destination. Then TASK-046/014 prioritize the Japanese owner-only local/free 60–90 second vertical slice before recording breadth, OBS, RX, broad Creative AI or locale expansion. Overall visual parity and native Voice completion remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.79
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.80
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-027 P-ORCH-2 Implementation PR #83 head `633e85d7b0f817bfea4887a29c889bb2f2b98dcf` passed hosted `9 / 9`, merged at exact main `a4d15f23d5781b515be6b2a228b491e696a5983f` and completed remote implementation branch/dedicated checkout cleanup. Exact initial and regenerated completed-output adoption now both end at `READY_FOR_AUDIT`; this docs-only closure sync precedes fresh-main Product-wide AUTONOMY reselection.
+- Current insertion: TASK-027 P-ORCH-2 hosted-closure PR #84 head `ab50e99261f05e3cf70211ee03cc77740ba901b6` passed hosted `9 / 9`, merged at exact main `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba`, and completed cleanup. Fresh-main Product-wide AUTONOMY classified TASK-026 as `PARTIALLY_IMPLEMENTED / PRODUCT_PROMOTION_REQUIRED`; P-AUDIO-1 durable placement-plan Product integration design is local PASS and hosted design pending.
 
 ## 3. MVP定義
 
@@ -102,7 +102,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | COMPLETE |
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
-| 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
+| 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | FOUNDATION IMPLEMENTED / P-AUDIO-1 PRODUCT PROMOTION DESIGN LOCAL PASS / HOSTED DESIGN PENDING |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
 | 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E | 003,006,007,010,011,012,024 | DEV-4 | COMPLETE / M3B PASS / RELEASED v0.20.1 |
@@ -1966,3 +1966,34 @@ Tag and Release remain outside this unit. Stable formal Release remains
 its own hosted cycle and cleanup, fresh-main AUTONOMY must re-audit the current
 Product and formally design the highest safe remaining integration rather than
 assuming that full multi-slice TASK-027 is complete.
+
+## Addendum LXXIV - TASK-026 P-AUDIO-1 Product Promotion Design
+
+TASK-027 P-ORCH-2 hosted-closure PR #84 exact head
+`ab50e99261f05e3cf70211ee03cc77740ba901b6` passed hosted `9 / 9`, merged at
+exact main `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba`, and completed remote
+branch/dedicated checkout cleanup. Fresh-main AUTONOMY then audited the whole
+current Product without treating the prior handoff as Source of Truth.
+
+The Task Index statement that TASK-026 is wholly not started conflicts with
+current code. Deterministic exact-frame placement/bed compilation and exact
+TASK-041 ACCEPT + TASK-037 LOCK + TASK-042 Timeline binding already exist and
+are tested. The real missing integration is a durable Product Project child,
+restart/currentness projection and explicit unified Audio Workspace
+prepare/apply action. This is classified `PARTIALLY_IMPLEMENTED /
+PRODUCT_PROMOTION_REQUIRED`, not a new compiler.
+
+P-AUDIO-1 designs an append-only, checksum-bound TASK-026 placement history.
+Only review ID, confirmed track intent, bed mode and exact snapshot expectations
+enter the Application. Candidate, Asset, range, fade/gain, Timeline and Plan are
+derived. Apply revalidates every upstream and commits the child through TASK-043
+coordinated save. Prior records derive `CURRENT` or `STALE` and are never
+silently overwritten or deleted.
+
+The existing Audio Workspace receives only typed plan-persistence controls and
+visible compatibility gaps. No Provider, paid work, Credential, media-byte
+write, TASK-010 conversion/execution, Resolve/Cubase mutation, Native H3 retry,
+Production Deploy, version, Tag or Release is introduced. Two Critic rounds
+close with unresolved Critical/High `0 / 0`. The design is
+`LOCAL_PASS / HOSTED_DESIGN_PR_AUTHORIZED`; implementation waits for an
+all-green design PR, exact main merge, cleanup and fresh-main reselection.

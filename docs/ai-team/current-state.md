@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_HOSTED_CLOSED / P_ORCH_2_IMPLEMENTATION_HOSTED_CLOSED / P_ORCH_2_CLOSURE_SYNC_LOCAL / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_AND_2_HOSTED_CLOSED / TASK_026_P_AUDIO_1_DESIGN_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
-- Active Consumer Task: `TASK-027 / P-ORCH-2 HOSTED CLOSURE SYNC / codex/task-027-strategy-parent-hosted-closure`; Implementation PR #83 exact head `633e85d7b0f817bfea4887a29c889bb2f2b98dcf` passed `9 / 9`, merged at exact main `a4d15f23d5781b515be6b2a228b491e696a5983f`, and completed remote implementation branch/checkout cleanup
+- Active Consumer Task: `TASK-026 / P-AUDIO-1 AUDIO PLACEMENT PLAN PRODUCT PROMOTION DESIGN / codex/task-026-audio-placement-product-promotion-design`; fresh exact main `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba` proves the deterministic compiler/binding foundation exists while durable Product/Shell integration is missing; DEV-4 Builder/Critic local PASS, hosted design pending
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `P-ORCH-2 closure-sync PR -> all-green main merge -> cleanup -> fresh-main Product-wide AUTONOMY reselection; Native H3 replay and Production Deploy remain blocked`
+- Next Consumer Decision Gate: `P-AUDIO-1 design PR -> all-green main merge -> cleanup -> fresh-main implementation reselection; Native H3 replay and Production Deploy remain blocked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.79 Addendum LXXIII. TASK-027 P-ORCH-2 Implementation PR #83 exact head `633e85d7b0f817bfea4887a29c889bb2f2b98dcf` passed hosted `9 / 9`, merged at exact main `a4d15f23d5781b515be6b2a228b491e696a5983f`, and completed remote implementation branch/checkout cleanup. Immutable Prompt regeneration binding, strict v1 compatibility, Queue v1.1 execution lineage and exact regenerated-output adoption are hosted-closed. This documentation-only closure sync must pass before fresh-main Product-wide AUTONOMY reselection. Provider/paid/ACCEPT/LOCK/Production Deploy remain blocked.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.80 Addendum LXXIV. TASK-027 P-ORCH-2 hosted-closure PR #84 exact head `ab50e99261f05e3cf70211ee03cc77740ba901b6` passed `9 / 9`, merged at exact main `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba`, and completed cleanup. Fresh-main Product audit selected TASK-026 P-AUDIO-1: existing deterministic placement/binding foundation is retained, while durable Product Project history, restart/currentness and explicit Shell plan persistence are designed. Provider/paid/media/TASK-010/Resolve/Cubase/Production Deploy remain blocked.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_21_0_RELEASED_TASK_027_P_ORCH_1_HOSTED_CLOSED_P_ORCH_2_IMPLEMENTATION_HOSTED_CLOSED_P_ORCH_2_CLOSURE_SYNC_LOCAL_NATIVE_RUNTIME_PARKED`
+`V0_21_0_RELEASED_TASK_027_P_ORCH_1_AND_2_HOSTED_CLOSED_TASK_026_P_AUDIO_1_DESIGN_LOCAL_PASS_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-027 P-ORCH-2 Implementation PR #83 head 633e85d passed 9 / 9, merged at exact main a4d15f23d5781b515be6b2a228b491e696a5983f, and completed remote implementation branch/checkout cleanup`
-- Active Task: `TASK-027 / P-ORCH-2 HOSTED CLOSURE SYNC / codex/task-027-strategy-parent-hosted-closure`; documentation synchronization is local-only until its own hosted PR passes
+- Last Completed Gate: `TASK-027 P-ORCH-2 hosted-closure PR #84 head ab50e99 passed 9 / 9, merged at exact main 5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba, and completed remote branch/checkout cleanup`
+- Active Task: `TASK-026 / P-AUDIO-1 AUDIO PLACEMENT PLAN PRODUCT PROMOTION DESIGN / codex/task-026-audio-placement-product-promotion-design`; current-main audit, DEV-4 decision, Builder design and two Critic rounds are local PASS while hosted design remains pending
 - TASK-004: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.79 Addendum LXXIII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.80 Addendum LXXIV
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -166,6 +166,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - TASK-027 P-ORCH-1 Design PR #79 passed hosted `9 / 9`, merged at exact main `4532bb29c0ace58c720016f7ec313bb2037788ea`, and completed remote branch/dedicated checkout cleanup. Fresh-main implementation now validates an exact initial completed local output, reuses TASK-003/037/040 canonical stores and ends at `READY_FOR_AUDIT`; focused Windows/WSL2 and full WSL2 regression pass locally. Provider replay, paid execution, Human ACCEPT/LOCK, publication and Native H3 remain false. Regenerated Prompt output remains parked until exact Strategy/Parent binding is persisted.
 - TASK-027 P-ORCH-1 Implementation PR #80 exact head `0e3575a5bd11f8664409d03078b4ed0dc0b7e52b` passed hosted `9 / 9`, merged at exact main `66d97fd9d0bfbfebca339197fed2103011f56616`, and completed remote branch/dedicated checkout cleanup. Initial completed-output adoption is hosted-closed. The next safe audit candidate is the missing immutable regenerated-output Strategy/Parent Queue binding; it receives no implementation claim until fresh-main design/Critic authorization.
 - TASK-027 P-ORCH-2 Design PR #82 passed hosted `9 / 9`, merged at exact main `1ed59286991ff70452b3f3602bc512b1fcd38ae4`, and completed cleanup. Implementation PR #83 exact head `633e85d7b0f817bfea4887a29c889bb2f2b98dcf` then passed hosted `9 / 9`, merged at exact main `a4d15f23d5781b515be6b2a228b491e696a5983f`, and completed remote implementation branch/dedicated checkout cleanup. Regenerated Strategy/Parent lineage is hosted-closed; this docs-only closure sync precedes fresh-main Product-wide AUTONOMY reselection.
+- TASK-027 P-ORCH-2 hosted-closure PR #84 exact head `ab50e99261f05e3cf70211ee03cc77740ba901b6` passed `9 / 9`, merged at exact main `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba`, and completed cleanup. Fresh-main AUTONOMY selected TASK-026 P-AUDIO-1 after proving the compiler/binding foundation already exists but durable Product/Shell integration does not.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

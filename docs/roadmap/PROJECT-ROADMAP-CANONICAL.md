@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.69
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.70
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-044 P-NLE-4 PR #72 passed hosted `9 / 9`, merged at exact main `6703c42a3aa06a563071f1a48dc7aab113f4dfe4` and completed cleanup, so TASK-044 is hosted-closed. TASK-045 compatibility/native/release closure is active at its full-design gate. Stable Product release remains `v0.20.1`; exact next SemVer is undecided.
+- Current insertion: TASK-045 Design PR #74 passed hosted `9 / 9`, merged at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062` and completed cleanup. Fresh-main P-RC-1 compatibility/migration/Asset paging passes focused `100 / 100` and full WSL2 `1123 / 1123`; hosted closure is pending. Stable Product release remains `v0.20.1`; exact next SemVer is undecided.
 
 ## 3. MVP定義
 
@@ -114,7 +114,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
-| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ACTIVE / DESIGN LOCAL PASS / HOSTED PENDING |
+| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ACTIVE / P-RC-1 LOCAL PASS / HOSTED PENDING |
 
 ## 6. Namespace Collision Resolution
 
@@ -181,7 +181,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **HOSTED CLOSED / PR #72 / MAIN 6703c42a**
-- TASK-045 V6 Native Acceptance / Release Closure: **ACTIVE / FULL DESIGN + CRITIC LOCAL PASS / HOSTED PENDING**
+- TASK-045 V6 Native Acceptance / Release Closure: **ACTIVE / P-RC-1 LOCAL PASS / HOSTED PENDING**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1694,3 +1694,24 @@ Release/Tag is conditionally Owner-authorized only after P-RC-1/P-RC-2 pass.
 Credential input is blocked. Production Deploy, paid Provider,
 ambiguous/destructive human-owned Project migration and TASK-013 native replay
 remain separate Human Gates.
+
+## Addendum LXIV — TASK-045 P-RC-1 Local Closure
+
+TASK-045 Design PR #74 exact head
+`7484da020970f9c043c6e72e56aaa61699c8d315` passed hosted `9 / 9`, merged at
+exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062`, and completed remote branch
+and dedicated checkout cleanup.
+
+Fresh-main P-RC-1 adds only the release-closure compatibility foundation:
+explicit rule-bound discovery of supported no-manifest legacy Projects,
+code-registered lossless transforms, copy-on-write Project save, verified Backup
+and reopen proof, additive SQLite schema v3 keyset paging for a 10,000-Asset
+library, and a bounded concurrency corrective for the derived latest source
+manifest pointer. Unknown/newer/corrupt, symlinked, stale, nondeterministic,
+lossy or human-gated migration remains fail-closed.
+
+Focused compatibility/save/history/Ingest regression passes `100 / 100`; full
+WSL2 regression passes `1123 / 1123`; compileall and hosted Windows/Linux CI
+remain required before hosted closure. P-RC-2 native/clean-install/restart
+acceptance and P-RC-3 exact SemVer/Tag/Release remain dependency-waiting. Stable
+formal Release remains `v0.20.1`. Production Deploy is not authorized.

@@ -6,11 +6,17 @@ from collections import deque
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Iterable, Mapping
+import re
+from typing import Callable, Iterable, Mapping
 
+from .errors import ProductError, ProductErrorCategory
 from .product_project import ProductProjectManifest, ProjectChildBinding, sha256_file_exact
 from .schema_contracts import SemVer
 from .serialization import canonical_json_bytes, sha256_bytes
+
+
+_MAX_MIGRATION_BYTES = 128 * 1024 * 1024
+_TRANSFORMER_ID_RE = re.compile(r"^[a-z][a-z0-9]*(?:[._-][a-z0-9][a-z0-9._-]*)+$")
 
 
 class CompatibilityState(str, Enum):
@@ -359,3 +365,137 @@ def _plan_state(plans: list[BindingMigrationPlan], blockers: list[str]) -> str:
     if plans:
         return "READY_FOR_COPY_ON_WRITE_APPLY"
     return "NO_MIGRATION_REQUIRED"
+
+
+@dataclass(frozen=True, slots=True)
+class MigrationTransformResult:
+    content: bytes
+    target_version: str
+    transformer_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MigrationTransformer:
+    """Code-registered exact lossless child transformation.
+
+    Transformers are constructed by Product code/tests, never deserialized from
+    a Project or accepted through a UI/CLI boundary.
+    """
+
+    transition: MigrationTransition
+    transformer_id: str
+    transform: Callable[[bytes], bytes]
+    validate_target: Callable[[bytes], None]
+
+    def __post_init__(self) -> None:
+        if not _TRANSFORMER_ID_RE.fullmatch(self.transformer_id):
+            raise ValueError("transformer_id must be a stable dotted identity")
+        if not self.transition.lossless or self.transition.requires_human_gate:
+            raise ValueError("automatic migration transformers must be exact lossless transitions")
+        if not callable(self.transform) or not callable(self.validate_target):
+            raise ValueError("migration transformer functions must be callable")
+
+
+class MigrationTransformerRegistry:
+    def __init__(self, transformers: Iterable[MigrationTransformer] = ()) -> None:
+        self._transformers: dict[tuple[str, str, str], MigrationTransformer] = {}
+        ids: set[str] = set()
+        for transformer in transformers:
+            key = (
+                transformer.transition.format_id,
+                transformer.transition.from_version,
+                transformer.transition.to_version,
+            )
+            if key in self._transformers or transformer.transformer_id in ids:
+                raise ValueError("duplicate migration transformer transition or identity")
+            self._transformers[key] = transformer
+            ids.add(transformer.transformer_id)
+
+    def assert_plan_supported(self, plan: ProjectMigrationPlan) -> None:
+        if plan.state != "READY_FOR_COPY_ON_WRITE_APPLY":
+            raise ProductError(
+                "ERR_PROJECT_MIGRATION_APPLY_NOT_READY",
+                "Migration plan is not eligible for lossless automatic apply",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                details={"plan_state": plan.state},
+            )
+        for binding_plan in plan.binding_plans:
+            for transition in binding_plan.transitions:
+                key = (transition.format_id, transition.from_version, transition.to_version)
+                if key not in self._transformers:
+                    raise ProductError(
+                        "ERR_PROJECT_MIGRATION_TRANSFORMER_MISSING",
+                        "Exact migration transformer is not registered",
+                        ProductErrorCategory.NOT_SUPPORTED,
+                        details={
+                            "format_id": transition.format_id,
+                            "from_version": transition.from_version,
+                            "to_version": transition.to_version,
+                        },
+                    )
+
+    def apply_binding(self, plan: BindingMigrationPlan, source: bytes) -> MigrationTransformResult:
+        if not isinstance(source, bytes) or not 0 < len(source) <= _MAX_MIGRATION_BYTES:
+            raise ProductError(
+                "ERR_PROJECT_MIGRATION_SOURCE_SIZE",
+                "Migration source bytes are empty or exceed the bounded maximum",
+                ProductErrorCategory.RESOURCE_EXHAUSTED,
+            )
+        if sha256_bytes(source) != plan.source_sha256:
+            raise ProductError(
+                "ERR_PROJECT_MIGRATION_SOURCE_STALE",
+                "Migration source bytes no longer match the exact plan",
+                ProductErrorCategory.STATE,
+            )
+        current = source
+        transformer_ids: list[str] = []
+        target_version: str | None = None
+        for transition in plan.transitions:
+            key = (transition.format_id, transition.from_version, transition.to_version)
+            transformer = self._transformers.get(key)
+            if transformer is None:
+                raise ProductError(
+                    "ERR_PROJECT_MIGRATION_TRANSFORMER_MISSING",
+                    "Exact migration transformer is not registered",
+                    ProductErrorCategory.NOT_SUPPORTED,
+                    details={"format_id": transition.format_id},
+                )
+            try:
+                output = transformer.transform(current)
+            except ProductError:
+                raise
+            except Exception as exc:
+                raise ProductError(
+                    "ERR_PROJECT_MIGRATION_TRANSFORM_FAILED",
+                    "Registered migration transformer failed",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={"transformer_id": transformer.transformer_id},
+                ) from exc
+            if not isinstance(output, bytes) or not 0 < len(output) <= _MAX_MIGRATION_BYTES:
+                raise ProductError(
+                    "ERR_PROJECT_MIGRATION_TARGET_SIZE",
+                    "Migration target bytes are empty or exceed the bounded maximum",
+                    ProductErrorCategory.RESOURCE_EXHAUSTED,
+                    details={"transformer_id": transformer.transformer_id},
+                )
+            try:
+                transformer.validate_target(output)
+            except ProductError:
+                raise
+            except Exception as exc:
+                raise ProductError(
+                    "ERR_PROJECT_MIGRATION_TARGET_INVALID",
+                    "Migration target bytes failed exact target validation",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={"transformer_id": transformer.transformer_id},
+                ) from exc
+            current = output
+            target_version = transition.to_version
+            transformer_ids.append(transformer.transformer_id)
+        if target_version is None:
+            raise ProductError(
+                "ERR_PROJECT_MIGRATION_TRANSITIONS_EMPTY",
+                "Migration binding plan has no transitions",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return MigrationTransformResult(current, target_version, tuple(transformer_ids))

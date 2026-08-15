@@ -14,7 +14,8 @@ from .serialization import utc_now_iso
 from .state import JobStateSnapshot, ProductionJobState
 
 _BASE_SCHEMA_VERSION = 1
-_SCHEMA_VERSION = 2
+_V2_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +43,27 @@ class ManifestRecord:
     schema_version: str
     status: str = "COMMITTED"
     operation_id: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class AssetPage:
+    """Bounded keyset page for large Asset Library projections."""
+
+    items: tuple[AssetRecord, ...]
+    limit: int
+    next_cursor: str | None
+
+    @property
+    def has_more(self) -> bool:
+        return self.next_cursor is not None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "items": [item.to_dict() for item in self.items],
+            "limit": self.limit,
+            "next_cursor": self.next_cursor,
+            "has_more": self.has_more,
+        }
 
 
 class SQLiteProductStore:
@@ -184,6 +206,11 @@ class SQLiteProductStore:
             self._apply_v2_migration(conn)
             conn.execute(
                 "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)",
+                (_V2_SCHEMA_VERSION, utc_now_iso()),
+            )
+            self._apply_v3_migration(conn)
+            conn.execute(
+                "INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (?, ?)",
                 (_SCHEMA_VERSION, utc_now_iso()),
             )
 
@@ -225,6 +252,14 @@ class SQLiteProductStore:
                 "existing Asset Registry contains duplicate checksums for the same Production Job",
                 ProductErrorCategory.DATA_INTEGRITY,
             ) from exc
+
+    @staticmethod
+    def _apply_v3_migration(conn: sqlite3.Connection) -> None:
+        # Keyset pagination must not materialize a complete large Asset Library.
+        # This additive index changes no Asset identity or historical row.
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_assets_job_asset_id ON assets(job_id, asset_id)"
+        )
 
     def schema_versions(self) -> tuple[int, ...]:
         with self._connect() as conn:
@@ -428,6 +463,42 @@ class SQLiteProductStore:
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM assets WHERE job_id=? ORDER BY asset_id", (job_id,)).fetchall()
         return tuple(self._row_to_asset(row) for row in rows)
+
+    def list_assets_page(
+        self,
+        job_id: str,
+        *,
+        limit: int = 100,
+        after_asset_id: str | None = None,
+    ) -> AssetPage:
+        """Return a stable, bounded keyset page ordered by Asset identity.
+
+        The cursor is the last returned Asset ID. This intentionally does not
+        claim snapshot isolation across concurrent inserts; consumers that need
+        an exact snapshot must bind a higher-level Project/Job revision.
+        """
+
+        validate_id(job_id, IdKind.JOB)
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 200:
+            raise ValueError("asset page limit must be between 1 and 200")
+        if after_asset_id is not None:
+            validate_id(after_asset_id, IdKind.ASSET)
+        with self._connect() as conn:
+            if after_asset_id is None:
+                rows = conn.execute(
+                    "SELECT * FROM assets WHERE job_id=? ORDER BY asset_id LIMIT ?",
+                    (job_id, limit + 1),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM assets WHERE job_id=? AND asset_id>? ORDER BY asset_id LIMIT ?",
+                    (job_id, after_asset_id, limit + 1),
+                ).fetchall()
+        has_more = len(rows) > limit
+        visible = rows[:limit]
+        items = tuple(self._row_to_asset(row) for row in visible)
+        cursor = items[-1].asset_id if has_more and items else None
+        return AssetPage(items=items, limit=limit, next_cursor=cursor)
 
     def reserve_operation(self, job_id: str, command_type: str, idempotency_key: str) -> tuple[OperationRecord, bool]:
         validate_id(job_id, IdKind.JOB)

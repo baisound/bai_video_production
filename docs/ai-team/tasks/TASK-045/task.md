@@ -4,7 +4,7 @@
 
 - Priority: `OWNER_MAXIMUM / RELEASE_CLOSURE`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `ACTIVE / FULL_DESIGN_AND_CRITIC_LOCAL_PASS / HOSTED_PENDING`
+- Status: `ACTIVE / P_RC_1_LOCAL_PASS / HOSTED_PENDING`
 - Depends on: TASK-043, TASK-042 P-V6-4 and TASK-044
 
 ## Goal
@@ -42,6 +42,8 @@ The current-main audit baseline is exact main
 `6703c42a3aa06a563071f1a48dc7aab113f4dfe4`; PR #72 passed `9 / 9` and TASK-044
 is hosted-closed. Existing compatibility/recovery/NLE focused tests pass `94 / 94`.
 Detailed design and two Critic rounds close at unresolved Critical/High `0 / 0`.
-Implementation starts only after this design checkpoint is hosted-closed and
-fresh-main P-RC-1 is reselected.
+Design PR #74 passed hosted `9 / 9`, merged at exact main
+`1ddc8ea39e45ee62590a443e3a67d8bb901b6062`, and completed branch/checkout
+cleanup. Fresh-main P-RC-1 is implemented with focused `100 / 100` and full WSL2
+`1123 / 1123` PASS. Hosted CI/main closure remains required before P-RC-2.
 

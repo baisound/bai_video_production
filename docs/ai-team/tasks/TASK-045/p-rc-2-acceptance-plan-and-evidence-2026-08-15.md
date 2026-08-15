@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Authority: `BVP-TASK-045-P-RC-2 / ACCEPTANCE`
-State: `LOCAL_PASS / HOSTED_PENDING`
+State: `HOSTED_CLOSED`
 
 ## Fresh-main selection
 
@@ -122,7 +122,10 @@ one canonical-document contract: `Development Candidate` must contain a plain
 SemVer, not the combined version/Tag/channel decision. `PROJECT.md` and
 `docs/ai-team/current-state.md` now retain `0.21.0` in that field and record
 `0.21.0 / v0.21.0 / stable` separately. Post-corrective full WSL2 regression is
-`1124 / 1124 PASS`. Hosted rerun remains required before merge.
+`1124 / 1124 PASS`. Final head `76644790b8e154014af7e46b5efeef49b3d58789`
+passed all hosted `9 / 9`, merged at exact main
+`84837e34a42234e23a544f54c8fe0c49aab8cacb`, and completed remote branch and
+dedicated checkout cleanup.
 
 ## Final Critic / Judge
 
@@ -138,6 +141,6 @@ SemVer, not the combined version/Tag/channel decision. `PROJECT.md` and
   replay, Resolve/Cubase mutation and Production Deploy remain blocked;
 - unresolved Critical/High: `0 / 0`.
 
-Judge decision: `P_RC_2_LOCAL_PASS / HOSTED_CI_REQUIRED`. P-RC-3 begins only
-after this branch passes hosted CI, merges to exact main, and completes remote
-branch and dedicated checkout cleanup.
+Judge decision: `P_RC_2_HOSTED_CLOSED / P_RC_3_RESELECTED`. Fresh-main
+`release/0.21.0` owns release metadata, regression, PR/main, exact merge SHA,
+annotated Tag and verified GitHub Release. Production Deploy remains blocked.

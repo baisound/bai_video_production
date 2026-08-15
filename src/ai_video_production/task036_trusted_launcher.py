@@ -441,7 +441,7 @@ def build_trusted_launch(
         configuration.cut_output,
     )
     coordinator = DesktopEditingCoordinator.create(
-        product_version="0.20.1",
+        product_version="0.21.0",
         project_id=configuration.project_id,
         display_name=configuration.display_name,
     )

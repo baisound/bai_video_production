@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.71
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.72
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-045 P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88` and completed cleanup. P-RC-2 packaged Project/native/restart/clean-install passes full Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`; exact next decision is `0.21.0 / v0.21.0 / stable`. Hosted closure is pending; stable formal Release remains `v0.20.1`.
+- Current insertion: TASK-045 P-RC-2 PR #76 final head `76644790b8e154014af7e46b5efeef49b3d58789` passed hosted `9 / 9`, merged at exact main `84837e34a42234e23a544f54c8fe0c49aab8cacb` and completed cleanup. Fresh-main P-RC-3 on `release/0.21.0` passes local metadata/full regression/build/install/packaged restart gates with exact `0.21.0 / v0.21.0 / stable`; PR/main/Tag/GitHub Release remain sequential gates. Stable formal Release remains `v0.20.1` until publication.
 
 ## 3. MVP定義
 
@@ -114,7 +114,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
-| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ACTIVE / P-RC-2 LOCAL PASS / HOSTED PENDING / 0.21.0 DECIDED |
+| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ACTIVE / P-RC-2 HOSTED CLOSED / P-RC-3 LOCAL PASS / HOSTED PENDING / 0.21.0 DECIDED |
 
 ## 6. Namespace Collision Resolution
 
@@ -181,7 +181,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **HOSTED CLOSED / PR #72 / MAIN 6703c42a**
-- TASK-045 V6 Native Acceptance / Release Closure: **ACTIVE / P-RC-2 LOCAL PASS / HOSTED PENDING / 0.21.0 DECIDED**
+- TASK-045 V6 Native Acceptance / Release Closure: **ACTIVE / P-RC-2 HOSTED CLOSED / P-RC-3 LOCAL PASS / HOSTED PENDING / 0.21.0 DECIDED**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1745,3 +1745,28 @@ regression, PR/main merge, exact SHA, annotated Tag and GitHub Release remain
 dependency-waiting for P-RC-2 hosted closure and fresh-main reselection.
 Production Deploy, paid Provider, credentials, ambiguous human-owned migration,
 TASK-013 native replay and Resolve/Cubase mutation remain blocked.
+
+## Addendum LXVI — TASK-045 P-RC-2 Hosted Closure and P-RC-3 Release Start
+
+P-RC-2 PR #76 final head `76644790b8e154014af7e46b5efeef49b3d58789`
+passed hosted `9 / 9` after one fail-closed canonical-document corrective,
+merged at exact main `84837e34a42234e23a544f54c8fe0c49aab8cacb`, and completed
+remote branch and dedicated checkout cleanup. The corrective retained plain
+SemVer `0.21.0` in the Development Candidate field and kept the exact
+`0.21.0 / v0.21.0 / stable` decision separate.
+
+Fresh exact main now authorizes P-RC-3 on `release/0.21.0`. This unit updates
+only enumerated Product version constants, Citation/CHANGELOG/README and exact
+TASK-045/current-state/roadmap/Release Evidence surfaces. It must pass metadata
+consistency, full regression, package build and clean install before PR. Only an
+all-green PR may merge; only its verified exact main merge SHA may receive the
+new annotated `v0.21.0` tag; only that existing tag may drive the repository
+GitHub Release workflow. Production Deploy, paid Provider, credential input,
+ambiguous human-owned migration and TASK-013 native replay remain blocked.
+
+P-RC-3 local gates now pass: full Windows `1123 passed, 1 expected skip`, full
+WSL2 `1124 / 1124`, compileall, wheel/source distribution build, fresh wheel
+install with `pip check`, and the Windows one-dir EXE build. The exact release
+candidate EXE also passes isolated default UIA/Timeline/native-picker restart and
+owned v0.20.1 Project open/reopen with an unchanged Manifest. Hosted PR/main,
+exact merge SHA, annotated Tag and GitHub Release remain sequentially pending.

@@ -4,12 +4,12 @@
 
 ## Current identity
 
-- Product package: `0.20.1`
+- Product package: `0.21.0` release candidate
 - Stable formal Release: `v0.20.1`
 - Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Current development main: `402c8956a5f5f3ac485c43db2b3e35e667846a88` (PR #75 TASK-045 P-RC-1 merge)
-- Current Product state: `V0_20_1_RELEASED / TASK_045_P_RC_2_LOCAL_PASS_HOSTED_PENDING / V0_21_0_DECIDED / NATIVE_RUNTIME_PARKED`
-- Active implementation branch: `refactor/task-045-prc2-native-acceptance`
+- Current development main: `84837e34a42234e23a544f54c8fe0c49aab8cacb` (PR #76 TASK-045 P-RC-2 merge)
+- Current Product state: `V0_20_1_STABLE / TASK_045_P_RC_3_LOCAL_PASS_HOSTED_PENDING / V0_21_0_RELEASE_CANDIDATE / NATIVE_RUNTIME_PARKED`
+- Active implementation branch: `release/0.21.0`
 
 Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
 
@@ -36,7 +36,7 @@ No contained generated output, TASK-037 Candidate, TASK-040 Attempt binding, TAS
 
 ## Remaining Product scope
 
-- TASK-045 executable supported migration/legacy corpus, large-project performance, integrated native/clean-install/restart acceptance and exact Release closure;
+- TASK-045 P-RC-3 hosted PR/main/annotated Tag/GitHub Release finalization;
 - full multi-slice TASK-027 production orchestration;
 - remaining TASK-013 native generation and post-native Candidate/Audit binding;
 - TASK-014 Owner Narration, TASK-026 Audio Placement compilation/execution and later TASK-041 audio-processing slices;
@@ -53,6 +53,8 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 - TASK-045 audit baseline compatibility/recovery/NLE focused tests: `94 / 94 PASS`
 - TASK-045 P-RC-1 compatibility/migration/paging focused tests: `100 / 100 PASS`; full WSL2 regression: `1123 / 1123 PASS`
 - TASK-045 P-RC-2 final packaged Project/native/restart/clean-install acceptance: `PASS`; full Windows `1123 passed, 1 expected skip`; full WSL2 `1124 / 1124 PASS`; exact next decision `0.21.0 / v0.21.0 / stable`
+- TASK-045 P-RC-2 PR #76 final head `76644790`: hosted `9 / 9 PASS`; exact main `84837e34`; remote branch/dedicated checkout cleanup `PASS`
+- TASK-045 P-RC-3 local release gates: Windows `1123 passed, 1 expected skip`; WSL2 `1124 / 1124`; wheel/sdist build, clean install, `pip check`, EXE build and two packaged restart paths `PASS`
 - PR #47 exact head `3785e44a211b8c4d81005060bc8a1faff161870d`: `9 / 9 PASS`; exact main merge `8dd6434a65115d88641d0942b08788a9eceda279`
 - TASK-041 focused regression: `64 / 64 PASS`
 - TASK-041 full WSL2 regression: `932 / 932 PASS`

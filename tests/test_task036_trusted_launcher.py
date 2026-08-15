@@ -229,10 +229,15 @@ def test_v11_launch_explicitly_composes_bounded_local_generation_without_executi
         comfy_client=ComfyClient(),
     )
     assert launch.bridge._generation_execution_application is not None
+    assert launch.bridge._generation_output_adoption_application is not None
     snapshot = launch.bridge.generation_execution_snapshot({})
     assert snapshot["available"] is True
     assert snapshot["events"] == []
     assert snapshot["paid_execution_authorized"] is False
+    combined = launch.bridge.generation_queue_snapshot({})
+    assert combined["output_adoption_control"]["available"] is True
+    assert combined["output_adoption_control"]["eligible_completed_outputs"] == []
+    assert combined["output_adoption_control"]["publication_authorized"] is False
     assert not any(roots["generation-output"].iterdir())
 
 

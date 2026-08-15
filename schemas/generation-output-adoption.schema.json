@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/generation-output-adoption.schema.json",
+  "title": "TASK-027 Generation Output Adoption Store",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "adoption_version", "task_owner", "project_id", "revision", "records",
+    "provider_execution_started", "provider_execution_replayed",
+    "paid_execution_authorized", "human_audit_decision_created",
+    "candidate_accepted", "candidate_locked", "publication_authorized",
+    "nle_mutation_started", "adoption_snapshot_sha256"
+  ],
+  "properties": {
+    "adoption_version": {"const": "1.0.0"},
+    "task_owner": {"const": "TASK-027"},
+    "project_id": {"type": "string", "minLength": 1, "maxLength": 200},
+    "revision": {"type": "integer", "minimum": 0},
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "adoption_id", "execution_id", "queue_entry_id", "slot_id",
+          "prompt_id", "prompt_version", "output_ref", "output_sha256",
+          "execution_event_sha256", "media_kind",
+          "candidate_id", "record_revision", "state", "asset_id", "failure_code"
+        ],
+        "properties": {
+          "adoption_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+          "execution_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+          "queue_entry_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+          "slot_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+          "prompt_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+          "prompt_version": {"type": "integer", "minimum": 1},
+          "output_ref": {"type": "string", "pattern": "^project-output://[A-Za-z0-9][A-Za-z0-9._/-]{0,499}$"},
+          "output_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "execution_event_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "media_kind": {"enum": ["IMAGE", "VIDEO", "AUDIO"]},
+          "candidate_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+          "record_revision": {"type": "integer", "minimum": 1},
+          "state": {"enum": ["PREPARED", "ASSET_REGISTERED", "CANDIDATE_REGISTERED", "ATTEMPT_BOUND", "READY_FOR_AUDIT", "FAILED_KNOWN"]},
+          "asset_id": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+          "failure_code": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"}
+        }
+      }
+    },
+    "provider_execution_started": {"const": false},
+    "provider_execution_replayed": {"const": false},
+    "paid_execution_authorized": {"const": false},
+    "human_audit_decision_created": {"const": false},
+    "candidate_accepted": {"const": false},
+    "candidate_locked": {"const": false},
+    "publication_authorized": {"const": false},
+    "nle_mutation_started": {"const": false},
+    "adoption_snapshot_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

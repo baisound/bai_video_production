@@ -651,6 +651,63 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 
+def test_generation_output_adoption_bridge_is_allowlisted_and_separate_from_provider_execution():
+    class QueueStub:
+        def snapshot(self):
+            return {"project_id": "project-1", "queue_snapshot_sha256": "sha256:" + "1" * 64, "entries": []}
+
+    class AdoptionStub:
+        def __init__(self):
+            self.calls = []
+
+        def snapshot(self):
+            return {
+                "project_id": "project-1",
+                "adoption_snapshot_sha256": "sha256:" + "2" * 64,
+                "eligible_completed_outputs": [],
+                "recovery": {"required": False, "active": []},
+                "provider_execution_started": False,
+                "publication_authorized": False,
+            }
+
+        def prepare_adoption(self, **values):
+            self.calls.append(("prepare", values))
+            return {"confirmation_id": "adopt-confirm", "action_label": "検証して監査候補へ登録"}
+
+        def apply_adoption(self, **values):
+            self.calls.append(("apply", values))
+            return {"records": [{"state": "READY_FOR_AUDIT"}]}
+
+        def apply_recovery(self, **values):
+            self.calls.append(("recover", values))
+            return {"recovery": {"required": False}}
+
+    adoption = AdoptionStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        generation_queue_application=QueueStub(),
+        generation_output_adoption_application=adoption,
+    )
+    combined = bridge.generation_queue_snapshot({})
+    assert combined["output_adoption_control"]["available"] is True
+    values = {
+        "execution_id": "execution-1",
+        "expected_execution_snapshot_sha256": "sha256:" + "3" * 64,
+        "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,
+        "expected_production_snapshot_sha256": "sha256:" + "4" * 64,
+        "expected_prompt_snapshot_sha256": "sha256:" + "5" * 64,
+        "expected_adoption_snapshot_sha256": "sha256:" + "2" * 64,
+    }
+    prepared = bridge.generation_output_adoption_prepare(values)
+    assert prepared["action_label"] == "検証して監査候補へ登録"
+    assert bridge.generation_output_adoption_apply({"confirmation_id": "adopt-confirm"})["records"][0]["state"] == "READY_FOR_AUDIT"
+    assert bridge.generation_output_adoption_recover({"adoption_id": "adoption-1"})["recovery"]["required"] is False
+    assert [name for name, _ in adoption.calls] == ["prepare", "apply", "recover"]
+    with pytest.raises(ProductError) as exc:
+        bridge.generation_output_adoption_prepare({"execution_id": "execution-1"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
 def test_audio_workspace_bridge_is_allowlisted_and_keeps_execution_separate():
     class AudioStub:
         def __init__(self):

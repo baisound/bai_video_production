@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Added TASK-027 P-ORCH-1 Human-confirmed adoption of an exact initial completed local generation output into canonical TASK-003 Asset, TASK-037 Candidate and TASK-040 PASS Attempt/`GENERATED_FROM` lineage, ending only at `READY_FOR_AUDIT` with checksum-closed restart recovery and unified Generation Queue UI. Provider replay, paid work, Human ACCEPT/LOCK, publication and NLE mutation remain false; regenerated Prompt output is parked until exact Strategy/Parent binding is persisted.
+
 ## [0.21.0] - 2026-08-15
 
 - Finalized the exact `0.21.0 / v0.21.0 / stable` release candidate metadata, upgrade/migration guidance and bounded release notes after full Windows/WSL2 regression, wheel/source build, fresh wheel install and final one-dir packaged restart acceptance.

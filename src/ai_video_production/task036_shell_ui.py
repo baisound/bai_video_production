@@ -28,6 +28,7 @@ from .continuity_application import Task039ContinuityApplication
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
 from .creative_generation_execution_application import Task013CreativeGenerationExecutionApplication
+from .generation_output_adoption_application import Task027GenerationOutputAdoptionApplication
 from .audio_workspace_application import Task041AudioWorkspaceApplication
 from .task044_nle_shell import Task044NleShellController
 from .interactive_timeline import (
@@ -139,8 +140,10 @@ document.querySelector('#chooseMediaButton').addEventListener('click',()=>choose
 document.querySelector('#chooseHandoffButton').addEventListener('click',()=>chooseAndReport('choose_handoff_folder','保存先'));
 function applyAccessibility(){const main=document.querySelector('main.viewer');if(main){main.id='editingCanvas';main.setAttribute('aria-label','映像プレビュー');main.tabIndex=0}const timeline=document.querySelector('section.timeline');if(timeline){timeline.setAttribute('role','region');timeline.setAttribute('aria-label','編集タイムライン')}const labels={keepButton:'候補を残す',cutButton:'候補をカットする',approvePlanButton:'編集プランを承認する'};for(const [id,label] of Object.entries(labels)){document.querySelector('#'+id)?.setAttribute('aria-label',label)}}
 async function prepareLocalGenerationExecution(model,item){const control=model.execution_control;const prepared=await call('generation_execution_prepare',{queue_entry_id:item.queue_entry_id,expected_queue_snapshot_sha256:control.queue_snapshot_sha256,expected_execution_snapshot_sha256:control.execution_snapshot_sha256});if(!prepared)return;const ok=window.confirm(`LOCAL Providerを実行しますか？\nScene/Slot: ${prepared.scene_id} / ${prepared.slot_id}\nRoute: ${prepared.route_id} / ${prepared.model_id}\nCost: ${prepared.cost_class}\n\nDISPATCHING後に中断しても自動再実行しません。有料Providerは使用しません。`);if(ok){await call('generation_execution_apply',{confirmation_id:prepared.confirmation_id});renderGenerationQueue(await call('generation_queue_snapshot'))}}
+async function prepareGenerationOutputAdoption(model,item){const control=model.execution_control,adoption=model.output_adoption_control,production=await call('production_snapshot'),prompt=await call('prompt_evidence_snapshot');const prepared=await call('generation_output_adoption_prepare',{execution_id:item.execution_id,expected_execution_snapshot_sha256:control.execution_snapshot_sha256,expected_queue_snapshot_sha256:model.queue_snapshot_sha256,expected_production_snapshot_sha256:production.snapshot_sha256,expected_prompt_snapshot_sha256:prompt.prompt_snapshot_sha256,expected_adoption_snapshot_sha256:adoption.adoption_snapshot_sha256});if(!prepared)return;const ok=window.confirm(`生成済み出力を検証して監査候補へ登録しますか？\nExecution: ${prepared.execution_id}\nSlot: ${prepared.slot_id}\nCandidate: ${prepared.candidate_id}\n\nProvider再実行・課金・Human ACCEPT/LOCK・公開は行いません。`);if(ok){await call('generation_output_adoption_apply',{confirmation_id:prepared.confirmation_id});renderGenerationQueue(await call('generation_queue_snapshot'))}}
+async function recoverGenerationOutputAdoption(item){const ok=window.confirm(`中断した監査候補登録の残りだけを再開しますか？\n${item.adoption_id} / ${item.state}\nProviderは再実行しません。`);if(ok){await call('generation_output_adoption_recover',{adoption_id:item.adoption_id});renderGenerationQueue(await call('generation_queue_snapshot'))}}
 const renderGenerationQueueAdmission=renderGenerationQueue;
-renderGenerationQueue=function(model){renderGenerationQueueAdmission(model);if(!model?.available)return;const control=model.execution_control,host=document.querySelector('#generationQueueContent'),summary=document.querySelector('#generationQueueSummary'),boundary=host.querySelector('.planning-warning');if(!control?.available){const unavailable=document.createElement('div');unavailable.className='production-meta planning-warning';unavailable.textContent='Local execution adapter is not configured. Admission Evidence remains non-executable.';host.append(unavailable);return}summary.textContent=`Admission ${model.entry_count} / Local execution ${control.latest_executions?.length||0}`;if(boundary)boundary.textContent='R4 local execution controlは、明示確認されたLOCAL_FREE_AIだけを実行します。有料Provider、Budget予約、Candidate作成、自動再生成、Resolve/Cubase操作は行いません。';if(control.recovery?.required){const recovery=document.createElement('div');recovery.className='audit-recovery';recovery.textContent='RECOVERY_REQUIRED: 中断したlocal dispatchは自動再実行しません。';host.append(recovery)}for(const item of control.available_queue_entries||[]){const card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`LOCAL EXECUTION READY · ${item.scene_id} / ${item.slot_id}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`${item.queue_entry_id}\nPrompt: ${item.prompt_id} v${item.prompt_version}\nPrompt body: private / hash-verified`;const button=document.createElement('button');button.className='action';button.textContent='Local Provider実行を確認';button.disabled=!!control.recovery?.required;button.addEventListener('click',()=>prepareLocalGenerationExecution(model,item));card.append(title,meta,button);host.append(card)}for(const event of control.latest_executions||[]){const card=document.createElement('section');card.className='planning-card';card.textContent=`${event.execution_id} · ${event.state} · ${event.route_id} / ${event.model_id}`;host.append(card)}}
+renderGenerationQueue=function(model){renderGenerationQueueAdmission(model);if(!model?.available)return;const control=model.execution_control,adoption=model.output_adoption_control,host=document.querySelector('#generationQueueContent'),summary=document.querySelector('#generationQueueSummary'),boundary=host.querySelector('.planning-warning');if(!control?.available){const unavailable=document.createElement('div');unavailable.className='production-meta planning-warning';unavailable.textContent='Local execution adapter is not configured. Admission Evidence remains non-executable.';host.append(unavailable);return}summary.textContent=`Admission ${model.entry_count} / Local execution ${control.latest_executions?.length||0} / Audit candidates ${adoption?.latest_adoptions?.filter(x=>x.state==='READY_FOR_AUDIT').length||0}`;if(boundary)boundary.textContent='LOCAL_FREE_AI実行と、生成済み出力の監査候補登録は別の明示確認です。監査候補登録はProviderを再実行せず、課金・Human ACCEPT/LOCK・公開・NLE操作を行いません。';if(control.recovery?.required){const recovery=document.createElement('div');recovery.className='audit-recovery';recovery.textContent='RECOVERY_REQUIRED: 中断したlocal dispatchは自動再実行しません。';host.append(recovery)}for(const item of control.available_queue_entries||[]){const card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`LOCAL EXECUTION READY · ${item.scene_id} / ${item.slot_id}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`${item.queue_entry_id}\nPrompt: ${item.prompt_id} v${item.prompt_version}\nPrompt body: private / hash-verified`;const button=document.createElement('button');button.className='action';button.textContent='Local Provider実行を確認';button.disabled=!!control.recovery?.required;button.addEventListener('click',()=>prepareLocalGenerationExecution(model,item));card.append(title,meta,button);host.append(card)}if(adoption?.available){for(const item of adoption.recovery?.active||[]){const card=document.createElement('section');card.className='audit-recovery';card.textContent=`監査候補登録の再開待ち · ${item.adoption_id} / ${item.state}`;const button=document.createElement('button');button.className='action';button.textContent='残りだけ再開';button.addEventListener('click',()=>recoverGenerationOutputAdoption(item));card.append(button);host.append(card)}for(const item of adoption.eligible_completed_outputs||[]){const card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`COMPLETED OUTPUT · ${item.execution_id}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`Slot: ${item.slot_id}\nPrompt: ${item.prompt_id} v${item.prompt_version}\nMedia: ${item.media_kind}\nSHA: ${item.output_sha256}\nAdoption: ${item.adoption_status}`;const button=document.createElement('button');button.className='action';button.textContent=item.adoption_status==='READY'?'検証して監査候補へ登録':'Strategy/Parent binding待ち';button.disabled=!!adoption.recovery?.required||item.adoption_status!=='READY';button.addEventListener('click',()=>prepareGenerationOutputAdoption(model,item));card.append(title,meta,button);host.append(card)}}for(const event of control.latest_executions||[]){const card=document.createElement('section');card.className='planning-card';card.textContent=`${event.execution_id} · ${event.state} · ${event.route_id} / ${event.model_id}`;host.append(card)}}
 applyAccessibility();window.addEventListener('pywebviewready',refresh);setTimeout(refresh,300);
 </script></body></html>'''
 
@@ -167,6 +170,7 @@ class Task036ShellBridge:
         prompt_evidence_application: Task040PromptEvidenceApplication | None = None,
         generation_queue_application: Task027GenerationQueueApplication | None = None,
         generation_execution_application: Task013CreativeGenerationExecutionApplication | None = None,
+        generation_output_adoption_application: Task027GenerationOutputAdoptionApplication | None = None,
         audio_workspace_application: Task041AudioWorkspaceApplication | None = None,
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
@@ -195,6 +199,7 @@ class Task036ShellBridge:
         self._prompt_evidence_application = prompt_evidence_application
         self._generation_queue_application = generation_queue_application
         self._generation_execution_application = generation_execution_application
+        self._generation_output_adoption_application = generation_output_adoption_application
         self._audio_workspace_application = audio_workspace_application
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
@@ -776,7 +781,15 @@ class Task036ShellBridge:
         execution = {"available": False}
         if self._generation_execution_application is not None:
             execution = {"available": True, **self._generation_execution_application.snapshot()}
-        return {"available": True, **self._generation_queue_application.snapshot(), "execution_control": execution}
+        adoption = {"available": False}
+        if self._generation_output_adoption_application is not None:
+            adoption = {"available": True, **self._generation_output_adoption_application.snapshot()}
+        return {
+            "available": True,
+            **self._generation_queue_application.snapshot(),
+            "execution_control": execution,
+            "output_adoption_control": adoption,
+        }
 
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:
         required = {"prompt_id", "prompt_version", "expected_queue_snapshot_sha256", "expected_upstream_snapshots"}
@@ -829,6 +842,31 @@ class Task036ShellBridge:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution apply request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_execution_application().apply_execution(confirmation_id=args["confirmation_id"])
+
+    def _require_generation_output_adoption_application(self) -> Task027GenerationOutputAdoptionApplication:
+        if self._generation_output_adoption_application is None:
+            raise ProductError("ERR_TASK027_OUTPUT_ADOPTION_NOT_BOUND", "Generation output adoption is not bound to this Shell", ProductErrorCategory.STATE)
+        return self._generation_output_adoption_application
+
+    def generation_output_adoption_prepare(self, args: Any) -> dict[str, Any]:
+        required = {
+            "execution_id", "expected_execution_snapshot_sha256",
+            "expected_queue_snapshot_sha256", "expected_production_snapshot_sha256",
+            "expected_prompt_snapshot_sha256", "expected_adoption_snapshot_sha256",
+        }
+        if not isinstance(args, dict) or set(args) != required or not all(isinstance(args[name], str) for name in required):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption preparation request is invalid", ProductErrorCategory.VALIDATION)
+        return self._require_generation_output_adoption_application().prepare_adoption(**args)
+
+    def generation_output_adoption_apply(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption apply request is invalid", ProductErrorCategory.VALIDATION)
+        return self._require_generation_output_adoption_application().apply_adoption(confirmation_id=args["confirmation_id"])
+
+    def generation_output_adoption_recover(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"adoption_id"} or not isinstance(args["adoption_id"], str):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption recovery request is invalid", ProductErrorCategory.VALIDATION)
+        return self._require_generation_output_adoption_application().apply_recovery(adoption_id=args["adoption_id"])
 
     def _require_audio_workspace_application(self) -> Task041AudioWorkspaceApplication:
         if self._audio_workspace_application is None:

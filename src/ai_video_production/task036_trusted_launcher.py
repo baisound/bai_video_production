@@ -15,6 +15,10 @@ from typing import Any
 from .ai_connections import ConnectionAvailability
 from .comfyui import ComfyEndpointPolicy, ComfyUIClient
 from .creative_generation_execution_application import Task013CreativeGenerationExecutionApplication
+from .generation_output_adoption_application import (
+    Task027GeneratedOutputAssetPort,
+    Task027GenerationOutputAdoptionApplication,
+)
 from .desktop_editing_coordinator import DesktopEditingCoordinator
 from .desktop_post_resolve_workflow import Task036PostResolveWorkflowFacade
 from .desktop_resolve_workflow import Task036ResolveWorkflowFacade
@@ -541,6 +545,7 @@ def build_trusted_launch(
             export_application=export_application,
         )
     generation_execution_application = None
+    generation_output_adoption_application = None
     if configuration.local_generation is not None:
         local_client = comfy_client or ComfyUIClient(configuration.local_generation.endpoint)
         local_port = LocalComfyTextToVideoPort(config=configuration.local_generation, client=local_client)
@@ -551,6 +556,26 @@ def build_trusted_launch(
             execution_port=local_port,
             availability_factory=lambda: ConnectionAvailability(
                 frozenset({configuration.local_generation.route_id})
+            ),
+        )
+        generated_output_ingest = AssetIngestService(
+            store=store,
+            resolver=resolver,
+            source_policy=SourcePathPolicy((configuration.local_generation.project_output_root,)),
+        )
+        generation_output_adoption_application = Task027GenerationOutputAdoptionApplication(
+            project_root=configuration.project_root,
+            project_id=configuration.project_id,
+            generation_execution=generation_execution_application,
+            generation_queue=generation_queue_application,
+            production_control=production_control,
+            prompt_evidence=prompt_evidence_application,
+            asset_port=Task027GeneratedOutputAssetPort(
+                service=generated_output_ingest,
+                project_output_root=configuration.local_generation.project_output_root,
+                production_job_id=configuration.production_job_id,
+                owner=configuration.owner,
+                max_output_bytes=configuration.local_generation.max_output_bytes,
             ),
         )
     bridge = Task036ShellBridge(
@@ -566,6 +591,7 @@ def build_trusted_launch(
         prompt_evidence_application=prompt_evidence_application,
         generation_queue_application=generation_queue_application,
         generation_execution_application=generation_execution_application,
+        generation_output_adoption_application=generation_output_adoption_application,
         audio_workspace_application=audio_workspace_application,
         nle_controller_factory=nle_controller,
     )

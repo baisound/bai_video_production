@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_DESIGN_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_IMPLEMENTATION_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
-- Active Consumer Task: `TASK-027 / P-ORCH-1 GENERATION OUTPUT ADOPTION / DESIGN LOCAL PASS / HOSTED PENDING / feature/task-027-generation-output-adoption-design`; TASK-045 post-release PR #78 is hosted-closed at exact main `1956f6e04b0c6206f64333d719f41c567def0590`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-027 / P-ORCH-1 GENERATION OUTPUT ADOPTION / IMPLEMENTATION LOCAL PASS / HOSTED PENDING / feature/task-027-generation-output-adoption`; Design PR #79 is hosted-closed at exact main `4532bb29c0ace58c720016f7ec313bb2037788ea`, while TASK-013 native H3, regenerated-output Strategy/Parent binding and TASK-014 paid narration execution remain parked behind their recorded gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `P-ORCH-1 design PR -> all-green main merge -> cleanup -> fresh-main implementation reselection; Native H3 replay and Production Deploy remain blocked`
+- Next Consumer Decision Gate: `P-ORCH-1 implementation PR -> all-green main merge -> cleanup -> fresh-main next-task audit; Native H3 replay, regenerated-output adoption without exact Strategy/Parent binding and Production Deploy remain blocked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.74 Addendum LXVIII. TASK-045 post-release PR #78 passed hosted `9 / 9`, merged at exact main `1956f6e04b0c6206f64333d719f41c567def0590` and completed cleanup. Fresh-main P-ORCH-1 designs a Human-confirmed completed-output -> canonical Asset -> Candidate -> Prompt lineage -> READY_FOR_AUDIT handoff without Provider replay or ACCEPT/LOCK. Provider/paid/Production Deploy/ambiguous destructive migration remain blocked.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.75 Addendum LXIX. TASK-027 Design PR #79 passed hosted `9 / 9`, merged at exact main `4532bb29c0ace58c720016f7ec313bb2037788ea` and completed cleanup. Fresh-main P-ORCH-1 implementation locally passes the Human-confirmed initial completed-output -> canonical Asset -> Candidate -> Prompt lineage -> READY_FOR_AUDIT handoff. Regenerated Prompt output is parked until exact Strategy/Parent binding exists. Provider/paid/ACCEPT/LOCK/Production Deploy remain blocked.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

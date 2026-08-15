@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_045_P_RC_2_LOCAL_PASS_HOSTED_PENDING / V0_21_0_DECIDED / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_STABLE / TASK_045_P_RC_3_LOCAL_PASS_HOSTED_PENDING / V0_21_0_RELEASE_CANDIDATE / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-045 / P-RC-2 NATIVE + CLEAN INSTALL + RESTART / LOCAL PASS / HOSTED PENDING`; P-RC-1 PR #75 is hosted-closed at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-045 / P-RC-3 RELEASE FINALIZATION / LOCAL GATES PASS / HOSTED PENDING / release/0.21.0`; P-RC-2 PR #76 is hosted-closed at exact main `84837e34a42234e23a544f54c8fe0c49aab8cacb`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.20.1`
-- Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
-- Development Candidate: `0.21.0`; exact decision is `0.21.0 / v0.21.0 / stable`, while package metadata remains `0.20.1` until fresh-main P-RC-3
+- Package: `0.21.0`
+- Release State: `V0_21_0_RELEASE_CANDIDATE / LOCAL_GATES_PASS / HOSTED_PENDING`; latest formal GitHub Release remains `v0.20.1`
+- Development Candidate: `NONE`; the current release identity is `0.21.0 / v0.21.0 / stable`, and no later candidate is selected
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `P-RC-2 PR all-green/main merge/exact SHA/cleanup -> fresh-main release/0.21.0 P-RC-3 metadata/regression/PR/main/Tag/GitHub Release; Production Deploy remains blocked`
+- Next Consumer Decision Gate: `P-RC-3 metadata check -> full regression/build/clean install -> PR all-green -> exact main merge SHA -> annotated v0.21.0 -> verified stable GitHub Release; Production Deploy remains blocked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.71 Addendum LXV. P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88` and completed cleanup. P-RC-2 final candidate passes two-hour/10,000-clip acceptance, packaged synthetic Project open/reopen without manifest rewrite, Narrator/UIA, three displays, native picker cancel, conversation-free restart, final clean install, Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`. Observed pywebview rich-object recursion is corrected by a private Bridge graph with typed methods only. Exact decision is `0.21.0 / v0.21.0 / stable`; P-RC-3 remains dependency-waiting for P-RC-2 hosted closure. Provider/paid/Production Deploy/ambiguous destructive migration remain blocked.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.72 Addendum LXVI. P-RC-2 PR #76 final head `76644790` passed hosted `9 / 9`, merged at exact main `84837e34a42234e23a544f54c8fe0c49aab8cacb` and completed cleanup. Fresh-main P-RC-3 has selected exact `0.21.0 / v0.21.0 / stable` and is preparing metadata and release gates. Annotated Tag and GitHub Release remain pending until PR all-green/main exact-SHA verification. Provider/paid/Production Deploy/ambiguous destructive migration remain blocked.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

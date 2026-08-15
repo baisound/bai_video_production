@@ -127,6 +127,24 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
+### Upgrading to 0.21.0 and migrating Projects
+
+To install the formal release from this repository after publication, select the
+annotated `v0.21.0` tag and use the same installation command:
+
+```powershell
+git fetch --tags
+git checkout v0.21.0
+python -m pip install -e ".[dev]"
+```
+
+Existing v0.20.1 Projects remain readable. When migration is required, the
+Product applies only code-registered lossless transforms through a backed-up
+copy-on-write flow and reopens the result before reporting success. A legacy
+Project without a Manifest requires explicit Project identity and a preview.
+Unknown, newer, corrupt, lossy, or ambiguous formats fail closed and are never
+silently rewritten; do not point migration at an ambiguous human-owned Project.
+
 ## Five-minute, credential-free demo
 
 The quickstart uses no API key, network, paid AI, real media, or NLE mutation. It demonstrates offline capability routing and exact NTSC timeline mapping.

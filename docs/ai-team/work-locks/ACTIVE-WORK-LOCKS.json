@@ -37,8 +37,18 @@
       "task_unit": "TASK-036/P-UX-1C",
       "branch": "codex/task-036-v611-packaged-native-closure",
       "base_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
-      "status": "ACTIVE",
-      "implementation_state": "ACTIVE_PROTECTED_WIP_HASH_VERIFIED",
+      "status": "HOSTED_CLOSED_TRACK_CORRECTION_UNIT",
+      "implementation_state": "HOSTED_CLOSED_PR94_POST_MERGE_GREEN",
+      "hosted_closure": {
+        "pull_request": 94,
+        "head_sha": "42cc0a933b51b2b56eea84682d7664b6d8b456ec",
+        "merge_sha": "0c171f3a7ffffdf0179ced7476664a16c9c444a7",
+        "hosted_checks": "9_OF_9_PASS",
+        "post_merge_ci_run": 31879569752,
+        "post_merge_security_run": 31879569750,
+        "package_sha256": "ee15487e237c630f750512322963eaed5e9632e4e79b4be6442464d2d134ac38"
+      },
+      "whole_surface_v611_parity": "OPEN_SCREEN_BY_SCREEN_FOLLOWUP_NO_ACTIVE_IMPLEMENTATION_LOCK",
       "wip_hash_manifest": "BAI_VIDEO_PRODUCTION_PARALLEL_DEVELOPMENT_LOCK_HANDOFF_Ver1.0_2026-08-15/WIP_FILE_SHA256.txt",
       "last_wip_hash_verification": {
         "date": "2026-08-15",
@@ -77,12 +87,13 @@
       "lock_id": "BVP-LOCK-TASK046-PVS1A",
       "owner_agent": "開発担当2",
       "owner_thread_id": null,
-      "assignment_state": "RESERVED_FOR_DEVELOPER_2_NOT_STARTED",
+      "assignment_state": "DRAFT_PR_93_IMPLEMENTED_HOSTED_CHECKS_8_OF_9_CHANGELOG_GATE_ONLY",
       "task_unit": "TASK-046/P-VS-1A",
       "branch": "codex/task-046-p-vs-1a-body-free-backend",
       "base_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
       "status": "ACTIVE",
-      "implementation_state": "FRESH_MAIN_AUDIT_DESIGN_CRITIC_JUDGE_REQUIRED_BEFORE_PATCH",
+      "implementation_state": "DRAFT_PR_93_HEAD_A87E741F_CHANGELOG_INTEGRATION_REQUIRED",
+      "task036_merge_dependency": "SATISFIED_BY_PR94_TRACK_CORRECTION_HOSTED_CLOSURE",
       "allowed_files": [
         "src/ai_video_production/voice_profile_revision.py",
         "src/ai_video_production/voice_profile_store.py",
@@ -136,25 +147,35 @@
       "hosted_checks": "9_OF_9_PASS",
       "post_merge_ci_run": 31877047921,
       "post_merge_security_run": 31877047932
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK036-PUX1C-CHANGELOG-20260815",
+      "status": "HOSTED_CLOSED_RELEASED",
+      "hosting_pull_request": 95,
+      "target_pull_request": 94,
+      "target_head_sha": "42cc0a933b51b2b56eea84682d7664b6d8b456ec",
+      "target_merge_sha": "0c171f3a7ffffdf0179ced7476664a16c9c444a7",
+      "target_hosted_checks": "9_OF_9_PASS",
+      "target_post_merge_ci_run": 31879569752,
+      "target_post_merge_security_run": 31879569750
     }
   ],
   "integration_lock": {
-    "lock_id": "BVP-INTEGRATION-LOCK-TASK036-PUX1C-CHANGELOG-20260815",
+    "lock_id": "BVP-INTEGRATION-LOCK-TASK046-PVS1A-CHANGELOG-20260815",
     "owner_agent": "開発担当 / Integration owner",
     "owner_thread_id": "019ff856-bb71-7da0-a6fd-088ae06b158f",
-    "authority": "DELEGATED_OWNER_AUTHORIZATION_2026-08-15",
-    "hosting_branch": "codex/task-036-pux1c-changelog-integration-lock",
-    "hosting_base_sha": "841cda2e5f4eb4dbc5304d5f57afe49392723825",
+    "authority": "OWNER_APPROVED_PR93_SHORT_INTEGRATION_LOCK_AND_DELEGATED_OWNER_AUTHORIZATION_2026-08-15",
+    "hosting_branch": "codex/task-046-pvs1a-changelog-integration-lock",
+    "hosting_base_sha": "0c171f3a7ffffdf0179ced7476664a16c9c444a7",
     "status": "ACTIVE_ONLY_WHEN_EXACTLY_HOSTED_ON_MAIN",
-    "target_pr": 94,
-    "target_branch": "codex/task-036-v611-packaged-native-closure",
-    "expected_pre_integration_head": "dbccf1b1e6717a96d87440df1ebe8e707b3b8623",
-    "purpose": "ONE_EXACT_TASK036_PUX1C_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+    "target_pr": 93,
+    "target_branch": "codex/task-046-p-vs-1a-body-free-backend",
+    "expected_pre_integration_head": "a87e741f9213a532e152fd01c1a243ae7837ef3e",
+    "purpose": "ONE_EXACT_TASK046_PVS1A_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
     "allowed_files": [
       "CHANGELOG.md"
     ],
     "denied": [
-      "TASK036_IMPLEMENTATION_OR_EVIDENCE_FILES",
       "TASK046_PVS1A_IMPLEMENTATION_FILES",
       ".github/**",
       "OTHER_SHARED_INTEGRATION_FILES",
@@ -166,7 +187,7 @@
       "TARGET_PR_CLOSED_OR_MERGED",
       "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
     ],
-    "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_HOSTED_CHECKS_PASS_AND_TARGET_PR_MERGE_OR_CLOSE"
+    "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_OVERLAP_ZERO_HOSTED_CHECKS_PASS_AND_TARGET_PR_MERGE_OR_CLOSE"
   },
   "roadmap_dependency_gates": {
     "P-OBS-0": {

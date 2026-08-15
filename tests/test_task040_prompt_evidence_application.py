@@ -198,6 +198,10 @@ def test_human_regeneration_creates_next_prompt_version_without_provider(tmp_pat
     assert prepared["draft"]["new_prompt"]["prompt_version"] == 2
     saved = app.apply_regeneration(confirmation_id="regen")
     assert saved["prompt_count"] == 2
+    binding = saved["prompts"][1]["regeneration_binding"]
+    assert binding["parent_attempt_id"] == "job-1"
+    assert binding["strategy_level"] == 0
+    assert binding["regeneration_plan_sha256"] == prepared["plan"]["plan_sha256"]
     assert saved["provider_execution_started"] is False
 
 
@@ -230,3 +234,47 @@ def test_invalid_attempt_metadata_is_normalized_to_product_error(tmp_path: Path)
             expected_production_snapshot_sha256=state["production_snapshot_sha256"],
         )
     assert exc.value.code == "ERR_PROMPT_APPLICATION_ATTEMPT_INVALID"
+
+
+def test_generic_prompt_registration_cannot_create_unbound_later_version(tmp_path: Path) -> None:
+    seed_production(tmp_path, candidate=False); seed_prompt(tmp_path)
+    app = Task040PromptEvidenceApplication(project_root=tmp_path, project_id="project-1")
+    state = app.snapshot()
+    with pytest.raises(ProductError) as exc:
+        app.prepare_prompt(
+            prompt_id="prompt-1", prompt_version=2, purpose="x", scene_id="scene-1",
+            slot_id="slot-1", body_ref="project-private://prompts/prompt-1/v2",
+            body_sha256=H("2"), provider_profile_id="profile-1",
+            provider_profile_version="v1", input_asset_hashes=(), keep_conditions=("keep",),
+            expected_prompt_snapshot_sha256=state["prompt_snapshot_sha256"],
+            expected_production_snapshot_sha256=state["production_snapshot_sha256"],
+        )
+    assert exc.value.code == "ERR_PROMPT_APPLICATION_REGENERATION_ROUTE_REQUIRED"
+
+
+def test_legacy_unbound_later_prompt_is_readable_but_cannot_import_attempt(tmp_path: Path) -> None:
+    seed_production(tmp_path, candidate=False); seed_prompt(tmp_path)
+    prompts = PromptRegistrySnapshotStore.load(tmp_path / "prompt-registry.json")
+    previous = PromptRegistrySnapshotStore.snapshot(prompts)["snapshot_sha256"]
+    prompts.add_prompt(PromptEntity(
+        "prompt-1", 2, "legacy", H("2"), "profile-1", "v1", ("keep",),
+        scene_id="scene-1", slot_id="slot-1",
+        body_ref="project-private://prompts/prompt-1/v2",
+    ))
+    PromptRegistrySnapshotStore.save(
+        tmp_path / "prompt-registry.json", prompts,
+        expected_previous_snapshot_sha256=previous,
+    )
+    app = Task040PromptEvidenceApplication(project_root=tmp_path, project_id="project-1")
+    state = app.snapshot()
+    assert state["prompt_count"] == 2
+    with pytest.raises(ProductError) as exc:
+        app.prepare_attempt(
+            generation_job_id="job-legacy", slot_id="slot-1", prompt_id="prompt-1",
+            prompt_version=2, provider_id="provider-1", model_id="model-1",
+            strategy_level=1, result="FAIL", failure_codes=("DEPTH_REVERSED",),
+            output_candidate_id=None, parent_attempt_id=None, cost=None, latency_ms=None,
+            expected_prompt_snapshot_sha256=state["prompt_snapshot_sha256"],
+            expected_production_snapshot_sha256=state["production_snapshot_sha256"],
+        )
+    assert exc.value.code == "ERR_PROMPT_APPLICATION_REGENERATION_BINDING_REQUIRED"

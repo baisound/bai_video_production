@@ -207,6 +207,54 @@ class PromptCompilationBinding:
 
 
 @dataclass(frozen=True, slots=True)
+class PromptRegenerationBinding:
+    """Immutable intended lineage for one regenerated Prompt version."""
+
+    binding_version: str
+    parent_prompt_id: str
+    parent_prompt_version: int
+    parent_prompt_sha256: str
+    parent_attempt_id: str
+    strategy_level: RegenerationStrategy
+    reason_codes: tuple[str, ...]
+    regeneration_plan_sha256: str
+
+    def __post_init__(self) -> None:
+        if self.binding_version != "1.0.0":
+            raise ValueError("regeneration binding version is invalid")
+        _id(self.parent_prompt_id, "parent_prompt_id")
+        if (
+            isinstance(self.parent_prompt_version, bool)
+            or not isinstance(self.parent_prompt_version, int)
+            or self.parent_prompt_version < 1
+        ):
+            raise ValueError("parent_prompt_version must be >= 1")
+        _sha(self.parent_prompt_sha256, "parent_prompt_sha256")
+        _id(self.parent_attempt_id, "parent_attempt_id")
+        if not isinstance(self.strategy_level, RegenerationStrategy):
+            raise ValueError("strategy_level is invalid")
+        if not isinstance(self.reason_codes, tuple) or not self.reason_codes:
+            raise ValueError("reason_codes must be a non-empty tuple")
+        for value in self.reason_codes:
+            _id(value, "reason_code")
+        if tuple(sorted(set(self.reason_codes))) != self.reason_codes:
+            raise ValueError("reason_codes must be sorted and unique")
+        _sha(self.regeneration_plan_sha256, "regeneration_plan_sha256")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "binding_version": self.binding_version,
+            "parent_prompt_id": self.parent_prompt_id,
+            "parent_prompt_version": self.parent_prompt_version,
+            "parent_prompt_sha256": self.parent_prompt_sha256,
+            "parent_attempt_id": self.parent_attempt_id,
+            "strategy_level": int(self.strategy_level),
+            "reason_codes": list(self.reason_codes),
+            "regeneration_plan_sha256": self.regeneration_plan_sha256,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class PromptEntity:
     prompt_id: str
     prompt_version: int
@@ -220,6 +268,7 @@ class PromptEntity:
     body_ref: str | None = None
     input_asset_hashes: tuple[str, ...] = ()
     compilation_binding: PromptCompilationBinding | None = None
+    regeneration_binding: PromptRegenerationBinding | None = None
 
     def __post_init__(self) -> None:
         _id(self.prompt_id, "prompt_id")
@@ -261,6 +310,14 @@ class PromptEntity:
                 raise ValueError("compiled Prompt Provider profile differs from compilation")
             if self.scene_id != binding.scene_id or self.slot_id != binding.slot_id:
                 raise ValueError("compiled Prompt Scene/Slot differs from compilation")
+        if self.regeneration_binding is not None:
+            binding = self.regeneration_binding
+            if not isinstance(binding, PromptRegenerationBinding):
+                raise ValueError("regeneration_binding is invalid")
+            if self.prompt_version != binding.parent_prompt_version + 1:
+                raise ValueError("regenerated Prompt must immediately follow its parent version")
+            if self.prompt_id != binding.parent_prompt_id:
+                raise ValueError("regenerated Prompt ID differs from its parent lineage")
 
     def to_dict(self) -> dict[str, Any]:
         value = {
@@ -279,6 +336,8 @@ class PromptEntity:
         }
         if self.compilation_binding is not None:
             value["compilation_binding"] = self.compilation_binding.to_dict()
+        if self.regeneration_binding is not None:
+            value["regeneration_binding"] = self.regeneration_binding.to_dict()
         return value
 
 
@@ -484,7 +543,52 @@ class PromptGenerationRegistry:
                     "Regeneration strategy must not move backwards from its parent Attempt",
                     ProductErrorCategory.DATA_INTEGRITY,
                 )
+        binding = prompt.regeneration_binding
+        if binding is not None and (
+            attempt.parent_attempt_id != binding.parent_attempt_id
+            or attempt.strategy_level is not binding.strategy_level
+        ):
+            raise ProductError(
+                "ERR_GENERATION_REGENERATION_BINDING_MISMATCH",
+                "Generation Attempt differs from the immutable Prompt regeneration binding",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
         self.attempts[attempt.generation_job_id] = attempt
+
+    def require_regeneration_binding_valid(self, prompt: PromptEntity) -> None:
+        binding = prompt.regeneration_binding
+        if binding is None:
+            return
+        parent_prompt = self.prompts.get((binding.parent_prompt_id, binding.parent_prompt_version))
+        parent_attempt = self.attempts.get(binding.parent_attempt_id)
+        if parent_prompt is None or parent_prompt.body_sha256 != binding.parent_prompt_sha256:
+            raise ProductError(
+                "ERR_PROMPT_REGENERATION_PARENT_PROMPT_MISMATCH",
+                "Prompt regeneration binding references a missing or changed parent Prompt",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if (
+            parent_attempt is None
+            or parent_attempt.prompt_id != binding.parent_prompt_id
+            or parent_attempt.prompt_version != binding.parent_prompt_version
+            or parent_attempt.prompt_sha256 != binding.parent_prompt_sha256
+            or parent_attempt.slot_id != prompt.slot_id
+        ):
+            raise ProductError(
+                "ERR_PROMPT_REGENERATION_PARENT_ATTEMPT_MISMATCH",
+                "Prompt regeneration binding references an incompatible parent Attempt",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if parent_attempt.strategy_level > binding.strategy_level:
+            raise ProductError(
+                "ERR_PROMPT_REGENERATION_STRATEGY_REGRESSION",
+                "Prompt regeneration Strategy moves backwards from its parent Attempt",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+
+    def validate_regeneration_bindings(self) -> None:
+        for prompt in self.prompts.values():
+            self.require_regeneration_binding_valid(prompt)
 
     def slot_attempts(self, slot_id: str) -> tuple[GenerationAttempt, ...]:
         return tuple(item for item in self.attempts.values() if item.slot_id == slot_id)

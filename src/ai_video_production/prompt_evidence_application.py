@@ -335,6 +335,12 @@ class Task040PromptEvidenceApplication:
             raise ProductError("ERR_PROMPT_APPLICATION_RECOVERY_REQUIRED", "Complete Prompt recovery before registering a Prompt", ProductErrorCategory.STATE)
         if not isinstance(body_ref, str) or not body_ref.startswith("project-private://"):
             raise ProductError("ERR_PROMPT_APPLICATION_BODY_REF_INVALID", "Prompt body reference must use project-private:// storage", ProductErrorCategory.SECURITY)
+        if prompt_version != 1:
+            raise ProductError(
+                "ERR_PROMPT_APPLICATION_REGENERATION_ROUTE_REQUIRED",
+                "Later Prompt versions must be created through the confirmed regeneration route",
+                ProductErrorCategory.AUTHORIZATION,
+            )
         try:
             prompt = PromptEntity(
                 prompt_id, prompt_version, purpose, body_sha256, provider_profile_id,
@@ -383,6 +389,12 @@ class Task040PromptEvidenceApplication:
         prompt = prompts.prompts.get((prompt_id, prompt_version))
         if prompt is None:
             raise ProductError("ERR_GENERATION_PROMPT_NOT_FOUND", "Generation Evidence references unknown Prompt", ProductErrorCategory.DATA_INTEGRITY)
+        if prompt_version > 1 and prompt.regeneration_binding is None:
+            raise ProductError(
+                "ERR_PROMPT_APPLICATION_REGENERATION_BINDING_REQUIRED",
+                "Legacy regenerated Prompt lacks exact Strategy/Parent binding",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            )
         try:
             attempt = GenerationAttempt(
                 generation_job_id, slot_id, prompt_id, prompt_version, prompt.body_sha256,

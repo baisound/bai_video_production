@@ -11,7 +11,12 @@ from dataclasses import dataclass
 from typing import Any, Iterable
 
 from .errors import ProductError, ProductErrorCategory
-from .prompt_registry import PromptEntity, PromptGenerationRegistry, RegenerationStrategy
+from .prompt_registry import (
+    PromptEntity,
+    PromptGenerationRegistry,
+    PromptRegenerationBinding,
+    RegenerationStrategy,
+)
 from .regeneration_planning import RegenerationPlan
 from .serialization import canonical_json_bytes, sha256_bytes
 
@@ -70,10 +75,23 @@ class RegenerationPromptDraftService:
             or attempt.prompt_version != parent.prompt_version
             or attempt.prompt_sha256 != parent.body_sha256
             or attempt.slot_id != plan.slot_id
+            or attempt.strategy_level is not plan.current_strategy
         ):
             raise ProductError(
                 "ERR_REGENERATION_DRAFT_PARENT_ATTEMPT_MISMATCH",
                 "Regeneration Prompt parent Attempt no longer matches Prompt/Slot bytes",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if plan.next_strategy < plan.current_strategy:
+            raise ProductError(
+                "ERR_REGENERATION_DRAFT_STRATEGY_REGRESSION",
+                "Regeneration Prompt strategy must not move backwards",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if tuple(sorted(set(plan.failure_codes))) != plan.failure_codes:
+            raise ProductError(
+                "ERR_REGENERATION_DRAFT_REASON_CODES_INVALID",
+                "Regeneration Prompt reason codes must be sorted and unique",
                 ProductErrorCategory.DATA_INTEGRITY,
             )
         versions = [version for pid, version in registry.prompts if pid == parent.prompt_id]
@@ -99,6 +117,17 @@ class RegenerationPromptDraftService:
             )
         next_inputs = tuple(parent.input_asset_hashes if input_asset_hashes is None else input_asset_hashes)
         next_keep = tuple(parent.keep_conditions if keep_conditions is None else keep_conditions)
+        plan_document = plan.to_dict()
+        regeneration_binding = PromptRegenerationBinding(
+            binding_version="1.0.0",
+            parent_prompt_id=parent.prompt_id,
+            parent_prompt_version=parent.prompt_version,
+            parent_prompt_sha256=parent.body_sha256,
+            parent_attempt_id=plan.parent_attempt_id,
+            strategy_level=plan.next_strategy,
+            reason_codes=tuple(sorted(set(plan.failure_codes))),
+            regeneration_plan_sha256=plan_document["plan_sha256"],
+        )
         prompt = PromptEntity(
             prompt_id=parent.prompt_id,
             prompt_version=expected_version,
@@ -111,6 +140,7 @@ class RegenerationPromptDraftService:
             slot_id=parent.slot_id,
             body_ref=new_body_ref,
             input_asset_hashes=next_inputs,
+            regeneration_binding=regeneration_binding,
         )
         no_prompt_change = (
             prompt.body_sha256 == parent.body_sha256
@@ -151,5 +181,17 @@ class RegenerationPromptDraftService:
                 "Prompt lineage changed after regeneration draft was compiled",
                 ProductErrorCategory.STATE,
             )
+        binding = draft.prompt.regeneration_binding
+        if (
+            binding is None
+            or binding.strategy_level is not draft.strategy
+            or binding.reason_codes != tuple(sorted(set(draft.reason_codes)))
+        ):
+            raise ProductError(
+                "ERR_REGENERATION_DRAFT_BINDING_MISMATCH",
+                "Regeneration draft metadata differs from its immutable Prompt binding",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        registry.require_regeneration_binding_valid(draft.prompt)
         registry.add_prompt(draft.prompt)
         return draft.prompt

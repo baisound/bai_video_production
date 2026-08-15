@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from ai_video_production.errors import ProductError
-from ai_video_production.prompt_registry import GenerationAttempt, GenerationResult, PromptEntity, PromptGenerationRegistry, RegenerationStrategy
+from ai_video_production.prompt_registry import GenerationAttempt, GenerationResult, PromptEntity, PromptGenerationRegistry, PromptRegenerationBinding, RegenerationStrategy
 from ai_video_production.prompt_registry_store import PromptRegistrySnapshotStore
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 
@@ -38,6 +38,7 @@ def test_prompt_snapshot_round_trip_preserves_parent_graph_even_when_sort_order_
     loaded = PromptRegistrySnapshotStore.load(path)
     assert loaded.attempts["job-1"].parent_attempt_id == "job-2"
     assert loaded.prompts[("prompt-1", 1)].body_ref.startswith("project-private://")
+    assert json.loads(path.read_text(encoding="utf-8"))["snapshot_version"] == "1.1.0"
 
 
 def test_prompt_snapshot_does_not_embed_prompt_body_or_credentials():
@@ -109,3 +110,34 @@ def test_prompt_snapshot_serializes_concurrent_compare_and_swap(tmp_path: Path):
     with ThreadPoolExecutor(max_workers=2) as executor:
         results = list(executor.map(save, (variant("d"), variant("e"))))
     assert sorted(results) == ["ERR_PROMPT_SNAPSHOT_REVISION_CONFLICT", "PASS"]
+
+
+def test_prompt_snapshot_reads_strict_legacy_v1_without_guessing_lineage(tmp_path: Path):
+    path = tmp_path / "prompt-v1.json"
+    doc = PromptRegistrySnapshotStore.snapshot(registry())
+    doc["snapshot_version"] = "1.0.0"
+    body = {key: value for key, value in doc.items() if key != "snapshot_sha256"}
+    doc["snapshot_sha256"] = sha256_bytes(canonical_json_bytes(body))
+    path.write_text(json.dumps(doc), encoding="utf-8")
+    loaded = PromptRegistrySnapshotStore.load(path)
+    assert loaded.prompts[("prompt-1", 1)].regeneration_binding is None
+    assert PromptRegistrySnapshotStore.snapshot(loaded)["snapshot_version"] == "1.1.0"
+
+
+def test_prompt_snapshot_round_trip_preserves_exact_regeneration_binding(tmp_path: Path):
+    path = tmp_path / "prompt-v1-1.json"
+    value = registry()
+    binding = PromptRegenerationBinding(
+        "1.0.0", "prompt-1", 1, SHA, "job-1",
+        RegenerationStrategy.PROMPT_RESTRUCTURE, ("DEPTH_ORDER",),
+        "sha256:" + "9" * 64,
+    )
+    value.add_prompt(PromptEntity(
+        "prompt-1", 2, "scene frame", "sha256:" + "d" * 64,
+        "profile-1", "v1", ("monitor foreground",), scene_id="scene-1",
+        slot_id="slot-1", body_ref="project-private://prompts/prompt-1/v2",
+        regeneration_binding=binding,
+    ))
+    PromptRegistrySnapshotStore.save(path, value)
+    loaded = PromptRegistrySnapshotStore.load(path)
+    assert loaded.prompts[("prompt-1", 2)].regeneration_binding == binding

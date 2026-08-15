@@ -16,6 +16,7 @@ from .prompt_registry import (
     GenerationResult,
     PromptEntity,
     PromptCompilationBinding,
+    PromptRegenerationBinding,
     PromptGenerationRegistry,
     RegenerationStrategy,
 )
@@ -34,6 +35,10 @@ _PROMPT_FIELDS = {
     "keep_conditions", "prompt_body_embedded_in_general_evidence",
 }
 _COMPILED_PROMPT_FIELDS = _PROMPT_FIELDS | {"compilation_binding"}
+_REGENERATED_PROMPT_FIELDS = _PROMPT_FIELDS | {"regeneration_binding"}
+_COMPILED_REGENERATED_PROMPT_FIELDS = _PROMPT_FIELDS | {
+    "compilation_binding", "regeneration_binding",
+}
 _COMPILATION_BINDING_FIELDS = {
     "compilation_version", "compilation_manifest_ref", "compilation_sha256",
     "source_ja_ref", "source_ja_sha256", "normalized_ja_ref", "normalized_ja_sha256",
@@ -46,6 +51,11 @@ _COMPILATION_BINDING_FIELDS = {
     "input_asset_hashes", "scene_id", "slot_id", "prompt_bodies_embedded",
     "provider_execution_started",
 }
+_REGENERATION_BINDING_FIELDS = {
+    "binding_version", "parent_prompt_id", "parent_prompt_version",
+    "parent_prompt_sha256", "parent_attempt_id", "strategy_level",
+    "reason_codes", "regeneration_plan_sha256",
+}
 _ATTEMPT_FIELDS = {
     "generation_job_id", "slot_id", "prompt_id", "prompt_version", "prompt_sha256",
     "provider_id", "model_id", "provider_profile_version", "strategy_level", "result",
@@ -54,9 +64,20 @@ _ATTEMPT_FIELDS = {
 }
 
 
-def _body(registry: PromptGenerationRegistry) -> dict[str, Any]:
+def _body(
+    registry: PromptGenerationRegistry,
+    *,
+    snapshot_version: str = "1.1.0",
+) -> dict[str, Any]:
+    if snapshot_version not in {"1.0.0", "1.1.0"}:
+        raise ValueError("snapshot_version is invalid")
+    registry.validate_regeneration_bindings()
+    if snapshot_version == "1.0.0" and any(
+        prompt.regeneration_binding is not None for prompt in registry.prompts.values()
+    ):
+        raise ValueError("Prompt Registry v1.0 cannot contain regeneration bindings")
     body: dict[str, Any] = {
-        "snapshot_version": "1.0.0",
+        "snapshot_version": snapshot_version,
         "task_owner": "TASK-040",
         "prompts": [registry.prompts[key].to_dict() for key in sorted(registry.prompts)],
         "attempts": [registry.attempts[key].to_dict() for key in sorted(registry.attempts)],
@@ -69,7 +90,8 @@ def _body(registry: PromptGenerationRegistry) -> dict[str, Any]:
 
 
 def _parse(document: dict[str, Any]) -> PromptGenerationRegistry:
-    if set(document) != _DOCUMENT_FIELDS or document.get("snapshot_version") != "1.0.0" or document.get("task_owner") != "TASK-040":
+    snapshot_version = document.get("snapshot_version")
+    if set(document) != _DOCUMENT_FIELDS or snapshot_version not in {"1.0.0", "1.1.0"} or document.get("task_owner") != "TASK-040":
         raise ProductError("ERR_PROMPT_SNAPSHOT_VERSION", "Unsupported Prompt Registry snapshot version", ProductErrorCategory.DATA_INTEGRITY)
     expected = document.get("snapshot_sha256")
     body = {k: v for k, v in document.items() if k != "snapshot_sha256"}
@@ -83,9 +105,19 @@ def _parse(document: dict[str, Any]) -> PromptGenerationRegistry:
         if not isinstance(prompt_rows, list) or not isinstance(attempt_rows, list):
             raise TypeError("rows must be lists")
         for row in prompt_rows:
+            allowed_prompt_fields = (
+                (_PROMPT_FIELDS, _COMPILED_PROMPT_FIELDS)
+                if snapshot_version == "1.0.0"
+                else (
+                    _PROMPT_FIELDS,
+                    _COMPILED_PROMPT_FIELDS,
+                    _REGENERATED_PROMPT_FIELDS,
+                    _COMPILED_REGENERATED_PROMPT_FIELDS,
+                )
+            )
             if (
                 not isinstance(row, dict)
-                or (set(row) != _PROMPT_FIELDS and set(row) != _COMPILED_PROMPT_FIELDS)
+                or not any(set(row) == fields for fields in allowed_prompt_fields)
                 or isinstance(row["prompt_version"], bool)
                 or not isinstance(row["prompt_version"], int)
                 or not isinstance(row["input_asset_hashes"], list)
@@ -100,6 +132,18 @@ def _parse(document: dict[str, Any]) -> PromptGenerationRegistry:
                         or row["compilation_binding"]["provider_execution_started"] is not False
                         or not isinstance(row["compilation_binding"]["required_capabilities"], list)
                         or not isinstance(row["compilation_binding"]["input_asset_hashes"], list)
+                    )
+                )
+                or (
+                    "regeneration_binding" in row
+                    and (
+                        not isinstance(row["regeneration_binding"], dict)
+                        or set(row["regeneration_binding"]) != _REGENERATION_BINDING_FIELDS
+                        or isinstance(row["regeneration_binding"]["parent_prompt_version"], bool)
+                        or not isinstance(row["regeneration_binding"]["parent_prompt_version"], int)
+                        or isinstance(row["regeneration_binding"]["strategy_level"], bool)
+                        or not isinstance(row["regeneration_binding"]["strategy_level"], int)
+                        or not isinstance(row["regeneration_binding"]["reason_codes"], list)
                     )
                 )
             ):
@@ -141,6 +185,20 @@ def _parse(document: dict[str, Any]) -> PromptGenerationRegistry:
                             "required_capabilities": tuple(row["compilation_binding"]["required_capabilities"]),
                             "input_asset_hashes": tuple(row["compilation_binding"]["input_asset_hashes"]),
                         }
+                    )
+                ),
+                regeneration_binding=(
+                    None
+                    if "regeneration_binding" not in row
+                    else PromptRegenerationBinding(
+                        binding_version=row["regeneration_binding"]["binding_version"],
+                        parent_prompt_id=row["regeneration_binding"]["parent_prompt_id"],
+                        parent_prompt_version=row["regeneration_binding"]["parent_prompt_version"],
+                        parent_prompt_sha256=row["regeneration_binding"]["parent_prompt_sha256"],
+                        parent_attempt_id=row["regeneration_binding"]["parent_attempt_id"],
+                        strategy_level=RegenerationStrategy(row["regeneration_binding"]["strategy_level"]),
+                        reason_codes=tuple(row["regeneration_binding"]["reason_codes"]),
+                        regeneration_plan_sha256=row["regeneration_binding"]["regeneration_plan_sha256"],
                     )
                 ),
             )
@@ -187,7 +245,8 @@ def _parse(document: dict[str, Any]) -> PromptGenerationRegistry:
             raise ProductError("ERR_PROMPT_SNAPSHOT_PARENT_GRAPH", "Generation Attempt parent graph is missing a parent or contains a cycle", ProductErrorCategory.DATA_INTEGRITY)
     if len(registry.prompts) != len(prompt_rows) or len(registry.attempts) != len(attempt_rows):
         raise ProductError("ERR_PROMPT_SNAPSHOT_DUPLICATE_ID", "Prompt Registry snapshot contains duplicate identities", ProductErrorCategory.DATA_INTEGRITY)
-    if _body(registry)["snapshot_sha256"] != expected:
+    registry.validate_regeneration_bindings()
+    if _body(registry, snapshot_version=snapshot_version)["snapshot_sha256"] != expected:
         raise ProductError("ERR_PROMPT_SNAPSHOT_DOMAIN_HASH", "Prompt Registry identity changed during recovery", ProductErrorCategory.DATA_INTEGRITY)
     return registry
 

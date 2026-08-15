@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from ai_video_production.errors import ProductError
@@ -44,9 +46,13 @@ def test_regeneration_draft_creates_and_registers_next_immutable_prompt_version(
     )
     assert draft.prompt.prompt_version == 2
     assert draft.prompt.body_sha256 == SHA_B
+    assert draft.prompt.regeneration_binding.parent_attempt_id == "job-1"
+    assert draft.prompt.regeneration_binding.strategy_level is RegenerationStrategy.TEXT_PROMPT
+    assert draft.prompt.regeneration_binding.regeneration_plan_sha256 == plan().to_dict()["plan_sha256"]
     assert draft.to_dict()["provider_execution_started"] is False
     registered = RegenerationPromptDraftService.register(draft, registry=prompts)
     assert prompts.prompts[("prompt-1", 2)] == registered
+    prompts.validate_regeneration_bindings()
 
 
 def test_provider_profile_cannot_change_before_provider_switch_strategy() -> None:
@@ -95,3 +101,30 @@ def test_regeneration_draft_registration_fails_if_prompt_lineage_advanced() -> N
     with pytest.raises(ProductError) as exc:
         RegenerationPromptDraftService.register(draft, registry=prompts)
     assert exc.value.code == "ERR_REGENERATION_DRAFT_STALE"
+
+
+def test_regeneration_draft_rejects_plan_strategy_that_differs_from_parent_attempt() -> None:
+    prompts = registry()
+    with pytest.raises(ProductError) as exc:
+        RegenerationPromptDraftService.compile(
+            plan(
+                current=RegenerationStrategy.PROMPT_RESTRUCTURE,
+                next_strategy=RegenerationStrategy.LAYOUT_REFERENCE,
+            ),
+            registry=prompts, new_body_sha256=SHA_B,
+            new_body_ref="prompt://project/prompt-1/v2",
+        )
+    assert exc.value.code == "ERR_REGENERATION_DRAFT_PARENT_ATTEMPT_MISMATCH"
+
+
+def test_regeneration_registration_rejects_draft_binding_metadata_drift() -> None:
+    prompts = registry()
+    draft = RegenerationPromptDraftService.compile(
+        plan(next_strategy=RegenerationStrategy.PROMPT_RESTRUCTURE),
+        registry=prompts, new_body_sha256=SHA_B,
+        new_body_ref="prompt://project/prompt-1/v2",
+    )
+    forged = replace(draft, strategy=RegenerationStrategy.LAYOUT_REFERENCE)
+    with pytest.raises(ProductError) as exc:
+        RegenerationPromptDraftService.register(forged, registry=prompts)
+    assert exc.value.code == "ERR_REGENERATION_DRAFT_BINDING_MISMATCH"

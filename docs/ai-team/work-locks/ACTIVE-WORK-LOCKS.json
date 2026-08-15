@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 9,
+  "registry_revision": 10,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "00e1c75f186b0ba0240d75a96c5bf33fde224e19",
+  "audit_base_main_sha": "a7c9f0c7276249dd93b32508fe920007e7074c80",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -716,6 +716,65 @@
       "target_post_merge_security_run": 31889876711,
       "release_reason": "EXACT_CHANGELOG_ONLY_INTEGRATION_TARGET_MERGED_POST_MERGE_GREEN",
       "released_at": "2026-08-15T14:25:39Z",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK048-PQC1A-CHANGELOG-20260816",
+      "owner_agent": "開発担当2 / Integration owner",
+      "owner_thread_id": "01a00490-f4a3-7ab1-a3ea-fbda2ea50a02",
+      "lock_host_authority": "BVP-AUTH-20260816-TASK048-PQC1A-CHANGELOG-INT-H0",
+      "integration_effect_authority_state": "NOT_AUTHORIZED_AWAITING_SEPARATE_DESIGN_JUDGE",
+      "implementation_authority_state": "EXISTING_PQC1A_IMPL_I1_DOES_NOT_INCLUDE_CHANGELOG",
+      "hosting_branch": "codex/task-048-pqc1a-changelog-integration-lock-hosting",
+      "hosting_base_sha": "a7c9f0c7276249dd93b32508fe920007e7074c80",
+      "status": "ACTIVE",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "target_pull_request": 106,
+      "target_branch": "codex/task-048-p-qc-1a-voice-quality-calibration-contract",
+      "expected_pre_integration_head": "4f4453851b49aa2dc9a7c62a7626e52faa0f4675",
+      "purpose": "ONE_EXACT_TASK048_PQC1A_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+      "approved_changelog_bullet": "- Added TASK-048 P-QC-1A body-free voice-quality calibration metadata contracts with 23 canonical types, exact eight-stage capture-chain validation, declared/measured metric states, staging-versus-Asset separation, ordered single/SNR/before-after input bindings, interval-union readiness evidence, public/private projections and fail-closed P-VS-3A calibration binding. It records or analyzes no audio, changes no hardware/OBS/RX setting, performs no Asset/Dataset/Job/Training/Model/production effect, and adds no CMake/native/download/install/Release/Deploy operation.",
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
+      "immutable_target_implementation_files": [
+        "docs/ai-team/tasks/TASK-048/p-qc-1a-implementation-readiness-and-evidence-2026-08-15.md",
+        "schemas/voice-quality-calibration.schema.json",
+        "src/ai_video_production/schema_resources/voice-quality-calibration.schema.json",
+        "src/ai_video_production/voice_quality_calibration.py",
+        "tests/test_task048_voice_quality_calibration_contract.py"
+      ],
+      "denied": [
+        "TASK048_PQC1A_IMPLEMENTATION_FILE_MUTATION",
+        "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
+        ".github/**",
+        "OTHER_SHARED_INTEGRATION_FILES",
+        "CMAKE_NATIVE_AUDIO_ANALYZER_OBS_RX_ASSET_DATASET_JOB_TRAINING_PRODUCTION_EFFECT",
+        "VERSION_TAG_RELEASE_DEPLOY",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_UNCHANGED_HEAD_RETRY",
+      "composition_rule": "TARGET_PR_EXACT_5_IMMUTABLE_IMPLEMENTATION_FILES_PLUS_1_INTEGRATION_OWNED_CHANGELOG_FILE",
+      "implementation_blob_invariant": "EXACT_5_OF_5_BLOBS_MUST_REMAIN_IDENTICAL_TO_HEAD_4F4453851B49AA2DC9A7C62A7626E52FAA0F4675",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "LOCK_HOST_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "LOCK_HOST_MERGED_MAIN_EXACT_READ_BACK",
+        "LOCK_HOST_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "SEPARATE_TARGET_NORMAL_MAIN_INTO_TARGET_MERGE_AND_CHANGELOG_INTEGRATION_AUTHORIZATION",
+        "FRESH_MAIN_REGISTRY_TARGET_HEAD_AND_OVERLAP_REAUDIT"
+      ],
+      "expiry_conditions": [
+        "TARGET_HEAD_MISMATCH",
+        "TARGET_PR_CLOSED_OR_MERGED",
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_AUTHORIZED_EFFECT",
+        "PATH_OR_OPEN_PR_OVERLAP",
+        "IMPLEMENTATION_BLOB_DRIFT",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
+        "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+      ],
+      "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_OR_CLOSE_AND_SEPARATE_APPEND_ONLY_CLOSURE_EVIDENCE",
       "automatic_retry": false,
       "automatic_rollback_or_revert": false
     }

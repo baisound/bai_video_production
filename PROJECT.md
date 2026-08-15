@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_21_0_RELEASED_TASK_027_P_ORCH_1_HOSTED_CLOSED_CLOSURE_SYNC_ACTIVE_NATIVE_RUNTIME_PARKED`
+`V0_21_0_RELEASED_TASK_027_P_ORCH_1_HOSTED_CLOSED_P_ORCH_2_DESIGN_LOCAL_PASS_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-027 P-ORCH-1 implementation PR #80 head 0e3575a passed 9 / 9, merged at exact main 66d97fd9d0bfbfebca339197fed2103011f56616, and completed remote branch/checkout cleanup`
-- Active Task: `TASK-027 / P-ORCH-1 HOSTED CLOSURE SYNC / codex/task-027-output-adoption-hosted-closure`; initial output adoption is hosted-closed, while TASK-013 native H3, regenerated-output Strategy/Parent binding and TASK-014 paid narration execution remain parked behind their recorded gates
+- Last Completed Gate: `TASK-027 P-ORCH-1 hosted-closure PR #81 head a93b069 passed 9 / 9, merged at exact main 4efb0b92855c4943b66b8670c102e447de915498, and completed remote branch/checkout cleanup`
+- Active Task: `TASK-027 / P-ORCH-2 STRATEGY/PARENT BINDING DESIGN / codex/task-027-strategy-parent-binding-design`; current-main audit, DEV-4 decision, Allowed Files, two Critic rounds and Final Plan pass locally, while implementation waits for hosted design merge and fresh-main reselection
 - TASK-004: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.76 Addendum LXX
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.77 Addendum LXXI
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

@@ -1,13 +1,13 @@
 # TASK-027 — AI Video Creation Studio / New Production Orchestrator
 
-- Status: `P_ORCH_1_INITIAL_OUTPUT_ADOPTION_HOSTED_CLOSED / P_ORCH_2_STRATEGY_PARENT_BINDING_NEXT_AUDIT / FUTURE_SLICES_REMAIN`
+- Status: `P_ORCH_1_INITIAL_OUTPUT_ADOPTION_HOSTED_CLOSED / P_ORCH_2_STRATEGY_PARENT_BINDING_DESIGN_LOCAL_PASS / FUTURE_SLICES_REMAIN`
 
 ## Current bounded completion
 
 - R2 Planning Workspace minimum is complete and user-facing through the unified Desktop Shell.
 - R3 Generation Queue integration is complete as `ADMISSION_READY / EXECUTION_NOT_AUTHORIZED`.
 - Post-v0.21 P-ORCH-1 implementation is hosted-closed through PR #80 at exact main `66d97fd9d0bfbfebca339197fed2103011f56616`: Human-confirmed adoption of an exact initial completed local execution into canonical Asset/Candidate/Prompt lineage and `READY_FOR_AUDIT`.
-- Regenerated Prompt output remains fail-closed until the Queue persists its exact Strategy/Parent binding; it is shown as `PARKED_STRATEGY_BINDING_REQUIRED`, not recorded with guessed Evidence.
+- P-ORCH-2 current-main audit and two Critic rounds pass locally. Its bounded design persists one immutable Prompt regeneration binding, copies it into strict Queue execution lineage and uses it for exact regenerated-output PASS Attempt creation. Implementation waits for hosted design merge and fresh-main reselection; until then regenerated output remains `PARKED_STRATEGY_BINDING_REQUIRED` with no guessed Evidence.
 - The full multi-slice TASK-027 Product remains incomplete; Provider execution, generated-Asset production, complete audio production and final Resolve assembly remain governed future slices.
 - Governance candidate: `DEV-4 PRODUCT ORCHESTRATION CRITICAL`
 - Product route: `NEW_VIDEO_CREATION`

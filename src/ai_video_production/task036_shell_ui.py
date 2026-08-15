@@ -173,29 +173,29 @@ class Task036ShellBridge:
     ) -> None:
         if application is not None and application.shell is not service:
             raise ValueError("integrated application must use the supplied Shell service")
-        self.service = service
-        self.projection = projection
-        self.review = review
-        self.application = application
-        self.native_dialog = native_dialog
+        self._service = service
+        self._projection = projection
+        self._review = review
+        self._application = application
+        self._native_dialog = native_dialog
         if pre_edit_runtime is not None and pre_edit_runtime.coordinator.shell is not service:
             raise ValueError("pre-edit runtime must use the supplied Shell service")
-        self.pre_edit_runtime = pre_edit_runtime
+        self._pre_edit_runtime = pre_edit_runtime
         if workflow_runtime is not None and workflow_runtime.application is not application:
             raise ValueError("workflow runtime must use the supplied integrated application")
         if workflow_runtime is not None and workflow_runtime_factory is not None:
             raise ValueError("bind either a workflow runtime or a trusted runtime factory, not both")
-        self.workflow_runtime = workflow_runtime
-        self.workflow_runtime_factory = workflow_runtime_factory
-        self.production_control = production_control
-        self.audit_application = audit_application
-        self.planning_application = planning_application
-        self.generation_safety_application = generation_safety_application
-        self.continuity_application = continuity_application
-        self.prompt_evidence_application = prompt_evidence_application
-        self.generation_queue_application = generation_queue_application
-        self.generation_execution_application = generation_execution_application
-        self.audio_workspace_application = audio_workspace_application
+        self._workflow_runtime = workflow_runtime
+        self._workflow_runtime_factory = workflow_runtime_factory
+        self._production_control = production_control
+        self._audit_application = audit_application
+        self._planning_application = planning_application
+        self._generation_safety_application = generation_safety_application
+        self._continuity_application = continuity_application
+        self._prompt_evidence_application = prompt_evidence_application
+        self._generation_queue_application = generation_queue_application
+        self._generation_execution_application = generation_execution_application
+        self._audio_workspace_application = audio_workspace_application
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
         self._nle_controller = nle_controller
@@ -257,29 +257,29 @@ class Task036ShellBridge:
         return self._require_nle_controller().export_reconcile(args)
 
     def _current_application(self) -> Task036EditingApplication | None:
-        if self.application is not None:
-            return self.application
-        if self.pre_edit_runtime is not None:
-            return self.pre_edit_runtime.application
+        if self._application is not None:
+            return self._application
+        if self._pre_edit_runtime is not None:
+            return self._pre_edit_runtime.application
         return None
 
     def _require_native_dialog(self) -> Task036NativeDialogService:
-        if self.native_dialog is None:
+        if self._native_dialog is None:
             raise ProductError(
                 "ERR_TASK036_NATIVE_DIALOG_NOT_BOUND",
                 "Native file/folder dialog service is not bound to this Shell",
                 ProductErrorCategory.STATE,
             )
-        return self.native_dialog
+        return self._native_dialog
 
     def _require_workflow_runtime(self) -> Task036WorkflowRuntime:
-        if self.workflow_runtime is None:
+        if self._workflow_runtime is None:
             raise ProductError(
                 "ERR_TASK036_WORKFLOW_RUNTIME_NOT_BOUND",
                 "Trusted minimum-editing runtime is not bound to this Shell",
                 ProductErrorCategory.STATE,
             )
-        return self.workflow_runtime
+        return self._workflow_runtime
 
     @staticmethod
     def _empty_args(args: Any, operation: str) -> None:
@@ -292,10 +292,10 @@ class Task036ShellBridge:
 
     def workflow_status(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "workflow status")
-        if self.workflow_runtime is not None:
-            return self.workflow_runtime.status()
-        if self.pre_edit_runtime is not None:
-            status = self.pre_edit_runtime.status()
+        if self._workflow_runtime is not None:
+            return self._workflow_runtime.status()
+        if self._pre_edit_runtime is not None:
+            status = self._pre_edit_runtime.status()
             if status["next_recommended_action"] not in {
                 "media.choose_and_ingest",
                 "transcription.start",
@@ -310,33 +310,33 @@ class Task036ShellBridge:
 
     def choose_and_ingest_media(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "media choose and ingest")
-        if self.pre_edit_runtime is None:
+        if self._pre_edit_runtime is None:
             raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self.pre_edit_runtime.choose_and_ingest_media()
+        return self._pre_edit_runtime.choose_and_ingest_media()
 
     def run_local_transcription(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "local transcription")
-        if self.pre_edit_runtime is None:
+        if self._pre_edit_runtime is None:
             raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self.pre_edit_runtime.run_local_transcription()
+        return self._pre_edit_runtime.run_local_transcription()
 
     def create_runtime_subtitle_workspace(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Subtitle Workspace creation")
-        if self.pre_edit_runtime is None:
+        if self._pre_edit_runtime is None:
             raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self.pre_edit_runtime.create_subtitle_workspace()
+        return self._pre_edit_runtime.create_subtitle_workspace()
 
     def generate_runtime_cut_candidates(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Cut Candidate generation")
-        if self.pre_edit_runtime is None:
+        if self._pre_edit_runtime is None:
             raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        result = self.pre_edit_runtime.generate_cut_candidates()
-        application = self.pre_edit_runtime.application
-        if application is not None and self.workflow_runtime_factory is not None:
-            runtime = self.workflow_runtime_factory(application)
+        result = self._pre_edit_runtime.generate_cut_candidates()
+        application = self._pre_edit_runtime.application
+        if application is not None and self._workflow_runtime_factory is not None:
+            runtime = self._workflow_runtime_factory(application)
             if runtime.application is not application:
                 raise ValueError("trusted runtime factory returned a different editing application")
-            self.workflow_runtime = runtime
+            self._workflow_runtime = runtime
         return result
 
     def compile_resolve_assembly(self, args: Any = None) -> dict[str, Any]:
@@ -397,34 +397,34 @@ class Task036ShellBridge:
         return self._require_native_dialog().choose_handoff_folder().to_ui_dict()
 
     def snapshot(self, _args: Any = None) -> dict[str, Any]:
-        return self.service.snapshot().to_dict()
+        return self._service.snapshot().to_dict()
 
     def view_model(self, _args: Any = None) -> dict[str, Any]:
         application = self._current_application()
         if application is not None:
             return application.view_model()
-        return Task036DesktopViewModel(self.service.snapshot(), self.projection).to_dict()
+        return Task036DesktopViewModel(self._service.snapshot(), self._projection).to_dict()
 
     def set_workspace(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"workspace"}:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "workspace request is invalid", ProductErrorCategory.VALIDATION)
-        self.service.set_workspace(str(args["workspace"]))
-        return self.service.snapshot().to_dict()
+        self._service.set_workspace(str(args["workspace"]))
+        return self._service.snapshot().to_dict()
 
     def _require_production_control(self) -> Task037ProductionControlApplication:
-        if self.production_control is None:
+        if self._production_control is None:
             raise ProductError(
                 "ERR_TASK037_PRODUCTION_CONTROL_NOT_BOUND",
                 "Production Control is not bound to this Shell",
                 ProductErrorCategory.STATE,
             )
-        return self.production_control
+        return self._production_control
 
     def production_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Production Control snapshot")
-        if self.production_control is None:
+        if self._production_control is None:
             return {"available": False}
-        return {"available": True, **self.production_control.snapshot()}
+        return {"available": True, **self._production_control.snapshot()}
 
     def production_register_candidate(self, args: Any) -> dict[str, Any]:
         required = {"candidate_id", "slot_id", "asset_id", "asset_sha256", "expected_snapshot_sha256"}
@@ -461,15 +461,15 @@ class Task036ShellBridge:
         return self._require_production_control().apply_lock(confirmation_id=str(args["confirmation_id"]))
 
     def _require_audit_application(self) -> Task038AuditApplication:
-        if self.audit_application is None:
+        if self._audit_application is None:
             raise ProductError("ERR_TASK038_AUDIT_APPLICATION_NOT_BOUND", "Audit Workspace is not bound to this Shell", ProductErrorCategory.STATE)
-        return self.audit_application
+        return self._audit_application
 
     def audit_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Audit Workspace snapshot")
-        if self.audit_application is None:
+        if self._audit_application is None:
             return {"available": False}
-        return {"available": True, **self.audit_application.snapshot()}
+        return {"available": True, **self._audit_application.snapshot()}
 
     def audit_prepare_human_decision(self, args: Any) -> dict[str, Any]:
         required = {"candidate_id", "decision", "expected_production_snapshot_sha256", "expected_audit_snapshot_sha256"}
@@ -494,9 +494,9 @@ class Task036ShellBridge:
         return self._require_audit_application().apply_recovery(action=str(args["action"]))
 
     def _require_planning_application(self) -> Task027PlanningApplication:
-        if self.planning_application is None:
+        if self._planning_application is None:
             raise ProductError("ERR_TASK027_PLANNING_APPLICATION_NOT_BOUND", "Planning Workspace is not bound to this Shell", ProductErrorCategory.STATE)
-        return self.planning_application
+        return self._planning_application
 
     def planning_snapshot(self, args: Any = None) -> dict[str, Any]:
         if args in (None, {}):
@@ -505,9 +505,9 @@ class Task036ShellBridge:
             proposal_id = str(args["proposal_id"])
         else:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning snapshot request is invalid", ProductErrorCategory.VALIDATION)
-        if self.planning_application is None:
+        if self._planning_application is None:
             return {"available": False}
-        return {"available": True, **self.planning_application.snapshot(proposal_id=proposal_id)}
+        return {"available": True, **self._planning_application.snapshot(proposal_id=proposal_id)}
 
     def planning_prepare_go(self, args: Any) -> dict[str, Any]:
         required = {
@@ -551,15 +551,15 @@ class Task036ShellBridge:
         return self._require_planning_application().apply_install_plan(confirmation_id=str(args["confirmation_id"]))
 
     def _require_generation_safety_application(self) -> Task013GenerationSafetyApplication:
-        if self.generation_safety_application is None:
+        if self._generation_safety_application is None:
             raise ProductError("ERR_TASK013_GENERATION_SAFETY_NOT_BOUND", "Generation Safety is not bound to this Shell", ProductErrorCategory.STATE)
-        return self.generation_safety_application
+        return self._generation_safety_application
 
     def generation_safety_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Generation Safety snapshot")
-        if self.generation_safety_application is None:
+        if self._generation_safety_application is None:
             return {"available": False}
-        return {"available": True, **self.generation_safety_application.snapshot()}
+        return {"available": True, **self._generation_safety_application.snapshot()}
 
     def generation_safety_prepare_review(self, args: Any) -> dict[str, Any]:
         required = {
@@ -592,15 +592,15 @@ class Task036ShellBridge:
         )
 
     def _require_continuity_application(self) -> Task039ContinuityApplication:
-        if self.continuity_application is None:
+        if self._continuity_application is None:
             raise ProductError("ERR_TASK039_CONTINUITY_NOT_BOUND", "Continuity is not bound to this Shell", ProductErrorCategory.STATE)
-        return self.continuity_application
+        return self._continuity_application
 
     def continuity_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Continuity snapshot")
-        if self.continuity_application is None:
+        if self._continuity_application is None:
             return {"available": False}
-        return {"available": True, **self.continuity_application.snapshot()}
+        return {"available": True, **self._continuity_application.snapshot()}
 
     def continuity_prepare_edge(self, args: Any) -> dict[str, Any]:
         required = {"edge_id", "from_slot_id", "to_slot_id", "boundary_type", "character_contract_refs", "space_contract_refs", "expected_production_snapshot_sha256", "expected_continuity_snapshot_sha256"}
@@ -656,15 +656,15 @@ class Task036ShellBridge:
         return self._require_continuity_application().apply_recovery(action=args["action"])
 
     def _require_prompt_evidence_application(self) -> Task040PromptEvidenceApplication:
-        if self.prompt_evidence_application is None:
+        if self._prompt_evidence_application is None:
             raise ProductError("ERR_TASK040_PROMPT_EVIDENCE_NOT_BOUND", "Prompt Evidence is not bound to this Shell", ProductErrorCategory.STATE)
-        return self.prompt_evidence_application
+        return self._prompt_evidence_application
 
     def prompt_evidence_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Prompt Evidence snapshot")
-        if self.prompt_evidence_application is None:
+        if self._prompt_evidence_application is None:
             return {"available": False}
-        return {"available": True, **self.prompt_evidence_application.snapshot()}
+        return {"available": True, **self._prompt_evidence_application.snapshot()}
 
     def prompt_evidence_prepare_prompt(self, args: Any) -> dict[str, Any]:
         required = {
@@ -765,18 +765,18 @@ class Task036ShellBridge:
         return self._require_prompt_evidence_application().apply_recovery(action=args["action"])
 
     def _require_generation_queue_application(self) -> Task027GenerationQueueApplication:
-        if self.generation_queue_application is None:
+        if self._generation_queue_application is None:
             raise ProductError("ERR_TASK027_GENERATION_QUEUE_NOT_BOUND", "Generation Queue is not bound to this Shell", ProductErrorCategory.STATE)
-        return self.generation_queue_application
+        return self._generation_queue_application
 
     def generation_queue_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Generation Queue snapshot")
-        if self.generation_queue_application is None:
+        if self._generation_queue_application is None:
             return {"available": False}
         execution = {"available": False}
-        if self.generation_execution_application is not None:
-            execution = {"available": True, **self.generation_execution_application.snapshot()}
-        return {"available": True, **self.generation_queue_application.snapshot(), "execution_control": execution}
+        if self._generation_execution_application is not None:
+            execution = {"available": True, **self._generation_execution_application.snapshot()}
+        return {"available": True, **self._generation_queue_application.snapshot(), "execution_control": execution}
 
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:
         required = {"prompt_id", "prompt_version", "expected_queue_snapshot_sha256", "expected_upstream_snapshots"}
@@ -801,15 +801,15 @@ class Task036ShellBridge:
         return self._require_generation_queue_application().apply_enqueue(confirmation_id=args["confirmation_id"])
 
     def _require_generation_execution_application(self) -> Task013CreativeGenerationExecutionApplication:
-        if self.generation_execution_application is None:
+        if self._generation_execution_application is None:
             raise ProductError("ERR_TASK013_GENERATION_EXECUTION_NOT_BOUND", "Local generation execution is not bound to this Shell", ProductErrorCategory.STATE)
-        return self.generation_execution_application
+        return self._generation_execution_application
 
     def generation_execution_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Generation execution snapshot")
-        if self.generation_execution_application is None:
+        if self._generation_execution_application is None:
             return {"available": False}
-        return {"available": True, **self.generation_execution_application.snapshot()}
+        return {"available": True, **self._generation_execution_application.snapshot()}
 
     def generation_execution_preflight(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Generation execution preflight")
@@ -831,15 +831,15 @@ class Task036ShellBridge:
         return self._require_generation_execution_application().apply_execution(confirmation_id=args["confirmation_id"])
 
     def _require_audio_workspace_application(self) -> Task041AudioWorkspaceApplication:
-        if self.audio_workspace_application is None:
+        if self._audio_workspace_application is None:
             raise ProductError("ERR_TASK041_AUDIO_WORKSPACE_NOT_BOUND", "Audio Workspace is not bound to this Shell", ProductErrorCategory.STATE)
-        return self.audio_workspace_application
+        return self._audio_workspace_application
 
     def audio_workspace_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Audio Workspace snapshot")
-        if self.audio_workspace_application is None:
+        if self._audio_workspace_application is None:
             return {"available": False}
-        return {"available": True, **self.audio_workspace_application.snapshot()}
+        return {"available": True, **self._audio_workspace_application.snapshot()}
 
     def audio_workspace_prepare_placement(self, args: Any) -> dict[str, Any]:
         required = {
@@ -879,14 +879,14 @@ class Task036ShellBridge:
 
     def review_snapshot(self, _args: Any = None) -> dict[str, Any]:
         application = self._current_application()
-        review = application.review if application is not None else self.review
+        review = application.review if application is not None else self._review
         if review is None:
             return {"available": False}
         return {"available": True, **review.snapshot()}
 
     def select_candidate(self, args: Any) -> dict[str, Any]:
         application = self._current_application()
-        review = application.review if application is not None else self.review
+        review = application.review if application is not None else self._review
         if review is None:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         if not isinstance(args, dict) or set(args) != {"candidate_id"}:
@@ -895,7 +895,7 @@ class Task036ShellBridge:
 
     def review_candidate(self, args: Any) -> dict[str, Any]:
         application = self._current_application()
-        review = application.review if application is not None else self.review
+        review = application.review if application is not None else self._review
         if review is None:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         allowed = {"candidate_id", "decision", "override_start_us", "override_end_us"}
@@ -912,14 +912,14 @@ class Task036ShellBridge:
         if args not in (None, {}):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "plan approval preview request is invalid", ProductErrorCategory.VALIDATION)
         application = self._current_application()
-        review = application.review if application is not None else self.review
+        review = application.review if application is not None else self._review
         if review is None:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         return review.prepare_plan_approval()
 
     def approve_edit_plan(self, args: Any) -> dict[str, Any]:
         application = self._current_application()
-        review = application.review if application is not None else self.review
+        review = application.review if application is not None else self._review
         if review is None:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         required = {"confirmation_id", "draft_plan_sha256", "approved_by"}

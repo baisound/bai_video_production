@@ -147,8 +147,16 @@ def test_bridge_lazily_binds_nle_after_editing_application_exists() -> None:
         service, application=application,
         nle_controller_factory=lambda supplied: calls.append(supplied) or expected,
     )
-    assert not hasattr(shell, "nle_controller")
-    assert not hasattr(shell, "nle_controller_factory")
+    for internal_name in (
+        "service", "projection", "review", "application", "native_dialog",
+        "pre_edit_runtime", "workflow_runtime", "workflow_runtime_factory",
+        "production_control", "audit_application", "planning_application",
+        "generation_safety_application", "continuity_application",
+        "prompt_evidence_application", "generation_queue_application",
+        "generation_execution_application", "audio_workspace_application",
+        "nle_controller", "nle_controller_factory",
+    ):
+        assert not hasattr(shell, internal_name)
     assert shell.interactive_timeline_snapshot({})["available"] is True
     assert calls == [application]
     shell.interactive_timeline_snapshot({})

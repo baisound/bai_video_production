@@ -4,7 +4,7 @@
 
 - Priority: `OWNER_MAXIMUM / RELEASE_CLOSURE`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `ACTIVE / P_RC_1_LOCAL_PASS / HOSTED_PENDING`
+- Status: `ACTIVE / P_RC_2_LOCAL_PASS / HOSTED_PENDING / V0_21_0_DECIDED`
 - Depends on: TASK-043, TASK-042 P-V6-4 and TASK-044
 
 ## Goal
@@ -44,6 +44,8 @@ is hosted-closed. Existing compatibility/recovery/NLE focused tests pass `94 / 9
 Detailed design and two Critic rounds close at unresolved Critical/High `0 / 0`.
 Design PR #74 passed hosted `9 / 9`, merged at exact main
 `1ddc8ea39e45ee62590a443e3a67d8bb901b6062`, and completed branch/checkout
-cleanup. Fresh-main P-RC-1 is implemented with focused `100 / 100` and full WSL2
-`1123 / 1123` PASS. Hosted CI/main closure remains required before P-RC-2.
+cleanup. At the P-RC-1 local checkpoint, focused `100 / 100` and full WSL2
+`1123 / 1123` passed; its hosted closure is recorded immediately below.
+
+P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88`, and completed cleanup. P-RC-2 packaged Project/native/restart/clean-install acceptance passes with full Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`. Exact decision is `0.21.0 / v0.21.0 / stable`; P-RC-3 remains blocked until P-RC-2 hosted closure and fresh-main reselection.
 

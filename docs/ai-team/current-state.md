@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_045_P_RC_1_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_045_P_RC_2_LOCAL_PASS_HOSTED_PENDING / V0_21_0_DECIDED / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-045 / P-RC-1 COMPATIBILITY + MIGRATION + ASSET PAGING / LOCAL PASS / HOSTED PENDING`; Design PR #74 is hosted-closed at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-045 / P-RC-2 NATIVE + CLEAN INSTALL + RESTART / LOCAL PASS / HOSTED PENDING`; P-RC-1 PR #75 is hosted-closed at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
-- Development Candidate: `NONE`; expected impact class is MINOR only if TASK-045 compatibility/native/clean-install gates pass and an exact SemVer is selected
+- Development Candidate: `0.21.0 / v0.21.0 / stable`; package metadata remains `0.20.1` until fresh-main P-RC-3
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `P-RC-1 PR all-green/main merge/exact SHA/cleanup -> fresh-main P-RC-2 integrated native/clean-install/restart acceptance; TASK-013 native and TASK-014 paid execution remain parked`
+- Next Consumer Decision Gate: `P-RC-2 PR all-green/main merge/exact SHA/cleanup -> fresh-main release/0.21.0 P-RC-3 metadata/regression/PR/main/Tag/GitHub Release; Production Deploy remains blocked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.70 Addendum LXIV. TASK-045 Design PR #74 passed hosted `9 / 9`, merged at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062` and completed cleanup. Fresh-main P-RC-1 implements explicit legacy no-manifest discovery, code-registered lossless copy-on-write migration with backup/reopen proof, additive schema v3 bounded Asset paging and a concurrent source-manifest pointer corrective. Focused `100 / 100` and full WSL2 `1123 / 1123` pass; hosted closure remains pending. P-RC-2 and P-RC-3 remain dependency-waiting. Provider/paid/Production Deploy/ambiguous destructive migration remain blocked. Stable Product release remains `v0.20.1`; exact next SemVer is undecided.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.71 Addendum LXV. P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88` and completed cleanup. P-RC-2 final candidate passes two-hour/10,000-clip acceptance, packaged synthetic Project open/reopen without manifest rewrite, Narrator/UIA, three displays, native picker cancel, conversation-free restart, final clean install, Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`. Observed pywebview rich-object recursion is corrected by a private Bridge graph with typed methods only. Exact decision is `0.21.0 / v0.21.0 / stable`; P-RC-3 remains dependency-waiting for P-RC-2 hosted closure. Provider/paid/Production Deploy/ambiguous destructive migration remain blocked.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

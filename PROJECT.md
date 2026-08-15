@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-045 Design hosted closure: PR #74 checks 9 / 9 PASS and merged at exact main 1ddc8ea39e45ee62590a443e3a67d8bb901b6062; remote branches and dedicated design checkout cleanup PASS`
-- Active Task: `TASK-045 / P-RC-1 COMPATIBILITY + MIGRATION + ASSET PAGING / LOCAL PASS / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Last Completed Gate: `TASK-045 P-RC-1 hosted closure: PR #75 checks 9 / 9 PASS and merged at exact main 402c8956a5f5f3ac485c43db2b3e35e667846a88; remote branch and dedicated checkout cleanup PASS`
+- Active Task: `TASK-045 / P-RC-2 NATIVE + CLEAN INSTALL + RESTART / LOCAL PASS / HOSTED PENDING`; TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.20.1` targets exact release-code main SHA `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Development Candidate: `NONE`; TASK-045 records only an expected MINOR impact class until compatibility/native/clean-install Evidence passes and an exact SemVer is selected
+- Development Candidate: `0.21.0 / v0.21.0 / stable`; exact MINOR decision is made from completed P-RC-1/2 compatibility/native/clean-install Evidence, but metadata remains `0.20.1` until fresh-main P-RC-3
 - Current release verification: TASK-036 W0 clean-profile/runtime/path, W1 display/accessibility and W2 packaged native editing route pass. PR #22 passed `9 / 9`, merged, and annotated `v0.20.1` plus the formal stable GitHub Release published verified wheel/source assets.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.70 Addendum LXIV
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.71 Addendum LXV
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate
@@ -158,7 +158,8 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - TASK-044 P-NLE-1 PR #69 passed hosted `9 / 9`, merged at exact main `ab41b2105914488d1d96ca3b3f8997a09d53337a` and completed cleanup. P-NLE-2 exact-frame trim/snap/IN-OUT, append-only Timeline revision, CAS and compensating Undo/Redo then passed PR #70 `9 / 9` and merged at exact main `a6bb252f36f4d3a8aca0175eb35c0ab44a7b91e8`.
 - TASK-044 P-NLE-4 PR #72 exact head `ac5b2956e0a0e881a4cf0a58f414eaab826c2fb2` passed hosted `9 / 9`, merged at exact main `6703c42a3aa06a563071f1a48dc7aab113f4dfe4` and completed remote branch/dedicated checkout cleanup. The dynamic Unified NLE Shell, per-job Export recovery, bounded 10,000-clip projection and packaged Windows interaction Evidence are hosted-closed. Browser automation remained unavailable and is not claimed.
 - Fresh-main TASK-045 audit reclassified the release closure as three Atomic Units: P-RC-1 compatibility/migration/Asset paging, P-RC-2 integrated native/clean-install/restart acceptance, and P-RC-3 exact release finalization. Existing compatibility/recovery/NLE focused baseline is `94 / 94 PASS`; two Critic rounds close at unresolved Critical/High `0 / 0`. Exact SemVer remains undecided until P-RC-1/2 Evidence passes.
-- TASK-045 Design PR #74 passed hosted `9 / 9`, merged at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062`, and completed branch/checkout cleanup. Fresh-main P-RC-1 now implements explicit legacy discovery, code-registered lossless copy-on-write migration with backup/reopen proof, additive schema v3 Asset keyset paging and a concurrent source-manifest pointer corrective. Focused `100 / 100` and full WSL2 `1123 / 1123` pass; hosted closure remains pending.
+- TASK-045 Design PR #74 passed hosted `9 / 9` and merged at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062`. Fresh-main P-RC-1 implemented explicit legacy discovery, code-registered lossless copy-on-write migration with backup/reopen proof, additive schema v3 Asset keyset paging and a concurrent source-manifest pointer corrective; it was later hosted-closed by PR #75.
+- TASK-045 P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88`, and completed cleanup. P-RC-2 final candidate passes packaged synthetic Project open/reopen, Narrator/UIA, three displays, Timeline interaction, native picker cancel, conversation-free restart, clean install, Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`; exact release decision is `0.21.0 / v0.21.0 / stable`. Hosted closure remains pending.
 - OS-internal TASK-016 remains unrelated and untouched.
 
 ## Completion Rule

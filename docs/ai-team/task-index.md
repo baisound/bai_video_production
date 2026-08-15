@@ -36,7 +36,7 @@
 | TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_4_HOSTED_CLOSED | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | P-V6-4 PR #67 hosted 9/9 and merged at exact main 19f1a94f; branch/checkout cleanup passed. P-V6-5/6 are split into TASK-044/045. |
 | TASK-043 | Unified Product Project / Migration / Recovery Foundation | HOSTED_CLOSED | OWNER_MAXIMUM_MAJOR_REFACTOR | DEV-4 | Final P-FND-4 PR #66 hosted 9/9 and merged at exact main 10eae32b; branch cleanup passed. |
 | TASK-044 | Interactive Timeline / Unified NLE / Export Queue | HOSTED_CLOSED | OWNER_MAXIMUM_AFTER_TASK_043_AND_P_V6_4 | DEV-4 | P-NLE-4 PR #72 head ac5b295 passed 9/9 and merged at exact main 6703c42; dynamic/keyboard-accessible Shell, bounded Timeline, per-job Export recovery and packaged Windows native gate integrated; cleanup passed. |
-| TASK-045 | V6 Native Acceptance / Compatibility / Release Closure | P_RC_1_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_RELEASE_CLOSURE | DEV-4 | Design PR #74 merged at exact main 1ddc8ea3. P-RC-1 explicit legacy import, registered lossless migration, schema v3 Asset paging and manifest concurrency corrective pass focused 100/100 and full WSL2 1123/1123; P-RC-2/3 remain dependency-waiting. |
+| TASK-045 | V6 Native Acceptance / Compatibility / Release Closure | P_RC_2_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_RELEASE_CLOSURE | DEV-4 | P-RC-1 PR #75 merged at exact main 402c8956. P-RC-2 packaged Project/native/restart/clean-install and full Windows/WSL2 pass; observed Bridge recursion corrected; exact next decision 0.21.0/v0.21.0/stable. P-RC-3 waits for hosted closure. |
 
 ## Roadmap authority
 
@@ -44,7 +44,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, R2/R3 Product promotions, bounded TASK-027 Planning/Generation Queue, R4 local execution control and TASK-041 Audio Workspace promotion are completed or hosted-closed. TASK-043, TASK-042 P-V6-4 and TASK-044 P-NLE-1..4 are hosted-closed. TASK-045 Design is hosted-closed at exact main `1ddc8ea3`; P-RC-1 is active at local PASS/hosted pending. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, R2/R3 Product promotions, bounded TASK-027 Planning/Generation Queue, R4 local execution control and TASK-041 Audio Workspace promotion are completed or hosted-closed. TASK-043, TASK-042 P-V6-4, TASK-044 P-NLE-1..4 and TASK-045 P-RC-1 are hosted-closed; P-RC-1 exact main is `402c8956`. P-RC-2 is active at local PASS/hosted pending with exact `0.21.0` decision. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

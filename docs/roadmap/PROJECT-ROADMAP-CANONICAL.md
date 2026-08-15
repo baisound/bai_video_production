@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.70
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.71
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-045 Design PR #74 passed hosted `9 / 9`, merged at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062` and completed cleanup. Fresh-main P-RC-1 compatibility/migration/Asset paging passes focused `100 / 100` and full WSL2 `1123 / 1123`; hosted closure is pending. Stable Product release remains `v0.20.1`; exact next SemVer is undecided.
+- Current insertion: TASK-045 P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88` and completed cleanup. P-RC-2 packaged Project/native/restart/clean-install passes full Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`; exact next decision is `0.21.0 / v0.21.0 / stable`. Hosted closure is pending; stable formal Release remains `v0.20.1`.
 
 ## 3. MVP定義
 
@@ -114,7 +114,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
-| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ACTIVE / P-RC-1 LOCAL PASS / HOSTED PENDING |
+| 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ACTIVE / P-RC-2 LOCAL PASS / HOSTED PENDING / 0.21.0 DECIDED |
 
 ## 6. Namespace Collision Resolution
 
@@ -181,7 +181,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **HOSTED CLOSED / PR #72 / MAIN 6703c42a**
-- TASK-045 V6 Native Acceptance / Release Closure: **ACTIVE / P-RC-1 LOCAL PASS / HOSTED PENDING**
+- TASK-045 V6 Native Acceptance / Release Closure: **ACTIVE / P-RC-2 LOCAL PASS / HOSTED PENDING / 0.21.0 DECIDED**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1715,3 +1715,33 @@ WSL2 regression passes `1123 / 1123`; compileall and hosted Windows/Linux CI
 remain required before hosted closure. P-RC-2 native/clean-install/restart
 acceptance and P-RC-3 exact SemVer/Tag/Release remain dependency-waiting. Stable
 formal Release remains `v0.20.1`. Production Deploy is not authorized.
+
+## Addendum LXV — TASK-045 P-RC-2 Local Closure and Exact Release Decision
+
+P-RC-1 PR #75 exact head `30b20deb09f26c27ef98b0518953748fdc4c9c0f`
+passed hosted `9 / 9`, merged at exact main
+`402c8956a5f5f3ac485c43db2b3e35e667846a88`, and completed remote branch and
+dedicated checkout cleanup.
+
+P-RC-2 proves the final candidate on an owned synthetic Project and isolated
+Windows profiles. A two-hour-plus/10,000-clip controller and 10,000-Asset pages
+remain bounded. The exact packaged EXE opens and reopens a v0.20.1-format Project
+without changing its manifest, exposes named UIA controls, runs with Narrator,
+moves across three current displays, changes Timeline zoom/scroll geometry,
+cancels the native picker safely, exits normally and conversation-free restarts
+with the same isolated profile. Final Windows regression is
+`1123 passed, 1 expected skip`; final WSL2 regression is `1124 / 1124`.
+
+The first configured-Project run exposed recursive pywebview discovery through
+public rich Bridge objects. The bounded corrective makes all nineteen internal
+service/runtime/application bindings private and leaves only typed allowlisted
+methods public. Corrective focused Windows/WSL2 tests pass `51 / 51`; the final
+packaged reruns do not reproduce the recursion.
+
+The latest formal Release/Tag is `0.20.1 / v0.20.1 / stable`; `v0.21.0` is unused.
+The actual backward-compatible user-facing migration and Asset paging additions
+select the exact MINOR decision `0.21.0 / v0.21.0 / stable`. P-RC-3 metadata,
+regression, PR/main merge, exact SHA, annotated Tag and GitHub Release remain
+dependency-waiting for P-RC-2 hosted closure and fresh-main reselection.
+Production Deploy, paid Provider, credentials, ambiguous human-owned migration,
+TASK-013 native replay and Resolve/Cubase mutation remain blocked.

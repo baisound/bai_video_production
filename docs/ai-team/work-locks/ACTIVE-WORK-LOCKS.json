@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 3,
+  "registry_revision": 4,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "52284d77b8b42c09181256f68374d90b9b0375ab",
+  "audit_base_main_sha": "a73dea0899e5eb8e70f69d986c7c47f8fd85445c",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -140,6 +140,115 @@
         "CRITIC_AND_JUDGE_PASS",
         "HOSTED_CHECKS_ALL_GREEN"
       ]
+    },
+    {
+      "lock_id": "BVP-LOCK-TASK046-PVS3A",
+      "owner_agent": "開発担当2",
+      "owner_thread_id": "01a00490-f4a3-7ab1-a3ea-fbda2ea50a02",
+      "umbrella_authority": "BVP-AUTH-20260815-VOICE-CONTRACT-LH-SEQ-R0",
+      "lock_host_authority": "BVP-AUTH-20260815-TASK046-PVS3A-LH0",
+      "task_unit": "TASK-046/P-VS-3A",
+      "phase": "PURE_METADATA_RECORDING_SESSION_CONTRACT_IMPLEMENTATION",
+      "branch": "codex/task-046-p-vs-3a-recording-session-contract",
+      "base_sha": "a73dea0899e5eb8e70f69d986c7c47f8fd85445c",
+      "status": "ACTIVE",
+      "implementation_authority_state": "NOT_AUTHORIZED_AWAITING_SEPARATE_OWNER_DECISION",
+      "implementation_state": "NOT_STARTED",
+      "scope": "PURE_BODY_FREE_METADATA_SCHEMA_CAS_STATE_EVALUATOR_AND_SYNTHETIC_TESTS_ONLY",
+      "lock_hosting_evidence": {
+        "host_unit": "TASK-046/P-VS-3A-LH0",
+        "hosting_branch": "codex/task-046-pvs3a-lock-hosting",
+        "hosting_base_sha": "a73dea0899e5eb8e70f69d986c7c47f8fd85445c",
+        "evidence_doc": "docs/ai-team/work-locks/task046-pvs3a-lock-hosting-critic-judge-2026-08-15.md",
+        "expected_changed_files": 2,
+        "post_merge_main_presence_verification_required": true
+      },
+      "allowed_files": [
+        "docs/ai-team/tasks/TASK-046/p-vs-3a-implementation-readiness-and-evidence-2026-08-15.md",
+        "schemas/voice-recording-session.schema.json",
+        "src/ai_video_production/schema_resources/voice-recording-session.schema.json",
+        "src/ai_video_production/voice_recording_session.py",
+        "tests/test_task046_voice_recording_session_contract.py"
+      ],
+      "read_only_dependencies": [
+        "src/ai_video_production/voice_profile_revision.py",
+        "src/ai_video_production/voice_profile_store.py",
+        "src/ai_video_production/voice_studio_application.py",
+        "schemas/voice-profile-revision.schema.json",
+        "src/ai_video_production/schema_resources/voice-profile-revision.schema.json",
+        "schemas/asset-record.schema.json",
+        "schemas/durable-product-job.schema.json",
+        "docs/ai-team/tasks/TASK-047/task.md"
+      ],
+      "design_reference_only_not_hosted": [
+        "TASK-046/P-VS-3B",
+        "TASK-046/P-VS-4A",
+        "TASK-048/P-QC-1A"
+      ],
+      "canonical_serialized_types": [
+        "VoiceRecordingSessionRevision",
+        "VoiceSegmentAttemptRevision",
+        "TeleprompterCheckpointRevision",
+        "DatasetCandidateRevision",
+        "DatasetCandidateReviewDecision"
+      ],
+      "structured_unresolved_dependencies": [
+        "TASK-003_FORMAL_ASSET_REVISION_MAPPING",
+        "TASK-020_RESOURCE_ADMISSION",
+        "TASK-043_CAPTURE_DURABLE_JOB_AND_CHECKPOINT_BINDING",
+        "TASK-047_P_OBS_1_CAPTURE_COMMAND_EVENT_EVIDENCE",
+        "TASK-048_QUALITY_CALIBRATION_RECEIPT"
+      ],
+      "denied_paths": [
+        "CHANGELOG.md",
+        ".github/**",
+        "src/ai_video_production/__init__.py",
+        "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json",
+        "TASK046_PVS1A_EXISTING_FILES",
+        "SHARED_INTEGRATION_FILES",
+        "ALL_OTHER_PATHS"
+      ],
+      "denied_effects": [
+        "OBS_OR_CAPTURE_DISPATCH",
+        "AUDIO_BODY_OR_RECORDING",
+        "ASSET_OR_DATASET_MUTATION",
+        "JOB_OR_QUEUE_CREATION",
+        "MODEL_OR_TRAINING_OR_INFERENCE",
+        "DEVICE_OR_RX_MUTATION",
+        "CLOUD_PAID_CREDENTIAL",
+        "RELEASE_DEPLOY",
+        "PRODUCTION_ADMISSION_CLAIM"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING",
+      "prerequisites": [
+        "PR93_PVS1A_HOSTED_CLOSED_POST_MERGE_GREEN",
+        "PR97_PVS1A_LOCK_CLOSURE_MERGED_POST_MERGE_GREEN",
+        "PVS3A_R0_AND_L0_CRITICAL_HIGH_ZERO",
+        "FRESH_MAIN_EXACT_PVS1A_BLOBS_AND_SYMBOLS",
+        "EXACT_ALLOWED_FILES_5_AND_OVERLAP_ZERO",
+        "OWNER_LOCK_HOST_AUTHORIZATION_BVP_AUTH_20260815_TASK046_PVS3A_LH0"
+      ],
+      "expiry_conditions": [
+        "MAIN_SHA_DRIFT_BEFORE_IMPLEMENTATION_START",
+        "PVS1A_BLOB_OR_SYMBOL_DRIFT",
+        "PATH_OR_OPEN_PR_OVERLAP",
+        "ALLOWED_FILES_MISMATCH",
+        "OWNER_AUTHORITY_REVOKED",
+        "TARGET_PR_MERGED_OR_CLOSED",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION"
+      ],
+      "release_conditions": [
+        "EXACT_5_FILE_IMPLEMENTATION_DIFF",
+        "SCHEMA_MIRROR_BYTE_PARITY",
+        "FOCUSED_SYNTHETIC_TESTS_PASS",
+        "WINDOWS_FULL_REGRESSION_PASS",
+        "WSL2_FULL_REGRESSION_PASS",
+        "CRITIC_AND_JUDGE_PASS",
+        "HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "SEPARATE_CHANGELOG_INTEGRATION_LOCK_IF_REQUIRED",
+        "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_SECURITY_PASS",
+        "LOCK_CLOSURE_RELEASE_RECORD_HOSTED"
+      ]
     }
   ],
   "shared_integration_files": [
@@ -270,6 +379,7 @@
     "VOICE_SUCCESSOR_CANONICAL_MOCK",
     "TASK-046/P-VS-1B_SEPARATE_AUTHORIZATION",
     "TASK-046/P-VS-2_ZERO_SHOT_VERTICAL_SLICE",
+    "TASK-046/P-VS-3A_CONTRACT_HOSTED_BEFORE_TASK-047/P-OBS-1",
     "TASK-047/P-OBS-1_SEPARATE_AUTHORIZATION_AND_HOSTED_COMPLETION",
     "TASK-046/P-VS-3_PRODUCTION_RECORDING_AFTER_ALL_GATES",
     "TASK-046/P-VS-4_FINE_TUNING",

@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-044 P-NLE-4 dynamic Unified NLE composition in the existing TASK-036 Shell: bounded semantic clip DOM, distinct selection/seek/review, keyboard Fit/IN/OUT/trim flow, private typed pywebview bridge, per-job Export cancel/recovery controls, narrow/mixed-monitor behavior and packaged Windows acceptance. No blanket Execute All or external replay is authorized.
 - Added TASK-044 P-NLE-3 checksum-bound durable Export Queue composition with logical-only output identities, exact stale preflight, per-job external confirmation, DISPATCHING-before-side-effect recovery, Render QA-bound success and no blanket Execute All authority.
 - Added TASK-044 P-NLE-2 exact-frame trim/move/snap and checked track edits as append-only Product Project revisions, with compensating Undo/Redo and interruption-safe TASK-043 command-history finalization. It starts no provider, native or external mutation.
 - Added TASK-044 P-NLE-1 frame-authoritative dynamic Timeline projection with strict selection/seek separation, rational viewport transforms and bounded 10,000-clip windowing. It is read/reversible only and starts no external mutation.

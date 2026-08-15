@@ -300,10 +300,11 @@ class TimelineWindowProjection:
     next_clip_offset: int | None
 
     def to_dict(self, *, rate: FrameRate) -> dict[str, Any]:
+        media_by_track = {item.track_id: item.media_kind.value for item in self.tracks}
         return {"projection_version": "1.0.0", "task_owner": "TASK-044/P-NLE-1",
                 "viewport": self.viewport.to_dict(),
                 "tracks": [item.to_dict() for item in self.tracks],
-                "clips": [{**item.to_dict(),
+                "clips": [{**item.to_dict(), "media_kind": media_by_track[item.track_id],
                            "left_px": float(self.viewport.frame_to_pixel(item.start_frame, rate)),
                            "width_px": float(self.viewport.frame_to_pixel(item.end_frame, rate) - self.viewport.frame_to_pixel(item.start_frame, rate))}
                           for item in self.clips],

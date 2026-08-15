@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.67
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.68
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-044 Design is hosted-closed through PR #68 at exact main `f8b901c143f6a4987cacb46429cf0caf85aa2ab7`. P-NLE-1 Timeline semantic projection is local PASS and hosted-pending; native compatibility/release closure remains TASK-045. Stable Product release remains `v0.20.1`.
+- Current insertion: TASK-044 P-NLE-3 is hosted-closed through PR #71 at exact main `c23083e6fa1f8513b14010ece1c2a92c51c47916`. P-NLE-4 Unified Shell/UI and bounded Windows native acceptance are local PASS and hosted-pending; compatibility/release closure remains TASK-045. Stable Product release remains `v0.20.1`.
 
 ## 3. MVP定義
 
@@ -113,7 +113,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 041 | Audio Workspace / Embedded Audio Separation & Placement UX | review/lock lanes and TASK-026 placement UX | 004,026 | DEV-4 | PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | Blueprint v2, frame binding, WORLD LOCK projection, Prompt compilation, Timeline audio, Quick Generate | 027,036..041,013,014,026,028,032..034,043 | DEV-4 | P-V6-4 HOSTED CLOSED / PR #67 / MAIN 19f1a94f |
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
-| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | DESIGN HOSTED CLOSED / P-NLE-1 LOCAL PASS / HOSTED PENDING |
+| 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | P-NLE-3 HOSTED CLOSED / P-NLE-4 LOCAL NATIVE PASS / HOSTED PENDING |
 | 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | ALLOCATED / DEPENDENCY WAIT |
 
 ## 6. Namespace Collision Resolution
@@ -180,7 +180,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
-- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **DESIGN HOSTED CLOSED / P-NLE-1 LOCAL PASS / HOSTED PENDING**
+- TASK-044 Interactive Timeline / Unified NLE / Export Queue: **P-NLE-3 HOSTED CLOSED / P-NLE-4 LOCAL NATIVE PASS / HOSTED PENDING**
 - TASK-045 V6 Native Acceptance / Release Closure: **ALLOCATED / DEPENDENCY WAIT**
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
@@ -1623,3 +1623,42 @@ blanket authority close with unresolved Critical/High `0 / 0`. No real external
 execution or release operation occurred. Hosted CI remains required. After merge
 and cleanup, fresh-main P-NLE-4 Shell/UI and sandboxed Windows acceptance becomes
 next.
+
+## Addendum LXII — TASK-044 P-NLE-4 Unified Shell and Native Acceptance Gate
+
+P-NLE-3 PR #71 passed hosted `9 / 9`, merged at exact main
+`c23083e6fa1f8513b14010ece1c2a92c51c47916`, and completed remote branch and
+dedicated checkout cleanup. Fresh-main AUTONOMY selected
+`BVP-TASK-044-P-NLE-4 / IMPLEMENTATION`.
+
+P-NLE-4 composes the accepted frame-authoritative Timeline, append-only edit
+history and durable Export Queue into the one existing TASK-036 Shell. Python
+owns all durable and interaction truth. JavaScript receives at most 500 visible
+clips and calls only typed bridge operations for selection, seek, Fit, IN/OUT,
+trim prepare/apply and per-job Export decisions. Review Candidate styling and
+selection remain distinct. No host path or blanket Execute All authority is
+exposed.
+
+The trusted launcher lazily derives the Timeline from its current editing
+projection. Product Projects bind the TASK-044 edit and Export applications;
+legacy projects remain read-only. UNKNOWN Export recovery requires an explicit
+per-job Human action, and proven success additionally requires exact result and
+passing Render QA identities. The rich controller graph is private to Python so
+pywebview cannot expose it through recursive API discovery.
+
+Focused Windows and WSL2 tests pass `60 / 60`; full Windows Python 3.12 passes
+`1109 passed, 1 skipped`; full WSL2 Ubuntu passes `1110 / 1110`. Current-checkout
+and final packaged Windows UI Automation confirm dynamic VIDEO/AUDIO/TEXT names,
+keyboard seek, zoom/scroll, roving focus, bounded clip/track pages, narrow scroll
+behavior and three-monitor movement. A READY/UNKNOWN sandbox confirms per-job
+confirmation, safe cancel, typed recovery actions and zero Execute All buttons.
+The final ignored one-dir EXE builds and launches with SHA-256
+`BA96D3A5C06BC0CA299A24DDFA9EFA5048A212F345222E321B03013285EBC1A2`.
+
+The in-app Browser adapter was unavailable and is not claimed as PASS. Direct
+monitor-DPI querying stalled and is also not claimed; CSS dppx contracts,
+mixed-monitor movement and packaged native behavior are the bounded Evidence.
+Critic closes minimum-width, user-entered checksum, missing Export actions and
+public controller exposure with unresolved Critical/High `0 / 0`. Hosted CI
+remains required. After merge and cleanup, TASK-045 compatibility/native/release
+audit and exact release decision becomes runnable.

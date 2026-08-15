@@ -146,6 +146,59 @@ def test_interrupted_dispatch_recovers_unknown_and_cannot_be_cancelled(tmp_path:
     assert recovered[0].recovery_actions == ("ACCEPT_PROVEN_SUCCESS", "MARK_FAILED", "REQUIRE_HUMAN")
 
 
+def unknown(app: ExportQueueApplication, prep: ExportPreparation):
+    job = ready(app, prep)
+    dispatching = app.jobs.transition(
+        app.project_root, job.job_id, DurableProductJobState.DISPATCHING,
+        expected_state_version=job.state_version,
+    )
+    return app.jobs.transition(
+        app.project_root, job.job_id, DurableProductJobState.UNKNOWN,
+        expected_state_version=dispatching.state_version,
+        error_code="ERR_PRODUCT_JOB_RESTART_UNKNOWN",
+    )
+
+
+def test_unknown_reconciliation_requires_render_qa_and_binds_proven_success(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    prep = preparation(manifest)
+    app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    job = unknown(app, prep)
+    with pytest.raises(ProductError) as exc:
+        app.reconcile(job_id=job.job_id, expected_state_version=job.state_version,
+                      action="ACCEPT_PROVEN_SUCCESS")
+    assert exc.value.code == "ERR_EXPORT_RECONCILE_PROOF_REQUIRED"
+    result = ExportDispatchResult(
+        "SUCCEEDED", result_identity="resolve-render:master",
+        render_qa_sha256=checksum("render-qa"), render_qa_passed=True,
+    )
+    reconciled = app.reconcile(
+        job_id=job.job_id, expected_state_version=job.state_version,
+        action="ACCEPT_PROVEN_SUCCESS", result=result,
+    )
+    assert reconciled.state is DurableProductJobState.SUCCEEDED
+    assert reconciled.result_ref == result.durable_result_ref
+
+
+@pytest.mark.parametrize(
+    ("action", "expected"),
+    (("MARK_FAILED", DurableProductJobState.FAILED),
+     ("REQUIRE_HUMAN", DurableProductJobState.HUMAN_REQUIRED)),
+)
+def test_unknown_reconciliation_never_replays_external_work(
+    tmp_path: Path, action: str, expected: DurableProductJobState,
+) -> None:
+    manifest = setup_project(tmp_path)
+    prep = preparation(manifest)
+    app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    job = unknown(app, prep)
+    reconciled = app.reconcile(
+        job_id=job.job_id, expected_state_version=job.state_version, action=action,
+    )
+    assert reconciled.state is expected
+    assert reconciled.attempt == job.attempt
+
+
 def test_execute_all_never_issues_blanket_confirmation(tmp_path: Path) -> None:
     manifest = setup_project(tmp_path)
     app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")

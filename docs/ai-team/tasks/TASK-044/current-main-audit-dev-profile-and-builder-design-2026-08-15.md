@@ -256,6 +256,15 @@ only after native interaction acceptance. Version/Tag/Release remains TASK-045.
 - bounded `task036_shell_ui.py`, `desktop_editing_application.py`,
   `desktop_shell_projection.py`, launcher composition, focused UI/native gates,
   user documentation and TASK-044 Evidence
+- new bounded `task044_nle_shell.py` Python-owned view/controller adapter; it
+  stores no second Product truth and exposes only closed view models and typed
+  allowlisted commands to the existing TASK-036 bridge
+- bounded `interactive_timeline.py` projection-field correction required so
+  the Shell accessibility name receives the track-derived media kind rather
+  than an undefined JavaScript value
+- bounded `export_queue_application.py` recovery composition required so the
+  existing typed UNKNOWN recovery contract can be invoked per job by the
+  Shell without direct durable-store mutation or blanket authority
 
 Any file outside the exact active unit requires a new audit/Allowed Files update.
 

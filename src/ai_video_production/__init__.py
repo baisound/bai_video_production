@@ -171,6 +171,7 @@ from .interactive_timeline_store import TimelineEditSnapshotStore, parse_timelin
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .export_queue import ExportAuthorityClass, ExportDispatchResult, ExportOutputContract, ExportPreparation, ExportPreset
 from .export_queue_application import ExportQueueApplication
+from .task044_nle_shell import Task044NleShellController
 
 __version__ = "0.20.1"
 
@@ -270,4 +271,5 @@ __all__ = [
     "InteractiveTimelineProjectionService",
     "ExportAuthorityClass", "ExportDispatchResult", "ExportOutputContract", "ExportPreparation", "ExportPreset",
     "ExportQueueApplication",
+    "Task044NleShellController",
 ]

@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 5,
+  "registry_revision": 6,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "9fc7e4f9bd707c650abac2c5a29d45791ed3448e",
+  "audit_base_main_sha": "24d43daa201808fa2da11c0f6d8e61bbc1ffb45c",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -386,6 +386,97 @@
         "SEPARATE_CHANGELOG_INTEGRATION_LOCK_IF_REQUIRED",
         "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_SECURITY_PASS",
         "LOCK_CLOSURE_RELEASE_RECORD_HOSTED"
+      ]
+    },
+    {
+      "lock_id": "BVP-LOCK-TASK047-POBS1A-CONTRACT-HOST",
+      "owner_agent": "開発担当 / Canonical contract integration owner",
+      "owner_thread_id": "019ff856-bb71-7da0-a6fd-088ae06b158f",
+      "authority": "BVP-AUTH-20260815-TASK047-POBS1A-CONTRACT-H0",
+      "task_unit": "TASK-047/P-OBS-1A-CONTRACT-HOST",
+      "phase": "DOCS_ONLY_CANONICAL_CONTRACT_HOSTING",
+      "branch": "codex/task-047-pobs1a-contract-hosting",
+      "base_sha": "24d43daa201808fa2da11c0f6d8e61bbc1ffb45c",
+      "status": "ACTIVE",
+      "implementation_authority_state": "NOT_AUTHORIZED",
+      "implementation_state": "NOT_STARTED",
+      "scope": "HOST_REVIEWED_P_OBS_1A_REV2_1_DESIGN_CONTRACT_AND_PROVENANCE_ONLY",
+      "lock_hosting_evidence": {
+        "host_unit": "TASK-047/P-OBS-1A-CONTRACT-HOST-H0",
+        "hosting_branch": "codex/task-047-pobs1a-contract-hosting-lock",
+        "hosting_base_sha": "24d43daa201808fa2da11c0f6d8e61bbc1ffb45c",
+        "evidence_doc": "docs/ai-team/work-locks/task047-pobs1a-contract-hosting-lock-critic-judge-2026-08-15.md",
+        "expected_changed_files": 2,
+        "post_merge_main_presence_verification_required": true
+      },
+      "allowed_files": [
+        "docs/ai-team/tasks/TASK-047/p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-2026-08-15.md",
+        "docs/ai-team/tasks/TASK-047/p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-provenance.json",
+        "docs/ai-team/tasks/TASK-047/p-obs-1a-canonical-contract-hosting-evidence-2026-08-15.md",
+        "docs/ai-team/tasks/TASK-047/task.md"
+      ],
+      "dependency_state_at_host_audit": {
+        "p_vs_3a_lock": "HOSTED_ACTIVE",
+        "p_vs_3a_contract_implementation": "NOT_PRESENT_ON_MAIN",
+        "p_qc_1a_lock": "HOSTED_ACTIVE",
+        "p_qc_1a_contract_implementation": "NOT_PRESENT_ON_MAIN",
+        "open_pull_requests": 0,
+        "target_path_overlap": 0
+      },
+      "structured_unresolved_dependencies": [
+        "TASK046_PVS3A_CONTRACT_IMPLEMENTATION_NOT_HOSTED",
+        "TASK043_CAPTURE_DURABLE_JOB_BINDING_CANONICAL_REF_NOT_PROVIDED",
+        "TASK003_CAPTURE_STAGING_ASSET_EFFECT_BINDING_UNRESOLVED",
+        "TASK048_PQC1A_CONTRACT_IMPLEMENTATION_NOT_HOSTED",
+        "P_OBS_0_T0_TRUST_VALIDATION_BLOCKED_WITH_EXACT_CATALOG_MISMATCH"
+      ],
+      "denied_paths": [
+        "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json_EXCEPT_H0_AND_SEPARATE_H2",
+        "docs/ai-team/current-state.md",
+        "docs/ai-team/task-index.md",
+        "docs/roadmap/**",
+        "docs/ai-team/architecture/**",
+        "CHANGELOG.md",
+        ".github/**",
+        "src/**",
+        "schemas/**",
+        "tests/**",
+        "native/**",
+        "packaging/**",
+        "builds/**",
+        "ALL_OTHER_PATHS"
+      ],
+      "denied_effects": [
+        "IMPLEMENTATION_OR_RUNTIME_ADMISSION",
+        "DOWNLOAD_INSTALL_EXTRACT_CONFIGURE_BUILD_PACKAGE_OR_LOAD",
+        "OBS_LAUNCH_CONFIG_OR_CAPTURE",
+        "AUDIO_DEVICE_ASSET_DATASET_JOB_MODEL_OR_TRAINING_MUTATION",
+        "CLOUD_PAID_CREDENTIAL",
+        "VERSION_TAG_RELEASE_OR_DEPLOY"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING",
+      "prerequisites": [
+        "P_OBS_1A_FINAL_READ_ONLY_DESIGN_JUDGE_PASS",
+        "FRESH_MAIN_AND_REGISTRY_READ_BACK",
+        "EXACT_ALLOWED_FILES_4_AND_OVERLAP_ZERO",
+        "OPEN_PR_PATH_OVERLAP_ZERO",
+        "OWNER_LOCK_HOST_AUTHORIZATION_BVP_AUTH_20260815_TASK047_POBS1A_CONTRACT_H0"
+      ],
+      "expiry_conditions": [
+        "OWNER_AUTHORITY_REVOKED",
+        "CONTRACT_OR_INPUT_DIGEST_MISMATCH",
+        "PATH_OR_OPEN_PR_OVERLAP",
+        "ALLOWED_FILES_MISMATCH",
+        "TARGET_PR_MERGED_OR_CLOSED",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION"
+      ],
+      "release_conditions": [
+        "EXACT_4_FILE_DOCS_ONLY_CONTRACT_DIFF",
+        "CANONICAL_CONTENT_AND_PROVENANCE_DIGESTS_VALID",
+        "CRITIC_AND_JUDGE_PASS",
+        "HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_SECURITY_PASS",
+        "LOCK_CLOSURE_RELEASE_RECORD_HOSTED_IN_SEPARATE_H2"
       ]
     }
   ],

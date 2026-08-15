@@ -4,7 +4,7 @@
 
 - Priority: `OWNER_MAXIMUM / RELEASE_CLOSURE`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `ACTIVE / P_RC_2_HOSTED_CLOSED / P_RC_3_LOCAL_PASS_HOSTED_PENDING / V0_21_0_DECIDED`
+- Status: `FORMAL_RELEASE_COMPLETE / V0_21_0_RELEASED / POST_RELEASE_SYNC_HOSTED_PENDING`
 - Depends on: TASK-043, TASK-042 P-V6-4 and TASK-044
 
 ## Goal
@@ -47,5 +47,13 @@ Design PR #74 passed hosted `9 / 9`, merged at exact main
 cleanup. At the P-RC-1 local checkpoint, focused `100 / 100` and full WSL2
 `1123 / 1123` passed; its hosted closure is recorded immediately below.
 
-P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88`, and completed cleanup. P-RC-2 packaged Project/native/restart/clean-install acceptance passes with full Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`; PR #76 final head `76644790b8e154014af7e46b5efeef49b3d58789` then passed hosted `9 / 9`, merged at exact main `84837e34a42234e23a544f54c8fe0c49aab8cacb`, and completed cleanup. Exact decision is `0.21.0 / v0.21.0 / stable`; fresh-main P-RC-3 is active on `release/0.21.0`.
+P-RC-1 PR #75 passed hosted `9 / 9`, merged at exact main `402c8956a5f5f3ac485c43db2b3e35e667846a88`, and completed cleanup. P-RC-2 packaged Project/native/restart/clean-install acceptance passes with full Windows `1123 passed, 1 expected skip` and WSL2 `1124 / 1124`; PR #76 final head `76644790b8e154014af7e46b5efeef49b3d58789` then passed hosted `9 / 9`, merged at exact main `84837e34a42234e23a544f54c8fe0c49aab8cacb`, and completed cleanup. Exact decision is `0.21.0 / v0.21.0 / stable`; P-RC-3 publication closure is recorded below.
+
+P-RC-3 PR #77 final head `c5cdff27e7c0918efa37876c064dcfd5a3deae76`
+passed hosted `9 / 9`, merged at exact release-code main
+`c38187ed54e3601c44411d9b8a128348b0d8a7b7`, and completed the release branch
+and checkout cleanup. Annotated Tag `v0.21.0`, Release workflow `31858212510`,
+stable GitHub Release, published wheel/sdist digest verification and a fresh
+published-wheel install all pass. This final docs-only post-release Evidence
+sync does not reopen Product code or authorize Production Deploy.
 

@@ -4,14 +4,14 @@
 
 ## Current identity
 
-- Product package: `0.21.0` release candidate
-- Stable formal Release: `v0.20.1`
-- Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Current development main: `84837e34a42234e23a544f54c8fe0c49aab8cacb` (PR #76 TASK-045 P-RC-2 merge)
-- Current Product state: `V0_20_1_STABLE / TASK_045_P_RC_3_LOCAL_PASS_HOSTED_PENDING / V0_21_0_RELEASE_CANDIDATE / NATIVE_RUNTIME_PARKED`
-- Active implementation branch: `release/0.21.0`
+- Product package: `0.21.0`
+- Stable formal Release: `v0.21.0`
+- Release-code SHA: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
+- Current development main: `c38187ed54e3601c44411d9b8a128348b0d8a7b7` (PR #77 TASK-045 P-RC-3 merge and exact Tag target)
+- Current Product state: `V0_21_0_RELEASED / TASK_045_POST_RELEASE_SYNC_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Active implementation branch: `docs/task-045-v0.21.0-release-closure`
 
-Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
+Current main and the stable release identify the same exact release-code commit. The active branch changes only post-release Evidence and canonical state surfaces.
 
 ## Completed Product scope
 
@@ -36,7 +36,7 @@ No contained generated output, TASK-037 Candidate, TASK-040 Attempt binding, TAS
 
 ## Remaining Product scope
 
-- TASK-045 P-RC-3 hosted PR/main/annotated Tag/GitHub Release finalization;
+- TASK-045 post-release Evidence sync, hosted closure, cleanup and fresh-main AUTONOMY reselection;
 - full multi-slice TASK-027 production orchestration;
 - remaining TASK-013 native generation and post-native Candidate/Audit binding;
 - TASK-014 Owner Narration, TASK-026 Audio Placement compilation/execution and later TASK-041 audio-processing slices;
@@ -55,6 +55,7 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 - TASK-045 P-RC-2 final packaged Project/native/restart/clean-install acceptance: `PASS`; full Windows `1123 passed, 1 expected skip`; full WSL2 `1124 / 1124 PASS`; exact next decision `0.21.0 / v0.21.0 / stable`
 - TASK-045 P-RC-2 PR #76 final head `76644790`: hosted `9 / 9 PASS`; exact main `84837e34`; remote branch/dedicated checkout cleanup `PASS`
 - TASK-045 P-RC-3 local release gates: Windows `1123 passed, 1 expected skip`; WSL2 `1124 / 1124`; wheel/sdist build, clean install, `pip check`, EXE build and two packaged restart paths `PASS`
+- TASK-045 P-RC-3 PR #77 final head `c5cdff27`: hosted `9 / 9 PASS`; exact main/tag target `c38187ed`; annotated Tag object `93305ada`; Release workflow `31858212510 PASS`; stable GitHub Release and published wheel/sdist digest verification `PASS`
 - PR #47 exact head `3785e44a211b8c4d81005060bc8a1faff161870d`: `9 / 9 PASS`; exact main merge `8dd6434a65115d88641d0942b08788a9eceda279`
 - TASK-041 focused regression: `64 / 64 PASS`
 - TASK-041 full WSL2 regression: `932 / 932 PASS`
@@ -64,4 +65,4 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 - safe-runtime full WSL2 regression: `923 / 923 PASS`
 - R4 adapter focused regression: `35 / 35 PASS`
 - full WSL2 regression at adapter closure: `919 / 919 PASS`
-- latest stable Release: `v0.20.1`
+- latest stable Release: `v0.21.0`

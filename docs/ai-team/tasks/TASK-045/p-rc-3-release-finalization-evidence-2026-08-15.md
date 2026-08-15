@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Authority: `BVP-TASK-045-P-RC-3 / RELEASE_FINALIZATION`
-State: `LOCAL_PASS / HOSTED_PENDING / TAG_NOT_CREATED / RELEASE_NOT_CREATED`
+State: `FORMAL_RELEASE_COMPLETE / POST_RELEASE_SYNC_HOSTED_PENDING`
 
 ## Fresh-main selection
 
@@ -50,10 +50,10 @@ invented by P-RC-3.
 | Wheel and source distribution build | PASS |
 | Clean isolated install and `pip check` | PASS |
 | Windows one-dir EXE build and packaged acceptance | PASS |
-| Pull request and all hosted checks | PENDING |
-| Exact main merge SHA verification | PENDING |
-| Annotated `v0.21.0` creation/push | PENDING |
-| Repository Release workflow and published-asset verification | PENDING |
+| Pull request and all hosted checks | PASS (`#77`, `9 / 9`) |
+| Exact main merge SHA verification | PASS (`c38187ed54e3601c44411d9b8a128348b0d8a7b7`) |
+| Annotated `v0.21.0` creation/push | PASS |
+| Repository Release workflow and published-asset verification | PASS |
 
 ## Local release gate Evidence
 
@@ -96,13 +96,45 @@ correction may narrow claims but may not widen them beyond Evidence.
 
 Credential input, paid Provider execution, ambiguous or destructive Human-owned
 Project migration, TASK-013 Native H3 replay and Production Deploy remain
-blocked. No Tag or GitHub Release exists at this checkpoint.
+blocked. The completed Tag and Release authorize none of those operations.
+
+## Hosted publication Evidence
+
+- release PR: `#77`;
+- exact PR head: `c5cdff27e7c0918efa37876c064dcfd5a3deae76`;
+- hosted checks: `9 / 9 PASS`;
+- exact merged release-code main and Tag target:
+  `c38187ed54e3601c44411d9b8a128348b0d8a7b7`;
+- remote release branch and dedicated release checkout cleanup: `PASS`;
+- annotated Tag: `v0.21.0`;
+- annotated Tag object: `93305adaa5b72c19d235264cd38e921c2ab81f62`;
+- Release workflow run: `31858212510 / PASS`;
+- stable GitHub Release:
+  `https://github.com/baisound/bai_video_production/releases/tag/v0.21.0`;
+- Release state: `draft=false / prerelease=false`;
+- published wheel: `ai_video_production-0.21.0-py3-none-any.whl`, size
+  `650679`, SHA-256
+  `2e69e3037a07d66c0a1d2ca10d42b693f3633aabef87a3d5db98f8049d3ad125`;
+- published source distribution: `ai_video_production-0.21.0.tar.gz`, size
+  `736081`, SHA-256
+  `e63e0489958c10f835f30160547eef372a116d4c83e8b08356d766d75be2a0a8`;
+- downloaded-asset hashes versus GitHub digests: exact match;
+- fresh isolated Windows install from the published wheel, `pip check` and
+  installed distribution/package version `0.21.0`: `PASS`;
+- checked-in and published Release notes contain distinct Implemented,
+  Native-validated, Hosted-validated, Parked/not-claimed, Planned and
+  Upgrade/migration boundaries: `PASS`.
 
 ## Critic checkpoint
 
 - broad replacement of historical v0.20.1 fixtures/Evidence: prohibited;
 - version truth mismatch: fail closed through the repository metadata checker;
-- premature Tag or Release: blocked until exact merged main SHA;
+- premature Tag or Release: prevented; the annotated Tag was created only after
+  exact merged main SHA verification;
 - release-note overclaim: bounded by the checked-in release notes and P-RC1/2
   Evidence;
 - unresolved Critical/High: `0 / 0`.
+
+Final Judge decision: `PASS / FORMAL_RELEASE_COMPLETE`. This post-release change
+is Evidence-only. Its hosted merge and cleanup are required before TASK-045 is
+left on a conversation-free fresh-main boundary.

@@ -4,7 +4,7 @@
 
 - Priority: `OWNER_MAXIMUM / RELEASE_CLOSURE`
 - DEV Profile: `DEV-4 FOUNDATION CRITICAL`
-- Status: `ALLOCATED / DEPENDENCY_WAIT`
+- Status: `ACTIVE / FULL_DESIGN_AND_CRITIC_LOCAL_PASS / HOSTED_PENDING`
 - Depends on: TASK-043, TASK-042 P-V6-4 and TASK-044
 
 ## Goal
@@ -27,4 +27,21 @@ released without claims broader than Evidence.
 
 Paid Provider, TASK-013 Native H3 replay and Production Deploy are not release
 requirements and remain separate Human Gates.
+
+## Current execution plan
+
+1. `P-RC-1`: compatibility corpus, explicit legacy discovery, registered
+   lossless copy-on-write migration, backup/restore roundtrip and bounded Asset
+   paging.
+2. `P-RC-2`: two-hour/large-library performance, integrated packaged Windows,
+   clean-install and conversation-free restart acceptance; exact SemVer decision.
+3. `P-RC-3`: release metadata branch/PR, main merge, exact SHA, annotated Tag and
+   verified GitHub Release.
+
+The current-main audit baseline is exact main
+`6703c42a3aa06a563071f1a48dc7aab113f4dfe4`; PR #72 passed `9 / 9` and TASK-044
+is hosted-closed. Existing compatibility/recovery/NLE focused tests pass `94 / 94`.
+Detailed design and two Critic rounds close at unresolved Critical/High `0 / 0`.
+Implementation starts only after this design checkpoint is hosted-closed and
+fresh-main P-RC-1 is reselected.
 

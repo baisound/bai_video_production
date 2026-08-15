@@ -7,9 +7,9 @@
 - Product package: `0.20.1`
 - Stable formal Release: `v0.20.1`
 - Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Current development main: `8dd6434a65115d88641d0942b08788a9eceda279` (PR #47 TASK-041 Audio Workspace Product promotion merge)
-- Current Product state: `V0_20_1_RELEASED / R3_CONTROL_LOOP_COMPLETE / R4_AUDIO_WORKSPACE_PRODUCT_PROMOTION_HOSTED_CLOSED / NATIVE_RUNTIME_PARKED`
-- Active implementation branch: `NONE`
+- Current development main: `6703c42a3aa06a563071f1a48dc7aab113f4dfe4` (PR #72 TASK-044 P-NLE-4 merge)
+- Current Product state: `V0_20_1_RELEASED / TASK_044_HOSTED_CLOSED / TASK_045_RELEASE_CLOSURE_DESIGN_ACTIVE / NATIVE_RUNTIME_PARKED`
+- Active implementation branch: `NONE`; current design branch is `refactor/task-045-release-closure-design`
 
 Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
 
@@ -25,6 +25,8 @@ Current main is newer than the stable release because bounded R2-R4 Product deve
 - TASK-013 incident-derived safe-runtime launch-flag hardening rejects every force-restart memory flag and assignment form before durable reservation or external queue side effects.
 - TASK-013 now exposes a hosted-closed explicit read-only runtime readiness preflight through the Product application/Shell bridge. PR #45 exact head `f0d3a95` passed `9 / 9` and merged at `fac1a2fb`; it reuses the real pre-dispatch checks but cannot queue, create a journal/output, authorize execution or satisfy the Native Gate.
 - TASK-041 Audio Workspace Product promotion is hosted-closed. PR #47 exact head `3785e44a` passed all `9 / 9` checks and merged at exact main `8dd6434a`; the Product Application and unified Desktop workspace provide durable placement review and exact Human decisions over accepted/locked SE/BGM/NARRATION Candidates. Provider, paid execution, media-byte writes, TASK-026 compilation and Resolve/Cubase mutation remain separate and unstarted.
+- TASK-043 Product Project/migration planning/recovery foundation and TASK-042 P-V6-4 Timeline Audio are hosted-closed.
+- TASK-044 P-NLE-1..4 is hosted-closed. PR #72 exact head `ac5b2956e0a0e881a4cf0a58f414eaab826c2fb2` passed `9 / 9` and merged at exact main `6703c42a3aa06a563071f1a48dc7aab113f4dfe4`; dynamic Timeline/Edit/Export Shell and bounded packaged Windows acceptance are integrated.
 
 ## Current parked boundary
 
@@ -34,6 +36,7 @@ No contained generated output, TASK-037 Candidate, TASK-040 Attempt binding, TAS
 
 ## Remaining Product scope
 
+- TASK-045 executable supported migration/legacy corpus, large-project performance, integrated native/clean-install/restart acceptance and exact Release closure;
 - full multi-slice TASK-027 production orchestration;
 - remaining TASK-013 native generation and post-native Candidate/Audit binding;
 - TASK-014 Owner Narration, TASK-026 Audio Placement compilation/execution and later TASK-041 audio-processing slices;
@@ -45,6 +48,9 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 
 ## Current verification
 
+- PR #72 exact head `ac5b2956e0a0e881a4cf0a58f414eaab826c2fb2`: `9 / 9 PASS`; exact main merge `6703c42a3aa06a563071f1a48dc7aab113f4dfe4`
+- TASK-044 P-NLE-4 focused Windows/WSL2 `60 / 60`, full Windows `1109 passed, 1 skipped`, full WSL2 `1110 / 1110`, packaged Windows native PASS
+- TASK-045 audit baseline compatibility/recovery/NLE focused tests: `94 / 94 PASS`
 - PR #47 exact head `3785e44a211b8c4d81005060bc8a1faff161870d`: `9 / 9 PASS`; exact main merge `8dd6434a65115d88641d0942b08788a9eceda279`
 - TASK-041 focused regression: `64 / 64 PASS`
 - TASK-041 full WSL2 regression: `932 / 932 PASS`

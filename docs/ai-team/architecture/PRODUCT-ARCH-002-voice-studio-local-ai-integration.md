@@ -1,7 +1,7 @@
 # PRODUCT-ARCH-002 — Voice Studio and Local AI Integration
 
 Date: 2026-08-15
-Status: `PROPOSED_CANONICAL / HOSTED_CLOSURE_PENDING`
+Status: `CANONICAL / P_VS_0_HOSTED_CLOSED / P_VS_1A_BACKEND_PARALLEL_LOCK_ACTIVE / P_VS_1B_MOCK_GATED`
 Exact base main: `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`
 
 ## Decision
@@ -79,12 +79,24 @@ EXE-only layout invention is prohibited.
 
 ## Delivery order
 
-1. Host this architecture/roadmap intake.
-2. Complete TASK-036 P-UX-1C against the unchanged V6.1.1 mock.
-3. Approve a successor canonical mock for the Voice Studio destination.
-4. Implement TASK-046 P-VS-1 non-executing foundation.
-5. Establish exact local model/runtime/license evidence.
-6. Run the Japanese owner-only local/free 60–90 second vertical slice.
-7. Add recording/fine-tuning/calibration, then OBS and optional finishing.
-8. Add broader Local Creative AI/Managed Runtime and locale gates only after
+1. Retain the P-VS-0 architecture/roadmap intake hosted by PR #90 at exact
+   main `25e2e04fb3360af77017a4a42e868fc95b15ec80`.
+2. Host and read the disjoint P-UX-1C/P-VS-1A Work Lock Registry.
+3. Complete TASK-036 P-UX-1C against the unchanged V6.1.1 mock while P-VS-1A
+   may develop only its Shell-independent, body-free, non-executing Backend on
+   a separate fresh-main branch.
+4. After P-UX-1C hosted closure, rebase and merge P-VS-1A with overlap `0`.
+5. Approve a successor canonical mock for the Voice Studio destination, then
+   separately authorize P-VS-1B Shell/TASK-014 integration.
+6. Establish exact local model/runtime/license evidence.
+7. Run the Japanese owner-only local/free 60–90 second vertical slice.
+8. Add recording/fine-tuning/calibration, then OBS and optional finishing.
+9. Add broader Local Creative AI/Managed Runtime and locale gates only after
    the vertical slice is traceable and recoverable.
+
+P-VS-1A does not store voice/audio bodies and does not download, load or invoke
+an Engine. Its new domain type is `VoiceProfileRevision`; the existing
+`owner_narration.py::VoiceProfile` remains the canonical narration identity and
+must not be duplicated. P-VS-1B remains blocked by the successor-mock and separate
+Authorization gates. The hosted architecture therefore describes a future
+runtime boundary; it does not claim Voice Studio runtime implementation.

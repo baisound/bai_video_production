@@ -5,6 +5,19 @@ Exact base main: `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`
 Branch: `codex/task-046-voice-studio-roadmap-intake`
 Unit: `DESIGN_AND_GOVERNANCE_ONLY`
 
+## Hosted closure
+
+- PR: `#90` / `https://github.com/baisound/bai_video_production/pull/90`
+- Exact head: `664722d0fac8cc0e79f7c424c6911f4651ceb303`
+- Hosted checks: `9 / 9 PASS`
+- Merged: `2026-08-15T07:07:43Z`
+- Exact main merge: `25e2e04fb3360af77017a4a42e868fc95b15ec80`
+- Post-merge main CI: PASS, workflow `31871164920`
+- Post-merge main Security: PASS, workflow `31871164981`
+
+P-VS-0 is `HOSTED_CLOSED`. The former `HOSTED_PENDING` state is historical and
+must not be used as the current Consumer route.
+
 ## Current OS audit and Source of Truth
 
 The current BAI Video Production checkout and GitHub main are newer than the
@@ -33,14 +46,18 @@ The final sequence is:
 
 1. P-VS-0 documentation-only intake and hosted closure.
 2. TASK-036 P-UX-1C native parity closure against unchanged V6.1.1.
-3. TASK-046 P-VS-1 non-executing Voice foundation.
-4. exact local voice Model/Runtime/License capability decision.
-5. P-VS-2 Japanese, owner-only, Local/free 60–90 second vertical slice.
-6. P-VS-3 recording/Dataset and P-VS-4 fine-tuning.
-7. TASK-048 quality calibration.
-8. TASK-047 OBS capture.
-9. TASK-035 RX 12/REAPER finishing.
-10. Managed Runtime, broader Local Creative AI and staged locale gates.
+3. TASK-046 P-VS-1A Shell-independent, body-free, non-executing Voice Backend
+   may develop in parallel under its hosted disjoint File Lock, but merges only
+   after P-UX-1C hosted closure and fresh-main rebase.
+4. reviewed successor canonical mock, followed by separately authorized
+   P-VS-1B Shell/TASK-014 integration.
+5. exact local voice Model/Runtime/License capability decision.
+6. P-VS-2 Japanese, owner-only, Local/free 60–90 second vertical slice.
+7. P-VS-3 recording/Dataset and P-VS-4 fine-tuning.
+8. TASK-048 quality calibration.
+9. TASK-047 OBS capture.
+10. TASK-035 RX 12/REAPER finishing.
+11. Managed Runtime, broader Local Creative AI and staged locale gates.
 
 This moves the vertical slice ahead of breadth while preserving the existing
 mock-authority route. It does not claim the native vertical slice complete.
@@ -63,11 +80,15 @@ mock-authority route. It does not claim the native vertical slice complete.
 No `src/`, runtime, schema, package-version, release, native-app or external
 Project change is allowed in P-VS-0.
 
-## Builder design — first implementation unit P-VS-1
+## Builder design — first implementation unit P-VS-1A
 
-After P-VS-0 and P-UX-1C hosted closure, fresh main may implement only:
+After P-VS-0 and the parallel Work Lock Registry are hosted, an isolated
+fresh-main P-VS-1A branch may implement only the following. Its main merge
+still waits for P-UX-1C hosted closure and fresh-main rebase:
 
-- immutable private `VoiceProfile` revision and consent/license status;
+- immutable private `VoiceProfileRevision` metadata and consent/license status,
+  while `owner_narration.py::VoiceProfile` remains the read-only canonical
+  narration identity;
 - project-local atomic/CAS store with no raw voice body in public projections;
 - local engine capability interface and non-executing preflight;
 - deterministic public/private projection and secret/path redaction;
@@ -75,17 +96,20 @@ After P-VS-0 and P-UX-1C hosted closure, fresh main may implement only:
 
 Tentative exact implementation files:
 
-- `src/ai_video_production/voice_profile.py`
+- `src/ai_video_production/voice_profile_revision.py`
 - `src/ai_video_production/voice_profile_store.py`
 - `src/ai_video_production/voice_studio_application.py`
-- `src/ai_video_production/__init__.py`
-- `schemas/voice-profile.schema.json`
-- `src/ai_video_production/schema_resources/voice-profile.schema.json`
-- focused `tests/test_task046_*.py`
-- the minimal Product-owned documentation/Evidence/CHANGELOG files needed for
-  truthful synchronization.
+- `schemas/voice-profile-revision.schema.json`
+- `src/ai_video_production/schema_resources/voice-profile-revision.schema.json`
+- `tests/test_task046_voice_profile_foundation.py`
+- `docs/ai-team/tasks/TASK-046/p-vs-1a-*.md`
 
-P-VS-1 excludes recording, audio body import, engine/model download, TTS,
+`src/ai_video_production/owner_narration.py` and the existing shared Product
+stores are read-only dependencies. Package exports, global current-state,
+Roadmap, Architecture, CHANGELOG and release files require a separate
+Integration Lock and are not P-VS-1A implementation Allowed Files.
+
+P-VS-1A excludes recording, audio body import, engine/model download, TTS,
 training, OBS, RX/REAPER, Cloud/paid execution, Shell changes, external writes,
 version, Tag, Release and Deploy.
 
@@ -124,7 +148,7 @@ Decision: `CHANGES_REQUIRED`.
 
 Findings:
 
-1. **High — P-VS-1 still risked implicit execution.** A local adapter interface
+1. **High — P-VS-1A still risked implicit execution.** A local adapter interface
    could be read as permission to download or invoke a Model.
 2. **High — encrypted-data claims preceded an implementation route.** Private
    voice bodies must not be persisted until the encryption/recovery contract is
@@ -137,7 +161,7 @@ Findings:
 
 Corrections:
 
-- P-VS-1 is explicitly non-executing and body-free; exact model download and
+- P-VS-1A is explicitly non-executing and body-free; exact model download and
   invocation are excluded.
 - Raw/Dataset persistence is deferred to the encrypted recording slice.
 - P-VS-2 native work is parked until exact Model/License/Runtime and applicable
@@ -155,9 +179,11 @@ P-VS-0 may be committed and hosted as a documentation-only PR. It formally
 allocates TASK-046/047/048 and corrects current-state/roadmap drift. It does not
 authorize runtime behavior.
 
-After P-VS-0 is all-green on main, TASK-036 P-UX-1C is hosted-closed and the
-successor Voice Studio canonical mock is hosted, fresh-main AUTONOMY may start
-P-VS-1 within its exact body-free Allowed Files.
+After P-VS-0 and the Work Lock Registry are all-green on main, fresh-main
+AUTONOMY may start P-VS-1A within its exact body-free Allowed Files while
+P-UX-1C continues in its disjoint Lock. P-VS-1A may merge only after P-UX-1C
+hosted closure and fresh-main rebase. The successor Voice Studio canonical mock
+must be hosted before separately authorized P-VS-1B Shell/TASK-014 integration.
 Native Model download/generation, recording, training, private audio storage,
 OBS/RX/REAPER mutation, paid/Cloud work, version, Tag, Release and Deploy remain
 parked until their explicit gates are satisfied.

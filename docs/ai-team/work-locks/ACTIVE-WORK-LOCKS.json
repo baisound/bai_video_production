@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0.0",
+  "registry_revision": 1,
+  "registry_state": "ACTIVE",
+  "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
+  "audit_base_main_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
+  "owner_directive": {
+    "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
+    "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
+    "hosting_branch": "codex/parallel-lock-task036-task046",
+    "operation": "DOCS_ONLY_LOCK_AND_ROADMAP_HOSTING"
+  },
+  "last_completed_gate": {
+    "task_unit": "TASK-046/P-VS-0",
+    "state": "HOSTED_CLOSED",
+    "pull_request": 90,
+    "head_sha": "664722d0fac8cc0e79f7c424c6911f4651ceb303",
+    "merge_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
+    "hosted_checks": "9_OF_9_PASS",
+    "post_merge_ci": "PASS",
+    "post_merge_security": "PASS"
+  },
+  "locks": [
+    {
+      "lock_id": "BVP-LOCK-TASK036-PUX1C",
+      "owner_agent": "開発担当",
+      "owner_thread_id": "019ff856-bb71-7da0-a6fd-088ae06b158f",
+      "task_unit": "TASK-036/P-UX-1C",
+      "branch": "codex/task-036-v611-packaged-native-closure",
+      "base_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
+      "status": "ACTIVE",
+      "implementation_state": "PAUSED_PROTECTED_WIP_UNTIL_HOSTING_MERGE_AND_WIP_HASH_MATCH",
+      "wip_hash_manifest": "BAI_VIDEO_PRODUCTION_PARALLEL_DEVELOPMENT_LOCK_HANDOFF_Ver1.0_2026-08-15/WIP_FILE_SHA256.txt",
+      "allowed_files": [
+        "src/ai_video_production/interactive_timeline.py",
+        "src/ai_video_production/interactive_timeline_application.py",
+        "src/ai_video_production/interactive_timeline_edit.py",
+        "src/ai_video_production/task036_shell_ui.py",
+        "src/ai_video_production/task036_shell_v611.py",
+        "src/ai_video_production/task036_trusted_launcher.py",
+        "src/ai_video_production/task044_nle_shell.py",
+        "tests/test_task036_v611_interaction_contract.py",
+        "tests/test_task036_v611_visual_contract.py",
+        "tests/test_task036_pux1c_native_closure_contract.py",
+        "tests/test_task044_nle_shell_ui.py",
+        "tests/test_task044_timeline_edit_history.py",
+        "tools/windows/run-task036-pux1c-native-closure.ps1",
+        "docs/ai-team/tasks/TASK-036/p-ux-1c-*.md",
+        "evidence/native/task036-pux1c-*/**"
+      ],
+      "release_conditions": [
+        "WIP_FILE_SHA256_MATCH",
+        "LATEST_PACKAGED_NATIVE_GATE_PASS",
+        "POST_CHANGE_WINDOWS_FULL_REGRESSION_PASS",
+        "POST_CHANGE_WSL2_FULL_REGRESSION_PASS",
+        "CRITIC_AND_JUDGE_PASS",
+        "HOSTED_CHECKS_ALL_GREEN",
+        "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_PASS"
+      ]
+    },
+    {
+      "lock_id": "BVP-LOCK-TASK046-PVS1A",
+      "owner_agent": "開発担当2",
+      "owner_thread_id": null,
+      "assignment_state": "RESERVED_FOR_DEVELOPER_2_NOT_STARTED",
+      "task_unit": "TASK-046/P-VS-1A",
+      "branch": "codex/task-046-p-vs-1a-body-free-backend",
+      "base_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
+      "status": "ACTIVE",
+      "implementation_state": "FRESH_MAIN_AUDIT_DESIGN_CRITIC_JUDGE_REQUIRED_BEFORE_PATCH",
+      "allowed_files": [
+        "src/ai_video_production/voice_profile_revision.py",
+        "src/ai_video_production/voice_profile_store.py",
+        "src/ai_video_production/voice_studio_application.py",
+        "schemas/voice-profile-revision.schema.json",
+        "src/ai_video_production/schema_resources/voice-profile-revision.schema.json",
+        "tests/test_task046_voice_profile_foundation.py",
+        "docs/ai-team/tasks/TASK-046/p-vs-1a-*.md"
+      ],
+      "read_only_dependencies": [
+        "src/ai_video_production/owner_narration.py",
+        "src/ai_video_production/atomic.py",
+        "src/ai_video_production/errors.py",
+        "src/ai_video_production/serialization.py",
+        "src/ai_video_production/product_project_store.py"
+      ],
+      "canonical_reuse_invariants": [
+        "owner_narration.py::VoiceProfile_REMAINS_EXISTING_CANONICAL_IDENTITY",
+        "NO_SECOND_VOICEPROFILE_CLASS_OR_DUPLICATE_NARRATION_PLANNER",
+        "NEW_DOMAIN_TYPE_IS_VOICEPROFILE_REVISION_METADATA_ONLY"
+      ],
+      "merge_conditions": [
+        "TASK036_PUX1C_HOSTED_CLOSED",
+        "FRESH_MAIN_REBASE",
+        "LOCK_OVERLAP_ZERO",
+        "WINDOWS_AND_WSL2_FULL_REGRESSION_PASS",
+        "CRITIC_AND_JUDGE_PASS",
+        "HOSTED_CHECKS_ALL_GREEN"
+      ]
+    }
+  ],
+  "shared_integration_files": [
+    "PROJECT.md",
+    "CHANGELOG.md",
+    "docs/ai-team/current-state.md",
+    "docs/ai-team/task-index.md",
+    "docs/roadmap/PROJECT-ROADMAP-CANONICAL.md",
+    "docs/ai-team/architecture/PRODUCT-ARCH-002-voice-studio-local-ai-integration.md",
+    "docs/ai-team/tasks/TASK-046/task.md",
+    "src/ai_video_production/__init__.py",
+    "pyproject.toml",
+    ".github/**"
+  ],
+  "integration_lock": {
+    "lock_id": "BVP-INTEGRATION-LOCK-PARALLEL-HOSTING-20260815",
+    "owner_agent": "開発担当",
+    "owner_thread_id": "019ff856-bb71-7da0-a6fd-088ae06b158f",
+    "branch": "codex/parallel-lock-task036-task046",
+    "base_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
+    "status": "RELEASED_BY_REGISTRY_HOSTING_MERGE",
+    "scope": "DOCS_ONLY_INITIAL_LOCK_AND_ROADMAP_HOSTING",
+    "allowed_files": [
+      "PROJECT.md",
+      "CHANGELOG.md",
+      "docs/ai-team/current-state.md",
+      "docs/ai-team/task-index.md",
+      "docs/roadmap/PROJECT-ROADMAP-CANONICAL.md",
+      "docs/ai-team/architecture/PRODUCT-ARCH-002-voice-studio-local-ai-integration.md",
+      "docs/ai-team/tasks/TASK-046/task.md",
+      "docs/ai-team/tasks/TASK-046/p-vs-0-roadmap-intake-design-review-authorization-2026-08-15.md",
+      "docs/ai-team/tasks/TASK-046/voice-studio-acceptance-matrix-2026-08-15.md",
+      "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json",
+      "docs/ai-team/work-locks/TASK-036_TASK-046_PARALLEL-ALLOCATION.md",
+      "docs/ai-team/work-locks/parallel-lock-roadmap-hosting-governance-evidence-2026-08-15.md"
+    ]
+  },
+  "global_denied_operations": [
+    "MODEL_DOWNLOAD_LOAD_OR_INFERENCE",
+    "VOICE_OR_AUDIO_BODY_PERSISTENCE",
+    "RECORDING_OR_TRAINING",
+    "CREDENTIAL_OR_PAID_OR_CLOUD_PROVIDER",
+    "AMBIGUOUS_EXTERNAL_APPLICATION_MUTATION",
+    "HUMAN_ACCEPT_OR_LOCK",
+    "VERSION_TAG_RELEASE_OR_DEPLOY"
+  ],
+  "merge_order": [
+    "LOCK_AND_ROADMAP_HOSTING",
+    "TASK-036/P-UX-1C_HOSTED_CLOSURE",
+    "TASK-046/P-VS-1A_FRESH_MAIN_REBASE_AND_MERGE",
+    "VOICE_SUCCESSOR_CANONICAL_MOCK",
+    "TASK-046/P-VS-1B_SEPARATE_AUTHORIZATION"
+  ]
+}

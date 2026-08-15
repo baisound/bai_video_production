@@ -4,17 +4,18 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_046_P_VS_0_ROADMAP_INTAKE_LOCAL_PASS / HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_21_0_RELEASED / TASK_046_P_VS_0_HOSTED_CLOSED / TASK_036_P_UX_1C_ACTIVE / PARALLEL_WORK_LOCKS_HOSTED / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
-- Last Completed Consumer Gate: `TASK-036 P-UX-1B implementation`; PR #89 passed hosted `9 / 9`, merged at exact main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`, passed post-merge main CI/Security, and completed remote branch/dedicated-checkout cleanup
-- Active Consumer Task: `TASK-046 / P-VS-0 VOICE STUDIO ROADMAP INTAKE / codex/task-046-voice-studio-roadmap-intake`; exact base main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`; package integrity, audit, OR-01..32/Q1..44 Crosswalk, TASK-046/047/048 allocation, DEV-4, Architecture, Allowed Files, Builder design, two Critic passes and Judge pass locally; documentation-only hosted closure is pending
+- Last Completed Consumer Gate: `TASK-046 P-VS-0 documentation-only intake`; PR #90 exact head `664722d0fac8cc0e79f7c424c6911f4651ceb303` passed hosted `9 / 9`, merged at exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`, and passed post-merge main CI/Security
+- Active Consumer Task: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE / codex/task-036-v611-packaged-native-closure`; the uncommitted WIP/Evidence remains protected, and implementation resumes only after `BVP-LOCK-TASK036-PUX1C` is read from main and `WIP_FILE_SHA256.txt` matches
+- Parallel Reserved Consumer Task: `TASK-046 / P-VS-1A BODY-FREE VOICEPROFILE BACKEND / codex/task-046-p-vs-1a-body-free-backend`; `BVP-LOCK-TASK046-PVS1A` permits a fresh-main branch to develop only the non-executing body-free Backend, while its main merge waits for P-UX-1C hosted closure and fresh-main rebase
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `P-VS-0 documentation PR -> hosted 9/9 -> exact main merge -> cleanup -> fresh-main TASK-036 P-UX-1C native parity closure -> successor canonical Voice mock -> TASK-046 P-VS-1 body-free foundation; Native Model/download/voice processing remains separately gated`
+- Next Consumer Decision Gate: `hosted Lock Registry -> P-UX-1C WIP hash match -> P-UX-1C native/full closure; in parallel P-VS-1A body-free Backend may develop on its isolated Lock but merges only after P-UX-1C hosted closure; successor canonical Voice mock -> P-VS-1B Shell/TASK-014 integration; Native Model/download/voice processing remains separately gated`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -118,7 +119,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.85 Addendum LXXIX. TASK-036 P-UX-1B is hosted-closed by PR #89 at exact main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`, with post-merge CI/Security and cleanup complete. The Voice Studio Ver.1.2 intake is locally reconciled as TASK-046/047/048 plus bounded existing-Task extensions. P-UX-1C remains immediately before any Voice Shell change; a successor canonical mock must precede the Voice top-level destination. Then TASK-046/014 prioritize the Japanese owner-only local/free 60–90 second vertical slice before recording breadth, OBS, RX, broad Creative AI or locale expansion. Overall visual parity and native Voice completion remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.86 Addendum LXXX. TASK-046 P-VS-0 is hosted-closed by PR #90 at exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`, with post-merge CI/Security PASS. TASK-036 P-UX-1C is the active V6.1.1 native-parity route. P-VS-1A is split out as a Shell-independent, voice-body-free, non-executing Backend that may develop in parallel under a disjoint hosted File Lock but may merge only after P-UX-1C hosted closure and fresh-main rebase. A successor canonical mock remains mandatory before P-VS-1B adds any Voice destination, Shell or TASK-014 integration. Overall visual parity and native Voice completion remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

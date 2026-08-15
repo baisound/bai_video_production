@@ -1,9 +1,10 @@
 # TASK-046 — Voice Studio / Voice Dataset & Local Voice Profile
 
-- Status: `FORMALLY_ALLOCATED / DESIGN_ONLY / IMPLEMENTATION_PENDING_HOSTED_AUTHORIZATION`
-- Authorization: `OWNER_DIRECTED_ROADMAP_AND_DESIGN`
+- Status: `P_VS_0_HOSTED_CLOSED / P_VS_1A_PARALLEL_LOCK_ACTIVE / P_VS_1B_SUCCESSOR_MOCK_GATED`
+- Authorization: `OWNER_DIRECTED_ROADMAP_AND_BOUNDED_P_VS_1A_IMPLEMENTATION`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Exact allocation base: `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`
+- P-VS-0 hosted closure: PR #90 / exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`
 - Canonical input: `docs/ai-team/product-design/voice-studio/BAI_VIDEO_PRODUCTION_VOICE_STUDIO_LOCAL_AI_OBS_統合詳細設計書_Ver1.2.md`
 
 ## Goal
@@ -34,20 +35,26 @@ Timeline/Export Queue.
 
 ## Slices
 
-1. `P-VS-0` — current-state intake, Crosswalk, architecture, roadmap and Task
-   allocation. Documentation only.
-2. `P-VS-1` — project-local VoiceProfile/Consent/License contracts, immutable
-   revisions, non-executing local-engine capability preflight and Shell-neutral
-   application boundary. No model download or generation.
-3. `P-VS-2` — Japanese, one-speaker, local/free zero-shot 60–90 second vertical
+1. `P-VS-0` — hosted-closed current-state intake, Crosswalk, architecture,
+   roadmap and Task allocation. Documentation only.
+2. `P-VS-1A` — project-local `VoiceProfileRevision`/Consent/License references,
+   immutable metadata revisions, public/private projection, atomic/CAS store,
+   tamper/restart and non-executing local-engine capability description. It is
+   Shell-independent and stores no voice/audio body. The existing
+   `owner_narration.py::VoiceProfile` remains the canonical narration identity;
+   P-VS-1A must not create a second `VoiceProfile` class or narration planner.
+3. `P-VS-1B` — successor-mock-governed Voice destination, Shell and TASK-014
+   integration. It requires a separate Authorization and does not inherit
+   Engine execution authority from P-VS-1A.
+4. `P-VS-2` — Japanese, one-speaker, local/free zero-shot 60–90 second vertical
    slice through TASK-014, Asset/Candidate, Placement, Timeline, Export Queue
    and QA. Native execution needs exact model/license/runtime Evidence and the
    applicable explicit Human Gate.
-4. `P-VS-3` — 48 kHz/24-bit/mono teleprompter recording, preflight,
+5. `P-VS-3` — 48 kHz/24-bit/mono teleprompter recording, preflight,
    pause/resume/checkpoint and Dataset review.
-5. `P-VS-4` — 30/60/90/120 minute fine-tuning revisions, exclusive resource
+6. `P-VS-4` — 30/60/90/120 minute fine-tuning revisions, exclusive resource
    mode, comparison and Production approval.
-6. `P-VS-5` — style coverage, Semantic Direction, recording-coach proposals,
+7. `P-VS-5` — style coverage, Semantic Direction, recording-coach proposals,
    Japanese linguistic processing and later locale gates.
 
 ## Shell and mock authority
@@ -57,8 +64,10 @@ be added ad hoc to the packaged Shell. TASK-036 P-UX-1C first closes the
 current V6.1.1 mock acceptance. A later Voice Studio UI unit must create and
 approve a successor canonical mock revision that preserves the V6.1.1 design
 language before changing the EXE. Runtime-only divergence is an acceptance
-failure. The Owner-directed sequence places that successor mock immediately
-after P-UX-1C and before P-VS-1 even though P-VS-1 itself is Shell-neutral.
+failure. P-VS-1A may develop in parallel because it is Shell-independent and
+body-free, but it may merge only after P-UX-1C hosted closure and fresh-main
+rebase. The successor mock remains immediately after P-UX-1C and before
+P-VS-1B changes the Shell or connects TASK-014.
 
 ## Exit criteria
 

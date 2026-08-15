@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.85
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.86
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-036 P-UX-1B is hosted-closed by PR #89 at exact main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`, with post-merge CI/Security and cleanup complete. TASK-046 P-VS-0 now reconciles the checksum-verified Voice Studio Ver.1.2 input, formally allocates TASK-046/047/048 and puts P-UX-1C plus a successor canonical mock before Voice Shell changes. After that, the Japanese owner-only Local/free 60–90 second Voice vertical slice precedes recording breadth, OBS, RX, broad Creative AI and locale expansion. Overall visual parity and native Voice completion remain unclaimed.
+- Current insertion: TASK-046 P-VS-0 is hosted-closed by PR #90 at exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`, with hosted `9 / 9` and post-merge CI/Security PASS. TASK-036 P-UX-1C is active against the unchanged V6.1.1 mock. P-VS-1A is split out as a Shell-independent, body-free, non-executing VoiceProfile Backend that may develop in parallel under a disjoint hosted File Lock, but it may merge only after P-UX-1C hosted closure and fresh-main rebase. A successor canonical mock remains mandatory before P-VS-1B adds Voice Shell/TASK-014 integration. Overall visual parity and native Voice completion remain unclaimed.
 
 ## 3. MVP定義
 
@@ -105,7 +105,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION HOSTED CLOSED / PR #86 / MAIN 0e457e69 |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1B HOSTED CLOSED / P-UX-1C NEXT |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1B HOSTED CLOSED / P-UX-1C ACTIVE PROTECTED WIP |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -115,7 +115,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
 | 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED CLOSED |
-| 046 | Voice Studio / Voice Dataset & Local Voice Profile | private VoiceProfile/Dataset, teleprompter, capture preflight, zero-shot/fine-tune admission, style coverage and Owner-only 60–90 s vertical slice | 003,006,014,020,022,023,026,036,037,041,043,044 | DEV-4 | P-VS-0 ROADMAP INTAKE LOCAL PASS / HOSTED PENDING |
+| 046 | Voice Studio / Voice Dataset & Local Voice Profile | private VoiceProfile/Dataset, teleprompter, capture preflight, zero-shot/fine-tune admission, style coverage and Owner-only 60–90 s vertical slice | 003,006,014,020,022,023,026,036,037,041,043,044 | DEV-4 | P-VS-0 HOSTED CLOSED / P-VS-1A PARALLEL LOCK ACTIVE / P-VS-1B SUCCESSOR MOCK GATED |
 | 047 | OBS Voice Capture Integration | x64 OBS audio-filter Plugin, authenticated local IPC, Owner-mic consent, VAD/ASR/quality candidate and Dataset review | 006,020,023,043,046 | DEV-4 | FORMALLY ALLOCATED / DESIGN QUEUED AFTER VOICE VERTICAL SLICE |
 | 048 | Voice Quality Calibration | separate Calibration Dataset, Gold labels, versioned Analyzer/score profiles, threshold simulation, drift and Human decision trace | 014,038,041,046 | DEV-4 | FORMALLY ALLOCATED / DESIGN QUEUED AFTER VOICE VERTICAL SLICE |
 
@@ -2175,14 +2175,17 @@ jobs, Timeline, Export, Shell, resource and finishing truth.
 The new top-level Voice destination cannot be inserted directly into the EXE
 because V6.1.1 is the Owner's absolute mock authority. The fixed order is:
 
-1. host this documentation-only P-VS-0 intake;
-2. complete TASK-036 P-UX-1C against unchanged V6.1.1;
-3. approve a successor canonical mock using the V6.1.1 design language;
-4. implement P-VS-1 body-free VoiceProfile/Consent/License and non-executing
-   local-engine foundation;
-5. after exact Model/Runtime/License and applicable Human gates, complete the
+1. retain the hosted-closed P-VS-0 intake from PR #90;
+2. host the disjoint P-UX-1C/P-VS-1A Work Lock Registry;
+3. complete TASK-036 P-UX-1C against unchanged V6.1.1 while P-VS-1A may
+   develop only its Shell-independent, body-free, non-executing Backend on a
+   separate branch;
+4. after P-UX-1C hosted closure, rebase and merge P-VS-1A with zero overlap;
+5. approve a successor canonical mock using the V6.1.1 design language, then
+   authorize P-VS-1B Shell/TASK-014 integration separately;
+6. after exact Model/Runtime/License and applicable Human gates, complete the
    Japanese, one-speaker, Local/free 60–90 second vertical slice;
-6. only then expand recording/fine-tuning, calibration, OBS, RX/REAPER,
+7. only then expand recording/fine-tuning, calibration, OBS, RX/REAPER,
    Managed Runtime, broader Creative AI and locale gates.
 
 Japanese is L1. English, Simplified Chinese, Korean and Taiwan Traditional
@@ -2200,3 +2203,42 @@ No runtime/schema/package behavior, Model download, voice processing, paid or
 Cloud execution, Credential, private audio storage, OBS/RX/REAPER/Resolve/
 Cubase mutation, version, Tag, Release or Deploy is authorized by this
 Addendum.
+
+## Addendum LXXX - Hosted Parallel Work Locks and P-VS-1 Split
+
+TASK-046 P-VS-0 PR #90 exact head
+`664722d0fac8cc0e79f7c424c6911f4651ceb303` passed all `9 / 9` hosted checks
+and merged at exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`.
+Post-merge main CI and Security also passed. The prior `HOSTED_PENDING` state
+is therefore superseded by `P_VS_0_HOSTED_CLOSED`.
+
+The Owner-authorized parallel-development Lock Registry is
+`docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json`. It gives TASK-036 P-UX-1C
+exclusive ownership of the existing Timeline/Track/Shell/native-closure WIP
+files and reserves a disjoint set of new VoiceProfile Backend files for
+TASK-046 P-VS-1A. Shared status, roadmap, architecture, package export and
+release files remain Integration-Lock-only.
+
+P-VS-1 is split as follows:
+
+- `P-VS-1A`: Shell-independent, body-free and non-executing
+  `VoiceProfileRevision` metadata, Consent/License reference, public/private projection, CAS/atomic
+  persistence, tamper/restart and capability-description Backend. It may be
+  developed in parallel after the hosted Lock is read from fresh main. It may
+  merge only after P-UX-1C hosted closure, fresh-main rebase, overlap `0`,
+  full regression and its own Critic/Judge closure.
+  The existing `owner_narration.py::VoiceProfile` remains the canonical
+  narration identity; no second `VoiceProfile` class or planner is allowed.
+- `P-VS-1B`: Voice destination, Shell, TASK-014 connection and any approach to
+  real voice bodies or Engine execution. It remains blocked until a reviewed
+  successor canonical mock and a separate Authorization exist.
+
+P-UX-1C remains the active Consumer Task. Its existing uncommitted WIP and
+Evidence are protected in place; no copy, stash relocation, reset, clean or
+premature completion claim is allowed. Native Gate and post-change Windows/
+WSL2 full regression remain required before P-UX-1C closure.
+
+This Addendum and its Lock Registry change Governance documents only. They do
+not authorize Model download/load/inference, recording, training, audio body
+storage, Credential, Cloud/paid Provider, external application mutation,
+Human ACCEPT/LOCK, version, Tag, Release or Deploy.

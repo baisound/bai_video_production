@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 8,
+  "registry_revision": 9,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "1c94fac10f2c4beb9c31b2eccb85f97d531fabde",
+  "audit_base_main_sha": "00e1c75f186b0ba0240d75a96c5bf33fde224e19",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -20,20 +20,19 @@
     "implementation_authorization_implied": false
   },
   "last_completed_gate": {
-    "task_unit": "TASK-046/P-VS-3A",
+    "task_unit": "TASK-047/P-OBS-1A-CONTRACT-HOST",
     "state": "HOSTED_CLOSED_RELEASED",
-    "pull_request": 101,
-    "base_sha": "42d8227803579c60af9b1da72c3920299d0e4883",
-    "head_sha": "e63735a6a3b73a105bfa675afc9a12480597d3e5",
-    "merge_sha": "a7690917b2c05c44372a1c7ea6dd81d422b1aa88",
-    "changed_files": 6,
-    "implementation_blobs_unchanged": "5_OF_5_PASS",
-    "changelog_scope": "ONE_APPROVED_LINE_ONLY",
-    "schema_mirror": "BYTE_EXACT_PASS",
+    "pull_request": 102,
+    "base_sha": "a7690917b2c05c44372a1c7ea6dd81d422b1aa88",
+    "head_sha": "898555e4998173f6d77c6679ae151ba3d6ed5ff9",
+    "merge_sha": "1c94fac10f2c4beb9c31b2eccb85f97d531fabde",
+    "changed_files": 4,
+    "contract_blobs_unchanged": "4_OF_4_PASS",
     "hosted_checks": "9_OF_9_PASS",
-    "post_merge_ci_run": 31889876782,
-    "post_merge_security_run": 31889876711,
-    "post_merge_result": "PASS"
+    "post_merge_ci_run": 31890287294,
+    "post_merge_security_run": 31890287319,
+    "post_merge_result": "PASS",
+    "implementation_authority_state": "NOT_AUTHORIZED"
   },
   "locks": [
     {
@@ -434,9 +433,60 @@
       "phase": "DOCS_ONLY_CANONICAL_CONTRACT_HOSTING",
       "branch": "codex/task-047-pobs1a-contract-hosting",
       "base_sha": "24d43daa201808fa2da11c0f6d8e61bbc1ffb45c",
-      "status": "ACTIVE",
+      "status": "HOSTED_CLOSED_RELEASED",
       "implementation_authority_state": "NOT_AUTHORIZED",
       "implementation_state": "NOT_STARTED",
+      "closure_authority_id": "BVP-AUTH-20260815-TASK047-POBS1A-H2-LOCK-CLOSURE",
+      "hosted_closure": {
+        "pull_request": 102,
+        "base_sha": "a7690917b2c05c44372a1c7ea6dd81d422b1aa88",
+        "head_sha": "898555e4998173f6d77c6679ae151ba3d6ed5ff9",
+        "merge_sha": "1c94fac10f2c4beb9c31b2eccb85f97d531fabde",
+        "merge_parents": [
+          "a7690917b2c05c44372a1c7ea6dd81d422b1aa88",
+          "898555e4998173f6d77c6679ae151ba3d6ed5ff9"
+        ],
+        "changed_files": 4,
+        "contract_blobs_unchanged": "4_OF_4_PASS",
+        "content_receipts": [
+          {
+            "path": "docs/ai-team/tasks/TASK-047/p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-2026-08-15.md",
+            "git_blob_sha": "82a84898e4cc738e158acd3f77c36ac772cc387f",
+            "sha256": "5ec78a4aeaafd921b0a5f81b483a176ac99a54cbf0cce02a1db4443cf2f65362",
+            "bytes": 20234
+          },
+          {
+            "path": "docs/ai-team/tasks/TASK-047/p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-provenance.json",
+            "git_blob_sha": "c773f7e044ab967cbba3d3edc1fc648e0692fa30",
+            "sha256": "aa18f51f069c2857a02a6a63f79556b2dd9096a787d6c16e178593c4c01244a5",
+            "bytes": 8650
+          },
+          {
+            "path": "docs/ai-team/tasks/TASK-047/p-obs-1a-canonical-contract-hosting-evidence-2026-08-15.md",
+            "git_blob_sha": "579c9532ff645eb94cbecd579fde6cbc5c33d988",
+            "sha256": "b32d6dc7b2cbbe7477cbfb9e6b455d16df27d4c7874c7d7c453717488ba2cbf9",
+            "bytes": 4443
+          },
+          {
+            "path": "docs/ai-team/tasks/TASK-047/task.md",
+            "git_blob_sha": "10bdf7ce7515b90a8edce947d3b072a3d46a76f3",
+            "sha256": "c41f21b7b65fcf0f2a4a6285a2b1ebac644f78fc3c7300dfa721188add31df81",
+            "bytes": 5654
+          }
+        ],
+        "hosted_checks": "9_OF_9_PASS",
+        "pre_merge_ci_run": 31890071504,
+        "pre_merge_release_metadata_run": 31890071652,
+        "pre_merge_security_run": 31890071633,
+        "post_merge_ci_run": 31890287294,
+        "post_merge_security_run": 31890287319,
+        "post_merge_result": "PASS",
+        "main_readback": "4_OF_4_BLOB_CONTENT_HASH_AND_BYTE_LENGTH_PASS",
+        "critic_critical": 0,
+        "critic_high": 0,
+        "critic_medium": 0,
+        "implementation_or_runtime_authorized": false
+      },
       "scope": "HOST_REVIEWED_P_OBS_1A_REV2_1_DESIGN_CONTRACT_AND_PROVENANCE_ONLY",
       "lock_hosting_evidence": {
         "host_unit": "TASK-047/P-OBS-1A-CONTRACT-HOST-H0",

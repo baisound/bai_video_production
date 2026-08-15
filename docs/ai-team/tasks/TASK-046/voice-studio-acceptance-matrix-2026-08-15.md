@@ -4,10 +4,11 @@ Date: 2026-08-15
 
 | Gate | Acceptance | Evidence | Not claimed |
 |---|---|---|---|
-| P-VS-0 Intake | 13/13 hashes; OR-01..32 and Q1..44 traced; TASK-046..048 uniquely allocated; Critic 2x/Judge; current docs agree | audit, Crosswalk, roadmap, Task docs, hosted checks | runtime or Voice support |
+| P-VS-0 Intake | 13/13 hashes; OR-01..32 and Q1..44 traced; TASK-046..048 uniquely allocated; Critic 2x/Judge; PR #90 hosted 9/9 and post-merge CI/Security PASS | audit, Crosswalk, roadmap, Task docs, hosted checks, exact main `25e2e04f` | runtime or Voice support |
 | TASK-036 P-UX-1C | existing V6.1.1 clicks/drags/menus/focus/DPI/accessibility/restart pass | packaged EXE/native matrix | Voice top-level UI |
 | Successor mock | Voice destination/workspace approved in V6.1.1 design language | canonical mock revision + design review | runtime implementation |
-| P-VS-1 Foundation | private metadata revision/CAS/tamper/restart/redaction; non-executing local capability preflight | focused/full tests; schemas; Evidence | model install, audio body, generation |
+| P-VS-1A Backend | private metadata revision/CAS/tamper/restart/redaction; body-free, Shell-independent, non-executing capability description/preflight | focused/full tests; schemas; Evidence; hosted File Lock | model install, audio body, generation, Shell/TASK-014 integration |
+| P-VS-1B Product integration | successor canonical mock approved; Voice destination/Shell/TASK-014 boundary matches the mock and receives separate Authorization | canonical mock, design review, focused/full/native Evidence | model install/inference unless separately authorized |
 | Runtime/license | exact Engine/Model/hash/license/VRAM/performance established | probe and license Evidence | commercial support beyond exact artifacts |
 | P-VS-2 Vertical slice | real Japanese 60–90 s local/free path through QA/restart | Windows/WSL2/full/native/lineage/recovery | fine-tune, OBS, RX, locales |
 | P-VS-3 Recording | 48 kHz/24-bit/mono preflight, segment checkpoint, review and encrypted storage | native device/session/failure Evidence | automatic Dataset adoption |

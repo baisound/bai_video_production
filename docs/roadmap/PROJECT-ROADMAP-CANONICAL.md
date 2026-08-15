@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.77
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.78
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -1908,3 +1908,37 @@ for the all-green design PR, exact main merge, cleanup and fresh-main
 reselection. Provider dispatch/replay, paid work, Credentials, automatic Audit,
 ACCEPT/LOCK, publication, Resolve/Cubase mutation, Native H3 retry, Production
 Deploy, version change, Tag and Release remain outside this unit.
+
+## Addendum LXXII - TASK-027 P-ORCH-2 Local Implementation
+
+P-ORCH-2 Design PR #82 exact head
+`7648529c0d009942514d73dc7aec016da496b677` passed hosted `9 / 9`, merged at
+exact main `1ed59286991ff70452b3f3602bc512b1fcd38ae4`, and completed remote
+branch and clean dedicated checkout removal. Fresh-main AUTONOMY reselected the
+authorized implementation without a conflicting Source of Truth.
+
+TASK-040 now persists one immutable regeneration binding on the exact new
+Prompt version. It records parent Prompt/Attempt, non-regressing Strategy,
+normalized failure reasons and confirmed Plan checksum without Prompt body,
+Credential or host path. Prompt Registry v1.1 reads strict historical v1.0;
+ambiguous later legacy Prompts remain readable but non-runnable and are never
+guessed.
+
+New Generation Queue v1.1 entries copy this binding into deterministic exact
+execution lineage. P-ORCH-1 adoption verifies Queue against Prompt and creates
+the regenerated PASS Attempt with the same Strategy and parent, ending only at
+`READY_FOR_AUDIT`. Existing v1 Queue entries remain readable without silent
+identity rewrite. Provider execution/replay, paid work, Human Audit decision,
+ACCEPT/LOCK, publication and NLE mutation remain false.
+
+Final local gates pass: focused `59 / 59`, full WSL2 `1147 / 1147`, full
+Windows `1146 passed / 1 expected skip`, compileall and real persisted
+TASK-037/TASK-040 regenerated lineage. Two implementation Critic rounds close
+forged current Strategy, Draft/binding drift, caller authority, legacy guessing,
+migration identity rewrite and recovery lineage drift with unresolved
+Critical/High `0 / 0`.
+
+Hosted implementation PR, exact main merge and cleanup remain required before
+hosted closure and fresh-main reselection. Stable formal Release remains
+`v0.21.0`; no post-release version, Tag or Release is selected. Native H3 retry,
+paid TASK-014, Credentials and Production Deploy remain parked.

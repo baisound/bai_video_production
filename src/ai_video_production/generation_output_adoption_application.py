@@ -450,18 +450,94 @@ class Task027GenerationOutputAdoptionApplication:
             raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_SNAPSHOT_DRIFT", "Execution is not bound to the current Queue snapshot", ProductErrorCategory.DATA_INTEGRITY)
         if prompt.get("production_snapshot_sha256") != production.get("snapshot_sha256"):
             raise ProductError("ERR_OUTPUT_ADOPTION_CROSS_STORE_DRIFT", "Prompt and Production snapshots are not synchronized", ProductErrorCategory.DATA_INTEGRITY)
-        if event.get("prompt_version") != 1:
-            raise ProductError(
-                "ERR_OUTPUT_ADOPTION_REGENERATION_STRATEGY_UNBOUND",
-                "Regenerated Prompt output lacks an exact persisted strategy/parent binding",
-                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
-                details={"prompt_id": event.get("prompt_id"), "prompt_version": event.get("prompt_version")},
-            )
+        lineage = self._execution_lineage(entry)
+        prompt_row = next((
+            item for item in prompt.get("prompts", [])
+            if item.get("prompt_id") == event.get("prompt_id")
+            and item.get("prompt_version") == event.get("prompt_version")
+        ), None)
+        if prompt_row is None:
+            raise ProductError("ERR_OUTPUT_ADOPTION_PROMPT_MISSING", "Completed execution Prompt is missing from canonical Evidence", ProductErrorCategory.DATA_INTEGRITY)
+        self._require_prompt_lineage(prompt_row, event, lineage)
         if execution.get("recovery", {}).get("required") or (
             prompt.get("recovery", {}).get("required") and not allow_prompt_recovery
         ):
             raise ProductError("ERR_OUTPUT_ADOPTION_DEPENDENCY_RECOVERY_REQUIRED", "Complete exact dependency recovery before adopting another output", ProductErrorCategory.STATE)
         return execution, queue, production, prompt, entry
+
+    @staticmethod
+    def _execution_lineage(entry: Mapping[str, Any]) -> dict[str, Any]:
+        prompt_version = entry.get("prompt_version")
+        lineage = entry.get("execution_lineage")
+        if isinstance(prompt_version, bool) or not isinstance(prompt_version, int) or prompt_version < 1:
+            raise ProductError("ERR_OUTPUT_ADOPTION_REGENERATION_BINDING_INVALID", "Queue Prompt version is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        if prompt_version == 1 and lineage is None:
+            return {
+                "lineage_version": "1.0.0", "kind": "INITIAL", "strategy_level": 0,
+                "parent_attempt_id": None, "regeneration_plan_sha256": None,
+            }
+        expected_fields = {
+            "lineage_version", "kind", "strategy_level", "parent_attempt_id",
+            "regeneration_plan_sha256",
+        }
+        if not isinstance(lineage, dict) or set(lineage) != expected_fields:
+            raise ProductError(
+                "ERR_OUTPUT_ADOPTION_REGENERATION_STRATEGY_UNBOUND",
+                "Regenerated Prompt output lacks an exact persisted strategy/parent binding",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                details={"prompt_id": entry.get("prompt_id"), "prompt_version": prompt_version},
+            )
+        strategy = lineage.get("strategy_level")
+        if (
+            lineage.get("lineage_version") != "1.0.0"
+            or isinstance(strategy, bool)
+            or not isinstance(strategy, int)
+            or strategy not in range(7)
+        ):
+            raise ProductError("ERR_OUTPUT_ADOPTION_REGENERATION_BINDING_INVALID", "Queue execution lineage is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        if prompt_version == 1:
+            if lineage != {
+                "lineage_version": "1.0.0", "kind": "INITIAL", "strategy_level": 0,
+                "parent_attempt_id": None, "regeneration_plan_sha256": None,
+            }:
+                raise ProductError("ERR_OUTPUT_ADOPTION_REGENERATION_BINDING_INVALID", "Initial Queue lineage is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        elif (
+            not isinstance(prompt_version, int)
+            or prompt_version < 2
+            or lineage.get("kind") != "REGENERATION"
+            or not isinstance(lineage.get("parent_attempt_id"), str)
+            or not _ID_RE.fullmatch(lineage["parent_attempt_id"])
+            or not isinstance(lineage.get("regeneration_plan_sha256"), str)
+            or not _SHA_RE.fullmatch(lineage["regeneration_plan_sha256"])
+        ):
+            raise ProductError("ERR_OUTPUT_ADOPTION_REGENERATION_BINDING_INVALID", "Regenerated Queue lineage is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        return dict(lineage)
+
+    @staticmethod
+    def _require_prompt_lineage(
+        prompt_row: Mapping[str, Any],
+        event: Mapping[str, Any],
+        lineage: Mapping[str, Any],
+    ) -> None:
+        if event.get("prompt_version") == 1:
+            if prompt_row.get("regeneration_binding") is not None or lineage.get("kind") != "INITIAL":
+                raise ProductError("ERR_OUTPUT_ADOPTION_REGENERATION_BINDING_DRIFT", "Initial Prompt carries incompatible regeneration lineage", ProductErrorCategory.DATA_INTEGRITY)
+            return
+        binding = prompt_row.get("regeneration_binding")
+        expected = None if not isinstance(binding, dict) else {
+            "lineage_version": "1.0.0", "kind": "REGENERATION",
+            "strategy_level": binding.get("strategy_level"),
+            "parent_attempt_id": binding.get("parent_attempt_id"),
+            "regeneration_plan_sha256": binding.get("regeneration_plan_sha256"),
+        }
+        if (
+            not isinstance(binding, dict)
+            or binding.get("binding_version") != "1.0.0"
+            or binding.get("parent_prompt_id") != event.get("prompt_id")
+            or binding.get("parent_prompt_version") != event.get("prompt_version") - 1
+            or expected != lineage
+        ):
+            raise ProductError("ERR_OUTPUT_ADOPTION_REGENERATION_BINDING_DRIFT", "Queue and Prompt regeneration lineage differ", ProductErrorCategory.DATA_INTEGRITY)
 
     def snapshot(self) -> dict[str, Any]:
         store = self._load()
@@ -469,8 +545,28 @@ class Task027GenerationOutputAdoptionApplication:
         active = [item for item in latest.values() if item["state"] not in _TERMINAL_STATES]
         execution = self.generation_execution.snapshot()
         adopted_execution_ids = {item["execution_id"] for item in latest.values()}
-        eligible = [
-            {
+        eligible = []
+        queue_entries = {
+            item.get("queue_entry_id"): item
+            for item in self.generation_queue.snapshot().get("entries", [])
+        }
+        prompt_rows = {
+            (item.get("prompt_id"), item.get("prompt_version")): item
+            for item in self.prompt_evidence.snapshot().get("prompts", [])
+        }
+        for item in execution.get("latest_executions", []):
+            if item.get("state") != "COMPLETED" or item.get("execution_id") in adopted_execution_ids:
+                continue
+            status = "READY"
+            try:
+                lineage = self._execution_lineage(queue_entries.get(item.get("queue_entry_id"), {}))
+                prompt_row = prompt_rows.get((item.get("prompt_id"), item.get("prompt_version")))
+                if prompt_row is None:
+                    raise ProductError("ERR_OUTPUT_ADOPTION_PROMPT_MISSING", "Prompt is missing", ProductErrorCategory.DATA_INTEGRITY)
+                self._require_prompt_lineage(prompt_row, item, lineage)
+            except ProductError:
+                status = "PARKED_STRATEGY_BINDING_REQUIRED"
+            eligible.append({
                 "execution_id": item["execution_id"],
                 "queue_entry_id": item["queue_entry_id"],
                 "slot_id": item["slot_id"],
@@ -478,11 +574,8 @@ class Task027GenerationOutputAdoptionApplication:
                 "prompt_version": item["prompt_version"],
                 "output_sha256": item["output_sha256"],
                 "media_kind": item["media_kind"],
-                "adoption_status": "READY" if item.get("prompt_version") == 1 else "PARKED_STRATEGY_BINDING_REQUIRED",
-            }
-            for item in execution.get("latest_executions", [])
-            if item.get("state") == "COMPLETED" and item.get("execution_id") not in adopted_execution_ids
-        ]
+                "adoption_status": status,
+            })
         return {
             **store,
             "latest_adoptions": list(latest.values()),
@@ -523,6 +616,7 @@ class Task027GenerationOutputAdoptionApplication:
             "execution_id": execution_id,
             "queue_entry_id": event["queue_entry_id"],
             "output_sha256": event["output_sha256"],
+            "execution_lineage": self._execution_lineage(entry),
         }
         suffix = sha256_bytes(canonical_json_bytes(seed))[7:31]
         candidate_id = f"candidate-{suffix}"
@@ -542,6 +636,7 @@ class Task027GenerationOutputAdoptionApplication:
             "slot_id": event["slot_id"],
             "candidate_id": candidate_id,
             "output_sha256": event["output_sha256"],
+            "execution_lineage": self._execution_lineage(entry),
             "human_final_confirmation_required": True,
             "provider_execution_started": False,
             "provider_execution_replayed": False,
@@ -593,14 +688,20 @@ class Task027GenerationOutputAdoptionApplication:
             raise ProductError("ERR_OUTPUT_ADOPTION_CANDIDATE_CONFLICT", "Deterministic Candidate identity conflicts with Product state", ProductErrorCategory.DATA_INTEGRITY)
 
     @staticmethod
-    def _require_attempt_exact(attempt: Mapping[str, Any], *, event: Mapping[str, Any], base: Mapping[str, Any]) -> None:
+    def _require_attempt_exact(
+        attempt: Mapping[str, Any],
+        *,
+        event: Mapping[str, Any],
+        base: Mapping[str, Any],
+        lineage: Mapping[str, Any],
+    ) -> None:
         expected = {
             "generation_job_id": event["execution_id"], "slot_id": event["slot_id"],
             "prompt_id": event["prompt_id"], "prompt_version": event["prompt_version"],
             "prompt_sha256": event["prompt_sha256"], "provider_id": event["provider_id"],
-            "model_id": event["model_id"], "strategy_level": 0, "result": "PASS",
+            "model_id": event["model_id"], "strategy_level": lineage["strategy_level"], "result": "PASS",
             "failure_codes": [], "output_candidate_id": base["candidate_id"],
-            "parent_attempt_id": None, "cost": None, "latency_ms": event.get("latency_ms"),
+            "parent_attempt_id": lineage["parent_attempt_id"], "cost": None, "latency_ms": event.get("latency_ms"),
         }
         if any(attempt.get(name) != value for name, value in expected.items()):
             raise ProductError("ERR_OUTPUT_ADOPTION_ATTEMPT_CONFLICT", "Generation Attempt identity conflicts with completed execution", ProductErrorCategory.DATA_INTEGRITY)
@@ -614,6 +715,11 @@ class Task027GenerationOutputAdoptionApplication:
         state = latest["state"]
         asset_id = latest.get("asset_id")
         asset_just_registered = False
+        queue = self.generation_queue.snapshot()
+        entry = next((item for item in queue.get("entries", []) if item.get("queue_entry_id") == event["queue_entry_id"]), None)
+        if entry is None:
+            raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_ENTRY_MISSING", "Active adoption Queue entry disappeared", ProductErrorCategory.DATA_INTEGRITY)
+        lineage = self._execution_lineage(entry)
 
         if state == "PREPARED":
             try:
@@ -658,8 +764,8 @@ class Task027GenerationOutputAdoptionApplication:
                     generation_job_id=event["execution_id"], slot_id=event["slot_id"],
                     prompt_id=event["prompt_id"], prompt_version=event["prompt_version"],
                     provider_id=event["provider_id"], model_id=event["model_id"],
-                    strategy_level=0, result="PASS", failure_codes=(),
-                    output_candidate_id=base["candidate_id"], parent_attempt_id=None,
+                    strategy_level=lineage["strategy_level"], result="PASS", failure_codes=(),
+                    output_candidate_id=base["candidate_id"], parent_attempt_id=lineage["parent_attempt_id"],
                     cost=None, latency_ms=event.get("latency_ms"),
                     expected_prompt_snapshot_sha256=prompt["prompt_snapshot_sha256"],
                     expected_production_snapshot_sha256=prompt["production_snapshot_sha256"],
@@ -669,7 +775,7 @@ class Task027GenerationOutputAdoptionApplication:
                 attempt = self._attempt(prompt, base["execution_id"])
             if attempt is None:
                 raise ProductError("ERR_OUTPUT_ADOPTION_ATTEMPT_MISSING", "PASS Attempt did not become durable", ProductErrorCategory.DATA_INTEGRITY)
-            self._require_attempt_exact(attempt, event=event, base=base)
+            self._require_attempt_exact(attempt, event=event, base=base, lineage=lineage)
             latest = self._append(store, base, "ATTEMPT_BOUND", asset_id=asset.asset_id)
             state = latest["state"]
 
@@ -699,7 +805,7 @@ class Task027GenerationOutputAdoptionApplication:
         with exclusive_file_update_lock(self.snapshot_path):
             store = self._load()
             self._require_equal(store["adoption_snapshot_sha256"], pending.adoption_snapshot_sha256, "ERR_OUTPUT_ADOPTION_CONFIRMATION_STALE", "Output-adoption state changed after confirmation")
-            execution, queue, production, prompt, _entry = self._sources(pending.event["execution_id"])
+            execution, queue, production, prompt, entry = self._sources(pending.event["execution_id"])
             for actual, expected, code, message in (
                 (execution["execution_snapshot_sha256"], pending.execution_snapshot_sha256, "ERR_OUTPUT_ADOPTION_EXECUTION_CONFLICT", "Execution state changed after confirmation"),
                 (queue["queue_snapshot_sha256"], pending.queue_snapshot_sha256, "ERR_OUTPUT_ADOPTION_QUEUE_CONFLICT", "Queue state changed after confirmation"),
@@ -710,6 +816,8 @@ class Task027GenerationOutputAdoptionApplication:
             event = next(item for item in execution["latest_executions"] if item["execution_id"] == pending.event["execution_id"])
             if event != pending.event:
                 raise ProductError("ERR_OUTPUT_ADOPTION_EXECUTION_IDENTITY_DRIFT", "Completed execution changed after confirmation", ProductErrorCategory.DATA_INTEGRITY)
+            if entry != pending.queue_entry:
+                raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_IDENTITY_DRIFT", "Queue execution lineage changed after confirmation", ProductErrorCategory.DATA_INTEGRITY)
             base = self._base(event, pending.candidate_id)
             latest = self._append(store, base, "PREPARED", asset_id=None)
             return self._continue(store, latest, event)

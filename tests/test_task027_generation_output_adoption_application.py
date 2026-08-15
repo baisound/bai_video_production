@@ -17,12 +17,19 @@ from ai_video_production.serialization import sha256_bytes
 from ai_video_production.ingest import AssetIngestService
 from ai_video_production.media_probe import MediaProbeResult
 from ai_video_production.paths import LogicalPathResolver, PathMapping, SourcePathPolicy
-from ai_video_production.production_control import ProductionControlRegistry, SceneAssetSlot, SlotKind
+from ai_video_production.production_control import AssetCandidate, ProductionControlRegistry, SceneAssetSlot, SlotKind
 from ai_video_production.production_control_application import Task037ProductionControlApplication
 from ai_video_production.production_control_store import ProductionControlSnapshotStore
 from ai_video_production.profile import ProfileSnapshot
 from ai_video_production.prompt_evidence_application import Task040PromptEvidenceApplication
-from ai_video_production.prompt_registry import PromptEntity, PromptGenerationRegistry
+from ai_video_production.prompt_registry import (
+    GenerationAttempt,
+    GenerationResult,
+    PromptEntity,
+    PromptGenerationRegistry,
+    PromptRegenerationBinding,
+    RegenerationStrategy,
+)
 from ai_video_production.prompt_registry_store import PromptRegistrySnapshotStore
 from ai_video_production.store import SQLiteProductStore
 
@@ -120,6 +127,8 @@ class PromptStub:
         self.attempt = None
         self.pending = None
         self.recovery = {"required": False, "available_actions": []}
+        self.prompt_version = 1
+        self.regeneration_binding = None
 
     def snapshot(self):
         attempts = [] if self.attempt is None else [dict(self.attempt)]
@@ -127,7 +136,10 @@ class PromptStub:
             "prompt_snapshot_sha256": self.sha,
             "production_snapshot_sha256": self.production.sha,
             "recovery": dict(self.recovery),
-            "prompts": [{"prompt_id": "prompt-1", "prompt_version": 1, "attempts": attempts}],
+            "prompts": [{
+                "prompt_id": "prompt-1", "prompt_version": self.prompt_version,
+                "regeneration_binding": self.regeneration_binding, "attempts": attempts,
+            }],
         }
 
     def prepare_attempt(self, **values):
@@ -278,6 +290,51 @@ def test_regenerated_prompt_output_is_parked_until_strategy_parent_binding_is_ex
         prepare(app, execution, queue, production, prompt)
     assert exc.value.code == "ERR_OUTPUT_ADOPTION_REGENERATION_STRATEGY_UNBOUND"
     assert not app.snapshot_path.exists()
+
+
+def test_regenerated_prompt_output_uses_exact_queue_strategy_and_parent(tmp_path: Path):
+    app, execution, queue, production, prompt, _port = fixture(tmp_path)
+    execution.event["prompt_version"] = 2
+    queue.entry["prompt_version"] = 2
+    queue.entry["execution_lineage"] = {
+        "lineage_version": "1.0.0", "kind": "REGENERATION", "strategy_level": 2,
+        "parent_attempt_id": "job-parent", "regeneration_plan_sha256": SHA_3,
+    }
+    prompt.prompt_version = 2
+    prompt.regeneration_binding = {
+        "binding_version": "1.0.0", "parent_prompt_id": "prompt-1",
+        "parent_prompt_version": 1, "parent_prompt_sha256": SHA_4,
+        "parent_attempt_id": "job-parent", "strategy_level": 2,
+        "reason_codes": ["DEPTH_ORDER"], "regeneration_plan_sha256": SHA_3,
+    }
+    assert app.snapshot()["eligible_completed_outputs"][0]["adoption_status"] == "READY"
+    prepared = prepare(app, execution, queue, production, prompt)
+    assert prepared["execution_lineage"]["parent_attempt_id"] == "job-parent"
+    result = app.apply_adoption(confirmation_id=prepared["confirmation_id"])
+    assert result["records"][-1]["state"] == "READY_FOR_AUDIT"
+    assert prompt.attempt["strategy_level"] == 2
+    assert prompt.attempt["parent_attempt_id"] == "job-parent"
+
+
+def test_regenerated_output_blocks_when_queue_and_prompt_binding_differ(tmp_path: Path):
+    app, execution, queue, production, prompt, _port = fixture(tmp_path)
+    execution.event["prompt_version"] = 2
+    queue.entry["prompt_version"] = 2
+    queue.entry["execution_lineage"] = {
+        "lineage_version": "1.0.0", "kind": "REGENERATION", "strategy_level": 1,
+        "parent_attempt_id": "job-parent", "regeneration_plan_sha256": SHA_3,
+    }
+    prompt.prompt_version = 2
+    prompt.regeneration_binding = {
+        "binding_version": "1.0.0", "parent_prompt_id": "prompt-1",
+        "parent_prompt_version": 1, "parent_prompt_sha256": SHA_4,
+        "parent_attempt_id": "job-parent", "strategy_level": 2,
+        "reason_codes": ["DEPTH_ORDER"], "regeneration_plan_sha256": SHA_3,
+    }
+    with pytest.raises(ProductError) as exc:
+        prepare(app, execution, queue, production, prompt)
+    assert exc.value.code == "ERR_OUTPUT_ADOPTION_REGENERATION_BINDING_DRIFT"
+    assert production.candidate is None
 
 
 def test_recovery_continues_exact_suffix_without_reingesting_asset(tmp_path: Path):
@@ -455,3 +512,63 @@ def test_real_task003_037_040_stores_close_lineage_end_to_end(tmp_path: Path):
     assert prompt_state["prompts"][0]["attempts"][0]["output_candidate_id"] == candidate["candidate_id"]
     persisted = ProductionControlSnapshotStore.load(tmp_path / "production-control.json")
     assert any(edge.to_ref.entity_id == candidate["candidate_id"] for edge in persisted.edges.values())
+
+
+def test_real_task037_040_stores_adopt_regenerated_output_with_exact_lineage(tmp_path: Path):
+    production_registry = ProductionControlRegistry()
+    production_registry.add_slot(SceneAssetSlot("slot-video", "project-1", "scene-1", SlotKind.VIDEO, True))
+    production_registry.add_candidate(AssetCandidate(
+        "candidate-old", "slot-video", "asset-old", SHA_4, 1,
+        generation_job_id="job-parent",
+    ))
+    ProductionControlSnapshotStore.save(tmp_path / "production-control.json", production_registry)
+
+    prompt_registry = PromptGenerationRegistry()
+    prompt_registry.add_prompt(PromptEntity(
+        "prompt-1", 1, "scene video", SHA_1, "profile-1", "v1", ("keep identity",),
+        scene_id="scene-1", slot_id="slot-video", body_ref="project-private://prompts/prompt-1/v1",
+    ))
+    prompt_registry.add_attempt(GenerationAttempt(
+        "job-parent", "slot-video", "prompt-1", 1, SHA_1, "comfy", "minimax-h3",
+        RegenerationStrategy.TEXT_PROMPT, GenerationResult.PASS, (), "candidate-old",
+        provider_profile_version="v1",
+    ))
+    prompt_registry.add_prompt(PromptEntity(
+        "prompt-1", 2, "scene video", SHA_1, "profile-1", "v1", ("keep identity",),
+        scene_id="scene-1", slot_id="slot-video", body_ref="project-private://prompts/prompt-1/v2",
+        regeneration_binding=PromptRegenerationBinding(
+            "1.0.0", "prompt-1", 1, SHA_1, "job-parent",
+            RegenerationStrategy.LAYOUT_REFERENCE, ("DEPTH_ORDER",), SHA_3,
+        ),
+    ))
+    PromptRegistrySnapshotStore.save(tmp_path / "prompt-registry.json", prompt_registry)
+
+    execution = ExecutionStub()
+    execution.event["prompt_version"] = 2
+    queue = QueueStub()
+    queue.entry["prompt_version"] = 2
+    queue.entry["execution_lineage"] = {
+        "lineage_version": "1.0.0", "kind": "REGENERATION", "strategy_level": 2,
+        "parent_attempt_id": "job-parent", "regeneration_plan_sha256": SHA_3,
+    }
+    production = Task037ProductionControlApplication(project_root=tmp_path, project_id="project-1")
+    prompt = Task040PromptEvidenceApplication(
+        project_root=tmp_path, project_id="project-1", production_control=production,
+        token_factory=lambda: "prompt-confirm",
+    )
+    app = Task027GenerationOutputAdoptionApplication(
+        project_root=tmp_path, project_id="project-1", generation_execution=execution,
+        generation_queue=queue, production_control=production, prompt_evidence=prompt,
+        asset_port=AssetPortStub(), token_factory=lambda: "adoption-confirm",
+    )
+    prepared = prepare(app, execution, queue, production, prompt)
+    result = app.apply_adoption(confirmation_id=prepared["confirmation_id"])
+
+    assert result["records"][-1]["state"] == "READY_FOR_AUDIT"
+    state = prompt.snapshot()
+    attempt = next(
+        item for row in state["prompts"] for item in row["attempts"]
+        if item["generation_job_id"] == "execution-1"
+    )
+    assert attempt["strategy_level"] == 2
+    assert attempt["parent_attempt_id"] == "job-parent"

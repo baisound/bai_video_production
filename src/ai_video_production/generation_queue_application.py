@@ -35,7 +35,7 @@ _TOP_FIELDS = {
     "provider_execution_authorized", "paid_execution_authorized",
     "candidate_creation_authorized", "queue_snapshot_sha256",
 }
-_ENTRY_FIELDS = {
+_ENTRY_FIELDS_V1 = {
     "entry_version", "task_owner", "queue_entry_id", "queue_revision", "project_id",
     "plan_id", "approved_plan_sha256", "scene_id", "slot_id", "prompt_id",
     "prompt_version", "prompt_sha256", "provider_profile_id",
@@ -43,6 +43,16 @@ _ENTRY_FIELDS = {
     "input_bindings", "continuity_proof", "upstream_snapshots", "admission",
     "queue_status", "execution_status", "provider_execution_authorized",
     "paid_execution_authorized", "candidate_creation_authorized",
+}
+_ENTRY_FIELDS_V1_1 = _ENTRY_FIELDS_V1 | {"execution_lineage"}
+_EXECUTION_LINEAGE_FIELDS = {
+    "lineage_version", "kind", "strategy_level", "parent_attempt_id",
+    "regeneration_plan_sha256",
+}
+_PROMPT_REGENERATION_BINDING_FIELDS = {
+    "binding_version", "parent_prompt_id", "parent_prompt_version",
+    "parent_prompt_sha256", "parent_attempt_id", "strategy_level",
+    "reason_codes", "regeneration_plan_sha256",
 }
 _UPSTREAM_FIELDS = {
     "planning", "generation_safety", "production", "continuity", "prompt", "audit",
@@ -110,7 +120,7 @@ class Task027GenerationQueueApplication:
 
     def _empty(self) -> dict[str, Any]:
         return _with_hash({
-            "queue_version": "1.0.0", "task_owner": "TASK-027", "project_id": self.project_id,
+            "queue_version": "1.1.0", "task_owner": "TASK-027", "project_id": self.project_id,
             "revision": 0, "entries": [], "provider_execution_authorized": False,
             "paid_execution_authorized": False, "candidate_creation_authorized": False,
         })
@@ -118,7 +128,8 @@ class Task027GenerationQueueApplication:
     def _validate(self, value: Any) -> None:
         if not isinstance(value, dict) or set(value) != _TOP_FIELDS:
             raise ProductError("ERR_QUEUE_SNAPSHOT_INVALID", "Generation Queue snapshot fields are invalid", ProductErrorCategory.DATA_INTEGRITY)
-        if value.get("queue_version") != "1.0.0" or value.get("task_owner") != "TASK-027" or value.get("project_id") != self.project_id:
+        queue_version = value.get("queue_version")
+        if queue_version not in {"1.0.0", "1.1.0"} or value.get("task_owner") != "TASK-027" or value.get("project_id") != self.project_id:
             raise ProductError("ERR_QUEUE_SNAPSHOT_INVALID", "Generation Queue snapshot identity is invalid", ProductErrorCategory.DATA_INTEGRITY)
         if value.get("queue_snapshot_sha256") != _with_hash(value)["queue_snapshot_sha256"]:
             raise ProductError("ERR_QUEUE_SNAPSHOT_CHECKSUM", "Generation Queue snapshot checksum mismatch", ProductErrorCategory.DATA_INTEGRITY)
@@ -131,10 +142,26 @@ class Task027GenerationQueueApplication:
             raise ProductError("ERR_QUEUE_REVISION_INVALID", "Generation Queue revision/history is invalid", ProductErrorCategory.DATA_INTEGRITY)
         seen: set[str] = set()
         for index, entry in enumerate(entries, 1):
-            if not isinstance(entry, dict) or set(entry) != _ENTRY_FIELDS or entry.get("queue_revision") != index:
+            entry_version = entry.get("entry_version") if isinstance(entry, dict) else None
+            expected_fields = _ENTRY_FIELDS_V1 if entry_version == "1.0.0" else _ENTRY_FIELDS_V1_1
+            if (
+                not isinstance(entry, dict)
+                or entry_version not in {"1.0.0", "1.1.0"}
+                or set(entry) != expected_fields
+                or entry.get("queue_revision") != index
+                or (queue_version == "1.0.0" and entry_version != "1.0.0")
+            ):
                 raise ProductError("ERR_QUEUE_ENTRY_INVALID", "Generation Queue entry fields/revision are invalid", ProductErrorCategory.DATA_INTEGRITY)
-            if entry.get("project_id") != self.project_id or entry.get("task_owner") != "TASK-027" or entry.get("entry_version") != "1.0.0":
+            if entry.get("project_id") != self.project_id or entry.get("task_owner") != "TASK-027":
                 raise ProductError("ERR_QUEUE_ENTRY_INVALID", "Generation Queue entry identity is invalid", ProductErrorCategory.DATA_INTEGRITY)
+            if (
+                isinstance(entry.get("prompt_version"), bool)
+                or not isinstance(entry.get("prompt_version"), int)
+                or entry["prompt_version"] < 1
+            ):
+                raise ProductError("ERR_QUEUE_ENTRY_INVALID", "Generation Queue Prompt version is invalid", ProductErrorCategory.DATA_INTEGRITY)
+            if entry_version == "1.1.0":
+                self._validate_execution_lineage(entry.get("execution_lineage"), entry.get("prompt_version"))
             if not isinstance(entry.get("queue_entry_id"), str) or entry.get("queue_entry_id") in seen:
                 raise ProductError("ERR_QUEUE_ENTRY_DUPLICATE", "Generation Queue entry identity is duplicated", ProductErrorCategory.DATA_INTEGRITY)
             seen.add(entry["queue_entry_id"])
@@ -188,6 +215,85 @@ class Task027GenerationQueueApplication:
             expected_id = "QUEUE-" + sha256_bytes(canonical_json_bytes(seed)).split(":", 1)[1][:24].upper()
             if entry["queue_entry_id"] != expected_id:
                 raise ProductError("ERR_QUEUE_ENTRY_IDENTITY", "Generation Queue entry deterministic identity is invalid", ProductErrorCategory.DATA_INTEGRITY)
+
+    @staticmethod
+    def _validate_execution_lineage(lineage: Any, prompt_version: Any) -> None:
+        if not isinstance(lineage, dict) or set(lineage) != _EXECUTION_LINEAGE_FIELDS:
+            raise ProductError("ERR_QUEUE_EXECUTION_LINEAGE_INVALID", "Queue execution lineage fields are invalid", ProductErrorCategory.DATA_INTEGRITY)
+        if isinstance(prompt_version, bool) or not isinstance(prompt_version, int) or prompt_version < 1:
+            raise ProductError("ERR_QUEUE_EXECUTION_LINEAGE_INVALID", "Queue Prompt version is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        strategy = lineage.get("strategy_level")
+        if (
+            lineage.get("lineage_version") != "1.0.0"
+            or isinstance(strategy, bool)
+            or not isinstance(strategy, int)
+            or strategy not in range(7)
+        ):
+            raise ProductError("ERR_QUEUE_EXECUTION_LINEAGE_INVALID", "Queue execution lineage identity is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        if prompt_version == 1:
+            if lineage != {
+                "lineage_version": "1.0.0", "kind": "INITIAL", "strategy_level": 0,
+                "parent_attempt_id": None, "regeneration_plan_sha256": None,
+            }:
+                raise ProductError("ERR_QUEUE_EXECUTION_LINEAGE_INVALID", "Initial Prompt Queue lineage is invalid", ProductErrorCategory.DATA_INTEGRITY)
+            return
+        if (
+            prompt_version < 2
+            or lineage.get("kind") != "REGENERATION"
+            or not isinstance(lineage.get("parent_attempt_id"), str)
+            or not lineage["parent_attempt_id"]
+            or not isinstance(lineage.get("regeneration_plan_sha256"), str)
+            or not _SHA_RE.fullmatch(lineage["regeneration_plan_sha256"])
+        ):
+            raise ProductError("ERR_QUEUE_EXECUTION_LINEAGE_INVALID", "Regenerated Prompt Queue lineage is invalid", ProductErrorCategory.DATA_INTEGRITY)
+
+    @classmethod
+    def _execution_lineage(cls, prompt: Mapping[str, Any], *, entry_version: str) -> dict[str, Any] | None:
+        if entry_version == "1.0.0":
+            return None
+        if prompt["prompt_version"] == 1:
+            if prompt.get("regeneration_binding") is not None:
+                raise ProductError("ERR_QUEUE_REGENERATION_BINDING_INVALID", "Initial Prompt cannot carry regeneration lineage", ProductErrorCategory.DATA_INTEGRITY)
+            return {
+                "lineage_version": "1.0.0", "kind": "INITIAL", "strategy_level": 0,
+                "parent_attempt_id": None, "regeneration_plan_sha256": None,
+            }
+        binding = prompt.get("regeneration_binding")
+        if not isinstance(binding, dict):
+            raise ProductError(
+                "ERR_QUEUE_REGENERATION_BINDING_REQUIRED",
+                "Later Prompt Queue admission requires exact persisted Strategy/Parent binding",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            )
+        if (
+            set(binding) != _PROMPT_REGENERATION_BINDING_FIELDS
+            or binding.get("binding_version") != "1.0.0"
+            or not isinstance(binding.get("parent_prompt_id"), str)
+            or not binding["parent_prompt_id"]
+            or isinstance(binding.get("parent_prompt_version"), bool)
+            or not isinstance(binding.get("parent_prompt_version"), int)
+            or not isinstance(binding.get("parent_prompt_sha256"), str)
+            or not _SHA_RE.fullmatch(binding["parent_prompt_sha256"])
+            or not isinstance(binding.get("reason_codes"), list)
+            or not binding["reason_codes"]
+            or any(not isinstance(code, str) or not code for code in binding["reason_codes"])
+            or binding["reason_codes"] != sorted(set(binding["reason_codes"]))
+        ):
+            raise ProductError("ERR_QUEUE_REGENERATION_BINDING_INVALID", "Prompt regeneration binding fields are invalid", ProductErrorCategory.DATA_INTEGRITY)
+        lineage = {
+            "lineage_version": "1.0.0",
+            "kind": "REGENERATION",
+            "strategy_level": binding.get("strategy_level"),
+            "parent_attempt_id": binding.get("parent_attempt_id"),
+            "regeneration_plan_sha256": binding.get("regeneration_plan_sha256"),
+        }
+        cls._validate_execution_lineage(lineage, prompt["prompt_version"])
+        if (
+            binding.get("parent_prompt_id") != prompt["prompt_id"]
+            or binding.get("parent_prompt_version") != prompt["prompt_version"] - 1
+        ):
+            raise ProductError("ERR_QUEUE_REGENERATION_BINDING_INVALID", "Prompt regeneration binding is incompatible with this Prompt version", ProductErrorCategory.DATA_INTEGRITY)
+        return lineage
 
     def _load(self) -> dict[str, Any]:
         target = self.queue_path
@@ -369,7 +475,14 @@ class Task027GenerationQueueApplication:
                 required_slots.append(proof["slot_id"])
         return proofs, tuple(required_slots)
 
-    def _derive(self, *, prompt_id: str, prompt_version: int, queue_revision: int) -> dict[str, Any]:
+    def _derive(
+        self,
+        *,
+        prompt_id: str,
+        prompt_version: int,
+        queue_revision: int,
+        entry_version: str = "1.1.0",
+    ) -> dict[str, Any]:
         sources = self._sources()
         planning, production, safety = sources["planning"], sources["production"], sources["safety"]
         workspace = planning.get("workspace")
@@ -418,7 +531,7 @@ class Task027GenerationQueueApplication:
             "prompt": sources["prompts"]["prompt_snapshot_sha256"], "audit": sources["audit"]["audit_snapshot_sha256"],
         }
         entry: dict[str, Any] = {
-            "entry_version": "1.0.0", "task_owner": "TASK-027", "queue_entry_id": "",
+            "entry_version": entry_version, "task_owner": "TASK-027", "queue_entry_id": "",
             "queue_revision": queue_revision, "project_id": self.project_id, "plan_id": plan["plan_id"],
             "approved_plan_sha256": plan["approved_plan_sha256"], "scene_id": scene_id, "slot_id": slot_id,
             "prompt_id": prompt_id, "prompt_version": prompt_version, "prompt_sha256": prompt["body_sha256"],
@@ -429,6 +542,9 @@ class Task027GenerationQueueApplication:
             "execution_status": "EXECUTION_NOT_AUTHORIZED", "provider_execution_authorized": False,
             "paid_execution_authorized": False, "candidate_creation_authorized": False,
         }
+        lineage = self._execution_lineage(prompt, entry_version=entry_version)
+        if lineage is not None:
+            entry["execution_lineage"] = lineage
         seed = {key: item for key, item in entry.items() if key != "queue_entry_id"}
         entry["queue_entry_id"] = "QUEUE-" + sha256_bytes(canonical_json_bytes(seed)).split(":", 1)[1][:24].upper()
         return entry
@@ -482,6 +598,7 @@ class Task027GenerationQueueApplication:
             prompt_id=entry["prompt_id"],
             prompt_version=entry["prompt_version"],
             queue_revision=entry["queue_revision"],
+            entry_version=entry["entry_version"],
         )
         if current != entry:
             raise ProductError(
@@ -527,6 +644,7 @@ class Task027GenerationQueueApplication:
                 raise ProductError("ERR_QUEUE_CONFIRMATION_STALE", "Queue admission Evidence changed after confirmation", ProductErrorCategory.AUTHORIZATION)
             queue["revision"] += 1
             queue["entries"].append(entry)
+            queue["queue_version"] = "1.1.0"
             document = _with_hash(queue)
             AtomicJsonWriter.write(self.queue_path, document, validator=self._validate)
         return self.snapshot()

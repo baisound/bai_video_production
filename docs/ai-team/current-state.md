@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_HOSTED_CLOSED / P_ORCH_2_DESIGN_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_HOSTED_CLOSED / P_ORCH_2_IMPLEMENTATION_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
-- Active Consumer Task: `TASK-027 / P-ORCH-2 STRATEGY/PARENT BINDING DESIGN / codex/task-027-strategy-parent-binding-design`; PR #81 is merged at exact main `4efb0b92855c4943b66b8670c102e447de915498`, design/Critic pass locally and implementation remains dependency-waiting for hosted design merge plus fresh-main reselection
+- Active Consumer Task: `TASK-027 / P-ORCH-2 STRATEGY/PARENT BINDING IMPLEMENTATION / codex/task-027-strategy-parent-binding-implementation`; Design PR #82 is merged at exact main `1ed59286991ff70452b3f3602bc512b1fcd38ae4`, implementation/full regression/Critic pass locally and hosted implementation PR remains pending
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `P-ORCH-2 design PR -> all-green main merge -> cleanup -> fresh-main implementation audit; Native H3 replay and Production Deploy remain blocked`
+- Next Consumer Decision Gate: `P-ORCH-2 implementation PR -> all-green main merge -> cleanup -> fresh-main AUTONOMY reselection; Native H3 replay and Production Deploy remain blocked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.77 Addendum LXXI. TASK-027 P-ORCH-1 closure PR #81 passed hosted `9 / 9`, merged at exact main `4efb0b92855c4943b66b8670c102e447de915498`, and completed remote branch/checkout cleanup. P-ORCH-2 now has a local-pass DEV-4 design for immutable Prompt regeneration binding, strict legacy compatibility, Queue execution lineage and exact regenerated-output adoption. Implementation remains dependency-waiting for the design PR merge and fresh-main audit. Provider/paid/ACCEPT/LOCK/Production Deploy remain blocked.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.78 Addendum LXXII. TASK-027 P-ORCH-2 Design PR #82 passed hosted `9 / 9`, merged at exact main `1ed59286991ff70452b3f3602bc512b1fcd38ae4`, and completed cleanup. Immutable Prompt regeneration binding, strict v1 compatibility, Queue v1.1 execution lineage and exact regenerated-output adoption now pass local full Windows/WSL2 regression and Critic. Hosted implementation PR remains pending. Provider/paid/ACCEPT/LOCK/Production Deploy remain blocked.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

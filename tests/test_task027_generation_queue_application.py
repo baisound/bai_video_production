@@ -130,6 +130,11 @@ def test_queue_entry_is_one_shot_restart_durable_and_execution_free(tmp_path: Pa
     )
     assert prepared["entry"]["queue_status"] == "ADMISSION_READY"
     assert prepared["entry"]["execution_status"] == "EXECUTION_NOT_AUTHORIZED"
+    assert prepared["entry"]["entry_version"] == "1.1.0"
+    assert prepared["entry"]["execution_lineage"] == {
+        "lineage_version": "1.0.0", "kind": "INITIAL", "strategy_level": 0,
+        "parent_attempt_id": None, "regeneration_plan_sha256": None,
+    }
     saved = value.apply_enqueue(confirmation_id="queue-confirm")
     assert saved["entry_count"] == 1
     assert saved["provider_execution_started"] is False
@@ -232,3 +237,63 @@ def test_prompt_input_ambiguous_between_go_and_locked_candidate_fails_closed():
     with pytest.raises(ProductError) as exc:
         Task027GenerationQueueApplication._input_proofs(prompt, plan, production)
     assert exc.value.code == "ERR_QUEUE_INPUT_PROOF_AMBIGUOUS"
+
+
+def test_regenerated_prompt_queue_entry_binds_exact_strategy_and_parent(tmp_path: Path):
+    value = app(tmp_path)
+    prompt = value.prompt_evidence_application.value["prompts"][0]
+    prompt["prompt_version"] = 2
+    prompt["regeneration_binding"] = {
+        "binding_version": "1.0.0", "parent_prompt_id": "prompt-1",
+        "parent_prompt_version": 1, "parent_prompt_sha256": H("0"),
+        "parent_attempt_id": "job-parent", "strategy_level": 2,
+        "reason_codes": ["DEPTH_ORDER"], "regeneration_plan_sha256": H("8"),
+    }
+    state = value.snapshot()
+    prepared = value.prepare_enqueue(
+        prompt_id="prompt-1", prompt_version=2,
+        expected_queue_snapshot_sha256=state["queue_snapshot_sha256"],
+        expected_upstream_snapshots=expected(value),
+    )
+    assert prepared["entry"]["execution_lineage"] == {
+        "lineage_version": "1.0.0", "kind": "REGENERATION", "strategy_level": 2,
+        "parent_attempt_id": "job-parent", "regeneration_plan_sha256": H("8"),
+    }
+
+
+def test_regenerated_prompt_without_binding_cannot_receive_new_queue_entry(tmp_path: Path):
+    value = app(tmp_path)
+    value.prompt_evidence_application.value["prompts"][0]["prompt_version"] = 2
+    state = value.snapshot()
+    with pytest.raises(ProductError) as exc:
+        value.prepare_enqueue(
+            prompt_id="prompt-1", prompt_version=2,
+            expected_queue_snapshot_sha256=state["queue_snapshot_sha256"],
+            expected_upstream_snapshots=expected(value),
+        )
+    assert exc.value.code == "ERR_QUEUE_REGENERATION_BINDING_REQUIRED"
+
+
+def test_strict_legacy_queue_entry_remains_readable_without_silent_upgrade(tmp_path: Path):
+    value = app(tmp_path)
+    state = value.snapshot()
+    value.prepare_enqueue(
+        prompt_id="prompt-1", prompt_version=1,
+        expected_queue_snapshot_sha256=state["queue_snapshot_sha256"],
+        expected_upstream_snapshots=expected(value),
+    )
+    value.apply_enqueue(confirmation_id="queue-confirm")
+    document = json.loads(value.queue_path.read_text(encoding="utf-8"))
+    document["queue_version"] = "1.0.0"
+    entry = document["entries"][0]
+    entry["entry_version"] = "1.0.0"
+    del entry["execution_lineage"]
+    seed = {key: item for key, item in entry.items() if key != "queue_entry_id"}
+    entry["queue_entry_id"] = "QUEUE-" + sha256_bytes(canonical_json_bytes(seed)).split(":", 1)[1][:24].upper()
+    body = {key: item for key, item in document.items() if key != "queue_snapshot_sha256"}
+    document["queue_snapshot_sha256"] = sha256_bytes(canonical_json_bytes(body))
+    value.queue_path.write_text(json.dumps(document), encoding="utf-8")
+    reopened = value.snapshot()
+    assert reopened["entries"][0]["entry_version"] == "1.0.0"
+    assert "execution_lineage" not in reopened["entries"][0]
+    assert value.require_current_entry(queue_entry_id=entry["queue_entry_id"])["entry"] == entry

@@ -10,6 +10,7 @@ from ai_video_production.prompt_registry import (
     GenerationResult,
     PromptEntity,
     PromptGenerationRegistry,
+    PromptRegenerationBinding,
     RegenerationStrategy,
 )
 
@@ -155,3 +156,30 @@ def test_child_attempt_cannot_reduce_parent_strategy_level():
     with pytest.raises(ProductError) as exc:
         registry.add_attempt(child)
     assert exc.value.code == "ERR_GENERATION_PARENT_STRATEGY_REGRESSION"
+
+
+def test_regenerated_attempt_must_equal_immutable_prompt_binding():
+    registry = PromptGenerationRegistry(); registry.add_prompt(prompt())
+    registry.add_attempt(attempt("job-parent"))
+    binding = PromptRegenerationBinding(
+        "1.0.0", "prompt-1", 1, SHA, "job-parent",
+        RegenerationStrategy.PROMPT_RESTRUCTURE, ("DEPTH_ORDER",),
+        "sha256:" + "9" * 64,
+    )
+    regenerated = PromptEntity(
+        "prompt-1", 2, "scene frame", "sha256:" + "d" * 64,
+        "profile-1", "v1", ("monitor foreground",), scene_id="scene-1",
+        slot_id="slot-1", body_ref="project-private://prompts/prompt-1/v2",
+        regeneration_binding=binding,
+    )
+    registry.require_regeneration_binding_valid(regenerated)
+    registry.add_prompt(regenerated)
+    bad = GenerationAttempt(
+        "job-child", "slot-1", "prompt-1", 2, regenerated.body_sha256,
+        "provider-1", "model-1", RegenerationStrategy.TEXT_PROMPT,
+        GenerationResult.FAIL, ("DEPTH_ORDER",), parent_attempt_id="job-parent",
+        provider_profile_version="v1",
+    )
+    with pytest.raises(ProductError) as exc:
+        registry.add_attempt(bad)
+    assert exc.value.code == "ERR_GENERATION_REGENERATION_BINDING_MISMATCH"

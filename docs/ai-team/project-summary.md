@@ -7,9 +7,9 @@
 - Product package: `0.21.0`
 - Stable formal Release: `v0.21.0`
 - Release-code SHA: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Current development main: `1ed59286991ff70452b3f3602bc512b1fcd38ae4` (PR #82 TASK-027 P-ORCH-2 design merge)
-- Current Product state: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_HOSTED_CLOSED / P_ORCH_2_IMPLEMENTATION_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
-- Active development branch: `codex/task-027-strategy-parent-binding-implementation`
+- Current development main: `a4d15f23d5781b515be6b2a228b491e696a5983f` (PR #83 TASK-027 P-ORCH-2 implementation merge)
+- Current Product state: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_HOSTED_CLOSED / P_ORCH_2_IMPLEMENTATION_HOSTED_CLOSED / P_ORCH_2_CLOSURE_SYNC_LOCAL / NATIVE_RUNTIME_PARKED`
+- Active development branch: `codex/task-027-strategy-parent-hosted-closure`
 
 The stable Tag identifies release-code commit `c38187ed`; current main is newer by hosted TASK-045 Evidence and TASK-027 design/implementation merges. The active branch records hosted closure only and selects no new release version.
 
@@ -28,6 +28,7 @@ The stable Tag identifies release-code commit `c38187ed`; current main is newer 
 - TASK-043 Product Project/migration planning/recovery foundation and TASK-042 P-V6-4 Timeline Audio are hosted-closed.
 - TASK-044 P-NLE-1..4 is hosted-closed. PR #72 exact head `ac5b2956e0a0e881a4cf0a58f414eaab826c2fb2` passed `9 / 9` and merged at exact main `6703c42a3aa06a563071f1a48dc7aab113f4dfe4`; dynamic Timeline/Edit/Export Shell and bounded packaged Windows acceptance are integrated.
 - TASK-027 P-ORCH-1 initial completed-output adoption is hosted-closed through PR #80 at exact main `66d97fd9d0bfbfebca339197fed2103011f56616`: exact Product output validation, TASK-003 Asset ingest, TASK-037 Candidate, TASK-040 PASS Attempt/lineage and `READY_FOR_AUDIT` are integrated into the unified Generation Queue workspace with restart recovery and no Provider replay.
+- TASK-027 P-ORCH-2 regenerated-output Strategy/Parent binding is hosted-closed through PR #83 at exact main `a4d15f23d5781b515be6b2a228b491e696a5983f`: immutable Prompt binding, strict v1 compatibility, Queue v1.1 execution lineage and exact regenerated PASS Attempt creation end only at `READY_FOR_AUDIT`.
 
 ## Current parked boundary
 
@@ -37,7 +38,7 @@ No contained generated output, TASK-037 Candidate, TASK-040 Attempt binding, TAS
 
 ## Remaining Product scope
 
-- TASK-027 P-ORCH-2 exact Strategy/Parent Queue binding implementation is local-pass with strict Prompt/Queue v1 compatibility, full Windows/WSL2 regression and unresolved implementation Critical/High `0 / 0`; hosted implementation closure remains pending;
+- TASK-027 P-ORCH-2 closure documentation sync and subsequent fresh-main Product-wide AUTONOMY reselection;
 - full multi-slice TASK-027 production orchestration;
 - remaining TASK-013 native generation and post-native Candidate/Audit binding;
 - TASK-014 Owner Narration, TASK-026 Audio Placement compilation/execution and later TASK-041 audio-processing slices;
@@ -61,6 +62,7 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 - TASK-027 P-ORCH-1 Design PR #79: hosted `9 / 9 PASS`; exact main `4532bb29`; remote branch/dedicated checkout cleanup `PASS`
 - TASK-027 P-ORCH-1 implementation: final integrated focused `94 / 94 PASS`; real TASK-003/037/040 end-to-end store test PASS; full final-tree WSL2 `1134 / 1134`; full Windows `1133 passed / 1 expected skip`
 - TASK-027 P-ORCH-1 Implementation PR #80: exact head `0e3575a5`; hosted `9 / 9 PASS`; exact main `66d97fd9`; remote branch/dedicated checkout cleanup `PASS`
+- TASK-027 P-ORCH-2 Implementation PR #83: exact head `633e85d7`; hosted `9 / 9 PASS`; exact main `a4d15f23`; remote implementation branch/dedicated checkout cleanup `PASS`
 - PR #47 exact head `3785e44a211b8c4d81005060bc8a1faff161870d`: `9 / 9 PASS`; exact main merge `8dd6434a65115d88641d0942b08788a9eceda279`
 - TASK-041 focused regression: `64 / 64 PASS`
 - TASK-041 full WSL2 regression: `932 / 932 PASS`

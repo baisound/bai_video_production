@@ -42,27 +42,45 @@ version metadata, product code or any other shared Integration File.
 2. Move `BVP-LOCK-TASK046-PVS1A` from `ACTIVE` to
    `HOSTED_CLOSED_RELEASED` and bind its immutable Closure Evidence.
 3. Move `BVP-INTEGRATION-LOCK-TASK046-PVS1A-CHANGELOG-20260815` from the
-   active slot into append-only `integration_lock_history`.
+   active slot into append-only `integration_lock_history`, preserving every
+   original authority, identity, scope, denial, expiry and release-condition
+   field and appending only terminal Evidence.
 4. Validate JSON, exact changed-file scope and whitespace.
-5. Host through a separate docs-only PR, require all hosted checks, exact main
-   merge and post-merge CI/Security before deleting the source branch.
-6. Do not infer authorization for P-VS-1B, P-VS-2, recording, plugin load,
+5. Require PR #97 exact base/reviewed head, two changed files and all pre-merge
+   hosted checks `SUCCESS`. Its exact main merge makes this release record
+   authoritative and the Lock release effective.
+6. Treat PR #97 post-merge CI/Security as mandatory operational verification
+   and the source-branch cleanup gate, not as a circular Lock-release
+   precondition. A failure opens a separate incident/correction unit; it does
+   not rewrite history or automatically reopen this Lock.
+7. Do not infer authorization for P-VS-1B, P-VS-2, recording, plugin load,
    model execution, release or deployment from this closure.
 
 ## Critic pass 1
 
-1. **High — premature Lock release:** branch deletion before the Closure record
-   reaches main would remove evidence while the Lock is still authoritative.
-   Resolution: branch deletion is ordered after Closure PR merge and post-merge
-   green.
-2. **High — evidence inflation:** command acknowledgement alone could be
+1. **High — terminal-history Evidence loss:** shrinking the former active
+   Integration Lock to final hashes would discard original authority, owner,
+   branch, scope, denial, expiry and release-condition facts from the current
+   canonical record. Resolution: the terminal `integration_lock_history`
+   record preserves every original immutable field and only appends final
+   Evidence.
+2. **High — closure cycle:** making PR #97's own post-merge runs a recorded
+   prerequisite would require a follow-up PR and never allow one atomic closure.
+   Resolution: exact PR #97 main merge after all pre-merge checks makes release
+   effective; its post-merge runs remain mandatory verification and cleanup
+   gates, with failure routed to a separate incident/correction unit.
+3. **High — premature branch deletion:** deleting the source branch before the
+   Closure record reaches main would remove evidence while the Lock remains
+   authoritative. Resolution: deletion is ordered after exact Closure merge and
+   post-merge green.
+4. **High — evidence inflation:** command acknowledgement alone could be
    mistaken for P-VS-1A completion. Resolution: Closure binds exact merge SHA,
    nine-file set, 8/8 blob preservation, local regressions and both post-merge
    hosted runs.
-3. **High — shared-file overreach:** a closure PR could become a vehicle for
+5. **High — shared-file overreach:** a closure PR could become a vehicle for
    current-state, roadmap or product edits. Resolution: Allowed Files are the
    Registry and this Evidence document only.
-4. **Medium — future authority leak:** closing P-VS-1A might be read as approval
+6. **Medium — future authority leak:** closing P-VS-1A might be read as approval
    for production recording. Resolution: all subsequent execution and Human
    Gates remain explicitly outside this unit.
 
@@ -72,8 +90,10 @@ Unresolved Critical/High: `0 / 0`.
 
 1. PR, branch, base, head, merge and post-merge run identities are exact.
 2. The P-VS-1A implementation Lock and its temporary CHANGELOG Integration Lock
-   reach one consistent terminal state.
-3. No active Integration Lock remains after the history transition.
+   reach one consistent terminal state without losing original authority
+   Evidence.
+3. No active Integration Lock remains after the `integration_lock_history`
+   transition.
 4. The PR #93 implementation files, CHANGELOG and workflow remain immutable.
 5. Existing unknown local Evidence and WIP checkouts are outside this worktree
    and remain untouched.
@@ -84,5 +104,8 @@ Unresolved Critical/High: `0 / 0`.
 
 Decision: `PASS_FOR_DOCS_ONLY_CLOSURE_HOSTING`.
 
-The two-file unit is internally consistent and safe to host. Completion is
-claimed only after its own main merge and post-merge CI/Security succeed.
+The two-file unit is internally consistent and safe to host. The Lock release
+becomes effective when PR #97 with exact base, reviewed head, two-file scope and
+all-success pre-merge checks is merged to main. Post-merge CI/Security remain
+mandatory operational verification and source-branch cleanup gates; a failure
+requires a separate incident/correction unit and does not rewrite this history.

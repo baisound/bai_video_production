@@ -1,16 +1,55 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
 import tempfile
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 from .serialization import canonical_json_bytes, sha256_bytes
 
 FailureInjector = Callable[[str, Path], None]
 Validator = Callable[[Any], None]
+
+
+@contextmanager
+def exclusive_file_update_lock(path: str | Path) -> Iterator[None]:
+    """Serialize a bounded read-check-replace cycle across processes."""
+    target = Path(path)
+    lock_path = target.with_name(f".{target.name}.lock")
+    if lock_path.is_symlink() or (lock_path.exists() and not lock_path.is_file()):
+        raise ValueError("atomic update lock must be a regular non-symlink file")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+b") as handle:
+        if handle.seek(0, os.SEEK_END) == 0:
+            handle.write(b"0")
+            handle.flush()
+        handle.seek(0)
+        locked = False
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            locked = True
+            yield
+        finally:
+            if locked:
+                handle.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 @dataclass(frozen=True, slots=True)
 class AtomicWriteResult:

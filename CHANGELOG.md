@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-045 P-RC-1 explicit legacy Project discovery, code-registered lossless copy-on-write migration with exact backup/reopen proof, additive schema v3 bounded Asset keyset paging and a concurrent source-manifest latest-pointer corrective. It does not run ambiguous migration, Provider, paid, native, Tag, Release or Production Deploy operations.
 - Closed TASK-044 P-NLE-4 through PR #72 at exact main `6703c42a` and activated TASK-045 release closure as three governed units: compatibility/migration/Asset paging, integrated native/clean-install/restart acceptance, and exact release finalization. This design checkpoint does not select a version or perform migration, Tag, Release or Deploy.
 - Added TASK-044 P-NLE-4 dynamic Unified NLE composition in the existing TASK-036 Shell: bounded semantic clip DOM, distinct selection/seek/review, keyboard Fit/IN/OUT/trim flow, private typed pywebview bridge, per-job Export cancel/recovery controls, narrow/mixed-monitor behavior and packaged Windows acceptance. No blanket Execute All or external replay is authorized.
 - Added TASK-044 P-NLE-3 checksum-bound durable Export Queue composition with logical-only output identities, exact stale preflight, per-job external confirmation, DISPATCHING-before-side-effect recovery, Render QA-bound success and no blanket Execute All authority.

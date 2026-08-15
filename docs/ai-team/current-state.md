@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_044_HOSTED_CLOSED / TASK_045_RELEASE_CLOSURE_DESIGN_ACTIVE / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_045_P_RC_1_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-045 / CURRENT-MAIN AUDIT + FULL DETAILED DESIGN + CRITIC LOCAL PASS / HOSTED PENDING`; TASK-044 PR #72 is hosted-closed at exact main `6703c42a3aa06a563071f1a48dc7aab113f4dfe4`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-045 / P-RC-1 COMPATIBILITY + MIGRATION + ASSET PAGING / LOCAL PASS / HOSTED PENDING`; Design PR #74 is hosted-closed at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`; expected impact class is MINOR only if TASK-045 compatibility/native/clean-install gates pass and an exact SemVer is selected
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `TASK-045 Design PR all-green/main merge/exact SHA/cleanup -> fresh-main P-RC-1 compatibility/migration/performance implementation; TASK-013 native and TASK-014 paid execution remain parked`
+- Next Consumer Decision Gate: `P-RC-1 PR all-green/main merge/exact SHA/cleanup -> fresh-main P-RC-2 integrated native/clean-install/restart acceptance; TASK-013 native and TASK-014 paid execution remain parked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.69 Addendum LXIII. P-NLE-4 PR #72 exact head `ac5b2956e0a0e881a4cf0a58f414eaab826c2fb2` passed hosted `9 / 9`, merged at exact main `6703c42a3aa06a563071f1a48dc7aab113f4dfe4` and completed cleanup, closing TASK-044. TASK-045 fresh-main audit/design identifies missing executable lossless migration, explicit legacy no-manifest discovery and bounded Asset paging; existing compatibility/recovery/NLE focused baseline is `94 / 94 PASS`. P-RC-1, P-RC-2 and P-RC-3 are sequential; Critic unresolved Critical/High is `0 / 0`. Provider/paid/Production Deploy/ambiguous destructive migration remain blocked. Stable Product release remains `v0.20.1`; exact next SemVer is undecided.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.70 Addendum LXIV. TASK-045 Design PR #74 passed hosted `9 / 9`, merged at exact main `1ddc8ea39e45ee62590a443e3a67d8bb901b6062` and completed cleanup. Fresh-main P-RC-1 implements explicit legacy no-manifest discovery, code-registered lossless copy-on-write migration with backup/reopen proof, additive schema v3 bounded Asset paging and a concurrent source-manifest pointer corrective. Focused `100 / 100` and full WSL2 `1123 / 1123` pass; hosted closure remains pending. P-RC-2 and P-RC-3 remain dependency-waiting. Provider/paid/Production Deploy/ambiguous destructive migration remain blocked. Stable Product release remains `v0.20.1`; exact next SemVer is undecided.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

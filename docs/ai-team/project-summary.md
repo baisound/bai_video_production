@@ -7,9 +7,9 @@
 - Product package: `0.20.1`
 - Stable formal Release: `v0.20.1`
 - Release-code SHA: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Current development main: `6703c42a3aa06a563071f1a48dc7aab113f4dfe4` (PR #72 TASK-044 P-NLE-4 merge)
-- Current Product state: `V0_20_1_RELEASED / TASK_044_HOSTED_CLOSED / TASK_045_RELEASE_CLOSURE_DESIGN_ACTIVE / NATIVE_RUNTIME_PARKED`
-- Active implementation branch: `NONE`; current design branch is `refactor/task-045-release-closure-design`
+- Current development main: `1ddc8ea39e45ee62590a443e3a67d8bb901b6062` (PR #74 TASK-045 Design merge)
+- Current Product state: `V0_20_1_RELEASED / TASK_045_P_RC_1_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Active implementation branch: `refactor/task-045-prc1-compatibility-migration`
 
 Current main is newer than the stable release because bounded R2-R4 Product development was integrated without selecting a newer package, Tag or GitHub Release.
 
@@ -51,6 +51,7 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 - PR #72 exact head `ac5b2956e0a0e881a4cf0a58f414eaab826c2fb2`: `9 / 9 PASS`; exact main merge `6703c42a3aa06a563071f1a48dc7aab113f4dfe4`
 - TASK-044 P-NLE-4 focused Windows/WSL2 `60 / 60`, full Windows `1109 passed, 1 skipped`, full WSL2 `1110 / 1110`, packaged Windows native PASS
 - TASK-045 audit baseline compatibility/recovery/NLE focused tests: `94 / 94 PASS`
+- TASK-045 P-RC-1 compatibility/migration/paging focused tests: `100 / 100 PASS`; full WSL2 regression: `1123 / 1123 PASS`
 - PR #47 exact head `3785e44a211b8c4d81005060bc8a1faff161870d`: `9 / 9 PASS`; exact main merge `8dd6434a65115d88641d0942b08788a9eceda279`
 - TASK-041 focused regression: `64 / 64 PASS`
 - TASK-041 full WSL2 regression: `932 / 932 PASS`

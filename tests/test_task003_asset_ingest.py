@@ -299,7 +299,7 @@ def test_v1_database_migrates_additively_and_preserves_legacy_asset(tmp_path):
         conn.execute("INSERT INTO assets VALUES(?,?,?,?,?,?,?,?,?)", (asset_id,job_id,"AUDIO",f"asset://{job_id}/source/legacy.wav",checksum,"OWNED","USER","STANDARD",0))
         conn.execute("INSERT INTO asset_versions VALUES(?,?,?,?,NULL)", (generate_id(IdKind.ASSET_VERSION),asset_id,1,checksum))
     store = SQLiteProductStore(db)
-    assert store.schema_versions() == (1, 2)
+    assert store.schema_versions() == (1, 2, 3)
     asset = store.get_asset(asset_id)
     assert asset.asset_id == asset_id
     assert asset.reuse_allowed is PermissionState.ALLOWED

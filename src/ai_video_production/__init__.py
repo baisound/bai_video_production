@@ -109,7 +109,7 @@ from .profile import PluginDescriptor, ProfileSnapshot, merge_allowed_overrides
 from .resolve_capabilities import CapabilityStatus, ProbeMode, ResolveCapabilityProbe, authorize_mutation_probe
 from .resolve_loader import ResolveModuleLoader
 from .state import JobStateService, ProductionJobState
-from .store import ManifestRecord, SQLiteProductStore
+from .store import AssetPage, ManifestRecord, SQLiteProductStore
 from .edit_plan import (
     CandidateGraphEdge, CandidateGraphNode, CandidateReviewDecision, EditDecision,
     EditPlan, EditPlanService, PlannedRange,
@@ -144,9 +144,14 @@ from .durable_product_job import (
 )
 from .project_migration import (
     BindingCompatibility, BindingMigrationPlan, CompatibilityState,
-    MigrationRegistry, MigrationTransition, ProjectCompatibilityInspector,
+    MigrationRegistry, MigrationTransformResult, MigrationTransformer,
+    MigrationTransformerRegistry, MigrationTransition, ProjectCompatibilityInspector,
     ProjectCompatibilityReport, ProjectMigrationPlan, ProjectMigrationPlanner,
     SupportedFormatRange,
+)
+from .project_migration_application import (
+    LegacyProjectBindingRule, LegacyProjectCandidate, LegacyProjectDiscovery,
+    ProductProjectMigrationApplication,
 )
 from .timeline_audio import (
     AudioCue as TimelineAudioCue, AudioFitPolicy, AudioRange, AudioSourceBinding,
@@ -198,7 +203,7 @@ __all__ = [
     "ManifestRecord", "MediaProbeResult", "PathMapping", "PermissionState", "PluginDescriptor",
     "ProbeMode", "Producer", "ProductError", "ProductErrorCategory", "ProductionJobState",
     "ProfileSnapshot", "ResumeContext", "RetentionClass", "ResolveCapabilityProbe", "ResolveModuleLoader",
-    "RightsStatus", "SQLiteProductStore", "SourcePathPolicy", "TimelineOwner", "TimelineRef",
+    "AssetPage", "RightsStatus", "SQLiteProductStore", "SourcePathPolicy", "TimelineOwner", "TimelineRef",
     "TimelineWriteGuard", "assert_resume_compatible", "authorize_mutation_probe", "generate_id",
     "AsrProvider", "AsrRequest", "SrtRenderer", "SubtitleCue", "SubtitlePlan",
     "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment",
@@ -245,9 +250,12 @@ __all__ = [
     "ProductProjectManifest", "ProjectChildBinding", "ProjectTimebase",
     "parse_product_project_manifest", "sha256_file_exact", "validate_project_relative_path",
     "ProductProjectManifestStore", "BindingCompatibility", "BindingMigrationPlan",
-    "CompatibilityState", "MigrationRegistry", "MigrationTransition",
+    "CompatibilityState", "MigrationRegistry", "MigrationTransformResult",
+    "MigrationTransformer", "MigrationTransformerRegistry", "MigrationTransition",
     "ProjectCompatibilityInspector", "ProjectCompatibilityReport",
     "ProjectMigrationPlan", "ProjectMigrationPlanner", "SupportedFormatRange",
+    "LegacyProjectBindingRule", "LegacyProjectCandidate", "LegacyProjectDiscovery",
+    "ProductProjectMigrationApplication",
     "ProductProjectSaveCoordinator", "ProjectSaveState",
     "ProductProjectAutosaveCoordinator", "ProductProjectBackupStore",
     "ProjectAutosavePolicy", "ProjectAutosaveResult", "ProjectBackupPreview",

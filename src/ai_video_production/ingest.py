@@ -19,7 +19,7 @@ from .assets import (
     RetentionClass,
     RightsStatus,
 )
-from .atomic import AtomicJsonWriter
+from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .errors import ProductError, ProductErrorCategory
 from .evidence import EvidenceRecord, EvidenceWriter
 from .manifest import ManifestEnvelope, Producer
@@ -370,9 +370,10 @@ class AssetIngestService:
         # source-manifest.json is a derived convenience pointer. Only the
         # highest committed revision may update it, so concurrent older writers
         # cannot roll the pointer backwards.
-        latest = self.store.latest_manifest(job_id, "source-manifest")
-        if latest is not None and latest.manifest_id == committed.manifest_id:
-            AtomicJsonWriter.write(latest_path, envelope.to_dict(), validator=self._validate_source_manifest)
+        with exclusive_file_update_lock(latest_path):
+            latest = self.store.latest_manifest(job_id, "source-manifest")
+            if latest is not None and latest.manifest_id == committed.manifest_id:
+                AtomicJsonWriter.write(latest_path, envelope.to_dict(), validator=self._validate_source_manifest)
         return reservation.uri, versioned.checksum
 
     def _write_evidence(

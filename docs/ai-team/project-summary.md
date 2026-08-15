@@ -7,11 +7,11 @@
 - Product package: `0.21.0`
 - Stable formal Release: `v0.21.0`
 - Release-code SHA: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Current development main: `c38187ed54e3601c44411d9b8a128348b0d8a7b7` (PR #77 TASK-045 P-RC-3 merge and exact Tag target)
-- Current Product state: `V0_21_0_RELEASED / TASK_045_POST_RELEASE_SYNC_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
-- Active implementation branch: `docs/task-045-v0.21.0-release-closure`
+- Current development main: `1956f6e04b0c6206f64333d719f41c567def0590` (PR #78 TASK-045 post-release Evidence merge)
+- Current Product state: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_DESIGN_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Active implementation branch: `feature/task-027-generation-output-adoption-design`
 
-Current main and the stable release identify the same exact release-code commit. The active branch changes only post-release Evidence and canonical state surfaces.
+The stable Tag identifies release-code commit `c38187ed`; current main is newer only by the hosted TASK-045 Evidence sync. The active branch is a design-only TASK-027 orchestration unit.
 
 ## Completed Product scope
 
@@ -36,7 +36,7 @@ No contained generated output, TASK-037 Candidate, TASK-040 Attempt binding, TAS
 
 ## Remaining Product scope
 
-- TASK-045 post-release Evidence sync, hosted closure, cleanup and fresh-main AUTONOMY reselection;
+- TASK-027 P-ORCH-1 completed local-generation output adoption into canonical Asset/Candidate/Prompt lineage and READY_FOR_AUDIT;
 - full multi-slice TASK-027 production orchestration;
 - remaining TASK-013 native generation and post-native Candidate/Audit binding;
 - TASK-014 Owner Narration, TASK-026 Audio Placement compilation/execution and later TASK-041 audio-processing slices;
@@ -56,6 +56,7 @@ The adapter compatibility and historical migration baseline remains BAI Developm
 - TASK-045 P-RC-2 PR #76 final head `76644790`: hosted `9 / 9 PASS`; exact main `84837e34`; remote branch/dedicated checkout cleanup `PASS`
 - TASK-045 P-RC-3 local release gates: Windows `1123 passed, 1 expected skip`; WSL2 `1124 / 1124`; wheel/sdist build, clean install, `pip check`, EXE build and two packaged restart paths `PASS`
 - TASK-045 P-RC-3 PR #77 final head `c5cdff27`: hosted `9 / 9 PASS`; exact main/tag target `c38187ed`; annotated Tag object `93305ada`; Release workflow `31858212510 PASS`; stable GitHub Release and published wheel/sdist digest verification `PASS`
+- TASK-045 post-release PR #78 head `8b3f59b`: hosted `9 / 9 PASS`; exact main `1956f6e0`; remote branch/dedicated checkout cleanup `PASS`
 - PR #47 exact head `3785e44a211b8c4d81005060bc8a1faff161870d`: `9 / 9 PASS`; exact main merge `8dd6434a65115d88641d0942b08788a9eceda279`
 - TASK-041 focused regression: `64 / 64 PASS`
 - TASK-041 full WSL2 regression: `932 / 932 PASS`

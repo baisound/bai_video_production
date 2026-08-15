@@ -150,6 +150,52 @@ class ExportQueueApplication:
         return self.jobs.transition(self.project_root, job.job_id, DurableProductJobState.CANCELLED,
                                     expected_state_version=expected_state_version)
 
+    def reconcile(self, *, job_id: str, expected_state_version: int,
+                  action: str, result: ExportDispatchResult | None = None) -> DurableProductJob:
+        """Apply one explicit Human recovery decision to one UNKNOWN Export."""
+
+        job = self._job(job_id)
+        if job.state is not DurableProductJobState.UNKNOWN:
+            raise ProductError(
+                "ERR_EXPORT_RECONCILE_STATE", "Only an UNKNOWN Export can be reconciled",
+                ProductErrorCategory.STATE,
+            )
+        if action == "ACCEPT_PROVEN_SUCCESS":
+            if result is None or result.state != "SUCCEEDED":
+                raise ProductError(
+                    "ERR_EXPORT_RECONCILE_PROOF_REQUIRED",
+                    "Passing Render QA Evidence and exact result identity are required",
+                    ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                )
+            return self.jobs.transition(
+                self.project_root, job.job_id, DurableProductJobState.SUCCEEDED,
+                expected_state_version=expected_state_version,
+                recovery_action=action, result_ref=result.durable_result_ref,
+                actual_cost=result.actual_cost,
+            )
+        if result is not None:
+            raise ProductError(
+                "ERR_EXPORT_RECONCILE_PROOF_UNEXPECTED",
+                "Result proof is valid only for proven success",
+                ProductErrorCategory.VALIDATION,
+            )
+        target = {
+            "MARK_FAILED": DurableProductJobState.FAILED,
+            "REQUIRE_HUMAN": DurableProductJobState.HUMAN_REQUIRED,
+        }.get(action)
+        if target is None:
+            raise ProductError(
+                "ERR_EXPORT_RECONCILE_ACTION", "Export recovery action is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self.jobs.transition(
+            self.project_root, job.job_id, target,
+            expected_state_version=expected_state_version,
+            recovery_action=action,
+            error_code=("ERR_PRODUCT_JOB_RECONCILED_FAILED" if target is DurableProductJobState.FAILED
+                        else "ERR_PRODUCT_JOB_HUMAN_RECONCILIATION_REQUIRED"),
+        )
+
     def prepare_execute_all(self, preparations: dict[str, ExportPreparation]) -> dict[str, object]:
         rows = []
         for job_id in sorted(preparations):

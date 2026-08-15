@@ -35,7 +35,7 @@
 | TASK-041 | Audio Workspace / Embedded Audio Separation & Placement UX | PRODUCT_PROMOTION_HOSTED_CLOSED_FUTURE_SLICES_REMAIN | OWNER_DIRECTED_IMPLEMENTATION | DEV-4 | Durable project application and unified Desktop `音声` workspace passed focused 64/64, full WSL2 932/932 and PR #47 hosted 9/9; exact main merge 8dd6434a. Provider, paid execution, derived-media write, TASK-026 compile and Resolve/Cubase remain unstarted. |
 | TASK-042 | Product Workflow V6 Integration / Frame-bound Reference & Production UX | P_V6_4_HOSTED_CLOSED | OWNER_MAXIMUM_PRIORITY_SEQUENTIAL_P_V6 | DEV-4 | P-V6-4 PR #67 hosted 9/9 and merged at exact main 19f1a94f; branch/checkout cleanup passed. P-V6-5/6 are split into TASK-044/045. |
 | TASK-043 | Unified Product Project / Migration / Recovery Foundation | HOSTED_CLOSED | OWNER_MAXIMUM_MAJOR_REFACTOR | DEV-4 | Final P-FND-4 PR #66 hosted 9/9 and merged at exact main 10eae32b; branch cleanup passed. |
-| TASK-044 | Interactive Timeline / Unified NLE / Export Queue | P_NLE_2_HOSTED_CLOSED_P_NLE_3_LOCAL_PASS_HOSTED_PENDING | OWNER_MAXIMUM_AFTER_TASK_043_AND_P_V6_4 | DEV-4 | P-NLE-2 PR #70 merged at a6bb252; P-NLE-3 durable Export Queue passes focused 43/43 and full 1097 passed, 1 skipped; hosted pending. |
+| TASK-044 | Interactive Timeline / Unified NLE / Export Queue | P_NLE_3_HOSTED_CLOSED_P_NLE_4_LOCAL_NATIVE_PASS_HOSTED_PENDING | OWNER_MAXIMUM_AFTER_TASK_043_AND_P_V6_4 | DEV-4 | P-NLE-3 PR #71 merged at c23083e; P-NLE-4 dynamic/keyboard-accessible Shell, zoom/scroll/track paging, per-job Export recovery and packaged Windows native gate pass; Windows/WSL2 focused 60/60, full Windows 1109+1 skip, full WSL2 1110/1110; hosted pending. |
 | TASK-045 | V6 Native Acceptance / Compatibility / Release Closure | ALLOCATED_DEPENDENCY_WAIT | OWNER_MAXIMUM_RELEASE_CLOSURE | DEV-4 | Old-project migration corpus, recovery, native UX/full regression and exact SemVer/Tag/Release decision. |
 
 ## Roadmap authority
@@ -44,7 +44,7 @@
 
 ## Route control
 
-TASK-004, TASK-036, TASK-037, TASK-038, TASK-013/TASK-039/TASK-040 R3 Product promotions and bounded TASK-027 Planning/Generation Queue slices are completed. R4 TASK-013 local execution control, its exact local/free ComfyUI adapter and the bounded TASK-041 Audio Workspace Product promotion are hosted-closed. TASK-042 P-V6-4 Design is hosted-closed at exact main `6784a44e`, but its implementation now waits for TASK-043, which is the current maximum-priority runnable foundation under the replacement Owner Directive. TASK-044 and TASK-045 hold the former P-V6-5/6 responsibilities. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
+TASK-004, TASK-036, R2/R3 Product promotions, bounded TASK-027 Planning/Generation Queue, R4 local execution control and TASK-041 Audio Workspace promotion are completed or hosted-closed. TASK-043 and TASK-042 P-V6-4 are hosted-closed. TASK-044 P-NLE-3 is hosted-closed at exact main `c23083e6`; P-NLE-4 Unified Shell/UI and bounded Windows native acceptance are local PASS and hosted-pending. TASK-045 compatibility/native/release closure becomes runnable only after that hosted closure. Native H3 completion and paid TASK-014 execution remain parked at recorded Human Gates. A configured credential or enabled AI setting never authorizes Provider execution, suggestion acceptance or GO.
 
 ## Registered Future Design / Knowledge Intake
 

@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_20_1_RELEASED / TASK_044_P_NLE_2_HOSTED_CLOSED / P_NLE_3_LOCAL_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_20_1_RELEASED / TASK_044_P_NLE_3_HOSTED_CLOSED / P_NLE_4_LOCAL_NATIVE_PASS_HOSTED_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-036 H2 W0/W1 native closure — v0.20.1`
-- Active Consumer Task: `TASK-044 / P-NLE-3 DURABLE EXPORT QUEUE LOCAL PASS / HOSTED PENDING`; P-NLE-2 PR #70 is hosted-closed at exact main `a6bb252f36f4d3a8aca0175eb35c0ab44a7b91e8`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
+- Active Consumer Task: `TASK-044 / P-NLE-4 UNIFIED SHELL/UI AND NATIVE ACCEPTANCE LOCAL PASS / HOSTED PENDING`; P-NLE-3 PR #71 is hosted-closed at exact main `c23083e6fa1f8513b14010ece1c2a92c51c47916`, while TASK-013 native H3 and TASK-014 paid narration execution remain parked behind their recorded Human Gates
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.20.1`
 - Release State: `FORMAL_RELEASE_COMPLETE`; latest formal GitHub Release is `v0.20.1`
 - Development Candidate: `NONE`; TASK-043 foundation does not preselect a package version
 - Release commit: `c2e12d59f869a6b612848aab7ba8319e9cb8a4b4`
-- Next Consumer Decision Gate: `P-NLE-3 PR all-green/main merge/exact SHA/cleanup -> fresh-main P-NLE-4 Shell/UI and sandboxed Windows acceptance; TASK-013 native and TASK-014 paid execution remain parked`
+- Next Consumer Decision Gate: `P-NLE-4 PR all-green/main merge/exact SHA/cleanup -> fresh-main TASK-045 compatibility/native/release audit and exact release decision; TASK-013 native and TASK-014 paid execution remain parked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.67 Addendum LXI. P-NLE-2 PR #70 passed hosted `9 / 9`, merged at exact main `a6bb252f36f4d3a8aca0175eb35c0ab44a7b91e8` and completed cleanup. P-NLE-3 exact Export preparation, durable idempotent enqueue, stale preflight, per-job confirmation, UNKNOWN recovery and Render QA-bound success pass focused `43 / 43` and full `1097 passed, 1 skipped`; hosted checks remain pending with Critic `0 / 0`. P-NLE-4 waits for hosted closure. TASK-045 remains dependency-waiting. Provider/paid/native/media/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.68 Addendum LXII. P-NLE-3 PR #71 passed hosted `9 / 9`, merged at exact main `c23083e6fa1f8513b14010ece1c2a92c51c47916` and completed cleanup. P-NLE-4 dynamic Shell, private typed bridge, keyboard/accessibility, bounded clip/track projection, zoom/scroll/roving focus, per-job Export controls, narrow/mixed-monitor native behavior and final packaged EXE pass focused Windows/WSL2 `60 / 60`, full Windows `1109 passed, 1 skipped` and full WSL2 `1110 / 1110`; hosted checks remain pending with Critic `0 / 0`. Browser automation was unavailable and is not claimed. TASK-045 remains dependency-waiting until hosted closure. Provider/paid/Production/TASK-010/Resolve/Cubase operations remain false. Stable Product release remains `v0.20.1`.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

@@ -35,6 +35,11 @@ from .task036_product_ports import (
     Task036LocalTranscriptionPort,
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
+from .task044_nle_shell import Task044NleShellController
+from .interactive_timeline_application import Task044TimelineEditApplication
+from .interactive_timeline_projection import InteractiveTimelineProjectionService
+from .export_queue_application import ExportQueueApplication
+from .product_project_store import ProductProjectManifestStore
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
@@ -514,6 +519,27 @@ def build_trusted_launch(
         project_id=configuration.project_id,
         production_control=production_control,
     )
+
+    def nle_controller(application) -> Task044NleShellController:
+        timeline = InteractiveTimelineProjectionService.from_editing_projection(
+            project_id=configuration.project_id,
+            timeline_id=f"task036:{configuration.project_id}",
+            timeline_rate=configuration.timeline_rate,
+            projection=application.projection(),
+        )
+        edit_application = None
+        export_application = None
+        if ProductProjectManifestStore.path(configuration.project_root).exists():
+            edit_application = Task044TimelineEditApplication(
+                project_root=configuration.project_root, project_id=configuration.project_id,
+            )
+            export_application = ExportQueueApplication(
+                project_root=configuration.project_root, project_id=configuration.project_id,
+            )
+        return Task044NleShellController(
+            timeline=timeline, edit_application=edit_application,
+            export_application=export_application,
+        )
     generation_execution_application = None
     if configuration.local_generation is not None:
         local_client = comfy_client or ComfyUIClient(configuration.local_generation.endpoint)
@@ -541,6 +567,7 @@ def build_trusted_launch(
         generation_queue_application=generation_queue_application,
         generation_execution_application=generation_execution_application,
         audio_workspace_application=audio_workspace_application,
+        nle_controller_factory=nle_controller,
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)
 
@@ -561,6 +588,6 @@ def run_trusted_native_shell(config_path: str | Path) -> None:
         js_api=launch.bridge,
         width=1600,
         height=900,
-        min_size=(1100, 700),
+        min_size=(760, 600),
     )
     webview.start(gui="edgechromium")

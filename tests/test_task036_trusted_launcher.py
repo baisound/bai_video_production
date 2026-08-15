@@ -138,50 +138,50 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     public = json.dumps([launch.bridge.snapshot(), launch.bridge.workflow_status()])
     assert str(config.project_root) not in public
     assert str(config.analysis_source_path) not in public
-    assert isinstance(launch.bridge.production_control, Task037ProductionControlApplication)
-    assert launch.bridge.production_control.project_root == config.project_root
-    assert launch.bridge.production_control.project_id == config.project_id
-    assert isinstance(launch.bridge.audit_application, Task038AuditApplication)
-    assert launch.bridge.audit_application.project_root == config.project_root
-    assert launch.bridge.audit_application.project_id == config.project_id
-    assert isinstance(launch.bridge.planning_application, Task027PlanningApplication)
-    assert launch.bridge.planning_application.project_root == config.project_root
-    assert launch.bridge.planning_application.project_id == config.project_id
-    assert launch.bridge.planning_application.production_control is launch.bridge.production_control
-    assert isinstance(launch.bridge.generation_safety_application, Task013GenerationSafetyApplication)
-    assert launch.bridge.generation_safety_application.project_root == config.project_root
-    assert launch.bridge.generation_safety_application.project_id == config.project_id
-    assert launch.bridge.generation_safety_application.planning_application is launch.bridge.planning_application
-    assert launch.bridge.generation_safety_application.audit_application is launch.bridge.audit_application
-    assert isinstance(launch.bridge.continuity_application, Task039ContinuityApplication)
-    assert launch.bridge.continuity_application.project_root == config.project_root
-    assert launch.bridge.continuity_application.project_id == config.project_id
-    assert launch.bridge.continuity_application.production_control is launch.bridge.production_control
+    assert isinstance(launch.bridge._production_control, Task037ProductionControlApplication)
+    assert launch.bridge._production_control.project_root == config.project_root
+    assert launch.bridge._production_control.project_id == config.project_id
+    assert isinstance(launch.bridge._audit_application, Task038AuditApplication)
+    assert launch.bridge._audit_application.project_root == config.project_root
+    assert launch.bridge._audit_application.project_id == config.project_id
+    assert isinstance(launch.bridge._planning_application, Task027PlanningApplication)
+    assert launch.bridge._planning_application.project_root == config.project_root
+    assert launch.bridge._planning_application.project_id == config.project_id
+    assert launch.bridge._planning_application.production_control is launch.bridge._production_control
+    assert isinstance(launch.bridge._generation_safety_application, Task013GenerationSafetyApplication)
+    assert launch.bridge._generation_safety_application.project_root == config.project_root
+    assert launch.bridge._generation_safety_application.project_id == config.project_id
+    assert launch.bridge._generation_safety_application.planning_application is launch.bridge._planning_application
+    assert launch.bridge._generation_safety_application.audit_application is launch.bridge._audit_application
+    assert isinstance(launch.bridge._continuity_application, Task039ContinuityApplication)
+    assert launch.bridge._continuity_application.project_root == config.project_root
+    assert launch.bridge._continuity_application.project_id == config.project_id
+    assert launch.bridge._continuity_application.production_control is launch.bridge._production_control
     continuity = launch.bridge.continuity_snapshot({})
     assert continuity["available"] is True
     assert continuity["provider_execution_started"] is False
     assert continuity["resolve_mutation_started"] is False
-    assert isinstance(launch.bridge.prompt_evidence_application, Task040PromptEvidenceApplication)
-    assert launch.bridge.prompt_evidence_application.project_root == config.project_root
-    assert launch.bridge.prompt_evidence_application.project_id == config.project_id
-    assert launch.bridge.prompt_evidence_application.production_control is launch.bridge.production_control
-    assert launch.bridge.prompt_evidence_application.audit_application is launch.bridge.audit_application
+    assert isinstance(launch.bridge._prompt_evidence_application, Task040PromptEvidenceApplication)
+    assert launch.bridge._prompt_evidence_application.project_root == config.project_root
+    assert launch.bridge._prompt_evidence_application.project_id == config.project_id
+    assert launch.bridge._prompt_evidence_application.production_control is launch.bridge._production_control
+    assert launch.bridge._prompt_evidence_application.audit_application is launch.bridge._audit_application
     prompt_evidence = launch.bridge.prompt_evidence_snapshot({})
     assert prompt_evidence["available"] is True
     assert prompt_evidence["provider_execution_started"] is False
     assert prompt_evidence["candidate_creation_started"] is False
-    assert isinstance(launch.bridge.generation_queue_application, Task027GenerationQueueApplication)
-    assert launch.bridge.generation_queue_application.production_control is launch.bridge.production_control
-    assert launch.bridge.generation_queue_application.planning_application is launch.bridge.planning_application
-    assert launch.bridge.generation_queue_application.generation_safety_application is launch.bridge.generation_safety_application
-    assert launch.bridge.generation_queue_application.continuity_application is launch.bridge.continuity_application
-    assert launch.bridge.generation_queue_application.prompt_evidence_application is launch.bridge.prompt_evidence_application
+    assert isinstance(launch.bridge._generation_queue_application, Task027GenerationQueueApplication)
+    assert launch.bridge._generation_queue_application.production_control is launch.bridge._production_control
+    assert launch.bridge._generation_queue_application.planning_application is launch.bridge._planning_application
+    assert launch.bridge._generation_queue_application.generation_safety_application is launch.bridge._generation_safety_application
+    assert launch.bridge._generation_queue_application.continuity_application is launch.bridge._continuity_application
+    assert launch.bridge._generation_queue_application.prompt_evidence_application is launch.bridge._prompt_evidence_application
     queue = launch.bridge.generation_queue_snapshot({})
     assert queue["available"] is True
     assert queue["provider_execution_started"] is False
     assert queue["paid_execution_authorized"] is False
-    assert isinstance(launch.bridge.audio_workspace_application, Task041AudioWorkspaceApplication)
-    assert launch.bridge.audio_workspace_application.production_control is launch.bridge.production_control
+    assert isinstance(launch.bridge._audio_workspace_application, Task041AudioWorkspaceApplication)
+    assert launch.bridge._audio_workspace_application.production_control is launch.bridge._production_control
     audio = launch.bridge.audio_workspace_snapshot({})
     assert audio["available"] is True
     assert audio["provider_execution_started"] is False
@@ -228,7 +228,7 @@ def test_v11_launch_explicitly_composes_bounded_local_generation_without_executi
         resolve_adapter=ResolveAdapter(),
         comfy_client=ComfyClient(),
     )
-    assert launch.bridge.generation_execution_application is not None
+    assert launch.bridge._generation_execution_application is not None
     snapshot = launch.bridge.generation_execution_snapshot({})
     assert snapshot["available"] is True
     assert snapshot["events"] == []

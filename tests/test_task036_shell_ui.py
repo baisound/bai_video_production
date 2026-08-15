@@ -554,7 +554,7 @@ def test_integrated_bridge_plan_approval_advances_workflow_stage():
         project_id="project-1",
         display_name="Project 1",
         source_asset_sha256="sha256:" + "9" * 64,
-        cut_manifest=source_bridge.review.state.manifest,
+        cut_manifest=source_bridge._review.state.manifest,
         token_factory=lambda: next(values),
     )
     bridge = Task036ShellBridge(app.shell, application=app)

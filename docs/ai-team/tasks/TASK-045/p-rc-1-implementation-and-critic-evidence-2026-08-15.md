@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 Authority: `BVP-TASK-045-P-RC-1 / IMPLEMENTATION`
-State: `LOCAL_PASS / HOSTED_PENDING`
+State: `HOSTED_CLOSED`
 
 ## Allowed Files amendment 1
 
@@ -76,9 +76,12 @@ Judge decision: `ALLOWED_FILES_AMENDMENT_AUTHORIZED`.
 - full WSL2 regression: `1123 / 1123 PASS` in `45.78 s`;
 - WSL2 compileall `src tests`: `PASS`;
 - `git diff --check`: `PASS`;
-- local Windows Python launcher/runtime: unavailable after the Owner-reported
-  restart; no local Windows PASS is claimed;
-- hosted Windows/Linux CI: `PENDING` until PR.
+- local Windows Python launcher/runtime was unavailable during P-RC-1; no local
+  Windows PASS is retrospectively claimed;
+- hosted Windows/Linux CI: PR #75 `9 / 9 PASS`;
+- exact PR head: `30b20deb09f26c27ef98b0518953748fdc4c9c0f`;
+- exact main merge: `402c8956a5f5f3ac485c43db2b3e35e667846a88`;
+- remote branch and dedicated checkout cleanup: `PASS`.
 
 ## Final Critic / Judge
 
@@ -90,7 +93,5 @@ Judge decision: `ALLOWED_FILES_AMENDMENT_AUTHORIZED`.
 - unbounded Asset materialization: excluded from the new Product page API;
 - unresolved Critical/High: `0 / 0`.
 
-Judge decision: `P_RC_1_LOCAL_PASS / HOSTED_CI_REQUIRED`. P-RC-2 remains blocked
-until this branch passes hosted CI, merges to exact main and completes branch and
-checkout cleanup. Exact SemVer, Tag, GitHub Release and Production Deploy are not
-performed in P-RC-1.
+Judge decision: `P_RC_1_HOSTED_CLOSED`. Exact SemVer, Tag, GitHub Release and
+Production Deploy were not performed in P-RC-1.

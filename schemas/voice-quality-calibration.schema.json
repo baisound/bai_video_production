@@ -1,0 +1,430 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/voice-quality-calibration.schema.json",
+  "title": "TASK-048 P-QC-1A Body-free Voice Quality Calibration Contract",
+  "oneOf": [
+    {"$ref": "#/$defs/captureChainRevision"},
+    {"$ref": "#/$defs/calibrationProfileRevision"},
+    {"$ref": "#/$defs/qualityPolicyRevision"},
+    {"$ref": "#/$defs/analyzerProfileRevision"},
+    {"$ref": "#/$defs/calibrationSessionRevision"},
+    {"$ref": "#/$defs/measurementInputRangeBinding"},
+    {"$ref": "#/$defs/stagingToTask003AssetPromotionBinding"},
+    {"$ref": "#/$defs/metricInputSetBinding"},
+    {"$ref": "#/$defs/metricFact"},
+    {"$ref": "#/$defs/measurementReceipt"},
+    {"$ref": "#/$defs/qualityEvaluationReceipt"},
+    {"$ref": "#/$defs/captureEvidenceBinding"},
+    {"$ref": "#/$defs/rxDerivedQualityBinding"},
+    {"$ref": "#/$defs/privacyPolicyBinding"},
+    {"$ref": "#/$defs/humanInputBinding"},
+    {"$ref": "#/$defs/gainRecommendationRevision"},
+    {"$ref": "#/$defs/additionalRecordingRecommendationRevision"},
+    {"$ref": "#/$defs/driftComparisonReceipt"},
+    {"$ref": "#/$defs/durationCoverageIndicator"},
+    {"$ref": "#/$defs/approvedStyleLanguageEmotionCoverageIndicator"},
+    {"$ref": "#/$defs/rawAcousticQualityCoverageIndicator"},
+    {"$ref": "#/$defs/datasetReadinessIndicator"},
+    {"$ref": "#/$defs/modelEvaluationReadinessIndicator"}
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullableId": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/id"}]},
+    "nullableSha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "nullableTimestamp": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]},
+    "contractState": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "qualityState": {"enum": ["PASS", "FAIL", "UNKNOWN", "RERECORD_RECOMMENDED"]},
+    "processingClass": {"enum": ["RAW_PRE_FILTER", "OBS_POST_FILTER", "CANONICAL_CONVERTED_RAW", "RX_DERIVED"]},
+    "bodyAuthorityFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "audio_body_persisted", "raw_sample_body_persisted", "transcript_body_persisted",
+        "credential_value_persisted", "host_absolute_path_persisted", "device_fingerprint_public",
+        "capture_or_staging_write_authorized", "asset_effect_authorized",
+        "analyzer_execution_authorized", "obs_rx_device_effect_authorized",
+        "dataset_training_production_authorized"
+      ],
+      "properties": {
+        "audio_body_persisted": {"const": false},
+        "raw_sample_body_persisted": {"const": false},
+        "transcript_body_persisted": {"const": false},
+        "credential_value_persisted": {"const": false},
+        "host_absolute_path_persisted": {"const": false},
+        "device_fingerprint_public": {"const": false},
+        "capture_or_staging_write_authorized": {"const": false},
+        "asset_effect_authorized": {"const": false},
+        "analyzer_execution_authorized": {"const": false},
+        "obs_rx_device_effect_authorized": {"const": false},
+        "dataset_training_production_authorized": {"const": false}
+      }
+    },
+    "commonRevision": {
+      "type": "object",
+      "required": [
+        "voice_quality_contract_version", "record_type", "task_owner", "project_id",
+        "revision", "parent_revision_sha256", "created_at", "body_authority_flags"
+      ],
+      "properties": {
+        "voice_quality_contract_version": {"const": "1.0.0"},
+        "record_type": {"type": "string"},
+        "task_owner": {"const": "TASK-048/P-QC-1A"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "body_authority_flags": {"$ref": "#/$defs/bodyAuthorityFlags"}
+      },
+      "allOf": [{
+        "if": {"properties": {"revision": {"const": 1}}},
+        "then": {"properties": {"parent_revision_sha256": {"type": "null"}}},
+        "else": {"properties": {"parent_revision_sha256": {"$ref": "#/$defs/sha256"}}}
+      }]
+    },
+    "recordReference": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_ref", "record_sha256"],
+      "properties": {"record_ref": {"$ref": "#/$defs/id"}, "record_sha256": {"$ref": "#/$defs/sha256"}}
+    },
+    "rationalSampleDuration": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sample_count", "denominator"],
+      "properties": {"sample_count": {"type": "integer", "minimum": 0}, "denominator": {"const": 48000}}
+    },
+    "halfOpenSampleInterval": {
+      "type": "object", "additionalProperties": false,
+      "required": ["start_sample", "end_sample"],
+      "properties": {"start_sample": {"type": "integer", "minimum": 0}, "end_sample": {"type": "integer", "minimum": 1}}
+    },
+    "captureChainStage": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "stage_index", "stage_kind", "stage_id", "stage_revision", "stage_sha256",
+        "settings_sha256", "processing_state", "phantom_power_observation_state",
+        "pad_observation_state", "hpf_observation_state", "preamp_gain_observation_state",
+        "hidden_processing_state", "gain_role",
+        "previous_stage_sha256", "next_stage_sha256", "evidence_ref", "evidence_sha256",
+        "stable_private_ref", "stable_private_ref_sha256", "observed_display_name",
+        "automatic_change_authorized"
+      ],
+      "properties": {
+        "stage_index": {"type": "integer", "minimum": 1, "maximum": 8},
+        "stage_kind": {"enum": ["MIC_PAD_HPF", "INTERFACE_ANALOGUE_PREAMP", "DRIVER_OS_ENDPOINT", "OBS_SOURCE", "OBS_FILTERS", "OBS_MIXER", "PLUGIN_CAPTURE_TAP", "NON_REALTIME_CANONICAL_CONVERSION"]},
+        "stage_id": {"$ref": "#/$defs/id"},
+        "stage_revision": {"type": "integer", "minimum": 1},
+        "stage_sha256": {"$ref": "#/$defs/sha256"},
+        "settings_sha256": {"$ref": "#/$defs/sha256"},
+        "processing_state": {"enum": ["DECLARED", "OBSERVED", "UNKNOWN"]},
+        "phantom_power_observation_state": {"enum": ["DECLARED", "MEASURED", "OBSERVED", "UNKNOWN", "NOT_APPLICABLE"]},
+        "pad_observation_state": {"enum": ["DECLARED", "MEASURED", "OBSERVED", "UNKNOWN", "NOT_APPLICABLE"]},
+        "hpf_observation_state": {"enum": ["DECLARED", "MEASURED", "OBSERVED", "UNKNOWN", "NOT_APPLICABLE"]},
+        "preamp_gain_observation_state": {"enum": ["DECLARED", "MEASURED", "OBSERVED", "UNKNOWN", "NOT_APPLICABLE"]},
+        "hidden_processing_state": {"enum": ["CLEAR", "DETECTED", "UNKNOWN"]},
+        "gain_role": {"enum": ["NONE", "PRIMARY", "DECLARED_SECONDARY", "UNKNOWN"]},
+        "previous_stage_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "next_stage_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "evidence_ref": {"$ref": "#/$defs/id"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "stable_private_ref": {"$ref": "#/$defs/nullableId"},
+        "stable_private_ref_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "observed_display_name": {"oneOf": [{"type": "null"}, {"type": "string", "minLength": 1}]},
+        "automatic_change_authorized": {"const": false}
+      }
+    },
+    "metricInputReference": {
+      "type": "object", "additionalProperties": false,
+      "required": ["role", "range_ref", "range_sha256"],
+      "properties": {
+        "role": {"enum": ["SIGNAL", "NOISE", "BEFORE", "AFTER", "TARGET", "REFERENCE"]},
+        "range_ref": {"$ref": "#/$defs/id"},
+        "range_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "calibrationStagingObjectBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "contract_state", "capture_evidence_binding_ref", "capture_evidence_binding_sha256",
+        "encrypted_staging_object_ref", "staging_object_sha256", "canonical_mapping_receipt_ref",
+        "canonical_mapping_receipt_sha256", "retention_expires_at", "disposition",
+        "reverification_state", "dataset_adoption_permitted", "asset_publication_permitted",
+        "training_use_permitted"
+      ],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "capture_evidence_binding_ref": {"$ref": "#/$defs/nullableId"},
+        "capture_evidence_binding_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "encrypted_staging_object_ref": {"$ref": "#/$defs/nullableId"},
+        "staging_object_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "canonical_mapping_receipt_ref": {"$ref": "#/$defs/nullableId"},
+        "canonical_mapping_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "retention_expires_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "disposition": {"enum": ["ACTIVE", "EXPIRED", "DELETED", "UNKNOWN"]},
+        "reverification_state": {"enum": ["AVAILABLE", "UNAVAILABLE", "UNKNOWN"]},
+        "dataset_adoption_permitted": {"const": false},
+        "asset_publication_permitted": {"const": false},
+        "training_use_permitted": {"const": false}
+      },
+      "allOf": [
+        {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}}, "then": {"properties": {
+          "capture_evidence_binding_ref": {"type": "null"}, "capture_evidence_binding_sha256": {"type": "null"},
+          "encrypted_staging_object_ref": {"type": "null"}, "staging_object_sha256": {"type": "null"},
+          "canonical_mapping_receipt_ref": {"type": "null"}, "canonical_mapping_receipt_sha256": {"type": "null"},
+          "retention_expires_at": {"type": "null"}
+        }}},
+        {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {
+          "capture_evidence_binding_ref": {"$ref": "#/$defs/id"}, "capture_evidence_binding_sha256": {"$ref": "#/$defs/sha256"},
+          "encrypted_staging_object_ref": {"$ref": "#/$defs/id"}, "staging_object_sha256": {"$ref": "#/$defs/sha256"},
+          "canonical_mapping_receipt_ref": {"$ref": "#/$defs/id"}, "canonical_mapping_receipt_sha256": {"$ref": "#/$defs/sha256"},
+          "retention_expires_at": {"$ref": "#/$defs/timestamp"}
+        }}}
+      ]
+    },
+    "task003AssetBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "asset_id", "asset_checksum_sha256", "asset_record_evidence_sha256", "asset_revision_binding_ref", "asset_revision_binding_sha256", "official_mapping_state"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "asset_id": {"$ref": "#/$defs/nullableId"},
+        "asset_checksum_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "asset_record_evidence_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "asset_revision_binding_ref": {"$ref": "#/$defs/nullableId"},
+        "asset_revision_binding_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "official_mapping_state": {"enum": ["UNBOUND_PENDING_TASK003", "BOUND", "MISMATCH", "UNKNOWN"]}
+      },
+      "allOf": [
+        {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}}, "then": {"properties": {
+          "asset_id": {"type": "null"}, "asset_checksum_sha256": {"type": "null"},
+          "asset_record_evidence_sha256": {"type": "null"}, "asset_revision_binding_ref": {"type": "null"},
+          "asset_revision_binding_sha256": {"type": "null"}, "official_mapping_state": {"const": "UNBOUND_PENDING_TASK003"}
+        }}},
+        {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {
+          "asset_id": {"$ref": "#/$defs/id"}, "asset_checksum_sha256": {"$ref": "#/$defs/sha256"},
+          "asset_record_evidence_sha256": {"$ref": "#/$defs/sha256"}, "asset_revision_binding_ref": {"$ref": "#/$defs/id"},
+          "asset_revision_binding_sha256": {"$ref": "#/$defs/sha256"}, "official_mapping_state": {"const": "BOUND"}
+        }}}
+      ]
+    },
+    "captureChainRevision": {
+      "allOf": [
+        {"$ref": "#/$defs/commonRevision"},
+        {"type": "object", "required": ["capture_chain_id", "sample_rate", "bit_depth", "channels", "stages", "calibration_state", "human_input_binding_sha256", "capture_chain_revision_sha256"], "properties": {
+          "record_type": {"const": "CaptureChainRevision"}, "capture_chain_id": {"$ref": "#/$defs/id"},
+          "sample_rate": {"const": 48000}, "bit_depth": {"const": 24}, "channels": {"const": 1},
+          "stages": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "#/$defs/captureChainStage"}},
+          "calibration_state": {"$ref": "#/$defs/qualityState"}, "human_input_binding_sha256": {"$ref": "#/$defs/sha256"},
+          "capture_chain_revision_sha256": {"$ref": "#/$defs/sha256"}
+        }}
+      ], "unevaluatedProperties": false
+    },
+    "calibrationProfileRevision": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["calibration_profile_id", "capture_chain_revision_sha256", "scenario", "processing_class", "sample_rate", "bit_depth", "channels", "policy_scope", "calibration_profile_revision_sha256"], "properties": {
+        "record_type": {"const": "CalibrationProfileRevision"}, "calibration_profile_id": {"$ref": "#/$defs/id"}, "capture_chain_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "scenario": {"enum": ["ROOM_TONE", "NORMAL_VOICE", "LOUD_VOICE", "WHISPER", "SOFT_WHISPER", "NORMAL_INTERMEDIATE"]}, "processing_class": {"$ref": "#/$defs/processingClass"},
+        "sample_rate": {"const": 48000}, "bit_depth": {"const": 24}, "channels": {"const": 1}, "policy_scope": {"$ref": "#/$defs/id"}, "calibration_profile_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "qualityPolicyRevision": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["quality_policy_id", "use_case_scope", "metric_rules_sha256", "precedence_rule", "conflict_rule", "percentage_policy_state", "target_percentage_basis_points", "privacy_policy_binding_sha256", "default_valid_decision", "quality_policy_revision_sha256"], "properties": {
+        "record_type": {"const": "QualityPolicyRevision"}, "quality_policy_id": {"$ref": "#/$defs/id"}, "use_case_scope": {"enum": ["NARRATION_RECORDING", "TRAINING_SOURCE", "PUBLISHED_PROGRAMME", "MODEL_EVALUATION"]},
+        "metric_rules_sha256": {"$ref": "#/$defs/sha256"}, "precedence_rule": {"enum": ["EXACT_CURRENT_ONLY", "EXPLICIT_ORDER", "UNKNOWN"]}, "conflict_rule": {"enum": ["FAIL_WINS", "EXPLICIT_PRECEDENCE", "UNKNOWN"]},
+        "percentage_policy_state": {"$ref": "#/$defs/contractState"}, "target_percentage_basis_points": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0, "maximum": 10000}]},
+        "privacy_policy_binding_sha256": {"$ref": "#/$defs/sha256"}, "default_valid_decision": {"$ref": "#/$defs/qualityState"}, "quality_policy_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }}, {"if": {"properties": {"percentage_policy_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {"target_percentage_basis_points": {"type": "integer", "minimum": 0, "maximum": 10000}}}, "else": {"properties": {"target_percentage_basis_points": {"type": "null"}}}}], "unevaluatedProperties": false
+    },
+    "analyzerProfileRevision": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["analyzer_profile_id", "analyzer_name", "analyzer_version", "code_sha256", "supported_metrics", "capability_evidence_sha256", "contract_state", "analyzer_profile_revision_sha256"], "properties": {
+        "record_type": {"const": "AnalyzerProfileRevision"}, "analyzer_profile_id": {"$ref": "#/$defs/id"}, "analyzer_name": {"$ref": "#/$defs/id"}, "analyzer_version": {"$ref": "#/$defs/id"},
+        "code_sha256": {"$ref": "#/$defs/sha256"}, "supported_metrics": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}, "capability_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "contract_state": {"$ref": "#/$defs/contractState"}, "analyzer_profile_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "calibrationSessionRevision": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["calibration_session_id", "state", "capture_chain_revision_sha256", "calibration_profile_revision_sha256", "quality_policy_revision_sha256", "analyzer_profile_revision_sha256", "human_input_binding_sha256", "capture_evidence_binding_sha256", "production_admission", "calibration_session_revision_sha256"], "properties": {
+        "record_type": {"const": "CalibrationSessionRevision"}, "calibration_session_id": {"$ref": "#/$defs/id"}, "state": {"enum": ["DRAFT", "PREFLIGHT_PENDING", "BLOCKED", "READY_FOR_HUMAN_GATE", "MEASUREMENT_PENDING", "MEASURED", "FAILED_KNOWN", "UNKNOWN", "CANCELLED_SAFE"]},
+        "capture_chain_revision_sha256": {"$ref": "#/$defs/sha256"}, "calibration_profile_revision_sha256": {"$ref": "#/$defs/sha256"}, "quality_policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "analyzer_profile_revision_sha256": {"$ref": "#/$defs/sha256"}, "human_input_binding_sha256": {"$ref": "#/$defs/sha256"}, "capture_evidence_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "production_admission": {"const": false}, "calibration_session_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "measurementInputRangeBinding": {
+      "allOf": [
+        {"$ref": "#/$defs/commonRevision"},
+        {"type": "object", "required": ["measurement_input_range_id", "source_class", "processing_class", "sample_rate", "bit_depth", "channels", "interval", "canonical_mapping_sha256", "capture_chain_revision_sha256", "source_binding", "measurement_input_range_binding_sha256"], "properties": {
+          "record_type": {"const": "MeasurementInputRangeBinding"}, "measurement_input_range_id": {"$ref": "#/$defs/id"},
+          "source_class": {"enum": ["CALIBRATION_STAGING_EVIDENCE", "TASK003_ASSET_REVISION"]}, "processing_class": {"$ref": "#/$defs/processingClass"},
+          "sample_rate": {"const": 48000}, "bit_depth": {"const": 24}, "channels": {"const": 1}, "interval": {"$ref": "#/$defs/halfOpenSampleInterval"},
+          "canonical_mapping_sha256": {"$ref": "#/$defs/sha256"}, "capture_chain_revision_sha256": {"$ref": "#/$defs/sha256"},
+          "source_binding": {"oneOf": [{"$ref": "#/$defs/calibrationStagingObjectBinding"}, {"$ref": "#/$defs/task003AssetBinding"}]},
+          "measurement_input_range_binding_sha256": {"$ref": "#/$defs/sha256"}
+        }},
+        {"if": {"properties": {"source_class": {"const": "CALIBRATION_STAGING_EVIDENCE"}}}, "then": {"properties": {"source_binding": {"$ref": "#/$defs/calibrationStagingObjectBinding"}}}, "else": {"properties": {"source_binding": {"$ref": "#/$defs/task003AssetBinding"}}}}
+      ], "unevaluatedProperties": false
+    },
+    "stagingToTask003AssetPromotionBinding": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["promotion_binding_id", "contract_state", "staging_input_range_sha256", "asset_mapping_ref", "asset_mapping_sha256", "owner_decision_ref", "owner_decision_sha256", "effect_receipt_ref", "effect_receipt_sha256", "source_object_state_mutated", "effect_issued_by_pqc", "staging_to_task003_asset_promotion_binding_sha256"], "properties": {
+        "record_type": {"const": "StagingToTask003AssetPromotionBinding"}, "promotion_binding_id": {"$ref": "#/$defs/id"}, "contract_state": {"$ref": "#/$defs/contractState"},
+        "staging_input_range_sha256": {"$ref": "#/$defs/nullableSha256"}, "asset_mapping_ref": {"$ref": "#/$defs/nullableId"}, "asset_mapping_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "owner_decision_ref": {"$ref": "#/$defs/nullableId"}, "owner_decision_sha256": {"$ref": "#/$defs/nullableSha256"}, "effect_receipt_ref": {"$ref": "#/$defs/nullableId"}, "effect_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "source_object_state_mutated": {"const": false}, "effect_issued_by_pqc": {"const": false}, "staging_to_task003_asset_promotion_binding_sha256": {"$ref": "#/$defs/sha256"}
+      }}, {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}}, "then": {"properties": {
+        "staging_input_range_sha256": {"type": "null"}, "asset_mapping_ref": {"type": "null"}, "asset_mapping_sha256": {"type": "null"},
+        "owner_decision_ref": {"type": "null"}, "owner_decision_sha256": {"type": "null"}, "effect_receipt_ref": {"type": "null"}, "effect_receipt_sha256": {"type": "null"}
+      }}}, {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {
+        "staging_input_range_sha256": {"$ref": "#/$defs/sha256"}, "asset_mapping_ref": {"$ref": "#/$defs/id"}, "asset_mapping_sha256": {"$ref": "#/$defs/sha256"},
+        "owner_decision_ref": {"$ref": "#/$defs/id"}, "owner_decision_sha256": {"$ref": "#/$defs/sha256"}, "effect_receipt_ref": {"$ref": "#/$defs/id"}, "effect_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }}}], "unevaluatedProperties": false
+    },
+    "metricInputSetBinding": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["metric_input_set_id", "input_kind", "purpose", "input_refs", "analyzer_profile_revision_sha256", "calibration_profile_revision_sha256", "quality_policy_revision_sha256", "compatibility_state", "metric_input_set_binding_sha256"], "properties": {
+        "record_type": {"const": "MetricInputSetBinding"}, "metric_input_set_id": {"$ref": "#/$defs/id"}, "input_kind": {"enum": ["SINGLE_RANGE", "ORDERED_MULTI_RANGE", "PAIRED_BEFORE_AFTER"]}, "purpose": {"$ref": "#/$defs/id"},
+        "input_refs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/metricInputReference"}}, "analyzer_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "calibration_profile_revision_sha256": {"$ref": "#/$defs/sha256"}, "quality_policy_revision_sha256": {"$ref": "#/$defs/sha256"}, "compatibility_state": {"$ref": "#/$defs/qualityState"},
+        "metric_input_set_binding_sha256": {"$ref": "#/$defs/sha256"}
+      }},
+      {"if": {"properties": {"input_kind": {"const": "SINGLE_RANGE"}}}, "then": {"properties": {"input_refs": {"minItems": 1, "maxItems": 1}}}},
+      {"if": {"properties": {"input_kind": {"const": "ORDERED_MULTI_RANGE"}}}, "then": {"properties": {"input_refs": {"minItems": 2, "maxItems": 2, "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/metricInputReference"}, {"properties": {"role": {"const": "SIGNAL"}}}]},
+        {"allOf": [{"$ref": "#/$defs/metricInputReference"}, {"properties": {"role": {"const": "NOISE"}}}]}
+      ]}}}},
+      {"if": {"properties": {"input_kind": {"const": "PAIRED_BEFORE_AFTER"}}}, "then": {"properties": {"input_refs": {"minItems": 2, "maxItems": 2, "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/metricInputReference"}, {"properties": {"role": {"const": "BEFORE"}}}]},
+        {"allOf": [{"$ref": "#/$defs/metricInputReference"}, {"properties": {"role": {"const": "AFTER"}}}]}
+      ]}}}}
+      ], "unevaluatedProperties": false
+    },
+    "metricFact": {
+      "allOf": [
+        {"$ref": "#/$defs/commonRevision"},
+        {"type": "object", "required": ["metric_fact_id", "metric_input_set_sha256", "metric_name", "unit", "value_state", "value", "error_code", "evidence_sha256", "metric_fact_sha256"], "properties": {
+          "record_type": {"const": "MetricFact"}, "metric_fact_id": {"$ref": "#/$defs/id"}, "metric_input_set_sha256": {"$ref": "#/$defs/sha256"}, "metric_name": {"$ref": "#/$defs/id"}, "unit": {"$ref": "#/$defs/id"},
+          "value_state": {"enum": ["DECLARED", "MEASURED", "NOT_SUPPORTED", "INSUFFICIENT_INPUT", "ERROR", "UNKNOWN"]}, "value": {"oneOf": [{"type": "null"}, {"type": "number"}]}, "error_code": {"$ref": "#/$defs/nullableId"},
+          "evidence_sha256": {"$ref": "#/$defs/sha256"}, "metric_fact_sha256": {"$ref": "#/$defs/sha256"}
+        }},
+        {"if": {"properties": {"value_state": {"const": "MEASURED"}}}, "then": {"properties": {"value": {"type": "number"}, "error_code": {"type": "null"}}}, "else": {"properties": {"value": {"type": "null"}}}},
+        {"if": {"properties": {"value_state": {"const": "ERROR"}}}, "then": {"properties": {"error_code": {"$ref": "#/$defs/id"}}}, "else": {"properties": {"error_code": {"type": "null"}}}}
+      ], "unevaluatedProperties": false
+    },
+    "measurementReceipt": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["measurement_receipt_id", "measured_at", "metric_input_set_ref", "metric_input_set_sha256", "analyzer_profile_ref", "analyzer_profile_revision_sha256", "calibration_profile_revision_sha256", "capture_chain_revision_sha256", "metric_fact_refs", "fact_validity", "current", "tampered", "measurement_receipt_sha256"], "properties": {
+        "record_type": {"const": "MeasurementReceipt"}, "measurement_receipt_id": {"$ref": "#/$defs/id"}, "measured_at": {"$ref": "#/$defs/timestamp"}, "metric_input_set_ref": {"$ref": "#/$defs/id"}, "metric_input_set_sha256": {"$ref": "#/$defs/sha256"},
+        "analyzer_profile_ref": {"$ref": "#/$defs/id"}, "analyzer_profile_revision_sha256": {"$ref": "#/$defs/sha256"}, "calibration_profile_revision_sha256": {"$ref": "#/$defs/sha256"}, "capture_chain_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "metric_fact_refs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/recordReference"}}, "fact_validity": {"enum": ["VALID", "INVALID_INPUT", "UNKNOWN"]}, "current": {"type": "boolean"}, "tampered": {"type": "boolean"},
+        "measurement_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "qualityEvaluationReceipt": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["quality_evaluation_receipt_id", "evaluated_at", "measurement_receipt_refs", "receipt_index_sha256", "analyzer_profile_ref", "analyzer_profile_revision_sha256", "quality_policy_ref", "quality_policy_revision_sha256", "capture_chain_revision_sha256", "result", "reason_codes", "precedence_digest", "conflict_state", "quality_evaluation_receipt_sha256"], "properties": {
+        "record_type": {"const": "QualityEvaluationReceipt"}, "quality_evaluation_receipt_id": {"$ref": "#/$defs/id"}, "evaluated_at": {"$ref": "#/$defs/timestamp"}, "measurement_receipt_refs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/recordReference"}},
+        "receipt_index_sha256": {"$ref": "#/$defs/sha256"}, "analyzer_profile_ref": {"$ref": "#/$defs/id"}, "analyzer_profile_revision_sha256": {"$ref": "#/$defs/sha256"}, "quality_policy_ref": {"$ref": "#/$defs/id"}, "quality_policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "capture_chain_revision_sha256": {"$ref": "#/$defs/sha256"}, "result": {"$ref": "#/$defs/qualityState"}, "reason_codes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "precedence_digest": {"$ref": "#/$defs/sha256"}, "conflict_state": {"enum": ["CLEAR", "CONFLICT", "UNKNOWN"]}, "quality_evaluation_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "captureEvidenceBinding": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["capture_evidence_binding_id", "contract_state", "capture_receipt_ref", "capture_receipt_sha256", "staging_owner_ref", "staging_owner_sha256", "evidence_state", "callback_bounded_copy_only", "analyzer_in_callback", "capture_evidence_binding_sha256"], "properties": {
+        "record_type": {"const": "CaptureEvidenceBinding"}, "capture_evidence_binding_id": {"$ref": "#/$defs/id"}, "contract_state": {"$ref": "#/$defs/contractState"}, "capture_receipt_ref": {"$ref": "#/$defs/nullableId"}, "capture_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "staging_owner_ref": {"$ref": "#/$defs/nullableId"}, "staging_owner_sha256": {"$ref": "#/$defs/nullableSha256"}, "evidence_state": {"$ref": "#/$defs/qualityState"}, "callback_bounded_copy_only": {"const": true}, "analyzer_in_callback": {"const": false}, "capture_evidence_binding_sha256": {"$ref": "#/$defs/sha256"}
+      }}, {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}}, "then": {"properties": {
+        "capture_receipt_ref": {"type": "null"}, "capture_receipt_sha256": {"type": "null"}, "staging_owner_ref": {"type": "null"}, "staging_owner_sha256": {"type": "null"}, "evidence_state": {"const": "UNKNOWN"}
+      }}}, {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {
+        "capture_receipt_ref": {"$ref": "#/$defs/id"}, "capture_receipt_sha256": {"$ref": "#/$defs/sha256"}, "staging_owner_ref": {"$ref": "#/$defs/id"}, "staging_owner_sha256": {"$ref": "#/$defs/sha256"}
+      }}}], "unevaluatedProperties": false
+    },
+    "rxDerivedQualityBinding": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["rx_derived_quality_binding_id", "contract_state", "source_asset_ref", "source_asset_sha256", "derived_asset_ref", "derived_asset_sha256", "rx_version_ref", "rx_version_sha256", "module_preset_parameter_sha256", "render_receipt_ref", "render_receipt_sha256", "before_measurement_receipt_sha256", "after_measurement_receipt_sha256", "source_overwritten", "raw_delete_authorized", "dataset_adoption_authorized", "rx_derived_quality_binding_sha256"], "properties": {
+        "record_type": {"const": "RXDerivedQualityBinding"}, "rx_derived_quality_binding_id": {"$ref": "#/$defs/id"}, "contract_state": {"$ref": "#/$defs/contractState"},
+        "source_asset_ref": {"$ref": "#/$defs/nullableId"}, "source_asset_sha256": {"$ref": "#/$defs/nullableSha256"}, "derived_asset_ref": {"$ref": "#/$defs/nullableId"}, "derived_asset_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "rx_version_ref": {"$ref": "#/$defs/nullableId"}, "rx_version_sha256": {"$ref": "#/$defs/nullableSha256"}, "module_preset_parameter_sha256": {"$ref": "#/$defs/nullableSha256"}, "render_receipt_ref": {"$ref": "#/$defs/nullableId"}, "render_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "before_measurement_receipt_sha256": {"$ref": "#/$defs/nullableSha256"}, "after_measurement_receipt_sha256": {"$ref": "#/$defs/nullableSha256"}, "source_overwritten": {"const": false}, "raw_delete_authorized": {"const": false}, "dataset_adoption_authorized": {"const": false},
+        "rx_derived_quality_binding_sha256": {"$ref": "#/$defs/sha256"}
+      }}, {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}}, "then": {"properties": {
+        "source_asset_ref": {"type": "null"}, "source_asset_sha256": {"type": "null"}, "derived_asset_ref": {"type": "null"}, "derived_asset_sha256": {"type": "null"},
+        "rx_version_ref": {"type": "null"}, "rx_version_sha256": {"type": "null"}, "module_preset_parameter_sha256": {"type": "null"}, "render_receipt_ref": {"type": "null"}, "render_receipt_sha256": {"type": "null"},
+        "before_measurement_receipt_sha256": {"type": "null"}, "after_measurement_receipt_sha256": {"type": "null"}
+      }}}, {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {
+        "source_asset_ref": {"$ref": "#/$defs/id"}, "source_asset_sha256": {"$ref": "#/$defs/sha256"}, "derived_asset_ref": {"$ref": "#/$defs/id"}, "derived_asset_sha256": {"$ref": "#/$defs/sha256"},
+        "rx_version_ref": {"$ref": "#/$defs/id"}, "rx_version_sha256": {"$ref": "#/$defs/sha256"}, "module_preset_parameter_sha256": {"$ref": "#/$defs/sha256"}, "render_receipt_ref": {"$ref": "#/$defs/id"}, "render_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "before_measurement_receipt_sha256": {"$ref": "#/$defs/sha256"}, "after_measurement_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }}}], "unevaluatedProperties": false
+    },
+    "privacyPolicyBinding": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["privacy_policy_binding_id", "contract_state", "policy_ref", "policy_sha256", "public_detail_state", "public_detail_allowed", "low_count_suppression_evidence_sha256", "privacy_policy_binding_sha256"], "properties": {
+        "record_type": {"const": "PrivacyPolicyBinding"}, "privacy_policy_binding_id": {"$ref": "#/$defs/id"}, "contract_state": {"$ref": "#/$defs/contractState"}, "policy_ref": {"$ref": "#/$defs/nullableId"}, "policy_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "public_detail_state": {"enum": ["SUPPRESSED", "POLICY_AUTHORIZED", "UNKNOWN"]}, "public_detail_allowed": {"type": "boolean"}, "low_count_suppression_evidence_sha256": {"$ref": "#/$defs/nullableSha256"}, "privacy_policy_binding_sha256": {"$ref": "#/$defs/sha256"}
+      }}, {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}}, "then": {"properties": {
+        "policy_ref": {"type": "null"}, "policy_sha256": {"type": "null"}, "public_detail_state": {"const": "SUPPRESSED"}, "public_detail_allowed": {"const": false}, "low_count_suppression_evidence_sha256": {"type": "null"}
+      }}}], "unevaluatedProperties": false
+    },
+    "humanInputBinding": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["human_input_binding_id", "contract_state", "human_input_ref", "human_input_sha256", "input_state", "required_answers_sha256", "hardware_change_authorized", "owner_voice_recording_authorized", "human_input_binding_sha256"], "properties": {
+        "record_type": {"const": "HumanInputBinding"}, "human_input_binding_id": {"$ref": "#/$defs/id"}, "contract_state": {"$ref": "#/$defs/contractState"}, "human_input_ref": {"$ref": "#/$defs/nullableId"}, "human_input_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "input_state": {"enum": ["COMPLETE", "INCOMPLETE", "UNKNOWN"]}, "required_answers_sha256": {"$ref": "#/$defs/nullableSha256"}, "hardware_change_authorized": {"const": false}, "owner_voice_recording_authorized": {"const": false}, "human_input_binding_sha256": {"$ref": "#/$defs/sha256"}
+      }}, {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}}, "then": {"properties": {
+        "human_input_ref": {"type": "null"}, "human_input_sha256": {"type": "null"}, "required_answers_sha256": {"type": "null"}
+      }}}, {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {
+        "human_input_ref": {"$ref": "#/$defs/id"}, "human_input_sha256": {"$ref": "#/$defs/sha256"}, "required_answers_sha256": {"$ref": "#/$defs/sha256"}, "input_state": {"const": "COMPLETE"}
+      }}}], "unevaluatedProperties": false
+    },
+    "gainRecommendationRevision": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["gain_recommendation_id", "state", "capture_chain_revision_sha256", "measurement_receipt_sha256", "quality_policy_revision_sha256", "proposed_stage_id", "proposed_change_sha256", "human_confirmation_binding_sha256", "device_setting_change_authorized", "gain_recommendation_revision_sha256"], "properties": {
+        "record_type": {"const": "GainRecommendationRevision"}, "gain_recommendation_id": {"$ref": "#/$defs/id"}, "state": {"enum": ["PROPOSED", "OWNER_APPROVED", "REJECTED", "UNKNOWN"]}, "capture_chain_revision_sha256": {"$ref": "#/$defs/sha256"}, "measurement_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "quality_policy_revision_sha256": {"$ref": "#/$defs/sha256"}, "proposed_stage_id": {"$ref": "#/$defs/id"}, "proposed_change_sha256": {"$ref": "#/$defs/sha256"}, "human_confirmation_binding_sha256": {"$ref": "#/$defs/sha256"}, "device_setting_change_authorized": {"const": false}, "gain_recommendation_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "additionalRecordingRecommendationRevision": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["additional_recording_recommendation_id", "state", "readiness_axis_refs", "reason_codes", "estimated_duration", "proposed_coverage_sha256", "human_confirmation_binding_sha256", "recording_plan_mutation_authorized", "additional_recording_recommendation_revision_sha256"], "properties": {
+        "record_type": {"const": "AdditionalRecordingRecommendationRevision"}, "additional_recording_recommendation_id": {"$ref": "#/$defs/id"}, "state": {"enum": ["PROPOSED", "OWNER_APPROVED", "REJECTED", "UNKNOWN"]},
+        "readiness_axis_refs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/recordReference"}}, "reason_codes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/id"}}, "estimated_duration": {"$ref": "#/$defs/rationalSampleDuration"},
+        "proposed_coverage_sha256": {"$ref": "#/$defs/sha256"}, "human_confirmation_binding_sha256": {"$ref": "#/$defs/sha256"}, "recording_plan_mutation_authorized": {"const": false}, "additional_recording_recommendation_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "driftComparisonReceipt": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["drift_comparison_receipt_id", "compared_at", "before_capture_chain_sha256", "after_capture_chain_sha256", "before_profile_sha256", "after_profile_sha256", "before_measurement_receipt_sha256", "after_measurement_receipt_sha256", "paired_metric_input_set_sha256", "result", "raw_fact_mutated", "drift_comparison_receipt_sha256"], "properties": {
+        "record_type": {"const": "DriftComparisonReceipt"}, "drift_comparison_receipt_id": {"$ref": "#/$defs/id"}, "compared_at": {"$ref": "#/$defs/timestamp"}, "before_capture_chain_sha256": {"$ref": "#/$defs/sha256"}, "after_capture_chain_sha256": {"$ref": "#/$defs/sha256"},
+        "before_profile_sha256": {"$ref": "#/$defs/sha256"}, "after_profile_sha256": {"$ref": "#/$defs/sha256"}, "before_measurement_receipt_sha256": {"$ref": "#/$defs/sha256"}, "after_measurement_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "paired_metric_input_set_sha256": {"$ref": "#/$defs/sha256"}, "result": {"$ref": "#/$defs/qualityState"}, "raw_fact_mutated": {"const": false}, "drift_comparison_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "coverageCommon": {
+      "type": "object",
+      "required": ["state", "policy_ref", "policy_revision_sha256", "numerator_sample_count", "denominator_sample_count", "percentage_basis_points", "percentage_policy_state"],
+      "properties": {
+        "state": {"$ref": "#/$defs/qualityState"}, "policy_ref": {"$ref": "#/$defs/id"}, "policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "numerator_sample_count": {"type": "integer", "minimum": 0}, "denominator_sample_count": {"type": "integer", "minimum": 1},
+        "percentage_basis_points": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0, "maximum": 10000}]}, "percentage_policy_state": {"$ref": "#/$defs/contractState"}
+      },
+      "allOf": [{"if": {"properties": {"percentage_policy_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {"percentage_basis_points": {"type": "integer", "minimum": 0, "maximum": 10000}}}, "else": {"properties": {"percentage_basis_points": {"type": "null"}, "state": {"const": "UNKNOWN"}}}}]
+    },
+    "durationCoverageIndicator": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"$ref": "#/$defs/coverageCommon"}, {"type": "object", "required": ["duration_coverage_indicator_id", "eligible_interval_index_sha256", "duration_coverage_indicator_sha256"], "properties": {
+        "record_type": {"const": "DurationCoverageIndicator"}, "duration_coverage_indicator_id": {"$ref": "#/$defs/id"}, "eligible_interval_index_sha256": {"$ref": "#/$defs/sha256"}, "duration_coverage_indicator_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "approvedStyleLanguageEmotionCoverageIndicator": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"$ref": "#/$defs/coverageCommon"}, {"type": "object", "required": ["approved_style_language_emotion_coverage_indicator_id", "approved_label_index_ref", "approved_label_index_sha256", "upstream_truth_recomputed", "approved_style_language_emotion_coverage_indicator_sha256"], "properties": {
+        "record_type": {"const": "ApprovedStyleLanguageEmotionCoverageIndicator"}, "approved_style_language_emotion_coverage_indicator_id": {"$ref": "#/$defs/id"}, "approved_label_index_ref": {"$ref": "#/$defs/id"}, "approved_label_index_sha256": {"$ref": "#/$defs/sha256"},
+        "upstream_truth_recomputed": {"const": false}, "approved_style_language_emotion_coverage_indicator_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "rawAcousticQualityCoverageIndicator": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"$ref": "#/$defs/coverageCommon"}, {"type": "object", "required": ["raw_acoustic_quality_coverage_indicator_id", "processing_class", "policy_scope", "current_receipt_index_sha256", "eligible_interval_index_sha256", "conflict_state", "raw_acoustic_quality_coverage_indicator_sha256"], "properties": {
+        "record_type": {"const": "RawAcousticQualityCoverageIndicator"}, "raw_acoustic_quality_coverage_indicator_id": {"$ref": "#/$defs/id"}, "processing_class": {"$ref": "#/$defs/processingClass"}, "policy_scope": {"$ref": "#/$defs/id"},
+        "current_receipt_index_sha256": {"$ref": "#/$defs/sha256"}, "eligible_interval_index_sha256": {"$ref": "#/$defs/sha256"}, "conflict_state": {"enum": ["CLEAR", "CONFLICT", "UNKNOWN"]}, "raw_acoustic_quality_coverage_indicator_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "datasetReadinessIndicator": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["dataset_readiness_indicator_id", "duration_axis_ref", "approved_coverage_axis_ref", "acoustic_quality_axis_ref", "policy_ref", "policy_revision_sha256", "state", "percentage_basis_points", "arithmetic_average_used", "upstream_truth_recomputed", "dataset_readiness_indicator_sha256"], "properties": {
+        "record_type": {"const": "DatasetReadinessIndicator"}, "dataset_readiness_indicator_id": {"$ref": "#/$defs/id"}, "duration_axis_ref": {"$ref": "#/$defs/recordReference"}, "approved_coverage_axis_ref": {"$ref": "#/$defs/recordReference"}, "acoustic_quality_axis_ref": {"$ref": "#/$defs/recordReference"},
+        "policy_ref": {"$ref": "#/$defs/id"}, "policy_revision_sha256": {"$ref": "#/$defs/sha256"}, "state": {"$ref": "#/$defs/qualityState"}, "percentage_basis_points": {"type": "null"}, "arithmetic_average_used": {"const": false}, "upstream_truth_recomputed": {"const": false}, "dataset_readiness_indicator_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    },
+    "modelEvaluationReadinessIndicator": {
+      "allOf": [{"$ref": "#/$defs/commonRevision"}, {"type": "object", "required": ["model_evaluation_readiness_indicator_id", "duration_axis_ref", "approved_coverage_axis_ref", "acoustic_quality_axis_ref", "dataset_readiness_ref", "evaluation_policy_ref", "evaluation_policy_sha256", "state", "percentage_basis_points", "arithmetic_average_used", "model_effect_authorized", "model_evaluation_readiness_indicator_sha256"], "properties": {
+        "record_type": {"const": "ModelEvaluationReadinessIndicator"}, "model_evaluation_readiness_indicator_id": {"$ref": "#/$defs/id"}, "duration_axis_ref": {"$ref": "#/$defs/recordReference"}, "approved_coverage_axis_ref": {"$ref": "#/$defs/recordReference"}, "acoustic_quality_axis_ref": {"$ref": "#/$defs/recordReference"}, "dataset_readiness_ref": {"$ref": "#/$defs/recordReference"},
+        "evaluation_policy_ref": {"$ref": "#/$defs/id"}, "evaluation_policy_sha256": {"$ref": "#/$defs/sha256"}, "state": {"$ref": "#/$defs/qualityState"}, "percentage_basis_points": {"type": "null"}, "arithmetic_average_used": {"const": false}, "model_effect_authorized": {"const": false}, "model_evaluation_readiness_indicator_sha256": {"$ref": "#/$defs/sha256"}
+      }}], "unevaluatedProperties": false
+    }
+  }
+}

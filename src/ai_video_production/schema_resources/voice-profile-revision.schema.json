@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/voice-profile-revision.schema.json",
+  "title": "TASK-046 Body-free Voice Profile Revision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_revision_version",
+    "task_owner",
+    "voice_profile_id",
+    "canonical_narration_profile_sha256",
+    "revision",
+    "parent_revision_sha256",
+    "created_at",
+    "consent",
+    "license",
+    "capability",
+    "audio_body_persisted",
+    "dataset_body_persisted",
+    "speaker_embedding_persisted",
+    "transcript_body_persisted",
+    "credential_value_persisted",
+    "private_provider_voice_id_persisted",
+    "host_path_persisted",
+    "execution_authorized",
+    "voice_profile_revision_sha256"
+  ],
+  "properties": {
+    "profile_revision_version": {"const": "1.0.0"},
+    "task_owner": {"const": "TASK-046"},
+    "voice_profile_id": {"$ref": "#/$defs/id"},
+    "canonical_narration_profile_sha256": {"$ref": "#/$defs/sha256"},
+    "revision": {"type": "integer", "minimum": 1},
+    "parent_revision_sha256": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/sha256"}
+      ]
+    },
+    "created_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "consent": {"$ref": "#/$defs/consent"},
+    "license": {"$ref": "#/$defs/license"},
+    "capability": {"$ref": "#/$defs/capability"},
+    "audio_body_persisted": {"const": false},
+    "dataset_body_persisted": {"const": false},
+    "speaker_embedding_persisted": {"const": false},
+    "transcript_body_persisted": {"const": false},
+    "credential_value_persisted": {"const": false},
+    "private_provider_voice_id_persisted": {"const": false},
+    "host_path_persisted": {"const": false},
+    "execution_authorized": {"const": false},
+    "voice_profile_revision_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"revision": {"const": 1}}},
+      "then": {"properties": {"parent_revision_sha256": {"type": "null"}}},
+      "else": {"properties": {"parent_revision_sha256": {"$ref": "#/$defs/sha256"}}}
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "nullable_id": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/id"}
+      ]
+    },
+    "nullable_sha256": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/sha256"}
+      ]
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "consent_subject_ref",
+        "consent_scope",
+        "allowed_usage_classes",
+        "state",
+        "subject_verified",
+        "evidence_id",
+        "evidence_sha256",
+        "consent_sha256"
+      ],
+      "properties": {
+        "consent_subject_ref": {"$ref": "#/$defs/id"},
+        "consent_scope": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "allowed_usage_classes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "state": {"enum": ["UNKNOWN", "ACTIVE", "REVOKED"]},
+        "subject_verified": {"type": "boolean"},
+        "evidence_id": {"$ref": "#/$defs/nullable_id"},
+        "evidence_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "consent_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"state": {"const": "ACTIVE"}}},
+          "then": {
+            "properties": {
+              "subject_verified": {"const": true},
+              "evidence_id": {"$ref": "#/$defs/id"},
+              "evidence_sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"evidence_id": {"type": "null"}}},
+          "then": {"properties": {"evidence_sha256": {"type": "null"}}},
+          "else": {"properties": {"evidence_sha256": {"$ref": "#/$defs/sha256"}}}
+        }
+      ]
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_artifact_id",
+        "exact_model_id",
+        "checkpoint_sha256",
+        "runtime_id",
+        "license_class",
+        "artifact_state",
+        "commercial_use_allowed",
+        "evidence_id",
+        "evidence_sha256",
+        "license_sha256"
+      ],
+      "properties": {
+        "model_artifact_id": {"$ref": "#/$defs/id"},
+        "exact_model_id": {"$ref": "#/$defs/id"},
+        "checkpoint_sha256": {"$ref": "#/$defs/sha256"},
+        "runtime_id": {"$ref": "#/$defs/id"},
+        "license_class": {
+          "enum": ["UNKNOWN", "COMMERCIAL_ALLOWED", "NONCOMMERCIAL_ONLY", "RESTRICTED"]
+        },
+        "artifact_state": {
+          "enum": ["CATALOG_ONLY", "EVALUATION_CANDIDATE", "APPROVED", "BLOCKED", "DEPRECATED"]
+        },
+        "commercial_use_allowed": {"type": "boolean"},
+        "evidence_id": {"$ref": "#/$defs/nullable_id"},
+        "evidence_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "license_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"artifact_state": {"const": "APPROVED"}}},
+          "then": {
+            "properties": {
+              "license_class": {
+                "enum": ["COMMERCIAL_ALLOWED", "NONCOMMERCIAL_ONLY", "RESTRICTED"]
+              },
+              "evidence_id": {"$ref": "#/$defs/id"},
+              "evidence_sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"commercial_use_allowed": {"const": true}}},
+          "then": {
+            "properties": {
+              "license_class": {"const": "COMMERCIAL_ALLOWED"},
+              "artifact_state": {"const": "APPROVED"},
+              "evidence_id": {"$ref": "#/$defs/id"},
+              "evidence_sha256": {"$ref": "#/$defs/sha256"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"evidence_id": {"type": "null"}}},
+          "then": {"properties": {"evidence_sha256": {"type": "null"}}},
+          "else": {"properties": {"evidence_sha256": {"$ref": "#/$defs/sha256"}}}
+        }
+      ]
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "engine_family",
+        "engine_id",
+        "supported_languages",
+        "capabilities",
+        "offline_only",
+        "probe_state",
+        "probe_report_sha256",
+        "capability_description_sha256"
+      ],
+      "properties": {
+        "engine_family": {"$ref": "#/$defs/id"},
+        "engine_id": {"$ref": "#/$defs/id"},
+        "supported_languages": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+          }
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "offline_only": {"type": "boolean"},
+        "probe_state": {"enum": ["NOT_RUN", "VERIFIED", "FAILED"]},
+        "probe_report_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "capability_description_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"probe_state": {"const": "VERIFIED"}}},
+          "then": {"properties": {"probe_report_sha256": {"$ref": "#/$defs/sha256"}}}
+        },
+        {
+          "if": {"properties": {"probe_state": {"const": "NOT_RUN"}}},
+          "then": {"properties": {"probe_report_sha256": {"type": "null"}}}
+        }
+      ]
+    }
+  }
+}

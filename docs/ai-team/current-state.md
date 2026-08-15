@@ -4,17 +4,17 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_036_P_UX_1A_LOCAL_PASS / HOSTED_IMPLEMENTATION_PENDING / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_21_0_RELEASED / TASK_036_P_UX_1B_CORE_LOCAL_PASS / HOSTED_IMPLEMENTATION_PENDING / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
-- Last Completed Consumer Gate: `TASK-036 P-UX-1 design`; PR #87 passed hosted `9 / 9`, merged at exact main `b771b9acae67fcd0ee41218d70a011e387beb300`, and completed remote branch/dedicated-checkout cleanup
-- Active Consumer Task: `TASK-036 / P-UX-1A V6.1.1 SHELL COMPOSITION IMPLEMENTATION / codex/task-036-v611-shell-composition-implementation`; exact base main `b771b9acae67fcd0ee41218d70a011e387beb300`; runtime V6.1.1 composition, focused `46 / 46`, Windows `1162 passed, 1 skip`, WSL2 `1163 passed`, one-dir build and native Home/Edit/Export/Settings inspection are local PASS; hosted implementation closure is pending
+- Last Completed Consumer Gate: `TASK-036 P-UX-1A implementation`; PR #88 passed hosted `9 / 9`, merged at exact main `35b91f29b39372ce38616d1d757b6ef43d68232b`, and completed remote branch/dedicated-checkout cleanup
+- Active Consumer Task: `TASK-036 / P-UX-1B V6.1.1 INTERACTION AND STATE CONVERGENCE / codex/task-036-v611-interaction-state-convergence`; exact base main `35b91f29b39372ce38616d1d757b6ef43d68232b`; explicit command registry, menu/focus behavior, nine Settings category tabs, real dual-queue Jobs projection and controller-authoritative Timeline scrub pass focused `50 / 50`, Windows full `1166 passed, 1 skip`, WSL2 full `1167 / 1167`, one-dir build and bounded native interaction locally; hosted implementation closure is pending
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `P-UX-1A implementation PR -> hosted 9/9 -> exact main merge -> cleanup -> fresh-main P-UX-1B interaction/state convergence; Native H3 replay and Production Deploy remain blocked`
+- Next Consumer Decision Gate: `P-UX-1B implementation PR -> hosted 9/9 -> exact main merge -> cleanup -> fresh-main Voice Studio Local AI handoff reconciliation; P-UX-1C remains required and Native H3 replay/Production Deploy remain blocked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -118,7 +118,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.83 Addendum LXXVII. TASK-036 P-UX-1 design is hosted-closed by PR #87 at exact main `b771b9acae67fcd0ee41218d70a011e387beb300`, including remote branch/dedicated-checkout cleanup. P-UX-1A is the active Owner P0 and locally passes the V6.1.1 runtime composition, Windows/WSL2 full regression, one-dir build and native Home/Edit/Export/Settings inspection. The mock remains the absolute packaged-EXE layout and interaction-intent authority; all dynamic state comes from existing Product stores/Application Services and fake demo state is absent. P-UX-1B interaction/state convergence and P-UX-1C full native closure remain, so overall visual parity remains unclaimed. Provider/paid/media/TASK-010/Resolve/Cubase/Production Deploy remain blocked.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.84 Addendum LXXVIII. TASK-036 P-UX-1A is hosted-closed by PR #88 at exact main `35b91f29b39372ce38616d1d757b6ef43d68232b`, including remote branch/dedicated-checkout cleanup. P-UX-1B core now passes command registry, menu/focus, nine-category Settings tabs, dual Background Jobs projection, controller-authoritative Timeline scrub, focused `50 / 50`, Windows full `1166 passed, 1 skip`, WSL2 full `1167 / 1167`, one-dir build and bounded native interaction locally. The mock remains the absolute packaged-EXE layout and interaction-intent authority; all dynamic state comes from existing Product stores/Application Services and fake demo state is absent. Hosted P-UX-1B closure and P-UX-1C full native closure remain, so overall visual parity remains unclaimed. After the P-UX-1B main merge and cleanup, the Owner-supplied Voice Studio Local AI handoff is the next required current-main reconciliation. Provider/paid/media/TASK-010/Resolve/Cubase/Production Deploy remain blocked.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

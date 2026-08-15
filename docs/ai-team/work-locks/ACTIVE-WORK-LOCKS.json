@@ -126,36 +126,47 @@
     "pyproject.toml",
     ".github/**"
   ],
+  "integration_lock_history": [
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK047-P0-ROADMAP-20260815",
+      "status": "HOSTED_CLOSED_RELEASED",
+      "pull_request": 92,
+      "head_sha": "14a719dd0f5382ef3062c31df00bc773a16319d6",
+      "merge_sha": "841cda2e5f4eb4dbc5304d5f57afe49392723825",
+      "hosted_checks": "9_OF_9_PASS",
+      "post_merge_ci_run": 31877047921,
+      "post_merge_security_run": 31877047932
+    }
+  ],
   "integration_lock": {
-    "lock_id": "BVP-INTEGRATION-LOCK-TASK047-P0-ROADMAP-20260815",
-    "owner_agent": "開発担当",
+    "lock_id": "BVP-INTEGRATION-LOCK-TASK036-PUX1C-CHANGELOG-20260815",
+    "owner_agent": "開発担当 / Integration owner",
     "owner_thread_id": "019ff856-bb71-7da0-a6fd-088ae06b158f",
-    "branch": "codex/task-047-p0-recording-dependency-roadmap",
-    "base_sha": "5e9d8405b6d39f0e726689e4153de8bb8416bf0d",
-    "status": "ACTIVE_UNTIL_EXACT_MAIN_HOSTING_THEN_RELEASED",
-    "release_condition": "THIS_DOCS_ONLY_UNIT_EXACT_MAIN_MERGE_AND_POST_MERGE_CHECKS_PASS",
-    "scope": "DOCS_ONLY_TASK047_P0_RECORDING_DEPENDENCY_ROADMAP_SYNC",
+    "authority": "DELEGATED_OWNER_AUTHORIZATION_2026-08-15",
+    "hosting_branch": "codex/task-036-pux1c-changelog-integration-lock",
+    "hosting_base_sha": "841cda2e5f4eb4dbc5304d5f57afe49392723825",
+    "status": "ACTIVE_ONLY_WHEN_EXACTLY_HOSTED_ON_MAIN",
+    "target_pr": 94,
+    "target_branch": "codex/task-036-v611-packaged-native-closure",
+    "expected_pre_integration_head": "dbccf1b1e6717a96d87440df1ebe8e707b3b8623",
+    "purpose": "ONE_EXACT_TASK036_PUX1C_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
     "allowed_files": [
-      "PROJECT.md",
-      "CHANGELOG.md",
-      "docs/ai-team/current-state.md",
-      "docs/ai-team/task-index.md",
-      "docs/roadmap/PROJECT-ROADMAP-CANONICAL.md",
-      "docs/ai-team/architecture/PRODUCT-ARCH-002-voice-studio-local-ai-integration.md",
-      "docs/ai-team/tasks/TASK-046/task.md",
-      "docs/ai-team/tasks/TASK-046/p-vs-0-roadmap-intake-design-review-authorization-2026-08-15.md",
-      "docs/ai-team/tasks/TASK-046/voice-studio-current-state-audit-2026-08-15.md",
-      "docs/ai-team/tasks/TASK-046/voice-studio-requirements-task-crosswalk-2026-08-15.md",
-      "docs/ai-team/tasks/TASK-046/voice-studio-acceptance-matrix-2026-08-15.md",
-      "docs/ai-team/tasks/TASK-046/voice-studio-60-90-second-vertical-slice-plan-2026-08-15.md",
-      "docs/ai-team/tasks/TASK-046/voice-studio-runtime-license-capability-probe-plan-2026-08-15.md",
-      "docs/ai-team/tasks/TASK-047/task.md",
-      "docs/ai-team/tasks/TASK-047/p-obs-priority-dependency-roadmap-audit-design-critic-judge-2026-08-15.md",
-      "docs/ai-team/tasks/TASK-043/task.md",
-      "docs/ai-team/tasks/TASK-045/task.md",
-      "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json",
-      "docs/ai-team/work-locks/TASK-036_TASK-046_PARALLEL-ALLOCATION.md"
-    ]
+      "CHANGELOG.md"
+    ],
+    "denied": [
+      "TASK036_IMPLEMENTATION_OR_EVIDENCE_FILES",
+      "TASK046_PVS1A_IMPLEMENTATION_FILES",
+      ".github/**",
+      "OTHER_SHARED_INTEGRATION_FILES",
+      "VERSION_TAG_RELEASE_DEPLOY"
+    ],
+    "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING",
+    "expiry_conditions": [
+      "TARGET_HEAD_MISMATCH",
+      "TARGET_PR_CLOSED_OR_MERGED",
+      "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+    ],
+    "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_HOSTED_CHECKS_PASS_AND_TARGET_PR_MERGE_OR_CLOSE"
   },
   "roadmap_dependency_gates": {
     "P-OBS-0": {

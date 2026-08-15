@@ -765,3 +765,51 @@ def test_audio_workspace_bridge_is_allowlisted_and_keeps_execution_separate():
     with pytest.raises(ProductError) as exc:
         bridge.audio_workspace_prepare_placement({"review_id": "review-1"})
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_task026_audio_placement_bridge_is_narrow_and_non_executing():
+    class PlacementStub:
+        def __init__(self):
+            self.calls = []
+
+        def snapshot(self):
+            return {"project_id": "project-1", "records": [], "resolve_mutation_started": False}
+
+        def prepare_compilation(self, **values):
+            self.calls.append(("prepare", values))
+            return {"confirmation_id": "compile-confirm", "estimated_cost": 0}
+
+        def apply_compilation(self, **values):
+            self.calls.append(("apply", values))
+            return {"apply_result": {"external_execution_started": False}}
+
+    placement = PlacementStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        audio_placement_application=placement,
+    )
+    assert bridge.audio_placement_snapshot({})["resolve_mutation_started"] is False
+    prepared = bridge.audio_placement_prepare({
+        "review_id": "review-1",
+        "track_index": 2,
+        "bed_mode": "FULL",
+        "expected_project_manifest_sha256": "sha256:" + "1" * 64,
+        "expected_production_snapshot_sha256": "sha256:" + "2" * 64,
+        "expected_audio_snapshot_sha256": "sha256:" + "3" * 64,
+        "expected_timeline_snapshot_sha256": "sha256:" + "4" * 64,
+        "expected_history_snapshot_sha256": "sha256:" + "5" * 64,
+    })
+    assert prepared == {"confirmation_id": "compile-confirm", "estimated_cost": 0}
+    applied = bridge.audio_placement_apply({"confirmation_id": "compile-confirm"})
+    assert applied["apply_result"]["external_execution_started"] is False
+    assert [name for name, _ in placement.calls] == ["prepare", "apply"]
+    with pytest.raises(ProductError) as exc:
+        bridge.audio_placement_prepare({"review_id": "review-1"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_html_exposes_task026_plan_without_external_execution_claim():
+    assert "Placement Planを作成" in HTML
+    assert "audio_placement_prepare" in HTML
+    assert "audio_placement_apply" in HTML
+    assert "Provider・課金・音声生成・Resolve/Cubaseは開始しません" in HTML

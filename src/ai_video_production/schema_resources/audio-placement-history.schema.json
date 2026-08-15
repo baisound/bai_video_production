@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/audio-placement-history.schema.json",
+  "title": "TASK-026 Audio Placement History",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["snapshot_version", "task_owner", "project_id", "store_revision", "records", "provider_execution_authority", "paid_execution_authority", "media_bytes_embedded", "external_mutation_authority", "snapshot_sha256"],
+  "properties": {
+    "snapshot_version": {"const": "1.0.0"},
+    "task_owner": {"const": "TASK-026"},
+    "project_id": {"$ref": "#/$defs/id"},
+    "store_revision": {"type": "integer", "minimum": 0, "maximum": 10000},
+    "records": {"type": "array", "maxItems": 10000, "items": {"$ref": "#/$defs/record"}},
+    "provider_execution_authority": {"const": false},
+    "paid_execution_authority": {"const": false},
+    "media_bytes_embedded": {"const": false},
+    "external_mutation_authority": {"const": false},
+    "snapshot_sha256": {"$ref": "#/$defs/sha"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$"},
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "segment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["segment_index", "timeline_start_frame", "duration_frames", "source_start_frame"],
+      "properties": {
+        "segment_index": {"type": "integer", "minimum": 1},
+        "timeline_start_frame": {"type": "integer", "minimum": 0},
+        "duration_frames": {"type": "integer", "minimum": 1},
+        "source_start_frame": {"type": "integer", "minimum": 0}
+      }
+    },
+    "snap": {
+      "type": "object", "additionalProperties": false,
+      "required": ["frame", "reason"],
+      "properties": {"frame": {"type": "integer", "minimum": 0}, "reason": {"type": "string", "minLength": 1, "maxLength": 160}}
+    },
+    "plan": {
+      "type": "object", "additionalProperties": false,
+      "required": ["plan_version", "task_owner", "resolve_execution_owner", "asset_id", "role", "track_index", "requested_start_frame", "effective_start_frame", "desired_duration_frames", "source_duration_frames", "snapped_to", "loop", "fade_in_frames", "fade_out_frames", "gain_db", "bed_mode", "segments", "task010_compatible", "external_write_authorized", "plan_sha256"],
+      "properties": {
+        "plan_version": {"const": "1.0.0"}, "task_owner": {"const": "TASK-026"}, "resolve_execution_owner": {"const": "TASK-010"},
+        "asset_id": {"$ref": "#/$defs/id"}, "role": {"enum": ["SOURCE", "SE", "BGM", "AMBIENCE", "NARRATION", "MIX_STEM"]},
+        "track_index": {"type": "integer", "minimum": 1}, "requested_start_frame": {"type": "integer", "minimum": 0}, "effective_start_frame": {"type": "integer", "minimum": 0},
+        "desired_duration_frames": {"type": "integer", "minimum": 1}, "source_duration_frames": {"type": "integer", "minimum": 1},
+        "snapped_to": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/snap"}]}, "loop": {"type": "boolean"},
+        "fade_in_frames": {"type": "integer", "minimum": 0}, "fade_out_frames": {"type": "integer", "minimum": 0},
+        "gain_db": {"oneOf": [{"type": "null"}, {"type": "number", "minimum": -120, "maximum": 24}]},
+        "bed_mode": {"enum": ["PREVIEW", "FULL"]}, "segments": {"type": "array", "minItems": 1, "maxItems": 10000, "items": {"$ref": "#/$defs/segment"}},
+        "task010_compatible": {"type": "boolean"}, "external_write_authorized": {"const": false}, "plan_sha256": {"$ref": "#/$defs/sha"}
+      }
+    },
+    "record": {
+      "type": "object", "additionalProperties": false,
+      "required": ["compilation_id", "project_id", "source_project_revision", "source_project_manifest_sha256", "review_id", "placement_decision", "audio_snapshot_sha256", "production_snapshot_sha256", "timeline_snapshot_sha256", "slot_id", "candidate_id", "asset_id", "asset_sha256", "timeline_plan_id", "timeline_revision", "timeline_plan_sha256", "timeline_item_id", "timeline_item_sha256", "track_index", "bed_mode", "task026_plan", "task026_plan_sha256", "task010_structurally_compatible", "provider_execution_started", "paid_execution_authorized", "media_write_started", "task010_execution_started", "resolve_mutation_started", "cubase_mutation_started"],
+      "properties": {
+        "compilation_id": {"$ref": "#/$defs/id"}, "project_id": {"$ref": "#/$defs/id"}, "source_project_revision": {"type": "integer", "minimum": 1}, "source_project_manifest_sha256": {"$ref": "#/$defs/sha"},
+        "review_id": {"$ref": "#/$defs/id"}, "placement_decision": {"const": "ACCEPT"}, "audio_snapshot_sha256": {"$ref": "#/$defs/sha"}, "production_snapshot_sha256": {"$ref": "#/$defs/sha"}, "timeline_snapshot_sha256": {"$ref": "#/$defs/sha"},
+        "slot_id": {"$ref": "#/$defs/id"}, "candidate_id": {"$ref": "#/$defs/id"}, "asset_id": {"$ref": "#/$defs/id"}, "asset_sha256": {"$ref": "#/$defs/sha"},
+        "timeline_plan_id": {"$ref": "#/$defs/id"}, "timeline_revision": {"type": "integer", "minimum": 1}, "timeline_plan_sha256": {"$ref": "#/$defs/sha"}, "timeline_item_id": {"$ref": "#/$defs/id"}, "timeline_item_sha256": {"$ref": "#/$defs/sha"},
+        "track_index": {"type": "integer", "minimum": 1}, "bed_mode": {"enum": ["PREVIEW", "FULL"]}, "task026_plan": {"$ref": "#/$defs/plan"}, "task026_plan_sha256": {"$ref": "#/$defs/sha"}, "task010_structurally_compatible": {"type": "boolean"},
+        "provider_execution_started": {"const": false}, "paid_execution_authorized": {"const": false}, "media_write_started": {"const": false}, "task010_execution_started": {"const": false}, "resolve_mutation_started": {"const": false}, "cubase_mutation_started": {"const": false}
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.84
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.85
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-036 P-UX-1A is hosted-closed by PR #88 at exact main `35b91f29b39372ce38616d1d757b6ef43d68232b`, with branch/checkout cleanup complete. P-UX-1B core command/menu/focus/Settings/Jobs/Timeline interaction convergence passes focused, WSL2 full, one-dir build and bounded native interaction locally. Hosted P-UX-1B closure and P-UX-1C remain; overall visual parity is not claimed. After the P-UX-1B main merge and cleanup, the Owner-supplied Voice Studio Local AI handoff is reconciled against fresh exact main.
+- Current insertion: TASK-036 P-UX-1B is hosted-closed by PR #89 at exact main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`, with post-merge CI/Security and cleanup complete. TASK-046 P-VS-0 now reconciles the checksum-verified Voice Studio Ver.1.2 input, formally allocates TASK-046/047/048 and puts P-UX-1C plus a successor canonical mock before Voice Shell changes. After that, the Japanese owner-only Local/free 60–90 second Voice vertical slice precedes recording breadth, OBS, RX, broad Creative AI and locale expansion. Overall visual parity and native Voice completion remain unclaimed.
 
 ## 3. MVP定義
 
@@ -90,7 +90,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4 | NATIVE VALIDATED / SHELL INTEGRATED |
 | 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3 | NATIVE VALIDATED / SHELL INTEGRATED |
 | 013 | AI SE / BGM / Video Orchestration | TASK-004 local-runtime基盤を利用したSE/BGM/Video生成のProvider選択・創作制御・rights/cost/evidence。内容連動選定は007依存 | 004; 007は内容連動時 | DEV-4 | R3 PROMOTION COMPLETE / R4 ADAPTER HOSTED CLOSED / NATIVE RUNTIME PARKED |
-| 014 | Voice TTS / Owner Narration | ElevenLabsの既存Owner Voice Profile、read-only capability/ownership probe、timed TTS、dictionary、consent/retention、48 kHz canonical narration。ユーザー指定原稿からの生成は003後に前倒し可 | 003,028; 自動原稿生成は006/007; 配置は026 | DEV-4 | DESIGN RECORDED / ADAPTER FOUNDATION EXISTS |
+| 014 | Voice TTS / Owner Narration | Existing deterministic VoiceProfile/narration plan and ElevenLabs foundation plus future Local Primary zero-shot/fine-tuned render, Japanese text/direction/alignment, 48 kHz staged publication | 003,006,023,028,046; 配置は026/022/041 | DEV-4 | DESIGN RECORDED / ADAPTER FOUNDATION EXISTS / LOCAL PRIMARY EXTENSION ALLOCATED |
 | 015 | YouTube Feedback | performance ingest, feedback features | 008 | DEV-3候補 | NOT STARTED |
 | 016 | Privacy Guard | PII/notification/NG detection + redaction plan | 003,006 | DEV-4 | NOT STARTED |
 | 017 | Storage Lifecycle / GC | archive, retention, legal hold, staged delete | 003,018 | DEV-4 | NOT STARTED |
@@ -102,10 +102,10 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | COMPLETE |
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
-| 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION IMPLEMENTATION LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
+| 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION HOSTED CLOSED / PR #86 / MAIN 0e457e69 |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1A HOSTED CLOSED / P-UX-1B CORE LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1B HOSTED CLOSED / P-UX-1C NEXT |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -115,6 +115,9 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
 | 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED CLOSED |
+| 046 | Voice Studio / Voice Dataset & Local Voice Profile | private VoiceProfile/Dataset, teleprompter, capture preflight, zero-shot/fine-tune admission, style coverage and Owner-only 60–90 s vertical slice | 003,006,014,020,022,023,026,036,037,041,043,044 | DEV-4 | P-VS-0 ROADMAP INTAKE LOCAL PASS / HOSTED PENDING |
+| 047 | OBS Voice Capture Integration | x64 OBS audio-filter Plugin, authenticated local IPC, Owner-mic consent, VAD/ASR/quality candidate and Dataset review | 006,020,023,043,046 | DEV-4 | FORMALLY ALLOCATED / DESIGN QUEUED AFTER VOICE VERTICAL SLICE |
+| 048 | Voice Quality Calibration | separate Calibration Dataset, Gold labels, versioned Analyzer/score profiles, threshold simulation, drift and Human decision trace | 014,038,041,046 | DEV-4 | FORMALLY ALLOCATED / DESIGN QUEUED AFTER VOICE VERTICAL SLICE |
 
 ## 6. Namespace Collision Resolution
 
@@ -2139,3 +2142,61 @@ must be read from `README-FIRST.md` order and reconciled with fresh exact main
 before another Product implementation unit is selected. Native H3 replay,
 paid Provider, Credentials, Human ACCEPT/LOCK, Resolve/Cubase mutation,
 Production Deploy, version, Tag and Release remain blocked.
+
+## Addendum LXXIX - Voice Studio Ver.1.2 Intake and TASK-046/047/048 Allocation
+
+TASK-036 P-UX-1B PR #89 exact head
+`dfb660e7d964ddd1d2be41641d40f7ba68d3b0d7` passed all `9 / 9` hosted
+checks and merged at exact main
+`244e86aaa0ea65bdba2ca35176c422bcfc30d65f`. Post-merge main CI and
+Security passed, and the remote branch/dedicated checkout were removed before
+fresh-main Voice Studio intake began.
+
+The Owner-supplied Voice Studio/Local AI handoff passed `13 / 13` file hash
+verification with zero mismatch. Canonical design Ver.1.2 SHA-256 is
+`82533ef5b87f352f06a950a5640d6de92bee13aa2f0bfff696dca14538c17ae5`.
+All OR-01..OR-32 and Decisions Q1..Q44 are traced in the TASK-046 Crosswalk.
+
+Current implementation already contains TASK-014 VoiceProfile/narration-plan
+and paid-admission foundations, TASK-006/023 subtitle/ASR, TASK-003/037/038
+Asset/Candidate/Audit, TASK-041 audio review, TASK-026/022 placement/frame,
+TASK-043 durable jobs and TASK-044 Timeline/Export. It does not contain Voice
+Studio recording/Dataset, local zero-shot/fine-tune, OBS capture, calibrated
+voice quality or a native local Voice vertical slice. TASK-004 and TASK-044
+remain complete and are not reopened.
+
+TASK-005, 008, 009 and 015..021 already have canonical identities. The first
+sequential unused identifiers were verified as TASK-046..048 and are formally
+allocated to Voice Studio/Dataset, OBS Voice Capture and Voice Quality
+Calibration respectively. All three are DEV-4. Existing owners retain
+narration, subtitle, ASR, Asset, Candidate, Human review, placement, frames,
+jobs, Timeline, Export, Shell, resource and finishing truth.
+
+The new top-level Voice destination cannot be inserted directly into the EXE
+because V6.1.1 is the Owner's absolute mock authority. The fixed order is:
+
+1. host this documentation-only P-VS-0 intake;
+2. complete TASK-036 P-UX-1C against unchanged V6.1.1;
+3. approve a successor canonical mock using the V6.1.1 design language;
+4. implement P-VS-1 body-free VoiceProfile/Consent/License and non-executing
+   local-engine foundation;
+5. after exact Model/Runtime/License and applicable Human gates, complete the
+   Japanese, one-speaker, Local/free 60–90 second vertical slice;
+6. only then expand recording/fine-tuning, calibration, OBS, RX/REAPER,
+   Managed Runtime, broader Creative AI and locale gates.
+
+Japanese is L1. English, Simplified Chinese, Korean and Taiwan Traditional
+Chinese are independent later gates requiring language/script processing,
+G2P, alignment, font, model/license, provider and Human calibration—not UI
+translation alone.
+
+P-VS-0 Critic Pass 1 and Pass 2 corrected the mock conflict, late vertical
+slice, unimplemented TASK-020 dependency, implicit Model approval, duplicate
+TASK-014 ownership, implicit execution/encryption claims and ambiguous locale
+acceptance. Final unresolved Critical/High is `0 / 0`; Judge is
+`PASS_FOR_DOCUMENTATION_HOSTING / CONDITIONAL_IMPLEMENTATION`.
+
+No runtime/schema/package behavior, Model download, voice processing, paid or
+Cloud execution, Credential, private audio storage, OBS/RX/REAPER/Resolve/
+Cubase mutation, version, Tag, Release or Deploy is authorized by this
+Addendum.

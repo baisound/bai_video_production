@@ -63,6 +63,15 @@ This Task does not claim `SHELL_INTEGRATED`. It exits at `INTEGRATION_DESIGNED` 
 
 ## Final state
 
+### Voice Studio future extension — design allocated 2026-08-15
+
+The current FasterWhisper provider remains canonical. A later TASK-006/023
+unit may add exact `large-v3-turbo` selection and locale-aware alignment/ASR
+analysis while retaining the current `small` route. Model choice is per
+Project/job, source audio and Transcript revisions remain traceable, and no
+duplicate ASR provider or automatic model download is introduced by this
+design allocation.
+
 - Task status: `COMPLETE`.
 - Product integration state: `INTEGRATION_DESIGNED`.
 - `SHELL_INTEGRATED`: NOT CLAIMED.

@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_21_0_RELEASED_TASK_036_P_UX_1B_CORE_LOCAL_PASS_HOSTED_IMPLEMENTATION_PENDING_NATIVE_RUNTIME_PARKED`
+`V0_21_0_RELEASED_TASK_046_P_VS_0_ROADMAP_INTAKE_LOCAL_PASS_HOSTED_PENDING_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,15 +110,15 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-036 P-UX-1A implementation PR #88 passed hosted 9 / 9, merged at exact main 35b91f29b39372ce38616d1d757b6ef43d68232b, and completed remote branch/checkout cleanup`
-- Active Task: `TASK-036 / P-UX-1B V6.1.1 INTERACTION AND STATE CONVERGENCE / codex/task-036-v611-interaction-state-convergence`; exact base main `35b91f29b39372ce38616d1d757b6ef43d68232b`; command registry, menu/focus behavior, nine Settings category tabs, dual Background Jobs projection and controller-authoritative Timeline scrub pass focused `50 / 50`, Windows full `1166 passed, 1 skip`, WSL2 full `1167 / 1167`, one-dir build and bounded native interaction locally; hosted implementation closure is pending and overall visual parity remains unclaimed
+- Last Completed Gate: `TASK-036 P-UX-1B implementation PR #89 passed hosted 9 / 9, merged at exact main 244e86aaa0ea65bdba2ca35176c422bcfc30d65f, passed post-merge main CI/Security, and completed remote branch/dedicated-checkout cleanup`
+- Active Task: `TASK-046 / P-VS-0 VOICE STUDIO ROADMAP INTAKE / codex/task-046-voice-studio-roadmap-intake`; exact base main `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`; package integrity, Current State Audit, OR-01..32/Q1..44 Crosswalk, TASK-046/047/048 allocation, DEV-4 profiles, Architecture, Allowed Files, Builder design, two Critic passes and Judge pass locally; documentation-only hosted closure is pending
 - TASK-004: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.84 Addendum LXXVIII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.85 Addendum LXXIX
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

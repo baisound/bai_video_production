@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.83
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.84
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-036 P-UX-1 differential design is hosted-closed by PR #87 at exact main `b771b9acae67fcd0ee41218d70a011e387beb300`, with branch/checkout cleanup complete. P-UX-1A V6.1.1 Shell composition is the active Owner P0 and passes locally across full Windows/WSL2 regression, one-dir build and bounded native Home/Edit/Export/Settings inspection. P-UX-1B/1C remain; overall visual parity is not claimed.
+- Current insertion: TASK-036 P-UX-1A is hosted-closed by PR #88 at exact main `35b91f29b39372ce38616d1d757b6ef43d68232b`, with branch/checkout cleanup complete. P-UX-1B core command/menu/focus/Settings/Jobs/Timeline interaction convergence passes focused, WSL2 full, one-dir build and bounded native interaction locally. Hosted P-UX-1B closure and P-UX-1C remain; overall visual parity is not claimed. After the P-UX-1B main merge and cleanup, the Owner-supplied Voice Studio Local AI handoff is reconciled against fresh exact main.
 
 ## 3. MVP定義
 
@@ -105,7 +105,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION IMPLEMENTATION LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1 DESIGN HOSTED CLOSED / P-UX-1A LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1A HOSTED CLOSED / P-UX-1B CORE LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -2103,3 +2103,39 @@ complete the supported viewport/DPI, menus, keyboard, focus, accessibility and
 conversation-free packaged restart matrix. Native H3 replay, paid Provider,
 Credentials, Human ACCEPT/LOCK, Resolve/Cubase mutation, Production Deploy,
 version, Tag and Release remain blocked.
+
+## Addendum LXXVIII - TASK-036 P-UX-1A Hosted Closure and P-UX-1B Core Local Gate
+
+TASK-036 P-UX-1A PR #88 passed all hosted checks and merged at exact main
+`35b91f29b39372ce38616d1d757b6ef43d68232b`. Its remote branch and dedicated
+checkout were removed before fresh-main AUTONOMY selected P-UX-1B on
+`codex/task-036-v611-interaction-state-convergence`.
+
+P-UX-1B adds an explicit Shell command registry, top-menu keyboard navigation
+and invoker-correct focus restoration, all nine canonical Settings category
+tabs with read-only authority boundaries, generation/export Background Jobs
+projection and Timeline ruler/playhead scrub through the existing
+`interactive_timeline_seek` controller. Seek work is serialized and coalesced;
+the returned Product snapshot remains authoritative and JavaScript stores no
+durable Timeline truth. No automatic Job replay or Settings/Provider mutation
+is introduced.
+
+Focused interaction regression passes `50 / 50` on Windows and Ubuntu WSL2.
+Windows full regression passes `1166` with one intentional non-Windows skip,
+Ubuntu WSL2 full regression passes `1167 / 1167`, embedded JavaScript syntax,
+diff checks and the Windows one-dir build pass. Native packaged inspection
+passes Audio Settings category selection, File menu presentation and Timeline
+drag seek to controller-derived `00:00:06:09`. A screenshot alone does not
+prove the complete native focus matrix, so that claim remains with P-UX-1C.
+Critic-found Jobs-focus and stale-Escape defects were corrected; unresolved
+Critical/High findings are `0 / 0`.
+
+P-UX-1B core is therefore `LOCAL_PASS`, subject to hosted all-green closure.
+Overall `V6.1.1_VISUAL_PARITY_PASS` remains unclaimed: P-UX-1C still owns the
+complete supported viewport/DPI, menu, keyboard, focus, accessibility and
+conversation-free packaged restart matrix. After P-UX-1B reaches exact main
+and branch/checkout cleanup, the Owner-supplied Voice Studio Local AI handoff
+must be read from `README-FIRST.md` order and reconciled with fresh exact main
+before another Product implementation unit is selected. Native H3 replay,
+paid Provider, Credentials, Human ACCEPT/LOCK, Resolve/Cubase mutation,
+Production Deploy, version, Tag and Release remain blocked.

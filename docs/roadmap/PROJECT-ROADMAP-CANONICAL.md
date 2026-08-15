@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.75
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.76
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-027 P-ORCH-1 Design PR #79 passed hosted `9 / 9`, merged at exact main `4532bb29c0ace58c720016f7ec313bb2037788ea` and completed branch/checkout cleanup. Fresh-main implementation locally passes exact initial completed local execution -> canonical Asset -> Candidate -> Prompt Attempt/lineage -> READY_FOR_AUDIT, with no Provider replay, paid execution, automatic Human decision, Lock or publication. Regenerated Prompt output is parked until exact Strategy/Parent binding is persisted.
+- Current insertion: TASK-027 P-ORCH-1 Implementation PR #80 head `0e3575a5bd11f8664409d03078b4ed0dc0b7e52b` passed hosted `9 / 9`, merged at exact main `66d97fd9d0bfbfebca339197fed2103011f56616` and completed remote branch/dedicated checkout cleanup. Initial completed local execution -> canonical Asset -> Candidate -> Prompt Attempt/lineage -> READY_FOR_AUDIT is hosted-closed. Regenerated Prompt output remains parked until exact Strategy/Parent binding is persisted.
 
 ## 3. MVP定義
 
@@ -103,7 +103,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; 013/014は生成asset利用時; 007は内容連動時 | DEV-3/4候補 | NOT STARTED |
-| 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION IMPLEMENTATION LOCAL PASS / HOSTED PENDING / REGENERATED STRATEGY BINDING PARKED / FUTURE SLICES REMAIN |
+| 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING NEXT AUDIT / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
 | 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E | 003,006,007,010,011,012,024 | DEV-4 | COMPLETE / M3B PASS / RELEASED v0.20.1 |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
@@ -182,7 +182,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
 - TASK-044 Interactive Timeline / Unified NLE / Export Queue: **HOSTED CLOSED / PR #72 / MAIN 6703c42a**
 - TASK-045 V6 Native Acceptance / Release Closure: **FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED CLOSED**
-- TASK-027 P-ORCH-1 Generation Output Adoption: **INITIAL OUTPUT IMPLEMENTATION LOCAL PASS / HOSTED PENDING**; regenerated-output Strategy/Parent binding is parked
+- TASK-027 P-ORCH-1 Generation Output Adoption: **INITIAL OUTPUT HOSTED CLOSED / PR #80 / MAIN 66d97fd9**; P-ORCH-2 regenerated-output Strategy/Parent binding is next audit
 
 内容に応じた自動SE/BGM選定や自動ナレーション構成はTASK-007/008等の解析結果へ後から接続する。
 
@@ -1858,3 +1858,23 @@ would falsify Evidence, so those outputs are explicitly
 task-local park does not block the exact initial-generation adoption route.
 Unresolved implementation Critical/High findings are `0 / 0`. Stable Release
 remains `v0.21.0`; no post-release version is selected.
+
+## Addendum LXX — TASK-027 P-ORCH-1 Hosted Implementation Closure
+
+TASK-027 P-ORCH-1 Implementation PR #80 exact head
+`0e3575a5bd11f8664409d03078b4ed0dc0b7e52b` passed all hosted `9 / 9`
+checks and merged at exact main
+`66d97fd9d0bfbfebca339197fed2103011f56616`. The remote implementation
+branch and dedicated implementation checkout were removed, and a clean
+fresh-main checkout verified the exact merge SHA.
+
+The initial completed-output adoption path is therefore hosted-closed at the
+bounded `READY_FOR_AUDIT` endpoint. Provider replay, paid work, Credential use,
+Human Audit decision, ACCEPT/LOCK, publication, NLE/native mutation, Tag,
+Release and Production Deploy remain outside its authority.
+
+The implementation Critic park remains exact: regenerated Prompt output cannot
+be adopted until TASK-027 persists an immutable Strategy/Parent binding rather
+than guessing Evidence. P-ORCH-2 is the next fresh-main audit/design candidate;
+it is not yet an implementation claim. Stable Release remains `v0.21.0` and no
+post-release version is selected.

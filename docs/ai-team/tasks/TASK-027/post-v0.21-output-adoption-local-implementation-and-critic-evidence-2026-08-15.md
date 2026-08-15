@@ -9,7 +9,7 @@ Release state: stable `v0.21.0`; no new version selected
 
 ## Result
 
-`P_ORCH_1_IMPLEMENTATION_LOCAL_PASS / HOSTED_PENDING`
+`P_ORCH_1_IMPLEMENTATION_HOSTED_CLOSED`
 
 The bounded initial-generation route is implemented:
 
@@ -109,10 +109,15 @@ Unresolved Critical/High after implementation Critic: `0 / 0`.
 - Canonical/package schema parity and JSON Schema validation: PASS.
 - `git diff --check`: PASS after final documentation synchronization.
 
-## Hosted closure rule
+## Hosted closure
 
-This document is local Evidence only. Hosted closure requires an intentional
-commit, implementation PR, all required hosted checks green, exact main merge
-verification, remote branch removal, dedicated checkout removal and a fresh-main
-restart. Stable Release remains `v0.21.0`; this unit does not authorize a Tag or
-GitHub Release.
+- Commit: `0e3575a5bd11f8664409d03078b4ed0dc0b7e52b`.
+- PR: `#80`, Ready/MERGEABLE, hosted `9 / 9 PASS`.
+- Exact main merge: `66d97fd9d0bfbfebca339197fed2103011f56616`.
+- Remote implementation branch removal: PASS.
+- Dedicated implementation checkout removal: PASS.
+- Fresh-main restart at exact merge SHA: PASS.
+
+Stable Release remains `v0.21.0`; this unit created no Tag or GitHub Release.
+P-ORCH-2 Strategy/Parent binding is only the next audit/design candidate and has
+no implementation claim in this closure.

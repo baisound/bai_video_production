@@ -625,4 +625,4 @@ def run_trusted_native_shell(config_path: str | Path) -> None:
         height=900,
         min_size=(760, 600),
     )
-    webview.start(gui="edgechromium")
+    webview.start(gui="edgechromium", private_mode=True)

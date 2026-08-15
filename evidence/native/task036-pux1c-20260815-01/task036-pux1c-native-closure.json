@@ -1,0 +1,110 @@
+﻿{
+    "evidence_version":  "1.0.0",
+    "task":  "TASK-036",
+    "gate":  "P_UX_1C_PACKAGED_NATIVE_CLOSURE",
+    "timestamp_utc":  "2026-08-15T07:38:17.7996119Z",
+    "package_sha256":  "58b8f3c2504207db2ca296a5d4efc3f24c12585b161f1107a77a02659600a172",
+    "package_copied_to_owned_short_path":  true,
+    "clean_profile_at_start":  true,
+    "canonical_ui_contract":  "V6.1.1",
+    "visual":  {
+                   "captures":  [
+                                    {
+                                        "file":  "01-home.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "12fd92393ee367c524c4f990a090f2c3555490334583d139d1d0f720cc00757d"
+                                    },
+                                    {
+                                        "file":  "02-file-menu.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "a631d4a2316cc86d81746a150f942d351ed0e1274e06af0877935cf39dbf24ca"
+                                    },
+                                    {
+                                        "file":  "03-settings-audio.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "40b03a92ceb9d5d403f05e715710ae5a1a14a9efd5ade202aa3a0e5ad91f7fd5"
+                                    },
+                                    {
+                                        "file":  "04-export.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "0bd8d6ebd8c100924087027aeaf6c768b6e30eac169981a5aff6af3aefac83f5"
+                                    },
+                                    {
+                                        "file":  "05-edit-after-scrub.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "9b793fa7915a9d89bb3d1edb824b913ad81f2ed47df4bc38da696afc8db2c58c"
+                                    }
+                                ],
+                   "text_scale_percent":  130,
+                   "monitor_dpi_and_text_scale_recorded_separately":  true,
+                   "mock_demo_state_used":  false,
+                   "product_projection_used":  true
+               },
+    "interaction":  {
+                        "initial_required_controls_present":  true,
+                        "concrete_file_menu_present":  true,
+                        "menu_escape_focus_restored":  true,
+                        "nine_settings_categories_present":  true,
+                        "settings_escape_focus_restored":  true,
+                        "timeline_zoom_changed_geometry":  true,
+                        "timeline_scroll_changed_geometry":  true,
+                        "timeline_native_pointer_scrub_changed_controller_value":  true,
+                        "playhead_before":  0,
+                        "playhead_after":  228,
+                        "native_picker_cancelled_without_exit":  true
+                    },
+    "accessibility":  {
+                          "automation_root_name":  null,
+                          "semantic_button_count":  28,
+                          "visible_focus_css_contract_tested":  true,
+                          "ruler_accessible_name_present":  true,
+                          "playhead_range_value_present":  true
+                      },
+    "displays":  [
+                     {
+                         "device":  "\\\\.\\DISPLAY2",
+                         "primary":  false,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     },
+                     {
+                         "device":  "\\\\.\\DISPLAY3",
+                         "primary":  false,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     },
+                     {
+                         "device":  "\\\\.\\DISPLAY1",
+                         "primary":  true,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     }
+                 ],
+    "all_display_moves_passed":  true,
+    "restart":  {
+                    "same_isolated_profile":  true,
+                    "prior_profile_entry_count":  84,
+                    "required_controls_present":  true,
+                    "first_owned_process_exit":  true,
+                    "second_owned_process_exit":  true,
+                    "conversation_free_restart_passed":  true
+                },
+    "provider_execution_started":  false,
+    "paid_execution_authorized":  false,
+    "credential_mutation_started":  false,
+    "human_accept_or_lock_started":  false,
+    "resolve_mutation_started":  false,
+    "cubase_mutation_started":  false,
+    "release_or_deploy_started":  false
+}

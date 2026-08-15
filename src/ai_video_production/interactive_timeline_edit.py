@@ -8,7 +8,10 @@ import re
 from typing import Any, Iterable
 
 from .errors import ProductError, ProductErrorCategory
-from .interactive_timeline import InteractiveTimeline, InteractiveTimelineClip, TimelineTrack
+from .interactive_timeline import (
+    InteractiveTimeline, InteractiveTimelineClip, TimelineTrack,
+    timeline_track_category,
+)
 from .serialization import canonical_json_bytes, sha256_bytes
 
 _ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,199}")
@@ -176,7 +179,7 @@ class TimelineEditCommand:
             )
         if self.kind is TimelineEditKind.ADD_TRACK:
             return TimelineEditCommand(command_id, TimelineEditKind.REMOVE_TRACK,
-                                       target_track_id=self.track.track_id)
+                                       target_track_id=self.track.track_id, track=self.track)
         if self.kind is TimelineEditKind.REMOVE_TRACK:
             if self.track is None:
                 raise ValueError("REMOVE_TRACK compensation requires removed track snapshot")
@@ -267,7 +270,11 @@ class TimelineEditProjector:
                 tracks[command.track.track_id] = command.track
             elif command.kind is TimelineEditKind.REMOVE_TRACK:
                 track = tracks.get(command.target_track_id or "")
-                if track is None or track.minimum_required or any(
+                category_count = 0 if track is None else sum(
+                    timeline_track_category(item) is timeline_track_category(track)
+                    for item in tracks.values()
+                )
+                if track is None or track.minimum_required or category_count <= 1 or any(
                     clip.track_id == command.target_track_id for clip in clips.values()
                 ):
                     raise ProductError(

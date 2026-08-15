@@ -73,6 +73,7 @@ def test_static_controls_are_bound_or_truthfully_disabled() -> None:
             or button.get("data-menu-button")
             or button.get("data-command")
             or button.get("data-settings-view")
+            or button.get("data-add-track")
         ), button
         if "disabled" in button:
             # A few context-sensitive Product actions start disabled and are

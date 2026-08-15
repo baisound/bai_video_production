@@ -81,6 +81,49 @@ def test_bridge_fails_closed_for_stale_or_extra_timeline_requests() -> None:
     with pytest.raises(ProductError) as exc:
         shell.interactive_timeline_snapshot({"clip_offset": 0, "max_clips": 500, "exec": "whoami"})
     assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+
+
+def test_track_controls_are_python_owned_and_media_aware() -> None:
+    value = timeline()
+    shell, _controller = bridge(value)
+    initial = shell.interactive_timeline_snapshot({})
+    tracks = {item["track_id"]: item for item in initial["projection"]["tracks"]}
+    assert tracks["V1"]["category"] == "VIDEO"
+    assert tracks["A1"]["category"] == "AUDIO"
+    assert tracks["V1"]["visible"] is True
+    assert tracks["A1"]["muted"] is False
+    changed = shell.interactive_timeline_update_track_state({
+        "track_id": "A1", "state": "MUTED", "value": True,
+        "expected_timeline_sha256": value.timeline_sha256,
+    })
+    changed_audio = next(item for item in changed["projection"]["tracks"] if item["track_id"] == "A1")
+    assert changed_audio["muted"] is True
+    assert changed["durable_state_in_javascript"] is False
+    hidden = shell.interactive_timeline_update_track_state({
+        "track_id": "V1", "state": "VISIBLE", "value": False,
+        "expected_timeline_sha256": value.timeline_sha256,
+    })
+    assert next(item for item in hidden["projection"]["tracks"] if item["track_id"] == "V1")["visible"] is False
+    soloed = shell.interactive_timeline_update_track_state({
+        "track_id": "A1", "state": "SOLO", "value": True,
+        "expected_timeline_sha256": value.timeline_sha256,
+    })
+    assert next(item for item in soloed["projection"]["tracks"] if item["track_id"] == "A1")["solo"] is True
+    resized = shell.interactive_timeline_update_track_height({
+        "height": 72, "expected_timeline_sha256": value.timeline_sha256,
+    })
+    assert {item["height"] for item in resized["projection"]["tracks"]} == {72}
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_update_track_height({
+            "height": 93, "expected_timeline_sha256": value.timeline_sha256,
+        })
+    assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_update_track_state({
+            "track_id": "V1", "state": "MUTED", "value": True,
+            "expected_timeline_sha256": value.timeline_sha256,
+        })
+    assert exc.value.code == "ERR_NLE_SHELL_TRACK_STATE_NOT_APPLICABLE"
     with pytest.raises(ProductError) as exc:
         shell.interactive_timeline_snapshot({"clip_offset": 0, "max_clips": 501})
     assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
@@ -171,6 +214,15 @@ def test_html_wires_dynamic_nle_without_javascript_durable_store() -> None:
         'id="setInButton"', 'id="setOutButton"', "interactive_timeline_snapshot",
         "interactive_timeline_select", "interactive_timeline_seek",
         "interactive_timeline_prepare_trim", "interactive_timeline_apply_edit",
+        "interactive_timeline_update_track_state",
+        "interactive_timeline_update_track_height",
+        "interactive_timeline_prepare_add_track",
+        "interactive_timeline_prepare_remove_track",
+        'data-add-track="VIDEO"', 'data-add-track="SUBTITLE"',
+        'data-add-track="AUDIO"', 'data-add-track="SE"', 'data-add-track="BGM"',
+        "installTrackHeightControl", "document.querySelector('.zoomrow')",
+        "aria-label','Track高さ'", "trackControl('M'",
+        "trackControl('S'", "track.remove_available",
         "max_clips:500", "replaceChildren", "role','button'", "clipButtons.indexOf",
     )
     for marker in required:

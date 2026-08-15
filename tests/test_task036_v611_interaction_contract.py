@@ -59,7 +59,39 @@ def test_timeline_scrub_uses_python_owned_seek_without_frontend_truth() -> None:
     ):
         assert marker in HTML
     assert "button.addEventListener('click',async event=>{event.stopPropagation();await call('interactive_timeline_select'" in HTML
-    assert "lane.addEventListener('click',event=>{if(event.target!==lane)return;seekFromClient" in HTML
+    assert "lane.addEventListener('click',event=>{if(event.target!==lane||track.locked)return;seekFromClient" in HTML
+
+
+def test_timeline_toolbar_retains_descriptive_native_accessibility_names() -> None:
+    for label in (
+        "タイムラインを拡大",
+        "タイムラインを縮小",
+        "タイムラインを左へスクロール",
+        "タイムラインを右へスクロール",
+        "前のトラックページ",
+        "次のトラックページ",
+    ):
+        assert f'aria-label="{label}"' in HTML
+    assert 'role="toolbar" aria-label="タイムライン表示操作"' in HTML
+
+
+def test_v611_track_parts_match_canonical_mock_and_spec() -> None:
+    for category in ("VIDEO", "SUBTITLE", "AUDIO", "SE", "BGM"):
+        assert f'data-add-track="{category}"' in HTML
+    for marker in (
+        "function trackControl(",
+        "interactive_timeline_update_track_state",
+        "interactive_timeline_update_track_height",
+        "interactive_timeline_prepare_add_track",
+        "interactive_timeline_prepare_remove_track",
+        "track.visible",
+        "track.locked",
+        "track.muted",
+        "track.solo",
+        "track.remove_available",
+        "installTrackHeightControl",
+    ):
+        assert marker in HTML
 
 
 def test_background_jobs_keeps_generation_and_export_recovery_visible() -> None:

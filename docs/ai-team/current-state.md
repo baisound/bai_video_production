@@ -4,16 +4,16 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_AND_2_HOSTED_CLOSED / TASK_026_P_AUDIO_1_DESIGN_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
+- Project Status: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_AND_2_HOSTED_CLOSED / TASK_026_P_AUDIO_1_IMPLEMENTATION_LOCAL_PASS / TASK_036_P_UX_1_OWNER_P0_QUEUED / NATIVE_RUNTIME_PARKED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
-- Active Consumer Task: `TASK-026 / P-AUDIO-1 AUDIO PLACEMENT PLAN PRODUCT PROMOTION DESIGN / codex/task-026-audio-placement-product-promotion-design`; fresh exact main `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba` proves the deterministic compiler/binding foundation exists while durable Product/Shell integration is missing; DEV-4 Builder/Critic local PASS, hosted design pending
+- Active Consumer Task: `TASK-026 / P-AUDIO-1 AUDIO PLACEMENT PLAN PRODUCT PROMOTION IMPLEMENTATION / codex/task-026-audio-placement-product-promotion-implementation`; exact implementation base main `82e97e37b04c12c74fe213dbd0993e8b83e4c4d1`; durable Product history, restart CURRENT/STALE, TASK-043 save and narrow Shell plan persistence pass local gates; hosted implementation pending
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.21.0`
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `P-AUDIO-1 design PR -> all-green main merge -> cleanup -> fresh-main implementation reselection; Native H3 replay and Production Deploy remain blocked`
+- Next Consumer Decision Gate: `P-AUDIO-1 implementation PR -> hosted 9/9 -> exact main merge -> cleanup -> fresh-main TASK-036 P-UX-1 V6.1.1 mock-to-EXE convergence; Native H3 replay and Production Deploy remain blocked`
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -117,7 +117,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.80 Addendum LXXIV. TASK-027 P-ORCH-2 hosted-closure PR #84 exact head `ab50e99261f05e3cf70211ee03cc77740ba901b6` passed `9 / 9`, merged at exact main `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba`, and completed cleanup. Fresh-main Product audit selected TASK-026 P-AUDIO-1: existing deterministic placement/binding foundation is retained, while durable Product Project history, restart/currentness and explicit Shell plan persistence are designed. Provider/paid/media/TASK-010/Resolve/Cubase/Production Deploy remain blocked.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.81 Addendum LXXV. TASK-026 P-AUDIO-1 promotes the existing deterministic compiler/binding into append-only Product history, restart CURRENT/STALE and an explicit Audio Workspace plan-persistence action. Local Windows full regression is `1156 passed, 1 intentional skip`; WSL2 is `1157 passed`; focused cross-task regression, compileall, schema parity and embedded JavaScript syntax pass. Current-checkout Windows one-dir EXE build also passes; that is packaging Evidence, not visual-parity Evidence. Hosted PR/main/cleanup remain. Owner has made V6.1.1 mock fidelity an absolute next P0: after TASK-026 hosted cleanup, TASK-036 P-UX-1 must converge the packaged EXE layout and interaction to the canonical mock before further user-facing expansion. Current visual parity is not claimed. Provider/paid/media/TASK-010/Resolve/Cubase/Production Deploy remain blocked.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

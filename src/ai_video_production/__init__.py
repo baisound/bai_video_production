@@ -131,6 +131,7 @@ from .product_project_store import ProductProjectManifestStore
 from .project_save import (
     ProductProjectSaveCoordinator, ProjectSaveState,
 )
+from .audio_placement_application import Task026AudioPlacementApplication
 from .project_history import (
     ProductProjectAutosaveCoordinator, ProductProjectBackupStore,
     ProjectAutosavePolicy, ProjectAutosaveResult, ProjectBackupPreview,

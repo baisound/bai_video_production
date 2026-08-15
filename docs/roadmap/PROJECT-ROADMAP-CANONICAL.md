@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.80
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.81
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-027 P-ORCH-2 hosted-closure PR #84 head `ab50e99261f05e3cf70211ee03cc77740ba901b6` passed hosted `9 / 9`, merged at exact main `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba`, and completed cleanup. Fresh-main Product-wide AUTONOMY classified TASK-026 as `PARTIALLY_IMPLEMENTED / PRODUCT_PROMOTION_REQUIRED`; P-AUDIO-1 durable placement-plan Product integration design is local PASS and hosted design pending.
+- Current insertion: TASK-026 P-AUDIO-1 implementation from exact design main `82e97e37b04c12c74fe213dbd0993e8b83e4c4d1` is local PASS and hosted implementation pending. Immediately after its all-green main merge and cleanup, Owner P0 requires TASK-036 P-UX-1 V6.1.1 mock-to-EXE visual/interaction convergence; current visual parity is not claimed.
 
 ## 3. MVP定義
 
@@ -102,10 +102,10 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | COMPLETE |
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
-| 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | FOUNDATION IMPLEMENTED / P-AUDIO-1 PRODUCT PROMOTION DESIGN LOCAL PASS / HOSTED DESIGN PENDING |
+| 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION IMPLEMENTATION LOCAL PASS / HOSTED IMPLEMENTATION PENDING |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E | 003,006,007,010,011,012,024 | DEV-4 | COMPLETE / M3B PASS / RELEASED v0.20.1 |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1 OWNER P0 QUEUED AFTER TASK-026 |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -176,7 +176,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-013 R4 execution control + exact local/free ComfyUI adapter: **HOSTED CLOSED**
 - TASK-013 native H3 completion: **PARKED_TO_SAFE_RUNTIME_REVIEW**; automatic replay prohibited
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
-- TASK-026 SE/BGM/ナレーション配置、BGM loop/fade、Audio Bed: **NOT STARTED / NOT AUTHORIZED**
+- TASK-026 SE/BGM/ナレーション配置Plan、BGM loop/fade、Audio Bed: **P-AUDIO-1 PRODUCT PROMOTION IMPLEMENTATION LOCAL PASS / HOSTED PENDING**; TASK-010/Resolve/Cubase execution remains separate and unstarted
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**
@@ -1997,3 +1997,42 @@ Production Deploy, version, Tag or Release is introduced. Two Critic rounds
 close with unresolved Critical/High `0 / 0`. The design is
 `LOCAL_PASS / HOSTED_DESIGN_PR_AUTHORIZED`; implementation waits for an
 all-green design PR, exact main merge, cleanup and fresh-main reselection.
+
+## Addendum LXXV - TASK-026 P-AUDIO-1 Local Implementation and Owner P0 Visual Convergence Queue
+
+TASK-026 P-AUDIO-1 implementation starts from exact authorized design main
+`82e97e37b04c12c74fe213dbd0993e8b83e4c4d1`. The existing deterministic
+compiler remains canonical. This unit adds a strict append-only
+`state/audio-placement-history.json` Product child, exact binding and restart
+parsing, CURRENT/STALE derivation from TASK-037/041/042, one-shot prepare/apply
+re-derivation and TASK-043 child-first/Manifest-last coordinated save.
+
+The existing Audio Workspace gains only a narrow `Placement Planを作成` action
+with visible Plan identity and TASK-010 compatibility. It does not add a new
+window or visual system. Provider execution, paid work, Credentials, media
+generation/write, TASK-010 execution, Resolve/Cubase mutation, Native H3 retry,
+Production Deploy, package version, Tag and Release remain false.
+
+Windows full regression passes `1156 / 1157` with the one declared non-Windows
+Credential Vault skip; WSL2 Ubuntu passes `1157 / 1157`. Focused TASK-026/036/
+041/042/043 regression passes `94 / 94`; schema public/package parity,
+compileall, embedded JavaScript syntax and diff checks pass. Implementation
+Critic closes unresolved Critical/High at `0 / 0`. Hosted PR checks, exact main
+merge and branch/checkout cleanup remain before P-AUDIO-1 hosted closure.
+
+The Owner then issued an absolute visual authority directive: the checked-in
+`BVP-UI-MOCK-V6.1.1.html` is the canonical best-user-experience design, and
+departure of the packaged EXE from its visual or interaction intent is an
+absolute NG. Therefore, immediately after TASK-026 reaches all-green `main` and
+cleanup, AUTONOMY must select `TASK-036 P-UX-1 / V6.1.1 MOCK-TO-EXE VISUAL
+CONVERGENCE` as the highest-priority unit before any further user-facing feature
+surface.
+
+P-UX-1 must independently audit and then converge the top menu/navigation,
+Workspace structure, integrated Asset/Viewer/Inspector regions, Timeline,
+Quick Generate, Settings and Export Queue, including the mock's selection,
+seek/scrub, scroll, focus, confirmation and state-transition intent. Acceptance
+requires real packaged-EXE interaction and supported viewport/DPI checks; HTML
+syntax, DOM labels or historical TASK-036 functional Native Gates alone cannot
+claim visual parity. This Addendum queues that next unit but does not pre-claim
+its design, implementation or PASS.

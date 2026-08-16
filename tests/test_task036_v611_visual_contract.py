@@ -535,6 +535,30 @@ def test_edit_source_projection_does_not_claim_full_library_or_host_paths() -> N
     assert "edit_asset_import" not in SHELL_HTML
 
 
+def test_edit_cut_review_candidate_selection_uses_exact_review_contract() -> None:
+    for marker in (
+        'id="reviewCandidateList"',
+        'id="reviewProgress"',
+        "async function selectReviewCandidate(candidateId)",
+        "call('select_candidate',{candidate_id:candidateId})",
+        "item.candidate_id} · ${item.kind} · ${item.review_state}",
+        "button.setAttribute('aria-pressed',String(!!item.selected))",
+        "currentReview.reviewed_count",
+        "currentReview.unresolved_count",
+        "currentReview.unresolved_count!==0||!!currentReview.approved_plan",
+        "Cut候補の選択はReview workspaceへ保持され",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_edit_cut_review_keeps_selection_and_human_decision_separate() -> None:
+    assert "selectReviewCandidate(item.candidate_id)" in SHELL_HTML
+    assert "reviewDecision('KEEP')" in SHELL_HTML
+    assert "reviewDecision('CUT')" in SHELL_HTML
+    assert "selectReviewCandidate(item.candidate_id,'CUT')" not in SHELL_HTML
+    assert "currentReview?.all_reviewed" not in SHELL_HTML
+
+
 def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
     for marker in (
         "`${row.stage} · ${row.job_id}`",

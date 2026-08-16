@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-009 DBDProfilePlugin R0として、TASK-008のcanonical FeatureRule/ScoringProfileを再利用し、DBDのHUD・chase・event taxonomyをclosed mappingとexact rule projectionで束縛するno-effect profile snapshot契約を追加しました。実media/HUD/OCR検出、game process、feature producer、Provider、Human decision、Edit Plan/Timeline変更、Release/Deployは別Gateです。
 - TASK-018 Smart Reframe R0として、TASK-007のexact Edit Plan/keep rangesとTASK-005/008/Human Reviewのcurrent-valid行Evidenceを束縛し、source-contained・target-aspect-exact crop、gapless output ranges、provider-neutral target profileを決定論的に生成するno-effect契約を追加しました。実media解析、focus/OCR検出、Remotion・Resolve実行、Human承認、Asset/Timeline採用、Release/Deployは別Gateです。
 - TASK-035 REAPER Audio Finishing Foundation R0として、canonical Asset・Timeline Audio・Audio Workspace・Resource Admissionを参照するbody-free DAW capability、Session Plan、project snapshot、one-shot Human authorization、external execution・QA・Human approval・Audio Round-trip manifest契約を追加しました。REAPER起動・project/audio mutation・plugin操作・render・Asset昇格・Resolve配置・Release/Deploy/Productionは別Gateです。
 - TASK-008 Multimodal Scoring R0として、既存TASK-005/006/007/024のcanonical feature座標だけを参照するprovider-neutral固定小数点scoring contractを追加しました。required欠落、UNKNOWN、STALE/REVOKED、provenance不一致をfail-closedで分離し、Human review必須・Edit Plan自動変更なしを固定しています。実media/OCR/provider実行、Human decision、Release、Deployは別Gateです。

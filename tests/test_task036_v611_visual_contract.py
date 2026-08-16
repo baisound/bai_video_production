@@ -132,6 +132,17 @@ def test_home_has_explicit_project_open_action_without_demo_recent_state() -> No
     assert "BAI Promotion 90s" not in SHELL_HTML
 
 
+def test_export_keeps_execute_all_visible_but_fail_closed() -> None:
+    assert 'id="runAllExportButton" disabled' in SHELL_HTML
+    assert (
+        'data-disabled-reason="Export AuthorityはJobごとの個別確認だけを許可します"'
+        in SHELL_HTML
+    )
+    assert ">キュー全て実行</button>" in SHELL_HTML
+    assert "blanket Execute All: NO" in SHELL_HTML
+    assert "export_queue_dispatch_all" not in SHELL_HTML
+
+
 def test_existing_product_authority_is_projected_into_mock_surfaces() -> None:
     for method in (
         "planning_snapshot",

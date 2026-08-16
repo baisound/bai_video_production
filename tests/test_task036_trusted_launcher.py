@@ -6,6 +6,15 @@ from pathlib import Path
 import pytest
 
 from ai_video_production.errors import ProductError
+from ai_video_production.ai_connections import (
+    AiConnectionProfile,
+    AiWorkload,
+    CostClass,
+    ModelRoute,
+    ProviderFamily,
+    SelectionMode,
+)
+from ai_video_production.connection_settings_store import ConnectionSettingsStore
 from ai_video_production.task036_native_dialog import Task036NativeDialogService
 from ai_video_production.task036_trusted_launcher import (
     Task036LaunchConfiguration,
@@ -192,6 +201,41 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert production["project_id"] == config.project_id
     assert production["provider_execution_started"] is False
     assert production["resolve_mutation_started"] is False
+
+
+def test_trusted_launch_binds_existing_task028_settings_without_provider_execution(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    profile = AiConnectionProfile(
+        "desktop-profile",
+        "1",
+        SelectionMode.OFFLINE_ONLY,
+        (
+            ModelRoute(
+                "local-image",
+                AiWorkload.IMAGE,
+                ProviderFamily.COMFYUI,
+                "comfyui",
+                "workflow-v1",
+                CostClass.LOCAL_FREE_AI,
+                capabilities=("IMAGE_GENERATION",),
+            ),
+        ),
+    )
+    ConnectionSettingsStore.save(project / "ai-connection-settings.json", profile)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+    snapshot = launch.bridge.connection_settings_snapshot({})
+    assert snapshot["available"] is True
+    assert snapshot["profile_id"] == "desktop-profile"
+    assert snapshot["revision"] == 1
+    assert snapshot["provider_execution_started"] is False
+    assert snapshot["generation_started"] is False
+    assert snapshot["credential_values_redisplayed"] is False
 
 
 def test_v11_launch_explicitly_composes_bounded_local_generation_without_execution(tmp_path: Path):

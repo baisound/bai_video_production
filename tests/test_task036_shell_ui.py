@@ -2,6 +2,17 @@ from __future__ import annotations
 
 import pytest
 
+from ai_video_production.ai_connections import (
+    AiConnectionProfile,
+    AiWorkload,
+    ConnectionAvailability,
+    CostClass,
+    ModelRoute,
+    ProviderFamily,
+    SelectionMode,
+)
+from ai_video_production.connection_settings_store import ConnectionSettingsStore
+from ai_video_production.connection_settings_web import ConnectionSettingsWebService
 from ai_video_production.desktop_shell import ShellApplicationService
 from ai_video_production.errors import ProductError
 from ai_video_production.task036_shell_ui import HTML, Task036ShellBridge
@@ -35,6 +46,97 @@ def test_bridge_rejects_extra_request_fields():
     with pytest.raises(ProductError) as exc:
         bridge.set_workspace({"workspace": "EDIT", "command": "whoami"})
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def _connection_settings_service(tmp_path):
+    profile = AiConnectionProfile(
+        "desktop-profile",
+        "1",
+        SelectionMode.AUTO,
+        (
+            ModelRoute(
+                "local-image",
+                AiWorkload.IMAGE,
+                ProviderFamily.COMFYUI,
+                "comfyui",
+                "workflow-v1",
+                CostClass.LOCAL_FREE_AI,
+                priority=10,
+                capabilities=("IMAGE_GENERATION",),
+            ),
+            ModelRoute(
+                "cloud-image",
+                AiWorkload.IMAGE,
+                ProviderFamily.OPENAI,
+                "openai",
+                "configured-image-model",
+                CostClass.CLOUD_PAID_AI,
+                priority=20,
+                credential_ref="credential://openai/default",
+                capabilities=("IMAGE_GENERATION",),
+            ),
+        ),
+    )
+    return ConnectionSettingsWebService(
+        tmp_path / "ai-connection-settings.json",
+        profile,
+        0,
+        ConnectionAvailability(frozenset({"local-image", "cloud-image"})),
+    )
+
+
+def test_connection_settings_bridge_projects_and_updates_exact_modes_without_execution(tmp_path):
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        connection_settings=_connection_settings_service(tmp_path),
+    )
+    snapshot = bridge.connection_settings_snapshot({})
+    assert snapshot["available"] is True
+    assert snapshot["revision"] == 0
+    assert snapshot["credential_values_redisplayed"] is False
+    assert snapshot["provider_execution_started"] is False
+    assert snapshot["paid_execution_authorized"] is False
+    assert "credential://" not in str(snapshot)
+
+    modes = {row["workload"]: row["selection_mode"] for row in snapshot["workloads"]}
+    modes["IMAGE"] = "OFFLINE_ONLY"
+    preferred = {row["workload"]: None for row in snapshot["workloads"]}
+    preferred["IMAGE"] = "local-image"
+    updated = bridge.connection_settings_update({
+        "revision": 0,
+        "workload_modes": modes,
+        "preferred_route_ids": preferred,
+    })
+    assert updated["revision"] == 1
+    assert updated["provider_execution_started"] is False
+    loaded = ConnectionSettingsStore.load(tmp_path / "ai-connection-settings.json").record
+    assert loaded.profile.mode_for(AiWorkload.IMAGE) is SelectionMode.OFFLINE_ONLY
+    assert loaded.profile.routes[0].route_id == "local-image"
+
+
+def test_connection_settings_bridge_is_fail_closed_when_unbound_or_request_is_broad(tmp_path):
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"))
+    assert bridge.connection_settings_snapshot({})["available"] is False
+    with pytest.raises(ProductError) as exc:
+        bridge.connection_settings_update({"revision": 0, "exec": "provider"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+    bound = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        connection_settings=_connection_settings_service(tmp_path),
+    )
+    with pytest.raises(ProductError) as exc:
+        bound.connection_settings_snapshot({"secret": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_pux2_settings_ui_uses_existing_task028_contract_and_never_collects_secrets():
+    assert "connection_settings_snapshot" in HTML
+    assert "connection_settings_update" in HTML
+    assert "data-connection-mode" in HTML
+    assert "data-connection-route" in HTML
+    assert "Secret本文の表示・入力・削除はこのShellでは行いません" in HTML
+    assert "保存はProvider実行・課金・生成を許可しません" in HTML
 
 
 def test_quick_generation_bridge_projects_snapshot_read_only():

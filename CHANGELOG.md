@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-036 P-UX-2Aとして、既存TASK-028 Connection Settings正本をUnified DesktopのAIモデル設定へ接続し、workload modeと優先RouteをCAS保存できるようにしました。Secret本文・Catalog・endpoint・Provider実行・課金・生成・TASK-041音声・Release/Deployは変更しません。
 - Added TASK-025 Premiere FCP7 XML Adapter R0 as a deterministic, video-only `xmeml` v5 compiler over exact TASK-022 Timeline Mapping plans, with a closed frame-rate matrix, strict private media-URI binding and public digest-only receipts. Media/file access, XML persistence, Premiere launch/import, audio/subtitle/retime, Asset/Timeline mutation, Release and Deploy remain separate.
 - TASK-017 Storage Lifecycle / GC Foundation R0として、既存Asset保持区分を参照するbody-free保持policy、外部inventory観測、archive/delete提案、one-shot Human effect authorization、外部effect receipt bindingと公開projectionを追加しました。filesystem列挙、Asset/Job/Privacy正本変更、archive/delete実行、成功receipt発行、Release/Deploy/Productionは別Gateです。
 - Added TASK-019 Profile Auto-Tuner as a deterministic, no-effect tuning-proposal contract over exact TASK-008 profiles and TASK-015 aggregate feedback, with bounded weight deltas, current-valid holdout evaluation, regression/UNKNOWN/stale gates and an immutable rollback coordinate. Profile writes, automatic promotion or rollback, Edit Plan mutation, YouTube API/Credential access, Release and Deploy remain separate.

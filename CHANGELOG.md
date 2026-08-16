@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-021 Integrated Dashboard / Operations Foundation R0として、canonical Job・Evidence・Resource・Privacy・Audit・Checkpoint truthを複製せず参照するbody-free read model、staleness・alert・incident分類、operation proposal・Human confirmation・external receipt境界、public/private projectionを追加しました。DashboardからのJob・store・process・app・Provider・通知・Production effectは別Gateです。
+
 - TASK-016 Privacy Guard Contract Foundation R0として、body-free入力座標、検出Evidence、policy評価、immutable redaction proposal、Human privacy review、notification/publication metadata、invalidation、public/private projectionを追加しました。実検出、redaction、通知送信、公開、保持・削除は別Gateです。
 - TASK-020 Resource Admission / Monitoring Foundation R0として、CPU・RAM・VRAM・disk・network・process・applicationのbody-free測定事実と、Admission・Watermark・Incident・Operation Gateの決定論的分類、schema mirror、canonical digest、UNKNOWNのfail-closed処理を追加しました。OS情報収集・資源予約・scheduler・process/app操作、Provider・model・media、Release・Deployは別Gateです。
 - TASK-013 Native H3 のComfyUI出力解決で、Windows形式の相対サブフォルダーを安全に正規化し、親移動・ドライブ指定・UNCパス・ファイル名内区切り文字を拒否するようにしました。実機再試験では最終MP4のbytes/SHA一致を確認済みです。Asset採用、timeline、Release、Deployは別Gateです。

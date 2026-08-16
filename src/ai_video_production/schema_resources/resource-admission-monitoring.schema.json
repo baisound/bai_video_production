@@ -1,0 +1,289 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/resource-admission-monitoring.schema.json",
+  "title": "TASK-020 Resource Admission and Monitoring Metadata",
+  "oneOf": [
+    {"$ref": "#/$defs/resourceAdmissionPolicyRevision"},
+    {"$ref": "#/$defs/resourcePreflightObservationReceipt"},
+    {"$ref": "#/$defs/resourceAdmissionDecisionReceipt"},
+    {"$ref": "#/$defs/runtimeResourceWatermarkReceipt"},
+    {"$ref": "#/$defs/resourceIncidentReceipt"},
+    {"$ref": "#/$defs/resourceOperationGateBinding"}
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    },
+    "reasonCodes": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}
+    },
+    "metricKind": {
+      "enum": [
+        "CPU_AVAILABLE_MILLICORES",
+        "RAM_AVAILABLE_BYTES",
+        "VRAM_AVAILABLE_BYTES",
+        "DISK_AVAILABLE_BYTES",
+        "NETWORK_REACHABLE",
+        "PROCESS_INSTANCE_COUNT",
+        "APP_INSTANCE_COUNT"
+      ]
+    },
+    "metricValueState": {
+      "enum": ["DECLARED", "MEASURED", "NOT_SUPPORTED", "INSUFFICIENT_INPUT", "ERROR", "UNKNOWN"]
+    },
+    "resourceMetricFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric_kind", "value_state", "value_int", "unit", "observed_at",
+        "source_profile_ref", "source_profile_sha256", "metric_fact_sha256"
+      ],
+      "properties": {
+        "metric_kind": {"$ref": "#/$defs/metricKind"},
+        "value_state": {"$ref": "#/$defs/metricValueState"},
+        "value_int": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0}]},
+        "unit": {"enum": ["millicores", "bytes", "boolean-int", "count"]},
+        "observed_at": {"$ref": "#/$defs/timestamp"},
+        "source_profile_ref": {"$ref": "#/$defs/id"},
+        "source_profile_sha256": {"$ref": "#/$defs/sha256"},
+        "metric_fact_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"value_state": {"const": "MEASURED"}}, "required": ["value_state"]},
+          "then": {"properties": {"value_int": {"type": "integer", "minimum": 0}}},
+          "else": {"properties": {"value_int": {"type": "null"}}}
+        }
+      ]
+    },
+    "resourceThreshold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metric_kind", "comparison", "threshold_value_int", "unit", "required"],
+      "properties": {
+        "metric_kind": {"$ref": "#/$defs/metricKind"},
+        "comparison": {"enum": ["GREATER_THAN_OR_EQUAL", "LESS_THAN_OR_EQUAL", "EQUAL"]},
+        "threshold_value_int": {"type": "integer", "minimum": 0},
+        "unit": {"enum": ["millicores", "bytes", "boolean-int", "count"]},
+        "required": {"type": "boolean"}
+      }
+    },
+    "recordIdentity": {
+      "type": "object",
+      "properties": {
+        "schema": {"const": "bai.task020.resource-admission-monitoring.v1"},
+        "task_owner": {"const": "TASK-020"},
+        "project_id": {"$ref": "#/$defs/id"}
+      }
+    },
+    "resourceAdmissionPolicyRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "record_type", "task_owner", "project_id", "policy_id", "revision",
+        "parent_revision_sha256", "created_at", "max_fact_age_seconds", "thresholds",
+        "collector_body_persisted", "effect_authorized", "policy_revision_sha256"
+      ],
+      "properties": {
+        "schema": {"const": "bai.task020.resource-admission-monitoring.v1"},
+        "record_type": {"const": "ResourceAdmissionPolicyRevision"},
+        "task_owner": {"const": "TASK-020"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "policy_id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "max_fact_age_seconds": {"type": "integer", "minimum": 1},
+        "thresholds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 7,
+          "items": {"$ref": "#/$defs/resourceThreshold"}
+        },
+        "collector_body_persisted": {"const": false},
+        "effect_authorized": {"const": false},
+        "policy_revision_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "resourcePreflightObservationReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "record_type", "task_owner", "project_id", "observation_receipt_id",
+        "operation_identity", "operation_input_sha256", "target_kind", "target_ref",
+        "target_revision_sha256", "policy_id", "policy_revision_sha256", "observed_at",
+        "facts", "collector_executed_by_module", "operation_started", "observation_receipt_sha256"
+      ],
+      "properties": {
+        "schema": {"const": "bai.task020.resource-admission-monitoring.v1"},
+        "record_type": {"const": "ResourcePreflightObservationReceipt"},
+        "task_owner": {"const": "TASK-020"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "observation_receipt_id": {"$ref": "#/$defs/id"},
+        "operation_identity": {"$ref": "#/$defs/id"},
+        "operation_input_sha256": {"$ref": "#/$defs/sha256"},
+        "target_kind": {"$ref": "#/$defs/id"},
+        "target_ref": {"$ref": "#/$defs/id"},
+        "target_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "policy_id": {"$ref": "#/$defs/id"},
+        "policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "observed_at": {"$ref": "#/$defs/timestamp"},
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 7,
+          "items": {"$ref": "#/$defs/resourceMetricFact"}
+        },
+        "collector_executed_by_module": {"const": false},
+        "operation_started": {"const": false},
+        "observation_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "resourceAdmissionDecisionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "record_type", "task_owner", "project_id", "decision_id",
+        "operation_identity", "policy_revision_sha256", "observation_receipt_sha256",
+        "evaluated_at", "decision", "reason_codes", "reservation_started",
+        "dispatch_started", "execution_authorized", "admission_decision_sha256"
+      ],
+      "properties": {
+        "schema": {"const": "bai.task020.resource-admission-monitoring.v1"},
+        "record_type": {"const": "ResourceAdmissionDecisionReceipt"},
+        "task_owner": {"const": "TASK-020"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "decision_id": {"$ref": "#/$defs/id"},
+        "operation_identity": {"$ref": "#/$defs/id"},
+        "policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "evaluated_at": {"$ref": "#/$defs/timestamp"},
+        "decision": {"enum": ["ADMITTED", "DENIED", "UNKNOWN"]},
+        "reason_codes": {"$ref": "#/$defs/reasonCodes"},
+        "reservation_started": {"const": false},
+        "dispatch_started": {"const": false},
+        "execution_authorized": {"const": false},
+        "admission_decision_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "runtimeResourceWatermarkReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "record_type", "task_owner", "project_id", "watermark_receipt_id",
+        "operation_identity", "policy_revision_sha256", "admission_decision_sha256",
+        "sequence", "window_started_at", "window_ended_at", "facts", "state",
+        "reason_codes", "collector_executed_by_module", "process_control_started",
+        "app_operation_started", "watermark_receipt_sha256"
+      ],
+      "properties": {
+        "schema": {"const": "bai.task020.resource-admission-monitoring.v1"},
+        "record_type": {"const": "RuntimeResourceWatermarkReceipt"},
+        "task_owner": {"const": "TASK-020"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "watermark_receipt_id": {"$ref": "#/$defs/id"},
+        "operation_identity": {"$ref": "#/$defs/id"},
+        "policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "admission_decision_sha256": {"$ref": "#/$defs/sha256"},
+        "sequence": {"type": "integer", "minimum": 1},
+        "window_started_at": {"$ref": "#/$defs/timestamp"},
+        "window_ended_at": {"$ref": "#/$defs/timestamp"},
+        "facts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 7,
+          "items": {"$ref": "#/$defs/resourceMetricFact"}
+        },
+        "state": {"enum": ["WITHIN_ADMITTED_BOUNDS", "BREACH", "UNKNOWN"]},
+        "reason_codes": {"$ref": "#/$defs/reasonCodes"},
+        "collector_executed_by_module": {"const": false},
+        "process_control_started": {"const": false},
+        "app_operation_started": {"const": false},
+        "watermark_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "resourceIncidentReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "record_type", "task_owner", "project_id", "incident_receipt_id",
+        "operation_identity", "watermark_receipt_sha256", "detected_at", "state",
+        "incident_kind", "affected_metrics", "reason_codes", "termination_requested",
+        "process_kill_started", "app_stop_started", "incident_receipt_sha256"
+      ],
+      "properties": {
+        "schema": {"const": "bai.task020.resource-admission-monitoring.v1"},
+        "record_type": {"const": "ResourceIncidentReceipt"},
+        "task_owner": {"const": "TASK-020"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "incident_receipt_id": {"$ref": "#/$defs/id"},
+        "operation_identity": {"$ref": "#/$defs/id"},
+        "watermark_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "detected_at": {"$ref": "#/$defs/timestamp"},
+        "state": {"enum": ["CONFIRMED", "UNKNOWN"]},
+        "incident_kind": {
+          "enum": ["THRESHOLD_BREACH", "STALE_EVIDENCE", "PROCESS_CARDINALITY", "APP_CARDINALITY", "OBSERVATION_ERROR"]
+        },
+        "affected_metrics": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/metricKind"}
+        },
+        "reason_codes": {"$ref": "#/$defs/reasonCodes"},
+        "termination_requested": {"const": false},
+        "process_kill_started": {"const": false},
+        "app_stop_started": {"const": false},
+        "incident_receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "resourceOperationGateBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "record_type", "task_owner", "project_id", "binding_id",
+        "operation_identity", "operation_scope", "contract_state", "decision_ref",
+        "admission_decision_sha256", "admission_decision", "gate_decision", "reason_codes",
+        "execution_authorized", "reservation_started", "dispatch_started", "process_started",
+        "app_launched", "operation_gate_binding_sha256"
+      ],
+      "properties": {
+        "schema": {"const": "bai.task020.resource-admission-monitoring.v1"},
+        "record_type": {"const": "ResourceOperationGateBinding"},
+        "task_owner": {"const": "TASK-020"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "binding_id": {"$ref": "#/$defs/id"},
+        "operation_identity": {"$ref": "#/$defs/id"},
+        "operation_scope": {
+          "enum": ["LOCAL_ANALYSIS", "LOCAL_GENERATION", "VOICE_CAPTURE", "VOICE_TRAINING", "EXPORT", "APPLICATION_PROBE"]
+        },
+        "contract_state": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+        "decision_ref": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/id"}]},
+        "admission_decision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "admission_decision": {"oneOf": [{"type": "null"}, {"enum": ["ADMITTED", "DENIED", "UNKNOWN"]}]},
+        "gate_decision": {"enum": ["READY_FOR_EXTERNAL_HUMAN_GATE", "BLOCKED", "UNKNOWN"]},
+        "reason_codes": {"$ref": "#/$defs/reasonCodes"},
+        "execution_authorized": {"const": false},
+        "reservation_started": {"const": false},
+        "dispatch_started": {"const": false},
+        "process_started": {"const": false},
+        "app_launched": {"const": false},
+        "operation_gate_binding_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

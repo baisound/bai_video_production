@@ -8,7 +8,7 @@
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
 - Last Completed Consumer Gate: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE`; PR #122 exact head `5d0d8140659a6bf3a30e9b19ac183c206dee8d92` passed hosted `9 / 9`, merged at exact main `ea671ee75a6c1a6ef79756b33f68ecb07466c5b4`, and passed post-merge main CI/Security
 - Completed Consumer Task: `TASK-036 / P-UX-1C`; exact packaged native Evidence closes Home, WORLD LOCK, Scene Design, Edit, Quick, Settings, Export and all six top menus under `V6.1.1_VISUAL_PARITY_PASS`
-- Functional Screen Flow: `NOT_COMPLETE`; fresh source audit finds all `14 / 14` V6.1.1 primary pages and destinations but `37` truthfully disabled runtime controls. TASK-036 P-UX-2 is now the canonical `Home/Media -> Planning -> Scenes -> WORLD LOCK -> Generation/Audio -> Asset Review -> Edit -> Final Review -> Export -> output QA` completion route. Visual parity, navigation, a toast or an Export Queue ACK cannot substitute for the final verified-output read-back Gate.
+- Functional Screen Flow: `NOT_COMPLETE / MODEL_TO_EXPORT_BROKEN`; the element-level browser/source audit finds all `14 / 14` pages, but mock/runtime totals are `205/109` IDs, `57/2` selects and `83/7` inputs/textareas. No runtime select chooses a generation model. TASK-036 P-UX-2 must connect exact Provider/model selection, selected-state read-back, generation, Candidate adoption, Timeline, typed Final Approval, Export Job and output QA without promoting mock-local state.
 - Separate Voice Route: TASK-046/TASK-047 retain their own exact Locks, authorities and Human gates; the former P-UX-1C ordering dependency is satisfied
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; TASK-047 is split into P-OBS-0 exact-path read/design/probe, P-OBS-1 minimum production-recording capture and later P-OBS-2 continuous/multi-source expansion. No production training-material recording or fine-tuning may start before P-OBS-1 hosted completion, exact OBS path probe PASS, recording Consent, encrypted storage and Owner GO
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
@@ -17,8 +17,9 @@
 - Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Next Consumer Decision Gate: `TASK-036 P-UX-2A is the first effect-free functional-screen-flow unit after the currently active atomic work reaches a safe terminal; Voice work continues separately through TASK-046/TASK-047 and their exact runtime/license, Consent, encrypted-storage and Owner gates; P-OBS-2 remains later`
-- Owner Roadmap Markers: `🟦 DEV1 NOW = TASK-036 P-UX-2A (assigned, implementation branch not yet materialized)`; `🟪 DEV2 NOW = TASK-046 P-VS-3B unused Lock closure (exact Registry/Evidence lane)`; `🎯 NEXT = DEV2 TASK-021 R0, DEV1 TASK-018 after P-UX-2 safe terminal`. The complete DONE/NOW/NEXT/FUTURE/GATE matrix is canonical in Roadmap Ver.1.90 section 2.1.
+- Next Consumer Decision Gate: `TASK-036 P-UX-2A0 element/selection inventory, followed by effect-free P-UX-2A1 canonical Provider/model projection; Voice work continues separately through TASK-046/TASK-047 and their exact runtime/license, Consent, encrypted-storage and Owner gates; P-OBS-2 remains later`
+- Owner Roadmap Markers: `🟦 DEV1 NOW = TASK-036 P-UX-2A0`; `🟪 DEV2 NOW = TASK-021 Integrated Dashboard R0`; `🎯 DEV1 sequence = A0 -> A1 -> B -> C -> D -> E`. TASK-018 R0 and the TASK-046 unused-Lock closure are complete. The complete DONE/NOW/NEXT/FUTURE/GATE matrix is canonical in Roadmap Ver.1.90 section 2.1.
+- Owner Implementation Standing Rule: an assignee does not wait for a per-Unit implementation authorization receipt inside an already allocated exclusive lane after fresh main/PR/Lock/path/dirty/overlap checks pass. Cross-owner writes, shared CHANGELOG, Release/Deploy/Production, paid/private credential use, license/Consent decisions and destructive operations retain their existing Gates.
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -122,7 +123,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus Owner marker section 2.1. TASK-036 P-UX-1C is hosted-closed with `V6.1.1_VISUAL_PARITY_PASS`; TASK-036 P-UX-2 separately records `FUNCTIONAL_SCREEN_FLOW_NOT_COMPLETE` and the ordered path to verified export read-back. TASK-046/TASK-047 remain separately governed; no voice, recording, Dataset, training or external-operation authority is inferred from TASK-036 closure. Native Voice, production recording and fine-tuning remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus Owner marker section 2.1. TASK-036 P-UX-1C is hosted-closed with `V6.1.1_VISUAL_PARITY_PASS`; TASK-036 P-UX-2 separately records `ELEMENT_INTERACTION_PARITY_NOT_COMPLETE / MODEL_TO_EXPORT_FLOW_BROKEN` and the A0/A1/B/C/D/E path to verified export read-back. TASK-046/TASK-047 remain separately governed; no voice, recording, Dataset, training or external-operation authority is inferred from TASK-036 closure. Native Voice, production recording and fine-tuning remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

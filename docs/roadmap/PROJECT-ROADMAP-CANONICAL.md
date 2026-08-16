@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.89
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.90
 - Project: `ai-video-production`
 - Date: 2026-08-17
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -33,9 +33,57 @@
 - TASK-007/010/011/012 + TASK-036: **SHELL_INTEGRATED / NATIVE_VALIDATED / MINIMUM_EDITING_PRODUCT_MVP_PASS**; stable Release `v0.20.1`
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
-- R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
+- R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; Native H3 recovery rerun and Windows-path source fix are **COMPLETED** by the PR #142 closure, while Asset adoption/Timeline/Release/Deploy remain separate effects.
 - Current insertion: TASK-036 P-UX-1C is hosted-closed against unchanged V6.1.1 with packaged-native visual parity. TASK-046/TASK-047 remain separately governed, and their runtime, Consent, storage, recording and Owner gates are unchanged. Native Voice, production recording and fine-tuning remain unclaimed.
-- Current functional insertion: TASK-036 P-UX-2 is **DESIGN REGISTERED / IMPLEMENTATION QUEUED**. The V6.1.1 HTML mock remains the absolute visual authority, but `VISUAL_PARITY_PASS` is not functional completion. The current runtime exposes all 14 primary pages yet retains 37 disabled controls, including Scene revision/finalization, playback, replacement, typed Final Approval and Export preset/queue creation gaps. P-UX-2 closes the exact `Home/Media -> Planning -> Scenes -> WORLD LOCK -> Generation/Audio -> Asset Review -> Edit -> Final Review -> Export -> output QA` flow before a complete V6 application claim.
+- Current functional insertion: TASK-036 P-UX-2 is **DESIGN REGISTERED / ELEMENT-SELECTION RE-AUDITED / IMPLEMENTATION QUEUED**. The V6.1.1 HTML mock remains the absolute visual authority, but `VISUAL_PARITY_PASS` is not functional completion. The runtime exposes all 14 primary pages, yet the mock/runtime comparison is `205/109` stable IDs, `57/2` selects and `83/7` inputs/textareas. No runtime select currently chooses a generation model. The exact `Provider/model -> Prompt/Scene -> admission -> generation -> Candidate adoption -> Timeline -> Final Approval -> Export Job -> Render QA/output read-back` route is broken at model selection and later Gates.
+
+### 2.1 Owner向け全体ロードマップ目印（2026-08-17 / main `8ce6fd4`）
+
+| 目印 | 意味 |
+|---|---|
+| ✅ DONE | canonical mainへ統合済みの完成Gate |
+| 🟦 DEV1 NOW | 開発担当の現在割当。実装branch未materializeの場合もその事実を併記 |
+| 🟪 DEV2 NOW | 開発担当2が現在変更している排他的lane |
+| 🎯 NEXT | 現在Unitのsafe terminal後に開始する予約順序 |
+| ⬜ FUTURE | 依存解消後に残る実装Unit |
+| ⏸ GATE | Human、Consent、license、credential、実機または外部effect待ち |
+
+Owner standing instruction dated `2026-08-17`: 各担当は、割当済みの排他的
+lane/Task/Unit内でfresh main・PR・Lock・path・dirty・overlap確認がPASSなら、
+個別の実装権限発行依頼を待たずにbranch/worktree作成、実装、test、Critic/Judge、
+Draft PRまで自走する。これは担当外変更、Release/Deploy/Production、有料利用、
+新規credential/private account、推定license/Consent、破壊的overwrite/cleanupを
+許可しない。shared CHANGELOG等は引き続き直列化する。
+
+#### 二担当の現在地と排他的な次順序
+
+| 担当 | これまでの主要到達点 | 現在地点 | 次に進む順序 | 競合防止境界 |
+|---|---|---|---|---|
+| 開発担当 | ✅ TASK-005 R0/R1A/R1B1/R1C0、✅ TASK-008、✅ TASK-009 R0、✅ TASK-013 Native H3 recovery/source closure、✅ TASK-018 R0 | 🟦 **TASK-036 P-UX-2A0 Element/Selection Contract Inventory**。本設計PR #148はmerge済み。再監査でボタン以外を含む欠落を確定したが、実装完了とは表示しない | 🎯 P-UX-2A0→2A1 Model/Capability Selector→2B→2C→2D→2E、次にTASK-015、TASK-019、TASK-025、残るTASK-005/013/027 visual slices | TASK-046/047/048、Narration/Audio、共有Registry/CHANGELOGを変更しない。共有writeはIntegration Lockで直列化 |
+| 開発担当2 | ✅ TASK-047/048、✅ TASK-014 I1、✅ TASK-013 BGM/SFX、✅ TASK-020、✅ TASK-016、✅ TASK-035、✅ TASK-046 unused Lock closure | 🟪 **TASK-021 Integrated Dashboard / Operations R0**。read-only allocation packetはPASS、exact mutationはfresh Gateから開始 | 🎯 TASK-021 R0→TASK-014 Local Primary残slice→TASK-041 Audio残slice。TASK-017はTASK-018 receiptと保持/削除authority後 | TASK-036 P-UX-2、TASK-005/008/009/013 visual laneを変更しない。Provider/paid/voice recording/publicationは別Gate |
+
+#### 動画書き出しまでの現在位置
+
+`✅ Ingest/Normalize` → `✅ ASR/Cut/Scene foundation` → `✅ Planning/WORLD LOCK foundation` → `✅ Generation routing + Native H3 proof` → `✅ Asset/Audit/Timeline foundation` → `🟦 P-UX-2A0: 全要素/選択契約` → `🟦 P-UX-2A1: Provider/モデル選択` → `🟦 P-UX-2B..D: 選択結果を生成・採用・編集・承認・Queueへ接続` → `🟦 P-UX-2E: packaged native vertical E2E` → `🎯 Render QA→output read-back` → `⏸ Human publication/release Gate`
+
+`V6.1.1_VISUAL_PARITY_PASS`は上記🟦区間の完了を意味しない。最終到達点は、モックの順序と表示を維持したまま、同じproject/revision/asset/job lineageで出力artifactのchecksum・media・duration・QAをread-backする `TASK036_MOCK_ABSOLUTE_FUNCTIONAL_EXPORT_FLOW_COMPLETE` である。
+
+#### 全体残タスク目印
+
+| 目印 | TASK / 残Unit | 排他Owner | 開始条件・現在のGate |
+|---|---|---|---|
+| 🟦 DEV1 NOW | TASK-036 P-UX-2A0..E | 開発担当 | 2A0で全要素と選択結果をinventory化し、2A1でcanonical Provider/model projectionを接続してから後続へ進む |
+| 🟪 DEV2 NOW | TASK-021 Integrated Dashboard R0 | 開発担当2 | TASK-016/020 foundationとallocation packet済み。body-free read modelのfresh exact Gateから開始 |
+| ⬜ FUTURE | TASK-005 real detector acquisition/materialization/runtime | 開発担当 | Contract foundation済み。license/provenance/artifact identityと実media probeは別effect Gate |
+| ⬜ FUTURE | TASK-015 YouTube Feedback、TASK-019 Auto-Tuner | 開発担当 | TASK-009 R0はPR #151で完了。TASK-015はTASK-008後、TASK-019は008+015後 |
+| ⬜ FUTURE | TASK-025 Premiere adapter | 開発担当 | TASK-001/022済み。import Golden Fixture単位で開始 |
+| ⬜ FUTURE | TASK-013 Scene-Compatible Reference / TASK-027 visual orchestration残slice | 開発担当 | Native H3 closure済み。Human adoption、Asset publication、Timeline mutationを別Gate化 |
+| ⬜ FUTURE | TASK-014 Local Primary render/alignment/48 kHz publication | 開発担当2 | I1 preflight済み。model/license/Consent/VoiceProfile/Datasetと実生成は段階Gate |
+| ⬜ FUTURE | TASK-041 Audio Workspace残slice | 開発担当2 | hosted foundation済み。Provider/media write/Resolve/Cubase effectは別Gate |
+| ⏸ GATE | TASK-017 Storage Lifecycle / GC | 開発担当2 | TASK-018 receipt、retention/legal-hold policy、削除対象のOwner authorityが揃うまでpark |
+| ⏸ GATE | TASK-046 production recording/fine-tuning、TASK-047 P-OBS-2 | 開発担当2 | Consent、encrypted storage、license、recording/save、Dataset adoption、Owner GOを個別に要求 |
+
+完了済みの大区分は `TASK-001..004, 006..009, 010..012, 016, 020, 022..024, 026, 035, TASK-036 Minimum MVP/P-UX-1, 037..045, 047, 048`。ここで「完了」は記載したGateに限り、部分TASKの将来sliceやProduction effectを自動的に完了扱いしない。
 
 ## 3. MVP定義
 
@@ -82,31 +130,31 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 002 | Resolve Capability Spike | Capability Matrix, IPC ADR, live Evidence | 001 | DEV-4 | COMPLETED |
 | 003 | Asset Registry / Ingest / Path Resolver | Ingest API, rights, checksum, path mapping | 001 | DEV-4 / score 33 | COMPLETED |
 | 004 | Media Normalization + Local Visual/Audio AI Runtime Foundation | exact timebase/proxy/48k, ComfyUI image/H3, Character Identity, SingleFrame/Spectrum/Foley, Audacity OpenVINO, minimum admission/Evidence | 003 | DEV-4 / score 25 | COMPLETED |
-| 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | NOT STARTED |
+| 005 | Scene Boundary | Scene Manifest, detector adapter, fixtures | 004 | DEV-3候補 | R0/R1A/R1B1/R1C0 CONTRACT SLICES HOSTED CLOSED / REAL DETECTOR EFFECT GATED |
 | 006 | ASR / Subtitle | Transcript/SRT、VAD、非重複SRT Corrective、不変Raw Transcript、優先辞書、GUI人間Review、既定OFFのAI誤字・脱字候補、承認Gate、Resolve字幕配置用canonical subtitle plan | 004,028（外部AI補正時） | DEV-3/4候補 | SLICE D RELEASED v0.17.0 |
 | 007 | Candidate Clip Graph / Cut Plan | DAG/score/target-duration Edit Plan。基本Cut統合sliceは006/024で先行可、Scene-aware完全版は005も利用 | 006,024; full版は005 | DEV-3 | IMPLEMENTED / AUTOMATED VALIDATED / SHELL INTEGRATED |
-| 008 | Multimodal Scoring | audio/visual/OCR feature fusion | 007 | DEV-3候補 | NOT STARTED |
+| 008 | Multimodal Scoring | audio/visual/OCR feature fusion | 007 | DEV-3候補 | CANONICAL IMPLEMENTATION COMPLETE / PR #146 |
 | 009 | DBDProfilePlugin | DBD HUD/chase/event profile | 008 | DEV-3候補 | NOT STARTED |
 | 010 | Resolve Assembly MVP | 元動画Cut、Subtitle Track/SRT配置、Audio asset配置を含むGateway/Controller, AUTO_ASSEMBLY, idempotency。字幕配置/basic assembly sliceは007前に先行可 | 002,003,022; Cut plan反映は007 | DEV-4 | NATIVE VALIDATED / SHELL INTEGRATED |
 | 011 | Render QA / Loudness | render queue adapter, QA, loudness/true-peak | 010 | DEV-3/4 | NATIVE VALIDATED / SHELL INTEGRATED |
 | 012 | Manual Handoff / Cubase | EDITOR_WORK handoff, audio round-trip | 010,011 | DEV-3 | NATIVE VALIDATED / SHELL INTEGRATED |
-| 013 | AI SE / BGM / Video Orchestration | TASK-004 local-runtime基盤を利用したSE/BGM/Video生成のProvider選択・創作制御・rights/cost/evidence。内容連動選定は007依存 | 004; 007は内容連動時 | DEV-4 | R3 PROMOTION COMPLETE / R4 ADAPTER HOSTED CLOSED / NATIVE RUNTIME PARKED |
-| 014 | Voice TTS / Owner Narration | Existing deterministic VoiceProfile/narration plan and ElevenLabs foundation plus future Local Primary zero-shot/fine-tuned render, Japanese text/direction/alignment, 48 kHz staged publication | 003,006,023,028,046; 配置は026/022/041 | DEV-4 | DESIGN RECORDED / ADAPTER FOUNDATION EXISTS / LOCAL PRIMARY EXTENSION ALLOCATED |
+| 013 | AI SE / BGM / Video Orchestration | TASK-004 local-runtime基盤を利用したSE/BGM/Video生成のProvider選択・創作制御・rights/cost/evidence。内容連動選定は007依存 | 004; 007は内容連動時 | DEV-4 | R3/R4 HOSTED CLOSED / BGM+SFX COMPILERS CLOSED / NATIVE H3 RUNTIME+SOURCE CLOSURE COMPLETE / REFERENCE SLICES REMAIN |
+| 014 | Voice TTS / Owner Narration | Existing deterministic VoiceProfile/narration plan and ElevenLabs foundation plus future Local Primary zero-shot/fine-tuned render, Japanese text/direction/alignment, 48 kHz staged publication | 003,006,023,028,046; 配置は026/022/041 | DEV-4 | LOCAL PRIMARY PREFLIGHT I1 HOSTED CLOSED / RENDER+ALIGNMENT+48K PUBLICATION REMAIN |
 | 015 | YouTube Feedback | performance ingest, feedback features | 008 | DEV-3候補 | NOT STARTED |
-| 016 | Privacy Guard | PII/notification/NG detection + redaction plan | 003,006 | DEV-4 | NOT STARTED |
+| 016 | Privacy Guard | PII/notification/NG detection + redaction plan | 003,006 | DEV-4 | CONTRACT FOUNDATION R0 HOSTED CLOSED / LIVE DETECTION+REDACTION EFFECTS REMAIN |
 | 017 | Storage Lifecycle / GC | archive, retention, legal hold, staged delete | 003,018 | DEV-4 | NOT STARTED |
 | 018 | Smart Reframe / Remotion | canonical reframe plan, vertical outputs | 007,010 | DEV-3/4候補 | NOT STARTED |
 | 019 | Profile Auto-Tuner | holdout evaluation, rollback, promotion gate | 008,015 | DEV-3/4候補 | NOT STARTED |
-| 020 | Resource Admission / Monitoring | VRAM/CPU/disk/network admission + metrics | 001,004 | DEV-4候補 | NOT STARTED |
-| 021 | Integrated Dashboard / Operations | job/evidence/alerts/ops UI | Evidence contracts | DEV-3候補 | NOT STARTED |
+| 020 | Resource Admission / Monitoring | VRAM/CPU/disk/network admission + metrics | 001,004 | DEV-4候補 | CONTRACT FOUNDATION R0 HOSTED CLOSED / OS COLLECTOR+RESERVATION EFFECTS REMAIN |
+| 021 | Integrated Dashboard / Operations | job/evidence/alerts/ops UI | Evidence contracts | DEV-3候補 | R0 READ-ONLY ALLOCATION PASS / MUTATION QUEUED AFTER TASK-046 LOCK CLOSURE |
 | 022 | Timeline Mapping Service | exact frame/time mapping, schema, golden fixtures | 001,003,004 | DEV-4 | COMPLETED / NATIVE WINDOWS 263 OF 263 PASS |
 | 023 | FasterWhisper Fast Local Provider | local ASR provider/cache/evidence | 001,004,006 | DEV-3候補 | COMPLETE |
 | 024 | Silence / Filler / Disfluency Cut Candidate Worker | 無音、フィラー、言い直し、反復、長ポーズ、噛み候補、keep blocks、cut evidence | 003,004,022; ASR連動は006 | DEV-3 | RELEASED v0.18.0 |
 | 025 | Premiere FCP7 XML Adapter Spike | XML adapter, import report, frame-rate matrix | 001,022 | DEV-3候補 | NOT STARTED |
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION HOSTED CLOSED / PR #86 / MAIN 0e457e69 |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
-| 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence + mock-absolute functional screen flow through verified export | 003,005,006,007,010,011,012,013,014,016,020,021,022,024,026,027,035,037..044,046..048 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1C VISUAL PARITY HOSTED CLOSED / P-UX-2 FUNCTIONAL FLOW QUEUED |
+| 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | CONTRACT FOUNDATION R0 HOSTED CLOSED / NATIVE DAW EFFECT GATED / PR #147 |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence + mock-absolute element/selection flow from Provider/model through verified export | 003,005,006,007,010,011,012,013,014,016,020,021,022,024,026,027,035,037..044,046..048 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1C VISUAL PARITY HOSTED CLOSED / P-UX-2 ELEMENT+SELECTION RE-AUDITED / MODEL-TO-EXPORT BROKEN |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -116,9 +164,9 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 043 | Unified Product Project / Migration / Recovery Foundation | Project Manifest, compatibility/migration, atomic save recovery, Undo/Redo, Autosave/Backup, durable Product jobs | 001,003,027,036..042 | DEV-4 | HOSTED CLOSED / PR #66 / MAIN 10eae32b |
 | 044 | Interactive Timeline / Unified NLE / Export Queue | dynamic tracks, seek, viewport, trim/snap, IN/OUT, durable Export Queue | 010..012,022,036,042,043 | DEV-4 | HOSTED CLOSED / PR #72 / MAIN 6703c42a |
 | 045 | V6 Native Acceptance / Compatibility / Release Closure | migration corpus, recovery, native UX, full regression, exact SemVer/Tag/Release | 042..044 | DEV-4 | FORMAL RELEASE COMPLETE / v0.21.0 / POST-RELEASE SYNC HOSTED CLOSED |
-| 046 | Voice Studio / Voice Dataset & Local Voice Profile | private VoiceProfile/Dataset, teleprompter, capture preflight, zero-shot/fine-tune admission, style coverage and Owner-only 60–90 s vertical slice | 003,006,014,020,022,023,026,036,037,041,043,044,047 | DEV-4 | P-VS-0 HOSTED CLOSED / P-VS-1A PARALLEL LOCK ACTIVE / P-VS-1B SUCCESSOR MOCK GATED / P-VS-3 PRODUCTION RECORDING GATED BY P-OBS-1 |
-| 047 | OBS Voice Capture Integration | x64 OBS audio-filter Plugin, authenticated local IPC, selected-input capture session/segments, exact loss/recovery Evidence and later meeting/live breadth | 006,020,023,043,045,046 | DEV-4 | OWNER P0 RECORDING DEPENDENCY / P-OBS-0 DESIGN-PROBE SEPARATE / P-OBS-1 IMPLEMENTATION NOT AUTHORIZED / P-OBS-2 LATER |
-| 048 | Voice Quality Calibration | separate Calibration Dataset, Gold labels, versioned Analyzer/score profiles, threshold simulation, drift and Human decision trace | 014,038,041,046 | DEV-4 | FORMALLY ALLOCATED / DESIGN QUEUED AFTER VOICE VERTICAL SLICE |
+| 046 | Voice Studio / Voice Dataset & Local Voice Profile | private VoiceProfile/Dataset, teleprompter, capture preflight, zero-shot/fine-tune admission, style coverage and Owner-only 60–90 s vertical slice | 003,006,014,020,022,023,026,036,037,041,043,044,047 | DEV-4 | P-VS FOUNDATION HOSTED CLOSED / P-VS-3B UNUSED LOCK CLOSURE ACTIVE / RECORDING+FINE-TUNING HUMAN GATED |
+| 047 | OBS Voice Capture Integration | x64 OBS audio-filter Plugin, authenticated local IPC, selected-input capture session/segments, exact loss/recovery Evidence and later meeting/live breadth | 006,020,023,043,045,046 | DEV-4 | P-OBS-1 PLUGIN/INSTALLER/RUNTIME CANONICAL CLOSURE COMPLETE / P-OBS-2 LATER |
+| 048 | Voice Quality Calibration | separate Calibration Dataset, Gold labels, versioned Analyzer/score profiles, threshold simulation, drift and Human decision trace | 014,038,041,046 | DEV-4 | CANONICAL FOUNDATION COMPLETE / LIVE CALIBRATION AND AUTO DECISION REMAIN GATED |
 
 ## 6. Namespace Collision Resolution
 
@@ -177,10 +225,10 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 ### Wave 3A — V6.1.1 Mock-Absolute Functional Screen Flow
 
 - TASK-036 P-UX-1C: **V6.1.1 VISUAL PARITY HOSTED CLOSED**。
-- TASK-036 P-UX-2: **DESIGN REGISTERED / IMPLEMENTATION QUEUED / FUNCTIONAL FLOW NOT COMPLETE**。
+- TASK-036 P-UX-2: **DESIGN REGISTERED / ELEMENT-SELECTION RE-AUDITED / IMPLEMENTATION QUEUED / MODEL-TO-EXPORT FLOW NOT CONNECTED**。
 - 固定順序は `Home/Project/Media -> Planning -> Scenes -> WORLD LOCK -> Scene Design -> Start/End/AI Video/Audio -> Asset Review/Assets -> Edit -> Final Review -> Export Queue -> Render QA/output read-back`。
 - HTMLモックは見た目・ページ順・interaction intentの絶対正本を維持する。モックのsample data、random progress、timer、toast-only successはProduct truthへ昇格しない。
-- P-UX-2A inventory、P-UX-2B intake/planning/scenes、P-UX-2C generation/audio/adoption、P-UX-2D edit/review/export、P-UX-2E packaged native vertical closureの順で進める。
+- P-UX-2A0全要素/選択契約inventory、P-UX-2A1 Provider/model capability projection、P-UX-2B intake/planning/scenes、P-UX-2C generation/audio/adoption、P-UX-2D edit/review/export、P-UX-2E packaged native vertical closureの順で進める。
 - 最終Gateは `TASK036_MOCK_ABSOLUTE_FUNCTIONAL_EXPORT_FLOW_COMPLETE`。視覚パリティ、Backend単体PASS、画面遷移またはExport Job予約だけでは成立しない。
 
 ### Wave 4 — Generative/Audio現在位置
@@ -2359,14 +2407,17 @@ authority. Actual Product screens must also project the real feature content,
 execute the owning typed operations and read their results back into the next
 screen. Visual parity alone is not end-to-end functional completion.
 
-Fresh source audit at main `eb1ea977651767e183779bf6b70ef0778ba0210e`
-finds all `14 / 14` primary pages and destinations, but the mock's `253`
-buttons correspond to `126` runtime buttons, of which `37` remain disabled.
-Missing or blocked functional links include Proposal generation, Scene
-revision/finalization, player transport, Asset insertion/replacement, typed
-Final Approval and Export preset/queue creation. P-UX-1C remains a valid
-`V6.1.1_VISUAL_PARITY_PASS`; it is not retracted, but it is now explicitly
-separate from `FUNCTIONAL_SCREEN_FLOW_NOT_COMPLETE`.
+Fresh element/source audit at main
+`2e787b395a3de62ed3cb53547a1664cc42f6601f` finds all `14 / 14` primary pages
+and destinations, but the mock/runtime comparison is `253/126` buttons,
+`205/109` stable IDs, `57/2` selects and `83/7` inputs/textareas. The two
+runtime selects do not choose generation models. Missing or blocked links
+include Planning and generation Provider/model selection, Scene Design,
+Image/Quick controls, Audio choices, Candidate selection/adoption, player
+transport, Asset insertion/replacement, typed Final Approval and Export
+preset/queue creation. P-UX-1C remains a valid `V6.1.1_VISUAL_PARITY_PASS`;
+it is not retracted, but it is now explicitly separate from
+`ELEMENT_INTERACTION_PARITY_NOT_COMPLETE / MODEL_TO_EXPORT_FLOW_BROKEN`.
 
 The canonical production order is fixed as:
 
@@ -2374,10 +2425,11 @@ The canonical production order is fixed as:
 Start/End/AI Video/Audio -> Asset Review/Assets -> Edit -> Final Review ->
 Export Queue -> Render QA/output read-back`.
 
-P-UX-2 is divided into P-UX-2A machine-checkable flow inventory, P-UX-2B
+P-UX-2 is divided into P-UX-2A0 machine-checkable element/selection inventory,
+P-UX-2A1 canonical Provider/model capability projection, P-UX-2B
 intake/planning/scenes, P-UX-2C generation/audio/adoption, P-UX-2D
-edit/review/export and P-UX-2E packaged-native vertical closure. Existing
-TASK owners retain Project, Asset, Scene, generation, audio, Timeline, Export,
+edit/review/export and P-UX-2E packaged-native vertical closure. Existing TASK
+owners retain Project, Asset, Scene, generation, audio, Timeline, Export,
 Resolve and Human-authority truth; TASK-036 owns only unified presentation,
 bridge composition and cross-screen handoff.
 
@@ -2392,3 +2444,6 @@ delete/legal-hold, Release, Deploy or Production authority.
 
 Detailed design:
 `docs/ai-team/tasks/TASK-036/p-ux-2-v611-functional-screen-flow-detailed-design-2026-08-17.md`.
+
+Element/selection re-audit:
+`docs/ai-team/tasks/TASK-036/p-ux-2-v611-element-selection-export-flow-reaudit-2026-08-17.md`.

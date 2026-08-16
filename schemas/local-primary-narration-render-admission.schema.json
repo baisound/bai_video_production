@@ -1,0 +1,209 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/local-primary-narration-render-admission.schema.json",
+  "title": "TASK-014 Local Primary Narration Render Admission",
+  "$ref": "#/$defs/renderAdmission",
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "nullableId": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/id"}]},
+    "nullableSha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+    "nullableTimestamp": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]},
+    "nullablePositiveInteger": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+    "contractState": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "routeMode": {"enum": ["ZERO_SHOT_LOCAL", "FINE_TUNED_LOCAL"]},
+    "intendedUsage": {"enum": ["PREVIEW", "FULL_RENDER"]},
+    "reasonCodes": {
+      "type": "array", "maxItems": 32, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}
+    },
+    "localPrimaryPreflightBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "preflight_id", "preflight_sha256", "route_mode", "intended_usage", "script_text_revision_sha256", "voice_profile_revision_sha256", "decision", "evaluated_at", "expires_at"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "preflight_id": {"$ref": "#/$defs/nullableId"},
+        "preflight_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "route_mode": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/routeMode"}]},
+        "intended_usage": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/intendedUsage"}]},
+        "script_text_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "voice_profile_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "decision": {"oneOf": [{"type": "null"}, {"enum": ["READY_FOR_OWNER_HUMAN_GATE", "BLOCKED", "UNKNOWN"]}]},
+        "evaluated_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "expires_at": {"$ref": "#/$defs/nullableTimestamp"}
+      },
+      "allOf": [{
+        "if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}, "required": ["contract_state"]},
+        "then": {"properties": {
+          "preflight_id": {"$ref": "#/$defs/id"}, "preflight_sha256": {"$ref": "#/$defs/sha256"},
+          "route_mode": {"$ref": "#/$defs/routeMode"}, "intended_usage": {"$ref": "#/$defs/intendedUsage"},
+          "script_text_revision_sha256": {"$ref": "#/$defs/sha256"}, "voice_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+          "decision": {"enum": ["READY_FOR_OWNER_HUMAN_GATE", "BLOCKED", "UNKNOWN"]}, "evaluated_at": {"$ref": "#/$defs/timestamp"},
+          "expires_at": {"$ref": "#/$defs/timestamp"}
+        }},
+        "else": {"properties": {
+          "preflight_id": {"type": "null"}, "preflight_sha256": {"type": "null"}, "route_mode": {"type": "null"},
+          "intended_usage": {"type": "null"}, "script_text_revision_sha256": {"type": "null"},
+          "voice_profile_revision_sha256": {"type": "null"}, "decision": {"type": "null"},
+          "evaluated_at": {"type": "null"}, "expires_at": {"type": "null"}
+        }}
+      }]
+    },
+    "resourceAdmissionBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "resource_gate_id", "resource_gate_sha256", "operation_scope", "route_mode", "preflight_sha256", "decision", "evaluated_at", "expires_at"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"}, "resource_gate_id": {"$ref": "#/$defs/nullableId"},
+        "resource_gate_sha256": {"$ref": "#/$defs/nullableSha256"}, "operation_scope": {"$ref": "#/$defs/nullableId"},
+        "route_mode": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/routeMode"}]},
+        "preflight_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "decision": {"oneOf": [{"type": "null"}, {"enum": ["ADMITTED", "DENIED", "UNKNOWN"]}]},
+        "evaluated_at": {"$ref": "#/$defs/nullableTimestamp"}, "expires_at": {"$ref": "#/$defs/nullableTimestamp"}
+      },
+      "allOf": [{
+        "if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}, "required": ["contract_state"]},
+        "then": {"properties": {
+          "resource_gate_id": {"$ref": "#/$defs/id"}, "resource_gate_sha256": {"$ref": "#/$defs/sha256"},
+          "operation_scope": {"const": "LOCAL_NARRATION_RENDER"}, "route_mode": {"$ref": "#/$defs/routeMode"},
+          "preflight_sha256": {"$ref": "#/$defs/sha256"}, "decision": {"enum": ["ADMITTED", "DENIED", "UNKNOWN"]},
+          "evaluated_at": {"$ref": "#/$defs/timestamp"}, "expires_at": {"$ref": "#/$defs/timestamp"}
+        }},
+        "else": {"properties": {
+          "resource_gate_id": {"type": "null"}, "resource_gate_sha256": {"type": "null"}, "operation_scope": {"type": "null"},
+          "route_mode": {"type": "null"}, "preflight_sha256": {"type": "null"}, "decision": {"type": "null"},
+          "evaluated_at": {"type": "null"}, "expires_at": {"type": "null"}
+        }}
+      }]
+    },
+    "durableNarrationJobBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "job_id", "job_revision", "job_revision_sha256", "operation_identity_sha256", "idempotency_key_sha256", "job_state"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"}, "job_id": {"$ref": "#/$defs/nullableId"},
+        "job_revision": {"$ref": "#/$defs/nullablePositiveInteger"}, "job_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "operation_identity_sha256": {"$ref": "#/$defs/nullableSha256"}, "idempotency_key_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "job_state": {"oneOf": [{"type": "null"}, {"enum": ["REGISTERED", "QUEUED", "RUNNING", "UNKNOWN"]}]}
+      },
+      "allOf": [{
+        "if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}, "required": ["contract_state"]},
+        "then": {"properties": {
+          "job_id": {"$ref": "#/$defs/id"}, "job_revision": {"type": "integer", "minimum": 1},
+          "job_revision_sha256": {"$ref": "#/$defs/sha256"}, "operation_identity_sha256": {"$ref": "#/$defs/sha256"},
+          "idempotency_key_sha256": {"$ref": "#/$defs/sha256"}, "job_state": {"enum": ["REGISTERED", "QUEUED", "RUNNING", "UNKNOWN"]}
+        }},
+        "else": {"properties": {
+          "job_id": {"type": "null"}, "job_revision": {"type": "null"}, "job_revision_sha256": {"type": "null"},
+          "operation_identity_sha256": {"type": "null"}, "idempotency_key_sha256": {"type": "null"}, "job_state": {"type": "null"}
+        }}
+      }]
+    },
+    "outputStagingDestinationBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "destination_id", "storage_owner_ref", "storage_policy_sha256", "quota_admission_sha256", "recovery_policy_sha256", "retention_policy_sha256", "allowed_artifact_class", "public_exposure"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"}, "destination_id": {"$ref": "#/$defs/nullableId"},
+        "storage_owner_ref": {"$ref": "#/$defs/nullableId"}, "storage_policy_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "quota_admission_sha256": {"$ref": "#/$defs/nullableSha256"}, "recovery_policy_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "retention_policy_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "allowed_artifact_class": {"oneOf": [{"type": "null"}, {"const": "STAGED_NARRATION_PCM_WAV_48000_MONO"}]},
+        "public_exposure": {"oneOf": [{"type": "null"}, {"type": "boolean"}]}
+      },
+      "allOf": [{
+        "if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}, "required": ["contract_state"]},
+        "then": {"properties": {
+          "destination_id": {"$ref": "#/$defs/id"}, "storage_owner_ref": {"$ref": "#/$defs/id"},
+          "storage_policy_sha256": {"$ref": "#/$defs/sha256"}, "quota_admission_sha256": {"$ref": "#/$defs/sha256"},
+          "recovery_policy_sha256": {"$ref": "#/$defs/sha256"}, "retention_policy_sha256": {"$ref": "#/$defs/sha256"},
+          "allowed_artifact_class": {"const": "STAGED_NARRATION_PCM_WAV_48000_MONO"}, "public_exposure": {"const": false}
+        }},
+        "else": {"properties": {
+          "destination_id": {"type": "null"}, "storage_owner_ref": {"type": "null"}, "storage_policy_sha256": {"type": "null"},
+          "quota_admission_sha256": {"type": "null"}, "recovery_policy_sha256": {"type": "null"},
+          "retention_policy_sha256": {"type": "null"}, "allowed_artifact_class": {"type": "null"}, "public_exposure": {"type": "null"}
+        }}
+      }]
+    },
+    "executionAuthorizationBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_state", "authorization_id", "authorization_revision", "authorization_sha256", "authority_kind", "project_id", "admission_id", "admission_revision", "route_mode", "intended_usage", "script_text_revision_sha256", "voice_profile_revision_sha256", "preflight_sha256", "resource_gate_sha256", "job_revision_sha256", "destination_policy_sha256", "scope", "issued_at", "expires_at", "one_shot", "evidence_ref", "evidence_sha256"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"}, "authorization_id": {"$ref": "#/$defs/nullableId"},
+        "authorization_revision": {"$ref": "#/$defs/nullablePositiveInteger"}, "authorization_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "authority_kind": {"oneOf": [{"type": "null"}, {"enum": ["OWNER_HUMAN_GATE", "APPROVED_SYNTHETIC_TEST_AUTHORITY"]}]},
+        "project_id": {"$ref": "#/$defs/nullableId"}, "admission_id": {"$ref": "#/$defs/nullableId"},
+        "admission_revision": {"$ref": "#/$defs/nullablePositiveInteger"},
+        "route_mode": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/routeMode"}]},
+        "intended_usage": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/intendedUsage"}]},
+        "script_text_revision_sha256": {"$ref": "#/$defs/nullableSha256"}, "voice_profile_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "preflight_sha256": {"$ref": "#/$defs/nullableSha256"}, "resource_gate_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "job_revision_sha256": {"$ref": "#/$defs/nullableSha256"}, "destination_policy_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "scope": {"oneOf": [{"type": "null"}, {"enum": ["PREVIEW_RENDER", "FULL_RENDER"]}]},
+        "issued_at": {"$ref": "#/$defs/nullableTimestamp"}, "expires_at": {"$ref": "#/$defs/nullableTimestamp"},
+        "one_shot": {"oneOf": [{"type": "null"}, {"type": "boolean"}]}, "evidence_ref": {"$ref": "#/$defs/nullableId"},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      },
+      "allOf": [{
+        "if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}, "required": ["contract_state"]},
+        "then": {"properties": {
+          "authorization_id": {"$ref": "#/$defs/id"}, "authorization_revision": {"type": "integer", "minimum": 1},
+          "authorization_sha256": {"$ref": "#/$defs/sha256"}, "authority_kind": {"enum": ["OWNER_HUMAN_GATE", "APPROVED_SYNTHETIC_TEST_AUTHORITY"]},
+          "project_id": {"$ref": "#/$defs/id"}, "admission_id": {"$ref": "#/$defs/id"}, "admission_revision": {"type": "integer", "minimum": 1},
+          "route_mode": {"$ref": "#/$defs/routeMode"}, "intended_usage": {"$ref": "#/$defs/intendedUsage"},
+          "script_text_revision_sha256": {"$ref": "#/$defs/sha256"}, "voice_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+          "preflight_sha256": {"$ref": "#/$defs/sha256"}, "resource_gate_sha256": {"$ref": "#/$defs/sha256"},
+          "job_revision_sha256": {"$ref": "#/$defs/sha256"}, "destination_policy_sha256": {"$ref": "#/$defs/sha256"},
+          "scope": {"enum": ["PREVIEW_RENDER", "FULL_RENDER"]}, "issued_at": {"$ref": "#/$defs/timestamp"},
+          "expires_at": {"$ref": "#/$defs/timestamp"}, "one_shot": {"const": true},
+          "evidence_ref": {"$ref": "#/$defs/id"}, "evidence_sha256": {"$ref": "#/$defs/sha256"}
+        }},
+        "else": {"properties": {
+          "authorization_id": {"type": "null"}, "authorization_revision": {"type": "null"}, "authorization_sha256": {"type": "null"},
+          "authority_kind": {"type": "null"}, "project_id": {"type": "null"}, "admission_id": {"type": "null"},
+          "admission_revision": {"type": "null"}, "route_mode": {"type": "null"}, "intended_usage": {"type": "null"},
+          "script_text_revision_sha256": {"type": "null"}, "voice_profile_revision_sha256": {"type": "null"},
+          "preflight_sha256": {"type": "null"}, "resource_gate_sha256": {"type": "null"},
+          "job_revision_sha256": {"type": "null"}, "destination_policy_sha256": {"type": "null"}, "scope": {"type": "null"},
+          "issued_at": {"type": "null"}, "expires_at": {"type": "null"}, "one_shot": {"type": "null"},
+          "evidence_ref": {"type": "null"}, "evidence_sha256": {"type": "null"}
+        }}
+      }]
+    },
+    "renderAdmission": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "schema", "record_type", "task_owner", "project_id", "admission_id", "revision", "parent_revision_sha256", "created_at",
+        "route_mode", "intended_usage", "script_text_revision_id", "script_text_revision_sha256", "voice_profile_revision_id",
+        "voice_profile_revision_sha256", "preflight_binding", "resource_admission_binding", "durable_job_binding",
+        "output_destination_binding", "execution_authorization_binding", "decision", "reason_codes", "script_body_persisted",
+        "audio_body_persisted", "credential_value_persisted", "absolute_path_persisted", "execution_started", "job_dispatched",
+        "model_loaded", "gpu_reserved", "audio_rendered", "asset_published", "admission_sha256"
+      ],
+      "properties": {
+        "schema": {"const": "bai.task014.local-primary-narration-render-admission.v1"},
+        "record_type": {"const": "LocalPrimaryNarrationRenderAdmission"}, "task_owner": {"const": "TASK-014"},
+        "project_id": {"$ref": "#/$defs/id"}, "admission_id": {"$ref": "#/$defs/id"}, "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"}, "created_at": {"$ref": "#/$defs/timestamp"},
+        "route_mode": {"$ref": "#/$defs/routeMode"}, "intended_usage": {"$ref": "#/$defs/intendedUsage"},
+        "script_text_revision_id": {"$ref": "#/$defs/id"}, "script_text_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "voice_profile_revision_id": {"$ref": "#/$defs/id"}, "voice_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "preflight_binding": {"$ref": "#/$defs/localPrimaryPreflightBinding"},
+        "resource_admission_binding": {"$ref": "#/$defs/resourceAdmissionBinding"},
+        "durable_job_binding": {"$ref": "#/$defs/durableNarrationJobBinding"},
+        "output_destination_binding": {"$ref": "#/$defs/outputStagingDestinationBinding"},
+        "execution_authorization_binding": {"$ref": "#/$defs/executionAuthorizationBinding"},
+        "decision": {"enum": ["READY_FOR_EXTERNAL_DISPATCH_GATE", "BLOCKED", "UNKNOWN"]}, "reason_codes": {"$ref": "#/$defs/reasonCodes"},
+        "script_body_persisted": {"const": false}, "audio_body_persisted": {"const": false},
+        "credential_value_persisted": {"const": false}, "absolute_path_persisted": {"const": false},
+        "execution_started": {"const": false}, "job_dispatched": {"const": false}, "model_loaded": {"const": false},
+        "gpu_reserved": {"const": false}, "audio_rendered": {"const": false}, "asset_published": {"const": false},
+        "admission_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [{
+        "if": {"properties": {"revision": {"const": 1}}, "required": ["revision"]},
+        "then": {"properties": {"parent_revision_sha256": {"type": "null"}}},
+        "else": {"properties": {"parent_revision_sha256": {"$ref": "#/$defs/sha256"}}}
+      }]
+    }
+  }
+}

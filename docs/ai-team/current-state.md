@@ -18,6 +18,7 @@
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Next Consumer Decision Gate: `TASK-036 P-UX-2A is the first effect-free functional-screen-flow unit after the currently active atomic work reaches a safe terminal; Voice work continues separately through TASK-046/TASK-047 and their exact runtime/license, Consent, encrypted-storage and Owner gates; P-OBS-2 remains later`
+- Owner Roadmap Markers: `🟦 DEV1 NOW = TASK-036 P-UX-2A (assigned, implementation branch not yet materialized)`; `🟪 DEV2 NOW = TASK-046 P-VS-3B unused Lock closure (exact Registry/Evidence lane)`; `🎯 NEXT = DEV2 TASK-021 R0, DEV1 TASK-018 after P-UX-2 safe terminal`. The complete DONE/NOW/NEXT/FUTURE/GATE matrix is canonical in Roadmap Ver.1.90 section 2.1.
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate
 
@@ -121,7 +122,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.89 Addendum LXXXIII. TASK-036 P-UX-1C is hosted-closed with `V6.1.1_VISUAL_PARITY_PASS`; TASK-036 P-UX-2 separately records `FUNCTIONAL_SCREEN_FLOW_NOT_COMPLETE` and the ordered path to verified export read-back. TASK-046/TASK-047 remain separately governed; no voice, recording, Dataset, training or external-operation authority is inferred from TASK-036 closure. Native Voice, production recording and fine-tuning remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus Owner marker section 2.1. TASK-036 P-UX-1C is hosted-closed with `V6.1.1_VISUAL_PARITY_PASS`; TASK-036 P-UX-2 separately records `FUNCTIONAL_SCREEN_FLOW_NOT_COMPLETE` and the ordered path to verified export read-back. TASK-046/TASK-047 remain separately governed; no voice, recording, Dataset, training or external-operation authority is inferred from TASK-036 closure. Native Voice, production recording and fine-tuning remain unclaimed. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

@@ -49,6 +49,16 @@ def test_pux1c_gate_exercises_visual_interaction_focus_and_restart() -> None:
         "03-settings-audio.png",
         "04-export.png",
         "05-edit-after-scrub.png",
+        "06-world-lock.png",
+        "07-scene-design.png",
+        "08-quick.png",
+        "required_surface_captures_complete",
+        "required_surface_anchor_bounds_passed",
+        "Assert-VisibleWithinRoot",
+        "all_top_menus_verified",
+        "top_menu_contracts",
+        "disabled_menu_reasons_present",
+        "Assert-MenuContract",
         "menu_escape_focus_restored",
         "settings_escape_focus_restored",
         "timeline_zoom_changed_geometry",
@@ -66,6 +76,21 @@ def test_pux1c_gate_exercises_visual_interaction_focus_and_restart() -> None:
         "maximized_client_coverage_passed = $maximizedClientCoverage",
     ):
         assert marker in SCRIPT
+
+    for menu_name in ("$nameFile", "$nameEdit", "$nameView", "$nameProject", "$nameGenerate", "$nameExport"):
+        assert f"Assert-MenuContract $first.process {menu_name}" in SCRIPT
+
+    required_capture_list = SCRIPT[SCRIPT.index("required_surface_capture_files"):]
+    for file_name in (
+        "01-home.png",
+        "03-settings-audio.png",
+        "04-export.png",
+        "05-edit-after-scrub.png",
+        "06-world-lock.png",
+        "07-scene-design.png",
+        "08-quick.png",
+    ):
+        assert file_name in required_capture_list
 
     semantic_ready = SCRIPT.index('if (-not $semanticReady) {\n    throw "Packaged Shell attempt')
     post_ready_restore = SCRIPT.index("ShowWindow($handle, 9)")

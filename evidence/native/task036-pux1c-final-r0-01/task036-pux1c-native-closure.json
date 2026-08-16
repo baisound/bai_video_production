@@ -1,0 +1,190 @@
+﻿{
+    "evidence_version":  "1.1.0",
+    "task":  "TASK-036",
+    "gate":  "P_UX_1C_PACKAGED_NATIVE_CLOSURE",
+    "timestamp_utc":  "2026-08-16T08:49:28.9772700Z",
+    "package_sha256":  "9d35016d94e1c5119ca3f2c38dc9b8e29b539bde39820495fcb30c6f1878d7fa",
+    "package_copied_to_owned_short_path":  true,
+    "pywebview_private_mode_explicit":  true,
+    "canonical_ui_contract":  "V6.1.1",
+    "visual":  {
+                   "captures":  [
+                                    {
+                                        "file":  "01-home.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "1f13fe6dca5d86870269fda3ed9af4cbb9ee01f867667da029e17002cba79958"
+                                    },
+                                    {
+                                        "file":  "02-file-menu.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "c0c9b2aae7fe87da8194cfb750e4744776103136d1638e8326354ee797dbc7db"
+                                    },
+                                    {
+                                        "file":  "03-settings-audio.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "8f98fc047b651a093aec437e255d324a188e0b3af3e293337d1ade652f41fc0c"
+                                    },
+                                    {
+                                        "file":  "06-world-lock.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "c25cf82257b91a7580a56b05967edb4744f5f11493193d15d5f74496d86db62b"
+                                    },
+                                    {
+                                        "file":  "07-scene-design.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "81f05372b0a06094339956fcf405efd54a350aea7e00c4ae669902ae17aaeb57"
+                                    },
+                                    {
+                                        "file":  "08-quick.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "bc6b2d2d5d8af072bba309fe5c47b311bae7bc9c13b5b96aa645129619be7646"
+                                    },
+                                    {
+                                        "file":  "04-export.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "f68ff3cb42be81d23be993f88f0f419f49347e595584ebcc1bcf8dca775d2cfd"
+                                    },
+                                    {
+                                        "file":  "05-edit-after-scrub.png",
+                                        "width":  1936,
+                                        "height":  1096,
+                                        "sha256":  "0089d23a995158a10f7ea086338cc66894d1b44b2cf53c4246431fa183de71f4"
+                                    }
+                                ],
+                   "text_scale_percent":  130,
+                   "monitor_dpi_and_text_scale_recorded_separately":  true,
+                   "maximized_client_coverage_passed":  true,
+                   "required_surface_capture_files":  [
+                                                          "01-home.png",
+                                                          "03-settings-audio.png",
+                                                          "04-export.png",
+                                                          "05-edit-after-scrub.png",
+                                                          "06-world-lock.png",
+                                                          "07-scene-design.png",
+                                                          "08-quick.png"
+                                                      ],
+                   "required_surface_captures_complete":  true,
+                   "required_surface_anchor_bounds_passed":  true,
+                   "mock_demo_state_used":  false,
+                   "product_projection_used":  true
+               },
+    "interaction":  {
+                        "initial_required_controls_present":  true,
+                        "concrete_file_menu_present":  true,
+                        "all_top_menus_verified":  true,
+                        "top_menu_contracts":  [
+                                                   {
+                                                       "menu":  "ファイル",
+                                                       "enabled_item_count":  4,
+                                                       "disabled_item_count":  1,
+                                                       "disabled_reasons_present":  true,
+                                                       "escape_focus_restored":  true
+                                                   },
+                                                   {
+                                                       "menu":  "編集",
+                                                       "enabled_item_count":  3,
+                                                       "disabled_item_count":  2,
+                                                       "disabled_reasons_present":  true,
+                                                       "escape_focus_restored":  true
+                                                   },
+                                                   {
+                                                       "menu":  "表示",
+                                                       "enabled_item_count":  4,
+                                                       "disabled_item_count":  0,
+                                                       "disabled_reasons_present":  true,
+                                                       "escape_focus_restored":  true
+                                                   },
+                                                   {
+                                                       "menu":  "プロジェクト",
+                                                       "enabled_item_count":  4,
+                                                       "disabled_item_count":  1,
+                                                       "disabled_reasons_present":  true,
+                                                       "escape_focus_restored":  true
+                                                   },
+                                                   {
+                                                       "menu":  "生成",
+                                                       "enabled_item_count":  5,
+                                                       "disabled_item_count":  0,
+                                                       "disabled_reasons_present":  true,
+                                                       "escape_focus_restored":  true
+                                                   },
+                                                   {
+                                                       "menu":  "エクスポート",
+                                                       "enabled_item_count":  1,
+                                                       "disabled_item_count":  1,
+                                                       "disabled_reasons_present":  true,
+                                                       "escape_focus_restored":  true
+                                                   }
+                                               ],
+                        "disabled_menu_reasons_present":  true,
+                        "menu_escape_focus_restored":  true,
+                        "nine_settings_categories_present":  true,
+                        "settings_escape_focus_restored":  true,
+                        "timeline_zoom_changed_geometry":  true,
+                        "timeline_scroll_changed_geometry":  true,
+                        "timeline_native_pointer_scrub_changed_controller_value":  true,
+                        "canonical_track_controls_present":  true,
+                        "track_visibility_lock_mute_round_trip":  true,
+                        "track_height_python_round_trip":  true,
+                        "track_height_before":  44,
+                        "track_height_after":  52,
+                        "playhead_before":  0,
+                        "playhead_after":  228,
+                        "native_picker_cancelled_without_exit":  true
+                    },
+    "accessibility":  {
+                          "automation_root_name":  null,
+                          "semantic_button_count":  32,
+                          "visible_focus_css_contract_tested":  true,
+                          "ruler_accessible_name_present":  true,
+                          "playhead_range_value_present":  true
+                      },
+    "displays":  [
+                     {
+                         "device":  "\\\\.\\DISPLAY2",
+                         "primary":  false,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     },
+                     {
+                         "device":  "\\\\.\\DISPLAY3",
+                         "primary":  false,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     },
+                     {
+                         "device":  "\\\\.\\DISPLAY1",
+                         "primary":  true,
+                         "monitor_dpi_x":  96,
+                         "monitor_scale_percent":  100,
+                         "move_succeeded":  true,
+                         "window_on_target":  true
+                     }
+                 ],
+    "all_display_moves_passed":  true,
+    "restart":  {
+                    "private_mode_recreated_without_conversation":  true,
+                    "required_controls_present":  true,
+                    "first_owned_process_exit":  true,
+                    "second_owned_process_exit":  true,
+                    "conversation_free_restart_passed":  true
+                },
+    "provider_execution_started":  false,
+    "paid_execution_authorized":  false,
+    "credential_mutation_started":  false,
+    "human_accept_or_lock_started":  false,
+    "resolve_mutation_started":  false,
+    "cubase_mutation_started":  false,
+    "release_or_deploy_started":  false
+}

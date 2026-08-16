@@ -31,6 +31,7 @@ from .creative_generation_execution_application import Task013CreativeGeneration
 from .generation_output_adoption_application import Task027GenerationOutputAdoptionApplication
 from .audio_workspace_application import Task041AudioWorkspaceApplication
 from .audio_placement_application import Task026AudioPlacementApplication
+from .quick_generation_application import Task042QuickGenerationApplication
 from .task044_nle_shell import Task044NleShellController
 from .interactive_timeline import (
     InteractiveTimeline, InteractiveTimelineClip, TimelineMediaKind, TimelineTrack,
@@ -181,6 +182,7 @@ class Task036ShellBridge:
         generation_output_adoption_application: Task027GenerationOutputAdoptionApplication | None = None,
         audio_workspace_application: Task041AudioWorkspaceApplication | None = None,
         audio_placement_application: Task026AudioPlacementApplication | None = None,
+        quick_generation_application: Task042QuickGenerationApplication | None = None,
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
     ) -> None:
@@ -211,6 +213,7 @@ class Task036ShellBridge:
         self._generation_output_adoption_application = generation_output_adoption_application
         self._audio_workspace_application = audio_workspace_application
         self._audio_placement_application = audio_placement_application
+        self._quick_generation_application = quick_generation_application
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
         self._nle_controller = nle_controller
@@ -452,6 +455,12 @@ class Task036ShellBridge:
         if self._production_control is None:
             return {"available": False}
         return {"available": True, **self._production_control.snapshot()}
+
+    def quick_generation_snapshot(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Quick Generation snapshot")
+        if self._quick_generation_application is None:
+            return {"available": False}
+        return {"available": True, **self._quick_generation_application.snapshot()}
 
     def production_register_candidate(self, args: Any) -> dict[str, Any]:
         required = {"candidate_id", "slot_id", "asset_id", "asset_sha256", "expected_snapshot_sha256"}

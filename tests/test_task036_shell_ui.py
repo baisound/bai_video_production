@@ -37,6 +37,26 @@ def test_bridge_rejects_extra_request_fields():
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 
+def test_quick_generation_bridge_projects_snapshot_read_only():
+    class QuickApplicationStub:
+        def snapshot(self):
+            return {"project_id": "project-1", "intent_count": 0, "intents": []}
+
+    service = ShellApplicationService(product_version="0.21.0")
+    unavailable = Task036ShellBridge(service).quick_generation_snapshot({})
+    assert unavailable == {"available": False}
+    bridge = Task036ShellBridge(service, quick_generation_application=QuickApplicationStub())
+    assert bridge.quick_generation_snapshot({}) == {
+        "available": True,
+        "project_id": "project-1",
+        "intent_count": 0,
+        "intents": [],
+    }
+    with pytest.raises(ProductError) as exc:
+        bridge.quick_generation_snapshot({"create": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
 def _review_bridge():
     from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
     from ai_video_production.desktop_editing_review import ReviewWorkspaceState, Task036ReviewFacade

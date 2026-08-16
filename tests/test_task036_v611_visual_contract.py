@@ -75,6 +75,7 @@ def test_static_controls_are_bound_or_truthfully_disabled() -> None:
             or button.get("data-settings-view")
             or button.get("data-add-track")
             or button.get("data-lock-kind")
+            or button.get("data-asset-kind")
         ), button
         if "disabled" in button:
             # A few context-sensitive Product actions start disabled and are
@@ -261,9 +262,40 @@ def test_world_lock_registry_filters_exact_reference_slot_kinds() -> None:
 
 
 def test_world_lock_registry_is_read_only_and_does_not_invent_generation() -> None:
-    assert "renderLockRegistry(model);if(!model?.available)" in SHELL_HTML
+    assert "renderLockRegistry(model);renderAssetIndex(model);if(!model?.available)" in SHELL_HTML
     assert "production_register_candidate" not in SHELL_HTML
     assert "production_generate_lock" not in SHELL_HTML
     assert "正式LOCKを確認" in SHELL_HTML
     assert "production_prepare_lock" in SHELL_HTML
     assert "production_apply_lock" in SHELL_HTML
+
+
+def test_assets_projects_bounded_production_candidate_index() -> None:
+    for marker in (
+        "Production Candidate Assets",
+        'data-asset-kind="ALL"',
+        'data-asset-kind="VIDEO"',
+        'data-asset-kind="IMAGE"',
+        'data-asset-kind="AIVIDEO"',
+        'data-asset-kind="NARRATION"',
+        'data-asset-kind="SE"',
+        'data-asset-kind="BGM"',
+        'data-asset-kind="AMBIENCE"',
+        "function assetKindMatches(slot,candidate)",
+        "function renderAssetIndex(model)",
+        "rows.slice(0,500)",
+        "candidate.asset_sha256",
+        "candidate.generation_job_id",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_assets_does_not_infer_missing_registry_domains() -> None:
+    for marker in (
+        'data-disabled-reason="Production ControlにSubtitle Asset種別がありません"',
+        'data-disabled-reason="Production Control snapshotにTag正本がありません"',
+        'data-disabled-reason="Tag正本がないため条件結合は使えません"',
+        "Rights/Tag/host pathはこのsnapshotに含まれません。",
+    ):
+        assert marker in SHELL_HTML
+    assert "renderModel($('assetContent')" not in SHELL_HTML

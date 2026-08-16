@@ -88,6 +88,31 @@ $nameProfile = Decode-UiName '5Yi25L2c44OX44Ot44OV44Kh44Kk44Or'
 $nameAudio = Decode-UiName '6Z+z5aOw'
 $nameAdvanced = Decode-UiName '6Kmz57Sw'
 $nameCloseSettings = Decode-UiName '6Kit5a6a44KS6ZaJ44GY44KL'
+$nameSave = Decode-UiName '5L+d5a2Y'
+$nameUndo = Decode-UiName '5YWD44Gr5oi744GZIEN0cmwrWg=='
+$nameRedo = Decode-UiName '44KE44KK55u044GZIEN0cmwrU2hpZnQrWg=='
+$nameFitSelection = Decode-UiName '6YG45oqe56+E5Zuy44G4Rml0'
+$nameSetIn = Decode-UiName 'SU7ngrnjgpLoqK3lrpo='
+$nameSetOut = Decode-UiName 'T1VU54K544KS6Kit5a6a'
+$nameFitEntire = Decode-UiName '5pmC6ZaT6Lu444KS5YWo5L2T6KGo56S6'
+$nameViewerWorkspace = Decode-UiName 'Vmlld2VyIC8g57Sg5p2QIC8gSW5zcGVjdG9yIC8g5pmC6ZaT6Lu4'
+$nameGenerationJobs = Decode-UiName '55Sf5oiQ44K444On44OW'
+$nameSceneTimeline = Decode-UiName 'U2NlbmXkuIDopqcgLyBUaW1lbGluZSBDb250cmFjdA=='
+$nameWorldLockRegistries = Decode-UiName 'V09STEQgTE9DSyBSZWdpc3RyaWVz'
+$nameAssetManagement = Decode-UiName '57Sg5p2Q566h55CG'
+$nameMasterSrtMusicPlan = Decode-UiName 'TWFzdGVyIFNSVCAvIE11c2ljIFBsYW4='
+$nameProjectValidation = Decode-UiName 'UHJvamVjdOaknOiovCAvIFNUQUxF56K66KqN'
+$nameQuickGeneration = Decode-UiName '44Kv44Kk44OD44Kv55Sf5oiQ'
+$nameReferenceGeneration = Decode-UiName '5Y+C54Wn55S75YOP55Sf5oiQ'
+$nameStartEndGeneration = Decode-UiName 'U3RhcnQgLyBFbmTnlLvlg4/nlJ/miJA='
+$nameAiVideoGeneration = Decode-UiName 'QUnli5XnlLvnlJ/miJA='
+$nameNarrationGeneration = Decode-UiName 'TmFycmF0aW9uIC8gQkdNIC8gU0UgLyDnkrDlooPpn7M='
+$nameExportScreen = Decode-UiName '5pu444GN5Ye644GX55S76Z2i'
+$nameResolveXml = Decode-UiName 'RGFWaW5jaSBSZXNvbHZlIC8gWE1M'
+$nameWorldLockSearch = Decode-UiName 'V09STEQgTE9DSyBSZWdpc3RyeeaknOe0og=='
+$nameContinuityPanel = Decode-UiName 'U3RhcnQgLyBFbmTjg7tDb250aW51aXR5'
+$namePromptEvidencePanel = Decode-UiName 'UHJvbXB06Ki86Leh'
+$nameNewQuickIntent = Decode-UiName '5paw44GX44GEUXVpY2sgSW50ZW5044KS5L2c5oiQ'
 $nameZoomIn = Decode-UiName '44K/44Kk44Og44Op44Kk44Oz44KS5ouh5aSn'
 $nameScrollRight = Decode-UiName '44K/44Kk44Og44Op44Kk44Oz44KS5Y+z44G444K544Kv44Ot44O844Or'
 $namePlayhead = Decode-UiName '5YaN55Sf44OY44OD44OJ'
@@ -201,6 +226,61 @@ function Invoke-Button([System.Windows.Automation.AutomationElement]$Button) {
     [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
   }
   Start-Sleep -Milliseconds 900
+}
+
+function Assert-VisibleWithinRoot(
+  [System.Windows.Automation.AutomationElement]$Root,
+  [System.Windows.Automation.AutomationElement]$Element,
+  [string]$Description
+) {
+  if ($null -eq $Element) { throw "Required visible element is unavailable: $Description" }
+  if ($Element.Current.IsOffscreen) { throw "Required element is offscreen: $Description" }
+  $rootRect = $Root.Current.BoundingRectangle
+  $rect = $Element.Current.BoundingRectangle
+  if ($rect.Width -le 0 -or $rect.Height -le 0 -or
+      $rect.Left -lt $rootRect.Left -or $rect.Top -lt $rootRect.Top -or
+      $rect.Right -gt $rootRect.Right -or $rect.Bottom -gt $rootRect.Bottom) {
+    throw "Required element is clipped outside the native client: $Description"
+  }
+  return $true
+}
+
+function Assert-MenuContract(
+  [System.Diagnostics.Process]$Process,
+  [string]$ButtonName,
+  [string[]]$EnabledNames,
+  [string[]]$DisabledNames
+) {
+  $root = Refresh-Root $Process
+  $button = Find-Button $root $ButtonName
+  Invoke-Button $button
+  $root = Refresh-Root $Process
+  foreach ($name in $EnabledNames) {
+    $item = Find-Element $root $name
+    if ($null -eq $item) { throw "$ButtonName menu item is missing: $name" }
+    if (-not $item.Current.IsEnabled) { throw "$ButtonName menu item must be enabled: $name" }
+  }
+  foreach ($name in $DisabledNames) {
+    $item = Find-Element $root $name
+    if ($null -eq $item) { throw "$ButtonName disabled menu item is missing: $name" }
+    if ($item.Current.IsEnabled) { throw "$ButtonName menu item must be disabled: $name" }
+    if ([string]::IsNullOrWhiteSpace($item.Current.HelpText)) {
+      throw "$ButtonName disabled menu item has no concrete reason: $name"
+    }
+  }
+  [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+  Start-Sleep -Milliseconds 500
+  $root = Refresh-Root $Process
+  if (-not (Find-Button $root $ButtonName).Current.HasKeyboardFocus) {
+    throw "$ButtonName menu Escape did not restore focus to its invoker."
+  }
+  return [ordered]@{
+    menu = $ButtonName
+    enabled_item_count = $EnabledNames.Count
+    disabled_item_count = $DisabledNames.Count
+    disabled_reasons_present = $true
+    escape_focus_restored = $true
+  }
 }
 
 function Capture-Window(
@@ -365,15 +445,19 @@ try {
   $fileButton = Find-Button $first.root $nameFile
   Invoke-Button $fileButton
   $first.root = Refresh-Root $first.process
-  $requiredFileMenu = @($nameOpen,$nameReadVideo,$nameEditorWork,$nameExportEllipsis)
-  $missingMenu = @($requiredFileMenu | Where-Object { $null -eq (Find-Element $first.root $_) })
-  if ($missingMenu.Count -ne 0) { throw "File menu items are missing: $($missingMenu -join ', ')" }
   $captures += Capture-Window $first.process '02-file-menu.png'
   [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
   Start-Sleep -Milliseconds 500
-  $first.root = Refresh-Root $first.process
-  $menuFocusRestored = (Find-Button $first.root $nameFile).Current.HasKeyboardFocus
-  if (-not $menuFocusRestored) { throw 'File menu Escape did not restore focus to its invoker.' }
+
+  $menuResults = @()
+  $menuResults += Assert-MenuContract $first.process $nameFile @($nameOpen,$nameReadVideo,$nameEditorWork,$nameExportEllipsis) @($nameSave)
+  $menuResults += Assert-MenuContract $first.process $nameEdit @($nameFitSelection,$nameSetIn,$nameSetOut) @($nameUndo,$nameRedo)
+  $menuResults += Assert-MenuContract $first.process $nameView @($nameFitEntire,$nameFitSelection,$nameViewerWorkspace,$nameGenerationJobs) @()
+  $menuResults += Assert-MenuContract $first.process $nameProject @($nameSceneTimeline,$nameWorldLockRegistries,$nameAssetManagement,$nameMasterSrtMusicPlan) @($nameProjectValidation)
+  $menuResults += Assert-MenuContract $first.process $nameGenerate @($nameQuickGeneration,$nameReferenceGeneration,$nameStartEndGeneration,$nameAiVideoGeneration,$nameNarrationGeneration) @()
+  $menuResults += Assert-MenuContract $first.process $nameExport @($nameExportScreen) @($nameResolveXml)
+  $menuFocusRestored = @($menuResults | Where-Object { -not $_.escape_focus_restored }).Count -eq 0
+  $disabledMenuReasonsPresent = @($menuResults | Where-Object { -not $_.disabled_reasons_present }).Count -eq 0
 
   Invoke-Button (Find-Button $first.root $nameSettings)
   $first.root = Refresh-Root $first.process
@@ -391,6 +475,29 @@ try {
     throw "Settings Escape did not restore focus to its invoker; focused=$focusedName"
   }
   Write-Host '[P-UX-1C] menus and Settings PASS'
+
+  Invoke-Button (Find-Button $first.root '3 WORLD LOCK')
+  $first.root = Refresh-Root $first.process
+  $worldLockSearch = Find-Element $first.root $nameWorldLockSearch
+  [void](Assert-VisibleWithinRoot $first.root $worldLockSearch 'WORLD LOCK Registry search')
+  $captures += Capture-Window $first.process '06-world-lock.png'
+
+  Invoke-Button (Find-Button $first.root $nameSceneDesign)
+  $first.root = Refresh-Root $first.process
+  [void](Assert-VisibleWithinRoot $first.root (Find-Element $first.root $nameContinuityPanel) 'Scene Design continuity panel')
+  [void](Assert-VisibleWithinRoot $first.root (Find-Element $first.root $namePromptEvidencePanel) 'Scene Design prompt Evidence panel')
+  $captures += Capture-Window $first.process '07-scene-design.png'
+
+  Invoke-Button (Find-Button $first.root $nameQuick)
+  $first.root = Refresh-Root $first.process
+  $newQuickIntent = Find-Button $first.root $nameNewQuickIntent
+  [void](Assert-VisibleWithinRoot $first.root $newQuickIntent 'Quick Intent authoring boundary')
+  if ($newQuickIntent.Current.IsEnabled -or [string]::IsNullOrWhiteSpace($newQuickIntent.Current.HelpText)) {
+    throw 'Quick Intent authoring boundary must remain disabled with its exact dependency reason.'
+  }
+  $captures += Capture-Window $first.process '08-quick.png'
+  $canonicalSurfaceCapturesComplete = $true
+  Write-Host '[P-UX-1C] WORLD LOCK, Scene Design and Quick surfaces PASS'
 
   Invoke-Button (Find-Button $first.root $nameExportStage)
   $captures += Capture-Window $first.process '04-export.png'
@@ -524,7 +631,7 @@ try {
 
   $textScale = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Accessibility' -Name TextScaleFactor -ErrorAction SilentlyContinue).TextScaleFactor
   $result = [ordered]@{
-    evidence_version = '1.0.0'
+    evidence_version = '1.1.0'
     task = 'TASK-036'
     gate = 'P_UX_1C_PACKAGED_NATIVE_CLOSURE'
     timestamp_utc = [DateTime]::UtcNow.ToString('o')
@@ -537,12 +644,21 @@ try {
       text_scale_percent = $textScale
       monitor_dpi_and_text_scale_recorded_separately = $true
       maximized_client_coverage_passed = $maximizedClientCoverage
+      required_surface_capture_files = @(
+        '01-home.png','03-settings-audio.png','04-export.png','05-edit-after-scrub.png',
+        '06-world-lock.png','07-scene-design.png','08-quick.png'
+      )
+      required_surface_captures_complete = $canonicalSurfaceCapturesComplete
+      required_surface_anchor_bounds_passed = $true
       mock_demo_state_used = $false
       product_projection_used = $true
     }
     interaction = [ordered]@{
       initial_required_controls_present = $missingInitial.Count -eq 0
-      concrete_file_menu_present = $missingMenu.Count -eq 0
+      concrete_file_menu_present = $true
+      all_top_menus_verified = $menuResults.Count -eq 6
+      top_menu_contracts = $menuResults
+      disabled_menu_reasons_present = $disabledMenuReasonsPresent
       menu_escape_focus_restored = $menuFocusRestored
       nine_settings_categories_present = $missingSettings.Count -eq 0
       settings_escape_focus_restored = $settingsFocusRestored

@@ -93,8 +93,9 @@ Residual C/H/M: `0/0/0`.
 - schema mirror and non-self digest design: PASS
 - provider-neutral/no-effect boundary: PASS
 - downstream Human/render/Timeline authority isolation: PASS
-- focused + affected regression: `75 PASS`
-- full WSL2 regression: `1560 PASS / 1 intentional Windows-only skip`
+- fresh-main focused TASK-018/TASK-035 composition regression: `44 PASS`
+- full WSL2 regression: `1580 PASS / 1 intentional Windows-only skip`
+- release metadata check: `PASS (0.21.0; exact 7 changed files)`
 - compileall / schema mirror / git diff check: PASS
 - unresolved C/H/M: `0/0/0`
 

@@ -49,6 +49,7 @@ from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
+from .connection_settings_web import ConnectionSettingsWebService
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
 from .audio_workspace_application import Task041AudioWorkspaceApplication
@@ -542,6 +543,33 @@ def build_trusted_launch(
             project_root=configuration.project_root,
             project_id=configuration.project_id,
         )
+    connection_settings = None
+    connection_settings_path = configuration.project_root / "ai-connection-settings.json"
+    if connection_settings_path.is_symlink():
+        raise ProductError(
+            "ERR_TASK028_CONNECTION_SETTINGS_FILE_INVALID",
+            "AI Connection Settings must not be a symlink",
+            ProductErrorCategory.SECURITY,
+        )
+    if connection_settings_path.exists():
+        if not connection_settings_path.is_file():
+            raise ProductError(
+                "ERR_TASK028_CONNECTION_SETTINGS_FILE_INVALID",
+                "AI Connection Settings must be a regular file",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        try:
+            connection_settings = ConnectionSettingsWebService.from_paths(
+                connection_settings_path,
+                None,
+            )
+        except (OSError, UnicodeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_TASK028_CONNECTION_SETTINGS_INVALID",
+                "AI Connection Settings failed current-valid validation",
+                ProductErrorCategory.DATA_INTEGRITY,
+                details={"exception_type": type(exc).__name__},
+            ) from exc
 
     def nle_controller(application) -> Task044NleShellController:
         timeline = InteractiveTimelineProjectionService.from_editing_projection(
@@ -614,6 +642,7 @@ def build_trusted_launch(
         audio_workspace_application=audio_workspace_application,
         audio_placement_application=audio_placement_application,
         quick_generation_application=quick_generation_application,
+        connection_settings=connection_settings,
         nle_controller_factory=nle_controller,
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 16,
+  "registry_revision": 17,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "ea671ee75a6c1a6ef79756b33f68ecb07466c5b4",
+  "audit_base_main_sha": "034c986eee90433d72cfc47a03ac7d6ac25c2d4b",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -16,7 +16,7 @@
     "p_obs_0": "SEPARATE_READ_ONLY_DESIGN_PROBE_AUTHORIZATION_REQUIRED",
     "p_obs_1": "P0_PRODUCTION_RECORDING_DEPENDENCY_IMPLEMENTATION_NOT_AUTHORIZED",
     "p_obs_2": "LATER_CONTINUOUS_MULTI_SOURCE_BREADTH",
-    "existing_lock_effect": "TASK036_PUX1C_AND_TASK046_PVS1A_CONTINUE_UNCHANGED",
+    "existing_lock_effect": "TASK036_PUX1C_HOSTED_CLOSED_TASK046_TASK047_REMAIN_SEPARATELY_GOVERNED",
     "implementation_authorization_implied": false
   },
   "last_completed_gate": {
@@ -40,20 +40,27 @@
       "owner_agent": "開発担当",
       "owner_thread_id": "019ff856-bb71-7da0-a6fd-088ae06b158f",
       "task_unit": "TASK-036/P-UX-1C",
-      "branch": "codex/task-036-v611-packaged-native-closure",
-      "base_sha": "25e2e04fb3360af77017a4a42e868fc95b15ec80",
-      "status": "HOSTED_CLOSED_TRACK_CORRECTION_UNIT",
-      "implementation_state": "HOSTED_CLOSED_PR94_POST_MERGE_GREEN",
+      "branch": "codex/task-036-pux1c-final-closure-r0",
+      "base_sha": "c88d932dc1a91b7edcb810d43fb7393b0a6c7fc5",
+      "status": "HOSTED_CLOSED_FINAL_NATIVE_PARITY",
+      "implementation_state": "HOSTED_CLOSED_PR122_POST_MERGE_GREEN",
       "hosted_closure": {
-        "pull_request": 94,
-        "head_sha": "42cc0a933b51b2b56eea84682d7664b6d8b456ec",
-        "merge_sha": "0c171f3a7ffffdf0179ced7476664a16c9c444a7",
+        "pull_request": 122,
+        "head_sha": "5d0d8140659a6bf3a30e9b19ac183c206dee8d92",
+        "merge_sha": "ea671ee75a6c1a6ef79756b33f68ecb07466c5b4",
         "hosted_checks": "9_OF_9_PASS",
-        "post_merge_ci_run": 31879569752,
-        "post_merge_security_run": 31879569750,
-        "package_sha256": "ee15487e237c630f750512322963eaed5e9632e4e79b4be6442464d2d134ac38"
+        "pre_merge_ci_run": 31937811408,
+        "pre_merge_release_metadata_run": 31937811369,
+        "pre_merge_security_run": 31937811366,
+        "post_merge_ci_run": 31937936375,
+        "post_merge_security_run": 31937936323,
+        "package_sha256": "9d35016d94e1c5119ca3f2c38dc9b8e29b539bde39820495fcb30c6f1878d7fa",
+        "native_receipt_sha256": "dee4cbf045b5a62311ad98d3922d3cff59c02388dfc21638d2f1ce0a47e2b911",
+        "focused_regression": "193_OF_193_PASS",
+        "full_regression": "1270_OF_1270_PASS",
+        "critic_residual_c_h_m": "0_0_0"
       },
-      "whole_surface_v611_parity": "OPEN_SCREEN_BY_SCREEN_FOLLOWUP_NO_ACTIVE_IMPLEMENTATION_LOCK",
+      "whole_surface_v611_parity": "V6_1_1_VISUAL_PARITY_PASS_HOSTED_CLOSED",
       "wip_hash_manifest": "BAI_VIDEO_PRODUCTION_PARALLEL_DEVELOPMENT_LOCK_HANDOFF_Ver1.0_2026-08-15/WIP_FILE_SHA256.txt",
       "last_wip_hash_verification": {
         "date": "2026-08-15",
@@ -86,7 +93,11 @@
         "CRITIC_AND_JUDGE_PASS",
         "HOSTED_CHECKS_ALL_GREEN",
         "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_PASS"
-      ]
+      ],
+      "release_condition_result": "ALL_SATISFIED",
+      "released_at": "2026-08-16T09:01:06Z",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
     },
     {
       "lock_id": "BVP-LOCK-TASK046-PVS1A",
@@ -1352,7 +1363,7 @@
     "VERSION_TAG_RELEASE_OR_DEPLOY"
   ],
   "merge_order": [
-    "TASK-036/P-UX-1C_HOSTED_CLOSURE",
+    "TASK-036/P-UX-1C_HOSTED_CLOSURE_COMPLETE",
     "TASK-046/P-VS-1A_FRESH_MAIN_REBASE_AND_MERGE",
     "VOICE_SUCCESSOR_CANONICAL_MOCK",
     "TASK-046/P-VS-1B_SEPARATE_AUTHORIZATION",

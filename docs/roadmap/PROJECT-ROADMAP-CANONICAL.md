@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.87
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.88
 - Project: `ai-video-production`
 - Date: 2026-08-15
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -34,7 +34,7 @@
 - R2: **COMPLETED** — TASK-037、TASK-038、TASK-027 Planning Workspace minimum
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; native H3 completion is **PARKED_TO_SAFE_RUNTIME_REVIEW**
-- Current insertion: TASK-046 P-VS-0 and the disjoint P-UX-1C/P-VS-1A Work Locks are hosted. TASK-036 P-UX-1C remains active against unchanged V6.1.1 and P-VS-1A remains separately bounded. Owner priority elevates TASK-047 P-OBS-1 minimum capture MVP to the P0 dependency for P-VS-3 production training-material recording and P-VS-4 fine-tuning. P-OBS-0 read-only installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may be separately authorized early; P-OBS-2 continuous/multi-source breadth remains later. Overall visual parity, native Voice, production recording and fine-tuning remain unclaimed.
+- Current insertion: TASK-036 P-UX-1C is hosted-closed against unchanged V6.1.1 with packaged-native visual parity. TASK-046/TASK-047 remain separately governed, and their runtime, Consent, storage, recording and Owner gates are unchanged. Native Voice, production recording and fine-tuning remain unclaimed.
 
 ## 3. MVP定義
 
@@ -105,7 +105,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION HOSTED CLOSED / PR #86 / MAIN 0e457e69 |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | PROPOSED / DESIGN RECORDED |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1B HOSTED CLOSED / P-UX-1C ACTIVE PROTECTED WIP |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence | 003,006,007,010,011,012,024,026 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1C V6.1.1 VISUAL PARITY HOSTED CLOSED |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -2309,3 +2309,30 @@ route and neither authorizes nor blocks OBS recording.
 This Addendum is design/governance only. It grants no OBS/Plugin mutation,
 capture, private audio persistence, Dataset adoption, training, external
 Provider, version, Tag, Release or Deploy authority.
+
+## Addendum LXXXII - TASK-036 P-UX-1C V6.1.1 Hosted Closure
+
+TASK-036 P-UX-1C PR #122 exact head
+`5d0d8140659a6bf3a30e9b19ac183c206dee8d92` passed all `9 / 9` hosted checks
+and merged normally at exact main
+`ea671ee75a6c1a6ef79756b33f68ecb07466c5b4`. Post-merge main CI run
+`31937936375` and Security run `31937936323` both passed.
+
+The final immutable Windows package executable SHA-256 is
+`9d35016d94e1c5119ca3f2c38dc9b8e29b539bde39820495fcb30c6f1878d7fa`.
+The machine-readable native receipt SHA-256 is
+`dee4cbf045b5a62311ad98d3922d3cff59c02388dfc21638d2f1ce0a47e2b911`.
+Home, WORLD LOCK, Scene Design, Edit, Quick, Settings and Export, all six
+top-level menus, exact disabled reasons, focus restoration, Timeline/Track
+interaction, three displays, accessibility, native picker cancellation and
+conversation-free restart pass. Focused regression is `193 / 193`; full WSL2
+regression is `1270 / 1270`; compileall, embedded JavaScript, PowerShell AST and
+diff checks pass. Final Critic residual C/H/M is `0 / 0 / 0`.
+
+Therefore `V6.1.1_VISUAL_PARITY_PASS` is canonical and P-UX-1C is
+`HOSTED_CLOSED`. The original TASK-036 Minimum Editing MVP remains released as
+`v0.20.1` and included in stable `v0.21.0`; this Unreleased closure selects no
+new version, Tag or GitHub Release. Truthfully disabled Provider, paid,
+Credential, Human authority, external NLE, Release and Deploy boundaries remain
+separate. TASK-046/TASK-047 retain their own exact authorities and gates; no
+voice, recording, Dataset or training authority is inferred.

@@ -70,6 +70,40 @@ implementation/probe Authorization.
 - explicit Human review before any Dataset adoption;
 - no automatic Dataset adoption and no automatic training start.
 
+#### Final installation and distribution shape
+
+The final Owner-facing installation path is an **installer**, not manual ZIP
+copying. ZIP artifacts remain immutable engineering/build inputs and recovery
+Evidence; they are not the final installation UX. The installer contract must:
+
+- discover or let the Owner select the exact OBS installation without a
+  machine-specific path baked into public metadata;
+- verify package identity, OBS version/architecture, process state, path
+  containment, reparse points, collisions, disk floor and required authority
+  before making a change;
+- stage and hash all payloads, create an exact pre-install backup/tombstone
+  manifest and append-only journal, publish only installer-owned files, then
+  read back every installed byte before claiming success;
+- install the OBS plugin payload and the separate recording controller without
+  copying controller files, licenses, manifests or source offers into the OBS
+  plugin directories unless the deployment manifest explicitly owns that path;
+- expose Repair, Update and Uninstall as distinct, confirmed transactions.
+  Uninstall removes only installer-owned files; rollback restores the exact
+  prior manifest and is never an automatic response to `UNKNOWN`;
+- preserve Scene, Profile, Source, Filter, device, gain and recording settings
+  unless a later exact Human-authorized operation owns those changes;
+- keep install completion separate from module load, recording, Dataset,
+  Training, Release and production admission;
+- carry exact version/hash, notices, source-offer and signing/admission Evidence.
+  Code-signing and publisher UX remain a Release Gate; a local unsigned test
+  package is not presented as a production installer.
+
+Installer technology, per-user/per-machine elevation behavior and final UI
+framework remain `PROBE_REQUIRED`; this does not weaken the mandatory behavior
+above. A future installer test must cover clean install, existing-version
+repair, version update, collision refusal, interrupted/`UNKNOWN` reconciliation,
+verified uninstall and verified rollback on the exact supported OBS build.
+
 P-OBS-1 owns capture/session transport and raw staging Evidence. It does not
 own the Dataset store, Dataset adoption or VoiceProfile revision truth.
 
@@ -92,6 +126,8 @@ and online/automatic training remain prohibited.
   meetings, BGM and game audio are quarantined or rejected by default.
 - Recording is visible, consent-bound and independently stoppable. Automatic
   recording never means automatic Dataset adoption or training.
+- Final Owner-facing deployment is installer-based. Manual ZIP extraction and
+  exact-file copying are development/recovery procedures only.
 - OBS audio is never modified by the capture filter.
 - The OBS-linked plugin and Product Core stay separated by local IPC; GPL
   linkage, source publication, notices, signing and distribution require a

@@ -23,6 +23,35 @@ OBS loadまたは録音の許可ではありません。実機項目や未確認
 - 学習、Fine-tuning、Model生成を自動で開始すること
 - 録音、Dataset採用、学習、公開のHuman Gateを省略すること
 
+## 最終版の導入方式
+
+最終的な利用者向けPluginは、ZIPを手作業でOBSフォルダーへコピーする方式ではなく、
+**インストーラー型**にします。現在記載しているRuntime ZIPとexact 3-entry配置手順は、
+開発中の再現性確認、障害調査、Backup/復元Evidenceのために残すもので、最終版の通常導入
+手順ではありません。
+
+最終インストーラーは、少なくとも次を一つの確認可能な画面と、操作ごとに分離した
+transactionで扱います。
+
+- 対象OBSの自動検出または利用者による選択と、Version/architectureの確認
+- OBS起動中、path逸脱、reparse、collision、容量不足の事前停止
+- Package、manifest、各fileのVersion・bytes・SHA-256の照合
+- 変更前Backupまたは`ABSENT` tombstone、append-only journalの作成
+- Pluginと録音コントローラの所有pathを分離したstaging・配置・read-back
+- Install、Repair、Update、Uninstallの明示的な選択
+- 失敗・中断・`UNKNOWN`時のread/reconcile。推測成功、自動retry、自動rollbackは行わない
+- インストーラーが所有するfileだけを対象にしたUninstallと、旧manifestへ戻す別Rollback
+- License、Notice、source offer、署名・Publisher Evidenceの表示
+
+インストーラーはScene、Profile、Source、Filter、microphone、GAIN、+48V、PAD、HPFを
+勝手に変更せず、導入完了をPlugin load、録音成功、Dataset採用、TrainingまたはProduction
+Readyへ昇格させません。録音コントローラの保存先も固定せず、利用者が選択できるように
+します。
+
+インストーラー技術、管理者権限の要否、per-user/per-machine方式、最終署名状態は
+`PROBE_REQUIRED`です。署名なしのlocal test成果物を最終配布用インストーラーとは表示
+しません。
+
 ## 現在の確認状況
 
 | 項目 | 値 | 状態 |
@@ -168,6 +197,9 @@ Package identity、exact 3-entry deployment map、install transactionは固定�
 最終validatorは`FINAL_DRIFT_1`で安全停止しましたが、各atomic publishの即時read-back、
 journal hash-chain、現targetのbytes/SHA-256を再照合し、targetを再書込みせずreceiptを封印しました。
 将来の導入・更新でも、次の順序を崩さないでください。
+
+この章の手動手順は最終インストーラーが同じGateを実装・証跡化するためのreferenceです。
+最終利用者へ手動コピーを要求する設計ではありません。
 
 1. Packageを許可されたstaging領域へ展開する。
 2. 展開後manifest、file size、SHA-256、containmentを検証する。

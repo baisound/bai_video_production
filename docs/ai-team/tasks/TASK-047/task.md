@@ -1,7 +1,7 @@
 # TASK-047 — OBS Voice Capture Integration
 
-- Status: `OWNER_P0_PRODUCTION_RECORDING_DEPENDENCY / P_OBS_0_DESIGN_PROBE_SEPARATE / P_OBS_1_IMPLEMENTATION_NOT_AUTHORIZED / P_OBS_2_LATER`
-- Authorization: `OWNER_DIRECTED_ROADMAP_AND_DESIGN`
+- Status: `P_OBS_1_LOCAL_TECHNICAL_PLUGIN_AND_INSTALLER_CANDIDATE_PASS / OWNER_VOICE_AND_PRODUCTION_RECORDING_GATE_OPEN / P_OBS_2_LATER`
+- Authorization: `OWNER_DIRECTED_ROADMAP_AND_DESIGN / OWNER_STANDING_AUG_2026_DEVELOPER2_INSTALL_ACQUIRE_CONFIGURE_BUILD`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Dependencies: `TASK-046`, `TASK-006/023`, `TASK-020`, `TASK-043`, `TASK-045`
 
@@ -98,9 +98,14 @@ Evidence; they are not the final installation UX. The installer contract must:
   Code-signing and publisher UX remain a Release Gate; a local unsigned test
   package is not presented as a production installer.
 
-Installer technology, per-user/per-machine elevation behavior and final UI
-framework remain `PROBE_REQUIRED`; this does not weaken the mandatory behavior
-above. A future installer test must cover clean install, existing-version
+The local technical candidate uses Inno Setup 7.1.0 in per-user mode and keeps
+the OBS installation selectable. Clean install, same-version repair, collision
+refusal, verified uninstall, preexisting exact3 restore and append-only journal
+hash-chain behavior passed on a synthetic OBS root; the exact OBS 32.2.1 target
+also passed installer-managed migration and module-load read-back. Code signing,
+publisher identity, public distribution and destructive interrupted-publish
+testing remain separate Gates. A future release-grade installer test must retain
+clean install, existing-version
 repair, version update, collision refusal, interrupted/`UNKNOWN` reconciliation,
 verified uninstall and verified rollback on the exact supported OBS build.
 

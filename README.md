@@ -181,6 +181,12 @@ Release workflowは[`SHA256SUMS`](packaging/release-assets/task047/SHA256SUMS)�
 OBS Studio 32.2.1 x64向けの未署名開発候補です。実際の導入と使い方は
 [初心者向けガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md)を上から順に読んでください。
 
+現在の公開Technical Previewは
+[BAI Voice Capture v0.1.0-dev.8 installer.4](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.8-installer.4)
+です。通常の利用者はRelease Assetsにある
+`bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe`を取得してください。
+これは未署名のPre-releaseであり、BAI Video Production全体の安定版`v0.21.0`とは別です。
+
 sourceからPlugin、runtime package、installerまで作り直す場合は、空の作業directoryを使い、
 OBS Studio `32.2.1` source（submoduleを含む）、Visual Studio Build Tools 2026、
 Windows SDK `10.0.26100.0`、CMake `3.30.5`、Inno Setup `7.1.0`を用意します。

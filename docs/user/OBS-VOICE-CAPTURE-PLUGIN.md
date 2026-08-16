@@ -1,6 +1,6 @@
 # OBS Voice Capture Plugin 導入・利用・復旧ガイド
 
-> **文書状態: LOCAL DRAFT / DEV.8 PACKAGE + INSTALL + SYNTHETIC LOAD・CONTROL EVIDENCE BOUND / OWNER音声未確認**
+> **文書状態: PUBLIC TECHNICAL PREVIEW / DEV.8 PACKAGE + INSTALL + SYNTHETIC LOAD・CONTROL EVIDENCE BOUND / OWNER音声未確認**
 > `P_OBS_PLUGIN_DEVELOPMENT_COMPLETE`: `NOT_ESTABLISHED`
 
 この文書は、BAI Video ProductionのOBS Voice Capture Pluginを安全に導入し、
@@ -8,8 +8,9 @@
 
 Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidence、exact 3-entry
 配置のinstall receipt、OBS 32.2.1での合成音声によるload・GAIN測定・開始・一時停止・再開・
-停止・WAV保存Evidenceは確認済みです。Owner音声、正式RecordingSession、Dataset採用、Release、
-Deploy、配布、Production利用は確認・認可していません。
+停止・WAV保存Evidenceは確認済みです。検証済みのインストーラー、runtime、source、SHA-256は
+[GitHubの公開Technical Preview](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.8-installer.4)
+から取得できます。Owner音声、正式RecordingSession、Dataset採用、Production利用は未確認です。
 
 ## このPluginが行うこと
 
@@ -32,28 +33,30 @@ process停止、path containment、reparse/collision、disk floor、package hash
 staging、原子的配置、read-backを実施し、Install / Repair / Update / Uninstallを別transactionで
 扱います。Scene、Profile、Source、device、GAIN、+48V、PAD、HPFは自動変更しません。
 
-日本語・英語対応の`0.1.0-dev.8-installer.4`はローカル技術候補として実装・検証済みです。
+日本語・英語対応の`0.1.0-dev.8-installer.4`は技術候補として実装・検証され、公開Technical Previewに
+同梱されています。
 OBS 32.2.1の選択、Version、停止状態、reparse、書込権限、空き容量、existing file hash、
-backup、journal、read-backを検査します。現候補は未署名で一般配布していません。Production
-installerやRelease/Deploy済み成果物として表示せず、署名とPublisher表示はRelease Gateで扱います。
+backup、journal、read-backを検査します。現候補は未署名のPre-releaseです。Production installerや
+BAI Video Production全体の安定版として表示せず、署名とPublisher表示は後続Gateで扱います。
 
 ## 初めて使う方へ（日本語）
 
 ### このガイドでできること
 
 この章は項目数を覚えるための「10手順」ではありません。上から順に読むだけで、Pluginを安全に導入し、保存先と安全停止条件を決め、GAINを確認し、
-録音を開始・一時停止・再開・停止して、最後に保存fileを確認できます。現在のdev.8は開発検証版で、
-一般利用者向けの最終インストーラーはまだ未公開です。最終版ではZIPをOBSフォルダーへ手作業で
-コピーする必要はありません。
+録音を開始・一時停止・再開・停止して、最後に保存fileを確認できます。現在のdev.8は公開Technical Previewです。
+[公式Release](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.8-installer.4)
+のAssetsから`bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe`を取得してください。
+ZIPをOBSフォルダーへ手作業でコピーする必要はありません。
 
 ### 導入する前の準備
 
 Windows 10/11の64-bit版と、OBS Studio 32.2.1（64-bit）を用意します。OBSで配信や録画をして
 いる場合は先に終了し、OBSを通常のメニューから閉じます。作業中のSceneや設定は保存しておきます。
 
-一般配布版を入手したら、案内されたVersion、SHA-256、Publisherが一致することを確認します。
-現在のローカル技術候補は未署名です。開発検証に参加していない方は、未署名候補を別経路から
-入手して実行しないでください。一致しないfileや予期しないWindows警告ではそこで中止します。
+公式Releaseから入手し、VersionとSHA-256が一致することを確認します。現在のTechnical Previewは
+未署名なので、Publisherが表示されない、またはWindowsの警告が表示される場合があります。
+別サイト、転載、メール添付から取得せず、一致しないfileや想定外の警告ではそこで中止します。
 
 ### インストーラーで導入する
 
@@ -103,16 +106,17 @@ file削除、上書きインストール、自動rollbackを先に行わず、[�
 ### What this guide covers
 
 This is not a fixed ten-step checklist to memorize. Read this section from top to bottom to install the Plugin, select a destination and safety limits, check gain,
-record, pause, resume, stop, and verify the saved files. The current dev.8 build is for engineering validation.
-The bilingual `0.1.0-dev.8-installer.4` is implemented and verified as a local technical candidate. It is not
-code-signed or publicly distributed, and it must not be presented as a Production installer or Release/Deploy.
+record, pause, resume, stop, and verify the saved files. The current dev.8 build is a public Technical Preview.
+Download `bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe` from the
+[official Release](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.8-installer.4).
+It is not code-signed and must not be presented as a Production installer or the stable BAI Video Production release.
 
 ### Prepare the computer
 
 Use 64-bit Windows 10/11 and 64-bit OBS Studio 32.2.1. Finish any stream or recording, save your work, and exit
-OBS normally. When a public installer becomes available, verify its version, SHA-256, and Publisher. The current
-local technical candidate is unsigned; do not run an unsigned copy obtained outside the controlled engineering
-workflow. Stop when the file or Windows security prompt is unexpected.
+OBS normally. Download only from the official Release and verify its version and SHA-256. The current Technical
+Preview is unsigned, so Publisher information may be absent and Windows may show a warning. Do not run a copy
+obtained from another site, a repost, or an email attachment. Stop when the file or security prompt is unexpected.
 
 ### Install the Plugin
 
@@ -180,7 +184,8 @@ If something goes wrong, select **Stop recording**, note the reason shown by the
 | Core/security synthetic suites | `3 / 3 PASS` | `PASS` |
 | CTest | `1 / 1 PASS` | `PASS` |
 | License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
-| Release・Deploy・配布許可 | なし | `LEGAL_REVIEW_REQUIRED` |
+| GitHub Technical Preview | 公開済み / `obs-voice-capture-v0.1.0-dev.8-installer.4` | `PASS` |
+| Stable Release・Production・Deploy | 未実施 | 未確認 |
 | Install先layout | Exact 3-entry OBS-root relative map | `PASS` |
 | Exact 3-entry install | `VERIFIED_INSTALLED` | `PASS` |
 | Install receipt SHA-256 | `dbfa5c78ac87083357bfba28e4b9e82bfa1542aa2b7305a14ab5293d4143bf4f` | `PASS` |
@@ -587,7 +592,8 @@ Dev.8 local build/install/synthetic acceptanceから、公開可能なexact値�
 | Source manifest SHA-256 | `1240807112913af15df53f5c14c125426d3a62c42f745592bd04aefb7c0bd1c8` | Dev.8 Evidence receipt |
 | Build/test | Release build PASS / core-security 3 suites PASS / CTest 1 of 1 PASS / controller self-test PASS | Dev.8 Evidence receipt |
 | License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
-| Release / Deploy / distribution authorization | なし | `LEGAL_REVIEW_REQUIRED` |
+| Public Technical Preview Release | `obs-voice-capture-v0.1.0-dev.8-installer.4` | GitHub Release read-back / 4 assets |
+| Stable Release / Production / Deploy | 未実施 | 未確認 |
 | Install receipt SHA-256 | `dbfa5c78ac87083357bfba28e4b9e82bfa1542aa2b7305a14ab5293d4143bf4f` | Exact 3 atomic install receipt |
 | Install state | `VERIFIED_INSTALLED` | Install receipt |
 | Load/control receipt SHA-256 | `f7dd39b2283c25553c0c3c2e648d5ddc5b94d73ab19b511fde1079fabdaecf64` | Synthetic Start/Pause/Resume/Stop receipt |
@@ -596,7 +602,7 @@ Dev.8 local build/install/synthetic acceptanceから、公開可能なexact値�
 
 値はcanonical成果物とreceiptから転記しています。Runtime filename、family名、
 チャット文だけを根拠に別の値へ置き換えません。合成音声local acceptanceの`PASS`をOwner音声、
-正式RecordingSession、Dataset、Training、Production、Release、Deploy、配布の`PASS`へ昇格しません。
+正式RecordingSession、Dataset、Training、Production、stable ReleaseまたはDeployの`PASS`へ昇格しません。
 
 ## 困ったとき
 
@@ -609,5 +615,5 @@ Dev.8 local build/install/synthetic acceptanceから、公開可能なexact値�
 - Stagingが残った: 自動削除・Asset化・Dataset採用を行わない
 - Public Evidenceにprivate情報が疑われる: 公開せずSecurity/Privacy reviewへ送る
 
-このdraftの存在は、Pluginの実装、導入、OBS起動、録音、ReleaseまたはDeployを許可する
-ものではありません。
+この公開ガイドとTechnical Previewの存在は、Owner音声の正式録音、Dataset採用、Training、
+Production利用、stable ReleaseまたはDeployを自動で許可するものではありません。

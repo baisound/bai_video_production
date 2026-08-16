@@ -32,14 +32,16 @@ process停止、path containment、reparse/collision、disk floor、package hash
 staging、原子的配置、read-backを実施し、Install / Repair / Update / Uninstallを別transactionで
 扱います。Scene、Profile、Source、device、GAIN、+48V、PAD、HPFは自動変更しません。
 
-インストーラー実装、署名、UI方式は未完了です。Local dev packageをProduction installerや
-Release/Deploy済み成果物として表示しません。
+日本語・英語対応の`0.1.0-dev.8-installer.4`はローカル技術候補として実装・検証済みです。
+OBS 32.2.1の選択、Version、停止状態、reparse、書込権限、空き容量、existing file hash、
+backup、journal、read-backを検査します。現候補は未署名で一般配布していません。Production
+installerやRelease/Deploy済み成果物として表示せず、署名とPublisher表示はRelease Gateで扱います。
 
 ## 初めて使う方へ（日本語）
 
 ### このガイドでできること
 
-この章を上から順に読むと、Pluginを安全に導入し、保存先と安全停止条件を決め、GAINを確認し、
+この章は項目数を覚えるための「10手順」ではありません。上から順に読むだけで、Pluginを安全に導入し、保存先と安全停止条件を決め、GAINを確認し、
 録音を開始・一時停止・再開・停止して、最後に保存fileを確認できます。現在のdev.8は開発検証版で、
 一般利用者向けの最終インストーラーはまだ未公開です。最終版ではZIPをOBSフォルダーへ手作業で
 コピーする必要はありません。
@@ -49,15 +51,16 @@ Release/Deploy済み成果物として表示しません。
 Windows 10/11の64-bit版と、OBS Studio 32.2.1（64-bit）を用意します。OBSで配信や録画をして
 いる場合は先に終了し、OBSを通常のメニューから閉じます。作業中のSceneや設定は保存しておきます。
 
-正式インストーラーを入手したら、案内されたVersionとSHA-256が一致することを確認します。
-一致しないfile、不明なPublisher、予期しないWindows警告が出た場合はそこで中止してください。
+一般配布版を入手したら、案内されたVersion、SHA-256、Publisherが一致することを確認します。
+現在のローカル技術候補は未署名です。開発検証に参加していない方は、未署名候補を別経路から
+入手して実行しないでください。一致しないfileや予期しないWindows警告ではそこで中止します。
 
 ### インストーラーで導入する
 
 インストーラーが検出したOBSを確認します。OBSが複数ある場合は、普段使う32.2.1を選びます。
-画面に表示される`OBS停止済み`、`64-bit`、`空き容量`、`既存file`、`Package hash`がすべて
-合格してから`インストール`を押します。既存の所有fileがある場合は先にbackupされ、処理履歴が
-残ります。`インストール確認済み`が表示されるまで、PCやOBSを強制終了しないでください。
+先へ進むと、インストーラーがOBS停止、32.2.1、空き容量、reparse、書込権限、既存fileのhashを
+確認します。不合格なら理由を表示して配置前に停止します。既存の同一fileがある場合はbackupされ、
+処理履歴が残ります。完了画面が出るまでPCやインストーラーを強制終了しないでください。
 
 ### Controllerを開いて保存先を決める
 
@@ -99,22 +102,25 @@ file削除、上書きインストール、自動rollbackを先に行わず、[�
 
 ### What this guide covers
 
-Read this section from top to bottom to install the Plugin, select a destination and safety limits, check gain,
+This is not a fixed ten-step checklist to memorize. Read this section from top to bottom to install the Plugin, select a destination and safety limits, check gain,
 record, pause, resume, stop, and verify the saved files. The current dev.8 build is for engineering validation.
-The final end-user installer is not public yet, and the final flow will not require manual ZIP copying.
+The bilingual `0.1.0-dev.8-installer.4` is implemented and verified as a local technical candidate. It is not
+code-signed or publicly distributed, and it must not be presented as a Production installer or Release/Deploy.
 
 ### Prepare the computer
 
 Use 64-bit Windows 10/11 and 64-bit OBS Studio 32.2.1. Finish any stream or recording, save your work, and exit
-OBS normally. When the official installer becomes available, verify its published version and SHA-256. Stop if
-the file, Publisher, or Windows security prompt is unexpected.
+OBS normally. When a public installer becomes available, verify its version, SHA-256, and Publisher. The current
+local technical candidate is unsigned; do not run an unsigned copy obtained outside the controlled engineering
+workflow. Stop when the file or Windows security prompt is unexpected.
 
 ### Install the Plugin
 
 Confirm the OBS installation detected by the installer. When several copies exist, select the 32.2.1 instance
-you normally use. Continue only when process stopped, x64, disk space, collision, and package-hash checks are
-all green. Select **Install** and wait for **Installation verified**. Existing installer-owned files are backed up
-and the transaction is journaled. Do not force-close OBS, the installer, or Windows during this work.
+you normally use. The installer checks that OBS is closed and compatible, then checks disk space, reparse points,
+write access, and existing-file hashes. It stops before placement and explains the reason when a check fails.
+Matching existing files are backed up and the transaction is journaled. Wait for the standard completion page;
+do not force-close OBS, the installer, or Windows during this work.
 
 ### Open the Controller and select a destination
 
@@ -156,6 +162,7 @@ If something goes wrong, select **Stop recording**, note the reason shown by the
 | Package target OBS build | `32.2.1` | `PASS` |
 | Module ID | `bai-voice-capture` | `PASS` |
 | Plugin version | `0.1.0-dev.8` | `PASS` |
+| Local installer candidate | `0.1.0-dev.8-installer.4` / SHA-256 `7f1dff48059f3eb292bae32185080d26a50303313e1128ee1286666bc9faabd6` | `PASS` |
 | 対応architecture | `windows-x64` | `PASS` |
 | Runtime package名 | `bai-voice-capture-0.1.0-dev.8-windows-x64.zip` | `PASS` |
 | Runtime package bytes | `36357` | `PASS` |
@@ -574,6 +581,7 @@ Dev.8 local build/install/synthetic acceptanceから、公開可能なexact値�
 | Dev.8 Evidence receipt SHA-256 | `980701cc2096bdda3455985d8d3dfa44d45a8e7ad3438dd665314fadbde7d02d` | Body-free local Evidence |
 | DLL bytes / SHA-256 | `23040` / `14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38` | Dev.8 Evidence receipt |
 | Controller bytes / SHA-256 | `30208` / `273fe96a952b1120b422785ee4c70a9612ba6f44c6d95f06447497abb52afb3f` | Dev.8 Evidence receipt |
+| Local installer candidate / SHA-256 | `0.1.0-dev.8-installer.4` / `7f1dff48059f3eb292bae32185080d26a50303313e1128ee1286666bc9faabd6` | Local technical installer receipt |
 | Source artifact filename | `bai-voice-capture-0.1.0-dev.8-source.zip` | Dev.8 Evidence receipt |
 | Source artifact bytes / SHA-256 | `41065` / `4dcd50f3aadaf95798a4d82ad511a66b14ad5a1e81a131a3bd65c0c5f933b0a4` | Dev.8 Evidence receipt |
 | Source manifest SHA-256 | `1240807112913af15df53f5c14c125426d3a62c42f745592bd04aefb7c0bd1c8` | Dev.8 Evidence receipt |

@@ -123,6 +123,15 @@ def test_home_export_and_settings_keep_canonical_information_composition() -> No
     assert "Projectの技術的な状態を表示" in SHELL_HTML
 
 
+def test_home_has_explicit_project_open_action_without_demo_recent_state() -> None:
+    assert 'id="homeOpenProjectButton"' in SHELL_HTML
+    assert (
+        "$('homeOpenProjectButton').addEventListener('click',()=>chooseAndReport('choose_project_folder','プロジェクト'))"
+        in SHELL_HTML
+    )
+    assert "BAI Promotion 90s" not in SHELL_HTML
+
+
 def test_existing_product_authority_is_projected_into_mock_surfaces() -> None:
     for method in (
         "planning_snapshot",

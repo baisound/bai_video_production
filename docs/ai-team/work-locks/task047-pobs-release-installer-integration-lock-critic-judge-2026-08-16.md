@@ -9,7 +9,7 @@ Plugin、runtime package、installerまでの再現build手順を確認できる
 
 ## Exact scope
 
-- base/main: `c88d932dc1a91b7edcb810d43fb7393b0a6c7fc5`
+- base/main: `ea671ee75a6c1a6ef79756b33f68ecb07466c5b4`
 - Registry: `15 -> 16`
 - Lock: `BVP-INTEGRATION-LOCK-TASK047-POBS-RELEASE-INSTALLER-20260816`
 - shared Allowed Files: `.github/workflows/release.yml`, `CHANGELOG.md`

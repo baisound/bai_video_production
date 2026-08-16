@@ -3,7 +3,7 @@
   "registry_revision": 16,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "c88d932dc1a91b7edcb810d43fb7393b0a6c7fc5",
+  "audit_base_main_sha": "ea671ee75a6c1a6ef79756b33f68ecb07466c5b4",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -742,7 +742,7 @@
       "task_unit": "TASK-047/P-OBS-RELEASE-INSTALLER",
       "phase": "RELEASE_ASSET_AND_BUILD_GUIDE_INTEGRATION",
       "hosting_branch": "codex/task-047-pobs-release-installer-lock-hosting",
-      "hosting_base_sha": "c88d932dc1a91b7edcb810d43fb7393b0a6c7fc5",
+      "hosting_base_sha": "ea671ee75a6c1a6ef79756b33f68ecb07466c5b4",
       "target_branch": "codex/task-047-pobs-release-installer-inclusion",
       "expected_pre_integration_head": "c88d932dc1a91b7edcb810d43fb7393b0a6c7fc5",
       "status": "ACTIVE",

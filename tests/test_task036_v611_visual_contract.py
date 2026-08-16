@@ -198,3 +198,28 @@ def test_planning_does_not_invent_ai_proposal_or_execution_authority() -> None:
         "if(warnings.length&&!window.confirm",
     ):
         assert marker in SHELL_HTML
+
+
+def test_scenes_browser_projects_exact_blueprint_without_local_revision() -> None:
+    for marker in (
+        "function renderScenes(model)",
+        "function renderSceneDetail(scene)",
+        "const blueprint=model.workspace.blueprint,scenes=blueprint.scenes||[]",
+        "button.setAttribute('aria-pressed','false')",
+        "renderSceneDetail(scenes[0])",
+        "この表示は正本Blueprintのread-only projectionです。",
+        "GO: ${model.workspace.go_status}",
+        "Slot投入: ${model.installation.status}",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_scenes_mutations_are_visible_but_truthfully_disabled() -> None:
+    assert SHELL_HTML.count(
+        'data-disabled-reason="Blueprint Scene revisionのtyped Application Serviceが未接続です"'
+    ) == 3
+    assert (
+        'data-disabled-reason="Timeline Contract finalizationのtyped Application Serviceが未接続です"'
+        in SHELL_HTML
+    )
+    assert "Add・Remove・Update・Timeline確定はtyped revision service未接続のため実行できません。" in SHELL_HTML

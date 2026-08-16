@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/youtube-feedback.schema.json",
+  "title": "TASK-015 YouTube Feedback Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "metric": {
+      "enum": [
+        "IMPRESSIONS_COUNT", "VIEWS_COUNT", "WATCH_TIME_SECONDS",
+        "AVERAGE_VIEW_DURATION_MILLISECONDS",
+        "IMPRESSIONS_CLICK_THROUGH_RATE_MILLI_PERCENT",
+        "AVERAGE_PERCENTAGE_VIEWED_MILLI_PERCENT"
+      ]
+    },
+    "metricArray": {
+      "type": "array", "maxItems": 6, "uniqueItems": true, "items": { "$ref": "#/$defs/metric" }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "metric": { "$ref": "#/$defs/metric" },
+        "unit": { "enum": ["COUNT", "SECONDS", "MILLISECONDS", "MILLI_PERCENT"] },
+        "value": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+        "provenance_manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "provenance_row_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+        "provenance_row_sha256": { "$ref": "#/$defs/sha256" },
+        "validity": { "enum": ["CURRENT_VALID", "STALE", "REVOKED", "UNKNOWN"] }
+      },
+      "required": [
+        "metric", "unit", "value", "provenance_manifest_sha256", "provenance_row_id",
+        "provenance_row_sha256", "validity"
+      ]
+    }
+  },
+  "properties": {
+    "snapshot_version": { "const": "1.0.0" },
+    "task_owner": { "const": "TASK-015" },
+    "publication": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "platform_video_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{6,64}$" },
+        "channel_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "source_asset_id": { "type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$" },
+        "source_edit_plan_sha256": { "$ref": "#/$defs/sha256" },
+        "render_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "published_at_epoch_s": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 }
+      },
+      "required": [
+        "platform_video_id", "channel_identity_sha256", "source_asset_id",
+        "source_edit_plan_sha256", "render_receipt_sha256", "published_at_epoch_s"
+      ]
+    },
+    "source_scoring_manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "analytics_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "start_epoch_s": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+        "end_epoch_s": { "type": "integer", "minimum": 1, "maximum": 9223372036854775807 }
+      },
+      "required": ["start_epoch_s", "end_epoch_s"]
+    },
+    "feedback_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+        "profile_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+        "required_metrics": { "allOf": [{ "$ref": "#/$defs/metricArray" }, { "minItems": 1 }] },
+        "optional_metrics": { "$ref": "#/$defs/metricArray" },
+        "profile_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "required": ["profile_id", "profile_version", "required_metrics", "optional_metrics", "profile_sha256"]
+    },
+    "observations": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/observation" } },
+    "state": {
+      "enum": ["COMPLETE", "PARTIAL_REQUIRED_METRICS", "UNKNOWN_EVIDENCE", "STALE_OR_REVOKED_EVIDENCE"]
+    },
+    "missing_required_metrics": { "$ref": "#/$defs/metricArray" },
+    "unknown_metrics": { "$ref": "#/$defs/metricArray" },
+    "stale_or_revoked_metrics": { "$ref": "#/$defs/metricArray" },
+    "aggregate_public_metrics_only": { "const": true },
+    "audience_row_data_included": { "const": false },
+    "credentials_accessed": { "const": false },
+    "platform_api_called": { "const": false },
+    "human_review_required": { "const": true },
+    "automatic_profile_tuning_authorized": { "const": false },
+    "automatic_edit_plan_mutation_authorized": { "const": false },
+    "publication_mutation_authorized": { "const": false },
+    "snapshot_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "required": [
+    "snapshot_version", "task_owner", "publication", "source_scoring_manifest_sha256",
+    "analytics_window", "feedback_profile", "observations", "state", "missing_required_metrics",
+    "unknown_metrics", "stale_or_revoked_metrics", "aggregate_public_metrics_only",
+    "audience_row_data_included", "credentials_accessed", "platform_api_called",
+    "human_review_required", "automatic_profile_tuning_authorized",
+    "automatic_edit_plan_mutation_authorized", "publication_mutation_authorized", "snapshot_sha256"
+  ]
+}

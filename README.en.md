@@ -151,9 +151,9 @@ silently rewritten; do not point migration at an ambiguous human-owned Project.
 Each GitHub Release includes these three TASK-047 artifacts in addition to the
 BAI Video Production Python packages:
 
-- `bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe` — beginner-friendly Windows installer
-- `bai-voice-capture-0.1.0-dev.8-windows-x64.zip` — runtime package for verification and recovery
-- `bai-voice-capture-0.1.0-dev.8-source.zip` — corresponding Plugin source
+- `bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe` — beginner-friendly Windows installer
+- `bai-voice-capture-0.1.0-dev.10-windows-x64.zip` — runtime package for verification and recovery
+- `bai-voice-capture-0.1.0-dev.10-source.zip` — corresponding Plugin source
 
 The Release workflow verifies [`SHA256SUMS`](packaging/release-assets/task047/SHA256SUMS)
 before publishing and stops if an artifact is missing or changed. This unsigned
@@ -161,10 +161,12 @@ development candidate targets OBS Studio 32.2.1 x64. Follow the
 [beginner guide](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) from top to bottom for installation and use.
 
 The current public Technical Preview is
-[BAI Voice Capture v0.1.0-dev.8 installer.4](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.8-installer.4).
+[BAI Voice Capture v0.1.0-dev.10 installer.1](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1).
 Most users should download
-`bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe` from its Release Assets.
+`bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe` from its Release Assets.
 It is an unsigned Pre-release and is separate from the stable BAI Video Production `v0.21.0` release.
+The Dev.10 Controller can select a destination, run the five-second gain check, start, pause, resume, and
+stop while OBS 32.2.1 remains open. Keep the live gain meter and the persistent recording/paused banner visible.
 
 To rebuild the Plugin, runtime package, and installer, use a fresh directory with
 the OBS Studio `32.2.1` source and submodules, Visual Studio Build Tools 2026,
@@ -181,7 +183,7 @@ $Iscc = 'C:\Program Files (x86)\Inno Setup 7\ISCC.exe'
 
 git clone --recursive --branch 32.2.1 https://github.com/obsproject/obs-studio.git $ObsSource
 New-Item -ItemType Directory -Path $PluginSource | Out-Null
-Expand-Archive .\packaging\release-assets\task047\bai-voice-capture-0.1.0-dev.8-source.zip -DestinationPath $PluginSource
+Expand-Archive .\packaging\release-assets\task047\bai-voice-capture-0.1.0-dev.10-source.zip -DestinationPath $PluginSource
 
 & "$PluginSource\scripts\configure.ps1" -CMakeExecutable $Cmake
 & "$PluginSource\scripts\build-controller.ps1" -Compiler $Csc
@@ -190,7 +192,7 @@ Expand-Archive .\packaging\release-assets\task047\bai-voice-capture-0.1.0-dev.8-
 & "$PluginSource\scripts\package.ps1" -Configuration Release
 
 $Artifacts = Join-Path (Split-Path $ObsSource -Parent) 'artifacts'
-$RuntimeZip = Join-Path $Artifacts 'bai-voice-capture-0.1.0-dev.8-windows-x64.zip'
+$RuntimeZip = Join-Path $Artifacts 'bai-voice-capture-0.1.0-dev.10-windows-x64.zip'
 $InstallerWork = Join-Path $env:TEMP 'bai-task047-installer-build-work'
 $InstallerOut = Join-Path $env:TEMP 'bai-task047-installer-build-output'
 powershell -ExecutionPolicy Bypass -File .\tools\windows\build-task047-obs-installer.ps1 `
@@ -201,6 +203,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\windows\build-task047-obs-insta
 The scripts fail closed across configure, build, test, package, and hash validation.
 They refuse to overwrite existing work/output directories. This procedure does not
 create a Tag or GitHub Release, sign files, install/load the Plugin, or start recording.
+On the verified machine, CMake 3.30.5 does not recognize the Visual Studio 18 generator. A Release rebuild
+through the existing VS18 graph passed, but a fresh configure must not silently fall back to another CMake or
+the PATH. Stop and resolve toolchain compatibility. The installer itself remains reproducible from the
+hash-pinned runtime ZIP and Inno Setup 7.1.0 with the script shown above.
 
 ## Five-minute, credential-free demo
 

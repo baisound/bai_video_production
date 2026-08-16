@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+import os
 import pathlib
 import re
+import subprocess
+import sys
+import textwrap
+import zipfile
+
+import pytest
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -11,6 +18,9 @@ ACCEPTANCE = ROOT / "tools" / "windows" / "test-task047-obs-installer.ps1"
 MANUAL = ROOT / "docs" / "user" / "OBS-VOICE-CAPTURE-PLUGIN.md"
 README_JA = ROOT / "README.md"
 README_EN = ROOT / "README.en.md"
+ASSET_ROOT = ROOT / "packaging" / "release-assets" / "task047"
+INSTALLER = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe"
+RUNTIME = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-windows-x64.zip"
 
 
 def _text(path: pathlib.Path) -> str:
@@ -58,6 +68,8 @@ def test_installer_preflight_and_exact3_are_fail_closed() -> None:
 
 def test_installer_preserves_original_ownership_and_journals_repairs() -> None:
     text = _text(ISS)
+    assert 'PreviousPluginSha "14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38"' in text
+    assert "(CompareText(ActualSha, PreviousSha) = 0)" in text
     assert "Repair/update detected; preserving original exact3 ownership state." in text
     assert "install-journal-v2.jsonl" in text
     assert "install-journal-v2-head.txt" in text
@@ -116,3 +128,101 @@ def test_beginner_guides_cover_the_complete_flow_and_are_reachable() -> None:
     assert "not a fixed ten-step checklist" in manual
     assert "docs/user/OBS-VOICE-CAPTURE-PLUGIN.md" in _text(README_JA)
     assert "docs/user/OBS-VOICE-CAPTURE-PLUGIN.md" in _text(README_EN)
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Inno Setup acceptance is Windows-only")
+def test_installer_executes_clean_repair_collision_and_uninstall(tmp_path: pathlib.Path) -> None:
+    running = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "if (Get-Process obs64 -ErrorAction SilentlyContinue) { 'RUNNING' } else { 'STOPPED' }",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    if running == "RUNNING":
+        pytest.skip("A real obs64 process is running; the release installer correctly fails closed")
+
+    source = tmp_path / "FakeObs.cs"
+    source.write_text(
+        textwrap.dedent(
+            """
+            using System.Reflection;
+            [assembly: AssemblyVersion("32.2.1.0")]
+            [assembly: AssemblyFileVersion("32.2.1.0")]
+            public static class Program { public static void Main() { } }
+            """
+        ).strip(),
+        encoding="utf-8",
+    )
+    obs_exe = tmp_path / "obs64.exe"
+    vswhere = (
+        pathlib.Path(os.environ["ProgramFiles(x86)"])
+        / "Microsoft Visual Studio"
+        / "Installer"
+        / "vswhere.exe"
+    )
+    installation = subprocess.run(
+        [
+            str(vswhere),
+            "-latest",
+            "-products",
+            "*",
+            "-requires",
+            "Microsoft.Component.MSBuild",
+            "-property",
+            "installationPath",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    csc = pathlib.Path(installation) / "MSBuild" / "Current" / "Bin" / "Roslyn" / "csc.exe"
+    assert csc.is_file()
+    subprocess.run(
+        [
+            str(csc),
+            "/nologo",
+            "/target:exe",
+            f"/out:{obs_exe}",
+            str(source),
+        ],
+        check=True,
+    )
+
+    payload = tmp_path / "payload"
+    with zipfile.ZipFile(RUNTIME) as archive:
+        archive.extractall(payload)
+    acceptance_root = tmp_path / "bai-task047-installer-acceptance"
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(ACCEPTANCE),
+            "-InstallerPath",
+            str(INSTALLER),
+            "-ObsExe",
+            str(obs_exe),
+            "-PayloadDirectory",
+            str(payload),
+            "-AcceptanceRoot",
+            str(acceptance_root),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, (
+        f"installer acceptance failed with exit {completed.returncode}\n"
+        f"stdout:\n{completed.stdout}\n"
+        f"stderr:\n{completed.stderr}"
+    )
+    assert "INSTALLER_ACCEPTANCE_PASS" in completed.stdout

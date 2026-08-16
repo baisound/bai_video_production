@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-047 P-OBS dev.10 reviewable Plugin source and a beginner-friendly Windows Controller/installer for OBS 32.2.1 with selectable recording destination, live Peak/RMS gain meter, persistent recording/paused banners and same-process start/pause/resume/stop. Owner-voice technical Acceptance passed with gap/HMAC/reconnect zero; Dataset adoption, Training, Production use and stable Release remain separate.
 - Added TASK-005 R1A bounded synthetic Scene Boundary detector adapter for deterministic contract tests with exact source/profile binding, R0 compiler proposal validation and fail-closed no-effect guards. Real media reads, FFmpeg/ffprobe/OpenCV/PySceneDetect execution, detector accuracy, Human review, downstream editing, Native H3, Release and Deploy remain separate Gates.
 - Added TASK-005 Scene Boundary Contract Foundation R0 with canonical Asset/checksum/frame-rate binding, deterministic gapless full-frame scene ranges, detector profile/configuration digests, byte-identical schemas and review-only no-effect guards. Real media analysis, detector runtime, generation, timeline mutation, Native H3 recovery, Release and Deploy remain separate.
 - Added TASK-047 GitHub Release composition for the hash-verified OBS Voice Capture Windows installer, matching runtime/source archives and bilingual README build instructions. The Release workflow fails closed on missing or changed assets; this change creates no Tag, Release, Deploy, OBS, capture or recording effect.

@@ -7,7 +7,7 @@ param(
     [string]$WorkRoot,
     [Parameter(Mandatory = $true)]
     [string]$OutputDirectory,
-    [string]$ExpectedRuntimeSha256 = '4e8fcdf6f697da059ef3aa9ae703a400d0f85e9ed89d77ace9f624dc2783e20f',
+    [string]$ExpectedRuntimeSha256 = '03286e9efbf5dd5af38230dcf7fee4bf53eb3fcc7d7a6d014833b9996bc1f558',
     [string]$ExpectedCompilerSha256 = 'd06ebd38f38e3cee60a3c50cc45bd449d77e0bc6a5cabc607ea9886808e4de1a'
 )
 
@@ -39,8 +39,8 @@ New-Item -ItemType Directory -Path $payloadRoot, $OutputDirectory -Force | Out-N
 Expand-Archive -LiteralPath $RuntimeZip -DestinationPath $payloadRoot
 
 $requiredPayload = [ordered]@{
-    'controller\bai-voice-capture-controller.exe' = '273fe96a952b1120b422785ee4c70a9612ba6f44c6d95f06447497abb52afb3f'
-    'obs-plugins\64bit\bai-voice-capture.dll' = '14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38'
+    'controller\bai-voice-capture-controller.exe' = 'e715fd0a3eff137f405b1f8da33ba5f9232e57d7c1c4d1694069ebdba3b3fc67'
+    'obs-plugins\64bit\bai-voice-capture.dll' = '9b8a603d6515c0735f776867c7079c0600990ebebaf8b9609d81d0f0f265bcdb'
     'data\obs-plugins\bai-voice-capture\locale\en-US.ini' = '066718cb394b9af07319f4bb4a0f6eb7cc50e45e73ffc76662c588ccbaa8ae8d'
     'data\obs-plugins\bai-voice-capture\locale\ja-JP.ini' = 'c55315f3973893bfe9303766df7ab824751e93a84a0a607224a3b465fbf63f4e'
 }
@@ -59,7 +59,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "ISCC failed with exit code $LASTEXITCODE"
 }
 
-$installerPath = Join-Path $OutputDirectory 'bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe'
+$installerPath = Join-Path $OutputDirectory 'bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe'
 Assert-AbsoluteFile $installerPath 'Compiled installer'
 $installer = Get-Item -LiteralPath $installerPath
 $result = [ordered]@{

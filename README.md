@@ -172,9 +172,9 @@ python -m pip install -e ".[windows-build]"
 
 GitHub Releaseには、BAI Video Production本体に加えて次の3点を同梱します。
 
-- `bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe`：初心者向けWindowsインストーラー
-- `bai-voice-capture-0.1.0-dev.8-windows-x64.zip`：検証・復旧用runtime package
-- `bai-voice-capture-0.1.0-dev.8-source.zip`：対応するPlugin source
+- `bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe`：初心者向けWindowsインストーラー
+- `bai-voice-capture-0.1.0-dev.10-windows-x64.zip`：検証・復旧用runtime package
+- `bai-voice-capture-0.1.0-dev.10-source.zip`：対応するPlugin source
 
 Release workflowは[`SHA256SUMS`](packaging/release-assets/task047/SHA256SUMS)を先に検証し、
 3点のどれかが欠落または改変されていればRelease作成前に停止します。現在のinstallerは
@@ -182,10 +182,12 @@ OBS Studio 32.2.1 x64向けの未署名開発候補です。実際の導入と�
 [初心者向けガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md)を上から順に読んでください。
 
 現在の公開Technical Previewは
-[BAI Voice Capture v0.1.0-dev.8 installer.4](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.8-installer.4)
+[BAI Voice Capture v0.1.0-dev.10 installer.1](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1)
 です。通常の利用者はRelease Assetsにある
-`bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe`を取得してください。
+`bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe`を取得してください。
 これは未署名のPre-releaseであり、BAI Video Production全体の安定版`v0.21.0`とは別です。
+Dev.10 ControllerはOBS 32.2.1を起動したまま保存先選択、5秒GAIN確認、録音開始、一時停止、
+再開、停止を行えます。GAINバーと`学習データ録音中` / `一時停止中`表示を常時確認してください。
 
 sourceからPlugin、runtime package、installerまで作り直す場合は、空の作業directoryを使い、
 OBS Studio `32.2.1` source（submoduleを含む）、Visual Studio Build Tools 2026、
@@ -202,7 +204,7 @@ $Iscc = 'C:\Program Files (x86)\Inno Setup 7\ISCC.exe'
 
 git clone --recursive --branch 32.2.1 https://github.com/obsproject/obs-studio.git $ObsSource
 New-Item -ItemType Directory -Path $PluginSource | Out-Null
-Expand-Archive .\packaging\release-assets\task047\bai-voice-capture-0.1.0-dev.8-source.zip -DestinationPath $PluginSource
+Expand-Archive .\packaging\release-assets\task047\bai-voice-capture-0.1.0-dev.10-source.zip -DestinationPath $PluginSource
 
 & "$PluginSource\scripts\configure.ps1" -CMakeExecutable $Cmake
 & "$PluginSource\scripts\build-controller.ps1" -Compiler $Csc
@@ -211,7 +213,7 @@ Expand-Archive .\packaging\release-assets\task047\bai-voice-capture-0.1.0-dev.8-
 & "$PluginSource\scripts\package.ps1" -Configuration Release
 
 $Artifacts = Join-Path (Split-Path $ObsSource -Parent) 'artifacts'
-$RuntimeZip = Join-Path $Artifacts 'bai-voice-capture-0.1.0-dev.8-windows-x64.zip'
+$RuntimeZip = Join-Path $Artifacts 'bai-voice-capture-0.1.0-dev.10-windows-x64.zip'
 $InstallerWork = Join-Path $env:TEMP 'bai-task047-installer-build-work'
 $InstallerOut = Join-Path $env:TEMP 'bai-task047-installer-build-output'
 powershell -ExecutionPolicy Bypass -File .\tools\windows\build-task047-obs-installer.ps1 `
@@ -221,6 +223,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\windows\build-task047-obs-insta
 
 各scriptはconfigure、build、test、packageの順序とhashをfail closedで検査します。
 既存の`$InstallerWork`または`$InstallerOut`は上書きせず停止するため、再buildでは新しい空pathを指定します。
+現在の検証環境ではCMake 3.30.5がVisual Studio 18 generatorを認識しません。既存VS18 graphでの
+Release再compileはPASSしていますが、fresh configureが失敗した場合に別CMakeやPATHへ暗黙fallbackせず停止し、
+toolchain compatibilityを解決してから再実行してください。installer単体のcompileは、hash固定済みruntime ZIPと
+Inno Setup 7.1.0を上記scriptへ渡して再現できます。
 この手順はTag、GitHub Release、署名、OBSへのinstall/load、録音を自動実行しません。
 
 ## Verification

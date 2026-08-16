@@ -1,0 +1,13 @@
+SPDX-License-Identifier: GPL-2.0-or-later
+
+BAI Voice Capture OBS Plugin is licensed under the GNU General Public
+License, version 2 or (at your option) any later version.
+
+This development package is intended to be built against OBS Studio. The
+complete corresponding source for this plugin is included in the source
+package. Distribution must include the applicable GNU GPL license text and
+all notices required by OBS Studio and every linked dependency. A runtime
+package must not be published until the dependency and notice manifest has
+been independently verified.
+
+License reference: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html

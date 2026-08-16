@@ -299,3 +299,26 @@ def test_assets_does_not_infer_missing_registry_domains() -> None:
     ):
         assert marker in SHELL_HTML
     assert "renderModel($('assetContent')" not in SHELL_HTML
+
+
+def test_final_review_aggregates_exact_gate_blockers_without_accepting() -> None:
+    for marker in (
+        'id="finalReviewState"',
+        'id="finalApprovalButton" disabled',
+        'data-disabled-reason="最終承認のtyped Application Serviceが未接続です"',
+        "function renderFinalReview(production,audit)",
+        "required=slots.filter(slot=>slot.required)",
+        "unlocked=required.filter(slot=>slot.status!=='LOCKED')",
+        "stale=slots.filter(slot=>slot.status==='STALE'||slot.stale_state==='STALE')",
+        "pending=candidates.filter(candidate=>(candidate.available_human_actions||[]).length>0)",
+        "state.textContent='REVIEW_REQUIRED'",
+        "集約表示は最終承認を作りません。",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_final_review_routes_to_owning_human_surfaces_only() -> None:
+    assert '<button class="btn" data-nav="assetReview">素材確認へ戻る</button>' in SHELL_HTML
+    assert '<button class="btn" data-nav="locks">WORLD LOCKへ戻る</button>' in SHELL_HTML
+    assert "final_review_apply" not in SHELL_HTML
+    assert "final_approve" not in SHELL_HTML

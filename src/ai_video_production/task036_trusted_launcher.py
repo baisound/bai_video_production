@@ -53,6 +53,7 @@ from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
 from .audio_workspace_application import Task041AudioWorkspaceApplication
 from .audio_placement_application import Task026AudioPlacementApplication
+from .quick_generation_application import Task042QuickGenerationApplication
 from .local_comfy_generation_port import (
     LocalComfyGenerationConfig, LocalComfyTextToVideoPort,
     MINIMAX_H3_NATIVE_WORKFLOW_SHA256, default_minimax_h3_workflow_path,
@@ -531,6 +532,16 @@ def build_trusted_launch(
             project_id=configuration.project_id,
             production_control=production_control,
         )
+    quick_generation_application = None
+    quick_inputs = (
+        configuration.project_root / "prompt-registry.json",
+        configuration.project_root / "production-control.json",
+    )
+    if all(path.is_file() and not path.is_symlink() for path in quick_inputs):
+        quick_generation_application = Task042QuickGenerationApplication(
+            project_root=configuration.project_root,
+            project_id=configuration.project_id,
+        )
 
     def nle_controller(application) -> Task044NleShellController:
         timeline = InteractiveTimelineProjectionService.from_editing_projection(
@@ -602,6 +613,7 @@ def build_trusted_launch(
         generation_output_adoption_application=generation_output_adoption_application,
         audio_workspace_application=audio_workspace_application,
         audio_placement_application=audio_placement_application,
+        quick_generation_application=quick_generation_application,
         nle_controller_factory=nle_controller,
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

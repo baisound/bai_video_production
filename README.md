@@ -168,6 +168,55 @@ python -m pip install -e ".[windows-build]"
 
 前提条件、Pythonの選択方法、作り直し方、エラー対処は [Windows EXEビルド手順](docs/windows/BUILDING-WINDOWS-EXE.md) を参照してください。
 
+### OBS Voice Capture Pluginとインストーラーのbuild
+
+GitHub Releaseには、BAI Video Production本体に加えて次の3点を同梱します。
+
+- `bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe`：初心者向けWindowsインストーラー
+- `bai-voice-capture-0.1.0-dev.8-windows-x64.zip`：検証・復旧用runtime package
+- `bai-voice-capture-0.1.0-dev.8-source.zip`：対応するPlugin source
+
+Release workflowは[`SHA256SUMS`](packaging/release-assets/task047/SHA256SUMS)を先に検証し、
+3点のどれかが欠落または改変されていればRelease作成前に停止します。現在のinstallerは
+OBS Studio 32.2.1 x64向けの未署名開発候補です。実際の導入と使い方は
+[初心者向けガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md)を上から順に読んでください。
+
+sourceからPlugin、runtime package、installerまで作り直す場合は、空の作業directoryを使い、
+OBS Studio `32.2.1` source（submoduleを含む）、Visual Studio Build Tools 2026、
+Windows SDK `10.0.26100.0`、CMake `3.30.5`、Inno Setup `7.1.0`を用意します。
+`cmake`をPATH任せにせず、実在するabsolute pathを指定してください。
+
+```powershell
+$ObsSource = 'C:\src\obs-studio-32.2.1'
+$PluginSource = Join-Path $ObsSource 'plugins\bai-voice-capture'
+$Cmake = 'C:\Tools\CMake\3.30.5\bin\cmake.exe'
+$Ctest = 'C:\Tools\CMake\3.30.5\bin\ctest.exe'
+$Csc = 'C:\Program Files\Microsoft Visual Studio\18\BuildTools\MSBuild\Current\Bin\Roslyn\csc.exe'
+$Iscc = 'C:\Program Files (x86)\Inno Setup 7\ISCC.exe'
+
+git clone --recursive --branch 32.2.1 https://github.com/obsproject/obs-studio.git $ObsSource
+New-Item -ItemType Directory -Path $PluginSource | Out-Null
+Expand-Archive .\packaging\release-assets\task047\bai-voice-capture-0.1.0-dev.8-source.zip -DestinationPath $PluginSource
+
+& "$PluginSource\scripts\configure.ps1" -CMakeExecutable $Cmake
+& "$PluginSource\scripts\build-controller.ps1" -Compiler $Csc
+& "$PluginSource\scripts\build.ps1" -CMakeExecutable $Cmake -Configuration Release
+& "$PluginSource\scripts\test.ps1" -CMakeExecutable $Cmake -CtestExecutable $Ctest -Configuration Release
+& "$PluginSource\scripts\package.ps1" -Configuration Release
+
+$Artifacts = Join-Path (Split-Path $ObsSource -Parent) 'artifacts'
+$RuntimeZip = Join-Path $Artifacts 'bai-voice-capture-0.1.0-dev.8-windows-x64.zip'
+$InstallerWork = Join-Path $env:TEMP 'bai-task047-installer-build-work'
+$InstallerOut = Join-Path $env:TEMP 'bai-task047-installer-build-output'
+powershell -ExecutionPolicy Bypass -File .\tools\windows\build-task047-obs-installer.ps1 `
+  -RuntimeZip $RuntimeZip -InnoCompiler $Iscc `
+  -WorkRoot $InstallerWork -OutputDirectory $InstallerOut
+```
+
+各scriptはconfigure、build、test、packageの順序とhashをfail closedで検査します。
+既存の`$InstallerWork`または`$InstallerOut`は上書きせず停止するため、再buildでは新しい空pathを指定します。
+この手順はTag、GitHub Release、署名、OBSへのinstall/load、録音を自動実行しません。
+
 ## Verification
 
 ```powershell

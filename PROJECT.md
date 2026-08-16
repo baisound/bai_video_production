@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_21_0_RELEASED_TASK_036_P_UX_1C_ACTIVE_TASK_046_P_VS_1A_PARALLEL_TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE_NATIVE_RUNTIME_PARKED`
+`V0_21_0_RELEASED_TASK_036_P_UX_1C_HOSTED_CLOSED_TASK_046_VOICE_ROUTE_SEPARATE_TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE_NATIVE_RUNTIME_PARKED`
 
 ## Purpose
 
@@ -110,9 +110,9 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 ## Current Consumer Task State
 
-- Last Completed Gate: `TASK-046 P-VS-0 documentation-only intake`; PR #90 exact head `664722d0fac8cc0e79f7c424c6911f4651ceb303` passed hosted `9 / 9`, merged at exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`, and passed post-merge main CI/Security
-- Active Task: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE / codex/task-036-v611-packaged-native-closure`; hosted Lock is ACTIVE and the protected WIP matched `WIP_FILE_SHA256.txt` `21 / 21`, so the existing route remains active without interruption
-- Parallel Reserved Task: `TASK-046 / P-VS-1A BODY-FREE VOICEPROFILE BACKEND / codex/task-046-p-vs-1a-body-free-backend`; implementation may start only from fresh main under `BVP-LOCK-TASK046-PVS1A`, and main merge waits for P-UX-1C hosted closure plus fresh-main rebase
+- Last Completed Gate: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE`; PR #122 exact head `5d0d8140659a6bf3a30e9b19ac183c206dee8d92` passed hosted `9 / 9`, merged at exact main `ea671ee75a6c1a6ef79756b33f68ecb07466c5b4`, and passed post-merge main CI/Security
+- Completed Task: `TASK-036 / P-UX-1C`; the exact packaged native matrix closes all required V6.1.1 primary surfaces and six top menus with `V6.1.1_VISUAL_PARITY_PASS`
+- Separate Voice Route: TASK-046/TASK-047 retain their own exact Locks, authorities and Human gates; P-UX-1C no longer blocks their independently authorized work
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; P-OBS-0 installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may move forward separately, but P-VS-3 production training-material recording and P-VS-4 fine-tuning require P-OBS-1 hosted completion plus exact-path probe PASS, recording Consent, storage encryption and Owner GO
 - TASK-004: `COMPLETED`
 - Package: `0.21.0`
@@ -120,7 +120,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.87 Addendum LXXXI
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.88 Addendum LXXXII
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

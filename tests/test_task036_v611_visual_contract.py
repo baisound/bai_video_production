@@ -322,3 +322,35 @@ def test_final_review_routes_to_owning_human_surfaces_only() -> None:
     assert '<button class="btn" data-nav="locks">WORLD LOCKへ戻る</button>' in SHELL_HTML
     assert "final_review_apply" not in SHELL_HTML
     assert "final_approve" not in SHELL_HTML
+
+
+def test_scene_design_reuses_exact_continuity_application_contract() -> None:
+    for marker in (
+        'id="continuitySummary"',
+        "function prepareContinuityEdge(model)",
+        "function renderContinuity(model)",
+        "continuity_prepare_edge",
+        "expected_production_snapshot_sha256:model.production_snapshot_sha256",
+        "expected_continuity_snapshot_sha256:model.continuity_snapshot_sha256",
+        "continuity_apply_edge",
+        "continuity_inspect",
+        "continuity_prepare_soft_approval",
+        "continuity_apply_soft_approval",
+        "continuity_propagate_stale",
+        "continuity_apply_recovery",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_scene_design_preserves_human_and_generation_boundaries() -> None:
+    for marker in (
+        "if(!['DIRECT_CONTINUATION','SOFT_CONTINUITY','DISCONTINUOUS'].includes(boundary))return",
+        "Human override for DIRECT: NO",
+        "再生成・削除は行いません。",
+        "自動再生成は行いません。",
+        "if(!model.recovery?.required&&!row.resolution)",
+        "if(!model.recovery?.required&&row.human_soft_approval_available)",
+    ):
+        assert marker in SHELL_HTML
+    assert "continuity_generate" not in SHELL_HTML
+    assert "continuity_delete" not in SHELL_HTML

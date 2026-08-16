@@ -120,4 +120,3 @@ Assert-Targets
 } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $root 'acceptance-receipt.json') -Encoding utf8NoBOM
 
 Get-Content -LiteralPath (Join-Path $root 'acceptance-receipt.json')
-

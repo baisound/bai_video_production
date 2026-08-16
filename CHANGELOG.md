@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-036 P-UX-2A1として、既存TASK-028 Connection SettingsとTASK-040/042のScene・Quick正本から、Planning・Image・Video・QuickのProvider/Model選択を秘密非表示で決定論的に投影し、Project既定Routeを既存CASへ保存できるようにしました。Audioは開発担当2へ委譲し、権利/license・resourceはUNKNOWN、Provider実行・課金・生成は未許可のままです。
 - TASK-036 P-UX-2A0として、V6.1.1 mock/runtimeのfield・select・card・list・tab・state・resultを含む決定論的な要素/選択契約inventory、既存ownerへのpage/service registry、cross-screen identityとfail-closed lifecycleを追加しました。Provider・Credential・課金・model取得/実行・media・Human決定・Timeline・Export・Release/Deployは開始しません。
 - TASK-041 Audio Workspace Media Review / Handoff Foundation R0として、body-free音声source・試聴/波形capability・外部receipt・独立した音声/映像Human判断・非破壊派生Asset proposal・TASK-035 REAPER往復状態の決定論的契約を追加しました。音声読取・再生・波形生成・media処理・Asset登録・配置変更・DAW操作・Release/Deployは別Gateです。
 - TASK-036 P-UX-2Aとして、既存TASK-028 Connection Settings正本をUnified DesktopのAIモデル設定へ接続し、workload modeと優先RouteをCAS保存できるようにしました。Secret本文・Catalog・endpoint・Provider実行・課金・生成・TASK-041音声・Release/Deployは変更しません。

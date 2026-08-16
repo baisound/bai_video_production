@@ -1067,6 +1067,63 @@
       "released_at": "2026-08-16T07:41:43Z",
       "automatic_retry": false,
       "automatic_rollback_or_revert": false
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK036-PUX1C-NATIVE-GATE-CHANGELOG-20260816",
+      "owner_agent": "開発担当 / Integration owner",
+      "owner_thread_id": "01a00321-73b1-7ba2-a8b3-5fbd426588ed",
+      "lock_host_authority": "OWNER_STANDING_AUTONOMY_CURRENT_THREAD_20260816",
+      "integration_effect_authority_state": "AUTHORIZED_ONLY_AFTER_HOSTED_MAIN_EXACT_READ_BACK_AND_FRESH_AUDIT",
+      "target_merge_authority_state": "PENDING_HOSTED_GREEN_AND_FRESH_AUDIT",
+      "implementation_authority_state": "EXISTING_TASK036_PUX1C_NATIVE_GATE_CORRECTION_DOES_NOT_INCLUDE_CHANGELOG",
+      "hosting_branch": "codex/task-036-pux1c-native-gate-changelog-lock-r0",
+      "hosting_base_sha": "8dc18418ae5eb62cb14149fc7bc28887f899bf5e",
+      "status": "ACTIVE",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "target_pull_request": 115,
+      "target_branch": "codex/task-036-pux1c-native-gate-resize-r0",
+      "expected_pre_integration_head": "df211fe36257e703c08ec15d04248b9de8e3616f",
+      "purpose": "ONE_EXACT_TASK036_PUX1C_NATIVE_GATE_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+      "approved_changelog_bullet": "- Fixed TASK-036 P-UX-1C native closure validation by re-maximizing the WebView host after semantic readiness and rejecting uncovered bright client regions at the right and bottom boundaries. This changes only native validation tooling and its contract test; Product runtime and package bytes, Provider, paid, Credential, external NLE, Release and Deploy behavior remain unchanged.",
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
+      "immutable_target_implementation_files": [
+        "tools/windows/run-task036-pux1c-native-closure.ps1",
+        "tests/test_task036_pux1c_native_closure_contract.py"
+      ],
+      "denied": [
+        "TASK036_PUX1C_NATIVE_GATE_IMPLEMENTATION_OR_EVIDENCE_FILE_MUTATION_DURING_INTEGRATION_EFFECT",
+        "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
+        ".github/**",
+        "OTHER_SHARED_INTEGRATION_FILES",
+        "PRODUCT_RUNTIME_OR_PACKAGE_REBUILD",
+        "PROVIDER_PAID_CREDENTIAL_EXTERNAL_NLE_RELEASE_DEPLOY",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_UNCHANGED_HEAD_RETRY",
+      "composition_rule": "TARGET_PR_EXACT_2_IMMUTABLE_IMPLEMENTATION_FILES_PLUS_1_INTEGRATION_OWNED_CHANGELOG_FILE",
+      "implementation_blob_invariant": "EXACT_2_OF_2_BLOBS_MUST_REMAIN_IDENTICAL_TO_HEAD_DF211FE36257E703C08EC15D04248B9DE8E3616F",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "LOCK_HOST_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "LOCK_HOST_MERGED_MAIN_EXACT_READ_BACK",
+        "LOCK_HOST_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "FRESH_MAIN_REGISTRY_TARGET_HEAD_AND_OVERLAP_REAUDIT",
+        "NORMAL_MAIN_INTO_TARGET_MERGE_NO_REBASE_NO_FORCE"
+      ],
+      "expiry_conditions": [
+        "TARGET_HEAD_MISMATCH",
+        "TARGET_PR_CLOSED_OR_MERGED",
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_AUTHORIZED_EFFECT",
+        "PATH_OR_OPEN_PR_OVERLAP",
+        "IMPLEMENTATION_BLOB_DRIFT",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
+        "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+      ],
+      "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_OR_CLOSE_AND_APPEND_ONLY_CLOSURE_EVIDENCE",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
     }
   ],
   "roadmap_dependency_gates": {

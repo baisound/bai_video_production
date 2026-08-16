@@ -440,3 +440,37 @@ def test_prompt_evidence_preserves_private_and_provider_boundaries() -> None:
     assert "body_content" not in SHELL_HTML
     assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
     assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
+
+
+def test_audio_workspace_connects_review_and_task026_plan_boundaries() -> None:
+    for marker in (
+        'id="audioWorkspaceSummary"',
+        "audio_placement_snapshot",
+        "function prepareAudioPlacement(model,item)",
+        "function decideAudioPlacement(model,row,decision)",
+        "function prepareTask026Placement(model,row)",
+        "function renderAudioWorkspace(model,placementModel)",
+        "audio_workspace_prepare_placement",
+        "audio_workspace_apply_placement",
+        "audio_workspace_prepare_decision",
+        "audio_workspace_apply_decision",
+        "audio_placement_prepare",
+        "audio_placement_apply",
+        "expected_project_manifest_sha256:model.project_manifest_sha256",
+        "expected_timeline_snapshot_sha256:model.timeline_snapshot_sha256",
+        "expected_history_snapshot_sha256:model.history_snapshot_sha256",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_audio_workspace_keeps_external_execution_and_ambiguous_plan_disabled() -> None:
+    for marker in (
+        'data-disabled-reason="各ACCEPT済みReviewのrunnable判定から個別に作成します"',
+        "if(planRow?.runnable)",
+        "External execution: NO",
+        "Provider・課金・音声生成・派生Media作成・TASK-010・Resolve/Cubase操作は開始しません。",
+        "if(!['PREVIEW','FULL'].includes(mode))return",
+    ):
+        assert marker in SHELL_HTML
+    assert "audio_workspace_execute" not in SHELL_HTML
+    assert "audio_placement_execute" not in SHELL_HTML

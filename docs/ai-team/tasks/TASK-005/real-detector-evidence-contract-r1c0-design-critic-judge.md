@@ -173,8 +173,9 @@ overlap closure.
 Local verification result:
 
 - focused R1C0 plus R1B1/R1A/R0 regression: `74 passed`;
-- full Windows regression: `1356 passed, 1 expected non-Windows skip`;
-- Windows and WSL2 all-source/all-test syntax compilation: `382 / 382 PASS`;
+- full Windows regression on the current-main integrated head: `1395 passed,
+  1 expected non-Windows skip`;
+- Windows and WSL2 all-source/all-test syntax compilation: `384 / 384 PASS`;
 - exact five-file scope, predecessor blob immutability and `git diff --check`:
   `PASS`;
 - dependency install/download, artifact/materialization/process/media/runtime

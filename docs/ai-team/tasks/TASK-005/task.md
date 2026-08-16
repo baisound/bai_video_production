@@ -34,3 +34,17 @@ or complete TASK-005 detector runtime.
 - focused, full, and hosted regression with unresolved Critic C/H/M `0/0/0`.
 
 Native H3 recovery remains parked and is not a TASK-005 dependency or effect.
+
+## R1A bounded synthetic adapter
+
+`BoundedSyntheticSceneBoundaryDetectorAdapter` is the first concrete adapter
+for contract and integration tests. It is immutable and binds exactly one R0
+source, detector profile, and prevalidated in-memory proposal tuple. Detection
+rejects any source/profile mismatch and delegates all proposal count, range,
+coverage, manifest, and hash rules to the existing R0 compiler.
+
+R1A is explicitly synthetic-only. It accepts no path, raw bytes, callback,
+runner, filesystem handle, Provider, model, or native-runtime input. It neither
+reads media nor proves detector accuracy. FFmpeg/OpenCV/PySceneDetect selection,
+real-media analysis, Human review, downstream editing, and Native H3 remain
+separate parked Gates.

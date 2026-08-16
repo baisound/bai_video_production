@@ -404,3 +404,39 @@ def test_ai_video_keeps_execution_read_only_in_this_slice() -> None:
     assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
     assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
     assert "中断したlocal dispatchは自動再実行しません。" in SHELL_HTML
+
+
+def test_prompt_evidence_projects_versioned_metadata_and_exact_receipts() -> None:
+    for marker in (
+        'id="promptEvidenceSummary"',
+        "function preparePromptEvidencePrompt(model)",
+        "function preparePromptEvidenceAttempt(model)",
+        "function preparePromptRegeneration(model,candidateId)",
+        "function renderPromptEvidence(model)",
+        "prompt_evidence_prepare_prompt",
+        "prompt_evidence_apply_prompt",
+        "prompt_evidence_prepare_attempt",
+        "prompt_evidence_apply_attempt",
+        "prompt_evidence_prepare_regeneration",
+        "prompt_evidence_apply_regeneration",
+        "prompt_evidence_apply_recovery",
+        "expected_prompt_snapshot_sha256:model.prompt_snapshot_sha256",
+        "expected_production_snapshot_sha256:model.production_snapshot_sha256",
+        "expected_audit_snapshot_sha256:model.audit_snapshot_sha256",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_prompt_evidence_preserves_private_and_provider_boundaries() -> None:
+    for marker in (
+        "if(model.actions_allowed&&attempt.human_regeneration_available&&attempt.output_candidate_id)",
+        "Prompt body embedded: ${model.prompt_body_embedded?'YES':'NO'}",
+        "Prompt本文は埋め込まず、Provider実行・課金・Candidate作成・自動再生成・Human判断は行いません。",
+        "終了済みGeneration Evidence取込",
+        "Providerも実行しません。",
+    ):
+        assert marker in SHELL_HTML
+    assert "body_text" not in SHELL_HTML
+    assert "body_content" not in SHELL_HTML
+    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
+    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML

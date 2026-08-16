@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.local/schemas/storage-lifecycle-gc.schema.json",
+  "title": "TASK-017 Storage Lifecycle / GC body-free metadata contracts",
+  "oneOf": [
+    {"$ref": "#/$defs/StorageRetentionPolicyRevision"},
+    {"$ref": "#/$defs/StorageObjectObservationReceipt"},
+    {"$ref": "#/$defs/StorageDispositionDecisionReceipt"},
+    {"$ref": "#/$defs/StorageEffectAuthorizationBinding"},
+    {"$ref": "#/$defs/StorageEffectReceiptBinding"},
+    {"$ref": "#/$defs/StorageDispositionPublicProjection"},
+    {"$ref": "#/$defs/StorageEffectPublicProjection"}
+  ],
+  "$defs": {
+    "Digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "NullableDigest": {"oneOf": [{"$ref": "#/$defs/Digest"}, {"type": "null"}]},
+    "Id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$", "not": {"pattern": "(^/|\\\\|(^|/)\\.\\.(/|$)|(?i:credential|password|secret|token|private-key))"}},
+    "NullableId": {"oneOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]},
+    "Timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "NullableTimestamp": {"oneOf": [{"$ref": "#/$defs/Timestamp"}, {"type": "null"}]},
+    "Reason": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"},
+    "Reasons": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/Reason"}},
+    "RetentionClass": {"enum": ["STANDARD", "CONFIDENTIAL", "RESTRICTED", "LEGAL_HOLD"]},
+    "RetentionRule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["retention_class", "archive_after_seconds", "delete_after_seconds"],
+      "properties": {
+        "retention_class": {"$ref": "#/$defs/RetentionClass"},
+        "archive_after_seconds": {"oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]},
+        "delete_after_seconds": {"oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]}
+      },
+      "allOf": [
+        {"if": {"properties": {"retention_class": {"const": "LEGAL_HOLD"}}}, "then": {"properties": {"archive_after_seconds": {"type": "null"}, "delete_after_seconds": {"type": "null"}}}, "else": {"properties": {"archive_after_seconds": {"type": "integer", "minimum": 1}, "delete_after_seconds": {"type": "integer", "minimum": 1}}}}
+      ]
+    },
+    "StorageRetentionPolicyRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "record_type", "task_owner", "project_id", "policy_id", "revision", "parent_revision_sha256", "created_at", "max_observation_age_seconds", "rules", "automatic_effect_authorized", "policy_revision_sha256"],
+      "properties": {
+        "schema": {"const": "bai.task017.storage-lifecycle-gc.v1"}, "record_type": {"const": "StorageRetentionPolicyRevision"}, "task_owner": {"const": "TASK-017"},
+        "project_id": {"$ref": "#/$defs/Id"}, "policy_id": {"$ref": "#/$defs/Id"}, "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_sha256": {"$ref": "#/$defs/NullableDigest"}, "created_at": {"$ref": "#/$defs/Timestamp"},
+        "max_observation_age_seconds": {"type": "integer", "minimum": 1},
+        "rules": {"type": "array", "minItems": 4, "maxItems": 4, "prefixItems": [
+          {"allOf": [{"$ref": "#/$defs/RetentionRule"}, {"properties": {"retention_class": {"const": "STANDARD"}}}]},
+          {"allOf": [{"$ref": "#/$defs/RetentionRule"}, {"properties": {"retention_class": {"const": "CONFIDENTIAL"}}}]},
+          {"allOf": [{"$ref": "#/$defs/RetentionRule"}, {"properties": {"retention_class": {"const": "RESTRICTED"}}}]},
+          {"allOf": [{"$ref": "#/$defs/RetentionRule"}, {"properties": {"retention_class": {"const": "LEGAL_HOLD"}}}]}
+        ], "items": false},
+        "automatic_effect_authorized": {"const": false}, "policy_revision_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"revision": {"const": 1}}}, "then": {"properties": {"parent_revision_sha256": {"type": "null"}}}, "else": {"properties": {"parent_revision_sha256": {"$ref": "#/$defs/Digest"}}}}
+      ]
+    },
+    "StorageObjectObservationReceipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "record_type", "task_owner", "project_id", "observation_id", "object_ref", "object_revision_sha256", "asset_record_sha256", "retention_class", "observation_state", "observed_at", "last_used_at", "storage_bytes", "active_reference_count", "pending_job_reference_count", "legal_hold_state", "privacy_hold_state", "inventory_profile_ref", "inventory_profile_sha256", "observation_performed_by_module", "path_body_persisted", "media_body_persisted", "observation_sha256"],
+      "properties": {
+        "schema": {"const": "bai.task017.storage-lifecycle-gc.v1"}, "record_type": {"const": "StorageObjectObservationReceipt"}, "task_owner": {"const": "TASK-017"},
+        "project_id": {"$ref": "#/$defs/Id"}, "observation_id": {"$ref": "#/$defs/Id"}, "object_ref": {"$ref": "#/$defs/Id"},
+        "object_revision_sha256": {"$ref": "#/$defs/Digest"}, "asset_record_sha256": {"$ref": "#/$defs/Digest"}, "retention_class": {"$ref": "#/$defs/RetentionClass"},
+        "observation_state": {"enum": ["PRESENT", "ABSENT", "UNKNOWN"]}, "observed_at": {"$ref": "#/$defs/Timestamp"}, "last_used_at": {"$ref": "#/$defs/NullableTimestamp"},
+        "storage_bytes": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]}, "active_reference_count": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]}, "pending_job_reference_count": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+        "legal_hold_state": {"enum": ["CLEAR", "ACTIVE", "UNKNOWN"]}, "privacy_hold_state": {"enum": ["CLEAR", "ACTIVE", "UNKNOWN"]},
+        "inventory_profile_ref": {"$ref": "#/$defs/Id"}, "inventory_profile_sha256": {"$ref": "#/$defs/Digest"},
+        "observation_performed_by_module": {"const": false}, "path_body_persisted": {"const": false}, "media_body_persisted": {"const": false}, "observation_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [{"if": {"properties": {"observation_state": {"const": "UNKNOWN"}}}, "then": {"properties": {"last_used_at": {"type": "null"}, "storage_bytes": {"type": "null"}, "active_reference_count": {"type": "null"}, "pending_job_reference_count": {"type": "null"}, "legal_hold_state": {"const": "UNKNOWN"}, "privacy_hold_state": {"const": "UNKNOWN"}}}}]
+    },
+    "StorageDispositionDecisionReceipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "record_type", "task_owner", "project_id", "decision_id", "policy_revision_sha256", "observation_sha256", "evaluated_at", "decision", "proposed_effect", "reason_codes", "effect_started", "automatic_delete_authorized", "decision_sha256"],
+      "properties": {
+        "schema": {"const": "bai.task017.storage-lifecycle-gc.v1"}, "record_type": {"const": "StorageDispositionDecisionReceipt"}, "task_owner": {"const": "TASK-017"},
+        "project_id": {"$ref": "#/$defs/Id"}, "decision_id": {"$ref": "#/$defs/Id"}, "policy_revision_sha256": {"$ref": "#/$defs/Digest"}, "observation_sha256": {"$ref": "#/$defs/Digest"}, "evaluated_at": {"$ref": "#/$defs/Timestamp"},
+        "decision": {"enum": ["KEEP", "ARCHIVE_PROPOSED", "DELETE_PROPOSED", "NO_ACTION_ALREADY_ABSENT", "BLOCKED", "UNKNOWN"]},
+        "proposed_effect": {"oneOf": [{"enum": ["ARCHIVE", "DELETE"]}, {"type": "null"}]}, "reason_codes": {"$ref": "#/$defs/Reasons"},
+        "effect_started": {"const": false}, "automatic_delete_authorized": {"const": false}, "decision_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"decision": {"const": "ARCHIVE_PROPOSED"}}}, "then": {"properties": {"proposed_effect": {"const": "ARCHIVE"}}}},
+        {"if": {"properties": {"decision": {"const": "DELETE_PROPOSED"}}}, "then": {"properties": {"proposed_effect": {"const": "DELETE"}}}},
+        {"if": {"properties": {"decision": {"enum": ["KEEP", "NO_ACTION_ALREADY_ABSENT", "BLOCKED", "UNKNOWN"]}}}, "then": {"properties": {"proposed_effect": {"type": "null"}}}}
+      ]
+    },
+    "StorageEffectAuthorizationBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "authorization_id", "authorization_revision", "authorization_sha256", "authority_kind", "project_id", "object_ref", "object_revision_sha256", "decision_sha256", "effect", "issued_at", "expires_at", "one_shot", "evidence_ref", "evidence_sha256"],
+      "properties": {
+        "record_type": {"const": "StorageEffectAuthorizationBinding"}, "contract_state": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+        "authorization_id": {"$ref": "#/$defs/NullableId"}, "authorization_revision": {"oneOf": [{"type": "integer", "minimum": 1}, {"type": "null"}]}, "authorization_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "authority_kind": {"oneOf": [{"enum": ["OWNER_HUMAN_GATE", "APPROVED_SYNTHETIC_TEST_AUTHORITY"]}, {"type": "null"}]},
+        "project_id": {"$ref": "#/$defs/NullableId"}, "object_ref": {"$ref": "#/$defs/NullableId"}, "object_revision_sha256": {"$ref": "#/$defs/NullableDigest"}, "decision_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "effect": {"oneOf": [{"enum": ["ARCHIVE", "DELETE"]}, {"type": "null"}]}, "issued_at": {"$ref": "#/$defs/NullableTimestamp"}, "expires_at": {"$ref": "#/$defs/NullableTimestamp"}, "one_shot": {"oneOf": [{"const": true}, {"type": "null"}]},
+        "evidence_ref": {"$ref": "#/$defs/NullableId"}, "evidence_sha256": {"$ref": "#/$defs/NullableDigest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {"authorization_id": {"$ref": "#/$defs/Id"}, "authorization_revision": {"type": "integer", "minimum": 1}, "authorization_sha256": {"$ref": "#/$defs/Digest"}, "authority_kind": {"enum": ["OWNER_HUMAN_GATE", "APPROVED_SYNTHETIC_TEST_AUTHORITY"]}, "project_id": {"$ref": "#/$defs/Id"}, "object_ref": {"$ref": "#/$defs/Id"}, "object_revision_sha256": {"$ref": "#/$defs/Digest"}, "decision_sha256": {"$ref": "#/$defs/Digest"}, "effect": {"enum": ["ARCHIVE", "DELETE"]}, "issued_at": {"$ref": "#/$defs/Timestamp"}, "expires_at": {"$ref": "#/$defs/Timestamp"}, "one_shot": {"const": true}, "evidence_ref": {"$ref": "#/$defs/Id"}, "evidence_sha256": {"$ref": "#/$defs/Digest"}}},
+        "else": {"properties": {"authorization_id": {"type": "null"}, "authorization_revision": {"type": "null"}, "authorization_sha256": {"type": "null"}, "authority_kind": {"type": "null"}, "project_id": {"type": "null"}, "object_ref": {"type": "null"}, "object_revision_sha256": {"type": "null"}, "decision_sha256": {"type": "null"}, "effect": {"type": "null"}, "issued_at": {"type": "null"}, "expires_at": {"type": "null"}, "one_shot": {"type": "null"}, "evidence_ref": {"type": "null"}, "evidence_sha256": {"type": "null"}}}}
+      ]
+    },
+    "StorageEffectReceiptBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "receipt_ref", "receipt_sha256", "project_id", "object_ref", "object_revision_sha256", "decision_sha256", "authorization_sha256", "effect", "result", "observed_at", "before_observation_sha256", "after_observation_sha256", "reason_codes", "effect_performed_by_module", "automatic_retry_authorized"],
+      "properties": {
+        "record_type": {"const": "StorageEffectReceiptBinding"}, "contract_state": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+        "receipt_ref": {"$ref": "#/$defs/NullableId"}, "receipt_sha256": {"$ref": "#/$defs/NullableDigest"}, "project_id": {"$ref": "#/$defs/NullableId"}, "object_ref": {"$ref": "#/$defs/NullableId"},
+        "object_revision_sha256": {"$ref": "#/$defs/NullableDigest"}, "decision_sha256": {"$ref": "#/$defs/NullableDigest"}, "authorization_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "effect": {"oneOf": [{"enum": ["ARCHIVE", "DELETE"]}, {"type": "null"}]}, "result": {"oneOf": [{"enum": ["VERIFIED_ARCHIVED", "VERIFIED_DELETED", "FAILED_KNOWN", "PARTIAL", "UNKNOWN"]}, {"type": "null"}]}, "observed_at": {"$ref": "#/$defs/NullableTimestamp"}, "before_observation_sha256": {"$ref": "#/$defs/NullableDigest"}, "after_observation_sha256": {"$ref": "#/$defs/NullableDigest"}, "reason_codes": {"$ref": "#/$defs/Reasons"},
+        "effect_performed_by_module": {"const": false}, "automatic_retry_authorized": {"const": false}
+      },
+      "allOf": [
+        {"if": {"properties": {"result": {"const": "VERIFIED_ARCHIVED"}}}, "then": {"properties": {"effect": {"const": "ARCHIVE"}, "after_observation_sha256": {"$ref": "#/$defs/Digest"}}}},
+        {"if": {"properties": {"result": {"const": "VERIFIED_DELETED"}}}, "then": {"properties": {"effect": {"const": "DELETE"}, "after_observation_sha256": {"$ref": "#/$defs/Digest"}}}},
+        {"if": {"properties": {"result": {"enum": ["FAILED_KNOWN", "PARTIAL", "UNKNOWN"]}}}, "then": {"properties": {"after_observation_sha256": {"type": "null"}}}},
+        {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}}, "then": {"properties": {"receipt_ref": {"$ref": "#/$defs/Id"}, "receipt_sha256": {"$ref": "#/$defs/Digest"}, "project_id": {"$ref": "#/$defs/Id"}, "object_ref": {"$ref": "#/$defs/Id"}, "object_revision_sha256": {"$ref": "#/$defs/Digest"}, "decision_sha256": {"$ref": "#/$defs/Digest"}, "authorization_sha256": {"$ref": "#/$defs/Digest"}, "effect": {"enum": ["ARCHIVE", "DELETE"]}, "result": {"enum": ["VERIFIED_ARCHIVED", "VERIFIED_DELETED", "FAILED_KNOWN", "PARTIAL", "UNKNOWN"]}, "observed_at": {"$ref": "#/$defs/Timestamp"}, "before_observation_sha256": {"$ref": "#/$defs/Digest"}}},
+        "else": {"properties": {"receipt_ref": {"type": "null"}, "receipt_sha256": {"type": "null"}, "project_id": {"type": "null"}, "object_ref": {"type": "null"}, "object_revision_sha256": {"type": "null"}, "decision_sha256": {"type": "null"}, "authorization_sha256": {"type": "null"}, "effect": {"type": "null"}, "result": {"type": "null"}, "observed_at": {"type": "null"}, "before_observation_sha256": {"type": "null"}, "after_observation_sha256": {"type": "null"}, "reason_codes": {"maxItems": 0}}}}
+      ]
+    },
+    "StorageDispositionPublicProjection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "record_type", "decision", "proposed_effect", "reason_codes", "private_coordinate_suppressed", "effect_started"],
+      "properties": {"schema": {"const": "bai.task017.storage-lifecycle-gc.v1"}, "record_type": {"const": "StorageDispositionPublicProjection"}, "decision": {"enum": ["KEEP", "ARCHIVE_PROPOSED", "DELETE_PROPOSED", "NO_ACTION_ALREADY_ABSENT", "BLOCKED", "UNKNOWN"]}, "proposed_effect": {"oneOf": [{"enum": ["ARCHIVE", "DELETE"]}, {"type": "null"}]}, "reason_codes": {"$ref": "#/$defs/Reasons"}, "private_coordinate_suppressed": {"const": true}, "effect_started": {"const": false}}
+    },
+    "StorageEffectPublicProjection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "record_type", "contract_state", "effect", "result", "reason_codes", "private_coordinate_suppressed", "effect_performed_by_module", "automatic_retry_authorized"],
+      "properties": {"schema": {"const": "bai.task017.storage-lifecycle-gc.v1"}, "record_type": {"const": "StorageEffectPublicProjection"}, "contract_state": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]}, "effect": {"oneOf": [{"enum": ["ARCHIVE", "DELETE"]}, {"type": "null"}]}, "result": {"oneOf": [{"enum": ["VERIFIED_ARCHIVED", "VERIFIED_DELETED", "FAILED_KNOWN", "PARTIAL", "UNKNOWN"]}, {"type": "null"}]}, "reason_codes": {"$ref": "#/$defs/Reasons"}, "private_coordinate_suppressed": {"const": true}, "effect_performed_by_module": {"const": false}, "automatic_retry_authorized": {"const": false}}
+    }
+  }
+}

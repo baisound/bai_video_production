@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-035 REAPER Audio Finishing Foundation R0として、canonical Asset・Timeline Audio・Audio Workspace・Resource Admissionを参照するbody-free DAW capability、Session Plan、project snapshot、one-shot Human authorization、external execution・QA・Human approval・Audio Round-trip manifest契約を追加しました。REAPER起動・project/audio mutation・plugin操作・render・Asset昇格・Resolve配置・Release/Deploy/Productionは別Gateです。
 - TASK-008 Multimodal Scoring R0として、既存TASK-005/006/007/024のcanonical feature座標だけを参照するprovider-neutral固定小数点scoring contractを追加しました。required欠落、UNKNOWN、STALE/REVOKED、provenance不一致をfail-closedで分離し、Human review必須・Edit Plan自動変更なしを固定しています。実media/OCR/provider実行、Human decision、Release、Deployは別Gateです。
 - TASK-021 Integrated Dashboard / Operations Foundation R0として、canonical Job・Evidence・Resource・Privacy・Audit・Checkpoint truthを複製せず参照するbody-free read model、staleness・alert・incident分類、operation proposal・Human confirmation・external receipt境界、public/private projectionを追加しました。DashboardからのJob・store・process・app・Provider・通知・Production effectは別Gateです。
 

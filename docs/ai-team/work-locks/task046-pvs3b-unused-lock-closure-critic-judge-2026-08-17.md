@@ -82,4 +82,3 @@ Result: Critical 0 / High 0 / Medium 0.
 - `IMPLEMENTATION_OR_DOMAIN_EFFECT_AUTHORIZED`: NO
 - `REGISTRY_WRITE_READY`: PASS
 - residual Critical / High / Medium: 0 / 0 / 0
-

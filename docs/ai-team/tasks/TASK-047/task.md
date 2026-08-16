@@ -56,7 +56,13 @@ implementation/probe Authorization.
   boundary and TASK-043-owned durable recovery binding;
 - explicit user selection of one Owner audio input;
 - durable capture session and immutable segment identities;
-- start, pause, resume and stop with a continuously visible recording state;
+- start, pause, resume and stop while the exact selected OBS 32.2.1 process remains running;
+- pause/resume/stop must validate the same OBS process ID and executable path used at start;
+- show a continuously visible `学習データ録音中` / `一時停止中` state so a forgotten
+  capture cannot silently consume disk or other resources;
+- provide a real-time Peak/RMS GAIN meter with clipping indication before and during capture,
+  without changing preamp, +48 V, PAD, HPF, OS, OBS mixer, filter or device settings;
+- let the user choose the recording destination, maximum duration and free-space stop floor;
 - the OBS real-time callback only copies bounded native frames and minimum
   metadata into a non-blocking ring/IPC boundary; it performs no resampling,
   bit-depth conversion, analysis, encryption or filesystem write;
@@ -94,6 +100,10 @@ Evidence; they are not the final installation UX. The installer contract must:
   unless a later exact Human-authorized operation owns those changes;
 - keep install completion separate from module load, recording, Dataset,
   Training, Release and production admission;
+- include the installer, matching runtime/source ZIPs and SHA-256 manifest in the public
+  GitHub Technical Preview Release, and provide beginner-friendly Japanese and English
+  installation, build, recording, pause/resume, save and recovery guidance reachable from
+  the repository README;
 - carry exact version/hash, notices, source-offer and signing/admission Evidence.
   Code-signing and publisher UX remain a Release Gate; a local unsigned test
   package is not presented as a production installer.

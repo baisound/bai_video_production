@@ -20,9 +20,9 @@ download, OBS mutation, Plugin load, capture or recording.
 
 ## Release boundary
 
-The release workflow verifies `SHA256SUMS`, copies the three files under a dedicated
-`dist/task047-obs` directory and passes the resulting tree to the existing
-`gh release create` command. A missing or changed file stops before publication.
+The release workflow verifies `SHA256SUMS`, copies the three files and their checksum
+manifest into the existing flat `dist` release staging directory, and passes them to
+the existing `gh release create` command. A missing or changed file stops before publication.
 This implementation changes the future Release composition but does not create a Tag,
 GitHub Release or Deploy in this task.
 
@@ -37,6 +37,10 @@ recovery artifact. Correction: bind all three exact artifacts and their hashes a
 - Release omission path: 0
 - README private-path leak: 0
 - unsigned/OBS/recording false completion: 0
+- focused Release contract: `4 passed`
+- Windows full regression: `1273 passed, 1 skipped`
+- WSL2 Ubuntu full regression: `1274 passed`
+- Python compileall (Windows/WSL2): `PASS`
 - unresolved Critical/High/Medium: `0 / 0 / 0`
 
-Judge: `PASS_PENDING_SHARED_WORKFLOW_LOCK_HOST_AND_FULL_VALIDATION`.
+Judge: `PASS_FOR_DRAFT_PR`; actual Tag/GitHub Release creation remains a separate Release Gate.

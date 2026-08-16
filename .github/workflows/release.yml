@@ -31,6 +31,14 @@ jobs:
       - name: Verify tag matches package version
         shell: bash
         run: test "${{ inputs.tag }}" = "v$(python -c 'import ai_video_production; print(ai_video_production.__version__)')"
+      - name: Verify TASK-047 OBS release assets
+        shell: bash
+        run: |
+          cd packaging/release-assets/task047
+          sha256sum --check SHA256SUMS
+      - name: Stage TASK-047 OBS release assets
+        shell: bash
+        run: cp packaging/release-assets/task047/* dist/
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

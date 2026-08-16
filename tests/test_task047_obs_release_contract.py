@@ -43,7 +43,7 @@ def test_release_workflow_verifies_and_uploads_obs_assets() -> None:
     assert "Verify TASK-047 OBS release assets" in text
     assert "sha256sum --check SHA256SUMS" in text
     assert "packaging/release-assets/task047/*" in text
-    assert "dist/task047-obs" in text
+    assert "cp packaging/release-assets/task047/* dist/" in text
     assert "gh release create" in text
 
 

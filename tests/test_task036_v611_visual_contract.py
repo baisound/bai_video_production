@@ -354,3 +354,31 @@ def test_scene_design_preserves_human_and_generation_boundaries() -> None:
         assert marker in SHELL_HTML
     assert "continuity_generate" not in SHELL_HTML
     assert "continuity_delete" not in SHELL_HTML
+
+
+def test_start_end_projects_human_approved_shot_feasibility() -> None:
+    for marker in (
+        'id="generationSafetySummary"',
+        "const generationCheckLabels=Object.freeze",
+        "function reviewGenerationScene(model,row)",
+        "function renderGenerationSafety(model)",
+        "if(model.plan_status!=='APPROVED')",
+        "generation_safety_prepare_review",
+        "expected_planning_snapshot_sha256:model.planning_snapshot_sha256",
+        "expected_safety_snapshot_sha256:model.safety_snapshot_sha256",
+        "generation_safety_apply_review",
+        "reviewed_by:reviewer",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_start_end_feasibility_does_not_gain_execution_authority() -> None:
+    for marker in (
+        "Provider・課金・Candidate生成は開始しません。",
+        "この画面はFEASIBILITYだけを記録します。Provider・課金・Candidate生成・Human ACCEPT・Resolve/Cubase操作は開始しません。",
+        "if(!['CUT','DIRECT_CONTINUATION','MATCH_CUT','GRAPHIC_TRANSITION'].includes(continuity))return",
+        "if(!['NEW','PREV_END'].includes(startSource))return",
+    ):
+        assert marker in SHELL_HTML
+    assert "generation_safety_execute" not in SHELL_HTML
+    assert "generation_safety_accept" not in SHELL_HTML

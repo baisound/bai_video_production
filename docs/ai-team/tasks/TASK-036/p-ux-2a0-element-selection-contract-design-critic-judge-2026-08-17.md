@@ -1,8 +1,8 @@
 # TASK-036 P-UX-2A0 — Element / Selection Contract Inventory
 
-Date: `2026-08-17`  
-Base: `3daf14163b3547c9999ac26ddd5324fa234d33e0`  
-Unit: `TASK-036 / P-UX-2A0`  
+Date: `2026-08-17`
+Base: `3daf14163b3547c9999ac26ddd5324fa234d33e0`
+Unit: `TASK-036 / P-UX-2A0`
 Effect: `DATA_ONLY / NO_PROVIDER_OR_MEDIA_EFFECT`
 
 ## Design

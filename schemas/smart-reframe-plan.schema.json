@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/smart-reframe-plan.schema.json",
+  "title": "TASK-018 Smart Reframe Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "frameRate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "numerator": { "type": "integer", "minimum": 1 },
+        "denominator": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["numerator", "denominator"]
+    },
+    "frameRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "start": { "type": "integer", "minimum": 0 },
+        "end_exclusive": { "type": "integer", "minimum": 1, "maximum": 9223372036854775807 }
+      },
+      "required": ["start", "end_exclusive"]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "enum": ["TASK005_SCENE_BOUNDARY", "TASK008_MULTIMODAL_SCORING", "HUMAN_REVIEW"]
+        },
+        "contract_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "row_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "row_sha256": { "$ref": "#/$defs/sha256" },
+        "validity": { "enum": ["CURRENT_VALID", "UNKNOWN", "STALE", "REVOKED"] }
+      },
+      "required": ["source", "contract_version", "manifest_sha256", "row_id", "row_sha256", "validity"]
+    }
+  },
+  "properties": {
+    "plan_version": { "const": "1.0.0" },
+    "task_owner": { "const": "TASK-018" },
+    "upstream_edit_plan_owner": { "const": "TASK-007" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "asset_sha256": { "$ref": "#/$defs/sha256" },
+        "geometry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "width": { "type": "integer", "minimum": 1, "maximum": 32768 },
+            "height": { "type": "integer", "minimum": 1, "maximum": 32768 }
+          },
+          "required": ["width", "height"]
+        },
+        "pixel_aspect_ratio": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "numerator": { "const": 1 },
+            "denominator": { "const": 1 }
+          },
+          "required": ["numerator", "denominator"]
+        },
+        "frame_rate": { "$ref": "#/$defs/frameRate" },
+        "total_frames": { "type": "integer", "minimum": 1, "maximum": 9223372036854775807 }
+      },
+      "required": ["asset_id", "asset_sha256", "geometry", "pixel_aspect_ratio", "frame_rate", "total_frames"]
+    },
+    "source_edit_plan_sha256": { "$ref": "#/$defs/sha256" },
+    "source_keep_ranges": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": { "$ref": "#/$defs/frameRange" }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "profile_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "width": { "type": "integer", "minimum": 1, "maximum": 32768 },
+        "height": { "type": "integer", "minimum": 1, "maximum": 32768 },
+        "frame_rate": { "$ref": "#/$defs/frameRate" },
+        "output_family": { "const": "VERTICAL" },
+        "adapter_family": { "const": "PROVIDER_NEUTRAL" },
+        "remotion_compatibility": { "const": "CONTRACT_ONLY_UNPROVEN" },
+        "profile_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "required": [
+        "profile_id", "profile_version", "width", "height", "frame_rate",
+        "output_family", "adapter_family", "remotion_compatibility", "profile_sha256"
+      ]
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "segment_id": { "type": "string", "pattern": "^reframe-[0-9]{6}$" },
+          "source_range_frames": { "$ref": "#/$defs/frameRange" },
+          "output_range_frames": { "$ref": "#/$defs/frameRange" },
+          "crop": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "x": { "type": "integer", "minimum": 0 },
+              "y": { "type": "integer", "minimum": 0 },
+              "width": { "type": "integer", "minimum": 1, "maximum": 32768 },
+              "height": { "type": "integer", "minimum": 1, "maximum": 32768 }
+            },
+            "required": ["x", "y", "width", "height"]
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": { "$ref": "#/$defs/evidence" }
+          },
+          "decision_state": { "const": "PROPOSED_FOR_HUMAN_REVIEW" }
+        },
+        "required": [
+          "segment_id", "source_range_frames", "output_range_frames", "crop", "evidence", "decision_state"
+        ]
+      }
+    },
+    "state": {
+      "enum": ["READY_FOR_HUMAN_REVIEW", "UNKNOWN_EVIDENCE", "STALE_OR_REVOKED_EVIDENCE"]
+    },
+    "human_review_required": { "const": true },
+    "media_read_performed": { "const": false },
+    "remotion_execution_performed": { "const": false },
+    "render_authorized": { "const": false },
+    "timeline_mutation_authorized": { "const": false },
+    "external_write_authorized": { "const": false },
+    "plan_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "required": [
+    "plan_version", "task_owner", "upstream_edit_plan_owner", "source", "source_edit_plan_sha256",
+    "source_keep_ranges", "target", "segments", "state", "human_review_required", "media_read_performed",
+    "remotion_execution_performed", "render_authorized", "timeline_mutation_authorized",
+    "external_write_authorized", "plan_sha256"
+  ]
+}

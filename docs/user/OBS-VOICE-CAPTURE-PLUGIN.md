@@ -295,6 +295,9 @@ Package identity、exact 3-entry deployment map、install transactionは固定�
 journal hash-chain、現targetのbytes/SHA-256を再照合し、targetを再書込みせずreceiptを封印しました。
 将来の導入・更新でも、次の順序を崩さないでください。
 
+この章の手動手順は最終インストーラーが同じGateを実装・証跡化するためのreferenceです。
+最終利用者へ手動コピーを要求する設計ではありません。
+
 1. Packageを許可されたstaging領域へ展開する。
 2. 展開後manifest、file size、SHA-256、containmentを検証する。
 3. OBS processが0件であることをもう一度確認する。

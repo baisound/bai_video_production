@@ -48,3 +48,19 @@ runner, filesystem handle, Provider, model, or native-runtime input. It neither
 reads media nor proves detector accuracy. FFmpeg/OpenCV/PySceneDetect selection,
 real-media analysis, Human review, downstream editing, and Native H3 remain
 separate parked Gates.
+
+## R1B1 real-detector admission contract
+
+`scene_detector_admission.py` classifies immutable, typed Evidence receipt
+bindings for a closed detector-candidate set. It computes the exact missing
+Evidence set and deterministic admission state, preserving separate License,
+Acquisition and Capability Gates. Only an exact complete set of twelve
+`CURRENT_VALID_JUDGED` claims can produce `ADMITTED`.
+
+`ADMITTED` remains contract-only: the selected runtime candidate is fixed to
+`NONE`, and runtime, media-read and external-effect authority remain false.
+FFmpeg Scene Filter is only the preferred contract family. Binary identity,
+license/provenance, offline materialization, runtime capability, resource bounds
+and output normalization require separately authorized Evidence. Real media,
+dependency acquisition/install, FFmpeg/OpenCV/PySceneDetect execution, Human
+license acceptance, downstream editing/generation and Native H3 remain parked.

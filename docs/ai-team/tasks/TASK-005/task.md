@@ -64,3 +64,28 @@ license/provenance, offline materialization, runtime capability, resource bounds
 and output normalization require separately authorized Evidence. Real media,
 dependency acquisition/install, FFmpeg/OpenCV/PySceneDetect execution, Human
 license acceptance, downstream editing/generation and Native H3 remain parked.
+
+## R1C0 artifact, probe, and output Evidence contract
+
+`scene_detector_evidence.py` supplies the pure data boundary beneath R1B1. It
+keeps expected publisher coordinates and observed artifact coordinates
+immutable and separate, derives an exact `MATCH` / `MISMATCH` /
+`NOT_OBSERVED` / `OBSERVED_ONLY_UNBOUND` / `UNKNOWN` comparison, and rejects a
+both-null placeholder. Signature requirements are explicitly `REQUIRED`,
+`NOT_APPLICABLE`, or `UNKNOWN`; null never silently means either of the first
+two.
+
+Typed license/provenance, contained-materialization, bounded probe, and
+normalized-event receipts bind their exact lower constituent receipts. Only a
+current-valid exact receipt can be projected one-to-one into an existing R1B1
+`DetectorEvidenceClaim`, and the projection cannot strengthen one receipt into
+an unrelated Evidence kind. Incident-bearing output, a nonmatching artifact,
+unresolved SPDX/license state, stale/revoked Evidence, or an incomplete probe
+remains fail-closed.
+
+R1C0 executes nothing and supplies no actual artifact, license clearance,
+installation, capability, media, or detector result. It accepts no path, raw
+bytes, command, runner, callback, filesystem handle, or media input. R1C-A
+acquisition, R1C-B materialization, R1C-C no-media process probe, R1C-D
+synthetic-media probe, R1C-E real-media/Human acceptance, and Native H3 remain
+separate parked authority Gates.

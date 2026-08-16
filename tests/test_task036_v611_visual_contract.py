@@ -474,3 +474,32 @@ def test_audio_workspace_keeps_external_execution_and_ambiguous_plan_disabled() 
         assert marker in SHELL_HTML
     assert "audio_workspace_execute" not in SHELL_HTML
     assert "audio_placement_execute" not in SHELL_HTML
+
+
+def test_ai_video_connects_completed_output_adoption_to_audit_candidate() -> None:
+    for marker in (
+        "function prepareGenerationOutputAdoption(model,item)",
+        "function recoverGenerationOutputAdoption(item)",
+        "generation_output_adoption_prepare",
+        "generation_output_adoption_apply",
+        "generation_output_adoption_recover",
+        "expected_execution_snapshot_sha256:control.execution_snapshot_sha256",
+        "expected_queue_snapshot_sha256:model.queue_snapshot_sha256",
+        "expected_production_snapshot_sha256:production.snapshot_sha256",
+        "expected_prompt_snapshot_sha256:prompt.prompt_snapshot_sha256",
+        "expected_adoption_snapshot_sha256:adoption.adoption_snapshot_sha256",
+        "item.adoption_status==='READY'?'検証して監査候補へ登録':'Strategy/Parent binding待ち'",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_output_adoption_does_not_gain_provider_or_human_accept_authority() -> None:
+    for marker in (
+        "button.disabled=!!adoption.recovery?.required||item.adoption_status!=='READY'",
+        "中断した監査候補登録の残りだけを再開しますか？",
+        "Provider再実行・課金・Human ACCEPT/LOCK・公開は行いません。",
+        "監査候補登録もProvider再実行・課金・Human ACCEPT/LOCK・公開・NLE操作を行いません。",
+    ):
+        assert marker in SHELL_HTML
+    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
+    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML

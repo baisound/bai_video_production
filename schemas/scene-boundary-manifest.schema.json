@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/scene-boundary-manifest.schema.json",
+  "title": "TASK-005 Scene Boundary Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "manifest_version": { "const": "1.0.0" },
+    "task_owner": { "const": "TASK-005" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "source_asset_id": {
+          "type": "string",
+          "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "source_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "frame_rate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "numerator": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+            "denominator": { "type": "integer", "minimum": 1, "maximum": 100000 }
+          },
+          "required": ["numerator", "denominator"]
+        },
+        "total_frames": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        }
+      },
+      "required": ["source_asset_id", "source_sha256", "frame_rate", "total_frames"]
+    },
+    "detector_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "profile_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "config_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      },
+      "required": ["profile_id", "profile_version", "config_sha256"]
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "scene_id": { "type": "string", "pattern": "^scene-[0-9]{6}$" },
+          "range_frames": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "start": { "type": "integer", "minimum": 0 },
+              "end_exclusive": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9223372036854775807
+              }
+            },
+            "required": ["start", "end_exclusive"]
+          },
+          "confidence_milli": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "evidence_codes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$" }
+          },
+          "decision_state": { "const": "PROPOSED_FOR_REVIEW" }
+        },
+        "required": [
+          "scene_id",
+          "range_frames",
+          "confidence_milli",
+          "evidence_codes",
+          "decision_state"
+        ]
+      }
+    },
+    "review_state": { "const": "REVIEW_REQUIRED" },
+    "media_read_performed": { "const": false },
+    "auto_apply_authorized": { "const": false },
+    "generation_authorized": { "const": false },
+    "timeline_mutation_authorized": { "const": false },
+    "manifest_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "manifest_version",
+    "task_owner",
+    "source",
+    "detector_profile",
+    "scenes",
+    "review_state",
+    "media_read_performed",
+    "auto_apply_authorized",
+    "generation_authorized",
+    "timeline_mutation_authorized",
+    "manifest_sha256"
+  ]
+}

@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-013に、既存Creative Generation・Asset・rights・capability/license/resource Evidenceの正本座標だけを参照し、UNKNOWNをfail-closedで保持しながら候補routeの除外・選択理由を決定論的に記録するbody-freeなSFX provider-neutral routing-plan compilerを追加しました。Provider呼出し、Credential解決、H3 Foley・SFX生成、Asset公開・配置、Resolve、Release/Deployは別Gateのままです。
 - TASK-013に、既存Creative Generation・Asset・rights・Evidenceの正本座標だけを参照し、UNKNOWNをfail-closedで保持しながら候補routeの除外・選択理由を決定論的に記録するbody-freeなBGM provider-neutral routing-plan compilerを追加しました。Provider呼出し、Credential解決、BGM生成、Asset公開・配置、Resolve、Release/Deployは別Gateのままです。
 - TASK-014 Local Primaryナレーション事前判定I1を追加し、body-freeテキストdigest、hosted VoiceProfileRevision、ZERO_SHOT_LOCAL/FINE_TUNED_LOCAL分離、engine/model/runtime/license/resource/rights/Consentの構造化binding、canonical digest、public/private projection、fail-closed評価と`execution_started=false`を固定。モデル取得、local render/GPU/audio、paid provider、48 kHz publication、録音・保存、Release/Deployは別Gateのままです。
 - Added TASK-005 R1C0 data-only detector Evidence contracts for separate expected/observed artifact coordinates, exact current-valid comparison, license/provenance and contained-materialization receipts, bounded probe plans/results, typed normalized events and fail-closed one-to-one R1B1 claim projection. Acquisition, install, process/media execution, Human license acceptance, Native H3, Release and Deploy remain separate Gates.

@@ -62,8 +62,16 @@ def test_pux1c_gate_exercises_visual_interaction_focus_and_restart() -> None:
         "$nameAudioMute",
         "native_picker_cancelled_without_exit",
         "conversation_free_restart_passed",
+        "Assert-DarkClientCoverage",
+        "maximized_client_coverage_passed = $maximizedClientCoverage",
     ):
         assert marker in SCRIPT
+
+    semantic_ready = SCRIPT.index('if (-not $semanticReady) {\n    throw "Packaged Shell attempt')
+    post_ready_restore = SCRIPT.index("ShowWindow($handle, 9)")
+    post_ready_maximize = SCRIPT.index("ShowWindow($handle, 3)", post_ready_restore)
+    closure_return = SCRIPT.index("return [ordered]@{ process = $process", post_ready_maximize)
+    assert semantic_ready < post_ready_restore < post_ready_maximize < closure_return
 
 
 def test_pux1c_gate_keeps_external_and_human_authority_false() -> None:

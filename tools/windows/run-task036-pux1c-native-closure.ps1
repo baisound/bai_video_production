@@ -233,6 +233,32 @@ function Capture-Window(
   }
 }
 
+function Assert-DarkClientCoverage([string]$ImagePath) {
+  $bitmap = [System.Drawing.Bitmap]::new($ImagePath)
+  try {
+    $sampleRatios = @(
+      @(0.88, 0.25),
+      @(0.88, 0.50),
+      @(0.88, 0.75),
+      @(0.25, 0.88),
+      @(0.50, 0.88),
+      @(0.75, 0.88)
+    )
+    $brightSamples = @($sampleRatios | Where-Object {
+      $x = [Math]::Min($bitmap.Width - 1, [Math]::Floor($bitmap.Width * $_[0]))
+      $y = [Math]::Min($bitmap.Height - 1, [Math]::Floor($bitmap.Height * $_[1]))
+      $pixel = $bitmap.GetPixel($x, $y)
+      $pixel.R -ge 240 -and $pixel.G -ge 240 -and $pixel.B -ge 240
+    })
+    if ($brightSamples.Count -ne 0) {
+      throw "Maximized V6.1.1 client did not cover the captured window; bright edge samples=$($brightSamples.Count)."
+    }
+    return $true
+  } finally {
+    $bitmap.Dispose()
+  }
+}
+
 function Start-ClosureApp([int]$Attempt) {
   $start = [System.Diagnostics.ProcessStartInfo]::new()
   $start.FileName = $exe
@@ -277,6 +303,16 @@ function Start-ClosureApp([int]$Attempt) {
   if (-not $semanticReady) {
     throw "Packaged Shell attempt $Attempt did not expose the Home/File semantic controls. Observed buttons: $($names -join ', ')"
   }
+  # Maximize again after the WebView child is semantic-ready. Maximizing only
+  # the early native host can race child creation and leave a fixed 1600x900
+  # WebView inside a larger maximized client area.
+  [void][Task036PuxWin32]::ShowWindow($handle, 9)
+  Start-Sleep -Milliseconds 250
+  [void][Task036PuxWin32]::ShowWindow($handle, 3)
+  [void][Task036PuxWin32]::SetForegroundWindow($handle)
+  Start-Sleep -Seconds 2
+  $root = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
+  $names = Get-ButtonNames $root
   return [ordered]@{ process = $process; handle = $handle; root = $root; names = $names }
 }
 
@@ -324,6 +360,7 @@ try {
 
   $captures = @()
   $captures += Capture-Window $first.process '01-home.png'
+  $maximizedClientCoverage = Assert-DarkClientCoverage (Join-Path $evidenceRoot '01-home.png')
 
   $fileButton = Find-Button $first.root $nameFile
   Invoke-Button $fileButton
@@ -499,6 +536,7 @@ try {
       captures = $captures
       text_scale_percent = $textScale
       monitor_dpi_and_text_scale_recorded_separately = $true
+      maximized_client_coverage_passed = $maximizedClientCoverage
       mock_demo_state_used = $false
       product_projection_used = $true
     }

@@ -73,9 +73,21 @@ def test_resolve_comfy_output_blocks_traversal_and_symlink(tmp_path):
     root = tmp_path / "out"; root.mkdir()
     good = root / "ok.mp4"; good.write_bytes(b"x")
     assert resolve_comfy_output(root, {"filename":"ok.mp4","type":"output"}) == good
+    windows_output = root / "bai-task013" / "EXEC-NATIVE-1" / "result.mp4"
+    windows_output.parent.mkdir(parents=True)
+    windows_output.write_bytes(b"video")
+    assert resolve_comfy_output(root, {
+        "filename": "result.mp4",
+        "subfolder": r"bai-task013\EXEC-NATIVE-1",
+        "type": "output",
+    }) == windows_output
     for desc in [
         {"filename":"../x.mp4","type":"output"},
         {"filename":"x.mp4","subfolder":"../evil","type":"output"},
+        {"filename":"x.mp4","subfolder":r"..\evil","type":"output"},
+        {"filename":"x.mp4","subfolder":r"C:\evil","type":"output"},
+        {"filename":"x.mp4","subfolder":r"\\server\share","type":"output"},
+        {"filename":r"nested\x.mp4","type":"output"},
         {"filename":"ok.mp4","type":"temp"},
     ]:
         with pytest.raises(ProductError): resolve_comfy_output(root, desc)

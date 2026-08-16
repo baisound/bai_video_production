@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 import ipaddress
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import shutil
 import time
@@ -467,12 +467,26 @@ def resolve_comfy_output(root: Path, descriptor: dict[str, Any]) -> Path:
         raise ProductError("ERR_SECURITY_COMFY_OUTPUT_TYPE", "only ComfyUI output files may become canonical Assets", ProductErrorCategory.SECURITY)
     filename = descriptor.get("filename")
     subfolder = descriptor.get("subfolder", "")
-    if not isinstance(filename, str) or not filename or Path(filename).name != filename or "\x00" in filename:
+    if (
+        not isinstance(filename, str)
+        or not filename
+        or Path(filename).name != filename
+        or "/" in filename
+        or "\\" in filename
+        or "\x00" in filename
+    ):
         raise ProductError("ERR_SECURITY_COMFY_OUTPUT_PATH", "invalid ComfyUI output filename", ProductErrorCategory.SECURITY)
-    if not isinstance(subfolder, str) or "\x00" in subfolder or "\\" in subfolder:
+    if not isinstance(subfolder, str) or "\x00" in subfolder:
         raise ProductError("ERR_SECURITY_COMFY_OUTPUT_PATH", "invalid ComfyUI output subfolder", ProductErrorCategory.SECURITY)
-    parts = [] if not subfolder else subfolder.split("/")
-    if any(p in {"", ".", ".."} for p in parts) or Path(subfolder).is_absolute():
+    normalized_subfolder = subfolder.replace("\\", "/")
+    windows_subfolder = PureWindowsPath(subfolder)
+    parts = [] if not normalized_subfolder else normalized_subfolder.split("/")
+    if (
+        any(part in {"", ".", ".."} for part in parts)
+        or PurePosixPath(normalized_subfolder).is_absolute()
+        or windows_subfolder.is_absolute()
+        or bool(windows_subfolder.drive)
+    ):
         raise ProductError("ERR_SECURITY_COMFY_OUTPUT_PATH", "ComfyUI output traversal is forbidden", ProductErrorCategory.SECURITY)
     canonical_root = root.resolve(strict=True)
     candidate = canonical_root.joinpath(*parts, filename)

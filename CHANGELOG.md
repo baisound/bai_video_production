@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-013 Native H3 のComfyUI出力解決で、Windows形式の相対サブフォルダーを安全に正規化し、親移動・ドライブ指定・UNCパス・ファイル名内区切り文字を拒否するようにしました。実機再試験では最終MP4のbytes/SHA一致を確認済みです。Asset採用、timeline、Release、Deployは別Gateです。
 - TASK-013に、既存Creative Generation・Asset・rights・capability/license/resource Evidenceの正本座標だけを参照し、UNKNOWNをfail-closedで保持しながら候補routeの除外・選択理由を決定論的に記録するbody-freeなSFX provider-neutral routing-plan compilerを追加しました。Provider呼出し、Credential解決、H3 Foley・SFX生成、Asset公開・配置、Resolve、Release/Deployは別Gateのままです。
 - TASK-013に、既存Creative Generation・Asset・rights・Evidenceの正本座標だけを参照し、UNKNOWNをfail-closedで保持しながら候補routeの除外・選択理由を決定論的に記録するbody-freeなBGM provider-neutral routing-plan compilerを追加しました。Provider呼出し、Credential解決、BGM生成、Asset公開・配置、Resolve、Release/Deployは別Gateのままです。
 - TASK-014 Local Primaryナレーション事前判定I1を追加し、body-freeテキストdigest、hosted VoiceProfileRevision、ZERO_SHOT_LOCAL/FINE_TUNED_LOCAL分離、engine/model/runtime/license/resource/rights/Consentの構造化binding、canonical digest、public/private projection、fail-closed評価と`execution_started=false`を固定。モデル取得、local render/GPU/audio、paid provider、48 kHz publication、録音・保存、Release/Deployは別Gateのままです。

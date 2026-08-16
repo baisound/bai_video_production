@@ -168,3 +168,33 @@ def test_asset_review_recovery_and_empty_states_fail_closed() -> None:
     assert "if(!audit.recovery?.required&&candidate.available_human_actions?.length)" in SHELL_HTML
     assert "既存のProduction Control復旧を完了するまで新しい判断はできません。" in SHELL_HTML
     assert "監査済みCandidateはまだありません。" in SHELL_HTML
+
+
+def test_planning_projects_real_proposal_and_separates_go_from_install() -> None:
+    for marker in (
+        'id="planningSummary"',
+        "function renderPlanning(model)",
+        "function approvePlanning(model,workspace,blueprint)",
+        "planning_prepare_go",
+        "expected_snapshot_sha256:model.snapshot_sha256",
+        "planning_approve_go",
+        "approved_by:actor.trim()",
+        "function installPlanning(model,workspace)",
+        "planning_prepare_install_plan",
+        "expected_proposal_snapshot_sha256:model.snapshot_sha256",
+        "expected_production_snapshot_sha256:model.installation.production.snapshot_sha256",
+        "planning_apply_install_plan",
+        "workspace.go_status==='GO_REQUIRED'",
+        "workspace.go_status==='APPROVED'&&model.installation.status==='NOT_INSTALLED'",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_planning_does_not_invent_ai_proposal_or_execution_authority() -> None:
+    for marker in (
+        'data-disabled-reason="AI Proposal生成のtyped Application Serviceが未接続です"',
+        "AI Proposal生成は実行しません。",
+        "Provider: 未開始 / Paid: 未許可 / Budget reservation: なし / Resolve: 未変更 / Publish: 未開始",
+        "if(warnings.length&&!window.confirm",
+    ):
+        assert marker in SHELL_HTML

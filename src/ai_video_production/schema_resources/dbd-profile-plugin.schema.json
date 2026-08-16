@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/dbd-profile-plugin.schema.json",
+  "title": "TASK-009 DBD Profile Plugin Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "producer_task_id": { "type": "string", "pattern": "^TASK-[0-9]{3}$" },
+        "contract_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" }
+      },
+      "required": ["producer_task_id", "contract_id"]
+    },
+    "featureRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "feature_key": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){0,7}$" },
+        "modality": { "enum": ["AUDIO", "VISUAL", "LANGUAGE_TEXT", "OCR_TEXT"] },
+        "weight_milli": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "raw_range": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minimum": { "type": "integer", "minimum": -1000000000, "maximum": 1000000000 },
+            "maximum": { "type": "integer", "minimum": -1000000000, "maximum": 1000000000 }
+          },
+          "required": ["minimum", "maximum"]
+        },
+        "polarity": { "enum": ["DIRECT", "INVERSE"] },
+        "required": { "type": "boolean" },
+        "optional_missing_value_milli": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000 },
+        "allowed_sources": {
+          "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/selector" }
+        }
+      },
+      "required": [
+        "feature_key", "modality", "weight_milli", "raw_range", "polarity", "required",
+        "optional_missing_value_milli", "allowed_sources"
+      ]
+    }
+  },
+  "properties": {
+    "snapshot_version": { "const": "1.0.0" },
+    "task_owner": { "const": "TASK-009" },
+    "plugin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plugin_id": { "const": "dbd.multimodal-profile" },
+        "version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+        "capabilities": {
+          "const": ["DECLARE_MULTIMODAL_SCORING_PROFILE", "MAP_DBD_SIGNAL_TAXONOMY"]
+        },
+        "input_schema_ids": { "const": ["task008.feature-coordinate.v1"] },
+        "output_schema_ids": {
+          "const": ["task008.scoring-profile.v1", "task009.dbd-profile-snapshot.v1"]
+        },
+        "failure_codes": {
+          "const": ["ERR_DBD_PROFILE_INVALID", "ERR_FEATURE_EVIDENCE_MISSING", "ERR_FEATURE_EVIDENCE_UNKNOWN"]
+        }
+      },
+      "required": ["plugin_id", "version", "capabilities", "input_schema_ids", "output_schema_ids", "failure_codes"]
+    },
+    "game_profile_identity": { "const": "DEAD_BY_DAYLIGHT" },
+    "scoring_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": { "const": "dbd.multimodal-advisory" },
+        "profile_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+        "rules": { "type": "array", "minItems": 3, "maxItems": 64, "items": { "$ref": "#/$defs/featureRule" } },
+        "profile_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "required": ["profile_id", "profile_version", "rules", "profile_sha256"]
+    },
+    "signal_taxonomy": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "signal_kind": {
+            "enum": [
+              "HUD_SURVIVOR_HEALTH", "HUD_GENERATOR_PROGRESS", "CHASE_INTENSITY", "EVENT_HOOK",
+              "EVENT_RESCUE", "EVENT_EXIT_GATE", "EVENT_MATCH_OUTCOME"
+            ]
+          },
+          "family": { "enum": ["HUD_STATE", "CHASE", "EVENT"] },
+          "feature_key": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){0,7}$" }
+        },
+        "required": ["signal_kind", "family", "feature_key"]
+      }
+    },
+    "runtime_feature_producer_state": { "const": "NOT_SELECTED" },
+    "human_review_required": { "const": true },
+    "media_read_performed": { "const": false },
+    "hud_detection_performed": { "const": false },
+    "game_process_accessed": { "const": false },
+    "automatic_edit_plan_mutation_authorized": { "const": false },
+    "timeline_mutation_authorized": { "const": false },
+    "external_effect_authorized": { "const": false },
+    "snapshot_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "required": [
+    "snapshot_version", "task_owner", "plugin", "game_profile_identity", "scoring_profile",
+    "signal_taxonomy", "runtime_feature_producer_state", "human_review_required", "media_read_performed",
+    "hud_detection_performed", "game_process_accessed", "automatic_edit_plan_mutation_authorized",
+    "timeline_mutation_authorized", "external_effect_authorized", "snapshot_sha256"
+  ]
+}

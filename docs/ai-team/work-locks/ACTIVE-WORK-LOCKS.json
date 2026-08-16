@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 17,
+  "registry_revision": 18,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "034c986eee90433d72cfc47a03ac7d6ac25c2d4b",
+  "audit_base_main_sha": "f7f55ec3f14842452a71a564b21b718ef282a830",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -744,76 +744,6 @@
         "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_SECURITY_PASS",
         "LOCK_CLOSURE_RELEASE_RECORD_HOSTED"
       ]
-    },
-    {
-      "lock_id": "BVP-INTEGRATION-LOCK-TASK047-POBS-RELEASE-INSTALLER-20260816",
-      "owner_agent": "開発担当2 / TASK-047 release integration owner",
-      "owner_thread_id": "01a00490-f4a3-7ab1-a3ea-fbda2ea50a02",
-      "lock_host_authority": "OWNER_STANDING_AUTONOMOUS_DEVELOPMENT_MODE_20260816_DEVELOPER2",
-      "task_unit": "TASK-047/P-OBS-RELEASE-INSTALLER",
-      "phase": "RELEASE_ASSET_AND_BUILD_GUIDE_INTEGRATION",
-      "hosting_branch": "codex/task-047-pobs-release-installer-lock-hosting",
-      "hosting_base_sha": "ea671ee75a6c1a6ef79756b33f68ecb07466c5b4",
-      "target_branch": "codex/task-047-pobs-release-installer-inclusion",
-      "expected_pre_integration_head": "c88d932dc1a91b7edcb810d43fb7393b0a6c7fc5",
-      "status": "ACTIVE",
-      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
-      "purpose": "ENSURE_EVERY_FUTURE_GITHUB_RELEASE_INCLUDES_THE_HASH_VERIFIED_OBS_PLUGIN_INSTALLER_AND_DOCUMENT_THE_COMPLETE_BUILD_FLOW",
-      "allowed_files": [
-        ".github/workflows/release.yml",
-        "CHANGELOG.md"
-      ],
-      "task_owned_files": [
-        "README.md",
-        "README.en.md",
-        "docs/ai-team/tasks/TASK-047/p-obs-release-installer-evidence-2026-08-16.md",
-        "packaging/release-assets/task047/**",
-        "tests/test_task047_obs_release_contract.py"
-      ],
-      "release_asset_invariants": [
-        "WINDOWS_INSTALLER_EXE_INCLUDED_IN_GITHUB_RELEASE",
-        "RUNTIME_AND_CORRESPONDING_SOURCE_ARCHIVES_INCLUDED",
-        "SHA256SUMS_VERIFIED_BEFORE_GH_RELEASE_CREATE",
-        "README_JAPANESE_AND_ENGLISH_BUILD_STEPS_REACHABLE",
-        "NO_INSTALL_LOAD_CAPTURE_OR_OWNER_VOICE_EFFECT"
-      ],
-      "denied": [
-        "UNRELATED_WORKFLOW_OR_SHARED_FILE",
-        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING",
-        "UNVERIFIED_OR_MUTABLE_BINARY_DOWNLOAD",
-        "TAG_OR_RELEASE_CREATION_DURING_IMPLEMENTATION",
-        "PLUGIN_INSTALL_LOAD_CAPTURE_RECORDING",
-        "OWNER_VOICE_DATASET_TRAINING_PRODUCTION_DEPLOY",
-        "FORCE_REBASE_RESET_ROLLBACK"
-      ],
-      "workflow_policy": "BUILD_OR_VERIFY_EXACT_ASSETS_FAIL_CLOSED_BEFORE_RELEASE_NO_STALE_FALLBACK",
-      "roadmap_delta": "NONE",
-      "prerequisites": [
-        "TASK047_INSTALLER_PR119_MERGED_POST_MERGE_GREEN",
-        "TASK047_INSTALLER_CHANGELOG_LOCK_CLOSED_PR121_POST_MERGE_GREEN",
-        "FRESH_MAIN_REGISTRY_AND_OVERLAP_ZERO",
-        "REPRODUCIBLE_INSTALLER_SHA256_MATCH",
-        "EXACT_SHARED_FILE_OWNERSHIP"
-      ],
-      "expiry_conditions": [
-        "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
-        "TARGET_BRANCH_OR_PATH_OVERLAP",
-        "INSTALLER_RUNTIME_SOURCE_OR_HASH_DRIFT",
-        "HOSTED_CHECK_NON_SUCCESS_OR_UNKNOWN",
-        "TARGET_PR_MERGED_OR_CLOSED",
-        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION"
-      ],
-      "release_conditions": [
-        "LOCK_HOST_MERGED_MAIN_READ_BACK_AND_POST_MERGE_GREEN",
-        "FOCUSED_RELEASE_CONTRACT_TESTS_PASS",
-        "WINDOWS_INSTALLER_REPRODUCIBLE_BUILD_PASS",
-        "FULL_WINDOWS_AND_WSL_REGRESSION_PASS",
-        "TARGET_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
-        "TARGET_PR_EXACT_MERGE_AND_POST_MERGE_GREEN",
-        "APPEND_ONLY_LOCK_CLOSURE_HOSTED"
-      ],
-      "automatic_retry": false,
-      "automatic_rollback_or_revert": false
     }
   ],
   "shared_integration_files": [
@@ -1309,6 +1239,104 @@
       "target_post_merge_security_run": 31936933314,
       "release_reason": "EXACT_CHANGELOG_ONLY_INTEGRATION_TARGET_MERGED_POST_MERGE_GREEN",
       "released_at": "2026-08-16T08:41:00Z",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK047-POBS-RELEASE-INSTALLER-20260816",
+      "owner_agent": "開発担当2 / TASK-047 release integration owner",
+      "owner_thread_id": "01a00490-f4a3-7ab1-a3ea-fbda2ea50a02",
+      "lock_host_authority": "OWNER_STANDING_AUTONOMOUS_DEVELOPMENT_MODE_20260816_DEVELOPER2",
+      "task_unit": "TASK-047/P-OBS-RELEASE-INSTALLER",
+      "phase": "RELEASE_ASSET_AND_BUILD_GUIDE_INTEGRATION",
+      "hosting_branch": "codex/task-047-pobs-release-installer-lock-hosting",
+      "hosting_base_sha": "ea671ee75a6c1a6ef79756b33f68ecb07466c5b4",
+      "target_branch": "codex/task-047-pobs-release-installer-inclusion",
+      "expected_pre_integration_head": "c88d932dc1a91b7edcb810d43fb7393b0a6c7fc5",
+      "status": "HOSTED_CLOSED_RELEASED",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "purpose": "ENSURE_EVERY_FUTURE_GITHUB_RELEASE_INCLUDES_THE_HASH_VERIFIED_OBS_PLUGIN_INSTALLER_AND_DOCUMENT_THE_COMPLETE_BUILD_FLOW",
+      "allowed_files": [
+        ".github/workflows/release.yml",
+        "CHANGELOG.md"
+      ],
+      "task_owned_files": [
+        "README.md",
+        "README.en.md",
+        "docs/ai-team/tasks/TASK-047/p-obs-release-installer-evidence-2026-08-16.md",
+        "packaging/release-assets/task047/**",
+        "tests/test_task047_obs_release_contract.py"
+      ],
+      "release_asset_invariants": [
+        "WINDOWS_INSTALLER_EXE_INCLUDED_IN_GITHUB_RELEASE",
+        "RUNTIME_AND_CORRESPONDING_SOURCE_ARCHIVES_INCLUDED",
+        "SHA256SUMS_VERIFIED_BEFORE_GH_RELEASE_CREATE",
+        "README_JAPANESE_AND_ENGLISH_BUILD_STEPS_REACHABLE",
+        "NO_INSTALL_LOAD_CAPTURE_OR_OWNER_VOICE_EFFECT"
+      ],
+      "denied": [
+        "UNRELATED_WORKFLOW_OR_SHARED_FILE",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING",
+        "UNVERIFIED_OR_MUTABLE_BINARY_DOWNLOAD",
+        "TAG_OR_RELEASE_CREATION_DURING_IMPLEMENTATION",
+        "PLUGIN_INSTALL_LOAD_CAPTURE_RECORDING",
+        "OWNER_VOICE_DATASET_TRAINING_PRODUCTION_DEPLOY",
+        "FORCE_REBASE_RESET_ROLLBACK"
+      ],
+      "workflow_policy": "BUILD_OR_VERIFY_EXACT_ASSETS_FAIL_CLOSED_BEFORE_RELEASE_NO_STALE_FALLBACK",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "TASK047_INSTALLER_PR119_MERGED_POST_MERGE_GREEN",
+        "TASK047_INSTALLER_CHANGELOG_LOCK_CLOSED_PR121_POST_MERGE_GREEN",
+        "FRESH_MAIN_REGISTRY_AND_OVERLAP_ZERO",
+        "REPRODUCIBLE_INSTALLER_SHA256_MATCH",
+        "EXACT_SHARED_FILE_OWNERSHIP"
+      ],
+      "expiry_conditions": [
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
+        "TARGET_BRANCH_OR_PATH_OVERLAP",
+        "INSTALLER_RUNTIME_SOURCE_OR_HASH_DRIFT",
+        "HOSTED_CHECK_NON_SUCCESS_OR_UNKNOWN",
+        "TARGET_PR_MERGED_OR_CLOSED",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION"
+      ],
+      "release_conditions": [
+        "LOCK_HOST_MERGED_MAIN_READ_BACK_AND_POST_MERGE_GREEN",
+        "FOCUSED_RELEASE_CONTRACT_TESTS_PASS",
+        "WINDOWS_INSTALLER_REPRODUCIBLE_BUILD_PASS",
+        "FULL_WINDOWS_AND_WSL_REGRESSION_PASS",
+        "TARGET_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "TARGET_PR_EXACT_MERGE_AND_POST_MERGE_GREEN",
+        "APPEND_ONLY_LOCK_CLOSURE_HOSTED"
+      ],
+      "hosting_pull_request": 123,
+      "hosting_head_sha": "e41b9fcb410ad181d278ed0397e7cd4d0801a45e",
+      "hosting_merge_sha": "034c986eee90433d72cfc47a03ac7d6ac25c2d4b",
+      "hosting_hosted_checks": "9_OF_9_PASS",
+      "hosting_pre_merge_ci_run": 31938089628,
+      "hosting_pre_merge_release_metadata_run": 31938089670,
+      "hosting_pre_merge_security_run": 31938089635,
+      "hosting_post_merge_ci_run": 31938259077,
+      "hosting_post_merge_security_run": 31938259076,
+      "target_pull_request": 125,
+      "target_base_sha": "5d9e18a59a08923e917f846505136fb09ebf52ad",
+      "target_head_sha": "eef852526bfb983a5e1826a44b2c8939014eb241",
+      "target_merge_sha": "f7f55ec3f14842452a71a564b21b718ef282a830",
+      "target_changed_files": 10,
+      "target_asset_hash_result": "3_OF_3_PASS",
+      "target_readme_build_guide_result": "JAPANESE_AND_ENGLISH_PASS",
+      "target_release_workflow_result": "VERIFY_AND_STAGE_BEFORE_GH_RELEASE_CREATE_PASS",
+      "target_focused_tests": "4_PASS",
+      "target_windows_full_regression": "1273_PASS_1_SKIP",
+      "target_wsl2_full_regression": "1274_PASS",
+      "target_hosted_checks": "9_OF_9_PASS",
+      "target_pre_merge_ci_run": 31938813518,
+      "target_pre_merge_release_metadata_run": 31938813498,
+      "target_pre_merge_security_run": 31938813482,
+      "target_post_merge_ci_run": 31938971179,
+      "target_post_merge_security_run": 31938971144,
+      "release_reason": "EXACT_RELEASE_INSTALLER_ASSET_SET_AND_BUILD_GUIDES_MERGED_POST_MERGE_GREEN",
+      "released_at": "2026-08-16T09:28:25Z",
       "automatic_retry": false,
       "automatic_rollback_or_revert": false
     }

@@ -1,7 +1,7 @@
 # TASK-036 P-UX-2A0 — Element / Selection Contract Inventory
 
 Date: `2026-08-17`
-Base: `3daf14163b3547c9999ac26ddd5324fa234d33e0`
+Fresh integration base: `3d737d950be72c34ce318ec768e57a5b21c346d5`
 Unit: `TASK-036 / P-UX-2A0`
 Effect: `DATA_ONLY / NO_PROVIDER_OR_MEDIA_EFFECT`
 
@@ -11,6 +11,11 @@ P-UX-2A0 adds a pure markup-to-contract compiler. It accepts already supplied
 V6.1.1 mock/runtime markup and emits one deterministic union inventory. The
 compiler does not open files, execute JavaScript, launch a browser or Provider,
 or treat a visual selection as Product truth.
+
+The base advanced during validation through Developer2-owned TASK-041 PR #159.
+Its exact six paths were integrated by a normal non-fast-forward merge. The
+P-UX-2A0 implementation paths remain disjoint; the shared CHANGELOG retains
+the canonical TASK-041 bullet and adds only the serialized P-UX-2A0 bullet.
 
 The inventory covers the required element classes: buttons, inputs,
 textareas, selects, labels, cards, lists, tabs, selected/state surfaces and
@@ -85,8 +90,8 @@ lifecycle requirement or a record changes.
 ## Verification
 
 - focused P-UX-2A0 tests: `11 passed`;
-- adjacent TASK-036 regression: `105 passed`;
-- full WSL2 regression: `1692 passed / 1 intentional Windows-only skip`;
+- adjacent TASK-036/TASK-041 non-overlap regression: `122 passed`;
+- full WSL2 regression: `1709 passed / 1 intentional Windows-only skip`;
 - compileall: PASS;
 - deterministic digest/equality: PASS;
 - page/service/handoff registry: PASS;

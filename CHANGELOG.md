@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-019 Profile Auto-Tuner as a deterministic, no-effect tuning-proposal contract over exact TASK-008 profiles and TASK-015 aggregate feedback, with bounded weight deltas, current-valid holdout evaluation, regression/UNKNOWN/stale gates and an immutable rollback coordinate. Profile writes, automatic promotion or rollback, Edit Plan mutation, YouTube API/Credential access, Release and Deploy remain separate.
 - Added TASK-015 YouTube Feedback as a credential-free, deterministic aggregate analytics contract bound to exact publication/render and TASK-008 scoring receipts, with typed fixed-point metrics and fail-closed missing, UNKNOWN, stale and revoked states. Audience-level data, YouTube API/network access, automatic profile tuning, Edit Plan/publication mutation, Release and Deploy remain separate.
 - TASK-014 Local Primary Narration Render Admission R0として、既存preflightをexact script・VoiceProfile・Resource・Durable Job・private staging・one-shot Owner Gateへbody-freeで束縛し、route/usage/expiry/idempotencyをfail-closed判定する実行前契約を追加しました。model取得・load、GPU予約、Job dispatch、audio render、48 kHz WAV保存、Asset公開、Release/Deployは別Gateです。
 - TASK-009 DBDProfilePlugin R0として、TASK-008のcanonical FeatureRule/ScoringProfileを再利用し、DBDのHUD・chase・event taxonomyをclosed mappingとexact rule projectionで束縛するno-effect profile snapshot契約を追加しました。実media/HUD/OCR検出、game process、feature producer、Provider、Human decision、Edit Plan/Timeline変更、Release/Deployは別Gateです。

@@ -142,3 +142,29 @@ def test_existing_product_authority_is_projected_into_mock_surfaces() -> None:
     assert "interactive_timeline_seek" in SHELL_HTML
     assert "export_queue_prepare_dispatch" in SHELL_HTML
     assert "generation_queue_dispatch" not in SHELL_HTML
+
+
+def test_asset_review_binds_exact_task038_human_decision_boundary() -> None:
+    for marker in (
+        "function renderAssetReview(audit)",
+        "function decideAssetReview(audit,candidate,decisionName)",
+        "candidate.available_human_actions",
+        "audit_prepare_human_decision",
+        "expected_production_snapshot_sha256:audit.production_snapshot_sha256",
+        "expected_audit_snapshot_sha256:audit.audit_snapshot_sha256",
+        "audit_apply_human_decision",
+        "confirmation_id:prepared.confirmation_id",
+        "actor_id:actor.trim()",
+        "AIスコアはHuman Decisionではありません。",
+        "LOCK・Provider実行・課金・自動再生成・AIラフ編集・物理削除は開始しません。",
+    ):
+        assert marker in SHELL_HTML
+    assert "renderModel($('assetReviewContent'),audit" not in SHELL_HTML
+    assert "buildRoughBtn" not in SHELL_HTML
+
+
+def test_asset_review_recovery_and_empty_states_fail_closed() -> None:
+    assert "if(audit?.recovery?.required)return" in SHELL_HTML
+    assert "if(!audit.recovery?.required&&candidate.available_human_actions?.length)" in SHELL_HTML
+    assert "既存のProduction Control復旧を完了するまで新しい判断はできません。" in SHELL_HTML
+    assert "監査済みCandidateはまだありません。" in SHELL_HTML

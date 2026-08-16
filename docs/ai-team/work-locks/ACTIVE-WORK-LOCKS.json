@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 21,
+  "registry_revision": 22,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "1bccded179dedba83226cb1228f53cc9dc775b81",
+  "audit_base_main_sha": "dafcea762ca7ce4a6437033bf407695cccc9860d",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -887,6 +887,101 @@
         "SEPARATE_CHANGELOG_INTEGRATION_LOCK_IF_REQUIRED",
         "EXACT_MAIN_MERGE_POST_MERGE_CI_SECURITY_PASS",
         "PUBLIC_PRERELEASE_ASSET_READ_BACK_PASS",
+        "APPEND_ONLY_LOCK_CLOSURE_HOSTED"
+      ]
+    },
+    {
+      "lock_id": "BVP-LOCK-TASK048-PQC1B-LOCAL-GAIN-ADMISSION",
+      "owner_agent": "開発担当2",
+      "owner_thread_id": "01a00490-f4a3-7ab1-a3ea-fbda2ea50a02",
+      "lock_host_authority": "OWNER_TASK048_PRIORITY_AND_AUTONOMOUS_DEVELOPMENT_DIRECTIVE_20260816",
+      "task_unit": "TASK-048/P-QC-1B-LOCAL-GAIN-RECEIPT-ADMISSION",
+      "phase": "BODY_FREE_LOCAL_GAIN_RECEIPT_ADMISSION_ADAPTER",
+      "branch": "codex/task-048-pqc1b-local-gain-receipt-admission",
+      "base_sha": "dafcea762ca7ce4a6437033bf407695cccc9860d",
+      "status": "ACTIVE",
+      "implementation_authority_state": "OWNER_ASSIGNED_TASK048_AUTONOMOUS_LANE",
+      "implementation_state": "NOT_STARTED",
+      "scope": "PURE_MAPPING_VALIDATION_HASH_CLASSIFICATION_AND_FAIL_CLOSED_BINDING_OF_TASK047_BODY_FREE_GAIN_RECEIPT_TO_EXISTING_PQC1A_CONTRACT",
+      "lock_hosting_evidence": {
+        "host_unit": "TASK-048/P-QC-1B-LOCAL-GAIN-RECEIPT-ADMISSION-LH0",
+        "hosting_branch": "codex/task-048-pqc1b-local-gain-receipt-admission-lock-hosting",
+        "hosting_base_sha": "dafcea762ca7ce4a6437033bf407695cccc9860d",
+        "evidence_doc": "docs/ai-team/work-locks/task048-pqc1b-local-gain-receipt-admission-lock-hosting-critic-judge-2026-08-16.md",
+        "expected_changed_files": 2,
+        "post_merge_main_presence_verification_required": true
+      },
+      "allowed_files": [
+        "docs/ai-team/tasks/TASK-048/p-qc-1b-local-gain-receipt-admission-evidence-2026-08-16.md",
+        "schemas/voice-quality-gain-admission.schema.json",
+        "src/ai_video_production/schema_resources/voice-quality-gain-admission.schema.json",
+        "src/ai_video_production/voice_quality_gain_admission.py",
+        "tests/test_task048_voice_quality_gain_admission.py"
+      ],
+      "read_only_dependencies": [
+        "src/ai_video_production/voice_quality_calibration.py",
+        "schemas/voice-quality-calibration.schema.json",
+        "native/task047_obs_voice_capture/controller/BaiVoiceCaptureController.cs",
+        "docs/ai-team/tasks/TASK-047/p-obs-dev10-runtime-evidence-2026-08-16.md",
+        "docs/user/OBS-VOICE-CAPTURE-PLUGIN.md"
+      ],
+      "accepted_invariants": [
+        "INPUT_IS_BODY_FREE_TASK047_LOCAL_GAIN_CHECK_RECEIPT_V1_MAPPING_ONLY",
+        "SOURCE_RECEIPT_CANONICAL_JSON_SHA256_IS_FIXED",
+        "CLIPPING_OR_NON_FINITE_VALUES_CANNOT_PASS",
+        "UNKNOWN_SAMPLE_FORMAT_CHANNEL_MAPPING_CAPTURE_CHAIN_OR_POLICY_CANNOT_PASS",
+        "MEASURED_ZERO_REMAINS_MEASURED_ZERO_AND_UNKNOWN_IS_NEVER_ZERO",
+        "NO_PQC_CANONICAL_MEASUREMENT_OR_QUALITY_RECEIPT_IS_ISSUED_BY_ADAPTER",
+        "NO_AUDIO_BODY_PATH_CREDENTIAL_DEVICE_IDENTITY_OR_SESSION_KEY_IN_PUBLIC_PROJECTION",
+        "GAIN_CHANGE_IS_PROPOSAL_ONLY_AND_NO_HARDWARE_OR_OBS_SETTING_IS_CHANGED"
+      ],
+      "release_metadata_policy": "RESERVED_AUTOMATIC_CHANGELOG_INTEGRATION_SUB_GATE_AFTER_IMPLEMENTATION_CHECKS_ONLY_WHEN_SHARED_LANE_IS_FRESH_AND_OVERLAP_ZERO",
+      "denied_paths": [
+        "CHANGELOG.md",
+        ".github/**",
+        "src/ai_video_production/__init__.py",
+        "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json",
+        "TASK047_PLUGIN_CONTROLLER_AND_NATIVE_FILES",
+        "TASK048_PQC1A_EXISTING_FIVE_FILES",
+        "ALL_SHARED_INTEGRATION_FILES",
+        "ALL_OTHER_PATHS"
+      ],
+      "denied_effects": [
+        "AUDIO_READ_WRITE_ANALYSIS_OR_RECORDING",
+        "OBS_PLUGIN_DEVICE_RX_OR_HARDWARE_MUTATION",
+        "CANONICAL_PQC_MEASUREMENT_OR_QUALITY_RECEIPT_ISSUANCE",
+        "ASSET_DATASET_JOB_TRAINING_MODEL_OR_PRODUCTION_EFFECT",
+        "AUTOMATIC_GAIN_CHANGE_OR_OWNER_POLICY_APPROVAL",
+        "DOWNLOAD_INSTALL_CONFIGURE_BUILD",
+        "CLOUD_PAID_CREDENTIAL",
+        "RELEASE_DEPLOY"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_FORCE_RESET_REBASE_OR_BLIND_RETRY",
+      "prerequisites": [
+        "PQC1A_PURE_CONTRACT_HOSTED_CLOSED_POST_MERGE_GREEN",
+        "TASK047_DEV10_RUNTIME_HOSTED_CLOSED_POST_MERGE_GREEN_PUBLIC_PRERELEASE_VERIFIED",
+        "FRESH_MAIN_REGISTRY_OPEN_PR_AND_BRANCH_AUDIT",
+        "EXACT_ALLOWED_FILES_5_AND_OVERLAP_ZERO",
+        "TASK048_OWNER_PRIORITY_AND_AUTONOMOUS_DEVELOPMENT_DIRECTIVE"
+      ],
+      "expiry_conditions": [
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_IMPLEMENTATION_START",
+        "DEPENDENCY_BLOB_OR_RECEIPT_SCHEMA_DRIFT",
+        "PATH_LOCK_OR_OPEN_PR_OVERLAP",
+        "ALLOWED_FILES_EXPANSION",
+        "OWNER_AUTHORITY_REVOKED",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION"
+      ],
+      "release_conditions": [
+        "EXACT_5_FILE_IMPLEMENTATION_DIFF",
+        "SCHEMA_MIRROR_BYTE_PARITY",
+        "FOCUSED_POSITIVE_NEGATIVE_TESTS_PASS",
+        "CURRENT_WINDOWS_AND_WSL_REGRESSION_PASS",
+        "STATIC_NO_FILESYSTEM_AUDIO_SUBPROCESS_OBS_HARDWARE_EFFECT_SURFACE_PASS",
+        "CRITIC_AND_JUDGE_CRITICAL_HIGH_ZERO",
+        "HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "RELEASE_METADATA_POLICY_SATISFIED_WITHOUT_CONCURRENT_CHANGELOG_WRITE",
+        "EXACT_MAIN_MERGE_POST_MERGE_CI_SECURITY_PASS",
         "APPEND_ONLY_LOCK_CLOSURE_HOSTED"
       ]
     }

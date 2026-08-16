@@ -14,6 +14,7 @@
 | 読む人 | ページ | 内容 |
 |---|---|---|
 | 初めて見る方・非開発者 | [やさしい導入ガイド](docs/user/GETTING-STARTED.md) | 何ができるか、費用・安全性、5分Demo、困った時 |
+| OBSで学習用音声を録音する方 | [OBS Voice Capture Plugin 導入・利用ガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) | 日本語・Englishで準備から保存・復旧まで説明する初心者向けガイド |
 | 利用を検討する方 | [機能と開発状況](PROJECT.md) | 実装済み／未実装、現在地、次の到達点 |
 | 開発者・Contributor | [開発者Architecture Guide](docs/developer/ARCHITECTURE.md) | Data flow、責任境界、Adapter、Test、変更手順 |
 | OSS活動を確認する方 | [公開準備Schedule](docs/oss/PUBLIC-READINESS-SCHEDULE.md) | 期限、Evidence、採択準備、実利用Gate |

@@ -14,6 +14,7 @@ BAI Video Production is a Python foundation for gradually automating secure medi
 | Reader | Page | Purpose |
 |---|---|---|
 | First-time or non-developer reader | [Beginner guide (Japanese)](docs/user/GETTING-STARTED.md) | Capabilities, cost/safety, five-minute demo, troubleshooting |
+| OBS voice-capture user | [OBS Voice Capture Plugin guide](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) | Beginner-friendly Japanese/English guidance from preparation through gain check, recording, save, and recovery |
 | Evaluator | [Project status](PROJECT.md) | Implemented versus planned scope and milestones |
 | Developer or contributor | [Developer Architecture Guide](docs/developer/ARCHITECTURE.md) | Data flow, boundaries, adapters, tests, change procedure |
 | OSS reviewer | [Public-readiness schedule](docs/oss/PUBLIC-READINESS-SCHEDULE.md) | Deadlines, evidence, adoption and application gates |

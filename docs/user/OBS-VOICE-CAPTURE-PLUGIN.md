@@ -1,15 +1,15 @@
 # OBS Voice Capture Plugin 導入・利用・復旧ガイド
 
-> **文書状態: LOCAL DRAFT / PACKAGE + SOURCE + INSTALL EVIDENCE BOUND / LOAD・録音未確認**
+> **文書状態: LOCAL DRAFT / DEV.8 PACKAGE + INSTALL + SYNTHETIC LOAD・CONTROL EVIDENCE BOUND / OWNER音声未確認**
 > `P_OBS_PLUGIN_DEVELOPMENT_COMPLETE`: `NOT_ESTABLISHED`
 
 この文書は、BAI Video ProductionのOBS Voice Capture Pluginを安全に導入し、
 録音操作と異常復旧を確認するための公開マニュアル案です。
 
-Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenceと、exact 3-entry
-配置のinstall receiptは確認済みです。ただし、packageやこの文書自体はRelease、Deploy、配布、
-OBS loadまたは録音の許可ではありません。実機項目や未確認欄を推測で埋めたり、この文書だけを
-根拠にOBSを起動・load・録音したりしないでください。
+Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidence、exact 3-entry
+配置のinstall receipt、OBS 32.2.1での合成音声によるload・GAIN測定・開始・一時停止・再開・
+停止・WAV保存Evidenceは確認済みです。Owner音声、正式RecordingSession、Dataset採用、Release、
+Deploy、配布、Production利用は確認・認可していません。
 
 ## このPluginが行うこと
 
@@ -23,45 +23,171 @@ OBS loadまたは録音の許可ではありません。実機項目や未確認
 - 学習、Fine-tuning、Model生成を自動で開始すること
 - 録音、Dataset採用、学習、公開のHuman Gateを省略すること
 
+## 最終導入形態
+
+最終的なOwner向け配布形態は、ZIPを手作業でコピーする方式ではなく、署名・昇格方針を
+Evidenceで固定したWindowsインストーラーとします。現在のZIPとexact 3-entry手順は、開発、
+検証、復旧用artifactです。最終インストーラーはOBSの検出・選択、Version/architecture、
+process停止、path containment、reparse/collision、disk floor、package hash、backup、journal、
+staging、原子的配置、read-backを実施し、Install / Repair / Update / Uninstallを別transactionで
+扱います。Scene、Profile、Source、device、GAIN、+48V、PAD、HPFは自動変更しません。
+
+インストーラー実装、署名、UI方式は未完了です。Local dev packageをProduction installerや
+Release/Deploy済み成果物として表示しません。
+
+## 初めて使う方へ（日本語）
+
+### このガイドでできること
+
+この章を上から順に読むと、Pluginを安全に導入し、保存先と安全停止条件を決め、GAINを確認し、
+録音を開始・一時停止・再開・停止して、最後に保存fileを確認できます。現在のdev.8は開発検証版で、
+一般利用者向けの最終インストーラーはまだ未公開です。最終版ではZIPをOBSフォルダーへ手作業で
+コピーする必要はありません。
+
+### 導入する前の準備
+
+Windows 10/11の64-bit版と、OBS Studio 32.2.1（64-bit）を用意します。OBSで配信や録画をして
+いる場合は先に終了し、OBSを通常のメニューから閉じます。作業中のSceneや設定は保存しておきます。
+
+正式インストーラーを入手したら、案内されたVersionとSHA-256が一致することを確認します。
+一致しないfile、不明なPublisher、予期しないWindows警告が出た場合はそこで中止してください。
+
+### インストーラーで導入する
+
+インストーラーが検出したOBSを確認します。OBSが複数ある場合は、普段使う32.2.1を選びます。
+画面に表示される`OBS停止済み`、`64-bit`、`空き容量`、`既存file`、`Package hash`がすべて
+合格してから`インストール`を押します。既存の所有fileがある場合は先にbackupされ、処理履歴が
+残ります。`インストール確認済み`が表示されるまで、PCやOBSを強制終了しないでください。
+
+### Controllerを開いて保存先を決める
+
+`BAI 学習データ録音コントローラ`を開きます。OBSが既に開いていたら、いったん通常終了します。
+`保存先`の`参照...`を押し、空き容量が十分なフォルダーを選びます。保存先は録音のたびに変更
+できます。続けて`最大録音時間`（1〜120分）と`停止する空き容量`を設定します。初めて試す時は、
+短い最大時間にしてください。
+
+### 録音前にGAINを確認する
+
+`録音前GAINチェック（5秒・保存なし）`を押し、案内された音量で発声します。この確認では
+音声fileを保存せず、Peak、RMS、clippingだけを測定します。Pluginは物理GAIN、+48V、PAD、
+HPFやOBS設定を自動変更しません。
+
+clippingが表示された場合は録音を始めず、物理GAINを少し下げてからもう一度確認します。
+Quality Policyが未設定の時は、数値が表示されても自動で`適正`とは判定しません。
+
+### 録音を開始する
+
+`録音準備＋OBS起動`を押します。Controllerがその録音だけに使う鍵を安全に渡してOBSを起動します。
+赤い`● 学習データ録音中`が表示されたことを必ず確認してから話してください。画面には経過時間、
+保存量、保存先の空き容量、packet gap、認証失敗が表示されます。赤い表示がなければ録音中ではありません。
+
+### 一時停止して再開する
+
+話を中断する時は`一時停止`を押します。橙色の一時停止表示中はWAVへ追記せず、Pluginも音声copyを
+停止します。再び話す時は`再開`を押し、赤い録音中表示へ戻ったことを確認してから続けます。
+
+### 録音を停止してfileを確認する
+
+終了時は`録音停止`を押します。`.partial.wav`が確定した`.wav`へ変わり、同名の
+`.receipt.json`が作られるまで待ちます。保存先で両方を確認した後、OBSを通常終了します。
+録音したWAVはDatasetやTrainingへ自動採用されません。採用、削除、公開は別のOwner確認で行います。
+
+途中で困った場合は、まず`録音停止`を押し、Controllerに表示された停止理由を控えます。電源断、
+file削除、上書きインストール、自動rollbackを先に行わず、[困ったとき](#困ったとき)を参照してください。
+
+## Beginner guide (English)
+
+### What this guide covers
+
+Read this section from top to bottom to install the Plugin, select a destination and safety limits, check gain,
+record, pause, resume, stop, and verify the saved files. The current dev.8 build is for engineering validation.
+The final end-user installer is not public yet, and the final flow will not require manual ZIP copying.
+
+### Prepare the computer
+
+Use 64-bit Windows 10/11 and 64-bit OBS Studio 32.2.1. Finish any stream or recording, save your work, and exit
+OBS normally. When the official installer becomes available, verify its published version and SHA-256. Stop if
+the file, Publisher, or Windows security prompt is unexpected.
+
+### Install the Plugin
+
+Confirm the OBS installation detected by the installer. When several copies exist, select the 32.2.1 instance
+you normally use. Continue only when process stopped, x64, disk space, collision, and package-hash checks are
+all green. Select **Install** and wait for **Installation verified**. Existing installer-owned files are backed up
+and the transaction is journaled. Do not force-close OBS, the installer, or Windows during this work.
+
+### Open the Controller and select a destination
+
+Open **BAI Learning Voice Capture Controller**. If OBS is already running, exit it normally first. Select
+**Browse** beside **Destination** and choose a folder with enough free space. You may change this folder for each
+session. Set **Maximum recording time** (1–120 minutes) and **Stop at free-space floor**; use a short limit first.
+
+### Check gain before recording
+
+Select **Pre-recording gain check (5 seconds, no audio saved)** and speak at the requested level. The check
+measures peak, RMS, and clipping while saving no audio and changing no physical gain, +48 V, PAD, HPF, or OBS
+setting. If clipping is detected, do not record. Lower the physical gain slightly and check again. Without an
+approved Quality Policy, measured values are not automatically labelled “good.”
+
+### Start recording
+
+Select **Prepare recording + start OBS**. The Controller starts OBS with an ephemeral key used only for that
+session. Speak only after the red **● Recording learning data** banner appears. The window shows elapsed time,
+saved bytes, destination free space, packet gaps, and authentication failures. No red banner means no recording.
+
+### Pause and resume
+
+Select **Pause** when interrupted. While the amber paused banner is visible, the WAV does not grow and the Plugin
+stops copying audio. Select **Resume**, wait for the red banner to return, and then continue speaking.
+
+### Stop and verify the result
+
+Select **Stop recording**. Wait until the `.partial.wav` becomes a finalized `.wav` and a matching
+`.receipt.json` appears. Verify both files in the destination, then exit OBS normally. The WAV is not automatically
+adopted into a Dataset or Training run; adoption, deletion, and publication require separate decisions.
+
+If something goes wrong, select **Stop recording**, note the reason shown by the Controller, and follow
+[Troubleshooting](#困ったとき). Do not delete files, overwrite the installation, or attempt an automatic rollback first.
+
 ## 現在の確認状況
 
 | 項目 | 値 | 状態 |
 |---|---|---|
 | Package target OBS build | `32.2.1` | `PASS` |
 | Module ID | `bai-voice-capture` | `PASS` |
-| Plugin version | `0.1.0-dev.1` | `PASS` |
+| Plugin version | `0.1.0-dev.8` | `PASS` |
 | 対応architecture | `windows-x64` | `PASS` |
-| Runtime package名 | `bai-voice-capture-0.1.0-dev.1-windows-x64.zip` | `PASS` |
-| Runtime package bytes | `19703` | `PASS` |
-| Runtime package SHA-256 | `b1647f4dc8e64964a5caf711f9fec798908e120f4a831b8a465f766fc96119e4` | `PASS` |
-| Package manifest SHA-256 | `80cbf57683f592c2ae8c256a373c0f77b7ecda9ad939aa589e9c6368ecfcb72d` | `PASS` |
-| Package receipt SHA-256 | `3e3d4fa5e379820c25e2a7e29faff1bfa296074ec125f2e30dd2439ba8820252` | `PASS` |
-| Plugin DLL bytes | `21504` | `PASS` |
-| Plugin DLL SHA-256 | `127a69d69930563e8d4d9ec67e7006992f978f9061c4e61ea94b593dad2ed129` | `PASS` |
-| Source ZIP filename | `bai-voice-capture-0.1.0-dev.1-source-r8.zip` | `PASS` |
-| Source ZIP bytes | `28567` | `PASS` |
-| Source ZIP SHA-256 | `c261e7807e9ca7c02106728a6d576363f1ce59546cce7f280a6184f72bd68f67` | `PASS` |
-| Source manifest SHA-256 | `4dde554fb5aa366931b0c4570521dbed463fc8465c677c43cd5c60dae2004e83` | `PASS` |
-| Source addendum SHA-256 | `88e193458fe4c1265d2a83c7d913a820c5de8d0d9bd67cb060d44022edb34c6c` | `PASS` |
-| Source inventory | files `27` / dirs `0` | `PASS` |
-| Source-set digest | `4b7726f05727ee0c0410aa6ad2c49341e64c71caf7584e44e9816b4bb4b4edf5` | `PASS` |
-| Source freeze receipt SHA-256 | `596b8ac246705271e644198cddcfed171701277eff5f8088cfdba9ce5da20c5f` | `PASS` |
-| R8 binary rebuild / runtime change | `0` / unchanged | `PASS` |
+| Runtime package名 | `bai-voice-capture-0.1.0-dev.8-windows-x64.zip` | `PASS` |
+| Runtime package bytes | `36357` | `PASS` |
+| Runtime package SHA-256 | `4e8fcdf6f697da059ef3aa9ae703a400d0f85e9ed89d77ace9f624dc2783e20f` | `PASS` |
+| Package manifest SHA-256 | `5d76e81c233c0a8ec42b2c1075043c8b967e2ed353047768ce123859f709c351` | `PASS` |
+| Dev.8 Evidence receipt SHA-256 | `980701cc2096bdda3455985d8d3dfa44d45a8e7ad3438dd665314fadbde7d02d` | `PASS` |
+| Plugin DLL bytes / SHA-256 | `23040` / `14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38` | `PASS` |
+| Controller bytes / SHA-256 | `30208` / `273fe96a952b1120b422785ee4c70a9612ba6f44c6d95f06447497abb52afb3f` | `PASS` |
+| Source ZIP filename | `bai-voice-capture-0.1.0-dev.8-source.zip` | `PASS` |
+| Source ZIP bytes / SHA-256 | `41065` / `4dcd50f3aadaf95798a4d82ad511a66b14ad5a1e81a131a3bd65c0c5f933b0a4` | `PASS` |
+| Source manifest SHA-256 | `1240807112913af15df53f5c14c125426d3a62c42f745592bd04aefb7c0bd1c8` | `PASS` |
 | Plugin implementation / build / test / package | Local build Evidence確認済み | `PASS` |
 | Configure | `PASS` | `PASS` |
 | Release build | `PASS` | `PASS` |
-| Synthetic tests | `4 / 4 PASS` | `PASS` |
+| Core/security synthetic suites | `3 / 3 PASS` | `PASS` |
 | CTest | `1 / 1 PASS` | `PASS` |
 | License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
 | Release・Deploy・配布許可 | なし | `LEGAL_REVIEW_REQUIRED` |
 | Install先layout | Exact 3-entry OBS-root relative map | `PASS` |
-| Exact 3-entry install | `VERIFIED_INSTALLED_AFTER_READ_RECONCILE` | `PASS` |
-| Install receipt SHA-256 | `71100143d374596f15790adc3e8c848cdcc5c1e8e85bd0a3d2d614c13f568e75` | `PASS` |
-| Backup | 既存対象0件のabsent tombstone manifest | `PASS` |
+| Exact 3-entry install | `VERIFIED_INSTALLED` | `PASS` |
+| Install receipt SHA-256 | `dbfa5c78ac87083357bfba28e4b9e82bfa1542aa2b7305a14ab5293d4143bf4f` | `PASS` |
+| Backup | Dev.7 exact3を別transactionへ保存 | `PASS` |
 | Rollback結果 | 未確認 | 未確認 |
-| OBS load結果 | 未確認 | 未確認 |
-| START/PAUSE/RESUME/STOP | 未確認 | 未確認 |
-| 保存・異常終了・復旧 | 未確認 | 未確認 |
+| OBS load結果 | OBS 32.2.1 / 合成音声scene | `PASS` |
+| 録音中の常時表示 | `● 学習データ録音中` | `PASS` |
+| 保存先・最大時間・disk floor | Controllerから変更可能 | `PASS` |
+| START/PAUSE/RESUME/STOP | 合成音声、Pause中WAV増加0 | `PASS` |
+| Recording receipt SHA-256 | `f7dd39b2283c25553c0c3c2e648d5ddc5b94d73ab19b511fde1079fabdaecf64` | `PASS` |
+| 録音前GAINチェック | 5秒、音声body保存0、設定変更0 | `PASS` |
+| GAIN receipt SHA-256 | `80018c274ec911d5b7e12ba8c6d8f2a4ebd2c99575cdbe65073d3adfa9aa19c9` | `PASS` |
+| Owner音声・正式RecordingSession | 未実施 | 未確認 |
+| 異常終了・rollback・recovery | 一部未実施 | 未確認 |
 
 `PASS`のartifact値はcanonical local build receiptへ、install値はexact transaction receiptへ
 bindingした値です。Installの`PASS`をload、録音、保存、rollbackの`PASS`へ読み替えません。
@@ -120,9 +246,9 @@ manifest、install-readiness handoffをread-onlyで照合し、OBS rootからの
 
 | Entry | Package内source relative path | OBS rootからのtarget relative path | Bytes / SHA-256 | 状態 |
 |---|---|---|---|---|
-| 1 / 3 | `obs-plugins/64bit/bai-voice-capture.dll` | `obs-plugins/64bit/bai-voice-capture.dll` | `21504` / `127a69d69930563e8d4d9ec67e7006992f978f9061c4e61ea94b593dad2ed129` | `PASS` |
-| 2 / 3 | `data/obs-plugins/bai-voice-capture/locale/en-US.ini` | `data/obs-plugins/bai-voice-capture/locale/en-US.ini` | `85` / `fabd379c5a95b4155ec3bf6427a6104d3d4675db5373cee053b8558f171cc8ae` | `PASS` |
-| 3 / 3 | `data/obs-plugins/bai-voice-capture/locale/ja-JP.ini` | `data/obs-plugins/bai-voice-capture/locale/ja-JP.ini` | `101` / `474064713f588c8ae776079b7d21f3630d4e2bfb068cfb156788a29dbd85cb27` | `PASS` |
+| 1 / 3 | `obs-plugins/64bit/bai-voice-capture.dll` | `obs-plugins/64bit/bai-voice-capture.dll` | `23040` / `14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38` | `PASS` |
+| 2 / 3 | `data/obs-plugins/bai-voice-capture/locale/en-US.ini` | `data/obs-plugins/bai-voice-capture/locale/en-US.ini` | `478` / `066718cb394b9af07319f4bb4a0f6eb7cc50e45e73ffc76662c588ccbaa8ae8d` | `PASS` |
+| 3 / 3 | `data/obs-plugins/bai-voice-capture/locale/ja-JP.ini` | `data/obs-plugins/bai-voice-capture/locale/ja-JP.ini` | `525` / `c55315f3973893bfe9303766df7ab824751e93a84a0a607224a3b465fbf63f4e` | `PASS` |
 
 - [ ] canonical manifest上のdeployment entry数がexact 3である — 状態: `PASS`
 - [ ] 3 entryすべてのsource/target relative path、bytes、SHA-256が固定されている — 状態: `PASS`
@@ -196,11 +322,11 @@ retryしたり、別の導入effectを発行したりしません。
 | Package read-back | Runtime bytes/SHA-256一致 | `PASS` |
 | Target manifest一致 | Exact 3 / bytes・SHA-256一致 | `PASS` |
 | Unexpected deployment file | 0件 | `PASS` |
-| Journal terminal state | Sequence 15 / `VERIFIED_INSTALLED` | `PASS` |
-| Journal head SHA-256 | `97ee8be63fc7ca706da37ff4b3b074a39b0bc56246a073eb9a074829dade1b3f` | `PASS` |
-| Install receipt SHA-256 | `71100143d374596f15790adc3e8c848cdcc5c1e8e85bd0a3d2d614c13f568e75` | `PASS` |
+| Journal terminal state | Sequence 5 / `VERIFIED_INSTALLED` | `PASS` |
+| Journal head SHA-256 | `2c122375cb142218d387f105c1411c5bc8548008d5302e63824e145004efa839` | `PASS` |
+| Install receipt SHA-256 | `dbfa5c78ac87083357bfba28e4b9e82bfa1542aa2b7305a14ab5293d4143bf4f` | `PASS` |
 | Reconcile中のtarget再書込み | `false` | `PASS` |
-| OBS load / Source登録 / 録音 | 未実行 | 未確認 |
+| OBS load / 合成音声Controller録音 | Start/Pause/Resume/Stop + WAV receipt | `PASS` |
 
 ## 4. Rollback・復元チェックリスト
 
@@ -220,16 +346,16 @@ Rollbackは導入失敗時の自動処理ではなく、別の明示的なRecove
 
 ## 5. OBS読込確認チェックリスト
 
-この章はOBS起動・Plugin loadの別Authorization取得後にだけ実行します。
+この章のうち、local dev.8と合成音声sceneで確認した項目だけを`PASS`にしています。
 
-- [ ] 対象OBS buildと実行architectureがmanifestに一致する — 状態: `未確認`
-- [ ] 読み込まれたModule IDとVersionが成果物に一致する — 状態: `未確認`
-- [ ] OBS logにload error、ABI mismatch、missing dependencyがない — 状態: `未確認`
+- [x] 対象OBS buildと実行architectureがmanifestに一致する — 状態: `PASS`
+- [x] 読み込まれたModule IDとVersionが成果物に一致する — 状態: `PASS`
+- [x] OBS logにload error、ABI mismatch、missing dependencyがない — 状態: `PASS`
 - [ ] 想定外のPlugin、DLL search path、side-loadがない — 状態: `未確認`
 - [ ] Scene、Profile、Source、Filter、Mixer設定に変更がない — 状態: `未確認`
-- [ ] Pluginの状態表示が確認できる — 状態: `未確認`
+- [x] Plugin/Controllerの録音中・一時停止・GAIN測定状態表示が確認できる — 状態: `PASS`
 - [ ] 未選択Sourceで録音開始できない — 状態: `未確認`
-- [ ] OBS終了・再起動後もVersionとModule identityが一致する — 状態: `未確認`
+- [x] OBS終了・再起動後もVersionとModule identityが一致する — 状態: `PASS`
 
 Display nameだけをSource identityとして使いません。正式確認では、privateなProfile、
 Scene Collection、Source UUID、graph digest、endpoint bindingを使用し、公開Evidenceでは
@@ -237,8 +363,9 @@ redactします。
 
 ## 6. 録音操作の受入チェックリスト
 
+合成音声ではStart/Pause/Resume/Stop、WAV確定、receipt、常時表示を確認済みです。
 Owner voiceを含む実録音には、別のConsent、Owner GO、保存先・暗号化・retention Gateが
-必要です。このdraftは録音を許可しません。
+必要であり、まだ実施していません。
 
 ### 6.1 共通Preflight
 
@@ -250,20 +377,34 @@ Owner voiceを含む実録音には、別のConsent、Owner GO、保存先・暗
 - [ ] encrypted staging、disk floor、recovery、retentionが`PASS`である — 状態: `未確認`
 - [ ] recording-specific Human Gateが有効期限内である — 状態: `未確認`
 
+### 6.1a 録音前GAINチェック
+
+1. 保存先とOBS実行ファイルを確認します。
+2. `録音前GAINチェック（5秒・保存なし）`を押します。
+3. 青い`● 録音前GAINチェック中（音声保存なし）`が表示されている間だけ、対象scenarioの
+   音量で発声します。合成試験ではPeak、RMS、clip countを測定し、音声body保存0を確認済みです。
+4. `clip > 0`ではhardware gainを下げる提案を表示できますが、Pluginはpreamp、OS、OBS、
+   +48V、PAD、HPFを自動変更しません。
+5. Quality Policyが未bindingの場合、Peak/RMSを測定できても`適正`とは表示しません。
+
+最終的にはroom tone、通常声、大声、whisper、normal-intermediateを別scenarioとして測定し、
+同じCaptureChain/Analyzer/Policy revisionへbindingします。短い通常声の結果を他scenarioや
+30分〜2時間のDataset全体へ外挿しません。Owner音声による各scenario測定は未確認です。
+
 ### 6.2 START
 
 - [ ] P-VSが発行したSession/Segment/Attempt identityを使用する — 状態: `未確認`
 - [ ] Pluginがidentityを生成・置換しない — 状態: `未確認`
 - [ ] `COMMAND_ACCEPTED`と`CAPTURE_STARTED`を別eventとして確認する — 状態: `未確認`
 - [ ] ACKだけで録音成功を表示しない — 状態: `未確認`
-- [ ] 可視状態が録音中へ遷移する — 状態: `未確認`
+- [x] 可視状態が`● 学習データ録音中`へ遷移する — 状態: `PASS`（合成音声）
 
 ### 6.3 PAUSE
 
 - [ ] `PAUSE_ACKNOWLEDGED`を確認する — 状態: `未確認`
 - [ ] bounded drain、最後のsource frame/sample rangeを固定する — 状態: `未確認`
 - [ ] 未完文・partial captureをEvidenceへ記録する — 状態: `未確認`
-- [ ] PAUSE中にframeが暗黙追加されない — 状態: `未確認`
+- [x] PAUSE中にWAV byteが増加せず、Pluginがunauthorized fast-pathへ戻る — 状態: `PASS`（合成音声）
 - [ ] PAUSEをSTOP成功として扱わない — 状態: `未確認`
 
 ### 6.4 RESUME
@@ -274,6 +415,7 @@ Owner voiceを含む実録音には、別のConsent、Owner GO、保存先・暗
 - [ ] 未完文は文頭anchorから再録する — 状態: `未確認`
 - [ ] Pluginが新SegmentやAttemptを勝手に作らない — 状態: `未確認`
 - [ ] `RESUME_STARTED`を確認する — 状態: `未確認`
+- [x] Controllerの再開表示、Pipe再接続、通常gap `0`を確認する — 状態: `PASS`（合成音声）
 
 ### 6.5 STOP
 
@@ -282,7 +424,7 @@ Owner voiceを含む実録音には、別のConsent、Owner GO、保存先・暗
 - [ ] source frameとcanonical sample mappingを確定する — 状態: `未確認`
 - [ ] staging receiptとretained Evidence ledgerを確認する — 状態: `未確認`
 - [ ] 完全なCandidateと不完全・UNKNOWNを分離する — 状態: `未確認`
-- [ ] Dataset採用や学習を自動開始しない — 状態: `未確認`
+- [x] Dataset採用や学習を自動開始しない — 状態: `PASS`（local controller）
 
 ### 6.6 CANCEL
 
@@ -294,8 +436,8 @@ Owner voiceを含む実録音には、別のConsent、Owner GO、保存先・暗
 
 ## 7. 保存・Staging受入チェックリスト
 
-- [ ] Callback内ではbounded copyと最小metadata以外を行わない — 状態: `未確認`
-- [ ] Disk I/O、JSON、network、analysis、RX、encryptionはcallback外で行う — 状態: `未確認`
+- [x] Callback内ではbounded copyと最小metadata以外を行わない — 状態: `PASS`（source/test）
+- [x] Disk I/O、JSON、GAIN analysisはreceiver/controller worker側で行う — 状態: `PASS`（source/test）
 - [ ] Native rangeとcanonical `48 kHz / 24-bit integer PCM / mono` rangeの対応を保持する — 状態: `未確認`
 - [ ] Conversion profile、delay、tail、remainderをEvidenceへ記録する — 状態: `未確認`
 - [ ] Byte checksum、sample count、range hashをprivate Evidenceへ保存する — 状態: `未確認`
@@ -416,39 +558,34 @@ Plugin開発完了を主張するには、少なくとも次のGateがすべて�
 
 ## 12. 成果物bindingと未確認Gate
 
-Lead担当のlocal build成果物から、公開可能なexact値だけをbindingしています。
+Dev.8 local build/install/synthetic acceptanceから、公開可能なexact値だけをbindingしています。
 
 | Field | 確定値 | Evidence |
 |---|---|---|
 | Module / Package ID | `bai-voice-capture` | Package receipt |
-| Version | `0.1.0-dev.1` | Package receipt |
+| Version | `0.1.0-dev.8` | Dev.8 Evidence receipt |
 | Target | `windows-x64 / OBS 32.2.1` | Package receipt |
-| Runtime filename | `bai-voice-capture-0.1.0-dev.1-windows-x64.zip` | Package receipt |
-| Runtime bytes | `19703` | Package receipt |
-| Runtime SHA-256 | `b1647f4dc8e64964a5caf711f9fec798908e120f4a831b8a465f766fc96119e4` | Package receipt |
-| Manifest SHA-256 | `80cbf57683f592c2ae8c256a373c0f77b7ecda9ad939aa589e9c6368ecfcb72d` | Package receipt |
-| Receipt SHA-256 | `3e3d4fa5e379820c25e2a7e29faff1bfa296074ec125f2e30dd2439ba8820252` | Lead canonical receipt |
-| DLL bytes | `21504` | Package receipt |
-| DLL SHA-256 | `127a69d69930563e8d4d9ec67e7006992f978f9061c4e61ea94b593dad2ed129` | Package receipt |
-| Source artifact filename | `bai-voice-capture-0.1.0-dev.1-source-r8.zip` | R8 canonical source addendum |
-| Source artifact bytes | `28567` | R8 canonical source addendum |
-| Source artifact SHA-256 | `c261e7807e9ca7c02106728a6d576363f1ce59546cce7f280a6184f72bd68f67` | R8 canonical source addendum |
-| Source manifest SHA-256 | `4dde554fb5aa366931b0c4570521dbed463fc8465c677c43cd5c60dae2004e83` | R8 canonical source addendum |
-| Source addendum SHA-256 | `88e193458fe4c1265d2a83c7d913a820c5de8d0d9bd67cb060d44022edb34c6c` | R8 canonical source addendum |
-| Source inventory | files `27` / dirs `0` | R8 canonical source addendum |
-| Source-set digest | `4b7726f05727ee0c0410aa6ad2c49341e64c71caf7584e44e9816b4bb4b4edf5` | R8 source freeze + addendum |
-| Source freeze receipt SHA-256 | `596b8ac246705271e644198cddcfed171701277eff5f8088cfdba9ce5da20c5f` | R8 source freeze receipt |
-| R8 binary rebuild / runtime change | `0` / unchanged | R8 canonical source addendum |
-| Build/test | Configure PASS / Release build PASS / synthetic 4 PASS / CTest 1 of 1 PASS | Package receipt |
+| Runtime filename | `bai-voice-capture-0.1.0-dev.8-windows-x64.zip` | Dev.8 Evidence receipt |
+| Runtime bytes / SHA-256 | `36357` / `4e8fcdf6f697da059ef3aa9ae703a400d0f85e9ed89d77ace9f624dc2783e20f` | Dev.8 Evidence receipt |
+| Runtime manifest SHA-256 | `5d76e81c233c0a8ec42b2c1075043c8b967e2ed353047768ce123859f709c351` | Dev.8 Evidence receipt |
+| Dev.8 Evidence receipt SHA-256 | `980701cc2096bdda3455985d8d3dfa44d45a8e7ad3438dd665314fadbde7d02d` | Body-free local Evidence |
+| DLL bytes / SHA-256 | `23040` / `14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38` | Dev.8 Evidence receipt |
+| Controller bytes / SHA-256 | `30208` / `273fe96a952b1120b422785ee4c70a9612ba6f44c6d95f06447497abb52afb3f` | Dev.8 Evidence receipt |
+| Source artifact filename | `bai-voice-capture-0.1.0-dev.8-source.zip` | Dev.8 Evidence receipt |
+| Source artifact bytes / SHA-256 | `41065` / `4dcd50f3aadaf95798a4d82ad511a66b14ad5a1e81a131a3bd65c0c5f933b0a4` | Dev.8 Evidence receipt |
+| Source manifest SHA-256 | `1240807112913af15df53f5c14c125426d3a62c42f745592bd04aefb7c0bd1c8` | Dev.8 Evidence receipt |
+| Build/test | Release build PASS / core-security 3 suites PASS / CTest 1 of 1 PASS / controller self-test PASS | Dev.8 Evidence receipt |
 | License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
 | Release / Deploy / distribution authorization | なし | `LEGAL_REVIEW_REQUIRED` |
-| Install receipt SHA-256 | `71100143d374596f15790adc3e8c848cdcc5c1e8e85bd0a3d2d614c13f568e75` | Exact 3 read/reconcile receipt |
-| Install state | `VERIFIED_INSTALLED_AFTER_READ_RECONCILE` | Install receipt |
-| Load receipt | 未確認 | 未確認 |
+| Install receipt SHA-256 | `dbfa5c78ac87083357bfba28e4b9e82bfa1542aa2b7305a14ab5293d4143bf4f` | Exact 3 atomic install receipt |
+| Install state | `VERIFIED_INSTALLED` | Install receipt |
+| Load/control receipt SHA-256 | `f7dd39b2283c25553c0c3c2e648d5ddc5b94d73ab19b511fde1079fabdaecf64` | Synthetic Start/Pause/Resume/Stop receipt |
+| Gain check receipt SHA-256 | `80018c274ec911d5b7e12ba8c6d8f2a4ebd2c99575cdbe65073d3adfa9aa19c9` | Synthetic 5-second measurement receipt |
+| Owner voice / Production receipt | 未確認 | 未確認 |
 
 値はcanonical成果物とreceiptから転記しています。Runtime filename、family名、
-チャット文だけを根拠に別の値へ置き換えません。Local buildの`PASS`をRelease、Deploy、配布、
-loadまたは録音の`PASS`へ昇格しません。
+チャット文だけを根拠に別の値へ置き換えません。合成音声local acceptanceの`PASS`をOwner音声、
+正式RecordingSession、Dataset、Training、Production、Release、Deploy、配布の`PASS`へ昇格しません。
 
 ## 困ったとき
 

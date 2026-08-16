@@ -1,7 +1,9 @@
 # TASK-013 BGM Provider-Neutral Routing Compiler R0
 
-日付: 2026-08-17  
-Authority: `BVP-AUTH-20260817-TASK013-BGM-ROUTING-COMPILER-R0-01`  
+日付: 2026-08-17
+
+Authority: `BVP-AUTH-20260817-TASK013-BGM-ROUTING-COMPILER-R0-01`
+
 Integration Lock: `BVP-ILOCK-20260817-TASK013-BGM-R0-CHANGELOG-01`
 
 ## A. 目的と境界
@@ -87,20 +89,26 @@ Validation:
 
 ## E. Critic 1 — Builder
 
-Finding: generic Creative Generation plannerを再実装すると既存authorityとdriftする危険。  
-Correction: inputは既存mode/profile/availabilityとimmutable coordinateへ限定し、provider adapter・Asset store・Prompt bodyを含めない。  
+Finding: generic Creative Generation plannerを再実装すると既存authorityとdriftする危険。
+
+Correction: inputは既存mode/profile/availabilityとimmutable coordinateへ限定し、provider adapter・Asset store・Prompt bodyを含めない。
+
 Residual Critical/High/Medium: `0/0/0`。
 
 ## F. Critic 2 — Security / Privacy
 
-Finding: persisted credential ref、route settings、Prompt/Asset body、pathをPlanへ漏らす危険。  
-Correction: outputはcredential presenceを理由判定にだけ使用し、Credential ref/settings/body/pathを一切serializeしない。Evidence refはallowlisted `evidence://`、rightsは `rights://`、digestはcanonical lowercase SHA-256に限定。  
+Finding: persisted credential ref、route settings、Prompt/Asset body、pathをPlanへ漏らす危険。
+
+Correction: outputはcredential presenceを理由判定にだけ使用し、Credential ref/settings/body/pathを一切serializeしない。Evidence refはallowlisted `evidence://`、rightsは `rights://`、digestはcanonical lowercase SHA-256に限定。
+
 Residual Critical/High/Medium: `0/0/0`。
 
 ## G. Critic 3 — Compatibility / Fail-closed
 
-Finding: UNKNOWNを単なるroute exclusionとしてBLOCKEDへ弱める、候補順がcaller順で変わる危険。  
-Correction: UNKNOWN provenanceをPlan stateへ伝播し、候補を `(priority, route_id)` sort、理由順を固定。profile exact hash mismatchとduplicate coordinatesをreject。  
+Finding: UNKNOWNを単なるroute exclusionとしてBLOCKEDへ弱める、候補順がcaller順で変わる危険。
+
+Correction: UNKNOWN provenanceをPlan stateへ伝播し、候補を `(priority, route_id)` sort、理由順を固定。profile exact hash mismatchとduplicate coordinatesをreject。
+
 Residual Critical/High/Medium: `0/0/0`。
 
 ## H. Judge

@@ -1,15 +1,15 @@
 # OBS Voice Capture Plugin 導入・利用・復旧ガイド
 
-> **文書状態: LOCAL DRAFT / PACKAGE + SOURCE EVIDENCE BOUND / 実機未確認**
+> **文書状態: LOCAL DRAFT / PACKAGE + SOURCE + INSTALL EVIDENCE BOUND / LOAD・録音未確認**
 > `P_OBS_PLUGIN_DEVELOPMENT_COMPLETE`: `NOT_ESTABLISHED`
 
 この文書は、BAI Video ProductionのOBS Voice Capture Pluginを安全に導入し、
 録音操作と異常復旧を確認するための公開マニュアル案です。
 
-Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenceは確認済み
-です。ただし、このpackageはRelease、Deploy、配布、導入、OBS loadまたは録音を許可する
-ものではありません。実機項目や未確認欄を推測で埋めたり、この文書だけを根拠にPluginを
-導入・起動・録音したりしないでください。
+Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenceと、exact 3-entry
+配置のinstall receiptは確認済みです。ただし、packageやこの文書自体はRelease、Deploy、配布、
+OBS loadまたは録音の許可ではありません。実機項目や未確認欄を推測で埋めたり、この文書だけを
+根拠にOBSを起動・load・録音したりしないでください。
 
 ## このPluginが行うこと
 
@@ -55,14 +55,16 @@ Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenc
 | License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
 | Release・Deploy・配布許可 | なし | `LEGAL_REVIEW_REQUIRED` |
 | Install先layout | Exact 3-entry OBS-root relative map | `PASS` |
-| Backup先 | 未確認 | 未確認 |
+| Exact 3-entry install | `VERIFIED_INSTALLED_AFTER_READ_RECONCILE` | `PASS` |
+| Install receipt SHA-256 | `71100143d374596f15790adc3e8c848cdcc5c1e8e85bd0a3d2d614c13f568e75` | `PASS` |
+| Backup | 既存対象0件のabsent tombstone manifest | `PASS` |
 | Rollback結果 | 未確認 | 未確認 |
 | OBS load結果 | 未確認 | 未確認 |
 | START/PAUSE/RESUME/STOP | 未確認 | 未確認 |
 | 保存・異常終了・復旧 | 未確認 | 未確認 |
 
-`PASS`のartifact値はLead担当のlocal build receiptへbindingした値です。実機導入、load、
-録音、保存、rollbackの状態は、それぞれのEvidenceを得た後にだけ更新します。
+`PASS`のartifact値はcanonical local build receiptへ、install値はexact transaction receiptへ
+bindingした値です。Installの`PASS`をload、録音、保存、rollbackの`PASS`へ読み替えません。
 
 ## 判定語
 
@@ -86,11 +88,11 @@ Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenc
 
 ### 1.1 Authorityと対象
 
-- [ ] 導入作業に対する明示的な許可がある — 状態: `未確認`
-- [ ] 対象PC、OBS build、architectureが許可内容と一致する — 状態: `未確認`
-- [ ] OBSが停止し、対象OBS processが0件である — 状態: `未確認`
-- [ ] Scene Collection、Profile、Source設定を変更しない範囲が明確 — 状態: `未確認`
-- [ ] 録音・Source選択・device操作は導入作業と別Gateである — 状態: `未確認`
+- [x] 導入作業に対する明示的な許可がある — 状態: `PASS`
+- [x] 対象PC、OBS build、architectureが許可内容と一致する — 状態: `PASS`
+- [x] OBSが停止し、対象OBS processが0件である — 状態: `PASS`
+- [x] Scene Collection、Profile、Source設定を変更しない範囲が明確 — 状態: `PASS`
+- [x] 録音・Source選択・device操作は導入作業と別Gateである — 状態: `PASS`
 
 ### 1.2 Package identity
 
@@ -99,16 +101,16 @@ Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenc
 - [ ] Module ID、architecture、target OBS buildが固定されている — 状態: `PASS`
 - [ ] Configure、Release build、synthetic tests、CTest Evidenceが固定されている — 状態: `PASS`
 - [ ] License、Notice、source-offer、配布境界の法務確認を完了した — 状態: `LEGAL_REVIEW_REQUIRED`
-- [ ] Package内に絶対path、Credential、音声、個人情報がない — 状態: `未確認`
+- [x] Package内に絶対path、Credential、音声、個人情報がない — 状態: `PASS`
 
 ### 1.3 Install先とcollision
 
-- [ ] 対象rootが許可されたOBS install内に収まる — 状態: `未確認`
-- [ ] `..`、絶対path、junction、symlink、reparse traversalがない — 状態: `未確認`
-- [ ] 既存PluginとModule ID、filename、data/locale pathが衝突しない — 状態: `未確認`
-- [ ] 同名で内容が異なる既存fileを検出した場合は停止する — 状態: `未確認`
-- [ ] stagingとtargetが同一volumeである — 状態: `未確認`
-- [ ] 必要disk容量とrollback用容量を確保した — 状態: `未確認`
+- [x] 対象rootが許可されたOBS install内に収まる — 状態: `PASS`
+- [x] `..`、絶対path、junction、symlink、reparse traversalがない — 状態: `PASS`
+- [x] 既存PluginとModule ID、filename、data/locale pathが衝突しない — 状態: `PASS`
+- [x] 同名で内容が異なる既存fileを検出した場合は停止する — 状態: `PASS`
+- [x] stagingとtargetが同一volumeである — 状態: `PASS`
+- [x] 必要disk容量とrollback用容量を確保した — 状態: `PASS`
 
 ### 1.4 Exact 3-entry deployment map
 
@@ -125,7 +127,7 @@ manifest、install-readiness handoffをread-onlyで照合し、OBS rootからの
 - [ ] canonical manifest上のdeployment entry数がexact 3である — 状態: `PASS`
 - [ ] 3 entryすべてのsource/target relative path、bytes、SHA-256が固定されている — 状態: `PASS`
 - [ ] sourceとtargetに絶対path、`..`、junction、symlink、reparse traversalがない — 状態: `PASS`
-- [ ] Backup/collision/read-back対象がこのexact 3 entryと一致する — 状態: `未確認`
+- [x] Backup/collision/read-back対象がこのexact 3 entryと一致する — 状態: `PASS`
 
 ZIP rootの`LICENSE`、`NOTICE.md`、`package-manifest.json`、`UPSTREAM-OBS-COPYING.txt`は
 OBS rootへ配置しません。entry数・path・digestのいずれかが不明または不一致なら導入を開始
@@ -137,13 +139,13 @@ containmentをoperation直前に再検証します。
 Backupは導入前の状態を復元するためのものです。録音素材、Scene、Profileを無断で
 収集する仕組みではありません。
 
-- [ ] Backup operation IDを発行した — 状態: `未確認`
-- [ ] 対象fileの存在・非存在を含む旧manifestを保存した — 状態: `未確認`
-- [ ] 既存fileのsizeとSHA-256を記録した — 状態: `未確認`
-- [ ] Backup先が対象root外かつ許可されたprivate領域である — 状態: `未確認`
-- [ ] Backup先の空き容量と暗号化・retention方針を確認した — 状態: `未確認`
-- [ ] Backup後に全fileをread-backし、manifestと一致した — 状態: `未確認`
-- [ ] Backup EvidenceにCredential、host path、device fingerprintを公開しない — 状態: `未確認`
+- [x] Install operation IDを発行した — 状態: `PASS`
+- [x] 対象fileの存在・非存在を含む旧manifestを保存した — 状態: `PASS`
+- [x] 既存fileは0件で、exact 3 entryのabsent tombstoneを記録した — 状態: `PASS`
+- [x] Backup manifestを対象root外のprivate transaction領域へ保存した — 状態: `PASS`
+- [x] 必要disk容量を確認した — 状態: `PASS`
+- [x] 旧manifestをread-backした — 状態: `PASS`
+- [x] 公開マニュアルにCredential、host path、device fingerprintを記録しない — 状態: `PASS`
 
 Backup manifestに最低限必要な項目:
 
@@ -162,9 +164,10 @@ verification_state
 
 ## 3. 導入チェックリスト
 
-Package identityとexact 3-entry deployment mapは固定済みですが、法務判定と正式なinstall
-operationの実行前再検証は未完了のため、現在は実行しません。将来の導入では、次の順序を
-崩さないでください。
+Package identity、exact 3-entry deployment map、install transactionは固定済みです。初回の
+最終validatorは`FINAL_DRIFT_1`で安全停止しましたが、各atomic publishの即時read-back、
+journal hash-chain、現targetのbytes/SHA-256を再照合し、targetを再書込みせずreceiptを封印しました。
+将来の導入・更新でも、次の順序を崩さないでください。
 
 1. Packageを許可されたstaging領域へ展開する。
 2. 展開後manifest、file size、SHA-256、containmentを検証する。
@@ -190,11 +193,14 @@ retryしたり、別の導入effectを発行したりしません。
 
 | 項目 | 証跡 | 判定 |
 |---|---|---|
-| Package read-back | 未確認 | 未確認 |
-| Target manifest一致 | 未確認 | 未確認 |
-| Unexpected file 0件 | 未確認 | 未確認 |
-| Journal terminal state | 未確認 | 未確認 |
-| Install receipt | 未確認 | 未確認 |
+| Package read-back | Runtime bytes/SHA-256一致 | `PASS` |
+| Target manifest一致 | Exact 3 / bytes・SHA-256一致 | `PASS` |
+| Unexpected deployment file | 0件 | `PASS` |
+| Journal terminal state | Sequence 15 / `VERIFIED_INSTALLED` | `PASS` |
+| Journal head SHA-256 | `97ee8be63fc7ca706da37ff4b3b074a39b0bc56246a073eb9a074829dade1b3f` | `PASS` |
+| Install receipt SHA-256 | `71100143d374596f15790adc3e8c848cdcc5c1e8e85bd0a3d2d614c13f568e75` | `PASS` |
+| Reconcile中のtarget再書込み | `false` | `PASS` |
+| OBS load / Source登録 / 録音 | 未実行 | 未確認 |
 
 ## 4. Rollback・復元チェックリスト
 
@@ -436,12 +442,13 @@ Lead担当のlocal build成果物から、公開可能なexact値だけをbindin
 | Build/test | Configure PASS / Release build PASS / synthetic 4 PASS / CTest 1 of 1 PASS | Package receipt |
 | License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
 | Release / Deploy / distribution authorization | なし | `LEGAL_REVIEW_REQUIRED` |
-| Install receipt | 未確認 | 未確認 |
+| Install receipt SHA-256 | `71100143d374596f15790adc3e8c848cdcc5c1e8e85bd0a3d2d614c13f568e75` | Exact 3 read/reconcile receipt |
+| Install state | `VERIFIED_INSTALLED_AFTER_READ_RECONCILE` | Install receipt |
 | Load receipt | 未確認 | 未確認 |
 
-値はLead担当のcanonical成果物とreceiptから転記しています。Runtime filename、family名、
+値はcanonical成果物とreceiptから転記しています。Runtime filename、family名、
 チャット文だけを根拠に別の値へ置き換えません。Local buildの`PASS`をRelease、Deploy、配布、
-導入、loadまたは録音の`PASS`へ昇格しません。
+loadまたは録音の`PASS`へ昇格しません。
 
 ## 困ったとき
 

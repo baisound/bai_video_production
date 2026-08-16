@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 11,
+  "registry_revision": 12,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "458b671fb2a00e0ec820edde4e6cefea6b766059",
+  "audit_base_main_sha": "40b0567991ea8f7bd4342010cd52ef1e63ab6486",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -605,6 +605,133 @@
         "HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
         "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_SECURITY_PASS",
         "LOCK_CLOSURE_RELEASE_RECORD_HOSTED_IN_SEPARATE_H2"
+      ]
+    },
+    {
+      "lock_id": "BVP-LOCK-TASK046-PVS3B",
+      "owner_agent": "開発担当2",
+      "owner_thread_id": "01a00490-f4a3-7ab1-a3ea-fbda2ea50a02",
+      "lock_host_authority": "BVP-AUTH-20260816-TASK046-PVS3B-LH0",
+      "task_unit": "TASK-046/P-VS-3B",
+      "phase": "PURE_METADATA_VOICE_DATASET_REVISION_CONTRACT_IMPLEMENTATION",
+      "branch": "codex/task-046-p-vs-3b-voice-dataset-revision-contract",
+      "base_sha": "40b0567991ea8f7bd4342010cd52ef1e63ab6486",
+      "status": "ACTIVE",
+      "implementation_authority_state": "NOT_AUTHORIZED_AWAITING_SEPARATE_OWNER_DECISION",
+      "implementation_state": "NOT_STARTED",
+      "scope": "BODY_FREE_SCHEMA_COMMIT_DAG_CAS_VALIDATION_PROJECTION_AND_SYNTHETIC_TESTS_ONLY",
+      "lock_hosting_evidence": {
+        "host_unit": "TASK-046/P-VS-3B-LH0",
+        "hosting_branch": "codex/task-046-pvs3b-lock-hosting",
+        "hosting_base_sha": "40b0567991ea8f7bd4342010cd52ef1e63ab6486",
+        "evidence_doc": "docs/ai-team/work-locks/task046-pvs3b-lock-hosting-critic-judge-2026-08-16.md",
+        "expected_changed_files": 2,
+        "post_merge_main_presence_verification_required": true
+      },
+      "allowed_files": [
+        "docs/ai-team/tasks/TASK-046/p-vs-3b-implementation-readiness-and-evidence-2026-08-16.md",
+        "schemas/voice-dataset-revision.schema.json",
+        "src/ai_video_production/schema_resources/voice-dataset-revision.schema.json",
+        "src/ai_video_production/voice_dataset_revision.py",
+        "tests/test_task046_voice_dataset_revision_contract.py"
+      ],
+      "read_only_dependencies": [
+        "src/ai_video_production/voice_profile_revision.py",
+        "schemas/voice-profile-revision.schema.json",
+        "schemas/voice-recording-session.schema.json",
+        "src/ai_video_production/voice_recording_session.py",
+        "schemas/voice-quality-calibration.schema.json",
+        "src/ai_video_production/voice_quality_calibration.py",
+        "schemas/asset-record.schema.json",
+        "schemas/durable-product-job.schema.json",
+        "src/ai_video_production/durable_product_job.py"
+      ],
+      "hosted_governance_dependencies": [
+        "PVS1A_HOSTED_CLOSED_POST_MERGE_GREEN",
+        "PVS3A_CONTRACT_HOSTED_CLOSED_POST_MERGE_GREEN",
+        "PQC1A_PURE_CONTRACT_HOSTED_CLOSED_POST_MERGE_GREEN"
+      ],
+      "design_reference_only_not_hosted": [
+        "TASK-046/P-VS-4A",
+        "TASK-046/P-VS-2A_RUNTIME_ADMISSION"
+      ],
+      "canonical_serialized_types": [
+        "VoiceDatasetStore",
+        "VoiceDatasetCommitIntent",
+        "VoiceDatasetRevision",
+        "VoiceDatasetMembershipEntry",
+        "DatasetMemberExclusion",
+        "DatasetCandidateReviewBinding",
+        "DatasetAdoptionReceipt",
+        "VoiceDatasetCommitEnvelope",
+        "DatasetStorePersistenceCapabilityBinding",
+        "StoreCommitBinding",
+        "DurableDatasetAdoptionJobBinding",
+        "DatasetReadinessCoverageIndicator",
+        "TrainingInputSnapshot"
+      ],
+      "structured_unresolved_dependencies": [
+        "TASK-003_FORMAL_ASSET_REVISION_MAPPING",
+        "TASK-020_RESOURCE_ADMISSION",
+        "TASK-043_VOICE_DATASET_ADOPTION_JOB_KIND",
+        "DATASET_STORE_PERSISTENCE_CAPABILITY",
+        "CAPTURE_STAGING_RUNTIME_RECEIPT",
+        "REAL_TASK048_QUALITY_CALIBRATION_RECEIPT",
+        "CANONICAL_PRIVACY_POLICY_INSTANCE"
+      ],
+      "denied_paths": [
+        "CHANGELOG.md",
+        ".github/**",
+        "src/ai_video_production/__init__.py",
+        "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json",
+        "FIXTURES",
+        "PVS1A_PVS3A_PQC_EXISTING_FILES",
+        "SHARED_INTEGRATION_FILES",
+        "ALL_OTHER_PATHS"
+      ],
+      "denied_effects": [
+        "DATASET_ASSET_OR_STORE_WRITE",
+        "ADOPTION_OR_PERSISTENCE_DISPATCH",
+        "STORE_COMMIT_BINDING_OR_CANONICAL_RECEIPT_ISSUANCE",
+        "JOB_OR_QUEUE_CREATE",
+        "AUDIO_OR_TEXT_BODY",
+        "TRAINING_INPUT_EFFECT",
+        "TRAINING_MODEL_OR_PRODUCTION_EFFECT",
+        "PHYSICAL_DELETE_OR_KEY_DESTRUCTION",
+        "DOWNLOAD_INSTALL_BUILD",
+        "CLOUD_PAID_CREDENTIAL",
+        "RELEASE_DEPLOY"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING",
+      "prerequisites": [
+        "PVS1A_HOSTED_CLOSED_POST_MERGE_GREEN",
+        "PVS3A_CONTRACT_HOSTED_CLOSED_POST_MERGE_GREEN",
+        "PQC1A_PURE_CONTRACT_HOSTED_CLOSED_POST_MERGE_GREEN",
+        "PVS3B_REV2_AND_R0_CRITICAL_HIGH_MEDIUM_ZERO",
+        "FRESH_MAIN_DEPENDENCY_BLOB_AND_SYMBOL_AUDIT",
+        "EXACT_ALLOWED_FILES_5_AND_OVERLAP_ZERO",
+        "OWNER_LOCK_HOST_AUTHORIZATION_BVP_AUTH_20260816_TASK046_PVS3B_LH0"
+      ],
+      "expiry_conditions": [
+        "MAIN_SHA_DRIFT_BEFORE_HOST_OR_IMPLEMENTATION_START",
+        "DEPENDENCY_BLOB_OR_SYMBOL_DRIFT",
+        "PATH_OR_OPEN_PR_OVERLAP",
+        "ALLOWED_FILES_MISMATCH",
+        "OWNER_AUTHORITY_REVOKED",
+        "TARGET_PR_MERGED_OR_CLOSED",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION"
+      ],
+      "release_conditions": [
+        "EXACT_5_FILE_IMPLEMENTATION_DIFF",
+        "SCHEMA_MIRROR_BYTE_PARITY",
+        "FOCUSED_SYNTHETIC_TESTS_PASS",
+        "WINDOWS_FULL_REGRESSION_PASS",
+        "WSL2_FULL_REGRESSION_PASS",
+        "CRITIC_AND_JUDGE_PASS",
+        "HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "SEPARATE_CHANGELOG_INTEGRATION_LOCK_IF_REQUIRED",
+        "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_SECURITY_PASS",
+        "LOCK_CLOSURE_RELEASE_RECORD_HOSTED"
       ]
     }
   ],

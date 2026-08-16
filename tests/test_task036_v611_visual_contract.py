@@ -572,6 +572,7 @@ def test_quick_projects_persisted_task042_intents_without_execution() -> None:
         'id="quickStatus"',
         "async function refreshQuick()",
         "call('quick_generation_snapshot')",
+        "quick:['quick_generation_snapshot']",
         "model.intents||[]",
         "row.references||[]",
         "model.prompt_snapshot_sha256",

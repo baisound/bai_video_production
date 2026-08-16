@@ -38,13 +38,14 @@ Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenc
 | Package receipt SHA-256 | `3e3d4fa5e379820c25e2a7e29faff1bfa296074ec125f2e30dd2439ba8820252` | `PASS` |
 | Plugin DLL bytes | `21504` | `PASS` |
 | Plugin DLL SHA-256 | `127a69d69930563e8d4d9ec67e7006992f978f9061c4e61ea94b593dad2ed129` | `PASS` |
-| Source ZIP filename | 未確認 | 未確認 |
+| Source ZIP filename | `bai-voice-capture-0.1.0-dev.1-source-r8.zip` | `PASS` |
 | Source ZIP bytes | `28567` | `PASS` |
 | Source ZIP SHA-256 | `c261e7807e9ca7c02106728a6d576363f1ce59546cce7f280a6184f72bd68f67` | `PASS` |
 | Source manifest SHA-256 | `4dde554fb5aa366931b0c4570521dbed463fc8465c677c43cd5c60dae2004e83` | `PASS` |
 | Source addendum SHA-256 | `88e193458fe4c1265d2a83c7d913a820c5de8d0d9bd67cb060d44022edb34c6c` | `PASS` |
 | Source inventory | files `27` / dirs `0` | `PASS` |
-| Source-set digest | `27bcba975544f9d3613e0a4164ef6776d1ed722fe62f546d9c67d9ca452ff3a3` | `PASS` |
+| Source-set digest | `4b7726f05727ee0c0410aa6ad2c49341e64c71caf7584e44e9816b4bb4b4edf5` | `PASS` |
+| Source freeze receipt SHA-256 | `596b8ac246705271e644198cddcfed171701277eff5f8088cfdba9ce5da20c5f` | `PASS` |
 | R8 binary rebuild / runtime change | `0` / unchanged | `PASS` |
 | Plugin implementation / build / test / package | Local build Evidence確認済み | `PASS` |
 | Configure | `PASS` | `PASS` |
@@ -53,7 +54,7 @@ Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenc
 | CTest | `1 / 1 PASS` | `PASS` |
 | License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
 | Release・Deploy・配布許可 | なし | `LEGAL_REVIEW_REQUIRED` |
-| Install先layout | 未確認 | 未確認 |
+| Install先layout | Exact 3-entry OBS-root relative map | `PASS` |
 | Backup先 | 未確認 | 未確認 |
 | Rollback結果 | 未確認 | 未確認 |
 | OBS load結果 | 未確認 | 未確認 |
@@ -111,24 +112,25 @@ Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenc
 
 ### 1.4 Exact 3-entry deployment map
 
-Runtime packageの`PASS`だけでは配置先を確定しません。導入前にLeadのcanonical package
-manifestとinstall-readiness receiptから、次の3 entryを相対pathで固定します。現在はreceiptの
-exact path mappingが未提供のため、3件とも`未確認`です。表示名や一般的なOBS layoutから
-補完しません。
+Runtime packageの`PASS`だけでは配置先を確定しません。Leadのcanonical runtime ZIP、package
+manifest、install-readiness handoffをread-onlyで照合し、OBS rootからの相対pathで次の3 entryを
+固定しました。Host absolute pathは公開せず、一般的なOBS layoutから補完していません。
 
 | Entry | Package内source relative path | OBS rootからのtarget relative path | Bytes / SHA-256 | 状態 |
 |---|---|---|---|---|
-| 1 / 3 | 未確認 | 未確認 | 未確認 | 未確認 |
-| 2 / 3 | 未確認 | 未確認 | 未確認 | 未確認 |
-| 3 / 3 | 未確認 | 未確認 | 未確認 | 未確認 |
+| 1 / 3 | `obs-plugins/64bit/bai-voice-capture.dll` | `obs-plugins/64bit/bai-voice-capture.dll` | `21504` / `127a69d69930563e8d4d9ec67e7006992f978f9061c4e61ea94b593dad2ed129` | `PASS` |
+| 2 / 3 | `data/obs-plugins/bai-voice-capture/locale/en-US.ini` | `data/obs-plugins/bai-voice-capture/locale/en-US.ini` | `85` / `fabd379c5a95b4155ec3bf6427a6104d3d4675db5373cee053b8558f171cc8ae` | `PASS` |
+| 3 / 3 | `data/obs-plugins/bai-voice-capture/locale/ja-JP.ini` | `data/obs-plugins/bai-voice-capture/locale/ja-JP.ini` | `101` / `474064713f588c8ae776079b7d21f3630d4e2bfb068cfb156788a29dbd85cb27` | `PASS` |
 
-- [ ] canonical manifest上のdeployment entry数がexact 3である — 状態: `未確認`
-- [ ] 3 entryすべてのsource/target relative path、bytes、SHA-256が固定されている — 状態: `未確認`
-- [ ] sourceとtargetに絶対path、`..`、junction、symlink、reparse traversalがない — 状態: `未確認`
+- [ ] canonical manifest上のdeployment entry数がexact 3である — 状態: `PASS`
+- [ ] 3 entryすべてのsource/target relative path、bytes、SHA-256が固定されている — 状態: `PASS`
+- [ ] sourceとtargetに絶対path、`..`、junction、symlink、reparse traversalがない — 状態: `PASS`
 - [ ] Backup/collision/read-back対象がこのexact 3 entryと一致する — 状態: `未確認`
 
-entry数・path・digestのいずれかが不明または不一致なら導入を開始しません。Public Evidenceへ
-host absolute pathを出さず、private Evidenceでもcanonical rootからのcontainmentを別途検証します。
+ZIP rootの`LICENSE`、`NOTICE.md`、`package-manifest.json`、`UPSTREAM-OBS-COPYING.txt`は
+OBS rootへ配置しません。entry数・path・digestのいずれかが不明または不一致なら導入を開始
+しません。Public Evidenceへhost absolute pathを出さず、private Evidenceでもcanonical rootからの
+containmentをoperation直前に再検証します。
 
 ## 2. Backupチェックリスト
 
@@ -160,9 +162,9 @@ verification_state
 
 ## 3. 導入チェックリスト
 
-Package identityはlocal build receiptへ固定済みですが、exact 3-entry deployment mapと正式な
-operation手順は未確認のため、現在は実行しません。将来の導入では、次の順序を崩さないで
-ください。
+Package identityとexact 3-entry deployment mapは固定済みですが、法務判定と正式なinstall
+operationの実行前再検証は未完了のため、現在は実行しません。将来の導入では、次の順序を
+崩さないでください。
 
 1. Packageを許可されたstaging領域へ展開する。
 2. 展開後manifest、file size、SHA-256、containmentを検証する。
@@ -422,13 +424,14 @@ Lead担当のlocal build成果物から、公開可能なexact値だけをbindin
 | Receipt SHA-256 | `3e3d4fa5e379820c25e2a7e29faff1bfa296074ec125f2e30dd2439ba8820252` | Lead canonical receipt |
 | DLL bytes | `21504` | Package receipt |
 | DLL SHA-256 | `127a69d69930563e8d4d9ec67e7006992f978f9061c4e61ea94b593dad2ed129` | Package receipt |
-| Source artifact filename | 未確認 | R8 receiptに公開filenameなし |
+| Source artifact filename | `bai-voice-capture-0.1.0-dev.1-source-r8.zip` | R8 canonical source addendum |
 | Source artifact bytes | `28567` | R8 canonical source addendum |
 | Source artifact SHA-256 | `c261e7807e9ca7c02106728a6d576363f1ce59546cce7f280a6184f72bd68f67` | R8 canonical source addendum |
 | Source manifest SHA-256 | `4dde554fb5aa366931b0c4570521dbed463fc8465c677c43cd5c60dae2004e83` | R8 canonical source addendum |
 | Source addendum SHA-256 | `88e193458fe4c1265d2a83c7d913a820c5de8d0d9bd67cb060d44022edb34c6c` | R8 canonical source addendum |
 | Source inventory | files `27` / dirs `0` | R8 canonical source addendum |
-| Source-set digest | `27bcba975544f9d3613e0a4164ef6776d1ed722fe62f546d9c67d9ca452ff3a3` | R4 source freeze + R8 addendum |
+| Source-set digest | `4b7726f05727ee0c0410aa6ad2c49341e64c71caf7584e44e9816b4bb4b4edf5` | R8 source freeze + addendum |
+| Source freeze receipt SHA-256 | `596b8ac246705271e644198cddcfed171701277eff5f8088cfdba9ce5da20c5f` | R8 source freeze receipt |
 | R8 binary rebuild / runtime change | `0` / unchanged | R8 canonical source addendum |
 | Build/test | Configure PASS / Release build PASS / synthetic 4 PASS / CTest 1 of 1 PASS | Package receipt |
 | License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |

@@ -382,3 +382,25 @@ def test_start_end_feasibility_does_not_gain_execution_authority() -> None:
         assert marker in SHELL_HTML
     assert "generation_safety_execute" not in SHELL_HTML
     assert "generation_safety_accept" not in SHELL_HTML
+
+
+def test_ai_video_connects_queue_admission_without_execution() -> None:
+    for marker in (
+        'id="generationQueueSummary"',
+        "function prepareGenerationQueue(model,prompt)",
+        "function renderGenerationQueue(model)",
+        "generation_queue_prepare",
+        "expected_queue_snapshot_sha256:model.queue_snapshot_sha256",
+        "expected_upstream_snapshots:model.upstream_snapshots",
+        "generation_queue_apply",
+        "Admission Evidenceを登録",
+        "Queue登録は実行許可ではありません。",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_ai_video_keeps_execution_read_only_in_this_slice() -> None:
+    assert 'data-disabled-reason="Local executionはQueue admissionと別の明示確認が必要です"' in SHELL_HTML
+    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
+    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
+    assert "中断したlocal dispatchは自動再実行しません。" in SHELL_HTML

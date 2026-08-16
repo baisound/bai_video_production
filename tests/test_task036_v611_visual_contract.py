@@ -503,3 +503,33 @@ def test_output_adoption_does_not_gain_provider_or_human_accept_authority() -> N
         assert marker in SHELL_HTML
     assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
     assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
+
+
+def test_edit_projects_bounded_timeline_sources_and_exact_selection() -> None:
+    for marker in (
+        'id="editAssetSearch"',
+        'id="editAssetList"',
+        'id="timelineInspector"',
+        "function renderEditAssetList(model)",
+        "function renderTimelineInspector(model)",
+        "model.projection?.clips||[]",
+        "clip.source_owner",
+        "clip.source_ref",
+        "clip.source_sha256",
+        "clip.review_candidate_id",
+        "expected_timeline_sha256:model.timeline_sha256",
+        "現在viewportの${model.projection.total_intersecting_clips}件中、最大500件のbounded page",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_edit_source_projection_does_not_claim_full_library_or_host_paths() -> None:
+    for marker in (
+        "完全なAsset Libraryではありません。",
+        "現在のbounded viewport外です。",
+        "Timeline selectionは非永続表示状態です。",
+        "clip.review_candidate_id?' review-candidate':''",
+    ):
+        assert marker in SHELL_HTML
+    assert "clip.cut_candidate_id" not in SHELL_HTML
+    assert "edit_asset_import" not in SHELL_HTML

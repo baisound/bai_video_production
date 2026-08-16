@@ -18,7 +18,7 @@
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
 - Next Consumer Decision Gate: `TASK-036 P-UX-2A0 element/selection inventory, followed by effect-free P-UX-2A1 canonical Provider/model projection; Voice work continues separately through TASK-046/TASK-047 and their exact runtime/license, Consent, encrypted-storage and Owner gates; P-OBS-2 remains later`
-- Owner Roadmap Markers: `🟦 DEV1 NOW = TASK-036 P-UX-2A0`; `🟪 DEV2 NOW = TASK-021 Integrated Dashboard R0`; `🎯 DEV1 sequence = A0 -> A1 -> B -> C -> D -> E`. TASK-018 R0 and the TASK-046 unused-Lock closure are complete. The complete DONE/NOW/NEXT/FUTURE/GATE matrix is canonical in Roadmap Ver.1.90 section 2.1.
+- Owner Roadmap Markers: `🟦 DEV1 NOW = TASK-036 P-UX-2A0`; `🟪 DEV2 NOW = TASK-021 Integrated Dashboard R0`; `🎯 DEV1 sequence = A0 -> A1 -> B -> C -> D -> E`. TASK-009 R0、TASK-018 R0 and the TASK-046 unused-Lock closure are complete. The complete DONE/NOW/NEXT/FUTURE/GATE matrix is canonical in Roadmap Ver.1.90 section 2.1.
 - Owner Implementation Standing Rule: an assignee does not wait for a per-Unit implementation authorization receipt inside an already allocated exclusive lane after fresh main/PR/Lock/path/dirty/overlap checks pass. Cross-owner writes, shared CHANGELOG, Release/Deploy/Production, paid/private credential use, license/Consent decisions and destructive operations retain their existing Gates.
 
 ## TASK-007 / 010 / 011 / 012 Technical MVP candidate

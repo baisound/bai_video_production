@@ -37,7 +37,7 @@
 - Current insertion: TASK-036 P-UX-1C is hosted-closed against unchanged V6.1.1 with packaged-native visual parity. TASK-046/TASK-047 remain separately governed, and their runtime, Consent, storage, recording and Owner gates are unchanged. Native Voice, production recording and fine-tuning remain unclaimed.
 - Current functional insertion: TASK-036 P-UX-2 is **DESIGN REGISTERED / ELEMENT-SELECTION RE-AUDITED / IMPLEMENTATION QUEUED**. The V6.1.1 HTML mock remains the absolute visual authority, but `VISUAL_PARITY_PASS` is not functional completion. The runtime exposes all 14 primary pages, yet the mock/runtime comparison is `205/109` stable IDs, `57/2` selects and `83/7` inputs/textareas. No runtime select currently chooses a generation model. The exact `Provider/model -> Prompt/Scene -> admission -> generation -> Candidate adoption -> Timeline -> Final Approval -> Export Job -> Render QA/output read-back` route is broken at model selection and later Gates.
 
-### 2.1 Owner向け全体ロードマップ目印（2026-08-17 / main `349a590`）
+### 2.1 Owner向け全体ロードマップ目印（2026-08-17 / main `8ce6fd4`）
 
 | 目印 | 意味 |
 |---|---|
@@ -59,7 +59,7 @@ Draft PRまで自走する。これは担当外変更、Release/Deploy/Productio
 
 | 担当 | これまでの主要到達点 | 現在地点 | 次に進む順序 | 競合防止境界 |
 |---|---|---|---|---|
-| 開発担当 | ✅ TASK-005 R0/R1A/R1B1/R1C0、✅ TASK-008、✅ TASK-013 Native H3 recovery/source closure、✅ TASK-018 R0 | 🟦 **TASK-036 P-UX-2A0 Element/Selection Contract Inventory**。本設計PR #148はmerge済み。再監査でボタン以外を含む欠落を確定したが、実装完了とは表示しない | 🎯 P-UX-2A0→2A1 Model/Capability Selector→2B→2C→2D→2E、次にTASK-009、TASK-015、TASK-019、TASK-025、残るTASK-005/013/027 visual slices | TASK-046/047/048、Narration/Audio、共有Registry/CHANGELOGを変更しない。共有writeはIntegration Lockで直列化 |
+| 開発担当 | ✅ TASK-005 R0/R1A/R1B1/R1C0、✅ TASK-008、✅ TASK-009 R0、✅ TASK-013 Native H3 recovery/source closure、✅ TASK-018 R0 | 🟦 **TASK-036 P-UX-2A0 Element/Selection Contract Inventory**。本設計PR #148はmerge済み。再監査でボタン以外を含む欠落を確定したが、実装完了とは表示しない | 🎯 P-UX-2A0→2A1 Model/Capability Selector→2B→2C→2D→2E、次にTASK-015、TASK-019、TASK-025、残るTASK-005/013/027 visual slices | TASK-046/047/048、Narration/Audio、共有Registry/CHANGELOGを変更しない。共有writeはIntegration Lockで直列化 |
 | 開発担当2 | ✅ TASK-047/048、✅ TASK-014 I1、✅ TASK-013 BGM/SFX、✅ TASK-020、✅ TASK-016、✅ TASK-035、✅ TASK-046 unused Lock closure | 🟪 **TASK-021 Integrated Dashboard / Operations R0**。read-only allocation packetはPASS、exact mutationはfresh Gateから開始 | 🎯 TASK-021 R0→TASK-014 Local Primary残slice→TASK-041 Audio残slice。TASK-017はTASK-018 receiptと保持/削除authority後 | TASK-036 P-UX-2、TASK-005/008/009/013 visual laneを変更しない。Provider/paid/voice recording/publicationは別Gate |
 
 #### 動画書き出しまでの現在位置
@@ -75,7 +75,7 @@ Draft PRまで自走する。これは担当外変更、Release/Deploy/Productio
 | 🟦 DEV1 NOW | TASK-036 P-UX-2A0..E | 開発担当 | 2A0で全要素と選択結果をinventory化し、2A1でcanonical Provider/model projectionを接続してから後続へ進む |
 | 🟪 DEV2 NOW | TASK-021 Integrated Dashboard R0 | 開発担当2 | TASK-016/020 foundationとallocation packet済み。body-free read modelのfresh exact Gateから開始 |
 | ⬜ FUTURE | TASK-005 real detector acquisition/materialization/runtime | 開発担当 | Contract foundation済み。license/provenance/artifact identityと実media probeは別effect Gate |
-| ⬜ FUTURE | TASK-009 DBD Profile、TASK-015 YouTube Feedback、TASK-019 Auto-Tuner | 開発担当 | TASK-009はTASK-008後、TASK-015はTASK-008後、TASK-019は008+015後 |
+| ⬜ FUTURE | TASK-015 YouTube Feedback、TASK-019 Auto-Tuner | 開発担当 | TASK-009 R0はPR #151で完了。TASK-015はTASK-008後、TASK-019は008+015後 |
 | ⬜ FUTURE | TASK-025 Premiere adapter | 開発担当 | TASK-001/022済み。import Golden Fixture単位で開始 |
 | ⬜ FUTURE | TASK-013 Scene-Compatible Reference / TASK-027 visual orchestration残slice | 開発担当 | Native H3 closure済み。Human adoption、Asset publication、Timeline mutationを別Gate化 |
 | ⬜ FUTURE | TASK-014 Local Primary render/alignment/48 kHz publication | 開発担当2 | I1 preflight済み。model/license/Consent/VoiceProfile/Datasetと実生成は段階Gate |
@@ -83,7 +83,7 @@ Draft PRまで自走する。これは担当外変更、Release/Deploy/Productio
 | ⏸ GATE | TASK-017 Storage Lifecycle / GC | 開発担当2 | TASK-018 receipt、retention/legal-hold policy、削除対象のOwner authorityが揃うまでpark |
 | ⏸ GATE | TASK-046 production recording/fine-tuning、TASK-047 P-OBS-2 | 開発担当2 | Consent、encrypted storage、license、recording/save、Dataset adoption、Owner GOを個別に要求 |
 
-完了済みの大区分は `TASK-001..004, 006..008, 010..012, 016, 020, 022..024, 026, 035, TASK-036 Minimum MVP/P-UX-1, 037..045, 047, 048`。ここで「完了」は記載したGateに限り、部分TASKの将来sliceやProduction effectを自動的に完了扱いしない。
+完了済みの大区分は `TASK-001..004, 006..009, 010..012, 016, 020, 022..024, 026, 035, TASK-036 Minimum MVP/P-UX-1, 037..045, 047, 048`。ここで「完了」は記載したGateに限り、部分TASKの将来sliceやProduction effectを自動的に完了扱いしない。
 
 ## 3. MVP定義
 

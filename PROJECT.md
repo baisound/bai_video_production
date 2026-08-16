@@ -112,7 +112,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 
 - Last Completed Gate: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE`; PR #122 exact head `5d0d8140659a6bf3a30e9b19ac183c206dee8d92` passed hosted `9 / 9`, merged at exact main `ea671ee75a6c1a6ef79756b33f68ecb07466c5b4`, and passed post-merge main CI/Security
 - Completed Task: `TASK-036 / P-UX-1C`; the exact packaged native matrix closes all required V6.1.1 primary surfaces and six top menus with `V6.1.1_VISUAL_PARITY_PASS`
-- Active Product Integration Route: `TASK-036 / P-UX-2`; the V6.1.1 HTML mock remains the absolute visual authority, while the separate functional Gate connects the real screen content and operations from media intake through verified Export read-back. Current state is `FUNCTIONAL_SCREEN_FLOW_NOT_COMPLETE`; visual parity is not promoted to functional completion.
+- Active Product Integration Route: `TASK-036 / P-UX-2`; the V6.1.1 HTML mock remains the absolute visual authority. The element-level re-audit covers fields, selects, cards, candidates, selected outcomes and handoffs, not buttons alone. Current state is `ELEMENT_INTERACTION_PARITY_NOT_COMPLETE / MODEL_TO_EXPORT_FLOW_BROKEN`; P-UX-2A0 inventory and P-UX-2A1 canonical Provider/model projection precede the B..E route to verified Export read-back.
 - Separate Voice Route: TASK-046/TASK-047 retain their own exact Locks, authorities and Human gates; P-UX-1C no longer blocks their independently authorized work
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; P-OBS-0 installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may move forward separately, but P-VS-3 production training-material recording and P-VS-4 fine-tuning require P-OBS-1 hosted completion plus exact-path probe PASS, recording Consent, storage encryption and Owner GO
 - TASK-004: `COMPLETED`
@@ -121,7 +121,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Development Candidate: `NONE`; no post-0.21.0 candidate is selected
 - Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
-- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.88 Addendum LXXXII
+- Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus Owner marker section 2.1 (`DONE / DEV1 NOW / DEV2 NOW / NEXT / FUTURE / GATE`)
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS
 - AI routing: package 0.6.2 native-Windows `293 / 293 PASS`; TASK-028 package 0.6.3 uses exact model capabilities rather than provider-purpose locking; GUI settings and remaining adapters are subsequent slices
 - OSS readiness: package 0.6.4 adds public documentation, governance/community health files, cross-platform CI, dependency/secret scanning, packaging metadata and evidence-based impact guidance; the Repository is now public and hosted CI remains the final external gate

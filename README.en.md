@@ -160,6 +160,12 @@ before publishing and stops if an artifact is missing or changed. This unsigned
 development candidate targets OBS Studio 32.2.1 x64. Follow the
 [beginner guide](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) from top to bottom for installation and use.
 
+The current public Technical Preview is
+[BAI Voice Capture v0.1.0-dev.8 installer.4](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.8-installer.4).
+Most users should download
+`bai-voice-capture-0.1.0-dev.8-installer.4-windows-x64-setup.exe` from its Release Assets.
+It is an unsigned Pre-release and is separate from the stable BAI Video Production `v0.21.0` release.
+
 To rebuild the Plugin, runtime package, and installer, use a fresh directory with
 the OBS Studio `32.2.1` source and submodules, Visual Studio Build Tools 2026,
 Windows SDK `10.0.26100.0`, CMake `3.30.5`, and Inno Setup `7.1.0`.

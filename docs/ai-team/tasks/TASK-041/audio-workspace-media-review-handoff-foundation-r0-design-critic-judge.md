@@ -2,7 +2,8 @@
 
 - Date: 2026-08-17
 - Authority: Owner autonomous roadmap queue / TASK-041 remaining Audio Workspace slice
-- Base: `main@6ef869098b0bc629deb87d1d6e964c4e3fbfc44d`
+- Initial base: `main@6ef869098b0bc629deb87d1d6e964c4e3fbfc44d`
+- Fresh integrated base: `main@8dddd2b7caadd1daaba87aa4f3bc73a183e9dd73`
 - State: `PURE_METADATA_IMPLEMENTED_AND_LOCALLY_VALIDATED`
 - Effects: audio read/playback/waveform render/media strip/Asset registration/placement mutation/DAW launch = `false`
 
@@ -139,7 +140,7 @@ this slice performs no concurrent shared write. It may add one Japanese
   managed Windows environment. The initial default-temp run was separately
   invalidated by a pre-existing pytest temp-root access denial; the dedicated
   workspace basetemp removed those 542 setup errors.
-- WSL2 full regression: `1670 passed, 1 skipped`.
+- WSL2 full regression after fresh-main integration: `1694 passed, 1 skipped`.
 - Hosted checks: pending Draft PR.
 
 ## K. Critic pass 1

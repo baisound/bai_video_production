@@ -19,6 +19,7 @@ from .task036_view_model import Task036DesktopViewModel
 from .task036_native_dialog import Task036NativeDialogService
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_workflow_runtime import Task036WorkflowRuntime
+from .connection_settings_web import ConnectionSettingsWebService
 from .errors import ProductError, ProductErrorCategory
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
@@ -183,6 +184,7 @@ class Task036ShellBridge:
         audio_workspace_application: Task041AudioWorkspaceApplication | None = None,
         audio_placement_application: Task026AudioPlacementApplication | None = None,
         quick_generation_application: Task042QuickGenerationApplication | None = None,
+        connection_settings: ConnectionSettingsWebService | None = None,
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
     ) -> None:
@@ -214,6 +216,7 @@ class Task036ShellBridge:
         self._audio_workspace_application = audio_workspace_application
         self._audio_placement_application = audio_placement_application
         self._quick_generation_application = quick_generation_application
+        self._connection_settings = connection_settings
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
         self._nle_controller = nle_controller
@@ -461,6 +464,45 @@ class Task036ShellBridge:
         if self._quick_generation_application is None:
             return {"available": False}
         return {"available": True, **self._quick_generation_application.snapshot()}
+
+    @staticmethod
+    def _connection_settings_projection(form: dict[str, object]) -> dict[str, object]:
+        return {
+            "available": True,
+            **form,
+            "credential_values_redisplayed": False,
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "generation_started": False,
+        }
+
+    def connection_settings_snapshot(self, args: Any = None) -> dict[str, object]:
+        self._empty_args(args, "Connection Settings snapshot")
+        if self._connection_settings is None:
+            return {
+                "available": False,
+                "credential_values_redisplayed": False,
+                "provider_execution_started": False,
+                "paid_execution_authorized": False,
+                "generation_started": False,
+            }
+        return self._connection_settings_projection(self._connection_settings.form())
+
+    def connection_settings_update(self, args: Any) -> dict[str, object]:
+        required = {"revision", "workload_modes", "preferred_route_ids"}
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Connection Settings request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._connection_settings is None:
+            raise ProductError(
+                "ERR_TASK028_CONNECTION_SETTINGS_NOT_BOUND",
+                "Connection Settings are not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._connection_settings_projection(self._connection_settings.update(args))
 
     def production_register_candidate(self, args: Any) -> dict[str, Any]:
         required = {"candidate_id", "slot_id", "asset_id", "asset_sha256", "expected_snapshot_sha256"}

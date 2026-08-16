@@ -74,6 +74,7 @@ def test_static_controls_are_bound_or_truthfully_disabled() -> None:
             or button.get("data-command")
             or button.get("data-settings-view")
             or button.get("data-add-track")
+            or button.get("data-lock-kind")
         ), button
         if "disabled" in button:
             # A few context-sensitive Product actions start disabled and are
@@ -243,3 +244,26 @@ def test_scenes_mutations_are_visible_but_truthfully_disabled() -> None:
         in SHELL_HTML
     )
     assert "Add・Remove・Update・Timeline確定はtyped revision service未接続のため実行できません。" in SHELL_HTML
+
+
+def test_world_lock_registry_filters_exact_reference_slot_kinds() -> None:
+    for marker in (
+        'data-lock-kind="CHARACTER_REFERENCE"',
+        'data-lock-kind="SPACE_REFERENCE"',
+        'data-lock-kind="COMPOSITION_REFERENCE"',
+        'id="lockSearch"',
+        "function renderLockRegistry(model)",
+        "slot.slot_kind===currentLockKind",
+        "slot.locked_candidate_id",
+        "Official: ${locked?locked.candidate_id+' / '+locked.asset_id+' / '+locked.asset_sha256:'正式LOCKなし'}",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_world_lock_registry_is_read_only_and_does_not_invent_generation() -> None:
+    assert "renderLockRegistry(model);if(!model?.available)" in SHELL_HTML
+    assert "production_register_candidate" not in SHELL_HTML
+    assert "production_generate_lock" not in SHELL_HTML
+    assert "正式LOCKを確認" in SHELL_HTML
+    assert "production_prepare_lock" in SHELL_HTML
+    assert "production_apply_lock" in SHELL_HTML

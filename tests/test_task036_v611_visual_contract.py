@@ -565,6 +565,25 @@ def test_edit_cut_review_keeps_selection_and_human_decision_separate() -> None:
     assert "currentReview?.all_reviewed" not in SHELL_HTML
 
 
+def test_quick_projects_persisted_task042_intents_without_execution() -> None:
+    for marker in (
+        'id="quickSources"',
+        'id="quickIntents"',
+        'id="quickStatus"',
+        "async function refreshQuick()",
+        "call('quick_generation_snapshot')",
+        "model.intents||[]",
+        "row.references||[]",
+        "model.prompt_snapshot_sha256",
+        "model.production_snapshot_sha256",
+        "row.provider_execution_started?'STARTED':'NOT STARTED'",
+        "Quick Intent作成にはexact compiled Prompt、権利、Cost ceiling、Execution Decisionの入力が必要です",
+    ):
+        assert marker in SHELL_HTML
+    assert "quick_generation_prepare" not in SHELL_HTML
+    assert "quick_generation_apply" not in SHELL_HTML
+
+
 def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
     for marker in (
         "`${row.stage} · ${row.job_id}`",

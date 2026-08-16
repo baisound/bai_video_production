@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.local/schemas/reaper-audio-finishing.schema.json",
+  "title": "TASK-035 REAPER Audio Finishing Foundation R0",
+  "oneOf": [
+    { "$ref": "#/$defs/DawFinishingPolicyRevision" },
+    { "$ref": "#/$defs/DawSourceBinding" },
+    { "$ref": "#/$defs/DawCapabilityReport" },
+    { "$ref": "#/$defs/DawSessionPlan" },
+    { "$ref": "#/$defs/DawExecutionAuthorizationBinding" },
+    { "$ref": "#/$defs/DawProjectSnapshotBinding" },
+    { "$ref": "#/$defs/DawExecutionReceiptBinding" },
+    { "$ref": "#/$defs/AudioQaReceiptBinding" },
+    { "$ref": "#/$defs/HumanMixApprovalBinding" },
+    { "$ref": "#/$defs/AudioRoundTripManifest" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
+    "utc": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "contractState": { "enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"] },
+    "capabilityState": { "enum": ["SUPPORTED", "LIMITED", "PROBE_REQUIRED", "UNSUPPORTED", "UNKNOWN"] },
+    "licenseState": { "enum": ["VERIFIED", "REVIEW_REQUIRED", "REVOKED", "UNKNOWN"] },
+    "rightsState": { "enum": ["PASS", "BLOCKED", "REVOKED", "UNKNOWN"] },
+    "reasons": { "type": "array", "maxItems": 64, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$" } },
+    "digests": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/sha256" } },
+    "DawFinishingPolicyRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "policy_id", "revision", "parent_record_sha256", "required_sample_rate_hz", "max_tracks", "max_routes", "max_render_targets", "allow_human_owned_mutation", "official_policy_ref", "official_policy_sha256", "effective_at", "expires_at", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DawFinishingPolicyRevision" }, "policy_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 }, "parent_record_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "required_sample_rate_hz": { "const": 48000 }, "max_tracks": { "type": "integer", "minimum": 1, "maximum": 256 },
+        "max_routes": { "type": "integer", "minimum": 1, "maximum": 1024 }, "max_render_targets": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "allow_human_owned_mutation": { "const": false }, "official_policy_ref": { "$ref": "#/$defs/id" },
+        "official_policy_sha256": { "$ref": "#/$defs/sha256" }, "effective_at": { "$ref": "#/$defs/utc" },
+        "expires_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "DawSourceBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "source_id", "source_kind", "contract_state", "canonical_ref", "canonical_sha256", "canonical_revision", "rights_state", "observed_at", "body_included", "absolute_path_included", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DawSourceBinding" }, "source_id": { "$ref": "#/$defs/id" },
+        "source_kind": { "enum": ["ASSET_REVISION", "TIMELINE_AUDIO", "AUDIO_WORKSPACE", "PLACEMENT_PLAN", "RESOURCE_ADMISSION", "QUALITY_POLICY"] },
+        "contract_state": { "$ref": "#/$defs/contractState" }, "canonical_ref": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "canonical_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "canonical_revision": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+        "rights_state": { "$ref": "#/$defs/rightsState" }, "observed_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] },
+        "body_included": { "const": false }, "absolute_path_included": { "const": false }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "DawCapabilityReport": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "report_id", "reaper_version", "platform", "executable_sha256", "reascript_api_state", "project_read_state", "project_write_state", "undo_state", "render_mix_state", "render_stems_state", "plugin_inventory_state", "plugin_inventory_sha256", "license_state", "probed_at", "probe_profile_sha256", "private_path_included", "license_data_included", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DawCapabilityReport" }, "report_id": { "$ref": "#/$defs/id" }, "reaper_version": { "$ref": "#/$defs/id" },
+        "platform": { "const": "WINDOWS_X64" }, "executable_sha256": { "$ref": "#/$defs/sha256" },
+        "reascript_api_state": { "$ref": "#/$defs/capabilityState" }, "project_read_state": { "$ref": "#/$defs/capabilityState" },
+        "project_write_state": { "$ref": "#/$defs/capabilityState" }, "undo_state": { "$ref": "#/$defs/capabilityState" },
+        "render_mix_state": { "$ref": "#/$defs/capabilityState" }, "render_stems_state": { "$ref": "#/$defs/capabilityState" },
+        "plugin_inventory_state": { "$ref": "#/$defs/capabilityState" }, "plugin_inventory_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "license_state": { "$ref": "#/$defs/licenseState" }, "probed_at": { "$ref": "#/$defs/utc" }, "probe_profile_sha256": { "$ref": "#/$defs/sha256" },
+        "private_path_included": { "const": false }, "license_data_included": { "const": false }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "DawSessionPlan": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "session_plan_id", "production_job_id", "revision", "parent_record_sha256", "project_id", "source_binding_hashes", "timeline_binding_sha256", "audio_workspace_sha256", "resource_admission_sha256", "capability_report_sha256", "sample_rate_hz", "frame_rate_numerator", "frame_rate_denominator", "channel_layout", "track_spec_hashes", "route_spec_hashes", "render_target_hashes", "ownership", "plan_state", "reason_codes", "body_included", "absolute_path_included", "execution_started", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DawSessionPlan" }, "session_plan_id": { "$ref": "#/$defs/id" }, "production_job_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 }, "parent_record_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "project_id": { "$ref": "#/$defs/id" }, "source_binding_hashes": { "allOf": [{ "$ref": "#/$defs/digests" }, { "minItems": 1, "maxItems": 512 }] },
+        "timeline_binding_sha256": { "$ref": "#/$defs/sha256" }, "audio_workspace_sha256": { "$ref": "#/$defs/sha256" },
+        "resource_admission_sha256": { "$ref": "#/$defs/sha256" }, "capability_report_sha256": { "$ref": "#/$defs/sha256" },
+        "sample_rate_hz": { "const": 48000 }, "frame_rate_numerator": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+        "frame_rate_denominator": { "type": "integer", "minimum": 1, "maximum": 1000000 }, "channel_layout": { "enum": ["MONO", "STEREO", "MULTICHANNEL"] },
+        "track_spec_hashes": { "allOf": [{ "$ref": "#/$defs/digests" }, { "minItems": 1, "maxItems": 256 }] },
+        "route_spec_hashes": { "allOf": [{ "$ref": "#/$defs/digests" }, { "maxItems": 1024 }] },
+        "render_target_hashes": { "allOf": [{ "$ref": "#/$defs/digests" }, { "minItems": 1, "maxItems": 64 }] },
+        "ownership": { "enum": ["AUTOMATION_OWNED", "HUMAN_OWNED", "SHARED_REVIEW"] }, "plan_state": { "enum": ["DRAFT", "PREFLIGHT_READY", "BLOCKED", "UNKNOWN"] },
+        "reason_codes": { "$ref": "#/$defs/reasons" }, "body_included": { "const": false }, "absolute_path_included": { "const": false },
+        "execution_started": { "const": false }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "DawExecutionAuthorizationBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "authorization_id", "authorization_revision", "authorization_sha256", "session_plan_sha256", "capability_report_sha256", "resource_gate_sha256", "operation", "authority_kind", "issued_at", "expires_at", "one_shot", "consumed", "evidence_ref", "evidence_sha256", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DawExecutionAuthorizationBinding" }, "contract_state": { "$ref": "#/$defs/contractState" },
+        "authorization_id": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] }, "authorization_revision": { "type": ["integer", "null"], "minimum": 1 },
+        "authorization_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "session_plan_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "capability_report_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "resource_gate_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "operation": { "enum": ["CREATE_PROJECT", "SYNC_PROJECT", "APPLY_TRACK_PLAN", "RENDER_MIX", "RENDER_STEMS", null] }, "authority_kind": { "enum": ["OWNER_HUMAN_GATE", null] },
+        "issued_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] }, "expires_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] },
+        "one_shot": { "type": ["boolean", "null"] }, "consumed": { "type": ["boolean", "null"] }, "evidence_ref": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "evidence_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "DawProjectSnapshotBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "snapshot_ref", "snapshot_sha256", "session_plan_sha256", "project_state_sha256", "reaper_version", "ownership", "observed_at", "retained_as_evidence", "absolute_path_included", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DawProjectSnapshotBinding" }, "contract_state": { "$ref": "#/$defs/contractState" },
+        "snapshot_ref": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] }, "snapshot_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "session_plan_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "project_state_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "reaper_version": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] }, "ownership": { "enum": ["AUTOMATION_OWNED", "HUMAN_OWNED", "SHARED_REVIEW", null] },
+        "observed_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] }, "retained_as_evidence": { "type": ["boolean", "null"] },
+        "absolute_path_included": { "const": false }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "DawExecutionReceiptBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "receipt_ref", "receipt_sha256", "operation_identity", "operation", "session_plan_sha256", "authorization_sha256", "before_snapshot_sha256", "after_snapshot_sha256", "external_state", "started_at", "completed_at", "canonical_persistence_verified", "effect_started_by_module", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DawExecutionReceiptBinding" }, "contract_state": { "$ref": "#/$defs/contractState" },
+        "receipt_ref": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] }, "receipt_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "operation_identity": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] }, "operation": { "enum": ["CREATE_PROJECT", "SYNC_PROJECT", "APPLY_TRACK_PLAN", "RENDER_MIX", "RENDER_STEMS", null] },
+        "session_plan_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "authorization_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "before_snapshot_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "after_snapshot_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "external_state": { "enum": ["COMPLETED", "FAILED", "CANCELLED_SAFE", "UNKNOWN", null] }, "started_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] },
+        "completed_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] }, "canonical_persistence_verified": { "type": ["boolean", "null"] },
+        "effect_started_by_module": { "const": false }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "AudioQaReceiptBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "qa_receipt_ref", "qa_receipt_sha256", "rendered_candidate_sha256", "quality_policy_sha256", "analyzer_profile_sha256", "sample_rate_hz", "channel_layout", "duration_samples", "qa_decision", "observed_at", "audio_analyzed_by_module", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "AudioQaReceiptBinding" }, "contract_state": { "$ref": "#/$defs/contractState" },
+        "qa_receipt_ref": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] }, "qa_receipt_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "rendered_candidate_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "quality_policy_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "analyzer_profile_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "sample_rate_hz": { "type": ["integer", "null"], "minimum": 1, "maximum": 768000 },
+        "channel_layout": { "enum": ["MONO", "STEREO", "MULTICHANNEL", null] }, "duration_samples": { "type": ["integer", "null"], "minimum": 1 },
+        "qa_decision": { "enum": ["PASS", "FAIL", "REVIEW_REQUIRED", "UNKNOWN", null] }, "observed_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] },
+        "audio_analyzed_by_module": { "const": false }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "HumanMixApprovalBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "approval_id", "approval_sha256", "candidate_manifest_sha256", "qa_receipt_sha256", "decision", "reviewer_kind", "decided_at", "evidence_ref", "evidence_sha256", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "HumanMixApprovalBinding" }, "contract_state": { "$ref": "#/$defs/contractState" },
+        "approval_id": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] }, "approval_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "candidate_manifest_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "qa_receipt_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "decision": { "enum": ["APPROVE", "REJECT", "RETEST", null] }, "reviewer_kind": { "enum": ["OWNER", null] },
+        "decided_at": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] }, "evidence_ref": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+        "evidence_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "AudioRoundTripManifest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "manifest_id", "revision", "parent_record_sha256", "project_id", "session_plan_sha256", "project_snapshot_sha256", "execution_receipt_sha256", "rendered_asset_binding_hashes", "qa_receipt_hashes", "human_approval_sha256", "resolve_placement_plan_sha256", "round_trip_state", "reason_codes", "untreated_source_preserved", "asset_promotion_started", "resolve_mutation_started", "publication_started", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "AudioRoundTripManifest" }, "manifest_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 }, "parent_record_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "project_id": { "$ref": "#/$defs/id" }, "session_plan_sha256": { "$ref": "#/$defs/sha256" }, "project_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "execution_receipt_sha256": { "$ref": "#/$defs/sha256" }, "rendered_asset_binding_hashes": { "allOf": [{ "$ref": "#/$defs/digests" }, { "minItems": 1, "maxItems": 64 }] },
+        "qa_receipt_hashes": { "allOf": [{ "$ref": "#/$defs/digests" }, { "maxItems": 64 }] }, "human_approval_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "resolve_placement_plan_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }, "round_trip_state": { "enum": ["RENDER_CANDIDATE", "QA_VERIFIED", "HUMAN_APPROVED", "ASSET_BOUND", "PLACEMENT_BOUND", "UNKNOWN"] },
+        "reason_codes": { "$ref": "#/$defs/reasons" }, "untreated_source_preserved": { "const": true }, "asset_promotion_started": { "const": false },
+        "resolve_mutation_started": { "const": false }, "publication_started": { "const": false }, "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

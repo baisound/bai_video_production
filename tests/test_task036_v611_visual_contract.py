@@ -188,6 +188,12 @@ def test_asset_review_binds_exact_task038_human_decision_boundary() -> None:
 def test_asset_review_recovery_and_empty_states_fail_closed() -> None:
     assert "if(audit?.recovery?.required)return" in SHELL_HTML
     assert "if(!audit.recovery?.required&&candidate.available_human_actions?.length)" in SHELL_HTML
+    assert "async function recoverAssetReview(audit,action)" in SHELL_HTML
+    assert "['COMPLETE','ABANDON','FINALIZE'].includes(action)" in SHELL_HTML
+    assert "(audit.recovery.available_actions||[]).includes(action)" in SHELL_HTML
+    assert "call('audit_apply_recovery',{action})" in SHELL_HTML
+    assert "安全に適用できる復旧Actionはありません。手動調査が必要です。" in SHELL_HTML
+    assert "audit_apply_recovery',{action:'COMPLETE'" not in SHELL_HTML
     assert "既存のProduction Control復旧を完了するまで新しい判断はできません。" in SHELL_HTML
     assert "監査済みCandidateはまだありません。" in SHELL_HTML
 

@@ -131,10 +131,10 @@ Local validation result:
 - schema draft check and all ten root payloads: passed
 - public/schema-resource mirror: byte exact
 - Python AST compile and static no-effect scan: passed
-- Windows full: 1,543 passed / 1 skipped / 1 unrelated `ProductProjectBackupStore` directory-rename permission failure; immediate isolated single-test reconciliation passed 1/1
-- WSL full: 1,544 passed / 1 Windows-only skip
+- final Windows full after latest-main composition: 1,554 passed / 1 skipped / 2 unrelated atomic-directory rename permission failures in TASK-012/TASK-043; immediate isolated reconciliation passed 2/2
+- final WSL full after latest-main composition: 1,556 passed / 1 Windows-only skip
 
-The reconciled Windows permission failure changed no source and is not counted as TASK-035 PASS evidence; the complete WSL suite and hosted Windows checks remain the canonical full-regression gates.
+The reconciled Windows permission failures changed no source and are not counted as TASK-035 PASS evidence; the complete WSL suite and hosted Windows checks remain the canonical full-regression gates.
 
 ## 11. Critic pass 1
 

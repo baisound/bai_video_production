@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/voice-quality-gain-admission.schema.json",
+  "title": "TASK-048 P-QC-1B Body-free Local Gain Receipt Admission",
+  "$ref": "#/$defs/gainReceiptAdmissionReport",
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullableId": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/id"}]},
+    "nullableSha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+    "nullableNumber": {"oneOf": [{"type": "null"}, {"type": "number"}]},
+    "nullablePositiveInteger": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+    "contractState": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "canonicalRecordBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contract_state", "record_ref", "record_sha256", "evidence_sha256"],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "record_ref": {"$ref": "#/$defs/nullableId"},
+        "record_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "evidence_sha256": {"$ref": "#/$defs/nullableSha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}},
+          "then": {"properties": {"record_ref": {"type": "null"}, "record_sha256": {"type": "null"}, "evidence_sha256": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}},
+          "then": {"properties": {"record_ref": {"$ref": "#/$defs/id"}, "record_sha256": {"$ref": "#/$defs/sha256"}, "evidence_sha256": {"$ref": "#/$defs/sha256"}}}
+        }
+      ]
+    },
+    "canonicalMeasurementBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_state", "measurement_input_range_ref", "measurement_input_range_sha256",
+        "canonical_mapping_receipt_ref", "canonical_mapping_receipt_sha256", "sample_rate",
+        "bit_depth", "channels", "processing_class"
+      ],
+      "properties": {
+        "contract_state": {"$ref": "#/$defs/contractState"},
+        "measurement_input_range_ref": {"$ref": "#/$defs/nullableId"},
+        "measurement_input_range_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "canonical_mapping_receipt_ref": {"$ref": "#/$defs/nullableId"},
+        "canonical_mapping_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "sample_rate": {"$ref": "#/$defs/nullablePositiveInteger"},
+        "bit_depth": {"$ref": "#/$defs/nullablePositiveInteger"},
+        "channels": {"$ref": "#/$defs/nullablePositiveInteger"},
+        "processing_class": {"oneOf": [{"type": "null"}, {"enum": ["RAW_PRE_FILTER", "OBS_POST_FILTER", "CANONICAL_CONVERTED_RAW", "RX_DERIVED"]}]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}},
+          "then": {"properties": {
+            "measurement_input_range_ref": {"type": "null"}, "measurement_input_range_sha256": {"type": "null"},
+            "canonical_mapping_receipt_ref": {"type": "null"}, "canonical_mapping_receipt_sha256": {"type": "null"},
+            "sample_rate": {"type": "null"}, "bit_depth": {"type": "null"}, "channels": {"type": "null"},
+            "processing_class": {"type": "null"}
+          }}
+        },
+        {
+          "if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}},
+          "then": {"properties": {
+            "measurement_input_range_ref": {"$ref": "#/$defs/id"}, "measurement_input_range_sha256": {"$ref": "#/$defs/sha256"},
+            "canonical_mapping_receipt_ref": {"$ref": "#/$defs/id"}, "canonical_mapping_receipt_sha256": {"$ref": "#/$defs/sha256"},
+            "sample_rate": {"const": 48000}, "bit_depth": {"const": 24}, "channels": {"const": 1},
+            "processing_class": {"enum": ["RAW_PRE_FILTER", "OBS_POST_FILTER", "CANONICAL_CONVERTED_RAW", "RX_DERIVED"]}
+          }}
+        }
+      ]
+    },
+    "gainAdmissionContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["measurement_binding", "capture_chain_binding", "analyzer_profile_binding", "quality_policy_binding"],
+      "properties": {
+        "measurement_binding": {"$ref": "#/$defs/canonicalMeasurementBinding"},
+        "capture_chain_binding": {"$ref": "#/$defs/canonicalRecordBinding"},
+        "analyzer_profile_binding": {"$ref": "#/$defs/canonicalRecordBinding"},
+        "quality_policy_binding": {"$ref": "#/$defs/canonicalRecordBinding"}
+      }
+    },
+    "localGainCheckReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema", "terminal_reason", "started_at_utc", "finished_at_utc",
+        "measurement_fact_state", "signal_integrity_state", "gain_admission_state",
+        "recommendation", "sample_peak_dbfs", "rms_dbfs", "clip_threshold_abs",
+        "clip_sample_count", "non_finite_sample_count", "measured_sample_values",
+        "received_bytes", "audio_body_persisted", "hardware_setting_changed",
+        "session_key_persisted"
+      ],
+      "properties": {
+        "schema": {"const": "bvp.task047.local-gain-check-receipt.v1"},
+        "terminal_reason": {"type": "string", "minLength": 1},
+        "started_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+        "finished_at_utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+        "measurement_fact_state": {"enum": ["MEASURED", "ERROR_NON_FINITE_SAMPLE", "INSUFFICIENT_INPUT"]},
+        "signal_integrity_state": {"enum": ["MEASURED_NO_CLIPPING", "FAIL_CLIPPING", "UNKNOWN"]},
+        "gain_admission_state": {"const": "UNKNOWN_POLICY_NOT_BOUND"},
+        "recommendation": {"enum": ["LOWER_HARDWARE_GAIN_PROPOSAL", "NO_AUTOMATIC_RECOMMENDATION"]},
+        "sample_peak_dbfs": {"$ref": "#/$defs/nullableNumber"},
+        "rms_dbfs": {"$ref": "#/$defs/nullableNumber"},
+        "clip_threshold_abs": {"const": 0.9999},
+        "clip_sample_count": {"type": "integer", "minimum": 0},
+        "non_finite_sample_count": {"type": "integer", "minimum": 0},
+        "measured_sample_values": {"type": "integer", "minimum": 0},
+        "received_bytes": {"type": "integer", "minimum": 0},
+        "audio_body_persisted": {"const": false},
+        "hardware_setting_changed": {"const": false},
+        "session_key_persisted": {"const": false}
+      }
+    },
+    "gainReceiptAdmissionReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "gain_admission_contract_version", "record_type", "task_owner", "source_schema",
+        "source_receipt_sha256", "source_receipt", "context", "measurement_fact_validity",
+        "classification", "quality_state", "measured_linear_zero",
+        "canonical_pqc_measurement_receipt_issued", "canonical_pqc_quality_receipt_issued",
+        "audio_body_read", "analyzer_executed", "hardware_or_obs_setting_changed",
+        "gain_change_authorized", "dataset_training_production_authorized",
+        "gain_receipt_admission_report_sha256"
+      ],
+      "properties": {
+        "gain_admission_contract_version": {"const": "1.0.0"},
+        "record_type": {"const": "GainReceiptAdmissionReport"},
+        "task_owner": {"const": "TASK-048/P-QC-1B"},
+        "source_schema": {"const": "bvp.task047.local-gain-check-receipt.v1"},
+        "source_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "source_receipt": {"$ref": "#/$defs/localGainCheckReceipt"},
+        "context": {"$ref": "#/$defs/gainAdmissionContext"},
+        "measurement_fact_validity": {"enum": ["VALID", "INVALID_INPUT", "UNKNOWN"]},
+        "classification": {"enum": [
+          "INVALID_MEASUREMENT", "RERECORD_RECOMMENDED_CLIPPING",
+          "MEASURED_FACTS_POLICY_OR_CHAIN_UNBOUND", "MISMATCH",
+          "READY_FOR_CANONICAL_PQC_EVALUATION"
+        ]},
+        "quality_state": {"enum": ["FAIL", "UNKNOWN", "RERECORD_RECOMMENDED"]},
+        "measured_linear_zero": {"type": "boolean"},
+        "canonical_pqc_measurement_receipt_issued": {"const": false},
+        "canonical_pqc_quality_receipt_issued": {"const": false},
+        "audio_body_read": {"const": false},
+        "analyzer_executed": {"const": false},
+        "hardware_or_obs_setting_changed": {"const": false},
+        "gain_change_authorized": {"const": false},
+        "dataset_training_production_authorized": {"const": false},
+        "gain_receipt_admission_report_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

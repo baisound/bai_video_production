@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Added TASK-005 R1A bounded synthetic Scene Boundary detector adapter for deterministic contract tests with exact source/profile binding, R0 compiler proposal validation and fail-closed no-effect guards. Real media reads, FFmpeg/ffprobe/OpenCV/PySceneDetect execution, detector accuracy, Human review, downstream editing, Native H3, Release and Deploy remain separate Gates.
 - Added TASK-005 Scene Boundary Contract Foundation R0 with canonical Asset/checksum/frame-rate binding, deterministic gapless full-frame scene ranges, detector profile/configuration digests, byte-identical schemas and review-only no-effect guards. Real media analysis, detector runtime, generation, timeline mutation, Native H3 recovery, Release and Deploy remain separate.
 - Added TASK-047 GitHub Release composition for the hash-verified OBS Voice Capture Windows installer, matching runtime/source archives and bilingual README build instructions. The Release workflow fails closed on missing or changed assets; this change creates no Tag, Release, Deploy, OBS, capture or recording effect.
 - Completed the TASK-036 P-UX-1C packaged-native V6.1.1 parity matrix across Home, WORLD LOCK, Scene Design, Edit, Quick, Settings, Export and all six top menus, with exact disabled reasons, focus restoration, display/accessibility/restart Evidence and full regression. Product runtime and package bytes remain unchanged; Provider, paid, Credential, external NLE, Release and Deploy remain separate.

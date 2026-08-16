@@ -4,7 +4,7 @@
 
 - authority: `OWNER-AUTH-20260817-DEVELOPER2-EXCLUSIVE-ROADMAP-QUEUE-AUTONOMY-01`
 - task: TASK-046 / P-VS-3B active Lock closure
-- preimage main: `eb1ea970cecda1cffb3577dde6efc99b4958582d`
+- preimage main: `2e787b395a3de62ed3cb53547a1664cc42f6601f`
 - preimage Registry: revision 23, blob `aa7705d709fe7d79268aee4ed6f42fa62cc8cd80`
 - exact changed files: Registry plus this Evidence file
 - Registry transition: 23 → 24

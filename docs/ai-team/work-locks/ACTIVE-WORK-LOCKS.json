@@ -3,7 +3,7 @@
   "registry_revision": 24,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "eb1ea970cecda1cffb3577dde6efc99b4958582d",
+  "audit_base_main_sha": "2e787b395a3de62ed3cb53547a1664cc42f6601f",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -633,7 +633,7 @@
       "closure_authority_id": "OWNER-AUTH-20260817-DEVELOPER2-EXCLUSIVE-ROADMAP-QUEUE-AUTONOMY-01",
       "unused_lock_closure": {
         "reason": "OWNER_QUEUE_DIRECTIVE_CLOSE_UNUSED_ACTIVE_LOCK",
-        "closure_preimage_main_sha": "eb1ea970cecda1cffb3577dde6efc99b4958582d",
+        "closure_preimage_main_sha": "2e787b395a3de62ed3cb53547a1664cc42f6601f",
         "registry_preimage_revision": 23,
         "registry_preimage_blob": "aa7705d709fe7d79268aee4ed6f42fa62cc8cd80",
         "lock_hosting_pull_request": 109,

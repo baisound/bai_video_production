@@ -1,14 +1,15 @@
 # OBS Voice Capture Plugin 導入・利用・復旧ガイド
 
-> **文書状態: LOCAL DRAFT / 実機未確認**
+> **文書状態: LOCAL DRAFT / PACKAGE EVIDENCE BOUND / 実機未確認**
 > `P_OBS_PLUGIN_DEVELOPMENT_COMPLETE`: `NOT_ESTABLISHED`
 
 この文書は、BAI Video ProductionのOBS Voice Capture Pluginを安全に導入し、
 録音操作と異常復旧を確認するための公開マニュアル案です。
 
-現在、公開・導入可能なPlugin package、Version、SHA-256、実機load結果は確認されて
-いません。値が未確認の欄を推測で埋めたり、この文書だけを根拠にPluginを導入・起動・
-録音したりしないでください。
+Local buildのPlugin package、Version、SHA-256、manifest、build/test Evidenceは確認済み
+です。ただし、このpackageはRelease、Deploy、配布、導入、OBS loadまたは録音を許可する
+ものではありません。実機項目や未確認欄を推測で埋めたり、この文書だけを根拠にPluginを
+導入・起動・録音したりしないでください。
 
 ## このPluginが行うこと
 
@@ -26,15 +27,24 @@
 
 | 項目 | 値 | 状態 |
 |---|---|---|
-| 対応OBS build | 未確認 | 未確認 |
-| Plugin package名 | 未確認 | 未確認 |
-| Plugin version | 未確認 | 未確認 |
-| Package SHA-256 | 未確認 | 未確認 |
-| Package manifest SHA-256 | 未確認 | 未確認 |
-| Module ID | 未確認 | 未確認 |
-| 対応architecture | 未確認 | 未確認 |
-| 署名・配布元・provenance | 未確認 | 未確認 |
-| License・Notice | 未確認 | 未確認 |
+| Package target OBS build | `32.2.1` | `PASS` |
+| Module ID | `bai-voice-capture` | `PASS` |
+| Plugin version | `0.1.0-dev.1` | `PASS` |
+| 対応architecture | `windows-x64` | `PASS` |
+| Runtime package名 | `bai-voice-capture-0.1.0-dev.1-windows-x64.zip` | `PASS` |
+| Runtime package bytes | `19703` | `PASS` |
+| Runtime package SHA-256 | `b1647f4dc8e64964a5caf711f9fec798908e120f4a831b8a465f766fc96119e4` | `PASS` |
+| Package manifest SHA-256 | `80cbf57683f592c2ae8c256a373c0f77b7ecda9ad939aa589e9c6368ecfcb72d` | `PASS` |
+| Package receipt SHA-256 | `3e3d4fa5e379820c25e2a7e29faff1bfa296074ec125f2e30dd2439ba8820252` | `PASS` |
+| Plugin DLL bytes | `21504` | `PASS` |
+| Plugin DLL SHA-256 | `127a69d69930563e8d4d9ec67e7006992f978f9061c4e61ea94b593dad2ed129` | `PASS` |
+| Plugin implementation / build / test / package | Local build Evidence確認済み | `PASS` |
+| Configure | `PASS` | `PASS` |
+| Release build | `PASS` | `PASS` |
+| Synthetic tests | `4 / 4 PASS` | `PASS` |
+| CTest | `1 / 1 PASS` | `PASS` |
+| License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
+| Release・Deploy・配布許可 | なし | `LEGAL_REVIEW_REQUIRED` |
 | Install先layout | 未確認 | 未確認 |
 | Backup先 | 未確認 | 未確認 |
 | Rollback結果 | 未確認 | 未確認 |
@@ -42,7 +52,8 @@
 | START/PAUSE/RESUME/STOP | 未確認 | 未確認 |
 | 保存・異常終了・復旧 | 未確認 | 未確認 |
 
-この表は、実成果物と実機Evidenceを得た後にだけ更新します。
+`PASS`のartifact値はLead担当のlocal build receiptへbindingした値です。実機導入、load、
+録音、保存、rollbackの状態は、それぞれのEvidenceを得た後にだけ更新します。
 
 ## 判定語
 
@@ -55,6 +66,7 @@
 | `UNKNOWN` | 処理結果や外部状態を確定できない |
 | `未確認` | まだ確認を開始していない |
 | `NOT_APPLICABLE` | 承認済みPolicy上、その項目が対象外 |
+| `LEGAL_REVIEW_REQUIRED` | Licenseは識別済みだが、配布・公開等の法務判断が未完了 |
 
 `UNKNOWN`や`未確認`を`PASS`へ読み替えないでください。件数や音声欠損が不明な場合も
 `0`として扱いません。
@@ -73,11 +85,11 @@
 
 ### 1.2 Package identity
 
-- [ ] Package名、Version、SHA-256が正式な成果物Evidenceと一致する — 状態: `未確認`
-- [ ] Manifestに全file、相対path、size、SHA-256がある — 状態: `未確認`
-- [ ] Module ID、architecture、OBS互換範囲が固定されている — 状態: `未確認`
-- [ ] 配布元、source revision、build Evidenceが固定されている — 状態: `未確認`
-- [ ] License、Notice、source-offer等の必要事項を確認した — 状態: `未確認`
+- [ ] Package名、Version、SHA-256が正式なlocal build Evidenceと一致する — 状態: `PASS`
+- [ ] ManifestとPackage receiptのSHA-256が固定されている — 状態: `PASS`
+- [ ] Module ID、architecture、target OBS buildが固定されている — 状態: `PASS`
+- [ ] Configure、Release build、synthetic tests、CTest Evidenceが固定されている — 状態: `PASS`
+- [ ] License、Notice、source-offer、配布境界の法務確認を完了した — 状態: `LEGAL_REVIEW_REQUIRED`
 - [ ] Package内に絶対path、Credential、音声、個人情報がない — 状態: `未確認`
 
 ### 1.3 Install先とcollision
@@ -321,7 +333,9 @@ notes:
 成功を示しません。
 
 - [ ] `P_OBS_PLUGIN_DEVELOPMENT_COMPLETE`は最終Judge前に`NOT_ESTABLISHED` — 状態: `PASS`
-- [ ] 未確認のPackage/Version/SHAを具体値で表示していない — 状態: `PASS`
+- [ ] Plugin implementation/build/test/packageの`PASS`をexact local build receiptへ限定している — 状態: `PASS`
+- [ ] Local buildの`PASS`をinstall/load/実機録音/Release/Deployへ昇格していない — 状態: `PASS`
+- [ ] Canonical receiptで未確認のartifact値を具体値で表示していない — 状態: `PASS`
 - [ ] Design完成をPlugin実装・導入・利用可能と表示していない — 状態: `PASS`
 - [ ] Package展開成功をOBS load成功と表示していない — 状態: `PASS`
 - [ ] OBS load成功を録音成功・Production Readyと表示していない — 状態: `PASS`
@@ -361,25 +375,32 @@ Plugin開発完了を主張するには、少なくとも次のGateがすべて�
 いずれかが`未確認`、`UNKNOWN`、`FAIL`なら、
 `P_OBS_PLUGIN_DEVELOPMENT_COMPLETE`は`NOT_ESTABLISHED`のままです。
 
-## 12. 成果物確定後に更新する欄
+## 12. 成果物bindingと未確認Gate
 
-Lead担当から実成果物を受領した後、次をEvidence付きで更新します。
+Lead担当のlocal build成果物から、公開可能なexact値だけをbindingしています。
 
 | Field | 確定値 | Evidence |
 |---|---|---|
-| Package ID | 未確認 | 未確認 |
-| Version | 未確認 | 未確認 |
-| SHA-256 | 未確認 | 未確認 |
-| Manifest SHA-256 | 未確認 | 未確認 |
+| Module / Package ID | `bai-voice-capture` | Package receipt |
+| Version | `0.1.0-dev.1` | Package receipt |
+| Target | `windows-x64 / OBS 32.2.1` | Package receipt |
+| Runtime filename | `bai-voice-capture-0.1.0-dev.1-windows-x64.zip` | Package receipt |
+| Runtime bytes | `19703` | Package receipt |
+| Runtime SHA-256 | `b1647f4dc8e64964a5caf711f9fec798908e120f4a831b8a465f766fc96119e4` | Package receipt |
+| Manifest SHA-256 | `80cbf57683f592c2ae8c256a373c0f77b7ecda9ad939aa589e9c6368ecfcb72d` | Package receipt |
+| Receipt SHA-256 | `3e3d4fa5e379820c25e2a7e29faff1bfa296074ec125f2e30dd2439ba8820252` | Lead canonical receipt |
+| DLL bytes | `21504` | Package receipt |
+| DLL SHA-256 | `127a69d69930563e8d4d9ec67e7006992f978f9061c4e61ea94b593dad2ed129` | Package receipt |
 | Source revision | 未確認 | 未確認 |
-| Build profile | 未確認 | 未確認 |
-| Module ID | 未確認 | 未確認 |
-| Supported OBS build | 未確認 | 未確認 |
+| Build/test | Configure PASS / Release build PASS / synthetic 4 PASS / CTest 1 of 1 PASS | Package receipt |
+| License | `GPL-2.0-or-later` | `LEGAL_REVIEW_REQUIRED` |
+| Release / Deploy / distribution authorization | なし | `LEGAL_REVIEW_REQUIRED` |
 | Install receipt | 未確認 | 未確認 |
 | Load receipt | 未確認 | 未確認 |
 
-値はLead担当のcanonical成果物とreceiptから転記し、チャット、filename、family名、手入力だけを
-根拠に確定しません。
+値はLead担当のcanonical成果物とreceiptから転記しています。Runtime filename、family名、
+チャット文だけを根拠に別の値へ置き換えません。Local buildの`PASS`をRelease、Deploy、配布、
+導入、loadまたは録音の`PASS`へ昇格しません。
 
 ## 困ったとき
 

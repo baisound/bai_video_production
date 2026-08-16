@@ -135,12 +135,12 @@ this slice performs no concurrent shared write. It may add one Japanese
 
 - Focused WSL2: `17 passed`.
 - Schema mirror byte equality: required and covered.
-- Windows focused: `17 passed`; full: `1669 passed, 1 skipped`, plus one
+- Windows focused: `17 passed`; final full: `1697 passed, 1 skipped`, plus one
   known unrelated TASK-047 installer acceptance failure (`exit=4`) in the
   managed Windows environment. The initial default-temp run was separately
   invalidated by a pre-existing pytest temp-root access denial; the dedicated
   workspace basetemp removed those 542 setup errors.
-- WSL2 full regression after fresh-main integration: `1694 passed, 1 skipped`.
+- WSL2 full regression after final fresh-main integration: `1698 passed, 1 skipped`.
 - Hosted checks: pending Draft PR.
 
 ## K. Critic pass 1

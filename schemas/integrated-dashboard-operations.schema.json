@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/integrated-dashboard-operations.schema.json",
+  "title": "TASK-021 Integrated Dashboard and Operations Foundation R0",
+  "oneOf": [
+    {"$ref": "#/$defs/DashboardProjectionPolicyRevision"},
+    {"$ref": "#/$defs/DashboardSourceBinding"},
+    {"$ref": "#/$defs/DashboardQueryIntent"},
+    {"$ref": "#/$defs/DashboardJobReadModel"},
+    {"$ref": "#/$defs/DashboardEvidenceReadModel"},
+    {"$ref": "#/$defs/DashboardIncidentReadModel"},
+    {"$ref": "#/$defs/DashboardAlertClassificationReceipt"},
+    {"$ref": "#/$defs/IntegratedDashboardSnapshotRevision"},
+    {"$ref": "#/$defs/DashboardOperationProposalRevision"},
+    {"$ref": "#/$defs/HumanOperationConfirmationBinding"},
+    {"$ref": "#/$defs/DashboardExecutionReceiptBinding"}
+  ],
+  "$defs": {
+    "Id": {"type": "string", "pattern": "^(?![A-Za-z]:/)[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$"},
+    "Digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "NullableDigest": {"oneOf": [{"$ref": "#/$defs/Digest"}, {"type": "null"}]},
+    "NullableId": {"oneOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]},
+    "Timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "NullableTimestamp": {"oneOf": [{"$ref": "#/$defs/Timestamp"}, {"type": "null"}]},
+    "ReasonCodes": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}},
+    "DigestList64": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/Digest"}},
+    "DigestList256": {"type": "array", "maxItems": 256, "uniqueItems": true, "items": {"$ref": "#/$defs/Digest"}},
+    "DigestList1024": {"type": "array", "maxItems": 1024, "uniqueItems": true, "items": {"$ref": "#/$defs/Digest"}},
+    "DigestList4096": {"type": "array", "maxItems": 4096, "uniqueItems": true, "items": {"$ref": "#/$defs/Digest"}},
+    "ContractState": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "FreshnessState": {"enum": ["CURRENT", "STALE", "INVALIDATED", "UNKNOWN"]},
+    "SourceKind": {"enum": ["PRODUCTION_DASHBOARD", "DURABLE_JOB", "CHECKPOINT", "AUDIT", "RESOURCE", "PRIVACY_PUBLIC", "EVIDENCE"]},
+    "JobState": {"enum": ["QUEUED", "PREFLIGHT", "READY", "DISPATCHING", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED", "UNKNOWN", "HUMAN_REQUIRED"]},
+    "EvidenceState": {"enum": ["PASS", "FAIL", "NOT_SUPPORTED", "UNKNOWN"]},
+    "IncidentState": {"enum": ["ACTIVE", "RESOLVED_PROVEN", "UNKNOWN"]},
+    "Severity": {"enum": ["INFO", "WARNING", "HIGH", "CRITICAL", "UNKNOWN"]},
+    "AlertLifecycle": {"enum": ["OPEN", "ACKNOWLEDGED", "RESOLVED_PROVEN", "SUPPRESSED_BY_POLICY", "UNKNOWN"]},
+    "CoverageState": {"enum": ["COMPLETE", "PARTIAL", "UNKNOWN"]},
+    "SnapshotState": {"enum": ["ACTION_REQUIRED", "DEGRADED", "NO_ACTIVE_INCIDENT_PROVEN", "STALE", "UNKNOWN"]},
+    "OperationKind": {"enum": ["ACK_ALERT", "REQUEST_RECONCILE", "REQUEST_PAUSE", "REQUEST_CANCEL", "REQUEST_RESUME", "OPEN_HUMAN_REVIEW", "REQUEST_PRIVATE_DETAIL"]},
+
+    "DashboardProjectionPolicyRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "policy_id", "revision", "parent_record_sha256", "max_source_age_seconds", "max_page_size", "max_sources", "max_items", "max_alerts", "max_incidents", "authority_ref", "authority_sha256", "effective_at", "expires_at", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardProjectionPolicyRevision"}, "policy_id": {"$ref": "#/$defs/Id"},
+        "revision": {"type": "integer", "minimum": 1, "maximum": 2147483647}, "parent_record_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "max_source_age_seconds": {"type": "integer", "minimum": 1, "maximum": 31536000}, "max_page_size": {"type": "integer", "minimum": 1, "maximum": 200},
+        "max_sources": {"type": "integer", "minimum": 1, "maximum": 256}, "max_items": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "max_alerts": {"type": "integer", "minimum": 1, "maximum": 1024}, "max_incidents": {"type": "integer", "minimum": 1, "maximum": 1024},
+        "authority_ref": {"$ref": "#/$defs/Id"}, "authority_sha256": {"$ref": "#/$defs/Digest"},
+        "effective_at": {"$ref": "#/$defs/Timestamp"}, "expires_at": {"$ref": "#/$defs/NullableTimestamp"}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "DashboardSourceBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "source_id", "source_kind", "contract_state", "source_ref", "source_sha256", "source_revision", "observed_at", "freshness_state", "validity_state", "public_projection_only", "body_included", "private_path_included", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardSourceBinding"}, "source_id": {"$ref": "#/$defs/Id"}, "source_kind": {"$ref": "#/$defs/SourceKind"},
+        "contract_state": {"$ref": "#/$defs/ContractState"}, "source_ref": {"$ref": "#/$defs/NullableId"}, "source_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "source_revision": {"type": ["integer", "null"], "minimum": 1, "maximum": 2147483647}, "observed_at": {"$ref": "#/$defs/NullableTimestamp"},
+        "freshness_state": {"$ref": "#/$defs/FreshnessState"}, "validity_state": {"$ref": "#/$defs/FreshnessState"},
+        "public_projection_only": {"type": "boolean"}, "body_included": {"const": false}, "private_path_included": {"const": false}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}, "required": ["contract_state"]}, "then": {"properties": {"source_ref": {"type": "null"}, "source_sha256": {"type": "null"}, "source_revision": {"type": "null"}, "observed_at": {"type": "null"}, "freshness_state": {"const": "UNKNOWN"}, "validity_state": {"const": "UNKNOWN"}}}},
+        {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}, "required": ["contract_state"]}, "then": {"properties": {"source_ref": {"$ref": "#/$defs/Id"}, "source_sha256": {"$ref": "#/$defs/Digest"}, "source_revision": {"type": "integer", "minimum": 1}, "observed_at": {"$ref": "#/$defs/Timestamp"}}}},
+        {"if": {"properties": {"source_kind": {"const": "PRIVACY_PUBLIC"}}, "required": ["source_kind"]}, "then": {"properties": {"public_projection_only": {"const": true}}}}
+      ]
+    },
+    "DashboardQueryIntent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "query_id", "project_id", "source_kinds", "state_filters", "page_size", "cursor_sha256", "sort_order", "body_included", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardQueryIntent"}, "query_id": {"$ref": "#/$defs/Id"}, "project_id": {"$ref": "#/$defs/Id"},
+        "source_kinds": {"type": "array", "maxItems": 7, "uniqueItems": true, "items": {"$ref": "#/$defs/SourceKind"}},
+        "state_filters": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/Id"}},
+        "page_size": {"type": "integer", "minimum": 1, "maximum": 200}, "cursor_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "sort_order": {"enum": ["UPDATED_AT_ASC", "UPDATED_AT_DESC", "SEVERITY_DESC_UPDATED_AT_ASC"]}, "body_included": {"const": false}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "DashboardJobReadModel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "view_id", "source_binding_sha256", "job_sha256", "operation_identity", "job_state", "state_version", "attempt", "updated_at", "freshness_state", "reason_codes", "effect_started_by_dashboard", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardJobReadModel"}, "view_id": {"$ref": "#/$defs/Id"}, "source_binding_sha256": {"$ref": "#/$defs/Digest"}, "job_sha256": {"$ref": "#/$defs/Digest"},
+        "operation_identity": {"$ref": "#/$defs/Id"}, "job_state": {"$ref": "#/$defs/JobState"}, "state_version": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "attempt": {"type": "integer", "minimum": 0, "maximum": 2147483647}, "updated_at": {"$ref": "#/$defs/Timestamp"}, "freshness_state": {"$ref": "#/$defs/FreshnessState"},
+        "reason_codes": {"$ref": "#/$defs/ReasonCodes"}, "effect_started_by_dashboard": {"const": false}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "DashboardEvidenceReadModel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "view_id", "source_binding_sha256", "evidence_record_type", "evidence_sha256", "result_state", "observed_at", "freshness_state", "reason_codes", "body_included", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardEvidenceReadModel"}, "view_id": {"$ref": "#/$defs/Id"}, "source_binding_sha256": {"$ref": "#/$defs/Digest"},
+        "evidence_record_type": {"$ref": "#/$defs/Id"}, "evidence_sha256": {"$ref": "#/$defs/Digest"}, "result_state": {"$ref": "#/$defs/EvidenceState"},
+        "observed_at": {"$ref": "#/$defs/Timestamp"}, "freshness_state": {"$ref": "#/$defs/FreshnessState"}, "reason_codes": {"$ref": "#/$defs/ReasonCodes"},
+        "body_included": {"const": false}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "DashboardIncidentReadModel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "view_id", "source_binding_sha256", "incident_id", "incident_state", "severity", "observed_at", "resolved_receipt_sha256", "freshness_state", "reason_codes", "absence_assumed_healthy", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardIncidentReadModel"}, "view_id": {"$ref": "#/$defs/Id"}, "source_binding_sha256": {"$ref": "#/$defs/Digest"},
+        "incident_id": {"$ref": "#/$defs/Id"}, "incident_state": {"$ref": "#/$defs/IncidentState"}, "severity": {"$ref": "#/$defs/Severity"},
+        "observed_at": {"$ref": "#/$defs/Timestamp"}, "resolved_receipt_sha256": {"$ref": "#/$defs/NullableDigest"}, "freshness_state": {"$ref": "#/$defs/FreshnessState"},
+        "reason_codes": {"$ref": "#/$defs/ReasonCodes"}, "absence_assumed_healthy": {"const": false}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [{"if": {"properties": {"incident_state": {"const": "RESOLVED_PROVEN"}}, "required": ["incident_state"]}, "then": {"properties": {"resolved_receipt_sha256": {"$ref": "#/$defs/Digest"}}}, "else": {"properties": {"resolved_receipt_sha256": {"type": "null"}}}}]
+    },
+    "DashboardAlertClassificationReceipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "alert_id", "policy_sha256", "subject_sha256", "incident_sha256", "severity", "lifecycle", "acknowledgement_receipt_sha256", "reason_codes", "classified_at", "effect_started_by_dashboard", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardAlertClassificationReceipt"}, "alert_id": {"$ref": "#/$defs/Id"}, "policy_sha256": {"$ref": "#/$defs/Digest"},
+        "subject_sha256": {"$ref": "#/$defs/Digest"}, "incident_sha256": {"$ref": "#/$defs/NullableDigest"}, "severity": {"$ref": "#/$defs/Severity"},
+        "lifecycle": {"$ref": "#/$defs/AlertLifecycle"}, "acknowledgement_receipt_sha256": {"$ref": "#/$defs/NullableDigest"}, "reason_codes": {"$ref": "#/$defs/ReasonCodes"},
+        "classified_at": {"$ref": "#/$defs/Timestamp"}, "effect_started_by_dashboard": {"const": false}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [{"if": {"properties": {"lifecycle": {"const": "ACKNOWLEDGED"}}, "required": ["lifecycle"]}, "then": {"properties": {"acknowledgement_receipt_sha256": {"$ref": "#/$defs/Digest"}}}, "else": {"properties": {"acknowledgement_receipt_sha256": {"type": "null"}}}}]
+    },
+    "IntegratedDashboardSnapshotRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "snapshot_id", "revision", "parent_record_sha256", "project_id", "policy_sha256", "query_sha256", "source_binding_hashes", "job_view_hashes", "evidence_view_hashes", "incident_view_hashes", "alert_hashes", "coverage_state", "snapshot_state", "source_watermark_sha256", "generated_at", "body_included", "private_detail_included", "effect_started_by_dashboard", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "IntegratedDashboardSnapshotRevision"}, "snapshot_id": {"$ref": "#/$defs/Id"}, "revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "parent_record_sha256": {"$ref": "#/$defs/NullableDigest"}, "project_id": {"$ref": "#/$defs/Id"}, "policy_sha256": {"$ref": "#/$defs/Digest"}, "query_sha256": {"$ref": "#/$defs/Digest"},
+        "source_binding_hashes": {"$ref": "#/$defs/DigestList256"}, "job_view_hashes": {"$ref": "#/$defs/DigestList4096"}, "evidence_view_hashes": {"$ref": "#/$defs/DigestList4096"},
+        "incident_view_hashes": {"$ref": "#/$defs/DigestList1024"}, "alert_hashes": {"$ref": "#/$defs/DigestList1024"}, "coverage_state": {"$ref": "#/$defs/CoverageState"},
+        "snapshot_state": {"$ref": "#/$defs/SnapshotState"}, "source_watermark_sha256": {"$ref": "#/$defs/Digest"}, "generated_at": {"$ref": "#/$defs/Timestamp"},
+        "body_included": {"const": false}, "private_detail_included": {"const": false}, "effect_started_by_dashboard": {"const": false}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [{"if": {"properties": {"snapshot_state": {"const": "NO_ACTIVE_INCIDENT_PROVEN"}}, "required": ["snapshot_state"]}, "then": {"properties": {"coverage_state": {"const": "COMPLETE"}}}}]
+    },
+    "DashboardOperationProposalRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "proposal_id", "revision", "parent_record_sha256", "snapshot_sha256", "operation_kind", "target_source_sha256", "expected_target_state_version", "precondition_hashes", "proposal_state", "reason_codes", "created_at", "expires_at", "proposal_only", "execution_started", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardOperationProposalRevision"}, "proposal_id": {"$ref": "#/$defs/Id"}, "revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "parent_record_sha256": {"$ref": "#/$defs/NullableDigest"}, "snapshot_sha256": {"$ref": "#/$defs/Digest"}, "operation_kind": {"$ref": "#/$defs/OperationKind"},
+        "target_source_sha256": {"$ref": "#/$defs/Digest"}, "expected_target_state_version": {"type": ["integer", "null"], "minimum": 1, "maximum": 2147483647},
+        "precondition_hashes": {"$ref": "#/$defs/DigestList64"}, "proposal_state": {"enum": ["PROPOSED", "BLOCKED", "UNKNOWN"]}, "reason_codes": {"$ref": "#/$defs/ReasonCodes"},
+        "created_at": {"$ref": "#/$defs/Timestamp"}, "expires_at": {"$ref": "#/$defs/Timestamp"}, "proposal_only": {"const": true}, "execution_started": {"const": false},
+        "record_sha256": {"$ref": "#/$defs/Digest"}
+      }
+    },
+    "HumanOperationConfirmationBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "confirmation_id", "confirmation_revision", "confirmation_sha256", "proposal_sha256", "snapshot_sha256", "target_source_sha256", "operation_kind", "reviewer_kind", "decision", "decided_at", "expires_at", "one_shot", "consumed", "evidence_ref", "evidence_sha256", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "HumanOperationConfirmationBinding"}, "contract_state": {"$ref": "#/$defs/ContractState"}, "confirmation_id": {"$ref": "#/$defs/NullableId"},
+        "confirmation_revision": {"type": ["integer", "null"], "minimum": 1, "maximum": 2147483647}, "confirmation_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "proposal_sha256": {"$ref": "#/$defs/NullableDigest"}, "snapshot_sha256": {"$ref": "#/$defs/NullableDigest"}, "target_source_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "operation_kind": {"oneOf": [{"$ref": "#/$defs/OperationKind"}, {"type": "null"}]}, "reviewer_kind": {"enum": ["HUMAN", null]},
+        "decision": {"enum": ["APPROVE", "REJECT", "REVISE", null]}, "decided_at": {"$ref": "#/$defs/NullableTimestamp"}, "expires_at": {"$ref": "#/$defs/NullableTimestamp"},
+        "one_shot": {"type": ["boolean", "null"]}, "consumed": {"type": ["boolean", "null"]}, "evidence_ref": {"$ref": "#/$defs/NullableId"}, "evidence_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "record_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}, "required": ["contract_state"]}, "then": {"properties": {"confirmation_id": {"type": "null"}, "confirmation_revision": {"type": "null"}, "confirmation_sha256": {"type": "null"}, "proposal_sha256": {"type": "null"}, "snapshot_sha256": {"type": "null"}, "target_source_sha256": {"type": "null"}, "operation_kind": {"type": "null"}, "reviewer_kind": {"type": "null"}, "decision": {"type": "null"}, "decided_at": {"type": "null"}, "expires_at": {"type": "null"}, "one_shot": {"type": "null"}, "consumed": {"type": "null"}, "evidence_ref": {"type": "null"}, "evidence_sha256": {"type": "null"}}}},
+        {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}, "required": ["contract_state"]}, "then": {"properties": {"confirmation_id": {"$ref": "#/$defs/Id"}, "confirmation_revision": {"type": "integer", "minimum": 1}, "confirmation_sha256": {"$ref": "#/$defs/Digest"}, "proposal_sha256": {"$ref": "#/$defs/Digest"}, "snapshot_sha256": {"$ref": "#/$defs/Digest"}, "target_source_sha256": {"$ref": "#/$defs/Digest"}, "operation_kind": {"$ref": "#/$defs/OperationKind"}, "reviewer_kind": {"const": "HUMAN"}, "decision": {"enum": ["APPROVE", "REJECT", "REVISE"]}, "decided_at": {"$ref": "#/$defs/Timestamp"}, "expires_at": {"$ref": "#/$defs/Timestamp"}, "one_shot": {"const": true}, "consumed": {"type": "boolean"}, "evidence_ref": {"$ref": "#/$defs/Id"}, "evidence_sha256": {"$ref": "#/$defs/Digest"}}}}
+      ]
+    },
+    "DashboardExecutionReceiptBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "receipt_id", "receipt_ref", "receipt_sha256", "proposal_sha256", "confirmation_sha256", "operation_identity", "external_state", "observed_at", "canonical_persistence_verified", "effect_started_by_dashboard", "record_sha256"],
+      "properties": {
+        "record_type": {"const": "DashboardExecutionReceiptBinding"}, "contract_state": {"$ref": "#/$defs/ContractState"}, "receipt_id": {"$ref": "#/$defs/NullableId"},
+        "receipt_ref": {"$ref": "#/$defs/NullableId"}, "receipt_sha256": {"$ref": "#/$defs/NullableDigest"}, "proposal_sha256": {"$ref": "#/$defs/NullableDigest"},
+        "confirmation_sha256": {"$ref": "#/$defs/NullableDigest"}, "operation_identity": {"$ref": "#/$defs/NullableId"},
+        "external_state": {"enum": ["ACCEPTED", "REJECTED", "FAILED", "UNKNOWN", null]}, "observed_at": {"$ref": "#/$defs/NullableTimestamp"},
+        "canonical_persistence_verified": {"type": ["boolean", "null"]}, "effect_started_by_dashboard": {"const": false}, "record_sha256": {"$ref": "#/$defs/Digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"}}, "required": ["contract_state"]}, "then": {"properties": {"receipt_id": {"type": "null"}, "receipt_ref": {"type": "null"}, "receipt_sha256": {"type": "null"}, "proposal_sha256": {"type": "null"}, "confirmation_sha256": {"type": "null"}, "operation_identity": {"type": "null"}, "external_state": {"type": "null"}, "observed_at": {"type": "null"}, "canonical_persistence_verified": {"type": "null"}}}},
+        {"if": {"properties": {"contract_state": {"const": "BOUND_VERIFIED"}}, "required": ["contract_state"]}, "then": {"properties": {"receipt_id": {"$ref": "#/$defs/Id"}, "receipt_ref": {"$ref": "#/$defs/Id"}, "receipt_sha256": {"$ref": "#/$defs/Digest"}, "proposal_sha256": {"$ref": "#/$defs/Digest"}, "confirmation_sha256": {"$ref": "#/$defs/Digest"}, "operation_identity": {"$ref": "#/$defs/Id"}, "external_state": {"enum": ["ACCEPTED", "REJECTED", "FAILED", "UNKNOWN"]}, "observed_at": {"$ref": "#/$defs/Timestamp"}, "canonical_persistence_verified": {"type": "boolean"}}}},
+        {"if": {"properties": {"external_state": {"const": "ACCEPTED"}}, "required": ["external_state"]}, "then": {"properties": {"canonical_persistence_verified": {"const": true}}}}
+      ]
+    }
+  }
+}

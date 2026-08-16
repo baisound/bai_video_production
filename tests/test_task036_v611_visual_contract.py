@@ -533,3 +533,32 @@ def test_edit_source_projection_does_not_claim_full_library_or_host_paths() -> N
         assert marker in SHELL_HTML
     assert "clip.cut_candidate_id" not in SHELL_HTML
     assert "edit_asset_import" not in SHELL_HTML
+
+
+def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
+    for marker in (
+        "`${row.stage} · ${row.job_id}`",
+        "row.progress_value===null||row.progress_value===undefined?row.progress_kind",
+        "Operation: ${row.operation_identity}",
+        "Safe cancel: ${row.safe_cancel?'YES':'NO'}",
+        "Individual confirmation: ${row.individual_confirmation_required?'REQUIRED':'NO'}",
+        "if(row.individual_confirmation_required)",
+        "このJobの実行確認を準備",
+        "if(row.safe_cancel)",
+        "安全にCancel",
+        "expected_state_version:row.state_version",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_export_does_not_use_undefined_fields_or_blanket_execution() -> None:
+    for marker in (
+        "if(!['ACCEPT_PROVEN_SUCCESS','MARK_FAILED','REQUIRE_HUMAN'].includes(action))continue",
+        "各READY Jobは個別確認だけを準備し、private launcherが別途確認します。",
+        "UNKNOWNは自動再実行しません。",
+        "host path persisted: NO",
+    ):
+        assert marker in SHELL_HTML
+    assert "row.cancel_available" not in SHELL_HTML
+    assert "row.progress_percent" not in SHELL_HTML
+    assert "export_queue_execute_all" not in SHELL_HTML

@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.local/schemas/audio-workspace-media-review.schema.json",
+  "title": "TASK-041 Audio Workspace Media Review Foundation R0",
+  "oneOf": [
+    { "$ref": "#/$defs/AudioMediaReviewPolicyRevision" },
+    { "$ref": "#/$defs/AudioMediaSourceBinding" },
+    { "$ref": "#/$defs/PlaybackWaveformCapabilityBinding" },
+    { "$ref": "#/$defs/AudioMediaReviewIntent" },
+    { "$ref": "#/$defs/ExternalAudioReviewReceiptBinding" },
+    { "$ref": "#/$defs/DerivedAudioAssetProposal" },
+    { "$ref": "#/$defs/AudioMediaReviewDecision" },
+    { "$ref": "#/$defs/DawRoundTripStatusBinding" }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$" },
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "utc": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "nullableId": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] },
+    "nullableSha": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "nullableUtc": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] },
+    "contractState": { "enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"] },
+    "rightsState": { "enum": ["PASS", "BLOCKED", "REVOKED", "UNKNOWN"] },
+    "capabilityState": { "enum": ["SUPPORTED", "LIMITED", "PROBE_REQUIRED", "UNSUPPORTED", "UNKNOWN"] },
+    "reasonCodes": {
+      "type": "array", "maxItems": 64, "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$" }
+    },
+    "AudioMediaReviewPolicyRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "policy_id", "revision", "parent_record_sha256", "required_sample_rate_hz", "max_review_duration_samples", "max_observation_age_seconds", "official_policy_ref", "official_policy_sha256", "effective_at", "expires_at", "audio_read_started", "media_mutation_started", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "AudioMediaReviewPolicyRevision" },
+        "policy_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "parent_record_sha256": { "$ref": "#/$defs/nullableSha" },
+        "required_sample_rate_hz": { "const": 48000 },
+        "max_review_duration_samples": { "type": "integer", "minimum": 1, "maximum": 691200000 },
+        "max_observation_age_seconds": { "type": "integer", "minimum": 1, "maximum": 86400 },
+        "official_policy_ref": { "$ref": "#/$defs/id" },
+        "official_policy_sha256": { "$ref": "#/$defs/sha256" },
+        "effective_at": { "$ref": "#/$defs/utc" },
+        "expires_at": { "$ref": "#/$defs/nullableUtc" },
+        "audio_read_started": { "const": false },
+        "media_mutation_started": { "const": false },
+        "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "AudioMediaSourceBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "source_id", "media_kind", "contract_state", "canonical_ref", "canonical_sha256", "canonical_revision", "candidate_id", "asset_id", "rights_state", "sample_rate_hz", "channel_count", "duration_samples", "observed_at", "body_included", "absolute_path_included", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "AudioMediaSourceBinding" },
+        "source_id": { "$ref": "#/$defs/id" },
+        "media_kind": { "enum": ["AUDIO_ASSET", "VIDEO_WITH_EMBEDDED_AUDIO", "AUDIO_WORKSPACE_CANDIDATE", "DAW_ROUND_TRIP_CANDIDATE"] },
+        "contract_state": { "$ref": "#/$defs/contractState" },
+        "canonical_ref": { "$ref": "#/$defs/nullableId" },
+        "canonical_sha256": { "$ref": "#/$defs/nullableSha" },
+        "canonical_revision": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+        "candidate_id": { "$ref": "#/$defs/nullableId" },
+        "asset_id": { "$ref": "#/$defs/nullableId" },
+        "rights_state": { "$ref": "#/$defs/rightsState" },
+        "sample_rate_hz": { "type": ["integer", "null"], "minimum": 1, "maximum": 768000 },
+        "channel_count": { "type": ["integer", "null"], "minimum": 1, "maximum": 64 },
+        "duration_samples": { "type": ["integer", "null"], "minimum": 1, "maximum": 4147200000 },
+        "observed_at": { "$ref": "#/$defs/nullableUtc" },
+        "body_included": { "const": false },
+        "absolute_path_included": { "const": false },
+        "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "PlaybackWaveformCapabilityBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "capability_id", "contract_state", "player_state", "waveform_state", "decode_state", "sample_accurate_range_state", "capability_profile_ref", "capability_profile_sha256", "app_identity_sha256", "observed_at", "body_included", "absolute_path_included", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "PlaybackWaveformCapabilityBinding" },
+        "capability_id": { "$ref": "#/$defs/id" },
+        "contract_state": { "$ref": "#/$defs/contractState" },
+        "player_state": { "$ref": "#/$defs/capabilityState" },
+        "waveform_state": { "$ref": "#/$defs/capabilityState" },
+        "decode_state": { "$ref": "#/$defs/capabilityState" },
+        "sample_accurate_range_state": { "$ref": "#/$defs/capabilityState" },
+        "capability_profile_ref": { "$ref": "#/$defs/nullableId" },
+        "capability_profile_sha256": { "$ref": "#/$defs/nullableSha" },
+        "app_identity_sha256": { "$ref": "#/$defs/nullableSha" },
+        "observed_at": { "$ref": "#/$defs/nullableUtc" },
+        "body_included": { "const": false },
+        "absolute_path_included": { "const": false },
+        "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "AudioMediaReviewIntent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "intent_id", "revision", "parent_record_sha256", "project_id", "policy_sha256", "source_binding_sha256", "capability_binding_sha256", "audio_workspace_snapshot_sha256", "requested_operations", "range_start_sample", "range_end_sample", "requested_at", "body_included", "absolute_path_included", "playback_started", "waveform_render_started", "media_mutation_started", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "AudioMediaReviewIntent" },
+        "intent_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "parent_record_sha256": { "$ref": "#/$defs/nullableSha" },
+        "project_id": { "$ref": "#/$defs/id" },
+        "policy_sha256": { "$ref": "#/$defs/sha256" },
+        "source_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "capability_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "audio_workspace_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "requested_operations": { "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": { "enum": ["AUDITION", "WAVEFORM_VIEW", "STRIP_EMBEDDED_AUDIO", "RETAIN_AUDIO_ALTERNATE", "DAW_HANDOFF"] } },
+        "range_start_sample": { "type": "integer", "minimum": 0, "maximum": 4147200000 },
+        "range_end_sample": { "type": "integer", "minimum": 1, "maximum": 4147200000 },
+        "requested_at": { "$ref": "#/$defs/utc" },
+        "body_included": { "const": false },
+        "absolute_path_included": { "const": false },
+        "playback_started": { "const": false },
+        "waveform_render_started": { "const": false },
+        "media_mutation_started": { "const": false },
+        "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "ExternalAudioReviewReceiptBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "receipt_ref", "receipt_sha256", "intent_sha256", "source_binding_sha256", "capability_binding_sha256", "range_start_sample", "range_end_sample", "external_state", "audition_completed", "waveform_available", "observed_at", "canonical_persistence_verified", "effect_started_by_module", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "ExternalAudioReviewReceiptBinding" },
+        "contract_state": { "$ref": "#/$defs/contractState" },
+        "receipt_ref": { "$ref": "#/$defs/nullableId" },
+        "receipt_sha256": { "$ref": "#/$defs/nullableSha" },
+        "intent_sha256": { "$ref": "#/$defs/nullableSha" },
+        "source_binding_sha256": { "$ref": "#/$defs/nullableSha" },
+        "capability_binding_sha256": { "$ref": "#/$defs/nullableSha" },
+        "range_start_sample": { "type": ["integer", "null"], "minimum": 0, "maximum": 4147200000 },
+        "range_end_sample": { "type": ["integer", "null"], "minimum": 1, "maximum": 4147200000 },
+        "external_state": { "enum": ["COMPLETED", "FAILED", "CANCELLED_SAFE", "UNKNOWN", null] },
+        "audition_completed": { "type": ["boolean", "null"] },
+        "waveform_available": { "type": ["boolean", "null"] },
+        "observed_at": { "$ref": "#/$defs/nullableUtc" },
+        "canonical_persistence_verified": { "type": ["boolean", "null"] },
+        "effect_started_by_module": { "const": false },
+        "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "DerivedAudioAssetProposal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "proposal_id", "revision", "parent_record_sha256", "source_binding_sha256", "review_intent_sha256", "derivation_kind", "proposed_asset_identity", "lineage_sha256", "source_bytes_preserved", "derived_bytes_present", "asset_registration_started", "media_mutation_started", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DerivedAudioAssetProposal" },
+        "proposal_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "parent_record_sha256": { "$ref": "#/$defs/nullableSha" },
+        "source_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "review_intent_sha256": { "$ref": "#/$defs/sha256" },
+        "derivation_kind": { "enum": ["AUDIO_STRIPPED_VIDEO", "AUDIO_ONLY_ALTERNATE"] },
+        "proposed_asset_identity": { "$ref": "#/$defs/id" },
+        "lineage_sha256": { "$ref": "#/$defs/sha256" },
+        "source_bytes_preserved": { "const": true },
+        "derived_bytes_present": { "const": false },
+        "asset_registration_started": { "const": false },
+        "media_mutation_started": { "const": false },
+        "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "AudioMediaReviewDecision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "decision_id", "revision", "parent_record_sha256", "intent_sha256", "source_binding_sha256", "external_review_receipt_sha256", "audio_decision", "visual_decision", "derived_proposal_sha256", "reviewer_kind", "decided_at", "evidence_ref", "evidence_sha256", "reason_codes", "asset_mutation_started", "placement_mutation_started", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "AudioMediaReviewDecision" },
+        "decision_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "parent_record_sha256": { "$ref": "#/$defs/nullableSha" },
+        "intent_sha256": { "$ref": "#/$defs/sha256" },
+        "source_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "external_review_receipt_sha256": { "$ref": "#/$defs/nullableSha" },
+        "audio_decision": { "enum": ["ACCEPT_AUDIO", "REJECT_AUDIO", "RETAIN_ALTERNATE", "STRIP_AUDIO", "RETEST"] },
+        "visual_decision": { "enum": ["PASS", "FAIL", "UNKNOWN", "NOT_APPLICABLE"] },
+        "derived_proposal_sha256": { "$ref": "#/$defs/nullableSha" },
+        "reviewer_kind": { "const": "OWNER_HUMAN" },
+        "decided_at": { "$ref": "#/$defs/utc" },
+        "evidence_ref": { "$ref": "#/$defs/id" },
+        "evidence_sha256": { "$ref": "#/$defs/sha256" },
+        "reason_codes": { "$ref": "#/$defs/reasonCodes" },
+        "asset_mutation_started": { "const": false },
+        "placement_mutation_started": { "const": false },
+        "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "DawRoundTripStatusBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "handoff_ref", "handoff_sha256", "review_decision_sha256", "task035_manifest_sha256", "returned_candidate_binding_sha256", "handoff_state", "observed_at", "reaper_launch_started", "audio_render_started", "asset_promotion_started", "record_sha256"],
+      "properties": {
+        "record_type": { "const": "DawRoundTripStatusBinding" },
+        "contract_state": { "$ref": "#/$defs/contractState" },
+        "handoff_ref": { "$ref": "#/$defs/nullableId" },
+        "handoff_sha256": { "$ref": "#/$defs/nullableSha" },
+        "review_decision_sha256": { "$ref": "#/$defs/nullableSha" },
+        "task035_manifest_sha256": { "$ref": "#/$defs/nullableSha" },
+        "returned_candidate_binding_sha256": { "$ref": "#/$defs/nullableSha" },
+        "handoff_state": { "enum": ["PROPOSED", "EXTERNAL_PENDING", "RETURN_RECEIVED", "UNKNOWN", null] },
+        "observed_at": { "$ref": "#/$defs/nullableUtc" },
+        "reaper_launch_started": { "const": false },
+        "audio_render_started": { "const": false },
+        "asset_promotion_started": { "const": false },
+        "record_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 18,
+  "registry_revision": 19,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "f7f55ec3f14842452a71a564b21b718ef282a830",
+  "audit_base_main_sha": "79975f6eb5a93ccea324d14a4612d24c847e2189",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -743,6 +743,103 @@
         "SEPARATE_CHANGELOG_INTEGRATION_LOCK_IF_REQUIRED",
         "EXACT_MAIN_MERGE_AND_POST_MERGE_CI_SECURITY_PASS",
         "LOCK_CLOSURE_RELEASE_RECORD_HOSTED"
+      ]
+    },
+    {
+      "lock_id": "BVP-LOCK-TASK047-POBS-DEV10-UX-RUNTIME",
+      "owner_agent": "開発担当2",
+      "owner_thread_id": "01a00490-f4a3-7ab1-a3ea-fbda2ea50a02",
+      "lock_host_authority": "OWNER-DIRECTIVE-20260816-TASK047-AUTONOMOUS-DEVELOPMENT",
+      "task_unit": "TASK-047/P-OBS-DEV10-UX-RUNTIME",
+      "phase": "RUNNING_OBS_CONTROLLER_GAIN_METER_PAUSE_RESUME_INSTALLER_AND_RELEASE",
+      "branch": "codex/task-047-dev10-runtime-controller",
+      "base_sha": "79975f6eb5a93ccea324d14a4612d24c847e2189",
+      "status": "ACTIVE",
+      "implementation_authority_state": "OWNER_AUTHORIZED_AUTONOMOUS_TASK047_LANE",
+      "implementation_state": "IN_PROGRESS_LOCAL_EVIDENCE_NOT_HOSTED",
+      "scope": "REVIEWABLE_PLUGIN_SOURCE_CONTROLLER_SECURE_SAME_USER_HANDSHAKE_LIVE_GAIN_METER_RUNNING_OBS_START_PAUSE_RESUME_STOP_INSTALLER_GUIDES_AND_PUBLIC_PRERELEASE",
+      "lock_hosting_evidence": {
+        "host_unit": "TASK-047/P-OBS-DEV10-UX-RUNTIME-LH0",
+        "hosting_branch": "codex/task-047-dev10-runtime-lock-hosting",
+        "hosting_base_sha": "79975f6eb5a93ccea324d14a4612d24c847e2189",
+        "evidence_doc": "docs/ai-team/work-locks/task047-pobs-dev10-runtime-lock-hosting-critic-judge-2026-08-16.md",
+        "expected_changed_files": 2,
+        "post_merge_main_presence_verification_required": true
+      },
+      "allowed_files": [
+        "native/task047_obs_voice_capture/**",
+        "packaging/release-assets/task047/**",
+        "packaging/task047_obs_voice_capture_installer.iss",
+        "tools/windows/build-task047-obs-installer.ps1",
+        "tools/windows/test-task047-obs-installer.ps1",
+        "tests/test_task047_obs_installer_contract.py",
+        "tests/test_task047_obs_release_contract.py",
+        "tests/test_task047_obs_runtime_source_contract.py",
+        "docs/user/OBS-VOICE-CAPTURE-PLUGIN.md",
+        "docs/ai-team/tasks/TASK-047/p-obs-dev10-runtime-evidence-2026-08-16.md",
+        "docs/ai-team/tasks/TASK-047/task.md",
+        "README.md",
+        "README.en.md"
+      ],
+      "read_only_dependencies": [
+        "docs/ai-team/tasks/TASK-047/p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-2026-08-15.md",
+        "schemas/voice-recording-session.schema.json",
+        "src/ai_video_production/voice_recording_session.py",
+        "schemas/voice-quality-calibration.schema.json",
+        "src/ai_video_production/voice_quality_calibration.py"
+      ],
+      "accepted_runtime_requirements": [
+        "OBS_32_2_1_MAY_REMAIN_RUNNING_FOR_GAIN_START_PAUSE_RESUME_STOP",
+        "PAUSE_RESUME_REQUIRE_SAME_OBS_PROCESS_ID_AND_EXECUTABLE",
+        "VISIBLE_LEARNING_DATA_RECORDING_AND_PAUSED_BANNERS",
+        "REAL_TIME_PEAK_RMS_GAIN_METER_WITHOUT_AUTOMATIC_HARDWARE_CHANGE",
+        "USER_SELECTABLE_OUTPUT_ROOT_WITH_DISK_FLOOR",
+        "INSTALLER_BASED_INSTALL_REPAIR_UPDATE_UNINSTALL",
+        "BEGINNER_FRIENDLY_JAPANESE_AND_ENGLISH_GUIDES_REACHABLE_FROM_README",
+        "INSTALLER_RUNTIME_SOURCE_AND_CHECKSUMS_INCLUDED_IN_PUBLIC_PRERELEASE"
+      ],
+      "denied_paths": [
+        "CHANGELOG.md",
+        ".github/**",
+        "docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json",
+        "ALL_UNRELATED_TASK_FILES",
+        "ALL_OTHER_SHARED_INTEGRATION_FILES"
+      ],
+      "denied_effects": [
+        "UNAPPROVED_OWNER_VOICE_RECORDING",
+        "AUTOMATIC_DATASET_ADOPTION",
+        "TRAINING_OR_MODEL_EFFECT",
+        "PRODUCTION_RECORDING_ADMISSION",
+        "PHYSICAL_DEVICE_GAIN_PHANTOM_PAD_OR_HPF_CHANGE",
+        "DESTRUCTIVE_DELETE_OR_KEY_DESTRUCTION",
+        "PAID_CLOUD_OR_CREDENTIAL_EFFECT"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_FORCE_RESET_OR_UNMERGED_DELETE",
+      "prerequisites": [
+        "FRESH_MAIN_REGISTRY_AND_OPEN_PR_AUDIT",
+        "P_OBS_1A_CONTRACT_HOSTED_CLOSED",
+        "PVS3A_AND_PQC1A_PURE_CONTRACTS_HOSTED_CLOSED",
+        "EXACT_ALLOWED_PATH_OVERLAP_ZERO",
+        "OWNER_TASK047_AUTONOMOUS_DEVELOPMENT_DIRECTIVE"
+      ],
+      "expiry_conditions": [
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_LOCK_HOST",
+        "ACTIVE_LOCK_OR_OPEN_PR_PATH_OVERLAP",
+        "ALLOWED_PATH_EXPANSION",
+        "OWNER_AUTHORITY_REVOKED",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION"
+      ],
+      "release_conditions": [
+        "REVIEWABLE_SOURCE_CONTROLLER_AND_TESTS_HOSTED",
+        "RUNNING_OBS_GAIN_START_PAUSE_RESUME_STOP_SYNTHETIC_TESTS_PASS",
+        "WINDOWS_BUILD_PACKAGE_INSTALLER_AND_CONTRACT_TESTS_PASS",
+        "WINDOWS_AND_WSL_REGRESSION_PASS",
+        "CRITIC_AND_JUDGE_CRITICAL_HIGH_ZERO",
+        "HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "SEPARATE_CHANGELOG_INTEGRATION_LOCK_IF_REQUIRED",
+        "EXACT_MAIN_MERGE_POST_MERGE_CI_SECURITY_PASS",
+        "PUBLIC_PRERELEASE_ASSET_READ_BACK_PASS",
+        "APPEND_ONLY_LOCK_CLOSURE_HOSTED"
       ]
     }
   ],

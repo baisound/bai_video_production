@@ -2359,7 +2359,7 @@ authority. Actual Product screens must also project the real feature content,
 execute the owning typed operations and read their results back into the next
 screen. Visual parity alone is not end-to-end functional completion.
 
-Fresh source audit at main `a943c2a9c0f2a7e9c812379146f2e77b2e9746d8`
+Fresh source audit at main `eb1ea977651767e183779bf6b70ef0778ba0210e`
 finds all `14 / 14` primary pages and destinations, but the mock's `253`
 buttons correspond to `126` runtime buttons, of which `37` remain disabled.
 Missing or blocked functional links include Proposal generation, Scene

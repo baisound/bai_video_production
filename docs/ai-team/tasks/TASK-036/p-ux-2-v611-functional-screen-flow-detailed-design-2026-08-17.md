@@ -5,7 +5,7 @@ Task: `TASK-036 / P-UX-2`
 Profile: `DEV-4`
 Status: `DESIGN_REGISTERED / IMPLEMENTATION_QUEUED / FUNCTIONAL_FLOW_NOT_COMPLETE`
 Canonical visual authority: `docs/ai-team/product-design/v6-integration/BVP-UI-MOCK-V6.1.1.html`
-Implementation audit base: `a943c2a9c0f2a7e9c812379146f2e77b2e9746d8`
+Implementation audit base: `eb1ea977651767e183779bf6b70ef0778ba0210e`
 
 ## 1. Owner directive
 

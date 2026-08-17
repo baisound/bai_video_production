@@ -29,6 +29,7 @@ foreach ($item in $manifest.payload) {
         'application/bai-voice-model-builder.exe' { 'bai-voice-model-builder.exe' }
         'docs/VOICE-MODEL-BUILDER.md' { 'docs\VOICE-MODEL-BUILDER.md' }
         'LICENSE.md' { 'LICENSE.md' }
+        'THIRD-PARTY-NOTICES.txt' { 'THIRD-PARTY-NOTICES.txt' }
         default { throw "Unexpected manifest path: $($item.path)" }
     }
     $installed = Join-Path $installRoot $relative
@@ -61,13 +62,14 @@ if ((Get-Content -Raw -LiteralPath (Join-Path $userDataRoot 'owner-data-sentinel
 
 [ordered]@{
     schema_version = 1
-    task = 'TASK-046/P-VS-4B-BEGINNER-CLIENT-INSTALLER-R1'
+    task = 'TASK-046/P-VS-4B-BEGINNER-CLIENT-RELEASE-R2'
     clean_install = 'PASS'
     exact_repair = 'PASS'
     collision_fail_closed = 'PASS'
     contained_self_check = 'PASS'
     uninstall = 'PASS'
     user_data_preserved = 'PASS'
+    third_party_notices = 'PASS'
     model_download_started = $false
     training_started = $false
     audio_access_started = $false

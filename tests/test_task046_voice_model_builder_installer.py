@@ -12,6 +12,7 @@ ISS = ROOT / "packaging" / "task046_voice_model_builder_installer.iss"
 BUILD = ROOT / "tools" / "windows" / "build-task046-voice-model-builder-installer.ps1"
 ACCEPTANCE = ROOT / "tools" / "windows" / "test-task046-voice-model-builder-installer.ps1"
 LAUNCHER = ROOT / "tools" / "windows" / "task046_voice_model_builder_launcher.py"
+NOTICES = ROOT / "tools" / "windows" / "task046_collect_third_party_notices.py"
 GUIDE = ROOT / "docs" / "user" / "VOICE-MODEL-BUILDER.md"
 
 
@@ -58,6 +59,7 @@ def test_installer_checks_collision_disk_reparse_and_exact_readback() -> None:
         "GetSHA256OfFile(TargetGuide)",
         "GetSHA256OfFile(TargetLicense)",
         "GetSHA256OfFile(TargetManifest)",
+        "GetSHA256OfFile(TargetNotice)",
     ):
         assert token in text
     assert "[UninstallDelete]" not in text
@@ -73,6 +75,7 @@ def test_build_is_hash_bound_and_has_no_runtime_effect() -> None:
         "jsonschema_version",
         "python_sha256",
         "package_manifest_sha256",
+        "third_party_notice_sha256",
         "model_download_started = $false",
         "training_started = $false",
         "audio_access_started = $false",
@@ -93,6 +96,7 @@ def test_acceptance_covers_install_repair_collision_self_check_and_uninstall() -
         "WaitForExit(30000)",
         "Uninstall failed",
         "User data sentinel was changed or removed",
+        "THIRD-PARTY-NOTICES.txt",
     ):
         assert token in text
 
@@ -120,8 +124,25 @@ def test_beginner_guide_is_bilingual_and_reachable_from_both_readmes() -> None:
     assert "docs/user/VOICE-MODEL-BUILDER.md" in _text(ROOT / "README.en.md")
 
 
+def test_notice_collector_is_closed_exact_and_path_free() -> None:
+    text = _text(NOTICES)
+    for component in (
+        '"pyinstaller"',
+        '"jsonschema"',
+        '"attrs"',
+        '"jsonschema-specifications"',
+        '"referencing"',
+        '"rpds-py"',
+        '"CPython"',
+        '"Tcl/Tk"',
+    ):
+        assert component in text
+    assert "private_path_exposed" in text
+    assert "os.environ" not in text
+
+
 def test_public_sources_contain_no_private_absolute_paths_or_credentials() -> None:
-    combined = "\n".join(_text(path) for path in (ISS, BUILD, ACCEPTANCE, LAUNCHER, GUIDE))
+    combined = "\n".join(_text(path) for path in (ISS, BUILD, ACCEPTANCE, LAUNCHER, NOTICES, GUIDE))
     assert "BAI_WORKSPACES" not in combined
     assert "sk-" not in combined
     assert "AppData\\Local\\Temp" not in combined

@@ -46,9 +46,10 @@ if ($LASTEXITCODE -ne 0 -or -not $jsonschemaVersion) {
 $sourceRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $launcher = Join-Path $sourceRoot 'tools\windows\task046_voice_model_builder_launcher.py'
 $installerScript = Join-Path $sourceRoot 'packaging\task046_voice_model_builder_installer.iss'
+$noticesCollector = Join-Path $sourceRoot 'tools\windows\task046_collect_third_party_notices.py'
 $guide = Join-Path $sourceRoot 'docs\user\VOICE-MODEL-BUILDER.md'
 $license = Join-Path $sourceRoot 'LICENSE.md'
-foreach ($entry in @($launcher, $installerScript, $guide, $license)) {
+foreach ($entry in @($launcher, $installerScript, $noticesCollector, $guide, $license)) {
     Assert-AbsoluteFile $entry 'Source input'
 }
 
@@ -82,11 +83,17 @@ $payloadExe = Join-Path $applicationRoot 'bai-voice-model-builder.exe'
 Copy-Item -LiteralPath $builtExe -Destination $payloadExe
 Copy-Item -LiteralPath $guide -Destination (Join-Path $docsRoot 'VOICE-MODEL-BUILDER.md')
 Copy-Item -LiteralPath $license -Destination (Join-Path $payloadRoot 'LICENSE.md')
+$noticePath = Join-Path $payloadRoot 'THIRD-PARTY-NOTICES.txt'
+$noticeReceiptJson = & $PythonExe $noticesCollector --output $noticePath
+if ($LASTEXITCODE -ne 0) { throw 'Third-party notice collection failed' }
+$noticeReceipt = $noticeReceiptJson | ConvertFrom-Json
+if ($noticeReceipt.private_path_exposed -ne $false) { throw 'Third-party notice exposed a private path' }
 
 $payloadItems = @(
     [ordered]@{ path = 'application/bai-voice-model-builder.exe'; bytes = (Get-Item -LiteralPath $payloadExe).Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $payloadExe).Hash.ToLowerInvariant() },
     [ordered]@{ path = 'docs/VOICE-MODEL-BUILDER.md'; bytes = (Get-Item -LiteralPath (Join-Path $docsRoot 'VOICE-MODEL-BUILDER.md')).Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $docsRoot 'VOICE-MODEL-BUILDER.md')).Hash.ToLowerInvariant() },
-    [ordered]@{ path = 'LICENSE.md'; bytes = (Get-Item -LiteralPath (Join-Path $payloadRoot 'LICENSE.md')).Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $payloadRoot 'LICENSE.md')).Hash.ToLowerInvariant() }
+    [ordered]@{ path = 'LICENSE.md'; bytes = (Get-Item -LiteralPath (Join-Path $payloadRoot 'LICENSE.md')).Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $payloadRoot 'LICENSE.md')).Hash.ToLowerInvariant() },
+    [ordered]@{ path = 'THIRD-PARTY-NOTICES.txt'; bytes = (Get-Item -LiteralPath $noticePath).Length; sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $noticePath).Hash.ToLowerInvariant() }
 )
 $manifest = [ordered]@{
     schema_version = 1
@@ -98,6 +105,8 @@ $manifest = [ordered]@{
     pyinstaller_version = $pyInstallerVersion
     jsonschema_version = $jsonschemaVersion
     iscc_sha256 = $compilerHash
+    third_party_notice_sha256 = $noticeReceipt.notice_sha256
+    third_party_components = @($noticeReceipt.components | ForEach-Object { [ordered]@{ component = $_.component; version = $_.version; license = $_.license; source_license_sha256 = $_.sha256 } })
     payload = $payloadItems
     installer_launches_application = $false
     model_download_started = $false
@@ -113,12 +122,13 @@ $manifestJson = $manifest | ConvertTo-Json -Depth 8
 $executableSha = $payloadItems[0].sha256
 $guideSha = $payloadItems[1].sha256
 $licenseSha = $payloadItems[2].sha256
+$noticeSha = $payloadItems[3].sha256
 $manifestSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $manifestPath).Hash.ToLowerInvariant()
 $ErrorActionPreference = 'Continue'
 $compileOutput = & $InnoCompiler `
     "/DPayloadRoot=$payloadRoot" "/DAppVersion=$AppVersion" `
     "/DExecutableSha=$executableSha" "/DGuideSha=$guideSha" `
-    "/DLicenseSha=$licenseSha" "/DManifestSha=$manifestSha" `
+    "/DLicenseSha=$licenseSha" "/DManifestSha=$manifestSha" "/DNoticeSha=$noticeSha" `
     "/O$OutputDirectory" $installerScript 2>&1
 $isccExitCode = $LASTEXITCODE
 $ErrorActionPreference = $savedErrorPreference
@@ -131,7 +141,7 @@ $installerPath = Join-Path $OutputDirectory "bai-voice-model-builder-$AppVersion
 Assert-AbsoluteFile $installerPath 'Compiled installer'
 $result = [ordered]@{
     schema_version = 1
-    task = 'TASK-046/P-VS-4B-BEGINNER-CLIENT-INSTALLER-R1'
+    task = 'TASK-046/P-VS-4B-BEGINNER-CLIENT-RELEASE-R2'
     app_version = $AppVersion
     python_sha256 = $pythonHash
     pyinstaller_version = $pyInstallerVersion
@@ -140,6 +150,8 @@ $result = [ordered]@{
     executable_bytes = (Get-Item -LiteralPath $payloadExe).Length
     executable_sha256 = $executableSha
     package_manifest_sha256 = $manifestSha
+    third_party_notice_sha256 = $noticeSha
+    third_party_component_count = @($noticeReceipt.components).Count
     installer_path = $installerPath
     installer_bytes = (Get-Item -LiteralPath $installerPath).Length
     installer_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash.ToLowerInvariant()

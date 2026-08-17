@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-046 P-VS-4B Beginner Client R4として、全18 workflow状態へ日本語・英語の「現在の状況」「次にすること」と読みやすい工程状態を追加し、12工程の完了数をbody-freeに表示できるようにしました。UNKNOWN・失敗・未確認Gateは進行不可のまま保持し、Dataset・学習・Model・audio・公開effectは開始しません。
+
 - TASK-046 P-VS-4B Voice Model Builder R3として、最大1 MiBのUTF-8 workflow JSONをユーザー選択時だけ読み取り、重複key・contract・revision・digest・effect flagをfail closed検証して12工程へ反映するWindows Technical Previewとinstaller.2を追加しました。元JSONの変更、録音読取、Dataset・学習・model・GPU・音声生成・公開は開始しません。
 
 - TASK-046 P-VS-4B Beginner Client Release R2として、Windows bundleに含むCPython・Tcl/Tk・PyInstaller・jsonschema系dependencyの完全なlicense本文をexact build環境から決定論的に収集し、path-free receipt・SHA-256 manifest・installer read-backへ追加しました。license欠落/重複はfail closedで、学習・audio/録音・Model・公開effectは開始しません。

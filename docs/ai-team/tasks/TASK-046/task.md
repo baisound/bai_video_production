@@ -55,9 +55,19 @@ Timeline/Export Queue.
    design may precede capture, but real recording requires P-OBS-1 hosted
    completion, P-OBS-0 exact-path probe PASS, recording Consent, verified
    encrypted storage and explicit Owner GO.
-6. `P-VS-4` — 30/60/90/120 minute fine-tuning revisions, exclusive resource
-   mode, comparison and Production approval.
-7. `P-VS-5` — style coverage, Semantic Direction, recording-coach proposals,
+6. `P-VS-4A` — 30/60/90/120 minute fine-tuning revisions, exclusive resource
+   mode, checkpoint/restart, ModelCandidate evaluation and Owner approval.  A
+   completed Training job is not automatically a usable or active model.
+7. `P-VS-4B` — **OBS-to-Model-to-Narration WAV vertical slice**.  Starting from
+   Owner-approved OBS recordings, compose TASK-048 quality Evidence, P-VS-3B
+   Dataset/TrainingInputSnapshot, P-VS-4A training/ModelCandidate and TASK-014
+   local narration.  Generate style-specific Cue WAVs from one approved model,
+   then assemble and QA one natural 48 kHz Master WAV with stable speaker
+   identity, intended pauses, consistent level and no audible joins.  A simple
+   Windows client and installer are the acceptance tool for this slice, not the
+   product goal.  Dataset adoption, training start, model approval, narration
+   generation and final Master acceptance remain separate Owner Gates.
+8. `P-VS-5` — style coverage, Semantic Direction, recording-coach proposals,
    Japanese linguistic processing and later locale gates.
 
 ## Shell and mock authority

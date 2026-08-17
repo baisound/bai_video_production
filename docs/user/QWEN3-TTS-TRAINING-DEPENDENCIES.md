@@ -1,6 +1,8 @@
 # Qwen3-TTS 学習依存セットアップ — flash-attn / TensorBoard
 
-[English quick guide](#english-quick-guide) | [0.6B Base本体の準備](QWEN3-TTS-06B-BASE-SETUP.md)
+[English quick guide](#english-quick-guide) | [0.6B Base本体の準備](QWEN3-TTS-06B-BASE-SETUP.md) |
+[WSL2実測手順](QWEN3-TTS-WSL2-VERIFIED-ENVIRONMENT.md) |
+[Windowsネイティブ検証](QWEN3-TTS-WINDOWS-NATIVE-ENVIRONMENT.md)
 
 このページはQwen3-TTSの公式fine-tuning scriptが要求する`flash-attn`と
 TensorBoardを、推測で成功扱いにせず準備するための手順です。dependencyのinstall成功は、
@@ -12,9 +14,9 @@ Qwen3-TTS 0.6Bの学習成功、12 GB VRAM適合、Model承認を意味しませ
    compilationはさらにtestが必要」という扱いで、公式の安定Windows wheel手順ではありません。
 2. Qwen3-TTS公式fine-tuning scriptは`attn_implementation="flash_attention_2"`と
    `Accelerator(..., log_with="tensorboard")`を指定します。
-3. このProjectのWindows隔離環境にはTensorBoard 2.21.0を導入し、`SummaryWriter`の
-   event file生成まで確認済みです。Windows native向けの公式`flash-attn` wheelは確認できず、
-   Windows環境へは導入していません。
+3. このProjectのWindows隔離環境ではTensorBoard 2.21.0に加え、公式sourceから
+   `flash-attn` 2.8.3.post1 Windows wheelをlocal buildし、RTX 4070 SUPER上のbf16
+   forward/backwardまで確認済みです。公式配布Windows wheelではないため、別環境へ流用しません。
 4. さらに、公式Qwen3-TTS `main@022e286b98fbec7e1e916cb940cdf532cd9f488e`の
    0.6B recipeには2048/1024 embedding不整合があります。open PR #336を勝手に
    取り込んで公式PASSとはしません。
@@ -27,8 +29,8 @@ Qwen3-TTS 0.6Bの学習成功、12 GB VRAM適合、Model承認を意味しませ
 [0.6B Baseセットアップ](QWEN3-TTS-06B-BASE-SETUP.md)で作った隔離環境を使います。
 
 ```powershell
-$QwenRoot = Join-Path $env:LOCALAPPDATA 'BAI\Qwen3TTS-0.6B'
-$EnvRoot = Join-Path $QwenRoot 'env'
+$BaiAiRoot = 'E:\BAI_AI'
+$EnvRoot = Join-Path $BaiAiRoot 'envs\qwen3-tts-06b-base'
 $Python = Join-Path $EnvRoot 'Scripts\python.exe'
 
 & $Python --version
@@ -119,19 +121,20 @@ source buildを繰り返しません。
 
 ## 5. Windows native routeの扱い
 
-FlashAttention公式READMEはWindows compilationを安定対応とはしていません。そのため、
-このProjectでは以下を守ります。
+FlashAttention公式READMEはWindows compilationを安定対応とはしていません。一方、対象PCでは
+[Windowsネイティブ検証手順](QWEN3-TTS-WINDOWS-NATIVE-ENVIRONMENT.md)に固定したVS 2026、
+PyTorch 2.11/cu130、NVIDIA pip CUDA 13.3/CCCLの組合せでlocal wheel buildとGPU backwardが
+成功しました。このProjectでは以下を守ります。
 
 - `pip install flash-attn --no-build-isolation`を成功するまでblind retryしない。
 - 出所不明のprebuilt wheelを使わない。
 - third-party wheelを使う提案は、source、release、Python ABI、PyTorch/CUDA ABI、GPU arch、
   bytes、SHA-256、license、security reviewを別Evidenceで固定する。
 - `flash_attention_2`を黙って`sdpa`へ書き換え、公式recipeと同じだと表示しない。
-- Visual Studio Build Tools、CUDA toolkit、PATH、Registryをこの手順から自動変更しない。
+- system PATHやRegistryを変更せず、toolchainとSoXは隔離root/process-local PATHで扱う。
 
-Windows native buildを将来採用する場合は、exact toolchainを別のTechnical Probeとして
-構成し、import testだけでなくbf16 forward/backward、gradient、OOM-safe failure、再起動後
-loadまで検証します。
+Windows native buildを再現する場合は、exact toolchainを新しい隔離rootへ構成し、source/wheel
+SHAを取り直します。import testだけでなくbf16 forward/backwardとgradientを検証します。
 
 ## 6. TensorBoardとflash-attnの検査
 
@@ -206,6 +209,12 @@ FlashAttention 2.8.3 `cu12torch2.8/cp312/cxx11abiTRUE` wheel whose SHA-256 is
 shown above. Do not reuse that wheel with a different ABI, install an
 unverified third-party Windows wheel, or silently replace
 `flash_attention_2` with SDPA in the official training recipe.
+
+On the measured Windows host, FlashAttention 2.8.3.post1 was also built from
+the exact official source distribution with VS Build Tools 2026, NVIDIA pip
+CUDA 13.3/CCCL and PyTorch 2.11+cu130.  Its local wheel and bf16 GPU backward
+passed, but that machine-bound build is not an upstream Windows binary and
+must not be reused as generic compatibility Evidence.
 
 Dependency imports do not prove Qwen3-TTS 0.6B training feasibility. The
 official current 0.6B recipe incompatibility, a synthetic representative step,

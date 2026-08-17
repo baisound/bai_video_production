@@ -5,8 +5,9 @@
 TensorBoard and FlashAttention are now installed and runtime-verified in
 isolated environments on the target machine.
 
-- Windows probe environment: TensorBoard 2.21.0 installed; `SummaryWriter`
-  event-file creation passed.
+- Windows native environment: TensorBoard 2.21.0, SoX 14.4.2 and a
+  FlashAttention 2.8.3.post1 wheel built locally from the official source;
+  CUDA compiler smoke and bf16 GPU forward/backward passed.
 - WSL2 probe environment: official FlashAttention 2.8.3 Linux wheel installed
   with PyTorch/Torchaudio 2.8.0+cu128; bf16 CUDA forward and backward passed on
   the RTX 4070 SUPER.
@@ -84,9 +85,11 @@ The official PyPI 2.8.3.post1 source distribution was also examined:
 
 - source archive SHA-256:
   `55d5103ed846da8b56e0797acf4bde07dee4b1c7e8907fcfc6699c203030c348`;
-- Windows native result: no official matching wheel was supplied; build
-  prerequisites (`nvcc`, CUDA home and MSVC toolchain) were absent, so
-  FlashAttention was not installed into the Windows environment;
+- Windows native official binary result: no matching official Windows wheel
+  was supplied;
+- Windows native source result: the exact official sdist was compiled with VS
+  Build Tools 2026, NVIDIA pip CUDA 13.3/CCCL and PyTorch 2.11+cu130, producing
+  a local cp312/win_amd64 wheel; no source file was patched;
 - WSL 4-job source build: failed by genuine memory exhaustion with 31 GB RAM
   and 8 GB swap;
 - WSL 1-job / one nvcc-thread source build: avoided the observed OOM but the
@@ -96,6 +99,31 @@ The official PyPI 2.8.3.post1 source distribution was also examined:
 The interrupted source attempt is not PASS.  It was not blindly retried after
 the exact official compatible wheel was found.  No unofficial or fork release
 was substituted.
+
+## Windows native source-build and runtime result
+
+- Python: 3.12;
+- PyTorch/Torchaudio: 2.11.0+cu130;
+- CUDA source compiler: NVIDIA pip `nvcc` 13.3.73;
+- CCCL: 13.3.3.4.1;
+- MSVC: 19.51.36256 / VS Build Tools 2026 18.9;
+- source sdist bytes: 8,451,657;
+- source sdist SHA-256:
+  `55d5103ed846da8b56e0797acf4bde07dee4b1c7e8907fcfc6699c203030c348`;
+- local wheel: `flash_attn-2.8.3.post1-cp312-cp312-win_amd64.whl`;
+- local wheel bytes: 57,016,766;
+- local wheel SHA-256:
+  `9190c93e0a62532ab42f390b0029e9862e277930caef77ef4de39ae4035b453a`;
+- CUDA compiler `sm_89` smoke: PASS, result 42;
+- FlashAttention bf16 forward/backward: PASS;
+- output and q/k/v gradients finite: true;
+- Qwen-TTS class import with process-local SoX: PASS;
+- `pip check`: no broken requirements.
+
+The generated wheel is a local build artifact, not an upstream-provided or
+signed Windows binary.  It is not admitted for reuse on another Python,
+PyTorch, CUDA, compiler or machine binding without a new build and runtime
+verification.
 
 ## Runtime compatibility measurement
 
@@ -153,6 +181,14 @@ Final WSL2 verification:
   `0bcd15128485b1714eaa4f5f0b37e4cc31607b13cec3dd145fc398f5a02aaa6c`;
 - final pip-check receipt:
   `9261363b733079a641c2e4cc9bc46ffa1d8336945a87f807b6cf68847dbc9b09`.
+- Windows FlashAttention runtime smoke:
+  `1f0c7600708b9bbdda3a78a329468f9ec0a1585b1f575090e0be2737533649e7`;
+- Windows final dependency report:
+  `4e16e41fbc553a38b1d06c153f57fe704900a357565cfc09da00ef84c22612a2`;
+- Windows local wheel install report:
+  `af6e2c9de639e65bea591a4014907786551a9ddcf833df789294014e477dbd96`;
+- Windows CUDA CCCL install report:
+  `6aa6bcba78677975426282f86bb5df153963bb8689decf4cca13c281adf65079`.
 
 Private absolute environment and recovery paths are intentionally omitted from
 this repository Evidence.
@@ -179,7 +215,8 @@ Therefore:
 
 ## Critic pass 1 — Builder and compatibility
 
-- rejected the first PyTorch 2.11/cu130 source-build path after exact failures;
+- classified and corrected the PyTorch OEM decode, missing CCCL and standard
+  MSVC preprocessor prerequisites before completing the Windows build;
 - selected an official release asset rather than a community wheel;
 - matched Python, PyTorch, CUDA-major and CXX11 ABI coordinates;
 - tested actual CUDA forward and backward, not import alone;
@@ -204,6 +241,8 @@ Residual Critical/High/Medium: `0 / 0 / 0`.
 - TENSORBOARD SETUP: `PASS`.
 - OFFICIAL FLASHATTENTION WHEEL IDENTITY: `PASS_VERIFIED`.
 - TARGET GPU FORWARD/BACKWARD: `PASS_BOUNDED_COMPATIBILITY`.
+- WINDOWS LOCAL FLASHATTENTION BUILD: `PASS_FROM_OFFICIAL_SOURCE`.
+- WINDOWS GPU FORWARD/BACKWARD: `PASS_BOUNDED_COMPATIBILITY`.
 - QWEN-TTS PACKAGE IMPORT: `PASS_IMPORT_ONLY`.
 - OFFICIAL 0.6B TRAINING RECIPE: `FAILED_KNOWN / BLOCKED`.
 - TRAINING RESOURCE ADMISSION: `UNKNOWN / NOT_AUTHORIZED`.

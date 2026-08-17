@@ -1,6 +1,6 @@
 # TASK-036 P-UX-2D1 Final Review Readiness
 
-Date: 2026-08-17  
+Date: 2026-08-17
 Atomic unit: `P-UX-2D1_FINAL_REVIEW_READINESS_R0`
 
 ## Boundary and design

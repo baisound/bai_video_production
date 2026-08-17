@@ -1,6 +1,8 @@
 # Qwen3-TTS 0.6B Base セットアップガイド
 
-[English quick guide](#english-quick-guide) | [学習依存の準備](QWEN3-TTS-TRAINING-DEPENDENCIES.md)
+[English quick guide](#english-quick-guide) | [学習依存の準備](QWEN3-TTS-TRAINING-DEPENDENCIES.md) |
+[WSL2実測手順](QWEN3-TTS-WSL2-VERIFIED-ENVIRONMENT.md) |
+[Windowsネイティブ検証](QWEN3-TTS-WINDOWS-NATIVE-ENVIRONMENT.md)
 
 このページは、Qwen3-TTS 0.6B BaseをほかのPython環境と混ぜずに準備し、
 「packageが入った」「Modelがloadできた」「学習できる」を別々に確認するための
@@ -41,17 +43,22 @@ PythonやCUDAを推測でinstallすると、後で環境が再現できなくな
 
 ## 2. 保存先を決める
 
-以下は例です。既存directoryを上書きしない新しいrootを使います。
+以下は`E:\BAI_AI`へ置く例です。既存directoryを上書きしない新しいrootを使います。
 
 ```powershell
-$QwenRoot = Join-Path $env:LOCALAPPDATA 'BAI\Qwen3TTS-0.6B'
-$EnvRoot = Join-Path $QwenRoot 'env'
+$BaiAiRoot = 'E:\BAI_AI'
+$QwenRoot = Join-Path $BaiAiRoot 'models\Qwen3-TTS-12Hz-0.6B-Base'
+$EnvRoot = Join-Path $BaiAiRoot 'envs\qwen3-tts-06b-base'
 $ModelRoot = Join-Path $QwenRoot 'model\5d83992436eae1d760afd27aff78a71d676296fc'
 
-if (Test-Path -LiteralPath $QwenRoot) {
-    throw "保存先が既にあります。上書きせず、内容を確認してください: $QwenRoot"
+if (-not (Test-Path -LiteralPath 'E:\')) {
+    throw 'E: driveが見つかりません。'
 }
-New-Item -ItemType Directory -Path $QwenRoot | Out-Null
+if ((Test-Path -LiteralPath $QwenRoot) -or (Test-Path -LiteralPath $EnvRoot)) {
+    throw '保存先が既にあります。上書きせず、内容を確認してください。'
+}
+New-Item -ItemType Directory -Force -Path $QwenRoot | Out-Null
+Get-Volume -DriveLetter E | Select-Object DriveLetter, Size, SizeRemaining
 ```
 
 ProjectのRepository内、OBS Plugin directory、録音保存先にはModelを置かないで
@@ -136,7 +143,10 @@ VRAMを確認してから実行してください。
 ```
 
 SoXや`flash-attn`のwarningが出ても、無視して学習PASSにはしません。R3実測では
-RTX 4070 SUPER上のload-only peak allocatedは2,175,147,520 bytesでした。
+RTX 4070 SUPER上のload-only peak allocatedは2,175,147,520 bytesでした。R4では別の
+WSL2隔離環境にSoX 14.4.2、TensorBoard 2.21.0、公式FlashAttention 2.8.3 wheelを導入し、
+同じGPUでFlashAttentionのbf16 forward/backwardまで確認しました。Windows load-only環境へ
+混ぜたのではなく、目的とversionを固定した別環境です。
 
 ## 9. ここで完了する範囲
 

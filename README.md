@@ -15,7 +15,7 @@
 |---|---|---|
 | 初めて見る方・非開発者 | [やさしい導入ガイド](docs/user/GETTING-STARTED.md) | 何ができるか、費用・安全性、5分Demo、困った時 |
 | OBSで学習用音声を録音する方 | [OBS Voice Capture Plugin 導入・利用ガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) | 日本語・Englishで準備から保存・復旧まで説明する初心者向けガイド |
-| ローカル音声Modelを準備する方 | [Qwen3-TTS 0.6B Base セットアップ](docs/user/QWEN3-TTS-06B-BASE-SETUP.md) / [学習依存（flash-attn・TensorBoard）](docs/user/QWEN3-TTS-TRAINING-DEPENDENCIES.md) | 隔離環境、固定revision、GPU確認、Windows制約、学習を始めてよい条件 |
+| ローカル音声Modelを準備する方 | [Qwen3-TTS 0.6B Base セットアップ](docs/user/QWEN3-TTS-06B-BASE-SETUP.md) / [学習依存（flash-attn・TensorBoard）](docs/user/QWEN3-TTS-TRAINING-DEPENDENCIES.md) / [WSL2実測手順](docs/user/QWEN3-TTS-WSL2-VERIFIED-ENVIRONMENT.md) / [Windowsネイティブ検証手順](docs/user/QWEN3-TTS-WINDOWS-NATIVE-ENVIRONMENT.md) | 隔離環境、固定revision、GPU確認、Windows制約、学習を始めてよい条件 |
 | 利用を検討する方 | [機能と開発状況](PROJECT.md) | 実装済み／未実装、現在地、次の到達点 |
 | 開発者・Contributor | [開発者Architecture Guide](docs/developer/ARCHITECTURE.md) | Data flow、責任境界、Adapter、Test、変更手順 |
 | OSS活動を確認する方 | [公開準備Schedule](docs/oss/PUBLIC-READINESS-SCHEDULE.md) | 期限、Evidence、採択準備、実利用Gate |

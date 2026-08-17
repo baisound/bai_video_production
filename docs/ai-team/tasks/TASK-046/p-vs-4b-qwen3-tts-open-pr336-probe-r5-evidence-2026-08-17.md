@@ -28,7 +28,7 @@ audio, write a checkpoint/model artifact, or grant training admission.
   `2e714c787c8edb98b05432685cddb634add2de4d4e645f653d68251ef72ba011`;
 - model weights SHA-256:
   `180b3b10eb1c9f1b4db7806d5475bae3071c0243c299d49926bab1da3b6946f6`;
-- speech-tokenizer weights SHA-256:
+- speech codec model content digest (SHA-256):
   `836b7b357f5ea43e889936a3709af68dfe3751881acefe4ecf0dbd30ba571258`.
 
 The probe used the isolated Windows environment documented by R4:

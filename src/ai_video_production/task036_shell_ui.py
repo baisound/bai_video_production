@@ -24,11 +24,14 @@ from .task036_model_selection import Task036ModelSelectionProjection
 from .visual_generation_handoff import Task036VisualGenerationHandoffProjection
 from .final_review_readiness import Task036FinalReviewReadinessProjection
 from .final_review_application import FinalReviewApprovalApplication
+from .final_review import FinalReviewApprovalReceipt
+from .final_review_export_application import Task036FinalReviewExportApplication
 from .final_review_gate import (
     FinalReviewExternalGateReceipt,
     validate_external_gate_receipts,
 )
 from .errors import ProductError, ProductErrorCategory
+from .export_queue import ExportPreparation
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
@@ -197,6 +200,9 @@ class Task036ShellBridge:
         final_review_external_gate_provider: Callable[
             [], tuple[FinalReviewExternalGateReceipt, ...]
         ] | None = None,
+        final_review_export_preparation_provider: Callable[
+            [FinalReviewApprovalReceipt], ExportPreparation
+        ] | None = None,
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
     ) -> None:
@@ -237,6 +243,21 @@ class Task036ShellBridge:
         # discovery. Only the typed bridge methods below are exported.
         self._nle_controller = nle_controller
         self._nle_controller_factory = nle_controller_factory
+        self._final_review_export_application = None
+        if final_review_export_preparation_provider is not None:
+            if final_review_application is None:
+                raise ValueError("Final Review Export preparation requires the approval application")
+            if not callable(final_review_export_preparation_provider):
+                raise ValueError("Final Review Export preparation provider is invalid")
+            self._final_review_export_application = Task036FinalReviewExportApplication(
+                project_id=final_review_application.project_id,
+                final_review_application=final_review_application,
+                export_application_provider=lambda: (
+                    None if self._ensure_nle_controller() is None
+                    else self._require_nle_controller().export_application
+                ),
+                preparation_provider=final_review_export_preparation_provider,
+            )
 
     def _ensure_nle_controller(self) -> Task044NleShellController | None:
         if self._nle_controller is None and self._nle_controller_factory is not None:
@@ -1134,6 +1155,68 @@ class Task036ShellBridge:
             "export_job_created": False,
             "render_or_publish_started": False,
         }
+
+    def final_review_export_snapshot(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Final Review Export snapshot")
+        if self._final_review_export_application is None:
+            return {
+                "available": False,
+                "state": "PRIVATE_EXPORT_PREPARATION_UNBOUND",
+                "queue_confirmation_ready": False,
+                "export_job_created": False,
+                "dispatch_or_render_started": False,
+                "host_output_path_persisted": False,
+            }
+        return self._final_review_export_application.snapshot(
+            readiness=self.final_review_readiness_snapshot(),
+        )
+
+    def final_review_export_prepare(self, args: Any) -> dict[str, Any]:
+        required = {
+            "expected_readiness_projection_sha256",
+            "expected_approval_snapshot_sha256",
+            "expected_preparation_sha256",
+        }
+        if (
+            not isinstance(args, dict)
+            or set(args) != required
+            or not all(isinstance(args[name], str) for name in required)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review Export preparation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._final_review_export_application is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_NOT_BOUND",
+                "Private Export preparation is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._final_review_export_application.prepare_enqueue(
+            readiness=self.final_review_readiness_snapshot(),
+            expected_readiness_projection_sha256=args["expected_readiness_projection_sha256"],
+            expected_approval_snapshot_sha256=args["expected_approval_snapshot_sha256"],
+            expected_preparation_sha256=args["expected_preparation_sha256"],
+        )
+
+    def final_review_export_apply(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review Export apply request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._final_review_export_application is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_NOT_BOUND",
+                "Private Export preparation is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._final_review_export_application.apply_enqueue(
+            confirmation_id=args["confirmation_id"],
+            readiness=self.final_review_readiness_snapshot(),
+        )
 
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:
         required = {"prompt_id", "prompt_version", "expected_queue_snapshot_sha256", "expected_upstream_snapshots"}

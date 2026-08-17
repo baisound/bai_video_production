@@ -43,6 +43,8 @@ from .task044_nle_shell import Task044NleShellController
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_projection import InteractiveTimelineProjectionService
 from .export_queue_application import ExportQueueApplication
+from .export_queue import ExportPreparation
+from .final_review import FinalReviewApprovalReceipt
 from .final_review_application import FinalReviewApprovalApplication
 from .final_review_gate import FinalReviewExternalGateReceipt
 from .product_project_store import ProductProjectManifestStore
@@ -407,6 +409,9 @@ def build_trusted_launch(
     final_review_external_gate_provider: Callable[
         [], tuple[FinalReviewExternalGateReceipt, ...]
     ] | None = None,
+    final_review_export_preparation_provider: Callable[
+        [FinalReviewApprovalReceipt], ExportPreparation
+    ] | None = None,
 ) -> Task036TrustedLaunch:
     for directory in (
         configuration.asset_root,
@@ -654,6 +659,7 @@ def build_trusted_launch(
         connection_settings=connection_settings,
         final_review_application=final_review_application,
         final_review_external_gate_provider=final_review_external_gate_provider,
+        final_review_export_preparation_provider=final_review_export_preparation_provider,
         nle_controller_factory=nle_controller,
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

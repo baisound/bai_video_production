@@ -49,7 +49,7 @@
     },
     "EngineRecipeAdmissionBinding": {
       "type": "object", "additionalProperties": false,
-      "required": ["record_type", "binding_id", "contract_state", "engine_id", "engine_revision", "package_sha256", "model_id", "model_revision", "weight_sha256", "runtime_sha256", "recipe_revision", "recipe_sha256", "training_mode", "official_recipe_state", "representative_step_state", "target_resource_state", "checkpoint_compatibility_state", "license_state", "license_evidence_sha256", "evaluated_at", "binding_sha256"],
+      "required": ["record_type", "binding_id", "contract_state", "engine_id", "engine_revision", "package_sha256", "model_id", "model_revision", "weight_sha256", "runtime_sha256", "recipe_revision", "recipe_sha256", "training_mode", "official_recipe_state", "representative_step_state", "target_resource_state", "checkpoint_compatibility_state", "license_state", "license_evidence_sha256", "admission_state", "evaluated_at", "binding_sha256"],
       "properties": {
         "record_type": { "const": "EngineRecipeAdmissionBinding" },
         "binding_id": { "$ref": "#/$defs/id" },
@@ -70,20 +70,22 @@
         "checkpoint_compatibility_state": { "$ref": "#/$defs/fact" },
         "license_state": { "enum": ["APPROVED_FOR_SYNTHETIC_TECHNICAL_TEST", "LEGAL_REVIEW_REQUIRED", "REVOKED", "UNKNOWN"] },
         "license_evidence_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha" }] },
+        "admission_state": { "$ref": "#/$defs/fact" },
         "evaluated_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/utc" }] },
         "binding_sha256": { "$ref": "#/$defs/sha" }
       }
     },
     "TrainingExecutionProposal": {
       "type": "object", "additionalProperties": false,
-      "required": ["record_type", "proposal_id", "dataset_manifest_sha256", "engine_admission_sha256", "output_destination_binding_sha256", "engine_admission_state", "durable_job_binding_state", "rights_consent_state", "proposal_state", "reason_codes", "owner_human_gate_required", "dispatch_started", "gpu_reserved", "training_started", "artifact_written", "created_at", "proposal_sha256"],
+      "required": ["record_type", "proposal_id", "dataset_manifest_sha256", "engine_admission_sha256", "output_destination_binding_sha256", "engine_binding_state", "engine_admission_state", "durable_job_binding_state", "rights_consent_state", "proposal_state", "reason_codes", "owner_human_gate_required", "dispatch_started", "gpu_reserved", "training_started", "artifact_written", "created_at", "proposal_sha256"],
       "properties": {
         "record_type": { "const": "TrainingExecutionProposal" },
         "proposal_id": { "$ref": "#/$defs/id" },
         "dataset_manifest_sha256": { "$ref": "#/$defs/sha" },
         "engine_admission_sha256": { "$ref": "#/$defs/sha" },
         "output_destination_binding_sha256": { "$ref": "#/$defs/sha" },
-        "engine_admission_state": { "$ref": "#/$defs/state" },
+        "engine_binding_state": { "$ref": "#/$defs/state" },
+        "engine_admission_state": { "$ref": "#/$defs/fact" },
         "durable_job_binding_state": { "$ref": "#/$defs/state" },
         "rights_consent_state": { "$ref": "#/$defs/fact" },
         "proposal_state": { "enum": ["BLOCKED", "READY_FOR_OWNER_HUMAN_GATE"] },

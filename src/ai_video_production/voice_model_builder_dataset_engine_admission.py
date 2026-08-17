@@ -196,7 +196,7 @@ def _validate_engine(value: Mapping[str, Any]) -> None:
         "package_sha256", "model_id", "model_revision", "weight_sha256", "runtime_sha256",
         "recipe_revision", "recipe_sha256", "training_mode", "official_recipe_state",
         "representative_step_state", "target_resource_state", "checkpoint_compatibility_state",
-        "license_state", "license_evidence_sha256", "evaluated_at", "binding_sha256",
+        "license_state", "license_evidence_sha256", "admission_state", "evaluated_at", "binding_sha256",
     }
     _expect(value, fields, "EngineRecipeAdmissionBinding")
     _id(value["binding_id"], "binding_id")
@@ -207,6 +207,7 @@ def _validate_engine(value: Mapping[str, Any]) -> None:
         "checkpoint_compatibility_state",
     ))
     license_state = _enum(LicenseState, value["license_state"], "license_state")
+    admission = _enum(FactState, value["admission_state"], "admission_state")
     bound_fields = (
         "engine_id", "engine_revision", "package_sha256", "model_id", "model_revision",
         "weight_sha256", "runtime_sha256", "recipe_revision", "recipe_sha256",
@@ -218,17 +219,18 @@ def _validate_engine(value: Mapping[str, Any]) -> None:
         for name in ("package_sha256", "weight_sha256", "runtime_sha256", "recipe_sha256", "license_evidence_sha256"):
             _sha(value[name], name)
         _timestamp(value["evaluated_at"], "evaluated_at")
-        if not all(fact is FactState.PASS for fact in facts) or license_state is not LicenseState.APPROVED_FOR_SYNTHETIC_TECHNICAL_TEST:
-            raise ValueError("BOUND_VERIFIED admission requires all exact PASS and approved synthetic license")
     elif any(value[name] is not None for name in bound_fields):
         raise ValueError("unresolved engine admission must not invent canonical fields")
+    eligible = state is ContractState.BOUND_VERIFIED and all(fact is FactState.PASS for fact in facts) and license_state is LicenseState.APPROVED_FOR_SYNTHETIC_TECHNICAL_TEST
+    if (admission is FactState.PASS) != eligible:
+        raise ValueError("admission_state PASS requires bound exact recipe/resource/checkpoint and approved license")
     _verify_digest(value, "binding_sha256")
 
 
 def _validate_proposal(value: Mapping[str, Any]) -> None:
     fields = {
         "record_type", "proposal_id", "dataset_manifest_sha256", "engine_admission_sha256",
-        "output_destination_binding_sha256", "engine_admission_state", "durable_job_binding_state", "rights_consent_state",
+        "output_destination_binding_sha256", "engine_binding_state", "engine_admission_state", "durable_job_binding_state", "rights_consent_state",
         "proposal_state", "reason_codes", "owner_human_gate_required", "dispatch_started",
         "gpu_reserved", "training_started", "artifact_written", "created_at", "proposal_sha256",
     }
@@ -236,12 +238,13 @@ def _validate_proposal(value: Mapping[str, Any]) -> None:
     _id(value["proposal_id"], "proposal_id")
     for name in ("dataset_manifest_sha256", "engine_admission_sha256", "output_destination_binding_sha256"):
         _sha(value[name], name)
-    engine = _enum(ContractState, value["engine_admission_state"], "engine_admission_state")
+    engine_binding = _enum(ContractState, value["engine_binding_state"], "engine_binding_state")
+    engine_admission = _enum(FactState, value["engine_admission_state"], "engine_admission_state")
     job = _enum(ContractState, value["durable_job_binding_state"], "durable_job_binding_state")
     rights = _enum(FactState, value["rights_consent_state"], "rights_consent_state")
     state = _enum(ProposalState, value["proposal_state"], "proposal_state")
     _reasons(value["reason_codes"])
-    ready = engine is ContractState.BOUND_VERIFIED and job is ContractState.BOUND_VERIFIED and rights is FactState.PASS
+    ready = engine_binding is ContractState.BOUND_VERIFIED and engine_admission is FactState.PASS and job is ContractState.BOUND_VERIFIED and rights is FactState.PASS
     if (state is ProposalState.READY_FOR_OWNER_HUMAN_GATE) != ready:
         raise ValueError("proposal_state does not match current prerequisites")
     if ready and value["reason_codes"]:
@@ -341,6 +344,8 @@ def compile_training_proposal(
     reasons: list[str] = []
     if engine["contract_state"] != "BOUND_VERIFIED":
         reasons.append("ENGINE_RECIPE_NOT_BOUND")
+    if engine["admission_state"] != "PASS":
+        reasons.append("ENGINE_RECIPE_NOT_ADMITTED")
     if job is not ContractState.BOUND_VERIFIED:
         reasons.append("DURABLE_JOB_NOT_BOUND")
     if rights is not FactState.PASS:
@@ -352,7 +357,8 @@ def compile_training_proposal(
         "dataset_manifest_sha256": manifest["manifest_sha256"],
         "engine_admission_sha256": engine["binding_sha256"],
         "output_destination_binding_sha256": output_destination_binding_sha256,
-        "engine_admission_state": engine["contract_state"],
+        "engine_binding_state": engine["contract_state"],
+        "engine_admission_state": engine["admission_state"],
         "durable_job_binding_state": durable_job_binding_state,
         "rights_consent_state": rights_consent_state,
         "proposal_state": "READY_FOR_OWNER_HUMAN_GATE" if ready else "BLOCKED",
@@ -380,6 +386,7 @@ def public_projection(value: Mapping[str, Any]) -> dict[str, Any]:
         return {
             "record_type": record["record_type"],
             "contract_state": record["contract_state"],
+            "admission_state": record["admission_state"],
             "training_mode": record["training_mode"],
             "license_state": record["license_state"],
             "effect_authorized": False,

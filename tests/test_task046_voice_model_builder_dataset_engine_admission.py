@@ -78,6 +78,7 @@ def engine(*, bound: bool = True, legal: bool = False, mode: str = "ADAPTER_OR_L
         "target_resource_state": fact,
         "checkpoint_compatibility_state": fact,
         "license_state": "LEGAL_REVIEW_REQUIRED" if legal else ("APPROVED_FOR_SYNTHETIC_TECHNICAL_TEST" if bound else "UNKNOWN"),
+        "admission_state": "UNKNOWN" if legal or not bound else "PASS",
     }
     return add_record_digest(body, "binding_sha256")
 
@@ -131,13 +132,19 @@ def test_engine_admission_is_mode_specific_and_schema_valid(mode: str) -> None:
 
 
 def test_qwen_like_legal_review_or_short_probe_cannot_be_bound() -> None:
-    with pytest.raises(ValueError, match="approved synthetic license"):
-        EngineRecipeAdmissionBinding(engine(legal=True))
+    legal = EngineRecipeAdmissionBinding(engine(legal=True)).to_dict()
+    assert legal["contract_state"] == "BOUND_VERIFIED"
+    assert legal["admission_state"] == "UNKNOWN"
     record = engine()
     record["representative_step_state"] = "UNKNOWN"
+    record["admission_state"] = "UNKNOWN"
     record = add_record_digest(record, "binding_sha256")
-    with pytest.raises(ValueError, match="all exact PASS"):
-        EngineRecipeAdmissionBinding(record)
+    assert EngineRecipeAdmissionBinding(record).to_dict()["admission_state"] == "UNKNOWN"
+    forged = copy.deepcopy(record)
+    forged["admission_state"] = "PASS"
+    forged = add_record_digest(forged, "binding_sha256")
+    with pytest.raises(ValueError, match="admission_state PASS"):
+        EngineRecipeAdmissionBinding(forged)
 
 
 def test_unresolved_engine_cannot_invent_identifiers_or_hashes() -> None:
@@ -215,4 +222,3 @@ def test_public_projection_hides_hashes_items_and_engine_identity() -> None:
 
 def test_no_effect_surface() -> None:
     assert_no_effect_surface()
-

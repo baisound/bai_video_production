@@ -17,8 +17,10 @@ performed.
 2. `EngineRecipeAdmissionBinding` keeps engine/package/model/runtime/weights,
    exact recipe revision, training mode, official-recipe, representative-step,
    target-resource, checkpoint and license Evidence together.  FULL, PEFT and
-   LoRA modes are distinct.  `BOUND_VERIFIED` requires every fact PASS and an
-   approved synthetic technical-test license state.
+   LoRA modes are distinct.  Canonical binding and admission are orthogonal:
+   `admission_state=PASS` requires every fact PASS and an approved synthetic
+   technical-test license, while a correctly bound legal-review state remains
+   representable but cannot run.
 3. `TrainingExecutionProposal` composes the preparation manifest, engine
    admission, output-destination hash, durable-job state and rights/Consent
    state.  Even a ready proposal is `READY_FOR_OWNER_HUMAN_GATE`, never a
@@ -62,4 +64,3 @@ Critical/High/Medium `0 / 0 / 0` after focused/full validation.
 - EXACT_ENGINE_RECIPE_ADMISSION_CONTRACT: PASS after validation.
 - REAL DATASET ADOPTION / JOB / GPU / TRAINING / MODEL: BLOCKED, separate Gate.
 - OWNER AUDIO / CONSENT / PRODUCTION / RELEASE: NOT AUTHORIZED.
-

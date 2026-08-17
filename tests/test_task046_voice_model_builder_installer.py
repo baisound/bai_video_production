@@ -3,8 +3,11 @@ from __future__ import annotations
 import pathlib
 import re
 import os
+import json
 import subprocess
 import sys
+
+from ai_video_production.voice_model_builder_workflow import add_record_digest
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -20,7 +23,42 @@ def _text(path: pathlib.Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_launcher_performs_only_contained_synthetic_self_check() -> None:
+def _workflow_payload() -> dict:
+    source = add_record_digest(
+        {
+            "record_type": "CanonicalSourceBinding",
+            "contract_state": "CANONICAL_REF_NOT_PROVIDED",
+            "source_kind": "OBS_CAPTURE_SESSION",
+            "canonical_ref": None,
+            "canonical_revision": None,
+            "canonical_sha256": None,
+            "current_valid": None,
+            "evaluated_at": None,
+        },
+        "binding_sha256",
+    )
+    return add_record_digest(
+        {
+            "record_type": "VerticalSliceWorkflowRevision",
+            "workflow_id": "workflow:launcher-test",
+            "revision": 1,
+            "parent_workflow_sha256": None,
+            "project_id": "project:launcher-test",
+            "source_bindings": [source],
+            "state": "RECORDINGS_REVIEW_REQUIRED",
+            "ordered_cue_sha256": [],
+            "master_candidate_sha256": None,
+            "reason_codes": ["SYNTHETIC_TEST_ONLY"],
+            "created_at": "2026-08-17T00:00:00Z",
+            "dataset_effect_started": False,
+            "training_started": False,
+            "render_started": False,
+        },
+        "workflow_sha256",
+    )
+
+
+def test_launcher_performs_bounded_preview_and_contained_synthetic_self_check(tmp_path: pathlib.Path) -> None:
     environment = os.environ.copy()
     environment["PYTHONPATH"] = str(ROOT / "src")
     completed = subprocess.run(
@@ -32,9 +70,41 @@ def test_launcher_performs_only_contained_synthetic_self_check() -> None:
         text=True,
     )
     assert completed.returncode == 0, completed.stderr
+    workflow_json = tmp_path / "workflow.json"
+    workflow_json.write_text(json.dumps(_workflow_payload()), encoding="utf-8")
+    imported = subprocess.run(
+        [
+            sys.executable,
+            str(LAUNCHER),
+            "--self-check",
+            "--locale",
+            "ja",
+            "--workflow-json",
+            str(workflow_json),
+        ],
+        cwd=ROOT,
+        env=environment,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert imported.returncode == 0, imported.stderr
     text = _text(LAUNCHER)
-    for forbidden in ("subprocess", "requests", "torch", "wave", "pathlib", "open("):
+    for forbidden in ("subprocess", "requests", "torch", "wave", "socket", "urllib", "unlink(", "rmtree"):
         assert forbidden not in text
+    for required in (
+        "MAX_WORKFLOW_JSON_BYTES",
+        "path.is_symlink()",
+        "path.is_file()",
+        "before = path.stat()",
+        "after = path.stat()",
+        "after.st_mtime_ns != before.st_mtime_ns",
+        "path.read_bytes()",
+        "workflow JSON changed while it was being read",
+        "--workflow-json",
+        "askopenfilename",
+    ):
+        assert required in text
 
 
 def test_installer_is_bilingual_per_user_and_never_auto_launches() -> None:

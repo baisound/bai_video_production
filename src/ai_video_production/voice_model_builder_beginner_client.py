@@ -1,8 +1,9 @@
 """Beginner-facing, non-executing TASK-046 Voice Model Builder client.
 
 The client projects an already validated ``VerticalSliceWorkflowRevision``
-into twelve friendly steps.  R0 deliberately has no Dataset, Job, training,
-model, audio, provider, network or filesystem execution surface.
+into twelve friendly steps.  R3 also validates a bounded UTF-8 JSON workflow
+selected by the user.  It still has no Dataset, Job, training, model, audio,
+provider or network execution surface.
 """
 
 from __future__ import annotations
@@ -13,14 +14,16 @@ from datetime import datetime
 from enum import Enum
 from html import escape
 import inspect
+import json
 from types import MappingProxyType
-from typing import Any, ClassVar, Mapping, Sequence
+from typing import Any, Callable, ClassVar, Mapping, Sequence
 
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
 from .voice_model_builder_workflow import validate_record as validate_workflow_record
 
 
 SCHEMA_ID = "bai.task046.voice-model-builder-beginner-client.v1"
+MAX_WORKFLOW_JSON_BYTES = 1_048_576
 
 
 class Locale(str, Enum):
@@ -275,6 +278,42 @@ def compile_beginner_snapshot(
     return BeginnerClientSnapshot(body)
 
 
+def compile_beginner_snapshot_from_workflow_json(
+    *, payload: bytes, locale: str, created_at: str,
+) -> BeginnerClientSnapshot:
+    """Validate one bounded workflow JSON document and project it without effects."""
+    if not isinstance(payload, bytes) or not 1 <= len(payload) <= MAX_WORKFLOW_JSON_BYTES:
+        raise ValueError("workflow JSON must be between 1 byte and 1 MiB")
+    if payload.startswith(b"\xef\xbb\xbf"):
+        raise ValueError("workflow JSON must be UTF-8 without a byte-order mark")
+    try:
+        text = payload.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise ValueError("workflow JSON must be valid UTF-8") from exc
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in result:
+                raise ValueError("workflow JSON contains a duplicate key")
+            result[key] = item
+        return result
+
+    try:
+        workflow = json.loads(text, object_pairs_hook=reject_duplicate_keys)
+    except (json.JSONDecodeError, RecursionError) as exc:
+        raise ValueError("workflow JSON is malformed or too deeply nested") from exc
+    if not isinstance(workflow, Mapping):
+        raise ValueError("workflow JSON root must be an object")
+    validated = validate_workflow_record(workflow, expected_type="VerticalSliceWorkflowRevision")
+    return compile_beginner_snapshot(
+        snapshot_id=f'client-snapshot:workflow:{validated["workflow_sha256"].removeprefix("sha256:")}',
+        workflow=validated,
+        locale=locale,
+        created_at=created_at,
+    )
+
+
 def public_projection(snapshot: Mapping[str, Any]) -> dict[str, Any]:
     value = validate_snapshot(snapshot)
     return {
@@ -310,7 +349,7 @@ def render_beginner_html(snapshot: Mapping[str, Any]) -> str:
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{escape(title)}</title>
 <style>body{{margin:0;background:#10141b;color:#eef2f7;font:16px/1.5 'Segoe UI',sans-serif}}main{{max-width:840px;margin:auto;padding:28px}}h1{{font-size:28px}}p{{padding:14px;background:#18202b;border-left:4px solid #5b8def}}ol{{list-style:none;padding:0;display:grid;gap:9px}}li{{display:grid;grid-template-columns:38px 1fr auto;align-items:center;gap:12px;padding:13px;border:1px solid #303b4a;border-radius:8px;background:#171d26}}li span{{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#2a3544}}li em{{font-size:12px;color:#aab5c3}}li.complete{{border-color:#347d5b}}li.action_required{{border-color:#b58535}}li.blocked{{border-color:#b34d55}}footer{{color:#aab5c3;font-size:13px}}</style></head>
 <body><main><h1>{escape(title)}</h1><p>{escape(view['safety_notice'])}</p><ol>{rows}</ol>
-<footer>R0 · DISPLAY ONLY · execution_started=false</footer></main></body></html>"""
+<footer>R3 · VALIDATION PREVIEW ONLY · execution_started=false</footer></main></body></html>"""
 
 
 def build_demo_snapshot(*, locale: str = "ja") -> BeginnerClientSnapshot:
@@ -356,22 +395,83 @@ def build_demo_snapshot(*, locale: str = "ja") -> BeginnerClientSnapshot:
     )
 
 
-def launch_demo(*, locale: str = "ja") -> None:
-    """Launch the contained synthetic preview.  No workflow effect is exposed."""
+def launch_demo(
+    *,
+    locale: str = "ja",
+    initial_snapshot: Mapping[str, Any] | None = None,
+    workflow_loader: Callable[[], tuple[bytes, str] | None] | None = None,
+) -> None:
+    """Launch a preview; an optional callback may supply bounded JSON bytes."""
     import tkinter as tk
     from tkinter import ttk
 
-    snapshot = public_projection(build_demo_snapshot(locale=locale).to_dict())
+    current = initial_snapshot or build_demo_snapshot(locale=locale).to_dict()
+    snapshot = public_projection(current)
     window = tk.Tk()
-    window.title("BAI Voice Model Builder — Synthetic Demo")
-    window.geometry("820x720")
+    window.title("BAI Voice Model Builder — Workflow Preview")
+    window.geometry("820x780")
     frame = ttk.Frame(window, padding=20)
     frame.pack(fill="both", expand=True)
     ttk.Label(frame, text="音声モデル作成ガイド" if locale == "ja" else "Voice Model Builder Guide", font=("Segoe UI", 18, "bold")).pack(anchor="w")
     ttk.Label(frame, text=snapshot["safety_notice"], wraplength=760).pack(anchor="w", pady=(8, 16))
-    for step in snapshot["steps"]:
-        ttk.Label(frame, text=f'{step["ordinal"]}. {step["label"]}  —  {step["state"]}', wraplength=760).pack(anchor="w", pady=3)
-    ttk.Label(frame, text="R0 / SYNTHETIC DEMO / DISPLAY ONLY").pack(anchor="w", pady=(18, 0))
+    status = tk.StringVar(
+        value=("合成Demoを表示中" if locale == "ja" else "Showing the synthetic demo")
+        if initial_snapshot is None
+        else ("検証済みworkflowを表示中" if locale == "ja" else "Showing a validated workflow")
+    )
+    steps_frame = ttk.Frame(frame)
+    steps_frame.pack(fill="x")
+
+    def show_steps(value: Mapping[str, Any]) -> None:
+        view = public_projection(value)
+        for child in steps_frame.winfo_children():
+            child.destroy()
+        for step in view["steps"]:
+            ttk.Label(
+                steps_frame,
+                text=f'{step["ordinal"]}. {step["label"]}  —  {step["state"]}',
+                wraplength=760,
+            ).pack(anchor="w", pady=3)
+
+    def load_workflow() -> None:
+        if workflow_loader is None:
+            return
+        try:
+            supplied = workflow_loader()
+        except (OSError, TypeError, ValueError):
+            status.set(
+                "読み取れませんでした。元ファイルは変更されていません。"
+                if locale == "ja"
+                else "The file could not be read. The original was not changed."
+            )
+            return
+        if supplied is None:
+            status.set("選択をキャンセルしました" if locale == "ja" else "Selection cancelled")
+            return
+        payload, created_at = supplied
+        try:
+            imported = compile_beginner_snapshot_from_workflow_json(
+                payload=payload, locale=locale, created_at=created_at,
+            )
+        except (TypeError, ValueError):
+            status.set(
+                "検証に失敗しました。workflow JSONは変更・実行されていません。"
+                if locale == "ja"
+                else "Validation failed. The workflow JSON was not changed or executed."
+            )
+            return
+        show_steps(imported.to_dict())
+        status.set("検証済みworkflowを表示中" if locale == "ja" else "Showing a validated workflow")
+
+    show_steps(current)
+    if workflow_loader is not None:
+        ttk.Button(
+            frame,
+            text="workflow JSONを選ぶ" if locale == "ja" else "Choose workflow JSON",
+            command=load_workflow,
+        ).pack(anchor="w", pady=(16, 6))
+    ttk.Label(frame, textvariable=status, wraplength=760).pack(anchor="w")
+    ttk.Label(frame, text="R3 / VALIDATION PREVIEW ONLY / execution_started=false").pack(anchor="w", pady=(14, 0))
     window.mainloop()
 
 

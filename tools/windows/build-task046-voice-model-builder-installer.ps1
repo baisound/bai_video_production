@@ -7,7 +7,7 @@ param(
     [string]$WorkRoot,
     [Parameter(Mandatory = $true)]
     [string]$OutputDirectory,
-    [string]$AppVersion = '0.1.0-dev.1-installer.1',
+    [string]$AppVersion = '0.1.0-dev.1-installer.2',
     [string]$ExpectedPythonSha256 = '',
     [string]$ExpectedCompilerSha256 = 'd06ebd38f38e3cee60a3c50cc45bd449d77e0bc6a5cabc607ea9886808e4de1a'
 )
@@ -141,7 +141,7 @@ $installerPath = Join-Path $OutputDirectory "bai-voice-model-builder-$AppVersion
 Assert-AbsoluteFile $installerPath 'Compiled installer'
 $result = [ordered]@{
     schema_version = 1
-    task = 'TASK-046/P-VS-4B-BEGINNER-CLIENT-RELEASE-R2'
+    task = 'TASK-046/P-VS-4B-WORKFLOW-IMPORT-PREFLIGHT-R3'
     app_version = $AppVersion
     python_sha256 = $pythonHash
     pyinstaller_version = $pyInstallerVersion

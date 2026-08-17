@@ -6,16 +6,16 @@
 
 BAI Voice Model Builderは、OBSで録音した学習用WAVから、将来のDataset確認、Model学習、品質評価、style別音声、一本の自然なMaster WAVまでの流れを迷わず進めるためのWindowsクライアントです。
 
-現在の`0.1.0-dev.1`は**12工程を確認する合成Demo（表示専用）**です。インストールしても、録音を読み取らず、Modelをdownloadせず、学習・音声生成・公開を開始しません。ボタンがないのは故障ではなく、安全な最初の版の境界です。
+現在の`0.1.0-dev.1-installer.2`は、**12工程を確認し、既存のworkflow JSONを実行せず検証・表示するTechnical Preview**です。インストールしても、録音を読み取らず、Modelをdownloadせず、学習・音声生成・公開を開始しません。
 
 ## インストール前の確認
 
 1. Windows 10または11の64-bit環境を使います。
-2. Releaseの`bai-voice-model-builder-0.1.0-dev.1-installer.1-windows-x64-setup.exe`と`SHA256SUMS`を同じ場所へ保存します。
+2. Releaseの`bai-voice-model-builder-0.1.0-dev.1-installer.2-windows-x64-setup.exe`と`SHA256SUMS`を同じ場所へ保存します。
 3. PowerShellで次を実行し、表示されたSHA-256がReleaseの値と一致することを確認します。
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\bai-voice-model-builder-0.1.0-dev.1-installer.1-windows-x64-setup.exe
+Get-FileHash -Algorithm SHA256 .\bai-voice-model-builder-0.1.0-dev.1-installer.2-windows-x64-setup.exe
 ```
 
 一致しない場合は実行しないでください。開発版インストーラーは未署名のため、Windowsが警告する場合があります。出所とSHA-256を確認できない場合は中止してください。
@@ -35,8 +35,10 @@ Get-FileHash -Algorithm SHA256 .\bai-voice-model-builder-0.1.0-dev.1-installer.1
 1. スタートメニューから「BAI Voice Model Builder」を開きます。
 2. 「この画面だけでは学習・音声生成を開始しません」と表示されることを確認します。
 3. 12工程を上から確認します。最初は「録音を選ぶ」が次の作業です。
-4. 現在は合成Demoなので、Owner音声やprivateな保存先を指定する必要はありません。
-5. 英語表示を確認する場合は、コマンドプロンプトでインストール先のEXEへ`--locale en`を付けて起動します。
+4. 既存の`VerticalSliceWorkflowRevision` JSONを確認する場合だけ「workflow JSONを選ぶ」を押します。最大1 MiBのUTF-8 JSONを読み、型・revision・digest・effect flagを検証して表示します。
+5. 不正・改変・未対応のJSONはfail closedで拒否し、元ファイルを書き換えません。選択したpathやJSON本文を公開metadataへ保存しません。
+6. JSONを選ばなければ合成Demoのままです。Owner音声やprivateな保存先を指定する必要はありません。
+7. 英語表示を確認する場合は、コマンドプロンプトでインストール先のEXEへ`--locale en`を付けて起動します。
 
 ## 将来の完成形
 
@@ -92,7 +94,7 @@ Installerにはprojectの`LICENSE.md`に加え、実際にbundleしたCPython、
 
 BAI Voice Model Builder is the future Windows client for moving from OBS training WAV recordings through Dataset review, model training, evaluation, style clips, and one naturally joined Master WAV.
 
-Version `0.1.0-dev.1` is a **display-only synthetic demo of the twelve-step flow**. Installing it does not read recordings, download a model, start training, generate audio, or publish anything. The absence of action buttons is an intentional safety boundary of this first version.
+Version `0.1.0-dev.1-installer.2` is a **Technical Preview that shows the twelve-step flow and validates an existing workflow JSON without executing it**. Installing it does not read recordings, download a model, start training, generate audio, or publish anything.
 
 ### Before installation
 
@@ -110,6 +112,8 @@ Version `0.1.0-dev.1` is a **display-only synthetic demo of the twelve-step flow
 5. Open “BAI Voice Model Builder” from the Start menu.
 6. Confirm that the window says it does not start training or audio generation.
 7. Read the twelve steps from top to bottom. The synthetic demo begins at “Choose recordings”.
+8. To inspect an existing `VerticalSliceWorkflowRevision`, choose “Choose workflow JSON”. The app accepts at most 1 MiB of strict UTF-8 JSON, validates its exact contract and digest, and never changes the selected file.
+9. Invalid, tampered or unsupported input is rejected. The local path and JSON body are not copied to public metadata.
 
 ### Safety and future workflow
 

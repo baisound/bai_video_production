@@ -62,7 +62,7 @@ if ((Get-Content -Raw -LiteralPath (Join-Path $userDataRoot 'owner-data-sentinel
 
 [ordered]@{
     schema_version = 1
-    task = 'TASK-046/P-VS-4B-BEGINNER-CLIENT-RELEASE-R2'
+    task = 'TASK-046/P-VS-4B-WORKFLOW-IMPORT-PREFLIGHT-R3'
     clean_install = 'PASS'
     exact_repair = 'PASS'
     collision_fail_closed = 'PASS'

@@ -8,18 +8,57 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from ai_video_production.voice_model_builder_beginner_client import (
+    MAX_WORKFLOW_JSON_BYTES,
     BeginnerClientSnapshot,
     assert_no_forbidden_effect_surface,
     build_demo_snapshot,
+    compile_beginner_snapshot_from_workflow_json,
     public_projection,
     render_beginner_html,
     validate_snapshot,
 )
+from ai_video_production.voice_model_builder_workflow import add_record_digest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "schemas" / "voice-model-builder-beginner-client.schema.json"
 MIRROR = ROOT / "src" / "ai_video_production" / "schema_resources" / "voice-model-builder-beginner-client.schema.json"
+
+
+def _workflow_json_bytes(*, training_started: bool = False) -> bytes:
+    source = add_record_digest(
+        {
+            "record_type": "CanonicalSourceBinding",
+            "contract_state": "CANONICAL_REF_NOT_PROVIDED",
+            "source_kind": "OBS_CAPTURE_SESSION",
+            "canonical_ref": None,
+            "canonical_revision": None,
+            "canonical_sha256": None,
+            "current_valid": None,
+            "evaluated_at": None,
+        },
+        "binding_sha256",
+    )
+    workflow = add_record_digest(
+        {
+            "record_type": "VerticalSliceWorkflowRevision",
+            "workflow_id": "workflow:import-test",
+            "revision": 1,
+            "parent_workflow_sha256": None,
+            "project_id": "project:import-test",
+            "source_bindings": [source],
+            "state": "RECORDINGS_REVIEW_REQUIRED",
+            "ordered_cue_sha256": [],
+            "master_candidate_sha256": None,
+            "reason_codes": ["SYNTHETIC_TEST_ONLY"],
+            "created_at": "2026-08-17T00:00:00Z",
+            "dataset_effect_started": False,
+            "training_started": training_started,
+            "render_started": False,
+        },
+        "workflow_sha256",
+    )
+    return json.dumps(workflow, ensure_ascii=False, separators=(",", ":")).encode()
 
 
 def test_demo_snapshot_matches_schema_and_is_deterministic() -> None:
@@ -29,6 +68,51 @@ def test_demo_snapshot_matches_schema_and_is_deterministic() -> None:
     assert BeginnerClientSnapshot(first).canonical_json() == BeginnerClientSnapshot(second).canonical_json()
     assert len(first["steps"]) == 12
     assert first["current_step"] == 2
+
+
+def test_bounded_workflow_json_compiles_to_the_same_deterministic_projection() -> None:
+    kwargs = {
+        "payload": _workflow_json_bytes(),
+        "locale": "ja",
+        "created_at": "2026-08-17T01:00:00Z",
+    }
+    first = compile_beginner_snapshot_from_workflow_json(**kwargs).to_dict()
+    second = compile_beginner_snapshot_from_workflow_json(**kwargs).to_dict()
+    Draft202012Validator(json.loads(SCHEMA.read_text(encoding="utf-8"))).validate(first)
+    assert first == second
+    assert first["snapshot_id"].startswith("client-snapshot:workflow:")
+    assert first["training_started"] is False
+    assert first["audio_access_started"] is False
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        (b"", "between 1 byte"),
+        (b"x" * (MAX_WORKFLOW_JSON_BYTES + 1), "between 1 byte"),
+        (b"\xff", "valid UTF-8"),
+        (b"\xef\xbb\xbf{}", "byte-order mark"),
+        (b"[]", "root must be an object"),
+        (b'{"record_type":"one","record_type":"two"}', "duplicate key"),
+    ],
+    ids=("empty", "over-limit", "invalid-utf8", "bom", "non-object", "duplicate-key"),
+)
+def test_workflow_json_import_rejects_unbounded_ambiguous_or_noncanonical_input(
+    payload: bytes, message: str,
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        compile_beginner_snapshot_from_workflow_json(
+            payload=payload, locale="ja", created_at="2026-08-17T01:00:00Z",
+        )
+
+
+def test_workflow_json_import_cannot_turn_effect_flags_on() -> None:
+    with pytest.raises(ValueError, match="training_started"):
+        compile_beginner_snapshot_from_workflow_json(
+            payload=_workflow_json_bytes(training_started=True),
+            locale="ja",
+            created_at="2026-08-17T01:00:00Z",
+        )
 
 
 def test_schema_mirror_is_byte_exact() -> None:

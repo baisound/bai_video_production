@@ -1,6 +1,6 @@
 #define AppName "BAI Voice Model Builder"
 #ifndef AppVersion
-  #define AppVersion "0.1.0-dev.1-installer.1"
+  #define AppVersion "0.1.0-dev.1-installer.2"
 #endif
 #ifndef PayloadRoot
   #define PayloadRoot "payload"

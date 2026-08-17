@@ -12,7 +12,9 @@ Qwen3-TTS 0.6Bの学習成功、12 GB VRAM適合、Model承認を意味しませ
    compilationはさらにtestが必要」という扱いで、公式の安定Windows wheel手順ではありません。
 2. Qwen3-TTS公式fine-tuning scriptは`attn_implementation="flash_attention_2"`と
    `Accelerator(..., log_with="tensorboard")`を指定します。
-3. このProjectのWindows実測環境には、現時点で`flash-attn`と`tensorboard`がありません。
+3. このProjectのWindows隔離環境にはTensorBoard 2.21.0を導入し、`SummaryWriter`の
+   event file生成まで確認済みです。Windows native向けの公式`flash-attn` wheelは確認できず、
+   Windows環境へは導入していません。
 4. さらに、公式Qwen3-TTS `main@022e286b98fbec7e1e916cb940cdf532cd9f488e`の
    0.6B recipeには2048/1024 embedding不整合があります。open PR #336を勝手に
    取り込んで公式PASSとはしません。
@@ -74,22 +76,37 @@ backward passの成功を証明しません。
 公式要件に近いのはLinuxです。Windows native環境へ無理に混ぜず、WSL2 Ubuntuなどの
 新しいtask-owned環境でPython、PyTorch、CUDA visibilityを最初から確認します。
 
+R4で実測PASSになった組合せは、Python 3.12、PyTorch/Torchaudio 2.8.0+cu128、
+Qwen-TTS 0.1.1、FlashAttention 2.8.3公式Linux wheelです。別versionへ読み替えず、
+必ず新しい隔離環境で作ります。
+
 ```bash
-python3.12 -m venv .venv-qwen3-tts-probe
-source .venv-qwen3-tts-probe/bin/activate
-python -m pip install --upgrade pip
+python3.12 -m venv .venv-qwen3-tts-cu128
+source .venv-qwen3-tts-cu128/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install torch==2.8.0 torchaudio==2.8.0 \
+  --index-url https://download.pytorch.org/whl/cu128
+python -m pip install qwen-tts==0.1.1 tensorboard==2.21.0 \
+  packaging psutil==7.2.2 ninja==1.13.0
 
-# PyTorchは https://pytorch.org/get-started/locally/ で
-# Linux / Pip / Python / 使用するCUDAを選んだexact commandを使う。
-python -m pip install packaging psutil ninja
-ninja --version
-
-MAX_JOBS=4 python -m pip install flash-attn --no-build-isolation
+curl -fL -o flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl \
+  'https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl'
+echo 'f25da18657a87fc83dc1bfb8b7751b82246e9db355510226b674fd437c34b5fb  flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl' \
+  | sha256sum --check
+python -m pip install --no-deps \
+  ./flash_attn-2.8.3+cu12torch2.8cxx11abiTRUE-cp312-cp312-linux_x86_64.whl
+python -m pip check
 python -c "import flash_attn, torch; print('flash_attn=', flash_attn.__version__); print('torch=', torch.__version__); print('cuda=', torch.version.cuda)"
 ```
 
-`MAX_JOBS=4`はbuild時のRAM使用量を抑えるための上限例です。公式READMEも、RAMが
-96 GB未満でCPU coreが多い環境ではjob数を制限するよう案内しています。
+wheel名の`cp312`、`torch2.8`、`cu12`、`cxx11abiTRUE`は互換条件です。Python、PyTorch、
+CUDA major、CXX11 ABIのいずれかが違う環境へ流用しません。公式wheelがない組合せでは
+自動的に第三者wheelへ切り替えません。
+
+source buildが本当に必要な場合だけ別Technical Probeに分け、まず`MAX_JOBS=1`と
+`NVCC_THREADS=1`を使います。R4では31 GB RAM / 8 GB swap環境の4-job buildがOOMとなり、
+CUDA 13.0 source buildもWSL VMを不安定化させました。公式互換wheelがある場合は
+source buildを繰り返しません。
 
 このrouteでも、次をexactに固定してから代表stepへ進みます。
 
@@ -138,6 +155,11 @@ PY
 
 `imports=PASS`はpackage importの確認だけです。fine-tuning admissionには使えません。
 
+R4実測ではRTX 4070 SUPER上でbf16、shape `(2, 128, 4, 64)`の
+`flash_attn_func` forward/backwardを実行し、outputとq/k/v gradientがすべてfiniteでした。
+TensorBoard 2.21.0の`SummaryWriter`もevent fileを生成しました。これはdependency互換性の
+PASSであり、Qwen3-TTSの学習stepや12 GB適合のPASSではありません。
+
 ## 7. 0.6B学習を始めてよい条件
 
 次がすべて揃うまでは開始しません。
@@ -164,6 +186,8 @@ Model loadだけ、短いforwardだけ、TensorBoard表示だけを12 GB trainin
 - 2048と1024のshape mismatch: 現行公式main 0.6B recipeの既知境界です。open fixを
   official merged PASSとして扱いません。
 - importは通るがstepでOOM: import/load PASSをresource feasibilityへ流用してはいけません。
+- WSLがsource build中に停止する: 同じ構成をblind retryせず、公式releaseにexact ABIのwheelが
+  あるか確認します。公式wheelがなければ`FAILED_KNOWN / PROBE_REQUIRED`として止めます。
 
 ## 公式資料
 
@@ -175,13 +199,12 @@ Model loadだけ、短いforwardだけ、TensorBoard表示だけを12 GB trainin
 
 ## English quick guide
 
-Install TensorBoard in the same isolated Python environment with
-`python -m pip install tensorboard`, then verify `SummaryWriter` imports.
-FlashAttention officially requires a CUDA/ROCm toolkit, PyTorch 2.2 or newer,
-build helpers and Linux; its official README says Windows compilation still
-needs more testing. Prefer a new Linux/WSL2 probe environment and bind the exact
-Python, PyTorch, CUDA, compiler, FlashAttention source/wheel and hashes. Do not
-install an unverified third-party Windows wheel and do not silently replace
+Install TensorBoard in the same isolated Python environment and verify that
+`SummaryWriter` creates an event file. The tested Linux/WSL2 matrix is Python
+3.12, PyTorch/Torchaudio 2.8.0+cu128, Qwen-TTS 0.1.1 and the official
+FlashAttention 2.8.3 `cu12torch2.8/cp312/cxx11abiTRUE` wheel whose SHA-256 is
+shown above. Do not reuse that wheel with a different ABI, install an
+unverified third-party Windows wheel, or silently replace
 `flash_attention_2` with SDPA in the official training recipe.
 
 Dependency imports do not prove Qwen3-TTS 0.6B training feasibility. The

@@ -136,7 +136,10 @@ VRAMを確認してから実行してください。
 ```
 
 SoXや`flash-attn`のwarningが出ても、無視して学習PASSにはしません。R3実測では
-RTX 4070 SUPER上のload-only peak allocatedは2,175,147,520 bytesでした。
+RTX 4070 SUPER上のload-only peak allocatedは2,175,147,520 bytesでした。R4では別の
+WSL2隔離環境にSoX 14.4.2、TensorBoard 2.21.0、公式FlashAttention 2.8.3 wheelを導入し、
+同じGPUでFlashAttentionのbf16 forward/backwardまで確認しました。Windows load-only環境へ
+混ぜたのではなく、目的とversionを固定した別環境です。
 
 ## 9. ここで完了する範囲
 

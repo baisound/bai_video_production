@@ -193,3 +193,121 @@ def test_concurrent_go_publication_allows_exactly_one_writer(tmp_path: Path) -> 
         results = list(pool.map(lambda value: publish(*value), ((first, "go-first"), (second, "go-second"))))
     assert results.count("PASS") == 1
     assert len(ProductionProposalSnapshotStore.load(tmp_path / "production-proposal.json").approved_plans) == 1
+
+
+def revision_sections(*, concept_title: str = "Concept", concept_body: str = "A clearer introduction") -> list[dict[str, str]]:
+    return [
+        {"section_id": "concept", "kind": "CONCEPT", "title": concept_title, "body": concept_body},
+        {"section_id": "script", "kind": "SCRIPT", "title": "Script", "body": "Opening then promise"},
+    ]
+
+
+def test_human_revision_is_append_only_persisted_and_no_effect(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "revision-confirm",
+    )
+    before = service.snapshot()
+    prepared = service.prepare_revision(
+        proposal_id="PROPOSAL-DEMO",
+        sections=revision_sections(),
+        expected_snapshot_sha256=before["snapshot_sha256"],
+    )
+    assert prepared["proposal"]["revision"] == 2
+    assert prepared["proposal"]["parent_proposal_sha256"] == before["workspace"]["latest_proposal_sha256"]
+    assert prepared["provider_execution_started"] is False
+    assert prepared["paid_execution_authorized"] is False
+    assert prepared["publish_started"] is False
+
+    result = service.apply_revision(confirmation_id=prepared["confirmation_id"])
+    workspace = result["application"]["workspace"]
+    assert workspace["latest_revision"] == 2
+    assert workspace["go_status"] == "GO_REQUIRED"
+    assert workspace["changed_section_ids_from_previous"] == ["concept"]
+    assert result["provider_execution_started"] is False
+    assert result["resolve_mutation_started"] is False
+    assert result["publish_started"] is False
+
+    registry = ProductionProposalSnapshotStore.load(tmp_path / "production-proposal.json")
+    first, second = registry.proposals["PROPOSAL-DEMO"]
+    assert second.intent_sha256 == first.intent_sha256
+    assert second.blueprint.to_dict() == first.blueprint.to_dict()
+    assert second.provider_policy == first.provider_policy
+    assert (second.estimated_cost_min, second.estimated_cost_max, second.currency) == (
+        first.estimated_cost_min,
+        first.estimated_cost_max,
+        first.currency,
+    )
+    reopened = Task027PlanningApplication(project_root=tmp_path, project_id="project-1").snapshot()
+    assert reopened["workspace"]["latest_revision"] == 2
+    with pytest.raises(ProductError) as exc:
+        service.apply_revision(confirmation_id="revision-confirm")
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_REVISION_CONFIRMATION_INVALID"
+
+
+def test_human_revision_after_go_requires_fresh_go_without_removing_prior_plan(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=iter(("go-confirm", "revision-confirm")).__next__,
+    )
+    approved = approve(service)
+    state = service.snapshot()
+    prepared = service.prepare_revision(
+        proposal_id="PROPOSAL-DEMO",
+        sections=revision_sections(concept_title="Revised concept"),
+        expected_snapshot_sha256=state["snapshot_sha256"],
+    )
+    applied = service.apply_revision(confirmation_id=prepared["confirmation_id"])
+    workspace = applied["application"]["workspace"]
+    assert workspace["go_status"] == "GO_REQUIRED"
+    assert workspace["new_go_required_after_revision"] is True
+    assert workspace["prior_approved_plan_ids"] == [approved["approved_plan"]["plan_id"]]
+    assert workspace["approved_plan"] is None
+
+
+@pytest.mark.parametrize(
+    ("sections", "code"),
+    (
+        (revision_sections(concept_body="A clear introduction"), "ERR_PLANNING_APPLICATION_REVISION_NO_CHANGE"),
+        (list(reversed(revision_sections())), "ERR_PLANNING_APPLICATION_REVISION_SECTION_IDENTITY"),
+        ([{**revision_sections()[0], "kind": "SCRIPT"}, revision_sections()[1]], "ERR_PLANNING_APPLICATION_REVISION_SECTION_IDENTITY"),
+        ([{**revision_sections()[0], "extra": "forbidden"}, revision_sections()[1]], "ERR_PLANNING_APPLICATION_REVISION_SECTIONS_INVALID"),
+        (revision_sections() * 33, "ERR_PLANNING_APPLICATION_REVISION_SECTIONS_INVALID"),
+    ),
+)
+def test_human_revision_rejects_noop_identity_drift_broad_fields_and_cap_plus_one(
+    tmp_path: Path,
+    sections: list[dict[str, str]],
+    code: str,
+) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(project_root=tmp_path, project_id="project-1")
+    with pytest.raises(ProductError) as exc:
+        service.prepare_revision(
+            proposal_id="PROPOSAL-DEMO",
+            sections=sections,
+            expected_snapshot_sha256=service.snapshot()["snapshot_sha256"],
+        )
+    assert exc.value.code == code
+
+
+def test_concurrent_revision_publication_allows_exactly_one_writer(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    first = Task027PlanningApplication(project_root=tmp_path, project_id="project-1", token_factory=lambda: "revision-first")
+    second = Task027PlanningApplication(project_root=tmp_path, project_id="project-1", token_factory=lambda: "revision-second")
+    snapshot = first.snapshot()["snapshot_sha256"]
+    first.prepare_revision(proposal_id="PROPOSAL-DEMO", sections=revision_sections(), expected_snapshot_sha256=snapshot)
+    second.prepare_revision(
+        proposal_id="PROPOSAL-DEMO",
+        sections=revision_sections(concept_title="Other title"),
+        expected_snapshot_sha256=snapshot,
+    )
+    first.apply_revision(confirmation_id="revision-first")
+    with pytest.raises(ProductError) as exc:
+        second.apply_revision(confirmation_id="revision-second")
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SNAPSHOT_CONFLICT"
+    assert len(ProductionProposalSnapshotStore.load(tmp_path / "production-proposal.json").proposals["PROPOSAL-DEMO"]) == 2

@@ -21,7 +21,13 @@ from .production_control import EntityType, ProductionControlRegistry
 from .production_blueprint_v2 import ProductionBlueprintV2
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import ProductionControlSnapshotStore, _exclusive_snapshot_lock
-from .production_proposal import ProductionGoApprovalService, ProductionProposalRegistry, ReferenceAssetBinding
+from .production_proposal import (
+    ProductionGoApprovalService,
+    ProductionProposalRegistry,
+    ProductionProposalRevision,
+    ProposalSection,
+    ReferenceAssetBinding,
+)
 from .production_proposal_store import ProductionProposalSnapshotStore
 
 
@@ -50,6 +56,16 @@ class _InstallConfirmation:
     plan_id: str
     proposal_id: str
     blueprint_sha256: str
+    consumed: bool = False
+
+
+@dataclass(slots=True)
+class _RevisionConfirmation:
+    confirmation_id: str
+    snapshot_sha256: str
+    proposal_id: str
+    parent_proposal_sha256: str
+    sections: tuple[ProposalSection, ...]
     consumed: bool = False
 
 
@@ -96,6 +112,7 @@ class Task027PlanningApplication:
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
         self._go_confirmations: dict[str, _GoConfirmation] = {}
         self._install_confirmations: dict[str, _InstallConfirmation] = {}
+        self._revision_confirmations: dict[str, _RevisionConfirmation] = {}
 
     @staticmethod
     def _snapshot_hash(registry: ProductionProposalRegistry) -> str:
@@ -248,6 +265,143 @@ class Task027PlanningApplication:
             "selected_proposal_id": selected,
             "workspace": workspace,
             "installation": installation,
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "budget_reservation_created": False,
+            "resolve_mutation_started": False,
+            "publish_started": False,
+        }
+
+    @staticmethod
+    def _revision_sections(values: Iterable[dict[str, Any]]) -> tuple[ProposalSection, ...]:
+        if not isinstance(values, (list, tuple)):
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_REVISION_SECTIONS_INVALID",
+                "Proposal revision sections must be an exact bounded list",
+                ProductErrorCategory.VALIDATION,
+            )
+        rows = tuple(values)
+        if not rows or len(rows) > 64:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_REVISION_SECTIONS_INVALID",
+                "Proposal revision sections must contain 1..64 rows",
+                ProductErrorCategory.VALIDATION,
+            )
+        try:
+            if any(not isinstance(item, dict) or set(item) != {"section_id", "kind", "title", "body"} for item in rows):
+                raise ValueError("section fields are invalid")
+            return tuple(
+                ProposalSection(
+                    section_id=item["section_id"],
+                    kind=item["kind"],
+                    title=item["title"],
+                    body=item["body"],
+                )
+                for item in rows
+            )
+        except (TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_REVISION_SECTIONS_INVALID",
+                "Proposal revision sections are invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
+
+    @staticmethod
+    def _revision_candidate(
+        latest: ProductionProposalRevision,
+        sections: tuple[ProposalSection, ...],
+    ) -> ProductionProposalRevision:
+        expected_identity = [(item.section_id, item.kind) for item in latest.sections]
+        actual_identity = [(item.section_id, item.kind) for item in sections]
+        if actual_identity != expected_identity:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_REVISION_SECTION_IDENTITY",
+                "Proposal revision must preserve exact section order, IDs and kinds",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if [item.to_dict() for item in sections] == [item.to_dict() for item in latest.sections]:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_REVISION_NO_CHANGE",
+                "Proposal revision must change at least one title or body",
+                ProductErrorCategory.VALIDATION,
+            )
+        return ProductionProposalRevision(
+            proposal_id=latest.proposal_id,
+            revision=latest.revision + 1,
+            intent_sha256=latest.intent_sha256,
+            blueprint=latest.blueprint,
+            sections=sections,
+            provider_policy=latest.provider_policy,
+            estimated_cost_min=latest.estimated_cost_min,
+            estimated_cost_max=latest.estimated_cost_max,
+            currency=latest.currency,
+            rights_warnings=latest.rights_warnings,
+            parent_proposal_sha256=latest.to_dict()["proposal_sha256"],
+        )
+
+    def prepare_revision(
+        self,
+        *,
+        proposal_id: str,
+        sections: Iterable[dict[str, Any]],
+        expected_snapshot_sha256: str,
+    ) -> dict[str, Any]:
+        registry, snapshot_sha, _ = self._load()
+        self._require_expected(snapshot_sha, expected_snapshot_sha256, "Proposal")
+        latest = registry.latest_proposal(proposal_id)
+        parsed = self._revision_sections(sections)
+        candidate = self._revision_candidate(latest, parsed)
+        token = self._new_token(self._revision_confirmations)
+        self._revision_confirmations[token] = _RevisionConfirmation(
+            token,
+            snapshot_sha,
+            proposal_id,
+            str(candidate.parent_proposal_sha256),
+            parsed,
+        )
+        return {
+            "confirmation_version": "1.0.0",
+            "task_owner": "TASK-027",
+            "confirmation_id": token,
+            "project_id": self.project_id,
+            "proposal": candidate.to_dict(),
+            "human_final_authority_required": True,
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "budget_reservation_created": False,
+            "resolve_mutation_started": False,
+            "publish_started": False,
+        }
+
+    def apply_revision(self, *, confirmation_id: str) -> dict[str, Any]:
+        pending = self._revision_confirmations.get(confirmation_id)
+        if pending is None or pending.consumed:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_REVISION_CONFIRMATION_INVALID",
+                "Proposal revision confirmation is missing or already used",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        pending.consumed = True
+        with _exclusive_snapshot_lock(self._application_lock_target):
+            registry, snapshot_sha, persisted = self._load()
+            self._require_expected(snapshot_sha, pending.snapshot_sha256, "Proposal")
+            latest = registry.latest_proposal(pending.proposal_id)
+            if latest.to_dict()["proposal_sha256"] != pending.parent_proposal_sha256:
+                raise ProductError(
+                    "ERR_PLANNING_APPLICATION_REVISION_PARENT_STALE",
+                    "Proposal changed after revision preparation",
+                    ProductErrorCategory.STATE,
+                )
+            candidate = self._revision_candidate(latest, pending.sections)
+            registry.add_proposal(candidate)
+            ProductionProposalSnapshotStore.save(
+                self.proposal_path,
+                registry,
+                expected_previous_snapshot_sha256=snapshot_sha if persisted else None,
+            )
+        return {
+            "proposal": candidate.to_dict(),
+            "application": self.snapshot(proposal_id=pending.proposal_id),
             "provider_execution_started": False,
             "paid_execution_authorized": False,
             "budget_reservation_created": False,

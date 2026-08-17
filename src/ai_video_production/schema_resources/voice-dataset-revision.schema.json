@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai.task046.voice-dataset-revision.v1",
+  "title": "TASK-046 P-VS-3B Voice Dataset Revision Contract",
+  "description": "Body-free metadata only. This schema does not authorize Dataset persistence, receipt issuance, Jobs or Training.",
+  "oneOf": [
+    {"$ref": "#/$defs/VoiceDatasetStore"},
+    {"$ref": "#/$defs/VoiceDatasetCommitIntent"},
+    {"$ref": "#/$defs/VoiceDatasetRevision"},
+    {"$ref": "#/$defs/VoiceDatasetMembershipEntry"},
+    {"$ref": "#/$defs/DatasetMemberExclusion"},
+    {"$ref": "#/$defs/DatasetCandidateReviewBinding"},
+    {"$ref": "#/$defs/DatasetAdoptionReceipt"},
+    {"$ref": "#/$defs/VoiceDatasetCommitEnvelope"},
+    {"$ref": "#/$defs/DatasetStorePersistenceCapabilityBinding"},
+    {"$ref": "#/$defs/StoreCommitBinding"},
+    {"$ref": "#/$defs/DurableDatasetAdoptionJobBinding"},
+    {"$ref": "#/$defs/DatasetReadinessCoverageIndicator"},
+    {"$ref": "#/$defs/TrainingInputSnapshot"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "identifier": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$"},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "StoreIdentity": {
+      "type": "object",
+      "required": ["dataset_store_id", "schema_version", "canonicalization_profile", "project_id", "dataset_id", "policy_revision_sha256"],
+      "properties": {
+        "dataset_store_id": {"$ref": "#/$defs/identifier"},
+        "schema_version": {"$ref": "#/$defs/identifier"},
+        "canonicalization_profile": {"$ref": "#/$defs/identifier"},
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "policy_revision_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "RevisionIndexEntry": {
+      "type": "object",
+      "required": ["revision_number", "revision_id", "revision_sha256", "parent_revision_sha256", "envelope_sha256"],
+      "properties": {
+        "revision_number": {"type": "integer", "minimum": 1},
+        "revision_id": {"$ref": "#/$defs/identifier"},
+        "revision_sha256": {"$ref": "#/$defs/sha256"},
+        "parent_revision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "envelope_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "VoiceDatasetStore": {
+      "type": "object",
+      "required": ["record_type", "dataset_store_id", "schema_version", "canonicalization_profile", "project_id", "dataset_id", "policy_revision_sha256", "store_generation", "head_revision_sha256", "latest_revision_number", "revision_count", "revision_index", "audio_body_persisted", "text_body_persisted", "dataset_store_write_authorized", "store_sha256"],
+      "properties": {
+        "record_type": {"const": "VoiceDatasetStore"},
+        "dataset_store_id": {"$ref": "#/$defs/identifier"},
+        "schema_version": {"$ref": "#/$defs/identifier"},
+        "canonicalization_profile": {"$ref": "#/$defs/identifier"},
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "store_generation": {"type": "integer", "minimum": 0},
+        "head_revision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "latest_revision_number": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "revision_count": {"type": "integer", "minimum": 0},
+        "revision_index": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/RevisionIndexEntry"}},
+        "audio_body_persisted": {"const": false},
+        "text_body_persisted": {"const": false},
+        "dataset_store_write_authorized": {"const": false},
+        "store_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "VoiceDatasetCommitIntent": {
+      "type": "object",
+      "required": ["record_type", "operation_id", "idempotency_key", "store_identity", "target_revision_id", "target_revision_number", "target_revision_sha256", "expected_store_generation", "expected_store_sha256", "expected_empty_store_sha256", "expected_head_revision_sha256", "expected_latest_revision_number", "expected_revision_count", "created_at", "intent_sha256"],
+      "properties": {
+        "record_type": {"const": "VoiceDatasetCommitIntent"},
+        "operation_id": {"$ref": "#/$defs/identifier"},
+        "idempotency_key": {"$ref": "#/$defs/identifier"},
+        "store_identity": {"$ref": "#/$defs/StoreIdentity"},
+        "target_revision_id": {"$ref": "#/$defs/identifier"},
+        "target_revision_number": {"type": "integer", "minimum": 1},
+        "target_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "expected_store_generation": {"type": "integer", "minimum": 0},
+        "expected_store_sha256": {"$ref": "#/$defs/sha256"},
+        "expected_empty_store_sha256": {"$ref": "#/$defs/sha256"},
+        "expected_head_revision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "expected_latest_revision_number": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "expected_revision_count": {"type": "integer", "minimum": 0},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "intent_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "VoiceDatasetMembershipEntry": {
+      "type": "object",
+      "required": ["record_type", "member_id", "candidate_revision_ref", "candidate_revision_sha256", "asset_binding_state", "asset_revision_ref", "asset_revision_sha256", "asset_checksum_sha256", "sample_start", "sample_end", "consent_evaluation_sha256", "rights_evaluation_sha256", "quality_evaluation_sha256", "approved_label_binding_sha256", "processing_class", "audio_body_persisted", "entry_sha256"],
+      "properties": {
+        "record_type": {"const": "VoiceDatasetMembershipEntry"},
+        "member_id": {"$ref": "#/$defs/identifier"},
+        "candidate_revision_ref": {"$ref": "#/$defs/identifier"},
+        "candidate_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "asset_binding_state": {"enum": ["BOUND_VERIFIED", "UNBOUND_PENDING_TASK003", "MISMATCH", "UNKNOWN"]},
+        "asset_revision_ref": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "asset_revision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "asset_checksum_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "sample_start": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 0}]},
+        "sample_end": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "consent_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "rights_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "quality_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "approved_label_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "processing_class": {"enum": ["RAW_PRE_FILTER", "OBS_POST_FILTER", "CANONICAL_CONVERTED_RAW", "RX_DERIVED"]},
+        "audio_body_persisted": {"const": false},
+        "entry_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "DatasetMemberExclusion": {
+      "type": "object",
+      "required": ["record_type", "member_id", "source_entry_sha256", "reason_code", "excluded_at", "exclusion_sha256"],
+      "properties": {
+        "record_type": {"const": "DatasetMemberExclusion"},
+        "member_id": {"$ref": "#/$defs/identifier"},
+        "source_entry_sha256": {"$ref": "#/$defs/sha256"},
+        "reason_code": {"enum": ["OWNER_REJECTED", "QUALITY_FAILED", "RIGHTS_BLOCKED", "CONSENT_BLOCKED", "DUPLICATE", "RANGE_OVERLAP", "SUPERSEDED", "OTHER_APPROVED_REASON"]},
+        "excluded_at": {"$ref": "#/$defs/timestamp"},
+        "exclusion_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "DatasetCandidateReviewBinding": {
+      "type": "object",
+      "required": ["record_type", "candidate_revision_ref", "candidate_revision_sha256", "decision", "owner_decision_ref", "owner_decision_sha256", "current_consent_evaluation_sha256", "current_rights_evaluation_sha256", "reviewed_at", "review_binding_sha256"],
+      "properties": {
+        "record_type": {"const": "DatasetCandidateReviewBinding"},
+        "candidate_revision_ref": {"$ref": "#/$defs/identifier"},
+        "candidate_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "decision": {"enum": ["APPROVE", "REJECT", "RECORD_MORE"]},
+        "owner_decision_ref": {"$ref": "#/$defs/identifier"},
+        "owner_decision_sha256": {"$ref": "#/$defs/sha256"},
+        "current_consent_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "current_rights_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "reviewed_at": {"$ref": "#/$defs/timestamp"},
+        "review_binding_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "DatasetReadinessCoverageIndicator": {
+      "type": "object",
+      "required": ["record_type", "policy_revision_ref", "policy_revision_sha256", "eligible_interval_index_sha256", "accepted_unique_samples", "eligible_unique_samples", "state", "reason_codes", "readiness_sha256"],
+      "properties": {
+        "record_type": {"const": "DatasetReadinessCoverageIndicator"},
+        "policy_revision_ref": {"$ref": "#/$defs/identifier"},
+        "policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "eligible_interval_index_sha256": {"$ref": "#/$defs/sha256"},
+        "accepted_unique_samples": {"type": "integer", "minimum": 0},
+        "eligible_unique_samples": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["PASS", "FAIL", "UNKNOWN"]},
+        "reason_codes": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/identifier"}},
+        "readiness_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "VoiceDatasetRevision": {
+      "type": "object",
+      "required": ["record_type", "dataset_revision_id", "dataset_id", "revision", "parent_revision_id", "parent_revision_sha256", "commit_intent_sha256", "membership_entries", "exclusions", "review_binding", "readiness_coverage", "created_at", "audio_body_persisted", "text_body_persisted", "dataset_mutation_authorized", "revision_sha256"],
+      "properties": {
+        "record_type": {"const": "VoiceDatasetRevision"},
+        "dataset_revision_id": {"$ref": "#/$defs/identifier"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_revision_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "parent_revision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "commit_intent_sha256": {"$ref": "#/$defs/sha256"},
+        "membership_entries": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/VoiceDatasetMembershipEntry"}},
+        "exclusions": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/DatasetMemberExclusion"}},
+        "review_binding": {"$ref": "#/$defs/DatasetCandidateReviewBinding"},
+        "readiness_coverage": {"$ref": "#/$defs/DatasetReadinessCoverageIndicator"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "audio_body_persisted": {"const": false},
+        "text_body_persisted": {"const": false},
+        "dataset_mutation_authorized": {"const": false},
+        "revision_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "DatasetAdoptionReceipt": {
+      "type": "object",
+      "required": ["record_type", "operation_id", "idempotency_key", "intent_sha256", "revision_sha256", "store_preimage_sha256", "store_postimage_sha256", "generation_before", "generation_after", "head_before_sha256", "head_after_sha256", "latest_before", "latest_after", "revision_count_before", "revision_count_after", "atomic_cas", "read_back_verified", "result_state", "issued_at", "receipt_sha256"],
+      "properties": {
+        "record_type": {"const": "DatasetAdoptionReceipt"},
+        "operation_id": {"$ref": "#/$defs/identifier"},
+        "idempotency_key": {"$ref": "#/$defs/identifier"},
+        "intent_sha256": {"$ref": "#/$defs/sha256"},
+        "revision_sha256": {"$ref": "#/$defs/sha256"},
+        "store_preimage_sha256": {"$ref": "#/$defs/sha256"},
+        "store_postimage_sha256": {"$ref": "#/$defs/sha256"},
+        "generation_before": {"type": "integer", "minimum": 0},
+        "generation_after": {"type": "integer", "minimum": 1},
+        "head_before_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "head_after_sha256": {"$ref": "#/$defs/sha256"},
+        "latest_before": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1}]},
+        "latest_after": {"type": "integer", "minimum": 1},
+        "revision_count_before": {"type": "integer", "minimum": 0},
+        "revision_count_after": {"type": "integer", "minimum": 1},
+        "atomic_cas": {"type": "boolean"},
+        "read_back_verified": {"type": "boolean"},
+        "result_state": {"enum": ["VERIFIED_COMMITTED", "UNKNOWN", "CORRUPT_OR_INCOMPLETE", "CONFLICT"]},
+        "issued_at": {"$ref": "#/$defs/timestamp"},
+        "receipt_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "VoiceDatasetCommitEnvelope": {
+      "type": "object",
+      "required": ["record_type", "operation_id", "idempotency_key", "intent_sha256", "revision_sha256", "receipt_sha256", "previous_envelope_sha256", "created_at", "envelope_sha256"],
+      "properties": {
+        "record_type": {"const": "VoiceDatasetCommitEnvelope"},
+        "operation_id": {"$ref": "#/$defs/identifier"},
+        "idempotency_key": {"$ref": "#/$defs/identifier"},
+        "intent_sha256": {"$ref": "#/$defs/sha256"},
+        "revision_sha256": {"$ref": "#/$defs/sha256"},
+        "receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "previous_envelope_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "envelope_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "DatasetStorePersistenceCapabilityBinding": {
+      "type": "object",
+      "required": ["record_type", "contract_state", "canonical_owner_ref", "canonical_owner_sha256", "api_version", "atomic_full_store_cas", "authoritative_read_back", "history_reconciliation", "evidence_ref", "evidence_sha256", "capability_sha256"],
+      "properties": {
+        "record_type": {"const": "DatasetStorePersistenceCapabilityBinding"},
+        "contract_state": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+        "canonical_owner_ref": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "canonical_owner_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "api_version": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "atomic_full_store_cas": {"type": ["boolean", "null"]},
+        "authoritative_read_back": {"type": ["boolean", "null"]},
+        "history_reconciliation": {"type": ["boolean", "null"]},
+        "evidence_ref": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "evidence_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "capability_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "StoreCommitBinding": {
+      "type": "object",
+      "required": ["record_type", "contract_state", "authoritative_store_sha256", "store_generation", "head_revision_sha256", "latest_revision_number", "revision_count", "committed_envelope_sha256", "read_back_evidence_ref", "read_back_evidence_sha256", "observed_at", "reason_code", "binding_sha256"],
+      "properties": {
+        "record_type": {"const": "StoreCommitBinding"},
+        "contract_state": {"enum": ["BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+        "authoritative_store_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "store_generation": {"type": ["integer", "null"], "minimum": 1},
+        "head_revision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "latest_revision_number": {"type": ["integer", "null"], "minimum": 1},
+        "revision_count": {"type": ["integer", "null"], "minimum": 1},
+        "committed_envelope_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "read_back_evidence_ref": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "read_back_evidence_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "observed_at": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]},
+        "reason_code": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "binding_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "DurableDatasetAdoptionJobBinding": {
+      "type": "object",
+      "required": ["record_type", "contract_state", "job_id", "operation_id", "idempotency_key", "job_kind", "job_revision", "job_revision_sha256", "job_state", "canonical_job_evidence_ref", "canonical_job_evidence_sha256", "identity_shared_with_training_job", "binding_sha256"],
+      "properties": {
+        "record_type": {"const": "DurableDatasetAdoptionJobBinding"},
+        "contract_state": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+        "job_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "operation_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "idempotency_key": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "job_kind": {"type": ["string", "null"]},
+        "job_revision": {"type": ["integer", "null"], "minimum": 1},
+        "job_revision_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "job_state": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "canonical_job_evidence_ref": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/identifier"}]},
+        "canonical_job_evidence_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "identity_shared_with_training_job": {"const": false},
+        "binding_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    },
+    "TrainingInputSnapshot": {
+      "type": "object",
+      "required": ["record_type", "snapshot_id", "revision", "parent_snapshot_sha256", "project_id", "dataset_id", "voice_dataset_revision_ref", "voice_dataset_revision_sha256", "selected_member_entry_sha256s", "exclusion_sha256s", "policy_revision_sha256", "readiness_sha256", "current_consent_evaluation_sha256", "current_rights_evaluation_sha256", "created_at", "audio_body_persisted", "text_body_persisted", "dataset_mutation_authorized", "training_authorized", "snapshot_sha256"],
+      "properties": {
+        "record_type": {"const": "TrainingInputSnapshot"},
+        "snapshot_id": {"$ref": "#/$defs/identifier"},
+        "revision": {"type": "integer", "minimum": 1},
+        "parent_snapshot_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "dataset_id": {"$ref": "#/$defs/identifier"},
+        "voice_dataset_revision_ref": {"$ref": "#/$defs/identifier"},
+        "voice_dataset_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "selected_member_entry_sha256s": {"type": "array", "maxItems": 4096, "uniqueItems": true, "items": {"$ref": "#/$defs/sha256"}},
+        "exclusion_sha256s": {"type": "array", "maxItems": 4096, "uniqueItems": true, "items": {"$ref": "#/$defs/sha256"}},
+        "policy_revision_sha256": {"$ref": "#/$defs/sha256"},
+        "readiness_sha256": {"$ref": "#/$defs/sha256"},
+        "current_consent_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "current_rights_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "created_at": {"$ref": "#/$defs/timestamp"},
+        "audio_body_persisted": {"const": false},
+        "text_body_persisted": {"const": false},
+        "dataset_mutation_authorized": {"const": false},
+        "training_authorized": {"const": false},
+        "snapshot_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

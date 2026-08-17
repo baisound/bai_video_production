@@ -127,14 +127,17 @@ Focused synthetic tests cover:
 - focused tests: `20 passed`;
 - public/schema-resource mirror: byte exact;
 - Python compile: PASS;
-- Windows full regression: `1780 passed, 1 skipped, 1 failed`; the sole failure
+- Windows full regression after fresh-main integration, excluding the unrelated
+  installer effect test: `1794 passed, 1 skipped, 1 deselected` in `70.83s`.
+  The complete prior run was `1780 passed, 1 skipped, 1 failed`; its sole failure
   is the unrelated TASK-047 Windows installer acceptance.  Its Inno Setup log
   proves managed-host denial when creating a Start Menu directory and HKCU
   uninstall key (`WinError/code 5`); all P-VS-4A tests pass.  The first run's
   inherited pytest temp root was also inaccessible, so the recorded run uses a
   fresh explicit task test root and does not misclassify that environment error
   as product evidence;
-- WSL2 full regression: `1781 passed, 1 skipped` in `69.31s`; the skip is the
+- WSL2 full regression after fresh-main integration: `1795 passed, 1 skipped`
+  in `62.98s`; the skip is the
   intentionally Windows-only TASK-047 installer acceptance.
 
 ## Critic pass 1

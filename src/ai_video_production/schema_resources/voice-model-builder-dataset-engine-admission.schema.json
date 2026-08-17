@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai.task046.voice-model-builder-dataset-engine-admission.v1",
+  "title": "TASK-046 P-VS-4B Dataset and engine admission R1",
+  "oneOf": [
+    { "$ref": "#/$defs/SyntheticDatasetPreparationManifest" },
+    { "$ref": "#/$defs/EngineRecipeAdmissionBinding" },
+    { "$ref": "#/$defs/TrainingExecutionProposal" }
+  ],
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$", "not": { "pattern": "(^/|\\\\|^[A-Za-z]:/|(^|/)\\.\\.(/|$))" } },
+    "utc": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "state": { "enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"] },
+    "fact": { "enum": ["PASS", "FAIL", "UNKNOWN"] },
+    "SelectionItem": {
+      "type": "object", "additionalProperties": false,
+      "required": ["order_index", "item_id", "wav_inspection_receipt_sha256", "source_sha256", "start_frame", "end_frame", "approved_label_sha256"],
+      "properties": {
+        "order_index": { "type": "integer", "minimum": 0, "maximum": 4095 },
+        "item_id": { "$ref": "#/$defs/id" },
+        "wav_inspection_receipt_sha256": { "$ref": "#/$defs/sha" },
+        "source_sha256": { "$ref": "#/$defs/sha" },
+        "start_frame": { "type": "integer", "minimum": 0 },
+        "end_frame": { "type": "integer", "minimum": 1 },
+        "approved_label_sha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "SyntheticDatasetPreparationManifest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "manifest_id", "revision", "parent_manifest_sha256", "workflow_sha256", "authority_kind", "ordered_items", "selected_unique_frames", "sample_rate_hz", "synthetic_input_only", "owner_audio_used", "dataset_adoption_started", "training_input_snapshot_issued", "created_at", "manifest_sha256"],
+      "properties": {
+        "record_type": { "const": "SyntheticDatasetPreparationManifest" },
+        "manifest_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "parent_manifest_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha" }] },
+        "workflow_sha256": { "$ref": "#/$defs/sha" },
+        "authority_kind": { "const": "APPROVED_SYNTHETIC_TEST_AUTHORITY" },
+        "ordered_items": { "type": "array", "minItems": 1, "maxItems": 4096, "items": { "$ref": "#/$defs/SelectionItem" } },
+        "selected_unique_frames": { "type": "integer", "minimum": 1, "maximum": 345600000 },
+        "sample_rate_hz": { "const": 48000 },
+        "synthetic_input_only": { "const": true },
+        "owner_audio_used": { "const": false },
+        "dataset_adoption_started": { "const": false },
+        "training_input_snapshot_issued": { "const": false },
+        "created_at": { "$ref": "#/$defs/utc" },
+        "manifest_sha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "EngineRecipeAdmissionBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "binding_id", "contract_state", "engine_id", "engine_revision", "package_sha256", "model_id", "model_revision", "weight_sha256", "runtime_sha256", "recipe_revision", "recipe_sha256", "training_mode", "official_recipe_state", "representative_step_state", "target_resource_state", "checkpoint_compatibility_state", "license_state", "license_evidence_sha256", "evaluated_at", "binding_sha256"],
+      "properties": {
+        "record_type": { "const": "EngineRecipeAdmissionBinding" },
+        "binding_id": { "$ref": "#/$defs/id" },
+        "contract_state": { "$ref": "#/$defs/state" },
+        "engine_id": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+        "engine_revision": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+        "package_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha" }] },
+        "model_id": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+        "model_revision": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+        "weight_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha" }] },
+        "runtime_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha" }] },
+        "recipe_revision": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/id" }] },
+        "recipe_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha" }] },
+        "training_mode": { "enum": ["FULL_FINE_TUNE", "PARAMETER_EFFICIENT_FINE_TUNE", "ADAPTER_OR_LORA"] },
+        "official_recipe_state": { "$ref": "#/$defs/fact" },
+        "representative_step_state": { "$ref": "#/$defs/fact" },
+        "target_resource_state": { "$ref": "#/$defs/fact" },
+        "checkpoint_compatibility_state": { "$ref": "#/$defs/fact" },
+        "license_state": { "enum": ["APPROVED_FOR_SYNTHETIC_TECHNICAL_TEST", "LEGAL_REVIEW_REQUIRED", "REVOKED", "UNKNOWN"] },
+        "license_evidence_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha" }] },
+        "evaluated_at": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/utc" }] },
+        "binding_sha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "TrainingExecutionProposal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "proposal_id", "dataset_manifest_sha256", "engine_admission_sha256", "output_destination_binding_sha256", "engine_admission_state", "durable_job_binding_state", "rights_consent_state", "proposal_state", "reason_codes", "owner_human_gate_required", "dispatch_started", "gpu_reserved", "training_started", "artifact_written", "created_at", "proposal_sha256"],
+      "properties": {
+        "record_type": { "const": "TrainingExecutionProposal" },
+        "proposal_id": { "$ref": "#/$defs/id" },
+        "dataset_manifest_sha256": { "$ref": "#/$defs/sha" },
+        "engine_admission_sha256": { "$ref": "#/$defs/sha" },
+        "output_destination_binding_sha256": { "$ref": "#/$defs/sha" },
+        "engine_admission_state": { "$ref": "#/$defs/state" },
+        "durable_job_binding_state": { "$ref": "#/$defs/state" },
+        "rights_consent_state": { "$ref": "#/$defs/fact" },
+        "proposal_state": { "enum": ["BLOCKED", "READY_FOR_OWNER_HUMAN_GATE"] },
+        "reason_codes": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$" } },
+        "owner_human_gate_required": { "const": true },
+        "dispatch_started": { "const": false },
+        "gpu_reserved": { "const": false },
+        "training_started": { "const": false },
+        "artifact_written": { "const": false },
+        "created_at": { "$ref": "#/$defs/utc" },
+        "proposal_sha256": { "$ref": "#/$defs/sha" }
+      }
+    }
+  }
+}

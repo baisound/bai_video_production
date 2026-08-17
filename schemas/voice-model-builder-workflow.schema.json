@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.local/schemas/voice-model-builder-workflow.schema.json",
+  "title": "TASK-046 P-VS-4B Voice Model Builder Workflow",
+  "oneOf": [
+    {"$ref": "#/$defs/CanonicalSourceBinding"},
+    {"$ref": "#/$defs/StyleCueRevision"},
+    {"$ref": "#/$defs/MasterAssemblyPolicyBinding"},
+    {"$ref": "#/$defs/MasterWavCandidateRevision"},
+    {"$ref": "#/$defs/VerticalSliceWorkflowRevision"},
+    {"$ref": "#/$defs/ExternalOperationRequest"}
+  ],
+  "$defs": {
+    "Sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "Id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$"},
+    "Time": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "ContractState": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "FactState": {"enum": ["PASS", "FAIL", "UNKNOWN"]},
+    "CanonicalSourceBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "source_kind", "canonical_ref", "canonical_revision", "canonical_sha256", "current_valid", "evaluated_at", "binding_sha256"],
+      "properties": {
+        "record_type": {"const": "CanonicalSourceBinding"}, "contract_state": {"$ref": "#/$defs/ContractState"},
+        "source_kind": {"enum": ["OBS_CAPTURE_SESSION", "QUALITY_EVALUATION", "TASK003_ASSET_REVISION", "TRAINING_INPUT_SNAPSHOT", "TRAINING_RUN_REVISION", "MODEL_CANDIDATE_REVISION", "OWNER_MODEL_APPROVAL", "NARRATION_RENDER_ADMISSION"]},
+        "canonical_ref": {"oneOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]}, "canonical_revision": {"type": ["integer", "null"], "minimum": 1},
+        "canonical_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]}, "current_valid": {"type": ["boolean", "null"]},
+        "evaluated_at": {"oneOf": [{"$ref": "#/$defs/Time"}, {"type": "null"}]}, "binding_sha256": {"$ref": "#/$defs/Sha256"}
+      }
+    },
+    "StyleCueRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "cue_id", "revision", "parent_cue_sha256", "workflow_id", "order_index", "script_revision_sha256", "text_start", "text_end", "style_direction_sha256", "model_candidate_sha256", "voice_profile_revision_sha256", "render_admission_sha256", "state", "external_render_receipt_ref", "external_render_receipt_sha256", "cue_artifact_ref", "cue_artifact_sha256", "audio_body_persisted", "created_at", "cue_sha256"],
+      "properties": {
+        "record_type": {"const": "StyleCueRevision"}, "cue_id": {"$ref": "#/$defs/Id"}, "revision": {"type": "integer", "minimum": 1},
+        "parent_cue_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]}, "workflow_id": {"$ref": "#/$defs/Id"},
+        "order_index": {"type": "integer", "minimum": 0}, "script_revision_sha256": {"$ref": "#/$defs/Sha256"}, "text_start": {"type": "integer", "minimum": 0}, "text_end": {"type": "integer", "minimum": 1},
+        "style_direction_sha256": {"$ref": "#/$defs/Sha256"}, "model_candidate_sha256": {"$ref": "#/$defs/Sha256"}, "voice_profile_revision_sha256": {"$ref": "#/$defs/Sha256"}, "render_admission_sha256": {"$ref": "#/$defs/Sha256"},
+        "state": {"enum": ["PENDING", "EXTERNAL_RENDER_REQUESTED", "RENDERED_BOUND", "FAILED_KNOWN", "UNKNOWN"]},
+        "external_render_receipt_ref": {"oneOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]}, "external_render_receipt_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]},
+        "cue_artifact_ref": {"oneOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]}, "cue_artifact_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]},
+        "audio_body_persisted": {"const": false}, "created_at": {"$ref": "#/$defs/Time"}, "cue_sha256": {"$ref": "#/$defs/Sha256"}
+      }
+    },
+    "MasterAssemblyPolicyBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "contract_state", "sample_rate_hz", "channels", "sample_format", "pause_policy_sha256", "loudness_policy_state", "loudness_policy_sha256", "boundary_policy_state", "boundary_policy_sha256", "identity_policy_state", "identity_policy_sha256", "max_crossfade_samples", "policy_sha256"],
+      "properties": {
+        "record_type": {"const": "MasterAssemblyPolicyBinding"}, "contract_state": {"$ref": "#/$defs/ContractState"}, "sample_rate_hz": {"const": 48000}, "channels": {"const": 1}, "sample_format": {"const": "PCM_S24LE"},
+        "pause_policy_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]}, "loudness_policy_state": {"$ref": "#/$defs/ContractState"}, "loudness_policy_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]},
+        "boundary_policy_state": {"$ref": "#/$defs/ContractState"}, "boundary_policy_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]}, "identity_policy_state": {"$ref": "#/$defs/ContractState"}, "identity_policy_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]},
+        "max_crossfade_samples": {"type": "integer", "minimum": 0, "maximum": 48000}, "policy_sha256": {"$ref": "#/$defs/Sha256"}
+      }
+    },
+    "MasterWavCandidateRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "master_id", "revision", "parent_master_sha256", "workflow_id", "ordered_cue_sha256", "model_candidate_sha256", "voice_profile_revision_sha256", "assembly_policy_sha256", "external_assembly_receipt_ref", "external_assembly_receipt_sha256", "master_artifact_ref", "master_artifact_sha256", "format_state", "boundary_state", "loudness_state", "identity_continuity_state", "style_state", "owner_acceptance", "audio_body_persisted", "asset_adoption_started", "publication_started", "created_at", "master_sha256"],
+      "properties": {
+        "record_type": {"const": "MasterWavCandidateRevision"}, "master_id": {"$ref": "#/$defs/Id"}, "revision": {"type": "integer", "minimum": 1}, "parent_master_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]}, "workflow_id": {"$ref": "#/$defs/Id"},
+        "ordered_cue_sha256": {"type": "array", "minItems": 2, "maxItems": 4096, "uniqueItems": true, "items": {"$ref": "#/$defs/Sha256"}}, "model_candidate_sha256": {"$ref": "#/$defs/Sha256"}, "voice_profile_revision_sha256": {"$ref": "#/$defs/Sha256"}, "assembly_policy_sha256": {"$ref": "#/$defs/Sha256"},
+        "external_assembly_receipt_ref": {"oneOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]}, "external_assembly_receipt_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]}, "master_artifact_ref": {"oneOf": [{"$ref": "#/$defs/Id"}, {"type": "null"}]}, "master_artifact_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]},
+        "format_state": {"$ref": "#/$defs/FactState"}, "boundary_state": {"$ref": "#/$defs/FactState"}, "loudness_state": {"$ref": "#/$defs/FactState"}, "identity_continuity_state": {"$ref": "#/$defs/FactState"}, "style_state": {"$ref": "#/$defs/FactState"}, "owner_acceptance": {"enum": ["PENDING", "ACCEPTED", "REJECTED"]},
+        "audio_body_persisted": {"const": false}, "asset_adoption_started": {"const": false}, "publication_started": {"const": false}, "created_at": {"$ref": "#/$defs/Time"}, "master_sha256": {"$ref": "#/$defs/Sha256"}
+      }
+    },
+    "VerticalSliceWorkflowRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "workflow_id", "revision", "parent_workflow_sha256", "project_id", "source_bindings", "state", "ordered_cue_sha256", "master_candidate_sha256", "reason_codes", "created_at", "dataset_effect_started", "training_started", "render_started", "workflow_sha256"],
+      "properties": {
+        "record_type": {"const": "VerticalSliceWorkflowRevision"}, "workflow_id": {"$ref": "#/$defs/Id"}, "revision": {"type": "integer", "minimum": 1}, "parent_workflow_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]}, "project_id": {"$ref": "#/$defs/Id"},
+        "source_bindings": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"$ref": "#/$defs/CanonicalSourceBinding"}},
+        "state": {"enum": ["RECORDINGS_REVIEW_REQUIRED", "DATASET_PROPOSAL_READY", "DATASET_ADOPTION_BLOCKED", "TRAINING_RECIPE_NOT_VERIFIED", "READY_FOR_OWNER_TRAINING_CONFIRMATION", "TRAINING_IN_PROGRESS", "TRAINING_COMPLETED_ARTIFACT_UNBOUND", "MODEL_CANDIDATE_REGISTERED", "EVALUATION_PENDING", "EVALUATED_CANDIDATE", "OWNER_APPROVED", "STYLE_CUES_PENDING", "MASTER_ASSEMBLY_PENDING", "MASTER_REVIEW_REQUIRED", "MASTER_ACCEPTED", "MASTER_REJECTED", "FAILED_KNOWN", "UNKNOWN"]},
+        "ordered_cue_sha256": {"type": "array", "maxItems": 4096, "uniqueItems": true, "items": {"$ref": "#/$defs/Sha256"}}, "master_candidate_sha256": {"oneOf": [{"$ref": "#/$defs/Sha256"}, {"type": "null"}]}, "reason_codes": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}},
+        "created_at": {"$ref": "#/$defs/Time"}, "dataset_effect_started": {"const": false}, "training_started": {"const": false}, "render_started": {"const": false}, "workflow_sha256": {"$ref": "#/$defs/Sha256"}
+      }
+    },
+    "ExternalOperationRequest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "request_id", "operation_kind", "workflow_sha256", "subject_sha256", "authorization_binding_sha256", "idempotency_key", "request_state", "dispatch_started", "created_at", "request_sha256"],
+      "properties": {
+        "record_type": {"const": "ExternalOperationRequest"}, "request_id": {"$ref": "#/$defs/Id"}, "operation_kind": {"enum": ["DATASET_ADOPTION", "TRAINING_DISPATCH", "STYLE_CUE_RENDER", "MASTER_ASSEMBLY"]}, "workflow_sha256": {"$ref": "#/$defs/Sha256"}, "subject_sha256": {"$ref": "#/$defs/Sha256"}, "authorization_binding_sha256": {"$ref": "#/$defs/Sha256"}, "idempotency_key": {"$ref": "#/$defs/Id"}, "request_state": {"const": "PROPOSAL_ONLY"}, "dispatch_started": {"const": false}, "created_at": {"$ref": "#/$defs/Time"}, "request_sha256": {"$ref": "#/$defs/Sha256"}
+      }
+    }
+  }
+}

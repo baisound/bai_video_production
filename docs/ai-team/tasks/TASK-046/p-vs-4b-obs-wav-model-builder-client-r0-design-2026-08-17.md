@@ -201,4 +201,3 @@ The following must fail closed:
 - Dataset mutation/training/model approval/narration/publication authority:
   not granted by this design.
 - Residual Critical/High: `0 / 0`.
-

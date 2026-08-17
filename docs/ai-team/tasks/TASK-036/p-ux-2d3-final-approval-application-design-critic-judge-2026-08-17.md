@@ -1,6 +1,6 @@
 # TASK-036 P-UX-2D3 Final Approval Application
 
-Date: 2026-08-17  
+Date: 2026-08-17
 Atomic unit: `P-UX-2D3_FINAL_APPROVAL_APPLICATION_R0`
 
 ## Finding and boundary

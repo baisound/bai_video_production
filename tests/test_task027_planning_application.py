@@ -14,6 +14,14 @@ from ai_video_production.production_blueprint import (
     CameraMotion,
     GenerationRisk,
     ProductionBlueprint,
+    SceneAudioPlan,
+)
+from ai_video_production.production_blueprint_v2 import (
+    FrameIntent,
+    FrameKind,
+    FrameReferenceBinding,
+    BlueprintSceneV2,
+    ProductionBlueprintV2,
 )
 from ai_video_production.production_control_application import Task037ProductionControlApplication
 from ai_video_production.production_proposal import (
@@ -202,6 +210,23 @@ def revision_sections(*, concept_title: str = "Concept", concept_body: str = "A 
     ]
 
 
+def scene_revision_rows(*, first_role: str = "Opening revised") -> list[dict[str, object]]:
+    return [
+        {
+            "scene_id": "SC01", "start_frame": 0, "end_frame": 30,
+            "narrative_role": first_role, "source_strategy": "REAL_CAPTURE",
+            "generation_risk": "A_LOW_TEXT", "camera_motion": "STATIC",
+            "post_composite_text": False, "final_hold_frames": 0,
+        },
+        {
+            "scene_id": "SC02", "start_frame": 30, "end_frame": 60,
+            "narrative_role": "Promise", "source_strategy": "COMPOSITE",
+            "generation_risk": "B_HEADLINE", "camera_motion": "SUBTLE",
+            "post_composite_text": False, "final_hold_frames": 0,
+        },
+    ]
+
+
 def test_human_revision_is_append_only_persisted_and_no_effect(tmp_path: Path) -> None:
     seed_proposal(tmp_path)
     service = Task027PlanningApplication(
@@ -311,3 +336,148 @@ def test_concurrent_revision_publication_allows_exactly_one_writer(tmp_path: Pat
         second.apply_revision(confirmation_id="revision-second")
     assert exc.value.code == "ERR_PLANNING_APPLICATION_SNAPSHOT_CONFLICT"
     assert len(ProductionProposalSnapshotStore.load(tmp_path / "production-proposal.json").proposals["PROPOSAL-DEMO"]) == 2
+
+
+def test_scene_revision_is_append_only_preserves_audio_references_policy_and_requires_new_go(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=iter(("go-confirm", "scene-confirm")).__next__,
+    )
+    approved = approve(service)
+    before = service.snapshot()
+    prepared = service.prepare_scene_revision(
+        proposal_id="PROPOSAL-DEMO",
+        scenes=scene_revision_rows(),
+        expected_snapshot_sha256=before["snapshot_sha256"],
+    )
+    assert prepared["proposal"]["blueprint"]["scenes"][0]["narrative_role"] == "Opening revised"
+    assert prepared["provider_execution_started"] is False
+    result = service.apply_scene_revision(confirmation_id=prepared["confirmation_id"])
+    workspace = result["application"]["workspace"]
+    assert workspace["latest_revision"] == 2
+    assert workspace["go_status"] == "GO_REQUIRED"
+    assert workspace["new_go_required_after_revision"] is True
+    assert workspace["prior_approved_plan_ids"] == [approved["approved_plan"]["plan_id"]]
+    registry = ProductionProposalSnapshotStore.load(tmp_path / "production-proposal.json")
+    first, second = registry.proposals["PROPOSAL-DEMO"]
+    assert second.sections == first.sections
+    assert second.intent_sha256 == first.intent_sha256
+    assert second.provider_policy == first.provider_policy
+    assert second.rights_warnings == first.rights_warnings
+    assert second.blueprint.references == first.blueprint.references
+    assert second.blueprint.scenes[0].reference_ids == first.blueprint.scenes[0].reference_ids
+    assert second.blueprint.scenes[0].audio == first.blueprint.scenes[0].audio
+    assert result["resolve_mutation_started"] is False
+    assert result["publish_started"] is False
+    with pytest.raises(ProductError) as exc:
+        service.apply_scene_revision(confirmation_id="scene-confirm")
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SCENE_REVISION_CONFIRMATION_INVALID"
+
+
+def test_scene_revision_preserves_v2_frame_intents_and_audio(tmp_path: Path) -> None:
+    intent_row = FrameIntent(
+        FrameKind.START,
+        "Character starts centered",
+        "Introduce product",
+        ("character",),
+        ("logo distortion",),
+        ("character", "background"),
+        "static medium",
+        FrameReferenceBinding(),
+    )
+    end_row = FrameIntent(
+        FrameKind.END,
+        "Character ends centered",
+        "Finish introduction",
+        ("character",),
+        ("logo distortion",),
+        ("character", "background"),
+        "static medium",
+        FrameReferenceBinding(),
+    )
+    registry = ProductionProposalRegistry()
+    intent = CreationIntent(
+        "INTENT-V2", 1, "V2 intro", "Viewers", "YouTube", "16:9", Decimal("2"),
+        "Calm", "Explain", "ja-JP",
+    )
+    registry.add_intent(intent)
+    audio = SceneAudioPlan(narration=True, sound_effects=("whoosh",))
+    blueprint = ProductionBlueprintV2(
+        "BP-DEMO-V2", "Demo V2", FrameRate(30), 60,
+        (
+            BlueprintSceneV2(
+                "SC01", 0, 60, "Opening", AssetSourceStrategy.COMPOSITE,
+                GenerationRisk.B_HEADLINE, CameraMotion.STATIC, intent_row, end_row, audio,
+            ),
+        ),
+    )
+    registry.add_proposal(ProductionProposalRevision(
+        "PROPOSAL-V2", 1, intent.to_dict()["intent_sha256"], blueprint,
+        (ProposalSection("concept", "CONCEPT", "Concept", "V2"),),
+        ProviderPolicyBinding("policy", "1", POLICY_SHA),
+    ))
+    ProductionProposalSnapshotStore.save(tmp_path / "production-proposal.json", registry)
+    service = Task027PlanningApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: "scene-v2",
+    )
+    state = service.snapshot()
+    rows = [{
+        "scene_id": "SC01", "start_frame": 0, "end_frame": 60,
+        "narrative_role": "Opening revised", "source_strategy": "COMPOSITE",
+        "generation_risk": "B_HEADLINE", "camera_motion": "STATIC",
+        "post_composite_text": False, "final_hold_frames": 1,
+    }]
+    prepared = service.prepare_scene_revision(
+        proposal_id="PROPOSAL-V2", scenes=rows, expected_snapshot_sha256=state["snapshot_sha256"],
+    )
+    service.apply_scene_revision(confirmation_id=prepared["confirmation_id"])
+    latest = ProductionProposalSnapshotStore.load(tmp_path / "production-proposal.json").latest_proposal("PROPOSAL-V2")
+    assert isinstance(latest.blueprint, ProductionBlueprintV2)
+    assert latest.blueprint.scenes[0].start_frame_intent == intent_row
+    assert latest.blueprint.scenes[0].end_frame_intent == end_row
+    assert latest.blueprint.scenes[0].audio == audio
+
+
+@pytest.mark.parametrize(
+    ("rows", "code"),
+    (
+        (scene_revision_rows(first_role="Opening"), "ERR_PLANNING_APPLICATION_SCENE_REVISION_NO_CHANGE"),
+        (list(reversed(scene_revision_rows())), "ERR_PLANNING_APPLICATION_SCENE_REVISION_IDENTITY"),
+        (scene_revision_rows()[:1], "ERR_PLANNING_APPLICATION_SCENE_REVISION_INVALID"),
+        ([scene_revision_rows()[0]] * 257, "ERR_PLANNING_APPLICATION_SCENE_REVISION_INVALID"),
+        ([{**scene_revision_rows()[0], "extra": "forbidden"}, scene_revision_rows()[1]], "ERR_PLANNING_APPLICATION_SCENE_REVISION_INVALID"),
+        ([{**scene_revision_rows()[0], "end_frame": 31}, scene_revision_rows()[1]], "ERR_PLANNING_APPLICATION_SCENE_REVISION_INVALID"),
+        ([{**scene_revision_rows()[0], "start_frame": True}, scene_revision_rows()[1]], "ERR_PLANNING_APPLICATION_SCENE_REVISION_INVALID"),
+    ),
+)
+def test_scene_revision_rejects_noop_identity_drift_broad_fields_gap_and_bool_frames(
+    tmp_path: Path,
+    rows: list[dict[str, object]],
+    code: str,
+) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(project_root=tmp_path, project_id="project-1")
+    with pytest.raises(ProductError) as exc:
+        service.prepare_scene_revision(
+            proposal_id="PROPOSAL-DEMO", scenes=rows,
+            expected_snapshot_sha256=service.snapshot()["snapshot_sha256"],
+        )
+    assert exc.value.code == code
+
+
+def test_concurrent_scene_revision_publication_allows_exactly_one_writer(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    first = Task027PlanningApplication(project_root=tmp_path, project_id="project-1", token_factory=lambda: "scene-first")
+    second = Task027PlanningApplication(project_root=tmp_path, project_id="project-1", token_factory=lambda: "scene-second")
+    snapshot = first.snapshot()["snapshot_sha256"]
+    first.prepare_scene_revision(proposal_id="PROPOSAL-DEMO", scenes=scene_revision_rows(), expected_snapshot_sha256=snapshot)
+    second.prepare_scene_revision(
+        proposal_id="PROPOSAL-DEMO", scenes=scene_revision_rows(first_role="Other role"),
+        expected_snapshot_sha256=snapshot,
+    )
+    first.apply_scene_revision(confirmation_id="scene-first")
+    with pytest.raises(ProductError) as exc:
+        second.apply_scene_revision(confirmation_id="scene-second")
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SNAPSHOT_CONFLICT"

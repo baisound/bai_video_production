@@ -637,6 +637,31 @@ class Task036ShellBridge:
             confirmation_id=str(args["confirmation_id"]),
         )
 
+    def planning_prepare_scene_revision(self, args: Any) -> dict[str, Any]:
+        required = {"proposal_id", "scenes", "expected_snapshot_sha256"}
+        if not isinstance(args, dict) or set(args) != required or not isinstance(args["scenes"], list):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Planning Scene revision preparation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_planning_application().prepare_scene_revision(
+            proposal_id=str(args["proposal_id"]),
+            scenes=args["scenes"],
+            expected_snapshot_sha256=str(args["expected_snapshot_sha256"]),
+        )
+
+    def planning_apply_scene_revision(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Planning Scene revision request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_planning_application().apply_scene_revision(
+            confirmation_id=str(args["confirmation_id"]),
+        )
+
     def planning_prepare_go(self, args: Any) -> dict[str, Any]:
         required = {
             "proposal_id", "proposal_revision", "reference_bindings", "cost_ceiling",

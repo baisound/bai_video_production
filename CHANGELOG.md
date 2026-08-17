@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-046 P-VS-4B Gate 4 R0として、承認済み合成テストWAVだけをcontained root内で検査し、48 kHz・24-bit monoのstyle Cueを決定論的な順序と休止sampleでMaster候補へ結合する限定runtime adapter、body-free receipt、schema mirror、改ざん・symlink・既存出力のfail-closed検証を追加しました。Owner音声、Dataset採用、学習、Model推論、音質・style合格判定、Asset採用、公開、Release/Deployは別Gateです。
 - TASK-036 P-UX-2D2として、P-UX-2D1のexact ready状態・全Product source・privacy/rights/resource/edit/開発担当2所有Audio完了Gateを束縛するtyped Human Final Review approval receiptを追加し、TASK-044 Export preparationへ必須bindしました。Export Job作成、dispatch、render、公開、Audio変更、Native H3、Release/Deployは別Gateです。
 - TASK-046 P-VS-4Bとして、OBS録音からDataset・Training・承認済みModelを経て、同一話者/Model系譜の複数style Cueを順序付きで束縛し、48 kHz・24-bit monoの自然なMaster WAV候補へ接続するbody-free application-service契約を追加しました。Dataset採用、Job dispatch、学習・推論、音声render/assembly、Asset採用、公開、Release/Deployは別Gateです。
 - TASK-036 P-UX-2D1として、Production・Audit・Visual Handoff・編集Timeline・Export Queueと、privacy・rights/license・resource・edit persistence・開発担当2所有のAudio完了receiptをexactに突合するread-only Final Review readinessを追加しました。最終承認、Export Job作成、render、公開、Audio変更、Native H3、Release/Deployは別Gateです。

@@ -148,6 +148,12 @@ WSL2隔離環境にSoX 14.4.2、TensorBoard 2.21.0、公式FlashAttention 2.8.3 
 同じGPUでFlashAttentionのbf16 forward/backwardまで確認しました。Windows load-only環境へ
 混ぜたのではなく、目的とversionを固定した別環境です。
 
+R5では、公式修正候補PR #336の2048→1024投影を固定head/blobから読み取り、Windows隔離環境で
+合成16-token入力のtalker/sub-talker forward/backwardを確認しました。lossと402個のparameter
+gradientはfiniteで、peak CUDA allocatedは5,563,923,456 bytesでした。ただしPR #336はまだ
+OPENです。また、この確認はoptimizer、checkpoint、実Dataset、speaker encoder、長時間負荷を
+含みません。したがって「学習可能」や「12 GBで十分」という判定には使えません。
+
 ## 9. ここで完了する範囲
 
 ここまでで確認できるのは次だけです。
@@ -169,12 +175,14 @@ recipe修正revision、synthetic representative step、12 GB資源Probe、checkp
 - hashが違う: fileを利用せず、exact revisionと取得元を確認します。
 - load時にVRAM不足: 再試行を繰り返さず、ほかのGPU processと実測Evidenceを確認します。
 - 0.6B学習がshape mismatchで止まる: 現行公式mainの既知境界です。独自patchで成功扱いに
-  せず、公式修正revisionの再監査を待ちます。
+  せず、公式修正revisionの再監査を待ちます。PR #336の合成probeがPASSしていても、merge前の
+  提案は公式recipe admissionではありません。
 
 ## 公式資料
 
 - [Qwen3-TTS official repository](https://github.com/QwenLM/Qwen3-TTS)
 - [Qwen3-TTS official fine-tuning guide](https://github.com/QwenLM/Qwen3-TTS/blob/main/finetuning/README.md)
+- [Qwen3-TTS pull request #336](https://github.com/QwenLM/Qwen3-TTS/pull/336)
 - [Hugging Face `hf download` CLI](https://huggingface.co/docs/huggingface_hub/en/package_reference/cli)
 - [PyTorch local installation selector](https://pytorch.org/get-started/locally/)
 

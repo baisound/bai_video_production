@@ -228,29 +228,41 @@ def test_planning_does_not_invent_ai_proposal_or_execution_authority() -> None:
         assert marker in SHELL_HTML
 
 
-def test_scenes_browser_projects_exact_blueprint_without_local_revision() -> None:
+def test_scenes_browser_projects_exact_blueprint_and_selected_scene_revision() -> None:
     for marker in (
         "function renderScenes(model)",
         "function renderSceneDetail(scene)",
         "const blueprint=model.workspace.blueprint,scenes=blueprint.scenes||[]",
         "button.setAttribute('aria-pressed','false')",
-        "renderSceneDetail(scenes[0])",
-        "この表示は正本Blueprintのread-only projectionです。",
+        "renderSceneDetail(selected)",
+        "既存Sceneの視覚・frame項目だけを改訂できます。参照・Audio・FrameIntentは保持します。",
         "GO: ${model.workspace.go_status}",
         "Slot投入: ${model.installation.status}",
+        "planning_prepare_scene_revision",
+        "planning_apply_scene_revision",
+        "id=\"sceneUpdateButton\"",
+        "async function reviseScene()",
     ):
         assert marker in SHELL_HTML
 
 
-def test_scenes_mutations_are_visible_but_truthfully_disabled() -> None:
-    assert SHELL_HTML.count(
-        'data-disabled-reason="Blueprint Scene revisionのtyped Application Serviceが未接続です"'
-    ) == 3
+def test_scene_add_remove_and_timeline_finalization_remain_truthfully_disabled() -> None:
+    assert 'data-disabled-reason="Blueprint Scene addのtyped Application Serviceが未接続です"' in SHELL_HTML
+    assert 'data-disabled-reason="Blueprint Scene removeのtyped Application Serviceが未接続です"' in SHELL_HTML
     assert (
         'data-disabled-reason="Timeline Contract finalizationのtyped Application Serviceが未接続です"'
         in SHELL_HTML
     )
-    assert "Add・Remove・Update・Timeline確定はtyped revision service未接続のため実行できません。" in SHELL_HTML
+    assert "既存Scene更新はHuman確認付きで保存します。Add・Remove・Timeline確定は未接続です。" in SHELL_HTML
+
+
+def test_scene_revision_does_not_accept_or_mutate_audio_reference_or_execution_surfaces() -> None:
+    revision_source = SHELL_HTML.split("async function reviseScene()", 1)[1].split("async function refreshPlanning", 1)[0]
+    for forbidden in (
+        "reference_ids:", "audio:", "start_frame_intent:", "end_frame_intent:",
+        "subprocess", "fetch(", "open(",
+    ):
+        assert forbidden not in revision_source.lower()
 
 
 def test_world_lock_registry_filters_exact_reference_slot_kinds() -> None:

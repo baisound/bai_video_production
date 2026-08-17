@@ -1,7 +1,7 @@
 # TASK-046 / P-VS-4A Training Run Contract — Implementation Evidence
 
-Date: 2026-08-17  
-Base: `main@43a5afc392b8c0f4e034d73db01af1ea79e4b182`  
+Date: 2026-08-17
+Base: `main@43a5afc392b8c0f4e034d73db01af1ea79e4b182`
 Branch: `codex/task-046-p-vs-4a-training-run-contract`
 
 ## Outcome boundary

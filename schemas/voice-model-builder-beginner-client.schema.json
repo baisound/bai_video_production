@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/voice-model-builder-beginner-client.schema.json",
+  "title": "TASK-046 Voice Model Builder Beginner Client",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["record_type", "snapshot_id", "workflow_sha256", "workflow_revision", "workflow_state", "locale", "steps", "current_step", "client_state", "reason_codes", "display_only", "execution_started", "dataset_effect_started", "training_started", "model_inference_started", "audio_access_started", "publication_started", "created_at", "snapshot_sha256"],
+  "properties": {
+    "record_type": {"const": "BeginnerClientSnapshot"},
+    "snapshot_id": {"type": "string", "pattern": "^client-snapshot:[A-Za-z0-9._:/-]+$", "maxLength": 256},
+    "workflow_sha256": {"$ref": "#/$defs/sha256"},
+    "workflow_revision": {"type": "integer", "minimum": 1},
+    "workflow_state": {"type": "string", "enum": ["RECORDINGS_REVIEW_REQUIRED", "DATASET_PROPOSAL_READY", "DATASET_ADOPTION_BLOCKED", "TRAINING_RECIPE_NOT_VERIFIED", "READY_FOR_OWNER_TRAINING_CONFIRMATION", "TRAINING_IN_PROGRESS", "TRAINING_COMPLETED_ARTIFACT_UNBOUND", "MODEL_CANDIDATE_REGISTERED", "EVALUATION_PENDING", "EVALUATED_CANDIDATE", "OWNER_APPROVED", "STYLE_CUES_PENDING", "MASTER_ASSEMBLY_PENDING", "MASTER_REVIEW_REQUIRED", "MASTER_ACCEPTED", "MASTER_REJECTED", "FAILED_KNOWN", "UNKNOWN"]},
+    "locale": {"type": "string", "enum": ["ja", "en"]},
+    "steps": {"type": "array", "minItems": 12, "maxItems": 12, "items": {"$ref": "#/$defs/step"}},
+    "current_step": {"type": "integer", "minimum": 1, "maximum": 12},
+    "client_state": {"$ref": "#/$defs/clientState"},
+    "reason_codes": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}},
+    "display_only": {"const": true},
+    "execution_started": {"const": false},
+    "dataset_effect_started": {"const": false},
+    "training_started": {"const": false},
+    "model_inference_started": {"const": false},
+    "audio_access_started": {"const": false},
+    "publication_started": {"const": false},
+    "created_at": {"type": "string", "format": "date-time"},
+    "snapshot_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "clientState": {"type": "string", "enum": ["NOT_CHECKED", "ACTION_REQUIRED", "BLOCKED", "COMPLETE"]},
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ordinal", "step_key", "label", "state", "reason_codes", "operation_effect_authorized"],
+      "properties": {
+        "ordinal": {"type": "integer", "minimum": 1, "maximum": 12},
+        "step_key": {"type": "string", "enum": ["CHOOSE_RECORDINGS", "CHECK_RECORDINGS", "REVIEW_DATASET", "CHOOSE_TRAINING_RECIPE", "REVIEW_TRAINING_RUN", "START_TRAINING", "MONITOR_TRAINING", "REGISTER_MODEL", "EVALUATE_AND_APPROVE", "GENERATE_STYLE_TEST", "REVIEW_MASTER_WAV", "USE_FOR_NARRATION"]},
+        "label": {"type": "string", "minLength": 1, "maxLength": 160},
+        "state": {"$ref": "#/$defs/clientState"},
+        "reason_codes": {"type": "array", "maxItems": 16, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}},
+        "operation_effect_authorized": {"const": false}
+      }
+    }
+  }
+}

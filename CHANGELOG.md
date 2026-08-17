@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-036 P-UX-2C1として、既存のShot Feasibility・Prompt・Generation Queue・local execution・output adoption・Human Asset状態をScene/Visual Slot単位でfail-closedに突合するread-only handoffをImage/Video画面へ追加しました。Audioは開発担当2へ委譲し、Provider実行、Human判断、Asset/Timeline変更、Native H3、Release/Deployは別Gateです。
 - TASK-036 P-UX-2B3として、現行Human GO済みTASK-027 Scene台帳をApproved Plan・Proposal・Blueprint・全Scene順序のexact hashへ束縛するappend-only確定receiptと、再改訂時のfresh GO/再確定Gateを追加しました。Scene追加/削除、実media・detector・Provider実行、Audio、Timeline/Resolve変更、Release/Deployは別Gateです。
 - TASK-046 P-VS-3Bとして、body-freeなVoiceDatasetStore、CommitIntent→Revision→Receipt→Envelope DAG、初回/通常のcombined CAS、TrainingInputSnapshot、authoritative read-backのUNKNOWN/CORRUPT分類とcurrent canonical ancestor inclusion検証を追加しました。Dataset・Asset・store・Job・Training・Model effectは別Gateです。
 - TASK-036 P-UX-2B2として、既存TASK-027 BlueprintのScene順序・IDと参照・Audio・FrameIntentを保持し、視覚・frame項目だけをHuman確認付きでappend-only改訂できるようにしました。Scene追加/削除、Timeline確定、Provider・生成・Resolve、Release/Deployは別Gateです。

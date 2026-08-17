@@ -48,6 +48,59 @@ def test_bridge_rejects_extra_request_fields():
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 
+def test_visual_generation_handoff_bridge_requires_every_exact_source_and_stays_read_only():
+    service = ShellApplicationService(product_version="0.21.0")
+    unavailable = Task036ShellBridge(service).visual_generation_handoff_snapshot({})
+    assert unavailable == {
+        "available": False,
+        "missing_sources": ["production", "safety", "prompt", "queue", "execution", "adoption"],
+        "provider_execution_authorized": False,
+        "human_decision_created": False,
+        "asset_or_timeline_mutation_started": False,
+    }
+
+    class Stub:
+        def __init__(self, value):
+            self.value = value
+
+        def snapshot(self):
+            return self.value
+
+    h = lambda char: "sha256:" + char * 64
+    production = Stub({
+        "project_id": "project-1", "snapshot_sha256": h("1"),
+        "slots": [{"slot_id": "slot-1", "scene_id": "SC01", "slot_kind": "VIDEO", "required": True,
+                   "status": "EMPTY", "stale_state": "CURRENT", "candidates": []}],
+    })
+    safety = Stub({"project_id": "project-1", "safety_snapshot_sha256": h("2"), "scenes": [
+        {"scene": {"scene_id": "SC01"}, "feasibility_status": "PASS"},
+    ]})
+    prompt = Stub({"project_id": "project-1", "prompt_snapshot_sha256": h("3"), "prompts": [
+        {"prompt_id": "prompt-1", "prompt_version": 1, "scene_id": "SC01", "slot_id": "slot-1"},
+    ]})
+    queue = Stub({"project_id": "project-1", "queue_snapshot_sha256": h("4"), "entries": []})
+    execution = Stub({"project_id": "project-1", "execution_snapshot_sha256": h("5"), "queue_snapshot_sha256": h("4"), "latest_executions": []})
+    adoption = Stub({"project_id": "project-1", "adoption_snapshot_sha256": h("6"), "eligible_completed_outputs": [], "latest_adoptions": []})
+    bridge = Task036ShellBridge(
+        service,
+        production_control=production,
+        generation_safety_application=safety,
+        prompt_evidence_application=prompt,
+        generation_queue_application=queue,
+        generation_execution_application=execution,
+        generation_output_adoption_application=adoption,
+    )
+    result = bridge.visual_generation_handoff_snapshot({})
+    assert result["available"] is True
+    assert result["rows"][0]["state"] == "PROMPT_READY"
+    assert result["provider_execution_authorized"] is False
+    assert result["human_decision_created"] is False
+    assert result["asset_or_timeline_mutation_started"] is False
+    with pytest.raises(ProductError) as exc:
+        bridge.visual_generation_handoff_snapshot({"execute": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
 def _connection_settings_service(tmp_path):
     profile = AiConnectionProfile(
         "desktop-profile",

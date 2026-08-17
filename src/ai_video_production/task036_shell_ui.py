@@ -21,6 +21,7 @@ from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .connection_settings_web import ConnectionSettingsWebService
 from .task036_model_selection import Task036ModelSelectionProjection
+from .visual_generation_handoff import Task036VisualGenerationHandoffProjection
 from .errors import ProductError, ProductErrorCategory
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
@@ -963,6 +964,37 @@ class Task036ShellBridge:
             **self._generation_queue_application.snapshot(),
             "execution_control": execution,
             "output_adoption_control": adoption,
+        }
+
+    def visual_generation_handoff_snapshot(self, args: Any = None) -> dict[str, Any]:
+        """Project current visual lineage without granting any next-stage authority."""
+        self._empty_args(args, "Visual generation handoff snapshot")
+        missing = [
+            name for name, application in (
+                ("production", self._production_control),
+                ("safety", self._generation_safety_application),
+                ("prompt", self._prompt_evidence_application),
+                ("queue", self._generation_queue_application),
+                ("execution", self._generation_execution_application),
+                ("adoption", self._generation_output_adoption_application),
+            ) if application is None
+        ]
+        if missing:
+            return {
+                "available": False,
+                "missing_sources": missing,
+                "provider_execution_authorized": False,
+                "human_decision_created": False,
+                "asset_or_timeline_mutation_started": False,
+            }
+        return {
+            "available": True,
+            **Task036VisualGenerationHandoffProjection.project(
+                production_snapshot=self._production_control.snapshot(),
+                safety_snapshot=self._generation_safety_application.snapshot(),
+                prompt_snapshot=self._prompt_evidence_application.snapshot(),
+                queue_snapshot=self.generation_queue_snapshot(),
+            ),
         }
 
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:

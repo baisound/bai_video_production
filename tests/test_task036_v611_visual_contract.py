@@ -539,6 +539,24 @@ def test_output_adoption_does_not_gain_provider_or_human_accept_authority() -> N
     assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
 
 
+def test_visual_generation_handoff_projects_exact_non_audio_lifecycle_without_effect_authority() -> None:
+    for marker in (
+        'data-visual-handoff="image"',
+        'data-visual-handoff="video"',
+        "handoff:['visual_generation_handoff_snapshot']",
+        "function visualHandoffTarget(state)",
+        "function renderVisualGenerationHandoff(model,page)",
+        "async function refreshVisualGenerationHandoff(page)",
+        "await call('visual_generation_handoff_snapshot')",
+        "model.required_blocker_count",
+        "model.all_required_visual_slots_adopted",
+        "model.delegated_audio_owner",
+        "Provider実行・Human判断・Asset/Timeline変更を許可しません。",
+    ):
+        assert marker in SHELL_HTML
+    assert "audio_slot_counted:1" not in SHELL_HTML
+
+
 def test_edit_projects_bounded_timeline_sources_and_exact_selection() -> None:
     for marker in (
         'id="editAssetSearch"',

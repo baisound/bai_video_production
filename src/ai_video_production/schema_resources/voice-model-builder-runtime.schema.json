@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai.task046.voice-model-builder-runtime.v1",
+  "title": "TASK-046 P-VS-4B bounded synthetic WAV runtime",
+  "oneOf": [
+    { "$ref": "#/$defs/WavInspectionReceipt" },
+    { "$ref": "#/$defs/SyntheticMasterAssemblyRequest" },
+    { "$ref": "#/$defs/SyntheticMasterAssemblyReceipt" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "logicalId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$",
+      "not": { "pattern": "(^/|\\\\|(^|/)\\.\\.(/|$))" }
+    },
+    "utc": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "WavInspectionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "receipt_id", "source_logical_ref", "source_sha256", "source_bytes", "sample_rate_hz", "channels", "sample_width_bytes", "frame_count", "duration_numerator", "duration_denominator", "format_state", "synthetic_input", "owner_audio_used", "inspected_at", "receipt_sha256"],
+      "properties": {
+        "record_type": { "const": "WavInspectionReceipt" },
+        "receipt_id": { "$ref": "#/$defs/logicalId" },
+        "source_logical_ref": { "$ref": "#/$defs/logicalId" },
+        "source_sha256": { "$ref": "#/$defs/sha256" },
+        "source_bytes": { "type": "integer", "minimum": 0 },
+        "sample_rate_hz": { "const": 48000 },
+        "channels": { "const": 1 },
+        "sample_width_bytes": { "const": 3 },
+        "frame_count": { "type": "integer", "minimum": 0, "maximum": 28800000 },
+        "duration_numerator": { "type": "integer", "minimum": 0, "maximum": 28800000 },
+        "duration_denominator": { "const": 48000 },
+        "format_state": { "const": "PASS" },
+        "synthetic_input": { "const": true },
+        "owner_audio_used": { "const": false },
+        "inspected_at": { "$ref": "#/$defs/utc" },
+        "receipt_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "OrderedInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["order_index", "cue_sha256", "source_logical_ref", "inspection_receipt_sha256", "pause_after_samples"],
+      "properties": {
+        "order_index": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "cue_sha256": { "$ref": "#/$defs/sha256" },
+        "source_logical_ref": { "$ref": "#/$defs/logicalId" },
+        "inspection_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "pause_after_samples": { "type": "integer", "minimum": 0, "maximum": 480000 }
+      }
+    },
+    "SyntheticMasterAssemblyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "request_id", "workflow_sha256", "model_candidate_sha256", "voice_profile_revision_sha256", "assembly_policy_sha256", "authority_kind", "authority_evidence_sha256", "ordered_inputs", "output_logical_ref", "max_total_frames", "execution_state", "execution_started", "owner_audio_used", "dataset_effect_started", "training_started", "model_inference_started", "publication_started", "created_at", "request_sha256"],
+      "properties": {
+        "record_type": { "const": "SyntheticMasterAssemblyRequest" },
+        "request_id": { "$ref": "#/$defs/logicalId" },
+        "workflow_sha256": { "$ref": "#/$defs/sha256" },
+        "model_candidate_sha256": { "$ref": "#/$defs/sha256" },
+        "voice_profile_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "assembly_policy_sha256": { "$ref": "#/$defs/sha256" },
+        "authority_kind": { "const": "APPROVED_SYNTHETIC_TEST_AUTHORITY" },
+        "authority_evidence_sha256": { "$ref": "#/$defs/sha256" },
+        "ordered_inputs": { "type": "array", "minItems": 2, "maxItems": 256, "items": { "$ref": "#/$defs/OrderedInput" } },
+        "output_logical_ref": { "$ref": "#/$defs/logicalId" },
+        "max_total_frames": { "type": "integer", "minimum": 1, "maximum": 28800000 },
+        "execution_state": { "const": "PROPOSAL_ONLY" },
+        "execution_started": { "const": false },
+        "owner_audio_used": { "const": false },
+        "dataset_effect_started": { "const": false },
+        "training_started": { "const": false },
+        "model_inference_started": { "const": false },
+        "publication_started": { "const": false },
+        "created_at": { "$ref": "#/$defs/utc" },
+        "request_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "SyntheticMasterAssemblyReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["record_type", "receipt_id", "request_sha256", "ordered_cue_sha256", "output_logical_ref", "output_sha256", "output_bytes", "sample_rate_hz", "channels", "sample_width_bytes", "frame_count", "duration_numerator", "duration_denominator", "inserted_silence_samples", "format_state", "boundary_analysis_state", "loudness_analysis_state", "style_analysis_state", "execution_state", "owner_audio_used", "dataset_effect_started", "training_started", "model_inference_started", "asset_adoption_started", "publication_started", "completed_at", "receipt_sha256"],
+      "properties": {
+        "record_type": { "const": "SyntheticMasterAssemblyReceipt" },
+        "receipt_id": { "$ref": "#/$defs/logicalId" },
+        "request_sha256": { "$ref": "#/$defs/sha256" },
+        "ordered_cue_sha256": { "type": "array", "minItems": 2, "maxItems": 256, "uniqueItems": true, "items": { "$ref": "#/$defs/sha256" } },
+        "output_logical_ref": { "$ref": "#/$defs/logicalId" },
+        "output_sha256": { "$ref": "#/$defs/sha256" },
+        "output_bytes": { "type": "integer", "minimum": 0 },
+        "sample_rate_hz": { "const": 48000 },
+        "channels": { "const": 1 },
+        "sample_width_bytes": { "const": 3 },
+        "frame_count": { "type": "integer", "minimum": 0, "maximum": 28800000 },
+        "duration_numerator": { "type": "integer", "minimum": 0, "maximum": 28800000 },
+        "duration_denominator": { "const": 48000 },
+        "inserted_silence_samples": { "type": "integer", "minimum": 0, "maximum": 28800000 },
+        "format_state": { "const": "PASS" },
+        "boundary_analysis_state": { "const": "UNKNOWN" },
+        "loudness_analysis_state": { "const": "UNKNOWN" },
+        "style_analysis_state": { "const": "UNKNOWN" },
+        "execution_state": { "const": "COMPLETED_SYNTHETIC" },
+        "owner_audio_used": { "const": false },
+        "dataset_effect_started": { "const": false },
+        "training_started": { "const": false },
+        "model_inference_started": { "const": false },
+        "asset_adoption_started": { "const": false },
+        "publication_started": { "const": false },
+        "completed_at": { "$ref": "#/$defs/utc" },
+        "receipt_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

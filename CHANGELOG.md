@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-046 P-VS-3Bとして、body-freeなVoiceDatasetStore、CommitIntent→Revision→Receipt→Envelope DAG、初回/通常のcombined CAS、TrainingInputSnapshot、authoritative read-backのUNKNOWN/CORRUPT分類とcurrent canonical ancestor inclusion検証を追加しました。Dataset・Asset・store・Job・Training・Model effectは別Gateです。
 - TASK-036 P-UX-2B2として、既存TASK-027 BlueprintのScene順序・IDと参照・Audio・FrameIntentを保持し、視覚・frame項目だけをHuman確認付きでappend-only改訂できるようにしました。Scene追加/削除、Timeline確定、Provider・生成・Resolve、Release/Deployは別Gateです。
 - TASK-036 P-UX-2B1として、既存TASK-027 Proposalのsection見出し・本文だけをHuman確認付きでappend-only改訂し、Intent・Blueprint・Provider Policy・cost・rightsを保持したまま新しいGOを必須にするPlanning操作を追加しました。AI Proposal生成、Provider・課金・Budget予約、Production/Timeline/Resolve変更、Release/Deployは開始しません。
 - TASK-036 P-UX-2A1として、既存TASK-028 Connection SettingsとTASK-040/042のScene・Quick正本から、Planning・Image・Video・QuickのProvider/Model選択を秘密非表示で決定論的に投影し、Project既定Routeを既存CASへ保存できるようにしました。Audioは開発担当2へ委譲し、権利/license・resourceはUNKNOWN、Provider実行・課金・生成は未許可のままです。

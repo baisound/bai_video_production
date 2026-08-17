@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai.task046.voice-training-run.v1",
+  "title": "TASK-046 P-VS-4A Voice Training Run Contract",
+  "description": "Body-free metadata only. This schema authorizes no Job, reservation, process, training, model, audio or publication effect.",
+  "oneOf": [
+    {"$ref": "#/$defs/EngineAdmissionBinding"},
+    {"$ref": "#/$defs/OutputArtifactDestinationBinding"},
+    {"$ref": "#/$defs/TargetResourceFeasibilityBinding"},
+    {"$ref": "#/$defs/ExecutionResourceReservationBinding"},
+    {"$ref": "#/$defs/TrainingDurableJobBinding"},
+    {"$ref": "#/$defs/TrainingExecutionAuthorizationBinding"},
+    {"$ref": "#/$defs/CurrentUseRightsBinding"},
+    {"$ref": "#/$defs/EvaluationInputSnapshot"},
+    {"$ref": "#/$defs/ContaminationProofBinding"},
+    {"$ref": "#/$defs/TrainingRunIntent"},
+    {"$ref": "#/$defs/TrainingRunRevision"},
+    {"$ref": "#/$defs/TrainingComputeTerminalReceipt"},
+    {"$ref": "#/$defs/CheckpointArtifactBinding"},
+    {"$ref": "#/$defs/GPUProcessObservationBinding"},
+    {"$ref": "#/$defs/ModelArtifactBinding"},
+    {"$ref": "#/$defs/ModelCandidateRevision"},
+    {"$ref": "#/$defs/EvaluationReceipt"},
+    {"$ref": "#/$defs/OwnerModelApprovalDecisionBinding"},
+    {"$ref": "#/$defs/TrainingPreflightReport"},
+    {"$ref": "#/$defs/TrainingDispatchAdmissionReport"}
+  ],
+  "$defs": {
+    "Sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "Identifier": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$"},
+    "Timestamp": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "ContractState": {"enum": ["CANONICAL_REF_NOT_PROVIDED", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "TrainingMode": {"enum": ["FULL_FINE_TUNE", "PARAMETER_EFFICIENT_FINE_TUNE", "ADAPTER_OR_LORA"]},
+    "Decision": {"enum": ["PASS", "FAIL", "BLOCKED", "UNKNOWN"]},
+    "Record": {
+      "type": "object",
+      "propertyNames": {"enum": [
+        "record_type", "contract_state", "binding_sha256", "snapshot_sha256", "proof_sha256", "intent_sha256", "revision_sha256", "receipt_sha256", "candidate_sha256", "report_sha256",
+        "engine_id", "engine_repository_ref", "engine_commit_sha256", "package_lock_sha256", "training_mode", "capability_state", "license_state", "base_model_id", "base_model_revision", "base_model_sha256", "runtime_revision", "runtime_sha256", "code_revision", "code_sha256", "weight_revision", "weight_sha256", "tokenizer_sha256", "codec_sha256", "vocoder_sha256", "config_sha256", "target_probe_profile_ref", "target_probe_profile_sha256", "evidence_ref", "evidence_sha256",
+        "canonical_owner_ref", "canonical_owner_sha256", "storage_policy_ref", "storage_policy_sha256", "logical_uri", "encryption_policy_sha256", "recovery_policy_sha256", "retention_policy_sha256", "disk_quota_admission_ref", "disk_quota_admission_sha256", "allowed_artifact_classes", "public_exposure",
+        "mode", "recipe_revision_ref", "recipe_revision_sha256", "probe_profile_ref", "probe_profile_sha256", "target_gpu_ref", "target_vram_bytes", "peak_vram_bytes", "peak_ram_bytes", "optimizer_overhead_bytes", "checkpoint_overhead_bytes", "representative_batch", "representative_sequence_units", "thermal_floor_state", "disk_floor_state", "oom_recovery_state", "expected_duration_seconds", "headroom_policy_ref", "headroom_policy_sha256", "admission_state",
+        "reservation_id", "receipt_ref", "receipt_sha256", "gpu_ref", "cpu_units", "ram_bytes", "vram_bytes", "disk_bytes", "thermal_state", "power_state", "issued_at", "expires_at",
+        "job_id", "operation_id", "idempotency_key", "job_kind", "job_revision", "job_revision_sha256", "job_state", "canonical_job_evidence_ref", "canonical_job_evidence_sha256", "identity_shared_with_dataset_adoption_job",
+        "authorization_id", "authorization_revision", "authorization_sha256", "authority_kind", "project_id", "run_intent_sha256", "run_revision_sha256", "training_input_snapshot_sha256", "engine_admission_sha256", "current_consent_rights_license_sha256", "scope", "one_shot", "replay_policy",
+        "evaluation_ref", "evaluation_sha256", "consent_state", "training_data_rights_state", "reference_audio_rights_state", "output_rights_state", "evaluated_at",
+        "snapshot_id", "revision", "parent_snapshot_sha256", "selection_policy_ref", "selection_policy_sha256", "selected_items", "private_equivalence_index_sha256", "created_at", "audio_body_persisted", "text_body_persisted",
+        "training_input_snapshot_ref", "evaluation_input_snapshot_ref", "evaluation_input_snapshot_sha256", "identity_non_overlap", "asset_mapping_non_overlap", "checksum_non_overlap", "sample_range_non_overlap", "source_lineage_non_overlap", "semantic_policy_state", "semantic_policy_ref", "semantic_policy_sha256", "semantic_decision", "decision", "reason_codes",
+        "run_intent_id", "parent_intent_sha256", "contamination_proof_binding", "engine_admission_binding", "output_artifact_destination_binding", "target_resource_feasibility_binding", "current_use_rights_binding", "execution_authorized",
+        "run_revision_id", "parent_revision_sha256", "state", "durable_job_binding", "resource_reservation_binding", "execution_authorization_binding", "process_observation_binding", "checkpoint_artifact_binding", "compute_terminal_receipt_sha256", "model_candidate_sha256", "evaluation_receipt_sha256", "owner_approval_binding_sha256", "execution_started",
+        "receipt_id", "job_binding_sha256", "compute_state", "last_checkpoint_binding_sha256", "started_at", "terminal_at", "artifact_registered",
+        "checkpoint_id", "checkpoint_revision", "persistence_receipt_ref", "persistence_receipt_sha256", "artifact_checksum_sha256", "license_evaluation_sha256", "consent_evaluation_sha256", "training_step", "optimizer_state_sha256", "resume_compatibility_sha256", "resume_decision",
+        "process_observation_id", "process_identity_sha256", "observation_state", "gpu_process_present", "observed_at",
+        "artifact_id", "artifact_kind", "artifact_manifest_sha256", "artifact_index_sha256", "component_checksums", "serialization_format", "base_model_license_sha256", "adapter_format", "adapter_config_sha256", "merge_state", "merge_provenance_receipt_ref", "merge_provenance_receipt_sha256", "engine_sha256", "load_compatibility_evidence_ref", "load_compatibility_evidence_sha256", "load_compatibility_state", "license_inheritance_state",
+        "candidate_id", "parent_candidate_sha256", "model_artifact_binding", "candidate_state", "model_use_authorized", "production_use_authorized",
+        "evaluation_id", "model_artifact_binding_sha256", "contamination_proof_sha256", "similarity_decision", "pronunciation_decision", "style_emotion_whisper_decision", "long_form_decision", "artifact_integrity_decision", "threshold_policy_state", "threshold_policy_ref", "threshold_policy_sha256", "held_out_decision", "overall_decision", "audio_analysis_executed",
+        "decision_id", "decision_revision", "artifact_composition_sha256", "decided_at", "reviewer_kind", "human_gate_evidence_ref", "human_gate_evidence_sha256",
+        "dispatch_started", "gpu_process_started", "training_started"
+      ]},
+      "properties": {
+        "audio_body_persisted": {"const": false},
+        "text_body_persisted": {"const": false},
+        "execution_authorized": {"const": false},
+        "public_exposure": {"const": false},
+        "model_use_authorized": {"const": false},
+        "production_use_authorized": {"const": false},
+        "artifact_registered": {"const": false},
+        "audio_analysis_executed": {"const": false},
+        "dispatch_started": {"const": false},
+        "gpu_process_started": {"const": false},
+        "training_started": {"const": false}
+      }
+    },
+    "StructuredBinding": {
+      "allOf": [{"$ref": "#/$defs/Record"}],
+      "required": ["record_type", "contract_state", "binding_sha256"],
+      "properties": {"contract_state": {"$ref": "#/$defs/ContractState"}, "binding_sha256": {"$ref": "#/$defs/Sha256"}}
+    },
+    "EngineAdmissionBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}],
+      "properties": {"record_type": {"const": "EngineAdmissionBinding"}, "training_mode": {"$ref": "#/$defs/TrainingMode"}},
+      "required": ["record_type", "contract_state", "engine_id", "engine_repository_ref", "engine_commit_sha256", "package_lock_sha256", "training_mode", "capability_state", "license_state", "base_model_id", "base_model_revision", "base_model_sha256", "runtime_revision", "runtime_sha256", "code_revision", "code_sha256", "weight_revision", "weight_sha256", "tokenizer_sha256", "codec_sha256", "vocoder_sha256", "config_sha256", "target_probe_profile_ref", "target_probe_profile_sha256", "evidence_ref", "evidence_sha256", "binding_sha256"]
+    },
+    "OutputArtifactDestinationBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}],
+      "properties": {"record_type": {"const": "OutputArtifactDestinationBinding"}},
+      "required": ["record_type", "contract_state", "canonical_owner_ref", "canonical_owner_sha256", "storage_policy_ref", "storage_policy_sha256", "logical_uri", "encryption_policy_sha256", "recovery_policy_sha256", "retention_policy_sha256", "disk_quota_admission_ref", "disk_quota_admission_sha256", "allowed_artifact_classes", "public_exposure", "binding_sha256"]
+    },
+    "TargetResourceFeasibilityBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}],
+      "properties": {"record_type": {"const": "TargetResourceFeasibilityBinding"}, "mode": {"$ref": "#/$defs/TrainingMode"}},
+      "required": ["record_type", "contract_state", "mode", "recipe_revision_ref", "recipe_revision_sha256", "probe_profile_ref", "probe_profile_sha256", "target_gpu_ref", "target_vram_bytes", "peak_vram_bytes", "peak_ram_bytes", "optimizer_overhead_bytes", "checkpoint_overhead_bytes", "representative_batch", "representative_sequence_units", "thermal_floor_state", "disk_floor_state", "oom_recovery_state", "expected_duration_seconds", "headroom_policy_ref", "headroom_policy_sha256", "admission_state", "evidence_ref", "evidence_sha256", "binding_sha256"]
+    },
+    "ExecutionResourceReservationBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}], "properties": {"record_type": {"const": "ExecutionResourceReservationBinding"}},
+      "required": ["record_type", "contract_state", "reservation_id", "receipt_ref", "receipt_sha256", "gpu_ref", "cpu_units", "ram_bytes", "vram_bytes", "disk_bytes", "thermal_state", "power_state", "admission_state", "issued_at", "expires_at", "binding_sha256"]
+    },
+    "TrainingDurableJobBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}], "properties": {"record_type": {"const": "TrainingDurableJobBinding"}},
+      "required": ["record_type", "contract_state", "job_id", "operation_id", "idempotency_key", "job_kind", "job_revision", "job_revision_sha256", "job_state", "canonical_job_evidence_ref", "canonical_job_evidence_sha256", "identity_shared_with_dataset_adoption_job", "binding_sha256"]
+    },
+    "TrainingExecutionAuthorizationBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}], "properties": {"record_type": {"const": "TrainingExecutionAuthorizationBinding"}},
+      "required": ["record_type", "contract_state", "authorization_id", "authorization_revision", "authorization_sha256", "authority_kind", "project_id", "run_intent_sha256", "run_revision_sha256", "training_input_snapshot_sha256", "engine_admission_sha256", "config_sha256", "current_consent_rights_license_sha256", "scope", "issued_at", "expires_at", "one_shot", "replay_policy", "evidence_ref", "evidence_sha256", "binding_sha256"]
+    },
+    "CurrentUseRightsBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}], "properties": {"record_type": {"const": "CurrentUseRightsBinding"}},
+      "required": ["record_type", "contract_state", "evaluation_ref", "evaluation_sha256", "consent_state", "training_data_rights_state", "reference_audio_rights_state", "output_rights_state", "license_state", "evaluated_at", "binding_sha256"]
+    },
+    "EvaluationInputSnapshot": {
+      "allOf": [{"$ref": "#/$defs/Record"}], "properties": {"record_type": {"const": "EvaluationInputSnapshot"}, "snapshot_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "snapshot_id", "revision", "parent_snapshot_sha256", "project_id", "selection_policy_ref", "selection_policy_sha256", "selected_items", "private_equivalence_index_sha256", "created_at", "audio_body_persisted", "text_body_persisted", "snapshot_sha256"]
+    },
+    "ContaminationProofBinding": {
+      "allOf": [{"$ref": "#/$defs/Record"}], "properties": {"record_type": {"const": "ContaminationProofBinding"}, "decision": {"$ref": "#/$defs/Decision"}, "proof_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "training_input_snapshot_ref", "training_input_snapshot_sha256", "evaluation_input_snapshot_ref", "evaluation_input_snapshot_sha256", "identity_non_overlap", "asset_mapping_non_overlap", "checksum_non_overlap", "sample_range_non_overlap", "source_lineage_non_overlap", "semantic_policy_state", "semantic_policy_ref", "semantic_policy_sha256", "semantic_decision", "decision", "reason_codes", "proof_sha256"]
+    },
+    "TrainingRunIntent": {
+      "allOf": [{"$ref": "#/$defs/Record"}],
+      "properties": {"record_type": {"const": "TrainingRunIntent"}, "training_mode": {"$ref": "#/$defs/TrainingMode"}, "contamination_proof_binding": {"$ref": "#/$defs/ContaminationProofBinding"}, "engine_admission_binding": {"$ref": "#/$defs/EngineAdmissionBinding"}, "output_artifact_destination_binding": {"$ref": "#/$defs/OutputArtifactDestinationBinding"}, "target_resource_feasibility_binding": {"$ref": "#/$defs/TargetResourceFeasibilityBinding"}, "current_use_rights_binding": {"$ref": "#/$defs/CurrentUseRightsBinding"}, "intent_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "run_intent_id", "revision", "parent_intent_sha256", "project_id", "training_mode", "training_input_snapshot_ref", "training_input_snapshot_sha256", "evaluation_input_snapshot_ref", "evaluation_input_snapshot_sha256", "contamination_proof_binding", "engine_admission_binding", "output_artifact_destination_binding", "target_resource_feasibility_binding", "current_use_rights_binding", "current_consent_rights_license_sha256", "config_sha256", "created_at", "audio_body_persisted", "text_body_persisted", "execution_authorized", "intent_sha256"]
+    },
+    "TrainingRunRevision": {
+      "allOf": [{"$ref": "#/$defs/Record"}],
+      "properties": {"record_type": {"const": "TrainingRunRevision"}, "durable_job_binding": {"$ref": "#/$defs/TrainingDurableJobBinding"}, "resource_reservation_binding": {"$ref": "#/$defs/ExecutionResourceReservationBinding"}, "execution_authorization_binding": {"$ref": "#/$defs/TrainingExecutionAuthorizationBinding"}, "process_observation_binding": {"$ref": "#/$defs/GPUProcessObservationBinding"}, "checkpoint_artifact_binding": {"$ref": "#/$defs/CheckpointArtifactBinding"}, "revision_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "run_revision_id", "revision", "parent_revision_sha256", "run_intent_sha256", "state", "durable_job_binding", "resource_reservation_binding", "execution_authorization_binding", "process_observation_binding", "checkpoint_artifact_binding", "compute_terminal_receipt_sha256", "model_candidate_sha256", "evaluation_receipt_sha256", "owner_approval_binding_sha256", "reason_codes", "created_at", "execution_started", "revision_sha256"]
+    },
+    "TrainingComputeTerminalReceipt": {
+      "allOf": [{"$ref": "#/$defs/Record"}], "properties": {"record_type": {"const": "TrainingComputeTerminalReceipt"}, "receipt_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "receipt_id", "run_intent_sha256", "run_revision_sha256", "job_binding_sha256", "compute_state", "last_checkpoint_binding_sha256", "started_at", "terminal_at", "reason_codes", "artifact_registered", "receipt_sha256"]
+    },
+    "CheckpointArtifactBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}], "properties": {"record_type": {"const": "CheckpointArtifactBinding"}},
+      "required": ["record_type", "contract_state", "checkpoint_id", "checkpoint_revision", "canonical_owner_ref", "canonical_owner_sha256", "persistence_receipt_ref", "persistence_receipt_sha256", "artifact_checksum_sha256", "training_input_snapshot_sha256", "base_model_sha256", "runtime_sha256", "code_sha256", "config_sha256", "license_evaluation_sha256", "consent_evaluation_sha256", "training_step", "optimizer_state_sha256", "resume_compatibility_sha256", "resume_decision", "logical_uri", "binding_sha256"]
+    },
+    "GPUProcessObservationBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}], "properties": {"record_type": {"const": "GPUProcessObservationBinding"}},
+      "required": ["record_type", "contract_state", "process_observation_id", "job_id", "process_identity_sha256", "observation_state", "gpu_process_present", "observed_at", "evidence_ref", "evidence_sha256", "binding_sha256"]
+    },
+    "ModelArtifactBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}], "properties": {"record_type": {"const": "ModelArtifactBinding"}},
+      "required": ["record_type", "contract_state", "artifact_id", "artifact_kind", "canonical_owner_ref", "canonical_owner_sha256", "persistence_receipt_ref", "persistence_receipt_sha256", "artifact_checksum_sha256", "artifact_manifest_sha256", "artifact_index_sha256", "component_checksums", "serialization_format", "base_model_id", "base_model_revision", "base_model_sha256", "base_model_license_sha256", "adapter_format", "adapter_config_sha256", "merge_state", "merge_provenance_receipt_ref", "merge_provenance_receipt_sha256", "engine_sha256", "runtime_sha256", "tokenizer_sha256", "codec_sha256", "vocoder_sha256", "config_sha256", "load_compatibility_evidence_ref", "load_compatibility_evidence_sha256", "load_compatibility_state", "license_inheritance_state", "logical_uri", "binding_sha256"]
+    },
+    "ModelCandidateRevision": {
+      "allOf": [{"$ref": "#/$defs/Record"}], "properties": {"record_type": {"const": "ModelCandidateRevision"}, "model_artifact_binding": {"$ref": "#/$defs/ModelArtifactBinding"}, "candidate_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "candidate_id", "revision", "parent_candidate_sha256", "run_intent_sha256", "compute_terminal_receipt_sha256", "model_artifact_binding", "candidate_state", "current_consent_rights_license_sha256", "created_at", "model_use_authorized", "production_use_authorized", "candidate_sha256"]
+    },
+    "EvaluationReceipt": {
+      "allOf": [{"$ref": "#/$defs/Record"}], "properties": {"record_type": {"const": "EvaluationReceipt"}, "receipt_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "evaluation_id", "candidate_sha256", "model_artifact_binding_sha256", "evaluation_input_snapshot_sha256", "contamination_proof_sha256", "similarity_decision", "pronunciation_decision", "style_emotion_whisper_decision", "long_form_decision", "artifact_integrity_decision", "threshold_policy_state", "threshold_policy_ref", "threshold_policy_sha256", "held_out_decision", "overall_decision", "current_consent_rights_license_sha256", "evaluated_at", "audio_analysis_executed", "receipt_sha256"]
+    },
+    "OwnerModelApprovalDecisionBinding": {
+      "allOf": [{"$ref": "#/$defs/StructuredBinding"}], "properties": {"record_type": {"const": "OwnerModelApprovalDecisionBinding"}},
+      "required": ["record_type", "contract_state", "decision_id", "decision_revision", "candidate_sha256", "evaluation_receipt_sha256", "model_artifact_binding_sha256", "artifact_composition_sha256", "current_consent_rights_license_sha256", "decision", "decided_at", "reviewer_kind", "human_gate_evidence_ref", "human_gate_evidence_sha256", "binding_sha256"]
+    },
+    "TrainingPreflightReport": {
+      "allOf": [{"$ref": "#/$defs/Record"}], "properties": {"record_type": {"const": "TrainingPreflightReport"}, "decision": {"$ref": "#/$defs/Decision"}, "report_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "run_intent_sha256", "run_revision_sha256", "decision", "reason_codes", "evaluated_at", "dispatch_started", "gpu_process_started", "training_started", "report_sha256"]
+    },
+    "TrainingDispatchAdmissionReport": {
+      "allOf": [{"$ref": "#/$defs/Record"}], "properties": {"record_type": {"const": "TrainingDispatchAdmissionReport"}, "decision": {"$ref": "#/$defs/Decision"}, "report_sha256": {"$ref": "#/$defs/Sha256"}},
+      "required": ["record_type", "run_intent_sha256", "run_revision_sha256", "decision", "reason_codes", "evaluated_at", "dispatch_started", "gpu_process_started", "training_started", "report_sha256"]
+    }
+  }
+}

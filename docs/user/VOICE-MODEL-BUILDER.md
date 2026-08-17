@@ -80,6 +80,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\windows\build-task04
 
 build scriptはPython、project runtime dependencyのjsonschema、PyInstaller 6.22.0、Inno Setup compilerのidentityを検証し、EXE・guide・license・manifestのSHA-256をInstallerへ固定します。出力をReleaseへ公開する行為はbuildとは別のGateです。
 
+Installerにはprojectの`LICENSE.md`に加え、実際にbundleしたCPython、Tcl/Tk、PyInstaller、jsonschema、attrs、jsonschema-specifications、referencing、rpds-pyの完全なlicense本文を`THIRD-PARTY-NOTICES.txt`として同梱します。build環境でlicense fileが欠落・増減した場合はfail closedで停止します。
+
 ---
 
 <a id="english-guide"></a>
@@ -120,3 +122,5 @@ Uninstall through Windows Installed apps. Application files and shortcuts are re
 ### Build from source
 
 Use the `E:\BAI_AI` commands in the Japanese build section above. They intentionally use absolute executable paths and do not modify PATH. The build creates a local candidate; publishing it as a GitHub Release is a separate operation.
+
+The installer also includes `THIRD-PARTY-NOTICES.txt`, generated from the exact CPython, Tcl/Tk, PyInstaller, jsonschema, attrs, jsonschema-specifications, referencing and rpds-py license files used by the build. Missing or ambiguous license input stops the build.

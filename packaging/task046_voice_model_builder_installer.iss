@@ -17,6 +17,9 @@
 #ifndef ManifestSha
   #define ManifestSha "0000000000000000000000000000000000000000000000000000000000000000"
 #endif
+#ifndef NoticeSha
+  #define NoticeSha "0000000000000000000000000000000000000000000000000000000000000000"
+#endif
 
 [Setup]
 AppId={{4DA96B8F-C27E-4AD8-B7C5-5F8EF105AEEA}
@@ -71,10 +74,12 @@ Source: "{#PayloadRoot}\application\bai-voice-model-builder.exe"; DestDir: "{app
 Source: "{#PayloadRoot}\docs\VOICE-MODEL-BUILDER.md"; DestDir: "{app}\docs"; Flags: ignoreversion
 Source: "{#PayloadRoot}\LICENSE.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PayloadRoot}\package-manifest.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\BAI Voice Model Builder"; Filename: "{app}\bai-voice-model-builder.exe"
 Name: "{group}\Voice Model Builder Guide"; Filename: "{app}\docs\VOICE-MODEL-BUILDER.md"
+Name: "{group}\Third-Party Notices"; Filename: "{app}\THIRD-PARTY-NOTICES.txt"
 Name: "{autodesktop}\BAI Voice Model Builder"; Filename: "{app}\bai-voice-model-builder.exe"; Tasks: desktopicon
 
 [Code]
@@ -103,6 +108,11 @@ end;
 function TargetManifest: String;
 begin
   Result := ExpandConstant('{app}\package-manifest.json');
+end;
+
+function TargetNotice: String;
+begin
+  Result := ExpandConstant('{app}\THIRD-PARTY-NOTICES.txt');
 end;
 
 function DirectoryIsReparsePoint(const Path: String): Boolean;
@@ -143,7 +153,9 @@ begin
   else if not ExistingFileIsAllowed(TargetLicense, '{#LicenseSha}') then
     Result := FmtMessage(CustomMessage('TargetCollision'), TargetLicense)
   else if not ExistingFileIsAllowed(TargetManifest, '{#ManifestSha}') then
-    Result := FmtMessage(CustomMessage('TargetCollision'), TargetManifest);
+    Result := FmtMessage(CustomMessage('TargetCollision'), TargetManifest)
+  else if not ExistingFileIsAllowed(TargetNotice, '{#NoticeSha}') then
+    Result := FmtMessage(CustomMessage('TargetCollision'), TargetNotice);
 end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
@@ -165,7 +177,9 @@ begin
     else if CompareText(GetSHA256OfFile(TargetLicense), '{#LicenseSha}') <> 0 then
       FailurePath := TargetLicense
     else if CompareText(GetSHA256OfFile(TargetManifest), '{#ManifestSha}') <> 0 then
-      FailurePath := TargetManifest;
+      FailurePath := TargetManifest
+    else if CompareText(GetSHA256OfFile(TargetNotice), '{#NoticeSha}') <> 0 then
+      FailurePath := TargetNotice;
     if FailurePath <> '' then
       MsgBox(FmtMessage(CustomMessage('ReadbackFailed'), FailurePath), mbError, MB_OK)
     else

@@ -22,6 +22,7 @@ from .task036_workflow_runtime import Task036WorkflowRuntime
 from .connection_settings_web import ConnectionSettingsWebService
 from .task036_model_selection import Task036ModelSelectionProjection
 from .visual_generation_handoff import Task036VisualGenerationHandoffProjection
+from .final_review_readiness import Task036FinalReviewReadinessProjection
 from .errors import ProductError, ProductErrorCategory
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
@@ -994,6 +995,40 @@ class Task036ShellBridge:
                 safety_snapshot=self._generation_safety_application.snapshot(),
                 prompt_snapshot=self._prompt_evidence_application.snapshot(),
                 queue_snapshot=self.generation_queue_snapshot(),
+            ),
+        }
+
+    def final_review_readiness_snapshot(self, args: Any = None) -> dict[str, Any]:
+        """Compose current Final Review blockers without creating approval."""
+        self._empty_args(args, "Final Review readiness snapshot")
+        sources = {
+            "production": self.production_snapshot(),
+            "audit": self.audit_snapshot(),
+            "visual": self.visual_generation_handoff_snapshot(),
+            "timeline": self.interactive_timeline_snapshot(),
+            "export": self.export_queue_snapshot(),
+        }
+        missing = sorted(name for name, source in sources.items() if source.get("available") is not True)
+        if missing:
+            return {
+                "available": False,
+                "state": "SOURCE_UNAVAILABLE",
+                "missing_sources": missing,
+                "delegated_audio_owner": "DEVELOPER2",
+                "final_approval_created": False,
+                "export_job_created": False,
+                "render_or_publish_started": False,
+                "human_decision_authorized": False,
+            }
+        return {
+            "available": True,
+            **Task036FinalReviewReadinessProjection.project(
+                production_snapshot=sources["production"],
+                audit_snapshot=sources["audit"],
+                visual_handoff_snapshot=sources["visual"],
+                timeline_snapshot=sources["timeline"],
+                export_snapshot=sources["export"],
+                external_gate_receipts=(),
             ),
         }
 

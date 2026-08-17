@@ -1126,3 +1126,45 @@ def test_html_exposes_task026_plan_without_external_execution_claim():
     assert "audio_placement_prepare" in HTML
     assert "audio_placement_apply" in HTML
     assert "Provider・課金・音声生成・Resolve/Cubaseは開始しません" in HTML
+
+
+def test_final_review_readiness_bridge_fails_closed_when_sources_are_missing():
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"))
+    result = bridge.final_review_readiness_snapshot({})
+    assert result["available"] is False
+    assert result["state"] == "SOURCE_UNAVAILABLE"
+    assert result["missing_sources"] == ["audit", "export", "production", "timeline", "visual"]
+    assert result["delegated_audio_owner"] == "DEVELOPER2"
+    assert result["final_approval_created"] is False
+    assert result["export_job_created"] is False
+    assert result["render_or_publish_started"] is False
+    assert result["human_decision_authorized"] is False
+
+
+def test_final_review_readiness_bridge_keeps_missing_external_gates_explicit(monkeypatch):
+    sha = lambda char: "sha256:" + char * 64
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"))
+    monkeypatch.setattr(bridge, "production_snapshot", lambda args=None: {
+        "available": True, "project_id": "project-1", "snapshot_sha256": sha("1"),
+        "slots": [{"slot_id": "slot-1", "required": True, "status": "LOCKED", "stale_state": "CURRENT"}],
+    })
+    monkeypatch.setattr(bridge, "audit_snapshot", lambda args=None: {
+        "available": True, "project_id": "project-1",
+        "production_snapshot_sha256": sha("1"), "audit_snapshot_sha256": sha("2"),
+        "recovery": {"required": False}, "workspace": {"candidates": []},
+    })
+    monkeypatch.setattr(bridge, "visual_generation_handoff_snapshot", lambda args=None: {
+        "available": True, "project_id": "project-1",
+        "source_snapshots": {"production": sha("1")}, "projection_sha256": sha("3"),
+        "all_required_visual_slots_adopted": True, "required_blocker_count": 0,
+    })
+    monkeypatch.setattr(bridge, "interactive_timeline_snapshot", lambda args=None: {
+        "available": True, "projected_timeline_sha256": sha("4"),
+        "project_manifest_sha256": sha("5"),
+    })
+    monkeypatch.setattr(bridge, "export_queue_snapshot", lambda args=None: {"available": True, "rows": []})
+    result = bridge.final_review_readiness_snapshot({})
+    assert result["available"] is True
+    assert result["state"] == "BLOCKED_EXTERNAL_GATES"
+    assert [gate["state"] for gate in result["external_gates"]] == ["MISSING"] * 5
+    assert result["final_approval_created"] is False

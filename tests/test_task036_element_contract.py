@@ -45,7 +45,7 @@ def test_canonical_mock_and_runtime_source_counts_remain_explicit() -> None:
     }
     assert count_source_controls(RUNTIME_HTML) == {
         "pages": 14,
-        "stable_ids": 111,
+        "stable_ids": 112,
         "buttons": 126,
         "selects": 2,
         "inputs_and_textareas": 6,
@@ -66,9 +66,9 @@ def test_inventory_is_deterministic_and_preserves_current_incompleteness() -> No
     assert len(first.elements) == 581
     states = first.to_dict()["state_counts"]
     assert states == {
-        "BOUND": 45,
+        "BOUND": 46,
         "NAVIGATION": 43,
-        "DISABLED_WITH_REASON": 35,
+        "DISABLED_WITH_REASON": 34,
         "DYNAMIC_CONDITIONAL": 42,
         "INTENT_ONLY": 14,
         "MISSING": 402,

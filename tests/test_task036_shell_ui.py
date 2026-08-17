@@ -526,6 +526,8 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
             self.revised = None
             self.scene_revision = None
             self.scene_revised = None
+            self.scene_finalization = None
+            self.scene_finalized = None
             self.approved = None
             self.install = None
             self.installed = None
@@ -552,6 +554,14 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
         def apply_scene_revision(self, **values):
             self.scene_revised = values
             return {"scene_revised": True}
+
+        def prepare_scene_finalization(self, **values):
+            self.scene_finalization = values
+            return {"confirmation_id": "scene-finalization", **values}
+
+        def apply_scene_finalization(self, **values):
+            self.scene_finalized = values
+            return {"scene_finalized": True}
 
         def approve_go(self, **values):
             self.approved = values
@@ -591,6 +601,17 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
         {"confirmation_id": scene_revision["confirmation_id"]}
     ) == {"scene_revised": True}
     assert planning.scene_revised == {"confirmation_id": "scene-revision"}
+    scene_finalization = bridge.planning_prepare_scene_finalization({
+        "proposal_id": "proposal-1",
+        "finalized_by": "owner",
+        "expected_proposal_snapshot_sha256": "sha256:" + "a" * 64,
+        "expected_finalization_snapshot_sha256": "sha256:" + "b" * 64,
+    })
+    assert planning.scene_finalization["finalized_by"] == "owner"
+    assert bridge.planning_apply_scene_finalization(
+        {"confirmation_id": scene_finalization["confirmation_id"]}
+    ) == {"scene_finalized": True}
+    assert planning.scene_finalized == {"confirmation_id": "scene-finalization"}
     prepared = bridge.planning_prepare_go({
         "proposal_id": "proposal-1", "proposal_revision": 1, "reference_bindings": [],
         "cost_ceiling": "10", "rights_warnings_acknowledged": False,
@@ -614,6 +635,12 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
     with pytest.raises(ProductError) as exc:
         bridge.planning_prepare_scene_revision({"proposal_id": "x", "scenes": {}, "expected_snapshot_sha256": "x"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    with pytest.raises(ProductError) as exc:
+        bridge.planning_prepare_scene_finalization({
+            "proposal_id": "x", "finalized_by": "owner",
+            "expected_proposal_snapshot_sha256": "x",
+        })
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 

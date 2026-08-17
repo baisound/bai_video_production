@@ -85,6 +85,20 @@ def approve(service: Task027PlanningApplication) -> dict:
     return service.approve_go(confirmation_id=prepared["confirmation_id"], approved_by="owner")
 
 
+def approve_latest(service: Task027PlanningApplication, *, approved_by: str = "owner") -> dict:
+    state = service.snapshot()
+    workspace = state["workspace"]
+    prepared = service.prepare_go(
+        proposal_id=workspace["proposal_id"],
+        proposal_revision=workspace["latest_revision"],
+        reference_bindings=(),
+        cost_ceiling="3",
+        rights_warnings_acknowledged=False,
+        expected_snapshot_sha256=state["snapshot_sha256"],
+    )
+    return service.approve_go(confirmation_id=prepared["confirmation_id"], approved_by=approved_by)
+
+
 def test_snapshot_projects_persisted_scene_contract_without_execution(tmp_path: Path) -> None:
     seed_proposal(tmp_path)
     state = app(tmp_path).snapshot()
@@ -92,6 +106,13 @@ def test_snapshot_projects_persisted_scene_contract_without_execution(tmp_path: 
     assert state["workspace"]["go_status"] == "GO_REQUIRED"
     assert [scene["scene_id"] for scene in state["workspace"]["blueprint"]["scenes"]] == ["SC01", "SC02"]
     assert state["installation"]["status"] == "GO_REQUIRED"
+    assert state["scene_contract"] == {
+        "status": "GO_REQUIRED",
+        "current_receipt": None,
+        "historical_receipt_count": 0,
+        "stale_historical_receipts": 0,
+        "snapshot_sha256": state["scene_contract"]["snapshot_sha256"],
+    }
     assert state["provider_execution_started"] is False
     assert state["paid_execution_authorized"] is False
     assert state["budget_reservation_created"] is False
@@ -481,3 +502,161 @@ def test_concurrent_scene_revision_publication_allows_exactly_one_writer(tmp_pat
     with pytest.raises(ProductError) as exc:
         second.apply_scene_revision(confirmation_id="scene-second")
     assert exc.value.code == "ERR_PLANNING_APPLICATION_SNAPSHOT_CONFLICT"
+
+
+def test_scene_finalization_is_human_confirmed_persisted_exact_and_effect_free(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=iter(("go-confirm", "final-confirm")).__next__,
+    )
+    approved = approve(service)
+    state = service.snapshot()
+    assert state["scene_contract"]["status"] == "READY_TO_FINALIZE"
+    prepared = service.prepare_scene_finalization(
+        proposal_id="PROPOSAL-DEMO",
+        finalized_by="scene-owner",
+        expected_proposal_snapshot_sha256=state["snapshot_sha256"],
+        expected_finalization_snapshot_sha256=state["scene_contract"]["snapshot_sha256"],
+    )
+    receipt = prepared["receipt"]
+    expected_receipt = dict(receipt)
+    assert receipt["plan_id"] == approved["approved_plan"]["plan_id"]
+    assert receipt["proposal_revision"] == 1
+    assert receipt["blueprint_id"] == "BP-DEMO-027"
+    assert receipt["scene_ledger_sha256"].startswith("sha256:")
+    assert prepared["human_final_authority_required"] is True
+    assert prepared["provider_execution_started"] is False
+    prepared["receipt"]["finalized_by"] = "mutated-caller-copy"
+
+    applied = service.apply_scene_finalization(confirmation_id="final-confirm")
+    assert applied["receipt"]["finalized_by"] == "scene-owner"
+    assert applied["application"]["scene_contract"]["status"] == "FINALIZED"
+    assert applied["application"]["scene_contract"]["current_receipt"] == expected_receipt
+    assert applied["provider_execution_started"] is False
+    assert applied["resolve_mutation_started"] is False
+    assert applied["publish_started"] is False
+    reopened = Task027PlanningApplication(project_root=tmp_path, project_id="project-1").snapshot()
+    assert reopened["scene_contract"]["current_receipt"] == expected_receipt
+    with pytest.raises(ProductError) as exc:
+        service.apply_scene_finalization(confirmation_id="final-confirm")
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_CONFIRMATION_INVALID"
+    with pytest.raises(ProductError) as exc:
+        service.prepare_scene_finalization(
+            proposal_id="PROPOSAL-DEMO", finalized_by="other",
+            expected_proposal_snapshot_sha256=reopened["snapshot_sha256"],
+            expected_finalization_snapshot_sha256=reopened["scene_contract"]["snapshot_sha256"],
+        )
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SCENE_ALREADY_FINALIZED"
+
+
+def test_scene_revision_invalidates_current_finalization_and_fresh_go_can_refinalize(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=iter((
+            "go-1", "final-1", "scene-revision", "go-2", "final-2",
+        )).__next__,
+    )
+    approve_latest(service)
+    state = service.snapshot()
+    prepared = service.prepare_scene_finalization(
+        proposal_id="PROPOSAL-DEMO", finalized_by="owner-1",
+        expected_proposal_snapshot_sha256=state["snapshot_sha256"],
+        expected_finalization_snapshot_sha256=state["scene_contract"]["snapshot_sha256"],
+    )
+    service.apply_scene_finalization(confirmation_id=prepared["confirmation_id"])
+    state = service.snapshot()
+    revised = service.prepare_scene_revision(
+        proposal_id="PROPOSAL-DEMO", scenes=scene_revision_rows(),
+        expected_snapshot_sha256=state["snapshot_sha256"],
+    )
+    after_revision = service.apply_scene_revision(confirmation_id=revised["confirmation_id"])["application"]
+    assert after_revision["scene_contract"]["status"] == "GO_REQUIRED"
+    assert after_revision["scene_contract"]["current_receipt"] is None
+    assert after_revision["scene_contract"]["historical_receipt_count"] == 1
+    assert after_revision["scene_contract"]["stale_historical_receipts"] == 1
+
+    approve_latest(service, approved_by="owner-2")
+    ready = service.snapshot()
+    assert ready["scene_contract"]["status"] == "READY_TO_FINALIZE"
+    second = service.prepare_scene_finalization(
+        proposal_id="PROPOSAL-DEMO", finalized_by="owner-2",
+        expected_proposal_snapshot_sha256=ready["snapshot_sha256"],
+        expected_finalization_snapshot_sha256=ready["scene_contract"]["snapshot_sha256"],
+    )
+    final = service.apply_scene_finalization(confirmation_id=second["confirmation_id"])["application"]
+    assert final["scene_contract"]["status"] == "FINALIZED"
+    assert final["scene_contract"]["historical_receipt_count"] == 2
+    assert final["scene_contract"]["stale_historical_receipts"] == 1
+    assert final["scene_contract"]["current_receipt"]["proposal_revision"] == 2
+
+
+def test_scene_finalization_requires_go_actor_and_exact_current_snapshots(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(project_root=tmp_path, project_id="project-1")
+    state = service.snapshot()
+    with pytest.raises(ProductError) as exc:
+        service.prepare_scene_finalization(
+            proposal_id="PROPOSAL-DEMO", finalized_by="owner",
+            expected_proposal_snapshot_sha256=state["snapshot_sha256"],
+            expected_finalization_snapshot_sha256=state["scene_contract"]["snapshot_sha256"],
+        )
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_CURRENT_PLAN_REQUIRED"
+    with pytest.raises(ProductError) as exc:
+        service.prepare_scene_finalization(
+            proposal_id="PROPOSAL-DEMO", finalized_by=" ",
+            expected_proposal_snapshot_sha256=state["snapshot_sha256"],
+            expected_finalization_snapshot_sha256=state["scene_contract"]["snapshot_sha256"],
+        )
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_ACTOR_INVALID"
+
+
+def test_concurrent_scene_finalization_allows_exactly_one_writer(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    approval = Task027PlanningApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: "go",
+    )
+    approve_latest(approval)
+    first = Task027PlanningApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: "final-first",
+    )
+    second = Task027PlanningApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: "final-second",
+    )
+    state = first.snapshot()
+    for service in (first, second):
+        service.prepare_scene_finalization(
+            proposal_id="PROPOSAL-DEMO", finalized_by="owner",
+            expected_proposal_snapshot_sha256=state["snapshot_sha256"],
+            expected_finalization_snapshot_sha256=state["scene_contract"]["snapshot_sha256"],
+        )
+    first.apply_scene_finalization(confirmation_id="final-first")
+    with pytest.raises(ProductError) as exc:
+        second.apply_scene_finalization(confirmation_id="final-second")
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SNAPSHOT_CONFLICT"
+
+
+def test_scene_finalization_snapshot_tampering_is_rejected(tmp_path: Path) -> None:
+    seed_proposal(tmp_path)
+    service = Task027PlanningApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=iter(("go", "final")).__next__,
+    )
+    approve_latest(service)
+    state = service.snapshot()
+    prepared = service.prepare_scene_finalization(
+        proposal_id="PROPOSAL-DEMO", finalized_by="owner",
+        expected_proposal_snapshot_sha256=state["snapshot_sha256"],
+        expected_finalization_snapshot_sha256=state["scene_contract"]["snapshot_sha256"],
+    )
+    service.apply_scene_finalization(confirmation_id=prepared["confirmation_id"])
+    path = tmp_path / "scene-contract-finalizations.json"
+    tampered = path.read_text(encoding="utf-8").replace('"finalized_by":"owner"', '"finalized_by":"attacker"')
+    path.write_text(tampered, encoding="utf-8")
+    with pytest.raises(ProductError) as exc:
+        service.snapshot()
+    assert exc.value.code == "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_SNAPSHOT_INVALID"

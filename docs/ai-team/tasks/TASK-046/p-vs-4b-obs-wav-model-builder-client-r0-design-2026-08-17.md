@@ -1,28 +1,60 @@
-# TASK-046 / P-VS-4B — OBS WAV Model Builder Client R0
+# TASK-046 / P-VS-4B — OBS-to-Model-to-Narration WAV Vertical Slice R0
 
 ## Decision
 
-The Owner-requested beginner client that turns reviewed OBS voice recordings
-into a local voice-model candidate belongs to `TASK-046`, not `TASK-014`.
+The primary deliverable is an end-to-end vertical slice that turns reviewed OBS
+voice recordings into an approved local model and then into one natural,
+style-aware narration Master WAV.  The Owner-requested beginner client is the
+test and acceptance tool for that slice; it is not the final product goal.
+
+This integration slice belongs to `TASK-046`, while final narration rendering
+ownership remains in `TASK-014`.
 `TASK-014` consumes an already admitted VoiceProfile/ModelCandidate to render
-narration.  `P-VS-4B` is the client and installer surface over the following
-canonical owners:
+narration.  `P-VS-4B` is the vertical-slice integration and acceptance surface
+over the following canonical owners:
 
 1. `TASK-047` records WAV and capture Evidence.
 2. `TASK-048` supplies calibration and acoustic-quality Evidence.
 3. `TASK-003` owns AssetRevision truth.
 4. `P-VS-3B` owns Dataset review, adoption and TrainingInputSnapshot truth.
 5. `P-VS-4A` owns TrainingRun, checkpoint, ModelCandidate and evaluation truth.
-6. `P-VS-4B` presents the workflow and validates external receipts.  It does
-   not create a second Dataset, Job, Model, Consent or Asset truth.
+6. `P-VS-4B` composes the workflow, style-Cue/Master lineage and test client,
+   and validates external receipts.  It does not create a second Dataset, Job,
+   Model, Consent or Asset truth.
 7. `TASK-014` may bind an Owner-approved candidate for local narration only
    after its independent render-admission Gate.
 
-This design adds the client and installer to the roadmap.  It does not claim
-that training has run, that a model has been created, or that a model is ready
-for narration or publication.
+This design adds the vertical slice, its test client and installer to the
+roadmap immediately after P-VS-4A and before P-VS-5.  It does not claim that
+training or narration has run, that a model has been created, or that a Master
+WAV is accepted for publication.
 
-## Beginner workflow
+## Priority outcome
+
+The first complete acceptance path is deliberately narrow:
+
+1. record the Owner in OBS with start/pause/resume/stop and immutable capture
+   Evidence;
+2. review exact WAV ranges and adopt only approved material into a Dataset;
+3. freeze one `TrainingInputSnapshot` and run one exact admitted training
+   recipe with durable checkpoint/reconciliation;
+4. register, evaluate and explicitly approve one `ModelCandidateRevision`;
+5. take one approved narration script whose style plan contains multiple
+   ordered style segments;
+6. render each segment with the same approved speaker/model lineage and exact
+   style direction;
+7. assemble one canonical 48 kHz Master WAV; and
+8. pass automatic boundary checks plus an Owner listening acceptance.
+
+The Master is not a naïve concatenation.  The assembly contract binds segment
+order, source Cue hashes, measured sample ranges, pause policy, gain/loudness
+continuity, sample format, optional bounded crossfade, speaker-similarity
+continuity and boundary artifact results.  A failed segment may be regenerated
+as a new Cue revision without silently changing its neighbours.  If an engine
+cannot express a requested style or the analyzer/policy is unavailable, that
+style/whole-Master decision is `UNKNOWN` or `FAIL`, not synthetic PASS.
+
+## Beginner test-client workflow
 
 The client uses one guided screen per decision and keeps advanced identifiers
 behind a details disclosure.
@@ -54,7 +86,13 @@ behind a details disclosure.
    receipts.  An unbound checkpoint or model is never shown as usable.
 9. **Evaluate and approve** — evaluation uses a separately authorized held-out
    EvaluationInputSnapshot.  The Owner may approve, reject or request retest.
-10. **Use for narration** — linking to VoiceProfile/TASK-014 is another Gate.
+10. **Generate a style test** — select a short approved script containing at
+    least two style segments, render separate immutable Cue revisions and show
+    their exact order and boundary policy.
+11. **Listen to one Master WAV** — assemble a contained 48 kHz candidate and
+    show join, silence, level, identity and style QA separately.  Owner
+    acceptance is required before it can become a canonical narration Asset.
+12. **Use for narration** — linking to VoiceProfile/TASK-014 is another Gate.
     It does not publish, deploy, or automatically replace the active model.
 
 ## Required client states
@@ -73,6 +111,8 @@ directly:
 - `MODEL_CANDIDATE_REGISTERED`
 - `EVALUATION_PENDING`, `EVALUATED_CANDIDATE`
 - `OWNER_APPROVED`, `OWNER_REJECTED`, `RETEST_REQUIRED`
+- `STYLE_CUES_PENDING`, `MASTER_ASSEMBLY_PENDING`, `MASTER_REVIEW_REQUIRED`
+- `MASTER_ACCEPTED`, `MASTER_REJECTED`
 - `UNKNOWN`, `FAILED_KNOWN`, `CANCELLED_SAFE`
 
 UI labels may be friendly Japanese/English text, but serialized values remain
@@ -150,20 +190,23 @@ Implement TrainingRun, checkpoint/artifact binding, ModelCandidate,
 EvaluationInputSnapshot/Receipt and OwnerModelApprovalDecision metadata.  No
 Job, reservation, GPU, training, merge or publication effect is included.
 
-### Gate 3 — P-VS-4B client application service
+### Gate 3 — P-VS-4B vertical-slice application service
 
-Implement a pure application/service layer that composes Gate 1 and Gate 2,
-projects beginner-friendly states and produces exact external-operation
-requests.  It may not access a WAV body or execute training in unit tests.
+Implement a pure application/service layer that composes Gate 1, Gate 2 and the
+TASK-014 render-admission contract, projects beginner-friendly states and
+produces exact external-operation requests.  It also defines immutable style
+Cue order and Master assembly/QA bindings.  It may not access a WAV body or
+execute training/rendering in unit tests.
 
 ### Gate 4 — bounded runtime adapter
 
-Implement contained WAV inspection, Dataset preparation and an engine adapter
-only for an exact admitted recipe.  Dataset adoption and training start retain
+Implement contained WAV inspection, Dataset preparation, an engine adapter and
+style-Cue/Master assembly only for exact admitted recipes.  Dataset adoption,
+training start, model approval, narration render and Master acceptance retain
 separate Owner Gates.  Runtime acceptance uses synthetic/non-Owner audio until
-an explicit Owner recording/training Gate is reached.
+an explicit Owner recording/training/render Gate is reached.
 
-### Gate 5 — Windows UI and installer
+### Gate 5 — Windows test client and installer
 
 Package the standalone client, Japanese/English guide and offline manifest.
 Only after the standalone workflow is accepted may a later successor Shell
@@ -186,6 +229,11 @@ The following must fail closed:
 - orphan GPU process causes automatic retry or duplicate run;
 - adapter artifact is displayed as a standalone full/merged model;
 - completed training is displayed as approved, production-bound or published;
+- different style Cues silently use different ModelCandidate/VoiceProfile
+  revisions;
+- style Cues are concatenated without measured pause, level, identity and
+  boundary-artifact checks;
+- successful Cue renders are treated as an accepted natural Master WAV;
 - installer contains voice audio, model output, credentials or private paths;
 - uninstall silently deletes recordings, Dataset, checkpoints or models;
 - install success launches training or changes OBS/device configuration;
@@ -193,8 +241,11 @@ The following must fail closed:
 
 ## R0 Judge
 
-- Task placement: `TASK-046/P-VS-4B` — PASS.
+- Task placement: `TASK-046/P-VS-4B`, after P-VS-4A and before P-VS-5 — PASS.
 - TASK-014 boundary: consumer-only — PASS.
+- Primary outcome: OBS recording → trained ModelCandidate → multi-style Cue
+  renders → one natural 48 kHz Master WAV — fixed.
+- Client/installer role: acceptance tool subordinate to the vertical slice.
 - Standalone-first overlap with current TASK-036 Shell work: zero by design.
 - Qwen3-TTS inference load evidence: PASS, training admission remains UNKNOWN.
 - Installer requirement: accepted and mandatory before public client Release.

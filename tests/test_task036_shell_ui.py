@@ -139,6 +139,64 @@ def test_pux2_settings_ui_uses_existing_task028_contract_and_never_collects_secr
     assert "保存はProvider実行・課金・生成を許可しません" in HTML
 
 
+def test_pux2a1_model_selection_bridge_reuses_existing_receipts_without_audio_overlap(tmp_path):
+    class PromptApplicationStub:
+        def snapshot(self):
+            return {"prompts": [{
+                "prompt_id": "prompt-1", "prompt_version": 1, "scene_id": "scene-1", "slot_id": "slot-1",
+                "compilation_binding": {"selected_route_id": "local-image"},
+            }]}
+
+    class QuickApplicationStub:
+        def snapshot(self):
+            return {"intents": [{
+                "intent_id": "quick-1", "intent_version": 1, "mode": "IMAGE", "scene_id": "scene-1",
+                "selected_route_id": "local-image", "selected_capability": "IMAGE_GENERATION",
+            }]}
+
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        connection_settings=_connection_settings_service(tmp_path),
+        prompt_evidence_application=PromptApplicationStub(),
+        quick_generation_application=QuickApplicationStub(),
+    )
+    snapshot = bridge.model_selection_snapshot({})
+    assert snapshot["available"] is True
+    assert snapshot["scene_bindings"][0]["selected_route_id"] == "local-image"
+    assert snapshot["quick_bindings"][0]["coordinate_state"] == "CURRENT_CONFIGURED"
+    assert snapshot["delegated_audio_owner"] == "DEVELOPER2"
+    assert snapshot["provider_execution_started"] is False
+    assert snapshot["paid_execution_authorized"] is False
+    assert snapshot["generation_started"] is False
+    assert "credential://" not in str(snapshot)
+
+
+def test_pux2a1_model_selection_bridge_fails_closed_when_unbound_or_request_is_broad():
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"))
+    assert bridge.model_selection_snapshot({}) == {
+        "available": False,
+        "unavailable_reason": "CONNECTION_SETTINGS_NOT_BOUND",
+        "delegated_audio_owner": "DEVELOPER2",
+        "credential_values_redisplayed": False,
+        "provider_execution_started": False,
+        "paid_execution_authorized": False,
+        "generation_started": False,
+    }
+    with pytest.raises(ProductError) as exc:
+        bridge.model_selection_snapshot({"execute": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_pux2a1_main_pages_expose_project_selection_and_persisted_coordinate_projection():
+    assert "model_selection_snapshot" in HTML
+    assert "planningModelSelection" in HTML
+    assert "imageModelSelection" in HTML
+    assert "videoModelSelection" in HTML
+    assert "quickModelSelection" in HTML
+    assert "Audioは開発担当2の専用レーン" in HTML
+    assert "Provider実行・課金・生成は開始しません" in HTML
+
+
 def test_quick_generation_bridge_projects_snapshot_read_only():
     class QuickApplicationStub:
         def snapshot(self):

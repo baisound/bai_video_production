@@ -20,6 +20,7 @@ from .task036_native_dialog import Task036NativeDialogService
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .connection_settings_web import ConnectionSettingsWebService
+from .task036_model_selection import Task036ModelSelectionProjection
 from .errors import ProductError, ProductErrorCategory
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
@@ -487,6 +488,30 @@ class Task036ShellBridge:
                 "generation_started": False,
             }
         return self._connection_settings_projection(self._connection_settings.form())
+
+    def model_selection_snapshot(self, args: Any = None) -> dict[str, object]:
+        """Compose persisted Project/Scene/Quick route coordinates without effects."""
+        self._empty_args(args, "Model Selection snapshot")
+        if self._connection_settings is None:
+            return {
+                "available": False,
+                "unavailable_reason": "CONNECTION_SETTINGS_NOT_BOUND",
+                "delegated_audio_owner": "DEVELOPER2",
+                "credential_values_redisplayed": False,
+                "provider_execution_started": False,
+                "paid_execution_authorized": False,
+                "generation_started": False,
+            }
+        prompt = self._prompt_evidence_application.snapshot() if self._prompt_evidence_application is not None else None
+        quick = self._quick_generation_application.snapshot() if self._quick_generation_application is not None else None
+        return {
+            "available": True,
+            **Task036ModelSelectionProjection.project(
+                self._connection_settings.form(),
+                prompt_snapshot=prompt,
+                quick_snapshot=quick,
+            ),
+        }
 
     def connection_settings_update(self, args: Any) -> dict[str, object]:
         required = {"revision", "workload_modes", "preferred_route_ids"}

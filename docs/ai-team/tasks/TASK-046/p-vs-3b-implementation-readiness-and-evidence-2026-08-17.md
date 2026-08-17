@@ -75,9 +75,9 @@ repository `sha256:<64 lowercase hex>` convention and canonical JSON helper.
 Validation results at the current checkpoint:
 
 - focused contract tests: `13 passed`;
-- Windows full regression: `1736 passed, 1 skipped`;
+- Windows full regression after the fresh-main merge: `1755 passed, 1 skipped`;
 - WSL2 full regression using the existing offline venv:
-  `1736 passed, 1 Windows-only installer skip`;
+  `1755 passed, 1 Windows-only installer skip`;
 - public/schema-resource mirror: byte exact;
 - Python 3.12 compile: PASS.
 

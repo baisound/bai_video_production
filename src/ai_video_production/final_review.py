@@ -86,6 +86,14 @@ class FinalReviewApprovalReceipt:
         approved_at: str,
     ) -> "FinalReviewApprovalReceipt":
         source = _mapping(readiness, "readiness")
+        projection_sha256 = source.get("projection_sha256")
+        validate_sha256(projection_sha256, field_name="readiness.projection_sha256")
+        projection_body = {
+            key: value for key, value in source.items()
+            if key not in {"available", "projection_sha256"}
+        }
+        if projection_sha256 != sha256_bytes(canonical_json_bytes(projection_body)):
+            raise ValueError("Final Review readiness projection checksum mismatch")
         if source.get("available") is not True or source.get("state") != "READY_FOR_TYPED_FINAL_REVIEW":
             raise ValueError("Final Review approval requires exact ready state")
         if source.get("product_blockers") != [] or source.get("external_blockers") != []:
@@ -120,12 +128,48 @@ class FinalReviewApprovalReceipt:
             project_id=project_id,
             project_manifest_sha256=str(snapshots["project_manifest"]),
             timeline_sha256=str(snapshots["timeline"]),
-            readiness_projection_sha256=str(source.get("projection_sha256")),
+            readiness_projection_sha256=str(projection_sha256),
             source_snapshot_sha256s=source_pairs,
             external_gate_receipt_sha256s=gate_pairs,
             approved_by=approved_by,
             approved_at=approved_at,
         )
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, object]) -> "FinalReviewApprovalReceipt":
+        source = _mapping(value, "final approval receipt")
+        expected = {
+            "receipt_version", "task_owner", "receipt_id", "project_id",
+            "project_manifest_sha256", "timeline_sha256",
+            "readiness_projection_sha256", "source_snapshot_sha256s",
+            "external_gate_receipt_sha256s", "decision", "approved_by",
+            "approved_at", "export_job_created", "render_or_publish_started",
+            "final_approval_receipt_sha256",
+        }
+        if set(source) != expected:
+            raise ValueError("Final Review approval receipt fields are not exact")
+        if source.get("receipt_version") != "1.0.0" or source.get("task_owner") != "TASK-036/P-UX-2D2":
+            raise ValueError("Final Review approval receipt version or owner is invalid")
+        if source.get("decision") != "APPROVE":
+            raise ValueError("Final Review approval receipt decision is invalid")
+        if source.get("export_job_created") is not False or source.get("render_or_publish_started") is not False:
+            raise ValueError("Final Review approval receipt claims prohibited effects")
+        raw_sources = _mapping(source.get("source_snapshot_sha256s"), "source snapshots")
+        raw_gates = _mapping(source.get("external_gate_receipt_sha256s"), "external gates")
+        receipt = cls(
+            receipt_id=source.get("receipt_id"),
+            project_id=source.get("project_id"),
+            project_manifest_sha256=source.get("project_manifest_sha256"),
+            timeline_sha256=source.get("timeline_sha256"),
+            readiness_projection_sha256=source.get("readiness_projection_sha256"),
+            source_snapshot_sha256s=tuple((key, raw_sources.get(key)) for key in _SOURCE_KEYS),
+            external_gate_receipt_sha256s=tuple((key, raw_gates.get(key)) for key in _GATE_KEYS),
+            approved_by=source.get("approved_by"),
+            approved_at=source.get("approved_at"),
+        )
+        if receipt.to_dict() != dict(source):
+            raise ValueError("Final Review approval receipt checksum or canonical body mismatch")
+        return receipt
 
     def to_dict(self) -> dict[str, Any]:
         body: dict[str, Any] = {

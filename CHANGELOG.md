@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-036 P-UX-2D4として、独立Ownerの外部Gate receiptを型付き・改ざん検知付きproviderから毎回再読込し、exact readinessからHuman最終承認をprepare/confirm/applyしてappend-only保存するShell境界を追加しました。Audio receipt生成、Export Job作成、dispatch、render、公開、Native H3、Release/Deployは別Gateです。
 - TASK-036 P-UX-2D3として、typed Final Review承認をProject単位のappend-only/CAS履歴へ永続化し、同一readinessの二重承認、確認後のstale化、改ざん、上限超過をfail-closedにするno-effect applicationを追加しました。Shell承認操作、Audio receipt生成、Export Job作成、dispatch、render、公開、Native H3、Release/Deployは別Gateです。
 - TASK-046 P-VS-4B Gate 4 R0として、承認済み合成テストWAVだけをcontained root内で検査し、48 kHz・24-bit monoのstyle Cueを決定論的な順序と休止sampleでMaster候補へ結合する限定runtime adapter、body-free receipt、schema mirror、改ざん・symlink・既存出力のfail-closed検証を追加しました。Owner音声、Dataset採用、学習、Model推論、音質・style合格判定、Asset採用、公開、Release/Deployは別Gateです。
 - TASK-036 P-UX-2D2として、P-UX-2D1のexact ready状態・全Product source・privacy/rights/resource/edit/開発担当2所有Audio完了Gateを束縛するtyped Human Final Review approval receiptを追加し、TASK-044 Export preparationへ必須bindしました。Export Job作成、dispatch、render、公開、Audio変更、Native H3、Release/Deployは別Gateです。

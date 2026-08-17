@@ -23,6 +23,11 @@ from .connection_settings_web import ConnectionSettingsWebService
 from .task036_model_selection import Task036ModelSelectionProjection
 from .visual_generation_handoff import Task036VisualGenerationHandoffProjection
 from .final_review_readiness import Task036FinalReviewReadinessProjection
+from .final_review_application import FinalReviewApprovalApplication
+from .final_review_gate import (
+    FinalReviewExternalGateReceipt,
+    validate_external_gate_receipts,
+)
 from .errors import ProductError, ProductErrorCategory
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
@@ -188,6 +193,10 @@ class Task036ShellBridge:
         audio_placement_application: Task026AudioPlacementApplication | None = None,
         quick_generation_application: Task042QuickGenerationApplication | None = None,
         connection_settings: ConnectionSettingsWebService | None = None,
+        final_review_application: FinalReviewApprovalApplication | None = None,
+        final_review_external_gate_provider: Callable[
+            [], tuple[FinalReviewExternalGateReceipt, ...]
+        ] | None = None,
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
     ) -> None:
@@ -220,6 +229,10 @@ class Task036ShellBridge:
         self._audio_placement_application = audio_placement_application
         self._quick_generation_application = quick_generation_application
         self._connection_settings = connection_settings
+        self._final_review_application = final_review_application
+        if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
+            raise ValueError("Final Review external Gate provider is invalid")
+        self._final_review_external_gate_provider = final_review_external_gate_provider
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
         self._nle_controller = nle_controller
@@ -1020,6 +1033,17 @@ class Task036ShellBridge:
                 "render_or_publish_started": False,
                 "human_decision_authorized": False,
             }
+        try:
+            external_gate_receipts = validate_external_gate_receipts(
+                () if self._final_review_external_gate_provider is None
+                else self._final_review_external_gate_provider(),
+            )
+        except (TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXTERNAL_GATE_BINDING_INVALID",
+                "Final Review external Gate provider returned invalid receipts",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
         return {
             "available": True,
             **Task036FinalReviewReadinessProjection.project(
@@ -1028,8 +1052,87 @@ class Task036ShellBridge:
                 visual_handoff_snapshot=sources["visual"],
                 timeline_snapshot=sources["timeline"],
                 export_snapshot=sources["export"],
-                external_gate_receipts=(),
+                external_gate_receipts=tuple(
+                    receipt.to_readiness_dict()
+                    for receipt in external_gate_receipts
+                ),
             ),
+        }
+
+    def final_review_snapshot(self, args: Any = None) -> dict[str, Any]:
+        """Compose readiness and durable approval state without creating either."""
+        self._empty_args(args, "Final Review snapshot")
+        readiness = self.final_review_readiness_snapshot()
+        if self._final_review_application is None:
+            approval: dict[str, Any] = {
+                "available": False,
+                "state": "APPROVAL_APPLICATION_UNBOUND",
+                "approval_current": False,
+                "export_job_created": False,
+                "render_or_publish_started": False,
+            }
+        else:
+            approval = self._final_review_application.snapshot(
+                readiness=readiness if readiness.get("available") is True else None,
+            )
+        return {
+            "available": readiness.get("available") is True and approval.get("available") is True,
+            "readiness": readiness,
+            "approval": approval,
+            "human_confirmation_required": True,
+            "export_job_created": False,
+            "render_or_publish_started": False,
+        }
+
+    def _require_final_review_application(self) -> FinalReviewApprovalApplication:
+        if self._final_review_application is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_APPLICATION_NOT_BOUND",
+                "Final Review approval application is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._final_review_application
+
+    def final_review_prepare(self, args: Any) -> dict[str, Any]:
+        required = {"expected_readiness_projection_sha256", "expected_approval_snapshot_sha256"}
+        if (
+            not isinstance(args, dict) or set(args) != required
+            or not all(isinstance(args[name], str) for name in required)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review preparation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        readiness = self.final_review_readiness_snapshot()
+        return self._require_final_review_application().prepare_approval(
+            readiness=readiness,
+            expected_readiness_projection_sha256=args["expected_readiness_projection_sha256"],
+            expected_snapshot_sha256=args["expected_approval_snapshot_sha256"],
+        )
+
+    def final_review_apply(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id", "approved_by"}
+            or not all(isinstance(args[name], str) for name in ("confirmation_id", "approved_by"))
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review apply request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        readiness = self.final_review_readiness_snapshot()
+        result = self._require_final_review_application().apply_approval(
+            confirmation_id=args["confirmation_id"],
+            readiness=readiness,
+            approved_by=args["approved_by"],
+        )
+        return {
+            **result,
+            "readiness_projection_sha256": readiness["projection_sha256"],
+            "export_job_created": False,
+            "render_or_publish_started": False,
         }
 
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:

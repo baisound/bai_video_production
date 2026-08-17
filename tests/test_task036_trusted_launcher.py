@@ -30,6 +30,7 @@ from ai_video_production.continuity_application import Task039ContinuityApplicat
 from ai_video_production.prompt_evidence_application import Task040PromptEvidenceApplication
 from ai_video_production.generation_queue_application import Task027GenerationQueueApplication
 from ai_video_production.audio_workspace_application import Task041AudioWorkspaceApplication
+from ai_video_production.final_review_application import FinalReviewApprovalApplication
 
 
 class DialogBackend:
@@ -162,6 +163,13 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert launch.bridge._generation_safety_application.project_id == config.project_id
     assert launch.bridge._generation_safety_application.planning_application is launch.bridge._planning_application
     assert launch.bridge._generation_safety_application.audit_application is launch.bridge._audit_application
+    assert isinstance(launch.bridge._final_review_application, FinalReviewApprovalApplication)
+    assert launch.bridge._final_review_application.project_root == config.project_root
+    assert launch.bridge._final_review_external_gate_provider is None
+    final_review = launch.bridge.final_review_snapshot({})
+    assert final_review["approval"]["available"] is True
+    assert final_review["export_job_created"] is False
+    assert final_review["render_or_publish_started"] is False
     assert isinstance(launch.bridge._continuity_application, Task039ContinuityApplication)
     assert launch.bridge._continuity_application.project_root == config.project_root
     assert launch.bridge._continuity_application.project_id == config.project_id

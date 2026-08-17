@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .ai_connections import ConnectionAvailability
 from .comfyui import ComfyEndpointPolicy, ComfyUIClient
@@ -43,6 +43,8 @@ from .task044_nle_shell import Task044NleShellController
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_projection import InteractiveTimelineProjectionService
 from .export_queue_application import ExportQueueApplication
+from .final_review_application import FinalReviewApprovalApplication
+from .final_review_gate import FinalReviewExternalGateReceipt
 from .product_project_store import ProductProjectManifestStore
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
@@ -402,6 +404,9 @@ def build_trusted_launch(
     asr_provider: FasterWhisperProvider | None = None,
     resolve_adapter: ResolveScriptingAssemblyAdapter | None = None,
     comfy_client: ComfyUIClient | None = None,
+    final_review_external_gate_provider: Callable[
+        [], tuple[FinalReviewExternalGateReceipt, ...]
+    ] | None = None,
 ) -> Task036TrustedLaunch:
     for directory in (
         configuration.asset_root,
@@ -625,6 +630,10 @@ def build_trusted_launch(
                 max_output_bytes=configuration.local_generation.max_output_bytes,
             ),
         )
+    final_review_application = FinalReviewApprovalApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+    )
     bridge = Task036ShellBridge(
         coordinator.shell,
         native_dialog=dialog,
@@ -643,6 +652,8 @@ def build_trusted_launch(
         audio_placement_application=audio_placement_application,
         quick_generation_application=quick_generation_application,
         connection_settings=connection_settings,
+        final_review_application=final_review_application,
+        final_review_external_gate_provider=final_review_external_gate_provider,
         nle_controller_factory=nle_controller,
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

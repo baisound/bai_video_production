@@ -335,19 +335,20 @@ def test_assets_does_not_infer_missing_registry_domains() -> None:
     assert "renderModel($('assetContent')" not in SHELL_HTML
 
 
-def test_final_review_renders_exact_readiness_without_accepting() -> None:
+def test_final_review_renders_exact_readiness_and_typed_approval_boundary() -> None:
     for marker in (
         'id="finalReviewState"',
         'id="finalApprovalButton" disabled',
         'data-disabled-reason="正本Gateのreadiness確認とtyped Final Review Serviceが必要です"',
         "function renderFinalReview(model)",
-        "final_review_readiness_snapshot",
-        "model.source_snapshots",
-        "model.product_blockers",
-        "model.external_gates",
-        "model.external_blockers",
+        "final_review_snapshot",
+        "model?.readiness",
+        "readiness.source_snapshots",
+        "readiness.product_blockers",
+        "readiness.external_gates",
+        "readiness.external_blockers",
         "READY_FOR_TYPED_FINAL_REVIEW",
-        "readinessは最終承認・Export Job・render・公開を作りません。",
+        "最終承認はexact readinessをappend-only保存します。Export Job・render・公開は作成せず",
     ):
         assert marker in SHELL_HTML
 
@@ -355,8 +356,12 @@ def test_final_review_renders_exact_readiness_without_accepting() -> None:
 def test_final_review_routes_to_owning_human_surfaces_only() -> None:
     assert '<button class="btn" data-nav="assetReview">素材確認へ戻る</button>' in SHELL_HTML
     assert '<button class="btn" data-nav="locks">WORLD LOCKへ戻る</button>' in SHELL_HTML
-    assert "final_review_apply" not in SHELL_HTML
-    assert "final_approve" not in SHELL_HTML
+    assert "final_review_prepare" in SHELL_HTML
+    assert "final_review_apply" in SHELL_HTML
+    assert "expected_readiness_projection_sha256" in SHELL_HTML
+    assert "expected_approval_snapshot_sha256" in SHELL_HTML
+    assert "prepareFinalApproval" in SHELL_HTML
+    assert "Export Job・render・公開は開始しません" in SHELL_HTML
     assert "Audio完了receiptは開発担当2から受け取るだけ" in SHELL_HTML
 
 

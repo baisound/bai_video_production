@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-046 P-VS-4B Beginner Client Installer R1として、12工程の表示専用Voice Model Builderを独立したWindows EXEと日英per-user installerへpackageし、hash固定manifest、既存file/reparse/disk/read-backのfail-closed検証、repair・uninstall時の利用者data保護、READMEから辿れる初心者guideと`E:\BAI_AI` build手順を追加しました。Model取得・学習・audio/録音・生成・公開・Release/Deployは別Gateです。
 - TASK-046 P-VS-4B Gate 5 R0として、既存のOBS→Dataset→Training→Model承認→style Cue→Master WAV workflowを初心者向け12工程へ投影する日本語/英語client基盤と合成表示demoを追加しました。UNKNOWNは未確認/blockedのまま保持し、操作権限・Dataset/Job/学習/Model/audio/公開effectは開始しません。Windows installerは別の次Gateです。
 - TASK-046 P-VS-4B Gate 4 R2として、engine・model・runtime・recipe・training modeをexactに束縛するsynthetic capability probe plan、phase別の外部実測receipt、R1 admission向けEvidence projectionを追加しました。load成功だけでは学習可能とせず、代表step・VRAM/RAM・optimizer/checkpoint・OOM recovery・thermal/duration・process reconciliationのUNKNOWNをfail-closedに保持します。download/install、model load、GPU、学習・artifact、Owner音声、Release/Deployは別Gateです。
 - TASK-046 P-VS-4B Gate 4 R1として、合成WAV検査receiptから重複・overlapを排除したbody-free Dataset準備manifestを作り、engineのcanonical bindingとmode別recipe・代表step・resource・checkpoint・licenseのTraining admissionを直交分離し、Owner Human Gate前のdispatch=false提案へ接続しました。Owner音声、Dataset採用、Job/GPU、学習・Model・artifact effect、公開、Release/Deployは別Gateです。

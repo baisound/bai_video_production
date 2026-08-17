@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-036 P-UX-2B2として、既存TASK-027 BlueprintのScene順序・IDと参照・Audio・FrameIntentを保持し、視覚・frame項目だけをHuman確認付きでappend-only改訂できるようにしました。Scene追加/削除、Timeline確定、Provider・生成・Resolve、Release/Deployは別Gateです。
+- TASK-036 P-UX-2B1として、既存TASK-027 Proposalのsection見出し・本文だけをHuman確認付きでappend-only改訂し、Intent・Blueprint・Provider Policy・cost・rightsを保持したまま新しいGOを必須にするPlanning操作を追加しました。AI Proposal生成、Provider・課金・Budget予約、Production/Timeline/Resolve変更、Release/Deployは開始しません。
 - TASK-036 P-UX-2A1として、既存TASK-028 Connection SettingsとTASK-040/042のScene・Quick正本から、Planning・Image・Video・QuickのProvider/Model選択を秘密非表示で決定論的に投影し、Project既定Routeを既存CASへ保存できるようにしました。Audioは開発担当2へ委譲し、権利/license・resourceはUNKNOWN、Provider実行・課金・生成は未許可のままです。
 - TASK-036 P-UX-2A0として、V6.1.1 mock/runtimeのfield・select・card・list・tab・state・resultを含む決定論的な要素/選択契約inventory、既存ownerへのpage/service registry、cross-screen identityとfail-closed lifecycleを追加しました。Provider・Credential・課金・model取得/実行・media・Human決定・Timeline・Export・Release/Deployは開始しません。
 - TASK-041 Audio Workspace Media Review / Handoff Foundation R0として、body-free音声source・試聴/波形capability・外部receipt・独立した音声/映像Human判断・非破壊派生Asset proposal・TASK-035 REAPER往復状態の決定論的契約を追加しました。音声読取・再生・波形生成・media処理・Asset登録・配置変更・DAW操作・Release/Deployは別Gateです。

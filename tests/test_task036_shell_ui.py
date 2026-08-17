@@ -360,12 +360,16 @@ def test_html_promotes_planning_scene_contract_with_separate_go_and_install():
     assert 'data-w="PLANNING"' in HTML
     assert 'id="planningWorkspace"' in HTML
     assert "planning_snapshot" in HTML
+    assert "planning_prepare_revision" in HTML
+    assert "planning_apply_revision" in HTML
     assert "planning_prepare_go" in HTML
     assert "planning_approve_go" in HTML
     assert "planning_prepare_install_plan" in HTML
     assert "planning_apply_install_plan" in HTML
     assert "Provider/課金/Resolveは開始しません" in HTML
     assert "生成・課金・Resolve操作は開始しません" in HTML
+    assert "Proposal本文を改訂" in HTML
+    assert "新しいHuman GOを要求します" in HTML
     assert "innerHTML" not in HTML
 
 
@@ -518,6 +522,10 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
     class PlanningApplicationStub:
         def __init__(self):
             self.go = None
+            self.revision = None
+            self.revised = None
+            self.scene_revision = None
+            self.scene_revised = None
             self.approved = None
             self.install = None
             self.installed = None
@@ -528,6 +536,22 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
         def prepare_go(self, **values):
             self.go = values
             return {"confirmation_id": "go", **values}
+
+        def prepare_revision(self, **values):
+            self.revision = values
+            return {"confirmation_id": "revision", **values}
+
+        def apply_revision(self, **values):
+            self.revised = values
+            return {"revised": True}
+
+        def prepare_scene_revision(self, **values):
+            self.scene_revision = values
+            return {"confirmation_id": "scene-revision", **values}
+
+        def apply_scene_revision(self, **values):
+            self.scene_revised = values
+            return {"scene_revised": True}
 
         def approve_go(self, **values):
             self.approved = values
@@ -544,6 +568,29 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
     planning = PlanningApplicationStub()
     bridge = Task036ShellBridge(ShellApplicationService(product_version="0.20.1"), planning_application=planning)
     assert bridge.planning_snapshot({"proposal_id": "proposal-1"})["selected_proposal_id"] == "proposal-1"
+    revision = bridge.planning_prepare_revision({
+        "proposal_id": "proposal-1",
+        "sections": [{"section_id": "concept", "kind": "CONCEPT", "title": "Concept", "body": "Revised"}],
+        "expected_snapshot_sha256": "sha256:" + "a" * 64,
+    })
+    assert planning.revision["sections"][0]["body"] == "Revised"
+    assert bridge.planning_apply_revision({"confirmation_id": revision["confirmation_id"]}) == {"revised": True}
+    assert planning.revised == {"confirmation_id": "revision"}
+    scene_revision = bridge.planning_prepare_scene_revision({
+        "proposal_id": "proposal-1",
+        "scenes": [{
+            "scene_id": "SC01", "start_frame": 0, "end_frame": 30,
+            "narrative_role": "Opening", "source_strategy": "REAL_CAPTURE",
+            "generation_risk": "A_LOW_TEXT", "camera_motion": "STATIC",
+            "post_composite_text": False, "final_hold_frames": 0,
+        }],
+        "expected_snapshot_sha256": "sha256:" + "a" * 64,
+    })
+    assert planning.scene_revision["scenes"][0]["scene_id"] == "SC01"
+    assert bridge.planning_apply_scene_revision(
+        {"confirmation_id": scene_revision["confirmation_id"]}
+    ) == {"scene_revised": True}
+    assert planning.scene_revised == {"confirmation_id": "scene-revision"}
     prepared = bridge.planning_prepare_go({
         "proposal_id": "proposal-1", "proposal_revision": 1, "reference_bindings": [],
         "cost_ceiling": "10", "rights_warnings_acknowledged": False,
@@ -561,6 +608,12 @@ def test_planning_bridge_routes_exact_go_and_separate_install_contracts():
     assert planning.installed == {"confirmation_id": "install"}
     with pytest.raises(ProductError) as exc:
         bridge.planning_prepare_go({"proposal_id": "x", "proposal_revision": True, "reference_bindings": [], "cost_ceiling": "1", "rights_warnings_acknowledged": False, "expected_snapshot_sha256": "x"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    with pytest.raises(ProductError) as exc:
+        bridge.planning_prepare_revision({"proposal_id": "x", "sections": {}, "expected_snapshot_sha256": "x"})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    with pytest.raises(ProductError) as exc:
+        bridge.planning_prepare_scene_revision({"proposal_id": "x", "scenes": {}, "expected_snapshot_sha256": "x"})
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 

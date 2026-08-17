@@ -9,6 +9,7 @@ from pathlib import PureWindowsPath
 from typing import Any, Mapping
 
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
+from .final_review import FinalReviewApprovalReceipt
 
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
 _SAFE_TOKEN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -98,6 +99,7 @@ class ExportPreparation:
     timeline_sha256: str
     edit_plan_sha256: str
     assembly_plan_sha256: str
+    final_approval: FinalReviewApprovalReceipt
     preset: ExportPreset
     output_target_identity: str
     authority_class: ExportAuthorityClass
@@ -116,6 +118,14 @@ class ExportPreparation:
         validate_sha256(self.timeline_sha256, field_name="timeline_sha256")
         validate_sha256(self.edit_plan_sha256, field_name="edit_plan_sha256")
         validate_sha256(self.assembly_plan_sha256, field_name="assembly_plan_sha256")
+        if not isinstance(self.final_approval, FinalReviewApprovalReceipt):
+            raise ValueError("final_approval must be a typed receipt")
+        if self.final_approval.project_id != self.project_id:
+            raise ValueError("Export preparation crosses Final Review Project")
+        if self.final_approval.project_manifest_sha256 != self.project_manifest_sha256:
+            raise ValueError("Export preparation crosses Final Review Project Manifest")
+        if self.final_approval.timeline_sha256 != self.timeline_sha256:
+            raise ValueError("Export preparation crosses Final Review Timeline")
         _positive_int(self.timeline_revision, "timeline_revision")
         if not isinstance(self.product_version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", self.product_version):
             raise ValueError("product_version is invalid")
@@ -146,6 +156,7 @@ class ExportPreparation:
         return {"project_manifest": self.project_manifest_sha256,
                 "timeline": self.timeline_sha256, "edit_plan": self.edit_plan_sha256,
                 "assembly_plan": self.assembly_plan_sha256,
+                "final_approval": self.final_approval.final_approval_receipt_sha256,
                 "preset": self.preset.preset_sha256}
 
     def to_dict(self) -> dict[str, Any]:
@@ -158,6 +169,7 @@ class ExportPreparation:
                 "timeline_sha256": self.timeline_sha256,
                 "edit_plan_sha256": self.edit_plan_sha256,
                 "assembly_plan_sha256": self.assembly_plan_sha256,
+                "final_approval_receipt_sha256": self.final_approval.final_approval_receipt_sha256,
                 "preset": self.preset.to_dict(),
                 "output_target_identity": self.output_target_identity,
                 "authority_class": self.authority_class.value,

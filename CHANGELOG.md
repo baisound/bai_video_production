@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-036 P-UX-2D2として、P-UX-2D1のexact ready状態・全Product source・privacy/rights/resource/edit/開発担当2所有Audio完了Gateを束縛するtyped Human Final Review approval receiptを追加し、TASK-044 Export preparationへ必須bindしました。Export Job作成、dispatch、render、公開、Audio変更、Native H3、Release/Deployは別Gateです。
 - TASK-036 P-UX-2D1として、Production・Audit・Visual Handoff・編集Timeline・Export Queueと、privacy・rights/license・resource・edit persistence・開発担当2所有のAudio完了receiptをexactに突合するread-only Final Review readinessを追加しました。最終承認、Export Job作成、render、公開、Audio変更、Native H3、Release/Deployは別Gateです。
 - TASK-046 P-VS-4Aとして、body-freeなTraining Run、held-out EvaluationInputSnapshot、mode別Engine・Resource admission、Durable Job・checkpoint・GPU process reconciliation、full・adapter・merged ModelArtifact、ModelCandidate・Evaluation・Owner approvalのfail-closed契約を追加しました。Job作成、資源予約、学習・推論、artifact・merge、VoiceProfile・Production・Publication effectは別Gateです。
 - TASK-036 P-UX-2C1として、既存のShot Feasibility・Prompt・Generation Queue・local execution・output adoption・Human Asset状態をScene/Visual Slot単位でfail-closedに突合するread-only handoffをImage/Video画面へ追加しました。Audioは開発担当2へ委譲し、Provider実行、Human判断、Asset/Timeline変更、Native H3、Release/Deployは別Gateです。

@@ -8,10 +8,12 @@ separate one-shot operations. Neither operation starts a Provider or NLE.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import secrets
 from typing import Any, Callable, Iterable
 
+from .atomic import AtomicJsonWriter
 from .approved_plan_orchestration import ApprovedPlanProductionControlInstaller, ApprovedPlanVerifier
 from .approved_plan_trace import ApprovedPlanTraceValidator
 from .blueprint_v2_world_lock import BlueprintV2WorldLockService
@@ -36,11 +38,14 @@ from .production_proposal import (
     ReferenceAssetBinding,
 )
 from .production_proposal_store import ProductionProposalSnapshotStore
+from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
 
 
 TokenFactory = Callable[[], str]
 _PROPOSAL_NAME = "production-proposal.json"
 _APPLICATION_LOCK_NAME = "task027-planning-application.json"
+_SCENE_FINALIZATION_NAME = "scene-contract-finalizations.json"
+_MAX_SCENE_FINALIZATIONS = 256
 
 
 @dataclass(slots=True)
@@ -86,6 +91,15 @@ class _SceneRevisionConfirmation:
     consumed: bool = False
 
 
+@dataclass(slots=True)
+class _SceneFinalizationConfirmation:
+    confirmation_id: str
+    proposal_snapshot_sha256: str
+    finalization_snapshot_sha256: str
+    receipt: dict[str, Any]
+    consumed: bool = False
+
+
 class Task027PlanningApplication:
     """Durable Planning/GO facade bound to one trusted Product project."""
 
@@ -122,6 +136,7 @@ class Task027PlanningApplication:
         self.project_id = project_id
         self.proposal_path = root / _PROPOSAL_NAME
         self._application_lock_target = root / _APPLICATION_LOCK_NAME
+        self._scene_finalization_path = root / _SCENE_FINALIZATION_NAME
         self.production_control = production_control or Task037ProductionControlApplication(
             project_root=root,
             project_id=project_id,
@@ -131,6 +146,7 @@ class Task027PlanningApplication:
         self._install_confirmations: dict[str, _InstallConfirmation] = {}
         self._revision_confirmations: dict[str, _RevisionConfirmation] = {}
         self._scene_revision_confirmations: dict[str, _SceneRevisionConfirmation] = {}
+        self._scene_finalization_confirmations: dict[str, _SceneFinalizationConfirmation] = {}
 
     @staticmethod
     def _snapshot_hash(registry: ProductionProposalRegistry) -> str:
@@ -144,6 +160,127 @@ class Task027PlanningApplication:
             return registry, self._snapshot_hash(registry), True
         registry = ProductionProposalRegistry()
         return registry, self._snapshot_hash(registry), False
+
+    def _empty_scene_finalizations(self) -> dict[str, Any]:
+        body = {
+            "format_id": "bai.task027.scene-contract-finalizations",
+            "format_version": "1.0.0",
+            "project_id": self.project_id,
+            "receipts": [],
+        }
+        return {**body, "snapshot_sha256": sha256_bytes(canonical_json_bytes(body))}
+
+    def _validate_scene_finalizations(self, value: Any) -> None:
+        fields = {"format_id", "format_version", "project_id", "receipts", "snapshot_sha256"}
+        if not isinstance(value, dict) or set(value) != fields:
+            raise ValueError("Scene finalization snapshot fields are invalid")
+        if (
+            value["format_id"] != "bai.task027.scene-contract-finalizations"
+            or value["format_version"] != "1.0.0"
+            or value["project_id"] != self.project_id
+            or not isinstance(value["receipts"], list)
+            or len(value["receipts"]) > _MAX_SCENE_FINALIZATIONS
+        ):
+            raise ValueError("Scene finalization snapshot identity is invalid")
+        receipt_fields = {
+            "receipt_version", "task_owner", "project_id", "finalization_id", "plan_id",
+            "proposal_id", "proposal_revision", "proposal_sha256", "blueprint_id",
+            "blueprint_sha256", "scene_ledger_sha256", "finalized_by", "receipt_sha256",
+        }
+        seen: set[str] = set()
+        proposal_hashes: set[str] = set()
+        for receipt in value["receipts"]:
+            if not isinstance(receipt, dict) or set(receipt) != receipt_fields:
+                raise ValueError("Scene finalization receipt fields are invalid")
+            if (
+                receipt["receipt_version"] != "1.0.0"
+                or receipt["task_owner"] != "TASK-027"
+                or receipt["project_id"] != self.project_id
+                or not isinstance(receipt["proposal_revision"], int)
+                or isinstance(receipt["proposal_revision"], bool)
+                or receipt["proposal_revision"] < 1
+            ):
+                raise ValueError("Scene finalization receipt identity is invalid")
+            for key in (
+                "finalization_id", "plan_id", "proposal_id", "blueprint_id", "finalized_by",
+            ):
+                if (
+                    not isinstance(receipt[key], str)
+                    or not receipt[key].strip()
+                    or len(receipt[key]) > 256
+                    or "\x00" in receipt[key]
+                ):
+                    raise ValueError("Scene finalization receipt text identity is invalid")
+            for key in ("proposal_sha256", "blueprint_sha256", "scene_ledger_sha256", "receipt_sha256"):
+                validate_sha256(receipt[key], field_name=key)
+            body = {key: item for key, item in receipt.items() if key != "receipt_sha256"}
+            if sha256_bytes(canonical_json_bytes(body)) != receipt["receipt_sha256"]:
+                raise ValueError("Scene finalization receipt checksum is invalid")
+            if receipt["finalization_id"] in seen or receipt["proposal_sha256"] in proposal_hashes:
+                raise ValueError("Scene finalization receipts must be unique per Proposal revision")
+            seen.add(receipt["finalization_id"])
+            proposal_hashes.add(receipt["proposal_sha256"])
+        body = {key: item for key, item in value.items() if key != "snapshot_sha256"}
+        validate_sha256(value["snapshot_sha256"], field_name="snapshot_sha256")
+        if sha256_bytes(canonical_json_bytes(body)) != value["snapshot_sha256"]:
+            raise ValueError("Scene finalization snapshot checksum is invalid")
+
+    def _load_scene_finalizations(self) -> dict[str, Any]:
+        path = self._scene_finalization_path
+        if path.is_symlink():
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_FILE_INVALID",
+                "Scene finalization snapshot cannot be a symlink",
+                ProductErrorCategory.SECURITY,
+            )
+        if not path.exists():
+            return self._empty_scene_finalizations()
+        if not path.is_file() or not 0 < path.stat().st_size <= 4 * 1024 * 1024:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_FILE_INVALID",
+                "Scene finalization snapshot must be a bounded regular non-symlink file",
+                ProductErrorCategory.SECURITY,
+            )
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+            self._validate_scene_finalizations(value)
+        except (OSError, UnicodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_SNAPSHOT_INVALID",
+                "Scene finalization snapshot is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+        return value
+
+    def _scene_finalization_projection(
+        self,
+        registry: ProductionProposalRegistry,
+        workspace: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        finalizations = self._load_scene_finalizations()
+        if workspace is None:
+            return {
+                "status": "NO_PROPOSAL", "current_receipt": None,
+                "historical_receipt_count": len(finalizations["receipts"]),
+                "stale_historical_receipts": len(finalizations["receipts"]),
+                "snapshot_sha256": finalizations["snapshot_sha256"],
+            }
+        latest = registry.latest_proposal(str(workspace["proposal_id"]))
+        proposal_sha = latest.to_dict()["proposal_sha256"]
+        current = [item for item in finalizations["receipts"] if item["proposal_sha256"] == proposal_sha]
+        if current:
+            status = "FINALIZED"
+        elif workspace["go_status"] != "APPROVED":
+            status = "GO_REQUIRED"
+        else:
+            status = "READY_TO_FINALIZE"
+        return {
+            "status": status,
+            "current_receipt": current[0] if current else None,
+            "historical_receipt_count": len(finalizations["receipts"]),
+            "stale_historical_receipts": len(finalizations["receipts"]) - len(current),
+            "snapshot_sha256": finalizations["snapshot_sha256"],
+        }
 
     @staticmethod
     def _require_expected(actual: str, expected: str, kind: str) -> None:
@@ -273,6 +410,7 @@ class Task027PlanningApplication:
             )
         workspace = None if selected is None else Task027PlanningWorkspaceProjection.build(registry, proposal_id=selected)
         installation = None if workspace is None else self._installation(registry, workspace)
+        scene_contract = self._scene_finalization_projection(registry, workspace)
         return {
             "application_version": "1.0.0",
             "task_owner": "TASK-027",
@@ -283,9 +421,148 @@ class Task027PlanningApplication:
             "selected_proposal_id": selected,
             "workspace": workspace,
             "installation": installation,
+            "scene_contract": scene_contract,
             "provider_execution_started": False,
             "paid_execution_authorized": False,
             "budget_reservation_created": False,
+            "resolve_mutation_started": False,
+            "publish_started": False,
+        }
+
+    @staticmethod
+    def _current_plan(registry: ProductionProposalRegistry, proposal: ProductionProposalRevision):
+        proposal_sha = proposal.to_dict()["proposal_sha256"]
+        blueprint_sha = proposal.blueprint.to_dict()["blueprint_sha256"]
+        matches = [
+            plan for plan in registry.approved_plans.values()
+            if plan.proposal_id == proposal.proposal_id
+            and plan.proposal_revision == proposal.revision
+            and plan.proposal_sha256 == proposal_sha
+            and plan.blueprint_sha256 == blueprint_sha
+        ]
+        if len(matches) != 1:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_CURRENT_PLAN_REQUIRED",
+                "Scene finalization requires exactly one Approved Plan for the current Proposal",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            )
+        return matches[0]
+
+    def prepare_scene_finalization(
+        self,
+        *,
+        proposal_id: str,
+        finalized_by: str,
+        expected_proposal_snapshot_sha256: str,
+        expected_finalization_snapshot_sha256: str,
+    ) -> dict[str, Any]:
+        if not isinstance(finalized_by, str) or not finalized_by.strip() or len(finalized_by) > 256 or "\x00" in finalized_by:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_ACTOR_INVALID",
+                "Scene finalization actor must be non-empty bounded text",
+                ProductErrorCategory.VALIDATION,
+            )
+        registry, proposal_snapshot, _ = self._load()
+        self._require_expected(proposal_snapshot, expected_proposal_snapshot_sha256, "Proposal")
+        finalizations = self._load_scene_finalizations()
+        self._require_expected(
+            str(finalizations["snapshot_sha256"]), expected_finalization_snapshot_sha256, "Scene finalization",
+        )
+        latest = registry.latest_proposal(proposal_id)
+        plan = self._current_plan(registry, latest)
+        proposal_row = latest.to_dict()
+        if any(item["proposal_sha256"] == proposal_row["proposal_sha256"] for item in finalizations["receipts"]):
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_SCENE_ALREADY_FINALIZED",
+                "Current Scene ledger is already finalized",
+                ProductErrorCategory.STATE,
+            )
+        if len(finalizations["receipts"]) >= _MAX_SCENE_FINALIZATIONS:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_CAP",
+                "Scene finalization history reached the 256 receipt cap",
+                ProductErrorCategory.STATE,
+            )
+        blueprint = latest.blueprint.to_dict()
+        identity_body = {
+            "project_id": self.project_id,
+            "plan_id": plan.plan_id,
+            "proposal_sha256": proposal_row["proposal_sha256"],
+            "blueprint_sha256": blueprint["blueprint_sha256"],
+            "finalized_by": finalized_by.strip(),
+        }
+        body = {
+            "receipt_version": "1.0.0",
+            "task_owner": "TASK-027",
+            "project_id": self.project_id,
+            "finalization_id": "SCENE-FINAL-" + sha256_bytes(canonical_json_bytes(identity_body)).split(":", 1)[1][:16].upper(),
+            "plan_id": plan.plan_id,
+            "proposal_id": latest.proposal_id,
+            "proposal_revision": latest.revision,
+            "proposal_sha256": proposal_row["proposal_sha256"],
+            "blueprint_id": latest.blueprint.blueprint_id,
+            "blueprint_sha256": blueprint["blueprint_sha256"],
+            "scene_ledger_sha256": sha256_bytes(canonical_json_bytes(blueprint["scenes"])),
+            "finalized_by": finalized_by.strip(),
+        }
+        receipt = {**body, "receipt_sha256": sha256_bytes(canonical_json_bytes(body))}
+        token = self._new_token(self._scene_finalization_confirmations)
+        self._scene_finalization_confirmations[token] = _SceneFinalizationConfirmation(
+            token, proposal_snapshot, str(finalizations["snapshot_sha256"]), dict(receipt),
+        )
+        return {
+            "confirmation_version": "1.0.0",
+            "confirmation_id": token,
+            "receipt": dict(receipt),
+            "human_final_authority_required": True,
+            "provider_execution_started": False,
+            "resolve_mutation_started": False,
+            "publish_started": False,
+        }
+
+    def apply_scene_finalization(self, *, confirmation_id: str) -> dict[str, Any]:
+        pending = self._scene_finalization_confirmations.get(confirmation_id)
+        if pending is None or pending.consumed:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_CONFIRMATION_INVALID",
+                "Scene finalization confirmation is missing or already used",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        pending.consumed = True
+        with _exclusive_snapshot_lock(self._application_lock_target):
+            registry, proposal_snapshot, _ = self._load()
+            self._require_expected(proposal_snapshot, pending.proposal_snapshot_sha256, "Proposal")
+            finalizations = self._load_scene_finalizations()
+            self._require_expected(
+                str(finalizations["snapshot_sha256"]), pending.finalization_snapshot_sha256, "Scene finalization",
+            )
+            latest = registry.latest_proposal(str(pending.receipt["proposal_id"]))
+            plan = self._current_plan(registry, latest)
+            blueprint = latest.blueprint.to_dict()
+            if (
+                latest.to_dict()["proposal_sha256"] != pending.receipt["proposal_sha256"]
+                or plan.plan_id != pending.receipt["plan_id"]
+                or blueprint["blueprint_sha256"] != pending.receipt["blueprint_sha256"]
+                or sha256_bytes(canonical_json_bytes(blueprint["scenes"]))
+                != pending.receipt["scene_ledger_sha256"]
+            ):
+                raise ProductError(
+                    "ERR_PLANNING_APPLICATION_SCENE_FINALIZATION_STALE",
+                    "Scene finalization inputs changed after preparation",
+                    ProductErrorCategory.STATE,
+                )
+            body = {
+                "format_id": finalizations["format_id"],
+                "format_version": finalizations["format_version"],
+                "project_id": finalizations["project_id"],
+                "receipts": [*finalizations["receipts"], pending.receipt],
+            }
+            document = {**body, "snapshot_sha256": sha256_bytes(canonical_json_bytes(body))}
+            AtomicJsonWriter.write(self._scene_finalization_path, document, validator=self._validate_scene_finalizations)
+        return {
+            "receipt": dict(pending.receipt),
+            "application": self.snapshot(proposal_id=str(pending.receipt["proposal_id"])),
+            "provider_execution_started": False,
             "resolve_mutation_started": False,
             "publish_started": False,
         }

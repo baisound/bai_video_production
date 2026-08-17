@@ -246,14 +246,30 @@ def test_scenes_browser_projects_exact_blueprint_and_selected_scene_revision() -
         assert marker in SHELL_HTML
 
 
-def test_scene_add_remove_and_timeline_finalization_remain_truthfully_disabled() -> None:
+def test_scene_add_remove_remain_disabled_and_finalization_is_exactly_bound() -> None:
     assert 'data-disabled-reason="Blueprint Scene addのtyped Application Serviceが未接続です"' in SHELL_HTML
     assert 'data-disabled-reason="Blueprint Scene removeのtyped Application Serviceが未接続です"' in SHELL_HTML
-    assert (
-        'data-disabled-reason="Timeline Contract finalizationのtyped Application Serviceが未接続です"'
-        in SHELL_HTML
-    )
-    assert "既存Scene更新はHuman確認付きで保存します。Add・Remove・Timeline確定は未接続です。" in SHELL_HTML
+    for marker in (
+        'id="sceneFinalizeButton"',
+        "planning_prepare_scene_finalization",
+        "planning_apply_scene_finalization",
+        "contract.status!=='READY_TO_FINALIZE'",
+        "expected_proposal_snapshot_sha256:model.snapshot_sha256",
+        "expected_finalization_snapshot_sha256:contract.snapshot_sha256",
+        "生成・Timeline・Resolveは開始しません。",
+        "既存Scene更新とGO済み台帳のHuman確定を保存できます。Add・Removeは未接続です。",
+    ):
+        assert marker in SHELL_HTML
+
+
+def test_scene_finalization_has_no_provider_media_timeline_or_publish_surface() -> None:
+    source = SHELL_HTML.split("async function finalizeScenes()", 1)[1].split(
+        "async function refreshShell", 1,
+    )[0]
+    for forbidden in (
+        "fetch(", "subprocess", "provider_", "timeline_apply", "resolve_apply", "publish_", "audio_",
+    ):
+        assert forbidden not in source.lower()
 
 
 def test_scene_revision_does_not_accept_or_mutate_audio_reference_or_execution_surfaces() -> None:

@@ -15,6 +15,7 @@ from ai_video_production.export_queue import (
     ExportPreparation, ExportPreset,
 )
 from ai_video_production.export_queue_application import ExportQueueApplication
+from ai_video_production.final_review import FinalReviewApprovalReceipt
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.serialization import sha256_bytes
@@ -39,10 +40,24 @@ def setup_project(root: Path) -> ProductProjectManifest:
 def preparation(manifest: ProductProjectManifest, *, target: str = "export:master") -> ExportPreparation:
     output = ExportOutputContract(1920, 1080, 30, 1, 48000, 2, "mp4", "h264", "pcm")
     preset = ExportPreset("preset-master", "1.0.0", output)
+    final_approval = FinalReviewApprovalReceipt(
+        receipt_id="final-review-1", project_id="project-1",
+        project_manifest_sha256=manifest.project_manifest_sha256,
+        timeline_sha256=checksum("timeline"), readiness_projection_sha256=checksum("readiness"),
+        source_snapshot_sha256s=(
+            ("audit", checksum("audit")), ("production", checksum("production")),
+            ("project_manifest", manifest.project_manifest_sha256),
+            ("timeline", checksum("timeline")), ("visual_handoff", checksum("visual_handoff")),
+        ),
+        external_gate_receipt_sha256s=tuple((key, checksum(key)) for key in (
+            "AUDIO_COMPLETION", "EDIT_PERSISTENCE", "PRIVACY", "RESOURCE", "RIGHTS_LICENSE",
+        )),
+        approved_by="owner-1", approved_at="2026-08-17T02:00:00.000Z",
+    )
     return ExportPreparation(
         "project-1", manifest.project_manifest_sha256, manifest.product_version,
         "timeline-main", 3, checksum("timeline"), checksum("edit"), checksum("assembly"),
-        preset, target, ExportAuthorityClass.RESOLVE_RENDER,
+        final_approval, preset, target, ExportAuthorityClass.RESOLVE_RENDER,
         "resolve-project-main", "resolve-timeline-main", 0, "USD", "local-free",
     )
 
@@ -58,11 +73,41 @@ def test_contract_is_hash_bound_and_rejects_host_output_target(tmp_path: Path) -
     document = prep.to_dict()
     assert document["host_output_path_persisted"] is False
     assert document["external_mutation_authorized"] is False
-    assert set(prep.input_hashes) == {"project_manifest", "timeline", "edit_plan", "assembly_plan", "preset"}
+    assert set(prep.input_hashes) == {
+        "project_manifest", "timeline", "edit_plan", "assembly_plan", "final_approval", "preset",
+    }
+    assert prep.to_dict()["final_approval_receipt_sha256"] == prep.final_approval.final_approval_receipt_sha256
     with pytest.raises(ValueError):
         preparation(manifest, target="C:/Users/user/final.mp4")
     with pytest.raises(ValueError):
         ExportOutputContract(1920, 1080, True, 1, 48000, 2, "mp4", "h264", "pcm")
+
+
+def test_export_preparation_rejects_cross_scope_final_approval(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    current = preparation(manifest)
+    other = FinalReviewApprovalReceipt(
+        receipt_id="final-review-other", project_id="other-project",
+        project_manifest_sha256=manifest.project_manifest_sha256,
+        timeline_sha256=current.timeline_sha256,
+        readiness_projection_sha256=checksum("other-readiness"),
+        source_snapshot_sha256s=(
+            ("audit", checksum("audit")), ("production", checksum("production")),
+            ("project_manifest", manifest.project_manifest_sha256),
+            ("timeline", current.timeline_sha256), ("visual_handoff", checksum("visual")),
+        ),
+        external_gate_receipt_sha256s=current.final_approval.external_gate_receipt_sha256s,
+        approved_by="owner-1", approved_at="2026-08-17T02:00:01.000Z",
+    )
+    with pytest.raises(ValueError, match="crosses Final Review Project"):
+        ExportPreparation(
+            current.project_id, current.project_manifest_sha256, current.product_version,
+            current.timeline_plan_id, current.timeline_revision, current.timeline_sha256,
+            current.edit_plan_sha256, current.assembly_plan_sha256, other,
+            current.preset, current.output_target_identity, current.authority_class,
+            current.resolve_project_identity, current.resolve_timeline_identity,
+            current.estimated_cost, current.currency, current.estimate_source,
+        )
 
 
 def test_enqueue_is_idempotent_and_durable_record_has_no_host_path(tmp_path: Path) -> None:

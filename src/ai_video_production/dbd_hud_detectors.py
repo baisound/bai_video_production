@@ -16,6 +16,7 @@ import subprocess
 import unicodedata
 from typing import Iterable, Protocol, Sequence
 
+from .dbd_hud_visibility import HudVisibility, visibility_training_label
 from .dbd_vision_slices import GrayImage, ReferenceSliceIndex, SliceMatch, TemporalConsensus
 from .errors import ProductError, ProductErrorCategory
 
@@ -113,6 +114,7 @@ class PerkSlotObservation:
     perk_id: str | None
     confidence_milli: int
     candidates: tuple[RecognitionCandidate, ...]
+    visibility: HudVisibility = HudVisibility.UNKNOWN
 
 
 class PerkIconDetector:
@@ -126,8 +128,13 @@ class PerkIconDetector:
         if not 0 <= slot <= 3:
             raise ValueError("perk slot must be 0..3")
         result = self.classifier.classify(image, top_k=3)
+        visibility = visibility_training_label("PERK", result.selected_label)
+        if visibility is not None and not result.unknown:
+            return PerkSlotObservation(slot, None, result.confidence_milli, result.candidates, visibility)
+
         perk_id = None if result.unknown or not result.selected_label.startswith("perk_") else result.selected_label
-        return PerkSlotObservation(slot, perk_id, result.confidence_milli, result.candidates)
+        visibility = HudVisibility.VISIBLE if perk_id is not None else HudVisibility.UNKNOWN
+        return PerkSlotObservation(slot, perk_id, result.confidence_milli, result.candidates, visibility)
 
     def temporal_vote(self, observations: Sequence[PerkSlotObservation]) -> PerkSlotObservation:
         if not observations:
@@ -135,11 +142,28 @@ class PerkIconDetector:
         slots = {item.slot for item in observations}
         if len(slots) != 1:
             raise ValueError("temporal observations must belong to one perk slot")
+        slot = next(iter(slots))
+        visibility_vote = TemporalConsensus.vote(
+            [(item.visibility.value, item.confidence_milli) for item in observations],
+            minimum_frames=self.temporal_minimum_frames,
+            minimum_confidence_milli=650,
+        )
+        if visibility_vote is not None:
+            visibility = HudVisibility(visibility_vote[0])
+            if visibility in {
+                HudVisibility.HIDDEN,
+                HudVisibility.PARTIALLY_OCCLUDED,
+                HudVisibility.UNREADABLE,
+            }:
+                return PerkSlotObservation(slot, None, visibility_vote[1], (), visibility)
+
         vote = TemporalConsensus.vote([(item.perk_id or "UNKNOWN", item.confidence_milli) for item in observations], minimum_frames=self.temporal_minimum_frames, minimum_confidence_milli=650)
         if vote is None or vote[0] == "UNKNOWN":
             confidence = max((item.confidence_milli for item in observations), default=0)
-            return PerkSlotObservation(next(iter(slots)), None, confidence, ())
-        return PerkSlotObservation(next(iter(slots)), vote[0], vote[1], ())
+            visible_seen = any(item.visibility is HudVisibility.VISIBLE for item in observations)
+            visibility = HudVisibility.VISIBLE if visible_seen else HudVisibility.UNKNOWN
+            return PerkSlotObservation(slot, None, confidence, (), visibility)
+        return PerkSlotObservation(slot, vote[0], vote[1], (), HudVisibility.VISIBLE)
 
 
 class OcrEngine(Protocol):
@@ -290,6 +314,7 @@ def to_resolver_health_state(state: SurvivorHudState):
 __all__ = [
     "ClassifiedSlice", "DBDNotificationTextDetector", "NotificationTextObservation",
     "NotificationVocabularyEntry", "NotificationVocabularyIndex", "OcrEngine", "PerkIconDetector", "PerkSlotObservation",
+    "HudVisibility",
     "RecognitionCandidate", "ReferenceSliceClassifier", "SurvivorHudState",
     "SurvivorHudStateDetector", "SurvivorSlotObservation", "TesseractCliOcrEngine",
     "normalize_hud_text", "to_resolver_health_state",

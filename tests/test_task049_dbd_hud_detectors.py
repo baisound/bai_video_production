@@ -1,6 +1,6 @@
 from pathlib import Path
 from ai_video_production.dbd_hud_detectors import (
-    DBDNotificationTextDetector, PerkIconDetector, SurvivorHudState,
+    DBDNotificationTextDetector, HudVisibility, PerkIconDetector, PerkSlotObservation, SurvivorHudState,
     SurvivorHudStateDetector,
 )
 from ai_video_production.dbd_vision_slices import GrayImage, ReferenceSliceIndex
@@ -60,3 +60,41 @@ def test_classifier_compares_unique_labels_not_duplicate_references():
     )
     assert result.unknown is True
     assert [item.label for item in result.candidates] == ['perk_a', 'perk_b']
+
+
+def test_perk_hidden_is_distinct_from_unknown_identity(tmp_path):
+    visible = _pgm(tmp_path/'visible.pgm')
+    hidden = _pgm(tmp_path/'hidden.pgm', True)
+    index = ReferenceSliceIndex.train_from_pgm(
+        index_id='perk-hidden',
+        samples=[('perk_a', visible), ('PERK_HIDDEN', hidden)],
+    )
+    detector = PerkIconDetector(index, acceptance_milli=700)
+    result = detector.detect_slot(GrayImage.read_pgm(hidden), slot=0)
+    assert result.perk_id is None
+    assert result.visibility is HudVisibility.HIDDEN
+
+
+def test_perk_partial_occlusion_abstains_from_identity(tmp_path):
+    visible = _pgm(tmp_path/'visible.pgm')
+    partial = _pgm(tmp_path/'partial.pgm', True)
+    index = ReferenceSliceIndex.train_from_pgm(
+        index_id='perk-partial',
+        samples=[('perk_a', visible), ('PERK_PARTIALLY_OCCLUDED', partial)],
+    )
+    detector = PerkIconDetector(index, acceptance_milli=700)
+    result = detector.detect_slot(GrayImage.read_pgm(partial), slot=3)
+    assert result.perk_id is None
+    assert result.visibility is HudVisibility.PARTIALLY_OCCLUDED
+
+
+def test_perk_temporal_vote_preserves_hidden_state():
+    detector = PerkIconDetector.__new__(PerkIconDetector)
+    detector.temporal_minimum_frames = 2
+    observations = [
+        PerkSlotObservation(1, None, 900, (), HudVisibility.HIDDEN),
+        PerkSlotObservation(1, None, 880, (), HudVisibility.HIDDEN),
+    ]
+    result = detector.temporal_vote(observations)
+    assert result.perk_id is None
+    assert result.visibility is HudVisibility.HIDDEN

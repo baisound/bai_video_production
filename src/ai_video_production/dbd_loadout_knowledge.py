@@ -10,6 +10,7 @@ import sqlite3
 from typing import Any
 
 from .canonical_game_event import GameEnvironment, GameKnowledgeKind, GameKnowledgeRef
+from .dbd_hud_visibility import HudVisibility, visibility_training_label
 from .dbd_perk_knowledge import DBDPatchVersion, PerkEnvironment
 from .dbd_vision_slices import GrayImage, ReferenceSliceIndex
 from .errors import ProductError, ProductErrorCategory
@@ -219,6 +220,7 @@ class LoadoutVisualObservation:
     confidence_milli: int
     kind: LoadoutKnowledgeKind
     slot: int | None = None
+    visibility: HudVisibility = HudVisibility.UNKNOWN
 
 
 class LoadoutVisualRecognizer:
@@ -234,17 +236,23 @@ class LoadoutVisualRecognizer:
             best_by_label.setdefault(row.label, row)
         unique = sorted(best_by_label.values(), key=lambda item: (-item.confidence_milli, item.distance_bits, item.label, item.source_ref))
         if not unique or unique[0].confidence_milli < self.acceptance_milli:
-            return LoadoutVisualObservation(None, unique[0].confidence_milli if unique else 0, self.kind, slot)
+            return LoadoutVisualObservation(None, unique[0].confidence_milli if unique else 0, self.kind, slot, HudVisibility.UNKNOWN)
         if len(unique) > 1 and unique[0].confidence_milli - unique[1].confidence_milli < 70:
-            return LoadoutVisualObservation(None, unique[0].confidence_milli, self.kind, slot)
-        prefix = "item_" if self.kind is LoadoutKnowledgeKind.ITEM else "addon_"
+            return LoadoutVisualObservation(None, unique[0].confidence_milli, self.kind, slot, HudVisibility.UNKNOWN)
+
         label = unique[0].label
+        visibility_prefix = "ITEM" if self.kind is LoadoutKnowledgeKind.ITEM else "ADDON"
+        visibility = visibility_training_label(visibility_prefix, label)
+        if visibility is not None:
+            return LoadoutVisualObservation(None, unique[0].confidence_milli, self.kind, slot, visibility)
+
+        prefix = "item_" if self.kind is LoadoutKnowledgeKind.ITEM else "addon_"
         if not label.startswith(prefix):
-            return LoadoutVisualObservation(None, unique[0].confidence_milli, self.kind, slot)
-        return LoadoutVisualObservation(label, unique[0].confidence_milli, self.kind, slot)
+            return LoadoutVisualObservation(None, unique[0].confidence_milli, self.kind, slot, HudVisibility.UNKNOWN)
+        return LoadoutVisualObservation(label, unique[0].confidence_milli, self.kind, slot, HudVisibility.VISIBLE)
 
 
 __all__ = [
     "DbDLoadoutKnowledgeStore", "LoadoutKnowledgeKind", "LoadoutKnowledgeRevision", "LoadoutKnowledgeSource",
-    "LoadoutKnowledgeStatus", "LoadoutVisualObservation", "LoadoutVisualRecognizer",
+    "LoadoutKnowledgeStatus", "LoadoutVisualObservation", "LoadoutVisualRecognizer", "HudVisibility",
 ]

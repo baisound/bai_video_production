@@ -114,7 +114,7 @@ class DbDRecognitionKnowledgeResolver:
         perk_environment = PerkEnvironment(environment.value)
         for item in recognition.perk_slots:
             if item.perk_id is None:
-                unresolved.append(f"perk_slot_{item.slot}:UNKNOWN")
+                unresolved.append(f"perk_slot_{item.slot}:{item.visibility.value}")
                 continue
             if self.perk_store is None:
                 unresolved.append(f"perk_slot_{item.slot}:STORE_UNAVAILABLE")
@@ -127,7 +127,7 @@ class DbDRecognitionKnowledgeResolver:
         for item in loadout_rows:
             prefix = "item" if item.kind is LoadoutKnowledgeKind.ITEM else f"addon_slot_{item.slot}"
             if item.entity_id is None:
-                unresolved.append(f"{prefix}:UNKNOWN")
+                unresolved.append(f"{prefix}:{item.visibility.value}")
                 continue
             if self.loadout_store is None:
                 unresolved.append(f"{prefix}:{item.entity_id}:STORE_UNAVAILABLE")

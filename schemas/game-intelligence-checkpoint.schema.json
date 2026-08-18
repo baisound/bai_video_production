@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/game-intelligence-checkpoint.schema.json",
+  "title": "TASK-049 Game Intelligence Checkpoint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "checkpoint_id",
+    "match_id",
+    "checkpoint_revision",
+    "stage",
+    "store_schema_version",
+    "match_sha256",
+    "evidence_head_sha256",
+    "event_head_sha256",
+    "review_head_sha256",
+    "state",
+    "created_at",
+    "checkpoint_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "checkpoint_id": {
+      "type": "string",
+      "pattern": "^CHK-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "match_id": {
+      "type": "string",
+      "pattern": "^MATCH-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "checkpoint_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "stage": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+    },
+    "store_schema_version": {
+      "const": "1.0.0"
+    },
+    "match_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "evidence_head_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "event_head_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "review_head_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "state": {
+      "type": "object"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "checkpoint_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

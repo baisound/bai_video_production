@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/perk-localization.schema.json",
+  "title": "TASK-049 DbD Perk Localization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "perk_id",
+    "locale",
+    "name",
+    "simple_text",
+    "beginner_text",
+    "short_text",
+    "perk_localization_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "perk_id": {
+      "type": "string",
+      "pattern": "^perk_[a-z0-9][a-z0-9_]{1,123}$"
+    },
+    "locale": {
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "simple_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "beginner_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "short_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "perk_localization_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

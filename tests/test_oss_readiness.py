@@ -100,3 +100,24 @@ def test_impact_claims_are_bounded_by_evidence() -> None:
     readiness = (ROOT / "docs/oss/CODEX-FOR-OSS-READINESS.md").read_text(encoding="utf-8")
     assert "intended impact, not a claim of demonstrated scale" in readiness
     assert "Never invent usage" in readiness
+
+def test_every_windows_executable_or_installer_has_a_dedicated_build_guide() -> None:
+    targets = {
+        "build-windows-exe.bat": "docs/windows/BUILDING-WINDOWS-EXE.md",
+        "build-dbd-training-studio-exe.bat": "docs/windows/BUILDING-DBD-TRAINING-STUDIO-EXE.md",
+        "build-dbd-trivia-editor-exe.bat": "docs/windows/BUILDING-DBD-TRIVIA-EDITOR-EXE.md",
+        "tools/windows/build-task046-voice-model-builder-installer.ps1": "docs/windows/BUILDING-VOICE-MODEL-BUILDER-INSTALLER.md",
+        "tools/windows/build-task047-obs-installer.ps1": "docs/windows/BUILDING-OBS-VOICE-CAPTURE-INSTALLER.md",
+    }
+    for builder, guide in targets.items():
+        assert (ROOT / builder).is_file(), builder
+        assert (ROOT / guide).is_file(), guide
+        assert (ROOT / guide).stat().st_size > 500, guide
+
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "docs/windows/WINDOWS-EXE-BUILD-INDEX.md" in readme
+    assert "docs/windows/WINDOWS-GAME-INTELLIGENCE-ENVIRONMENT.md" in readme
+
+    index = (ROOT / "docs/windows/WINDOWS-EXE-BUILD-INDEX.md").read_text(encoding="utf-8")
+    for guide in targets.values():
+        assert Path(guide).name in index, guide

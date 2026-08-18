@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/perk-revision.schema.json",
+  "title": "TASK-049 DbD Perk Revision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "revision_id",
+    "perk_id",
+    "game_version_from",
+    "game_version_to_exclusive",
+    "environment",
+    "status",
+    "source_ids",
+    "official_effect_ja",
+    "official_effect_en",
+    "structured_effect",
+    "tags",
+    "content_sha256",
+    "created_at",
+    "perk_revision_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "revision_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "perk_id": {
+      "type": "string",
+      "pattern": "^perk_[a-z0-9][a-z0-9_]{1,123}$"
+    },
+    "game_version_from": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:\\.(0|[1-9][0-9]*))?$"
+    },
+    "game_version_to_exclusive": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:\\.(0|[1-9][0-9]*))?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "environment": {
+      "enum": [
+        "LIVE",
+        "PTB",
+        "ARCHIVE",
+        "UNKNOWN"
+      ]
+    },
+    "status": {
+      "enum": [
+        "DISCOVERED",
+        "PARSED",
+        "STRUCTURED",
+        "NEEDS_REVIEW",
+        "VERIFIED",
+        "SUPERSEDED",
+        "REJECTED"
+      ]
+    },
+    "source_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+      }
+    },
+    "official_effect_ja": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 12000
+    },
+    "official_effect_en": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 12000
+    },
+    "structured_effect": {
+      "type": "object"
+    },
+    "tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+      }
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "perk_revision_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/game-event-review.schema.json",
+  "title": "TASK-049 Game Event Review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_id",
+    "event_id",
+    "event_revision",
+    "action",
+    "reviewer_kind",
+    "original_confirmation_state",
+    "corrected_confirmation_state",
+    "original_event_type",
+    "corrected_event_type",
+    "reason_code",
+    "notes",
+    "created_at",
+    "review_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "review_id": {
+      "type": "string",
+      "pattern": "^GREV-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "event_id": {
+      "type": "string",
+      "pattern": "^GEVT-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "event_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "action": {
+      "enum": [
+        "APPROVE",
+        "CORRECT",
+        "REJECT",
+        "MARK_UNKNOWN"
+      ]
+    },
+    "reviewer_kind": {
+      "enum": [
+        "HUMAN",
+        "SYSTEM"
+      ]
+    },
+    "original_confirmation_state": {
+      "enum": [
+        "DETECTED",
+        "POSSIBLE",
+        "CONFIRMED",
+        "REJECTED",
+        "UNKNOWN",
+        "NEEDS_REVIEW"
+      ]
+    },
+    "corrected_confirmation_state": {
+      "enum": [
+        "DETECTED",
+        "POSSIBLE",
+        "CONFIRMED",
+        "REJECTED",
+        "UNKNOWN",
+        "NEEDS_REVIEW"
+      ]
+    },
+    "original_event_type": {
+      "enum": [
+        "MATCH_START",
+        "CHASE_START",
+        "CHASE_END",
+        "INJURY",
+        "DOWN",
+        "HOOK",
+        "UNHOOK",
+        "WINDOW_VAULT",
+        "PALLET_DROP",
+        "KILL",
+        "ESCAPE",
+        "UNKNOWN_EVENT"
+      ]
+    },
+    "corrected_event_type": {
+      "enum": [
+        "MATCH_START",
+        "CHASE_START",
+        "CHASE_END",
+        "INJURY",
+        "DOWN",
+        "HOOK",
+        "UNHOOK",
+        "WINDOW_VAULT",
+        "PALLET_DROP",
+        "KILL",
+        "ESCAPE",
+        "UNKNOWN_EVENT"
+      ]
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "review_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

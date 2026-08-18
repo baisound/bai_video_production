@@ -43,6 +43,9 @@ ai-video-transcribe = "ai_video_production.transcription_cli:main"
 ai-video-subtitle-workspace = "ai_video_production.subtitle_workspace_web:main"
 ai-video-resolve-subtitle-handoff = "ai_video_production.resolve_subtitle_handoff_cli:main"
 ai-video-cut-candidates = "ai_video_production.cut_candidate_cli:main"
+ai-video-dbd-trivia-editor = "ai_video_production.dbd_trivia_editor:main"
+ai-video-dbd-training-studio = "ai_video_production.dbd_training_studio:main"
+ai-video-dbd-kamigame-collect = "ai_video_production.dbd_kamigame_cli:main"
 ai-video-faster-whisper-evidence = "ai_video_production.faster_whisper_reconciliation_cli:main"
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]

@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+- TASK-049 R6B/R9B1として、既存V6 ShellへadditiveなGame Intelligence Workspaceを追加し、CGEL Match/Event/Evidenceのread-back、append-only Human Confirm/Correct/Reject/UNKNOWN、analysis-only JSON/JSONL/CSV/Markdown/SRT出力を既存native folder chooserへ接続しました。TASK-049 extensionはTASK-036 V6.1.1 base mock contractから明示分離し、Production Timeline・Resolve・Publishは変更しません。TASK-036 P-UX-2はcurrent sourceでA0..D3を再検証し102 PASS、P-UX-2Eは未完のままです。
+- Documentation filename normalizationとして、docs配下の日本語/escaped filenameを英名へ統一し、READMEを含む内部参照を更新しました。README local Markdown link regressionはPASSしています。
+
 - TASK-046 P-VS-4B Beginner Client R4として、全18 workflow状態へ日本語・英語の「現在の状況」「次にすること」と読みやすい工程状態を追加し、12工程の完了数をbody-freeに表示できるようにしました。UNKNOWN・失敗・未確認Gateは進行不可のまま保持し、Dataset・学習・Model・audio・公開effectは開始しません。
 
 - TASK-046 P-VS-4B Voice Model Builder R3として、最大1 MiBのUTF-8 workflow JSONをユーザー選択時だけ読み取り、重複key・contract・revision・digest・effect flagをfail closed検証して12工程へ反映するWindows Technical Previewとinstaller.2を追加しました。元JSONの変更、録音読取、Dataset・学習・model・GPU・音声生成・公開は開始しません。
@@ -343,3 +346,13 @@
 ## [0.1.0] - 2026-08-08
 
 - Added Product domain, canonical manifest, state, evidence and persistence foundation.
+
+### TASK-049 R10B0 native pilot infrastructure
+
+- Added bounded exact-frame FFmpeg PNG sampling for real-media DbD pilot evaluation.
+- Added label-blind native detector port and Human-Gold evaluation ranges.
+- Added native detector -> Evidence -> CGEL -> KPI orchestration without production accuracy authority.
+- Added deterministic benchmark dataset parser/schema mirror and R10B0 focused tests.
+
+- Added TASK-049 Human Gold CSV compiler for strict real-media benchmark authoring.
+- Added TASK-049 real-media exact-frame preflight receipt before detector tuning.

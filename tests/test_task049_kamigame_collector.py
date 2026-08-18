@@ -118,7 +118,7 @@ def test_collector_writes_reviewable_bundle_without_canonical_promotion(tmp_path
 
 def test_training_studio_exposes_kamigame_knowledge_import_tab() -> None:
     text = Path("src/ai_video_production/dbd_training_studio.py").read_text(encoding="utf-8")
-    assert 'text="Knowledge Import"' in text
+    assert 'notebook.add(knowledge_import_tab, text="ゲーム情報を取得")' in text
     assert "KamigameDbDKnowledgeCollector" in text
     assert "Collect Survivor / Killer / Killer details" in text
 

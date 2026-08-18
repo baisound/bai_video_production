@@ -108,7 +108,7 @@ def test_hud_profile_round_trip_supports_left_loadout_item_and_two_addon_slots()
         ),
     )
     restored = DBDHudRoiProfile.from_dict(profile.to_dict())
-    assert restored.to_dict()["schema_version"] == "2.1.0"
+    assert restored.to_dict()["schema_version"] == "2.2.0"
     assert restored.item_slot_roi().roi_id == "item_slot"
     assert restored.addon_slot_roi(0).roi_id == "addon_slot_0"
     assert restored.addon_slot_roi(1).roi_id == "addon_slot_1"

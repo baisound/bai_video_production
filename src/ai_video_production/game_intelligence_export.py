@@ -12,7 +12,7 @@ import io
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 from .canonical_game_event import (
     CanonicalGameEvent,
@@ -23,6 +23,11 @@ from .game_commentary import CommentaryCandidateStore
 from .game_event_store import GameIntelligenceStore
 from .ids import IdKind, validate_id
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
+from .dbd_observation_envelope import (
+    DbDObservationEnvelope,
+    serialize_observations_csv,
+    serialize_observations_jsonl,
+)
 
 
 _EXPORT_FORMAT = "task049.game-intelligence-export"
@@ -100,11 +105,14 @@ class GameIntelligenceAnalysisExporter:
         match_id: str,
         destination: str | Path,
         commentary_store: CommentaryCandidateStore | None = None,
+        observations: Sequence[DbDObservationEnvelope] = (),
     ) -> dict[str, Path]:
         if not isinstance(store, GameIntelligenceStore):
             raise ValueError("store must be a GameIntelligenceStore")
         if commentary_store is not None and not isinstance(commentary_store, CommentaryCandidateStore):
             raise ValueError("commentary_store must be a CommentaryCandidateStore or None")
+        if any(not isinstance(item, DbDObservationEnvelope) for item in observations):
+            raise ValueError("observations must contain DbDObservationEnvelope records")
         validate_id(match_id, IdKind.GAME_MATCH)
 
         root = Path(destination)
@@ -127,6 +135,11 @@ class GameIntelligenceAnalysisExporter:
             commentary_by_event[key]
             for key in sorted(commentary_by_event)
         ]
+        observation_rows = tuple(sorted(
+            observations,
+            key=lambda item: (item.frame_start, item.observation_type.value, item.observation_id),
+        ))
+        observation_payloads = [item.to_dict() for item in observation_rows]
 
         analysis_body = {
             "schema_version": _EXPORT_VERSION,
@@ -134,6 +147,7 @@ class GameIntelligenceAnalysisExporter:
             "match": match.to_dict(),
             "events": event_payloads,
             "validated_commentary": selected_commentary,
+            "observations": observation_payloads,
             "analysis_only": True,
             "production_timeline_mutated": False,
             "resolve_write_performed": False,
@@ -158,6 +172,19 @@ class GameIntelligenceAnalysisExporter:
             files["jsonl"],
             "".join(canonical_json_bytes(payload).decode("utf-8") + "\n" for payload in event_payloads),
         )
+        observations_jsonl_path: Path | None = None
+        observations_csv_path: Path | None = None
+        if observation_rows:
+            observations_jsonl_path = root / "observations.jsonl"
+            observations_csv_path = root / "observations.csv"
+            _atomic_write_bytes(
+                observations_jsonl_path,
+                serialize_observations_jsonl(observation_rows),
+            )
+            _atomic_write_text(
+                observations_csv_path,
+                serialize_observations_csv(observation_rows),
+            )
 
         csv_buffer = io.StringIO(newline="")
         writer = csv.writer(csv_buffer, lineterminator="\n")
@@ -252,8 +279,22 @@ class GameIntelligenceAnalysisExporter:
         _atomic_write_text(files["srt"], "\n".join(srt_blocks))
 
         artifact_entries = []
-        for key in ("json", "jsonl", "csv", "markdown", "srt"):
-            path = files[key]
+        manifest_artifacts = [
+            ("json", files["json"]),
+            ("jsonl", files["jsonl"]),
+            ("csv", files["csv"]),
+            ("markdown", files["markdown"]),
+            ("srt", files["srt"]),
+        ]
+        if observations_jsonl_path is not None:
+            manifest_artifacts.append(
+                ("observations_jsonl", observations_jsonl_path)
+            )
+        if observations_csv_path is not None:
+            manifest_artifacts.append(
+                ("observations_csv", observations_csv_path)
+            )
+        for key, path in manifest_artifacts:
             data = path.read_bytes()
             artifact_entries.append(
                 {

@@ -37,7 +37,7 @@ def test_training_studio_templates_cover_single_bulk_and_video_learning(tmp_path
 
 def test_training_studio_exposes_portable_backup_restore_and_user_guide():
     source = (ROOT / "src" / "ai_video_production" / "dbd_training_studio.py").read_text(encoding="utf-8")
-    assert 'text="Backup / Restore"' in source
+    assert 'notebook.add(migration_tab, text="バックアップ・復元")' in source
     assert "DbDDataMigrationService" in source
     guide = ROOT / "docs" / "user" / "DBD-DATA-BACKUP-RESTORE.md"
     assert guide.is_file()
@@ -49,7 +49,7 @@ def test_training_studio_exposes_portable_backup_restore_and_user_guide():
 
 def test_training_studio_exposes_hud_calibration_profile_and_anchor_controls():
     source = (ROOT / "src" / "ai_video_production" / "dbd_training_studio.py").read_text(encoding="utf-8")
-    assert 'text="HUD Calibration"' in source
+    assert 'notebook.add(calibration_tab, text="HUD位置を設定")' in source
     assert "Save versioned profile + anchors" in source
     assert "Test auto profile + anchor correction" in source
     assert "HudProfileRegistry" in source

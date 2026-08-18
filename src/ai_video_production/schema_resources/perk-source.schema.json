@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/perk-source.schema.json",
+  "title": "TASK-049 DbD Perk Source Provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_id",
+    "source_type",
+    "authority",
+    "environment",
+    "uri",
+    "retrieved_at",
+    "locale",
+    "content_sha256",
+    "perk_source_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "source_type": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "authority": {
+      "enum": [
+        "GAME_CLIENT",
+        "BHVR_OFFICIAL",
+        "OFFICIAL_CHARACTER_PAGE",
+        "OFFICIAL_PATCH_NOTE",
+        "OFFICIAL_WIKI",
+        "MANUAL_VERIFIED",
+        "COMMUNITY_REFERENCE",
+        "UNKNOWN"
+      ]
+    },
+    "environment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "LIVE",
+        "PTB",
+        "ARCHIVE",
+        "UNKNOWN",
+        null
+      ]
+    },
+    "uri": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "retrieved_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "locale": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "content_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "perk_source_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

@@ -57,8 +57,12 @@ def test_runtime_uses_owner_canonical_v611_template() -> None:
 def test_runtime_keeps_every_mock_destination_and_top_menu() -> None:
     expected = _surface(MOCK)
     actual = _surface(SHELL_HTML)
-    assert actual.pages == expected.pages
+    # TASK-036 still owns the V6.1.1 base surface.  Explicitly marked
+    # additive feature pages may extend it without rewriting the mock contract.
+    assert expected.pages.issubset(actual.pages)
+    assert actual.pages - expected.pages == {"gameIntelligence"}
     assert expected.pages.issubset(actual.navigation)
+    assert "gameIntelligence" in actual.navigation
     for label in ("ファイル", "編集", "表示", "プロジェクト", "生成", "エクスポート"):
         assert f">{label}</button>" in SHELL_HTML
 

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/perk-observation.schema.json",
+  "title": "TASK-049 DbD Perk Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "observation_id",
+    "match_id",
+    "slot",
+    "evidence_ref",
+    "confidence_milli",
+    "state",
+    "perk_id",
+    "resolved_revision_id",
+    "perk_observation_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "observation_id": {
+      "type": "string",
+      "pattern": "^CAND-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "match_id": {
+      "type": "string",
+      "pattern": "^MATCH-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "slot": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4
+    },
+    "evidence_ref": {
+      "type": "string",
+      "pattern": "^GEVD-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "confidence_milli": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "state": {
+      "enum": [
+        "UNKNOWN",
+        "CANDIDATE",
+        "RESOLVED"
+      ]
+    },
+    "perk_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^perk_[a-z0-9][a-z0-9_]{1,123}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resolved_revision_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "perk_observation_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

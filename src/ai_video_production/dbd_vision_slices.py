@@ -118,6 +118,7 @@ class DBDHudRoiProfile:
         NormalizedROI("perk_slot_3", 0.900, 0.840, 0.075, 0.095),
     ))
     killer_power_hud: NormalizedROI | None = None
+    heartbeat_hud: NormalizedROI | None = None
 
     def __post_init__(self) -> None:
         if not self.profile_id or len(self.profile_id) > 128:
@@ -158,7 +159,7 @@ class DBDHudRoiProfile:
         if not isinstance(payload, dict):
             raise ValueError("ROI profile must be an object")
         schema_version = str(payload.get("schema_version", "1.1.0"))
-        if schema_version not in {"1.1.0", "2.0.0", "2.1.0"}:
+        if schema_version not in {"1.1.0", "2.0.0", "2.1.0", "2.2.0"}:
             raise ValueError("unsupported HUD ROI profile schema")
         def roi(name: str, value: object) -> NormalizedROI:
             if not isinstance(value, dict):
@@ -191,6 +192,7 @@ class DBDHudRoiProfile:
             survivor_slots=tuple(roi(f"survivor_slot_{index}", value) for index, value in enumerate(survivor_values)) if isinstance(survivor_values, list) else defaults.survivor_slots,
             perk_slots=tuple(roi(f"perk_slot_{index}", value) for index, value in enumerate(perk_values)) if isinstance(perk_values, list) else defaults.perk_slots,
             killer_power_hud=None if payload.get("killer_power_hud") is None else roi("killer_power_hud", payload["killer_power_hud"]),
+            heartbeat_hud=None if payload.get("heartbeat_hud") is None else roi("heartbeat_hud", payload["heartbeat_hud"]),
         )
 
     def survivor_slot_roi(self, slot: int) -> NormalizedROI:
@@ -227,6 +229,8 @@ class DBDHudRoiProfile:
             direct[self.item_slot.roi_id] = self.item_slot
         if self.killer_power_hud is not None:
             direct[self.killer_power_hud.roi_id] = self.killer_power_hud
+        if self.heartbeat_hud is not None:
+            direct[self.heartbeat_hud.roi_id] = self.heartbeat_hud
         direct.update({item.roi_id: item for item in self.survivor_slots + self.perk_slots + self.addon_slots})
         if roi_id not in direct:
             raise KeyError(roi_id)
@@ -234,7 +238,7 @@ class DBDHudRoiProfile:
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "schema_version": "2.1.0",
+            "schema_version": "2.2.0",
             "profile_id": self.profile_id,
             "profile_version": self.profile_version,
             "calibrated_frame_width": self.calibrated_frame_width,
@@ -253,6 +257,7 @@ class DBDHudRoiProfile:
             "survivor_slots": [item.to_dict() for item in self.survivor_slots],
             "perk_slots": [item.to_dict() for item in self.perk_slots],
             "killer_power_hud": None if self.killer_power_hud is None else self.killer_power_hud.to_dict(),
+            "heartbeat_hud": None if self.heartbeat_hud is None else self.heartbeat_hud.to_dict(),
         }
 
 

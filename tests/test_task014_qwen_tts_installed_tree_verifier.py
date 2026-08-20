@@ -40,6 +40,10 @@ def _record(rows: dict[str, bytes], *, unhashed: set[str]) -> bytes:
 
 def _fixture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[Path, Path, dict[str, bytes]]:
     """A complete 24/23 wheel and 45-row installed tree; no target package is imported."""
+    # Production is deliberately Windows-only. Synthetic archive/tree tests
+    # replace only the private platform/root admission so the same bounded
+    # parser and reconciliation matrix runs on hosted Linux CI as well.
+    monkeypatch.setattr(verifier, "_safe_root", lambda path: None)
     dist = verifier.DIST_INFO
     payload: dict[str, bytes] = {"qwen_tts/__init__.py": b"", "qwen_tts/cli/__init__.py": b"", "qwen_tts/cli/demo.py": b"def main(): pass\n"}
     payload.update({f"qwen_tts/module_{index}.py": f"# {index}\n".encode() for index in range(14)})
@@ -133,12 +137,27 @@ def test_unsafe_relative_roots_are_rejected_before_any_file_io() -> None:
     assert result.to_private_dict()["reason_codes"] == ["UNSAFE_RUNTIME_ROOT"]
 
 
-def test_wrong_wheel_pin_stops_before_runtime_enumeration(tmp_path: Path) -> None:
+def test_wrong_wheel_pin_stops_before_runtime_enumeration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    admitted_roots: list[Path] = []
+    monkeypatch.setattr(
+        verifier, "_safe_root", lambda path: admitted_roots.append(Path(path)),
+    )
     wheel = tmp_path / verifier.WHEEL_FILENAME
     wheel.write_bytes(b"not the pinned wheel")
     result = verifier.verify_qwen_tts_011_installed_tree(wheel, tmp_path / "missing-runtime", "2026-08-21T00:00:00Z")
     assert result.to_private_dict()["decision"] == "BLOCKED"
     assert result.to_private_dict()["reason_codes"] == ["WHEEL_PIN_MISMATCH"]
+    assert admitted_roots == [wheel.parent]
+
+
+def test_non_windows_production_root_remains_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(verifier.os, "name", "posix")
+    with pytest.raises(verifier._Blocked, match="UNSUPPORTED_VERIFIER_PLATFORM"):
+        verifier._safe_root(tmp_path)
 
 
 def test_complete_synthetic_tree_is_verified_but_never_authorizes_runtime(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

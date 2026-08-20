@@ -71,7 +71,7 @@ close failure remains `BLOCKED / HANDLE_CLOSE_FAILED` with a nonzero count.
 ## Builder verification
 
 - focused synthetic parser/session tests: `22 PASS`
-- focused session plus prior observer regression: `59 PASS`
+- focused session plus prior observer regression: `60 PASS`
 - exact top-down open order: `PASS`
 - fixed-local/reparse/final-path/file-ID/swap failures: `PASS`
 - pre-existing writer-compatible open denial simulation: `PASS`
@@ -125,7 +125,10 @@ Owner-voice inference, publication, REAPER or iZotope gates.
 - fresh main: `9951f428b51e32b7b86d91959fd18cb008fc5886`
 - rebased dependency commit:
   `16b4479090f27553cc913b8e5cf5edf47e8856b4`
-- fresh-main locked-session plus prior-observer regression: `59 PASS`
+- fresh-main locked-session plus prior-observer regression: `60 PASS`
+- hosted-Linux synthetic verifier portability: the private test fixture bypasses
+  only the Windows root-admission seam; a separate test preserves the
+  production `UNSUPPORTED_VERIFIER_PLATFORM` result
 - Python no-bytecode compile: `PASS`
 - Draft 2020-12 schema and byte-identical packaged mirror: `PASS`
 - AU2B5 uncommitted scope: exact six authorized files

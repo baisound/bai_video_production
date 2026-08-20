@@ -1,6 +1,6 @@
 # TASK-051 — v0.22.0 Release Closure
 
-Status: RELEASE_CANDIDATE
+Status: FORMAL_RELEASE_COMPLETE
 Profile: DEV-4 FOUNDATION CRITICAL
 Depends on: merged main through TASK-036 P-UX-2D4/D5, TASK-049 and TASK-050
 Authority: Owner-selected `0.22.0 / v0.22.0 / stable` on 2026-08-21

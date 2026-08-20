@@ -4,14 +4,14 @@
 
 ## Current identity
 
-- Product package: `0.22.0` release candidate
-- Stable formal Release: `v0.21.0` until TASK-051 publication completes
-- Current stable release-code SHA: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Current development main: `77f65954ec26c5cc516af623f49f9fdea2bc5ded` (TASK-051 Release Metadata Lock hosted)
-- Current Product state: `V0_22_0_RELEASE_CANDIDATE / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / P_UX_2E_PENDING / TASK_049_TASK_050_INTEGRATED`
-- Active development branch: `codex/task-051-v0-22-0-release-finalization`
+- Product package: `0.22.0`
+- Stable formal Release: `v0.22.0`
+- Release-code SHA: `50a2f06b4d5b64764a521c5863aa1632992a1418`
+- Current development main: `50a2f06b4d5b64764a521c5863aa1632992a1418` before the docs-only post-release closure
+- Current Product state: `V0_22_0_RELEASED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / P_UX_2E_PENDING / TASK_049_TASK_050_INTEGRATED`
+- Active development branch: `codex/task-051-v0-22-0-post-release-closure`
 
-The stable `v0.21.0` Tag identifies release-code commit `c38187ed`. The Owner selected exact `0.22.0 / v0.22.0 / stable`; TASK-051 owns metadata consistency, all-green merge, annotated Tag and GitHub Release verification without widening any native, paid-provider or Production Gate.
+The annotated stable `v0.22.0` Tag dereferences to exact release-code commit `50a2f06b`; Release workflow `32407505931` and all six published asset digests pass. TASK-051 does not widen any native, paid-provider or Production Gate.
 
 ## Completed Product scope
 

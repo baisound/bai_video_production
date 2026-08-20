@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R1A_COMPLETE / R1B_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R1B_COMPLETE / R1C_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -48,6 +48,8 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
 - R1A taxonomy/detail-root/migration dry-run: complete; affected regression
   `105 PASS`, current catalog dry-run `4` proposed CHARACTER→SURVIVOR changes,
   `apply=false`, unresolved Critical/High `0 / 0`.
+- R1B Human-first detail and safe delete/tombstone: complete; dependency-driven
+  regression `146 PASS`, unresolved Critical/High `0 / 0`.
 - Windows packaged TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R1B Human-first detail fields and safe
-  delete/tombstone dependency policy.
+- Next dependency-ordered unit: R1C map asset content sniff/normalization and rotation
+  rendering persistence.

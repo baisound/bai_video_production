@@ -162,6 +162,24 @@ class EntityAliasCatalog:
             row = conn.execute("SELECT COUNT(*) FROM entity_alias").fetchone()
         return 0 if row is None else int(row[0])
 
+    def count_for_entity(self, entity_id: str) -> int:
+        with closing(sqlite3.connect(self.path)) as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM entity_alias WHERE entity_id=?",
+                (entity_id,),
+            ).fetchone()
+        return 0 if row is None else int(row[0])
+
+    def remove_entity(self, entity_id: str) -> int:
+        """Invalidate rebuildable search-index rows for one catalog entity."""
+        with closing(sqlite3.connect(self.path)) as conn:
+            with conn:
+                cursor = conn.execute(
+                    "DELETE FROM entity_alias WHERE entity_id=?",
+                    (entity_id,),
+                )
+        return max(0, int(cursor.rowcount))
+
     def search(
         self,
         query: str,

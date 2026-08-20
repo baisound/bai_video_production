@@ -289,6 +289,10 @@ class MapIntelligenceStore:
         row = self.get(map_id)
         return self.upsert(replace(row, orientation_locked=False, updated_at=utc_now_iso()))
 
+    def disable(self, map_id: str) -> MapRecord:
+        row = self.get(map_id)
+        return self.upsert(replace(row, enabled=False, updated_at=utc_now_iso()))
+
 
 __all__ = [
     "MapFloor", "MapRegion", "MapLandmark", "MapRecord", "MapTrainingCapture",

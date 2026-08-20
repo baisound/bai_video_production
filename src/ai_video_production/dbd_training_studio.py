@@ -19,7 +19,14 @@ from .dbd_kamigame_candidate_bridge import (
     load_kamigame_candidate_summaries,
     sync_kamigame_review_catalog,
 )
-from .dbd_game_knowledge_catalog import GameKnowledgeReviewCatalog
+from .dbd_game_knowledge_catalog import (
+    GameKnowledgeReviewCatalog,
+    KnowledgeDependencyReference,
+)
+from .dbd_game_knowledge_presentation import (
+    diagnostic_knowledge_values,
+    human_knowledge_fields,
+)
 from .dbd_map_intelligence import MapIntelligenceStore, MapRecord
 from .dbd_video_analysis_workspace import DbDVideoAnalysisWorkspaceService
 from .dbd_optional_roi_defaults import ensure_optional_roi_initialized
@@ -3527,6 +3534,9 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     }
 
     def _sync_candidate_alias_index(candidate) -> None:
+        if not candidate.enabled or candidate.review_status in {"REJECTED", "DISABLED"}:
+            entity_alias_catalog.remove_entity(candidate.candidate_id)
+            return
         status = (
             EntityAliasReviewStatus.VERIFIED if candidate.review_status == "VERIFIED"
             else EntityAliasReviewStatus.REJECTED if candidate.review_status in {"REJECTED", "DISABLED"}
@@ -3623,6 +3633,42 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         sel = inventory_tree.selection()
         return inventory_rows.get(sel[0]) if sel else None
 
+    def _knowledge_delete_dependencies(row) -> tuple[KnowledgeDependencyReference, ...]:
+        dependencies = []
+        alias_count = entity_alias_catalog.count_for_entity(row.candidate_id)
+        if alias_count:
+            dependencies.append(KnowledgeDependencyReference(
+                kind="REFERENCE_INDEX", reference_id=row.candidate_id,
+                description=f"検索用Alias {alias_count}件（再構築可能）", protected=False,
+            ))
+        try:
+            map_intelligence_store.get(row.candidate_id)
+            dependencies.append(KnowledgeDependencyReference(
+                kind="MAP_RELATION", reference_id=row.candidate_id,
+                description="マップ詳細・向き・学習領域との関係", protected=True,
+            ))
+        except KeyError:
+            pass
+        for trivia in workspace.trivia.list_latest():
+            if row.candidate_id in trivia.entity_refs:
+                dependencies.append(KnowledgeDependencyReference(
+                    kind="TRIVIA_ENTITY_REF", reference_id=trivia.trivia_id,
+                    description=f"豆知識『{trivia.title}』から参照", protected=True,
+                ))
+        for index, sample in enumerate(workspace.visual.list(), start=1):
+            if any(row.candidate_id in str(value) for value in sample.to_row().values()):
+                dependencies.append(KnowledgeDependencyReference(
+                    kind="VISUAL_TRAINING_SAMPLE", reference_id=f"visual:{index}",
+                    description=f"画像学習データ {sample.domain.value} / {sample.label}", protected=True,
+                ))
+        for index, sample in enumerate(workspace.ocr.list(), start=1):
+            if row.candidate_id in sample.signal_id or row.candidate_id in sample.source_ref:
+                dependencies.append(KnowledgeDependencyReference(
+                    kind="OCR_TRAINING_SAMPLE", reference_id=f"ocr:{index}",
+                    description=f"OCR学習語彙 {sample.signal_id}", protected=True,
+                ))
+        return tuple(dependencies)
+
     def edit_knowledge_candidate() -> None:
         row = selected_knowledge_candidate()
         if row is None:
@@ -3639,7 +3685,8 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         image_frame=ttk.LabelFrame(modal,text="画像",padding=8); image_frame.grid(row=4,column=0,columnspan=3,sticky="ew",padx=10,pady=6); image_frame.columnconfigure(0,weight=1)
         image_ref={"photo":None}
         image_preview=ttk.Label(image_frame,text="画像なし",anchor="center"); image_preview.grid(row=0,column=0,columnspan=2,sticky="ew")
-        image_path_label=ttk.Label(image_frame,textvariable=image_path,foreground="#555555",wraplength=760); image_path_label.grid(row=1,column=0,columnspan=2,sticky="w",pady=(6,4))
+        image_name=tk.StringVar(value=Path(image_path.get()).name if image_path.get() else "画像なし")
+        image_path_label=ttk.Label(image_frame,textvariable=image_name,foreground="#555555",wraplength=760); image_path_label.grid(row=1,column=0,columnspan=2,sticky="w",pady=(6,4))
         def refresh_edit_image():
             photo=_knowledge_thumbnail(image_path.get(), (520, 260))
             image_ref["photo"]=photo
@@ -3647,26 +3694,43 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         def choose_image():
             chosen=filedialog.askopenfilename(title="差し替える画像を選択",filetypes=[("画像","*.png;*.jpg;*.jpeg;*.gif;*.pgm;*.ppm"),("すべて","*.*")])
             if chosen:
-                image_path.set(chosen); refresh_edit_image()
+                image_path.set(chosen); image_name.set(Path(chosen).name); refresh_edit_image()
         ttk.Button(image_frame,text="画像を差し替える",command=choose_image).grid(row=2,column=0,sticky="w")
         refresh_edit_image()
 
-        details_box=ttk.LabelFrame(modal,text="取得した詳細情報",padding=8); details_box.grid(row=5,column=0,columnspan=3,sticky="nsew",padx=10,pady=6); details_box.columnconfigure(0,weight=1); details_box.rowconfigure(0,weight=1); modal.rowconfigure(5,weight=1)
+        details_box=ttk.LabelFrame(modal,text="ゲーム情報",padding=8); details_box.grid(row=5,column=0,columnspan=3,sticky="nsew",padx=10,pady=6); details_box.columnconfigure(0,weight=1); details_box.rowconfigure(0,weight=1); modal.rowconfigure(5,weight=1)
         details_text=tk.Text(details_box,height=12,wrap="word")
         details_text.grid(row=0,column=0,sticky="nsew")
         detail_lines=[]
-        for key,value in sorted(row.details.items()):
-            if key.startswith("_"):
-                continue
+        for field in human_knowledge_fields(row):
+            value=field.value
             if isinstance(value,(dict,list,tuple)):
-                import json
                 rendered=json.dumps(value,ensure_ascii=False,indent=2)
             else:
                 rendered=str(value)
-            detail_lines.append(f"{key}: {rendered}")
-        detail_lines.extend((f"source_page_url: {row.source_page_url}", f"candidate_id: {row.candidate_id}"))
+            detail_lines.append(f"{field.label_ja}: {rendered}")
         details_text.insert("1.0","\n\n".join(detail_lines) if detail_lines else "詳細情報はありません。")
         details_text.configure(state="disabled")
+
+        diagnostics_frame=ttk.Frame(details_box); diagnostics_frame.grid(row=2,column=0,sticky="nsew",pady=(6,0)); diagnostics_frame.grid_remove()
+        diagnostics_frame.columnconfigure(0,weight=1); diagnostics_frame.rowconfigure(0,weight=1)
+        diagnostics_text=tk.Text(diagnostics_frame,height=8,wrap="word")
+        diagnostics_text.grid(row=0,column=0,sticky="nsew")
+        diagnostic_lines=[]
+        for key,value in diagnostic_knowledge_values(row).items():
+            rendered=json.dumps(value,ensure_ascii=False,indent=2) if isinstance(value,(dict,list,tuple)) else str(value)
+            diagnostic_lines.append(f"{key}: {rendered}")
+        diagnostics_text.insert("1.0","\n\n".join(diagnostic_lines) or "診断情報はありません。")
+        diagnostics_text.configure(state="disabled")
+        diagnostics_visible={"value":False}
+        def toggle_diagnostics():
+            diagnostics_visible["value"]=not diagnostics_visible["value"]
+            if diagnostics_visible["value"]:
+                diagnostics_frame.grid(); diagnostics_button.configure(text="内部・診断情報を閉じる")
+            else:
+                diagnostics_frame.grid_remove(); diagnostics_button.configure(text="内部・診断情報を表示")
+        diagnostics_button=ttk.Button(details_box,text="内部・診断情報を表示",command=toggle_diagnostics)
+        diagnostics_button.grid(row=1,column=0,sticky="w",pady=(6,0))
 
         ttk.Checkbutton(modal,text="有効",variable=enabled).grid(row=6,column=1,sticky="w",padx=10,pady=5)
         ttk.Label(modal,text=f"確認状態: {REVIEW_STATUS_JA.get(row.review_status,row.review_status)} / 情報源: 外部参考情報",foreground="#555555").grid(row=7,column=0,columnspan=3,sticky="w",padx=10,pady=(6,2))
@@ -3676,8 +3740,39 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 _sync_candidate_alias_index(updated)
                 modal.destroy(); refresh_kamigame_inventory()
             except Exception as exc: messagebox.showerror("編集できません",f"{type(exc).__name__}: {exc}",parent=modal)
+        def delete_knowledge():
+            try:
+                dependencies=_knowledge_delete_dependencies(row)
+                impact=game_knowledge_catalog.preview_delete(row.candidate_id,external_dependencies=dependencies)
+                action_ja="候補行を削除" if impact.action=="REMOVE_CANDIDATE" else "無効化して履歴を保持"
+                lines=[
+                    f"対象: {row.effective_name_ja}", f"安全な処理: {action_ja}",
+                    f"保護参照: {impact.protected_count}件 / 再構築可能: {impact.rebuildable_count}件",
+                    "確認範囲: Catalog / Human review / Trivia / Map / Visual・OCR training / Alias / retained asset",
+                    "", *[f"- {item.kind}: {item.description}" for item in impact.dependencies],
+                    "", "raw取得元・provenance・cached assetは削除しません。",
+                ]
+                if not messagebox.askyesno("削除影響の確認","\n".join(lines),parent=modal):
+                    return
+                if impact.action=="REMOVE_CANDIDATE" and not messagebox.askyesno(
+                    "候補行を削除しますか？",
+                    "未確認候補のcatalog行を削除します。完全削除ではなく、同じ取得revisionの再出現を防ぐ記録は保持します。",
+                    parent=modal,
+                ):
+                    return
+                result=game_knowledge_catalog.delete_safely(
+                    row.candidate_id,expected_fingerprint=impact.fingerprint,
+                    external_dependencies=dependencies,
+                )
+                entity_alias_catalog.remove_entity(row.candidate_id)
+                if result.action=="TOMBSTONE":
+                    try: map_intelligence_store.disable(row.candidate_id)
+                    except KeyError: pass
+                modal.destroy(); refresh_kamigame_inventory()
+            except Exception as exc:
+                messagebox.showerror("安全に削除できません",f"{type(exc).__name__}: {exc}",parent=modal)
         action=ttk.Frame(modal); action.grid(row=8,column=0,columnspan=3,sticky="e",padx=10,pady=10)
-        ttk.Button(action,text="キャンセル",command=modal.destroy).pack(side="left",padx=4); ttk.Button(action,text="保存",command=save_edit).pack(side="left",padx=4)
+        ttk.Button(action,text="削除",command=delete_knowledge).pack(side="left",padx=4); ttk.Button(action,text="キャンセル",command=modal.destroy).pack(side="left",padx=4); ttk.Button(action,text="保存",command=save_edit).pack(side="left",padx=4)
 
     def verify_knowledge_candidate() -> None:
         row=selected_knowledge_candidate()

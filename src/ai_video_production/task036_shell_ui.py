@@ -7,8 +7,10 @@ shape before the real workflow is connected.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+from functools import wraps
 import json
-from typing import Any, Callable
+from typing import Any, Callable, ContextManager
 
 from .cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
 from .desktop_editing_application import Task036EditingApplication
@@ -170,6 +172,14 @@ applyAccessibility();window.addEventListener('pywebviewready',refresh);setTimeou
 HTML = V611_HTML
 
 
+def _nle_operation_guarded(method: Callable[..., dict[str, Any]]) -> Callable[..., dict[str, Any]]:
+    @wraps(method)
+    def guarded(self: "Task036ShellBridge", *args: Any, **kwargs: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return method(self, *args, **kwargs)
+    return guarded
+
+
 class Task036ShellBridge:
     """Allowlisted bridge used only by the native layout/runtime spike."""
 
@@ -207,6 +217,7 @@ class Task036ShellBridge:
         game_intelligence_application: GameIntelligenceShellApplication | None = None,
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
+        nle_runtime_guard: Callable[[], ContextManager[None]] | None = None,
     ) -> None:
         if application is not None and application.shell is not service:
             raise ValueError("integrated application must use the supplied Shell service")
@@ -246,6 +257,9 @@ class Task036ShellBridge:
         # discovery. Only the typed bridge methods below are exported.
         self._nle_controller = nle_controller
         self._nle_controller_factory = nle_controller_factory
+        if nle_runtime_guard is not None and not callable(nle_runtime_guard):
+            raise ValueError("NLE runtime guard is invalid")
+        self._nle_runtime_guard = nle_runtime_guard
         self._final_review_export_application = None
         if final_review_export_preparation_provider is not None:
             if final_review_application is None:
@@ -269,6 +283,14 @@ class Task036ShellBridge:
                 self._nle_controller = self._nle_controller_factory(application)
         return self._nle_controller
 
+    def _nle_operation(self) -> ContextManager[None]:
+        if self._nle_runtime_guard is None:
+            return nullcontext()
+        operation = self._nle_runtime_guard()
+        if not hasattr(operation, "__enter__") or not hasattr(operation, "__exit__"):
+            raise ValueError("NLE runtime guard must return a context manager")
+        return operation
+
     def _require_nle_controller(self) -> Task044NleShellController:
         controller = self._ensure_nle_controller()
         if controller is None:
@@ -276,58 +298,74 @@ class Task036ShellBridge:
         return controller
 
     def interactive_timeline_snapshot(self, args: Any = None) -> dict[str, Any]:
-        controller = self._ensure_nle_controller()
-        if controller is None:
-            return {"available": False}
-        return controller.snapshot(args)
+        with self._nle_operation():
+            controller = self._ensure_nle_controller()
+            if controller is None:
+                return {"available": False}
+            return controller.snapshot(args)
 
     def interactive_timeline_select(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().select(args)
+        with self._nle_operation():
+            return self._require_nle_controller().select(args)
 
     def interactive_timeline_seek(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().seek(args)
+        with self._nle_operation():
+            return self._require_nle_controller().seek(args)
 
     def interactive_timeline_set_in_out(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().set_in_out(args)
+        with self._nle_operation():
+            return self._require_nle_controller().set_in_out(args)
 
     def interactive_timeline_update_viewport(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().update_viewport(args)
+        with self._nle_operation():
+            return self._require_nle_controller().update_viewport(args)
 
     def interactive_timeline_fit(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().fit(args)
+        with self._nle_operation():
+            return self._require_nle_controller().fit(args)
 
     def interactive_timeline_update_track_state(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().update_track_state(args)
+        with self._nle_operation():
+            return self._require_nle_controller().update_track_state(args)
 
     def interactive_timeline_update_track_height(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().update_track_height(args)
+        with self._nle_operation():
+            return self._require_nle_controller().update_track_height(args)
 
     def interactive_timeline_prepare_add_track(self, args: Any) -> dict[str, object]:
-        return self._require_nle_controller().prepare_add_track(args)
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_add_track(args)
 
     def interactive_timeline_prepare_remove_track(self, args: Any) -> dict[str, object]:
-        return self._require_nle_controller().prepare_remove_track(args)
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_remove_track(args)
 
     def interactive_timeline_prepare_trim(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().prepare_trim(args)
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_trim(args)
 
     def interactive_timeline_apply_edit(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().apply_edit(args)
+        with self._nle_operation():
+            return self._require_nle_controller().apply_edit(args)
 
     def export_queue_snapshot(self, args: Any = None) -> dict[str, Any]:
-        controller = self._ensure_nle_controller()
-        if controller is None:
-            return {"available": False, "rows": []}
-        return controller.export_snapshot(args)
+        with self._nle_operation():
+            controller = self._ensure_nle_controller()
+            if controller is None:
+                return {"available": False, "rows": []}
+            return controller.export_snapshot(args)
 
     def export_queue_prepare_dispatch(self, args: Any) -> dict[str, object]:
-        return self._require_nle_controller().export_prepare_dispatch(args)
+        with self._nle_operation():
+            return self._require_nle_controller().export_prepare_dispatch(args)
 
     def export_queue_cancel(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().export_cancel(args)
+        with self._nle_operation():
+            return self._require_nle_controller().export_cancel(args)
 
     def export_queue_reconcile(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().export_reconcile(args)
+        with self._nle_operation():
+            return self._require_nle_controller().export_reconcile(args)
 
     def _current_application(self) -> Task036EditingApplication | None:
         if self._application is not None:
@@ -1264,6 +1302,7 @@ class Task036ShellBridge:
             "render_or_publish_started": False,
         }
 
+    @_nle_operation_guarded
     def final_review_export_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Final Review Export snapshot")
         if self._final_review_export_application is None:
@@ -1272,13 +1311,14 @@ class Task036ShellBridge:
                 "state": "PRIVATE_EXPORT_PREPARATION_UNBOUND",
                 "queue_confirmation_ready": False,
                 "export_job_created": False,
-                "dispatch_or_render_started": False,
+                "side_effect_started_by_this_call": False,
                 "host_output_path_persisted": False,
             }
         return self._final_review_export_application.snapshot(
             readiness=self.final_review_readiness_snapshot(),
         )
 
+    @_nle_operation_guarded
     def final_review_export_prepare(self, args: Any) -> dict[str, Any]:
         required = {
             "expected_readiness_projection_sha256",
@@ -1308,6 +1348,7 @@ class Task036ShellBridge:
             expected_preparation_sha256=args["expected_preparation_sha256"],
         )
 
+    @_nle_operation_guarded
     def final_review_export_apply(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError(
@@ -1324,6 +1365,24 @@ class Task036ShellBridge:
         return self._final_review_export_application.apply_enqueue(
             confirmation_id=args["confirmation_id"],
             readiness=self.final_review_readiness_snapshot(),
+        )
+
+    @_nle_operation_guarded
+    def final_review_export_cancel(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review Export cancellation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._final_review_export_application is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_NOT_BOUND",
+                "Private Export preparation is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._final_review_export_application.cancel_enqueue(
+            confirmation_id=args["confirmation_id"],
         )
 
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:

@@ -149,6 +149,10 @@ def test_export_keeps_execute_all_visible_but_fail_closed() -> None:
     assert "export_queue_dispatch_all" not in SHELL_HTML
 
 
+def test_export_queue_apply_does_not_read_job_id_from_a_null_response() -> None:
+    assert "if(queued?.job_id)notify(`Export Job ${queued.job_id}" in SHELL_HTML
+
+
 def test_existing_product_authority_is_projected_into_mock_surfaces() -> None:
     for method in (
         "planning_snapshot",
@@ -654,6 +658,11 @@ def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
         "if(row.safe_cancel)",
         "安全にCancel",
         "expected_state_version:row.state_version",
+        "final_review_export_cancel',{confirmation_id:prepared.confirmation_id}",
+        "if(preparation?.state==='EXISTING_EXPORT_JOB')",
+        "Durable Export Job: ${preparation.job_id}",
+        "Target: ${preparation.target_identity}",
+        "State version: ${preparation.state_version}",
     ):
         assert marker in SHELL_HTML
 
@@ -669,3 +678,9 @@ def test_export_does_not_use_undefined_fields_or_blanket_execution() -> None:
     assert "row.cancel_available" not in SHELL_HTML
     assert "row.progress_percent" not in SHELL_HTML
     assert "export_queue_execute_all" not in SHELL_HTML
+
+
+def test_scene_and_placement_listeners_are_installed_exactly_once() -> None:
+    assert SHELL_HTML.count("$('sceneUpdateButton').addEventListener('click',reviseScene)") == 1
+    assert SHELL_HTML.count("$('sceneFinalizeButton').addEventListener('click',finalizeScenes)") == 1
+    assert SHELL_HTML.count("$('placementPlanButton').addEventListener('click'") == 1

@@ -42,6 +42,8 @@ class ExportQueueApplication:
 
     def _validate_current(self, preparation: ExportPreparation) -> None:
         manifest = ProductProjectManifestStore.load(self.project_root)
+        if manifest.project_id != self.project_id:
+            raise ProductError("ERR_PRODUCT_JOB_PROJECT_CONFLICT", "Export queue belongs to another Project", ProductErrorCategory.SECURITY)
         if preparation.project_id != self.project_id:
             raise ProductError("ERR_EXPORT_PROJECT_MISMATCH", "Export preparation belongs to another Project", ProductErrorCategory.SECURITY)
         if (manifest.project_manifest_sha256 != preparation.project_manifest_sha256
@@ -57,6 +59,31 @@ class ExportQueueApplication:
             estimated_cost=preparation.estimated_cost,
             currency=preparation.currency,
             estimate_source=preparation.estimate_source,
+            exclusive_input_name="final_approval",
+            expected_project_id=self.project_id,
+        )
+
+    def jobs_for_final_approval(
+        self, final_approval_receipt_sha256: str,
+    ) -> tuple[DurableProductJob, ...]:
+        """Read exact EXPORT jobs already bound to one typed Final Review receipt."""
+
+        return self.jobs.query_by_input_binding(
+            self.project_root,
+            kind="EXPORT",
+            input_name="final_approval",
+            input_sha256=final_approval_receipt_sha256,
+            expected_project_id=self.project_id,
+        )
+
+    def recover_interrupted_on_startup(self) -> tuple[DurableProductJob, ...]:
+        """Explicit startup recovery; never infer a restart from construction."""
+
+        store_path = DurableProductJobStore.path(self.project_root)
+        if not store_path.exists() and not store_path.is_symlink():
+            return ()
+        return self.jobs.recover_interrupted(
+            self.project_root, kind="EXPORT", expected_project_id=self.project_id,
         )
 
     def _job(self, job_id: str) -> DurableProductJob:

@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 
-from ai_video_production.durable_product_job import DurableProductJobStore
+from ai_video_production.durable_product_job import (
+    DurableProductJobCollection,
+    DurableProductJobState,
+    DurableProductJobStore,
+)
 from ai_video_production.errors import ProductError
 from ai_video_production.export_queue import (
     ExportAuthorityClass,
@@ -129,7 +135,7 @@ def test_snapshot_exposes_only_logical_preparation_and_requires_confirmation(tmp
     assert snapshot["state"] == "READY_FOR_EXPORT_QUEUE_CONFIRMATION"
     assert snapshot["queue_confirmation_ready"] is True
     assert snapshot["export_job_created"] is False
-    assert snapshot["dispatch_or_render_started"] is False
+    assert snapshot["side_effect_started_by_this_call"] is False
     assert snapshot["host_output_path_persisted"] is False
     assert snapshot["preset"]["preset_id"] == "preset-youtube-1080p"
     assert str(tmp_path) not in json.dumps(snapshot)
@@ -150,11 +156,14 @@ def test_prepare_apply_creates_exactly_one_queued_job_without_dispatch(tmp_path:
     )
     assert result["state"] == "QUEUED"
     assert result["export_job_created"] is True
-    assert result["dispatch_or_render_started"] is False
+    assert result["side_effect_started_by_this_call"] is False
     collection = DurableProductJobStore.load(tmp_path)
     assert len(collection.jobs) == 1
     assert collection.jobs[0].state.value == "QUEUED"
-    assert app.snapshot(readiness=current)["state"] == "ALREADY_QUEUED"
+    existing = app.snapshot(readiness=current)
+    assert existing["state"] == "EXISTING_EXPORT_JOB"
+    assert existing["existing_job_state"] == "QUEUED"
+    assert existing["job_id"] == result["job_id"]
     with pytest.raises(ProductError, match="missing or consumed"):
         app.apply_enqueue(confirmation_id=str(prepared["confirmation_id"]), readiness=current)
 
@@ -219,3 +228,326 @@ def test_unbound_queue_is_read_only_unavailable(tmp_path: Path) -> None:
     assert snapshot["available"] is False
     assert snapshot["state"] == "ERR_FINAL_REVIEW_EXPORT_QUEUE_NOT_BOUND"
     assert snapshot["export_job_created"] is False
+
+
+def _stale_after_export(current: dict[str, object]) -> dict[str, object]:
+    stale = dict(current)
+    stale["export_job_count"] = 1
+    stale["product_blockers"] = [{"code": "UNSCOPED_EXPORT_JOB_PRESENT"}]
+    stale["projection_sha256"] = sha256_bytes(canonical_json_bytes({
+        key: value for key, value in stale.items() if key != "available" and key != "projection_sha256"
+    }))
+    return stale
+
+
+def _enqueue_once(app: Task036FinalReviewExportApplication, current: dict[str, object]) -> dict[str, object]:
+    snapshot = app.snapshot(readiness=current)
+    prepared = app.prepare_enqueue(
+        readiness=current,
+        expected_readiness_projection_sha256=str(snapshot["readiness_projection_sha256"]),
+        expected_approval_snapshot_sha256=str(snapshot["approval_snapshot_sha256"]),
+        expected_preparation_sha256=str(snapshot["preparation_sha256"]),
+    )
+    return app.apply_enqueue(confirmation_id=str(prepared["confirmation_id"]), readiness=current)
+
+
+@pytest.mark.parametrize(
+    ("target_state", "transitions"),
+    (
+        (DurableProductJobState.QUEUED, ()),
+        (DurableProductJobState.PREFLIGHT, (DurableProductJobState.PREFLIGHT,)),
+        (DurableProductJobState.READY, (DurableProductJobState.PREFLIGHT, DurableProductJobState.READY)),
+        (DurableProductJobState.DISPATCHING, (DurableProductJobState.PREFLIGHT, DurableProductJobState.READY, DurableProductJobState.DISPATCHING)),
+        (DurableProductJobState.RUNNING, (DurableProductJobState.PREFLIGHT, DurableProductJobState.READY, DurableProductJobState.DISPATCHING, DurableProductJobState.RUNNING)),
+        (DurableProductJobState.SUCCEEDED, (DurableProductJobState.PREFLIGHT, DurableProductJobState.READY, DurableProductJobState.DISPATCHING, DurableProductJobState.SUCCEEDED)),
+        (DurableProductJobState.FAILED, (DurableProductJobState.PREFLIGHT, DurableProductJobState.FAILED)),
+        (DurableProductJobState.CANCELLED, (DurableProductJobState.CANCELLED,)),
+        (DurableProductJobState.UNKNOWN, (DurableProductJobState.PREFLIGHT, DurableProductJobState.READY, DurableProductJobState.DISPATCHING, DurableProductJobState.UNKNOWN)),
+        (DurableProductJobState.HUMAN_REQUIRED, (DurableProductJobState.PREFLIGHT, DurableProductJobState.HUMAN_REQUIRED)),
+    ),
+)
+def test_stale_final_review_projects_existing_export_job_state_truthfully(
+    tmp_path: Path, target_state: DurableProductJobState, transitions: tuple[DurableProductJobState, ...]
+) -> None:
+    app, _, current, _, _ = application(tmp_path)
+    result = _enqueue_once(app, current)
+    job = DurableProductJobStore.load(tmp_path).jobs[0]
+    for state in transitions:
+        kwargs: dict[str, object] = {}
+        if state is DurableProductJobState.SUCCEEDED:
+            kwargs["result_ref"] = "result-export-1"
+        elif state in {DurableProductJobState.FAILED, DurableProductJobState.UNKNOWN, DurableProductJobState.HUMAN_REQUIRED}:
+            kwargs["error_code"] = "ERR_PRODUCT_JOB_TEST_STATE"
+        job = app._application().jobs.transition(
+            tmp_path, job.job_id, state, expected_state_version=job.state_version, **kwargs
+        )
+    snapshot = app.snapshot(readiness=_stale_after_export(current))
+    assert snapshot["state"] == "EXISTING_EXPORT_JOB"
+    assert snapshot["existing_job_state"] == target_state.value
+    assert snapshot["job_id"] == result["job_id"]
+    assert snapshot["operation_identity"] == result["operation_identity"]
+    assert snapshot["state_version"] == job.state_version
+    assert snapshot["target_identity"] == job.target_identity
+    assert "preset" not in snapshot
+    assert "preparation_sha256" not in snapshot
+    assert "authority_class" not in snapshot
+    assert snapshot["queue_confirmation_ready"] is False
+    assert snapshot["export_job_created"] is True
+    assert "dispatch_or_render_started" not in snapshot
+    assert snapshot["side_effect_started_by_this_call"] is False
+    assert snapshot["host_output_path_persisted"] is False
+    assert len(DurableProductJobStore.load(tmp_path).jobs) == 1
+
+
+def test_stale_final_review_without_existing_export_job_remains_unavailable(tmp_path: Path) -> None:
+    app, _, current, _, _ = application(tmp_path)
+    snapshot = app.snapshot(readiness=_stale_after_export(current))
+    assert snapshot["available"] is False
+    assert snapshot["state"] == "ERR_FINAL_REVIEW_EXPORT_APPROVAL_NOT_CURRENT"
+    assert snapshot["queue_confirmation_ready"] is False
+    assert snapshot["export_job_created"] is False
+    assert not DurableProductJobStore.path(tmp_path).exists()
+
+
+def test_stale_snapshot_never_calls_private_provider_and_survives_provider_change(
+    tmp_path: Path,
+) -> None:
+    app, _, current, _, _ = application(tmp_path)
+    queued = _enqueue_once(app, current)
+    calls = 0
+
+    def unavailable_provider(_: FinalReviewApprovalReceipt) -> ExportPreparation:
+        nonlocal calls
+        calls += 1
+        raise AssertionError("stale durable projection must not call private provider")
+
+    # This represents a process restart after provider configuration changes.
+    restarted = Task036FinalReviewExportApplication(
+        project_id=app.project_id,
+        final_review_application=app._final_review,
+        export_application_provider=app._export_application_provider,
+        preparation_provider=unavailable_provider,
+    )
+    snapshot = restarted.snapshot(readiness=_stale_after_export(current))
+    assert calls == 0
+    assert snapshot == {
+        "available": True,
+        "state": "EXISTING_EXPORT_JOB",
+        "job_id": queued["job_id"],
+        "operation_identity": queued["operation_identity"],
+        "target_identity": "export:master",
+        "existing_job_state": "QUEUED",
+        "state_version": 1,
+        "queue_confirmation_ready": False,
+        "export_job_created": True,
+        "side_effect_started_by_this_call": False,
+        "host_output_path_persisted": False,
+    }
+
+
+def test_multiple_durable_jobs_for_one_approval_fail_closed_without_provider(tmp_path: Path) -> None:
+    app, _, current, _, receipt = application(tmp_path)
+    _enqueue_once(app, current)
+    queue = app._application()
+    original = DurableProductJobStore.load(tmp_path).jobs[0]
+    queue.jobs.enqueue(
+        tmp_path,
+        kind="EXPORT",
+        target_identity="export:conflicting-target",
+        input_hashes=dict(original.input_hashes),
+    )
+    calls = 0
+
+    def forbidden_provider(_: FinalReviewApprovalReceipt) -> ExportPreparation:
+        nonlocal calls
+        calls += 1
+        raise AssertionError("conflict projection must not call private provider")
+
+    app._preparation_provider = forbidden_provider
+    snapshot = app.snapshot(readiness=_stale_after_export(current))
+    assert receipt.final_approval_receipt_sha256 == dict(original.input_hashes)["final_approval"]
+    assert calls == 0
+    assert snapshot["available"] is False
+    assert snapshot["state"] == "ERR_FINAL_REVIEW_EXPORT_EXISTING_JOB_CONFLICT"
+    assert snapshot["queue_confirmation_ready"] is False
+    assert snapshot["existing_export_job_count"] == 2
+    assert "export_job_created" not in snapshot
+    assert "dispatch_or_render_started" not in snapshot
+
+
+def test_pending_confirmation_cancel_and_bounded_eviction_fail_closed(tmp_path: Path) -> None:
+    tokens = iter(f"queue-confirmation-{index}" for index in range(300))
+    app, _, current, _, _ = application(tmp_path, token="unused")
+    app._token_factory = lambda: next(tokens)
+    snapshot = app.snapshot(readiness=current)
+    expected = {
+        "expected_readiness_projection_sha256": str(snapshot["readiness_projection_sha256"]),
+        "expected_approval_snapshot_sha256": str(snapshot["approval_snapshot_sha256"]),
+        "expected_preparation_sha256": str(snapshot["preparation_sha256"]),
+    }
+    first = app.prepare_enqueue(readiness=current, **expected)
+    app.apply_enqueue(confirmation_id=str(first["confirmation_id"]), readiness=current)
+    assert not app._pending
+    pending_app, _, pending_current, _, _ = application(tmp_path / "pending", token="unused")
+    pending_app._token_factory = lambda: next(tokens)
+    pending_snapshot = pending_app.snapshot(readiness=pending_current)
+    pending_expected = {
+        "expected_readiness_projection_sha256": str(pending_snapshot["readiness_projection_sha256"]),
+        "expected_approval_snapshot_sha256": str(pending_snapshot["approval_snapshot_sha256"]),
+        "expected_preparation_sha256": str(pending_snapshot["preparation_sha256"]),
+    }
+    pending = [pending_app.prepare_enqueue(readiness=pending_current, **pending_expected) for _ in range(256)]
+    evicted = pending_app.prepare_enqueue(readiness=pending_current, **pending_expected)
+    assert len(pending_app._pending) == 256
+    assert str(pending[0]["confirmation_id"]) not in pending_app._pending
+    with pytest.raises(ProductError, match="missing or consumed"):
+        pending_app.apply_enqueue(confirmation_id=str(pending[0]["confirmation_id"]), readiness=pending_current)
+    cancelled = pending_app.cancel_enqueue(confirmation_id=str(evicted["confirmation_id"]))
+    assert cancelled["cancelled"] is True
+    assert cancelled["export_job_created"] is False
+    with pytest.raises(ProductError, match="missing or consumed"):
+        pending_app.apply_enqueue(confirmation_id=str(evicted["confirmation_id"]), readiness=pending_current)
+    assert not DurableProductJobStore.path(tmp_path / "pending").exists()
+
+
+def test_apply_uses_private_preparation_once_and_fails_closed_on_provider_drift(tmp_path: Path) -> None:
+    app, selected, current, manifest, receipt = application(tmp_path)
+    calls = 0
+
+    def drifting_provider(_: FinalReviewApprovalReceipt) -> ExportPreparation:
+        nonlocal calls
+        calls += 1
+        return selected[0] if calls <= 3 else preparation(manifest, receipt, target="export:drifted")
+
+    app._preparation_provider = drifting_provider
+    snapshot = app.snapshot(readiness=current)
+    prepared = app.prepare_enqueue(
+        readiness=current,
+        expected_readiness_projection_sha256=str(snapshot["readiness_projection_sha256"]),
+        expected_approval_snapshot_sha256=str(snapshot["approval_snapshot_sha256"]),
+        expected_preparation_sha256=str(snapshot["preparation_sha256"]),
+    )
+    # snapshot + prepare each obtain their own preview.  If apply evaluated the
+    # provider twice, its fourth call would enqueue the drifted target.
+    result = app.apply_enqueue(confirmation_id=str(prepared["confirmation_id"]), readiness=current)
+    assert calls == 3
+    assert result["job_id"]
+    jobs = DurableProductJobStore.load(tmp_path).jobs
+    assert len(jobs) == 1
+    assert jobs[0].target_identity == "export:master"
+
+
+def test_concurrent_apply_consumes_one_confirmation_exactly_once(tmp_path: Path) -> None:
+    app, _, current, _, _ = application(tmp_path)
+    snapshot = app.snapshot(readiness=current)
+    prepared = app.prepare_enqueue(
+        readiness=current,
+        expected_readiness_projection_sha256=str(snapshot["readiness_projection_sha256"]),
+        expected_approval_snapshot_sha256=str(snapshot["approval_snapshot_sha256"]),
+        expected_preparation_sha256=str(snapshot["preparation_sha256"]),
+    )
+
+    def apply() -> dict[str, object] | ProductError:
+        try:
+            return app.apply_enqueue(confirmation_id=str(prepared["confirmation_id"]), readiness=current)
+        except ProductError as exc:
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = [future.result() for future in (executor.submit(apply), executor.submit(apply))]
+    successes = [item for item in results if not isinstance(item, ProductError)]
+    failures = [item for item in results if isinstance(item, ProductError)]
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert failures[0].code == "ERR_FINAL_REVIEW_EXPORT_CONFIRMATION_INVALID"
+    assert len(DurableProductJobStore.load(tmp_path).jobs) == 1
+
+
+def test_distinct_confirmations_and_preparations_admit_exactly_one_job_per_approval(tmp_path: Path) -> None:
+    manifest, approvals, receipt, first_queue, current = setup(tmp_path)
+    second_queue = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    first = Task036FinalReviewExportApplication(
+        project_id="project-1", final_review_application=approvals,
+        export_application_provider=lambda: first_queue,
+        preparation_provider=lambda _: preparation(manifest, receipt, target="export:master"),
+        token_factory=lambda: "first-confirmation",
+    )
+    second = Task036FinalReviewExportApplication(
+        project_id="project-1", final_review_application=approvals,
+        export_application_provider=lambda: second_queue,
+        preparation_provider=lambda _: preparation(manifest, receipt, target="export:alternate"),
+        token_factory=lambda: "second-confirmation",
+    )
+
+    def prepare(app: Task036FinalReviewExportApplication) -> dict[str, object]:
+        snapshot = app.snapshot(readiness=current)
+        return app.prepare_enqueue(
+            readiness=current,
+            expected_readiness_projection_sha256=str(snapshot["readiness_projection_sha256"]),
+            expected_approval_snapshot_sha256=str(snapshot["approval_snapshot_sha256"]),
+            expected_preparation_sha256=str(snapshot["preparation_sha256"]),
+        )
+
+    prepared = (prepare(first), prepare(second))
+    start = Barrier(2)
+
+    def apply(app: Task036FinalReviewExportApplication, confirmation: str):
+        start.wait()
+        try:
+            return app.apply_enqueue(confirmation_id=confirmation, readiness=current)
+        except ProductError as exc:
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(
+            lambda pair: apply(*pair),
+            zip((first, second), tuple(str(item["confirmation_id"]) for item in prepared), strict=True),
+        ))
+    successes = [item for item in results if not isinstance(item, ProductError)]
+    failures = [item for item in results if isinstance(item, ProductError)]
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert failures[0].code == "ERR_PRODUCT_JOB_EXCLUSIVE_INPUT_CONFLICT"
+    jobs = first_queue.jobs_for_final_approval(receipt.final_approval_receipt_sha256)
+    assert len(jobs) == 1
+    assert jobs[0].job_id == successes[0]["job_id"]
+    assert all(item["side_effect_started_by_this_call"] is False for item in successes)
+
+
+def test_checksum_valid_cross_project_collection_fails_closed_via_task044_query(tmp_path: Path) -> None:
+    app, _, current, _, _ = application(tmp_path)
+    manifest_path = ProductProjectManifestStore.path(tmp_path)
+    manifest_path.unlink()
+    ProductProjectManifestStore.save(
+        tmp_path,
+        ProductProjectManifest.create(
+            project_id="other-project", project_revision=1, product_version="0.20.1",
+            timebase=ProjectTimebase(30, 1), child_bindings=(),
+            created_at="2026-08-17T07:00:00.000Z", updated_at="2026-08-17T07:00:00.000Z",
+        ),
+    )
+    DurableProductJobStore._save_unlocked(
+        tmp_path,
+        DurableProductJobCollection.create("other-project"),
+    )
+    with pytest.raises(ProductError) as exc:
+        app.snapshot(readiness=current)
+    assert exc.value.code == "ERR_PRODUCT_JOB_PROJECT_CONFLICT"
+
+
+@pytest.mark.parametrize("target_kind", ("dangling", "valid"))
+def test_symlinked_durable_job_store_fails_closed_before_exists(
+    tmp_path: Path, target_kind: str
+) -> None:
+    app, _, current, _, _ = application(tmp_path)
+    store_path = DurableProductJobStore.path(tmp_path)
+    if target_kind == "valid":
+        _enqueue_once(app, current)
+        real_path = store_path.with_name("jobs-real.json")
+        store_path.replace(real_path)
+        store_path.symlink_to(real_path)
+    else:
+        store_path.symlink_to(store_path.with_name("missing-jobs.json"))
+    with pytest.raises(ProductError) as exc:
+        app.snapshot(readiness=_stale_after_export(current))
+    assert exc.value.code == "ERR_PRODUCT_JOB_STORE_FILE"

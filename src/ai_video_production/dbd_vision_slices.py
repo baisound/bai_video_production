@@ -9,12 +9,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import os
 from pathlib import Path
 import subprocess
 from typing import Iterable, Sequence
 
 from .errors import ProductError, ProductErrorCategory
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
+
+
+def _no_console_subprocess_kwargs() -> dict[str, int]:
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+    return {"creationflags": creationflags} if creationflags else {}
 
 
 @dataclass(frozen=True, slots=True)
@@ -518,7 +524,10 @@ class FFmpegSliceExtractor:
         vf = f"select=eq(n\\,{frame_index}),{crop},scale={width}:{height}:flags=area,format=gray"
         cmd = [self.ffmpeg_executable, "-hide_banner", "-loglevel", "error", "-i", str(source), "-vf", vf, "-frames:v", "1", "-f", "image2", "-vcodec", "pgm", "-y", str(target)]
         try:
-            completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
+            completed = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                timeout=120, **_no_console_subprocess_kwargs(),
+            )
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise ProductError("ERR_DBD_SLICE_FFMPEG_UNAVAILABLE", "FFmpeg ROI extraction failed to start", ProductErrorCategory.EXTERNAL_DEPENDENCY, retryable=True) from exc
         if completed.returncode != 0 or not target.is_file():
@@ -531,7 +540,10 @@ class FFmpegSliceExtractor:
             raise ValueError("reference image does not exist")
         target.parent.mkdir(parents=True, exist_ok=True)
         cmd = [self.ffmpeg_executable, "-hide_banner", "-loglevel", "error", "-i", str(source), "-vf", f"scale={width}:{height}:flags=area,format=gray", "-frames:v", "1", "-f", "image2", "-vcodec", "pgm", "-y", str(target)]
-        completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+        completed = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            timeout=60, **_no_console_subprocess_kwargs(),
+        )
         if completed.returncode != 0 or not target.is_file():
             raise ProductError("ERR_DBD_REFERENCE_NORMALIZE_FAILED", "FFmpeg failed to normalize a reference slice", ProductErrorCategory.EXTERNAL_DEPENDENCY)
         return target

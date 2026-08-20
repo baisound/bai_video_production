@@ -1,7 +1,7 @@
 """TASK-050 R3 safe visual learning workflow."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import Enum
 import hashlib
 import json
@@ -9,6 +9,9 @@ import os
 from pathlib import Path
 import shutil
 import tempfile
+import threading
+import time
+from typing import Callable, Sequence
 from uuid import uuid4
 
 from .dbd_hud_visibility import HudVisibility
@@ -61,10 +64,39 @@ class BatchPreviewReport:
     frame_count: int
     target_count: int
     staged: tuple[StagedTrainingSample, ...]
+    stage_count: int = 0
+    subprocess_count: int = 0
+    extract_seconds: float = 0.0
+    cancelled: bool = False
 
     @property
     def total_samples(self) -> int:
         return len(self.staged)
+
+
+@dataclass(frozen=True, slots=True)
+class BatchOperationProgress:
+    phase: str
+    processed: int
+    total: int
+    current_domain: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class BatchConfirmReport:
+    stage_count: int
+    confirm_count: int
+    duplicate_count: int
+    failed_count: int
+    subprocess_count: int
+    extract_seconds: float
+    commit_seconds: float
+    index_rebuild_seconds: float
+    total_seconds: float
+    cancelled: bool
+    affected_domains: tuple[str, ...] = ()
+    index_paths: tuple[str, ...] = ()
+    errors: tuple[str, ...] = ()
 
 
 
@@ -140,6 +172,8 @@ class SafeVisualLearningService:
     def preview_video_batch(
         self, *, video_path: str | Path, start_frame: int, end_frame_exclusive: int,
         frame_step: int, targets: tuple[BatchVisualTarget, ...], max_samples: int = 500,
+        progress: Callable[[BatchOperationProgress], None] | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> BatchPreviewReport:
         if start_frame < 0 or end_frame_exclusive <= start_frame:
             raise ValueError("動画学習のフレーム抽出範囲が不正です。")
@@ -157,9 +191,19 @@ class SafeVisualLearningService:
                 "フレーム間隔を広げるか範囲を分割してください。"
             )
         staged: list[StagedTrainingSample] = []
+        started = time.perf_counter()
+        processed = 0
         try:
             for frame_index in frames:
                 for target in targets:
+                    if cancel_event is not None and cancel_event.is_set():
+                        for item in staged:
+                            self.discard(item.staging_id)
+                        return BatchPreviewReport(
+                            frame_count=len(frames), target_count=len(targets), staged=(),
+                            stage_count=len(staged), subprocess_count=len(staged),
+                            extract_seconds=time.perf_counter() - started, cancelled=True,
+                        )
                     staged.append(
                         self.preview_video_frame(
                             domain=target.domain, label=target.label,
@@ -172,6 +216,11 @@ class SafeVisualLearningService:
                             signal_kind=target.signal_kind,
                         )
                     )
+                    processed += 1
+                    if progress is not None:
+                        progress(BatchOperationProgress(
+                            "EXTRACT", processed, requested, target.domain.value,
+                        ))
         except Exception:
             for item in staged:
                 try:
@@ -180,8 +229,153 @@ class SafeVisualLearningService:
                     pass
             raise
         return BatchPreviewReport(
-            frame_count=len(frames), target_count=len(targets), staged=tuple(staged)
+            frame_count=len(frames), target_count=len(targets), staged=tuple(staged),
+            stage_count=len(staged), subprocess_count=len(staged),
+            extract_seconds=time.perf_counter() - started,
         )
+
+    def confirm_batch(
+        self,
+        staged_values: Sequence[StagedTrainingSample],
+        *,
+        progress: Callable[[BatchOperationProgress], None] | None = None,
+        cancel_event: threading.Event | None = None,
+        rebuild_indexes: bool = True,
+        extract_seconds: float = 0.0,
+        stage_subprocess_count: int = 0,
+    ) -> BatchConfirmReport:
+        """Commit staged PGM files and manifest once, then rebuild once per domain."""
+        started = time.perf_counter()
+        values = tuple(staged_values)
+        if not values:
+            raise ValueError("一括登録するプレビューがありません。")
+        existing = list(self.manifest.list())
+        existing_ids = {self.manifest._identity(item) for item in existing}
+        prepared: list[tuple[StagedTrainingSample, VisualTrainingSample, Path, Path]] = []
+        duplicates = 0
+        try:
+            for number, staged in enumerate(values, start=1):
+                if cancel_event is not None and cancel_event.is_set():
+                    break
+                current = self.load_staged(staged.staging_id)
+                if current.state is not TrainingReviewState.PREVIEWED:
+                    duplicates += 1
+                    continue
+                source = Path(current.image_path)
+                if not source.is_file():
+                    raise ValueError(f"プレビュー画像が見つかりません: {current.staging_id}")
+                actual = f"sha256:{hashlib.sha256(source.read_bytes()).hexdigest()}"
+                if actual != current.sha256:
+                    raise ValueError(f"プレビュー画像が変更されています: {current.staging_id}")
+                final_dir = self.workspace_root / "training-data" / current.domain.value.lower() / current.label
+                final_dir.mkdir(parents=True, exist_ok=True)
+                final_path = final_dir / f"{current.staging_id}-{current.roi_id}.pgm"
+                notes = " | ".join(x for x in (current.notes, f"visibility={current.visibility.value}") if x)
+                item = VisualTrainingSample(
+                    domain=current.domain, label=current.label, image_path=str(final_path),
+                    group=current.group, source_ref=current.source_ref, notes=notes,
+                    registration_origin=current.registration_origin, slot=current.roi_id,
+                    display_state=current.visibility.value, source_video=current.source_video,
+                    source_frame=current.source_frame, match_id=current.match_id,
+                    survivor_slot=current.survivor_slot, signal_kind=current.signal_kind,
+                )
+                if self.manifest._identity(item) in existing_ids:
+                    duplicates += 1
+                    continue
+                if final_path.exists():
+                    raise ValueError(f"登録先ファイルが既に存在します: {final_path.name}")
+                temp_path = final_path.with_name(f".{final_path.name}.{uuid4().hex}.tmp")
+                shutil.copy2(source, temp_path)
+                prepared.append((current, item, temp_path, final_path))
+                existing_ids.add(self.manifest._identity(item))
+                if progress is not None:
+                    progress(BatchOperationProgress("PREPARE", number, len(values), current.domain.value))
+        except Exception:
+            for _, _, temp_path, _ in prepared:
+                temp_path.unlink(missing_ok=True)
+            raise
+
+        if cancel_event is not None and cancel_event.is_set():
+            for _, _, temp_path, _ in prepared:
+                temp_path.unlink(missing_ok=True)
+            report = BatchConfirmReport(
+                stage_count=len(values), confirm_count=0, duplicate_count=duplicates,
+                failed_count=0, subprocess_count=stage_subprocess_count,
+                extract_seconds=extract_seconds,
+                commit_seconds=0.0, index_rebuild_seconds=0.0,
+                total_seconds=extract_seconds + time.perf_counter() - started, cancelled=True,
+            )
+            self._write_batch_receipt(report)
+            return report
+
+        commit_started = time.perf_counter()
+        committed_paths: list[Path] = []
+        try:
+            for _, _, temp_path, final_path in prepared:
+                os.replace(temp_path, final_path)
+                committed_paths.append(final_path)
+            self.manifest._write((*existing, *(item for _, item, _, _ in prepared)))
+        except Exception:
+            for path in committed_paths:
+                path.unlink(missing_ok=True)
+            for _, _, temp_path, _ in prepared:
+                temp_path.unlink(missing_ok=True)
+            raise
+        commit_seconds = time.perf_counter() - commit_started
+        for number, (current, _, _, _) in enumerate(prepared, start=1):
+            self._write_receipt(self._with_state(current, TrainingReviewState.REGISTERED))
+            if progress is not None:
+                progress(BatchOperationProgress("COMMIT", number, len(prepared), current.domain.value))
+
+        affected = tuple(sorted({item.domain.value for _, item, _, _ in prepared}))
+        index_paths: list[str] = []
+        errors: list[str] = []
+        subprocess_count = 0
+        index_started = time.perf_counter()
+        if rebuild_indexes:
+            for number, domain_value in enumerate(affected, start=1):
+                domain = VisualTrainingDomain(domain_value)
+                domain_samples = self.manifest.list(domain=domain)
+                subprocess_count += sum(Path(item.image_path).suffix.casefold() != ".pgm" for item in domain_samples)
+                try:
+                    path = self.manifest.build_reference_index(
+                        domain=domain,
+                        output_path=self.workspace_root / "indexes" / f"{domain.value.lower()}-reference.json",
+                        index_id=f"{domain.value.lower()}-reference",
+                        ffmpeg_executable=self.extractor.ffmpeg_executable,
+                    )
+                    index_paths.append(str(path))
+                except Exception as exc:
+                    errors.append(f"{domain.value}: {type(exc).__name__}: {exc}")
+                if progress is not None:
+                    progress(BatchOperationProgress("INDEX_REBUILD", number, len(affected), domain.value))
+        index_seconds = time.perf_counter() - index_started
+        report = BatchConfirmReport(
+            stage_count=len(values), confirm_count=len(prepared), duplicate_count=duplicates,
+            failed_count=len(errors), subprocess_count=stage_subprocess_count + subprocess_count,
+            extract_seconds=extract_seconds, commit_seconds=commit_seconds,
+            index_rebuild_seconds=index_seconds,
+            total_seconds=extract_seconds + time.perf_counter() - started,
+            cancelled=False, affected_domains=affected, index_paths=tuple(index_paths),
+            errors=tuple(errors),
+        )
+        self._write_batch_receipt(report)
+        return report
+
+    def _write_batch_receipt(self, report: BatchConfirmReport) -> Path:
+        directory = self.staging_root / "batches"
+        directory.mkdir(parents=True, exist_ok=True)
+        target = directory / f"batch-confirm-{uuid4().hex}.json"
+        payload = {"schema_version": "1.0.0", **asdict(report)}
+        fd, raw_temp = tempfile.mkstemp(prefix=".batch-confirm.", suffix=".tmp", dir=directory)
+        os.close(fd)
+        temp = Path(raw_temp)
+        try:
+            temp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            os.replace(temp, target)
+        finally:
+            temp.unlink(missing_ok=True)
+        return target
 
     def confirm_register(self, staged: StagedTrainingSample) -> bool:
         current = self.load_staged(staged.staging_id)

@@ -265,7 +265,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     background_state = {"active": False}
 
-    def run_background(title: str, fn, on_success) -> None:
+    def run_background(title: str, fn, on_success, *, progress_queue=None, on_finish=None) -> None:
         """Keep long jobs off Tk; worker threads never call Tk APIs directly."""
         if background_state["active"]:
             messagebox.showwarning(
@@ -284,12 +284,26 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 outcome.put(("error", exc))
 
         def poll_outcome() -> None:
+            if progress_queue is not None:
+                latest = None
+                try:
+                    while True:
+                        latest = progress_queue.get_nowait()
+                except queue.Empty:
+                    pass
+                if latest is not None:
+                    domain = f" / {latest.current_domain}" if latest.current_domain else ""
+                    status.set(
+                        f"{title}: {latest.phase} {latest.processed}/{latest.total}{domain}"
+                    )
             try:
                 kind, value = outcome.get_nowait()
             except queue.Empty:
                 root.after(40, poll_outcome)
                 return
             background_state["active"] = False
+            if on_finish is not None:
+                on_finish()
             if kind == "error":
                 exc = value
                 status.set(f"{title}: 失敗")
@@ -444,6 +458,8 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     staged_video_samples: list[object] = []
     crop_preview_photos: list[object] = []
     crop_preview_widgets: list[object] = []
+    video_batch_cancel_event = {"value": None}
+    video_batch_preview_report = {"value": None}
 
     # First tier is a real two-column layout: source/targets on the left and
     # extraction conditions/advanced HUD binding on the right. The entire tier
@@ -782,6 +798,15 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 pass
         staged_video_samples.clear()
         clear_crop_previews()
+        video_batch_preview_report["value"] = None
+
+    def cancel_video_batch_operation() -> None:
+        event = video_batch_cancel_event["value"]
+        if event is None:
+            status.set("動画から一括学習: 取消対象の処理はありません")
+            return
+        event.set()
+        status.set("動画から一括学習: 取消要求を送信しました（Commit開始後は完了を待ちます）")
 
     def preview_video_learning() -> None:
         source = video_vars["video"].get().strip()
@@ -841,8 +866,19 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
         discard_staged_video_samples()
         video_learning_result.set("指定範囲から正確なCrop候補を作成中です…")
+        cancel_event = threading.Event()
+        progress_events = queue.Queue()
+        video_batch_cancel_event["value"] = cancel_event
 
         def completed(report) -> None:
+            video_batch_cancel_event["value"] = None
+            video_batch_preview_report["value"] = report
+            if report.cancelled:
+                video_learning_result.set(
+                    f"Crop作成を取消しました: 処理済み {report.stage_count}/{len(targets) * len(range(start_frame, end_frame, frame_step))}"
+                )
+                status.set("動画から一括学習: EXTRACT CANCELLED")
+                return
             staged_video_samples.extend(report.staged)
             clear_crop_previews()
             preview_limit = 12
@@ -890,8 +926,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 video_path=source, start_frame=start_frame,
                 end_frame_exclusive=end_frame, frame_step=frame_step,
                 targets=tuple(targets), max_samples=max_samples,
+                progress=progress_events.put, cancel_event=cancel_event,
             ),
             completed,
+            progress_queue=progress_events,
+            on_finish=lambda: video_batch_cancel_event.update(value=None),
         )
 
     def confirm_video_learning() -> None:
@@ -912,32 +951,42 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         ):
             return
 
-        accepted = duplicates = failed = 0
-        failures = []
-        for staged in tuple(staged_video_samples):
-            try:
-                if safe_visual_learning.confirm_register(staged):
-                    accepted += 1
-                else:
-                    duplicates += 1
-            except Exception as exc:
-                failed += 1
-                failures.append(
-                    f"{staged.roi_id}: {type(exc).__name__}: {exc}"
-                )
+        cancel_event = threading.Event()
+        progress_events = queue.Queue()
+        video_batch_cancel_event["value"] = cancel_event
+        staged_snapshot = tuple(staged_video_samples)
+        preview_report = video_batch_preview_report["value"]
 
-        staged_video_samples.clear()
-        clear_crop_previews()
-        refresh_visual_count()
+        def completed(report) -> None:
+            video_batch_cancel_event["value"] = None
+            if not report.cancelled:
+                staged_video_samples.clear()
+                clear_crop_previews()
+                video_batch_preview_report["value"] = None
+                refresh_visual_count()
+            message = (
+                f"登録={report.confirm_count}件 / 重複={report.duplicate_count}件 / "
+                f"Index失敗={report.failed_count}件 / cancelled={report.cancelled}\n"
+                f"subprocess={report.subprocess_count} / extract={report.extract_seconds:.3f}s / "
+                f"commit={report.commit_seconds:.3f}s / index={report.index_rebuild_seconds:.3f}s / "
+                f"total={report.total_seconds:.3f}s"
+            )
+            if report.errors:
+                message += "\n\n" + "\n".join(report.errors[:10])
+            (messagebox.showinfo if report.failed_count == 0 else messagebox.showwarning)(
+                "動画から一括学習", message,
+            )
 
-        message = (
-            f"登録={accepted}件 / 重複={duplicates}件 / 失敗={failed}件"
-        )
-        if failures:
-            message += "\n\n" + "\n".join(failures[:10])
-        (messagebox.showinfo if failed == 0 else messagebox.showwarning)(
-            "動画から一括学習",
-            message,
+        run_background(
+            "学習データへ一括登録",
+            lambda: safe_visual_learning.confirm_batch(
+                staged_snapshot, progress=progress_events.put, cancel_event=cancel_event,
+                extract_seconds=(0.0 if preview_report is None else preview_report.extract_seconds),
+                stage_subprocess_count=(0 if preview_report is None else preview_report.subprocess_count),
+            ),
+            completed,
+            progress_queue=progress_events,
+            on_finish=lambda: video_batch_cancel_event.update(value=None),
         )
 
     def import_video_ranges_csv() -> None:
@@ -977,6 +1026,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         video_buttons,
         text="破棄",
         command=discard_staged_video_samples,
+    ).pack(side="left",padx=6)
+    ttk.Button(
+        video_buttons,
+        text="一括処理をキャンセル",
+        command=cancel_video_batch_operation,
     ).pack(side="left",padx=6)
 
     ttk.Label(

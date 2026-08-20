@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R2A_COMPLETE / R2B_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R2B_COMPLETE / R3_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -55,6 +55,8 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   acceptance still `NOT_CONFIRMED`.
 - R2A Survivor-subject observation/teacher identity: complete; focused `36 PASS`,
   dependency-driven affected regression `206 PASS`, unresolved Critical/High `0 / 0`.
+- R2B batch visual registration transaction/progress/cancel/no-console: complete;
+  focused `20 PASS`, dependency-driven affected regression `212 PASS`, unresolved
+  Critical/High `0 / 0`.
 - Windows packaged TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R2B batch visual registration worker/progress/
-  no-console/index-rebuild hardening.
+- Next dependency-ordered unit: R3 per-Survivor and generator temporal state machines.

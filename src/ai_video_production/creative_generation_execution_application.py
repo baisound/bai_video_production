@@ -12,6 +12,7 @@ import json
 from pathlib import Path, PurePosixPath
 import re
 import secrets
+from threading import Lock
 from typing import Any, Callable, Mapping, Protocol
 
 from .ai_connections import (
@@ -37,6 +38,7 @@ _STORE_NAME = "generation-executions.json"
 _SETTINGS_NAME = "ai-connection-settings.json"
 _MAX_STORE_BYTES = 8 * 1024 * 1024
 _MAX_PROMPT_BYTES = 128 * 1024
+_MAX_PENDING_CONFIRMATIONS = 256
 _SHA_RE = re.compile(r"sha256:[0-9a-f]{64}")
 _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,199}")
 _ROUTE_VALUE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/:-]{0,199}")
@@ -154,6 +156,11 @@ class LocalGenerationExecutionPort(Protocol):
     ) -> LocalGenerationExecutionResult: ...
 
 
+LocalGenerationExecutionPortSelector = Callable[
+    [ModelRoute, str], LocalGenerationExecutionPort
+]
+
+
 @dataclass(slots=True)
 class _PendingExecution:
     confirmation_id: str
@@ -164,7 +171,11 @@ class _PendingExecution:
     route_id: str
     capability: str
     prompt_sha256: str
-    consumed: bool = False
+    provider_id: str
+    model_id: str
+    workflow_sha256: str
+    required_class_count: int
+    runtime_policy: str
 
 
 def _with_hash(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -182,8 +193,9 @@ class Task013CreativeGenerationExecutionApplication:
         project_root: str | Path,
         project_id: str,
         generation_queue: Task027GenerationQueueApplication,
-        execution_port: LocalGenerationExecutionPort,
+        execution_port: LocalGenerationExecutionPort | None,
         availability_factory: AvailabilityFactory,
+        execution_port_selector: LocalGenerationExecutionPortSelector | None = None,
         token_factory: TokenFactory | None = None,
     ) -> None:
         root = Path(project_root)
@@ -194,13 +206,84 @@ class Task013CreativeGenerationExecutionApplication:
         self.project_root = root
         self.project_id = project_id
         self.generation_queue = generation_queue
+        if (execution_port is None) == (execution_port_selector is None):
+            raise ProductError(
+                "ERR_GENERATION_EXECUTION_PORT_BINDING",
+                "Bind exactly one fixed execution port or route/capability selector",
+                ProductErrorCategory.VALIDATION,
+            )
         self.execution_port = execution_port
+        self.execution_port_selector = execution_port_selector
         self.availability_factory = availability_factory
         self.settings_path = root / _SETTINGS_NAME
         self.snapshot_path = root / _STORE_NAME
         self.private_prompt_root = root / "private" / "prompts"
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
         self._confirmations: dict[str, _PendingExecution] = {}
+        self._confirmation_lock = Lock()
+
+    @staticmethod
+    def _validate_port(port: Any) -> LocalGenerationExecutionPort:
+        if not callable(getattr(port, "preflight", None)) or not callable(
+            getattr(port, "execute", None)
+        ):
+            raise ProductError(
+                "ERR_GENERATION_EXECUTION_PORT_UNSUPPORTED",
+                "Selected local execution port is invalid",
+                ProductErrorCategory.NOT_SUPPORTED,
+            )
+        return port
+
+    def _port_for(
+        self,
+        *,
+        route: ModelRoute | None = None,
+        capability: str | None = None,
+    ) -> LocalGenerationExecutionPort:
+        if self.execution_port_selector is None:
+            return self._validate_port(self.execution_port)
+        if route is None or not isinstance(capability, str) or not capability:
+            raise ProductError(
+                "ERR_GENERATION_EXECUTION_PREFLIGHT_SCOPE_REQUIRED",
+                "Queue entry is required to select a local execution runtime",
+                ProductErrorCategory.VALIDATION,
+            )
+        try:
+            selected = self.execution_port_selector(route, capability)
+        except ProductError:
+            raise
+        except Exception as exc:
+            raise ProductError(
+                "ERR_GENERATION_EXECUTION_PORT_UNSUPPORTED",
+                "No local execution port accepts the exact route and capability",
+                ProductErrorCategory.NOT_SUPPORTED,
+            ) from exc
+        return self._validate_port(selected)
+
+    @staticmethod
+    def _preflight_port(
+        port: LocalGenerationExecutionPort,
+        *,
+        route: ModelRoute | None = None,
+    ) -> LocalGenerationRuntimeReadiness:
+        readiness = port.preflight()
+        if not isinstance(readiness, LocalGenerationRuntimeReadiness):
+            raise ProductError(
+                "ERR_GENERATION_PREFLIGHT_RESULT",
+                "Local runtime preflight returned an invalid result",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if route is not None and (
+            readiness.route_id != route.route_id
+            or readiness.provider_id != route.provider_id
+            or readiness.model_id != route.model_id
+        ):
+            raise ProductError(
+                "ERR_GENERATION_PREFLIGHT_ROUTE_MISMATCH",
+                "Local runtime readiness differs from the exact Queue route",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return readiness
 
     def _empty(self) -> dict[str, Any]:
         return _with_hash({
@@ -402,15 +485,20 @@ class Task013CreativeGenerationExecutionApplication:
             "paid_execution_authorized": False, "candidate_creation_authorized": False, "resolve_mutation_started": False,
         }
 
-    def runtime_preflight(self) -> dict[str, Any]:
+    def runtime_preflight(self, *, queue_entry_id: str | None = None) -> dict[str, Any]:
         """Inspect the bound local runtime without creating execution Authority."""
-        readiness = self.execution_port.preflight()
-        if not isinstance(readiness, LocalGenerationRuntimeReadiness):
-            raise ProductError(
-                "ERR_GENERATION_PREFLIGHT_RESULT",
-                "Local runtime preflight returned an invalid result",
-                ProductErrorCategory.DATA_INTEGRITY,
-            )
+        route = None
+        capability = None
+        if queue_entry_id is not None:
+            if not isinstance(queue_entry_id, str) or not queue_entry_id.strip():
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_PREFLIGHT_SCOPE_REQUIRED",
+                    "Queue entry is required to select a local execution runtime",
+                    ProductErrorCategory.VALIDATION,
+                )
+            _queue, _entry, route, _profile_sha, _prompt, _workload, capability, _media = self._derive(queue_entry_id)
+        port = self._port_for(route=route, capability=capability)
+        readiness = self._preflight_port(port, route=route)
         return readiness.as_dict()
 
     def prepare_execution(self, *, queue_entry_id: str, expected_queue_snapshot_sha256: str, expected_execution_snapshot_sha256: str) -> dict[str, Any]:
@@ -420,11 +508,26 @@ class Task013CreativeGenerationExecutionApplication:
             raise ProductError("ERR_GENERATION_EXECUTION_CONFLICT", "Queue or execution state changed; reload before execution", ProductErrorCategory.STATE)
         if any(event["queue_entry_id"] == queue_entry_id for event in store["events"]):
             raise ProductError("ERR_GENERATION_EXECUTION_ALREADY_DISPATCHED", "Queue entry already has execution history", ProductErrorCategory.STATE)
+        port = self._port_for(route=route, capability=capability)
+        readiness = self._preflight_port(port, route=route)
         token = self._token_factory()
-        if not isinstance(token, str) or not token.strip() or token in self._confirmations:
-            raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION", "Generation execution confirmation token is invalid", ProductErrorCategory.INTERNAL)
-        pending = _PendingExecution(token, queue["queue_snapshot_sha256"], store["execution_snapshot_sha256"], queue_entry_id, profile_sha, route.route_id, capability, entry["prompt_sha256"])
-        self._confirmations[token] = pending
+        pending = _PendingExecution(
+            token, queue["queue_snapshot_sha256"], store["execution_snapshot_sha256"],
+            queue_entry_id, profile_sha, route.route_id, capability,
+            entry["prompt_sha256"], readiness.provider_id, readiness.model_id,
+            readiness.workflow_sha256, readiness.required_class_count,
+            readiness.runtime_policy,
+        )
+        with self._confirmation_lock:
+            if not isinstance(token, str) or not token.strip() or token in self._confirmations:
+                raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION", "Generation execution confirmation token is invalid", ProductErrorCategory.INTERNAL)
+            if len(self._confirmations) >= _MAX_PENDING_CONFIRMATIONS:
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_CONFIRMATION_CAPACITY",
+                    "Generation execution confirmation capacity is exhausted; cancel an unused confirmation",
+                    ProductErrorCategory.STATE,
+                )
+            self._confirmations[token] = pending
         return {
             "confirmation_id": token, "queue_entry_id": queue_entry_id, "scene_id": entry["scene_id"], "slot_id": entry["slot_id"],
             "prompt_id": entry["prompt_id"], "prompt_version": entry["prompt_version"], "prompt_sha256": entry["prompt_sha256"],
@@ -457,23 +560,57 @@ class Task013CreativeGenerationExecutionApplication:
         }
 
     def apply_execution(self, *, confirmation_id: str) -> dict[str, Any]:
-        pending = self._confirmations.get(confirmation_id)
-        if pending is None or pending.consumed:
+        if not isinstance(confirmation_id, str) or not confirmation_id.strip():
+            raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION", "Generation execution confirmation is invalid", ProductErrorCategory.AUTHORIZATION)
+        with self._confirmation_lock:
+            pending = self._confirmations.pop(confirmation_id, None)
+        if pending is None:
             raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION", "Generation execution confirmation is missing or already used", ProductErrorCategory.AUTHORIZATION)
-        pending.consumed = True
         queue, entry, route, profile_sha, prompt_text, workload, capability, media_kind = self._derive(pending.queue_entry_id)
         if queue["queue_snapshot_sha256"] != pending.queue_snapshot_sha256 or profile_sha != pending.profile_sha256 or route.route_id != pending.route_id or entry["prompt_sha256"] != pending.prompt_sha256:
             raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION_STALE", "Queue, Prompt, Profile or route changed after confirmation", ProductErrorCategory.AUTHORIZATION)
         if capability != pending.capability:
             raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION_STALE", "Generation mode changed after confirmation", ProductErrorCategory.AUTHORIZATION)
-        seed = {"queue_entry_id": entry["queue_entry_id"], "profile_sha256": profile_sha, "route_id": route.route_id, "capability": capability}
-        execution_id = "EXEC-" + sha256_bytes(canonical_json_bytes(seed)).split(":", 1)[1][:24].upper()
+        port = self._port_for(route=route, capability=capability)
+        readiness = self._preflight_port(port, route=route)
+        if (
+            readiness.provider_id != pending.provider_id
+            or readiness.model_id != pending.model_id
+            or readiness.workflow_sha256 != pending.workflow_sha256
+            or readiness.required_class_count != pending.required_class_count
+            or readiness.runtime_policy != pending.runtime_policy
+        ):
+            raise ProductError(
+                "ERR_GENERATION_EXECUTION_CONFIRMATION_STALE",
+                "Local runtime identity changed after confirmation",
+                ProductErrorCategory.AUTHORIZATION,
+            )
         with _exclusive_snapshot_lock(self.snapshot_path):
             store = self._load()
             if store["execution_snapshot_sha256"] != pending.execution_snapshot_sha256:
                 raise ProductError("ERR_GENERATION_EXECUTION_CONFLICT", "Execution state changed after confirmation", ProductErrorCategory.STATE)
+            # This post-preflight re-derive is the admission linearization point
+            # for Queue/Prompt/Profile currentness. No Provider side effect or
+            # DISPATCHING record exists before this exact recheck.
+            queue, entry, route, profile_sha, prompt_text, workload, capability, media_kind = self._derive(pending.queue_entry_id)
+            if (
+                queue["queue_snapshot_sha256"] != pending.queue_snapshot_sha256
+                or profile_sha != pending.profile_sha256
+                or route.route_id != pending.route_id
+                or entry["prompt_sha256"] != pending.prompt_sha256
+                or capability != pending.capability
+                or route.provider_id != pending.provider_id
+                or route.model_id != pending.model_id
+            ):
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_CONFIRMATION_STALE",
+                    "Queue, Prompt, Profile, route or runtime changed during preflight",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
             if any(event["queue_entry_id"] == entry["queue_entry_id"] for event in store["events"]):
                 raise ProductError("ERR_GENERATION_EXECUTION_ALREADY_DISPATCHED", "Queue entry already has execution history", ProductErrorCategory.STATE)
+            seed = {"queue_entry_id": entry["queue_entry_id"], "profile_sha256": profile_sha, "route_id": route.route_id, "capability": capability}
+            execution_id = "EXEC-" + sha256_bytes(canonical_json_bytes(seed)).split(":", 1)[1][:24].upper()
             event = self._event_base(revision=store["revision"] + 1, execution_id=execution_id, entry=entry, profile_sha=profile_sha, route=route, workload=workload, capability=capability)
             event["state"] = "DISPATCHING"
             self._append(store, event)
@@ -482,7 +619,7 @@ class Task013CreativeGenerationExecutionApplication:
             prompt_text, entry["prompt_sha256"], tuple(entry["input_bindings"]), f"rights://{self.project_id}/{entry['scene_id']}",
         )
         try:
-            result = self.execution_port.execute(route, request)
+            result = port.execute(route, request)
             if (
                 result.route_id != route.route_id or result.provider_family is not route.provider_family
                 or result.provider_id != route.provider_id or result.model_id != route.model_id
@@ -509,9 +646,27 @@ class Task013CreativeGenerationExecutionApplication:
             self._append(store, completed)
         return self.snapshot()
 
+    def cancel_execution(self, *, confirmation_id: str) -> dict[str, Any]:
+        """Consume one unused Human confirmation without starting execution."""
+        if not isinstance(confirmation_id, str) or not confirmation_id.strip():
+            raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION", "Generation execution confirmation is invalid", ProductErrorCategory.AUTHORIZATION)
+        with self._confirmation_lock:
+            pending = self._confirmations.pop(confirmation_id, None)
+        if pending is None:
+            raise ProductError("ERR_GENERATION_EXECUTION_CONFIRMATION", "Generation execution confirmation is missing or already used", ProductErrorCategory.AUTHORIZATION)
+        return {
+            "confirmation_id": confirmation_id,
+            "queue_entry_id": pending.queue_entry_id,
+            "cancelled": True,
+            "provider_execution_started": False,
+            "dispatch_performed": False,
+            "execution_history_created": False,
+            "paid_execution_authorized": False,
+        }
+
 
 __all__ = [
-    "LocalGenerationExecutionPort", "LocalGenerationExecutionRequest",
+    "LocalGenerationExecutionPort", "LocalGenerationExecutionPortSelector", "LocalGenerationExecutionRequest",
     "LocalGenerationExecutionResult", "LocalGenerationRuntimeReadiness",
     "Task013CreativeGenerationExecutionApplication",
 ]

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
+
 import pytest
 
 from ai_video_production.ai_connections import (
@@ -14,7 +16,7 @@ from ai_video_production.ai_connections import (
 from ai_video_production.connection_settings_store import ConnectionSettingsStore
 from ai_video_production.connection_settings_web import ConnectionSettingsWebService
 from ai_video_production.desktop_shell import ShellApplicationService
-from ai_video_production.errors import ProductError
+from ai_video_production.errors import ProductError, ProductErrorCategory
 from ai_video_production.task036_shell_ui import HTML, Task036ShellBridge
 
 
@@ -927,8 +929,8 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
         def __init__(self): self.calls = []
         def snapshot(self):
             return {"project_id": "project-1", "execution_snapshot_sha256": "sha256:" + "2" * 64, "recovery": {"required": False}}
-        def runtime_preflight(self):
-            self.calls.append(("preflight", {})); return {
+        def runtime_preflight(self, *, queue_entry_id=None):
+            self.calls.append(("preflight", {"queue_entry_id": queue_entry_id})); return {
                 "result": "SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED",
                 "dispatch_performed": False,
                 "execution_authorized": False,
@@ -937,6 +939,8 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
             self.calls.append(("prepare", values)); return {"confirmation_id": "confirm-local"}
         def apply_execution(self, **values):
             self.calls.append(("apply", values)); return {"events": [{"state": "COMPLETED"}]}
+        def cancel_execution(self, **values):
+            self.calls.append(("cancel", values)); return {"cancelled": True}
 
     execution = ExecutionStub()
     bridge = Task036ShellBridge(
@@ -949,6 +953,8 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
     readiness = bridge.generation_execution_preflight({})
     assert readiness["result"] == "SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED"
     assert readiness["dispatch_performed"] is False
+    scoped = bridge.generation_execution_preflight({"queue_entry_id": "QUEUE-1"})
+    assert scoped["result"] == "SAFE_RUNTIME_PREFLIGHT_PASS_EXECUTION_PARKED"
     prepared = bridge.generation_execution_prepare({
         "queue_entry_id": "QUEUE-1",
         "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,
@@ -957,12 +963,54 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
     assert prepared["confirmation_id"] == "confirm-local"
     result = bridge.generation_execution_apply({"confirmation_id": "confirm-local"})
     assert result["events"][0]["state"] == "COMPLETED"
-    assert [name for name, _ in execution.calls] == ["preflight", "prepare", "apply"]
+    cancelled = bridge.generation_execution_cancel({"confirmation_id": "cancel-local"})
+    assert cancelled["cancelled"] is True
+    assert [name for name, _ in execution.calls] == ["preflight", "preflight", "prepare", "apply", "cancel"]
+    assert execution.calls[0][1]["queue_entry_id"] is None
+    assert execution.calls[1][1]["queue_entry_id"] == "QUEUE-1"
     with pytest.raises(ProductError) as exc:
         bridge.generation_execution_prepare({
             "queue_entry_id": "QUEUE-1", "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,
         })
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    for invalid in ({"queue_entry_id": ""}, {"queue_entry_id": 1}, {"queue_entry_id": True}, {"queue_entry_id": None}, {"extra": "QUEUE-1"}):
+        with pytest.raises(ProductError) as invalid_exc:
+            bridge.generation_execution_preflight(invalid)
+        assert invalid_exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    for invalid in ({}, {"confirmation_id": ""}, {"confirmation_id": 1}, {"confirmation_id": None}):
+        with pytest.raises(ProductError) as invalid_exc:
+            bridge.generation_execution_cancel(invalid)
+        assert invalid_exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+
+def test_generation_execution_bridge_enters_runtime_lease_before_touching_application():
+    class ExecutionStub:
+        calls = 0
+        def snapshot(self):
+            self.calls += 1
+            return {"project_id": "project-1", "execution_snapshot_sha256": "sha256:" + "2" * 64}
+
+    lease_active = False
+
+    @contextmanager
+    def guard():
+        if not lease_active:
+            raise ProductError("ERR_TASK036_RUNTIME_LEASE_REQUIRED", "closed", ProductErrorCategory.AUTHORIZATION)
+        yield
+
+    execution = ExecutionStub()
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.20.1"),
+        generation_execution_application=execution,
+        nle_runtime_guard=guard,
+    )
+    with pytest.raises(ProductError) as closed:
+        bridge.generation_execution_snapshot({})
+    assert closed.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert execution.calls == 0
+    lease_active = True
+    assert bridge.generation_execution_snapshot({})["available"] is True
+    assert execution.calls == 1
 
 
 def test_generation_output_adoption_bridge_is_allowlisted_and_separate_from_provider_execution():

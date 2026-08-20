@@ -129,18 +129,19 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-### Upgrading to 0.21.0 and migrating Projects
+### Upgrading to 0.22.0 and migrating Projects
 
 To install the formal release from this repository after publication, select the
-annotated `v0.21.0` tag and use the same installation command:
+annotated `v0.22.0` tag and use the same installation command:
 
 ```powershell
 git fetch --tags
-git checkout v0.21.0
+git checkout v0.22.0
 python -m pip install -e ".[dev]"
 ```
 
-Existing v0.20.1 Projects remain readable. When migration is required, the
+Existing v0.20.1 Projects remain readable, and v0.21.0 Project compatibility is
+preserved. When migration is required, the
 Product applies only code-registered lossless transforms through a backed-up
 copy-on-write flow and reopens the result before reporting success. A legacy
 Project without a Manifest requires explicit Project identity and a preview.
@@ -165,7 +166,7 @@ The current public Technical Preview is
 [BAI Voice Capture v0.1.0-dev.10 installer.1](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1).
 Most users should download
 `bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe` from its Release Assets.
-It is an unsigned Pre-release and is separate from the stable BAI Video Production `v0.21.0` release.
+It is an unsigned Pre-release and is separate from the stable BAI Video Production `v0.22.0` release.
 The Dev.10 Controller can select a destination, run the five-second gain check, start, pause, resume, and
 stop while OBS 32.2.1 remains open. Keep the live gain meter and the persistent recording/paused banner visible.
 

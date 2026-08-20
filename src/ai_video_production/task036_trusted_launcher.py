@@ -7,11 +7,13 @@ the window is created.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
-from typing import Any
+import threading
+from typing import Any, Callable
 
 from .ai_connections import ConnectionAvailability
 from .comfyui import ComfyEndpointPolicy, ComfyUIClient
@@ -45,6 +47,10 @@ from .task044_nle_shell import Task044NleShellController
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_projection import InteractiveTimelineProjectionService
 from .export_queue_application import ExportQueueApplication
+from .export_queue import ExportPreparation
+from .final_review import FinalReviewApprovalReceipt
+from .final_review_application import FinalReviewApprovalApplication
+from .final_review_gate import FinalReviewExternalGateReceipt
 from .product_project_store import ProductProjectManifestStore
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
@@ -379,6 +385,189 @@ class Task036TrustedLaunch:
     coordinator: DesktopEditingCoordinator
     pre_edit_runtime: Task036PreEditRuntime
     bridge: Task036ShellBridge
+    _runtime_lease: "_Task036ProjectRuntimeLease | None" = field(default=None, repr=False)
+
+    def close(self) -> None:
+        """Release the private mutation-runtime lease, if this launch owns one."""
+
+        lease = self._runtime_lease
+        if lease is not None:
+            lease.close()
+            self._runtime_lease = None
+
+    def __enter__(self) -> "Task036TrustedLaunch":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+
+
+class _Task036ProjectRuntimeLease:
+    """One live TASK-036 mutation composition per Project, held for launch life."""
+
+    _NAME = ".task036-runtime.lock"
+
+    def __init__(self, path: Path, handle: Any) -> None:
+        self._path = path
+        self._handle: Any | None = handle
+        self._condition = threading.Condition(threading.RLock())
+        self._local = threading.local()
+        self._closing = False
+        self._active_operation_count = 0
+
+    @property
+    def active(self) -> bool:
+        with self._condition:
+            return self._handle is not None and not self._closing
+
+    def require_active(self) -> None:
+        if not self.active:
+            raise ProductError(
+                "ERR_TASK036_RUNTIME_LEASE_REQUIRED",
+                "TASK-036 Project runtime lease is no longer active",
+                ProductErrorCategory.STATE,
+            )
+
+    def require_operation_active(self) -> None:
+        """Allow a previously admitted same-thread operation to finish on close."""
+
+        with self._condition:
+            if self._handle is None or (
+                self._closing and getattr(self._local, "depth", 0) == 0
+            ):
+                raise ProductError(
+                    "ERR_TASK036_RUNTIME_LEASE_REQUIRED",
+                    "TASK-036 Project runtime lease is no longer active",
+                    ProductErrorCategory.STATE,
+                )
+
+    @contextmanager
+    def operation(self):
+        """Hold the runtime lease throughout one public TASK-044 operation."""
+
+        with self._condition:
+            depth = getattr(self._local, "depth", 0)
+            if depth == 0:
+                if self._handle is None or self._closing:
+                    raise ProductError(
+                        "ERR_TASK036_RUNTIME_LEASE_REQUIRED",
+                        "TASK-036 Project runtime lease is no longer active",
+                        ProductErrorCategory.STATE,
+                    )
+                self._active_operation_count += 1
+            elif self._handle is None:
+                raise ProductError(
+                    "ERR_TASK036_RUNTIME_LEASE_REQUIRED",
+                    "TASK-036 Project runtime lease is no longer active",
+                    ProductErrorCategory.STATE,
+                )
+            self._local.depth = depth + 1
+        try:
+            yield
+        finally:
+            with self._condition:
+                depth = getattr(self._local, "depth", 1) - 1
+                self._local.depth = depth
+                if depth == 0:
+                    self._active_operation_count -= 1
+                    self._condition.notify_all()
+
+    @classmethod
+    def acquire(cls, project_root: Path) -> "_Task036ProjectRuntimeLease":
+        manifest_path = ProductProjectManifestStore.path(project_root)
+        control = manifest_path.parent
+        if control.is_symlink() or not control.is_dir():
+            raise ProductError(
+                "ERR_TASK036_RUNTIME_LEASE_INVALID",
+                "TASK-036 Project runtime lock directory is invalid",
+                ProductErrorCategory.SECURITY,
+            )
+        path = control / cls._NAME
+        if path.is_symlink() or (path.exists() and not path.is_file()):
+            raise ProductError(
+                "ERR_TASK036_RUNTIME_LEASE_INVALID",
+                "TASK-036 Project runtime lock must be a regular non-symlink file",
+                ProductErrorCategory.SECURITY,
+            )
+        try:
+            handle = path.open("a+b")
+            if path.is_symlink() or not path.is_file():
+                handle.close()
+                raise ProductError(
+                    "ERR_TASK036_RUNTIME_LEASE_INVALID",
+                    "TASK-036 Project runtime lock must be a regular non-symlink file",
+                    ProductErrorCategory.SECURITY,
+                )
+            if handle.seek(0, os.SEEK_END) == 0:
+                handle.write(b"0")
+                handle.flush()
+            handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except ProductError:
+            raise
+        except OSError as exc:
+            try:
+                handle.close()
+            except (OSError, UnboundLocalError):
+                pass
+            raise ProductError(
+                "ERR_TASK036_RUNTIME_ALREADY_ACTIVE",
+                "Another TASK-036 mutation runtime is already active for this Project",
+                ProductErrorCategory.STATE,
+            ) from exc
+        return cls(path, handle)
+
+    def close(self) -> None:
+        with self._condition:
+            if self._handle is None:
+                return
+            if getattr(self._local, "depth", 0):
+                raise ProductError(
+                    "ERR_TASK036_RUNTIME_CLOSE_IN_FLIGHT",
+                    "TASK-036 runtime lease cannot close from its active operation",
+                    ProductErrorCategory.STATE,
+                )
+            if self._closing:
+                while self._handle is not None:
+                    self._condition.wait()
+                return
+            self._closing = True
+            while self._active_operation_count:
+                self._condition.wait()
+            handle = self._handle
+            try:
+                handle.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            finally:
+                handle.close()
+                self._handle = None
+                self._condition.notify_all()
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except OSError:
+            pass
 
 
 def _resolve_asset_bindings(
@@ -406,6 +595,12 @@ def build_trusted_launch(
     asr_provider: FasterWhisperProvider | None = None,
     resolve_adapter: ResolveScriptingAssemblyAdapter | None = None,
     comfy_client: ComfyUIClient | None = None,
+    final_review_external_gate_provider: Callable[
+        [], tuple[FinalReviewExternalGateReceipt, ...]
+    ] | None = None,
+    final_review_export_preparation_provider: Callable[
+        [FinalReviewApprovalReceipt], ExportPreparation
+    ] | None = None,
 ) -> Task036TrustedLaunch:
     for directory in (
         configuration.asset_root,
@@ -452,7 +647,7 @@ def build_trusted_launch(
         configuration.cut_output,
     )
     coordinator = DesktopEditingCoordinator.create(
-        product_version="0.21.0",
+        product_version="0.22.0",
         project_id=configuration.project_id,
         display_name=configuration.display_name,
     )
@@ -584,6 +779,11 @@ def build_trusted_launch(
                 details={"exception_type": type(exc).__name__},
             ) from exc
 
+    has_mutation_composition = ProductProjectManifestStore.path(
+        configuration.project_root
+    ).exists()
+    runtime_lease: _Task036ProjectRuntimeLease | None = None
+
     def nle_controller(application) -> Task044NleShellController:
         timeline = InteractiveTimelineProjectionService.from_editing_projection(
             project_id=configuration.project_id,
@@ -593,13 +793,21 @@ def build_trusted_launch(
         )
         edit_application = None
         export_application = None
-        if ProductProjectManifestStore.path(configuration.project_root).exists():
+        if has_mutation_composition:
+            if runtime_lease is None:
+                raise ProductError(
+                    "ERR_TASK036_RUNTIME_LEASE_REQUIRED",
+                    "TASK-036 mutation composition requires its active Project runtime lease",
+                    ProductErrorCategory.STATE,
+                )
+            runtime_lease.require_operation_active()
             edit_application = Task044TimelineEditApplication(
                 project_root=configuration.project_root, project_id=configuration.project_id,
             )
             export_application = ExportQueueApplication(
                 project_root=configuration.project_root, project_id=configuration.project_id,
             )
+            export_application.recover_interrupted_on_startup()
         return Task044NleShellController(
             timeline=timeline, edit_application=edit_application,
             export_application=export_application,
@@ -638,31 +846,53 @@ def build_trusted_launch(
                 max_output_bytes=configuration.local_generation.max_output_bytes,
             ),
         )
+    final_review_application = FinalReviewApprovalApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+    )
     game_intelligence_application = GameIntelligenceShellApplication(
         configuration.project_root, connection_settings=connection_settings, provider_execution_service=game_intelligence_provider_service
     )
-    bridge = Task036ShellBridge(
-        coordinator.shell,
-        native_dialog=dialog,
-        pre_edit_runtime=pre_edit,
-        workflow_runtime_factory=downstream,
-        production_control=production_control,
-        audit_application=audit_application,
-        planning_application=planning_application,
-        generation_safety_application=generation_safety_application,
-        continuity_application=continuity_application,
-        prompt_evidence_application=prompt_evidence_application,
-        generation_queue_application=generation_queue_application,
-        generation_execution_application=generation_execution_application,
-        generation_output_adoption_application=generation_output_adoption_application,
-        audio_workspace_application=audio_workspace_application,
-        audio_placement_application=audio_placement_application,
-        quick_generation_application=quick_generation_application,
-        connection_settings=connection_settings,
-        game_intelligence_application=game_intelligence_application,
-        nle_controller_factory=nle_controller,
-    )
-    return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)
+    if has_mutation_composition:
+        # Validate the canonical manifest before creating a lock file.  This is
+        # the only mutation-capable TASK-044 composition path in this launcher.
+        ProductProjectManifestStore.load(configuration.project_root)
+        runtime_lease = _Task036ProjectRuntimeLease.acquire(configuration.project_root)
+    try:
+        bridge = Task036ShellBridge(
+            coordinator.shell,
+            native_dialog=dialog,
+            pre_edit_runtime=pre_edit,
+            workflow_runtime_factory=downstream,
+            production_control=production_control,
+            audit_application=audit_application,
+            planning_application=planning_application,
+            generation_safety_application=generation_safety_application,
+            continuity_application=continuity_application,
+            prompt_evidence_application=prompt_evidence_application,
+            generation_queue_application=generation_queue_application,
+            generation_execution_application=generation_execution_application,
+            generation_output_adoption_application=generation_output_adoption_application,
+            audio_workspace_application=audio_workspace_application,
+            audio_placement_application=audio_placement_application,
+            quick_generation_application=quick_generation_application,
+            connection_settings=connection_settings,
+            final_review_application=final_review_application,
+            final_review_external_gate_provider=final_review_external_gate_provider,
+            final_review_export_preparation_provider=final_review_export_preparation_provider,
+            game_intelligence_application=game_intelligence_application,
+            nle_controller_factory=nle_controller,
+            nle_runtime_guard=(
+                None if runtime_lease is None else runtime_lease.operation
+            ),
+        )
+        return Task036TrustedLaunch(
+            configuration, coordinator, pre_edit, bridge, runtime_lease,
+        )
+    except BaseException:
+        if runtime_lease is not None:
+            runtime_lease.close()
+        raise
 
 
 def run_trusted_native_shell(config_path: str | Path) -> None:
@@ -675,12 +905,15 @@ def run_trusted_native_shell(config_path: str | Path) -> None:
             ProductErrorCategory.EXTERNAL_DEPENDENCY,
         ) from exc
     launch = build_trusted_launch(Task036LaunchConfiguration.load(config_path))
-    webview.create_window(
-        f"BAI Video Production — {launch.configuration.display_name}",
-        html=HTML,
-        js_api=launch.bridge,
-        width=1600,
-        height=900,
-        min_size=(760, 600),
-    )
-    webview.start(gui="edgechromium", private_mode=True)
+    try:
+        webview.create_window(
+            f"BAI Video Production — {launch.configuration.display_name}",
+            html=HTML,
+            js_api=launch.bridge,
+            width=1600,
+            height=900,
+            min_size=(760, 600),
+        )
+        webview.start(gui="edgechromium", private_mode=True)
+    finally:
+        launch.close()

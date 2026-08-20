@@ -7,8 +7,10 @@ shape before the real workflow is connected.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
+from functools import wraps
 import json
-from typing import Any, Callable
+from typing import Any, Callable, ContextManager
 
 from .cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
 from .desktop_editing_application import Task036EditingApplication
@@ -23,7 +25,15 @@ from .connection_settings_web import ConnectionSettingsWebService
 from .task036_model_selection import Task036ModelSelectionProjection
 from .visual_generation_handoff import Task036VisualGenerationHandoffProjection
 from .final_review_readiness import Task036FinalReviewReadinessProjection
+from .final_review_application import FinalReviewApprovalApplication
+from .final_review import FinalReviewApprovalReceipt
+from .final_review_export_application import Task036FinalReviewExportApplication
+from .final_review_gate import (
+    FinalReviewExternalGateReceipt,
+    validate_external_gate_receipts,
+)
 from .errors import ProductError, ProductErrorCategory
+from .export_queue import ExportPreparation
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
@@ -162,6 +172,14 @@ applyAccessibility();window.addEventListener('pywebviewready',refresh);setTimeou
 HTML = V611_HTML
 
 
+def _nle_operation_guarded(method: Callable[..., dict[str, Any]]) -> Callable[..., dict[str, Any]]:
+    @wraps(method)
+    def guarded(self: "Task036ShellBridge", *args: Any, **kwargs: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return method(self, *args, **kwargs)
+    return guarded
+
+
 class Task036ShellBridge:
     """Allowlisted bridge used only by the native layout/runtime spike."""
 
@@ -189,9 +207,17 @@ class Task036ShellBridge:
         audio_placement_application: Task026AudioPlacementApplication | None = None,
         quick_generation_application: Task042QuickGenerationApplication | None = None,
         connection_settings: ConnectionSettingsWebService | None = None,
+        final_review_application: FinalReviewApprovalApplication | None = None,
+        final_review_external_gate_provider: Callable[
+            [], tuple[FinalReviewExternalGateReceipt, ...]
+        ] | None = None,
+        final_review_export_preparation_provider: Callable[
+            [FinalReviewApprovalReceipt], ExportPreparation
+        ] | None = None,
         game_intelligence_application: GameIntelligenceShellApplication | None = None,
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
+        nle_runtime_guard: Callable[[], ContextManager[None]] | None = None,
     ) -> None:
         if application is not None and application.shell is not service:
             raise ValueError("integrated application must use the supplied Shell service")
@@ -222,11 +248,33 @@ class Task036ShellBridge:
         self._audio_placement_application = audio_placement_application
         self._quick_generation_application = quick_generation_application
         self._connection_settings = connection_settings
+        self._final_review_application = final_review_application
+        if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
+            raise ValueError("Final Review external Gate provider is invalid")
+        self._final_review_external_gate_provider = final_review_external_gate_provider
         self._game_intelligence_application = game_intelligence_application
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
         self._nle_controller = nle_controller
         self._nle_controller_factory = nle_controller_factory
+        if nle_runtime_guard is not None and not callable(nle_runtime_guard):
+            raise ValueError("NLE runtime guard is invalid")
+        self._nle_runtime_guard = nle_runtime_guard
+        self._final_review_export_application = None
+        if final_review_export_preparation_provider is not None:
+            if final_review_application is None:
+                raise ValueError("Final Review Export preparation requires the approval application")
+            if not callable(final_review_export_preparation_provider):
+                raise ValueError("Final Review Export preparation provider is invalid")
+            self._final_review_export_application = Task036FinalReviewExportApplication(
+                project_id=final_review_application.project_id,
+                final_review_application=final_review_application,
+                export_application_provider=lambda: (
+                    None if self._ensure_nle_controller() is None
+                    else self._require_nle_controller().export_application
+                ),
+                preparation_provider=final_review_export_preparation_provider,
+            )
 
     def _ensure_nle_controller(self) -> Task044NleShellController | None:
         if self._nle_controller is None and self._nle_controller_factory is not None:
@@ -235,6 +283,14 @@ class Task036ShellBridge:
                 self._nle_controller = self._nle_controller_factory(application)
         return self._nle_controller
 
+    def _nle_operation(self) -> ContextManager[None]:
+        if self._nle_runtime_guard is None:
+            return nullcontext()
+        operation = self._nle_runtime_guard()
+        if not hasattr(operation, "__enter__") or not hasattr(operation, "__exit__"):
+            raise ValueError("NLE runtime guard must return a context manager")
+        return operation
+
     def _require_nle_controller(self) -> Task044NleShellController:
         controller = self._ensure_nle_controller()
         if controller is None:
@@ -242,58 +298,74 @@ class Task036ShellBridge:
         return controller
 
     def interactive_timeline_snapshot(self, args: Any = None) -> dict[str, Any]:
-        controller = self._ensure_nle_controller()
-        if controller is None:
-            return {"available": False}
-        return controller.snapshot(args)
+        with self._nle_operation():
+            controller = self._ensure_nle_controller()
+            if controller is None:
+                return {"available": False}
+            return controller.snapshot(args)
 
     def interactive_timeline_select(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().select(args)
+        with self._nle_operation():
+            return self._require_nle_controller().select(args)
 
     def interactive_timeline_seek(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().seek(args)
+        with self._nle_operation():
+            return self._require_nle_controller().seek(args)
 
     def interactive_timeline_set_in_out(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().set_in_out(args)
+        with self._nle_operation():
+            return self._require_nle_controller().set_in_out(args)
 
     def interactive_timeline_update_viewport(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().update_viewport(args)
+        with self._nle_operation():
+            return self._require_nle_controller().update_viewport(args)
 
     def interactive_timeline_fit(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().fit(args)
+        with self._nle_operation():
+            return self._require_nle_controller().fit(args)
 
     def interactive_timeline_update_track_state(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().update_track_state(args)
+        with self._nle_operation():
+            return self._require_nle_controller().update_track_state(args)
 
     def interactive_timeline_update_track_height(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().update_track_height(args)
+        with self._nle_operation():
+            return self._require_nle_controller().update_track_height(args)
 
     def interactive_timeline_prepare_add_track(self, args: Any) -> dict[str, object]:
-        return self._require_nle_controller().prepare_add_track(args)
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_add_track(args)
 
     def interactive_timeline_prepare_remove_track(self, args: Any) -> dict[str, object]:
-        return self._require_nle_controller().prepare_remove_track(args)
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_remove_track(args)
 
     def interactive_timeline_prepare_trim(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().prepare_trim(args)
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_trim(args)
 
     def interactive_timeline_apply_edit(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().apply_edit(args)
+        with self._nle_operation():
+            return self._require_nle_controller().apply_edit(args)
 
     def export_queue_snapshot(self, args: Any = None) -> dict[str, Any]:
-        controller = self._ensure_nle_controller()
-        if controller is None:
-            return {"available": False, "rows": []}
-        return controller.export_snapshot(args)
+        with self._nle_operation():
+            controller = self._ensure_nle_controller()
+            if controller is None:
+                return {"available": False, "rows": []}
+            return controller.export_snapshot(args)
 
     def export_queue_prepare_dispatch(self, args: Any) -> dict[str, object]:
-        return self._require_nle_controller().export_prepare_dispatch(args)
+        with self._nle_operation():
+            return self._require_nle_controller().export_prepare_dispatch(args)
 
     def export_queue_cancel(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().export_cancel(args)
+        with self._nle_operation():
+            return self._require_nle_controller().export_cancel(args)
 
     def export_queue_reconcile(self, args: Any) -> dict[str, Any]:
-        return self._require_nle_controller().export_reconcile(args)
+        with self._nle_operation():
+            return self._require_nle_controller().export_reconcile(args)
 
     def _current_application(self) -> Task036EditingApplication | None:
         if self._application is not None:
@@ -1128,6 +1200,17 @@ class Task036ShellBridge:
                 "render_or_publish_started": False,
                 "human_decision_authorized": False,
             }
+        try:
+            external_gate_receipts = validate_external_gate_receipts(
+                () if self._final_review_external_gate_provider is None
+                else self._final_review_external_gate_provider(),
+            )
+        except (TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXTERNAL_GATE_BINDING_INVALID",
+                "Final Review external Gate provider returned invalid receipts",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
         return {
             "available": True,
             **Task036FinalReviewReadinessProjection.project(
@@ -1136,9 +1219,171 @@ class Task036ShellBridge:
                 visual_handoff_snapshot=sources["visual"],
                 timeline_snapshot=sources["timeline"],
                 export_snapshot=sources["export"],
-                external_gate_receipts=(),
+                external_gate_receipts=tuple(
+                    receipt.to_readiness_dict()
+                    for receipt in external_gate_receipts
+                ),
             ),
         }
+
+    def final_review_snapshot(self, args: Any = None) -> dict[str, Any]:
+        """Compose readiness and durable approval state without creating either."""
+        self._empty_args(args, "Final Review snapshot")
+        readiness = self.final_review_readiness_snapshot()
+        if self._final_review_application is None:
+            approval: dict[str, Any] = {
+                "available": False,
+                "state": "APPROVAL_APPLICATION_UNBOUND",
+                "approval_current": False,
+                "export_job_created": False,
+                "render_or_publish_started": False,
+            }
+        else:
+            approval = self._final_review_application.snapshot(
+                readiness=readiness if readiness.get("available") is True else None,
+            )
+        return {
+            "available": readiness.get("available") is True and approval.get("available") is True,
+            "readiness": readiness,
+            "approval": approval,
+            "human_confirmation_required": True,
+            "export_job_created": False,
+            "render_or_publish_started": False,
+        }
+
+    def _require_final_review_application(self) -> FinalReviewApprovalApplication:
+        if self._final_review_application is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_APPLICATION_NOT_BOUND",
+                "Final Review approval application is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._final_review_application
+
+    def final_review_prepare(self, args: Any) -> dict[str, Any]:
+        required = {"expected_readiness_projection_sha256", "expected_approval_snapshot_sha256"}
+        if (
+            not isinstance(args, dict) or set(args) != required
+            or not all(isinstance(args[name], str) for name in required)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review preparation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        readiness = self.final_review_readiness_snapshot()
+        return self._require_final_review_application().prepare_approval(
+            readiness=readiness,
+            expected_readiness_projection_sha256=args["expected_readiness_projection_sha256"],
+            expected_snapshot_sha256=args["expected_approval_snapshot_sha256"],
+        )
+
+    def final_review_apply(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id", "approved_by"}
+            or not all(isinstance(args[name], str) for name in ("confirmation_id", "approved_by"))
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review apply request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        readiness = self.final_review_readiness_snapshot()
+        result = self._require_final_review_application().apply_approval(
+            confirmation_id=args["confirmation_id"],
+            readiness=readiness,
+            approved_by=args["approved_by"],
+        )
+        return {
+            **result,
+            "readiness_projection_sha256": readiness["projection_sha256"],
+            "export_job_created": False,
+            "render_or_publish_started": False,
+        }
+
+    @_nle_operation_guarded
+    def final_review_export_snapshot(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Final Review Export snapshot")
+        if self._final_review_export_application is None:
+            return {
+                "available": False,
+                "state": "PRIVATE_EXPORT_PREPARATION_UNBOUND",
+                "queue_confirmation_ready": False,
+                "export_job_created": False,
+                "side_effect_started_by_this_call": False,
+                "host_output_path_persisted": False,
+            }
+        return self._final_review_export_application.snapshot(
+            readiness=self.final_review_readiness_snapshot(),
+        )
+
+    @_nle_operation_guarded
+    def final_review_export_prepare(self, args: Any) -> dict[str, Any]:
+        required = {
+            "expected_readiness_projection_sha256",
+            "expected_approval_snapshot_sha256",
+            "expected_preparation_sha256",
+        }
+        if (
+            not isinstance(args, dict)
+            or set(args) != required
+            or not all(isinstance(args[name], str) for name in required)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review Export preparation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._final_review_export_application is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_NOT_BOUND",
+                "Private Export preparation is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._final_review_export_application.prepare_enqueue(
+            readiness=self.final_review_readiness_snapshot(),
+            expected_readiness_projection_sha256=args["expected_readiness_projection_sha256"],
+            expected_approval_snapshot_sha256=args["expected_approval_snapshot_sha256"],
+            expected_preparation_sha256=args["expected_preparation_sha256"],
+        )
+
+    @_nle_operation_guarded
+    def final_review_export_apply(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review Export apply request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._final_review_export_application is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_NOT_BOUND",
+                "Private Export preparation is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._final_review_export_application.apply_enqueue(
+            confirmation_id=args["confirmation_id"],
+            readiness=self.final_review_readiness_snapshot(),
+        )
+
+    @_nle_operation_guarded
+    def final_review_export_cancel(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Final Review Export cancellation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._final_review_export_application is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_NOT_BOUND",
+                "Private Export preparation is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._final_review_export_application.cancel_enqueue(
+            confirmation_id=args["confirmation_id"],
+        )
 
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:
         required = {"prompt_id", "prompt_version", "expected_queue_snapshot_sha256", "expected_upstream_snapshots"}
@@ -1377,7 +1622,7 @@ class Task036ShellBridge:
         )
 
 
-def run_native_layout_spike(*, product_version: str = "0.21.0") -> None:
+def run_native_layout_spike(*, product_version: str = "0.22.0") -> None:
     """Launch the native layout spike when optional pywebview is installed.
 
     This function does not install dependencies and does not mutate Product data.

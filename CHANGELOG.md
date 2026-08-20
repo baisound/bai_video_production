@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+- TASK-014として、固定Qwen3-TTS 0.6B Base manifestを厳格parseし、既存local snapshotのexact 13-file setをfixed-local drive・path/reparse・size/hash・bounded race観測で検査する診断専用verifierを追加しました。private/public receiptはcapabilityではなく、runtime再利用、model load、post-return状態保証、Owner音声読取、推論、network、filesystem変更のAuthorityを作りません。
+- TASK-014として、固定Qwen-TTS wheel／installed payloadのbounded read-only診断と、Windows上で祖先・wheel handleを保持してidentity・non-reparse・non-inherit・reverse closeを検証するone-shot locked sessionを追加しました。永続receiptは診断Evidenceのみで、runtime再利用、target package import、model load、Owner音声読取、推論、network、filesystem変更、Release/DeployのAuthorityを作りません。
+
+## [0.22.0] - 2026-08-21
+
+- Added TASK-036 P-UX-2D4/D5 trusted Final Review handoff from current typed approval through private ExportPreparation to exactly one durable TASK-044 Export Queue Job, with explicit Human confirmation, Project-scoped exclusive admission, restart-safe EXPORT recovery, runtime lease isolation and Shell projection that exposes no host path or dispatch/render authority. P-UX-2E packaged-native output read-back, per-Job dispatch/render, publication, Release and Deploy remain separate Gates.
 - TASK-050 DbD Training Studio Operational UX / Data Foundationとして、ユーザー選択WorkspaceとRuntime Profile、HUD位置のpixel calibration、preview/confirm/reviewを必須にするSafe Visual Learning、汎用Entity Alias、Observation provenance/export、Identity/Visibilityを分離したHuman Gold、checksum検証付きWorkspace relocation、Workspace境界に従うBackup/Restore、日本語-first UIとstable error code付き構造化エラー表示を追加しました。TASK-049のGame Intelligence Export互換性を保持し、HUD Profile schemaは2.2.0へ更新しています。
 - TASK-049 R6B/R9B1として、既存V6 ShellへadditiveなGame Intelligence Workspaceを追加し、CGEL Match/Event/Evidenceのread-back、append-only Human Confirm/Correct/Reject/UNKNOWN、analysis-only JSON/JSONL/CSV/Markdown/SRT出力を既存native folder chooserへ接続しました。TASK-049 extensionはTASK-036 V6.1.1 base mock contractから明示分離し、Production Timeline・Resolve・Publishは変更しません。TASK-036 P-UX-2はcurrent sourceでA0..D3を再検証し102 PASS、P-UX-2Eは未完のままです。
 - Documentation filename normalizationとして、docs配下の日本語/escaped filenameを英名へ統一し、READMEを含む内部参照を更新しました。README local Markdown link regressionはPASSしています。

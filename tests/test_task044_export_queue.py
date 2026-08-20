@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 
 from ai_video_production.desktop_shell import CommandCategory, ShellApplicationService
 from ai_video_production.durable_product_job import (
-    DurableProductJobService, DurableProductJobState, DurableProductJobStore,
+    DurableProductJobCollection, DurableProductJobService, DurableProductJobState,
+    DurableProductJobStore,
 )
 from ai_video_production.errors import ProductError
 from ai_video_production.export_queue import (
@@ -37,13 +40,15 @@ def setup_project(root: Path) -> ProductProjectManifest:
     return manifest
 
 
-def preparation(manifest: ProductProjectManifest, *, target: str = "export:master") -> ExportPreparation:
+def preparation(
+    manifest: ProductProjectManifest, *, target: str = "export:master", approval_suffix: str = "1",
+) -> ExportPreparation:
     output = ExportOutputContract(1920, 1080, 30, 1, 48000, 2, "mp4", "h264", "pcm")
     preset = ExportPreset("preset-master", "1.0.0", output)
     final_approval = FinalReviewApprovalReceipt(
-        receipt_id="final-review-1", project_id="project-1",
+        receipt_id=f"final-review-{approval_suffix}", project_id="project-1",
         project_manifest_sha256=manifest.project_manifest_sha256,
-        timeline_sha256=checksum("timeline"), readiness_projection_sha256=checksum("readiness"),
+        timeline_sha256=checksum("timeline"), readiness_projection_sha256=checksum(f"readiness-{approval_suffix}"),
         source_snapshot_sha256s=(
             ("audit", checksum("audit")), ("production", checksum("production")),
             ("project_manifest", manifest.project_manifest_sha256),
@@ -52,7 +57,7 @@ def preparation(manifest: ProductProjectManifest, *, target: str = "export:maste
         external_gate_receipt_sha256s=tuple((key, checksum(key)) for key in (
             "AUDIO_COMPLETION", "EDIT_PERSISTENCE", "PRIVACY", "RESOURCE", "RIGHTS_LICENSE",
         )),
-        approved_by="owner-1", approved_at="2026-08-17T02:00:00.000Z",
+        approved_by="owner-1", approved_at=f"2026-08-17T02:00:0{approval_suffix}.000Z",
     )
     return ExportPreparation(
         "project-1", manifest.project_manifest_sha256, manifest.product_version,
@@ -121,6 +126,124 @@ def test_enqueue_is_idempotent_and_durable_record_has_no_host_path(tmp_path: Pat
     assert len(document["jobs"]) == 1
     assert "C:" not in json.dumps(document)
     assert first.state is DurableProductJobState.QUEUED
+
+
+def test_final_approval_is_exclusive_across_app_instances_and_threads(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    first = preparation(manifest, target="export:master")
+    second = preparation(manifest, target="export:alternate")
+    apps = (
+        ExportQueueApplication(project_root=tmp_path, project_id="project-1"),
+        ExportQueueApplication(project_root=tmp_path, project_id="project-1"),
+    )
+    start = Barrier(2)
+
+    def enqueue_once(app: ExportQueueApplication, prep: ExportPreparation):
+        start.wait()
+        try:
+            return ("success", app.enqueue(prep))
+        except ProductError as exc:
+            return ("error", exc)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda pair: enqueue_once(*pair), zip(apps, (first, second), strict=True)))
+    successes = [value for state, value in results if state == "success"]
+    failures = [value for state, value in results if state == "error"]
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert failures[0].code == "ERR_PRODUCT_JOB_EXCLUSIVE_INPUT_CONFLICT"
+    assert apps[0].jobs_for_final_approval(first.final_approval.final_approval_receipt_sha256) == tuple(successes)
+
+
+def test_explicit_startup_recovery_recovers_interrupted_export_once_without_dispatch_or_store_creation(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    no_store = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    assert no_store.recover_interrupted_on_startup() == ()
+    assert no_store.jobs_for_final_approval(checksum("missing-approval")) == ()
+    assert not DurableProductJobStore.path(tmp_path).exists()
+
+    prep = preparation(manifest)
+    app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    ready_job = ready(app, prep)
+    dispatching = app.jobs.transition(
+        tmp_path, ready_job.job_id, DurableProductJobState.DISPATCHING,
+        expected_state_version=ready_job.state_version,
+    )
+    analysis = app.jobs.enqueue(
+        tmp_path, kind="LOCAL_ANALYSIS", target_identity="analysis:startup-recovery",
+        input_hashes={"source": checksum("startup-analysis")},
+    )
+    analysis = app.jobs.transition(
+        tmp_path, analysis.job_id, DurableProductJobState.PREFLIGHT,
+        expected_state_version=analysis.state_version,
+    )
+    analysis = app.jobs.transition(
+        tmp_path, analysis.job_id, DurableProductJobState.READY,
+        expected_state_version=analysis.state_version,
+    )
+    analysis = app.jobs.transition(
+        tmp_path, analysis.job_id, DurableProductJobState.DISPATCHING,
+        expected_state_version=analysis.state_version,
+    )
+    restarted = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    recovered = restarted.recover_interrupted_on_startup()
+    assert len(recovered) == 1
+    assert recovered[0].state is DurableProductJobState.UNKNOWN
+    assert recovered[0].state_version == dispatching.state_version + 1
+    assert DurableProductJobStore.load(tmp_path).get(analysis.job_id) == analysis
+    second_restart = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    assert second_restart.recover_interrupted_on_startup() == ()
+    assert second_restart.jobs_for_final_approval(prep.final_approval.final_approval_receipt_sha256) == recovered
+
+
+def test_existing_export_application_rejects_checksum_valid_other_project_manifest_and_jobs(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    app.enqueue(preparation(manifest))
+    manifest_path = ProductProjectManifestStore.path(tmp_path)
+    manifest_path.unlink()
+    ProductProjectManifestStore.save(
+        tmp_path,
+        ProductProjectManifest.create(
+            project_id="other-project", project_revision=1, product_version="0.20.1",
+            timebase=ProjectTimebase(30, 1), child_bindings=(),
+            created_at=CREATED, updated_at=CREATED,
+        ),
+    )
+    DurableProductJobStore._save_unlocked(
+        tmp_path, DurableProductJobCollection.create("other-project"),
+    )
+    for operation in (
+        lambda: app.jobs_for_final_approval(checksum("approval")),
+        app.recover_interrupted_on_startup,
+        lambda: app.enqueue(preparation(manifest)),
+    ):
+        with pytest.raises(ProductError) as exc:
+            operation()
+        assert exc.value.code == "ERR_PRODUCT_JOB_PROJECT_CONFLICT"
+
+
+@pytest.mark.parametrize("dangling", [False, True])
+def test_explicit_startup_recovery_fails_closed_for_valid_and_dangling_job_store_symlinks(
+    tmp_path: Path, dangling: bool,
+) -> None:
+    manifest = setup_project(tmp_path)
+    app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
+    app.enqueue(preparation(manifest))
+    store_path = DurableProductJobStore.path(tmp_path)
+    real_path = store_path.with_name("jobs-real.json")
+    try:
+        if dangling:
+            store_path.unlink()
+            store_path.symlink_to(store_path.with_name("missing-jobs.json"))
+        else:
+            store_path.replace(real_path)
+            store_path.symlink_to(real_path)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+    with pytest.raises(ProductError) as exc:
+        ExportQueueApplication(project_root=tmp_path, project_id="project-1").recover_interrupted_on_startup()
+    assert exc.value.code == "ERR_PRODUCT_JOB_STORE_FILE"
 
 
 def test_preflight_revalidates_exact_manifest_and_marks_stale_for_reprepare(tmp_path: Path) -> None:
@@ -248,7 +371,7 @@ def test_execute_all_never_issues_blanket_confirmation(tmp_path: Path) -> None:
     manifest = setup_project(tmp_path)
     app = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
     first = preparation(manifest, target="export:master")
-    second = preparation(manifest, target="export:proxy")
+    second = preparation(manifest, target="export:proxy", approval_suffix="2")
     first_job = ready(app, first)
     second_job = ready(app, second)
     result = app.prepare_execute_all({first_job.job_id: first, second_job.job_id: second})

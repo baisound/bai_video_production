@@ -407,20 +407,96 @@ class DurableProductJobService:
         self, project_root: str | Path, *, kind: str, target_identity: str,
         input_hashes: Mapping[str, str], estimated_cost: float | None = None,
         currency: str | None = None, estimate_source: str | None = None,
+        exclusive_input_name: str | None = None,
+        expected_project_id: str | None = None,
     ) -> DurableProductJob:
         root = _project_root(project_root)
         with _exclusive_project_lock(_manifest_path(root, create_control_dir=True)):
             manifest = ProductProjectManifestStore.load(root)
+            self._assert_expected_project_id(manifest.project_id, expected_project_id)
             collection = self._load_or_create(root, manifest.project_id)
+            self._assert_expected_project_id(collection.project_id, expected_project_id)
             candidate = DurableProductJob.create(
                 kind=kind, target_identity=target_identity, input_hashes=input_hashes,
                 estimated_cost=estimated_cost, currency=currency, estimate_source=estimate_source,
             )
-            for existing in collection.jobs:
-                if existing.operation_identity == candidate.operation_identity:
-                    return existing
+            exclusive_digest: str | None = None
+            if exclusive_input_name is not None:
+                self._validate_exclusive_input(candidate, exclusive_input_name)
+                exclusive_digest = dict(candidate.input_hashes)[exclusive_input_name]
+            if exclusive_input_name is not None:
+                matches = tuple(
+                    existing for existing in collection.jobs
+                    if (
+                        existing.kind == candidate.kind
+                        and dict(existing.input_hashes).get(exclusive_input_name) == exclusive_digest
+                    )
+                )
+                if len(matches) == 1 and matches[0].operation_identity == candidate.operation_identity:
+                    return matches[0]
+                if matches:
+                    raise ProductError(
+                        "ERR_PRODUCT_JOB_EXCLUSIVE_INPUT_CONFLICT",
+                        "Durable Product job already owns this exclusive input binding",
+                        ProductErrorCategory.DATA_INTEGRITY,
+                    )
+            else:
+                for existing in collection.jobs:
+                    if existing.operation_identity == candidate.operation_identity:
+                        return existing
             DurableProductJobStore._save_unlocked(root, collection.replace(candidate))
             return candidate
+
+    def query_by_input_binding(
+        self, project_root: str | Path, *, kind: str, input_name: str,
+        input_sha256: str, expected_project_id: str | None = None,
+    ) -> tuple[DurableProductJob, ...]:
+        """Return durable jobs for one exact public input coordinate.
+
+        An absent store is an empty, read-only result.  Existing stores are
+        always parsed and Project-scoped before their jobs are returned.
+        """
+
+        if not isinstance(kind, str) or not _KIND_RE.fullmatch(kind) or kind not in _LOCAL_JOB_KINDS:
+            raise ProductError(
+                "ERR_PRODUCT_JOB_QUERY_INVALID",
+                "Durable Product job kind is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        try:
+            _safe_public_identity(input_name, "input_name")
+            validate_sha256(input_sha256, field_name="input_sha256")
+        except ValueError as exc:
+            raise ProductError(
+                "ERR_PRODUCT_JOB_QUERY_INVALID",
+                "Durable Product job input binding is invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
+        root = _project_root(project_root)
+        with _exclusive_project_lock(_manifest_path(root, create_control_dir=True)):
+            manifest = ProductProjectManifestStore.load(root)
+            self._assert_expected_project_id(manifest.project_id, expected_project_id)
+            path = DurableProductJobStore.path(root)
+            if path.is_symlink():
+                raise ProductError(
+                    "ERR_PRODUCT_JOB_STORE_FILE",
+                    "Durable Product job store file is invalid",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            if not path.exists():
+                return ()
+            collection = DurableProductJobStore.load(root)
+            if collection.project_id != manifest.project_id:
+                raise ProductError(
+                    "ERR_PRODUCT_JOB_PROJECT_CONFLICT",
+                    "Durable Product jobs belong to another Project",
+                    ProductErrorCategory.SECURITY,
+                )
+            self._assert_expected_project_id(collection.project_id, expected_project_id)
+            return tuple(
+                job for job in collection.jobs
+                if job.kind == kind and dict(job.input_hashes).get(input_name) == input_sha256
+            )
 
     def transition(
         self, project_root: str | Path, job_id: str, state: DurableProductJobState,
@@ -441,13 +517,33 @@ class DurableProductJobService:
             DurableProductJobStore._save_unlocked(root, collection.replace(changed))
             return changed
 
-    def recover_interrupted(self, project_root: str | Path) -> tuple[DurableProductJob, ...]:
+    def recover_interrupted(
+        self, project_root: str | Path, *, kind: str | None = None,
+        expected_project_id: str | None = None,
+    ) -> tuple[DurableProductJob, ...]:
+        """Mark interrupted durable Jobs unknown, optionally for one validated kind."""
+
+        if kind is not None and (
+            not isinstance(kind, str)
+            or not _KIND_RE.fullmatch(kind)
+            or kind not in _LOCAL_JOB_KINDS
+        ):
+            raise ProductError(
+                "ERR_PRODUCT_JOB_RECOVERY_KIND_INVALID",
+                "Durable Product recovery kind is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
         root = _project_root(project_root)
         with _exclusive_project_lock(_manifest_path(root, create_control_dir=True)):
+            manifest = ProductProjectManifestStore.load(root)
+            self._assert_expected_project_id(manifest.project_id, expected_project_id)
             collection = self._load_verified_collection(root)
+            self._assert_expected_project_id(collection.project_id, expected_project_id)
             changed: list[DurableProductJob] = []
             current_collection = collection
             for job in collection.jobs:
+                if kind is not None and job.kind != kind:
+                    continue
                 if job.state not in {DurableProductJobState.DISPATCHING, DurableProductJobState.RUNNING}:
                     continue
                 recovered = job.transition(
@@ -463,12 +559,44 @@ class DurableProductJobService:
     @staticmethod
     def _load_or_create(root: Path, project_id: str) -> DurableProductJobCollection:
         path = DurableProductJobStore.path(root)
+        if path.is_symlink():
+            raise ProductError(
+                "ERR_PRODUCT_JOB_STORE_FILE",
+                "Durable Product job store file is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
         if not path.exists():
             return DurableProductJobCollection.create(project_id)
         collection = DurableProductJobStore.load(root)
         if collection.project_id != project_id:
             raise ProductError("ERR_PRODUCT_JOB_PROJECT_CONFLICT", "Durable Product jobs belong to another Project", ProductErrorCategory.SECURITY)
         return collection
+
+    @staticmethod
+    def _validate_exclusive_input(candidate: DurableProductJob, input_name: str) -> None:
+        try:
+            _safe_public_identity(input_name, "exclusive_input_name")
+        except ValueError as exc:
+            raise ProductError(
+                "ERR_PRODUCT_JOB_EXCLUSIVE_INPUT_INVALID",
+                "Durable Product exclusive input name is invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
+        if input_name not in dict(candidate.input_hashes):
+            raise ProductError(
+                "ERR_PRODUCT_JOB_EXCLUSIVE_INPUT_INVALID",
+                "Durable Product exclusive input is absent from the candidate",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+
+    @staticmethod
+    def _assert_expected_project_id(actual_project_id: str, expected_project_id: str | None) -> None:
+        if expected_project_id is not None and actual_project_id != expected_project_id:
+            raise ProductError(
+                "ERR_PRODUCT_JOB_PROJECT_CONFLICT",
+                "Durable Product jobs belong to another Project",
+                ProductErrorCategory.SECURITY,
+            )
 
     @staticmethod
     def _load_verified_collection(root: Path) -> DurableProductJobCollection:

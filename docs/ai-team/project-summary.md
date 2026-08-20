@@ -4,14 +4,14 @@
 
 ## Current identity
 
-- Product package: `0.21.0`
-- Stable formal Release: `v0.21.0`
-- Release-code SHA: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Current development main: `5e061fb5d7463c00ad893d28fdf0cbb9b480b1ba` (PR #84 TASK-027 P-ORCH-2 hosted-closure merge)
-- Current Product state: `V0_21_0_RELEASED / TASK_027_P_ORCH_1_AND_2_HOSTED_CLOSED / TASK_026_P_AUDIO_1_DESIGN_LOCAL_PASS / NATIVE_RUNTIME_PARKED`
-- Active development branch: `codex/task-026-audio-placement-product-promotion-design`
+- Product package: `0.22.0`
+- Stable formal Release: `v0.22.0`
+- Release-code SHA: `50a2f06b4d5b64764a521c5863aa1632992a1418`
+- Current development main: `50a2f06b4d5b64764a521c5863aa1632992a1418` before the docs-only post-release closure
+- Current Product state: `V0_22_0_RELEASED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / P_UX_2E_PENDING / TASK_049_TASK_050_INTEGRATED`
+- Active development branch: `codex/task-051-v0-22-0-post-release-closure`
 
-The stable Tag identifies release-code commit `c38187ed`; current main is newer by hosted TASK-045 Evidence and TASK-027 design/implementation merges. The active branch contains TASK-026 Product promotion design only and selects no new release version.
+The annotated stable `v0.22.0` Tag dereferences to exact release-code commit `50a2f06b`; Release workflow `32407505931` and all six published asset digests pass. TASK-051 does not widen any native, paid-provider or Production Gate.
 
 ## Completed Product scope
 

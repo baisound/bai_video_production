@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -204,6 +205,43 @@ def test_bridge_lazily_binds_nle_after_editing_application_exists() -> None:
     assert calls == [application]
     shell.interactive_timeline_snapshot({})
     assert calls == [application]
+
+
+def test_nle_runtime_guard_runs_for_cached_controller_and_rejects_invalid_binding() -> None:
+    service = ShellApplicationService(product_version="0.20.1")
+    service.open_project_context(project_id="project-1", display_name="Project 1")
+    allowed = True
+
+    @contextmanager
+    def guard():
+        if not allowed:
+            raise ProductError("ERR_TASK036_RUNTIME_LEASE_REQUIRED", "lease inactive")
+        yield
+
+    shell = Task036ShellBridge(
+        service, nle_controller=Task044NleShellController(timeline=timeline()),
+        nle_runtime_guard=guard,
+    )
+    assert shell.interactive_timeline_snapshot({})["available"] is True
+    allowed = False
+    for operation, args in (
+        (shell.interactive_timeline_snapshot, {}),
+        (shell.interactive_timeline_select, {}),
+        (shell.export_queue_snapshot, {}),
+        (shell.export_queue_prepare_dispatch, {}),
+        (shell.export_queue_cancel, {}),
+    ):
+        with pytest.raises(ProductError) as exc:
+            operation(args)
+        assert exc.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    with pytest.raises(ValueError, match="NLE runtime guard"):
+        Task036ShellBridge(service, nle_runtime_guard=object())  # type: ignore[arg-type]
+    invalid_context = Task036ShellBridge(
+        service, nle_controller=Task044NleShellController(timeline=timeline()),
+        nle_runtime_guard=lambda: None,  # type: ignore[arg-type]
+    )
+    with pytest.raises(ValueError, match="context manager"):
+        invalid_context.interactive_timeline_snapshot({})
 
 
 def test_html_wires_dynamic_nle_without_javascript_durable_store() -> None:

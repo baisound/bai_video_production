@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_22_0_RELEASE_CANDIDATE_TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED_P_UX_2E_PENDING_TASK_049_TASK_050_INTEGRATED_NATIVE_RUNTIME_GATES_PRESERVED`
+`V0_22_0_RELEASED_TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED_P_UX_2E_PENDING_TASK_049_TASK_050_INTEGRATED_NATIVE_RUNTIME_GATES_PRESERVED`
 
 ## Purpose
 
@@ -117,10 +117,10 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; P-OBS-0 installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may move forward separately, but P-VS-3 production training-material recording and P-VS-4 fine-tuning require P-OBS-1 hosted completion plus exact-path probe PASS, recording Consent, storage encryption and Owner GO
 - TASK-004: `COMPLETED`
 - Package: `0.22.0`
-- Release State: `RELEASE_CANDIDATE`; `v0.21.0` remains the published stable Release until TASK-051 exact-main Tag and Release verification completes
+- Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.22.0` targets exact release-code main SHA `50a2f06b4d5b64764a521c5863aa1632992a1418`
 - Development Candidate: `NONE`
 - Selected Release Identity: `0.22.0 / v0.22.0 / stable`, explicitly selected by the Owner on 2026-08-21
-- Active Release Unit: `TASK-051`; Tag, GitHub Release and Production Deploy are not created by metadata mutation
+- Completed Release Unit: `TASK-051`; PR #191, annotated Tag `v0.22.0`, Release workflow `32407505931` and six published asset digests PASS. Production Deploy remains separate.
 - Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus Owner marker section 2.1 (`DONE / DEV1 NOW / DEV2 NOW / NEXT / FUTURE / GATE`)

@@ -4,8 +4,9 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_21_0_RELEASED / TASK_036_P_UX_1C_VISUAL_HOSTED_CLOSED / TASK_036_P_UX_2_A0_D3_LOCAL_REVALIDATED / TASK_036_P_UX_2E_NATIVE_CLOSURE_PENDING / TASK_046_VOICE_ROUTE_SEPARATE / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE / TASK_049_R6B_R9B1_UI_INTEGRATED_LOCAL / TASK_049_R10B1_B5C_ITEM_ADDON_LOADOUT_LOCAL_PASS`
+- Project Status: `V0_22_0_RELEASE_CANDIDATE / TASK_036_P_UX_1C_VISUAL_HOSTED_CLOSED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / TASK_036_P_UX_2E_NATIVE_CLOSURE_PENDING / TASK_046_VOICE_ROUTE_SEPARATE / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE / TASK_049_GAME_INTELLIGENCE_INTEGRATED / TASK_050_TRAINING_STUDIO_FOUNDATION_INTEGRATED`
 - Last Completed Release Unit: `TASK-045 P-RC-3 — v0.21.0`
+- Active Release Unit: `TASK-051 — 0.22.0 / v0.22.0 stable Release Closure`; Owner-selected, metadata candidate under review, Tag and GitHub Release not yet created
 - Last Completed Consumer Gate: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE`; PR #122 exact head `5d0d8140659a6bf3a30e9b19ac183c206dee8d92` passed hosted `9 / 9`, merged at exact main `ea671ee75a6c1a6ef79756b33f68ecb07466c5b4`, and passed post-merge main CI/Security
 - Completed Consumer Task: `TASK-036 / P-UX-1C`; exact packaged native Evidence closes Home, WORLD LOCK, Scene Design, Edit, Quick, Settings, Export and all six top menus under `V6.1.1_VISUAL_PARITY_PASS`
 - Functional Screen Flow: `PARTIALLY_IMPLEMENTED / P_UX_2E_PACKAGED_NATIVE_CLOSURE_PENDING`; fresh source/test revalidation on 2026-08-18 confirms P-UX-2A0, Connection Settings, 2A1, 2B1/B2/B3, 2C1 and 2D1/D2/D3 are present, including canonical Provider/model selectors in Planning/Image/Video/Quick. Focused revalidation is `102 PASS`. Historical re-audit records remain evidence of the earlier gap; they are not current implementation state. `TASK036_MOCK_ABSOLUTE_FUNCTIONAL_EXPORT_FLOW_COMPLETE` remains unclaimed until P-UX-2E packaged-native output read-back closes.
@@ -13,10 +14,11 @@
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; TASK-047 is split into P-OBS-0 exact-path read/design/probe, P-OBS-1 minimum production-recording capture and later P-OBS-2 continuous/multi-source expansion. No production training-material recording or fine-tuning may start before P-OBS-1 hosted completion, exact OBS path probe PASS, recording Consent, encrypted storage and Owner GO
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.21.0`
-- Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.21.0` targets exact release-code main SHA `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
-- Development Candidate: `NONE`; no Product version/Tag/Release is selected
-- Release commit: `c38187ed54e3601c44411d9b8a128348b0d8a7b7`
+- Package: `0.22.0`
+- Release State: `RELEASE_CANDIDATE`; current stable GitHub Release remains `v0.21.0` at `c38187ed54e3601c44411d9b8a128348b0d8a7b7` until the TASK-051 candidate is merged, tagged and published
+- Development Candidate: `NONE`; no later Product version is selected
+- Selected Release Identity: `0.22.0 / v0.22.0 / stable`
+- Release commit: `PENDING_EXACT_MERGED_MAIN_SHA`
 - Next Consumer Decision Gate: `TASK-049 Windows packaged evidence for the main BVP EXE, BAI DbD Trivia Editor EXE and BAI DbD Training Studio EXE, then real DbD media ROI calibration / labeled/video-derived slice references / Human Gold KPI loop. TASK-036 P-UX-2E remains the separate packaged-native functional-export closure.`
 - Owner Roadmap Markers: `🟦 DEV1 NOW = TASK-049 Windows packaged evidence -> real-media Human Gold calibration`; `🟪 DEV2 NOW = TASK-021 Integrated Dashboard R0`; TASK-036 P-UX-2A0..D3 are locally revalidated and `P-UX-2E` remains pending packaged-native closure. TASK-009 R0、TASK-018 R0 and the TASK-046 unused-Lock closure are complete.
 - Owner Implementation Standing Rule: an assignee does not wait for a per-Unit implementation authorization receipt inside an already allocated exclusive lane after fresh main/PR/Lock/path/dirty/overlap checks pass. Cross-owner writes, shared CHANGELOG, Release/Deploy/Production, paid/private credential use, license/Consent decisions and destructive operations retain their existing Gates.

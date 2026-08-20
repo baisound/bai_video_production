@@ -1622,7 +1622,7 @@ class Task036ShellBridge:
         )
 
 
-def run_native_layout_spike(*, product_version: str = "0.21.0") -> None:
+def run_native_layout_spike(*, product_version: str = "0.22.0") -> None:
     """Launch the native layout spike when optional pywebview is installed.
 
     This function does not install dependencies and does not mutate Product data.

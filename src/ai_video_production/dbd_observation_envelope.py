@@ -24,12 +24,46 @@ from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
 
 class DbDObservationType(str, Enum):
     SURVIVOR_STATUS = "SURVIVOR_STATUS"
+    HOOK_COUNT = "HOOK_COUNT"
+    CHASE_STATE = "CHASE_STATE"
     PERK = "PERK"
     ITEM = "ITEM"
     ADDON = "ADDON"
     UPPER_RIGHT_NOTIFICATION = "UPPER_RIGHT_NOTIFICATION"
     KILLER_POWER = "KILLER_POWER"
     HEARTBEAT = "HEARTBEAT"
+
+
+class SurvivorSignalKind(str, Enum):
+    HOOK_COUNT = "HOOK_COUNT"
+    CHASE_STATE = "CHASE_STATE"
+    SURVIVOR_STATE = "SURVIVOR_STATE"
+
+
+_SURVIVOR_OBSERVATION_TYPES = {
+    DbDObservationType.HOOK_COUNT: SurvivorSignalKind.HOOK_COUNT,
+    DbDObservationType.CHASE_STATE: SurvivorSignalKind.CHASE_STATE,
+    DbDObservationType.SURVIVOR_STATUS: SurvivorSignalKind.SURVIVOR_STATE,
+}
+_SURVIVOR_SIGNAL_VALUES = {
+    SurvivorSignalKind.HOOK_COUNT: {"0", "1", "2", "UNKNOWN"},
+    SurvivorSignalKind.CHASE_STATE: {
+        "NOT_CHASE", "CHASE_CANDIDATE", "CHASE_ACTIVE", "CHASE_END_CANDIDATE", "UNKNOWN",
+    },
+    SurvivorSignalKind.SURVIVOR_STATE: {
+        "HEALTHY", "INJURED", "DOWNED", "HOOKED", "DEAD", "ESCAPED", "UNKNOWN",
+    },
+}
+
+
+def normalize_survivor_signal_value(signal_kind: SurvivorSignalKind, value: str) -> str:
+    if not isinstance(signal_kind, SurvivorSignalKind):
+        raise ValueError("signal_kind must be a SurvivorSignalKind")
+    normalized = value.strip().upper()
+    if normalized not in _SURVIVOR_SIGNAL_VALUES[signal_kind]:
+        allowed = "/".join(sorted(_SURVIVOR_SIGNAL_VALUES[signal_kind]))
+        raise ValueError(f"{signal_kind.value} value must be one of {allowed}")
+    return normalized
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +121,10 @@ class DbDObservationEnvelope:
     trend: str | None = None
     candidates: tuple[str, ...] = ()
     evidence_ref: str | None = None
+    match_id: str | None = None
+    survivor_slot: int | None = None
+    signal_kind: SurvivorSignalKind | None = None
+    source_frame: int | None = None
     created_at: str = field(default_factory=utc_now_iso)
 
     def __post_init__(self) -> None:
@@ -100,10 +138,24 @@ class DbDObservationEnvelope:
             raise ValueError("intensity_milli must be 0..1000")
         if self.candidates != tuple(sorted(set(self.candidates))):
             raise ValueError("candidates must be unique and sorted")
+        expected_signal = _SURVIVOR_OBSERVATION_TYPES.get(self.observation_type)
+        if expected_signal is not None:
+            if self.signal_kind is not expected_signal:
+                raise ValueError("survivor observation signal_kind does not match observation_type")
+            if self.match_id is None or not self.match_id.strip() or len(self.match_id) > 256:
+                raise ValueError("survivor observation requires bounded match_id")
+            if self.survivor_slot is not None and not 0 <= self.survivor_slot <= 3:
+                raise ValueError("survivor_slot must be 0..3 when known")
+            if self.survivor_slot is None and self.state != "UNKNOWN":
+                raise ValueError("unknown survivor slot may only emit UNKNOWN")
+            if self.source_frame is None or not self.frame_start <= self.source_frame < self.frame_end_exclusive:
+                raise ValueError("survivor observation source_frame must be inside its frame range")
+        elif any(value is not None for value in (self.match_id, self.survivor_slot, self.signal_kind, self.source_frame)):
+            raise ValueError("survivor subject fields are valid only for survivor observations")
 
     def to_dict(self) -> dict[str, object]:
         body = {
-            "schema_version": "1.0.0",
+            "schema_version": "1.1.0",
             "observation_id": self.observation_id,
             "observation_type": self.observation_type.value,
             "frame_start": self.frame_start,
@@ -116,6 +168,10 @@ class DbDObservationEnvelope:
             "trend": self.trend,
             "candidates": list(self.candidates),
             "evidence_ref": self.evidence_ref,
+            "match_id": self.match_id,
+            "survivor_slot": self.survivor_slot,
+            "signal_kind": None if self.signal_kind is None else self.signal_kind.value,
+            "source_frame": self.source_frame,
             "provenance": self.provenance.to_dict(),
             "created_at": self.created_at,
         }
@@ -144,6 +200,10 @@ def observation_csv_header() -> tuple[str, ...]:
         "detector_version",
         "knowledge_revision_refs",
         "evidence_ref",
+        "match_id",
+        "survivor_slot",
+        "signal_kind",
+        "source_frame",
     )
 
 
@@ -170,6 +230,10 @@ def observation_csv_row(item: DbDObservationEnvelope) -> tuple[object, ...]:
         p.detector_version,
         "|".join(p.knowledge_revision_refs),
         item.evidence_ref or "",
+        item.match_id or "",
+        "" if item.survivor_slot is None else item.survivor_slot,
+        "" if item.signal_kind is None else item.signal_kind.value,
+        "" if item.source_frame is None else item.source_frame,
     )
 
 
@@ -212,4 +276,38 @@ def heartbeat_to_observation(
         intensity_milli=intensity_milli,
         trend=trend,
         evidence_ref=evidence_ref,
+    )
+
+
+def survivor_signal_to_observation(
+    *,
+    observation_id: str,
+    match_id: str,
+    survivor_slot: int | None,
+    signal_kind: SurvivorSignalKind,
+    value: str,
+    confidence_milli: int,
+    source_frame: int,
+    provenance: ObservationProvenance,
+    evidence_ref: str | None = None,
+) -> DbDObservationEnvelope:
+    normalized = normalize_survivor_signal_value(signal_kind, value)
+    observation_type = {
+        SurvivorSignalKind.HOOK_COUNT: DbDObservationType.HOOK_COUNT,
+        SurvivorSignalKind.CHASE_STATE: DbDObservationType.CHASE_STATE,
+        SurvivorSignalKind.SURVIVOR_STATE: DbDObservationType.SURVIVOR_STATUS,
+    }[signal_kind]
+    return DbDObservationEnvelope(
+        observation_id=observation_id,
+        observation_type=observation_type,
+        frame_start=source_frame,
+        frame_end_exclusive=source_frame + 1,
+        confidence_milli=confidence_milli,
+        provenance=provenance,
+        state=normalized,
+        evidence_ref=evidence_ref,
+        match_id=match_id,
+        survivor_slot=survivor_slot,
+        signal_kind=signal_kind,
+        source_frame=source_frame,
     )

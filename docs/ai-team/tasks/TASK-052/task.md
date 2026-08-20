@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R1C_COMPLETE / R2A_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R2A_COMPLETE / R2B_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -53,6 +53,8 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
 - R1C map asset byte-sniff/rotation preview hardening: complete; affected regression
   `141 PASS`, existing opaque inventory `SVG 60 / inspection OK 60`, packaged visual
   acceptance still `NOT_CONFIRMED`.
+- R2A Survivor-subject observation/teacher identity: complete; focused `36 PASS`,
+  dependency-driven affected regression `206 PASS`, unresolved Critical/High `0 / 0`.
 - Windows packaged TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R2A Survivor-scoped HUD/teacher contract for hook and
-  chase state.
+- Next dependency-ordered unit: R2B batch visual registration worker/progress/
+  no-console/index-rebuild hardening.

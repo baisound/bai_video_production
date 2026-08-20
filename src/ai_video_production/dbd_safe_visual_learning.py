@@ -12,6 +12,7 @@ import tempfile
 from uuid import uuid4
 
 from .dbd_hud_visibility import HudVisibility
+from .dbd_observation_envelope import SurvivorSignalKind, normalize_survivor_signal_value
 from .dbd_training_workspace import VisualTrainingDomain, VisualTrainingManifest, VisualTrainingSample
 from .dbd_vision_slices import FFmpegSliceExtractor, NormalizedROI
 
@@ -38,6 +39,9 @@ class StagedTrainingSample:
     registration_origin: str = "VIDEO_SINGLE"
     state: TrainingReviewState = TrainingReviewState.PREVIEWED
     sha256: str = ""
+    match_id: str = ""
+    survivor_slot: int | None = None
+    signal_kind: SurvivorSignalKind | None = None
 
 @dataclass(frozen=True, slots=True)
 class BatchVisualTarget:
@@ -47,6 +51,9 @@ class BatchVisualTarget:
     roi: NormalizedROI
     group: str = "normal"
     notes: str = ""
+    match_id: str = ""
+    survivor_slot: int | None = None
+    signal_kind: SurvivorSignalKind | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +80,8 @@ class SafeVisualLearningService:
         self, *, domain: VisualTrainingDomain, label: str, visibility: HudVisibility,
         video_path: str | Path, frame_index: int, roi: NormalizedROI,
         group: str = "normal", notes: str = "", registration_origin: str = "VIDEO_SINGLE",
+        match_id: str = "", survivor_slot: int | None = None,
+        signal_kind: SurvivorSignalKind | None = None,
     ) -> StagedTrainingSample:
         source = Path(video_path).expanduser().resolve()
         if not source.is_file():
@@ -81,6 +90,18 @@ class SafeVisualLearningService:
             raise ValueError("フレーム位置は0以上で指定してください。")
         if not label.strip():
             raise ValueError("正解ラベルを選択してください。")
+        if domain is VisualTrainingDomain.SURVIVOR_HUD:
+            if not match_id.strip() or len(match_id) > 256:
+                raise ValueError("サバイバーHUD学習にはmatch_idが必要です。")
+            if survivor_slot is None or not 0 <= survivor_slot <= 3:
+                raise ValueError("サバイバーHUD学習にはスロット0..3が必要です。")
+            if signal_kind is None:
+                raise ValueError("サバイバーHUD学習にはsignal_kindが必要です。")
+            normalize_survivor_signal_value(signal_kind, label)
+            if roi.roi_id != f"survivor_slot_{survivor_slot}":
+                raise ValueError("サバイバースロットとROIが一致しません。")
+        elif match_id or survivor_slot is not None or signal_kind is not None:
+            raise ValueError("サバイバー主体情報はSURVIVOR_HUD専用です。")
 
         staging_id = f"preview-{uuid4().hex}"
         directory = self.staging_root / staging_id
@@ -110,6 +131,8 @@ class SafeVisualLearningService:
             notes=notes.strip(),
             registration_origin=registration_origin,
             sha256=f"sha256:{hashlib.sha256(raw).hexdigest()}",
+            match_id=match_id.strip(), survivor_slot=survivor_slot,
+            signal_kind=signal_kind,
         )
         self._write_receipt(staged)
         return staged
@@ -144,6 +167,9 @@ class SafeVisualLearningService:
                             frame_index=frame_index, roi=target.roi,
                             group=target.group, notes=target.notes,
                             registration_origin="VIDEO_BATCH",
+                            match_id=target.match_id,
+                            survivor_slot=target.survivor_slot,
+                            signal_kind=target.signal_kind,
                         )
                     )
         except Exception:
@@ -182,6 +208,8 @@ class SafeVisualLearningService:
             registration_origin=current.registration_origin, slot=current.roi_id,
             display_state=current.visibility.value, source_video=current.source_video,
             source_frame=current.source_frame,
+            match_id=current.match_id, survivor_slot=current.survivor_slot,
+            signal_kind=current.signal_kind,
         )
         if not self.manifest.append(item):
             final_path.unlink(missing_ok=True)
@@ -206,6 +234,9 @@ class SafeVisualLearningService:
             group=p.get("group", "normal"), notes=p.get("notes", ""),
             registration_origin=p.get("registration_origin", "VIDEO_SINGLE"),
             state=TrainingReviewState(p.get("state", "PREVIEWED")), sha256=p["sha256"],
+            match_id=p.get("match_id", ""),
+            survivor_slot=(None if p.get("survivor_slot") is None else int(p["survivor_slot"])),
+            signal_kind=(None if not p.get("signal_kind") else SurvivorSignalKind(p["signal_kind"])),
         )
 
     def _with_state(self, current: StagedTrainingSample, state: TrainingReviewState) -> StagedTrainingSample:
@@ -216,13 +247,15 @@ class SafeVisualLearningService:
             image_path=current.image_path, source_ref=current.source_ref,
             group=current.group, notes=current.notes, registration_origin=current.registration_origin,
             state=state, sha256=current.sha256,
+            match_id=current.match_id, survivor_slot=current.survivor_slot,
+            signal_kind=current.signal_kind,
         )
 
     def _write_receipt(self, staged: StagedTrainingSample) -> None:
         directory = self.staging_root / staged.staging_id
         directory.mkdir(parents=True, exist_ok=True)
         payload = {
-            "schema_version": "1.0.0", "staging_id": staged.staging_id,
+            "schema_version": "1.1.0", "staging_id": staged.staging_id,
             "domain": staged.domain.value, "label": staged.label,
             "visibility": staged.visibility.value, "source_video": staged.source_video,
             "source_frame": staged.source_frame, "roi_id": staged.roi_id,
@@ -230,6 +263,8 @@ class SafeVisualLearningService:
             "group": staged.group, "notes": staged.notes,
             "registration_origin": staged.registration_origin, "state": staged.state.value,
             "sha256": staged.sha256,
+            "match_id": staged.match_id, "survivor_slot": staged.survivor_slot,
+            "signal_kind": None if staged.signal_kind is None else staged.signal_kind.value,
         }
         target = directory / "receipt.json"
         fd, raw_temp = tempfile.mkstemp(prefix=".receipt.", suffix=".tmp", dir=directory)
@@ -269,6 +304,8 @@ class TrainingDataReviewService:
                     registration_origin=item.registration_origin, slot=item.slot,
                     display_state=item.display_state, source_video=item.source_video,
                     source_frame=item.source_frame,
+                    match_id=item.match_id, survivor_slot=item.survivor_slot,
+                    signal_kind=item.signal_kind,
                 ))
                 changed = True
             else:

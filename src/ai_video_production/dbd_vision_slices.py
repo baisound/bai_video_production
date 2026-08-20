@@ -346,6 +346,9 @@ class SliceReference:
     source_sha256: str
     source_ref: str
     group: str = "default"
+    match_id: str = ""
+    survivor_slot: int | None = None
+    signal_kind: str = ""
 
     def __post_init__(self) -> None:
         if not self.label.strip() or len(self.label) > 256:
@@ -357,13 +360,26 @@ class SliceReference:
             raise ValueError("source_sha256 must use canonical sha256:<hex>")
         if not self.source_ref or len(self.source_ref) > 1024:
             raise ValueError("source_ref must be bounded non-empty text")
+        has_subject = bool(self.match_id or self.survivor_slot is not None or self.signal_kind)
+        if has_subject:
+            if not self.match_id.strip() or len(self.match_id) > 256:
+                raise ValueError("subject reference requires bounded match_id")
+            if self.survivor_slot is None or not 0 <= self.survivor_slot <= 3:
+                raise ValueError("subject reference requires survivor_slot 0..3")
+            if self.signal_kind not in {"HOOK_COUNT", "CHASE_STATE", "SURVIVOR_STATE"}:
+                raise ValueError("subject reference requires supported signal_kind")
 
     @property
     def feature(self) -> int:
         return int(self.feature_hex, 16)
 
-    def to_dict(self) -> dict[str, str]:
-        return {"label": self.label, "feature_hex": self.feature_hex, "source_sha256": self.source_sha256, "source_ref": self.source_ref, "group": self.group}
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "label": self.label, "feature_hex": self.feature_hex,
+            "source_sha256": self.source_sha256, "source_ref": self.source_ref,
+            "group": self.group, "match_id": self.match_id,
+            "survivor_slot": self.survivor_slot, "signal_kind": self.signal_kind,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -372,10 +388,13 @@ class SliceMatch:
     confidence_milli: int
     distance_bits: int
     source_ref: str
+    match_id: str = ""
+    survivor_slot: int | None = None
+    signal_kind: str = ""
 
 
 class ReferenceSliceIndex:
-    schema_version = "1.0.0"
+    schema_version = "1.1.0"
 
     def __init__(self, *, index_id: str, references: Sequence[SliceReference], created_at: str | None = None) -> None:
         if not index_id or len(index_id) > 128:
@@ -391,7 +410,11 @@ class ReferenceSliceIndex:
         cls,
         *,
         index_id: str,
-        samples: Iterable[tuple[str, str | Path] | tuple[str, str | Path, str]],
+        samples: Iterable[
+            tuple[str, str | Path]
+            | tuple[str, str | Path, str]
+            | tuple[str, str | Path, str, str, int | None, str]
+        ],
         group: str = "default",
     ) -> "ReferenceSliceIndex":
         """Build the deterministic reference baseline from labeled PGM slices.
@@ -406,16 +429,24 @@ class ReferenceSliceIndex:
             if len(sample) == 2:
                 label, path_value = sample
                 sample_group = group
+                match_id, survivor_slot, signal_kind = "", None, ""
             elif len(sample) == 3:
                 label, path_value, sample_group = sample
+                match_id, survivor_slot, signal_kind = "", None, ""
+            elif len(sample) == 6:
+                label, path_value, sample_group, match_id, survivor_slot, signal_kind = sample
             else:
-                raise ValueError("reference sample must be (label,path) or (label,path,group)")
+                raise ValueError("reference sample must contain 2, 3 or 6 fields")
             if not str(sample_group).strip() or len(str(sample_group)) > 128:
                 raise ValueError("reference sample group must be bounded non-empty text")
             path = Path(path_value)
             raw = path.read_bytes()
             image = GrayImage.read_pgm(path)
-            refs.append(SliceReference(label, f"{image.dhash64():016x}", sha256_bytes(raw), str(path), str(sample_group).strip()))
+            refs.append(SliceReference(
+                label, f"{image.dhash64():016x}", sha256_bytes(raw), str(path),
+                str(sample_group).strip(), str(match_id).strip(), survivor_slot,
+                str(signal_kind).strip().upper(),
+            ))
         if not refs:
             raise ValueError("samples must not be empty")
         return cls(index_id=index_id, references=refs)
@@ -428,7 +459,10 @@ class ReferenceSliceIndex:
         for ref in self.references:
             distance = (feature ^ ref.feature).bit_count()
             confidence = max(0, 1000 - round(distance * 1000 / 64))
-            rows.append(SliceMatch(ref.label, confidence, distance, ref.source_ref))
+            rows.append(SliceMatch(
+                ref.label, confidence, distance, ref.source_ref,
+                ref.match_id, ref.survivor_slot, ref.signal_kind,
+            ))
         rows.sort(key=lambda item: (-item.confidence_milli, item.distance_bits, item.label, item.source_ref))
         return tuple(rows[:top_k])
 
@@ -437,7 +471,14 @@ class ReferenceSliceIndex:
             "schema_version": self.schema_version,
             "index_id": self.index_id,
             "created_at": self.created_at,
-            "references": [item.to_dict() for item in sorted(self.references, key=lambda x: (x.label, x.group, x.source_ref))],
+            "references": [item.to_dict() for item in sorted(
+                self.references,
+                key=lambda x: (
+                    x.label, x.group, x.match_id,
+                    -1 if x.survivor_slot is None else x.survivor_slot,
+                    x.signal_kind, x.source_ref,
+                ),
+            )],
         }
         return {**body, "index_sha256": sha256_bytes(canonical_json_bytes(body))}
 
@@ -454,7 +495,7 @@ class ReferenceSliceIndex:
         digest = body.pop("index_sha256", None)
         if digest != sha256_bytes(canonical_json_bytes(body)):
             raise ValueError("reference index checksum mismatch")
-        if body.get("schema_version") != cls.schema_version:
+        if body.get("schema_version") not in {"1.0.0", cls.schema_version}:
             raise ValueError("unsupported reference index schema")
         refs = tuple(SliceReference(**item) for item in body["references"])
         return cls(index_id=body["index_id"], references=refs, created_at=body["created_at"])

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/qwen-tts-locked-wheel-session-observation.schema.json",
+  "title": "TASK-014 handle-locked pinned wheel session diagnostic receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "scope", "package_name", "package_version", "wheel_filename", "wheel_bytes", "wheel_sha256", "trusted_payload_inventory_sha256", "evaluated_at", "decision", "reason_codes", "directory_handles_opened", "wheel_handle_opened", "wheel_bytes_read", "pinned_payload_files", "canonical_paths_verified", "non_reparse_verified", "file_ids_retained_in_session_only", "handles_non_inheritable", "handle_release_confirmed", "unreleased_handle_count", "persistent_receipt_is_capability", "runtime_reuse_authorized", "post_return_state_guaranteed", "consumer_execution_authorized", "dependency_resolved_or_installed", "target_python_executed", "target_package_imported", "model_loaded", "owner_audio_read", "inference_executed", "network_accessed", "subprocess_started", "archive_extracted", "filesystem_modified", "absolute_path_persisted", "receipt_sha256"],
+  "properties": {
+    "schema": {"const": "bai.task014.qwen-tts-locked-wheel-session-observation.v1"},
+    "scope": {"const": "HANDLE_LOCKED_PINNED_WHEEL_READ_SESSION_DIAGNOSTIC_ONLY"},
+    "package_name": {"const": "qwen-tts"}, "package_version": {"const": "0.1.1"},
+    "wheel_filename": {"const": "qwen_tts-0.1.1-py3-none-any.whl"}, "wheel_bytes": {"const": 113529},
+    "wheel_sha256": {"const": "sha256:11a290d8dabc7ef91a90c54478c8ab19b3edb1d85c0882313721892bdc4af15d"},
+    "trusted_payload_inventory_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha"}]},
+    "evaluated_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?Z$"},
+    "decision": {"enum": ["LOCKED_SOURCE_VERIFIED_DIAGNOSTIC", "BLOCKED", "UNKNOWN"]},
+    "reason_codes": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/reason"}},
+    "directory_handles_opened": {"type": "integer", "minimum": 0, "maximum": 4},
+    "wheel_handle_opened": {"type": "boolean"}, "wheel_bytes_read": {"enum": [0, 113529]},
+    "pinned_payload_files": {"enum": [0, 23]},
+    "canonical_paths_verified": {"type": "boolean"}, "non_reparse_verified": {"type": "boolean"},
+    "file_ids_retained_in_session_only": {"type": "boolean"}, "handles_non_inheritable": {"type": "boolean"},
+    "handle_release_confirmed": {"type": "boolean"}, "unreleased_handle_count": {"type": "integer", "minimum": 0, "maximum": 5},
+    "persistent_receipt_is_capability": {"const": false}, "runtime_reuse_authorized": {"const": false},
+    "post_return_state_guaranteed": {"const": false}, "consumer_execution_authorized": {"const": false},
+    "dependency_resolved_or_installed": {"const": false}, "target_python_executed": {"const": false},
+    "target_package_imported": {"const": false}, "model_loaded": {"const": false}, "owner_audio_read": {"const": false},
+    "inference_executed": {"const": false}, "network_accessed": {"const": false}, "subprocess_started": {"const": false},
+    "archive_extracted": {"const": false}, "filesystem_modified": {"const": false}, "absolute_path_persisted": {"const": false},
+    "receipt_sha256": {"$ref": "#/$defs/sha"}
+  },
+  "allOf": [
+    {"if": {"properties": {"decision": {"const": "LOCKED_SOURCE_VERIFIED_DIAGNOSTIC"}}}, "then": {"properties": {"reason_codes": {"maxItems": 0}, "directory_handles_opened": {"const": 4}, "wheel_handle_opened": {"const": true}, "wheel_bytes_read": {"const": 113529}, "pinned_payload_files": {"const": 23}, "trusted_payload_inventory_sha256": {"const": "sha256:0a0568dfbbf716135c911322c22dc44df1e279dfd52ab25de9a4edb6a8a11dd6"}, "canonical_paths_verified": {"const": true}, "non_reparse_verified": {"const": true}, "file_ids_retained_in_session_only": {"const": true}, "handles_non_inheritable": {"const": true}, "unreleased_handle_count": {"enum": [0, 5]}}}},
+    {"if": {"properties": {"decision": {"const": "BLOCKED"}}}, "then": {"properties": {"reason_codes": {"minItems": 1, "maxItems": 1, "items": {"$ref": "#/$defs/blocker"}}}}},
+    {"if": {"properties": {"decision": {"const": "UNKNOWN"}}}, "then": {"properties": {"reason_codes": {"const": ["WIN32_IO_UNAVAILABLE"]}}}},
+    {"if": {"properties": {"wheel_handle_opened": {"const": false}}}, "then": {"properties": {"wheel_bytes_read": {"const": 0}, "pinned_payload_files": {"const": 0}}}},
+    {"if": {"properties": {"pinned_payload_files": {"const": 0}}}, "then": {"properties": {"trusted_payload_inventory_sha256": {"type": "null"}}}},
+    {"if": {"properties": {"pinned_payload_files": {"const": 23}}}, "then": {"properties": {"wheel_handle_opened": {"const": true}, "wheel_bytes_read": {"const": 113529}, "trusted_payload_inventory_sha256": {"const": "sha256:0a0568dfbbf716135c911322c22dc44df1e279dfd52ab25de9a4edb6a8a11dd6"}}}},
+    {"if": {"properties": {"unreleased_handle_count": {"const": 0}}}, "then": {"properties": {"handle_release_confirmed": {"const": true}}}},
+    {"if": {"properties": {"unreleased_handle_count": {"minimum": 1}}}, "then": {"properties": {"handle_release_confirmed": {"const": false}}}},
+    {"if": {"properties": {"canonical_paths_verified": {"const": true}}}, "then": {"$ref": "#/$defs/source_verified"}},
+    {"if": {"properties": {"non_reparse_verified": {"const": true}}}, "then": {"$ref": "#/$defs/source_verified"}},
+    {"if": {"properties": {"file_ids_retained_in_session_only": {"const": true}}}, "then": {"$ref": "#/$defs/source_verified"}},
+    {"if": {"properties": {"handles_non_inheritable": {"const": true}}}, "then": {"$ref": "#/$defs/source_verified"}}
+  ],
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "source_verified": {"properties": {"directory_handles_opened": {"const": 4}, "wheel_handle_opened": {"const": true}, "wheel_bytes_read": {"const": 113529}, "pinned_payload_files": {"const": 23}, "canonical_paths_verified": {"const": true}, "non_reparse_verified": {"const": true}, "file_ids_retained_in_session_only": {"const": true}, "handles_non_inheritable": {"const": true}}},
+    "blocker": {"enum": ["UNSUPPORTED_PLATFORM", "NON_FIXED_LOCAL_DRIVE", "HANDLE_OPEN_DENIED", "REPARSE_POINT_REJECTED", "CANONICAL_PATH_MISMATCH", "FILE_ID_INVALID", "HANDLE_IDENTITY_CHANGED", "HANDLE_INHERITANCE_UNSAFE", "WHEEL_SIZE_MISMATCH", "WHEEL_READ_FAILED", "WHEEL_PIN_MISMATCH", "INVALID_WHEEL_ARCHIVE", "UNSAFE_ARCHIVE_PATH", "UNSAFE_ARCHIVE_MEMBER", "DUPLICATE_ARCHIVE_MEMBER", "ARCHIVE_BOUNDS_EXCEEDED", "ARCHIVE_MEMBER_SIZE_MISMATCH", "WHEEL_RECORD_MISSING", "WHEEL_RECORD_MEMBER_SET_MISMATCH", "WHEEL_RECORD_HASH_MISMATCH", "WHEEL_OBSERVED_COUNT_MISMATCH", "WHEEL_ENTRY_POINT_MISMATCH", "MALFORMED_RECORD", "DUPLICATE_RECORD_PATH", "TRUSTED_PAYLOAD_INVENTORY_MISMATCH", "HANDLE_CLOSE_FAILED"]},
+    "reason": {"enum": ["WIN32_IO_UNAVAILABLE", "UNSUPPORTED_PLATFORM", "NON_FIXED_LOCAL_DRIVE", "HANDLE_OPEN_DENIED", "REPARSE_POINT_REJECTED", "CANONICAL_PATH_MISMATCH", "FILE_ID_INVALID", "HANDLE_IDENTITY_CHANGED", "HANDLE_INHERITANCE_UNSAFE", "WHEEL_SIZE_MISMATCH", "WHEEL_READ_FAILED", "WHEEL_PIN_MISMATCH", "INVALID_WHEEL_ARCHIVE", "UNSAFE_ARCHIVE_PATH", "UNSAFE_ARCHIVE_MEMBER", "DUPLICATE_ARCHIVE_MEMBER", "ARCHIVE_BOUNDS_EXCEEDED", "ARCHIVE_MEMBER_SIZE_MISMATCH", "WHEEL_RECORD_MISSING", "WHEEL_RECORD_MEMBER_SET_MISMATCH", "WHEEL_RECORD_HASH_MISMATCH", "WHEEL_OBSERVED_COUNT_MISMATCH", "WHEEL_ENTRY_POINT_MISMATCH", "MALFORMED_RECORD", "DUPLICATE_RECORD_PATH", "TRUSTED_PAYLOAD_INVENTORY_MISMATCH", "HANDLE_CLOSE_FAILED"]}
+  }
+}

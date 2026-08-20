@@ -171,23 +171,62 @@ class OcrEngine(Protocol):
 
 
 class TesseractCliOcrEngine:
-    """Optional OCR adapter.  `tesseract` remains an external runtime dependency."""
+    """Optional OCR adapter with short-HUD multi-pass recognition.
+
+    Upper-right DbD text is often a single sparse line over a noisy game frame.
+    A single ``--psm 6`` pass is brittle, so the adapter evaluates several page
+    segmentation modes and returns unique alternatives in deterministic order.
+    """
 
     def __init__(self, executable: str = "tesseract") -> None:
         self.executable = executable
 
-    def read(self, image_path: str | Path, *, language: str = "jpn+eng") -> str:
+    def _read_psm(self, source: Path, *, language: str, psm: int) -> str:
+        cmd = [
+            self.executable, str(source), "stdout", "-l", language,
+            "--psm", str(psm), "-c", "preserve_interword_spaces=1",
+        ]
+        try:
+            completed = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                check=False, timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise ProductError(
+                "ERR_DBD_OCR_RUNTIME_UNAVAILABLE", "Tesseract OCR is unavailable",
+                ProductErrorCategory.EXTERNAL_DEPENDENCY, retryable=True,
+            ) from exc
+        if completed.returncode != 0:
+            raise ProductError(
+                "ERR_DBD_OCR_FAILED", "Tesseract OCR failed",
+                ProductErrorCategory.EXTERNAL_DEPENDENCY, retryable=True,
+                details={"returncode": completed.returncode, "psm": psm},
+            )
+        return completed.stdout.decode("utf-8", errors="replace").strip()
+
+    def read_candidates(
+        self, image_path: str | Path, *, language: str = "jpn+eng",
+    ) -> tuple[str, ...]:
         source = Path(image_path)
         if not source.is_file():
             raise ValueError("OCR image does not exist")
-        cmd = [self.executable, str(source), "stdout", "-l", language, "--psm", "6"]
-        try:
-            completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=30)
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            raise ProductError("ERR_DBD_OCR_RUNTIME_UNAVAILABLE", "Tesseract OCR is unavailable", ProductErrorCategory.EXTERNAL_DEPENDENCY, retryable=True) from exc
-        if completed.returncode != 0:
-            raise ProductError("ERR_DBD_OCR_FAILED", "Tesseract OCR failed", ProductErrorCategory.EXTERNAL_DEPENDENCY, retryable=True, details={"returncode": completed.returncode})
-        return completed.stdout.decode("utf-8", errors="replace").strip()
+        rows: list[str] = []
+        seen: set[str] = set()
+        # PSM 7 is strongest for one-line HUD labels, PSM 6 for compact blocks,
+        # and PSM 11 for sparse text.  Showing unique alternatives lets the
+        # human reviewer select/correct the strongest candidate without hiding
+        # uncertainty.
+        for psm in (7, 6, 11):
+            text = self._read_psm(source, language=language, psm=psm)
+            normalized = normalize_hud_text(text)
+            if normalized and normalized not in seen:
+                seen.add(normalized)
+                rows.append(text)
+        return tuple(rows)
+
+    def read(self, image_path: str | Path, *, language: str = "jpn+eng") -> str:
+        candidates = self.read_candidates(image_path, language=language)
+        return candidates[0] if candidates else ""
 
 
 def normalize_hud_text(value: str) -> str:

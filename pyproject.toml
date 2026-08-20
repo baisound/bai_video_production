@@ -54,6 +54,7 @@ windows-build = [
   "pyinstaller==6.22.0",
   "pywebview==6.2.1",
   "faster-whisper>=1.2.1,<2",
+  "pillow>=10,<13",
 ]
 
 [tool.setuptools]

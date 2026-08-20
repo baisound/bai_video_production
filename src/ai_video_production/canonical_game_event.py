@@ -96,6 +96,9 @@ class GameKnowledgeKind(str, Enum):
     ADDON = "ADDON"
     ITEM = "ITEM"
     OFFERING = "OFFERING"
+    CHARACTER = "CHARACTER"
+    SURVIVOR = "SURVIVOR"
+    KNOWLEDGE = "KNOWLEDGE"
     STATUS = "STATUS"
     MECHANIC = "MECHANIC"
 

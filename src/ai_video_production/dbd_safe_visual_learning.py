@@ -35,8 +35,30 @@ class StagedTrainingSample:
     source_ref: str
     group: str = "normal"
     notes: str = ""
+    registration_origin: str = "VIDEO_SINGLE"
     state: TrainingReviewState = TrainingReviewState.PREVIEWED
     sha256: str = ""
+
+@dataclass(frozen=True, slots=True)
+class BatchVisualTarget:
+    domain: VisualTrainingDomain
+    label: str
+    visibility: HudVisibility
+    roi: NormalizedROI
+    group: str = "normal"
+    notes: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class BatchPreviewReport:
+    frame_count: int
+    target_count: int
+    staged: tuple[StagedTrainingSample, ...]
+
+    @property
+    def total_samples(self) -> int:
+        return len(self.staged)
+
 
 
 class SafeVisualLearningService:
@@ -50,7 +72,7 @@ class SafeVisualLearningService:
     def preview_video_frame(
         self, *, domain: VisualTrainingDomain, label: str, visibility: HudVisibility,
         video_path: str | Path, frame_index: int, roi: NormalizedROI,
-        group: str = "normal", notes: str = "",
+        group: str = "normal", notes: str = "", registration_origin: str = "VIDEO_SINGLE",
     ) -> StagedTrainingSample:
         source = Path(video_path).expanduser().resolve()
         if not source.is_file():
@@ -86,10 +108,54 @@ class SafeVisualLearningService:
             source_ref=f"video://{source.as_posix()}#frame={frame_index}&roi={roi.roi_id}",
             group=group.strip() or "normal",
             notes=notes.strip(),
+            registration_origin=registration_origin,
             sha256=f"sha256:{hashlib.sha256(raw).hexdigest()}",
         )
         self._write_receipt(staged)
         return staged
+
+    def preview_video_batch(
+        self, *, video_path: str | Path, start_frame: int, end_frame_exclusive: int,
+        frame_step: int, targets: tuple[BatchVisualTarget, ...], max_samples: int = 500,
+    ) -> BatchPreviewReport:
+        if start_frame < 0 or end_frame_exclusive <= start_frame:
+            raise ValueError("動画学習のフレーム抽出範囲が不正です。")
+        if frame_step < 1:
+            raise ValueError("フレーム抽出間隔は1以上で指定してください。")
+        if not targets:
+            raise ValueError("学習するゲーム要素を1件以上選択してください。")
+        if not 1 <= int(max_samples) <= 10_000:
+            raise ValueError("最大件数は1..10000で指定してください。")
+        frames = tuple(range(int(start_frame), int(end_frame_exclusive), int(frame_step)))
+        requested = len(frames) * len(targets)
+        if requested > int(max_samples):
+            raise ValueError(
+                f"Crop候補 {requested}件は最大件数={max_samples}を超えます。"
+                "フレーム間隔を広げるか範囲を分割してください。"
+            )
+        staged: list[StagedTrainingSample] = []
+        try:
+            for frame_index in frames:
+                for target in targets:
+                    staged.append(
+                        self.preview_video_frame(
+                            domain=target.domain, label=target.label,
+                            visibility=target.visibility, video_path=video_path,
+                            frame_index=frame_index, roi=target.roi,
+                            group=target.group, notes=target.notes,
+                            registration_origin="VIDEO_BATCH",
+                        )
+                    )
+        except Exception:
+            for item in staged:
+                try:
+                    self.discard(item.staging_id)
+                except Exception:
+                    pass
+            raise
+        return BatchPreviewReport(
+            frame_count=len(frames), target_count=len(targets), staged=tuple(staged)
+        )
 
     def confirm_register(self, staged: StagedTrainingSample) -> bool:
         current = self.load_staged(staged.staging_id)
@@ -113,6 +179,9 @@ class SafeVisualLearningService:
         item = VisualTrainingSample(
             domain=current.domain, label=current.label, image_path=str(final_path),
             group=current.group, source_ref=current.source_ref, notes=notes,
+            registration_origin=current.registration_origin, slot=current.roi_id,
+            display_state=current.visibility.value, source_video=current.source_video,
+            source_frame=current.source_frame,
         )
         if not self.manifest.append(item):
             final_path.unlink(missing_ok=True)
@@ -135,6 +204,7 @@ class SafeVisualLearningService:
             source_video=p["source_video"], source_frame=int(p["source_frame"]),
             roi_id=p["roi_id"], image_path=p["image_path"], source_ref=p["source_ref"],
             group=p.get("group", "normal"), notes=p.get("notes", ""),
+            registration_origin=p.get("registration_origin", "VIDEO_SINGLE"),
             state=TrainingReviewState(p.get("state", "PREVIEWED")), sha256=p["sha256"],
         )
 
@@ -144,7 +214,8 @@ class SafeVisualLearningService:
             visibility=current.visibility, source_video=current.source_video,
             source_frame=current.source_frame, roi_id=current.roi_id,
             image_path=current.image_path, source_ref=current.source_ref,
-            group=current.group, notes=current.notes, state=state, sha256=current.sha256,
+            group=current.group, notes=current.notes, registration_origin=current.registration_origin,
+            state=state, sha256=current.sha256,
         )
 
     def _write_receipt(self, staged: StagedTrainingSample) -> None:
@@ -156,7 +227,8 @@ class SafeVisualLearningService:
             "visibility": staged.visibility.value, "source_video": staged.source_video,
             "source_frame": staged.source_frame, "roi_id": staged.roi_id,
             "image_path": staged.image_path, "source_ref": staged.source_ref,
-            "group": staged.group, "notes": staged.notes, "state": staged.state.value,
+            "group": staged.group, "notes": staged.notes,
+            "registration_origin": staged.registration_origin, "state": staged.state.value,
             "sha256": staged.sha256,
         }
         target = directory / "receipt.json"
@@ -194,6 +266,9 @@ class TrainingDataReviewService:
                 out.append(VisualTrainingSample(
                     domain=item.domain, label=new_label.strip(), image_path=item.image_path,
                     group=item.group, source_ref=item.source_ref, notes=item.notes,
+                    registration_origin=item.registration_origin, slot=item.slot,
+                    display_state=item.display_state, source_video=item.source_video,
+                    source_frame=item.source_frame,
                 ))
                 changed = True
             else:

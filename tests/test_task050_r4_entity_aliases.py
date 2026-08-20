@@ -46,3 +46,44 @@ def test_ambiguous_alias_fails_closed(tmp_path):
 def test_ui_choices_come_from_existing_event_contract():
     assert "GENERAL" in TRIVIA_CATEGORIES
     assert any(label == "チェイス開始" for label in EVENT_TYPE_JA.values())
+
+def test_blank_search_lists_aliases_without_weakening_alias_validation(tmp_path):
+    store = EntityAliasCatalog(tmp_path / "aliases.sqlite")
+
+    store.put_many(
+        (
+            EntityAliasRecord(
+                "perk_a",
+                GameKnowledgeKind.PERK,
+                "パークA",
+                EntityAliasType.OFFICIAL_NAME,
+                priority=100,
+            ),
+            EntityAliasRecord(
+                "perk_b",
+                GameKnowledgeKind.PERK,
+                "パークB",
+                EntityAliasType.OFFICIAL_NAME,
+                priority=90,
+            ),
+        )
+    )
+
+    rows = store.search(
+        "",
+        knowledge_kind=GameKnowledgeKind.PERK,
+        verified_only=False,
+    )
+
+    assert [row.entity_id for row in rows] == ["perk_a", "perk_b"]
+
+
+def test_blank_unique_resolution_still_fails_closed(tmp_path):
+    store = EntityAliasCatalog(tmp_path / "aliases.sqlite")
+
+    try:
+        store.resolve_unique("")
+    except ValueError as exc:
+        assert "1..256" in str(exc)
+    else:
+        raise AssertionError("blank alias resolution must remain invalid")

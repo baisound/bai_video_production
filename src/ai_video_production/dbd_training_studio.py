@@ -27,6 +27,7 @@ from .dbd_game_knowledge_presentation import (
     diagnostic_knowledge_values,
     human_knowledge_fields,
 )
+from .dbd_image_assets import ImageAssetDecodeError, decode_image_for_preview
 from .dbd_map_intelligence import MapIntelligenceStore, MapRecord
 from .dbd_video_analysis_workspace import DbDVideoAnalysisWorkspaceService
 from .dbd_optional_roi_defaults import ensure_optional_roi_initialized
@@ -3465,24 +3466,19 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     def _knowledge_thumbnail(path_text: str, max_size: tuple[int, int] = (96, 72), rotation_deg: int = 0):
         path = Path(path_text) if path_text else None
         if path is None or not path.is_file():
-            return None
+            return None, "FILE_NOT_FOUND: 画像ファイルがありません"
         try:
-            from PIL import Image, ImageTk
-            with Image.open(path) as opened:
-                image = opened.convert("RGBA")
-                if rotation_deg % 360:
-                    image = image.rotate(-rotation_deg, expand=True)
-                image.thumbnail(max_size)
-                return ImageTk.PhotoImage(image)
-        except Exception:
-            try:
-                photo = tk.PhotoImage(file=str(path))
-                factor = max(1, (max(photo.width() / max_size[0], photo.height() / max_size[1])))
-                if factor > 1:
-                    photo = photo.subsample(int(factor + 0.999), int(factor + 0.999))
-                return photo
-            except Exception:
-                return None
+            image, report = decode_image_for_preview(
+                path, max_size=max_size, rotation_deg=rotation_deg,
+            )
+            from PIL import ImageTk
+            return ImageTk.PhotoImage(image), f"{report.detected_format} / {report.decode_path}"
+        except ImageAssetDecodeError as exc:
+            report = exc.report
+            reason = report.diagnostic_reason or "decodeできません"
+            return None, f"{report.detected_format} / {report.diagnostic_code}: {reason}"
+        except Exception as exc:
+            return None, f"UNKNOWN / PREVIEW_FAILED: {type(exc).__name__}: {exc}"
 
     inventory_filter_row = ttk.Frame(inventory_box)
     inventory_filter_row.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 6))
@@ -3688,9 +3684,14 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         image_name=tk.StringVar(value=Path(image_path.get()).name if image_path.get() else "画像なし")
         image_path_label=ttk.Label(image_frame,textvariable=image_name,foreground="#555555",wraplength=760); image_path_label.grid(row=1,column=0,columnspan=2,sticky="w",pady=(6,4))
         def refresh_edit_image():
-            photo=_knowledge_thumbnail(image_path.get(), (520, 260))
-            image_ref["photo"]=photo
-            image_preview.configure(image=photo or "", text="" if photo else "画像なし")
+            photo,diagnostic=_knowledge_thumbnail(image_path.get(), (520, 260))
+            if photo is not None:
+                image_ref["photo"]=photo
+                image_preview.configure(image=photo,text="")
+            elif image_ref["photo"] is not None:
+                image_preview.configure(image=image_ref["photo"],text=f"前回表示を保持\n{diagnostic}",compound="top")
+            else:
+                image_preview.configure(image="",text=f"画像を表示できません\n{diagnostic}")
         def choose_image():
             chosen=filedialog.askopenfilename(title="差し替える画像を選択",filetypes=[("画像","*.png;*.jpg;*.jpeg;*.gif;*.pgm;*.ppm"),("すべて","*.*")])
             if chosen:
@@ -3793,12 +3794,14 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         image_label=ttk.Label(image_box,text="マップ画像なし",anchor="center"); image_label.grid(row=0,column=0,sticky="nsew")
         def refresh_image():
             path=Path(record.image_path) if record.image_path else None
-            photo=_knowledge_thumbnail(str(path) if path else "", (430, 430), rotation.get())
+            photo,diagnostic=_knowledge_thumbnail(str(path) if path else "", (430, 430), rotation.get())
             if photo is not None:
                 image_ref["photo"]=photo
-                image_label.configure(image=photo,text=f"↑ Canonical Up / 表示回転 {rotation.get()}°",compound="top")
+                image_label.configure(image=photo,text=f"↑ Canonical Up / 表示回転 {rotation.get()}°\n{diagnostic}",compound="top")
+            elif image_ref["photo"] is not None:
+                image_label.configure(image=image_ref["photo"],text=f"前回表示を保持\n{diagnostic}\n↑ Canonical Up / 回転 {rotation.get()}°",compound="top")
             elif path and path.is_file():
-                image_label.configure(image="",text=f"画像を表示できません\n{path.name}\n↑ Canonical Up / 回転 {rotation.get()}°")
+                image_label.configure(image="",text=f"画像を表示できません\n{path.name}\n{diagnostic}\n↑ Canonical Up / 回転 {rotation.get()}°")
             else:
                 image_label.configure(image="",text=f"画像未登録\n↑ Canonical Up / 回転 {rotation.get()}°")
         refresh_image()

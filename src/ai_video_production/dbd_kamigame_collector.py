@@ -19,6 +19,7 @@ from typing import Iterable
 from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 
+from .dbd_image_assets import content_image_extension
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
 
 SURVIVOR_PERKS_URL = "https://kamigame.jp/dbd/page/207150682694767780.html"
@@ -660,10 +661,12 @@ def _asset_allowed(url: str) -> bool:
     return p.scheme == "https" and any(host == suffix or (suffix.startswith(".") and host.endswith(suffix)) for suffix in _ALLOWED_ASSET_HOST_SUFFIXES)
 
 
-def _image_extension(content_type: str) -> str:
+def _image_extension(content_type: str, content: bytes | None = None) -> str:
+    if content:
+        return content_image_extension(content)
     return {
         "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif",
-        "image/webp": ".webp", "image/bmp": ".bmp",
+        "image/webp": ".webp", "image/bmp": ".bmp", "image/svg+xml": ".svg",
     }.get(content_type.casefold(), ".img")
 
 def discover_next_pages(html_text: str, *, page_url: str) -> list[str]:
@@ -718,7 +721,7 @@ class KamigameHTTPClient:
             if len(body) > 12 * 1024 * 1024:
                 raise ValueError("asset exceeds 12 MiB safety limit")
         self._last_request_at = time.monotonic()
-        output_path = output_stem.with_suffix(_image_extension(content_type))
+        output_path = output_stem.with_suffix(_image_extension(content_type, body))
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(body)
         return FetchReceipt(url, output_path, hashlib.sha256(body).hexdigest(), utc_now_iso(), content_type)

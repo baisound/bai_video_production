@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-014として、固定Qwen3-TTS 0.6B Base manifestを厳格parseし、既存local snapshotのexact 13-file setをfixed-local drive・path/reparse・size/hash・bounded race観測で検査する診断専用verifierを追加しました。private/public receiptはcapabilityではなく、runtime再利用、model load、post-return状態保証、Owner音声読取、推論、network、filesystem変更のAuthorityを作りません。
 - TASK-014として、固定Qwen-TTS wheel／installed payloadのbounded read-only診断と、Windows上で祖先・wheel handleを保持してidentity・non-reparse・non-inherit・reverse closeを検証するone-shot locked sessionを追加しました。永続receiptは診断Evidenceのみで、runtime再利用、target package import、model load、Owner音声読取、推論、network、filesystem変更、Release/DeployのAuthorityを作りません。
 
 ## [0.22.0] - 2026-08-21

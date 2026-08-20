@@ -1,9 +1,10 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `DESIGN_ALLOCATED / IMPLEMENTATION_QUEUED_AFTER_TASK051_RELEASE`
+Status: `IMPLEMENTATION_ACTIVE / R0_R0A_COMPLETE / R1A_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
+Implementation authority: explicit Owner TASK-052 AUTONOMY authorization on 2026-08-21
 
 ## Purpose
 
@@ -38,3 +39,12 @@ TASK-052 does not silently absorb:
 ## Acceptance
 
 See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
+
+## Current checkpoint
+
+- R0 corpus and 74-row traceability matrix: complete.
+- R0A Owner defect/source/current-data baseline: complete.
+- Focused pre-remediation source regression: `70 PASS`.
+- Windows packaged TASK-052 acceptance: `NOT_CONFIRMED`.
+- Next dependency-ordered unit: R1A canonical taxonomy, structural
+  `ENTITY_DETAIL_ROOT` parsing contract and migration dry-run.

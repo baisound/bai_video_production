@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0.0",
+  "manifest_id": "task014-qwen3-tts-06b-base-5d839924-r0",
+  "model_id": "Qwen/Qwen3-TTS-12Hz-0.6B-Base",
+  "revision": "5d83992436eae1d760afd27aff78a71d676296fc",
+  "retrieved_at": "2026-08-20T15:27:32.139Z",
+  "source": {
+    "provider": "Hugging Face",
+    "api": "https://huggingface.co/api/models/Qwen/Qwen3-TTS-12Hz-0.6B-Base/revision/5d83992436eae1d760afd27aff78a71d676296fc?blobs=true",
+    "resolve_prefix": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-0.6B-Base/resolve/5d83992436eae1d760afd27aff78a71d676296fc/"
+  },
+  "entries_sha256": "8c40ca449eb8fcf1bd55c4b272d40a29dd6dd91d1c419120ae24795d0c9482a3",
+  "entries_digest_algorithm": "TASK014_PINNED_MODEL_ENTRIES_V1: SHA-256 over UTF-8 file records sorted by ASCII bytewise ascending path; reject non-ASCII paths, duplicates and ASCII-case-fold collisions; each record is path, NUL, decimal bytes, NUL, sha256, NUL, blob_id_sha1, NUL, digest_source, NUL, lowercase load_input, LF",
+  "canonical_manifest_sha256": "8ee07dcddf13d95aa225df9167d4695b42e245b431686d8acb26bbd4a5e80935",
+  "canonical_manifest_digest_algorithm": "TASK014_PINNED_MODEL_MANIFEST_V1 defined in the companion Evidence",
+  "files": [
+    {
+      "path": ".gitattributes",
+      "bytes": 1519,
+      "sha256": "11ad7efa24975ee4b0c3c3a38ed18737f0658a5f75a0a96787b576a78a023361",
+      "blob_id_sha1": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+      "digest_source": "resolved_bytes",
+      "load_input": false
+    },
+    {
+      "path": "README.md",
+      "bytes": 3640,
+      "sha256": "181187b6057906bd960bc7f938d0b7a16652509776a0d52c4885b4ae5ccda0ea",
+      "blob_id_sha1": "50931da8c9b34f7233394b5c3063a47ef3285acf",
+      "digest_source": "resolved_bytes",
+      "load_input": false
+    },
+    {
+      "path": "config.json",
+      "bytes": 4494,
+      "sha256": "2e714c787c8edb98b05432685cddb634add2de4d4e645f653d68251ef72ba011",
+      "blob_id_sha1": "4e923f500f5c3eeb78d44072e7049b28817c2e04",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    },
+    {
+      "path": "generation_config.json",
+      "bytes": 245,
+      "sha256": "f1b90b4513f3b34c62851049e2492d7b4c5940daf1276f89c82b8ef04127f3aa",
+      "blob_id_sha1": "1872b16d4535564abf2db5d6debe6cddd82b7f2e",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    },
+    {
+      "path": "merges.txt",
+      "bytes": 1671839,
+      "sha256": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+      "blob_id_sha1": "20024bfe7c83998e9aeaf98a0cd6a2ce6306c2f0",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    },
+    {
+      "path": "model.safetensors",
+      "bytes": 1829344272,
+      "sha256": "180b3b10eb1c9f1b4db7806d5475bae3071c0243c299d49926bab1da3b6946f6",
+      "blob_id_sha1": "401a365c4572f09f44d48bb336fdbf94cd1e3ad2",
+      "digest_source": "official_lfs_sha256",
+      "load_input": true
+    },
+    {
+      "path": "preprocessor_config.json",
+      "bytes": 127,
+      "sha256": "efdde1022ea9d76928bf7a9cd53139138f5ba2e466e837f08f6105ab1af1c119",
+      "blob_id_sha1": "0525dd953bb9241912f7147666f0d535165d5d4f",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    },
+    {
+      "path": "speech_tokenizer/config.json",
+      "bytes": 2336,
+      "sha256": "ee65bb901c876664ab8707c487157aa1a6ee57c65969b28fb5ec9dc211e68167",
+      "blob_id_sha1": "06cc8dc4c5ec8a1929086b71b98c313020d9268b",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    },
+    {
+      "path": "speech_tokenizer/configuration.json",
+      "bytes": 76,
+      "sha256": "6bc26d64eb5024b4d1dab5a52371958b429256d6c9d59787f1f5294a54e0cebd",
+      "blob_id_sha1": "ab58e2eaf53cd14a1a2a7527d9261ceea93a24cd",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    },
+    {
+      "path": "speech_tokenizer/model.safetensors",
+      "bytes": 682293092,
+      "sha256": "836b7b357f5ea43e889936a3709af68dfe3751881acefe4ecf0dbd30ba571258",
+      "blob_id_sha1": "026d66bfb5d730dcfd56450c5e9e51b3ef4e0712",
+      "digest_source": "official_lfs_sha256",
+      "load_input": true
+    },
+    {
+      "path": "speech_tokenizer/preprocessor_config.json",
+      "bytes": 234,
+      "sha256": "fcb3805e597e786d4067706e602f6688524640f8d3396790e2e09b5942fcbdfb",
+      "blob_id_sha1": "ba40914f4f49ab98a8ca545d4892ef7291a39592",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    },
+    {
+      "path": "tokenizer_config.json",
+      "bytes": 7344,
+      "sha256": "dc3c31c3bdaedd5016382bb3cbe07323026775ad51f5a4fb564505992ae4a670",
+      "blob_id_sha1": "6ff9fd60cc623bb54bbd603cbd418c97a11528d7",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    },
+    {
+      "path": "vocab.json",
+      "bytes": 2776833,
+      "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "blob_id_sha1": "4783fe10ac3adce15ac8f358ef5462739852c569",
+      "digest_source": "resolved_bytes",
+      "load_input": true
+    }
+  ],
+  "no_effect_flags": {
+    "model_weights_downloaded": false,
+    "model_loaded": false,
+    "package_installed": false,
+    "owner_audio_read": false,
+    "inference_executed": false,
+    "firewall_changed": false
+  }
+}

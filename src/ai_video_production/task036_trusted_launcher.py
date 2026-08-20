@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 from typing import Any, Callable
 
@@ -39,6 +40,7 @@ from .task036_product_ports import (
     Task036LocalTranscriptionPort,
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
+from .game_intelligence_shell import GameIntelligenceShellApplication
 from .task044_nle_shell import Task044NleShellController
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_projection import InteractiveTimelineProjectionService
@@ -54,6 +56,8 @@ from .planning_application import Task027PlanningApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .connection_settings_web import ConnectionSettingsWebService
+from .credential_vault import WindowsCredentialManagerStore
+from .provider_execution import (AiProviderExecutionService, AnthropicMessagesAdapter, GoogleInteractionsAdapter, OpenAiResponsesAdapter, UrllibJsonTransport)
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
 from .audio_workspace_application import Task041AudioWorkspaceApplication
@@ -554,6 +558,7 @@ def build_trusted_launch(
             project_id=configuration.project_id,
         )
     connection_settings = None
+    game_intelligence_provider_service = None
     connection_settings_path = configuration.project_root / "ai-connection-settings.json"
     if connection_settings_path.is_symlink():
         raise ProductError(
@@ -569,10 +574,18 @@ def build_trusted_launch(
                 ProductErrorCategory.DATA_INTEGRITY,
             )
         try:
+            credential_vault = WindowsCredentialManagerStore() if os.name == "nt" else None
             connection_settings = ConnectionSettingsWebService.from_paths(
                 connection_settings_path,
                 None,
+                credential_vault=credential_vault,
             )
+            if credential_vault is not None:
+                transport = UrllibJsonTransport()
+                game_intelligence_provider_service = AiProviderExecutionService(
+                    (OpenAiResponsesAdapter(transport), AnthropicMessagesAdapter(transport), GoogleInteractionsAdapter(transport)),
+                    credential_vault,
+                )
         except (OSError, UnicodeError, ValueError) as exc:
             raise ProductError(
                 "ERR_TASK028_CONNECTION_SETTINGS_INVALID",
@@ -639,6 +652,9 @@ def build_trusted_launch(
         project_root=configuration.project_root,
         project_id=configuration.project_id,
     )
+    game_intelligence_application = GameIntelligenceShellApplication(
+        configuration.project_root, connection_settings=connection_settings, provider_execution_service=game_intelligence_provider_service
+    )
     bridge = Task036ShellBridge(
         coordinator.shell,
         native_dialog=dialog,
@@ -660,6 +676,7 @@ def build_trusted_launch(
         final_review_application=final_review_application,
         final_review_external_gate_provider=final_review_external_gate_provider,
         final_review_export_preparation_provider=final_review_export_preparation_provider,
+        game_intelligence_application=game_intelligence_application,
         nle_controller_factory=nle_controller,
     )
     return Task036TrustedLaunch(configuration, coordinator, pre_edit, bridge)

@@ -4,7 +4,19 @@
 
 ## [Unreleased]
 
-- TASK-036 P-UX-2D4として、独立Ownerの外部Gate receiptを型付き・改ざん検知付きproviderから毎回再読込し、exact readinessからHuman最終承認をprepare/confirm/applyしてappend-only保存するShell境界を追加しました。Audio receipt生成、Export Job作成、dispatch、render、公開、Native H3、Release/Deployは別Gateです。
+- TASK-050 DbD Training Studio Operational UX / Data Foundationとして、ユーザー選択WorkspaceとRuntime Profile、HUD位置のpixel calibration、preview/confirm/reviewを必須にするSafe Visual Learning、汎用Entity Alias、Observation provenance/export、Identity/Visibilityを分離したHuman Gold、checksum検証付きWorkspace relocation、Workspace境界に従うBackup/Restore、日本語-first UIとstable error code付き構造化エラー表示を追加しました。TASK-049のGame Intelligence Export互換性を保持し、HUD Profile schemaは2.2.0へ更新しています。
+- TASK-049 R6B/R9B1として、既存V6 ShellへadditiveなGame Intelligence Workspaceを追加し、CGEL Match/Event/Evidenceのread-back、append-only Human Confirm/Correct/Reject/UNKNOWN、analysis-only JSON/JSONL/CSV/Markdown/SRT出力を既存native folder chooserへ接続しました。TASK-049 extensionはTASK-036 V6.1.1 base mock contractから明示分離し、Production Timeline・Resolve・Publishは変更しません。TASK-036 P-UX-2はcurrent sourceでA0..D3を再検証し102 PASS、P-UX-2Eは未完のままです。
+- Documentation filename normalizationとして、docs配下の日本語/escaped filenameを英名へ統一し、READMEを含む内部参照を更新しました。README local Markdown link regressionはPASSしています。
+
+- TASK-046 P-VS-4B Beginner Client R4として、全18 workflow状態へ日本語・英語の「現在の状況」「次にすること」と読みやすい工程状態を追加し、12工程の完了数をbody-freeに表示できるようにしました。UNKNOWN・失敗・未確認Gateは進行不可のまま保持し、Dataset・学習・Model・audio・公開effectは開始しません。
+
+- TASK-046 P-VS-4B Voice Model Builder R3として、最大1 MiBのUTF-8 workflow JSONをユーザー選択時だけ読み取り、重複key・contract・revision・digest・effect flagをfail closed検証して12工程へ反映するWindows Technical Previewとinstaller.2を追加しました。元JSONの変更、録音読取、Dataset・学習・model・GPU・音声生成・公開は開始しません。
+
+- TASK-046 P-VS-4B Beginner Client Release R2として、Windows bundleに含むCPython・Tcl/Tk・PyInstaller・jsonschema系dependencyの完全なlicense本文をexact build環境から決定論的に収集し、path-free receipt・SHA-256 manifest・installer read-backへ追加しました。license欠落/重複はfail closedで、学習・audio/録音・Model・公開effectは開始しません。
+- TASK-046 P-VS-4B Beginner Client Installer R1として、12工程の表示専用Voice Model Builderを独立したWindows EXEと日英per-user installerへpackageし、hash固定manifest、既存file/reparse/disk/read-backのfail-closed検証、repair・uninstall時の利用者data保護、READMEから辿れる初心者guideと`E:\BAI_AI` build手順を追加しました。Model取得・学習・audio/録音・生成・公開・Release/Deployは別Gateです。
+- TASK-046 P-VS-4B Gate 5 R0として、既存のOBS→Dataset→Training→Model承認→style Cue→Master WAV workflowを初心者向け12工程へ投影する日本語/英語client基盤と合成表示demoを追加しました。UNKNOWNは未確認/blockedのまま保持し、操作権限・Dataset/Job/学習/Model/audio/公開effectは開始しません。Windows installerは別の次Gateです。
+- TASK-046 P-VS-4B Gate 4 R2として、engine・model・runtime・recipe・training modeをexactに束縛するsynthetic capability probe plan、phase別の外部実測receipt、R1 admission向けEvidence projectionを追加しました。load成功だけでは学習可能とせず、代表step・VRAM/RAM・optimizer/checkpoint・OOM recovery・thermal/duration・process reconciliationのUNKNOWNをfail-closedに保持します。download/install、model load、GPU、学習・artifact、Owner音声、Release/Deployは別Gateです。
+- TASK-046 P-VS-4B Gate 4 R1として、合成WAV検査receiptから重複・overlapを排除したbody-free Dataset準備manifestを作り、engineのcanonical bindingとmode別recipe・代表step・resource・checkpoint・licenseのTraining admissionを直交分離し、Owner Human Gate前のdispatch=false提案へ接続しました。Owner音声、Dataset採用、Job/GPU、学習・Model・artifact effect、公開、Release/Deployは別Gateです。
 - TASK-036 P-UX-2D3として、typed Final Review承認をProject単位のappend-only/CAS履歴へ永続化し、同一readinessの二重承認、確認後のstale化、改ざん、上限超過をfail-closedにするno-effect applicationを追加しました。Shell承認操作、Audio receipt生成、Export Job作成、dispatch、render、公開、Native H3、Release/Deployは別Gateです。
 - TASK-046 P-VS-4B Gate 4 R0として、承認済み合成テストWAVだけをcontained root内で検査し、48 kHz・24-bit monoのstyle Cueを決定論的な順序と休止sampleでMaster候補へ結合する限定runtime adapter、body-free receipt、schema mirror、改ざん・symlink・既存出力のfail-closed検証を追加しました。Owner音声、Dataset採用、学習、Model推論、音質・style合格判定、Asset採用、公開、Release/Deployは別Gateです。
 - TASK-036 P-UX-2D2として、P-UX-2D1のexact ready状態・全Product source・privacy/rights/resource/edit/開発担当2所有Audio完了Gateを束縛するtyped Human Final Review approval receiptを追加し、TASK-044 Export preparationへ必須bindしました。Export Job作成、dispatch、render、公開、Audio変更、Native H3、Release/Deployは別Gateです。
@@ -335,3 +347,13 @@
 ## [0.1.0] - 2026-08-08
 
 - Added Product domain, canonical manifest, state, evidence and persistence foundation.
+
+### TASK-049 R10B0 native pilot infrastructure
+
+- Added bounded exact-frame FFmpeg PNG sampling for real-media DbD pilot evaluation.
+- Added label-blind native detector port and Human-Gold evaluation ranges.
+- Added native detector -> Evidence -> CGEL -> KPI orchestration without production accuracy authority.
+- Added deterministic benchmark dataset parser/schema mirror and R10B0 focused tests.
+
+- Added TASK-049 Human Gold CSV compiler for strict real-media benchmark authoring.
+- Added TASK-049 real-media exact-frame preflight receipt before detector tuning.

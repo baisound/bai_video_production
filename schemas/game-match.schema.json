@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/game-match.schema.json",
+  "title": "TASK-049 Game Match",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "match_id",
+    "production_job_id",
+    "source_asset_id",
+    "game_profile_id",
+    "game_profile_version",
+    "game_version",
+    "environment",
+    "perspective",
+    "source_rate",
+    "analysis_revision",
+    "status",
+    "created_at",
+    "match_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "match_id": {
+      "type": "string",
+      "pattern": "^MATCH-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "production_job_id": {
+      "type": "string",
+      "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "source_asset_id": {
+      "type": "string",
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "game_profile_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{1,127}$"
+    },
+    "game_profile_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "game_version": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$"
+    },
+    "environment": {
+      "enum": [
+        "LIVE",
+        "PTB",
+        "UNKNOWN"
+      ]
+    },
+    "perspective": {
+      "enum": [
+        "SURVIVOR",
+        "KILLER",
+        "SPECTATOR",
+        "UNKNOWN"
+      ]
+    },
+    "source_rate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "properties": {
+        "numerator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "analysis_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "CREATED",
+        "ANALYZING",
+        "NEEDS_REVIEW",
+        "REVIEWED",
+        "COMPLETE",
+        "FAILED"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "match_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

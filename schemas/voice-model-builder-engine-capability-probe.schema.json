@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai.task046.voice-model-builder-engine-capability-probe.v1",
+  "title": "TASK-046 P-VS-4B engine capability probe R2",
+  "oneOf": [
+    { "$ref": "#/$defs/EngineCapabilityProbePlan" },
+    { "$ref": "#/$defs/EngineCapabilityProbeReceipt" },
+    { "$ref": "#/$defs/EngineAdmissionEvidenceProjection" }
+  ],
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$", "not": { "pattern": "(^/|\\\\|^[A-Za-z]:/|(^|/)\\.\\.(/|$))" } },
+    "utc": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "mode": { "enum": ["FULL_FINE_TUNE", "PARAMETER_EFFICIENT_FINE_TUNE", "ADAPTER_OR_LORA"] },
+    "phase": { "enum": ["PACKAGE_VERIFY", "MODEL_LOAD", "REPRESENTATIVE_STEP", "CHECKPOINT_ROUNDTRIP", "OOM_SAFE_FAILURE_RECOVERY", "THERMAL_DURATION"] },
+    "fact": { "enum": ["PASS", "FAIL", "UNKNOWN", "NOT_SUPPORTED", "NOT_APPLICABLE"] },
+    "phaseResult": {
+      "type": "object", "additionalProperties": false,
+      "required": ["order_index", "phase", "state", "evidence_sha256"],
+      "properties": {
+        "order_index": { "type": "integer", "minimum": 0, "maximum": 5 },
+        "phase": { "$ref": "#/$defs/phase" },
+        "state": { "$ref": "#/$defs/fact" },
+        "evidence_sha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "EngineCapabilityProbePlan": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "plan_id", "revision", "parent_plan_sha256", "authority_kind", "engine_id", "engine_revision", "package_sha256", "model_id", "model_revision", "weight_manifest_sha256", "runtime_sha256", "recipe_revision", "recipe_sha256", "training_mode", "probe_profile_revision", "probe_profile_sha256", "target_resource_profile_sha256", "requested_phases", "synthetic_input_only", "owner_audio_used", "download_started", "install_started", "model_load_started", "training_step_started", "created_at", "plan_sha256"],
+      "properties": {
+        "record_type": { "const": "EngineCapabilityProbePlan" },
+        "plan_id": { "$ref": "#/$defs/id" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "parent_plan_sha256": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha" }] },
+        "authority_kind": { "const": "APPROVED_SYNTHETIC_TEST_AUTHORITY" },
+        "engine_id": { "$ref": "#/$defs/id" },
+        "engine_revision": { "$ref": "#/$defs/id" },
+        "package_sha256": { "$ref": "#/$defs/sha" },
+        "model_id": { "$ref": "#/$defs/id" },
+        "model_revision": { "$ref": "#/$defs/id" },
+        "weight_manifest_sha256": { "$ref": "#/$defs/sha" },
+        "runtime_sha256": { "$ref": "#/$defs/sha" },
+        "recipe_revision": { "$ref": "#/$defs/id" },
+        "recipe_sha256": { "$ref": "#/$defs/sha" },
+        "training_mode": { "$ref": "#/$defs/mode" },
+        "probe_profile_revision": { "$ref": "#/$defs/id" },
+        "probe_profile_sha256": { "$ref": "#/$defs/sha" },
+        "target_resource_profile_sha256": { "$ref": "#/$defs/sha" },
+        "requested_phases": { "type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": { "$ref": "#/$defs/phase" } },
+        "synthetic_input_only": { "const": true },
+        "owner_audio_used": { "const": false },
+        "download_started": { "const": false },
+        "install_started": { "const": false },
+        "model_load_started": { "const": false },
+        "training_step_started": { "const": false },
+        "created_at": { "$ref": "#/$defs/utc" },
+        "plan_sha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "EngineCapabilityProbeReceipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "receipt_id", "plan_sha256", "training_mode", "requested_phases", "phase_results", "probe_state", "peak_vram_bytes", "peak_ram_bytes", "optimizer_state_bytes", "checkpoint_bytes", "free_disk_floor_bytes", "duration_milliseconds", "max_temperature_millidegrees_c", "measurement_profile_sha256", "process_reconciliation_state", "synthetic_input_only", "owner_audio_used", "probe_execution_performed_by_module", "training_run_dispatched", "model_candidate_registered", "observed_at", "receipt_sha256"],
+      "properties": {
+        "record_type": { "const": "EngineCapabilityProbeReceipt" },
+        "receipt_id": { "$ref": "#/$defs/id" },
+        "plan_sha256": { "$ref": "#/$defs/sha" },
+        "training_mode": { "$ref": "#/$defs/mode" },
+        "requested_phases": { "type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": { "$ref": "#/$defs/phase" } },
+        "phase_results": { "type": "array", "minItems": 1, "maxItems": 6, "items": { "$ref": "#/$defs/phaseResult" } },
+        "probe_state": { "enum": ["COMPLETED", "FAILED_KNOWN", "UNKNOWN"] },
+        "peak_vram_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "peak_ram_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "optimizer_state_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "checkpoint_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "free_disk_floor_bytes": { "type": ["integer", "null"], "minimum": 0 },
+        "duration_milliseconds": { "type": ["integer", "null"], "minimum": 0 },
+        "max_temperature_millidegrees_c": { "type": ["integer", "null"], "minimum": 0 },
+        "measurement_profile_sha256": { "$ref": "#/$defs/sha" },
+        "process_reconciliation_state": { "$ref": "#/$defs/fact" },
+        "synthetic_input_only": { "const": true },
+        "owner_audio_used": { "const": false },
+        "probe_execution_performed_by_module": { "const": false },
+        "training_run_dispatched": { "const": false },
+        "model_candidate_registered": { "const": false },
+        "observed_at": { "$ref": "#/$defs/utc" },
+        "receipt_sha256": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "EngineAdmissionEvidenceProjection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_type", "projection_id", "probe_receipt_sha256", "training_mode", "package_verification_state", "model_load_state", "representative_step_state", "target_resource_state", "checkpoint_compatibility_state", "recovery_state", "thermal_duration_state", "process_reconciliation_state", "load_only_proves_training", "evidence_state", "engine_admission_issued", "training_dispatched", "created_at", "projection_sha256"],
+      "properties": {
+        "record_type": { "const": "EngineAdmissionEvidenceProjection" },
+        "projection_id": { "$ref": "#/$defs/id" },
+        "probe_receipt_sha256": { "$ref": "#/$defs/sha" },
+        "training_mode": { "$ref": "#/$defs/mode" },
+        "package_verification_state": { "$ref": "#/$defs/fact" },
+        "model_load_state": { "$ref": "#/$defs/fact" },
+        "representative_step_state": { "$ref": "#/$defs/fact" },
+        "target_resource_state": { "$ref": "#/$defs/fact" },
+        "checkpoint_compatibility_state": { "$ref": "#/$defs/fact" },
+        "recovery_state": { "$ref": "#/$defs/fact" },
+        "thermal_duration_state": { "$ref": "#/$defs/fact" },
+        "process_reconciliation_state": { "$ref": "#/$defs/fact" },
+        "load_only_proves_training": { "const": false },
+        "evidence_state": { "enum": ["PASS", "FAIL", "UNKNOWN"] },
+        "engine_admission_issued": { "const": false },
+        "training_dispatched": { "const": false },
+        "created_at": { "$ref": "#/$defs/utc" },
+        "projection_sha256": { "$ref": "#/$defs/sha" }
+      }
+    }
+  }
+}

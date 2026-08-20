@@ -1,6 +1,6 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.90
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.93
 - Project: `ai-video-production`
-- Date: 2026-08-17
+- Date: 2026-08-18
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
 - Product Design Baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - Governance: BAI Development OS Consumer Project Mode
@@ -35,7 +35,7 @@
 - R3: **COMPLETED** — TASK-013 Generation Safety、TASK-039、TASK-040、TASK-027 Generation Queue
 - R4 current boundary: TASK-013 local/free ComfyUI readiness and TASK-041 Audio Workspace Product promotion are **HOSTED_CLOSED**; Native H3 recovery rerun and Windows-path source fix are **COMPLETED** by the PR #142 closure, while Asset adoption/Timeline/Release/Deploy remain separate effects.
 - Current insertion: TASK-036 P-UX-1C is hosted-closed against unchanged V6.1.1 with packaged-native visual parity. TASK-046/TASK-047 remain separately governed, and their runtime, Consent, storage, recording and Owner gates are unchanged. Native Voice, production recording and fine-tuning remain unclaimed.
-- Current functional insertion: TASK-036 P-UX-2 is **DESIGN REGISTERED / ELEMENT-SELECTION RE-AUDITED / IMPLEMENTATION QUEUED**. The V6.1.1 HTML mock remains the absolute visual authority, but `VISUAL_PARITY_PASS` is not functional completion. The runtime exposes all 14 primary pages, yet the mock/runtime comparison is `205/109` stable IDs, `57/2` selects and `83/7` inputs/textareas. No runtime select currently chooses a generation model. The exact `Provider/model -> Prompt/Scene -> admission -> generation -> Candidate adoption -> Timeline -> Final Approval -> Export Job -> Render QA/output read-back` route is broken at model selection and later Gates.
+- Current functional insertion: TASK-036 P-UX-2 is **LOCAL IMPLEMENTATION REVALIDATED THROUGH P-UX-2D3 / P-UX-2E PACKAGED-NATIVE CLOSURE PENDING**. The historical 2026-08-17 re-audit correctly recorded the then-observed gaps, but current source now contains P-UX-2A0, Connection Settings integration, 2A1, 2B1/B2/B3, 2C1 and 2D1/D2/D3, including canonical Provider/model selectors for Planning/Image/Video/Quick. Focused revalidation is `102 PASS`. V6.1.1 remains the base visual authority; additive TASK-owned extensions must be explicitly marked and must not rewrite the base mock contract. `TASK036_MOCK_ABSOLUTE_FUNCTIONAL_EXPORT_FLOW_COMPLETE` remains unclaimed until P-UX-2E proves the packaged-native output read-back route.
 
 ### 2.1 Owner向け全体ロードマップ目印（2026-08-17 / main `8ce6fd4`）
 
@@ -59,12 +59,12 @@ Draft PRまで自走する。これは担当外変更、Release/Deploy/Productio
 
 | 担当 | これまでの主要到達点 | 現在地点 | 次に進む順序 | 競合防止境界 |
 |---|---|---|---|---|
-| 開発担当 | ✅ TASK-005 R0/R1A/R1B1/R1C0、✅ TASK-008、✅ TASK-009 R0、✅ TASK-013 Native H3 recovery/source closure、✅ TASK-018 R0 | 🟦 **TASK-036 P-UX-2A0 Element/Selection Contract Inventory**。本設計PR #148はmerge済み。再監査でボタン以外を含む欠落を確定したが、実装完了とは表示しない | 🎯 P-UX-2A0→2A1 Model/Capability Selector→2B→2C→2D→2E、次にTASK-015、TASK-019、TASK-025、残るTASK-005/013/027 visual slices | TASK-046/047/048、Narration/Audio、共有Registry/CHANGELOGを変更しない。共有writeはIntegration Lockで直列化 |
+| 開発担当 | ✅ TASK-005 R0/R1A/R1B1/R1C0、✅ TASK-008、✅ TASK-009 R0、✅ TASK-013 Native H3 recovery/source closure、✅ TASK-018 R0、✅ TASK-036 P-UX-2A0..D3 local revalidation | 🟦 **TASK-049 DbD Game Intelligence — Windows packaged smoke (main BVP / Trivia Editor / Training Studio) -> R10B6 real-media calibration/Human-Gold KPI**。R6B/R9B1 UI integrationとR10B5A Training Studioはlocal実装済み | 🎯 TASK-049 R9B2→R10B。TASK-036は別途P-UX-2E packaged-native functional-export closure。次にTASK-015、TASK-019、TASK-025、残るTASK-005/013/027 visual slices | TASK-046/047/048、Narration/Audioの既存Authorityを変更しない。TASK-049はProduction Timeline/Resolve/Publishを直接変更しない |
 | 開発担当2 | ✅ TASK-047/048、✅ TASK-014 I1、✅ TASK-013 BGM/SFX、✅ TASK-020、✅ TASK-016、✅ TASK-035、✅ TASK-046 unused Lock closure | 🟪 **TASK-021 Integrated Dashboard / Operations R0**。read-only allocation packetはPASS、exact mutationはfresh Gateから開始 | 🎯 TASK-021 R0→TASK-014 Local Primary残slice→TASK-041 Audio残slice。TASK-017はTASK-018 receiptと保持/削除authority後 | TASK-036 P-UX-2、TASK-005/008/009/013 visual laneを変更しない。Provider/paid/voice recording/publicationは別Gate |
 
 #### 動画書き出しまでの現在位置
 
-`✅ Ingest/Normalize` → `✅ ASR/Cut/Scene foundation` → `✅ Planning/WORLD LOCK foundation` → `✅ Generation routing + Native H3 proof` → `✅ Asset/Audit/Timeline foundation` → `🟦 P-UX-2A0: 全要素/選択契約` → `🟦 P-UX-2A1: Provider/モデル選択` → `🟦 P-UX-2B..D: 選択結果を生成・採用・編集・承認・Queueへ接続` → `🟦 P-UX-2E: packaged native vertical E2E` → `🎯 Render QA→output read-back` → `⏸ Human publication/release Gate`
+`✅ Ingest/Normalize` → `✅ ASR/Cut/Scene foundation` → `✅ Planning/WORLD LOCK foundation` → `✅ Generation routing + Native H3 proof` → `✅ Asset/Audit/Timeline foundation` → `✅ P-UX-2A0: 全要素/選択契約` → `✅ P-UX-2A1: Provider/モデル選択` → `✅ P-UX-2B..D3: Planning/Scene/Visual/Final Review bounded functional contracts` → `🟦 P-UX-2E: packaged native vertical E2E` → `🎯 Render QA→output read-back` → `⏸ Human publication/release Gate`
 
 `V6.1.1_VISUAL_PARITY_PASS`は上記🟦区間の完了を意味しない。最終到達点は、モックの順序と表示を維持したまま、同じproject/revision/asset/job lineageで出力artifactのchecksum・media・duration・QAをread-backする `TASK036_MOCK_ABSOLUTE_FUNCTIONAL_EXPORT_FLOW_COMPLETE` である。
 
@@ -72,7 +72,7 @@ Draft PRまで自走する。これは担当外変更、Release/Deploy/Productio
 
 | 目印 | TASK / 残Unit | 排他Owner | 開始条件・現在のGate |
 |---|---|---|---|
-| 🟦 DEV1 NOW | TASK-036 P-UX-2A0..E | 開発担当 | 2A0で全要素と選択結果をinventory化し、2A1でcanonical Provider/model projectionを接続してから後続へ進む |
+| 🟦 DEV1 NOW | TASK-049 Windows package gates -> R10B6 | 開発担当 | R6B/R9B1とR10B5A Training Studioはlocal PASS。次はWindows hostでmain BVP / Trivia Editor / Training Studioのpackage evidenceを取得し、その後real DbD media + calibrated ROI + Human GoldでR10B6測定。TASK-036 P-UX-2Eは別のpackaged-native closureとして未完 |
 | 🟪 DEV2 NOW | TASK-021 Integrated Dashboard R0 | 開発担当2 | TASK-016/020 foundationとallocation packet済み。body-free read modelのfresh exact Gateから開始 |
 | ⬜ FUTURE | TASK-005 real detector acquisition/materialization/runtime | 開発担当 | Contract foundation済み。license/provenance/artifact identityと実media probeは別effect Gate |
 | ⬜ FUTURE | TASK-015 YouTube Feedback、TASK-019 Auto-Tuner | 開発担当 | TASK-009 R0はPR #151で完了。TASK-015はTASK-008後、TASK-019は008+015後 |
@@ -154,7 +154,7 @@ Multimodal/DBD最適化、AI SE/BGM/Video/TTS、Smart Reframe/Remotion、YouTube
 | 026 | Audio Placement & Bed Worker | SE/BGM/ナレーション placement plan、bounded snap、loop/fade、preview/full BGM bed、Resolve audio-track placement plan | 002,003,022; Product promotionは037,041,042,043,036; 013/014は生成asset利用時 | DEV-4 | P-AUDIO-1 PRODUCT PROMOTION HOSTED CLOSED / PR #86 / MAIN 0e457e69 |
 | 027 | AI Video Creation Studio / New Production Orchestrator | GUI入力、AI制作設計提案・補正、GO承認、画像/動画/SE/BGM/ナレーション生成、Asset差し替え、Resolve自動配置 | 001-004; Slice Aは先行可、完全版は010,013,014,022,026 | DEV-4 | P-ORCH-1 INITIAL OUTPUT ADOPTION HOSTED CLOSED / P-ORCH-2 STRATEGY PARENT BINDING HOSTED CLOSED / FUTURE SLICES REMAIN |
 | 035 | REAPER Audio Finishing Bridge / DaVinci Round-trip | deterministic DAW Session Plan、track/route/FX/render、iZotope capability probe、mix/stem QA、Resolve再配置 | 003,010,011,022,026 | DEV-4候補 | CONTRACT FOUNDATION R0 HOSTED CLOSED / NATIVE DAW EFFECT GATED / PR #147 |
-| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence + mock-absolute element/selection flow from Provider/model through verified export | 003,005,006,007,010,011,012,013,014,016,020,021,022,024,026,027,035,037..044,046..048 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1C VISUAL PARITY HOSTED CLOSED / P-UX-2 ELEMENT+SELECTION RE-AUDITED / MODEL-TO-EXPORT BROKEN |
+| 036 | Unified Desktop Editing Shell / Minimum Editing Workflow Integration | W0/W1 Windows shell acceptance + W2 packaged editing E2E + canonical V6.1.1 visual convergence + mock-absolute element/selection flow from Provider/model through verified export | 003,005,006,007,010,011,012,013,014,016,020,021,022,024,026,027,035,037..044,046..048 | DEV-4 | MINIMUM MVP RELEASED / P-UX-1C VISUAL PARITY HOSTED CLOSED / P-UX-2 A0..D3 LOCAL REVALIDATED / P-UX-2E PACKAGED-NATIVE CLOSURE PENDING |
 | 037 | Asset Registry 2 / Scene Asset Slot & Dependency Graph | Slot/Candidate/LOCK/STALE/dependency Product control | 003,027 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 038 | Audit Workspace / Candidate Quality Loop | Human decision/history/recovery | 037 | DEV-4 | COMPLETE R2 PRODUCT PROMOTION |
 | 039 | Continuity Map / Boundary Integrity & Stale Propagation | Continuity Edge/Human approval/STALE propagation | 037,038 | DEV-4 | COMPLETE R3 PRODUCT PROMOTION |
@@ -225,10 +225,10 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 ### Wave 3A — V6.1.1 Mock-Absolute Functional Screen Flow
 
 - TASK-036 P-UX-1C: **V6.1.1 VISUAL PARITY HOSTED CLOSED**。
-- TASK-036 P-UX-2: **DESIGN REGISTERED / ELEMENT-SELECTION RE-AUDITED / IMPLEMENTATION QUEUED / MODEL-TO-EXPORT FLOW NOT CONNECTED**。
+- TASK-036 P-UX-2: **A0..D3 LOCAL IMPLEMENTATION REVALIDATED / P-UX-2E PACKAGED-NATIVE CLOSURE PENDING**。
 - 固定順序は `Home/Project/Media -> Planning -> Scenes -> WORLD LOCK -> Scene Design -> Start/End/AI Video/Audio -> Asset Review/Assets -> Edit -> Final Review -> Export Queue -> Render QA/output read-back`。
 - HTMLモックは見た目・ページ順・interaction intentの絶対正本を維持する。モックのsample data、random progress、timer、toast-only successはProduct truthへ昇格しない。
-- P-UX-2A0全要素/選択契約inventory、P-UX-2A1 Provider/model capability projection、P-UX-2B intake/planning/scenes、P-UX-2C generation/audio/adoption、P-UX-2D edit/review/export、P-UX-2E packaged native vertical closureの順で進める。
+- P-UX-2A0/A1、B1/B2/B3、C1、D1/D2/D3はcurrent sourceで再検証済み。残るP-UX-2E packaged native vertical closureで、同一lineageの最終output read-backを実証する。
 - 最終Gateは `TASK036_MOCK_ABSOLUTE_FUNCTIONAL_EXPORT_FLOW_COMPLETE`。視覚パリティ、Backend単体PASS、画面遷移またはExport Job予約だけでは成立しない。
 
 ### Wave 4 — Generative/Audio現在位置
@@ -2447,3 +2447,263 @@ Detailed design:
 
 Element/selection re-audit:
 `docs/ai-team/tasks/TASK-036/p-ux-2-v611-element-selection-export-flow-reaudit-2026-08-17.md`.
+
+
+## Addendum LXXXIV - TASK-049 DbD Game Intelligence / Canonical Game Event Timeline
+
+Owner instruction dated `2026-08-18` authorizes a new isolated backend-first development lane for `TASK-049`. This corrects the earlier unmerged design candidate that attempted to place the full Game Intelligence platform under `TASK-009 R1+`. `TASK-009` remains the completed `DBDProfilePlugin R0` data-only responsibility.
+
+Canonical dependency and responsibility boundary:
+
+```text
+TASK-003 Asset / TASK-004 Media / TASK-006+023 ASR / TASK-008 Multimodal / TASK-022 Exact Timebase
+                                      |
+                                      +--> TASK-009 DBDProfilePlugin R0 (COMPLETE, unchanged)
+                                                        |
+                                                        v
+                                      TASK-049 DbD Game Intelligence / CGEL
+```
+
+`Canonical Game Event Timeline (CGEL)` answers **what was observed in the game**. It is a separate canonical model from the BVP Production Timeline, which answers **how the finished video is assembled**. Any future `GameEventToProductionBridge` may create proposals only; existing BVP Human/Timeline/Resolve authority continues to own adoption and mutation.
+
+The authorized implementation sequence is:
+
+```text
+R1  Match / Evidence / Event / Review / Knowledge Ref / CGEL contracts
+R2  Store / append-only revisions / resume / corruption fail-closed
+R3  BVP Asset / Media / ASR / exact timebase adapters
+R4  bounded DbD feature producers / event resolver
+R5  DbD Game Knowledge / Perk baseline
+R6  Human Review workspace
+R7  RAG / Commentary / Fact Validator
+R8  GameEventToProductionBridge
+R9  Independent analysis workflow in existing BVP + packaged test EXE
+R10 Native DbD pilot / Gold Dataset / accuracy gate
+```
+
+R1-R5 must avoid shared TASK-036 UI ownership where possible. R6/R9 require a fresh work-lock/ownership check before shared Shell/UI files are changed. No standalone product is planned; analysis-only completion inside `BAI Video Production.exe` is the required independent capability.
+
+This Addendum authorizes safe local implementation/testing/commit-ready work in the isolated TASK-049 branch. It does **not** authorize Product version selection, public Tag/Release/Deploy, paid Provider execution, credential changes, production activation, destructive migration, rights/Consent override, or external mutable app writes.
+
+
+## Addendum LXXXV - TASK-036 P-UX-2 Revalidation and TASK-049 Additive V6 Integration
+
+Fresh implementation revalidation dated `2026-08-18` supersedes the stale
+current-state interpretation that P-UX-2 was still waiting at A0 and that no
+runtime model selector existed.  Current source contains P-UX-2A0, Connection
+Settings integration, 2A1, 2B1/B2/B3, 2C1 and 2D1/D2/D3.  The bounded P-UX-2
+revalidation suite passes `102 / 102`.  Historical 2026-08-17 audits remain
+valid evidence of the earlier state; they are not rewritten.
+
+P-UX-2E remains open.  This Addendum does not mint
+`TASK036_MOCK_ABSOLUTE_FUNCTIONAL_EXPORT_FLOW_COMPLETE`; packaged-native
+Project/revision/Asset/job lineage through final output checksum/media/QA
+read-back is still required.
+
+After this revalidation, the Owner explicitly authorized TASK-049 to use the
+shared V6 Shell for a bounded additive Game Intelligence surface.  TASK-049
+R6B and R9B1 are locally integrated as an analysis-only extension: Match/CGEL
+projection, Event/Evidence review, append-only Human Confirm/Correct/Reject/
+UNKNOWN, and JSON/JSONL/CSV/Markdown/SRT analysis export through the existing
+native folder chooser.  The extension is marked
+`data-contract-extension="TASK-049"`; the P-UX-2A0 base inventory excludes
+these explicitly owned additive controls so V6.1.1 base parity is not silently
+redefined.
+
+The combined TASK-049/TASK-036/packaging focused regression after the initial V6 integration
+is `287 / 287 PASS`; subsequent R10B0-focused integration is also green and fresh broad regression is `2082 PASS / 1 Windows-only SKIP / 0 FAIL / 0 DESELECT`; embedded V6 JavaScript syntax validation passes.  R9B2
+remains the actual Windows packaged test-build/read-back Gate.  R10B remains
+blocked on real DbD media and Human Gold labels.  R8B remains parked because
+existing Production Asset, Narration, Subtitle and Cut/Highlight adoption
+authorities are domain-specific and must not be replaced by a generic Game
+Intelligence mutation layer.
+
+No Product version, Tag, Release, Deploy, paid Provider, Credential,
+publication, Production Timeline mutation or Resolve mutation is authorized by
+this Addendum.
+
+
+## Addendum LXXXVI - TASK-049 R9B2 Windows Packaged Smoke Readiness
+
+Date: `2026-08-18`
+
+TASK-049 R9B2 now includes a bounded Windows-only packaged smoke harness:
+
+```text
+tools/windows/run-task049-r9b2-packaged-smoke.ps1
+tools/windows/create-task049-game-intelligence-fixture.py
+```
+
+The harness builds the existing Windows package, launches the packaged `BAI Video Production.exe`, opens the additive Game Intelligence workspace, performs a Human Confirm action on a synthetic `WINDOW_VAULT` event, restarts the packaged app and verifies canonical read-back. It records an evidence receipt and explicitly performs no Provider, Production Timeline, Resolve, public release or native-media accuracy action.
+
+The current development host is Linux, therefore this is **not** Windows execution evidence. Current R9B2 state is:
+
+```text
+Harness: IMPLEMENTED
+Windows execution: NOT_EXECUTED
+Packaged observation: NOT_OBSERVED
+Result: NOT_CONFIRMED
+```
+
+R9B2 becomes PASS only after execution on a Windows host and inspection of the generated receipt. R10B remains a separate real-media/Human-Gold accuracy lane.
+
+
+## Addendum LXXXVII - TASK-049 R10B0 Native Pilot Infrastructure
+
+Date: `2026-08-18`
+
+R10B was split so native-media plumbing and benchmark integrity can be implemented without inventing detector accuracy before real DbD evidence exists.
+
+```text
+R10B0 = native-media pilot infrastructure
+R10B1 = concrete detector + real DbD media + Human Gold measurement
+R10B2 = expanded accuracy gate / hard-negative regression / threshold proposal
+```
+
+R10B0 is locally implemented. It adds exact bounded FFmpeg PNG frame extraction, explicit Human-Gold `evaluation_range`, deterministic dataset hash validation, a detector Protocol that receives pixels/range/rate but no expected label or case ID, and an orchestration path:
+
+```text
+real media window
+ -> sampled frame hashes
+ -> concrete detector port
+ -> VISION Evidence
+ -> existing R4 Resolver
+ -> CGEL
+ -> R10A KPI evaluator
+```
+
+The native pilot can persist Evidence/Event/checkpoint state through the existing TASK-049 Store. It records `native_media_evidence=true` while keeping `production_accuracy_claim_authorized=false`. No production threshold is inferred from Human Gold or native media alone.
+
+Current R10B0 visual surface is intentionally bounded to the existing R4 visual marker types (`MATCH_START`, `WINDOW_VAULT`, `PALLET_DROP`). Other events require concrete HUD/state producers before native accuracy can be measured.
+
+Focused R10B0/R10A verification is `15 PASS`; combined TASK-049 R1-R10B0 + TASK-009 focused regression is `129 PASS`. R10B0-R10B5 bounded detector/knowledge/LLM/trivia baselines are implemented; R10B6 remains blocked on real DbD media, calibrated labeled references and Human Gold labels.
+
+
+## Addendum LXXXVIII - TASK-049 R10B Recognition, LLM and Trivia Knowledge Baselines
+
+Owner instruction dated `2026-08-18` extends TASK-049 beyond the R10B0 detector port with bounded, accuracy-neutral implementation of the remaining Game Intelligence input surfaces.
+
+Implemented locally:
+
+- exact-frame normalized ROI/slice extraction and checksum-protected reference-index training;
+- lower-left survivor HUD state classification and temporal transitions;
+- upper-right OCR Port plus optional Tesseract CLI adapter and bounded DbD vocabulary resolution;
+- bottom-right four-slot Perk reference recognition with Top-K / UNKNOWN / temporal voting;
+- patch-aware/source-provenanced Killer / Power Knowledge and visual reference recognition;
+- Cross-modal Fusion across Vision/HUD/OCR/ASR/Audio/Knowledge/State;
+- LLM Commentary drafting through the existing BVP OpenAI/Anthropic/Google provider execution boundary with explicit execution authorization and deterministic Fact Validation;
+- revisioned DbD Commentary Trivia Knowledge with manual entry, commentary/transcript Candidate mining, Human verification, patch-aware retrieval and bounded Commentary reuse;
+- a small separate `BAI DbD Trivia Editor.exe` PyInstaller build definition for manual knowledge maintenance. This utility is not a standalone Game Intelligence product.
+
+README now links directly to the main Windows EXE build/usage guides, recognition accuracy/training guide, slice-dataset guide, Trivia Knowledge guide, and Trivia Editor build/usage guide.
+
+These implementations do not close the Production-accuracy gate. Remaining evidence requires actual Windows packaged execution plus real DbD media, calibrated ROI profiles, labeled Perk/Killer/Power/HUD slices and held-out Human Gold KPI measurement. Synthetic/reference baseline PASS must not be reported as Production recognition accuracy.
+
+
+## Addendum LXXXIX - TASK-049 Recognition Hardening and Knowledge Maintenance Closure
+
+Date: `2026-08-18`
+
+TASK-049 bounded recorded-video recognition and commentary-knowledge implementation received a final local hardening pass. The following are now explicit implementation contracts rather than design-only placeholders:
+
+- calibrated-profile exact-frame slice extraction for the four lower-left Survivor slots, four bottom-right Perk slots, upper-right OCR area and optional Killer/Power ROI;
+- slice provenance CSV and reference-index visual-state `group` preservation;
+- unique-label ambiguity comparison so repeated references for one class cannot conceal a close competing class;
+- recorded-video orchestration across HUD / OCR / Perk / Killer-Power inputs plus Cross-modal Fusion;
+- immutable/source-provenanced Killer/Power revision storage with payload-integrity verification;
+- existing BVP OpenAI / Anthropic / Google provider integration for commentary with explicit execution authorization and deterministic Fact Validation;
+- DbD Commentary Trivia candidate capture from manual entry, commentary and canonical ASR Transcript segments, Human verification, patch/event/entity-aware retrieval and usage history;
+- separate `BAI DbD Trivia Editor.exe` Windows one-dir build definition;
+- README entry points to main EXE build/use, recognition accuracy/training, slice dataset, Trivia design, Trivia Editor build/use.
+
+Local verification after this hardening is `2108 PASS / 1 Windows-only SKIP / 0 FAIL / 0 DESELECT` across every `tests/test_*.py`. The skip is the existing TASK-047 Inno Setup acceptance gate.
+
+This Addendum does **not** claim Production recognition accuracy and does not close Windows-native execution gates. The next evidence remains: main BVP/Trivia Editor Windows packaged execution and R10B6 real DbD media ROI/reference calibration + held-out Human Gold KPI.
+
+
+## Addendum XC - TASK-049 GUI/EXE Training Intake and Video Learning
+
+Date: `2026-08-18`
+
+Owner instruction requires all current DbD-specific teacher-data intake to be reachable through a GUI/EXE workflow, not only through CLI or hand-edited CSV. CSV remains supported for both a single row and bulk rows, and direct learning from owned/permitted gameplay video is now an explicit Product path.
+
+Implemented locally as the bounded `BAI DbD Training Studio.exe` utility:
+
+- one still-image teacher sample or CSV one/many for Survivor HUD, Perk Icon and Killer/Power visual references;
+- exact-frame video -> calibrated ROI -> slice extraction -> provenance -> visual manifest registration;
+- bulk labeled video ranges through CSV one/many;
+- upper-right video OCR scanning with Human-selected phrase admission; scan output alone cannot mutate vocabulary;
+- OCR vocabulary one-item/CSV intake and vocabulary JSON build;
+- Commentary Trivia one-item/CSV intake;
+- existing canonical TranscriptManifest -> Trivia CANDIDATE mining;
+- direct owned/permitted video -> local FasterWhisper transcript/SRT -> conservative Trivia CANDIDATE mining;
+- model download disabled by default and only enabled by explicit UI choice;
+- deterministic visual reference-index build from the reviewed manifest;
+- process-local manifest locking and atomic replace writes for GUI/background-job safety.
+
+The current visual learner is the deterministic reference-slice baseline, not a neural-network fine-tuning engine. The same exact-frame/provenance/group manifests are intentionally retained as the future input contract for embedding/CNN training after sufficient real-media data exists.
+
+Killer/Power direct video learning fails closed unless a calibrated ROI profile explicitly defines `killer_power_hud`. The utility does not invent an ROI.
+
+README now links directly to Training Studio EXE build and usage instructions in addition to the main BVP EXE, recognition-accuracy guide, slice-dataset guide and Trivia documentation.
+
+This Addendum does not authorize public release or claim Windows packaged execution. Windows evidence for the main BVP EXE, `BAI DbD Trivia Editor.exe` and `BAI DbD Training Studio.exe` remains required. Production recognition accuracy remains blocked on real-media ROI calibration, held-out Human Gold evaluation and KPI evidence.
+
+Verification after Addendum XC implementation is `2116 PASS / 1 Windows-only SKIP / 0 FAIL / 0 DESELECT` across all current `tests/test_*.py`. The skip remains the pre-existing TASK-047 Inno Setup acceptance gate. `git diff --check` and Python compile checks are also clean before packaging.
+
+
+## Addendum XCI - TASK-049 HUD Calibration / ROI Profile and Data Migration
+
+Owner instruction dated `2026-08-18` extends the Training Studio baseline with operator-friendly HUD geometry calibration and portable DbD data migration.
+
+Local implementation now includes:
+
+- video or still-image preview in `BAI DbD Training Studio.exe`;
+- mouse-drag registration for lower-left Survivor HUD, four Survivor slots, upper-right notification OCR, bottom-right Perk HUD, four Perk slots and optional Killer/Power HUD;
+- normalized coordinates with profile ID/version, source frame size, UI Scale and DbD game-version range;
+- stored reference anchor clips with dHash/SHA-256 provenance;
+- conservative automatic profile resolution by resolution/aspect/UI Scale/game version plus optional anchor score;
+- bounded anchor micro-alignment using translation only; child Survivor/Perk slots inherit the parent HUD translation;
+- fail-closed behavior when no profile or anchor alignment can be resolved confidently;
+- optional `DBDHudVideoProfileResolver` / `HudAnchorAligner` integration in `DbDRecordedVideoRecognizer`;
+- DbD migration Backup/Preview/Restore for project Game Intelligence databases, Training Studio workspace including calibrated HUD profiles/anchors, and global Trivia Knowledge; credentials and source video are excluded.
+
+README links directly to the HUD Calibration guide, Training Studio usage, recognition-accuracy/slice-training guides and data Backup/Restore guide. Production recognition accuracy remains gated on held-out real-media Human Gold evidence; Windows packaged execution remains a separate host gate.
+
+
+## Addendum XCII - TASK-049 Lower-left Item / Add-on Loadout Recognition
+
+Date: `2026-08-18`
+
+Owner clarification identifies a second major lower-left HUD responsibility in addition to Survivor status: the Item / Add-on loadout area. TASK-049 therefore splits lower-left recognition into two independent calibrated systems rather than treating the entire lower-left HUD as one semantic region.
+
+Local implementation adds:
+
+- optional `lower_left_loadout_hud` parent ROI with one `item_slot` and exactly two `addon_slot_0..1` child ROIs;
+- HUD Profile schema `2.1.0`, backward-compatible with existing 1.1/2.0 profiles;
+- Training Studio Calibration targets for loadout parent, Item and two Add-on slots;
+- `ITEM_ICON` and `ADDON_ICON` single-image, CSV one/many and direct-video exact-frame training intake;
+- parent-anchor micro-alignment propagation from `lower_left_loadout_hud` to Item/Add-on child slots;
+- deterministic Item/Add-on visual recognition with UNKNOWN/ambiguity handling;
+- source-provenanced, patch-aware canonical `ITEM` / `ADDON` Knowledge revisions;
+- recorded-video recognition and Knowledge resolution without conflating loadout evidence with Survivor-state evidence;
+- migration compatibility because Training Studio slices/indexes/profiles and project Game Intelligence databases remain inside the existing DbD migration scopes.
+
+This remains a baseline recognition contract, not a Production accuracy claim. Real-media Human Gold must measure Item and Add-on per-slot accuracy, UNKNOWN detection and hard-negative confusion before Production thresholds are authorized. Local verification after this extension is `2132 PASS / 1 Windows-only SKIP / 0 FAIL`.
+
+
+## Addendum XCIII - TASK-049 Kamigame Community Knowledge Candidate Import
+
+Owner instruction dated `2026-08-18` authorizes a bounded collector for the explicitly supplied Kamigame DbD Survivor-Perk, Killer-Perk and Killer-list pages. The collector follows Killer detail links when enabled and bounded pagination links when exposed by the source HTML.
+
+This lane is **candidate intake only**:
+
+- raw HTML snapshots and SHA-256 provenance are retained;
+- normalized Survivor/Killer Perks and Killer rows are emitted as `COMMUNITY_REFERENCE / CANDIDATE`;
+- canonical IDs are intentionally unset;
+- no LIVE/PTB, Patch compatibility or VERIFIED authority is inferred;
+- Killer detail prose remains bounded review evidence;
+- network access in Training Studio occurs only after explicit Human `Collect`;
+- canonical Perk/Killer/Power stores are not mutated by collection.
+
+Training Studio now exposes a `Knowledge Import` tab and README links to `DBD-KAMIGAME-KNOWLEDGE-IMPORT.md`. Local fixture/parser/bundle/UI/CLI verification is required; live-source execution remains an operator/network-host evidence gate.

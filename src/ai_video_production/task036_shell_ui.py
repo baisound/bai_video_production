@@ -45,6 +45,7 @@ from .audio_workspace_application import Task041AudioWorkspaceApplication
 from .audio_placement_application import Task026AudioPlacementApplication
 from .quick_generation_application import Task042QuickGenerationApplication
 from .task044_nle_shell import Task044NleShellController
+from .game_intelligence_shell import GameIntelligenceShellApplication
 from .interactive_timeline import (
     InteractiveTimeline, InteractiveTimelineClip, TimelineMediaKind, TimelineTrack,
     TimelineTrackRole,
@@ -203,6 +204,7 @@ class Task036ShellBridge:
         final_review_export_preparation_provider: Callable[
             [FinalReviewApprovalReceipt], ExportPreparation
         ] | None = None,
+        game_intelligence_application: GameIntelligenceShellApplication | None = None,
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
     ) -> None:
@@ -239,6 +241,7 @@ class Task036ShellBridge:
         if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
             raise ValueError("Final Review external Gate provider is invalid")
         self._final_review_external_gate_provider = final_review_external_gate_provider
+        self._game_intelligence_application = game_intelligence_application
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
         self._nle_controller = nle_controller
@@ -465,6 +468,111 @@ class Task036ShellBridge:
         if args not in (None, {}):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "handoff folder chooser request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_native_dialog().choose_handoff_folder().to_ui_dict()
+
+    def game_intelligence_snapshot(self, args: Any = None) -> dict[str, Any]:
+        if args is None:
+            args = {}
+        if not isinstance(args, dict) or set(args) - {"match_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Game Intelligence snapshot request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._game_intelligence_application is None:
+            return {
+                "available": False,
+                "unavailable_reason": "TASK049_GAME_INTELLIGENCE_NOT_BOUND",
+                "provider_execution_started": False,
+                "production_timeline_mutated": False,
+                "resolve_write_performed": False,
+            }
+        match_id = args.get("match_id")
+        if match_id is not None and not isinstance(match_id, str):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Game Intelligence match_id must be text",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._game_intelligence_application.snapshot(match_id)
+
+    def game_intelligence_review(self, args: Any) -> dict[str, Any]:
+        allowed = {
+            "event_id", "action", "corrected_event_type",
+            "corrected_confirmation_state", "reason_code", "notes",
+        }
+        if not isinstance(args, dict) or not {"event_id", "action"}.issubset(args) or set(args) - allowed:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Game Intelligence review request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._game_intelligence_application is None:
+            raise ProductError(
+                "ERR_TASK049_GAME_INTELLIGENCE_NOT_BOUND",
+                "Game Intelligence is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._game_intelligence_application.review(
+            event_id=str(args["event_id"]),
+            action=str(args["action"]),
+            corrected_event_type=args.get("corrected_event_type"),
+            corrected_confirmation_state=args.get("corrected_confirmation_state"),
+            reason_code=str(args.get("reason_code", "HUMAN_UI_REVIEW")),
+            notes=str(args.get("notes", "")),
+        )
+
+    def game_intelligence_generate_commentary(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"event_id", "execution_authorized"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Game Intelligence commentary request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if not isinstance(args.get("event_id"), str) or not isinstance(args.get("execution_authorized"), bool):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Game Intelligence commentary event_id/authorization types are invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._game_intelligence_application is None:
+            raise ProductError(
+                "ERR_TASK049_GAME_INTELLIGENCE_NOT_BOUND",
+                "Game Intelligence is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._game_intelligence_application.generate_commentary(
+            event_id=args["event_id"],
+            execution_authorized=args["execution_authorized"],
+        )
+
+    def game_intelligence_export(self, args: Any) -> dict[str, Any]:
+        if not isinstance(args, dict) or set(args) != {"match_id"} or not isinstance(args.get("match_id"), str):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Game Intelligence export request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._game_intelligence_application is None:
+            raise ProductError(
+                "ERR_TASK049_GAME_INTELLIGENCE_NOT_BOUND",
+                "Game Intelligence is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        selection = self._require_native_dialog().choose_handoff_folder()
+        if not selection.selected:
+            return {
+                "exported": False,
+                "selected": False,
+                "host_path_persisted": False,
+                "production_timeline_mutated": False,
+                "resolve_write_performed": False,
+            }
+        assert selection.host_path is not None
+        result = self._game_intelligence_application.export_analysis(
+            match_id=args["match_id"],
+            destination=selection.host_path,
+        )
+        return {**result, "selected": True}
 
     def snapshot(self, _args: Any = None) -> dict[str, Any]:
         return self._service.snapshot().to_dict()

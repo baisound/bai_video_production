@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/game-evidence.schema.json",
+  "title": "TASK-049 Game Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "game_evidence_id",
+    "production_job_id",
+    "match_id",
+    "source_asset_id",
+    "producer",
+    "producer_version",
+    "evidence_type",
+    "source_range",
+    "confidence_milli",
+    "artifact_ref",
+    "bvp_evidence_id",
+    "created_at",
+    "game_evidence_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "game_evidence_id": {
+      "type": "string",
+      "pattern": "^GEVD-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "production_job_id": {
+      "type": "string",
+      "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "match_id": {
+      "type": "string",
+      "pattern": "^MATCH-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "source_asset_id": {
+      "type": "string",
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "producer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "producer_version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "evidence_type": {
+      "enum": [
+        "VISION",
+        "HUD",
+        "ASR",
+        "AUDIO",
+        "STATE_TRANSITION",
+        "KNOWLEDGE_MATCH",
+        "HUMAN_REVIEW"
+      ]
+    },
+    "source_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start_frame",
+        "end_frame_exclusive"
+      ],
+      "properties": {
+        "start_frame": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_frame_exclusive": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "confidence_milli": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "artifact_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "bvp_evidence_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^EVD-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "game_evidence_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

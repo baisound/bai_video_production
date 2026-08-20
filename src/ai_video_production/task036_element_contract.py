@@ -108,6 +108,7 @@ _IDENTITY_ATTRS = (
     "data-add-track", "aria-label", "name", "placeholder",
 )
 _SPACE_RE = re.compile(r"\s+")
+_CONTRACT_EXTENSION_ATTR = "data-contract-extension"
 
 
 @dataclass(frozen=True, slots=True)
@@ -221,6 +222,7 @@ class _SurfaceParser(HTMLParser):
         self._depth = 0
         self._open: list[dict[str, Any]] = []
         self._ordinals: dict[str, int] = {}
+        self._ignored_depth: int | None = None
 
     @property
     def page_id(self) -> str:
@@ -229,6 +231,16 @@ class _SurfaceParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         self._depth += 1
         values = dict(attrs)
+        if self._ignored_depth is not None:
+            if tag in _VOID_TAGS:
+                self._depth -= 1
+            return
+        if values.get(_CONTRACT_EXTENSION_ATTR):
+            if tag in _VOID_TAGS:
+                self._depth -= 1
+            else:
+                self._ignored_depth = self._depth
+            return
         page = values.get("data-page")
         if tag == "section" and page:
             if page not in _PAGE_BY_ID or page == SHELL_PAGE:
@@ -252,10 +264,17 @@ class _SurfaceParser(HTMLParser):
             self.handle_endtag(tag)
 
     def handle_data(self, data: str) -> None:
+        if self._ignored_depth is not None:
+            return
         for item in self._open:
             item["text"].append(data)
 
     def handle_endtag(self, tag: str) -> None:
+        if self._ignored_depth is not None:
+            if self._depth == self._ignored_depth:
+                self._ignored_depth = None
+            self._depth -= 1
+            return
         for index in range(len(self._open) - 1, -1, -1):
             item = self._open[index]
             if item["tag"] == tag and item["depth"] == self._depth:
@@ -289,9 +308,22 @@ class _SourceCountParser(HTMLParser):
         self.buttons = 0
         self.selects = 0
         self.fields = 0
+        self._depth = 0
+        self._ignored_depth: int | None = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._depth += 1
         values = dict(attrs)
+        if self._ignored_depth is not None:
+            if tag in _VOID_TAGS:
+                self._depth -= 1
+            return
+        if values.get(_CONTRACT_EXTENSION_ATTR):
+            if tag in _VOID_TAGS:
+                self._depth -= 1
+            else:
+                self._ignored_depth = self._depth
+            return
         if values.get("data-page"):
             self.pages.add(str(values["data-page"]))
         element_id = values.get("id")
@@ -302,6 +334,18 @@ class _SourceCountParser(HTMLParser):
         self.buttons += tag == "button"
         self.selects += tag == "select"
         self.fields += tag in {"input", "textarea"}
+        if tag in _VOID_TAGS:
+            self._depth -= 1
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if tag not in _VOID_TAGS:
+            self.handle_endtag(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        if self._ignored_depth is not None and self._depth == self._ignored_depth:
+            self._ignored_depth = None
+        self._depth -= 1
 
 
 def _element_kind(tag: str, attrs: dict[str, str | None]) -> ElementKind | None:

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/perk-alias.schema.json",
+  "title": "TASK-049 DbD Perk Alias",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "alias_id",
+    "perk_id",
+    "locale",
+    "alias",
+    "alias_type",
+    "verified",
+    "perk_alias_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "alias_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$"
+    },
+    "perk_id": {
+      "type": "string",
+      "pattern": "^perk_[a-z0-9][a-z0-9_]{1,123}$"
+    },
+    "locale": {
+      "type": "string",
+      "pattern": "^[a-z]{2,3}(?:-[A-Z]{2})?$"
+    },
+    "alias": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "alias_type": {
+      "enum": [
+        "COMMUNITY",
+        "ABBREVIATION",
+        "OLD_NAME",
+        "SEARCH_SYNONYM",
+        "ASR_VARIANT",
+        "MANUAL"
+      ]
+    },
+    "verified": {
+      "type": "boolean"
+    },
+    "perk_alias_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

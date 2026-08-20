@@ -75,3 +75,15 @@ Test-Path ".\builds\BAI Video Production\BAI Video Production.exe"
 ## このビルドが行わないこと
 
 この手順はローカルの未署名EXEを作るだけです。Tag、GitHub Release、Deploy、Provider呼び出し、有料実行、クレジット購入、Production Activation、DaVinci Resolve/Cubaseプロジェクトへの書き込みは行いません。ビルド成功だけでリリース完了とはみなしません。
+
+ビルド後の起動・Project/Media選択・Game Intelligenceを含む利用手順は [Windows EXE利用ガイド](../user/WINDOWS-EXE-USAGE.md) を参照してください。
+
+## DbD Training Studio companion EXE
+
+The DbD teacher-data GUI is packaged separately from the main Product shell:
+
+```powershell
+.\build-dbd-training-studio-exe.bat
+```
+
+See [Build BAI DbD Training Studio EXE](BUILDING-DBD-TRAINING-STUDIO-EXE.md) and [Training Studio Usage](../user/DBD-TRAINING-STUDIO-USAGE.md). This companion utility does not replace `BAI Video Production.exe`; it provides bounded dataset/knowledge intake, including direct video slice learning.

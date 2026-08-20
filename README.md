@@ -14,7 +14,17 @@
 | 読む人 | ページ | 内容 |
 |---|---|---|
 | 初めて見る方・非開発者 | [やさしい導入ガイド](docs/user/GETTING-STARTED.md) | 何ができるか、費用・安全性、5分Demo、困った時 |
-| OBSで学習用音声を録音する方 | [OBS Voice Capture Plugin 導入・利用ガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) | 日本語・Englishで準備から保存・復旧まで説明する初心者向けガイド |
+| Windows EXE / Installerを構築する方 | [全EXE/Installer構築一覧](docs/windows/WINDOWS-EXE-BUILD-INDEX.md) / [今回機能のWindows環境構築](docs/windows/WINDOWS-GAME-INTELLIGENCE-ENVIRONMENT.md) | BVP本体、Training Studio、Trivia Editor、Voice Model Builder、OBS Voice Captureの個別構築手順と、FFmpeg/OCR/ASR/LLM環境 |
+| Windows EXEを構築・利用する方 | [EXE構築手順](docs/windows/BUILDING-WINDOWS-EXE.md) / [EXE利用ガイド](docs/user/WINDOWS-EXE-USAGE.md) | WindowsテストEXEの作成、起動、Project/Media選択、Game Intelligenceの現在の利用範囲、終了・再起動 |
+| DbD学習データをGUI/EXEから登録する方 | [Training Studio EXE構築](docs/windows/BUILDING-DBD-TRAINING-STUDIO-EXE.md) / [Training Studio操作方法](docs/user/DBD-TRAINING-STUDIO-USAGE.md) | 1件登録、CSV 1行/一括、動画からのROI Slice抽出、右上OCR候補、動画/Transcriptから豆知識Candidate作成、Index/Vocabulary構築 |
+| DbD学習・Knowledge・CGELデータを別PCへ移行する方 | [Backup / Restore移行ガイド](docs/user/DBD-DATA-BACKUP-RESTORE.md) | Project Game Intelligence、Training Studio、Trivia Knowledgeをchecksum付きZIPでBackup / Preview / Restore。Credentialは対象外 |
+| 神ゲー攻略からDbDパーク/キラー情報を収集する方 | [Kamigame Knowledge Candidate Import](docs/game-intelligence/DBD-KAMIGAME-KNOWLEDGE-IMPORT.md) | Survivor Perk / Killer Perk / Killer一覧＋詳細をRaw保存・hash付きCANDIDATEへ正規化。自動VERIFIEDは禁止 |
+| DbD HUD位置をGUIで固定・補正する方 | [HUD Calibration / ROI Profileガイド](docs/game-intelligence/DBD-HUD-CALIBRATION-GUIDE.md) | 動画/静止画Preview上のドラッグROI登録、Versioned Profile、Anchor clip、自動Profile推定、微小Anchor補正、Fail-closed |
+| DbD認識精度・学習を改善する方 | [認識精度・学習ガイド](docs/game-intelligence/DBD-RECOGNITION-ACCURACY-AND-TRAINING.md) / [スライスDatasetガイド](docs/game-intelligence/DBD-SLICE-DATASET-GUIDE.md) | 左下Survivor HUD、左下Item/Add-on、右上OCR、右下Perk、Killer/Power、Cross-modal Fusionの精度改善、ROI slice切出し、ラベル、Hard Negative、Gold Dataset |
+| DbD豆知識を登録・再利用する方 | [豆知識Knowledge設計](docs/game-intelligence/DBD-COMMENTARY-TRIVIA-KNOWLEDGE.md) / [Trivia Editor EXE構築](docs/windows/BUILDING-DBD-TRIVIA-EDITOR-EXE.md) / [操作方法](docs/user/DBD-TRIVIA-EDITOR-USAGE.md) | 手動登録、実況・解説からCandidate抽出、Human Verify、Commentaryでの再利用 |
+| OBSで学習用音声を録音する方 | [OBS Installer構築](docs/windows/BUILDING-OBS-VOICE-CAPTURE-INSTALLER.md) / [OBS Voice Capture Plugin 導入・利用ガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) | 日本語・Englishで準備から保存・復旧まで説明する初心者向けガイド |
+| 録音から音声Model作成の流れを確認する方 | [Voice Model Builder Installer構築](docs/windows/BUILDING-VOICE-MODEL-BUILDER-INSTALLER.md) / [BAI Voice Model Builder 初心者向けガイド](docs/user/VOICE-MODEL-BUILDER.md) | Windows installer、起動、現在の表示専用範囲、将来のDataset・学習・style・Master WAV工程、source build |
+| ローカル音声Modelを準備する方 | [Qwen3-TTS 0.6B Base セットアップ](docs/user/QWEN3-TTS-06B-BASE-SETUP.md) / [学習依存（flash-attn・TensorBoard）](docs/user/QWEN3-TTS-TRAINING-DEPENDENCIES.md) / [WSL2実測手順](docs/user/QWEN3-TTS-WSL2-VERIFIED-ENVIRONMENT.md) / [Windowsネイティブ検証手順](docs/user/QWEN3-TTS-WINDOWS-NATIVE-ENVIRONMENT.md) | 隔離環境、固定revision、GPU確認、Windows制約、学習を始めてよい条件 |
 | 利用を検討する方 | [機能と開発状況](PROJECT.md) | 実装済み／未実装、現在地、次の到達点 |
 | 開発者・Contributor | [開発者Architecture Guide](docs/developer/ARCHITECTURE.md) | Data flow、責任境界、Adapter、Test、変更手順 |
 | OSS活動を確認する方 | [公開準備Schedule](docs/oss/PUBLIC-READINESS-SCHEDULE.md) | 期限、Evidence、採択準備、実利用Gate |
@@ -157,6 +167,9 @@ python -m pip install -e ".[dev]"
 
 ### Windows EXE build
 
+全Windows EXE / Installerの構築入口は [Windows EXE / Installer Build Index](docs/windows/WINDOWS-EXE-BUILD-INDEX.md)、今回のDbD Game Intelligence / Training Studioに必要なPython・FFmpeg・Tesseract OCR・Faster-Whisper・LLM設定は [Windows環境構築ガイド](docs/windows/WINDOWS-GAME-INTELLIGENCE-ENVIRONMENT.md) を参照してください。
+
+
 WindowsクライアントをEXEにする場合は、ビルド用の依存を明示的にインストールしてから、ルートのバッチを実行します。
 
 ```powershell
@@ -168,7 +181,38 @@ python -m pip install -e ".[windows-build]"
 
 前提条件、Pythonの選択方法、作り直し方、エラー対処は [Windows EXEビルド手順](docs/windows/BUILDING-WINDOWS-EXE.md) を参照してください。
 
+ビルド後の起動方法、`BAI Video Production` フォルダーの扱い、Project/Media選択、Game Intelligenceを含む現在のテストEXE利用範囲は [Windows EXE利用ガイド](docs/user/WINDOWS-EXE-USAGE.md) を参照してください。
+
+
+### DbD Game Intelligence recognition / knowledge tools
+
+TASK-049では、CGELに加えて以下の認識・知識基盤を段階実装しています。
+
+- 左下Survivor HUDの状態slice認識と時間方向の変化検出
+- 左下Item / Add-on Loadout領域（Item 1枠 + Add-on 2枠）のCalibration・slice学習・visual recognition・patch-aware Knowledge参照
+- 右上通知領域のOCR Port / Tesseract CLI Adapter / DbD Vocabulary解決
+- 右下4 Perk Slotのreference slice認識、Top-K、UNKNOWN、時間方向vote
+- Killer / Powerのpatch-aware Knowledge Storeとvisual reference recognizer
+- Vision / HUD / OCR / ASR / Stateを統合するCross-modal Fusion
+- 既存OpenAI / Anthropic / Google provider routingを再利用するCommentary LLM接続とFact Validator
+- 手動・既存解説・ASR TranscriptからCANDIDATEを蓄積し、Human Verify後に再利用するDbD Commentary Trivia Store
+
+実動画でProduction精度が確認済みという意味ではありません。認識精度はReal-media Human Gold Datasetで測定し、UNKNOWNを許容しながら改善します。詳細は [認識精度・学習ガイド](docs/game-intelligence/DBD-RECOGNITION-ACCURACY-AND-TRAINING.md) と [スライスDatasetガイド](docs/game-intelligence/DBD-SLICE-DATASET-GUIDE.md) を参照してください。
+
+通常の教師データ投入は、CSVやPythonコマンドを直接操作しなくても **`BAI DbD Training Studio.exe`** から実行できます。静止画1件、CSV 1行/一括、実動画からのExact Frame ROI抽出、右上OCR候補のHuman選択、動画/Transcriptからの豆知識Candidate作成までを同じGUIで扱います。 [Training Studio EXE構築](docs/windows/BUILDING-DBD-TRAINING-STUDIO-EXE.md) / [操作方法](docs/user/DBD-TRAINING-STUDIO-USAGE.md) を参照してください。
+
+HUD位置は同じTraining Studioの **HUD Calibration** タブで動画/静止画Preview上からドラッグ登録できます。解像度・UI Scale・DbD Version付きのVersioned Profileとして保存し、Anchor clipによる自動Profile推定と微小位置補正を実認識へ接続します。 [HUD Calibration / ROI Profileガイド](docs/game-intelligence/DBD-HUD-CALIBRATION-GUIDE.md) を参照してください。
+
+Training Studioには **Backup / Restore** タブもあり、Project内Game Intelligence DB、Training workspace、Trivia Knowledgeを別PCへ移行するchecksum付きZIPを作成できます。Restoreは事前Preview必須で、既存データを置換する場合は自動Safety Backupを作ります。API Key/Credential/元動画は含みません。 [Backup / Restore移行ガイド](docs/user/DBD-DATA-BACKUP-RESTORE.md) を参照してください。
+
+Training Studioの **Knowledge Import** タブからは、ユーザー指定の神ゲー攻略Survivor Perk / Killer Perk / Killer一覧を取得し、Raw HTML＋SHA-256を保存したうえで `COMMUNITY_REFERENCE / CANDIDATE` のJSONL/CSVへ正規化できます。Killer detail巡回とHTML上のpaginationもboundedに対応します。Canonicalへは自動反映しません。 [Kamigame Knowledge Candidate Import](docs/game-intelligence/DBD-KAMIGAME-KNOWLEDGE-IMPORT.md) を参照してください。
+
+豆知識を手作業で簡単に登録する場合は、専用の `BAI DbD Trivia Editor.exe` を使えます。 [ビルド手順](docs/windows/BUILDING-DBD-TRIVIA-EDITOR-EXE.md) / [操作方法](docs/user/DBD-TRIVIA-EDITOR-USAGE.md) を参照してください。
+
 ### OBS Voice Capture Pluginとインストーラーのbuild
+
+専用の再現手順は [OBS Voice Capture Installer構築手順](docs/windows/BUILDING-OBS-VOICE-CAPTURE-INSTALLER.md) を参照してください。
+
 
 GitHub Releaseには、BAI Video Production本体に加えて次の3点を同梱します。
 
@@ -541,6 +585,168 @@ Release / Tag / Deploy / Paid Provider / Credential / destructive operation / na
 朝までに進められるだけ進めるのではなく、安全なCheckpointを単位として進められるだけ進めてください。
 
 最終報告には、完了、Park、未着手、次のHuman操作をまとめてください。
+```
+
+### 使用例11：モデル・Governance・Contextを適応制御してAtomic Unitを完結させる
+
+AUTONOMYでは、すべての作業へ同じ高コストModel、同じGovernance深度、同じContext量を適用しません。**難易度・失敗影響・責任境界・変更量に応じて、必要十分な能力と検証深度を選び、1つのAtomic Unitを `Design → Implement → Test → Commit-ready` まで完結させる**ことを基本とします。
+
+Model名や料金体系は将来変わる可能性があるため、Canonical RuleはModel固有名ではなく次の能力クラスで考えます。
+
+| 能力クラス | 主な用途 | 原則 |
+|---|---|---|
+| High-Reasoning | Architecture、既存設計との矛盾判断、Canonical責任境界、重要Schema判断、Critic、難しい不具合、最終統合Review | 高コストでも判断品質を優先する |
+| Implementation | 通常の実装、Adapter、Store、Application Service、UI接続、Test、Refactoring | 主力として使い、設計済みContractから逸脱しない |
+| Bulk / Mechanical | Test追加、Fixture、Schema boilerplate、Doc更新、Rename、単純修正、静的監査 | 低コストで大量処理し、重要判断を新規に作らない |
+
+Development Depthも変更の性質へ合わせます。
+
+```text
+Architecture / Canonical Boundary
+        → HIGH ASSURANCE
+
+Schema / Responsibility Boundary
+        → STANDARD ～ HIGH
+
+通常実装
+        → STANDARD
+
+Test追加 / Rename / Docs / Fixture
+        → QUICK / LIGHT
+```
+
+Safety Floor、Authority、Human Gateがより強い深度を要求する場合は、コスト節約を理由に下げません。逆に、単純な変更へ不要なBuilder/Critic/Judgeのフルサイクルを強制しません。
+
+ContextはRepository全文を毎回読むのではなく、Atomic Unitごとに必要な最小集合へ絞ります。一般形は次のとおりです。
+
+```text
+Current State
+Current Task / Atomic Unit
+直接依存Task
+Canonical Contract / Schema
+対象Source
+関連Test
+必要なEvidence / Handoff
+```
+
+たとえば既存機能を拡張するTaskなら、`Current State → Current Task → 直接依存Task → 必要Schema → 該当src → 該当tests` を優先し、巨大なArchitecture文書や過去Task全文は矛盾解決に必要な場合だけ追加で読みます。
+
+大きなTaskは一括実装せず、責任境界が明確なR1、R2、R3...または同等のAtomic Unitへ分割します。各Unitは原則として次を完了してから次へ進みます。
+
+```text
+Design
+  ↓
+Implement
+  ↓
+Focused Test
+  ↓
+必要ならFull Regression
+  ↓
+Evidence / Diff Review
+  ↓
+Commit-ready Checkpoint
+```
+
+途中でContextが肥大化した場合も、Atomic Unitを中途半端に切らず、安全なCheckpointまで完了してHandoffを作成します。
+
+#### 具体例：高難度の統合機能を限られたCodex予算で進める場合
+
+以下は上記ルールの**具体例**であり、Model名や対象Taskを全Projectへ固定する規則ではありません。利用可能なModel、料金、対象ProjectのRiskに応じて同等能力へ置き換えます。
+
+```text
+GPT-5.6 Sol
+    Architecture
+    既存設計との矛盾判断
+    Canonical責任境界
+    Schema重要判断
+    Critic
+    難しい不具合
+    最終統合Review
+
+GPT-5.6 Terra
+    Python実装
+    Adapter実装
+    Store
+    Application Service
+    UI接続
+    Test
+    Refactoring
+
+GPT-5.6 Luna
+    Test追加
+    Fixture
+    Schema boilerplate
+    Doc更新
+    Rename
+    単純修正
+    静的監査
+```
+
+同じ例でDevelopment Depthは次のように割り当てます。
+
+```text
+Architecture / Canonical Game Event Timeline
+        → HIGH ASSURANCE
+
+Schema / Responsibility Boundary
+        → STANDARD ～ HIGH
+
+通常実装
+        → STANDARD
+
+Test追加 / Rename / Docs
+        → QUICK / LIGHT
+```
+
+Contextも対象機能に必要なものだけに限定します。たとえば既存のゲーム解析機能を拡張する場合は、次のような集合をAtomic Unitへ与えます。
+
+```text
+current-state
+TASK-009
+TASK-022
+TASK-006
+TASK-003
+TASK-004
+必要Schema
+該当src
+該当tests
+```
+
+さらに大きな変更は、たとえば次のように刻みます。
+
+```text
+TASK-009 R1
+ ↓
+R2
+ ↓
+R3
+ ↓
+...
+```
+
+各Unitは次を一度の完結単位とします。
+
+```text
+Design
+→ Implement
+→ Test
+→ Commit-ready
+```
+
+Codexへの汎用依頼例:
+
+```text
+AUTONOMYで、開発コストとContextを適応制御しながら現在Taskを進めてください。
+
+最初にCurrent State、Authority、Current Task、直接依存Taskを確認し、変更のRiskと責任境界からDevelopment Depthを決めてください。
+
+Architecture、Canonical Boundary、重要Schema、Critic、難しい不具合、最終統合ReviewにはHigh-Reasoning能力を使い、通常実装はImplementation能力、Fixture・Test追加・Doc・Rename等の機械的作業はBulk / Mechanical能力を使ってください。利用可能なModelの中から各能力に必要十分なものを選び、単純作業へ高コストModelを固定しないでください。
+
+Repository全文を読み込まず、Current State、Current Task、直接依存Task、必要Contract / Schema、対象Source、関連Testだけを最初のContextとしてください。不明点や矛盾が出た場合だけ追加Contextを取得してください。
+
+大きなTaskは責任境界ごとのAtomic Unitへ分割し、各Unitを Design → Implement → Test → Evidence / Diff Review → Commit-ready まで完結させてから次へ進んでください。
+
+Safety Floor、Human Gate、Authorityはコスト最適化より優先してください。Atomic Unitを安価にするために必要な検証や承認を省略しないでください。
 ```
 
 ### 短い指示でも開始できる

@@ -20,6 +20,11 @@ class IdKind(str, Enum):
     PROFILE_SNAPSHOT = "PSN"
     ASSET_VERSION = "AV"
     APPROVAL = "APR"
+    GAME_MATCH = "MATCH"
+    GAME_EVENT = "GEVT"
+    GAME_EVIDENCE = "GEVD"
+    GAME_REVIEW = "GREV"
+    TRIVIA = "TRIV"
 
 _PATTERNS = {k: re.compile(rf"^{k.value}-{_CROCKFORD_RE}{{26}}$") for k in IdKind}
 _PROJECT_RE = re.compile(r"^[a-z][a-z0-9-]{2,63}$")

@@ -90,6 +90,146 @@ def test_exact_inputs_create_distinct_export_jobs(tmp_path: Path) -> None:
     assert len(DurableProductJobStore.load(tmp_path).jobs) == 2
 
 
+def test_exclusive_input_binding_is_idempotent_but_rejects_another_operation(tmp_path: Path) -> None:
+    setup_project(tmp_path)
+    service = DurableProductJobService()
+    approval = sha256_bytes(b"final-approval")
+    first = service.enqueue(
+        tmp_path, kind="EXPORT", target_identity="export:master",
+        input_hashes={"final_approval": approval, "preset": sha256_bytes(b"master")},
+        exclusive_input_name="final_approval",
+    )
+    assert service.enqueue(
+        tmp_path, kind="EXPORT", target_identity="export:master",
+        input_hashes={"final_approval": approval, "preset": sha256_bytes(b"master")},
+        exclusive_input_name="final_approval",
+    ) == first
+    with pytest.raises(ProductError) as exc:
+        service.enqueue(
+            tmp_path, kind="EXPORT", target_identity="export:alternate",
+            input_hashes={"final_approval": approval, "preset": sha256_bytes(b"alternate")},
+            exclusive_input_name="final_approval",
+        )
+    assert exc.value.code == "ERR_PRODUCT_JOB_EXCLUSIVE_INPUT_CONFLICT"
+
+
+def test_exclusive_input_binding_rejects_invalid_or_absent_input_name(tmp_path: Path) -> None:
+    setup_project(tmp_path)
+    service = DurableProductJobService()
+    with pytest.raises(ProductError) as exc:
+        service.enqueue(
+            tmp_path, kind="EXPORT", target_identity="export:master", input_hashes=inputs(),
+            exclusive_input_name="final_approval",
+        )
+    assert exc.value.code == "ERR_PRODUCT_JOB_EXCLUSIVE_INPUT_INVALID"
+
+
+def test_exclusive_input_binding_rejects_legacy_multiple_matches_even_for_same_operation(tmp_path: Path) -> None:
+    setup_project(tmp_path)
+    approval = sha256_bytes(b"final-approval")
+    first = DurableProductJob.create(
+        kind="EXPORT", target_identity="export:master",
+        input_hashes={"final_approval": approval, "preset": sha256_bytes(b"master")},
+    )
+    second = DurableProductJob.create(
+        kind="EXPORT", target_identity="export:alternate",
+        input_hashes={"final_approval": approval, "preset": sha256_bytes(b"alternate")},
+    )
+    DurableProductJobStore._save_unlocked(
+        tmp_path, DurableProductJobCollection.create("project-1").replace(first).replace(second),
+    )
+    with pytest.raises(ProductError) as exc:
+        DurableProductJobService().enqueue(
+            tmp_path, kind="EXPORT", target_identity="export:master",
+            input_hashes={"final_approval": approval, "preset": sha256_bytes(b"master")},
+            exclusive_input_name="final_approval",
+        )
+    assert exc.value.code == "ERR_PRODUCT_JOB_EXCLUSIVE_INPUT_CONFLICT"
+
+
+def test_query_by_input_binding_is_read_only_and_project_scoped(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    service = DurableProductJobService()
+    approval = sha256_bytes(b"final-approval")
+    assert service.query_by_input_binding(
+        tmp_path, kind="EXPORT", input_name="final_approval", input_sha256=approval,
+    ) == ()
+    assert not DurableProductJobStore.path(tmp_path).exists()
+    job = service.enqueue(
+        tmp_path, kind="EXPORT", target_identity="export:master",
+        input_hashes={"final_approval": approval, "preset": sha256_bytes(b"master")},
+        exclusive_input_name="final_approval",
+    )
+    assert service.query_by_input_binding(
+        tmp_path, kind="EXPORT", input_name="final_approval", input_sha256=approval,
+    ) == (job,)
+    DurableProductJobStore._save_unlocked(
+        tmp_path, DurableProductJobCollection.create("other-project").replace(job),
+    )
+    with pytest.raises(ProductError) as exc:
+        service.query_by_input_binding(
+            tmp_path, kind="EXPORT", input_name="final_approval", input_sha256=approval,
+        )
+    assert manifest.project_id == "project-1"
+    assert exc.value.code == "ERR_PRODUCT_JOB_PROJECT_CONFLICT"
+
+
+@pytest.mark.parametrize("dangling", [False, True])
+def test_query_by_input_binding_rejects_valid_and_dangling_store_symlinks(
+    tmp_path: Path, dangling: bool,
+) -> None:
+    setup_project(tmp_path)
+    approval = sha256_bytes(b"final-approval")
+    job = DurableProductJobService().enqueue(
+        tmp_path, kind="EXPORT", target_identity="export:master",
+        input_hashes={"final_approval": approval, "preset": sha256_bytes(b"master")},
+        exclusive_input_name="final_approval",
+    )
+    store_path = DurableProductJobStore.path(tmp_path)
+    real_path = store_path.with_name("jobs-real.json")
+    try:
+        if dangling:
+            store_path.unlink()
+            store_path.symlink_to(store_path.with_name("missing-jobs.json"))
+        else:
+            store_path.replace(real_path)
+            store_path.symlink_to(real_path)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+    with pytest.raises(ProductError) as exc:
+        DurableProductJobService().query_by_input_binding(
+            tmp_path, kind=job.kind, input_name="final_approval", input_sha256=approval,
+        )
+    assert exc.value.code == "ERR_PRODUCT_JOB_STORE_FILE"
+
+
+@pytest.mark.parametrize(("dangling", "exclusive"), [(False, False), (True, False), (False, True), (True, True)])
+def test_enqueue_rejects_store_symlinks_without_replacing_the_link(
+    tmp_path: Path, dangling: bool, exclusive: bool,
+) -> None:
+    setup_project(tmp_path)
+    store_path = DurableProductJobStore.path(tmp_path)
+    target = store_path.with_name("jobs-target.json")
+    target.write_text("sentinel", encoding="utf-8")
+    try:
+        store_path.symlink_to(
+            store_path.with_name("missing-jobs.json") if dangling else target,
+        )
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+    approval = sha256_bytes(b"final-approval")
+    with pytest.raises(ProductError) as exc:
+        DurableProductJobService().enqueue(
+            tmp_path, kind="EXPORT", target_identity="export:master",
+            input_hashes={"final_approval": approval},
+            exclusive_input_name="final_approval" if exclusive else None,
+        )
+    assert exc.value.code == "ERR_PRODUCT_JOB_STORE_FILE"
+    assert store_path.is_symlink()
+    if not dangling:
+        assert target.read_text(encoding="utf-8") == "sentinel"
+
+
 def test_full_local_job_state_machine_and_cost_truth(tmp_path: Path) -> None:
     setup_project(tmp_path)
     job = enqueue(tmp_path)
@@ -145,6 +285,30 @@ def test_restart_moves_dispatched_or_running_job_to_unknown_without_replay(tmp_p
     assert unknown.unknown_since is not None
     assert unknown.recovery_actions == ("ACCEPT_PROVEN_SUCCESS", "MARK_FAILED", "REQUIRE_HUMAN")
     assert DurableProductJobService().recover_interrupted(tmp_path) == ()
+
+
+def test_scoped_restart_recovery_preserves_other_kinds_and_rejects_invalid_kind(tmp_path: Path) -> None:
+    setup_project(tmp_path)
+    service = DurableProductJobService()
+    export = advance(
+        tmp_path, enqueue(tmp_path), DurableProductJobState.PREFLIGHT,
+        DurableProductJobState.READY, DurableProductJobState.DISPATCHING,
+    )
+    analysis = service.enqueue(
+        tmp_path, kind="LOCAL_ANALYSIS", target_identity="analysis:recover-scope",
+        input_hashes={"source": sha256_bytes(b"recover-scope")},
+    )
+    analysis = advance(
+        tmp_path, analysis, DurableProductJobState.PREFLIGHT,
+        DurableProductJobState.READY, DurableProductJobState.DISPATCHING,
+        DurableProductJobState.RUNNING,
+    )
+    recovered = service.recover_interrupted(tmp_path, kind="EXPORT")
+    assert tuple(job.job_id for job in recovered) == (export.job_id,)
+    assert DurableProductJobStore.load(tmp_path).get(analysis.job_id) == analysis
+    with pytest.raises(ProductError) as exc:
+        service.recover_interrupted(tmp_path, kind="NOT_A_LOCAL_JOB")
+    assert exc.value.code == "ERR_PRODUCT_JOB_RECOVERY_KIND_INVALID"
 
 
 def test_unknown_cannot_retry_and_requires_typed_reconciliation(tmp_path: Path) -> None:

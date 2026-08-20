@@ -50,7 +50,7 @@ KNOWLEDGE_KIND_JA = {
     GameKnowledgeKind.ADDON: "アドオン",
     GameKnowledgeKind.ITEM: "アイテム",
     GameKnowledgeKind.OFFERING: "オファリング",
-    GameKnowledgeKind.CHARACTER: "キャラクター",
+    GameKnowledgeKind.UNKNOWN: "未分類・要確認",
     GameKnowledgeKind.SURVIVOR: "サバイバー",
     GameKnowledgeKind.KNOWLEDGE: "ナレッジ系",
     GameKnowledgeKind.STATUS: "状態",

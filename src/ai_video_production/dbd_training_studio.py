@@ -3486,7 +3486,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         GameKnowledgeKind.PERK:"パーク", GameKnowledgeKind.KILLER:"キラー", GameKnowledgeKind.ITEM:"アイテム",
         GameKnowledgeKind.ADDON:"アドオン", GameKnowledgeKind.MAP:"マップ", GameKnowledgeKind.REALM:"領域",
         GameKnowledgeKind.OFFERING:"オファリング", GameKnowledgeKind.POWER:"能力",
-        GameKnowledgeKind.CHARACTER:"キャラクター", GameKnowledgeKind.SURVIVOR:"サバイバー",
+        GameKnowledgeKind.UNKNOWN:"未分類・要確認", GameKnowledgeKind.SURVIVOR:"サバイバー",
         GameKnowledgeKind.KNOWLEDGE:"ナレッジ系", GameKnowledgeKind.TILE:"地形",
         GameKnowledgeKind.STATUS:"状態", GameKnowledgeKind.MECHANIC:"ゲーム仕様",
     }
@@ -3588,7 +3588,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         needle = inventory_keyword_filter.get().strip().casefold()
         visible = []
         for row in rows:
-            label = INVENTORY_KIND_JA.get(row.knowledge_kind, row.knowledge_kind.value)
+            label = (
+                "未分類・要確認"
+                if row.knowledge_kind is GameKnowledgeKind.CHARACTER
+                else INVENTORY_KIND_JA.get(row.knowledge_kind, row.knowledge_kind.value)
+            )
             if selected_kind and selected_kind != "すべて" and label != selected_kind:
                 continue
             details_text = " ".join(str(v) for v in row.details.values() if v not in {None, ""})

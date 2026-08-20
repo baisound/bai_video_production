@@ -60,6 +60,15 @@ class Row:
     section_heading: str = ""
 
 
+@dataclass(slots=True)
+class _ElementFrame:
+    tag: str
+    attributes: dict[str, str]
+    in_article_root: bool
+    excluded: bool
+    terminal: bool
+
+
 def _row_source_sections(row: Row) -> list[dict[str, object]]:
     """Preserve source fields that do not yet have a dedicated normalized column."""
     sections: list[dict[str, object]] = []
@@ -77,9 +86,12 @@ def _row_source_sections(row: Row) -> list[dict[str, object]]:
 
 
 class _KamigameHTMLParser(HTMLParser):
-    def __init__(self, *, base_url: str) -> None:
+    _VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
+
+    def __init__(self, *, base_url: str, article_scope: bool = False) -> None:
         super().__init__(convert_charrefs=True)
         self.base_url = base_url
+        self.article_scope = article_scope
         self.rows: list[Row] = []
         self.links: list[Link] = []
         self.images: list[str] = []
@@ -93,13 +105,112 @@ class _KamigameHTMLParser(HTMLParser):
         self._heading_text: list[str] = []
         self._all_text: list[str] = []
         self._current_heading: str = ""
+        self._stack: list[_ElementFrame] = []
+        self._article_root_seen = False
+        self._article_h1_seen = False
+        self._terminal_reached = False
+
+    @property
+    def template_id(self) -> str:
+        if self._article_root_seen and self._article_h1_seen:
+            return "KAMIGAME_ARTICLE_MAIN_V1"
+        return "UNKNOWN"
+
+    @property
+    def structure_status(self) -> str:
+        return "ACCEPTED" if self.template_id != "UNKNOWN" else "UNKNOWN_STRUCTURE"
 
     @property
     def text(self) -> str:
         return _clean_text(" ".join(self._all_text))
 
+    @staticmethod
+    def _attributes(attrs: list[tuple[str, str | None]]) -> dict[str, str]:
+        return {str(key).casefold(): str(value or "") for key, value in attrs}
+
+    @staticmethod
+    def _class_tokens(attributes: dict[str, str]) -> set[str]:
+        return {
+            token.casefold()
+            for token in re.split(r"\s+", attributes.get("class", "").strip())
+            if token
+        }
+
+    @classmethod
+    def _structurally_excluded(cls, tag: str, attributes: dict[str, str]) -> bool:
+        if tag in {"aside", "nav", "footer"}:
+            return True
+        tokens = cls._class_tokens(attributes)
+        element_id = attributes.get("id", "").casefold()
+        markers = {*tokens, element_id}
+        return any(
+            marker == "ad"
+            or marker.startswith("ad_")
+            or marker.endswith("_ad")
+            or marker.startswith("inline_ad")
+            or marker.startswith("related")
+            or marker.startswith("relation")
+            or marker.startswith("recommend")
+            or marker.startswith("ranking")
+            or marker.endswith("_navigation")
+            or marker in {
+                "information_footer",
+                "priority_side",
+                "sidebar",
+                "ranking",
+                "recommendation",
+                "navigation",
+            }
+            for marker in markers
+            if marker
+        )
+
+    def _frame_for_start(self, tag: str, attributes: dict[str, str]) -> _ElementFrame:
+        parent = self._stack[-1] if self._stack else None
+        parent_is_main = bool(
+            parent
+            and parent.tag == "main"
+            and parent.attributes.get("id", "").casefold() == "main"
+            and "article" in self._class_tokens(parent.attributes)
+        )
+        is_article_root = tag == "article" and parent_is_main
+        if is_article_root:
+            self._article_root_seen = True
+        in_root = bool(is_article_root or (parent and parent.in_article_root))
+        excluded = bool(
+            (parent and parent.excluded)
+            or (in_root and self._structurally_excluded(tag, attributes))
+        )
+        terminal = bool((parent and parent.terminal) or self._terminal_reached)
+        if (
+            in_root
+            and not excluded
+            and tag == "h2"
+            and attributes.get("id", "").strip() in {"関連リンク", "related-links"}
+        ):
+            self._terminal_reached = True
+            terminal = True
+        return _ElementFrame(tag, attributes, in_root, excluded, terminal)
+
+    def _capture_allowed(self, frame: _ElementFrame | None = None) -> bool:
+        if not self.article_scope:
+            return True
+        current = frame or (self._stack[-1] if self._stack else None)
+        return bool(
+            current
+            and current.in_article_root
+            and not current.excluded
+            and not current.terminal
+        )
+
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        attr = {k: v for k, v in attrs}
+        tag = tag.casefold()
+        attr = self._attributes(attrs)
+        frame = self._frame_for_start(tag, attr)
+        if tag not in self._VOID_TAGS:
+            self._stack.append(frame)
+        if not self._capture_allowed(frame):
+            return
         if tag == "tr":
             self._row = Row(section_heading=self._current_heading)
         elif tag in {"td", "th"} and self._row is not None:
@@ -121,30 +232,39 @@ class _KamigameHTMLParser(HTMLParser):
             self._heading_text = []
 
     def handle_endtag(self, tag: str) -> None:
-        if tag in {"td", "th"} and self._row is not None and self._cell is not None:
-            self._row.cells.append(self._cell)
-            self._cell = None
-        elif tag == "tr" and self._row is not None:
-            if self._row.cells:
-                self.rows.append(self._row)
-            self._row = None
-        elif tag == "a" and self._anchor_href:
-            link = Link(_clean_text(" ".join(self._anchor_text)), self._anchor_href)
-            self.links.append(link)
-            if self._cell is not None:
-                self._cell.links.append(link)
-            self._anchor_href = None
-            self._anchor_text = []
-        elif tag == self._heading_tag:
-            text = _clean_text(" ".join(self._heading_text))
-            if text:
-                self.headings.append((tag, text))
-                self._current_heading = text
-            self._heading_tag = None
-            self._heading_text = []
+        tag = tag.casefold()
+        if self._capture_allowed():
+            if tag in {"td", "th"} and self._row is not None and self._cell is not None:
+                self._row.cells.append(self._cell)
+                self._cell = None
+            elif tag == "tr" and self._row is not None:
+                if self._row.cells:
+                    self.rows.append(self._row)
+                self._row = None
+            elif tag == "a" and self._anchor_href:
+                link = Link(_clean_text(" ".join(self._anchor_text)), self._anchor_href)
+                self.links.append(link)
+                if self._cell is not None:
+                    self._cell.links.append(link)
+                self._anchor_href = None
+                self._anchor_text = []
+            elif tag == self._heading_tag:
+                text = _clean_text(" ".join(self._heading_text))
+                if text:
+                    self.headings.append((tag, text))
+                    self._current_heading = text
+                    if tag == "h1" and self.article_scope:
+                        self._article_h1_seen = True
+                self._heading_tag = None
+                self._heading_text = []
+        if tag not in self._VOID_TAGS:
+            for index in range(len(self._stack) - 1, -1, -1):
+                if self._stack[index].tag == tag:
+                    del self._stack[index:]
+                    break
 
     def handle_data(self, data: str) -> None:
-        if not data or not data.strip():
+        if not data or not data.strip() or not self._capture_allowed():
             return
         text = data.strip()
         self._all_text.append(text)
@@ -266,12 +386,50 @@ def parse_killer_list_page(html_text: str, *, page_url: str) -> list[dict[str, o
 
 
 def parse_killer_detail_page(html_text: str, *, page_url: str) -> dict[str, object]:
-    parser = _KamigameHTMLParser(base_url=page_url); parser.feed(html_text)
+    parser = _KamigameHTMLParser(base_url=page_url, article_scope=True); parser.feed(html_text)
+    if parser.structure_status != "ACCEPTED":
+        return {
+            "page_url": page_url,
+            "template_id": "UNKNOWN",
+            "structure_status": "UNKNOWN_STRUCTURE",
+            "requires_human_review": True,
+            "headings": [],
+            "detail_sections": [],
+            "contains_power_section": False,
+            "contains_addon_section": False,
+            "page_text_excerpt": "",
+            "image_urls": [],
+            "linked_dbd_pages": [],
+        }
     headings = [text for _, text in parser.headings]
+    section_kinds: list[dict[str, str]] = []
+    for level, heading in parser.headings:
+        if level == "h1":
+            continue
+        if any(term in heading for term in ("ステータス", "基本情報")):
+            section_kind = "ENTITY_STAT_TABLE"
+        elif "固有パーク" in heading:
+            section_kind = "UNIQUE_PERK_SECTION"
+        elif "アドオン" in heading and any(term in heading for term in ("評価", "おすすめ")):
+            section_kind = "ADDON_EVALUATION_SECTION"
+        elif any(term in heading for term in ("評価", "強さ")):
+            section_kind = "EVALUATION_SECTION"
+        elif any(term in heading for term in ("能力", "パワー")):
+            section_kind = "ENTITY_FACT_SECTION"
+        elif any(term in heading for term in ("使い方", "立ち回り", "対策")):
+            section_kind = "TACTICAL_TEXT"
+        else:
+            section_kind = "UNKNOWN_SECTION"
+        section_kinds.append({"heading_level": level, "heading": heading, "section_kind": section_kind})
     return {
-        "page_url": page_url, "headings": headings[:128],
-        "contains_power_section": any(any(term in h for term in ("特殊能力", "能力", "パワー")) for h in headings),
-        "contains_addon_section": any("アドオン" in h for h in headings),
+        "page_url": page_url,
+        "template_id": parser.template_id,
+        "structure_status": parser.structure_status,
+        "requires_human_review": False,
+        "headings": headings[:128],
+        "detail_sections": section_kinds[:128],
+        "contains_power_section": any(row["section_kind"] == "ENTITY_FACT_SECTION" for row in section_kinds),
+        "contains_addon_section": any(row["section_kind"] == "ADDON_EVALUATION_SECTION" for row in section_kinds),
         "page_text_excerpt": parser.text[:12000],
         "image_urls": list(dict.fromkeys(parser.images))[:256],
         "linked_dbd_pages": [link.href for link in parser.links if _same_kamigame_page(link.href)][:512],
@@ -366,9 +524,13 @@ def parse_addon_page(html_text: str, *, page_url: str) -> list[dict[str, object]
 
 
 def parse_map_page(html_text: str, *, page_url: str) -> list[dict[str, object]]:
-    parser = _KamigameHTMLParser(base_url=page_url); parser.feed(html_text)
+    parser = _KamigameHTMLParser(base_url=page_url, article_scope=True); parser.feed(html_text)
+    if parser.structure_status != "ACCEPTED":
+        raise ValueError("Kamigame map page structure is not recognized; Human review is required")
     records: dict[str, dict[str, object]] = {}
     for row in parser.rows:
+        if "各マップ個別一覧" not in _clean_text(row.section_heading):
+            continue
         if len(row.cells) < 2:
             continue
         first, second = row.cells[0], row.cells[1]
@@ -408,27 +570,53 @@ def parse_map_page(html_text: str, *, page_url: str) -> list[dict[str, object]]:
             "environment_type": "INDOOR" if "室内" in text else ("OUTDOOR" if "室外" in text else previous.get("environment_type", "")),
             "review_status": "CANDIDATE", "source_authority": "COMMUNITY_REFERENCE",
             "source_section_heading": row.section_heading, "source_sections": _row_source_sections(row), "source_page_url": page_url,
+            "source_template_id": parser.template_id, "source_structure_status": parser.structure_status,
         }
     return list(records.values())
 
 
 def parse_map_detail_page(html_text: str, *, page_url: str) -> dict[str, object]:
     """Extract bounded map-detail metadata without promoting community data to canonical truth."""
-    parser = _KamigameHTMLParser(base_url=page_url); parser.feed(html_text)
+    parser = _KamigameHTMLParser(base_url=page_url, article_scope=True); parser.feed(html_text)
+    if parser.structure_status != "ACCEPTED":
+        return {
+            "realm_name_ja": "",
+            "offering_name_ja": "",
+            "features": "",
+            "unique_objects": "",
+            "favorability": "",
+            "pallet_text": "",
+            "area_m2": None,
+            "size_class": "",
+            "map_image_urls": [],
+            "all_image_urls": [],
+            "detail_url": page_url,
+            "template_id": "UNKNOWN",
+            "structure_status": "UNKNOWN_STRUCTURE",
+            "requires_human_review": True,
+        }
     realm_name = ""; offering_name = ""; pallet_text = ""; area_m2 = None; size_class = ""
+    expect_realm_offering = False
+    expect_dimensions = False
     for row in parser.rows:
         texts = [cell.text for cell in row.cells]
         if len(row.cells) >= 2:
-            joined = " ".join(texts)
-            if not realm_name and any("領域名" in x for x in texts):
+            if not realm_name and any("領域名" in x for x in texts) and any("オファリング" in x for x in texts):
+                expect_realm_offering = True
                 continue
-            # The realm/offering data row normally contains one link per cell.
-            if not realm_name and len(row.cells) >= 2 and row.cells[0].links and row.cells[1].links:
-                left = _clean_text(row.cells[0].links[0].text)
-                right = _clean_text(row.cells[1].links[0].text)
-                if left and right and "マップ" not in left:
-                    realm_name, offering_name = left, right
-            if len(row.cells) >= 3:
+            if expect_realm_offering:
+                expect_realm_offering = False
+                if row.cells[0].links and row.cells[1].links:
+                    left = _clean_text(row.cells[0].links[0].text)
+                    right = _clean_text(row.cells[1].links[0].text)
+                    if left and right:
+                        realm_name, offering_name = left, right
+                continue
+            if area_m2 is None and len(row.cells) >= 3 and "板" in texts[0] and "面積" in texts[1] and "広さ" in texts[2]:
+                expect_dimensions = True
+                continue
+            if expect_dimensions and len(row.cells) >= 3:
+                expect_dimensions = False
                 p, a, z = texts[0], texts[1], texts[2]
                 if "枚" in p and "㎡" in a:
                     pallet_text = p.replace("枚", "").strip()
@@ -436,6 +624,7 @@ def parse_map_detail_page(html_text: str, *, page_url: str) -> dict[str, object]
                     if m:
                         area_m2 = int(m.group(1))
                     size_class = z.strip()
+                continue
     text = parser.text
     features = ""
     match = re.search(r"特徴・固有オブジェクト\s*(.*?)\s*有利度", text)
@@ -459,6 +648,9 @@ def parse_map_detail_page(html_text: str, *, page_url: str) -> dict[str, object]
         "map_image_urls": list(dict.fromkeys(map_images))[:8],
         "all_image_urls": list(dict.fromkeys(parser.images))[:128],
         "detail_url": page_url,
+        "template_id": parser.template_id,
+        "structure_status": parser.structure_status,
+        "requires_human_review": False,
     }
 
 

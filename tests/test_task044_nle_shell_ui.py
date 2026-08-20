@@ -228,7 +228,10 @@ def test_nle_runtime_guard_runs_for_cached_controller_and_rejects_invalid_bindin
         (shell.interactive_timeline_snapshot, {}),
         (shell.interactive_timeline_select, {}),
         (shell.export_queue_snapshot, {}),
+        (shell.export_queue_preflight, {}),
         (shell.export_queue_prepare_dispatch, {}),
+        (shell.export_queue_apply_dispatch, {}),
+        (shell.export_queue_cancel_dispatch, {}),
         (shell.export_queue_cancel, {}),
     ):
         with pytest.raises(ProductError) as exc:
@@ -273,7 +276,9 @@ def test_html_wires_dynamic_nle_without_javascript_durable_store() -> None:
 
 def test_html_wires_export_rows_and_accessibility_responsive_contracts() -> None:
     for marker in ('id="exportWorkspace"', "export_queue_snapshot",
-                   "export_queue_prepare_dispatch", "export_queue_cancel",
+                   "export_queue_preflight", "export_queue_prepare_dispatch",
+                   "export_queue_apply_dispatch", "export_queue_cancel_dispatch",
+                   "export_queue_cancel",
                    "export_queue_reconcile", "ACCEPT_PROVEN_SUCCESS",
                    "individual_confirmation_required", "UNKNOWNは自動再実行しません",
                    'aria-live="polite"', "@media(max-width:900px)",

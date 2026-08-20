@@ -355,9 +355,21 @@ class Task036ShellBridge:
                 return {"available": False, "rows": []}
             return controller.export_snapshot(args)
 
+    def export_queue_preflight(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().export_preflight(args)
+
     def export_queue_prepare_dispatch(self, args: Any) -> dict[str, object]:
         with self._nle_operation():
             return self._require_nle_controller().export_prepare_dispatch(args)
+
+    def export_queue_apply_dispatch(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().export_apply_dispatch(args)
+
+    def export_queue_cancel_dispatch(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().export_cancel_dispatch(args)
 
     def export_queue_cancel(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():

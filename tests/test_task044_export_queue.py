@@ -80,7 +80,9 @@ def test_contract_is_hash_bound_and_rejects_host_output_target(tmp_path: Path) -
     assert document["external_mutation_authorized"] is False
     assert set(prep.input_hashes) == {
         "project_manifest", "timeline", "edit_plan", "assembly_plan", "final_approval", "preset",
+        "export_profile",
     }
+    assert document["export_profile_sha256"] == prep.input_hashes["export_profile"]
     assert prep.to_dict()["final_approval_receipt_sha256"] == prep.final_approval.final_approval_receipt_sha256
     with pytest.raises(ValueError):
         preparation(manifest, target="C:/Users/user/final.mp4")
@@ -290,6 +292,80 @@ def test_dispatch_writes_dispatching_before_side_effect_and_binds_render_qa(tmp_
         app.apply_dispatch(confirmation_id=confirmation["confirmation_id"], preparation=prep,
                            private_destination=tmp_path / "x.mp4", dispatcher=dispatch)
     assert exc.value.code == "ERR_EXPORT_CONFIRMATION_INVALID"
+
+
+def test_dispatch_confirmation_can_be_cancelled_without_job_mutation(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    prep = preparation(manifest)
+    app = ExportQueueApplication(
+        project_root=tmp_path, project_id="project-1",
+        token_factory=lambda: "confirm-cancel",
+    )
+    job = ready(app, prep)
+    confirmation = app.prepare_dispatch(job_id=job.job_id, preparation=prep)
+    cancelled = app.cancel_dispatch(confirmation_id=str(confirmation["confirmation_id"]))
+    assert cancelled["cancelled"] is True
+    assert DurableProductJobStore.load(tmp_path).get(job.job_id).state is DurableProductJobState.READY
+    with pytest.raises(ProductError) as exc:
+        app.apply_dispatch(
+            confirmation_id=str(confirmation["confirmation_id"]), preparation=prep,
+            private_destination=tmp_path / "final.mp4",
+            dispatcher=lambda *_: ExportDispatchResult("RUNNING"),
+        )
+    assert exc.value.code == "ERR_EXPORT_CONFIRMATION_INVALID"
+
+
+def test_parallel_dispatch_confirmation_is_admitted_exactly_once(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    prep = preparation(manifest)
+    app = ExportQueueApplication(
+        project_root=tmp_path, project_id="project-1",
+        token_factory=lambda: "confirm-parallel",
+    )
+    job = ready(app, prep)
+    confirmation = app.prepare_dispatch(job_id=job.job_id, preparation=prep)
+    calls = 0
+
+    def dispatch(*_args):
+        nonlocal calls
+        calls += 1
+        return ExportDispatchResult("RUNNING")
+
+    def apply():
+        try:
+            return app.apply_dispatch(
+                confirmation_id=str(confirmation["confirmation_id"]),
+                preparation=prep,
+                private_destination=tmp_path / "final.mp4",
+                dispatcher=dispatch,
+            ).state.value
+        except ProductError as exc:
+            return exc.code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = tuple(executor.map(lambda _: apply(), range(2)))
+    assert sorted(results) == ["ERR_EXPORT_CONFIRMATION_INVALID", "RUNNING"]
+    assert calls == 1
+
+
+def test_dispatch_confirmation_storage_is_bounded_and_cancel_releases_capacity(tmp_path: Path) -> None:
+    manifest = setup_project(tmp_path)
+    prep = preparation(manifest)
+    tokens = iter(f"confirm-{index}" for index in range(258))
+    app = ExportQueueApplication(
+        project_root=tmp_path, project_id="project-1", token_factory=lambda: next(tokens),
+    )
+    job = ready(app, prep)
+    confirmations = tuple(
+        app.prepare_dispatch(job_id=job.job_id, preparation=prep)
+        for _ in range(256)
+    )
+    with pytest.raises(ProductError) as exc:
+        app.prepare_dispatch(job_id=job.job_id, preparation=prep)
+    assert exc.value.code == "ERR_EXPORT_CONFIRMATION_CAPACITY"
+    app.cancel_dispatch(confirmation_id=str(confirmations[0]["confirmation_id"]))
+    replacement = app.prepare_dispatch(job_id=job.job_id, preparation=prep)
+    assert replacement["confirmation_id"] == "confirm-257"
 
 
 def test_interrupted_dispatch_recovers_unknown_and_cannot_be_cancelled(tmp_path: Path) -> None:

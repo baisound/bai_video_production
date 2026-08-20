@@ -655,7 +655,18 @@ def build_trusted_launch(
     pre_edit = Task036PreEditRuntime(coordinator, dialog, ingest_port, transcription_port, cut_port)
     adapter = resolve_adapter or ResolveScriptingAssemblyAdapter()
 
+    workflow_runtimes: dict[int, Task036WorkflowRuntime] = {}
+
     def downstream(application):
+        cached = workflow_runtimes.get(id(application))
+        if cached is not None:
+            if cached.application is not application:
+                raise ProductError(
+                    "ERR_TASK036_WORKFLOW_RUNTIME_IDENTITY",
+                    "Trusted workflow runtime identity changed",
+                    ProductErrorCategory.INTERNAL,
+                )
+            return cached
         source_path = pre_edit.media.runtime_source_path
         if source_path is None:
             raise ProductError(
@@ -665,7 +676,7 @@ def build_trusted_launch(
             )
         resolve = Task036ResolveWorkflowFacade(application)
         post_resolve = Task036PostResolveWorkflowFacade(application, resolve)
-        return Task036WorkflowRuntime(
+        runtime = Task036WorkflowRuntime(
             application,
             resolve,
             post_resolve,
@@ -680,6 +691,8 @@ def build_trusted_launch(
             handoff_destination=configuration.handoff_destination,
             subtitle_srt_path=_handoff_subtitle_path(configuration.transcription_output / "subtitles.srt"),
         )
+        workflow_runtimes[id(application)] = runtime
+        return runtime
 
     production_control = Task037ProductionControlApplication(
         project_root=configuration.project_root,
@@ -808,9 +821,41 @@ def build_trusted_launch(
                 project_root=configuration.project_root, project_id=configuration.project_id,
             )
             export_application.recover_interrupted_on_startup()
+        preparation_provider = None
+        destination_provider = None
+        dispatcher = None
+        if export_application is not None and final_review_export_preparation_provider is not None:
+            def preparation_provider(job_id: str) -> ExportPreparation:
+                application_boundary = bridge._final_review_export_application
+                if application_boundary is None:
+                    raise ProductError(
+                        "ERR_FINAL_REVIEW_EXPORT_PREPARATION_NOT_BOUND",
+                        "Private Export preparation is not bound to this launcher",
+                        ProductErrorCategory.STATE,
+                    )
+                return application_boundary.preparation_for_dispatch(job_id=job_id)
+
+            def destination_provider(job_id: str, _preparation: ExportPreparation) -> Path:
+                root = configuration.native_render_evidence_root.resolve()
+                destination = root / "exports" / job_id / "render-output"
+                try:
+                    destination.relative_to(root)
+                except ValueError as exc:
+                    raise ProductError(
+                        "ERR_TASK036_EXPORT_DESTINATION_INVALID",
+                        "Private Export destination escapes the trusted evidence root",
+                        ProductErrorCategory.SECURITY,
+                    ) from exc
+                return destination
+            dispatcher = lambda job, preparation, destination: downstream(
+                application
+            ).dispatch_export(job, preparation, destination)
         return Task044NleShellController(
             timeline=timeline, edit_application=edit_application,
             export_application=export_application,
+            export_preparation_provider=preparation_provider,
+            export_destination_provider=destination_provider,
+            export_dispatcher=dispatcher,
         )
     generation_execution_application = None
     generation_output_adoption_application = None

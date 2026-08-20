@@ -654,7 +654,10 @@ def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
         "Safe cancel: ${row.safe_cancel?'YES':'NO'}",
         "Individual confirmation: ${row.individual_confirmation_required?'REQUIRED':'NO'}",
         "if(row.individual_confirmation_required)",
-        "このJobの実行確認を準備",
+        "このJobを個別確認して実行",
+        "export_queue_preflight',{job_id:row.job_id}",
+        "export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id}",
+        "export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id}",
         "if(row.safe_cancel)",
         "安全にCancel",
         "expected_state_version:row.state_version",
@@ -670,7 +673,7 @@ def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
 def test_export_does_not_use_undefined_fields_or_blanket_execution() -> None:
     for marker in (
         "if(!['ACCEPT_PROVEN_SUCCESS','MARK_FAILED','REQUIRE_HUMAN'].includes(action))continue",
-        "各READY Jobは個別確認だけを準備し、private launcherが別途確認します。",
+        "QUEUEDはprivate preflight、READYはJob単位のHuman確認後だけ実行します。",
         "UNKNOWNは自動再実行しません。",
         "host path persisted: NO",
     ):

@@ -166,7 +166,65 @@ async function scrollNle(direction){if(!currentNleModel?.available)return;const 
 async function pageTracks(direction){if(!currentNleModel?.available)return;const viewport=currentNleModel.projection.viewport,first=viewport.first_track_index+direction*viewport.visible_track_count;await updateNleViewport(viewport.visible_start_frame,viewport.visible_end_frame,first)}
 async function reconcileExport(row,action){let resultIdentity=null,renderQa=null;if(action==='ACCEPT_PROVEN_SUCCESS'){resultIdentity=window.prompt('検証済みExport result identity');if(!resultIdentity)return;renderQa=window.prompt('PASSしたRender QA SHA-256','sha256:');if(!renderQa)return}else if(!window.confirm(`${row.job_id} に ${action} を適用しますか？\n外部処理は再実行しません。`))return;await call('export_queue_reconcile',{job_id:row.job_id,expected_state_version:row.state_version,action,result_identity:resultIdentity,render_qa_sha256:renderQa});await refreshExport()}
 async function prepareExportQueue(){const model=await call('final_review_export_snapshot',{});if(!model?.queue_confirmation_ready)return;const prepared=await call('final_review_export_prepare',{expected_readiness_projection_sha256:model.readiness_projection_sha256,expected_approval_snapshot_sha256:model.approval_snapshot_sha256,expected_preparation_sha256:model.preparation_sha256});if(!prepared)return;const preset=prepared.preset||{};const ok=window.confirm(`このexact Export JobをQueueへ1件追加しますか？\nPreset: ${preset.preset_id||'UNKNOWN'} v${preset.preset_version||'UNKNOWN'}\nTarget: ${prepared.output_target_identity}\n\nDispatch・render・公開は開始しません。`);if(!ok){await call('final_review_export_cancel',{confirmation_id:prepared.confirmation_id});await refreshExport();return}const queued=await call('final_review_export_apply',{confirmation_id:prepared.confirmation_id});if(queued?.job_id)notify(`Export Job ${queued.job_id} をQueueへ追加しました。実行は別の個別確認が必要です。`);await refreshExport()}
-async function refreshExport(){const [model,preparation]=await Promise.all([call('export_queue_snapshot'),call('final_review_export_snapshot',{})]),host=$('exportContent'),add=$('addExportQueueButton'),state=$('exportPreparationState'),content=$('exportPreparationContent');clear(host);const rows=model?.rows||[];$('exportCount').textContent=`${rows.length}件`;state.textContent=preparation?.state||'UNBOUND';add.disabled=preparation?.queue_confirmation_ready!==true;add.dataset.disabledReason=add.disabled?`Export preparation: ${preparation?.state||'UNBOUND'}`:'';add.title=add.dataset.disabledReason;if(preparation?.state==='EXISTING_EXPORT_JOB'){content.textContent=`Durable Export Job: ${preparation.job_id}\nOperation: ${preparation.operation_identity}\nTarget: ${preparation.target_identity}\nState: ${preparation.existing_job_state}\nState version: ${preparation.state_version}\nHost path: NOT PERSISTED`}else if(preparation?.available){const preset=preparation.preset||{};content.textContent=`Preset: ${preset.preset_id} v${preset.preset_version}\nTarget: ${preparation.output_target_identity}\nAuthority: ${preparation.authority_class}\nPreparation: ${preparation.preparation_sha256}\nHost path: NOT PERSISTED`}else content.textContent=`${preparation?.state||'PRIVATE_EXPORT_PREPARATION_UNBOUND'}\nQueue追加、dispatch、renderは開始していません。`;if(!model?.available){host.append(element('div','empty','Export Queue Applicationが接続されていません。'));return}if(!rows.length)host.append(element('div','empty','書き出しQueueは空です。'));for(const row of rows){const progress=row.progress_value===null||row.progress_value===undefined?row.progress_kind:`${Math.round(row.progress_value*100)}%`,item=card(`${row.stage} · ${row.job_id}`,`State: ${row.state}\nOperation: ${row.operation_identity}\nProgress: ${progress}\nSafe cancel: ${row.safe_cancel?'YES':'NO'}\nRecovery: ${(row.recovery_actions||[]).join(', ')||'NONE'}\nIndividual confirmation: ${row.individual_confirmation_required?'REQUIRED':'NO'}\nError: ${row.error_code||'NONE'}\nEvidence: ${row.evidence_ref||'NONE'}`),actions=element('div','row');if(row.individual_confirmation_required){const run=element('button','btn primary','このJobの実行確認を準備');run.addEventListener('click',async()=>{const prepared=await call('export_queue_prepare_dispatch',{job_id:row.job_id});if(prepared)notify(`個別確認を準備しました。Operation: ${prepared.operation_identity}。外部実行はまだ開始していません。`)});actions.append(run)}if(row.safe_cancel){const cancel=element('button','btn danger','安全にCancel');cancel.addEventListener('click',async()=>{if(window.confirm(`${row.job_id} を安全にCancelしますか？`)){await call('export_queue_cancel',{job_id:row.job_id,expected_state_version:row.state_version});await refreshExport()}});actions.append(cancel)}for(const action of row.recovery_actions||[]){if(!['ACCEPT_PROVEN_SUCCESS','MARK_FAILED','REQUIRE_HUMAN'].includes(action))continue;const recover=element('button','btn warn',action==='ACCEPT_PROVEN_SUCCESS'?'検証済み成功を採用':action);recover.addEventListener('click',()=>reconcileExport(row,action));actions.append(recover)}item.append(actions);host.append(item)}host.append(element('div','help','Execute Allは一括許可しません。各READY Jobは個別確認だけを準備し、private launcherが別途確認します。UNKNOWNは自動再実行しません。host path persisted: NO。'))}
+async function refreshExport(){
+  const [model,preparation]=await Promise.all([call('export_queue_snapshot'),call('final_review_export_snapshot',{})]),
+    host=$('exportContent'),add=$('addExportQueueButton'),state=$('exportPreparationState'),content=$('exportPreparationContent');
+  clear(host);
+  const rows=model?.rows||[];
+  $('exportCount').textContent=`${rows.length}件`;
+  state.textContent=preparation?.state||'UNBOUND';
+  add.disabled=preparation?.queue_confirmation_ready!==true;
+  add.dataset.disabledReason=add.disabled?`Export preparation: ${preparation?.state||'UNBOUND'}`:'';
+  add.title=add.dataset.disabledReason;
+  if(preparation?.state==='EXISTING_EXPORT_JOB'){
+    content.textContent=`Durable Export Job: ${preparation.job_id}\nOperation: ${preparation.operation_identity}\nTarget: ${preparation.target_identity}\nState: ${preparation.existing_job_state}\nState version: ${preparation.state_version}\nHost path: NOT PERSISTED`
+  }else if(preparation?.available){
+    const preset=preparation.preset||{};
+    content.textContent=`Preset: ${preset.preset_id} v${preset.preset_version}\nTarget: ${preparation.output_target_identity}\nAuthority: ${preparation.authority_class}\nPreparation: ${preparation.preparation_sha256}\nHost path: NOT PERSISTED`
+  }else content.textContent=`${preparation?.state||'PRIVATE_EXPORT_PREPARATION_UNBOUND'}\nQueue追加、dispatch、renderは開始していません。`;
+  if(!model?.available){host.append(element('div','empty','Export Queue Applicationが接続されていません。'));return}
+  if(!rows.length)host.append(element('div','empty','書き出しQueueは空です。'));
+  for(const row of rows){
+    const progress=row.progress_value===null||row.progress_value===undefined?row.progress_kind:`${Math.round(row.progress_value*100)}%`,
+      item=card(`${row.stage} · ${row.job_id}`,`State: ${row.state}\nOperation: ${row.operation_identity}\nProgress: ${progress}\nSafe cancel: ${row.safe_cancel?'YES':'NO'}\nRecovery: ${(row.recovery_actions||[]).join(', ')||'NONE'}\nIndividual confirmation: ${row.individual_confirmation_required?'REQUIRED':'NO'}\nError: ${row.error_code||'NONE'}\nEvidence: ${row.evidence_ref||'NONE'}`),
+      actions=element('div','row');
+    if(row.state==='QUEUED'){
+      const preflight=element('button','btn','Preflight');
+      preflight.addEventListener('click',async()=>{await call('export_queue_preflight',{job_id:row.job_id});await refreshExport()});
+      actions.append(preflight)
+    }
+    if(row.individual_confirmation_required){
+      const run=element('button','btn primary','このJobを個別確認して実行');
+      run.addEventListener('click',async()=>{
+        const prepared=await call('export_queue_prepare_dispatch',{job_id:row.job_id});
+        if(!prepared)return;
+        const accepted=window.confirm(`このexact Export Jobを実行しますか？\nOperation: ${prepared.operation_identity}\n\n外部レンダーを開始します。UNKNOWN時は自動再実行しません。`);
+        if(!accepted){
+          await call('export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id});
+          await refreshExport();
+          return
+        }
+        const completed=await call('export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id});
+        if(completed)notify(`Export ${completed.state}: ${completed.result_identity||completed.job_id} / QA ${completed.render_qa_sha256||'PENDING'}`);
+        await refreshExport()
+      });
+      actions.append(run)
+    }
+    if(row.safe_cancel){
+      const cancel=element('button','btn danger','安全にCancel');
+      cancel.addEventListener('click',async()=>{if(window.confirm(`${row.job_id} を安全にCancelしますか？`)){await call('export_queue_cancel',{job_id:row.job_id,expected_state_version:row.state_version});await refreshExport()}});
+      actions.append(cancel)
+    }
+    for(const action of row.recovery_actions||[]){
+      if(!['ACCEPT_PROVEN_SUCCESS','MARK_FAILED','REQUIRE_HUMAN'].includes(action))continue;
+      const recover=element('button','btn warn',action==='ACCEPT_PROVEN_SUCCESS'?'検証済み成功を採用':action);
+      recover.addEventListener('click',()=>reconcileExport(row,action));
+      actions.append(recover)
+    }
+    item.append(actions);host.append(item)
+  }
+  host.append(element('div','help','Execute Allは許可しません。QUEUEDはprivate preflight、READYはJob単位のHuman確認後だけ実行します。UNKNOWNは自動再実行しません。host path persisted: NO。'))
+}
 async function refreshQuick(){const model=await call('quick_generation_snapshot'),sources=$('quickSources'),intents=$('quickIntents'),status=$('quickStatus');clear(sources);clear(intents);clear(status);if(!model?.available){sources.append(element('div','empty','Quick Generation正本の前提snapshotが未接続です。'));intents.append(element('div','empty','persisted Quick Intentは表示できません。'));status.append(element('div','record','available: false'));return}const rows=model.intents||[],references=rows.flatMap(row=>(row.references||[]).map(ref=>({...ref,intent_id:row.intent_id,intent_version:row.intent_version})));if(!references.length)sources.append(element('div','empty','参照Sourceはありません。'));for(const ref of references){sources.append(card(`${ref.role} · ${ref.reference_id}`,`Intent: ${ref.intent_id} v${ref.intent_version}\nSource: ${ref.source_kind}\nAsset: ${ref.asset_id}\nSHA-256: ${ref.asset_sha256}\nSlot/Candidate: ${ref.slot_id||'NONE'} / ${ref.candidate_id||'NONE'}`))}if(!rows.length)intents.append(element('div','empty','Quick Intentはまだありません。'));for(const row of rows){intents.append(card(`${row.mode} · ${row.intent_id} v${row.intent_version}`,`Status: ${row.status}\nScene/Slot: ${row.scene_id} / ${row.target_slot_id}\nPrompt: ${row.prompt_id} v${row.prompt_version}\nPrompt SHA-256: ${row.prompt_sha256}\nCompilation: ${row.compilation_sha256}\nProvider profile: ${row.provider_profile_id} v${row.provider_profile_version}\nRoute/Capability: ${row.selected_route_id} / ${row.selected_capability}\nCost ceiling: ${row.currency} ${row.cost_ceiling}\nRights: ${row.rights_authorization_ref}\nExecution decision: ${row.execution_decision_id}\nProvider execution: ${row.provider_execution_started?'STARTED':'NOT STARTED'}\nCandidate created: ${row.candidate_created?'YES':'NO'}\nMedia write: ${row.media_write_started?'STARTED':'NOT STARTED'}`))}status.append(element('div','record',`Project: ${model.project_id}\nIntent count: ${model.intent_count}\nPersisted: ${model.persisted}\nQuick snapshot: ${model.quick_snapshot_sha256}\nPrompt snapshot: ${model.prompt_snapshot_sha256}\nProduction snapshot: ${model.production_snapshot_sha256}\nProvider execution started: ${model.provider_execution_started}\nPaid execution authorized: ${model.paid_execution_authorized}\nCandidate creation started: ${model.candidate_creation_started}\nMedia write started: ${model.media_write_started}`))}
 async function refreshGameIntelligence(){const model=await call('game_intelligence_snapshot',currentGameMatchId?{match_id:currentGameMatchId}:{});currentGameIntelligence=model;const matches=$('gameMatchList'),events=$('gameEventList');clear(matches);clear(events);if(!model?.available){$('gameIntelligenceSummary').textContent='未接続';matches.append(element('div','empty','Game Intelligence Applicationが接続されていません。'));$('gameEventDetail').textContent='利用できません。';return}currentGameMatchId=model.selected_match_id||null;const matchRows=model.matches||[];$('gameIntelligenceSummary').textContent=currentGameMatchId?`${currentGameMatchId} / ${model.events?.length||0} events`:'解析データなし';const cap=$('gameIntelligenceCapabilityNote');if(cap)cap.textContent=`Exportはanalysis-onlyです。LLM: ${model.llm_commentary_available?'READY (実行時確認必須)':'未設定'} / Trivia: VERIFIED ${model.trivia_verified_count||0}, CANDIDATE ${model.trivia_candidate_count||0} / 認識baselineは実装済みですがProduction精度は実動画Human Goldで校正します。`;if(!matchRows.length)matches.append(element('div','empty','解析済みMatchはありません。実動画認識baselineはR10Bで利用できますが、Production精度はHuman Gold校正前です。'));for(const row of matchRows){const button=element('button',`btn${row.match_id===currentGameMatchId?' primary':''}`,`${row.game_profile_id} · ${row.game_version}
 ${row.match_id}

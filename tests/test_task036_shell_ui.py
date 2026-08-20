@@ -419,7 +419,8 @@ def test_html_promotes_planning_scene_contract_with_separate_go_and_install():
     assert "planning_approve_go" in HTML
     assert "planning_prepare_install_plan" in HTML
     assert "planning_apply_install_plan" in HTML
-    assert "Provider/課金/Resolveは開始しません" in HTML
+    assert "企画AIは明示確認後に無償ローカルModelだけを実行します" in HTML
+    assert "有償Provider・課金・Resolveは開始しません" in HTML
     assert "生成・課金・Resolve操作は開始しません" in HTML
     assert "Proposal本文を改訂" in HTML
     assert "新しいHuman GOを要求します" in HTML

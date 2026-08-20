@@ -300,7 +300,7 @@ class LocalOllamaPlanningAdapter:
             "model": self.route.model_id, "stream": False, "think": False, "format": LOCAL_PLANNING_CANDIDATE_SCHEMA,
             "options": {"temperature": 0, "num_predict": 8192},
             "messages": [
-                {"role": "system", "content": "Return exactly one JSON object matching this schema. Do not add Markdown or host paths. The final end_frame must equal target_duration_seconds * timeline_fps; scenes start at zero, are contiguous without gaps or overlaps, and end exactly at that product. Dense UI requires locked_reference=true, camera_motion=STATIC, and post_composite_text=true. Schema: " + schema_text},
+                {"role": "system", "content": "Return exactly one JSON object matching this schema. Do not add Markdown or host paths. Before returning JSON, calculate target_frames = target_duration_seconds * timeline_fps as an integer. The first scene start_frame must be 0; every later start_frame must exactly equal the previous end_frame; every end_frame must be greater than its start_frame and no greater than target_frames; the last end_frame must exactly equal target_frames. Every final_hold_frames must satisfy 0 <= final_hold_frames < (end_frame - start_frame). For example, 2 seconds at 30 fps with two equal scenes uses [0,30) and [30,60), with a final_hold_frames smaller than 30. Dense UI requires locked_reference=true, camera_motion=STATIC, and post_composite_text=true. Check these arithmetic invariants before returning. Schema: " + schema_text},
                 {"role": "user", "content": prompt.strip()},
             ],
         }

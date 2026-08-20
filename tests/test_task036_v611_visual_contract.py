@@ -226,14 +226,25 @@ def test_planning_projects_real_proposal_and_separates_go_from_install() -> None
         assert marker in SHELL_HTML
 
 
-def test_planning_does_not_invent_ai_proposal_or_execution_authority() -> None:
+def test_planning_binds_human_confirmed_local_free_proposal_generation() -> None:
     for marker in (
-        'data-disabled-reason="AI Proposal生成のtyped Application Serviceが未接続です"',
-        "AI Proposal生成は実行しません。",
+        'id="planningRequest"',
+        'id="planningGenerateButton" disabled',
+        'id="planningGenerationStatus"',
+        "function renderPlanningGenerationStatus(status)",
+        "async function generatePlanning()",
+        "planning_generation_status",
+        "planning_generation_prepare",
+        "expected_planning_snapshot_sha256:model.snapshot_sha256",
+        "planning_generation_apply",
+        "planning_generation_cancel",
+        "prepared.cost_class",
+        "有償Provider・課金・Resolve・Human GOは開始しません。続行しますか？",
         "Provider: 未開始 / Paid: 未許可 / Budget reservation: なし / Resolve: 未変更 / Publish: 未開始",
         "if(warnings.length&&!window.confirm",
     ):
         assert marker in SHELL_HTML
+    assert "AI Proposal生成のtyped Application Serviceが未接続です" not in SHELL_HTML
 
 
 def test_scenes_browser_projects_exact_blueprint_and_selected_scene_revision() -> None:

@@ -37,6 +37,7 @@ from .export_queue import ExportPreparation
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
+from .task036_planning_generation_application import Task036PlanningGenerationApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .prompt_evidence_application import Task040PromptEvidenceApplication
@@ -197,6 +198,7 @@ class Task036ShellBridge:
         production_control: Task037ProductionControlApplication | None = None,
         audit_application: Task038AuditApplication | None = None,
         planning_application: Task027PlanningApplication | None = None,
+        planning_generation_application: Task036PlanningGenerationApplication | None = None,
         generation_safety_application: Task013GenerationSafetyApplication | None = None,
         continuity_application: Task039ContinuityApplication | None = None,
         prompt_evidence_application: Task040PromptEvidenceApplication | None = None,
@@ -238,6 +240,12 @@ class Task036ShellBridge:
         self._production_control = production_control
         self._audit_application = audit_application
         self._planning_application = planning_application
+        if planning_generation_application is not None and (
+            planning_application is None
+            or planning_generation_application.planning is not planning_application
+        ):
+            raise ValueError("Planning generation must use the supplied Planning application")
+        self._planning_generation_application = planning_generation_application
         self._generation_safety_application = generation_safety_application
         self._continuity_application = continuity_application
         self._prompt_evidence_application = prompt_evidence_application
@@ -805,6 +813,76 @@ class Task036ShellBridge:
         if self._planning_application is None:
             return {"available": False}
         return {"available": True, **self._planning_application.snapshot(proposal_id=proposal_id)}
+
+    def planning_generation_status(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Planning generation status")
+        if self._planning_generation_application is None:
+            return {
+                "available": False,
+                "provider_execution_started": False,
+                "paid_execution_authorized": False,
+                "human_confirmation_required": True,
+            }
+        try:
+            with self._nle_operation():
+                return self._planning_generation_application.status()
+        except ProductError as exc:
+            return {
+                "available": False,
+                "blocker_code": exc.code,
+                "provider_execution_started": False,
+                "paid_execution_authorized": False,
+                "human_confirmation_required": True,
+            }
+
+    def _require_planning_generation_application(self) -> Task036PlanningGenerationApplication:
+        if self._planning_generation_application is None:
+            raise ProductError(
+                "ERR_TASK036_PLANNING_GENERATION_NOT_BOUND",
+                "Local Planning generation is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._planning_generation_application
+
+    def planning_generation_prepare(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"vague_request", "expected_planning_snapshot_sha256"}
+            or not isinstance(args["vague_request"], str)
+            or not isinstance(args["expected_planning_snapshot_sha256"], str)
+        ):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning generation preparation request is invalid", ProductErrorCategory.VALIDATION)
+        with self._nle_operation():
+            return self._require_planning_generation_application().prepare(
+                vague_request=args["vague_request"],
+                expected_planning_snapshot_sha256=args["expected_planning_snapshot_sha256"],
+            )
+
+    def planning_generation_apply(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"]
+        ):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning generation request is invalid", ProductErrorCategory.VALIDATION)
+        with self._nle_operation():
+            return self._require_planning_generation_application().apply(
+                confirmation_id=args["confirmation_id"],
+            )
+
+    def planning_generation_cancel(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"]
+        ):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning generation cancellation request is invalid", ProductErrorCategory.VALIDATION)
+        with self._nle_operation():
+            return self._require_planning_generation_application().cancel(
+                confirmation_id=args["confirmation_id"],
+            )
 
     def planning_prepare_revision(self, args: Any) -> dict[str, Any]:
         required = {"proposal_id", "sections", "expected_snapshot_sha256"}

@@ -12,7 +12,7 @@ from ai_video_production import (
     AiConnectionProfile, AiWorkload, CostClass, ModelRoute, ProviderFamily,
     ReasoningEffort, SelectionMode,
 )
-from ai_video_production.connection_settings_store import ConnectionSettingsEditor
+from ai_video_production.connection_settings_store import ConnectionSettingsEditor, ConnectionSettingsStore
 from ai_video_production.connection_settings_web import (
     ConnectionSettingsWebService, launch_server,
 )
@@ -95,6 +95,46 @@ def test_service_rejects_secret_in_credential_ready_argument(tmp_path: Path) -> 
             tmp_path / "settings.json", raw,
             available_credential_refs=frozenset({"sk-not-a-reference"}),
         )
+
+
+def test_current_connection_reloads_external_canonical_profile_without_secrets(tmp_path: Path) -> None:
+    raw = tmp_path / "profile.json"
+    raw.write_text(json.dumps(profile().to_dict()), encoding="utf-8")
+    settings = tmp_path / "settings.json"
+    service = ConnectionSettingsWebService.from_paths(settings, raw)
+    modes = {workload.value: SelectionMode.DISABLED.value for workload in AiWorkload}
+    modes[AiWorkload.PLANNING.value] = SelectionMode.OFFLINE_ONLY.value
+    changed = ConnectionSettingsEditor.apply(
+        profile(),
+        workload_modes=modes,
+        preferred_route_ids={AiWorkload.PLANNING.value: "local"},
+    )
+    ConnectionSettingsStore.save(settings, changed)
+    current, availability = service.current_connection()
+    assert current.to_dict() == changed.to_dict()
+    assert service.revision == 1
+    assert availability.available_route_ids == frozenset({"openai", "local"})
+    assert availability.available_credential_refs == frozenset()
+
+
+def test_current_connection_rejects_removed_or_symlinked_canonical_settings(tmp_path: Path) -> None:
+    raw = tmp_path / "profile.json"
+    raw.write_text(json.dumps(profile().to_dict()), encoding="utf-8")
+    settings = tmp_path / "settings.json"
+    service = ConnectionSettingsWebService.from_paths(settings, raw)
+    ConnectionSettingsStore.save(settings, profile())
+    service.current_connection()
+
+    saved = tmp_path / "saved-settings.json"
+    settings.replace(saved)
+    with pytest.raises(ai_video_production.ProductError) as removed:
+        service.current_connection()
+    assert removed.value.code == "ERR_CONNECTION_SETTINGS_INTEGRITY"
+
+    settings.symlink_to(saved)
+    with pytest.raises(ai_video_production.ProductError) as linked:
+        service.current_connection()
+    assert linked.value.code == "ERR_CONNECTION_SETTINGS_INTEGRITY"
 
 
 def test_screen_is_local_bilingual_and_never_exposes_credential_reference(live_screen) -> None:

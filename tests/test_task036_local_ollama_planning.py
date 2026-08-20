@@ -80,6 +80,8 @@ def test_fixed_loopback_model_admission_and_exact_structured_schema_body():
     schema_text = json.dumps(LOCAL_PLANNING_CANDIDATE_SCHEMA, ensure_ascii=False, separators=(",", ":"))
     assert schema_text in body["messages"][0]["content"]
     assert "target_duration_seconds * timeline_fps" in body["messages"][0]["content"]
+    assert "0 <= final_hold_frames < (end_frame - start_frame)" in body["messages"][0]["content"]
+    assert "[0,30) and [30,60)" in body["messages"][0]["content"]
 
 
 def test_missing_model_never_posts_or_downloads():

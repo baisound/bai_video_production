@@ -3,6 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from decimal import Decimal
+import json
 from pathlib import Path
 from threading import Lock
 import shutil
@@ -11,9 +12,12 @@ import pytest
 
 from ai_video_production.ai_connections import AiConnectionProfile, AiWorkload, ConnectionAvailability, CostClass, ModelRoute, ProviderFamily, SelectionMode
 from ai_video_production.errors import ProductError, ProductErrorCategory
+from ai_video_production.desktop_shell import ShellApplicationService
 from ai_video_production.approved_creative_generation import ApprovedCreativeGenerationPlanner
 from ai_video_production.approved_plan_orchestration import ApprovedPlanProductionControlInstaller
 from ai_video_production.creative_generation import CreativeGenerationMode, CreativeGenerationRequest
+from ai_video_production.connection_settings_store import ConnectionSettingsStore
+from ai_video_production.connection_settings_web import ConnectionSettingsWebService
 from ai_video_production.local_ollama_planning import parse_local_planning_candidate
 from ai_video_production.planning_application import Task027PlanningApplication
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
@@ -24,6 +28,7 @@ from ai_video_production.production_control import ProductionControlRegistry
 from ai_video_production.prompt_registry import PromptEntity
 from ai_video_production.shot_feasibility import CheckState, ShotFeasibilityAssessment
 from ai_video_production.task036_planning_generation_application import Task036PlanningGenerationApplication
+from ai_video_production.task036_shell_ui import Task036ShellBridge
 
 
 def candidate(title: str = "Local plan"):
@@ -166,6 +171,27 @@ def test_connection_drift_consumes_confirmation_without_provider_or_store(tmp_pa
     assert adapter.generate_calls == 0 and not (tmp_path / "production-proposal.json").exists()
     with pytest.raises(ProductError):
         app.apply(confirmation_id=prepared["confirmation_id"])
+
+
+def test_removed_canonical_connection_after_prepare_blocks_provider_and_publication(tmp_path: Path):
+    raw = tmp_path / "initial-profile.json"
+    current_profile, _ = connection()
+    raw.write_text(json.dumps(current_profile.to_dict()), encoding="utf-8")
+    settings = tmp_path / "ai-connection-settings.json"
+    ConnectionSettingsStore.save(settings, current_profile)
+    service = ConnectionSettingsWebService.from_paths(settings, raw)
+    adapter = Adapter()
+    app = application(tmp_path, adapter, connection_provider=service.current_connection)
+    prepared = app.prepare(
+        vague_request="revoked settings",
+        expected_planning_snapshot_sha256=app.planning.snapshot()["snapshot_sha256"],
+    )
+    settings.unlink()
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"])
+    assert exc.value.code == "ERR_CONNECTION_SETTINGS_INTEGRITY"
+    assert adapter.generate_calls == 0
+    assert not (tmp_path / "production-proposal.json").exists()
 
 
 def test_provider_failure_leaves_canonical_store_absent(tmp_path: Path):
@@ -623,3 +649,86 @@ def test_model_cannot_use_reserved_provenance_sections(tmp_path: Path):
         app.apply(confirmation_id=prepared["confirmation_id"])
     assert exc.value.code == "ERR_TASK036_PLANNING_RESERVED_SECTION"
     assert not (tmp_path / "production-proposal.json").exists()
+
+
+def test_shell_bridge_runs_local_planning_only_after_exact_human_confirmation(tmp_path: Path):
+    adapter = Adapter()
+    planning_generation = application(tmp_path, adapter)
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.22.0"),
+        planning_application=planning_generation.planning,
+        planning_generation_application=planning_generation,
+    )
+    status = bridge.planning_generation_status({})
+    assert status["available"] is True
+    assert status["route_id"] == "planning-local"
+    assert status["model_id"] == "qwen3:8b"
+    assert status["cost_class"] == "LOCAL_FREE_AI"
+    assert status["provider_execution_started"] is False
+    assert status["paid_execution_authorized"] is False
+    assert status["human_confirmation_required"] is True
+    current = bridge.planning_snapshot({})
+    prepared = bridge.planning_generation_prepare({
+        "vague_request": "2秒の紹介動画",
+        "expected_planning_snapshot_sha256": current["snapshot_sha256"],
+    })
+    assert prepared["human_confirmation_required"] is True
+    assert adapter.ready_calls == 1 and adapter.generate_calls == 0
+    result = bridge.planning_generation_apply({
+        "confirmation_id": prepared["confirmation_id"],
+    })
+    assert result["paid_execution_authorized"] is False
+    assert adapter.generate_calls == 1
+    projected = bridge.planning_snapshot({"proposal_id": result["proposal_id"]})
+    assert projected["workspace"]["go_status"] == "GO_REQUIRED"
+
+
+def test_shell_bridge_unbound_cancel_and_broad_requests_fail_closed(tmp_path: Path):
+    unbound = Task036ShellBridge(ShellApplicationService(product_version="0.22.0"))
+    assert unbound.planning_generation_status({})["available"] is False
+    with pytest.raises(ProductError) as missing:
+        unbound.planning_generation_prepare({
+            "vague_request": "never",
+            "expected_planning_snapshot_sha256": "sha256:" + "0" * 64,
+        })
+    assert missing.value.code == "ERR_TASK036_PLANNING_GENERATION_NOT_BOUND"
+
+    adapter = Adapter()
+    planning_generation = application(tmp_path, adapter)
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.22.0"),
+        planning_application=planning_generation.planning,
+        planning_generation_application=planning_generation,
+    )
+    with pytest.raises(ProductError) as broad:
+        bridge.planning_generation_prepare({
+            "vague_request": "blocked",
+            "expected_planning_snapshot_sha256": planning_generation.planning.snapshot()["snapshot_sha256"],
+            "paid": True,
+        })
+    assert broad.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    prepared = bridge.planning_generation_prepare({
+        "vague_request": "cancel",
+        "expected_planning_snapshot_sha256": planning_generation.planning.snapshot()["snapshot_sha256"],
+    })
+    cancelled = bridge.planning_generation_cancel({
+        "confirmation_id": prepared["confirmation_id"],
+    })
+    assert cancelled["cancelled"] is True
+    assert adapter.generate_calls == 0
+
+
+def test_shell_bridge_rejects_non_string_or_empty_planning_confirmation_ids(tmp_path: Path):
+    adapter = Adapter()
+    planning_generation = application(tmp_path, adapter)
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.22.0"),
+        planning_application=planning_generation.planning,
+        planning_generation_application=planning_generation,
+    )
+    for operation in (bridge.planning_generation_apply, bridge.planning_generation_cancel):
+        for invalid in (None, 1, True, ""):
+            with pytest.raises(ProductError) as exc:
+                operation({"confirmation_id": invalid})
+            assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    assert adapter.generate_calls == 0

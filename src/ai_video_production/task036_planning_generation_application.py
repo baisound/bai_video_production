@@ -205,6 +205,19 @@ class Task036PlanningGenerationApplication:
             raise ProductError("ERR_TASK036_PLANNING_REQUEST_ID_CONFLICT", "Deterministic Planning identity conflicts with different canonical content", ProductErrorCategory.DATA_INTEGRITY)
         return selected
 
+    def status(self) -> dict[str, Any]:
+        self._project_manifest()
+        _, _, route, _, _ = self._connection()
+        return {
+            "available": True,
+            "route_id": route.route_id,
+            "model_id": route.model_id,
+            "cost_class": route.cost_class.value,
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "human_confirmation_required": True,
+        }
+
     def prepare(self, *, vague_request: str, expected_planning_snapshot_sha256: str) -> dict[str, Any]:
         request_text, request_sha = self._request(vague_request)
         project_manifest_sha = self._project_manifest()

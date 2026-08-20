@@ -55,6 +55,7 @@ from .product_project_store import ProductProjectManifestStore
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
+from .task036_planning_generation_application import Task036PlanningGenerationApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .connection_settings_web import ConnectionSettingsWebService
@@ -903,7 +904,13 @@ def build_trusted_launch(
         # the only mutation-capable TASK-044 composition path in this launcher.
         ProductProjectManifestStore.load(configuration.project_root)
         runtime_lease = _Task036ProjectRuntimeLease.acquire(configuration.project_root)
+    planning_generation_application = None
     try:
+        if connection_settings is not None and has_mutation_composition:
+            planning_generation_application = Task036PlanningGenerationApplication(
+                planning_application=planning_application,
+                connection_provider=connection_settings.current_connection,
+            )
         bridge = Task036ShellBridge(
             coordinator.shell,
             native_dialog=dialog,
@@ -912,6 +919,7 @@ def build_trusted_launch(
             production_control=production_control,
             audit_application=audit_application,
             planning_application=planning_application,
+            planning_generation_application=planning_generation_application,
             generation_safety_application=generation_safety_application,
             continuity_application=continuity_application,
             prompt_evidence_application=prompt_evidence_application,

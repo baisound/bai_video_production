@@ -28,6 +28,7 @@ from ai_video_production.task036_trusted_launcher import (
 from ai_video_production.production_control_application import Task037ProductionControlApplication
 from ai_video_production.audit_application import Task038AuditApplication
 from ai_video_production.planning_application import Task027PlanningApplication
+from ai_video_production.task036_planning_generation_application import Task036PlanningGenerationApplication
 from ai_video_production.generation_safety_application import Task013GenerationSafetyApplication
 from ai_video_production.continuity_application import Task039ContinuityApplication
 from ai_video_production.prompt_evidence_application import Task040PromptEvidenceApplication
@@ -632,6 +633,70 @@ def test_trusted_launch_binds_existing_task028_settings_without_provider_executi
     assert snapshot["provider_execution_started"] is False
     assert snapshot["generation_started"] is False
     assert snapshot["credential_values_redisplayed"] is False
+    assert launch.bridge._planning_generation_application is None
+    assert launch.bridge.planning_generation_status({})["available"] is False
+
+
+def test_trusted_launcher_binds_local_free_planning_and_invalidates_old_bridge_on_close(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    ProductProjectManifestStore.save(
+        config.project_root,
+        ProductProjectManifest.create(
+            project_id=config.project_id,
+            project_revision=1,
+            product_version="0.22.0",
+            timebase=ProjectTimebase(
+                config.timeline_rate.numerator,
+                config.timeline_rate.denominator,
+            ),
+            child_bindings=(),
+        ),
+    )
+    profile = AiConnectionProfile(
+        "local-planning-profile",
+        "1.0.0",
+        SelectionMode.OFFLINE_ONLY,
+        (
+            ModelRoute(
+                "planning-local",
+                AiWorkload.PLANNING,
+                ProviderFamily.LOCAL_OPEN_SOURCE,
+                "ollama",
+                "qwen3:8b",
+                CostClass.LOCAL_FREE_AI,
+                capabilities=("TEXT_GENERATION",),
+            ),
+        ),
+    )
+    ConnectionSettingsStore.save(
+        Path(raw["project"]["project_root"]) / "ai-connection-settings.json",
+        profile,
+    )
+    launch = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+    bridge = launch.bridge
+    assert isinstance(
+        bridge._planning_generation_application,
+        Task036PlanningGenerationApplication,
+    )
+    assert bridge._planning_generation_application.planning is bridge._planning_application
+    assert bridge.planning_generation_status({})["available"] is True
+    expected = bridge.planning_snapshot({})["snapshot_sha256"]
+    launch.close()
+    closed_status = bridge.planning_generation_status({})
+    assert closed_status["available"] is False
+    assert closed_status["blocker_code"] == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    with pytest.raises(ProductError) as exc:
+        bridge.planning_generation_prepare({
+            "vague_request": "must not reach Ollama",
+            "expected_planning_snapshot_sha256": expected,
+        })
+    assert exc.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
 
 
 def test_v11_launch_explicitly_composes_bounded_local_generation_without_execution(tmp_path: Path):

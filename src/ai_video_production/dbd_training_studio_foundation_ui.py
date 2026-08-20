@@ -13,10 +13,11 @@ from .dbd_training_studio_foundation import (
     WorkspaceRegistry,
     WorkspaceService,
     legacy_training_workspace_root,
+    resolve_workspace_runtime_profile,
 )
 from .dbd_training_studio_i18n import UserFacingError
 from .dbd_workspace_management_ui import build_workspace_management_panel
-from .dbd_training_review_ui import build_training_data_review_panel
+from .dbd_training_review_ui_v2 import build_training_data_review_panel
 
 
 class WorkspaceSelectionCancelled(RuntimeError):
@@ -190,7 +191,7 @@ def build_foundation_tabs(
     review_tab = ttk.Frame(notebook, padding=16)
     notebook.add(intro_tab, text="はじめに")
     notebook.add(runtime_tab, text="実行環境を設定")
-    notebook.add(review_tab, text="学習データを確認")
+    notebook.add(review_tab, text="学習・登録データを確認")
 
     # Introduction
     intro_tab.columnconfigure(0, weight=1)
@@ -207,7 +208,7 @@ def build_foundation_tabs(
             "2. ゲーム情報を取得\n"
             "3. HUD位置を設定\n"
             "4. 動画または画像から学習\n"
-            "5. 学習データを確認"
+            "5. 学習・登録データを確認"
         ),
         justify="left",
         wraplength=900,
@@ -218,7 +219,7 @@ def build_foundation_tabs(
     # Runtime profile
     runtime_tab.columnconfigure(1, weight=1)
     store = RuntimeProfileStore()
-    detected = store.autodetect()
+    detected = resolve_workspace_runtime_profile(workspace, store=store)
     runtime_state = {"profile": detected}
 
     runtime_vars = {
@@ -238,7 +239,7 @@ def build_foundation_tabs(
         ("FFmpeg", runtime_vars["ffmpeg"], False),
         ("FFprobe", runtime_vars["ffprobe"], False),
         ("Tesseract", runtime_vars["tesseract"], False),
-        ("FasterWhisperモデル保存先", runtime_vars["model_cache"], False),
+        ("FasterWhisper / Hugging Face キャッシュ", runtime_vars["model_cache"], False),
         ("既定Whisperモデル", runtime_vars["model"], False),
         ("デバイス", runtime_vars["device"], False),
         ("計算方式", runtime_vars["compute"], False),
@@ -258,6 +259,28 @@ def build_foundation_tabs(
                 if chosen:
                     target.set(chosen)
             ttk.Button(runtime_tab, text="変更", command=browse).grid(row=row_no, column=2, sticky="w")
+        elif label == "FasterWhisper / Hugging Face キャッシュ":
+            def browse_model_cache(target=var) -> None:
+                current = target.get().strip()
+                initial = None
+                if current:
+                    candidate = Path(current).expanduser()
+                    if candidate.is_dir():
+                        initial = str(candidate)
+                    elif candidate.parent.is_dir():
+                        initial = str(candidate.parent)
+                chosen = filedialog.askdirectory(
+                    title="FasterWhisper / Hugging Face キャッシュフォルダを選択",
+                    initialdir=initial,
+                    mustexist=True,
+                )
+                if chosen:
+                    target.set(chosen)
+            ttk.Button(
+                runtime_tab,
+                text="参照",
+                command=browse_model_cache,
+            ).grid(row=row_no, column=2, sticky="w")
 
     status_text = (
         f"FFmpeg: {'✓' if detected.ffmpeg.health == 'AVAILABLE' else '×'}   "
@@ -306,6 +329,15 @@ def build_foundation_tabs(
     )
 
     # Training data review - R3 operational maintenance.
-    build_training_data_review_panel(review_tab, training_workspace)
+    refresh_review = build_training_data_review_panel(review_tab, training_workspace)
+
+    def refresh_review_when_selected(event=None) -> None:
+        try:
+            if notebook.select() == str(review_tab):
+                refresh_review()
+        except Exception:
+            return
+
+    notebook.bind("<<NotebookTabChanged>>", refresh_review_when_selected, add="+")
 
     return intro_tab, runtime_tab, review_tab

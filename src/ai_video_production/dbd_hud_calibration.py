@@ -69,19 +69,44 @@ class FrameGeometry:
 
 
 class FFmpegFrameInspector:
-    """Bounded FFmpeg/ffprobe helper for calibration previews."""
+    """Bounded FFmpeg/ffprobe helper for calibration previews.
+
+    Probe results are cached per source identity and video previews use timestamp
+    seeking instead of decoding from frame zero for every transport update.
+    """
 
     def __init__(self, *, ffmpeg_executable: str = "ffmpeg", ffprobe_executable: str = "ffprobe") -> None:
         self.ffmpeg_executable = ffmpeg_executable
         self.ffprobe_executable = ffprobe_executable
+        self._probe_cache: dict[tuple[str, int, int], tuple[FrameGeometry, float]] = {}
 
-    def probe_geometry(self, source_path: str | Path) -> FrameGeometry:
+    @staticmethod
+    def _parse_rate(value: str | None) -> float:
+        raw = (value or "").strip()
+        if not raw or raw == "0/0":
+            raise ValueError("video FPS is unavailable")
+        if "/" in raw:
+            numerator, denominator = raw.split("/", 1)
+            fps = int(numerator) / int(denominator)
+        else:
+            fps = float(raw)
+        if fps <= 0:
+            raise ValueError("video FPS must be positive")
+        return fps
+
+    def _probe_video(self, source_path: str | Path) -> tuple[FrameGeometry, float]:
         source = Path(source_path)
         if not source.is_file():
             raise ValueError("calibration source does not exist")
+        stat = source.stat()
+        cache_key = (str(source.resolve()), stat.st_size, stat.st_mtime_ns)
+        cached = self._probe_cache.get(cache_key)
+        if cached is not None:
+            return cached
         cmd = [
             self.ffprobe_executable, "-v", "error", "-select_streams", "v:0",
-            "-show_entries", "stream=width,height", "-of", "json", str(source),
+            "-show_entries", "stream=width,height,avg_frame_rate,r_frame_rate",
+            "-of", "json", str(source),
         ]
         try:
             completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=30)
@@ -90,10 +115,18 @@ class FFmpegFrameInspector:
         if completed.returncode != 0:
             raise ProductError("ERR_DBD_HUD_FFPROBE_FAILED", "ffprobe failed to inspect calibration source", ProductErrorCategory.EXTERNAL_DEPENDENCY, retryable=True)
         try:
-            streams = json.loads(completed.stdout.decode("utf-8"))["streams"]
-            return FrameGeometry(int(streams[0]["width"]), int(streams[0]["height"]))
+            stream = json.loads(completed.stdout.decode("utf-8"))["streams"][0]
+            geometry = FrameGeometry(int(stream["width"]), int(stream["height"]))
+            fps = self._parse_rate(stream.get("avg_frame_rate") or stream.get("r_frame_rate"))
         except Exception as exc:
-            raise ProductError("ERR_DBD_HUD_FRAME_GEOMETRY", "video frame geometry could not be resolved", ProductErrorCategory.DATA_INTEGRITY) from exc
+            raise ProductError("ERR_DBD_HUD_FRAME_GEOMETRY", "video frame geometry/fps could not be resolved", ProductErrorCategory.DATA_INTEGRITY) from exc
+        self._probe_cache.clear()
+        self._probe_cache[cache_key] = (geometry, fps)
+        return geometry, fps
+
+    def probe_geometry(self, source_path: str | Path) -> FrameGeometry:
+        geometry, _fps = self._probe_video(source_path)
+        return geometry
 
     def extract_preview_pgm(
         self, *, source_path: str | Path, output_path: str | Path, frame_index: int = 0,
@@ -102,13 +135,19 @@ class FFmpegFrameInspector:
         if frame_index < 0:
             raise ValueError("frame_index must be non-negative")
         source = Path(source_path)
-        original = self.probe_geometry(source)
+        original, fps = self._probe_video(source)
         scale = min(maximum_width / original.width, maximum_height / original.height, 1.0)
         preview = FrameGeometry(max(64, round(original.width * scale)), max(64, round(original.height * scale)))
         target = Path(output_path)
         target.parent.mkdir(parents=True, exist_ok=True)
-        vf = f"select=eq(n\\,{frame_index}),scale={preview.width}:{preview.height}:flags=area,format=gray"
-        cmd = [self.ffmpeg_executable, "-hide_banner", "-loglevel", "error", "-i", str(source), "-vf", vf, "-frames:v", "1", "-f", "image2", "-vcodec", "pgm", "-y", str(target)]
+        seek_seconds = frame_index / fps
+        vf = f"scale={preview.width}:{preview.height}:flags=area,format=gray"
+        cmd = [
+            self.ffmpeg_executable, "-hide_banner", "-loglevel", "error",
+            "-ss", f"{seek_seconds:.6f}", "-i", str(source),
+            "-vf", vf, "-frames:v", "1", "-f", "image2",
+            "-vcodec", "pgm", "-y", str(target),
+        ]
         try:
             completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
         except (OSError, subprocess.TimeoutExpired) as exc:

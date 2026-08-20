@@ -19,6 +19,10 @@ from typing import Iterable, Sequence
 
 from .canonical_game_event import GameEventType
 from .dbd_commentary_knowledge import DbDTriviaStore, TriviaCandidateMiner
+from .dbd_trivia_operational import (
+    TriviaOperationalMetadataStore,
+    index_transcript_candidates,
+)
 from .dbd_hud_detectors import (
     NotificationVocabularyEntry,
     NotificationVocabularyIndex,
@@ -163,6 +167,11 @@ class VisualTrainingSample:
     group: str = "default"
     source_ref: str = "manual://owner"
     notes: str = ""
+    registration_origin: str = "LEGACY"
+    slot: str = ""
+    display_state: str = ""
+    source_video: str = ""
+    source_frame: int | None = None
 
     def __post_init__(self) -> None:
         if not self.label.strip() or len(self.label) > 256:
@@ -175,6 +184,14 @@ class VisualTrainingSample:
             raise ValueError("visual training source_ref must be bounded non-empty text")
         if len(self.notes) > 4000:
             raise ValueError("visual training notes are too long")
+        if self.registration_origin not in {"LEGACY", "VIDEO_BATCH", "VIDEO_SINGLE", "MANUAL_IMAGE"}:
+            raise ValueError("unsupported visual registration origin")
+        if len(self.slot) > 128 or len(self.display_state) > 64:
+            raise ValueError("visual training slot/display state is too long")
+        if len(self.source_video) > 2048:
+            raise ValueError("visual training source_video is too long")
+        if self.source_frame is not None and self.source_frame < 0:
+            raise ValueError("visual training source_frame must be non-negative")
 
     def to_row(self) -> dict[str, str]:
         return {
@@ -184,11 +201,19 @@ class VisualTrainingSample:
             "group": self.group.strip(),
             "source_ref": self.source_ref.strip(),
             "notes": self.notes.strip(),
+            "registration_origin": self.registration_origin,
+            "slot": self.slot.strip(),
+            "display_state": self.display_state.strip(),
+            "source_video": self.source_video.strip(),
+            "source_frame": "" if self.source_frame is None else str(self.source_frame),
         }
 
 
 class VisualTrainingManifest:
-    fieldnames = ("domain", "label", "image_path", "group", "source_ref", "notes")
+    fieldnames = (
+        "domain", "label", "image_path", "group", "source_ref", "notes",
+        "registration_origin", "slot", "display_state", "source_video", "source_frame",
+    )
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -228,6 +253,11 @@ class VisualTrainingManifest:
                             group=(row.get("group") or "default").strip() or "default",
                             source_ref=(row.get("source_ref") or "manual://owner").strip() or "manual://owner",
                             notes=(row.get("notes") or "").strip(),
+                            registration_origin=(row.get("registration_origin") or "LEGACY").strip() or "LEGACY",
+                            slot=(row.get("slot") or "").strip(),
+                            display_state=(row.get("display_state") or "").strip(),
+                            source_video=(row.get("source_video") or "").strip(),
+                            source_frame=(None if not (row.get("source_frame") or "").strip() else int((row.get("source_frame") or "0").strip())),
                         )
                     except Exception as exc:
                         raise ValueError(f"invalid visual manifest row {number}: {exc}") from exc
@@ -247,6 +277,30 @@ class VisualTrainingManifest:
                 return False
             values.append(item)
             self._write(values)
+            return True
+
+    def replace(self, original: VisualTrainingSample, replacement: VisualTrainingSample) -> bool:
+        with self._lock:
+            values = list(self.list())
+            key = self._identity(original)
+            index = next((i for i,v in enumerate(values) if self._identity(v) == key), None)
+            if index is None:
+                return False
+            replacement_key = self._identity(replacement)
+            if any(i != index and self._identity(v) == replacement_key for i,v in enumerate(values)):
+                raise ValueError("replacement visual sample would duplicate an existing sample")
+            values[index] = replacement
+            self._write(values)
+            return True
+
+    def delete(self, item: VisualTrainingSample) -> bool:
+        with self._lock:
+            values = list(self.list())
+            key = self._identity(item)
+            kept = [v for v in values if self._identity(v) != key]
+            if len(kept) == len(values):
+                return False
+            self._write(kept)
             return True
 
     def import_csv(self, path: str | Path, *, default_domain: VisualTrainingDomain | None = None) -> ImportReport:
@@ -270,6 +324,11 @@ class VisualTrainingManifest:
                         group=(row.get("group") or "default").strip() or "default",
                         source_ref=(row.get("source_ref") or source.resolve().as_uri()).strip(),
                         notes=(row.get("notes") or "").strip(),
+                        registration_origin=(row.get("registration_origin") or "MANUAL_IMAGE").strip() or "MANUAL_IMAGE",
+                        slot=(row.get("slot") or "").strip(),
+                        display_state=(row.get("display_state") or "").strip(),
+                        source_video=(row.get("source_video") or "").strip(),
+                        source_frame=(None if not (row.get("source_frame") or "").strip() else int((row.get("source_frame") or "0").strip())),
                     )
                     if not Path(item.image_path).is_file():
                         raise ValueError(f"image does not exist: {item.image_path}")
@@ -405,6 +464,30 @@ class OcrVocabularyManifest:
             self._write(values)
             return True
 
+    def replace(self, original: OcrVocabularySample, replacement: OcrVocabularySample) -> bool:
+        with self._lock:
+            values = list(self.list())
+            key = self._identity(original)
+            index = next((i for i,v in enumerate(values) if self._identity(v) == key), None)
+            if index is None:
+                return False
+            replacement_key = self._identity(replacement)
+            if any(i != index and self._identity(v) == replacement_key for i,v in enumerate(values)):
+                raise ValueError("replacement OCR phrase would duplicate an existing phrase")
+            values[index] = replacement
+            self._write(values)
+            return True
+
+    def delete(self, item: OcrVocabularySample) -> bool:
+        with self._lock:
+            values = list(self.list())
+            key = self._identity(item)
+            kept = [v for v in values if self._identity(v) != key]
+            if len(kept) == len(values):
+                return False
+            self._write(kept)
+            return True
+
     def import_csv(self, path: str | Path) -> ImportReport:
         accepted, rejected = 0, 0
         errors: list[str] = []
@@ -454,6 +537,7 @@ class DbDTrainingWorkspace:
         self.visual = VisualTrainingManifest(self.root / "visual-training.csv")
         self.ocr = OcrVocabularyManifest(self.root / "upper-right-ocr-vocabulary.csv")
         self.trivia = DbDTriviaStore(self.root / "dbd-commentary-knowledge.sqlite3")
+        self.trivia_operational = TriviaOperationalMetadataStore(self.root / "trivia-operational-metadata.json")
         (self.root / "indexes").mkdir(parents=True, exist_ok=True)
         (self.root / "video-slices").mkdir(parents=True, exist_ok=True)
         (self.root / "video-ocr").mkdir(parents=True, exist_ok=True)
@@ -508,6 +592,10 @@ class DbDTrainingWorkspace:
                     group=request.group,
                     source_ref=f"{base_ref}#frame={frame_index}&roi={roi.roi_id}",
                     notes=(request.notes.strip() + f" | video_profile={profile.profile_id}").strip(" |"),
+                    registration_origin="VIDEO_BATCH",
+                    slot=roi.roi_id,
+                    source_video=str(video),
+                    source_frame=frame_index,
                 )
                 if self.visual.append(item):
                     registered += 1
@@ -641,15 +729,26 @@ class DbDTrainingWorkspace:
                     frame_index=frame_index,
                     roi=roi,
                     output_path=target,
-                    width=512,
-                    height=256,
+                    # OCR needs materially more pixels than classifier slices.
+                    # Upscaling the bounded HUD ROI before Tesseract improves
+                    # small Japanese kana/kanji separation on 1080p/streamed video.
+                    width=1024,
+                    height=512,
                 )
                 scanned += 1
-                text = engine.read(target, language=language).strip()
-                normalized = normalize_hud_text(text)
-                if normalized and normalized not in seen:
-                    seen.add(normalized)
-                    candidates.append(OcrVideoCandidate(frame_index, str(target), text, normalized))
+                read_candidates = getattr(engine, "read_candidates", None)
+                texts = (
+                    read_candidates(target, language=language)
+                    if callable(read_candidates)
+                    else (engine.read(target, language=language),)
+                )
+                for text in texts:
+                    normalized = normalize_hud_text(text)
+                    if normalized and normalized not in seen:
+                        seen.add(normalized)
+                        candidates.append(
+                            OcrVideoCandidate(frame_index, str(target), text, normalized)
+                        )
             except Exception as exc:
                 rejected += 1
                 errors.append(f"frame {frame_index}: {exc}")
@@ -671,6 +770,7 @@ class DbDTrainingWorkspace:
         compute_type: str = "int8",
         language: str | None = "ja",
         allow_model_download: bool = False,
+        cache_directory: str | Path | None = None,
     ) -> TriviaVideoLearningReport:
         video = Path(video_path).expanduser().resolve()
         if not video.is_file():
@@ -683,6 +783,7 @@ class DbDTrainingWorkspace:
                 device=device,
                 compute_type=compute_type,
                 allow_model_download=allow_model_download,
+                cache_directory=cache_directory,
             )
         )
         publication = LocalTranscriptionService.run(
@@ -692,6 +793,13 @@ class DbDTrainingWorkspace:
             language=language or None,
         )
         mined = TriviaCandidateMiner().capture_transcript_manifest(self.trivia, publication.transcript)
+        index_transcript_candidates(
+            self.trivia_operational,
+            entries=mined,
+            transcript=publication.transcript,
+            source_video=str(video),
+            transcript_path=str(publication.transcript_path),
+        )
         return TriviaVideoLearningReport(
             transcript_path=str(publication.transcript_path),
             subtitle_path=str(publication.subtitle_path),
@@ -701,7 +809,21 @@ class DbDTrainingWorkspace:
 
     def mine_trivia_from_transcript(self, path: str | Path) -> int:
         manifest = load_transcript_manifest(path)
-        return len(TriviaCandidateMiner().capture_transcript_manifest(self.trivia, manifest))
+        mined = TriviaCandidateMiner().capture_transcript_manifest(self.trivia, manifest)
+        source_video = ""
+        for attr in ("source_path", "source_ref", "video_path"):
+            value = getattr(manifest, attr, None)
+            if isinstance(value, str) and value:
+                source_video = value
+                break
+        index_transcript_candidates(
+            self.trivia_operational,
+            entries=mined,
+            transcript=manifest,
+            source_video=source_video,
+            transcript_path=str(Path(path).expanduser().resolve()),
+        )
+        return len(mined)
 
     def import_trivia_csv(self, path: str | Path) -> ImportReport:
         accepted, rejected = 0, 0

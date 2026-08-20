@@ -92,6 +92,18 @@ class RoiPixelEditor:
     def rois(self) -> dict[str, NormalizedROI]:
         return dict(self._rois)
 
+    def rebase(self, rois: Mapping[str, NormalizedROI]) -> None:
+        """Make a loaded HUD profile the new edit-session baseline.
+
+        A profile load must replace all editable ROIs atomically. History from
+        the previously displayed profile is discarded so editing/resetting one
+        ROI cannot restore stale/default positions for the others.
+        """
+        self._initial = dict(rois)
+        self._rois = dict(rois)
+        self._undo.clear()
+        self._redo.clear()
+
     def normalized_to_pixels(self, roi: NormalizedROI) -> PixelRect:
         x = round(roi.x * self.source_width)
         y = round(roi.y * self.source_height)

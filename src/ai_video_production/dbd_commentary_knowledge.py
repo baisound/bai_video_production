@@ -162,6 +162,68 @@ class DbDTriviaStore:
         current = self.latest(trivia_id)
         return self.put(replace(current, revision=current.revision + 1, status=TriviaStatus.REJECTED))
 
+    def revise(
+        self,
+        trivia_id: str,
+        *,
+        title: str,
+        text: str,
+        source_ref: str,
+        category: str,
+        tags: Iterable[str] = (),
+        event_types: Iterable[GameEventType] = (),
+        entity_refs: Iterable[str] = (),
+        environment: PerkEnvironment = PerkEnvironment.LIVE,
+        game_version_from: str | None = None,
+        game_version_to: str | None = None,
+        verify: bool = False,
+    ) -> DBDTriviaEntry:
+        """Append an edited revision without destroying historical evidence."""
+        current = self.latest(trivia_id)
+        revised = replace(
+            current,
+            revision=current.revision + 1,
+            title=title.strip(),
+            text=text.strip(),
+            source_ref=source_ref.strip(),
+            status=TriviaStatus.VERIFIED if verify else TriviaStatus.CANDIDATE,
+            category=category.strip().upper() or "GENERAL",
+            tags=tuple(sorted(set(x.strip().upper() for x in tags if x.strip()))),
+            event_types=tuple(sorted(set(event_types), key=lambda x: x.value)),
+            entity_refs=tuple(sorted(set(x.strip() for x in entity_refs if x.strip()))),
+            environment=environment,
+            game_version_from=game_version_from,
+            game_version_to=game_version_to,
+            verified_at=utc_now_iso() if verify else None,
+        )
+        return self.put(revised)
+
+    def duplicate(self, trivia_id: str) -> DBDTriviaEntry:
+        """Create a new CANDIDATE entry from an existing entry."""
+        current = self.latest(trivia_id)
+        duplicated = replace(
+            current,
+            trivia_id=generate_id(IdKind.TRIVIA),
+            revision=1,
+            title=(current.title + "（複製）")[:300],
+            status=TriviaStatus.CANDIDATE,
+            created_at=utc_now_iso(),
+            verified_at=None,
+        )
+        return self.put(duplicated)
+
+    def supersede(self, trivia_id: str) -> DBDTriviaEntry:
+        """Soft-delete from active use while preserving immutable history."""
+        current = self.latest(trivia_id)
+        return self.put(
+            replace(
+                current,
+                revision=current.revision + 1,
+                status=TriviaStatus.SUPERSEDED,
+                verified_at=None,
+            )
+        )
+
     def list_latest(self, *, status: TriviaStatus | None = None) -> tuple[DBDTriviaEntry, ...]:
         with self._connect() as conn:
             rows = conn.execute("""SELECT r.payload_json,r.payload_sha256 FROM trivia_revision r

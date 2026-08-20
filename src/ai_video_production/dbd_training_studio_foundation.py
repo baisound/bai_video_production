@@ -473,6 +473,29 @@ def default_model_cache() -> str:
     return str(Path.home() / ".cache" / "huggingface" / "hub")
 
 
+def resolve_workspace_runtime_profile(
+    workspace: WorkspaceDescriptor,
+    *,
+    store: "RuntimeProfileStore | None" = None,
+) -> RuntimeEnvironmentProfile:
+    """Return the workspace-selected runtime profile with safe auto-detect fallback.
+
+    Saved runtime settings are Product state.  Training surfaces must not silently
+    ignore them and fall back to PATH-only tools, otherwise OCR/ASR can behave
+    differently from the Runtime tab that the operator already configured.
+    """
+    active_store = store or RuntimeProfileStore()
+    profile_id = (workspace.selected_runtime_profile_id or "").strip()
+    if profile_id:
+        try:
+            return active_store.load(profile_id)
+        except Exception:
+            # A stale/deleted profile must not brick the Studio.  Auto-detect is
+            # explicit fallback and the Runtime tab can save a new selection.
+            pass
+    return active_store.autodetect()
+
+
 class RuntimeProfileStore:
     def __init__(self, root: str | Path | None = None) -> None:
         self.root = Path(root) if root is not None else training_studio_settings_root() / "runtime-profiles"

@@ -3,7 +3,7 @@
 - Authority: TASK-014 / AU2B2, DEV-4
 - Status: `JUDGE_ACCEPTED / FRESH_MAIN_VALIDATED / COMMIT_READY / UNCOMMITTED`
 - Worktree: `codex/task-014-pinned-snapshot-verifier-r0` at `4ae3ea8df56ba76ef4eb29c10584ff3de55be740`
-- Scope: the five AU2B2-allowed files only
+- Scope: the five AU2B2 contract files plus the CI-required `CHANGELOG.md` release-metadata entry
 
 ## Implemented boundary
 

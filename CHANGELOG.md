@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-014として、固定Qwen-TTS wheel／installed payloadのbounded read-only診断と、Windows上で祖先・wheel handleを保持してidentity・non-reparse・non-inherit・reverse closeを検証するone-shot locked sessionを追加しました。永続receiptは診断Evidenceのみで、runtime再利用、target package import、model load、Owner音声読取、推論、network、filesystem変更、Release/DeployのAuthorityを作りません。
+
 ## [0.22.0] - 2026-08-21
 
 - Added TASK-036 P-UX-2D4/D5 trusted Final Review handoff from current typed approval through private ExportPreparation to exactly one durable TASK-044 Export Queue Job, with explicit Human confirmation, Project-scoped exclusive admission, restart-safe EXPORT recovery, runtime lease isolation and Shell projection that exposes no host path or dispatch/render authority. P-UX-2E packaged-native output read-back, per-Job dispatch/render, publication, Release and Deploy remain separate Gates.

@@ -1,0 +1,996 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.baisound.example/task014/qwen3-tts-runtime-artifact-manifest.schema.json",
+  "title": "TASK-014 Qwen3-TTS Runtime Artifact Manifest Contract R0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "status",
+    "manifest_id",
+    "revision",
+    "platform",
+    "artifacts",
+    "distributions",
+    "root_distribution_ids",
+    "runtime_files",
+    "system_exclusions",
+    "tools",
+    "counts",
+    "diagnostic_only",
+    "persistent_manifest_is_capability",
+    "runtime_reuse_authorized",
+    "model_load_authorized",
+    "consumer_execution_authorized",
+    "post_return_state_guaranteed",
+    "consumer_revalidation_required",
+    "no_effect_flags",
+    "semantic_manifest_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "bai.task014.qwen3-tts-runtime-artifact-manifest.v1"
+    },
+    "status": {
+      "const": "CONTRACT_ONLY_UNACCEPTED"
+    },
+    "manifest_id": {
+      "$ref": "#/$defs/id"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "architecture",
+        "python_abi",
+        "python_version"
+      ],
+      "properties": {
+        "os": {
+          "const": "WINDOWS"
+        },
+        "architecture": {
+          "const": "win_amd64"
+        },
+        "python_abi": {
+          "const": "cp312"
+        },
+        "python_version": {
+          "const": "3.12.4"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "distributions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/distribution"
+      }
+    },
+    "root_distribution_ids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/distribution_id"
+      }
+    },
+    "runtime_files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8192,
+      "items": {
+        "$ref": "#/$defs/runtime_file"
+      },
+      "minContains": 1,
+      "maxContains": 1,
+      "contains": {
+        "type": "object",
+        "properties": {
+          "logical_path": {
+            "const": "Scripts/python.exe"
+          },
+          "role": {
+            "const": "PYTHON_EXECUTABLE"
+          }
+        },
+        "required": [
+          "logical_path",
+          "role"
+        ]
+      }
+    },
+    "system_exclusions": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/system_exclusion"
+      }
+    },
+    "tools": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/tool"
+      },
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "FFMPEG"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "FFPROBE"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "minContains": 1,
+          "maxContains": 1
+        }
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_count",
+        "distribution_count",
+        "runtime_file_count",
+        "system_exclusion_count",
+        "tool_count",
+        "total_artifact_bytes"
+      ],
+      "properties": {
+        "artifact_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "distribution_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "runtime_file_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8192
+        },
+        "system_exclusion_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "tool_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "total_artifact_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 17592186044416
+        }
+      }
+    },
+    "diagnostic_only": {
+      "const": true
+    },
+    "persistent_manifest_is_capability": {
+      "const": false
+    },
+    "runtime_reuse_authorized": {
+      "const": false
+    },
+    "model_load_authorized": {
+      "const": false
+    },
+    "consumer_execution_authorized": {
+      "const": false
+    },
+    "post_return_state_guaranteed": {
+      "const": false
+    },
+    "consumer_revalidation_required": {
+      "const": true
+    },
+    "no_effect_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesystem_read",
+        "filesystem_write",
+        "network_accessed",
+        "package_resolved",
+        "package_downloaded",
+        "package_installed",
+        "target_python_executed",
+        "target_package_imported",
+        "model_loaded",
+        "owner_audio_read",
+        "inference_started",
+        "native_tool_executed"
+      ],
+      "properties": {
+        "filesystem_read": {
+          "const": false
+        },
+        "filesystem_write": {
+          "const": false
+        },
+        "network_accessed": {
+          "const": false
+        },
+        "package_resolved": {
+          "const": false
+        },
+        "package_downloaded": {
+          "const": false
+        },
+        "package_installed": {
+          "const": false
+        },
+        "target_python_executed": {
+          "const": false
+        },
+        "target_package_imported": {
+          "const": false
+        },
+        "model_loaded": {
+          "const": false
+        },
+        "owner_audio_read": {
+          "const": false
+        },
+        "inference_started": {
+          "const": false
+        },
+        "native_tool_executed": {
+          "const": false
+        }
+      }
+    },
+    "semantic_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "distribution_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "relative_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!/)(?!.*\\\\)(?!.*:)(?!.*//)(?!.*[<>\"|?*])(?!.*(?:^|/)\\.\\.?(?:/|$))(?!.*[. ](?:/|$))(?!.*(?:^|/)(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Nn][Ii][Nn]\\$|[Cc][Oo][Nn][Oo][Uu][Tt]\\$|[Cc][Ll][Oo][Cc][Kk]\\$|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\.[^/]*)?(?:/|$))[\\x21-\\x7e]+$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "kind",
+        "provider",
+        "source_url",
+        "filename",
+        "bytes",
+        "sha256",
+        "provenance",
+        "wheel_tags",
+        "load_policy",
+        "local_build_binding",
+        "source_contract"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "PYTHON_RUNTIME_ARCHIVE",
+            "DISTRIBUTION_WHEEL",
+            "NATIVE_TOOL_ARCHIVE",
+            "LOCAL_BUILD_WHEEL"
+          ]
+        },
+        "provider": {
+          "enum": [
+            "PYTHON_ORG",
+            "PYPI",
+            "PYTORCH_INDEX",
+            "OFFICIAL_PROJECT_RELEASE",
+            "OWNER_ACCEPTED_LOCAL_BUILD"
+          ]
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://(?:python\\.org|www\\.python\\.org|files\\.pythonhosted\\.org|download\\.pytorch\\.org|github\\.com|objects\\.githubusercontent\\.com)/[^?#]+$",
+          "maxLength": 2048
+        },
+        "filename": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+!-]{0,254}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 68719476736
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "provenance": {
+          "enum": [
+            "OFFICIAL_INDEX_DIGEST",
+            "OFFICIAL_RELEASE_DIGEST",
+            "LOCAL_BUILD_ATTESTATION"
+          ]
+        },
+        "wheel_tags": {
+          "type": "array",
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:py3-none-any|cp3(?:9|10|11|12)-abi3-win_amd64|cp312-cp312-win_amd64)$"
+          }
+        },
+        "load_policy": {
+          "enum": [
+            "REQUIRED_RUNTIME",
+            "REQUIRED_TOOL",
+            "BUILD_ONLY_EXCLUDED"
+          ]
+        },
+        "local_build_binding": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/local_build_binding"
+            }
+          ]
+        },
+        "source_contract": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/source_contract"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "PYTHON_ORG"
+              }
+            },
+            "required": [
+              "provider"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_url": {
+                "pattern": "^https://(?:python\\.org|www\\.python\\.org)/"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "PYPI"
+              }
+            },
+            "required": [
+              "provider"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_url": {
+                "pattern": "^https://files\\.pythonhosted\\.org/"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "PYTORCH_INDEX"
+              }
+            },
+            "required": [
+              "provider"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_url": {
+                "pattern": "^https://download\\.pytorch\\.org/"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "OFFICIAL_PROJECT_RELEASE"
+              }
+            },
+            "required": [
+              "provider"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_url": {
+                "pattern": "^https://(?:github\\.com|objects\\.githubusercontent\\.com)/"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "provider": {
+                "const": "OWNER_ACCEPTED_LOCAL_BUILD"
+              }
+            },
+            "required": [
+              "provider"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_url": {
+                "pattern": "^https://github\\.com/"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "PYTHON_RUNTIME_ARCHIVE"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "PYTHON_ORG"
+              },
+              "provenance": {
+                "const": "OFFICIAL_RELEASE_DIGEST"
+              },
+              "load_policy": {
+                "const": "REQUIRED_RUNTIME"
+              },
+              "wheel_tags": {
+                "maxItems": 0
+              },
+              "filename": {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._+!-]{0,250}(?:\\.zip|\\.exe)$"
+              },
+              "local_build_binding": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "DISTRIBUTION_WHEEL"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "enum": [
+                  "PYPI",
+                  "PYTORCH_INDEX",
+                  "OFFICIAL_PROJECT_RELEASE"
+                ]
+              },
+              "provenance": {
+                "enum": [
+                  "OFFICIAL_INDEX_DIGEST",
+                  "OFFICIAL_RELEASE_DIGEST"
+                ]
+              },
+              "load_policy": {
+                "const": "REQUIRED_RUNTIME"
+              },
+              "wheel_tags": {
+                "minItems": 1
+              },
+              "filename": {
+                "pattern": "^[A-Za-z0-9_.]+-\\d+(?:\\.\\d+)*(?:\\+[a-z0-9]+(?:[._][a-z0-9]+)*)?(?:-[0-9][A-Za-z0-9_.]*)?-(?:py3-none-any|cp3(?:9|10|11|12)-abi3-win_amd64|cp312-cp312-win_amd64)\\.whl$"
+              },
+              "local_build_binding": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "LOCAL_BUILD_WHEEL"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "provider": {
+                "const": "OWNER_ACCEPTED_LOCAL_BUILD"
+              },
+              "provenance": {
+                "const": "LOCAL_BUILD_ATTESTATION"
+              },
+              "load_policy": {
+                "enum": [
+                  "REQUIRED_RUNTIME",
+                  "BUILD_ONLY_EXCLUDED"
+                ]
+              },
+              "wheel_tags": {
+                "minItems": 1
+              },
+              "filename": {
+                "pattern": "^[A-Za-z0-9_.]+-\\d+(?:\\.\\d+)*(?:\\+[a-z0-9]+(?:[._][a-z0-9]+)*)?(?:-[0-9][A-Za-z0-9_.]*)?-(?:py3-none-any|cp3(?:9|10|11|12)-abi3-win_amd64|cp312-cp312-win_amd64)\\.whl$"
+              },
+              "local_build_binding": {
+                "$ref": "#/$defs/local_build_binding"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "NATIVE_TOOL_ARCHIVE"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "load_policy": {
+                "const": "REQUIRED_TOOL"
+              },
+              "wheel_tags": {
+                "maxItems": 0
+              },
+              "filename": {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._+!-]{0,250}(?:\\.zip|\\.7z|\\.tar\\.xz)$"
+              }
+            },
+            "oneOf": [
+              {
+                "properties": {
+                  "provider": {
+                    "const": "OFFICIAL_PROJECT_RELEASE"
+                  },
+                  "provenance": {
+                    "const": "OFFICIAL_RELEASE_DIGEST"
+                  },
+                  "local_build_binding": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "provider": {
+                    "const": "OWNER_ACCEPTED_LOCAL_BUILD"
+                  },
+                  "provenance": {
+                    "const": "LOCAL_BUILD_ATTESTATION"
+                  },
+                  "local_build_binding": {
+                    "$ref": "#/$defs/local_build_binding"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source_contract": {
+                "type": "object"
+              }
+            },
+            "required": ["source_contract"]
+          },
+          "then": {
+            "properties": {
+              "filename": {"const": "qwen_tts-0.1.1-py3-none-any.whl"},
+              "bytes": {"const": 113529},
+              "sha256": {"const": "sha256:11a290d8dabc7ef91a90c54478c8ab19b3edb1d85c0882313721892bdc4af15d"},
+              "kind": {"const": "DISTRIBUTION_WHEEL"},
+              "provider": {"const": "PYPI"},
+              "provenance": {"const": "OFFICIAL_INDEX_DIGEST"},
+              "load_policy": {"const": "REQUIRED_RUNTIME"},
+              "wheel_tags": {"const": ["py3-none-any"]},
+              "source_url": {"pattern": "^https://files\\.pythonhosted\\.org/.*/qwen_tts-0\\.1\\.1-py3-none-any\\.whl$"}
+            }
+          }
+        }
+      ]
+    },
+    "local_build_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_sha256",
+        "build_matrix_sha256",
+        "same_machine_only"
+      ],
+      "properties": {
+        "source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "build_matrix_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "same_machine_only": {
+          "const": true
+        }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distribution_id",
+        "version",
+        "artifact_id",
+        "dist_info_dir",
+        "record_sha256",
+        "payload_inventory_sha256",
+        "dependencies"
+      ],
+      "properties": {
+        "distribution_id": {
+          "$ref": "#/$defs/distribution_id"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+(?:\\.\\d+)*(?:\\+[a-z0-9]+(?:[._-][a-z0-9]+)*)?$"
+        },
+        "artifact_id": {
+          "$ref": "#/$defs/id"
+        },
+        "dist_info_dir": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "payload_inventory_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "dependencies": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/dependency"
+          }
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_id",
+        "distribution_id",
+        "requirement",
+        "marker_expression",
+        "marker_environment_sha256",
+        "marker_state"
+      ],
+      "properties": {
+        "requirement_id": {
+          "$ref": "#/$defs/id"
+        },
+        "distribution_id": {
+          "$ref": "#/$defs/distribution_id"
+        },
+        "requirement": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?! )(?!.* $)(?!.*[\\[\\]])[\\x20-\\x7e]+$"
+        },
+        "marker_expression": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^(?! )(?!.* $)[\\x20-\\x7e]+$"
+            }
+          ]
+        },
+        "marker_environment_sha256": {
+          "const": "sha256:b700a6f9cef287f3df3c68ea5b08b9fbf6a89663ca9c98fdea0b1ac96814ca72"
+        },
+        "marker_state": {
+          "enum": [
+            "ACTIVE",
+            "INACTIVE"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "marker_state": {
+                "const": "INACTIVE"
+              }
+            },
+            "required": [
+              "marker_state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "marker_expression": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "runtime_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_path",
+        "artifact_member_path",
+        "role",
+        "owner_kind",
+        "owner_id",
+        "bytes",
+        "sha256",
+        "mapping_sha256"
+      ],
+      "properties": {
+        "logical_path": {
+          "$ref": "#/$defs/relative_path"
+        },
+        "role": {
+          "enum": [
+            "PYTHON_EXECUTABLE",
+            "PYTHON_SUPPORT",
+            "DISTRIBUTION_PAYLOAD",
+            "NATIVE_LIBRARY",
+            "TOOL_EXECUTABLE"
+          ]
+        },
+        "owner_kind": {
+          "enum": [
+            "ARTIFACT",
+            "SYSTEM_PREREQUISITE"
+          ]
+        },
+        "owner_id": {
+          "$ref": "#/$defs/id"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 68719476736
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "artifact_member_path": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/relative_path"
+            }
+          ]
+        },
+        "mapping_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "owner_kind": {
+                "const": "SYSTEM_PREREQUISITE"
+              }
+            },
+            "required": [
+              "owner_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "role": {
+                "const": "NATIVE_LIBRARY"
+              },
+              "artifact_member_path": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "artifact_member_path": {
+                "$ref": "#/$defs/relative_path"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "system_exclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exclusion_id",
+        "name",
+        "reason",
+        "required_at_load_only"
+      ],
+      "properties": {
+        "exclusion_id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._+!-]{0,254}$"
+        },
+        "reason": {
+          "enum": [
+            "HOST_OS",
+            "HARDWARE_DRIVER"
+          ]
+        },
+        "required_at_load_only": {
+          "const": true
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_id",
+        "kind",
+        "artifact_id",
+        "logical_path"
+      ],
+      "properties": {
+        "tool_id": {
+          "$ref": "#/$defs/id"
+        },
+        "kind": {
+          "enum": [
+            "FFMPEG",
+            "FFPROBE",
+            "SOX"
+          ]
+        },
+        "artifact_id": {
+          "$ref": "#/$defs/id"
+        },
+        "logical_path": {
+          "$ref": "#/$defs/relative_path"
+        }
+      }
+    },
+    "source_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_id",
+        "schema",
+        "semantic_sha256",
+        "role"
+      ],
+      "properties": {
+        "contract_id": {
+          "const": "task014-qwen-tts-0.1.1-wheel-payload"
+        },
+        "schema": {
+          "const": "bai.task014.qwen-tts-locked-wheel-session-observation.v1"
+        },
+        "semantic_sha256": {
+          "const": "sha256:0a0568dfbbf716135c911322c22dc44df1e279dfd52ab25de9a4edb6a8a11dd6"
+        },
+        "role": {
+          "const": "QWEN_TTS_WHEEL_PAYLOAD"
+        }
+      }
+    }
+  }
+}

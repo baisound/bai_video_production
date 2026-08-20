@@ -64,7 +64,11 @@ def seed_proposal(root: Path) -> None:
         ),
         ProviderPolicyBinding("policy", "1", POLICY_SHA), Decimal("1"), Decimal("2"), "USD",
     ))
-    ProductionProposalSnapshotStore.save(root / "production-proposal.json", registry)
+    ProductionProposalSnapshotStore.save(
+        root / "production-proposal.json",
+        registry,
+        project_id="project-1",
+    )
 
 
 def app(root: Path) -> Task027PlanningApplication:
@@ -165,7 +169,10 @@ def test_new_proposal_revision_after_prepare_consumes_stale_go(tmp_path: Path) -
         rights_warnings_acknowledged=False, expected_snapshot_sha256=state["snapshot_sha256"],
     )
     registry = ProductionProposalSnapshotStore.load(tmp_path / "production-proposal.json")
-    previous_sha = ProductionProposalSnapshotStore.snapshot(registry)["snapshot_sha256"]
+    previous_sha = ProductionProposalSnapshotStore.snapshot(
+        registry,
+        project_id="project-1",
+    )["snapshot_sha256"]
     first = registry.latest_proposal("PROPOSAL-DEMO")
     registry.add_proposal(ProductionProposalRevision(
         "PROPOSAL-DEMO", 2, first.intent_sha256, first.blueprint,
@@ -176,6 +183,7 @@ def test_new_proposal_revision_after_prepare_consumes_stale_go(tmp_path: Path) -
     ProductionProposalSnapshotStore.save(
         tmp_path / "production-proposal.json", registry,
         expected_previous_snapshot_sha256=previous_sha,
+        project_id="project-1",
     )
     with pytest.raises(ProductError) as exc:
         service.approve_go(confirmation_id=prepared["confirmation_id"], approved_by="owner")
@@ -439,7 +447,11 @@ def test_scene_revision_preserves_v2_frame_intents_and_audio(tmp_path: Path) -> 
         (ProposalSection("concept", "CONCEPT", "Concept", "V2"),),
         ProviderPolicyBinding("policy", "1", POLICY_SHA),
     ))
-    ProductionProposalSnapshotStore.save(tmp_path / "production-proposal.json", registry)
+    ProductionProposalSnapshotStore.save(
+        tmp_path / "production-proposal.json",
+        registry,
+        project_id="project-1",
+    )
     service = Task027PlanningApplication(
         project_root=tmp_path, project_id="project-1", token_factory=lambda: "scene-v2",
     )

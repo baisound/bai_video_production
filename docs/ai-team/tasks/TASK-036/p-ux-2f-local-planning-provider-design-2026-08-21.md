@@ -30,3 +30,38 @@ current route, and publishes the typed records only through TASK-027 CAS.
 
 Unit A never writes `production-proposal.json` and never claims an approved Plan,
 Asset, generation Candidate, Timeline edit, audio completion or Export.
+
+## Unit B canonical publication
+
+Unit B adds a TASK-036 application boundary around the existing TASK-027 store.
+Prepare binds the exact empty/current Planning snapshot, current local connection
+coordinate, route and policy hash, performs model-inventory readiness only, and
+returns a body-free one-shot Human confirmation. Apply consumes the confirmation,
+rechecks every coordinate, calls the local adapter once, maps the validated
+candidate to the existing typed TASK-027 v1 records, and publishes them through
+the TASK-027 application lock and snapshot CAS.
+
+Intent, Proposal and Blueprint IDs are derived from the canonical request hash;
+the model cannot choose them. The existing Provider Policy keeps its canonical
+meaning as the exact active AI Connection Profile. A separate reserved Proposal
+section durably records the request, selected local route/model, cost class,
+schema and prompt-contract provenance without storing the raw request. Cost is
+Product-fixed to zero JPY and the new Proposal remains `GO_REQUIRED`.
+
+The canonical Proposal snapshot format `1.1.0` binds its checksum-protected
+collection to one immutable `project_id`; TASK-027 Product runtime rejects both
+foreign scoped snapshots and legacy unscoped `1.0.0` snapshots. Legacy reads
+remain available only to explicit offline tooling and do not migrate authority.
+The local provenance binds the exact Project ID and origin manifest hash. A
+later manifest revision intentionally produces a fresh authority coordinate;
+an older deterministic record cannot be projected as current idempotent output.
+Repeating the exact old request then fails as a deterministic identity conflict;
+an explicit Human-edited request or future governed migration is required.
+
+The current Product Project manifest ID/hash is required at prepare, apply and
+final publication. A TASK-036 generation lock provides at-most-one concurrent
+local call and exact-one CAS publication for identical live operations; restart
+of a fully published request projects the exact request/provenance record with
+no provider call. A process crash after side-effect-free local inference but
+before TASK-027 publication may require another local inference on retry. This
+unit does not claim an unconditional durable exactly-once dispatch journal.

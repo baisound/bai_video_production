@@ -57,7 +57,11 @@ def write_state(root: Path):
     continuity = ContinuityRegistry()
     audio = AudioWorkspaceRegistry()
 
-    ProductionProposalSnapshotStore.save(root / "production-proposal.json", proposals)
+    ProductionProposalSnapshotStore.save(
+        root / "production-proposal.json",
+        proposals,
+        project_id="project-1",
+    )
     ProductionBudgetSnapshotStore.save(root / "production-budget.json", budget)
     ProductionControlSnapshotStore.save(root / "production-control.json", production)
     CandidateAuditSnapshotStore.save(root / "candidate-audit.json", audits)

@@ -216,7 +216,11 @@ def test_v2_install_conflict_leaves_caller_registry_unchanged() -> None:
 
 def persist_foundation(root: Path):
     proposals, blueprint, plan_id = approved()
-    ProductionProposalSnapshotStore.save(root / "production-proposal.json", proposals)
+    ProductionProposalSnapshotStore.save(
+        root / "production-proposal.json",
+        proposals,
+        project_id="project-v2",
+    )
     ProductionControlSnapshotStore.save(root / "production-control.json", world_registry(blueprint))
     return proposals, blueprint, plan_id
 

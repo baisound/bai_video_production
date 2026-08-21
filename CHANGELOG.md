@@ -14,6 +14,8 @@
 
 - TASK-041 Audio Completion Contract R0として、6音声roleとTimeline item単位のclosed typed refsを持つpure候補契約を追加し、SOURCE_REVALIDATION_REQUIRED / NOT_MINTED固定によってproject-local JSONや自己SHAからFinal Review PASSを生成しない境界を定義しました。canonical store/latest、upstream再検証、TASK-036 wrapper、audio/network/model/provider/native、Release/Deployは引き続き別Gateです。
 
+- TASK-054 R2として、LLM出力の構造隔離、Fact/Policy Admission、Human承認・修正系譜を既存Commentary Candidate Storeへ追加しました。未承認・REJECT・REVISE・staleなCandidateはexportせず、Provider実行、学習、TTS、Release/Deployは引き続き別Human Gateです。
+
 - TASK-054 R1として、CGEL Event/Timeline、Game Evidence、Knowledge、Trivia、RAGを現在のcanonical snapshotへ厳密に束縛する決定的Context AssemblerとContext Schema 1.1を追加しました。Evidence/RAG snapshot、LIVE/PTB環境、既存Perk/Killer/Power patch境界、untrusted RAG隔離、Event/Perk Activation一致、128 KiB上限をfail closedで検証します。Provider実行、学習、Dataset採用、TTS、Timeline採用、Release/Deployは引き続き別Human Gateです。
 
 - TASK-054 R0として、既存CGEL/Commentary正本ID・Claim型を再利用するDbDチューニングLLM中間層のBinding、Context、Proposal、Execution Receiptとcanonical Schemaを追加しました。確認モードはDataset・Binding・Training Jobの前後完全一致を強制し、stale、未検証RAG、秘密値、過大Context、未知Schema、改ざん、silent fallback/retryをfail closedにします。Dataset採用、モデル/runtime取得、学習、Provider実行、TTS、Timeline採用、Release/Deployは引き続き別Human Gateです。

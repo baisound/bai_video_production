@@ -87,6 +87,7 @@ def test_video_learning_csv_accepts_one_or_many_rows(tmp_path, monkeypatch):
         writer = csv.DictWriter(handle, fieldnames=[
             "domain", "label", "video_path", "start_frame", "end_frame_exclusive", "frame_step",
             "slot", "group", "source_ref", "notes", "roi_profile_path", "max_samples",
+            "match_id", "signal_kind",
         ])
         writer.writeheader()
         writer.writerow({
@@ -96,6 +97,7 @@ def test_video_learning_csv_accepts_one_or_many_rows(tmp_path, monkeypatch):
         writer.writerow({
             "domain": "SURVIVOR_HUD", "label": "INJURED", "video_path": str(video), "start_frame": "100",
             "end_frame_exclusive": "221", "frame_step": "60", "slot": "1", "group": "injured", "max_samples": "10",
+            "match_id": "match-owned-1", "signal_kind": "SURVIVOR_STATE",
         })
 
     report = workspace.import_video_training_csv(manifest)

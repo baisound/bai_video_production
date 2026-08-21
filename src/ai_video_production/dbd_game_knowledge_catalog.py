@@ -114,6 +114,34 @@ class GameKnowledgeCandidate:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class KnowledgeDependencyReference:
+    kind: str
+    reference_id: str
+    description: str
+    protected: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class KnowledgeDeleteImpact:
+    candidate_id: str
+    action: str
+    review_status: str
+    human_touched: bool
+    dependencies: tuple[KnowledgeDependencyReference, ...]
+    protected_count: int
+    rebuildable_count: int
+    fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class KnowledgeDeleteResult:
+    candidate_id: str
+    action: str
+    retained_catalog_row: bool
+    tombstone_recorded: bool
+
+
 class GameKnowledgeReviewCatalog:
     """Version-light review catalog for imported game-information candidates."""
 
@@ -123,6 +151,26 @@ class GameKnowledgeReviewCatalog:
         if not self.path.exists():
             self._write(())
 
+    def _read_payload(self) -> dict[str, Any]:
+        try:
+            payload = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValueError("game knowledge review catalog is invalid") from exc
+        if not isinstance(payload, dict) or not isinstance(payload.get("records", []), list):
+            raise ValueError("game knowledge review catalog is invalid")
+        if not isinstance(payload.get("tombstones", []), list):
+            raise ValueError("game knowledge tombstone ledger is invalid")
+        return payload
+
+    def _tombstones(self) -> dict[str, dict[str, Any]]:
+        if not self.path.exists():
+            return {}
+        return {
+            str(row.get("candidate_id")): dict(row)
+            for row in self._read_payload().get("tombstones", ())
+            if isinstance(row, dict) and str(row.get("candidate_id") or "").strip()
+        }
+
     @staticmethod
     def _source_hash(row: dict[str, Any]) -> str:
         source = {
@@ -131,10 +179,18 @@ class GameKnowledgeReviewCatalog:
         }
         return sha256_bytes(canonical_json_bytes(source))
 
-    def _write(self, rows: Iterable[GameKnowledgeCandidate]) -> None:
+    def _write(
+        self,
+        rows: Iterable[GameKnowledgeCandidate],
+        *,
+        tombstones: dict[str, dict[str, Any]] | None = None,
+    ) -> None:
+        if tombstones is None:
+            tombstones = self._tombstones()
         payload = {
             "schema_version": "1.0.0",
             "records": [row.to_dict() for row in sorted(rows, key=lambda x: (x.knowledge_kind.value, x.effective_name_ja, x.candidate_id))],
+            "tombstones": [tombstones[key] for key in sorted(tombstones)],
         }
         fd, raw = tempfile.mkstemp(prefix=f".{self.path.name}.", suffix=".tmp", dir=self.path.parent)
         os.close(fd)
@@ -146,10 +202,7 @@ class GameKnowledgeReviewCatalog:
             temp.unlink(missing_ok=True)
 
     def list(self, *, kind: GameKnowledgeKind | None = None) -> tuple[GameKnowledgeCandidate, ...]:
-        try:
-            payload = json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-            raise ValueError("game knowledge review catalog is invalid") from exc
+        payload = self._read_payload()
         rows = tuple(GameKnowledgeCandidate.from_dict(row) for row in payload.get("records", ()))
         return tuple(row for row in rows if kind is None or row.knowledge_kind is kind)
 
@@ -161,17 +214,36 @@ class GameKnowledgeReviewCatalog:
 
     def upsert_external(self, rows: Iterable[GameKnowledgeCandidate]) -> int:
         current = {row.candidate_id: row for row in self.list()}
+        tombstones = self._tombstones()
         changed = 0
         for incoming in rows:
             old = current.get(incoming.candidate_id)
             if old is None:
+                tombstone = tombstones.get(incoming.candidate_id)
+                if tombstone and str(tombstone.get("source_revision_sha256") or "") == incoming.source_revision_sha256:
+                    continue
+                if tombstone:
+                    current[incoming.candidate_id] = replace(
+                        incoming,
+                        details={**incoming.details, "_previous_tombstone": tombstone},
+                        review_status="CANDIDATE",
+                    )
+                    tombstones.pop(incoming.candidate_id, None)
+                    changed += 1
+                    continue
                 current[incoming.candidate_id] = incoming
                 changed += 1
                 continue
             if old.source_revision_sha256 == incoming.source_revision_sha256:
                 continue
             status = old.review_status
-            if status in {"VERIFIED", "UPDATE_AVAILABLE"}:
+            if status == "DISABLED" and isinstance(old.details.get("_tombstone"), dict):
+                details = dict(old.details)
+                details["_pending_external_update"] = incoming.to_dict()
+                current[incoming.candidate_id] = replace(
+                    old, details=details, updated_at=utc_now_iso(),
+                )
+            elif status in {"VERIFIED", "UPDATE_AVAILABLE"}:
                 # Keep the last Human-verified source record active. A newer external
                 # snapshot is review evidence only until the owner explicitly accepts it.
                 pending = incoming.to_dict()
@@ -194,7 +266,7 @@ class GameKnowledgeReviewCatalog:
                     updated_at=utc_now_iso(),
                 )
             changed += 1
-        self._write(current.values())
+        self._write(current.values(), tombstones=tombstones)
         return changed
 
     def edit(
@@ -214,6 +286,9 @@ class GameKnowledgeReviewCatalog:
             new_status = "DISABLED"
         elif enabled is True and row.review_status == "DISABLED":
             new_status = "NEEDS_REVIEW"
+        details = dict(row.details)
+        if enabled is True:
+            details.pop("_tombstone", None)
         updated = replace(
             row,
             manual_name_ja=row.manual_name_ja if name_ja is None else name_ja.strip(),
@@ -222,10 +297,14 @@ class GameKnowledgeReviewCatalog:
             manual_image_path=row.manual_image_path if image_path is None else image_path.strip(),
             enabled=row.enabled if enabled is None else bool(enabled),
             review_status=new_status,
+            details=details,
             updated_at=utc_now_iso(),
         )
         rows[candidate_id] = updated
-        self._write(rows.values())
+        tombstones = self._tombstones()
+        if enabled is True:
+            tombstones.pop(candidate_id, None)
+        self._write(rows.values(), tombstones=tombstones)
         return updated
 
     def set_status(self, candidate_id: str, status: str) -> GameKnowledgeCandidate:
@@ -244,11 +323,158 @@ class GameKnowledgeReviewCatalog:
                 updated_at=utc_now_iso(),
             )
         else:
-            details = {k: v for k, v in row.details.items() if k != "_pending_external_update"} if status != "UPDATE_AVAILABLE" else row.details
+            details = (
+                {
+                    k: v for k, v in row.details.items()
+                    if k != "_pending_external_update" and not (status == "VERIFIED" and k == "_tombstone")
+                }
+                if status != "UPDATE_AVAILABLE" else row.details
+            )
             updated = replace(row, review_status=status, enabled=status != "DISABLED", details=details, updated_at=utc_now_iso())
         rows[candidate_id] = updated
-        self._write(rows.values())
+        tombstones = self._tombstones()
+        if status == "VERIFIED":
+            tombstones.pop(candidate_id, None)
+        self._write(rows.values(), tombstones=tombstones)
         return updated
+
+    @staticmethod
+    def _contains_candidate_ref(value: object, candidate_id: str) -> bool:
+        if isinstance(value, str):
+            return value == candidate_id
+        if isinstance(value, dict):
+            return any(
+                GameKnowledgeReviewCatalog._contains_candidate_ref(item, candidate_id)
+                for item in value.values()
+            )
+        if isinstance(value, (list, tuple, set)):
+            return any(
+                GameKnowledgeReviewCatalog._contains_candidate_ref(item, candidate_id)
+                for item in value
+            )
+        return False
+
+    @staticmethod
+    def _human_touched(row: GameKnowledgeCandidate) -> bool:
+        return bool(
+            row.review_status != "CANDIDATE"
+            or row.manual_name_ja.strip()
+            or row.manual_name_en.strip()
+            or row.manual_aliases_ja
+            or row.manual_image_path.strip()
+        )
+
+    def preview_delete(
+        self,
+        candidate_id: str,
+        *,
+        external_dependencies: Iterable[KnowledgeDependencyReference] = (),
+    ) -> KnowledgeDeleteImpact:
+        rows = self.list()
+        target = next((row for row in rows if row.candidate_id == candidate_id), None)
+        if target is None:
+            raise KeyError(candidate_id)
+        dependencies = list(external_dependencies)
+        human_touched = self._human_touched(target)
+        if human_touched:
+            dependencies.append(KnowledgeDependencyReference(
+                kind="HUMAN_REVIEW_STATE",
+                reference_id=target.review_status,
+                description="Human確認状態または手動overrideを保持",
+                protected=True,
+            ))
+        if target.effective_image:
+            dependencies.append(KnowledgeDependencyReference(
+                kind="CACHED_ASSET_RETAINED",
+                reference_id=target.candidate_id,
+                description="画像assetは監査・再利用のため保持",
+                protected=False,
+            ))
+        dependencies.extend(
+            KnowledgeDependencyReference(
+                kind="CATALOG_RELATION",
+                reference_id=row.candidate_id,
+                description=f"{row.effective_name_ja} の詳細情報から参照",
+                protected=True,
+            )
+            for row in rows
+            if row.candidate_id != candidate_id
+            and self._contains_candidate_ref(row.details, candidate_id)
+        )
+        unique = {
+            (item.kind, item.reference_id, item.description, item.protected): item
+            for item in dependencies
+        }
+        ordered = tuple(sorted(unique.values(), key=lambda item: (item.kind, item.reference_id, item.description)))
+        protected_count = sum(1 for item in ordered if item.protected)
+        rebuildable_count = len(ordered) - protected_count
+        action = "REMOVE_CANDIDATE" if not human_touched and protected_count == 0 else "TOMBSTONE"
+        fingerprint_payload = {
+            "candidate_id": candidate_id,
+            "updated_at": target.updated_at,
+            "review_status": target.review_status,
+            "action": action,
+            "dependencies": [
+                {
+                    "kind": item.kind,
+                    "reference_id": item.reference_id,
+                    "protected": item.protected,
+                }
+                for item in ordered
+            ],
+        }
+        return KnowledgeDeleteImpact(
+            candidate_id=candidate_id,
+            action=action,
+            review_status=target.review_status,
+            human_touched=human_touched,
+            dependencies=ordered,
+            protected_count=protected_count,
+            rebuildable_count=rebuildable_count,
+            fingerprint=sha256_bytes(canonical_json_bytes(fingerprint_payload)),
+        )
+
+    def delete_safely(
+        self,
+        candidate_id: str,
+        *,
+        expected_fingerprint: str,
+        external_dependencies: Iterable[KnowledgeDependencyReference] = (),
+        reason: str = "owner_requested_from_training_studio",
+    ) -> KnowledgeDeleteResult:
+        dependencies = tuple(external_dependencies)
+        impact = self.preview_delete(candidate_id, external_dependencies=dependencies)
+        if impact.fingerprint != expected_fingerprint:
+            raise ValueError("delete impact changed; preview again before deleting")
+        rows = {row.candidate_id: row for row in self.list()}
+        row = rows[candidate_id]
+        tombstones = self._tombstones()
+        tombstone = {
+            "candidate_id": candidate_id,
+            "source_revision_sha256": row.source_revision_sha256,
+            "deleted_at": utc_now_iso(),
+            "reason": reason.strip()[:256] or "owner_requested",
+            "action": impact.action,
+        }
+        tombstones[candidate_id] = tombstone
+        retained = impact.action == "TOMBSTONE"
+        if retained:
+            rows[candidate_id] = replace(
+                row,
+                review_status="DISABLED",
+                enabled=False,
+                details={**row.details, "_tombstone": tombstone},
+                updated_at=utc_now_iso(),
+            )
+        else:
+            rows.pop(candidate_id)
+        self._write(rows.values(), tombstones=tombstones)
+        return KnowledgeDeleteResult(
+            candidate_id=candidate_id,
+            action=impact.action,
+            retained_catalog_row=retained,
+            tombstone_recorded=True,
+        )
 
     def search(self, query: str = "", *, kind: GameKnowledgeKind | None = None, status: str | None = None) -> tuple[GameKnowledgeCandidate, ...]:
         needle = query.strip().casefold()
@@ -289,5 +515,6 @@ def candidate_from_normalized(row: dict[str, Any], kind: GameKnowledgeKind) -> G
 
 
 __all__ = [
-    "GameKnowledgeCandidate", "GameKnowledgeReviewCatalog", "candidate_from_normalized",
+    "GameKnowledgeCandidate", "GameKnowledgeReviewCatalog", "KnowledgeDeleteImpact",
+    "KnowledgeDeleteResult", "KnowledgeDependencyReference", "candidate_from_normalized",
 ]

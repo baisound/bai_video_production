@@ -14,6 +14,7 @@ from ai_video_production.dbd_kamigame_collector import (
     parse_killer_detail_page,
     parse_killer_list_page,
     parse_perk_page,
+    parse_map_page,
     parse_map_detail_page,
 )
 
@@ -42,12 +43,16 @@ KILLER_HTML = """
 
 ITEM_HTML = """<html><body><h2>医療キット系アイテム一覧</h2><table><tr><td>救急箱</td><td>Uncommon 〖基礎チャージ量〗24 〖効果〗自己治療</td></tr></table></body></html>"""
 ADDON_HTML = """<html><body><h2>ヒルビリーのアドオン一覧</h2><table><tr><td><img src='/boot.png'>親父のブーツ</td><td>Rare 〖効果〗旋回性能上昇</td></tr></table></body></html>"""
-MAP_HTML = """<html><body><h2>各マップ個別一覧</h2><table><tr><td><a href='/dbd/page/map1.html'>サファケーション・ピット</a> <a href='/dbd/page/realm1.html'>マクミラン・エステート</a></td><td>室外面積大板最大19枚</td></tr></table></body></html>"""
+MAP_HTML = """<html><body><main id="main" class="article"><article><h1>全マップ一覧</h1>
+<table><tr><td><a href='/dbd/page/perk.html'>究極の武器</a> <a href='/dbd/page/other.html'>素早い残虐行為</a></td><td>記事ヘッダー</td></tr></table>
+<h2>各マップ個別一覧</h2><table><tr><td><a href='/dbd/page/map1.html'>サファケーション・ピット</a> <a href='/dbd/page/realm1.html'>マクミラン・エステート</a></td><td>室外面積大板最大19枚</td></tr></table>
+<h2 id="関連リンク">関連リンク</h2><table><tr><td><a href='/dbd/page/bad.html'>ドワイト</a> <a href='/dbd/page/bad2.html'>ナンシー</a></td><td>関連記事</td></tr></table>
+</article><aside><a href='/dbd/page/ranking.html'>ランキング</a></aside></main></body></html>"""
 
-MAP_DETAIL_HTML = """<html><body><h2>サファケーション・ピットの見取り図</h2><img src="https://lh3.googleusercontent.com/map.png"><h2>サファケーション・ピットの特徴</h2><table><tr><th>領域名</th><th>オファリング</th></tr><tr><td><a href="/dbd/page/realm1.html">マクミラン・エステート</a></td><td><a href="/dbd/page/offering.html">マクミランの指骨</a></td></tr><tr><td>19~19枚</td><td>10240㎡</td><td>大</td></tr></table><p>特徴・固有オブジェクト 発電機が上下に固まりやすい 有利度 サバ微有利 板 面積 広さ</p></body></html>"""
+MAP_DETAIL_HTML = """<html><body><main id="main" class="article"><article><h1>サファケーション・ピット</h1><div class="related-articles"><table><tr><th>領域名</th><th>オファリング</th></tr><tr><td><a href="/dbd/page/perk.html">究極の武器</a></td><td><a href="/dbd/page/perk2.html">素早い残虐行為</a></td></tr></table></div><h2>サファケーション・ピットの見取り図</h2><img src="https://lh3.googleusercontent.com/map.png"><h2>サファケーション・ピットの特徴</h2><table><tr><th>領域名</th><th>オファリング</th></tr><tr><td><a href="/dbd/page/realm1.html">マクミラン・エステート</a></td><td><a href="/dbd/page/offering.html">マクミランの指骨</a></td></tr><tr><th>板</th><th>面積</th><th>広さ</th></tr><tr><td>19~19枚</td><td>10240㎡</td><td>大</td></tr></table><p>特徴・固有オブジェクト 発電機が上下に固まりやすい 有利度 サバ微有利 板 面積 広さ</p><h2 id="関連リンク">関連リンク</h2><table><tr><td><a href="/dbd/page/perk.html">究極の武器</a></td><td><a href="/dbd/page/perk2.html">素早い残虐行為</a></td></tr></table></article><aside><h2>最新人気記事ランキング</h2></aside></main></body></html>"""
 
 DETAIL_HTML = """
-<html><body><h1>トラッパー</h1><h2>特殊能力</h2><p>罠を設置する。</p><h2>アドオン一覧</h2><p>罠を強化する。</p></body></html>
+<html><body><main id="main" class="article"><article><h1>トラッパー</h1><h2>特殊能力</h2><p>罠を設置する。</p><h2>おすすめアドオン</h2><p>罠を強化する。</p><h2 id="関連リンク">関連リンク</h2><h2>別キラーの能力</h2></article><aside><h2>最新人気記事ランキング</h2></aside></main></body></html>
 """
 
 
@@ -81,8 +86,11 @@ def test_parse_killer_list_and_detail() -> None:
     assert row["height_text"] == "高い"
     assert row["unique_perks_ja"] == ["不安の元凶", "野蛮な力", "興奮"]
     detail = parse_killer_detail_page(DETAIL_HTML, page_url=row["detail_url"])
+    assert detail["template_id"] == "KAMIGAME_ARTICLE_MAIN_V1"
+    assert detail["structure_status"] == "ACCEPTED"
     assert detail["contains_power_section"] is True
     assert detail["contains_addon_section"] is True
+    assert "別キラーの能力" not in detail["headings"]
 
 
 def test_parse_map_detail_extracts_training_metadata() -> None:
@@ -92,6 +100,39 @@ def test_parse_map_detail_extracts_training_metadata() -> None:
     assert detail["area_m2"] == 10240
     assert detail["pallet_text"] == "19~19"
     assert detail["map_image_urls"] == ["https://lh3.googleusercontent.com/map.png"]
+    assert detail["structure_status"] == "ACCEPTED"
+
+
+def test_map_list_is_bounded_to_structural_article_and_map_section() -> None:
+    rows = parse_map_page(MAP_HTML, page_url=MAPS_URL)
+    assert [row["name_ja"] for row in rows] == ["サファケーション・ピット"]
+    assert rows[0]["source_template_id"] == "KAMIGAME_ARTICLE_MAIN_V1"
+
+
+def test_unknown_detail_structure_fails_closed() -> None:
+    html = "<html><body><table><tr><td><a href='/realm'>究極の武器</a></td><td><a href='/offering'>素早い残虐行為</a></td></tr></table></body></html>"
+    detail = parse_map_detail_page(html, page_url="https://kamigame.jp/dbd/page/changed.html")
+    assert detail["structure_status"] == "UNKNOWN_STRUCTURE"
+    assert detail["requires_human_review"] is True
+    assert detail["realm_name_ja"] == ""
+    assert detail["offering_name_ja"] == ""
+
+
+def test_unknown_map_list_structure_stops_collection_for_human_review() -> None:
+    html = "<html><body><h1>changed template</h1><h2>各マップ個別一覧</h2></body></html>"
+    try:
+        parse_map_page(html, page_url=MAPS_URL)
+    except ValueError as exc:
+        assert "Human review" in str(exc)
+    else:
+        raise AssertionError("unknown map structure must not be treated as an empty valid page")
+
+
+def test_killer_title_alone_does_not_prove_power_section() -> None:
+    html = '<main id="main" class="article"><article><h1>能力と元ネタ紹介</h1></article></main>'
+    detail = parse_killer_detail_page(html, page_url="https://kamigame.jp/dbd/page/killer.html")
+    assert detail["structure_status"] == "ACCEPTED"
+    assert detail["contains_power_section"] is False
 
 
 def test_pagination_discovery_is_bounded_to_same_page() -> None:

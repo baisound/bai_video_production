@@ -41,10 +41,12 @@ def test_game_knowledge_list_removes_image_and_adds_filters() -> None:
     assert "inventory_keyword_filter" in inventory
 
 
-def test_game_knowledge_detail_shows_image_path_and_details() -> None:
+def test_game_knowledge_detail_uses_human_fields_and_collapsed_diagnostics() -> None:
     studio = _studio()
     edit = studio.split("def edit_knowledge_candidate()", 1)[1].split("def verify_knowledge_candidate()", 1)[0]
     assert 'text="画像"' in edit
     assert "image_path_label" in edit
-    assert 'text="取得した詳細情報"' in edit
-    assert "row.details.items()" in edit
+    assert 'text="ゲーム情報"' in edit
+    assert "human_knowledge_fields(row)" in edit
+    assert 'text="内部・診断情報を表示"' in edit
+    assert "diagnostics_frame.grid_remove()" in edit

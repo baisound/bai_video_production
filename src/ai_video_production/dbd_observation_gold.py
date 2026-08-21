@@ -20,6 +20,8 @@ class HudObservationGoldCase:
     expected_entity_id: str | None
     expected_abstention: bool
     labeler_ref: str
+    match_id: str | None = None
+    survivor_slot: int | None = None
 
     def __post_init__(self) -> None:
         if not self.case_id.strip():
@@ -28,6 +30,8 @@ class HudObservationGoldCase:
             raise ValueError("frame_index must be non-negative")
         if not self.labeler_ref.strip():
             raise ValueError("labeler_ref is required")
+        if self.survivor_slot is not None and not 0 <= self.survivor_slot <= 3:
+            raise ValueError("survivor_slot must be 0..3 when supplied")
         if self.expected_abstention and self.expected_entity_id is not None:
             raise ValueError("abstention Gold must not assert entity identity")
         if self.expected_visibility in {
@@ -68,7 +72,10 @@ class HudObservationGoldEvaluator:
     ) -> HudObservationGoldReport:
         case_rows = tuple(cases)
         obs_rows = tuple(observations)
-        by_key = {(obs.observation_type.value, obs.frame_start): obs for obs in obs_rows}
+        by_key = {
+            (obs.observation_type.value, obs.frame_start, obs.match_id, obs.survivor_slot): obs
+            for obs in obs_rows
+        }
         if len(by_key) != len(obs_rows):
             raise ValueError("observations must be unique by observation_type/frame_start")
 
@@ -77,7 +84,7 @@ class HudObservationGoldEvaluator:
         identity_n = identity_ok = abstention_n = abstention_ok = 0
 
         for case in case_rows:
-            obs = by_key.get((case.observation_type, case.frame_index))
+            obs = by_key.get((case.observation_type, case.frame_index, case.match_id, case.survivor_slot))
             predicted_visibility = HudVisibility.UNKNOWN if obs is None else obs.visibility
             visibility_correct += int(predicted_visibility is case.expected_visibility)
 

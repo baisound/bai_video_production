@@ -142,6 +142,20 @@ class ConnectionSettingsWebService:
         with self._lock:
             return self._form_unlocked()
 
+    def current_connection(self) -> tuple[AiConnectionProfile, ConnectionAvailability]:
+        """Return the latest canonical profile/availability without exposing secrets."""
+        with self._lock:
+            if self.settings_path.is_symlink() or not self.settings_path.is_file():
+                raise ProductError(
+                    "ERR_CONNECTION_SETTINGS_INTEGRITY",
+                    "AI connection settings must be a present regular non-symlink file",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            latest = ConnectionSettingsStore.load(self.settings_path).record
+            self.profile, self.revision = latest.profile, latest.revision
+            self._refresh_availability_unlocked()
+            return self.profile, self.availability
+
     def _form_unlocked(self) -> dict[str, object]:
         preflight = AiConnectionSettingsService.preflight(self.profile, self.availability)
         form = ConnectionSettingsFormBuilder.build(self.profile, preflight, revision=self.revision)

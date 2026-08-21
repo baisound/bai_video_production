@@ -58,7 +58,11 @@ def seed_approved_plan(root: Path) -> Task027PlanningApplication:
         (ProposalSection("concept", "CONCEPT", "Concept", "Safe opening"),),
         ProviderPolicyBinding("policy", "1", POLICY_SHA), Decimal("0"), Decimal("0"), "USD",
     ))
-    ProductionProposalSnapshotStore.save(root / "production-proposal.json", registry)
+    ProductionProposalSnapshotStore.save(
+        root / "production-proposal.json",
+        registry,
+        project_id="project-1",
+    )
     planning = Task027PlanningApplication(project_root=root, project_id="project-1", token_factory=lambda: "go")
     state = planning.snapshot()
     prepared = planning.prepare_go(
@@ -175,7 +179,10 @@ def test_planning_change_after_prepare_consumes_confirmation(tmp_path: Path) -> 
     )
     prepare(app)
     registry = ProductionProposalSnapshotStore.load(tmp_path / "production-proposal.json")
-    previous = ProductionProposalSnapshotStore.snapshot(registry)["snapshot_sha256"]
+    previous = ProductionProposalSnapshotStore.snapshot(
+        registry,
+        project_id="project-1",
+    )["snapshot_sha256"]
     latest = registry.latest_proposal("PROPOSAL-SAFE")
     registry.add_proposal(ProductionProposalRevision(
         latest.proposal_id, 2, latest.intent_sha256, latest.blueprint,
@@ -186,6 +193,7 @@ def test_planning_change_after_prepare_consumes_confirmation(tmp_path: Path) -> 
     ProductionProposalSnapshotStore.save(
         tmp_path / "production-proposal.json", registry,
         expected_previous_snapshot_sha256=previous,
+        project_id="project-1",
     )
     with pytest.raises(ProductError) as exc:
         app.apply_feasibility(confirmation_id="stale-confirm", reviewed_by="owner")

@@ -45,11 +45,11 @@ def test_canonical_mock_and_runtime_source_counts_remain_explicit() -> None:
     }
     assert count_source_controls(RUNTIME_HTML) == {
         "pages": 14,
-        "stable_ids": 115,
+        "stable_ids": 118,
         "buttons": 126,
         "selects": 1,
-        "inputs_and_textareas": 5,
-        "contract_elements": 178,
+        "inputs_and_textareas": 6,
+        "contract_elements": 180,
     }
     assert BROWSER_AUDIT_BASELINE == {
         "mock": {"pages": 14, "buttons": 253, "stable_ids": 205, "selects": 57, "inputs_and_textareas": 83},
@@ -63,14 +63,14 @@ def test_inventory_is_deterministic_and_preserves_current_incompleteness() -> No
     assert first == second
     assert first.inventory_sha256 == second.inventory_sha256
     assert first.inventory_sha256.startswith("sha256:")
-    assert len(first.elements) == 580
+    assert len(first.elements) == 582
     states = first.to_dict()["state_counts"]
     assert states == {
-        "BOUND": 46,
+        "BOUND": 48,
         "NAVIGATION": 43,
-        "DISABLED_WITH_REASON": 33,
+        "DISABLED_WITH_REASON": 32,
         "DYNAMIC_CONDITIONAL": 43,
-        "INTENT_ONLY": 13,
+        "INTENT_ONLY": 14,
         "MISSING": 402,
     }
     assert states["MISSING"] > 0

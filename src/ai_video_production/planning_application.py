@@ -30,7 +30,9 @@ from .production_blueprint import (
 from .production_blueprint_v2 import BlueprintSceneV2, ProductionBlueprintV2
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import ProductionControlSnapshotStore, _exclusive_snapshot_lock
+from .product_project_store import ProductProjectManifestStore, _exclusive_project_lock
 from .production_proposal import (
+    CreationIntent,
     ProductionGoApprovalService,
     ProductionProposalRegistry,
     ProductionProposalRevision,
@@ -148,15 +150,20 @@ class Task027PlanningApplication:
         self._scene_revision_confirmations: dict[str, _SceneRevisionConfirmation] = {}
         self._scene_finalization_confirmations: dict[str, _SceneFinalizationConfirmation] = {}
 
-    @staticmethod
-    def _snapshot_hash(registry: ProductionProposalRegistry) -> str:
-        return str(ProductionProposalSnapshotStore.snapshot(registry)["snapshot_sha256"])
+    def _snapshot_hash(self, registry: ProductionProposalRegistry) -> str:
+        return str(ProductionProposalSnapshotStore.snapshot(
+            registry,
+            project_id=self.project_id,
+        )["snapshot_sha256"])
 
     def _load(self) -> tuple[ProductionProposalRegistry, str, bool]:
         if self.proposal_path.is_symlink():
             raise ProductError("ERR_PROPOSAL_SNAPSHOT_FILE_INVALID", "Proposal snapshot cannot be a symlink", ProductErrorCategory.SECURITY)
         if self.proposal_path.exists():
-            registry = ProductionProposalSnapshotStore.load(self.proposal_path)
+            registry = ProductionProposalSnapshotStore.load(
+                self.proposal_path,
+                expected_project_id=self.project_id,
+            )
             return registry, self._snapshot_hash(registry), True
         registry = ProductionProposalRegistry()
         return registry, self._snapshot_hash(registry), False
@@ -428,6 +435,55 @@ class Task027PlanningApplication:
             "resolve_mutation_started": False,
             "publish_started": False,
         }
+
+    def append_initial_proposal(
+        self,
+        *,
+        intent: CreationIntent,
+        proposal: ProductionProposalRevision,
+        expected_snapshot_sha256: str,
+        expected_project_manifest_sha256: str,
+    ) -> dict[str, Any]:
+        """Append one typed revision-1 Intent/Proposal through the canonical CAS."""
+        if not isinstance(intent, CreationIntent) or not isinstance(proposal, ProductionProposalRevision):
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_INITIAL_PROPOSAL_INVALID",
+                "Initial Planning records must use the canonical typed contracts",
+                ProductErrorCategory.VALIDATION,
+            )
+        if intent.revision != 1 or proposal.revision != 1 or proposal.parent_proposal_sha256 is not None:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_INITIAL_PROPOSAL_REVISION_INVALID",
+                "Initial Planning records must both be revision 1",
+                ProductErrorCategory.VALIDATION,
+            )
+        if proposal.intent_sha256 != intent.to_dict()["intent_sha256"]:
+            raise ProductError(
+                "ERR_PLANNING_APPLICATION_INITIAL_PROPOSAL_INTENT_MISMATCH",
+                "Initial Proposal must bind the exact supplied Creation Intent",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        manifest_path = ProductProjectManifestStore.path(self.project_root)
+        with _exclusive_project_lock(manifest_path):
+            manifest = ProductProjectManifestStore.load(self.project_root)
+            if manifest.project_id != self.project_id or manifest.project_manifest_sha256 != expected_project_manifest_sha256:
+                raise ProductError(
+                    "ERR_PLANNING_APPLICATION_PROJECT_SCOPE_MISMATCH",
+                    "Initial Proposal must bind the exact current Product Project",
+                    ProductErrorCategory.SECURITY,
+                )
+            with _exclusive_snapshot_lock(self._application_lock_target):
+                registry, snapshot_sha, persisted = self._load()
+                self._require_expected(snapshot_sha, expected_snapshot_sha256, "Proposal")
+                registry.add_intent(intent)
+                registry.add_proposal(proposal)
+                ProductionProposalSnapshotStore.save(
+                    self.proposal_path,
+                    registry,
+                    expected_previous_snapshot_sha256=snapshot_sha if persisted else None,
+                    project_id=self.project_id,
+                )
+        return self.snapshot(proposal_id=proposal.proposal_id)
 
     @staticmethod
     def _current_plan(registry: ProductionProposalRegistry, proposal: ProductionProposalRevision):
@@ -819,6 +875,7 @@ class Task027PlanningApplication:
                 self.proposal_path,
                 registry,
                 expected_previous_snapshot_sha256=snapshot_sha if persisted else None,
+                project_id=self.project_id,
             )
         return {
             "proposal": candidate.to_dict(),
@@ -889,6 +946,7 @@ class Task027PlanningApplication:
                 self.proposal_path,
                 registry,
                 expected_previous_snapshot_sha256=snapshot_sha if persisted else None,
+                project_id=self.project_id,
             )
         return {
             "proposal": candidate.to_dict(),
@@ -960,6 +1018,7 @@ class Task027PlanningApplication:
                 self.proposal_path,
                 registry,
                 expected_previous_snapshot_sha256=snapshot_sha if persisted else None,
+                project_id=self.project_id,
             )
         return {**result, "application": self.snapshot(proposal_id=pending.proposal_id)}
 

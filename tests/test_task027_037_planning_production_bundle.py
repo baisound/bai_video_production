@@ -59,7 +59,11 @@ def state():
 
 def write_bundle(root: Path):
     proposals, plan, budget, production = state()
-    ProductionProposalSnapshotStore.save(root / "production-proposal.json", proposals)
+    ProductionProposalSnapshotStore.save(
+        root / "production-proposal.json",
+        proposals,
+        project_id="project-1",
+    )
     ProductionBudgetSnapshotStore.save(root / "production-budget.json", budget)
     ProductionControlSnapshotStore.save(root / "production-control.json", production)
     manifest = PlanningProductionBundleStore.build(
@@ -103,3 +107,39 @@ def test_planning_production_bundle_rejects_budget_for_other_plan() -> None:
             production=production, project_id="project-1",
         )
     assert exc.value.code == "ERR_PLANNING_BUNDLE_BUDGET_PLAN_MISMATCH"
+
+
+@pytest.mark.parametrize(
+    ("proposal_project_id", "code"),
+    (
+        (None, "ERR_PROPOSAL_SNAPSHOT_PROJECT_SCOPE_REQUIRED"),
+        ("project-a", "ERR_PROPOSAL_SNAPSHOT_PROJECT_SCOPE_MISMATCH"),
+    ),
+)
+def test_planning_production_bundle_rejects_unscoped_or_foreign_proposal_store(
+    tmp_path: Path,
+    proposal_project_id: str | None,
+    code: str,
+) -> None:
+    proposals, plan, budget, production = state()
+    ProductionProposalSnapshotStore.save(
+        tmp_path / "production-proposal.json",
+        proposals,
+        project_id=proposal_project_id,
+    )
+    ProductionBudgetSnapshotStore.save(tmp_path / "production-budget.json", budget)
+    ProductionControlSnapshotStore.save(tmp_path / "production-control.json", production)
+    manifest = PlanningProductionBundleStore.build(
+        proposals=proposals,
+        plan_id=plan.plan_id,
+        budget=budget,
+        production=production,
+        project_id="project-1",
+    )
+    PlanningProductionBundleStore.save(
+        tmp_path / "planning-production-bundle.json",
+        manifest,
+    )
+    with pytest.raises(ProductError) as exc:
+        PlanningProductionBundleStore.recover(tmp_path)
+    assert exc.value.code == code

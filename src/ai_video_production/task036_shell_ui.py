@@ -37,6 +37,7 @@ from .export_queue import ExportPreparation
 from .production_control_application import Task037ProductionControlApplication
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
+from .task036_planning_generation_application import Task036PlanningGenerationApplication
 from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .prompt_evidence_application import Task040PromptEvidenceApplication
@@ -159,7 +160,7 @@ document.querySelector('#chooseProjectButton').addEventListener('click',()=>choo
 document.querySelector('#chooseMediaButton').addEventListener('click',()=>chooseAndReport('choose_media_source','メディア'));
 document.querySelector('#chooseHandoffButton').addEventListener('click',()=>chooseAndReport('choose_handoff_folder','保存先'));
 function applyAccessibility(){const main=document.querySelector('main.viewer');if(main){main.id='editingCanvas';main.setAttribute('aria-label','映像プレビュー');main.tabIndex=0}const timeline=document.querySelector('section.timeline');if(timeline){timeline.setAttribute('role','region');timeline.setAttribute('aria-label','編集タイムライン')}const labels={keepButton:'候補を残す',cutButton:'候補をカットする',approvePlanButton:'編集プランを承認する'};for(const [id,label] of Object.entries(labels)){document.querySelector('#'+id)?.setAttribute('aria-label',label)}}
-async function prepareLocalGenerationExecution(model,item){const control=model.execution_control;const prepared=await call('generation_execution_prepare',{queue_entry_id:item.queue_entry_id,expected_queue_snapshot_sha256:control.queue_snapshot_sha256,expected_execution_snapshot_sha256:control.execution_snapshot_sha256});if(!prepared)return;const ok=window.confirm(`LOCAL Providerを実行しますか？\nScene/Slot: ${prepared.scene_id} / ${prepared.slot_id}\nRoute: ${prepared.route_id} / ${prepared.model_id}\nCost: ${prepared.cost_class}\n\nDISPATCHING後に中断しても自動再実行しません。有料Providerは使用しません。`);if(ok){await call('generation_execution_apply',{confirmation_id:prepared.confirmation_id});renderGenerationQueue(await call('generation_queue_snapshot'))}}
+async function prepareLocalGenerationExecution(model,item){const control=model.execution_control;const prepared=await call('generation_execution_prepare',{queue_entry_id:item.queue_entry_id,expected_queue_snapshot_sha256:control.queue_snapshot_sha256,expected_execution_snapshot_sha256:control.execution_snapshot_sha256});if(!prepared)return;const ok=window.confirm(`LOCAL Providerを実行しますか？\nScene/Slot: ${prepared.scene_id} / ${prepared.slot_id}\nRoute: ${prepared.route_id} / ${prepared.model_id}\nCost: ${prepared.cost_class}\n\nDISPATCHING後に中断しても自動再実行しません。有料Providerは使用しません。`);if(ok){await call('generation_execution_apply',{confirmation_id:prepared.confirmation_id});renderGenerationQueue(await call('generation_queue_snapshot'))}else{await call('generation_execution_cancel',{confirmation_id:prepared.confirmation_id})}}
 async function prepareGenerationOutputAdoption(model,item){const control=model.execution_control,adoption=model.output_adoption_control,production=await call('production_snapshot'),prompt=await call('prompt_evidence_snapshot');const prepared=await call('generation_output_adoption_prepare',{execution_id:item.execution_id,expected_execution_snapshot_sha256:control.execution_snapshot_sha256,expected_queue_snapshot_sha256:model.queue_snapshot_sha256,expected_production_snapshot_sha256:production.snapshot_sha256,expected_prompt_snapshot_sha256:prompt.prompt_snapshot_sha256,expected_adoption_snapshot_sha256:adoption.adoption_snapshot_sha256});if(!prepared)return;const ok=window.confirm(`生成済み出力を検証して監査候補へ登録しますか？\nExecution: ${prepared.execution_id}\nSlot: ${prepared.slot_id}\nCandidate: ${prepared.candidate_id}\n\nProvider再実行・課金・Human ACCEPT/LOCK・公開は行いません。`);if(ok){await call('generation_output_adoption_apply',{confirmation_id:prepared.confirmation_id});renderGenerationQueue(await call('generation_queue_snapshot'))}}
 async function recoverGenerationOutputAdoption(item){const ok=window.confirm(`中断した監査候補登録の残りだけを再開しますか？\n${item.adoption_id} / ${item.state}\nProviderは再実行しません。`);if(ok){await call('generation_output_adoption_recover',{adoption_id:item.adoption_id});renderGenerationQueue(await call('generation_queue_snapshot'))}}
 const renderGenerationQueueAdmission=renderGenerationQueue;
@@ -197,6 +198,7 @@ class Task036ShellBridge:
         production_control: Task037ProductionControlApplication | None = None,
         audit_application: Task038AuditApplication | None = None,
         planning_application: Task027PlanningApplication | None = None,
+        planning_generation_application: Task036PlanningGenerationApplication | None = None,
         generation_safety_application: Task013GenerationSafetyApplication | None = None,
         continuity_application: Task039ContinuityApplication | None = None,
         prompt_evidence_application: Task040PromptEvidenceApplication | None = None,
@@ -238,6 +240,12 @@ class Task036ShellBridge:
         self._production_control = production_control
         self._audit_application = audit_application
         self._planning_application = planning_application
+        if planning_generation_application is not None and (
+            planning_application is None
+            or planning_generation_application.planning is not planning_application
+        ):
+            raise ValueError("Planning generation must use the supplied Planning application")
+        self._planning_generation_application = planning_generation_application
         self._generation_safety_application = generation_safety_application
         self._continuity_application = continuity_application
         self._prompt_evidence_application = prompt_evidence_application
@@ -355,9 +363,21 @@ class Task036ShellBridge:
                 return {"available": False, "rows": []}
             return controller.export_snapshot(args)
 
+    def export_queue_preflight(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().export_preflight(args)
+
     def export_queue_prepare_dispatch(self, args: Any) -> dict[str, object]:
         with self._nle_operation():
             return self._require_nle_controller().export_prepare_dispatch(args)
+
+    def export_queue_apply_dispatch(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().export_apply_dispatch(args)
+
+    def export_queue_cancel_dispatch(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().export_cancel_dispatch(args)
 
     def export_queue_cancel(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():
@@ -794,6 +814,76 @@ class Task036ShellBridge:
             return {"available": False}
         return {"available": True, **self._planning_application.snapshot(proposal_id=proposal_id)}
 
+    def planning_generation_status(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Planning generation status")
+        if self._planning_generation_application is None:
+            return {
+                "available": False,
+                "provider_execution_started": False,
+                "paid_execution_authorized": False,
+                "human_confirmation_required": True,
+            }
+        try:
+            with self._nle_operation():
+                return self._planning_generation_application.status()
+        except ProductError as exc:
+            return {
+                "available": False,
+                "blocker_code": exc.code,
+                "provider_execution_started": False,
+                "paid_execution_authorized": False,
+                "human_confirmation_required": True,
+            }
+
+    def _require_planning_generation_application(self) -> Task036PlanningGenerationApplication:
+        if self._planning_generation_application is None:
+            raise ProductError(
+                "ERR_TASK036_PLANNING_GENERATION_NOT_BOUND",
+                "Local Planning generation is not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        return self._planning_generation_application
+
+    def planning_generation_prepare(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"vague_request", "expected_planning_snapshot_sha256"}
+            or not isinstance(args["vague_request"], str)
+            or not isinstance(args["expected_planning_snapshot_sha256"], str)
+        ):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning generation preparation request is invalid", ProductErrorCategory.VALIDATION)
+        with self._nle_operation():
+            return self._require_planning_generation_application().prepare(
+                vague_request=args["vague_request"],
+                expected_planning_snapshot_sha256=args["expected_planning_snapshot_sha256"],
+            )
+
+    def planning_generation_apply(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"]
+        ):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning generation request is invalid", ProductErrorCategory.VALIDATION)
+        with self._nle_operation():
+            return self._require_planning_generation_application().apply(
+                confirmation_id=args["confirmation_id"],
+            )
+
+    def planning_generation_cancel(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"]
+        ):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning generation cancellation request is invalid", ProductErrorCategory.VALIDATION)
+        with self._nle_operation():
+            return self._require_planning_generation_application().cancel(
+                confirmation_id=args["confirmation_id"],
+            )
+
     def planning_prepare_revision(self, args: Any) -> dict[str, Any]:
         required = {"proposal_id", "sections", "expected_snapshot_sha256"}
         if not isinstance(args, dict) or set(args) != required or not isinstance(args["sections"], list):
@@ -1130,6 +1220,7 @@ class Task036ShellBridge:
             raise ProductError("ERR_TASK027_GENERATION_QUEUE_NOT_BOUND", "Generation Queue is not bound to this Shell", ProductErrorCategory.STATE)
         return self._generation_queue_application
 
+    @_nle_operation_guarded
     def generation_queue_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Generation Queue snapshot")
         if self._generation_queue_application is None:
@@ -1147,6 +1238,7 @@ class Task036ShellBridge:
             "output_adoption_control": adoption,
         }
 
+    @_nle_operation_guarded
     def visual_generation_handoff_snapshot(self, args: Any = None) -> dict[str, Any]:
         """Project current visual lineage without granting any next-stage authority."""
         self._empty_args(args, "Visual generation handoff snapshot")
@@ -1385,6 +1477,7 @@ class Task036ShellBridge:
             confirmation_id=args["confirmation_id"],
         )
 
+    @_nle_operation_guarded
     def generation_queue_prepare(self, args: Any) -> dict[str, Any]:
         required = {"prompt_id", "prompt_version", "expected_queue_snapshot_sha256", "expected_upstream_snapshots"}
         if (
@@ -1402,6 +1495,7 @@ class Task036ShellBridge:
             expected_upstream_snapshots=args["expected_upstream_snapshots"],
         )
 
+    @_nle_operation_guarded
     def generation_queue_apply(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation Queue apply request is invalid", ProductErrorCategory.VALIDATION)
@@ -1412,16 +1506,29 @@ class Task036ShellBridge:
             raise ProductError("ERR_TASK013_GENERATION_EXECUTION_NOT_BOUND", "Local generation execution is not bound to this Shell", ProductErrorCategory.STATE)
         return self._generation_execution_application
 
+    @_nle_operation_guarded
     def generation_execution_snapshot(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Generation execution snapshot")
         if self._generation_execution_application is None:
             return {"available": False}
         return {"available": True, **self._generation_execution_application.snapshot()}
 
+    @_nle_operation_guarded
     def generation_execution_preflight(self, args: Any = None) -> dict[str, Any]:
-        self._empty_args(args, "Generation execution preflight")
-        return self._require_generation_execution_application().runtime_preflight()
+        if args in (None, {}):
+            queue_entry_id = None
+        elif (
+            isinstance(args, dict)
+            and set(args) == {"queue_entry_id"}
+            and isinstance(args["queue_entry_id"], str)
+            and bool(args["queue_entry_id"].strip())
+        ):
+            queue_entry_id = args["queue_entry_id"]
+        else:
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution preflight request is invalid", ProductErrorCategory.VALIDATION)
+        return self._require_generation_execution_application().runtime_preflight(queue_entry_id=queue_entry_id)
 
+    @_nle_operation_guarded
     def generation_execution_prepare(self, args: Any) -> dict[str, Any]:
         required = {"queue_entry_id", "expected_queue_snapshot_sha256", "expected_execution_snapshot_sha256"}
         if not isinstance(args, dict) or set(args) != required or not all(isinstance(args[name], str) for name in required):
@@ -1432,16 +1539,47 @@ class Task036ShellBridge:
             expected_execution_snapshot_sha256=args["expected_execution_snapshot_sha256"],
         )
 
+    @_nle_operation_guarded
     def generation_execution_apply(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution apply request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_execution_application().apply_execution(confirmation_id=args["confirmation_id"])
+
+    @_nle_operation_guarded
+    def generation_execution_cancel(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"].strip()
+        ):
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution cancellation request is invalid", ProductErrorCategory.VALIDATION)
+        return self._require_generation_execution_application().cancel_execution(confirmation_id=args["confirmation_id"])
+
+    @_nle_operation_guarded
+    def generation_execution_recover(self, args: Any) -> dict[str, Any]:
+        required = {"execution_id", "expected_execution_snapshot_sha256"}
+        if (
+            not isinstance(args, dict)
+            or set(args) != required
+            or not all(isinstance(args[name], str) and args[name].strip() for name in required)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Generation execution recovery request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_generation_execution_application().recover_execution(
+            execution_id=args["execution_id"],
+            expected_execution_snapshot_sha256=args["expected_execution_snapshot_sha256"],
+        )
 
     def _require_generation_output_adoption_application(self) -> Task027GenerationOutputAdoptionApplication:
         if self._generation_output_adoption_application is None:
             raise ProductError("ERR_TASK027_OUTPUT_ADOPTION_NOT_BOUND", "Generation output adoption is not bound to this Shell", ProductErrorCategory.STATE)
         return self._generation_output_adoption_application
 
+    @_nle_operation_guarded
     def generation_output_adoption_prepare(self, args: Any) -> dict[str, Any]:
         required = {
             "execution_id", "expected_execution_snapshot_sha256",
@@ -1452,11 +1590,13 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption preparation request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_output_adoption_application().prepare_adoption(**args)
 
+    @_nle_operation_guarded
     def generation_output_adoption_apply(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption apply request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_output_adoption_application().apply_adoption(confirmation_id=args["confirmation_id"])
 
+    @_nle_operation_guarded
     def generation_output_adoption_recover(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"adoption_id"} or not isinstance(args["adoption_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption recovery request is invalid", ProductErrorCategory.VALIDATION)

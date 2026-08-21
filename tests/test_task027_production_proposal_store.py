@@ -85,6 +85,69 @@ def test_proposal_snapshot_roundtrip_and_cas(tmp_path: Path) -> None:
     assert second.bytes_written == first.bytes_written
 
 
+def test_project_scoped_proposal_snapshot_roundtrip_and_foreign_scope_rejection(tmp_path: Path) -> None:
+    source = registry()
+    path = tmp_path / "proposal.json"
+    ProductionProposalSnapshotStore.save(path, source, project_id="project-a")
+    document = json.loads(path.read_text(encoding="utf-8"))
+    assert document["snapshot_version"] == "1.1.0"
+    assert document["project_id"] == "project-a"
+    assert ProductionProposalSnapshotStore.load(
+        path,
+        expected_project_id="project-a",
+    ).to_dict() == source.to_dict()
+    scoped_sha = document["snapshot_sha256"]
+    ProductionProposalSnapshotStore.save(
+        path,
+        source,
+        project_id="project-a",
+        expected_previous_snapshot_sha256=scoped_sha,
+    )
+    with pytest.raises(ProductError) as exc:
+        ProductionProposalSnapshotStore.load(path, expected_project_id="project-b")
+    assert exc.value.code == "ERR_PROPOSAL_SNAPSHOT_PROJECT_SCOPE_MISMATCH"
+
+
+def test_generic_legacy_projection_cannot_downgrade_scoped_snapshot(tmp_path: Path) -> None:
+    source = registry()
+    path = tmp_path / "proposal.json"
+    ProductionProposalSnapshotStore.save(path, source, project_id="project-a")
+    before = path.read_bytes()
+    generic = ProductionProposalSnapshotStore.load(path)
+    legacy_sha = ProductionProposalSnapshotStore.snapshot(generic)["snapshot_sha256"]
+    with pytest.raises(ProductError) as exc:
+        ProductionProposalSnapshotStore.save(
+            path,
+            generic,
+            expected_previous_snapshot_sha256=legacy_sha,
+        )
+    assert exc.value.code == "ERR_PROPOSAL_SNAPSHOT_SCOPE_CHANGE_FORBIDDEN"
+    assert path.read_bytes() == before
+
+
+def test_existing_oversize_snapshot_save_fails_before_read_and_preserves_bytes(tmp_path: Path) -> None:
+    path = tmp_path / "proposal.json"
+    payload = b" " * (16 * 1024 * 1024 + 1)
+    path.write_bytes(payload)
+    with pytest.raises(ProductError) as exc:
+        ProductionProposalSnapshotStore.save(
+            path,
+            registry(),
+            expected_previous_snapshot_sha256="sha256:" + "0" * 64,
+        )
+    assert exc.value.code == "ERR_PROPOSAL_SNAPSHOT_SIZE"
+    assert path.read_bytes() == payload
+
+
+def test_product_runtime_rejects_legacy_unscoped_snapshot(tmp_path: Path) -> None:
+    path = tmp_path / "proposal.json"
+    ProductionProposalSnapshotStore.save(path, registry())
+    assert ProductionProposalSnapshotStore.load(path).to_dict() == registry().to_dict()
+    with pytest.raises(ProductError) as exc:
+        ProductionProposalSnapshotStore.load(path, expected_project_id="project-a")
+    assert exc.value.code == "ERR_PROPOSAL_SNAPSHOT_PROJECT_SCOPE_REQUIRED"
+
+
 def test_proposal_snapshot_requires_cas_for_existing_file(tmp_path: Path) -> None:
     path = tmp_path / "proposal.json"
     source = registry()

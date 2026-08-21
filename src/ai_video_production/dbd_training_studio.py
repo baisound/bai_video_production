@@ -2959,6 +2959,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     target_ids = [
         "lower_left_survivor_hud", "lower_left_loadout_hud", "upper_right_notifications", "bottom_right_perks",
+        "bottom_right_positive_effects", "bottom_right_negative_effects",
         *[f"survivor_slot_{i}" for i in range(4)],
         "item_slot", *[f"addon_slot_{i}" for i in range(2)],
         *[f"perk_slot_{i}" for i in range(4)],
@@ -2974,6 +2975,10 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         }
         if profile.lower_left_loadout_hud is not None:
             rows[profile.lower_left_loadout_hud.roi_id] = profile.lower_left_loadout_hud
+        if profile.bottom_right_positive_effects is not None:
+            rows[profile.bottom_right_positive_effects.roi_id] = profile.bottom_right_positive_effects
+        if profile.bottom_right_negative_effects is not None:
+            rows[profile.bottom_right_negative_effects.roi_id] = profile.bottom_right_negative_effects
         if profile.item_slot is not None:
             rows[profile.item_slot.roi_id] = profile.item_slot
         rows.update({item.roi_id: item for item in profile.addon_slots})
@@ -3528,6 +3533,8 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             lower_left_survivor_hud=rois["lower_left_survivor_hud"],
             upper_right_notifications=rois["upper_right_notifications"],
             bottom_right_perks=rois["bottom_right_perks"],
+            bottom_right_positive_effects=rois.get("bottom_right_positive_effects"),
+            bottom_right_negative_effects=rois.get("bottom_right_negative_effects"),
             lower_left_loadout_hud=rois.get("lower_left_loadout_hud"),
             item_slot=rois.get("item_slot"),
             addon_slots=tuple(rois[f"addon_slot_{i}"] for i in range(2)) if all(f"addon_slot_{i}" in rois for i in range(2)) else (),

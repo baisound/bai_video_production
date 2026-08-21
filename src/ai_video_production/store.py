@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
+import gc
+import hashlib
 import json
+import os
 from pathlib import Path
 import sqlite3
+import stat
+import tempfile
+import time
 from typing import Any
 
 from .assets import AssetRecord, AssetType, AudioRightsStatus, PermissionState, RetentionClass, RightsStatus
@@ -16,6 +23,9 @@ from .state import JobStateSnapshot, ProductionJobState
 _BASE_SCHEMA_VERSION = 1
 _V2_SCHEMA_VERSION = 2
 _SCHEMA_VERSION = 3
+_MAX_EXISTING_DATABASE_BYTES = 512 * 1024 * 1024
+_MAX_EXISTING_WAL_BYTES = 256 * 1024 * 1024
+_EXISTING_VALIDATION_TIMEOUT_SECONDS = 30.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,21 +77,338 @@ class AssetPage:
 
 
 class SQLiteProductStore:
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, require_existing: bool = False, required_job_id: str | None = None) -> None:
         self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._initialize()
+        self._require_existing = require_existing
+        self._pinned_database_identity: tuple[int, int] | None = None
+        self._database_pin_fd: int | None = None
+        if require_existing:
+            try:
+                invalid_path = (
+                    self.path.is_symlink()
+                    or not self.path.is_file()
+                    or self.path.stat().st_size <= 0
+                )
+            except OSError:
+                invalid_path = True
+            if invalid_path:
+                raise ProductError(
+                    "ERR_STORE_EXISTING_DATABASE_REQUIRED",
+                    "Existing Product database must be a non-empty regular non-symlink file",
+                    ProductErrorCategory.SECURITY,
+                )
+            try:
+                descriptor = os.open(
+                    self.path,
+                    os.O_RDWR | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0),
+                )
+                try:
+                    opened = os.fstat(descriptor)
+                    if (
+                        not stat.S_ISREG(opened.st_mode)
+                        or opened.st_size <= 0
+                        or opened.st_size > _MAX_EXISTING_DATABASE_BYTES
+                    ):
+                        raise OSError("database is not a regular file")
+                    header = os.read(descriptor, 100)
+                    self._pinned_database_identity = (opened.st_dev, opened.st_ino)
+                    self._database_pin_fd = descriptor
+                except BaseException:
+                    os.close(descriptor)
+                    raise
+                if header[:16] != b"SQLite format 3\x00" or header[18:20] != b"\x02\x02":
+                    raise sqlite3.DatabaseError("database is not a current WAL database")
+                with self._connect_existing_validation() as conn:
+                    self._validate_existing_database(conn)
+                    if required_job_id is not None:
+                        validate_id(required_job_id, IdKind.JOB)
+                        row = conn.execute(
+                            "SELECT 1 FROM production_jobs WHERE job_id=?",
+                            (required_job_id,),
+                        ).fetchone()
+                        if row is None:
+                            raise ProductError(
+                                "ERR_STORE_EXISTING_JOB_REQUIRED",
+                                "Existing Product database lacks the configured Product Job",
+                                ProductErrorCategory.STATE,
+                            )
+            except ProductError:
+                self.close()
+                raise
+            except (OSError, sqlite3.DatabaseError) as exc:
+                self.close()
+                raise ProductError(
+                    "ERR_STORE_EXISTING_DATABASE_INVALID",
+                    "Existing Product database is invalid",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                ) from exc
+        else:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self._initialize()
 
     def _connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.path, timeout=5.0)
+        if self._require_existing:
+            self._require_pinned_database_identity()
+            pinned = self._database_pin_fd
+            if pinned is None:
+                raise ProductError(
+                    "ERR_STORE_EXISTING_DATABASE_IDENTITY",
+                    "Existing Product database is no longer pinned",
+                    ProductErrorCategory.SECURITY,
+                )
+            # sqlite3.Connection context managers do not close their handles;
+            # collect unreachable prior connections before assigning identity
+            # to the descriptor opened by this exact connect operation.
+            gc.collect()
+            descriptor_snapshot = self._process_descriptor_snapshot()
+            database_uri = f"{self.path.resolve(strict=True).as_uri()}?mode=rw"
+            conn = sqlite3.connect(database_uri, timeout=5.0, uri=True)
+            try:
+                self._require_pinned_database_identity()
+                self._require_connection_database_identity(descriptor_snapshot)
+            except Exception:
+                conn.close()
+                raise
+        else:
+            conn = sqlite3.connect(self.path, timeout=5.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON")
-        conn.execute("PRAGMA journal_mode=WAL")
+        if not self._require_existing:
+            conn.execute("PRAGMA journal_mode=WAL")
         return conn
+
+    @staticmethod
+    def _process_descriptor_snapshot() -> dict[int, tuple[int, int]] | None:
+        directory = Path("/proc/self/fd")
+        if os.name != "posix" or not directory.is_dir():
+            return None
+        result: dict[int, tuple[int, int]] = {}
+        for entry in directory.iterdir():
+            try:
+                descriptor = int(entry.name)
+                observed = os.fstat(descriptor)
+            except (OSError, ValueError):
+                continue
+            result[descriptor] = (observed.st_dev, observed.st_ino)
+        return result
+
+    def _require_connection_database_identity(
+        self,
+        before: dict[int, tuple[int, int]] | None,
+    ) -> None:
+        # Windows' retained CRT descriptor denies rename/delete. On Linux/WSL,
+        # prove the sqlite connection itself opened the admitted inode; checking
+        # only the pathname before/after permits an attacker to swap it back.
+        if before is None:
+            return
+        expected = self._pinned_database_identity
+        pin = self._database_pin_fd
+        after = self._process_descriptor_snapshot()
+        if expected is None or after is None:
+            raise ProductError(
+                "ERR_STORE_EXISTING_DATABASE_IDENTITY",
+                "SQLite connection identity cannot be established",
+                ProductErrorCategory.SECURITY,
+            )
+        newly_opened = {
+            descriptor: identity
+            for descriptor, identity in after.items()
+            if descriptor != pin and before.get(descriptor) != identity
+        }
+        if expected not in newly_opened.values():
+            raise ProductError(
+                "ERR_STORE_EXISTING_DATABASE_IDENTITY",
+                "SQLite connected to a different Product database",
+                ProductErrorCategory.SECURITY,
+            )
+
+    def close(self) -> None:
+        descriptor = self._database_pin_fd
+        self._database_pin_fd = None
+        if descriptor is not None:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+
+    def __del__(self) -> None:
+        self.close()
+
+    def _require_pinned_database_identity(self) -> None:
+        descriptor = self._database_pin_fd
+        if descriptor is None:
+            raise ProductError(
+                "ERR_STORE_EXISTING_DATABASE_IDENTITY",
+                "Existing Product database is no longer pinned",
+                ProductErrorCategory.SECURITY,
+            )
+        try:
+            current = self.path.lstat()
+            pinned = os.fstat(descriptor)
+        except OSError as exc:
+            raise ProductError(
+                "ERR_STORE_EXISTING_DATABASE_IDENTITY",
+                "Existing Product database identity changed",
+                ProductErrorCategory.SECURITY,
+            ) from exc
+        if (
+            self.path.is_symlink()
+            or not stat.S_ISREG(current.st_mode)
+            or self._pinned_database_identity != (current.st_dev, current.st_ino)
+            or self._pinned_database_identity != (pinned.st_dev, pinned.st_ino)
+        ):
+            raise ProductError(
+                "ERR_STORE_EXISTING_DATABASE_IDENTITY",
+                "Existing Product database identity changed",
+                ProductErrorCategory.SECURITY,
+            )
+
+    @staticmethod
+    def _copy_stable_file(source: Path, target: Path, *, max_bytes: int) -> None:
+        if source.is_symlink() or not source.is_file():
+            raise OSError("database family member is not a regular file")
+        descriptor = os.open(
+            source,
+            os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0),
+        )
+        try:
+            before = os.fstat(descriptor)
+            if before.st_size <= 0 or before.st_size > max_bytes:
+                raise OSError("database family member exceeds its validation bound")
+            with target.open("xb") as output:
+                while True:
+                    chunk = os.read(descriptor, 1024 * 1024)
+                    if not chunk:
+                        break
+                    output.write(chunk)
+            after = os.fstat(descriptor)
+        finally:
+            os.close(descriptor)
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+            after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns
+        ):
+            raise OSError("database family member changed during validation copy")
+
+    def _copy_pinned_database(self, target: Path) -> None:
+        descriptor = self._database_pin_fd
+        if descriptor is None:
+            raise OSError("database is not pinned")
+        before = os.fstat(descriptor)
+        if before.st_size <= 0 or before.st_size > _MAX_EXISTING_DATABASE_BYTES:
+            raise OSError("database exceeds its validation bound")
+        position = os.lseek(descriptor, 0, os.SEEK_CUR)
+        copied_hash = hashlib.sha256()
+        try:
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            with target.open("xb") as output:
+                while True:
+                    chunk = os.read(descriptor, 1024 * 1024)
+                    if not chunk:
+                        break
+                    output.write(chunk)
+                    copied_hash.update(chunk)
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            observed_hash = hashlib.sha256()
+            while True:
+                chunk = os.read(descriptor, 1024 * 1024)
+                if not chunk:
+                    break
+                observed_hash.update(chunk)
+        finally:
+            os.lseek(descriptor, position, os.SEEK_SET)
+        after = os.fstat(descriptor)
+        if (
+            (before.st_dev, before.st_ino, before.st_size)
+            != (after.st_dev, after.st_ino, after.st_size)
+            or copied_hash.digest() != observed_hash.digest()
+        ):
+            raise OSError("database changed during validation copy")
+
+    @contextmanager
+    def _connect_existing_validation(self):
+        self._require_pinned_database_identity()
+        with tempfile.TemporaryDirectory(prefix="bai-product-admission-") as directory:
+            copy_path = Path(directory) / "product.sqlite3"
+            self._copy_pinned_database(copy_path)
+            # WAL is durable database state; SHM is ephemeral coordination and
+            # must be recreated for the isolated validation copy.
+            for suffix in ("-wal",):
+                source = self.path.with_name(self.path.name + suffix)
+                if source.exists() or source.is_symlink():
+                    self._copy_stable_file(
+                        source,
+                        copy_path.with_name(copy_path.name + suffix),
+                        max_bytes=_MAX_EXISTING_WAL_BYTES,
+                    )
+            self._require_pinned_database_identity()
+            conn = sqlite3.connect(copy_path, timeout=5.0)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys=ON")
+            deadline = time.monotonic() + _EXISTING_VALIDATION_TIMEOUT_SECONDS
+            conn.set_progress_handler(
+                lambda: 1 if time.monotonic() > deadline else 0,
+                10_000,
+            )
+            try:
+                yield conn
+            finally:
+                conn.close()
 
     @staticmethod
     def _column_names(conn: sqlite3.Connection, table: str) -> set[str]:
         return {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
+    @staticmethod
+    def _schema_fingerprint(conn: sqlite3.Connection) -> tuple[Any, ...]:
+        objects = tuple(
+            tuple(row)
+            for row in conn.execute(
+                "SELECT type,name,tbl_name FROM sqlite_master "
+                "WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name"
+            ).fetchall()
+        )
+        tables = tuple(row[1] for row in objects if row[0] == "table")
+        table_shapes = tuple(
+            (
+                table,
+                tuple(tuple(row[1:6]) for row in conn.execute(f"PRAGMA table_info({table})")),
+                tuple(tuple(row[2:8]) for row in conn.execute(f"PRAGMA foreign_key_list({table})")),
+                tuple(
+                    (
+                        tuple(row[1:5]),
+                        tuple(tuple(info[1:6]) for info in conn.execute(f"PRAGMA index_xinfo({row[1]})")),
+                    )
+                    for row in conn.execute(f"PRAGMA index_list({table})")
+                ),
+            )
+            for table in tables
+        )
+        return objects, table_shapes
+
+    @classmethod
+    def _validate_existing_database(cls, conn: sqlite3.Connection) -> None:
+        with tempfile.TemporaryDirectory(prefix="bai-product-schema-") as directory:
+            canonical_path = Path(directory) / "canonical.sqlite3"
+            canonical_store = cls(canonical_path)
+            with canonical_store._connect() as canonical:
+                expected = cls._schema_fingerprint(canonical)
+        versions = tuple(
+            int(row[0])
+            for row in conn.execute("SELECT version FROM schema_migrations ORDER BY version")
+        )
+        integrity = tuple(row[0] for row in conn.execute("PRAGMA integrity_check"))
+        foreign_keys = tuple(tuple(row) for row in conn.execute("PRAGMA foreign_key_check"))
+        if (
+            cls._schema_fingerprint(conn) != expected
+            or versions != (_BASE_SCHEMA_VERSION, _V2_SCHEMA_VERSION, _SCHEMA_VERSION)
+            or integrity != ("ok",)
+            or foreign_keys
+        ):
+            raise ProductError(
+                "ERR_STORE_EXISTING_DATABASE_INVALID",
+                "Existing Product database schema or journal mode is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
 
     @staticmethod
     def _add_column_if_missing(conn: sqlite3.Connection, table: str, name: str, ddl: str) -> None:

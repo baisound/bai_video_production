@@ -364,6 +364,28 @@ class ProductProjectSaveCoordinator:
         actions = ["FINALIZE"] if current.project_manifest_sha256 == journal.target_manifest.project_manifest_sha256 else ["COMPLETE", "ROLLBACK"]
         return {"required": True, "state": journal.state.value, "transaction_id": journal.transaction_id, "available_actions": actions}
 
+    def require_current_integrity(
+        self,
+        project_root: str | Path,
+        manifest: ProductProjectManifest,
+    ) -> None:
+        """Fail closed unless the manifest and every bound child are current."""
+        root = _project_root(project_root)
+        if self.recovery_status(root)["required"]:
+            raise ProductError(
+                "ERR_PROJECT_SAVE_RECOVERY_REQUIRED",
+                "Complete or roll back the interrupted Project save first",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            )
+        live = ProductProjectManifestStore.load(root)
+        if live.project_manifest_sha256 != manifest.project_manifest_sha256:
+            raise ProductError(
+                "ERR_PROJECT_SAVE_REVISION_CONFLICT",
+                "Project manifest changed during integrity validation",
+                ProductErrorCategory.STATE,
+            )
+        self._validate_target_children(root, manifest)
+
     def recover_complete(self, project_root: str | Path, *, transaction_id: str) -> ProductProjectManifest:
         root = _project_root(project_root)
         lock_target = _manifest_path(root, create_control_dir=True)

@@ -8,6 +8,7 @@ decision.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass
 import hashlib
 from importlib import resources
@@ -28,6 +29,8 @@ from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .errors import ProductError, ProductErrorCategory
 from .ingest import AssetIngestRequest, AssetIngestService
 from .serialization import canonical_json_bytes, sha256_bytes
+from .product_project_store import ProductProjectManifestStore, _exclusive_project_lock
+from .project_save import ProductProjectSaveCoordinator
 from .schema_contracts import validate_instance
 
 
@@ -250,6 +253,7 @@ class _PendingAdoption:
     production_snapshot_sha256: str
     prompt_snapshot_sha256: str
     adoption_snapshot_sha256: str
+    project_manifest_sha256: str | None
     consumed: bool = False
 
 
@@ -608,8 +612,15 @@ class Task027GenerationOutputAdoptionApplication:
         expected_production_snapshot_sha256: str,
         expected_prompt_snapshot_sha256: str,
         expected_adoption_snapshot_sha256: str,
+        expected_project_manifest_sha256: str | None = None,
     ) -> dict[str, Any]:
         store = self._load()
+        if expected_project_manifest_sha256 is not None:
+            if not isinstance(expected_project_manifest_sha256, str) or not _SHA_RE.fullmatch(expected_project_manifest_sha256):
+                raise ProductError("ERR_OUTPUT_ADOPTION_MANIFEST_EXPECTED_INVALID", "Expected Project manifest identity is invalid", ProductErrorCategory.VALIDATION)
+            manifest = ProductProjectManifestStore.load(self.project_root)
+            if manifest.project_id != self.project_id or manifest.project_manifest_sha256 != expected_project_manifest_sha256:
+                raise ProductError("ERR_OUTPUT_ADOPTION_MANIFEST_CONFLICT", "Project manifest changed before adoption confirmation", ProductErrorCategory.AUTHORIZATION)
         if store["adoption_snapshot_sha256"] != expected_adoption_snapshot_sha256:
             raise ProductError("ERR_OUTPUT_ADOPTION_SNAPSHOT_CONFLICT", "Output-adoption state changed; reload before confirming", ProductErrorCategory.STATE)
         if any(item["state"] not in _TERMINAL_STATES for item in self._latest_by_adoption(store).values()):
@@ -639,6 +650,7 @@ class Task027GenerationOutputAdoptionApplication:
             execution["execution_snapshot_sha256"], queue["queue_snapshot_sha256"],
             production["snapshot_sha256"], prompt["prompt_snapshot_sha256"],
             store["adoption_snapshot_sha256"],
+            expected_project_manifest_sha256,
         )
         return {
             "confirmation_id": token,
@@ -813,25 +825,36 @@ class Task027GenerationOutputAdoptionApplication:
         if pending is None or pending.consumed:
             raise ProductError("ERR_OUTPUT_ADOPTION_CONFIRMATION_INVALID", "Output-adoption confirmation is missing or already used", ProductErrorCategory.AUTHORIZATION)
         pending.consumed = True
-        with exclusive_file_update_lock(self.snapshot_path):
-            store = self._load()
-            self._require_equal(store["adoption_snapshot_sha256"], pending.adoption_snapshot_sha256, "ERR_OUTPUT_ADOPTION_CONFIRMATION_STALE", "Output-adoption state changed after confirmation")
-            execution, queue, production, prompt, entry = self._sources(pending.event["execution_id"])
-            for actual, expected, code, message in (
-                (execution["execution_snapshot_sha256"], pending.execution_snapshot_sha256, "ERR_OUTPUT_ADOPTION_EXECUTION_CONFLICT", "Execution state changed after confirmation"),
-                (queue["queue_snapshot_sha256"], pending.queue_snapshot_sha256, "ERR_OUTPUT_ADOPTION_QUEUE_CONFLICT", "Queue state changed after confirmation"),
-                (production["snapshot_sha256"], pending.production_snapshot_sha256, "ERR_OUTPUT_ADOPTION_PRODUCTION_CONFLICT", "Production state changed after confirmation"),
-                (prompt["prompt_snapshot_sha256"], pending.prompt_snapshot_sha256, "ERR_OUTPUT_ADOPTION_PROMPT_CONFLICT", "Prompt state changed after confirmation"),
-            ):
-                self._require_equal(actual, expected, code, message)
-            event = next(item for item in execution["latest_executions"] if item["execution_id"] == pending.event["execution_id"])
-            if event != pending.event:
-                raise ProductError("ERR_OUTPUT_ADOPTION_EXECUTION_IDENTITY_DRIFT", "Completed execution changed after confirmation", ProductErrorCategory.DATA_INTEGRITY)
-            if entry != pending.queue_entry:
-                raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_IDENTITY_DRIFT", "Queue execution lineage changed after confirmation", ProductErrorCategory.DATA_INTEGRITY)
-            base = self._base(event, pending.candidate_id)
-            latest = self._append(store, base, "PREPARED", asset_id=None)
-            return self._continue(store, latest, event)
+        project_guard = (
+            nullcontext()
+            if pending.project_manifest_sha256 is None
+            else _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root))
+        )
+        with project_guard:
+            if pending.project_manifest_sha256 is not None:
+                manifest = ProductProjectManifestStore.load(self.project_root)
+                if manifest.project_id != self.project_id or manifest.project_manifest_sha256 != pending.project_manifest_sha256:
+                    raise ProductError("ERR_OUTPUT_ADOPTION_MANIFEST_CONFLICT", "Project manifest changed after adoption confirmation", ProductErrorCategory.AUTHORIZATION)
+                ProductProjectSaveCoordinator().require_current_integrity(self.project_root, manifest)
+            with exclusive_file_update_lock(self.snapshot_path):
+                store = self._load()
+                self._require_equal(store["adoption_snapshot_sha256"], pending.adoption_snapshot_sha256, "ERR_OUTPUT_ADOPTION_CONFIRMATION_STALE", "Output-adoption state changed after confirmation")
+                execution, queue, production, prompt, entry = self._sources(pending.event["execution_id"])
+                for actual, expected, code, message in (
+                    (execution["execution_snapshot_sha256"], pending.execution_snapshot_sha256, "ERR_OUTPUT_ADOPTION_EXECUTION_CONFLICT", "Execution state changed after confirmation"),
+                    (queue["queue_snapshot_sha256"], pending.queue_snapshot_sha256, "ERR_OUTPUT_ADOPTION_QUEUE_CONFLICT", "Queue state changed after confirmation"),
+                    (production["snapshot_sha256"], pending.production_snapshot_sha256, "ERR_OUTPUT_ADOPTION_PRODUCTION_CONFLICT", "Production state changed after confirmation"),
+                    (prompt["prompt_snapshot_sha256"], pending.prompt_snapshot_sha256, "ERR_OUTPUT_ADOPTION_PROMPT_CONFLICT", "Prompt state changed after confirmation"),
+                ):
+                    self._require_equal(actual, expected, code, message)
+                event = next(item for item in execution["latest_executions"] if item["execution_id"] == pending.event["execution_id"])
+                if event != pending.event:
+                    raise ProductError("ERR_OUTPUT_ADOPTION_EXECUTION_IDENTITY_DRIFT", "Completed execution changed after confirmation", ProductErrorCategory.DATA_INTEGRITY)
+                if entry != pending.queue_entry:
+                    raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_IDENTITY_DRIFT", "Queue execution lineage changed after confirmation", ProductErrorCategory.DATA_INTEGRITY)
+                base = self._base(event, pending.candidate_id)
+                latest = self._append(store, base, "PREPARED", asset_id=None)
+                return self._continue(store, latest, event)
 
     def apply_recovery(self, *, adoption_id: str) -> dict[str, Any]:
         with exclusive_file_update_lock(self.snapshot_path):

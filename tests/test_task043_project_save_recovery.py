@@ -103,6 +103,18 @@ def test_failure_after_first_child_requires_recovery_and_keeps_old_manifest(tmp_
     status = coordinator.recovery_status(tmp_path)
     assert status["required"] is True
     assert set(status["available_actions"]) == {"COMPLETE", "ROLLBACK"}
+    with pytest.raises(ProductError) as admission:
+        ProductProjectSaveCoordinator().require_current_integrity(tmp_path, current)
+    assert admission.value.code == "ERR_PROJECT_SAVE_RECOVERY_REQUIRED"
+
+
+def test_current_integrity_rejects_manifest_bound_child_drift(tmp_path: Path) -> None:
+    current, _target, _documents = setup_project(tmp_path)
+    ProductProjectSaveCoordinator().require_current_integrity(tmp_path, current)
+    (tmp_path / "state/first.json").write_bytes(b"tampered")
+    with pytest.raises(ProductError) as rejected:
+        ProductProjectSaveCoordinator().require_current_integrity(tmp_path, current)
+    assert rejected.value.code == "ERR_PROJECT_SAVE_RECOVERY_TARGET_CONFLICT"
 
 
 def test_recovery_complete_finishes_same_transaction_without_duplicate_write(tmp_path: Path) -> None:

@@ -97,6 +97,11 @@ class SQLiteProductStore:
                     "Existing Product database must be a non-empty regular non-symlink file",
                     ProductErrorCategory.SECURITY,
                 )
+            # A sqlite Connection context manager commits or rolls back but does
+            # not close the native handle.  Finalize unreachable handles before
+            # pinning so a delayed WAL checkpoint cannot mutate the admitted
+            # database while its stable validation copy is being produced.
+            gc.collect()
             try:
                 descriptor = os.open(
                     self.path,
@@ -390,8 +395,15 @@ class SQLiteProductStore:
         with tempfile.TemporaryDirectory(prefix="bai-product-schema-") as directory:
             canonical_path = Path(directory) / "canonical.sqlite3"
             canonical_store = cls(canonical_path)
-            with canonical_store._connect() as canonical:
+            canonical = canonical_store._connect()
+            try:
                 expected = cls._schema_fingerprint(canonical)
+            finally:
+                # sqlite Connection.__exit__ does not close the file handle.
+                # Close explicitly before TemporaryDirectory cleanup, which is
+                # mandatory on Windows where an open database denies deletion.
+                canonical.close()
+                canonical_store.close()
         versions = tuple(
             int(row[0])
             for row in conn.execute("SELECT version FROM schema_migrations ORDER BY version")

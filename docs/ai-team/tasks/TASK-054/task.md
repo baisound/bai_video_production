@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R3B_ROUTE_CAPABILITY_COMPLETE / COMMIT_READY / R3C_NEXT`
+Status: `R3C_FAKE_ADAPTER_COMPLETE / COMMIT_READY / R3D_HUMAN_GATED`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -83,18 +83,33 @@ direct boundary Evidence is `57 PASS`; TASK-054 plus TASK-049 direct regression
 is `380 PASS`; compileall, schema mirror and diff-check pass. R3C deterministic
 fake adapter/fault tests are next.
 
+## R3C completion checkpoint
+
+R3C deterministic fake adapter/fault harness is complete and commit-ready. The
+test-only in-memory harness revalidates the current R3B decision before every
+emission, accepts only the canonical R2A strict parser and provides deterministic
+SUCCESS, malformed, timeout, cancellation, runtime-unavailable and resource-limit
+scenarios. Raw fixture bytes exist only while R2A parses them; the returned
+Attempt retains only digests, stable fault codes, metrics and the structural
+quarantine result. It cannot mint an ExecutionReceipt, Proposal, Candidate,
+review, Dataset or execution authority, and fixed state remains
+`TEST_ONLY_NO_PROVIDER_EXECUTION`. R3C focused Evidence is `18 PASS`; R3C + R3B
+and R2A direct boundary Evidence is `160 PASS`; TASK-054 plus TASK-049 direct
+regression is `398 PASS`; compileall and diff-check pass. R3D canonical
+Provider/local adapter integration remains a separate Human Gate.
+
 ## Authority boundary
 
-This checkpoint closes the bounded local R3B Route Capability unit and
-leaves R3C eligible as the next bounded local unit. It does not authorize Dataset adoption,
+This checkpoint closes the bounded local R3C deterministic fake adapter unit.
+R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,
 Timeline adoption, binding approval, Product Activation, release or deployment.
 Those remain Human-Gated.
 
 ## Current decision
 
-R3B Route Capability is complete and commit-ready under the Owner's exact
+R3C deterministic fake adapter/fault harness is complete and commit-ready under the Owner's exact
 bounded instruction. The tuned model design remains after CGEL + compatible
-Knowledge/RAG and before deterministic Fact/Policy validation. R3C is next;
+Knowledge/RAG and before deterministic Fact/Policy validation. R3D is Human-Gated;
 all Dataset, runtime, training, Provider, TTS, Timeline, release and deploy
 effects remain blocked by their Human Gates.

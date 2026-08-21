@@ -1,10 +1,11 @@
 # TASK-046 — Voice Studio / Voice Dataset & Local Voice Profile
 
-- Status: `P_VS_0_HOSTED_CLOSED / P_VS_1A_PARALLEL_LOCK_ACTIVE / P_VS_1B_SUCCESSOR_MOCK_GATED`
-- Authorization: `OWNER_DIRECTED_ROADMAP_AND_BOUNDED_P_VS_1A_IMPLEMENTATION`
+- Status: `P_VS_1A_PROFILE_FOUNDATION_HOSTED_CLOSED / P_VS_3A_3B_4A_4B_CONTRACT_FOUNDATION_HOSTED_CLOSED / BEGINNER_CLIENT_UNSIGNED_TECHNICAL_PREVIEW_HOSTED_CLOSED / PRODUCTION_RECORDING_TRAINING_MODEL_AUDIO_GATED`
+- Authorization: `HOSTED_CLOSED_BODY_FREE_SYNTHETIC_AND_TECHNICAL_PREVIEW_FOUNDATION / OWNER_VOICE_PRODUCTION_EFFECTS_REQUIRE_FRESH_AUTHORITY`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Exact allocation base: `244e86aaa0ea65bdba2ca35176c422bcfc30d65f`
 - P-VS-0 hosted closure: PR #90 / exact main `25e2e04fb3360af77017a4a42e868fc95b15ec80`
+- P-VS-1A body-free VoiceProfile foundation: PR #93 / exact main `52284d77b8b42c09181256f68374d90b9b0375ab`
 - Canonical input: `docs/ai-team/product-design/voice-studio/BAI_VIDEO_PRODUCTION_VOICE_STUDIO_LOCAL_AI_OBS_統合詳細設計書_Ver1.2.md`
 
 ## Goal
@@ -18,6 +19,44 @@ TASK-046 does not replace TASK-014 narration rendering, TASK-006/023 subtitle
 and ASR truth, TASK-003/037 Asset and Candidate truth, TASK-041 Human audio
 review, TASK-026/022 placement/frame truth, TASK-043 durable jobs or TASK-044
 Timeline/Export Queue.
+
+## Hosted implementation closure and remaining Gates
+
+The repository already contains more than the historical P-VS-1A active-Lock
+status implied. The following bounded foundations each passed `9 / 9` hosted
+checks and merged to main:
+
+- P-VS-1A body-free VoiceProfile foundation: PR #93 / exact main
+  `52284d77b8b42c09181256f68374d90b9b0375ab`;
+- P-VS-3A recording-session contract and P-VS-4B vertical-slice design:
+  PR #101 / `a7690917b2c05c44372a1c7ea6dd81d422b1aa88` and PR #163 /
+  `4a8599cec34622421708f3a7b6737323a69f572d`;
+- P-VS-3B Dataset revision, P-VS-4A Training/ModelCandidate and P-VS-4B
+  application contracts: PR #165 / `13a6e430400a1a5af6ba4800069c5b766eb1bcd3`,
+  PR #168 / `868548ebec65ebec565b62dd45bc45da99db2fb1` and PR #170 /
+  `75e813f54eb1b00d0b14468643972639e397b57f`;
+- bounded synthetic WAV runtime, Dataset/engine admission and engine Evidence
+  contracts: PR #173 / `c5a42a93df09f68ab4c4fd82f13757072200645e`,
+  PR #174 / `7f427c845fc0ff47e255dc5adc5349b21e025151` and PR #175 /
+  `cf2e37605b0d138181e0d5f7c56ce67b00f30aab`;
+- beginner client, Windows installer, license composition, workflow import and
+  next-action UX: PR #180 / `bb4f9aa717638712afaa9b9b11f34a55647643fc`,
+  PR #181 / `a380c03977a0f09f2b90e6d3c7fb23c85a7e46f2`, PR #182 /
+  `da834ccbd370b527c1cc6c4ba03806ea4a6ac669`, PR #183 /
+  `511dc5122347c63a9dd7241f4bfcf2f383f16057` and PR #184 /
+  `dc5710a11b45176962ca70a5398ddd705bc61f60`.
+
+These closures establish body-free contracts, synthetic fail-closed behavior
+and an unsigned development Technical Preview client/installer. They do not
+establish production Voice Studio admission. The Qwen3-TTS load/dependency
+probes remain diagnostic compatibility Evidence; the official representative
+training recipe is `FAILED_KNOWN / BLOCKED`. P-VS-1B Shell integration, P-VS-2
+real zero-shot narration, real recording/private-audio persistence, Dataset
+adoption, Training start, model approval, narration generation and Master WAV
+acceptance all remain separate fresh Gates. They require exact runtime/path
+Evidence, current Consent and rights, verified encrypted storage and explicit
+Owner authorization; no merged receipt or Technical Preview artifact is an
+execution capability.
 
 ## Product boundaries
 

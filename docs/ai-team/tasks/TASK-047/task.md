@@ -1,7 +1,7 @@
 # TASK-047 — OBS Voice Capture Integration
 
-- Status: `P_OBS_1_PUBLIC_TECHNICAL_PREVIEW_RELEASED / OWNER_VOICE_AND_PRODUCTION_RECORDING_GATE_OPEN / P_OBS_2_LATER`
-- Authorization: `OWNER_DIRECTED_ROADMAP_AND_DESIGN / OWNER_STANDING_AUG_2026_DEVELOPER2_INSTALL_ACQUIRE_CONFIGURE_BUILD`
+- Status: `P_OBS_1_PLUGIN_INSTALLER_RUNTIME_HOSTED_CLOSED / PUBLIC_TECHNICAL_PREVIEW_RELEASED / PRODUCTION_RECORDING_DATASET_TRAINING_GATED / P_OBS_2_LATER`
+- Authorization: `HOSTED_CLOSED_TECHNICAL_FOUNDATION / OWNER_VOICE_PRODUCTION_EFFECTS_REQUIRE_FRESH_AUTHORITY`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Dependencies: `TASK-046`, `TASK-006/023`, `TASK-020`, `TASK-043`, `TASK-045`
 
@@ -11,10 +11,33 @@
   `p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-2026-08-15.md`
 - Provenance:
   `p-obs-1a-native-selected-source-capture-adapter-contract-rev2.1-provenance.json`
-- Activation: design authority only when the exact contract and provenance are
-  read from `main` and their digests validate.
-- Implementation, native build/install/load, OBS launch/configuration/capture,
-  audio/device/Asset/Dataset mutation: `NOT_AUTHORIZED`.
+- Historical activation boundary: this contract originally granted design
+  authority only when the exact contract and provenance were read from `main`
+  and their digests validated. Its original implementation and native-effect
+  authority remained `NOT_AUTHORIZED`; the later bounded implementation and
+  Hosted closures below supersede that historical status without granting
+  production recording, Dataset adoption or Training authority.
+
+## Hosted closure
+
+- P-OBS-1A Rev.2.1 design contract passed all `9 / 9` hosted checks in PR #102
+  and merged at exact main
+  `1c94fac10f2c4beb9c31b2eccb85f97d531fabde`.
+- The bounded installer candidate passed all `9 / 9` hosted checks in PR #119
+  and merged at exact main
+  `42d7dcad784a76d4bcb3370bb5e17648e150ccde`.
+- Release composition and its beginner-facing public Technical Preview route
+  passed all `9 / 9` hosted checks in PR #125 and PR #127, merging at exact
+  mains `f7f55ec3f14842452a71a564b21b718ef282a830` and
+  `79975f6eb5a93ccea324d14a4612d24c847e2189`.
+- The selected-source Plugin/runtime and running-OBS recording Controller
+  passed all `9 / 9` hosted checks in PR #132 and merged at exact main
+  `1bccded179dedba83226cb1228f53cc9dc775b81`.
+- These closures establish the technical Plugin/installer/runtime foundation
+  and unsigned public Technical Preview only. A bounded Owner-voice development
+  acceptance is not production training-material admission. Production
+  recording, private audio persistence, encrypted staging acceptance, Dataset
+  adoption, Training, stable Release and P-OBS-2 remain separate fresh Gates.
 
 ## Goal
 

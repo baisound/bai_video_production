@@ -99,6 +99,17 @@ def test_route_settings_reject_embedded_secrets():
         ModelRoute("bad", AiWorkload.PLANNING, ProviderFamily.OPENAI, "openai", "model", CostClass.CLOUD_PAID_AI, settings={"api_key": "sk-secret"})
 
 
+def test_model_id_accepts_local_runtime_tag_without_relaxing_route_ids():
+    local = ModelRoute(
+        "local-llm", AiWorkload.PLANNING, ProviderFamily.LOCAL_OPEN_SOURCE,
+        "ollama", "qwen3:8b", CostClass.LOCAL_FREE_AI,
+        capabilities=("TEXT_GENERATION",),
+    )
+    assert local.model_id == "qwen3:8b"
+    with pytest.raises(ValueError, match="route_id"):
+        ModelRoute("bad:route", AiWorkload.PLANNING, ProviderFamily.LOCAL_OPEN_SOURCE, "ollama", "qwen3:8b", CostClass.LOCAL_FREE_AI)
+
+
 def test_connection_profile_is_deterministic_schema_valid_and_packaged():
     profile = AiConnectionProfile(
         "creator-default", "1.0.0", SelectionMode.AUTO,

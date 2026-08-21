@@ -22,6 +22,7 @@ EVENT_TYPE_JA = {
     GameEventType.MATCH_START: "試合開始",
     GameEventType.CHASE_START: "チェイス開始",
     GameEventType.CHASE_END: "チェイス終了",
+    GameEventType.GENERATOR_COMPLETE: "発電機修理完了",
     GameEventType.INJURY: "負傷",
     GameEventType.DOWN: "ダウン",
     GameEventType.HOOK: "フック",
@@ -50,7 +51,7 @@ KNOWLEDGE_KIND_JA = {
     GameKnowledgeKind.ADDON: "アドオン",
     GameKnowledgeKind.ITEM: "アイテム",
     GameKnowledgeKind.OFFERING: "オファリング",
-    GameKnowledgeKind.CHARACTER: "キャラクター",
+    GameKnowledgeKind.UNKNOWN: "未分類・要確認",
     GameKnowledgeKind.SURVIVOR: "サバイバー",
     GameKnowledgeKind.KNOWLEDGE: "ナレッジ系",
     GameKnowledgeKind.STATUS: "状態",
@@ -77,6 +78,7 @@ VISUAL_TRAINING_DOMAIN_JA = {
     "ITEM_ICON": "アイテムアイコン",
     "ADDON_ICON": "アドオンアイコン",
     "KILLER_POWER": "キラー能力アイコン",
+    "KILLER_SPECIFIC_HUD": "キラー固有HUD（Teacher）",
 }
 
 HUD_VISIBILITY_JA = {

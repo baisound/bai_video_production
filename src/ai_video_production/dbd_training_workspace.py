@@ -29,6 +29,9 @@ from .dbd_hud_detectors import (
     TesseractCliOcrEngine,
     normalize_hud_text,
 )
+from .dbd_killer_capability_registry import KillerCapabilityRegistry
+from .dbd_killer_specific_detector import KillerSpecificTeacherLabel, KillerSpecificTeacherRole
+from .dbd_observation_envelope import SurvivorSignalKind, normalize_survivor_signal_value
 from .dbd_perk_knowledge import PerkEnvironment
 from .dbd_vision_slices import DBDHudRoiProfile, FFmpegSliceExtractor, NormalizedROI, ReferenceSliceIndex
 from .faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService
@@ -41,6 +44,7 @@ class VisualTrainingDomain(str, Enum):
     ITEM_ICON = "ITEM_ICON"
     ADDON_ICON = "ADDON_ICON"
     KILLER_POWER = "KILLER_POWER"
+    KILLER_SPECIFIC_HUD = "KILLER_SPECIFIC_HUD"
 
 
 _SAFE_COMPONENT = re.compile(r"[^A-Za-z0-9._-]+")
@@ -89,6 +93,8 @@ class VisualVideoTrainingRequest:
     notes: str = ""
     roi_profile_path: str | None = None
     max_samples: int = 500
+    match_id: str = ""
+    signal_kind: SurvivorSignalKind | None = None
 
     def __post_init__(self) -> None:
         if not self.label.strip() or len(self.label) > 256:
@@ -103,6 +109,16 @@ class VisualVideoTrainingRequest:
             raise ValueError("slot must be 0..3 when specified")
         if not 1 <= self.max_samples <= 10_000:
             raise ValueError("max_samples must be 1..10000")
+        if self.domain is VisualTrainingDomain.SURVIVOR_HUD:
+            if self.slot is None:
+                raise ValueError("SURVIVOR_HUD video learning requires survivor slot 0..3")
+            if not self.match_id.strip() or len(self.match_id) > 256:
+                raise ValueError("SURVIVOR_HUD video learning requires bounded match_id")
+            if self.signal_kind is None:
+                raise ValueError("SURVIVOR_HUD video learning requires signal_kind")
+            normalize_survivor_signal_value(self.signal_kind, self.label)
+        elif self.match_id or self.signal_kind is not None:
+            raise ValueError("survivor subject fields require SURVIVOR_HUD domain")
         sample_count = ((self.end_frame_exclusive - self.start_frame - 1) // self.frame_step) + 1
         if sample_count > self.max_samples:
             raise ValueError(
@@ -172,6 +188,16 @@ class VisualTrainingSample:
     display_state: str = ""
     source_video: str = ""
     source_frame: int | None = None
+    match_id: str = ""
+    survivor_slot: int | None = None
+    signal_kind: SurvivorSignalKind | None = None
+    killer_id: str = ""
+    effect_id: str = ""
+    label_namespace: str = ""
+    teacher_role: KillerSpecificTeacherRole | None = None
+    active: bool | None = None
+    stage: int | None = None
+    progress_milli: int | None = None
 
     def __post_init__(self) -> None:
         if not self.label.strip() or len(self.label) > 256:
@@ -192,6 +218,43 @@ class VisualTrainingSample:
             raise ValueError("visual training source_video is too long")
         if self.source_frame is not None and self.source_frame < 0:
             raise ValueError("visual training source_frame must be non-negative")
+        if self.domain is VisualTrainingDomain.SURVIVOR_HUD:
+            is_legacy = self.registration_origin == "LEGACY"
+            if not is_legacy:
+                if not self.match_id.strip() or len(self.match_id) > 256:
+                    raise ValueError("SURVIVOR_HUD sample requires bounded match_id")
+                if self.survivor_slot is None or not 0 <= self.survivor_slot <= 3:
+                    raise ValueError("SURVIVOR_HUD sample requires survivor_slot 0..3")
+                if self.signal_kind is None:
+                    raise ValueError("SURVIVOR_HUD sample requires signal_kind")
+                normalize_survivor_signal_value(self.signal_kind, self.label)
+            elif self.survivor_slot is not None and not 0 <= self.survivor_slot <= 3:
+                raise ValueError("legacy survivor_slot must be 0..3 when supplied")
+        elif self.domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+            if not self.match_id.strip() or len(self.match_id) > 256:
+                raise ValueError("KILLER_SPECIFIC_HUD sample requires bounded match_id")
+            if self.survivor_slot is None or not 0 <= self.survivor_slot <= 3:
+                raise ValueError("KILLER_SPECIFIC_HUD sample requires survivor_slot 0..3")
+            if self.signal_kind is not None:
+                raise ValueError("KILLER_SPECIFIC_HUD does not use Survivor signal_kind")
+            if not re.fullmatch(r"killer_[a-z0-9_]+", self.killer_id):
+                raise ValueError("KILLER_SPECIFIC_HUD sample requires canonical killer_id")
+            if not re.fullmatch(r"[a-z][a-z0-9_]{1,127}", self.effect_id):
+                raise ValueError("KILLER_SPECIFIC_HUD sample requires canonical effect_id")
+            expected = f"KILLER_SPECIFIC_HUD/{self.killer_id}/{self.effect_id}"
+            if self.teacher_role is KillerSpecificTeacherRole.POSITIVE and self.label_namespace != expected:
+                raise ValueError("positive sample namespace must match killer/effect")
+            if self.teacher_role is KillerSpecificTeacherRole.HARD_NEGATIVE and self.label_namespace == expected:
+                raise ValueError("hard-negative sample must use a different namespace")
+            KillerSpecificTeacherLabel(
+                self.teacher_role, self.label_namespace, self.active, self.stage, self.progress_milli
+            )
+        elif self.match_id or self.survivor_slot is not None or self.signal_kind is not None:
+            raise ValueError("survivor subject fields require SURVIVOR_HUD domain")
+        elif any((self.killer_id, self.effect_id, self.label_namespace)) or self.teacher_role is not None or any(
+            value is not None for value in (self.active, self.stage, self.progress_milli)
+        ):
+            raise ValueError("Killer-specific teacher fields require KILLER_SPECIFIC_HUD domain")
 
     def to_row(self) -> dict[str, str]:
         return {
@@ -206,6 +269,16 @@ class VisualTrainingSample:
             "display_state": self.display_state.strip(),
             "source_video": self.source_video.strip(),
             "source_frame": "" if self.source_frame is None else str(self.source_frame),
+            "match_id": self.match_id.strip(),
+            "survivor_slot": "" if self.survivor_slot is None else str(self.survivor_slot),
+            "signal_kind": "" if self.signal_kind is None else self.signal_kind.value,
+            "killer_id": self.killer_id,
+            "effect_id": self.effect_id,
+            "label_namespace": self.label_namespace,
+            "teacher_role": "" if self.teacher_role is None else self.teacher_role.value,
+            "active": "" if self.active is None else "true" if self.active else "false",
+            "stage": "" if self.stage is None else str(self.stage),
+            "progress_milli": "" if self.progress_milli is None else str(self.progress_milli),
         }
 
 
@@ -213,6 +286,9 @@ class VisualTrainingManifest:
     fieldnames = (
         "domain", "label", "image_path", "group", "source_ref", "notes",
         "registration_origin", "slot", "display_state", "source_video", "source_frame",
+        "match_id", "survivor_slot", "signal_kind",
+        "killer_id", "effect_id", "label_namespace", "teacher_role",
+        "active", "stage", "progress_milli",
     )
 
     def __init__(self, path: str | Path) -> None:
@@ -246,6 +322,9 @@ class VisualTrainingManifest:
                     if not row:
                         continue
                     try:
+                        raw_active = (row.get("active") or "").strip().casefold()
+                        if raw_active not in {"", "true", "false"}:
+                            raise ValueError("active must be true, false or empty")
                         item = VisualTrainingSample(
                             domain=VisualTrainingDomain((row.get("domain") or "").strip().upper()),
                             label=(row.get("label") or "").strip(),
@@ -258,6 +337,16 @@ class VisualTrainingManifest:
                             display_state=(row.get("display_state") or "").strip(),
                             source_video=(row.get("source_video") or "").strip(),
                             source_frame=(None if not (row.get("source_frame") or "").strip() else int((row.get("source_frame") or "0").strip())),
+                            match_id=(row.get("match_id") or "").strip(),
+                            survivor_slot=(None if not (row.get("survivor_slot") or "").strip() else int((row.get("survivor_slot") or "0").strip())),
+                            signal_kind=(None if not (row.get("signal_kind") or "").strip() else SurvivorSignalKind((row.get("signal_kind") or "").strip().upper())),
+                            killer_id=(row.get("killer_id") or "").strip(),
+                            effect_id=(row.get("effect_id") or "").strip(),
+                            label_namespace=(row.get("label_namespace") or "").strip(),
+                            teacher_role=(None if not (row.get("teacher_role") or "").strip() else KillerSpecificTeacherRole((row.get("teacher_role") or "").strip().upper())),
+                            active=(None if not raw_active else raw_active == "true"),
+                            stage=(None if not (row.get("stage") or "").strip() else int((row.get("stage") or "0").strip())),
+                            progress_milli=(None if not (row.get("progress_milli") or "").strip() else int((row.get("progress_milli") or "0").strip())),
                         )
                     except Exception as exc:
                         raise ValueError(f"invalid visual manifest row {number}: {exc}") from exc
@@ -267,7 +356,17 @@ class VisualTrainingManifest:
 
     @staticmethod
     def _identity(item: VisualTrainingSample) -> tuple[str, ...]:
-        return (item.domain.value, item.label.casefold(), str(Path(item.image_path)).casefold(), item.group.casefold(), item.source_ref.casefold())
+        return (
+            item.domain.value, item.label.casefold(), str(Path(item.image_path)).casefold(),
+            item.group.casefold(), item.source_ref.casefold(), item.match_id.casefold(),
+            "" if item.survivor_slot is None else str(item.survivor_slot),
+            "" if item.signal_kind is None else item.signal_kind.value,
+            item.killer_id, item.effect_id, item.label_namespace,
+            "" if item.teacher_role is None else item.teacher_role.value,
+            "" if item.active is None else str(item.active),
+            "" if item.stage is None else str(item.stage),
+            "" if item.progress_milli is None else str(item.progress_milli),
+        )
 
     def append(self, item: VisualTrainingSample) -> bool:
         with self._lock:
@@ -317,6 +416,9 @@ class VisualTrainingManifest:
                     domain = VisualTrainingDomain(raw_domain) if raw_domain else default_domain
                     if domain is None:
                         raise ValueError("domain is required when no default domain is selected")
+                    raw_active = (row.get("active") or "").strip().casefold()
+                    if raw_active not in {"", "true", "false"}:
+                        raise ValueError("active must be true, false or empty")
                     item = VisualTrainingSample(
                         domain=domain,
                         label=(row.get("label") or "").strip(),
@@ -329,6 +431,16 @@ class VisualTrainingManifest:
                         display_state=(row.get("display_state") or "").strip(),
                         source_video=(row.get("source_video") or "").strip(),
                         source_frame=(None if not (row.get("source_frame") or "").strip() else int((row.get("source_frame") or "0").strip())),
+                        match_id=(row.get("match_id") or "").strip(),
+                        survivor_slot=(None if not (row.get("survivor_slot") or "").strip() else int((row.get("survivor_slot") or "0").strip())),
+                        signal_kind=(None if not (row.get("signal_kind") or "").strip() else SurvivorSignalKind((row.get("signal_kind") or "").strip().upper())),
+                        killer_id=(row.get("killer_id") or "").strip(),
+                        effect_id=(row.get("effect_id") or "").strip(),
+                        label_namespace=(row.get("label_namespace") or "").strip(),
+                        teacher_role=(None if not (row.get("teacher_role") or "").strip() else KillerSpecificTeacherRole((row.get("teacher_role") or "").strip().upper())),
+                        active=(None if not raw_active else raw_active == "true"),
+                        stage=(None if not (row.get("stage") or "").strip() else int((row.get("stage") or "0").strip())),
+                        progress_milli=(None if not (row.get("progress_milli") or "").strip() else int((row.get("progress_milli") or "0").strip())),
                     )
                     if not Path(item.image_path).is_file():
                         raise ValueError(f"image does not exist: {item.image_path}")
@@ -346,13 +458,40 @@ class VisualTrainingManifest:
         output_path: str | Path,
         index_id: str,
         ffmpeg_executable: str = "ffmpeg",
+        killer_capability_registry: KillerCapabilityRegistry | None = None,
     ) -> Path:
         samples = self.list(domain=domain)
         if not samples:
             raise ValueError(f"no visual samples registered for {domain.value}")
+        if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+            if killer_capability_registry is None:
+                raise ValueError("KILLER_SPECIFIC_HUD index requires Killer Capability Registry binding")
+            capabilities = {
+                (item.killer_id, item.effect_id): item
+                for item in killer_capability_registry.capabilities
+            }
+            coverage: dict[tuple[str, str], set[KillerSpecificTeacherRole]] = {}
+            for sample in samples:
+                key = (sample.killer_id, sample.effect_id)
+                capability = capabilities.get(key)
+                if capability is None:
+                    raise ValueError(f"unregistered Killer-specific teacher target: {key[0]}/{key[1]}")
+                if sample.teacher_role is KillerSpecificTeacherRole.HARD_NEGATIVE and (
+                    sample.label_namespace not in capability.hard_negative_namespaces
+                ):
+                    raise ValueError("hard-negative namespace is not registered for the target capability")
+                if capability.max_stage is not None and sample.stage is not None and sample.stage > capability.max_stage:
+                    raise ValueError("Killer-specific teacher stage exceeds capability maximum")
+                coverage.setdefault(key, set()).add(sample.teacher_role)
+            required_roles = {
+                KillerSpecificTeacherRole.POSITIVE,
+                KillerSpecificTeacherRole.HARD_NEGATIVE,
+            }
+            if any(roles != required_roles for roles in coverage.values()):
+                raise ValueError("each Killer-specific teacher target requires positive and hard-negative samples")
         extractor = FFmpegSliceExtractor(ffmpeg_executable)
         with tempfile.TemporaryDirectory(prefix="bvp-dbd-training-") as td:
-            normalized: list[tuple[str, Path, str]] = []
+            normalized: list[tuple] = []
             for index, sample in enumerate(samples):
                 source = Path(sample.image_path)
                 if not source.is_file():
@@ -362,7 +501,18 @@ class VisualTrainingManifest:
                 else:
                     pgm = Path(td) / f"{index:06d}.pgm"
                     extractor.normalize_still_to_pgm(image_path=source, output_path=pgm)
-                normalized.append((sample.label, pgm, sample.group))
+                if sample.domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+                    encoded = KillerSpecificTeacherLabel(
+                        sample.teacher_role, sample.label_namespace,
+                        sample.active, sample.stage, sample.progress_milli,
+                    ).encode()
+                    normalized.append((encoded, pgm, sample.group))
+                else:
+                    normalized.append((
+                        sample.label, pgm, sample.group, sample.match_id,
+                        sample.survivor_slot,
+                        "" if sample.signal_kind is None else sample.signal_kind.value,
+                    ))
             reference = ReferenceSliceIndex.train_from_pgm(index_id=index_id, samples=normalized)
             return reference.save(output_path)
 
@@ -559,6 +709,7 @@ class DbDTrainingWorkspace:
             (
                 f"{video}|{request.domain.value}|{request.label}|{request.start_frame}|"
                 f"{request.end_frame_exclusive}|{request.frame_step}|{roi.roi_id}|{profile.profile_id}"
+                f"|{request.match_id}|{'' if request.signal_kind is None else request.signal_kind.value}"
             ).encode("utf-8")
         ).hexdigest()[:12]
         output = (
@@ -596,6 +747,9 @@ class DbDTrainingWorkspace:
                     slot=roi.roi_id,
                     source_video=str(video),
                     source_frame=frame_index,
+                    match_id=request.match_id,
+                    survivor_slot=request.slot if request.domain is VisualTrainingDomain.SURVIVOR_HUD else None,
+                    signal_kind=request.signal_kind,
                 )
                 if self.visual.append(item):
                     registered += 1
@@ -617,12 +771,15 @@ class DbDTrainingWorkspace:
             errors=tuple(errors),
         )
         receipt = {
-            "schema_version": "1.0.0",
+            "schema_version": "1.1.0",
             "domain": report.domain.value,
             "label": report.label,
             "video_path": str(video),
             "roi_profile_id": profile.profile_id,
             "roi_id": report.roi_id,
+            "match_id": request.match_id,
+            "survivor_slot": request.slot if request.domain is VisualTrainingDomain.SURVIVOR_HUD else None,
+            "signal_kind": None if request.signal_kind is None else request.signal_kind.value,
             "range": {
                 "start_frame": request.start_frame,
                 "end_frame_exclusive": request.end_frame_exclusive,
@@ -675,6 +832,8 @@ class DbDTrainingWorkspace:
                         notes=(row.get("notes") or "").strip(),
                         roi_profile_path=(row.get("roi_profile_path") or "").strip() or None,
                         max_samples=int((row.get("max_samples") or "500").strip()),
+                        match_id=(row.get("match_id") or "").strip(),
+                        signal_kind=(None if not (row.get("signal_kind") or "").strip() else SurvivorSignalKind((row.get("signal_kind") or "").strip().upper())),
                     )
                     report = self.extract_visual_from_video(request, ffmpeg_executable=ffmpeg_executable)
                     accepted += report.registered

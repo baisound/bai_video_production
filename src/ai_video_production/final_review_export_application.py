@@ -346,5 +346,76 @@ class Task036FinalReviewExportApplication:
             "host_output_path_persisted": False,
         }
 
+    def preparation_for_dispatch(self, *, job_id: str) -> ExportPreparation:
+        """Reconstruct one exact private preparation for an explicit dispatch.
+
+        Durable Job projection intentionally avoids the private provider after
+        Final Review becomes stale. Dispatch preparation is different: it is an
+        explicit Human action and must re-bind the latest typed approval, the
+        exact existing Job inputs and the current Project Manifest.
+        """
+
+        approval = self._final_review.snapshot()
+        receipt_data = approval.get("latest_receipt")
+        if receipt_data is None:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_APPROVAL_NOT_CURRENT",
+                "A typed Final Review approval is required",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            )
+        try:
+            receipt = FinalReviewApprovalReceipt.from_dict(receipt_data)
+            preparation = self._preparation_provider(receipt)
+        except ProductError:
+            raise
+        except (TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_INVALID",
+                "Private Export preparation provider returned invalid data",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+        if not isinstance(preparation, ExportPreparation):
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_INVALID",
+                "Private Export preparation provider must return ExportPreparation",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if preparation.project_id != self.project_id or preparation.final_approval != receipt:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_MISMATCH",
+                "Export preparation does not consume the latest exact approval",
+                ProductErrorCategory.SECURITY,
+            )
+        application = self._application()
+        existing = self._existing_jobs(application, receipt)
+        if len(existing) != 1 or existing[0].job_id != job_id:
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_EXISTING_JOB_CONFLICT",
+                "Dispatch requires exactly one Export Job for the latest approval",
+                ProductErrorCategory.STATE,
+            )
+        job = existing[0]
+        if (
+            job.target_identity != preparation.output_target_identity
+            or dict(job.input_hashes) != dict(preparation.input_hashes)
+        ):
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_STALE",
+                "Private Export preparation differs from the durable Job",
+                ProductErrorCategory.STATE,
+            )
+        manifest = ProductProjectManifestStore.load(application.project_root)
+        if (
+            manifest.project_id != self.project_id
+            or manifest.project_manifest_sha256 != preparation.project_manifest_sha256
+            or manifest.product_version != preparation.product_version
+        ):
+            raise ProductError(
+                "ERR_FINAL_REVIEW_EXPORT_PREPARATION_STALE",
+                "Project changed; create a new Export preparation",
+                ProductErrorCategory.STATE,
+            )
+        return preparation
+
 
 __all__ = ["Task036FinalReviewExportApplication"]

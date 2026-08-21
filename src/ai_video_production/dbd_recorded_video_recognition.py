@@ -25,10 +25,18 @@ from .dbd_hud_detectors import (
     SurvivorSlotObservation,
 )
 from .dbd_killer_knowledge import DbDKillerKnowledgeStore, KillerPowerVisualObservation, KillerPowerVisualRecognizer
+from .dbd_killer_capability_registry import (
+    KillerCapabilityRegistry,
+    KillerConditionedRouteResult,
+    KillerRoiFamily,
+    KillerSpecificRoiKey,
+)
 from .dbd_loadout_knowledge import (
     DbDLoadoutKnowledgeStore, LoadoutKnowledgeKind, LoadoutVisualObservation, LoadoutVisualRecognizer,
 )
 from .dbd_perk_knowledge import DbDPerkKnowledgeStore, PerkEnvironment
+from .dbd_killer_status_temporal import EffectPolarity
+from .dbd_status_icon_segmentation import StatusIconSegmentationResult, StatusIconSegmenter
 from .dbd_vision_slices import DBDHudRoiProfile, FFmpegSliceExtractor, GrayImage, NormalizedROI
 from .dbd_hud_calibration import DBDHudVideoProfileResolver, FFmpegFrameInspector, HudAnchorAligner
 from .game_event_evidence import SourceFrameRange
@@ -48,6 +56,10 @@ class SliceArtifact:
     frame_index: int
     sha256: str
 
+    @property
+    def evidence_ref(self) -> str:
+        return f"recognition://roi-slice/{self.roi_id}/{self.frame_index}/sha256:{self.sha256}"
+
 
 @dataclass(frozen=True, slots=True)
 class DBDFrameRecognition:
@@ -59,6 +71,8 @@ class DBDFrameRecognition:
     slice_artifacts: tuple[SliceArtifact, ...]
     item: LoadoutVisualObservation | None = None
     addons: tuple[LoadoutVisualObservation, ...] = ()
+    killer_specific: KillerConditionedRouteResult | None = None
+    status_effect_regions: tuple[StatusIconSegmentationResult, ...] = ()
 
     def __post_init__(self) -> None:
         if self.frame_index < 0:
@@ -69,6 +83,13 @@ class DBDFrameRecognition:
             raise ValueError("perk_slots must contain four observations when enabled")
         if self.addons and len(self.addons) != 2:
             raise ValueError("addons must contain two observations when enabled")
+        if self.killer_specific is not None and any(
+            item.frame_index != self.frame_index for item in self.killer_specific.observations
+        ):
+            raise ValueError("killer_specific observations must match the frame")
+        polarities = tuple(item.polarity for item in self.status_effect_regions)
+        if len(polarities) != len(set(polarities)):
+            raise ValueError("status_effect_regions must contain at most one result per polarity")
 
 
 _NOTIFICATION_EVENT_MAP = {
@@ -166,8 +187,10 @@ class DbDRecordedVideoRecognizer:
         extractor: SliceExtractor | None = None,
         survivor_detector: SurvivorHudStateDetector | None = None,
         perk_detector: PerkIconDetector | None = None,
+        status_icon_segmenter: StatusIconSegmenter | None = None,
         notification_detector: DBDNotificationTextDetector | None = None,
         killer_power_recognizer: KillerPowerVisualRecognizer | None = None,
+        killer_capability_registry: KillerCapabilityRegistry | None = None,
         item_recognizer: LoadoutVisualRecognizer | None = None,
         addon_recognizer: LoadoutVisualRecognizer | None = None,
         fusion: DBDCrossModalFusion | None = None,
@@ -181,8 +204,10 @@ class DbDRecordedVideoRecognizer:
         self.extractor = extractor or FFmpegSliceExtractor()
         self.survivor_detector = survivor_detector
         self.perk_detector = perk_detector
+        self.status_icon_segmenter = status_icon_segmenter
         self.notification_detector = notification_detector
         self.killer_power_recognizer = killer_power_recognizer
+        self.killer_capability_registry = killer_capability_registry
         self.item_recognizer = item_recognizer
         self.addon_recognizer = addon_recognizer
         self.fusion = fusion or DBDCrossModalFusion()
@@ -219,9 +244,14 @@ class DbDRecordedVideoRecognizer:
         video_path: str | Path,
         frame_index: int,
         working_directory: str | Path | None = None,
+        match_id: str | None = None,
     ) -> DBDFrameRecognition:
         if frame_index < 0:
             raise ValueError("frame_index must be non-negative")
+        if self.killer_capability_registry is not None and (
+            not isinstance(match_id, str) or not match_id.strip() or len(match_id) > 256
+        ):
+            raise ValueError("bounded match_id is required for Killer-specific recorded-video routing")
         temporary = None
         if working_directory is None:
             temporary = tempfile.TemporaryDirectory(prefix="bvp-dbd-roi-")
@@ -251,6 +281,10 @@ class DbDRecordedVideoRecognizer:
         addon_observations: list[LoadoutVisualObservation] = []
         notification: NotificationTextObservation | None = None
         killer_power: KillerPowerVisualObservation | None = None
+        killer_specific: KillerConditionedRouteResult | None = None
+        status_effect_regions: list[StatusIconSegmentationResult] = []
+        survivor_slices: dict[int, tuple[GrayImage, SliceArtifact]] = {}
+        killer_power_slice: tuple[GrayImage, SliceArtifact] | None = None
         try:
             if self.survivor_detector is not None:
                 for slot in range(4):
@@ -260,6 +294,7 @@ class DbDRecordedVideoRecognizer:
                         target=root / f"survivor-{slot}.pgm",
                     )
                     artifacts.append(artifact)
+                    survivor_slices[slot] = (image, artifact)
                     survivors.append(self.survivor_detector.detect_slot(image, slot=slot))
 
             if self.perk_detector is not None:
@@ -271,6 +306,35 @@ class DbDRecordedVideoRecognizer:
                     )
                     artifacts.append(artifact)
                     perks.append(self.perk_detector.detect_slot(image, slot=slot))
+
+            if self.status_icon_segmenter is not None:
+                status_regions = (
+                    (
+                        EffectPolarity.POSITIVE,
+                        "bottom_right_positive_effects",
+                        profile.bottom_right_positive_effects,
+                    ),
+                    (
+                        EffectPolarity.NEGATIVE,
+                        "bottom_right_negative_effects",
+                        profile.bottom_right_negative_effects,
+                    ),
+                )
+                for polarity, region_roi_id, roi in status_regions:
+                    if roi is None:
+                        status_effect_regions.append(
+                            StatusIconSegmentationResult.unavailable(polarity, region_roi_id)
+                        )
+                        continue
+                    image, artifact = self._slice(
+                        video_path=video_path, frame_index=frame_index, roi=roi,
+                        target=root / f"{polarity.value.casefold()}-status-effects.pgm",
+                        width=384, height=192,
+                    )
+                    artifacts.append(artifact)
+                    status_effect_regions.append(self.status_icon_segmenter.segment(
+                        image, polarity=polarity, region_roi_id=roi.roi_id,
+                    ))
 
             if self.item_recognizer is not None:
                 roi = profile.item_slot_roi()
@@ -307,7 +371,48 @@ class DbDRecordedVideoRecognizer:
                     target=root / "killer-power.pgm",
                 )
                 artifacts.append(artifact)
+                killer_power_slice = (image, artifact)
                 killer_power = self.killer_power_recognizer.recognize(image)
+
+            if self.killer_capability_registry is not None:
+                identity = killer_power or KillerPowerVisualObservation(None, 0, None)
+                routed_images: dict[KillerSpecificRoiKey, GrayImage] = {}
+                routed_refs: dict[KillerSpecificRoiKey, str] = {}
+                for key in self.killer_capability_registry.required_roi_keys(identity):
+                    routed_slice: tuple[GrayImage, SliceArtifact] | None
+                    if key.family is KillerRoiFamily.SURVIVOR_PORTRAIT_OVERLAY:
+                        survivor_slot = key.survivor_slot
+                        if survivor_slot is None:  # pragma: no cover - registry invariant
+                            raise ValueError("Survivor overlay route lost its subject slot")
+                        routed_slice = survivor_slices.get(survivor_slot)
+                        if routed_slice is None:
+                            roi = profile.survivor_slot_roi(survivor_slot)
+                            routed_slice = self._slice(
+                                video_path=video_path, frame_index=frame_index, roi=roi,
+                                target=root / f"killer-specific-survivor-{survivor_slot}.pgm",
+                            )
+                            artifacts.append(routed_slice[1])
+                            survivor_slices[survivor_slot] = routed_slice
+                    elif key.family is KillerRoiFamily.KILLER_POWER_HUD:
+                        routed_slice = killer_power_slice
+                    else:  # pragma: no cover - closed enum guard
+                        routed_slice = None
+                    if routed_slice is not None:
+                        routed_images[key] = routed_slice[0]
+                        routed_refs[key] = routed_slice[1].evidence_ref
+                identity_ref = (
+                    killer_power_slice[1].evidence_ref
+                    if killer_power_slice is not None
+                    else f"recognition://killer-identity-unavailable/{frame_index}"
+                )
+                killer_specific = self.killer_capability_registry.route(
+                    identity,
+                    match_id=match_id,
+                    frame_index=frame_index,
+                    identity_evidence_ref=identity_ref,
+                    images=routed_images,
+                    evidence_refs=routed_refs,
+                )
 
             return DBDFrameRecognition(
                 frame_index=frame_index,
@@ -318,6 +423,8 @@ class DbDRecordedVideoRecognizer:
                 notification=notification,
                 killer_power=killer_power,
                 slice_artifacts=tuple(sorted(artifacts, key=lambda x: x.roi_id)),
+                killer_specific=killer_specific,
+                status_effect_regions=tuple(status_effect_regions),
             )
         finally:
             if temporary is not None:

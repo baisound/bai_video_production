@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   test:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -45,5 +46,24 @@ jobs:
           ffprobe -version
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest -q
+      - name: Install bounded parallel-test tooling
+        run: >-
+          python -m pip install --disable-pip-version-check --no-input
+          pytest-xdist==3.8.0 pytest-timeout==2.4.0
+      - name: Run bounded parallel test suite on Linux
+        if: runner.os == 'Linux'
+        run: >-
+          python -m pytest -q -n 2 --dist loadfile
+          --timeout=120 --max-worker-restart=0 --durations=20
+      - name: Run bounded parallel non-installer suite on Windows
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest -q -n 2 --dist loadfile
+          --timeout=120 --max-worker-restart=0 --durations=20
+          --ignore=tests/test_task047_obs_installer_contract.py
+      - name: Run native installer contract serially on Windows
+        if: runner.os == 'Windows'
+        run: >-
+          python -m pytest -q tests/test_task047_obs_installer_contract.py
+          --timeout=300 --durations=20
       - run: python -m compileall -q src tests

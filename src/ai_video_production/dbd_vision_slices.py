@@ -9,12 +9,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import os
 from pathlib import Path
 import subprocess
 from typing import Iterable, Sequence
 
 from .errors import ProductError, ProductErrorCategory
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
+
+
+def _no_console_subprocess_kwargs() -> dict[str, int]:
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0
+    return {"creationflags": creationflags} if creationflags else {}
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +108,8 @@ class DBDHudRoiProfile:
     lower_left_survivor_hud: NormalizedROI = field(default_factory=lambda: NormalizedROI("lower_left_survivor_hud", 0.0, 0.60, 0.30, 0.40))
     upper_right_notifications: NormalizedROI = field(default_factory=lambda: NormalizedROI("upper_right_notifications", 0.55, 0.0, 0.45, 0.38))
     bottom_right_perks: NormalizedROI = field(default_factory=lambda: NormalizedROI("bottom_right_perks", 0.72, 0.64, 0.28, 0.36))
+    bottom_right_positive_effects: NormalizedROI | None = None
+    bottom_right_negative_effects: NormalizedROI | None = None
     lower_left_loadout_hud: NormalizedROI | None = None
     item_slot: NormalizedROI | None = None
     addon_slots: tuple[NormalizedROI, ...] = ()
@@ -135,6 +143,10 @@ class DBDHudRoiProfile:
             raise ValueError("DbD HUD profile requires exactly four survivor and four perk slot ROIs")
         if len(self.addon_slots) not in {0, 2}:
             raise ValueError("addon_slots must be empty or contain exactly two add-on ROIs")
+        for field_name in ("bottom_right_positive_effects", "bottom_right_negative_effects"):
+            status_roi = getattr(self, field_name)
+            if status_roi is not None and status_roi.roi_id != field_name:
+                raise ValueError("status-effect ROI identifiers must match their canonical region")
         slot_rows = self.survivor_slots + self.perk_slots + self.addon_slots
         if self.item_slot is not None:
             slot_rows += (self.item_slot,)
@@ -159,7 +171,7 @@ class DBDHudRoiProfile:
         if not isinstance(payload, dict):
             raise ValueError("ROI profile must be an object")
         schema_version = str(payload.get("schema_version", "1.1.0"))
-        if schema_version not in {"1.1.0", "2.0.0", "2.1.0", "2.2.0"}:
+        if schema_version not in {"1.1.0", "2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("unsupported HUD ROI profile schema")
         def roi(name: str, value: object) -> NormalizedROI:
             if not isinstance(value, dict):
@@ -186,6 +198,14 @@ class DBDHudRoiProfile:
             lower_left_survivor_hud=roi("lower_left_survivor_hud", payload.get("lower_left_survivor_hud", defaults.lower_left_survivor_hud.to_dict())),
             upper_right_notifications=roi("upper_right_notifications", payload.get("upper_right_notifications", defaults.upper_right_notifications.to_dict())),
             bottom_right_perks=roi("bottom_right_perks", payload.get("bottom_right_perks", defaults.bottom_right_perks.to_dict())),
+            bottom_right_positive_effects=(
+                None if payload.get("bottom_right_positive_effects") is None
+                else roi("bottom_right_positive_effects", payload["bottom_right_positive_effects"])
+            ),
+            bottom_right_negative_effects=(
+                None if payload.get("bottom_right_negative_effects") is None
+                else roi("bottom_right_negative_effects", payload["bottom_right_negative_effects"])
+            ),
             lower_left_loadout_hud=None if payload.get("lower_left_loadout_hud") is None else roi("lower_left_loadout_hud", payload["lower_left_loadout_hud"]),
             item_slot=None if payload.get("item_slot") is None else roi("item_slot", payload["item_slot"]),
             addon_slots=tuple(roi(f"addon_slot_{index}", value) for index, value in enumerate(payload.get("addon_slots", []))) if isinstance(payload.get("addon_slots", []), list) else (),
@@ -223,6 +243,10 @@ class DBDHudRoiProfile:
             self.upper_right_notifications.roi_id: self.upper_right_notifications,
             self.bottom_right_perks.roi_id: self.bottom_right_perks,
         }
+        if self.bottom_right_positive_effects is not None:
+            direct[self.bottom_right_positive_effects.roi_id] = self.bottom_right_positive_effects
+        if self.bottom_right_negative_effects is not None:
+            direct[self.bottom_right_negative_effects.roi_id] = self.bottom_right_negative_effects
         if self.lower_left_loadout_hud is not None:
             direct[self.lower_left_loadout_hud.roi_id] = self.lower_left_loadout_hud
         if self.item_slot is not None:
@@ -238,7 +262,7 @@ class DBDHudRoiProfile:
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "schema_version": "2.2.0",
+            "schema_version": "2.3.0",
             "profile_id": self.profile_id,
             "profile_version": self.profile_version,
             "calibrated_frame_width": self.calibrated_frame_width,
@@ -251,6 +275,14 @@ class DBDHudRoiProfile:
             "lower_left_survivor_hud": self.lower_left_survivor_hud.to_dict(),
             "upper_right_notifications": self.upper_right_notifications.to_dict(),
             "bottom_right_perks": self.bottom_right_perks.to_dict(),
+            "bottom_right_positive_effects": (
+                None if self.bottom_right_positive_effects is None
+                else self.bottom_right_positive_effects.to_dict()
+            ),
+            "bottom_right_negative_effects": (
+                None if self.bottom_right_negative_effects is None
+                else self.bottom_right_negative_effects.to_dict()
+            ),
             "lower_left_loadout_hud": None if self.lower_left_loadout_hud is None else self.lower_left_loadout_hud.to_dict(),
             "item_slot": None if self.item_slot is None else self.item_slot.to_dict(),
             "addon_slots": [item.to_dict() for item in self.addon_slots],
@@ -346,6 +378,9 @@ class SliceReference:
     source_sha256: str
     source_ref: str
     group: str = "default"
+    match_id: str = ""
+    survivor_slot: int | None = None
+    signal_kind: str = ""
 
     def __post_init__(self) -> None:
         if not self.label.strip() or len(self.label) > 256:
@@ -357,13 +392,26 @@ class SliceReference:
             raise ValueError("source_sha256 must use canonical sha256:<hex>")
         if not self.source_ref or len(self.source_ref) > 1024:
             raise ValueError("source_ref must be bounded non-empty text")
+        has_subject = bool(self.match_id or self.survivor_slot is not None or self.signal_kind)
+        if has_subject:
+            if not self.match_id.strip() or len(self.match_id) > 256:
+                raise ValueError("subject reference requires bounded match_id")
+            if self.survivor_slot is None or not 0 <= self.survivor_slot <= 3:
+                raise ValueError("subject reference requires survivor_slot 0..3")
+            if self.signal_kind not in {"HOOK_COUNT", "CHASE_STATE", "SURVIVOR_STATE"}:
+                raise ValueError("subject reference requires supported signal_kind")
 
     @property
     def feature(self) -> int:
         return int(self.feature_hex, 16)
 
-    def to_dict(self) -> dict[str, str]:
-        return {"label": self.label, "feature_hex": self.feature_hex, "source_sha256": self.source_sha256, "source_ref": self.source_ref, "group": self.group}
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "label": self.label, "feature_hex": self.feature_hex,
+            "source_sha256": self.source_sha256, "source_ref": self.source_ref,
+            "group": self.group, "match_id": self.match_id,
+            "survivor_slot": self.survivor_slot, "signal_kind": self.signal_kind,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -372,10 +420,13 @@ class SliceMatch:
     confidence_milli: int
     distance_bits: int
     source_ref: str
+    match_id: str = ""
+    survivor_slot: int | None = None
+    signal_kind: str = ""
 
 
 class ReferenceSliceIndex:
-    schema_version = "1.0.0"
+    schema_version = "1.1.0"
 
     def __init__(self, *, index_id: str, references: Sequence[SliceReference], created_at: str | None = None) -> None:
         if not index_id or len(index_id) > 128:
@@ -391,7 +442,11 @@ class ReferenceSliceIndex:
         cls,
         *,
         index_id: str,
-        samples: Iterable[tuple[str, str | Path] | tuple[str, str | Path, str]],
+        samples: Iterable[
+            tuple[str, str | Path]
+            | tuple[str, str | Path, str]
+            | tuple[str, str | Path, str, str, int | None, str]
+        ],
         group: str = "default",
     ) -> "ReferenceSliceIndex":
         """Build the deterministic reference baseline from labeled PGM slices.
@@ -406,16 +461,24 @@ class ReferenceSliceIndex:
             if len(sample) == 2:
                 label, path_value = sample
                 sample_group = group
+                match_id, survivor_slot, signal_kind = "", None, ""
             elif len(sample) == 3:
                 label, path_value, sample_group = sample
+                match_id, survivor_slot, signal_kind = "", None, ""
+            elif len(sample) == 6:
+                label, path_value, sample_group, match_id, survivor_slot, signal_kind = sample
             else:
-                raise ValueError("reference sample must be (label,path) or (label,path,group)")
+                raise ValueError("reference sample must contain 2, 3 or 6 fields")
             if not str(sample_group).strip() or len(str(sample_group)) > 128:
                 raise ValueError("reference sample group must be bounded non-empty text")
             path = Path(path_value)
             raw = path.read_bytes()
             image = GrayImage.read_pgm(path)
-            refs.append(SliceReference(label, f"{image.dhash64():016x}", sha256_bytes(raw), str(path), str(sample_group).strip()))
+            refs.append(SliceReference(
+                label, f"{image.dhash64():016x}", sha256_bytes(raw), str(path),
+                str(sample_group).strip(), str(match_id).strip(), survivor_slot,
+                str(signal_kind).strip().upper(),
+            ))
         if not refs:
             raise ValueError("samples must not be empty")
         return cls(index_id=index_id, references=refs)
@@ -428,7 +491,10 @@ class ReferenceSliceIndex:
         for ref in self.references:
             distance = (feature ^ ref.feature).bit_count()
             confidence = max(0, 1000 - round(distance * 1000 / 64))
-            rows.append(SliceMatch(ref.label, confidence, distance, ref.source_ref))
+            rows.append(SliceMatch(
+                ref.label, confidence, distance, ref.source_ref,
+                ref.match_id, ref.survivor_slot, ref.signal_kind,
+            ))
         rows.sort(key=lambda item: (-item.confidence_milli, item.distance_bits, item.label, item.source_ref))
         return tuple(rows[:top_k])
 
@@ -437,7 +503,14 @@ class ReferenceSliceIndex:
             "schema_version": self.schema_version,
             "index_id": self.index_id,
             "created_at": self.created_at,
-            "references": [item.to_dict() for item in sorted(self.references, key=lambda x: (x.label, x.group, x.source_ref))],
+            "references": [item.to_dict() for item in sorted(
+                self.references,
+                key=lambda x: (
+                    x.label, x.group, x.match_id,
+                    -1 if x.survivor_slot is None else x.survivor_slot,
+                    x.signal_kind, x.source_ref,
+                ),
+            )],
         }
         return {**body, "index_sha256": sha256_bytes(canonical_json_bytes(body))}
 
@@ -454,7 +527,7 @@ class ReferenceSliceIndex:
         digest = body.pop("index_sha256", None)
         if digest != sha256_bytes(canonical_json_bytes(body)):
             raise ValueError("reference index checksum mismatch")
-        if body.get("schema_version") != cls.schema_version:
+        if body.get("schema_version") not in {"1.0.0", cls.schema_version}:
             raise ValueError("unsupported reference index schema")
         refs = tuple(SliceReference(**item) for item in body["references"])
         return cls(index_id=body["index_id"], references=refs, created_at=body["created_at"])
@@ -477,7 +550,10 @@ class FFmpegSliceExtractor:
         vf = f"select=eq(n\\,{frame_index}),{crop},scale={width}:{height}:flags=area,format=gray"
         cmd = [self.ffmpeg_executable, "-hide_banner", "-loglevel", "error", "-i", str(source), "-vf", vf, "-frames:v", "1", "-f", "image2", "-vcodec", "pgm", "-y", str(target)]
         try:
-            completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=120)
+            completed = subprocess.run(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+                timeout=120, **_no_console_subprocess_kwargs(),
+            )
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise ProductError("ERR_DBD_SLICE_FFMPEG_UNAVAILABLE", "FFmpeg ROI extraction failed to start", ProductErrorCategory.EXTERNAL_DEPENDENCY, retryable=True) from exc
         if completed.returncode != 0 or not target.is_file():
@@ -490,7 +566,10 @@ class FFmpegSliceExtractor:
             raise ValueError("reference image does not exist")
         target.parent.mkdir(parents=True, exist_ok=True)
         cmd = [self.ffmpeg_executable, "-hide_banner", "-loglevel", "error", "-i", str(source), "-vf", f"scale={width}:{height}:flags=area,format=gray", "-frames:v", "1", "-f", "image2", "-vcodec", "pgm", "-y", str(target)]
-        completed = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False, timeout=60)
+        completed = subprocess.run(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            timeout=60, **_no_console_subprocess_kwargs(),
+        )
         if completed.returncode != 0 or not target.is_file():
             raise ProductError("ERR_DBD_REFERENCE_NORMALIZE_FAILED", "FFmpeg failed to normalize a reference slice", ProductErrorCategory.EXTERNAL_DEPENDENCY)
         return target

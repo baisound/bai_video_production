@@ -168,6 +168,26 @@ def test_prepare_apply_creates_exactly_one_queued_job_without_dispatch(tmp_path:
         app.apply_enqueue(confirmation_id=str(prepared["confirmation_id"]), readiness=current)
 
 
+def test_dispatch_repreparation_survives_restart_and_binds_exact_job(tmp_path: Path) -> None:
+    app, selected, current, _, _ = application(tmp_path)
+    queued = _enqueue_once(app, current)
+    restarted = Task036FinalReviewExportApplication(
+        project_id=app.project_id,
+        final_review_application=FinalReviewApprovalApplication(
+            project_root=tmp_path, project_id=app.project_id,
+        ),
+        export_application_provider=lambda: ExportQueueApplication(
+            project_root=tmp_path, project_id=app.project_id,
+        ),
+        preparation_provider=lambda _receipt: selected[0],
+    )
+    rebound = restarted.preparation_for_dispatch(job_id=str(queued["job_id"]))
+    assert rebound.preparation_sha256 == selected[0].preparation_sha256
+    with pytest.raises(ProductError) as exc:
+        restarted.preparation_for_dispatch(job_id="product-job-" + "0" * 64)
+    assert exc.value.code == "ERR_FINAL_REVIEW_EXPORT_EXISTING_JOB_CONFLICT"
+
+
 def test_readiness_or_private_preparation_change_invalidates_confirmation(tmp_path: Path) -> None:
     app, selected, current, manifest, receipt = application(tmp_path)
     snapshot = app.snapshot(readiness=current)

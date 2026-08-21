@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from fractions import Fraction
-from typing import Any, Mapping
+from pathlib import Path
+from threading import Lock
+from typing import Any, Callable, Mapping
 
-from .durable_product_job import DurableProductJobState, DurableProductJobStore, durable_job_shell_projection
+from .durable_product_job import DurableProductJob, DurableProductJobState, DurableProductJobStore, durable_job_shell_projection
 from .errors import ProductError, ProductErrorCategory
-from .export_queue import ExportPreparation
-from .export_queue_application import ExportQueueApplication
+from .export_queue import ExportDispatchResult, ExportPreparation
+from .export_queue_application import DispatchCallback, ExportQueueApplication
 from .interactive_timeline import (
     InteractiveTimeline, TimelineFitMode, TimelineInteractionReducer,
     TimelineInteractionState, TimelineMediaKind, TimelineTrack,
@@ -18,6 +20,11 @@ from .interactive_timeline import (
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_edit import SnapAnchor, SnapKind
 from .product_project_store import ProductProjectManifestStore
+
+
+ExportPreparationProvider = Callable[[str], ExportPreparation]
+ExportDestinationProvider = Callable[[str, ExportPreparation], str | Path]
+_MAX_PENDING_DISPATCH_PREPARATIONS = 256
 
 
 def _frame(value: object, name: str, *, minimum: int = 0) -> int:
@@ -32,11 +39,19 @@ class Task044NleShellController:
     def __init__(self, *, timeline: InteractiveTimeline,
                  edit_application: Task044TimelineEditApplication | None = None,
                  export_application: ExportQueueApplication | None = None,
-                 export_preparations: Mapping[str, ExportPreparation] | None = None) -> None:
+                 export_preparations: Mapping[str, ExportPreparation] | None = None,
+                 export_preparation_provider: ExportPreparationProvider | None = None,
+                 export_destination_provider: ExportDestinationProvider | None = None,
+                 export_dispatcher: DispatchCallback | None = None) -> None:
         self.timeline = timeline
         self.edit_application = edit_application
         self.export_application = export_application
         self.export_preparations = dict(export_preparations or {})
+        self.export_preparation_provider = export_preparation_provider
+        self.export_destination_provider = export_destination_provider
+        self.export_dispatcher = export_dispatcher
+        self._pending_dispatch_preparations: dict[str, tuple[str, ExportPreparation]] = {}
+        self._pending_dispatch_lock = Lock()
         self._track_presentation: dict[str, dict[str, object]] = {}
         self.interaction = TimelineInteractionState(timeline.project_id, timeline.timeline_sha256, 0)
         self.viewport = TimelineViewport.fit(
@@ -334,20 +349,141 @@ class Task044NleShellController:
             raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Timeline apply request is invalid", ProductErrorCategory.VALIDATION)
         return self.edit_application.apply(confirmation_id=str(args["confirmation_id"]), timeline=self.timeline)
 
-    def export_prepare_dispatch(self, args: Any) -> dict[str, object]:
-        if self.export_application is None:
-            raise ProductError("ERR_NLE_SHELL_EXPORT_NOT_BOUND", "Export Queue is unavailable", ProductErrorCategory.STATE)
-        if not isinstance(args, dict) or set(args) != {"job_id"}:
-            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Export preparation request is invalid", ProductErrorCategory.VALIDATION)
-        job_id = str(args["job_id"])
+    def _export_preparation(self, job_id: str) -> ExportPreparation:
         preparation = self.export_preparations.get(job_id)
+        if preparation is None and self.export_preparation_provider is not None:
+            preparation = self.export_preparation_provider(job_id)
         if preparation is None:
             raise ProductError(
                 "ERR_NLE_SHELL_EXPORT_REPREPARE_REQUIRED",
                 "The exact private Export preparation is not bound; re-prepare this item",
                 ProductErrorCategory.STATE,
             )
-        return self.export_application.prepare_dispatch(job_id=job_id, preparation=preparation)
+        if not isinstance(preparation, ExportPreparation):
+            raise ProductError(
+                "ERR_NLE_SHELL_EXPORT_PREPARATION_INVALID",
+                "Private Export preparation provider returned invalid data",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return preparation
+
+    def export_preflight(self, args: Any) -> dict[str, Any]:
+        if self.export_application is None:
+            raise ProductError("ERR_NLE_SHELL_EXPORT_NOT_BOUND", "Export Queue is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != {"job_id"}:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Export preflight request is invalid", ProductErrorCategory.VALIDATION)
+        job_id = str(args["job_id"])
+        job = self.export_application.preflight(
+            job_id=job_id, preparation=self._export_preparation(job_id),
+        )
+        return {
+            "job_id": job.job_id,
+            "state": job.state.value,
+            "state_version": job.state_version,
+            "external_mutation_started": False,
+        }
+
+    def export_prepare_dispatch(self, args: Any) -> dict[str, object]:
+        if self.export_application is None:
+            raise ProductError("ERR_NLE_SHELL_EXPORT_NOT_BOUND", "Export Queue is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != {"job_id"}:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Export preparation request is invalid", ProductErrorCategory.VALIDATION)
+        job_id = str(args["job_id"])
+        preparation = self._export_preparation(job_id)
+        confirmation = self.export_application.prepare_dispatch(
+            job_id=job_id, preparation=preparation,
+        )
+        token = str(confirmation["confirmation_id"])
+        with self._pending_dispatch_lock:
+            if len(self._pending_dispatch_preparations) >= _MAX_PENDING_DISPATCH_PREPARATIONS:
+                self.export_application.cancel_dispatch(confirmation_id=token)
+                raise ProductError(
+                    "ERR_NLE_SHELL_EXPORT_CONFIRMATION_CAPACITY",
+                    "Export dispatch confirmation capacity is exhausted",
+                    ProductErrorCategory.STATE,
+                )
+            self._pending_dispatch_preparations[token] = (job_id, preparation)
+        return confirmation
+
+    def export_apply_dispatch(self, args: Any) -> dict[str, Any]:
+        if self.export_application is None:
+            raise ProductError("ERR_NLE_SHELL_EXPORT_NOT_BOUND", "Export Queue is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Export dispatch request is invalid", ProductErrorCategory.VALIDATION)
+        if self.export_destination_provider is None or self.export_dispatcher is None:
+            raise ProductError(
+                "ERR_NLE_SHELL_EXPORT_DISPATCH_NOT_BOUND",
+                "Private Export destination or dispatcher is unavailable",
+                ProductErrorCategory.STATE,
+            )
+        token = args["confirmation_id"]
+        with self._pending_dispatch_lock:
+            pending = self._pending_dispatch_preparations.pop(token, None)
+        if pending is None:
+            raise ProductError(
+                "ERR_EXPORT_CONFIRMATION_INVALID",
+                "Export confirmation is missing or consumed",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        job_id, confirmed_preparation = pending
+        try:
+            preparation = self._export_preparation(job_id)
+            if preparation != confirmed_preparation:
+                raise ProductError(
+                    "ERR_NLE_SHELL_EXPORT_CONFIRMATION_STALE",
+                    "Final Review approval or private Export preparation changed after confirmation",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            private_destination = self.export_destination_provider(job_id, preparation)
+        except BaseException:
+            # The controller token is already consumed. Keep the application
+            # confirmation in sync even when the private launcher binding fails.
+            self.export_application.cancel_dispatch(confirmation_id=token)
+            raise
+        captured: list[ExportDispatchResult] = []
+
+        def dispatch(
+            job: DurableProductJob, exact: ExportPreparation, destination: Path,
+        ) -> ExportDispatchResult:
+            result = self.export_dispatcher(job, exact, destination)
+            captured.append(result)
+            return result
+
+        job = self.export_application.apply_dispatch(
+            confirmation_id=token,
+            preparation=preparation,
+            private_destination=private_destination,
+            dispatcher=dispatch,
+        )
+        result = captured[0] if captured else None
+        return {
+            "job_id": job.job_id,
+            "operation_identity": job.operation_identity,
+            "state": job.state.value,
+            "state_version": job.state_version,
+            "result_ref": job.result_ref,
+            "result_identity": None if result is None else result.result_identity,
+            "render_qa_sha256": None if result is None else result.render_qa_sha256,
+            "render_qa_passed": None if result is None else result.render_qa_passed,
+            "external_mutation_started": True,
+            "host_output_path_persisted": False,
+        }
+
+    def export_cancel_dispatch(self, args: Any) -> dict[str, Any]:
+        if self.export_application is None:
+            raise ProductError("ERR_NLE_SHELL_EXPORT_NOT_BOUND", "Export Queue is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Export dispatch cancellation request is invalid", ProductErrorCategory.VALIDATION)
+        token = args["confirmation_id"]
+        with self._pending_dispatch_lock:
+            pending = self._pending_dispatch_preparations.pop(token, None)
+        if pending is None:
+            raise ProductError(
+                "ERR_EXPORT_CONFIRMATION_INVALID",
+                "Export confirmation is missing or consumed",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return dict(self.export_application.cancel_dispatch(confirmation_id=token))
 
     def export_cancel(self, args: Any) -> dict[str, Any]:
         if self.export_application is None:

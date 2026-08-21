@@ -63,6 +63,7 @@ class ReasoningEffort(str, Enum):
 
 
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
+_MODEL_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/:-]{0,127}$")
 _CREDENTIAL_REF = re.compile(r"^credential://[a-z0-9][a-z0-9._/-]{0,127}$")
 _FORBIDDEN_SETTING_KEYS = {"api_key", "apikey", "access_token", "token", "secret", "password", "credential"}
 
@@ -98,9 +99,11 @@ class ModelRoute:
     enabled: bool = True
 
     def __post_init__(self) -> None:
-        for name, value in (("route_id", self.route_id), ("provider_id", self.provider_id), ("model_id", self.model_id)):
+        for name, value in (("route_id", self.route_id), ("provider_id", self.provider_id)):
             if not _SAFE_ID.fullmatch(value):
                 raise ValueError(f"{name} is invalid")
+        if not _MODEL_ID.fullmatch(self.model_id):
+            raise ValueError("model_id is invalid")
         if not 0 <= self.priority <= 10000:
             raise ValueError("priority must be 0-10000")
         if self.credential_ref is not None and not _CREDENTIAL_REF.fullmatch(self.credential_ref):

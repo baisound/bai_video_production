@@ -41,9 +41,12 @@ class PlanningProductionBundleState:
     manifest_sha256: str
 
 
-def _hashes(*, proposals: ProductionProposalRegistry, budget: ProductionBudgetLedger, production: ProductionControlRegistry) -> dict[str, str]:
+def _hashes(*, proposals: ProductionProposalRegistry, budget: ProductionBudgetLedger, production: ProductionControlRegistry, project_id: str) -> dict[str, str]:
     return {
-        "proposals": ProductionProposalSnapshotStore.snapshot(proposals)["snapshot_sha256"],
+        "proposals": ProductionProposalSnapshotStore.snapshot(
+            proposals,
+            project_id=project_id,
+        )["snapshot_sha256"],
         "budget": ProductionBudgetSnapshotStore.snapshot(budget)["snapshot_sha256"],
         "production": ProductionControlSnapshotStore.snapshot(production)["snapshot_sha256"],
     }
@@ -132,7 +135,12 @@ class PlanningProductionBundleStore:
         return _manifest(
             plan_id=plan_id,
             project_id=project_id,
-            hashes=_hashes(proposals=proposals, budget=budget, production=production),
+            hashes=_hashes(
+                proposals=proposals,
+                budget=budget,
+                production=production,
+                project_id=project_id,
+            ),
             trace_sha256=trace.to_dict()["report_sha256"],
         )
 
@@ -180,10 +188,18 @@ class PlanningProductionBundleStore:
             raise ProductError("ERR_PLANNING_BUNDLE_MANIFEST_NAME", "Planning-production recovery uses the fixed canonical manifest name", ProductErrorCategory.SECURITY)
         document = PlanningProductionBundleStore.load_document(directory / manifest_name)
         plan_id, project_id, expected, expected_trace = _parse(document)
-        proposals = ProductionProposalSnapshotStore.load(directory / _FILES["proposals"])
+        proposals = ProductionProposalSnapshotStore.load(
+            directory / _FILES["proposals"],
+            expected_project_id=project_id,
+        )
         budget = ProductionBudgetSnapshotStore.load(directory / _FILES["budget"])
         production = ProductionControlSnapshotStore.load(directory / _FILES["production"])
-        observed = _hashes(proposals=proposals, budget=budget, production=production)
+        observed = _hashes(
+            proposals=proposals,
+            budget=budget,
+            production=production,
+            project_id=project_id,
+        )
         if observed != expected:
             changed = sorted(key for key in _FILES if observed[key] != expected[key])
             raise ProductError(

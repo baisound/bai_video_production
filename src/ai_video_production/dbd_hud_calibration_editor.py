@@ -201,6 +201,8 @@ ROI_DISPLAY_JA = {
     "addon_slot_1": "アドオン2",
     "upper_right_notifications": "右上：通知",
     "bottom_right_perks": "右下：パーク 全体",
+    "bottom_right_positive_effects": "右下：有利な状態効果（パーク左）",
+    "bottom_right_negative_effects": "右下：不利な状態効果（パーク上）",
     "perk_slot_0": "パーク1（上向き）",
     "perk_slot_1": "パーク2（右向き）",
     "perk_slot_2": "パーク3（下向き）",

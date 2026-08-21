@@ -13,10 +13,10 @@ from ai_video_production.dbd_kamigame_candidate_bridge import load_kamigame_cand
 @pytest.mark.parametrize(
     ("title", "expected"),
     [
-        ("トーリー", GameKnowledgeKind.CHARACTER),
-        ("ドワイト", GameKnowledgeKind.CHARACTER),
-        ("ナンシー", GameKnowledgeKind.CHARACTER),
-        ("ネア", GameKnowledgeKind.CHARACTER),
+        ("トーリー", GameKnowledgeKind.SURVIVOR),
+        ("ドワイト", GameKnowledgeKind.SURVIVOR),
+        ("ナンシー", GameKnowledgeKind.SURVIVOR),
+        ("ネア", GameKnowledgeKind.SURVIVOR),
         ("ハグ", GameKnowledgeKind.KILLER),
         ("ヒルビリー", GameKnowledgeKind.KILLER),
         ("ピッグ", GameKnowledgeKind.KILLER),
@@ -48,7 +48,7 @@ def test_known_entity_is_not_overwritten_by_map_source_kind() -> None:
         {"name_ja": "ドワイト", "source_section_heading": "各マップ一覧"},
         source_kind=GameKnowledgeKind.MAP,
     )
-    assert kind is GameKnowledgeKind.CHARACTER
+    assert kind is GameKnowledgeKind.SURVIVOR
     assert source == "KNOWN_ENTITY_MASTER"
 
 
@@ -66,7 +66,7 @@ def test_bridge_reclassifies_polluted_map_rows_before_review_catalog(tmp_path: P
     )
 
     found = {row.candidate_id: row for row in load_kamigame_candidates(tmp_path)}
-    assert found["legacy-map-dwight"].knowledge_kind is GameKnowledgeKind.CHARACTER
+    assert found["legacy-map-dwight"].knowledge_kind is GameKnowledgeKind.SURVIVOR
     assert found["legacy-map-hag-guide"].knowledge_kind is GameKnowledgeKind.KNOWLEDGE
     assert found["real-map"].knowledge_kind is GameKnowledgeKind.MAP
     assert found["legacy-map-dwight"].details["classification_source"] == "KNOWN_ENTITY_MASTER"

@@ -44,10 +44,12 @@ def test_kamigame_item_addon_map_parsers_cover_requested_domains() -> None:
     assert addons[0]["name_ja"] == "親父のブーツ"
 
     map_html = """
+    <main id="main" class="article"><article><h1>全マップ一覧</h1>
     <h2>各マップ個別一覧</h2>
     <table><tr><td><a href='/dbd/page/map1.html'>サファケーション・ピット</a> <a href='/dbd/page/realm1.html'>マクミラン・エステート</a></td><td>室外 面積大 板最大19枚</td></tr></table>
     <h2>各マップの広さと板枚数比較表</h2>
     <table><tr><td><a href='/dbd/page/map1.html'>サファケーション・ピット</a> <a href='/dbd/page/realm1.html'>マクミラン・エステート</a></td><td>10240</td><td>19~19</td></tr></table>
+    </article></main>
     """
     maps = parse_map_page(map_html, page_url="https://kamigame.jp/dbd/page/94254357779841031.html")
     assert maps and maps[0]["name_ja"] == "サファケーション・ピット"

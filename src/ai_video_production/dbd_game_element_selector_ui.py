@@ -19,12 +19,18 @@ _KIND_JA = {
     GameKnowledgeKind.ADDON: "アドオン",
     GameKnowledgeKind.ITEM: "アイテム",
     GameKnowledgeKind.OFFERING: "オファリング",
-    GameKnowledgeKind.CHARACTER: "キャラクター",
+    GameKnowledgeKind.UNKNOWN: "未分類・要確認",
     GameKnowledgeKind.SURVIVOR: "サバイバー",
     GameKnowledgeKind.KNOWLEDGE: "ナレッジ系",
     GameKnowledgeKind.STATUS: "状態",
     GameKnowledgeKind.MECHANIC: "ゲーム仕様",
 }
+
+
+def _kind_label_ja(kind: GameKnowledgeKind) -> str:
+    if kind in {GameKnowledgeKind.CHARACTER, GameKnowledgeKind.UNKNOWN}:
+        return "未分類・要確認"
+    return _KIND_JA.get(kind, kind.value)
 
 def open_game_element_selector(
     parent,
@@ -49,7 +55,7 @@ def open_game_element_selector(
     header = ttk.Frame(dialog, padding=(12, 12, 12, 6))
     header.grid(row=0, column=0, sticky="ew")
     header.columnconfigure(0, weight=1)
-    expected = "すべて" if expected_kind is None else _KIND_JA.get(expected_kind, expected_kind.value)
+    expected = "すべて" if expected_kind is None else _kind_label_ja(expected_kind)
     ttk.Label(
         header,
         text=f"正式名・読み・英語名・略称・通称から検索できます。対象: {expected}",
@@ -116,7 +122,7 @@ def open_game_element_selector(
         current_rows[:] = rows
         result_list.delete(0, tk.END)
         for row in rows:
-            kind = _KIND_JA.get(row.knowledge_kind, row.knowledge_kind.value)
+            kind = _kind_label_ja(row.knowledge_kind)
             display = display_name_resolver(row) if display_name_resolver is not None else row.matched_text
             result_list.insert(tk.END, f"{display}  [{kind}]  {row.matched_text}")
         status_var.set(

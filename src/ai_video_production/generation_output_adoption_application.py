@@ -443,9 +443,19 @@ class Task027GenerationOutputAdoptionApplication:
         entry = next((item for item in queue.get("entries", []) if item.get("queue_entry_id") == event.get("queue_entry_id")), None)
         if entry is None:
             raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_ENTRY_MISSING", "Completed execution has no canonical Queue entry", ProductErrorCategory.DATA_INTEGRITY)
-        for name in ("slot_id", "prompt_id", "prompt_version", "prompt_sha256"):
+        if event.get("slot_id") not in {None, entry.get("slot_id")}:
+            raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_IDENTITY_DRIFT", "Execution and Queue Slot identities differ", ProductErrorCategory.DATA_INTEGRITY)
+        for name in ("prompt_id", "prompt_version", "prompt_sha256"):
             if entry.get(name) != event.get(name):
                 raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_IDENTITY_DRIFT", "Execution and Queue identities differ", ProductErrorCategory.DATA_INTEGRITY)
+        bound_event = {**event, "slot_id": entry.get("slot_id")}
+        execution = {
+            **execution,
+            "latest_executions": [
+                bound_event if item.get("execution_id") == execution_id else item
+                for item in execution.get("latest_executions", [])
+            ],
+        }
         if execution.get("queue_snapshot_sha256") not in {None, queue.get("queue_snapshot_sha256")}:
             raise ProductError("ERR_OUTPUT_ADOPTION_QUEUE_SNAPSHOT_DRIFT", "Execution is not bound to the current Queue snapshot", ProductErrorCategory.DATA_INTEGRITY)
         if prompt.get("production_snapshot_sha256") != production.get("snapshot_sha256"):
@@ -558,8 +568,9 @@ class Task027GenerationOutputAdoptionApplication:
             if item.get("state") != "COMPLETED" or item.get("execution_id") in adopted_execution_ids:
                 continue
             status = "READY"
+            entry = queue_entries.get(item.get("queue_entry_id"), {})
             try:
-                lineage = self._execution_lineage(queue_entries.get(item.get("queue_entry_id"), {}))
+                lineage = self._execution_lineage(entry)
                 prompt_row = prompt_rows.get((item.get("prompt_id"), item.get("prompt_version")))
                 if prompt_row is None:
                     raise ProductError("ERR_OUTPUT_ADOPTION_PROMPT_MISSING", "Prompt is missing", ProductErrorCategory.DATA_INTEGRITY)
@@ -569,7 +580,7 @@ class Task027GenerationOutputAdoptionApplication:
             eligible.append({
                 "execution_id": item["execution_id"],
                 "queue_entry_id": item["queue_entry_id"],
-                "slot_id": item["slot_id"],
+                "slot_id": entry.get("slot_id"),
                 "prompt_id": item["prompt_id"],
                 "prompt_version": item["prompt_version"],
                 "output_sha256": item["output_sha256"],

@@ -8,7 +8,7 @@ import sys
 import time
 import threading
 import queue
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from .canonical_game_event import GameEventType, GameKnowledgeKind
 from .dbd_entity_aliases import (
@@ -19,7 +19,18 @@ from .dbd_kamigame_candidate_bridge import (
     load_kamigame_candidate_summaries,
     sync_kamigame_review_catalog,
 )
-from .dbd_game_knowledge_catalog import GameKnowledgeReviewCatalog
+from .dbd_game_knowledge_catalog import (
+    GameKnowledgeReviewCatalog,
+    KnowledgeDependencyReference,
+)
+from .dbd_game_knowledge_presentation import (
+    diagnostic_knowledge_values,
+    human_knowledge_fields,
+)
+from .dbd_image_assets import ImageAssetDecodeError, decode_image_for_preview
+from .dbd_killer_capability_registry import KillerCapabilityRegistry, initial_killer_capabilities
+from .dbd_killer_specific_detector import KillerSpecificTeacherLabel, KillerSpecificTeacherRole
+from .dbd_observation_envelope import SurvivorSignalKind
 from .dbd_map_intelligence import MapIntelligenceStore, MapRecord
 from .dbd_video_analysis_workspace import DbDVideoAnalysisWorkspaceService
 from .dbd_optional_roi_defaults import ensure_optional_roi_initialized
@@ -99,6 +110,25 @@ VISUAL_GROUP_HELP_JA = (
     "通常は normal のままでOK。active=発動中/強調、greyed=無効・グレー表示、"
     "hard-negative=見た目が似るが正解ではない誤認防止画像。"
 )
+SURVIVOR_SIGNAL_KIND_JA = {
+    SurvivorSignalKind.SURVIVOR_STATE.value: "サバイバー状態",
+    SurvivorSignalKind.HOOK_COUNT.value: "フック回数",
+    SurvivorSignalKind.CHASE_STATE.value: "チェイス状態",
+}
+
+
+def knowledge_detail_search_text(details: Mapping[str, object]) -> str:
+    """Build inventory search text from JSON-like detail values.
+
+    Knowledge details may contain nested dictionaries and lists.  Compare
+    values directly instead of using set membership so those valid unhashable
+    containers cannot abort Training Studio startup.
+    """
+    return " ".join(
+        str(value)
+        for value in details.values()
+        if value is not None and value != ""
+    )
 
 
 def ensure_csv_templates(root: str | Path) -> tuple[Path, Path, Path, Path]:
@@ -110,8 +140,8 @@ def ensure_csv_templates(root: str | Path) -> tuple[Path, Path, Path, Path]:
     video = base / "video-training-ranges-template.csv"
     if not visual.exists():
         with visual.open("w", encoding="utf-8-sig", newline="") as f:
-            w = csv.writer(f); w.writerow(["domain","label","image_path","group","source_ref","notes"])
-            w.writerow(["PERK_ICON","perk_windows_of_opportunity",r"D:\dbd-dataset\perk.png","normal","manual://owner",""])
+            w = csv.writer(f); w.writerow(["domain","label","image_path","group","source_ref","notes","match_id","survivor_slot","signal_kind"])
+            w.writerow(["PERK_ICON","perk_windows_of_opportunity",r"D:\dbd-dataset\perk.png","normal","manual://owner","","","",""])
     if not ocr.exists():
         with ocr.open("w", encoding="utf-8-sig", newline="") as f:
             w = csv.writer(f); w.writerow(["signal_id","phrase","locale","source_ref"])
@@ -123,8 +153,8 @@ def ensure_csv_templates(root: str | Path) -> tuple[Path, Path, Path, Path]:
     if not video.exists():
         with video.open("w", encoding="utf-8-sig", newline="") as f:
             w = csv.writer(f)
-            w.writerow(["domain","label","video_path","start_frame","end_frame_exclusive","frame_step","slot","group","source_ref","notes","roi_profile_path","max_samples"])
-            w.writerow(["PERK_ICON","perk_windows_of_opportunity",r"D:\dbd-dataset\match.mp4","300","1800","60","0","normal","","sampled from owned recording","","500"])
+            w.writerow(["domain","label","video_path","start_frame","end_frame_exclusive","frame_step","slot","group","source_ref","notes","roi_profile_path","max_samples","match_id","signal_kind"])
+            w.writerow(["PERK_ICON","perk_windows_of_opportunity",r"D:\dbd-dataset\match.mp4","300","1800","60","0","normal","","sampled from owned recording","","500","",""])
     return visual, ocr, trivia, video
 
 
@@ -170,9 +200,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         workspace, ffprobe_executable=runtime_ffprobe, ffmpeg_executable=runtime_ffmpeg,
         tesseract_executable=runtime_tesseract, model_cache=runtime_model_cache,
     )
+    killer_capability_registry = KillerCapabilityRegistry(initial_killer_capabilities(), {})
     safe_visual_learning = SafeVisualLearningService(
         workspace_root=workspace.root,
         manifest=workspace.visual,
+        killer_capability_registry=killer_capability_registry,
     )
     notification_semantics = NotificationSemanticStore(
         workspace.root / "knowledge" / "upper-right-notification-semantics.json"
@@ -251,7 +283,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     background_state = {"active": False}
 
-    def run_background(title: str, fn, on_success) -> None:
+    def run_background(title: str, fn, on_success, *, progress_queue=None, on_finish=None) -> None:
         """Keep long jobs off Tk; worker threads never call Tk APIs directly."""
         if background_state["active"]:
             messagebox.showwarning(
@@ -270,12 +302,26 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 outcome.put(("error", exc))
 
         def poll_outcome() -> None:
+            if progress_queue is not None:
+                latest = None
+                try:
+                    while True:
+                        latest = progress_queue.get_nowait()
+                except queue.Empty:
+                    pass
+                if latest is not None:
+                    domain = f" / {latest.current_domain}" if latest.current_domain else ""
+                    status.set(
+                        f"{title}: {latest.phase} {latest.processed}/{latest.total}{domain}"
+                    )
             try:
                 kind, value = outcome.get_nowait()
             except queue.Empty:
                 root.after(40, poll_outcome)
                 return
             background_state["active"] = False
+            if on_finish is not None:
+                on_finish()
             if kind == "error":
                 exc = value
                 status.set(f"{title}: 失敗")
@@ -417,6 +463,14 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         "end": tk.StringVar(value="300"),
         "step": tk.StringVar(value="30"),
         "max_samples": tk.StringVar(value="500"),
+        "match_id": tk.StringVar(),
+        "signal_kind": tk.StringVar(value=SurvivorSignalKind.SURVIVOR_STATE.value),
+        "killer_capability": tk.StringVar(),
+        "teacher_role": tk.StringVar(value=KillerSpecificTeacherRole.POSITIVE.value),
+        "label_namespace": tk.StringVar(),
+        "teacher_active": tk.StringVar(value="true"),
+        "teacher_stage": tk.StringVar(),
+        "teacher_progress_milli": tk.StringVar(),
         "ffmpeg": tk.StringVar(value=runtime_ffmpeg),
     }
 
@@ -428,6 +482,8 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     staged_video_samples: list[object] = []
     crop_preview_photos: list[object] = []
     crop_preview_widgets: list[object] = []
+    video_batch_cancel_event = {"value": None}
+    video_batch_preview_report = {"value": None}
 
     # First tier is a real two-column layout: source/targets on the left and
     # extraction conditions/advanced HUD binding on the right. The entire tier
@@ -509,6 +565,90 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     slot_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(6,6))
     slot_frame.columnconfigure(1, weight=1)
 
+    survivor_subject_frame = ttk.LabelFrame(
+        video_source_box,
+        text="サバイバー主体（SURVIVOR_HUD時は必須）",
+        padding=6,
+    )
+    survivor_subject_frame.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(0, 6))
+    survivor_subject_frame.columnconfigure(1, weight=1)
+    ttk.Label(survivor_subject_frame, text="match_id").grid(row=0, column=0, sticky="w")
+    ttk.Entry(survivor_subject_frame, textvariable=video_vars["match_id"]).grid(row=0, column=1, sticky="ew", padx=4)
+    ttk.Label(survivor_subject_frame, text="signal_kind").grid(row=1, column=0, sticky="w")
+    ttk.Combobox(
+        survivor_subject_frame, textvariable=video_vars["signal_kind"],
+        values=list(SURVIVOR_SIGNAL_KIND_JA), state="readonly",
+    ).grid(row=1, column=1, sticky="ew", padx=4)
+    ttk.Label(
+        survivor_subject_frame,
+        text="キラー固有HUDでもmatch_idが必須です（signal_kindは使用しません）。",
+    ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(3, 0))
+
+    killer_teacher_frame = ttk.LabelFrame(
+        video_source_box,
+        text="キラー固有Teacher契約（キラー固有HUD時のみ使用）",
+        padding=6,
+    )
+    killer_teacher_frame.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 6))
+    killer_teacher_frame.columnconfigure(1, weight=1)
+    killer_capability_choices = {
+        f"{item.killer_id} / {item.effect_id}": item
+        for item in killer_capability_registry.capabilities
+    }
+    video_vars["killer_capability"].set(next(iter(killer_capability_choices)))
+    ttk.Label(killer_teacher_frame, text="キラー / 効果").grid(row=0, column=0, sticky="w")
+    killer_capability_combo = ttk.Combobox(
+        killer_teacher_frame, textvariable=video_vars["killer_capability"],
+        values=list(killer_capability_choices), state="readonly",
+    )
+    killer_capability_combo.grid(row=0, column=1, sticky="ew", padx=4)
+    ttk.Label(killer_teacher_frame, text="Teacher role").grid(row=1, column=0, sticky="w")
+    killer_teacher_role_combo = ttk.Combobox(
+        killer_teacher_frame, textvariable=video_vars["teacher_role"],
+        values=[item.value for item in KillerSpecificTeacherRole], state="readonly",
+    )
+    killer_teacher_role_combo.grid(row=1, column=1, sticky="ew", padx=4)
+    ttk.Label(killer_teacher_frame, text="名前空間").grid(row=2, column=0, sticky="w")
+    killer_namespace_combo = ttk.Combobox(
+        killer_teacher_frame, textvariable=video_vars["label_namespace"], state="readonly",
+    )
+    killer_namespace_combo.grid(row=2, column=1, sticky="ew", padx=4)
+    teacher_state_frame = ttk.Frame(killer_teacher_frame)
+    teacher_state_frame.grid(row=3, column=1, sticky="ew", padx=4, pady=(3, 0))
+    for index in range(3):
+        teacher_state_frame.columnconfigure(index, weight=1)
+    ttk.Combobox(
+        teacher_state_frame, textvariable=video_vars["teacher_active"],
+        values=("true", "false"), state="readonly", width=8,
+    ).grid(row=0, column=0, sticky="ew", padx=(0, 3))
+    ttk.Entry(
+        teacher_state_frame, textvariable=video_vars["teacher_stage"], width=8,
+    ).grid(row=0, column=1, sticky="ew", padx=3)
+    ttk.Entry(
+        teacher_state_frame, textvariable=video_vars["teacher_progress_milli"], width=12,
+    ).grid(row=0, column=2, sticky="ew", padx=(3, 0))
+    ttk.Label(
+        teacher_state_frame, text="active / stage（任意） / progress 0..1000（任意）",
+    ).grid(row=1, column=0, columnspan=3, sticky="w")
+
+    def sync_killer_teacher_options(_event=None) -> None:
+        capability = killer_capability_choices[video_vars["killer_capability"].get()]
+        role = KillerSpecificTeacherRole(video_vars["teacher_role"].get())
+        namespaces = (
+            (capability.training_label_namespace,)
+            if role is KillerSpecificTeacherRole.POSITIVE
+            else capability.hard_negative_namespaces
+        )
+        killer_namespace_combo.configure(values=namespaces)
+        video_vars["label_namespace"].set(namespaces[0])
+        if role is KillerSpecificTeacherRole.HARD_NEGATIVE:
+            video_vars["teacher_stage"].set("")
+            video_vars["teacher_progress_milli"].set("")
+
+    killer_capability_combo.bind("<<ComboboxSelected>>", sync_killer_teacher_options)
+    killer_teacher_role_combo.bind("<<ComboboxSelected>>", sync_killer_teacher_options)
+    sync_killer_teacher_options()
+
     kind_map = {
         VisualTrainingDomain.PERK_ICON: GameKnowledgeKind.PERK,
         VisualTrainingDomain.ITEM_ICON: GameKnowledgeKind.ITEM,
@@ -569,7 +709,15 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             }
             video_slot_rows.append(row_state)
 
-            if expected_kind is not None:
+            if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+                enabled_var = tk.BooleanVar(value=False)
+                row_state["enabled"] = enabled_var
+                ttk.Checkbutton(
+                    slot_frame,
+                    text="このスロットをTeacher対象に含める",
+                    variable=enabled_var,
+                ).grid(row=row_no, column=1, columnspan=2, sticky="w", pady=3)
+            elif expected_kind is not None:
                 combo = ttk.Combobox(
                     slot_frame,
                     textvariable=display_var,
@@ -714,8 +862,15 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     def active_slot_selections() -> list[tuple[int | None, str, str]]:
         selections = []
+        domain = VisualTrainingDomain(video_vars["domain"].get())
         for row_state in video_slot_rows:
-            entity_id = row_state["entity_id"].get().strip()
+            if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+                if not row_state["enabled"].get():
+                    continue
+                capability = killer_capability_choices[video_vars["killer_capability"].get()]
+                entity_id = f"{capability.effect_id}-{video_vars['teacher_role'].get().lower()}"
+            else:
+                entity_id = row_state["entity_id"].get().strip()
             if entity_id:
                 selections.append(
                     (
@@ -725,6 +880,41 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                     )
                 )
         return selections
+
+    def selected_killer_teacher_values():
+        capability = killer_capability_choices[video_vars["killer_capability"].get()]
+        role = KillerSpecificTeacherRole(video_vars["teacher_role"].get())
+        namespace = video_vars["label_namespace"].get()
+        if role is KillerSpecificTeacherRole.POSITIVE:
+            active = video_vars["teacher_active"].get() == "true"
+            stage = (
+                None if not video_vars["teacher_stage"].get().strip()
+                else int(video_vars["teacher_stage"].get())
+            )
+            progress = (
+                None if not video_vars["teacher_progress_milli"].get().strip()
+                else int(video_vars["teacher_progress_milli"].get())
+            )
+        else:
+            active = None
+            stage = None
+            progress = None
+        if role is KillerSpecificTeacherRole.POSITIVE and namespace != capability.training_label_namespace:
+            raise ValueError("Positive名前空間が選択中のキラー/効果と一致しません。")
+        if role is KillerSpecificTeacherRole.HARD_NEGATIVE and namespace not in capability.hard_negative_namespaces:
+            raise ValueError("Hard Negative名前空間が選択中のキラー/効果に登録されていません。")
+        if capability.max_stage is not None and stage is not None and stage > capability.max_stage:
+            raise ValueError(f"stageは{capability.max_stage}以下で指定してください。")
+        KillerSpecificTeacherLabel(role, namespace, active, stage, progress)
+        state = "hard-negative"
+        if role is KillerSpecificTeacherRole.POSITIVE:
+            state = "active" if active else "inactive"
+            if stage is not None:
+                state += f"-stage-{stage}"
+            if progress is not None:
+                state += f"-progress-{progress}"
+        label = f"{capability.effect_id}-{role.value.lower().replace('_', '-')}-{state}"
+        return capability, role, namespace, active, stage, progress, label
 
     def resolve_active_profile():
         source = video_vars["video"].get().strip()
@@ -755,6 +945,15 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 pass
         staged_video_samples.clear()
         clear_crop_previews()
+        video_batch_preview_report["value"] = None
+
+    def cancel_video_batch_operation() -> None:
+        event = video_batch_cancel_event["value"]
+        if event is None:
+            status.set("動画から一括学習: 取消対象の処理はありません")
+            return
+        event.set()
+        status.set("動画から一括学習: 取消要求を送信しました（Commit開始後は完了を待ちます）")
 
     def preview_video_learning() -> None:
         source = video_vars["video"].get().strip()
@@ -764,7 +963,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 "先に学習元動画を選択してください。",
             )
             return
-        selections = active_slot_selections()
+        try:
+            selections = active_slot_selections()
+        except Exception as exc:
+            messagebox.showerror("動画から一括学習", f"Teacher条件を確認してください: {exc}")
+            return
         if not selections:
             messagebox.showwarning(
                 "動画から一括学習",
@@ -781,9 +984,17 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             domain = VisualTrainingDomain(video_vars["domain"].get())
             group = video_vars["group"].get().strip() or "normal"
             visibility = HudVisibility(video_visibility.get())
+            teacher_values = (
+                selected_killer_teacher_values()
+                if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD else None
+            )
             targets: list[BatchVisualTarget] = []
             target_labels: dict[str, str] = {}
             for slot, slot_label, entity_id in selections:
+                if teacher_values is not None:
+                    capability, teacher_role, namespace, active, stage, progress, entity_id = teacher_values
+                else:
+                    capability = teacher_role = namespace = active = stage = progress = None
                 roi = training_roi(binding.profile, domain, slot)
                 rect = roi_pixel_rect(
                     binding.profile, domain=domain, slot=slot,
@@ -794,11 +1005,33 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 targets.append(
                     BatchVisualTarget(
                         domain=domain, label=entity_id, visibility=visibility, roi=roi,
-                        group=group, notes=(
+                        group=(
+                            "hard-negative"
+                            if teacher_role is KillerSpecificTeacherRole.HARD_NEGATIVE else group
+                        ), notes=(
                             f"hud_profile={binding.profile.profile_id} "
                             f"roi={roi.roi_id} "
                             f"pixel={rect.x},{rect.y},{rect.width},{rect.height}"
                         ),
+                        match_id=(
+                            video_vars["match_id"].get().strip()
+                            if domain in {
+                                VisualTrainingDomain.SURVIVOR_HUD,
+                                VisualTrainingDomain.KILLER_SPECIFIC_HUD,
+                            } else ""
+                        ),
+                        survivor_slot=(
+                            slot if domain in {
+                                VisualTrainingDomain.SURVIVOR_HUD,
+                                VisualTrainingDomain.KILLER_SPECIFIC_HUD,
+                            } else None
+                        ),
+                        signal_kind=(SurvivorSignalKind(video_vars["signal_kind"].get()) if domain is VisualTrainingDomain.SURVIVOR_HUD else None),
+                        killer_id=("" if capability is None else capability.killer_id),
+                        effect_id=("" if capability is None else capability.effect_id),
+                        label_namespace=("" if namespace is None else namespace),
+                        teacher_role=teacher_role, active=active, stage=stage,
+                        progress_milli=progress,
                     )
                 )
         except Exception as exc:
@@ -811,8 +1044,19 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
         discard_staged_video_samples()
         video_learning_result.set("指定範囲から正確なCrop候補を作成中です…")
+        cancel_event = threading.Event()
+        progress_events = queue.Queue()
+        video_batch_cancel_event["value"] = cancel_event
 
         def completed(report) -> None:
+            video_batch_cancel_event["value"] = None
+            video_batch_preview_report["value"] = report
+            if report.cancelled:
+                video_learning_result.set(
+                    f"Crop作成を取消しました: 処理済み {report.stage_count}/{len(targets) * len(range(start_frame, end_frame, frame_step))}"
+                )
+                status.set("動画から一括学習: EXTRACT CANCELLED")
+                return
             staged_video_samples.extend(report.staged)
             clear_crop_previews()
             preview_limit = 12
@@ -860,8 +1104,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 video_path=source, start_frame=start_frame,
                 end_frame_exclusive=end_frame, frame_step=frame_step,
                 targets=tuple(targets), max_samples=max_samples,
+                progress=progress_events.put, cancel_event=cancel_event,
             ),
             completed,
+            progress_queue=progress_events,
+            on_finish=lambda: video_batch_cancel_event.update(value=None),
         )
 
     def confirm_video_learning() -> None:
@@ -882,32 +1129,42 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         ):
             return
 
-        accepted = duplicates = failed = 0
-        failures = []
-        for staged in tuple(staged_video_samples):
-            try:
-                if safe_visual_learning.confirm_register(staged):
-                    accepted += 1
-                else:
-                    duplicates += 1
-            except Exception as exc:
-                failed += 1
-                failures.append(
-                    f"{staged.roi_id}: {type(exc).__name__}: {exc}"
-                )
+        cancel_event = threading.Event()
+        progress_events = queue.Queue()
+        video_batch_cancel_event["value"] = cancel_event
+        staged_snapshot = tuple(staged_video_samples)
+        preview_report = video_batch_preview_report["value"]
 
-        staged_video_samples.clear()
-        clear_crop_previews()
-        refresh_visual_count()
+        def completed(report) -> None:
+            video_batch_cancel_event["value"] = None
+            if not report.cancelled:
+                staged_video_samples.clear()
+                clear_crop_previews()
+                video_batch_preview_report["value"] = None
+                refresh_visual_count()
+            message = (
+                f"登録={report.confirm_count}件 / 重複={report.duplicate_count}件 / "
+                f"Index失敗={report.failed_count}件 / cancelled={report.cancelled}\n"
+                f"subprocess={report.subprocess_count} / extract={report.extract_seconds:.3f}s / "
+                f"commit={report.commit_seconds:.3f}s / index={report.index_rebuild_seconds:.3f}s / "
+                f"total={report.total_seconds:.3f}s"
+            )
+            if report.errors:
+                message += "\n\n" + "\n".join(report.errors[:10])
+            (messagebox.showinfo if report.failed_count == 0 else messagebox.showwarning)(
+                "動画から一括学習", message,
+            )
 
-        message = (
-            f"登録={accepted}件 / 重複={duplicates}件 / 失敗={failed}件"
-        )
-        if failures:
-            message += "\n\n" + "\n".join(failures[:10])
-        (messagebox.showinfo if failed == 0 else messagebox.showwarning)(
-            "動画から一括学習",
-            message,
+        run_background(
+            "学習データへ一括登録",
+            lambda: safe_visual_learning.confirm_batch(
+                staged_snapshot, progress=progress_events.put, cancel_event=cancel_event,
+                extract_seconds=(0.0 if preview_report is None else preview_report.extract_seconds),
+                stage_subprocess_count=(0 if preview_report is None else preview_report.subprocess_count),
+            ),
+            completed,
+            progress_queue=progress_events,
+            on_finish=lambda: video_batch_cancel_event.update(value=None),
         )
 
     def import_video_ranges_csv() -> None:
@@ -948,6 +1205,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         text="破棄",
         command=discard_staged_video_samples,
     ).pack(side="left",padx=6)
+    ttk.Button(
+        video_buttons,
+        text="一括処理をキャンセル",
+        command=cancel_video_batch_operation,
+    ).pack(side="left",padx=6)
 
     ttk.Label(
         video_form,
@@ -977,6 +1239,8 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         "roi_profile": tk.StringVar(), "image": tk.StringVar(),
         "display_state": tk.StringVar(value=HudVisibility.VISIBLE.value),
         "selected_slot": tk.StringVar(),
+        "match_id": tk.StringVar(),
+        "signal_kind": tk.StringVar(value=SurvivorSignalKind.SURVIVOR_STATE.value),
     }
     visual_kind_map = {
         VisualTrainingDomain.PERK_ICON: GameKnowledgeKind.PERK,
@@ -1086,6 +1350,8 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     def open_visual_slot_search(slot: int | None) -> None:
         domain = visual_selected_domain()
+        if domain is VisualTrainingDomain.SURVIVOR_HUD:
+            return
         expected_kind = visual_kind_map[domain]
         def selected(choice) -> None:
             set_visual_slot(slot, choice.entity_id, f"{choice.matched_text}  [{choice.entity_id}]")
@@ -1115,13 +1381,21 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                     str(visual_slot_values[sl]["entity_id"].get())
                 ),
             ).grid(row=row_no, column=0, sticky="w", pady=3)
-            ttk.Entry(slot_host, textvariable=display, state="readonly").grid(
+            is_survivor = visual_selected_domain() is VisualTrainingDomain.SURVIVOR_HUD
+            ttk.Entry(
+                slot_host,
+                textvariable=(entity_id if is_survivor else display),
+                state=("normal" if is_survivor else "readonly"),
+            ).grid(
                 row=row_no, column=1, sticky="ew", padx=4, pady=3
             )
-            ttk.Button(
-                slot_host, text="検索",
-                command=lambda sl=slot: open_visual_slot_search(sl),
-            ).grid(row=row_no, column=2, pady=3)
+            if is_survivor:
+                ttk.Label(slot_host, text="例: HOOKED / CHASE_ACTIVE").grid(row=row_no, column=2, pady=3)
+            else:
+                ttk.Button(
+                    slot_host, text="検索",
+                    command=lambda sl=slot: open_visual_slot_search(sl),
+                ).grid(row=row_no, column=2, pady=3)
         if specs:
             first_slot = specs[0][0]
             visual_vars["selected_slot"].set("" if first_slot is None else str(first_slot))
@@ -1144,9 +1418,16 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     ttk.Label(options_box, text=VISUAL_GROUP_HELP_JA, wraplength=420).grid(
         row=2, column=1, sticky="w", pady=(0, 4)
     )
-    ttk.Label(options_box, text="情報源").grid(row=3, column=0, sticky="w", pady=3)
+    ttk.Label(options_box, text="match_id（サバイバー時必須）").grid(row=3, column=0, sticky="w", pady=3)
+    ttk.Entry(options_box, textvariable=visual_vars["match_id"]).grid(row=3, column=1, sticky="ew", pady=3)
+    ttk.Label(options_box, text="signal_kind（サバイバー時必須）").grid(row=4, column=0, sticky="w", pady=3)
+    ttk.Combobox(
+        options_box, textvariable=visual_vars["signal_kind"],
+        values=list(SURVIVOR_SIGNAL_KIND_JA), state="readonly",
+    ).grid(row=4, column=1, sticky="ew", pady=3)
+    ttk.Label(options_box, text="情報源").grid(row=5, column=0, sticky="w", pady=3)
     visual_source_row = ttk.Frame(options_box)
-    visual_source_row.grid(row=3, column=1, sticky="ew")
+    visual_source_row.grid(row=5, column=1, sticky="ew")
     visual_source_row.columnconfigure(2, weight=1)
     visual_source_url_entry = ttk.Entry(visual_source_row, textvariable=visual_source_url, state="disabled")
     def sync_visual_source() -> None:
@@ -1154,9 +1435,9 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     ttk.Radiobutton(visual_source_row, text=SOURCE_MODE_MANUAL_JA, variable=visual_source_mode, value=SOURCE_MODE_MANUAL_JA, command=sync_visual_source).grid(row=0, column=0)
     ttk.Radiobutton(visual_source_row, text=SOURCE_MODE_URL_JA, variable=visual_source_mode, value=SOURCE_MODE_URL_JA, command=sync_visual_source).grid(row=0, column=1)
     visual_source_url_entry.grid(row=0, column=2, sticky="ew", padx=(4, 0))
-    ttk.Label(options_box, text="メモ").grid(row=4, column=0, sticky="nw", pady=3)
+    ttk.Label(options_box, text="メモ").grid(row=6, column=0, sticky="nw", pady=3)
     visual_notes = tk.Text(options_box, height=4, wrap="word")
-    visual_notes.grid(row=4, column=1, sticky="ew", pady=3)
+    visual_notes.grid(row=6, column=1, sticky="ew", pady=3)
 
     preview_box = ttk.LabelFrame(visual_form, text="正確なCrop確認", padding=8)
     preview_box.grid(row=1, column=0, columnspan=2, sticky="ew", pady=6)
@@ -1171,7 +1452,13 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         return None if raw == "" else int(raw)
 
     def preview_visual_from_video() -> None:
-        label = visual_vars["label"].get().strip()
+        domain = visual_selected_domain()
+        slot = selected_visual_slot()
+        label = (
+            str(visual_slot_values[slot]["entity_id"].get()).strip()
+            if domain is VisualTrainingDomain.SURVIVOR_HUD and slot in visual_slot_values
+            else visual_vars["label"].get().strip()
+        )
         if not label:
             messagebox.showwarning("画像学習データ", "検索ボタンから正解ゲーム要素を選択してください。")
             return
@@ -1183,8 +1470,6 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 profile_var=visual_vars["roi_profile"],
                 frame_index=frame_index, inspector=visual_inspector,
             )
-            domain = visual_selected_domain()
-            slot = selected_visual_slot()
             roi = training_roi(binding.profile, domain, slot)
             rect = roi_pixel_rect(
                 binding.profile, domain=domain, slot=slot,
@@ -1199,6 +1484,9 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 group=visual_vars["group"].get().strip() or "normal",
                 notes=visual_notes.get("1.0", "end").strip(),
                 registration_origin="VIDEO_SINGLE",
+                match_id=(visual_vars["match_id"].get().strip() if domain is VisualTrainingDomain.SURVIVOR_HUD else ""),
+                survivor_slot=(slot if domain is VisualTrainingDomain.SURVIVOR_HUD else None),
+                signal_kind=(SurvivorSignalKind(visual_vars["signal_kind"].get()) if domain is VisualTrainingDomain.SURVIVOR_HUD else None),
             )
             visual_staged["value"] = staged
             photo = tk.PhotoImage(file=staged.image_path)
@@ -1242,6 +1530,9 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     manual_visibility_display = tk.StringVar(value=hud_visibility_display(HudVisibility.VISIBLE.value))
     manual_source_mode = tk.StringVar(value=SOURCE_MODE_MANUAL_JA)
     manual_source_url = tk.StringVar()
+    manual_match_id = tk.StringVar()
+    manual_survivor_slot = tk.StringVar(value="0")
+    manual_signal_kind = tk.StringVar(value=SurvivorSignalKind.SURVIVOR_STATE.value)
     manual_notes = tk.Text(visual_manual_tab, height=5, wrap="word")
     ttk.Label(visual_manual_tab, text="画像ファイル（必須）").grid(row=0, column=0, sticky="w", pady=3)
     ttk.Entry(visual_manual_tab, textvariable=visual_vars["image"]).grid(row=0, column=1, sticky="ew", pady=3)
@@ -1253,9 +1544,12 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     ttk.Label(visual_manual_tab, text="学習対象").grid(row=1, column=0, sticky="w", pady=3)
     ttk.Combobox(visual_manual_tab, textvariable=manual_domain_display, values=list(visual_domain_labels), state="readonly").grid(row=1, column=1, sticky="ew", pady=3)
     ttk.Label(visual_manual_tab, text="正解ゲーム要素").grid(row=2, column=0, sticky="w", pady=3)
-    ttk.Entry(visual_manual_tab, textvariable=manual_label_display, state="readonly").grid(row=2, column=1, sticky="ew", pady=3)
+    ttk.Entry(visual_manual_tab, textvariable=manual_label_display, state="normal").grid(row=2, column=1, sticky="ew", pady=3)
     def choose_manual_game_element() -> None:
         domain = visual_domain_labels[manual_domain_display.get()]
+        if domain is VisualTrainingDomain.SURVIVOR_HUD:
+            manual_label_id.set(manual_label_display.get().strip())
+            return
         def selected(choice) -> None:
             manual_label_id.set(choice.entity_id)
             manual_label_display.set(f"{choice.matched_text}  [{choice.entity_id}]")
@@ -1264,21 +1558,27 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             on_select=selected, expected_kind=visual_kind_map[domain], verified_only=True,
         )
     ttk.Button(visual_manual_tab, text="検索", command=choose_manual_game_element).grid(row=2, column=2, padx=(8, 0))
-    ttk.Label(visual_manual_tab, text="表示状態").grid(row=3, column=0, sticky="w", pady=3)
+    ttk.Label(visual_manual_tab, text="match_id（サバイバー時必須）").grid(row=3, column=0, sticky="w", pady=3)
+    ttk.Entry(visual_manual_tab, textvariable=manual_match_id).grid(row=3, column=1, sticky="ew", pady=3)
+    ttk.Label(visual_manual_tab, text="survivor_slot（0..3）").grid(row=4, column=0, sticky="w", pady=3)
+    ttk.Combobox(visual_manual_tab, textvariable=manual_survivor_slot, values=("0", "1", "2", "3"), state="readonly").grid(row=4, column=1, sticky="ew", pady=3)
+    ttk.Label(visual_manual_tab, text="signal_kind").grid(row=5, column=0, sticky="w", pady=3)
+    ttk.Combobox(visual_manual_tab, textvariable=manual_signal_kind, values=list(SURVIVOR_SIGNAL_KIND_JA), state="readonly").grid(row=5, column=1, sticky="ew", pady=3)
+    ttk.Label(visual_manual_tab, text="表示状態").grid(row=6, column=0, sticky="w", pady=3)
     ttk.Combobox(
         visual_manual_tab, textvariable=manual_visibility_display,
         values=list(HUD_VISIBILITY_JA.values()), state="readonly",
-    ).grid(row=3, column=1, sticky="ew", pady=3)
-    ttk.Label(visual_manual_tab, text="画像グループ").grid(row=4, column=0, sticky="w", pady=3)
+    ).grid(row=6, column=1, sticky="ew", pady=3)
+    ttk.Label(visual_manual_tab, text="画像グループ").grid(row=7, column=0, sticky="w", pady=3)
     ttk.Combobox(
         visual_manual_tab, textvariable=manual_group, values=VISUAL_GROUP_PRESETS, state="normal",
-    ).grid(row=4, column=1, sticky="ew", pady=3)
+    ).grid(row=7, column=1, sticky="ew", pady=3)
     ttk.Label(visual_manual_tab, text=VISUAL_GROUP_HELP_JA, wraplength=700).grid(
-        row=5, column=1, columnspan=2, sticky="w", pady=(0, 4)
+        row=8, column=1, columnspan=2, sticky="w", pady=(0, 4)
     )
-    ttk.Label(visual_manual_tab, text="情報源").grid(row=6, column=0, sticky="w", pady=3)
+    ttk.Label(visual_manual_tab, text="情報源").grid(row=9, column=0, sticky="w", pady=3)
     manual_source_row = ttk.Frame(visual_manual_tab)
-    manual_source_row.grid(row=6, column=1, columnspan=2, sticky="ew", pady=3)
+    manual_source_row.grid(row=9, column=1, columnspan=2, sticky="ew", pady=3)
     manual_source_row.columnconfigure(2, weight=1)
     manual_source_entry = ttk.Entry(manual_source_row, textvariable=manual_source_url, state="disabled")
     def sync_manual_visual_source() -> None:
@@ -1294,19 +1594,24 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         value=SOURCE_MODE_URL_JA, command=sync_manual_visual_source,
     ).grid(row=0, column=1)
     manual_source_entry.grid(row=0, column=2, sticky="ew", padx=(4, 0))
-    ttk.Label(visual_manual_tab, text="メモ").grid(row=7, column=0, sticky="nw", pady=3)
-    manual_notes.grid(row=7, column=1, columnspan=2, sticky="ew", pady=3)
+    ttk.Label(visual_manual_tab, text="メモ").grid(row=10, column=0, sticky="nw", pady=3)
+    manual_notes.grid(row=10, column=1, columnspan=2, sticky="ew", pady=3)
 
     def register_manual_visual() -> None:
         try:
             image = Path(visual_vars["image"].get()).expanduser().resolve()
             if not image.is_file():
                 raise ValueError("登録する画像ファイルを選択してください。")
-            label = manual_label_id.get().strip()
+            domain = visual_domain_labels[manual_domain_display.get()]
+            label = (
+                manual_label_display.get().strip()
+                if domain is VisualTrainingDomain.SURVIVOR_HUD
+                else manual_label_id.get().strip()
+            )
             if not label:
                 raise ValueError("正解ゲーム要素を検索して選択してください。")
             sample = VisualTrainingSample(
-                domain=visual_domain_labels[manual_domain_display.get()],
+                domain=domain,
                 label=label, image_path=str(image),
                 group=manual_group.get().strip() or "normal",
                 source_ref=compose_source_ref(manual_source_mode.get(), manual_source_url.get()),
@@ -1315,6 +1620,9 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 display_state=visual_visibility_reverse.get(
                     manual_visibility_display.get(), HudVisibility.VISIBLE.value
                 ),
+                match_id=(manual_match_id.get().strip() if domain is VisualTrainingDomain.SURVIVOR_HUD else ""),
+                survivor_slot=(int(manual_survivor_slot.get()) if domain is VisualTrainingDomain.SURVIVOR_HUD else None),
+                signal_kind=(SurvivorSignalKind(manual_signal_kind.get()) if domain is VisualTrainingDomain.SURVIVOR_HUD else None),
             )
             if workspace.visual.append(sample):
                 messagebox.showinfo("画像学習データ", "手動画像を登録しました。")
@@ -1327,7 +1635,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 "手動画像を登録できませんでした。",
                 "画像、学習対象、正解ゲーム要素を確認してください。", exc,
             )
-    ttk.Button(visual_manual_tab, text="登録", command=register_manual_visual).grid(row=8, column=1, sticky="w", pady=8)
+    ttk.Button(visual_manual_tab, text="登録", command=register_manual_visual).grid(row=11, column=1, sticky="w", pady=8)
 
     # Registered list + direct modal editing ---------------------------------
     visual_list_tab.columnconfigure(0, weight=1)
@@ -1358,7 +1666,12 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         visual_rows.clear()
         needle = visual_list_filter.get().strip().casefold()
         for item in workspace.visual.list():
-            if needle and needle not in f"{item.domain.value} {item.label} {item.group} {item.slot}".casefold():
+            if needle and needle not in (
+                f"{item.domain.value} {item.label} {item.group} {item.slot} "
+                f"{item.match_id} {item.survivor_slot} {item.signal_kind} "
+                f"{item.killer_id} {item.effect_id} {item.label_namespace} "
+                f"{item.teacher_role} {item.active} {item.stage} {item.progress_milli}"
+            ).casefold():
                 continue
             index = len(visual_rows)
             visual_rows.append(item)
@@ -1366,7 +1679,17 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 "", "end", iid=str(index),
                 values=(
                     visual_domain_display(item.domain.value), item.label,
-                    item.registration_origin, item.slot or "-", item.group,
+                    item.registration_origin,
+                    (
+                        f"S{item.survivor_slot + 1}/{item.signal_kind.value}"
+                        if item.survivor_slot is not None and item.signal_kind is not None
+                        else (
+                            f"S{item.survivor_slot + 1}/{item.teacher_role.value}"
+                            if item.survivor_slot is not None and item.teacher_role is not None
+                            else item.slot or "-"
+                        )
+                    ),
+                    item.group,
                     "手入力" if item.source_ref == "manual://owner" else item.source_ref,
                 ),
             )
@@ -1384,6 +1707,13 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         if original is None:
             messagebox.showinfo("画像学習データ", "編集する登録済みデータを選択してください。")
             return
+        if original.domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+            messagebox.showinfo(
+                "キラー固有Teacherデータ",
+                "能力・名前空間・状態の整合性を保つため汎用編集は使用できません。"
+                "修正する場合は対象行を削除し、動画から一括学習で再登録してください。",
+            )
+            return
         modal = tk.Toplevel(root)
         modal.title("画像学習データを編集")
         modal.transient(root)
@@ -1400,9 +1730,12 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         ttk.Label(modal, text="学習対象").grid(row=0, column=0, sticky="w", padx=10, pady=5)
         ttk.Combobox(modal, textvariable=domain_display, values=list(visual_domain_labels), state="readonly").grid(row=0, column=1, sticky="ew", padx=10, pady=5)
         ttk.Label(modal, text="正解ゲーム要素").grid(row=1, column=0, sticky="w", padx=10, pady=5)
-        ttk.Entry(modal, textvariable=label_display, state="readonly").grid(row=1, column=1, sticky="ew", padx=10, pady=5)
+        ttk.Entry(modal, textvariable=label_display, state="normal").grid(row=1, column=1, sticky="ew", padx=10, pady=5)
         def choose_edit_label() -> None:
             domain = visual_domain_labels[domain_display.get()]
+            if domain is VisualTrainingDomain.SURVIVOR_HUD:
+                label_id.set(label_display.get().strip())
+                return
             def picked(choice) -> None:
                 label_id.set(choice.entity_id); label_display.set(f"{choice.matched_text}  [{choice.entity_id}]")
             open_game_element_selector(root, catalog=entity_alias_catalog, title="正解ゲーム要素を選択", on_select=picked, expected_kind=visual_kind_map[domain], verified_only=True)
@@ -1417,13 +1750,22 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         notes_widget.grid(row=5, column=1, columnspan=2, sticky="ew", padx=10, pady=5)
         def save_edit() -> None:
             try:
+                replacement_domain = visual_domain_labels[domain_display.get()]
+                replacement_label = (
+                    label_display.get().strip()
+                    if replacement_domain is VisualTrainingDomain.SURVIVOR_HUD
+                    else label_id.get()
+                )
                 replacement = VisualTrainingSample(
-                    domain=visual_domain_labels[domain_display.get()], label=label_id.get(),
+                    domain=replacement_domain, label=replacement_label,
                     image_path=original.image_path, group=group.get().strip() or "normal",
                     source_ref=original.source_ref, notes=notes_widget.get("1.0", "end").strip(),
                     registration_origin=original.registration_origin, slot=slot.get().strip(),
                     display_state=display_state.get().strip(), source_video=original.source_video,
                     source_frame=original.source_frame,
+                    match_id=(original.match_id if replacement_domain is VisualTrainingDomain.SURVIVOR_HUD else ""),
+                    survivor_slot=(original.survivor_slot if replacement_domain is VisualTrainingDomain.SURVIVOR_HUD else None),
+                    signal_kind=(original.signal_kind if replacement_domain is VisualTrainingDomain.SURVIVOR_HUD else None),
                 )
                 if not workspace.visual.replace(original, replacement):
                     raise ValueError("編集対象が現在の一覧に見つかりません。")
@@ -2617,6 +2959,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     target_ids = [
         "lower_left_survivor_hud", "lower_left_loadout_hud", "upper_right_notifications", "bottom_right_perks",
+        "bottom_right_positive_effects", "bottom_right_negative_effects",
         *[f"survivor_slot_{i}" for i in range(4)],
         "item_slot", *[f"addon_slot_{i}" for i in range(2)],
         *[f"perk_slot_{i}" for i in range(4)],
@@ -2632,6 +2975,10 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         }
         if profile.lower_left_loadout_hud is not None:
             rows[profile.lower_left_loadout_hud.roi_id] = profile.lower_left_loadout_hud
+        if profile.bottom_right_positive_effects is not None:
+            rows[profile.bottom_right_positive_effects.roi_id] = profile.bottom_right_positive_effects
+        if profile.bottom_right_negative_effects is not None:
+            rows[profile.bottom_right_negative_effects.roi_id] = profile.bottom_right_negative_effects
         if profile.item_slot is not None:
             rows[profile.item_slot.roi_id] = profile.item_slot
         rows.update({item.roi_id: item for item in profile.addon_slots})
@@ -3186,6 +3533,8 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             lower_left_survivor_hud=rois["lower_left_survivor_hud"],
             upper_right_notifications=rois["upper_right_notifications"],
             bottom_right_perks=rois["bottom_right_perks"],
+            bottom_right_positive_effects=rois.get("bottom_right_positive_effects"),
+            bottom_right_negative_effects=rois.get("bottom_right_negative_effects"),
             lower_left_loadout_hud=rois.get("lower_left_loadout_hud"),
             item_slot=rois.get("item_slot"),
             addon_slots=tuple(rois[f"addon_slot_{i}"] for i in range(2)) if all(f"addon_slot_{i}" in rois for i in range(2)) else (),
@@ -3458,24 +3807,19 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     def _knowledge_thumbnail(path_text: str, max_size: tuple[int, int] = (96, 72), rotation_deg: int = 0):
         path = Path(path_text) if path_text else None
         if path is None or not path.is_file():
-            return None
+            return None, "FILE_NOT_FOUND: 画像ファイルがありません"
         try:
-            from PIL import Image, ImageTk
-            with Image.open(path) as opened:
-                image = opened.convert("RGBA")
-                if rotation_deg % 360:
-                    image = image.rotate(-rotation_deg, expand=True)
-                image.thumbnail(max_size)
-                return ImageTk.PhotoImage(image)
-        except Exception:
-            try:
-                photo = tk.PhotoImage(file=str(path))
-                factor = max(1, (max(photo.width() / max_size[0], photo.height() / max_size[1])))
-                if factor > 1:
-                    photo = photo.subsample(int(factor + 0.999), int(factor + 0.999))
-                return photo
-            except Exception:
-                return None
+            image, report = decode_image_for_preview(
+                path, max_size=max_size, rotation_deg=rotation_deg,
+            )
+            from PIL import ImageTk
+            return ImageTk.PhotoImage(image), f"{report.detected_format} / {report.decode_path}"
+        except ImageAssetDecodeError as exc:
+            report = exc.report
+            reason = report.diagnostic_reason or "decodeできません"
+            return None, f"{report.detected_format} / {report.diagnostic_code}: {reason}"
+        except Exception as exc:
+            return None, f"UNKNOWN / PREVIEW_FAILED: {type(exc).__name__}: {exc}"
 
     inventory_filter_row = ttk.Frame(inventory_box)
     inventory_filter_row.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 6))
@@ -3486,7 +3830,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         GameKnowledgeKind.PERK:"パーク", GameKnowledgeKind.KILLER:"キラー", GameKnowledgeKind.ITEM:"アイテム",
         GameKnowledgeKind.ADDON:"アドオン", GameKnowledgeKind.MAP:"マップ", GameKnowledgeKind.REALM:"領域",
         GameKnowledgeKind.OFFERING:"オファリング", GameKnowledgeKind.POWER:"能力",
-        GameKnowledgeKind.CHARACTER:"キャラクター", GameKnowledgeKind.SURVIVOR:"サバイバー",
+        GameKnowledgeKind.UNKNOWN:"未分類・要確認", GameKnowledgeKind.SURVIVOR:"サバイバー",
         GameKnowledgeKind.KNOWLEDGE:"ナレッジ系", GameKnowledgeKind.TILE:"地形",
         GameKnowledgeKind.STATUS:"状態", GameKnowledgeKind.MECHANIC:"ゲーム仕様",
     }
@@ -3527,6 +3871,9 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     }
 
     def _sync_candidate_alias_index(candidate) -> None:
+        if not candidate.enabled or candidate.review_status in {"REJECTED", "DISABLED"}:
+            entity_alias_catalog.remove_entity(candidate.candidate_id)
+            return
         status = (
             EntityAliasReviewStatus.VERIFIED if candidate.review_status == "VERIFIED"
             else EntityAliasReviewStatus.REJECTED if candidate.review_status in {"REJECTED", "DISABLED"}
@@ -3588,10 +3935,14 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         needle = inventory_keyword_filter.get().strip().casefold()
         visible = []
         for row in rows:
-            label = INVENTORY_KIND_JA.get(row.knowledge_kind, row.knowledge_kind.value)
+            label = (
+                "未分類・要確認"
+                if row.knowledge_kind is GameKnowledgeKind.CHARACTER
+                else INVENTORY_KIND_JA.get(row.knowledge_kind, row.knowledge_kind.value)
+            )
             if selected_kind and selected_kind != "すべて" and label != selected_kind:
                 continue
-            details_text = " ".join(str(v) for v in row.details.values() if v not in {None, ""})
+            details_text = knowledge_detail_search_text(row.details)
             hay = "\n".join((
                 row.effective_name_ja, row.effective_name_en, *row.effective_aliases_ja,
                 row.candidate_id, label, row.source_page_url, details_text,
@@ -3619,6 +3970,42 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         sel = inventory_tree.selection()
         return inventory_rows.get(sel[0]) if sel else None
 
+    def _knowledge_delete_dependencies(row) -> tuple[KnowledgeDependencyReference, ...]:
+        dependencies = []
+        alias_count = entity_alias_catalog.count_for_entity(row.candidate_id)
+        if alias_count:
+            dependencies.append(KnowledgeDependencyReference(
+                kind="REFERENCE_INDEX", reference_id=row.candidate_id,
+                description=f"検索用Alias {alias_count}件（再構築可能）", protected=False,
+            ))
+        try:
+            map_intelligence_store.get(row.candidate_id)
+            dependencies.append(KnowledgeDependencyReference(
+                kind="MAP_RELATION", reference_id=row.candidate_id,
+                description="マップ詳細・向き・学習領域との関係", protected=True,
+            ))
+        except KeyError:
+            pass
+        for trivia in workspace.trivia.list_latest():
+            if row.candidate_id in trivia.entity_refs:
+                dependencies.append(KnowledgeDependencyReference(
+                    kind="TRIVIA_ENTITY_REF", reference_id=trivia.trivia_id,
+                    description=f"豆知識『{trivia.title}』から参照", protected=True,
+                ))
+        for index, sample in enumerate(workspace.visual.list(), start=1):
+            if any(row.candidate_id in str(value) for value in sample.to_row().values()):
+                dependencies.append(KnowledgeDependencyReference(
+                    kind="VISUAL_TRAINING_SAMPLE", reference_id=f"visual:{index}",
+                    description=f"画像学習データ {sample.domain.value} / {sample.label}", protected=True,
+                ))
+        for index, sample in enumerate(workspace.ocr.list(), start=1):
+            if row.candidate_id in sample.signal_id or row.candidate_id in sample.source_ref:
+                dependencies.append(KnowledgeDependencyReference(
+                    kind="OCR_TRAINING_SAMPLE", reference_id=f"ocr:{index}",
+                    description=f"OCR学習語彙 {sample.signal_id}", protected=True,
+                ))
+        return tuple(dependencies)
+
     def edit_knowledge_candidate() -> None:
         row = selected_knowledge_candidate()
         if row is None:
@@ -3635,34 +4022,57 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         image_frame=ttk.LabelFrame(modal,text="画像",padding=8); image_frame.grid(row=4,column=0,columnspan=3,sticky="ew",padx=10,pady=6); image_frame.columnconfigure(0,weight=1)
         image_ref={"photo":None}
         image_preview=ttk.Label(image_frame,text="画像なし",anchor="center"); image_preview.grid(row=0,column=0,columnspan=2,sticky="ew")
-        image_path_label=ttk.Label(image_frame,textvariable=image_path,foreground="#555555",wraplength=760); image_path_label.grid(row=1,column=0,columnspan=2,sticky="w",pady=(6,4))
+        image_name=tk.StringVar(value=Path(image_path.get()).name if image_path.get() else "画像なし")
+        image_path_label=ttk.Label(image_frame,textvariable=image_name,foreground="#555555",wraplength=760); image_path_label.grid(row=1,column=0,columnspan=2,sticky="w",pady=(6,4))
         def refresh_edit_image():
-            photo=_knowledge_thumbnail(image_path.get(), (520, 260))
-            image_ref["photo"]=photo
-            image_preview.configure(image=photo or "", text="" if photo else "画像なし")
+            photo,diagnostic=_knowledge_thumbnail(image_path.get(), (520, 260))
+            if photo is not None:
+                image_ref["photo"]=photo
+                image_preview.configure(image=photo,text="")
+            elif image_ref["photo"] is not None:
+                image_preview.configure(image=image_ref["photo"],text=f"前回表示を保持\n{diagnostic}",compound="top")
+            else:
+                image_preview.configure(image="",text=f"画像を表示できません\n{diagnostic}")
         def choose_image():
             chosen=filedialog.askopenfilename(title="差し替える画像を選択",filetypes=[("画像","*.png;*.jpg;*.jpeg;*.gif;*.pgm;*.ppm"),("すべて","*.*")])
             if chosen:
-                image_path.set(chosen); refresh_edit_image()
+                image_path.set(chosen); image_name.set(Path(chosen).name); refresh_edit_image()
         ttk.Button(image_frame,text="画像を差し替える",command=choose_image).grid(row=2,column=0,sticky="w")
         refresh_edit_image()
 
-        details_box=ttk.LabelFrame(modal,text="取得した詳細情報",padding=8); details_box.grid(row=5,column=0,columnspan=3,sticky="nsew",padx=10,pady=6); details_box.columnconfigure(0,weight=1); details_box.rowconfigure(0,weight=1); modal.rowconfigure(5,weight=1)
+        details_box=ttk.LabelFrame(modal,text="ゲーム情報",padding=8); details_box.grid(row=5,column=0,columnspan=3,sticky="nsew",padx=10,pady=6); details_box.columnconfigure(0,weight=1); details_box.rowconfigure(0,weight=1); modal.rowconfigure(5,weight=1)
         details_text=tk.Text(details_box,height=12,wrap="word")
         details_text.grid(row=0,column=0,sticky="nsew")
         detail_lines=[]
-        for key,value in sorted(row.details.items()):
-            if key.startswith("_"):
-                continue
+        for field in human_knowledge_fields(row):
+            value=field.value
             if isinstance(value,(dict,list,tuple)):
-                import json
                 rendered=json.dumps(value,ensure_ascii=False,indent=2)
             else:
                 rendered=str(value)
-            detail_lines.append(f"{key}: {rendered}")
-        detail_lines.extend((f"source_page_url: {row.source_page_url}", f"candidate_id: {row.candidate_id}"))
+            detail_lines.append(f"{field.label_ja}: {rendered}")
         details_text.insert("1.0","\n\n".join(detail_lines) if detail_lines else "詳細情報はありません。")
         details_text.configure(state="disabled")
+
+        diagnostics_frame=ttk.Frame(details_box); diagnostics_frame.grid(row=2,column=0,sticky="nsew",pady=(6,0)); diagnostics_frame.grid_remove()
+        diagnostics_frame.columnconfigure(0,weight=1); diagnostics_frame.rowconfigure(0,weight=1)
+        diagnostics_text=tk.Text(diagnostics_frame,height=8,wrap="word")
+        diagnostics_text.grid(row=0,column=0,sticky="nsew")
+        diagnostic_lines=[]
+        for key,value in diagnostic_knowledge_values(row).items():
+            rendered=json.dumps(value,ensure_ascii=False,indent=2) if isinstance(value,(dict,list,tuple)) else str(value)
+            diagnostic_lines.append(f"{key}: {rendered}")
+        diagnostics_text.insert("1.0","\n\n".join(diagnostic_lines) or "診断情報はありません。")
+        diagnostics_text.configure(state="disabled")
+        diagnostics_visible={"value":False}
+        def toggle_diagnostics():
+            diagnostics_visible["value"]=not diagnostics_visible["value"]
+            if diagnostics_visible["value"]:
+                diagnostics_frame.grid(); diagnostics_button.configure(text="内部・診断情報を閉じる")
+            else:
+                diagnostics_frame.grid_remove(); diagnostics_button.configure(text="内部・診断情報を表示")
+        diagnostics_button=ttk.Button(details_box,text="内部・診断情報を表示",command=toggle_diagnostics)
+        diagnostics_button.grid(row=1,column=0,sticky="w",pady=(6,0))
 
         ttk.Checkbutton(modal,text="有効",variable=enabled).grid(row=6,column=1,sticky="w",padx=10,pady=5)
         ttk.Label(modal,text=f"確認状態: {REVIEW_STATUS_JA.get(row.review_status,row.review_status)} / 情報源: 外部参考情報",foreground="#555555").grid(row=7,column=0,columnspan=3,sticky="w",padx=10,pady=(6,2))
@@ -3672,8 +4082,39 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 _sync_candidate_alias_index(updated)
                 modal.destroy(); refresh_kamigame_inventory()
             except Exception as exc: messagebox.showerror("編集できません",f"{type(exc).__name__}: {exc}",parent=modal)
+        def delete_knowledge():
+            try:
+                dependencies=_knowledge_delete_dependencies(row)
+                impact=game_knowledge_catalog.preview_delete(row.candidate_id,external_dependencies=dependencies)
+                action_ja="候補行を削除" if impact.action=="REMOVE_CANDIDATE" else "無効化して履歴を保持"
+                lines=[
+                    f"対象: {row.effective_name_ja}", f"安全な処理: {action_ja}",
+                    f"保護参照: {impact.protected_count}件 / 再構築可能: {impact.rebuildable_count}件",
+                    "確認範囲: Catalog / Human review / Trivia / Map / Visual・OCR training / Alias / retained asset",
+                    "", *[f"- {item.kind}: {item.description}" for item in impact.dependencies],
+                    "", "raw取得元・provenance・cached assetは削除しません。",
+                ]
+                if not messagebox.askyesno("削除影響の確認","\n".join(lines),parent=modal):
+                    return
+                if impact.action=="REMOVE_CANDIDATE" and not messagebox.askyesno(
+                    "候補行を削除しますか？",
+                    "未確認候補のcatalog行を削除します。完全削除ではなく、同じ取得revisionの再出現を防ぐ記録は保持します。",
+                    parent=modal,
+                ):
+                    return
+                result=game_knowledge_catalog.delete_safely(
+                    row.candidate_id,expected_fingerprint=impact.fingerprint,
+                    external_dependencies=dependencies,
+                )
+                entity_alias_catalog.remove_entity(row.candidate_id)
+                if result.action=="TOMBSTONE":
+                    try: map_intelligence_store.disable(row.candidate_id)
+                    except KeyError: pass
+                modal.destroy(); refresh_kamigame_inventory()
+            except Exception as exc:
+                messagebox.showerror("安全に削除できません",f"{type(exc).__name__}: {exc}",parent=modal)
         action=ttk.Frame(modal); action.grid(row=8,column=0,columnspan=3,sticky="e",padx=10,pady=10)
-        ttk.Button(action,text="キャンセル",command=modal.destroy).pack(side="left",padx=4); ttk.Button(action,text="保存",command=save_edit).pack(side="left",padx=4)
+        ttk.Button(action,text="削除",command=delete_knowledge).pack(side="left",padx=4); ttk.Button(action,text="キャンセル",command=modal.destroy).pack(side="left",padx=4); ttk.Button(action,text="保存",command=save_edit).pack(side="left",padx=4)
 
     def verify_knowledge_candidate() -> None:
         row=selected_knowledge_candidate()
@@ -3694,12 +4135,14 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         image_label=ttk.Label(image_box,text="マップ画像なし",anchor="center"); image_label.grid(row=0,column=0,sticky="nsew")
         def refresh_image():
             path=Path(record.image_path) if record.image_path else None
-            photo=_knowledge_thumbnail(str(path) if path else "", (430, 430), rotation.get())
+            photo,diagnostic=_knowledge_thumbnail(str(path) if path else "", (430, 430), rotation.get())
             if photo is not None:
                 image_ref["photo"]=photo
-                image_label.configure(image=photo,text=f"↑ Canonical Up / 表示回転 {rotation.get()}°",compound="top")
+                image_label.configure(image=photo,text=f"↑ Canonical Up / 表示回転 {rotation.get()}°\n{diagnostic}",compound="top")
+            elif image_ref["photo"] is not None:
+                image_label.configure(image=image_ref["photo"],text=f"前回表示を保持\n{diagnostic}\n↑ Canonical Up / 回転 {rotation.get()}°",compound="top")
             elif path and path.is_file():
-                image_label.configure(image="",text=f"画像を表示できません\n{path.name}\n↑ Canonical Up / 回転 {rotation.get()}°")
+                image_label.configure(image="",text=f"画像を表示できません\n{path.name}\n{diagnostic}\n↑ Canonical Up / 回転 {rotation.get()}°")
             else:
                 image_label.configure(image="",text=f"画像未登録\n↑ Canonical Up / 回転 {rotation.get()}°")
         refresh_image()

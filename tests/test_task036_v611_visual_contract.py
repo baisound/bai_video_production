@@ -226,14 +226,25 @@ def test_planning_projects_real_proposal_and_separates_go_from_install() -> None
         assert marker in SHELL_HTML
 
 
-def test_planning_does_not_invent_ai_proposal_or_execution_authority() -> None:
+def test_planning_binds_human_confirmed_local_free_proposal_generation() -> None:
     for marker in (
-        'data-disabled-reason="AI Proposal生成のtyped Application Serviceが未接続です"',
-        "AI Proposal生成は実行しません。",
+        'id="planningRequest"',
+        'id="planningGenerateButton" disabled',
+        'id="planningGenerationStatus"',
+        "function renderPlanningGenerationStatus(status)",
+        "async function generatePlanning()",
+        "planning_generation_status",
+        "planning_generation_prepare",
+        "expected_planning_snapshot_sha256:model.snapshot_sha256",
+        "planning_generation_apply",
+        "planning_generation_cancel",
+        "prepared.cost_class",
+        "有償Provider・課金・Resolve・Human GOは開始しません。続行しますか？",
         "Provider: 未開始 / Paid: 未許可 / Budget reservation: なし / Resolve: 未変更 / Publish: 未開始",
         "if(warnings.length&&!window.confirm",
     ):
         assert marker in SHELL_HTML
+    assert "AI Proposal生成のtyped Application Serviceが未接続です" not in SHELL_HTML
 
 
 def test_scenes_browser_projects_exact_blueprint_and_selected_scene_revision() -> None:
@@ -443,16 +454,35 @@ def test_ai_video_connects_queue_admission_without_execution() -> None:
         "expected_upstream_snapshots:model.upstream_snapshots",
         "generation_queue_apply",
         "Admission Evidenceを登録",
-        "Queue登録は実行許可ではありません。",
+        "Queue登録だけではProviderを呼びません。",
     ):
         assert marker in SHELL_HTML
 
 
-def test_ai_video_keeps_execution_read_only_in_this_slice() -> None:
-    assert 'data-disabled-reason="Local executionはQueue admissionと別の明示確認が必要です"' in SHELL_HTML
-    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
-    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
+def test_ai_video_connects_scoped_preflight_and_individual_local_execution() -> None:
+    for marker in (
+        "function generationReadinessCoordinate(model,entry)",
+        "function preflightLocalGeneration(model,entry)",
+        "generation_execution_preflight',{queue_entry_id:entry.queue_entry_id}",
+        "generationRuntimeReadiness.set(entry.queue_entry_id",
+        "function prepareLocalGenerationExecution(model,entry)",
+        "readiness.coordinate!==generationReadinessCoordinate(model,entry)",
+        "generation_execution_prepare',{queue_entry_id:entry.queue_entry_id",
+        "generation_execution_apply',{confirmation_id:prepared.confirmation_id}",
+        "generation_execution_cancel',{confirmation_id:prepared.confirmation_id}",
+        "function recoverLocalGeneration(model,item)",
+        "generation_execution_recover',{execution_id:item.execution_id",
+        "if(item.recovery_supported)",
+        "このRuntimeは履歴照合未対応です。新しいJobは送信しません。",
+        "Provider履歴を照合",
+        "Runtimeを確認",
+        "この1件を確認して生成",
+        "一括生成（利用不可）",
+        "有償・Cloud Providerは使用しません。",
+    ):
+        assert marker in SHELL_HTML
     assert "中断したlocal dispatchは自動再実行しません。" in SHELL_HTML
+    assert "async function refreshQueue(){generationRuntimeReadiness.clear();" in SHELL_HTML
 
 
 def test_prompt_evidence_projects_versioned_metadata_and_exact_receipts() -> None:
@@ -487,8 +517,6 @@ def test_prompt_evidence_preserves_private_and_provider_boundaries() -> None:
         assert marker in SHELL_HTML
     assert "body_text" not in SHELL_HTML
     assert "body_content" not in SHELL_HTML
-    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
-    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
 
 
 def test_audio_workspace_connects_review_and_task026_plan_boundaries() -> None:
@@ -547,11 +575,9 @@ def test_output_adoption_does_not_gain_provider_or_human_accept_authority() -> N
         "button.disabled=!!adoption.recovery?.required||item.adoption_status!=='READY'",
         "中断した監査候補登録の残りだけを再開しますか？",
         "Provider再実行・課金・Human ACCEPT/LOCK・公開は行いません。",
-        "監査候補登録もProvider再実行・課金・Human ACCEPT/LOCK・公開・NLE操作を行いません。",
+        "生成済み出力の監査候補登録は別々の明示確認です。",
     ):
         assert marker in SHELL_HTML
-    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
-    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
 
 
 def test_visual_generation_handoff_projects_exact_non_audio_lifecycle_without_effect_authority() -> None:
@@ -654,7 +680,10 @@ def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
         "Safe cancel: ${row.safe_cancel?'YES':'NO'}",
         "Individual confirmation: ${row.individual_confirmation_required?'REQUIRED':'NO'}",
         "if(row.individual_confirmation_required)",
-        "このJobの実行確認を準備",
+        "このJobを個別確認して実行",
+        "export_queue_preflight',{job_id:row.job_id}",
+        "export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id}",
+        "export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id}",
         "if(row.safe_cancel)",
         "安全にCancel",
         "expected_state_version:row.state_version",
@@ -670,7 +699,7 @@ def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
 def test_export_does_not_use_undefined_fields_or_blanket_execution() -> None:
     for marker in (
         "if(!['ACCEPT_PROVEN_SUCCESS','MARK_FAILED','REQUIRE_HUMAN'].includes(action))continue",
-        "各READY Jobは個別確認だけを準備し、private launcherが別途確認します。",
+        "QUEUEDはprivate preflight、READYはJob単位のHuman確認後だけ実行します。",
         "UNKNOWNは自動再実行しません。",
         "host path persisted: NO",
     ):

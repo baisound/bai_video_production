@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import secrets
+from threading import Lock
 from typing import Callable
 
 from .durable_product_job import (
@@ -17,6 +18,7 @@ from .product_project_store import ProductProjectManifestStore
 
 TokenFactory = Callable[[], str]
 DispatchCallback = Callable[[DurableProductJob, ExportPreparation, Path], ExportDispatchResult]
+_MAX_PENDING_CONFIRMATIONS = 256
 
 
 @dataclass(slots=True)
@@ -38,6 +40,7 @@ class ExportQueueApplication:
             raise ProductError("ERR_EXPORT_PROJECT_MISMATCH", "Export queue belongs to another Project", ProductErrorCategory.SECURITY)
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
         self._pending: dict[str, _DispatchConfirmation] = {}
+        self._pending_lock = Lock()
         self.jobs = DurableProductJobService()
 
     def _validate_current(self, preparation: ExportPreparation) -> None:
@@ -124,12 +127,19 @@ class ExportQueueApplication:
         job = self._job(job_id)
         if job.state is not DurableProductJobState.READY or not self._matches(job, preparation):
             raise ProductError("ERR_EXPORT_DISPATCH_STALE", "Export is not ready for this exact preparation", ProductErrorCategory.STATE)
-        token = self._token_factory()
-        if not isinstance(token, str) or not token or token in self._pending:
-            raise ProductError("ERR_EXPORT_CONFIRMATION_INVALID", "Export confirmation identity is invalid", ProductErrorCategory.INTERNAL)
-        self._pending[token] = _DispatchConfirmation(
-            token, job.job_id, job.state_version, preparation.preparation_sha256,
-        )
+        with self._pending_lock:
+            token = self._token_factory()
+            if not isinstance(token, str) or not token or token in self._pending:
+                raise ProductError("ERR_EXPORT_CONFIRMATION_INVALID", "Export confirmation identity is invalid", ProductErrorCategory.INTERNAL)
+            if len(self._pending) >= _MAX_PENDING_CONFIRMATIONS:
+                raise ProductError(
+                    "ERR_EXPORT_CONFIRMATION_CAPACITY",
+                    "Export dispatch confirmation capacity is exhausted",
+                    ProductErrorCategory.STATE,
+                )
+            self._pending[token] = _DispatchConfirmation(
+                token, job.job_id, job.state_version, preparation.preparation_sha256,
+            )
         return {"confirmation_id": token, "job_id": job.job_id,
                 "operation_identity": job.operation_identity,
                 "preparation_sha256": preparation.preparation_sha256,
@@ -140,10 +150,10 @@ class ExportQueueApplication:
     def apply_dispatch(self, *, confirmation_id: str, preparation: ExportPreparation,
                        private_destination: str | Path,
                        dispatcher: DispatchCallback) -> DurableProductJob:
-        pending = self._pending.get(confirmation_id)
-        if pending is None or pending.consumed:
+        with self._pending_lock:
+            pending = self._pending.pop(confirmation_id, None)
+        if pending is None:
             raise ProductError("ERR_EXPORT_CONFIRMATION_INVALID", "Export confirmation is missing or consumed", ProductErrorCategory.AUTHORIZATION)
-        pending.consumed = True
         self._validate_current(preparation)
         job = self._job(pending.job_id)
         if (job.state_version != pending.expected_state_version
@@ -169,6 +179,24 @@ class ExportQueueApplication:
                                         result_ref=result.durable_result_ref,
                                         actual_cost=result.actual_cost)
         raise ProductError("ERR_EXPORT_DISPATCH_RESULT", "Dispatcher returned an unsupported result", ProductErrorCategory.DATA_INTEGRITY)
+
+    def cancel_dispatch(self, *, confirmation_id: str) -> dict[str, object]:
+        """Consume one un-applied dispatch confirmation without changing its Job."""
+
+        with self._pending_lock:
+            pending = self._pending.pop(confirmation_id, None)
+        if pending is None:
+            raise ProductError(
+                "ERR_EXPORT_CONFIRMATION_INVALID",
+                "Export confirmation is missing or consumed",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return {
+            "confirmation_id": confirmation_id,
+            "job_id": pending.job_id,
+            "cancelled": True,
+            "external_mutation_started": False,
+        }
 
     def cancel(self, *, job_id: str, expected_state_version: int) -> DurableProductJob:
         job = self._job(job_id)

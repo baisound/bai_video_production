@@ -15,10 +15,10 @@ from .canonical_game_event import GameKnowledgeKind
 # Owner-verified regression master. Keep this small and explicit; source/page rules
 # handle general cases while these identities protect known historical failures.
 _KNOWN_ENTITY_KIND: dict[str, GameKnowledgeKind] = {
-    "トーリー": GameKnowledgeKind.CHARACTER,
-    "ドワイト": GameKnowledgeKind.CHARACTER,
-    "ナンシー": GameKnowledgeKind.CHARACTER,
-    "ネア": GameKnowledgeKind.CHARACTER,
+    "トーリー": GameKnowledgeKind.SURVIVOR,
+    "ドワイト": GameKnowledgeKind.SURVIVOR,
+    "ナンシー": GameKnowledgeKind.SURVIVOR,
+    "ネア": GameKnowledgeKind.SURVIVOR,
     "ハディ": GameKnowledgeKind.SURVIVOR,
     "ハグ": GameKnowledgeKind.KILLER,
     "ヒルビリー": GameKnowledgeKind.KILLER,
@@ -47,11 +47,11 @@ def classify_game_information(
 ) -> tuple[GameKnowledgeKind, str, int]:
     """Return (kind, classification_source, confidence_milli).
 
-    Priority follows the approved design: explicit/manual -> known entity master ->
-    article semantics -> source metadata -> source-kind fallback.
+    Priority follows the approved design: explicit/manual -> article semantics ->
+    known entity master -> source metadata -> source-kind fallback.
     """
     explicit = str(row.get("forced_type") or row.get("knowledge_kind") or "").strip().upper()
-    if explicit in GameKnowledgeKind.__members__:
+    if explicit in GameKnowledgeKind.__members__ and explicit != GameKnowledgeKind.CHARACTER.value:
         return GameKnowledgeKind[explicit], "EXPLICIT_SOURCE", 1000
 
     title = _title(row)
@@ -64,17 +64,22 @@ def classify_game_information(
     if known is not None:
         return known, "KNOWN_ENTITY_MASTER", 1000
 
+    if explicit == GameKnowledgeKind.CHARACTER.value:
+        return GameKnowledgeKind.UNKNOWN, "LEGACY_CHARACTER", 1000
+
     heading = normalize_game_information_title(str(row.get("source_section_heading") or row.get("section_heading") or ""))
     if "対策" in heading or "攻略" in heading or "豆知識" in heading:
         return GameKnowledgeKind.KNOWLEDGE, "SOURCE_SECTION", 900
     if "サバイバー" in heading:
         return GameKnowledgeKind.SURVIVOR, "SOURCE_SECTION", 900
     if "キャラクター" in heading or "登場人物" in heading:
-        return GameKnowledgeKind.CHARACTER, "SOURCE_SECTION", 900
+        return GameKnowledgeKind.UNKNOWN, "AMBIGUOUS_CHARACTER_SECTION", 900
     if "キラー" in heading and source_kind in {None, GameKnowledgeKind.MAP, GameKnowledgeKind.MECHANIC}:
         return GameKnowledgeKind.KILLER, "SOURCE_SECTION", 850
 
-    return (source_kind or GameKnowledgeKind.MECHANIC), "SOURCE_KIND_FALLBACK", 500
+    if source_kind is GameKnowledgeKind.CHARACTER:
+        return GameKnowledgeKind.UNKNOWN, "LEGACY_CHARACTER", 500
+    return (source_kind or GameKnowledgeKind.UNKNOWN), "SOURCE_KIND_FALLBACK", 500
 
 
 __all__ = ["classify_game_information", "normalize_game_information_title"]

@@ -78,6 +78,7 @@ VISUAL_TRAINING_DOMAIN_JA = {
     "ITEM_ICON": "アイテムアイコン",
     "ADDON_ICON": "アドオンアイコン",
     "KILLER_POWER": "キラー能力アイコン",
+    "KILLER_SPECIFIC_HUD": "キラー固有HUD（Teacher）",
 }
 
 HUD_VISIBILITY_JA = {

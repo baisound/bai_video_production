@@ -40,6 +40,9 @@ Only these five new files belong to the Unit:
 
 No existing production source, dependency declaration, runbook, manifest,
 runtime, model, Owner media or TASK-036 shared path was changed.
+The PR additionally updates the existing `CHANGELOG.md` as required by the
+repository release-metadata check; that mechanical release note is not part of
+the five-file contract implementation boundary.
 
 ## Contract results
 

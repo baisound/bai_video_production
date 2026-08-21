@@ -363,9 +363,25 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().prepare_trim(args)
 
+    def interactive_timeline_prepare_move(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_move(args)
+
+    def interactive_timeline_prepare_undo(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_undo(args)
+
+    def interactive_timeline_prepare_redo(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_redo(args)
+
     def interactive_timeline_apply_edit(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():
             return self._require_nle_controller().apply_edit(args)
+
+    def interactive_timeline_cancel_edit(self, args: Any) -> dict[str, object]:
+        with self._nle_operation():
+            return self._require_nle_controller().cancel_edit(args)
 
     def visual_asset_placement_snapshot(self, args: Any = None) -> dict[str, Any]:
         with self._nle_operation():

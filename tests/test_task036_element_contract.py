@@ -45,7 +45,7 @@ def test_canonical_mock_and_runtime_source_counts_remain_explicit() -> None:
     }
     assert count_source_controls(RUNTIME_HTML) == {
         "pages": 14,
-        "stable_ids": 118,
+        "stable_ids": 120,
         "buttons": 126,
         "selects": 1,
         "inputs_and_textareas": 6,
@@ -63,7 +63,7 @@ def test_inventory_is_deterministic_and_preserves_current_incompleteness() -> No
     assert first == second
     assert first.inventory_sha256 == second.inventory_sha256
     assert first.inventory_sha256.startswith("sha256:")
-    assert len(first.elements) == 582
+    assert len(first.elements) == 584
     states = first.to_dict()["state_counts"]
     assert states == {
         "BOUND": 48,
@@ -71,7 +71,7 @@ def test_inventory_is_deterministic_and_preserves_current_incompleteness() -> No
         "DISABLED_WITH_REASON": 32,
         "DYNAMIC_CONDITIONAL": 43,
         "INTENT_ONLY": 14,
-        "MISSING": 402,
+        "MISSING": 404,
     }
     assert states["MISSING"] > 0
     assert first.provider_execution_authorized is False

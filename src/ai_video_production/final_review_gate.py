@@ -168,7 +168,32 @@ def validate_external_gate_receipts(
     return tuple(sorted(result, key=lambda item: item.gate_id.value))
 
 
+def bind_edit_persistence_gate_receipt(source: object) -> FinalReviewExternalGateReceipt:
+    """Wrap a typed TASK-044 current receipt without creating edit authority."""
+
+    from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
+
+    if not isinstance(source, Task044EditPersistenceReceipt):
+        raise ValueError("EDIT_PERSISTENCE source receipt must use the TASK-044 contract")
+    # Reparse the canonical body so a malformed or noncanonical object cannot be
+    # projected as lower-owner authority.
+    current = Task044EditPersistenceReceipt.from_dict(source.to_dict())
+    return FinalReviewExternalGateReceipt(
+        gate_id=FinalReviewGateId.EDIT_PERSISTENCE,
+        source_authority_owner="TASK-044",
+        project_id=current.project_id,
+        timeline_sha256=current.timeline_sha256,
+        source_receipt_id=current.receipt_id,
+        source_receipt_sha256=current.receipt_sha256,
+        state=FinalReviewGateState.PASS,
+        evaluated_at=current.evaluated_at,
+        current_valid=True,
+        invalidation_epoch=0,
+    )
+
+
 __all__ = [
     "FinalReviewExternalGateReceipt", "FinalReviewGateId", "FinalReviewGateState",
+    "bind_edit_persistence_gate_receipt",
     "validate_external_gate_receipts",
 ]

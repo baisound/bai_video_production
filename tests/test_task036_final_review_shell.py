@@ -24,6 +24,7 @@ from ai_video_production.interactive_timeline_application import Task044Timeline
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.task044_nle_shell import Task044NleShellController
+from ai_video_production.task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 from ai_video_production.task036_shell_ui import Task036ShellBridge
 from ai_video_production.timebase import FrameRate
 
@@ -254,6 +255,46 @@ def test_shell_rejects_raw_or_duplicate_external_gate_injection(
     bind_ready_sources(monkeypatch, duplicate)
     with pytest.raises(ProductError, match="invalid receipts"):
         duplicate.final_review_readiness_snapshot({})
+
+
+def test_shell_uses_canonical_task044_receipt_and_rejects_edit_substitution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = Task044EditPersistenceReceipt(
+        receipt_id="task044-edit-persistence-r1", project_id="project-1",
+        timeline_sha256=h("4"), project_manifest_sha256=h("b"),
+        edit_snapshot_sha256=h("c"), snapshot_version="1.0.0",
+        history_id="timeline-edit:project-1", current_revision=1,
+        current_revision_sha256=h("d"),
+        evaluated_at="2026-08-17T06:00:00.000Z",
+    )
+    external = tuple(
+        row for row in gates()
+        if row.gate_id is not FinalReviewGateId.EDIT_PERSISTENCE
+    )
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        final_review_external_gate_provider=lambda: external,
+        final_review_edit_persistence_provider=lambda: source,
+    )
+    bind_ready_sources(monkeypatch, bridge)
+    readiness = bridge.final_review_readiness_snapshot({})
+    edit = next(
+        row for row in readiness["external_gates"]
+        if row["gate_id"] == "EDIT_PERSISTENCE"
+    )
+    assert edit["state"] == "PASS"
+    assert readiness["state"] == "READY_FOR_TYPED_FINAL_REVIEW"
+
+    substituted = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        final_review_external_gate_provider=gates,
+        final_review_edit_persistence_provider=lambda: source,
+    )
+    bind_ready_sources(monkeypatch, substituted)
+    with pytest.raises(ProductError) as exc:
+        substituted.final_review_readiness_snapshot({})
+    assert exc.value.code == "ERR_FINAL_REVIEW_EDIT_PERSISTENCE_AUTHORITY_SUBSTITUTION"
 
 
 def test_shell_final_review_to_actual_task044_export_queue_is_exact_and_stale_safe(

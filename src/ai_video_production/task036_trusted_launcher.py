@@ -1134,6 +1134,13 @@ def build_trusted_launch(
         runtime_lease = _Task036ProjectRuntimeLease.acquire(configuration.project_root)
     planning_generation_application = None
     try:
+        def edit_persistence_provider():
+            if runtime_lease is None:
+                return None
+            with runtime_lease.operation():
+                controller = bridge._ensure_nle_controller()
+                return None if controller is None else controller.edit_persistence_receipt()
+
         if connection_settings is not None and has_mutation_composition:
             planning_generation_application = Task036PlanningGenerationApplication(
                 planning_application=planning_application,
@@ -1160,6 +1167,7 @@ def build_trusted_launch(
             connection_settings=connection_settings,
             final_review_application=final_review_application,
             final_review_external_gate_provider=final_review_external_gate_provider,
+            final_review_edit_persistence_provider=edit_persistence_provider,
             final_review_export_preparation_provider=final_review_export_preparation_provider,
             game_intelligence_application=game_intelligence_application,
             nle_controller_factory=nle_controller,

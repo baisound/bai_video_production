@@ -8,8 +8,10 @@ from ai_video_production.final_review_gate import (
     FinalReviewExternalGateReceipt,
     FinalReviewGateId,
     FinalReviewGateState,
+    bind_edit_persistence_gate_receipt,
     validate_external_gate_receipts,
 )
+from ai_video_production.task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 
 
 def h(char: str) -> str:
@@ -93,3 +95,26 @@ def test_collection_is_typed_bounded_sorted_and_duplicate_free() -> None:
         validate_external_gate_receipts((receipt(), receipt()))
     with pytest.raises(ValueError, match="typed contract"):
         validate_external_gate_receipts((receipt().to_dict(),))  # type: ignore[arg-type]
+
+
+def test_task044_current_receipt_is_the_only_edit_persistence_adapter_input() -> None:
+    source = Task044EditPersistenceReceipt(
+        receipt_id="task044-edit-persistence-r1", project_id="project-1",
+        timeline_sha256=h("1"), project_manifest_sha256=h("2"),
+        edit_snapshot_sha256=h("3"), snapshot_version="1.0.0",
+        history_id="timeline-edit:project-1", current_revision=1,
+        current_revision_sha256=h("4"),
+        evaluated_at="2026-08-17T06:00:00.000Z",
+    )
+    wrapped = bind_edit_persistence_gate_receipt(source)
+    assert wrapped.gate_id is FinalReviewGateId.EDIT_PERSISTENCE
+    assert wrapped.source_authority_owner == "TASK-044"
+    assert wrapped.source_receipt_sha256 == source.receipt_sha256
+    assert wrapped.timeline_sha256 == source.timeline_sha256
+    assert wrapped.current_valid is True
+    with pytest.raises(ValueError, match="TASK-044 contract"):
+        bind_edit_persistence_gate_receipt(source.to_dict())
+    invalid = source.to_dict()
+    invalid["current_revision"] = True
+    with pytest.raises(ValueError, match="invalid value"):
+        Task044EditPersistenceReceipt.from_dict(invalid)

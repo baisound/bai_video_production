@@ -30,6 +30,8 @@ from .final_review import FinalReviewApprovalReceipt
 from .final_review_export_application import Task036FinalReviewExportApplication
 from .final_review_gate import (
     FinalReviewExternalGateReceipt,
+    FinalReviewGateId,
+    bind_edit_persistence_gate_receipt,
     validate_external_gate_receipts,
 )
 from .errors import ProductError, ProductErrorCategory
@@ -48,6 +50,7 @@ from .audio_workspace_application import Task041AudioWorkspaceApplication
 from .audio_placement_application import Task026AudioPlacementApplication
 from .quick_generation_application import Task042QuickGenerationApplication
 from .task044_nle_shell import Task044NleShellController
+from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 from .game_intelligence_shell import GameIntelligenceShellApplication
 from .interactive_timeline import (
     InteractiveTimeline, InteractiveTimelineClip, TimelineMediaKind, TimelineTrack,
@@ -213,6 +216,9 @@ class Task036ShellBridge:
         final_review_external_gate_provider: Callable[
             [], tuple[FinalReviewExternalGateReceipt, ...]
         ] | None = None,
+        final_review_edit_persistence_provider: Callable[
+            [], Task044EditPersistenceReceipt | None
+        ] | None = None,
         final_review_export_preparation_provider: Callable[
             [FinalReviewApprovalReceipt], ExportPreparation
         ] | None = None,
@@ -260,6 +266,11 @@ class Task036ShellBridge:
         if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
             raise ValueError("Final Review external Gate provider is invalid")
         self._final_review_external_gate_provider = final_review_external_gate_provider
+        if final_review_edit_persistence_provider is not None and not callable(
+            final_review_edit_persistence_provider
+        ):
+            raise ValueError("Final Review edit persistence provider is invalid")
+        self._final_review_edit_persistence_provider = final_review_edit_persistence_provider
         self._game_intelligence_application = game_intelligence_application
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
@@ -1334,6 +1345,29 @@ class Task036ShellBridge:
                 "Final Review external Gate provider returned invalid receipts",
                 ProductErrorCategory.DATA_INTEGRITY,
             ) from exc
+        if self._final_review_edit_persistence_provider is not None:
+            if any(
+                item.gate_id is FinalReviewGateId.EDIT_PERSISTENCE
+                for item in external_gate_receipts
+            ):
+                raise ProductError(
+                    "ERR_FINAL_REVIEW_EDIT_PERSISTENCE_AUTHORITY_SUBSTITUTION",
+                    "EDIT_PERSISTENCE must come from the bound TASK-044 reader",
+                    ProductErrorCategory.SECURITY,
+                )
+            source = self._final_review_edit_persistence_provider()
+            if source is not None:
+                try:
+                    external_gate_receipts = validate_external_gate_receipts((
+                        *external_gate_receipts,
+                        bind_edit_persistence_gate_receipt(source),
+                    ))
+                except (TypeError, ValueError) as exc:
+                    raise ProductError(
+                        "ERR_FINAL_REVIEW_EDIT_PERSISTENCE_BINDING_INVALID",
+                        "TASK-044 edit persistence receipt is invalid",
+                        ProductErrorCategory.DATA_INTEGRITY,
+                    ) from exc
         return {
             "available": True,
             **Task036FinalReviewReadinessProjection.project(

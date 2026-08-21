@@ -58,5 +58,11 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
 - R2B batch visual registration transaction/progress/cancel/no-console: complete;
   focused `20 PASS`, dependency-driven affected regression `212 PASS`, unresolved
   Critical/High `0 / 0`.
-- Windows packaged TASK-052 acceptance: `NOT_CONFIRMED`.
+- R2B-F1 packaged startup failure fix: complete; nested JSON-like Knowledge details
+  no longer cause `TypeError: unhashable type: 'dict'` during initial inventory
+  refresh. Rebuilt Windows EXE passed Owner-workspace startup, inventory search,
+  Survivor HUD four-slot switching, registered-image listing and unified review
+  display (`13` focused / `38` TASK-052 / `161` affected PASS).
+- Windows packaged startup and bounded non-destructive interaction: `PASS`.
+- Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
 - Next dependency-ordered unit: R3 per-Survivor and generator temporal state machines.

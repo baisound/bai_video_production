@@ -8,7 +8,7 @@ import sys
 import time
 import threading
 import queue
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from .canonical_game_event import GameEventType, GameKnowledgeKind
 from .dbd_entity_aliases import (
@@ -113,6 +113,20 @@ SURVIVOR_SIGNAL_KIND_JA = {
     SurvivorSignalKind.HOOK_COUNT.value: "フック回数",
     SurvivorSignalKind.CHASE_STATE.value: "チェイス状態",
 }
+
+
+def knowledge_detail_search_text(details: Mapping[str, object]) -> str:
+    """Build inventory search text from JSON-like detail values.
+
+    Knowledge details may contain nested dictionaries and lists.  Compare
+    values directly instead of using set membership so those valid unhashable
+    containers cannot abort Training Studio startup.
+    """
+    return " ".join(
+        str(value)
+        for value in details.values()
+        if value is not None and value != ""
+    )
 
 
 def ensure_csv_templates(root: str | Path) -> tuple[Path, Path, Path, Path]:
@@ -3737,7 +3751,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             )
             if selected_kind and selected_kind != "すべて" and label != selected_kind:
                 continue
-            details_text = " ".join(str(v) for v in row.details.values() if v not in {None, ""})
+            details_text = knowledge_detail_search_text(row.details)
             hay = "\n".join((
                 row.effective_name_ja, row.effective_name_en, *row.effective_aliases_ja,
                 row.candidate_id, label, row.source_page_url, details_text,

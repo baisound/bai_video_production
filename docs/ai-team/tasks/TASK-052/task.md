@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R4C1_COMPLETE / R4C2_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R4_COMPLETE / R5A_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -101,5 +101,13 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   reference detector preserves foreign namespaces for R4A rejection. Focused
   backend/manifest regression `42 PASS`; affected Training Studio/TASK-052
   regression `123 PASS`.
+- R4C2 Killer-specific Teacher Training Studio: complete; existing Safe Visual
+  Learning now preserves the exact target/observed namespace, role, subject and
+  structured state through preview receipt, Human confirmation and capability-bound
+  index rebuild. The UI reuses the four Survivor ROIs, admits only registered
+  capability/namespace pairs and blocks generic editing of Killer-specific rows.
+  Focused regression `30 PASS`; TASK-050/TASK-052 dependency regression `161 PASS`;
+  TASK-051/package-source affected regression `125 PASS`; unresolved Critical/High
+  `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R4C2 Safe Visual Learning / Training Studio UI and Human review routing.
+- Next dependency-ordered unit: R5A bottom-right multi-status-icon segmentation.

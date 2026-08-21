@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/dbd-reasoning-raw-output.schema.json",
+  "title": "TASK-054 DbD Reasoning Raw Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "disposition", "observed_claims", "canonical_claims", "inferred_states", "tactical_interpretations", "commentary_outline", "commentary_text", "citations", "uncertainty_codes", "style_metrics"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "disposition": {"enum": ["PROPOSE", "REVIEW_REQUIRED", "ABSTAIN"]},
+    "observed_claims": {"$ref": "#/$defs/facts"},
+    "canonical_claims": {"$ref": "#/$defs/facts"},
+    "inferred_states": {"$ref": "#/$defs/inferences"},
+    "tactical_interpretations": {"$ref": "#/$defs/inferences"},
+    "commentary_outline": {"type": "array", "maxItems": 16, "items": {"type": "string", "minLength": 1, "maxLength": 500}},
+    "commentary_text": {"type": "string", "maxLength": 8000},
+    "citations": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"$ref": "#/$defs/safeRef"}},
+    "uncertainty_codes": {"type": "array", "maxItems": 64, "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"}, "description": "Canonical sorting is enforced by the runtime contract."},
+    "style_metrics": {"type": "object", "additionalProperties": false, "required": ["density_milli", "emotion_milli", "tempo_milli"], "properties": {"density_milli": {"type": "integer", "minimum": 0, "maximum": 1000}, "emotion_milli": {"type": "integer", "minimum": 0, "maximum": 1000}, "tempo_milli": {"type": "integer", "minimum": 0, "maximum": 1000}}}
+  },
+  "allOf": [
+    {"if": {"properties": {"disposition": {"enum": ["PROPOSE", "REVIEW_REQUIRED"]}}}, "then": {"properties": {"commentary_text": {"minLength": 1}}}},
+    {"if": {"properties": {"disposition": {"const": "ABSTAIN"}}}, "then": {"properties": {"observed_claims": {"maxItems": 0}, "canonical_claims": {"maxItems": 0}, "inferred_states": {"maxItems": 0}, "tactical_interpretations": {"maxItems": 0}, "commentary_outline": {"maxItems": 0}, "commentary_text": {"maxLength": 0}, "citations": {"maxItems": 0}}}}
+  ],
+  "$defs": {
+    "safeRef": {"type": "string", "minLength": 4, "maxLength": 512, "pattern": "^[A-Za-z][A-Za-z0-9+.-]*://[^\\s\\\\@?#]+$", "description": "Structural URI syntax only; Context membership and semantic policy are mandatory R2C responsibilities."},
+    "fact": {"type": "object", "additionalProperties": false, "required": ["kind", "key", "value"], "properties": {"kind": {"enum": ["EVENT_OCCURRED", "PERK_NAME", "PERK_EFFECT", "PERK_ACTIVATION", "KILLER_NAME", "KILLER_DESCRIPTION", "POWER_NAME", "POWER_DESCRIPTION", "TRIVIA"]}, "key": {"type": "string", "minLength": 1, "maxLength": 256}, "value": {"type": "string", "minLength": 1, "maxLength": 4096}}},
+    "facts": {"type": "array", "maxItems": 128, "uniqueItems": true, "items": {"$ref": "#/$defs/fact"}, "description": "Canonical sorting and kind/key/value uniqueness are enforced by the runtime contract."},
+    "inference": {"type": "object", "additionalProperties": false, "required": ["statement", "qualifier", "confidence_milli", "supporting_refs"], "properties": {"statement": {"type": "string", "minLength": 1, "maxLength": 1000}, "qualifier": {"enum": ["POSSIBLE", "LIKELY"]}, "confidence_milli": {"type": "integer", "minimum": 0, "maximum": 1000}, "supporting_refs": {"type": "array", "maxItems": 32, "uniqueItems": true, "items": {"$ref": "#/$defs/safeRef"}}}},
+    "inferences": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/inference"}}
+  }
+}

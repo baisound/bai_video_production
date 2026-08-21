@@ -32,6 +32,8 @@ from ai_video_production.interactive_timeline_edit import (
     TimelineSourceBinding,
 )
 from ai_video_production.interactive_timeline_store import (
+    FORMAT_ID,
+    FORMAT_VERSION,
     FORMAT_VERSION_V1_1,
     RELATIVE_PATH,
     TimelineEditSnapshotStore,
@@ -43,13 +45,18 @@ from ai_video_production.product_project import (
     ProjectTimebase,
 )
 from ai_video_production.product_project_store import ProductProjectManifestStore
-from ai_video_production.project_history import ProjectCommandAction, ProjectCommandHistoryStore
+from ai_video_production.project_history import (
+    ProjectCommandAction,
+    ProjectCommandHistory,
+    ProjectCommandHistoryStore,
+)
 from ai_video_production.project_save import (
     ProductProjectSaveCoordinator,
     ProjectSaveJournalStore,
 )
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.task044_nle_shell import Task044NleShellController
+from ai_video_production.task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 from ai_video_production.timebase import FrameRate
 
 CREATED = "2026-08-15T00:00:00.000Z"
@@ -309,6 +316,10 @@ def test_trim_apply_reopen_undo_redo_and_exact_project_history(tmp_path: Path) -
     app = Task044TimelineEditApplication(
         project_root=tmp_path, project_id="project-1", token_factory=lambda: next(tokens)
     )
+    empty_controls = app.history_control_snapshot(base)
+    assert empty_controls["project_history_sha256"] is None
+    assert empty_controls["undo"] == {"available": False}
+    assert empty_controls["redo"] == {"available": False}
     prepared = app.prepare_trim(
         timeline=base, clip_id="clip-1", edge="start", desired_frame=14,
         snap_tolerance_frames=2,
@@ -324,18 +335,44 @@ def test_trim_apply_reopen_undo_redo_and_exact_project_history(tmp_path: Path) -
     projected, _ = TimelineEditProjector.apply(base, app._load(first))
     assert projected.clips[0].start_frame == 15
 
+    applied_controls = app.history_control_snapshot(base)
+    assert applied_controls["undo"] == {
+        "available": True,
+        "command_kind": "timeline.trim_start",
+        "target_identity": "trim-1",
+    }
+    assert applied_controls["redo"] == {"available": False}
+    with pytest.raises(ProductError) as exc:
+        app.prepare_undo(
+            timeline=base,
+            command_id="undo-stale",
+            expected_project_manifest_sha256=first.project_manifest_sha256,
+            expected_project_history_sha256=sha256_bytes(b"stale-history"),
+        )
+    assert exc.value.code == "ERR_PROJECT_HISTORY_CAS_CONFLICT"
+
     undo = app.prepare_undo(
         timeline=base, command_id="undo-1",
         expected_project_manifest_sha256=first.project_manifest_sha256,
+        expected_project_history_sha256=applied_controls["project_history_sha256"],
     )
     app.apply(confirmation_id=undo["confirmation_id"], timeline=base)
     second = ProductProjectManifestStore.load(tmp_path)
     projected, _ = TimelineEditProjector.apply(base, app._load(second))
     assert projected.clips[0].start_frame == 10
 
+    undone_controls = app.history_control_snapshot(base)
+    assert undone_controls["undo"] == {"available": False}
+    assert undone_controls["redo"] == {
+        "available": True,
+        "command_kind": "timeline.trim_start",
+        "target_identity": "trim-1",
+    }
+
     redo = app.prepare_redo(
         timeline=base, command_id="redo-1",
         expected_project_manifest_sha256=second.project_manifest_sha256,
+        expected_project_history_sha256=undone_controls["project_history_sha256"],
     )
     app.apply(confirmation_id=redo["confirmation_id"], timeline=base)
     final = ProductProjectManifestStore.load(tmp_path)
@@ -362,6 +399,260 @@ def test_confirmation_and_manifest_cas_fail_closed(tmp_path: Path) -> None:
     with pytest.raises(ProductError) as exc:
         app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
     assert exc.value.code == "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID"
+
+
+def test_history_controls_reject_cross_store_command_kind_substitution(tmp_path: Path) -> None:
+    source = setup_project(tmp_path)
+    base = timeline()
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-kind",
+    )
+    prepared = app.prepare_trim(
+        timeline=base,
+        clip_id="clip-1",
+        edge="start",
+        desired_frame=12,
+        command_id="trim-kind",
+        expected_project_manifest_sha256=source.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    target = ProductProjectManifestStore.load(tmp_path)
+    actual = ProjectCommandHistoryStore.load(tmp_path)
+    substituted = ProjectCommandHistory.create("project-1").append_apply(
+        command_kind="timeline.move",
+        target_identity="trim-kind",
+        source_manifest_sha256=source.project_manifest_sha256,
+        result_manifest_sha256=target.project_manifest_sha256,
+        source_revision=source.project_revision,
+    )
+    ProjectCommandHistoryStore.save(
+        tmp_path,
+        substituted,
+        expected_previous_history_sha256=actual.history_sha256,
+    )
+    with pytest.raises(ProductError) as exc:
+        app.history_control_snapshot(base)
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_BINDING_CONFLICT"
+    with pytest.raises(ProductError) as exc:
+        app.prepare_undo(
+            timeline=base,
+            command_id="undo-kind",
+            expected_project_manifest_sha256=target.project_manifest_sha256,
+            expected_project_history_sha256=substituted.history_sha256,
+        )
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_BINDING_CONFLICT"
+
+
+def test_history_controls_reject_same_kind_target_substitution(tmp_path: Path) -> None:
+    source = setup_project(tmp_path)
+    base = timeline()
+    tokens = iter(("confirm-first", "confirm-second"))
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: next(tokens),
+    )
+    first = app.prepare_move(
+        timeline=base,
+        clip_id="clip-1",
+        desired_start_frame=20,
+        command_id="move-first",
+        expected_project_manifest_sha256=source.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=first["confirmation_id"], timeline=base)
+    middle = ProductProjectManifestStore.load(tmp_path)
+    second = app.prepare_move(
+        timeline=base,
+        clip_id="clip-1",
+        desired_start_frame=30,
+        command_id="move-second",
+        expected_project_manifest_sha256=middle.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=second["confirmation_id"], timeline=base)
+    target = ProductProjectManifestStore.load(tmp_path)
+    actual = ProjectCommandHistoryStore.load(tmp_path)
+    substituted = ProjectCommandHistory.create("project-1")
+    for index, record in enumerate(actual.records):
+        substituted = substituted.append_apply(
+            command_kind=record.command_kind,
+            target_identity=(
+                actual.records[0].target_identity
+                if index == len(actual.records) - 1
+                else record.target_identity
+            ),
+            source_manifest_sha256=record.source_manifest_sha256,
+            result_manifest_sha256=record.result_manifest_sha256,
+            source_revision=record.source_revision,
+            stale_target_ids=record.stale_target_ids,
+            recorded_at=record.recorded_at,
+        )
+    ProjectCommandHistoryStore.save(
+        tmp_path,
+        substituted,
+        expected_previous_history_sha256=actual.history_sha256,
+    )
+    with pytest.raises(ProductError) as exc:
+        app.history_control_snapshot(base)
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_BINDING_CONFLICT"
+    with pytest.raises(ProductError) as exc:
+        app.prepare_undo(
+            timeline=base,
+            command_id="undo-substituted",
+            expected_project_manifest_sha256=target.project_manifest_sha256,
+            expected_project_history_sha256=substituted.history_sha256,
+        )
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_BINDING_CONFLICT"
+
+
+def test_history_control_snapshot_rejects_mid_read_history_drift(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    setup_project(tmp_path)
+    app = Task044TimelineEditApplication(project_root=tmp_path, project_id="project-1")
+    empty = ProjectCommandHistory.create("project-1")
+    calls = 0
+
+    def drifting_history():
+        nonlocal calls
+        calls += 1
+        return empty, None if calls == 1 else sha256_bytes(b"new-history")
+
+    monkeypatch.setattr(app, "_load_project_history", drifting_history)
+    with pytest.raises(ProductError) as exc:
+        app.history_control_snapshot(timeline())
+    assert exc.value.code == "ERR_TIMELINE_EDIT_CONTROL_STALE"
+
+
+def test_prepare_undo_rechecks_observed_history_before_reserving_confirmation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = setup_project(tmp_path)
+    base = timeline()
+    tokens = iter(("confirm-apply", "confirm-undo"))
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: next(tokens),
+    )
+    prepared = app.prepare_move(
+        timeline=base,
+        clip_id="clip-1",
+        desired_start_frame=20,
+        command_id="move-history-cas",
+        expected_project_manifest_sha256=source.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    current = ProductProjectManifestStore.load(tmp_path)
+    history = ProjectCommandHistoryStore.load(tmp_path)
+    calls = 0
+
+    def drifting_history():
+        nonlocal calls
+        calls += 1
+        return history, history.history_sha256 if calls == 1 else sha256_bytes(b"drift")
+
+    monkeypatch.setattr(app, "_load_project_history", drifting_history)
+    with pytest.raises(ProductError) as exc:
+        app.prepare_undo(
+            timeline=base,
+            command_id="undo-history-cas",
+            expected_project_manifest_sha256=current.project_manifest_sha256,
+            expected_project_history_sha256=history.history_sha256,
+        )
+    assert exc.value.code == "ERR_PROJECT_HISTORY_CAS_CONFLICT"
+    assert app._pending == {}
+
+
+def test_duplicate_command_identity_fails_runtime_and_persisted_reads(tmp_path: Path) -> None:
+    source = setup_project(tmp_path)
+    base = timeline()
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-first",
+    )
+    first = app.prepare_trim(
+        timeline=base,
+        clip_id="clip-1",
+        edge="end",
+        desired_frame=30,
+        command_id="duplicate-command",
+        expected_project_manifest_sha256=source.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=first["confirmation_id"], timeline=base)
+    current = ProductProjectManifestStore.load(tmp_path)
+    with pytest.raises(ProductError) as exc:
+        app.prepare_move(
+            timeline=base,
+            clip_id="clip-1",
+            desired_start_frame=20,
+            command_id="duplicate-command",
+            expected_project_manifest_sha256=current.project_manifest_sha256,
+        )
+    assert exc.value.code == "ERR_TIMELINE_EDIT_COMMAND_DUPLICATE"
+
+    foreign_root = tmp_path / "persisted-duplicate"
+    foreign_root.mkdir()
+    foreign_source = setup_project(foreign_root)
+    history = TimelineEditHistory("project-1", "history-duplicate")
+    first_command = TimelineEditCommand(
+        "duplicate-persisted",
+        TimelineEditKind.TRIM_END,
+        target_clip_id="clip-1",
+        before_start_frame=10,
+        before_end_frame=40,
+        after_start_frame=10,
+        after_end_frame=30,
+    )
+    history.append(TimelineEditRevision(
+        "project-1", "history-duplicate", 1, base.timeline_sha256, first_command,
+    ))
+    second_command = TimelineEditCommand(
+        "duplicate-persisted",
+        TimelineEditKind.TRIM_END,
+        target_clip_id="clip-1",
+        before_start_frame=10,
+        before_end_frame=30,
+        after_start_frame=10,
+        after_end_frame=35,
+    )
+    history.append(TimelineEditRevision(
+        "project-1", "history-duplicate", 2, base.timeline_sha256, second_command,
+        previous_revision_sha256=history.current.revision_sha256,
+    ))
+    serialized = TimelineEditSnapshotStore.serialize(history)
+    snapshot_path = foreign_root / RELATIVE_PATH
+    snapshot_path.parent.mkdir(parents=True, exist_ok=True)
+    snapshot_path.write_bytes(serialized)
+    binding = ProjectChildBinding(
+        "TASK-044", RELATIVE_PATH, FORMAT_ID, FORMAT_VERSION,
+        sha256_bytes(serialized), True, (base.timeline_sha256,),
+    )
+    foreign_manifest = ProductProjectManifest.create(
+        project_id=foreign_source.project_id,
+        project_revision=foreign_source.project_revision + 1,
+        product_version=foreign_source.product_version,
+        timebase=foreign_source.timebase,
+        child_bindings=(binding,),
+        created_at=foreign_source.created_at,
+        updated_at=foreign_source.updated_at,
+    )
+    ProductProjectManifestStore.save(
+        foreign_root,
+        foreign_manifest,
+        expected_previous_manifest_sha256=foreign_source.project_manifest_sha256,
+    )
+    persisted = Task044TimelineEditApplication(
+        project_root=foreign_root,
+        project_id="project-1",
+    )
+    with pytest.raises(ProductError) as exc:
+        persisted.history_control_snapshot(base)
+    assert exc.value.code == "ERR_TIMELINE_EDIT_COMMAND_DUPLICATE"
 
 
 def test_v1_1_application_mints_exact_binding_and_reopens(tmp_path: Path) -> None:
@@ -402,6 +693,81 @@ def test_v1_1_application_mints_exact_binding_and_reopens(tmp_path: Path) -> Non
     projected, _in_out, bindings = TimelineEditProjector.apply_with_source_bindings(base, restored)
     assert next(item for item in projected.clips if item.clip_id == clip.clip_id) == clip
     assert bindings[clip.clip_id] == binding
+
+
+def test_current_edit_persistence_receipt_is_deterministic_and_requires_revision(
+    tmp_path: Path,
+) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-receipt",
+    )
+    assert app.current_edit_persistence_receipt(base) is None
+    prepared = app.prepare_move(
+        timeline=base, clip_id="clip-1", desired_start_frame=20,
+        command_id="move-for-receipt",
+        expected_project_manifest_sha256=current.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    first = app.current_edit_persistence_receipt(base)
+    second = app.current_edit_persistence_receipt(base)
+    assert first is not None and second == first
+    assert Task044EditPersistenceReceipt.from_dict(first.to_dict()) == first
+    assert first.timeline_sha256 == TimelineEditProjector.apply(
+        base, app._load(ProductProjectManifestStore.load(tmp_path)),
+    )[0].timeline_sha256
+    assert first.current_revision == 1
+    assert first.to_dict()["authority_effect_created"] is False
+    assert not any(str(tmp_path) in str(value) for value in first.to_dict().values())
+
+
+def test_current_edit_persistence_receipt_rejects_stale_base_and_tampered_child(
+    tmp_path: Path,
+) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-tamper",
+    )
+    prepared = app.prepare_move(
+        timeline=base, clip_id="clip-1", desired_start_frame=20,
+        command_id="move-for-tamper",
+        expected_project_manifest_sha256=current.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    stale = InteractiveTimeline(
+        base.project_id, "other-timeline", base.timeline_rate,
+        base.duration_frames, base.tracks, base.clips,
+    )
+    with pytest.raises(ProductError) as exc:
+        app.current_edit_persistence_receipt(stale)
+    assert exc.value.code == "ERR_TIMELINE_EDIT_BASE_STALE"
+    target = tmp_path / RELATIVE_PATH
+    target.write_bytes(target.read_bytes() + b"\n")
+    with pytest.raises(ProductError) as exc:
+        app.current_edit_persistence_receipt(base)
+    assert exc.value.code == "ERR_PROJECT_SAVE_RECOVERY_TARGET_CONFLICT"
+
+
+def test_current_edit_persistence_receipt_rejects_dangling_recovery_link(
+    tmp_path: Path,
+) -> None:
+    setup_project(tmp_path)
+    app = Task044TimelineEditApplication(project_root=tmp_path, project_id="project-1")
+    app._history_recovery_path.symlink_to(tmp_path / "missing-recovery.json")
+    with pytest.raises(ProductError) as exc:
+        app.current_edit_persistence_receipt(timeline())
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID"
+    app._history_recovery_path.unlink()
+    app._history_recovery_path.mkdir()
+    with pytest.raises(ProductError) as exc:
+        app.current_edit_persistence_receipt(timeline())
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID"
 
 
 def test_v1_1_binding_version_mismatch_and_unknown_version_fail_closed(tmp_path: Path) -> None:

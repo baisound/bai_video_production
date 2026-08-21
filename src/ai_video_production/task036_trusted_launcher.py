@@ -479,11 +479,16 @@ class Task036TrustedLaunch:
     pre_edit_runtime: Task036PreEditRuntime
     bridge: Task036ShellBridge
     _runtime_lease: "_Task036ProjectRuntimeLease | None" = field(default=None, repr=False)
+    _local_operation_lifetime: "_Task036LocalOperationLifetime | None" = field(default=None, repr=False)
     _product_store: SQLiteProductStore | None = field(default=None, repr=False)
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
 
+        local_lifetime = self._local_operation_lifetime
+        if local_lifetime is not None:
+            local_lifetime.close()
+            self._local_operation_lifetime = None
         lease = self._runtime_lease
         if lease is not None:
             lease.close()
@@ -504,6 +509,66 @@ class Task036TrustedLaunch:
             self.close()
         except Exception:
             pass
+
+
+class _Task036LocalOperationLifetime:
+    """Keep pre-Manifest Shell operations alive until launch close completes."""
+
+    def __init__(self) -> None:
+        self._condition = threading.Condition(threading.RLock())
+        self._local = threading.local()
+        self._closing = False
+        self._closed = False
+        self._active_operation_count = 0
+
+    @contextmanager
+    def operation(self):
+        with self._condition:
+            depth = getattr(self._local, "depth", 0)
+            if depth == 0:
+                if self._closed or self._closing:
+                    raise ProductError(
+                        "ERR_TASK036_RUNTIME_LEASE_REQUIRED",
+                        "TASK-036 Project runtime is no longer active",
+                        ProductErrorCategory.STATE,
+                    )
+                self._active_operation_count += 1
+            elif self._closed:
+                raise ProductError(
+                    "ERR_TASK036_RUNTIME_LEASE_REQUIRED",
+                    "TASK-036 Project runtime is no longer active",
+                    ProductErrorCategory.STATE,
+                )
+            self._local.depth = depth + 1
+        try:
+            yield
+        finally:
+            with self._condition:
+                depth = getattr(self._local, "depth", 1) - 1
+                self._local.depth = depth
+                if depth == 0:
+                    self._active_operation_count -= 1
+                    self._condition.notify_all()
+
+    def close(self) -> None:
+        with self._condition:
+            if self._closed:
+                return
+            if getattr(self._local, "depth", 0):
+                raise ProductError(
+                    "ERR_TASK036_RUNTIME_CLOSE_IN_FLIGHT",
+                    "TASK-036 runtime cannot close from its active operation",
+                    ProductErrorCategory.STATE,
+                )
+            if self._closing:
+                while not self._closed:
+                    self._condition.wait()
+                return
+            self._closing = True
+            while self._active_operation_count:
+                self._condition.wait()
+            self._closed = True
+            self._condition.notify_all()
 
 
 class _Task036ProjectRuntimeLease:
@@ -930,6 +995,7 @@ def build_trusted_launch(
         configuration.project_root
     ).exists()
     runtime_lease: _Task036ProjectRuntimeLease | None = None
+    local_operation_lifetime: _Task036LocalOperationLifetime | None = None
 
     def nle_controller(application) -> Task044NleShellController:
         timeline = InteractiveTimelineProjectionService.from_editing_projection(
@@ -1132,8 +1198,20 @@ def build_trusted_launch(
         # the only mutation-capable TASK-044 composition path in this launcher.
         ProductProjectManifestStore.load(configuration.project_root)
         runtime_lease = _Task036ProjectRuntimeLease.acquire(configuration.project_root)
+    else:
+        # Asset ingest mutates the Product store even before a Project Manifest
+        # exists.  Keep those bridge operations alive through launch.close()
+        # without creating the manifest-scoped OS lease file.
+        local_operation_lifetime = _Task036LocalOperationLifetime()
     planning_generation_application = None
     try:
+        def edit_persistence_provider():
+            if runtime_lease is None:
+                return None
+            with runtime_lease.operation():
+                controller = bridge._ensure_nle_controller()
+                return None if controller is None else controller.edit_persistence_receipt()
+
         if connection_settings is not None and has_mutation_composition:
             planning_generation_application = Task036PlanningGenerationApplication(
                 planning_application=planning_application,
@@ -1160,17 +1238,28 @@ def build_trusted_launch(
             connection_settings=connection_settings,
             final_review_application=final_review_application,
             final_review_external_gate_provider=final_review_external_gate_provider,
+            final_review_edit_persistence_provider=edit_persistence_provider,
             final_review_export_preparation_provider=final_review_export_preparation_provider,
             game_intelligence_application=game_intelligence_application,
             nle_controller_factory=nle_controller,
             nle_runtime_guard=(
-                None if runtime_lease is None else runtime_lease.operation
+                runtime_lease.operation
+                if runtime_lease is not None
+                else local_operation_lifetime.operation
             ),
         )
         return Task036TrustedLaunch(
-            configuration, coordinator, pre_edit, bridge, runtime_lease, store,
+            configuration=configuration,
+            coordinator=coordinator,
+            pre_edit_runtime=pre_edit,
+            bridge=bridge,
+            _runtime_lease=runtime_lease,
+            _local_operation_lifetime=local_operation_lifetime,
+            _product_store=store,
         )
     except BaseException:
+        if local_operation_lifetime is not None:
+            local_operation_lifetime.close()
         if runtime_lease is not None:
             runtime_lease.close()
         store.close()

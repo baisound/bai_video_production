@@ -12,10 +12,16 @@ from ai_video_production.interactive_timeline import (
     InteractiveTimeline, InteractiveTimelineClip, TimelineMediaKind, TimelineTrack,
     TimelineTrackRole,
 )
+from ai_video_production.interactive_timeline_application import Task044TimelineEditApplication
+from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
+from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.serialization import sha256_bytes
 from ai_video_production.task036_shell_ui import HTML, Task036ShellBridge
 from ai_video_production.task044_nle_shell import Task044NleShellController
 from ai_video_production.timebase import FrameRate
+
+
+CREATED = "2026-08-21T00:00:00.000Z"
 
 
 def timeline(count: int = 3) -> InteractiveTimeline:
@@ -36,6 +42,30 @@ def bridge(value: InteractiveTimeline):
     service.open_project_context(project_id="project-1", display_name="Project 1")
     controller = Task044NleShellController(timeline=value)
     return Task036ShellBridge(service, nle_controller=controller), controller
+
+
+def editable_bridge(root: Path):
+    value = timeline()
+    manifest = ProductProjectManifest.create(
+        project_id="project-1",
+        project_revision=1,
+        product_version="0.22.0",
+        timebase=ProjectTimebase(30, 1),
+        child_bindings=(),
+        created_at=CREATED,
+        updated_at=CREATED,
+    )
+    ProductProjectManifestStore.save(root, manifest)
+    tokens = iter(("cancel-move", "apply-move", "apply-undo", "apply-redo"))
+    application = Task044TimelineEditApplication(
+        project_root=root,
+        project_id="project-1",
+        token_factory=lambda: next(tokens),
+    )
+    service = ShellApplicationService(product_version="0.22.0")
+    service.open_project_context(project_id="project-1", display_name="Project 1")
+    controller = Task044NleShellController(timeline=value, edit_application=application)
+    return Task036ShellBridge(service, nle_controller=controller), controller, value
 
 
 def test_controller_returns_bounded_dynamic_projection_for_ten_thousand_clips() -> None:
@@ -81,6 +111,127 @@ def test_bridge_fails_closed_for_stale_or_extra_timeline_requests() -> None:
     assert exc.value.code == "ERR_NLE_SHELL_TIMELINE_STALE"
     with pytest.raises(ProductError) as exc:
         shell.interactive_timeline_snapshot({"clip_offset": 0, "max_clips": 500, "exec": "whoami"})
+    assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+
+
+def test_move_cancel_undo_redo_are_strict_and_projected_through_shell(tmp_path: Path) -> None:
+    shell, _controller, value = editable_bridge(tmp_path)
+    initial = shell.interactive_timeline_snapshot({})
+    assert initial["history_controls"]["undo"] == {"available": False}
+    assert initial["history_controls"]["redo"] == {"available": False}
+
+    move_request = {
+        "clip_id": "clip-00000",
+        "desired_start_frame": 3,
+        "command_id": "move-clip-0",
+        "expected_project_manifest_sha256": initial["project_manifest_sha256"],
+        "expected_timeline_sha256": value.timeline_sha256,
+    }
+    cancelled = shell.interactive_timeline_prepare_move(move_request)
+    assert shell.interactive_timeline_cancel_edit({
+        "confirmation_id": cancelled["confirmation_id"],
+    })["cancelled"] is True
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_apply_edit({
+            "confirmation_id": cancelled["confirmation_id"],
+        })
+    assert exc.value.code == "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID"
+
+    move_request["command_id"] = "move-clip-1"
+    moved = shell.interactive_timeline_prepare_move(move_request)
+    shell.interactive_timeline_apply_edit({"confirmation_id": moved["confirmation_id"]})
+    after_move = shell.interactive_timeline_snapshot({})
+    projected_clip = next(
+        item for item in after_move["projection"]["clips"]
+        if item["clip_id"] == "clip-00000"
+    )
+    assert (projected_clip["start_frame"], projected_clip["end_frame"]) == (3, 4)
+    assert after_move["history_controls"]["undo"] == {
+        "available": True,
+        "command_kind": "timeline.move",
+        "target_identity": "move-clip-1",
+    }
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_prepare_move({
+            **move_request,
+            "command_id": "move-clip-1",
+            "expected_project_manifest_sha256": after_move["project_manifest_sha256"],
+        })
+    assert exc.value.code == "ERR_TIMELINE_EDIT_COMMAND_DUPLICATE"
+
+    history_args = {
+        "command_id": "undo-move-1",
+        "expected_project_manifest_sha256": after_move["project_manifest_sha256"],
+        "expected_timeline_sha256": value.timeline_sha256,
+        "expected_project_history_sha256": after_move["history_controls"]["project_history_sha256"],
+    }
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_prepare_undo({**history_args, "command_id": True})
+    assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_prepare_undo({
+            **history_args,
+            "expected_project_history_sha256": sha256_bytes(b"stale"),
+        })
+    assert exc.value.code == "ERR_PROJECT_HISTORY_CAS_CONFLICT"
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_prepare_undo({
+            **history_args,
+            "expected_project_history_sha256": "not-a-sha",
+        })
+    assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+
+    undo = shell.interactive_timeline_prepare_undo(history_args)
+    shell.interactive_timeline_apply_edit({"confirmation_id": undo["confirmation_id"]})
+    after_undo = shell.interactive_timeline_snapshot({})
+    assert after_undo["history_controls"]["redo"]["available"] is True
+    redo = shell.interactive_timeline_prepare_redo({
+        "command_id": "redo-move-1",
+        "expected_project_manifest_sha256": after_undo["project_manifest_sha256"],
+        "expected_timeline_sha256": value.timeline_sha256,
+        "expected_project_history_sha256": after_undo["history_controls"]["project_history_sha256"],
+    })
+    shell.interactive_timeline_apply_edit({"confirmation_id": redo["confirmation_id"]})
+    after_redo = shell.interactive_timeline_snapshot({})
+    assert after_redo["history_controls"]["undo"]["target_identity"] == "move-clip-1"
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_cancel_edit({"confirmation_id": redo["confirmation_id"]})
+    assert exc.value.code == "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID"
+
+
+def test_move_rejects_locked_track_and_invalid_request_types(tmp_path: Path) -> None:
+    shell, _controller, value = editable_bridge(tmp_path)
+    initial = shell.interactive_timeline_snapshot({})
+    request = {
+        "clip_id": "clip-00000",
+        "desired_start_frame": 3,
+        "command_id": "move-locked",
+        "expected_project_manifest_sha256": initial["project_manifest_sha256"],
+        "expected_timeline_sha256": value.timeline_sha256,
+    }
+    shell.interactive_timeline_update_track_state({
+        "track_id": "V1",
+        "state": "LOCKED",
+        "value": True,
+        "expected_timeline_sha256": value.timeline_sha256,
+    })
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_prepare_move(request)
+    assert exc.value.code == "ERR_TIMELINE_TRACK_LOCKED"
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_prepare_move({**request, "desired_start_frame": True})
+    assert exc.value.code == "ERR_TIMELINE_TRACK_LOCKED"
+    shell.interactive_timeline_update_track_state({
+        "track_id": "V1",
+        "state": "LOCKED",
+        "value": False,
+        "expected_timeline_sha256": value.timeline_sha256,
+    })
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_prepare_move({**request, "desired_start_frame": True})
+    assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+    with pytest.raises(ProductError) as exc:
+        shell.interactive_timeline_prepare_move({**request, "extra": "field"})
     assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
 
 
@@ -311,6 +462,10 @@ def test_nle_runtime_guard_runs_for_cached_controller_and_rejects_invalid_bindin
     for operation, args in (
         (shell.interactive_timeline_snapshot, {}),
         (shell.interactive_timeline_select, {}),
+        (shell.interactive_timeline_prepare_move, {}),
+        (shell.interactive_timeline_prepare_undo, {}),
+        (shell.interactive_timeline_prepare_redo, {}),
+        (shell.interactive_timeline_cancel_edit, {}),
         (shell.export_queue_snapshot, {}),
         (shell.export_queue_preflight, {}),
         (shell.export_queue_prepare_dispatch, {}),
@@ -338,7 +493,9 @@ def test_html_wires_dynamic_nle_without_javascript_durable_store() -> None:
         'id="scrollRightButton"', 'id="trackUpButton"', 'id="trackDownButton"',
         'id="setInButton"', 'id="setOutButton"', "interactive_timeline_snapshot",
         "interactive_timeline_select", "interactive_timeline_seek",
-        "interactive_timeline_prepare_trim", "interactive_timeline_apply_edit",
+        "interactive_timeline_prepare_trim", "interactive_timeline_prepare_move",
+        "interactive_timeline_prepare_undo", "interactive_timeline_prepare_redo",
+        "interactive_timeline_apply_edit", "interactive_timeline_cancel_edit",
         "interactive_timeline_update_track_state",
         "interactive_timeline_update_track_height",
         "interactive_timeline_prepare_add_track",

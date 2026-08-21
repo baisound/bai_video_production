@@ -33,7 +33,8 @@ from .interactive_timeline_store import (
 from .product_project import ProductProjectManifest, ProjectChildBinding
 from .product_project_store import ProductProjectManifestStore
 from .project_history import (
-    ProjectCommandHistory, ProjectCommandHistoryStore, parse_project_command_history,
+    ProjectCommandAction, ProjectCommandHistory, ProjectCommandHistoryStore,
+    parse_project_command_history,
 )
 from .project_save import (
     ProductProjectSaveCoordinator,
@@ -43,6 +44,7 @@ from .project_save import (
     ProjectSaveParticipantResult,
 )
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
+from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 
 TokenFactory = Callable[[], str]
 CommitGuardFactory = Callable[[], ContextManager[None]]
@@ -524,6 +526,76 @@ class Task044TimelineEditApplication:
         )
         return projected, in_out, bindings, manifest.project_manifest_sha256
 
+    def current_edit_persistence_receipt(
+        self,
+        timeline: InteractiveTimeline,
+    ) -> Task044EditPersistenceReceipt | None:
+        """Read the latest current TASK-044 revision without creating new truth."""
+
+        self._require_no_history_recovery()
+        manifest = ProductProjectManifestStore.load(self.project_root)
+        if manifest.project_id != self.project_id:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_PROJECT_MISMATCH",
+                "Project identity differs",
+                ProductErrorCategory.SECURITY,
+            )
+        self._save_coordinator.require_current_integrity(self.project_root, manifest)
+        history = self._load(manifest)
+        current = history.current
+        if current is None:
+            return None
+        projected, _in_out, _bindings = TimelineEditProjector.apply_with_source_bindings(
+            timeline,
+            history,
+        )
+        binding = next(
+            item for item in manifest.child_bindings
+            if item.identity == ("TASK-044", RELATIVE_PATH)
+        )
+        live = ProductProjectManifestStore.load(self.project_root)
+        if live.project_manifest_sha256 != manifest.project_manifest_sha256:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_RECEIPT_STALE",
+                "Project changed during Timeline receipt evaluation",
+                ProductErrorCategory.STATE,
+            )
+        self._save_coordinator.require_current_integrity(self.project_root, live)
+        self._require_no_history_recovery()
+        return Task044EditPersistenceReceipt(
+            receipt_id=f"task044-edit-persistence-r{current.revision}",
+            project_id=self.project_id,
+            timeline_sha256=projected.timeline_sha256,
+            project_manifest_sha256=manifest.project_manifest_sha256,
+            edit_snapshot_sha256=binding.content_sha256,
+            snapshot_version=binding.format_version,
+            history_id=history.history_id,
+            current_revision=current.revision,
+            current_revision_sha256=current.revision_sha256,
+            evaluated_at=manifest.updated_at,
+        )
+
+    def _require_no_history_recovery(self) -> None:
+        path = self._history_recovery_path
+        if path.is_symlink():
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline command history recovery path is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if path.exists() and not path.is_file():
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline command history recovery path is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if path.exists():
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_PENDING",
+                "Timeline command history recovery must finish first",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            )
+
     def _load(self, manifest: ProductProjectManifest) -> TimelineEditHistory:
         binding = next((item for item in manifest.child_bindings if item.identity == ("TASK-044", RELATIVE_PATH)), None)
         if binding is None:
@@ -543,7 +615,82 @@ class Task044TimelineEditApplication:
             )
         if sha256_bytes(serialized) != binding.content_sha256:
             raise ProductError("ERR_TIMELINE_EDIT_BINDING_CHECKSUM", "Timeline edit child differs from Project binding", ProductErrorCategory.DATA_INTEGRITY)
+        self._command_index(history)
         return history
+
+    @staticmethod
+    def _command_index(history: TimelineEditHistory) -> dict[str, TimelineEditCommand]:
+        commands: dict[str, TimelineEditCommand] = {}
+        for row in history.revisions:
+            command_id = row.command.command_id
+            if command_id in commands:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_COMMAND_DUPLICATE",
+                    "Timeline edit command identity is duplicated",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            commands[command_id] = row.command
+        return commands
+
+    @staticmethod
+    def _command_semantics(command: TimelineEditCommand) -> dict[str, object]:
+        value = command.to_dict().copy()
+        value.pop("command_id", None)
+        value.pop("command_sha256", None)
+        return value
+
+    def _validate_project_history_binding(
+        self,
+        edit_history: TimelineEditHistory,
+        project_history: ProjectCommandHistory,
+    ) -> None:
+        timeline_records = tuple(
+            record
+            for record in project_history.records
+            if record.command_kind.startswith("timeline.")
+        )
+        if len(timeline_records) != len(edit_history.revisions):
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_BINDING_CONFLICT",
+                "Timeline edits and Project history have different lengths",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        originals: dict[str, TimelineEditCommand] = {}
+        for record, revision in zip(timeline_records, edit_history.revisions, strict=True):
+            command = revision.command
+            if record.action is ProjectCommandAction.APPLY:
+                if (
+                    record.target_identity != command.command_id
+                    or record.command_kind != f"timeline.{command.kind.value.lower()}"
+                ):
+                    raise ProductError(
+                        "ERR_TIMELINE_EDIT_HISTORY_BINDING_CONFLICT",
+                        "Timeline APPLY record does not match its edit revision",
+                        ProductErrorCategory.DATA_INTEGRITY,
+                    )
+                originals[record.target_identity] = command
+                continue
+            original = originals.get(record.target_identity)
+            if (
+                original is None
+                or record.command_kind != f"timeline.{original.kind.value.lower()}"
+            ):
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_HISTORY_BINDING_CONFLICT",
+                    "Timeline compensation target does not match an APPLY revision",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            expected = (
+                original.inverse(command_id=command.command_id)
+                if record.action is ProjectCommandAction.UNDO
+                else original
+            )
+            if self._command_semantics(command) != self._command_semantics(expected):
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_HISTORY_BINDING_CONFLICT",
+                    "Timeline compensation revision differs from its target",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
 
     def _load_project_history(self) -> tuple[ProjectCommandHistory, str | None]:
         target = ProjectCommandHistoryStore.path(self.project_root)
@@ -553,6 +700,75 @@ class Task044TimelineEditApplication:
         if history.project_id != self.project_id:
             raise ProductError("ERR_PROJECT_HISTORY_IDENTITY_CONFLICT", "Project history belongs to another Project", ProductErrorCategory.SECURITY)
         return history, history.history_sha256
+
+    def history_control_snapshot(self, timeline: InteractiveTimeline) -> dict[str, object]:
+        """Project the current body-free Undo/Redo controls without mutation."""
+
+        self._require_no_history_recovery()
+        manifest = ProductProjectManifestStore.load(self.project_root)
+        if manifest.project_id != self.project_id or timeline.project_id != self.project_id:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_PROJECT_MISMATCH",
+                "Timeline or Manifest belongs to another Project",
+                ProductErrorCategory.SECURITY,
+            )
+        self._save_coordinator.require_current_integrity(self.project_root, manifest)
+        edit_history = self._load(manifest)
+        TimelineEditProjector.apply(timeline, edit_history)
+        project_history, history_sha256 = self._load_project_history()
+        self._validate_project_history_binding(edit_history, project_history)
+        if project_history.records and (
+            project_history.records[-1].result_manifest_sha256
+            != manifest.project_manifest_sha256
+        ):
+            raise ProductError(
+                "ERR_PROJECT_HISTORY_SOURCE_CONFLICT",
+                "Project history is not at current Manifest",
+                ProductErrorCategory.STATE,
+            )
+        commands = self._command_index(edit_history)
+
+        def project(candidate: object) -> dict[str, object]:
+            if candidate is None:
+                return {"available": False}
+            command_kind = getattr(candidate, "command_kind", None)
+            target_identity = getattr(candidate, "target_identity", None)
+            command = commands.get(target_identity) if isinstance(target_identity, str) else None
+            if (
+                not isinstance(command_kind, str)
+                or not command_kind.startswith("timeline.")
+                or not isinstance(target_identity, str)
+                or command is None
+                or command_kind != f"timeline.{command.kind.value.lower()}"
+            ):
+                return {"available": False}
+            return {
+                "available": True,
+                "command_kind": command_kind,
+                "target_identity": target_identity,
+            }
+
+        live_manifest = ProductProjectManifestStore.load(self.project_root)
+        _live_history, live_history_sha256 = self._load_project_history()
+        if (
+            live_manifest.project_manifest_sha256 != manifest.project_manifest_sha256
+            or live_history_sha256 != history_sha256
+        ):
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_CONTROL_STALE",
+                "Project or command history changed during control evaluation",
+                ProductErrorCategory.STATE,
+            )
+        self._save_coordinator.require_current_integrity(self.project_root, live_manifest)
+        self._require_no_history_recovery()
+        return {
+            "available": True,
+            "project_history_sha256": history_sha256,
+            "undo": project(project_history.undo_candidate()),
+            "redo": project(project_history.redo_candidate()),
+            "provider_execution_started": False,
+            "external_mutation_started": False,
+        }
 
     @staticmethod
     def _clip(timeline: InteractiveTimeline, clip_id: str):
@@ -623,27 +839,67 @@ class Task044TimelineEditApplication:
         return self._prepare(timeline, command, expected_project_manifest_sha256, "APPLY")
 
     def prepare_undo(self, *, timeline: InteractiveTimeline, command_id: str,
-                     expected_project_manifest_sha256: str) -> dict[str, object]:
-        project_history, _ = self._load_project_history()
+                     expected_project_manifest_sha256: str,
+                     expected_project_history_sha256: str | None = None) -> dict[str, object]:
+        project_history, project_history_sha256 = self._load_project_history()
+        if (
+            expected_project_history_sha256 is not None
+            and project_history_sha256 != expected_project_history_sha256
+        ):
+            raise ProductError(
+                "ERR_PROJECT_HISTORY_CAS_CONFLICT",
+                "Project history changed; reload first",
+                ProductErrorCategory.STATE,
+            )
         candidate = project_history.undo_candidate()
         if candidate is None or not candidate.command_kind.startswith("timeline."):
             raise ProductError("ERR_TIMELINE_EDIT_UNDO_EMPTY", "No Timeline edit is available to undo", ProductErrorCategory.STATE)
         edit_history = self._load(ProductProjectManifestStore.load(self.project_root))
+        self._validate_project_history_binding(edit_history, project_history)
         original = next((item.command for item in edit_history.revisions if item.command.command_id == candidate.target_identity), None)
         if original is None:
             raise ProductError("ERR_TIMELINE_EDIT_UNDO_TARGET", "Undo target is missing", ProductErrorCategory.DATA_INTEGRITY)
-        return self._prepare(timeline, original.inverse(command_id=command_id), expected_project_manifest_sha256, "UNDO")
+        if candidate.command_kind != f"timeline.{original.kind.value.lower()}":
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_UNDO_TARGET",
+                "Undo target kind differs from Project history",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return self._prepare(
+            timeline,
+            original.inverse(command_id=command_id),
+            expected_project_manifest_sha256,
+            "UNDO",
+            expected_project_history_sha256=project_history_sha256,
+        )
 
     def prepare_redo(self, *, timeline: InteractiveTimeline, command_id: str,
-                     expected_project_manifest_sha256: str) -> dict[str, object]:
-        project_history, _ = self._load_project_history()
+                     expected_project_manifest_sha256: str,
+                     expected_project_history_sha256: str | None = None) -> dict[str, object]:
+        project_history, project_history_sha256 = self._load_project_history()
+        if (
+            expected_project_history_sha256 is not None
+            and project_history_sha256 != expected_project_history_sha256
+        ):
+            raise ProductError(
+                "ERR_PROJECT_HISTORY_CAS_CONFLICT",
+                "Project history changed; reload first",
+                ProductErrorCategory.STATE,
+            )
         candidate = project_history.redo_candidate()
         if candidate is None or not candidate.command_kind.startswith("timeline."):
             raise ProductError("ERR_TIMELINE_EDIT_REDO_EMPTY", "No Timeline edit is available to redo", ProductErrorCategory.STATE)
         edit_history = self._load(ProductProjectManifestStore.load(self.project_root))
+        self._validate_project_history_binding(edit_history, project_history)
         original = next((item.command for item in edit_history.revisions if item.command.command_id == candidate.target_identity), None)
         if original is None:
             raise ProductError("ERR_TIMELINE_EDIT_REDO_TARGET", "Redo target is missing", ProductErrorCategory.DATA_INTEGRITY)
+        if candidate.command_kind != f"timeline.{original.kind.value.lower()}":
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_REDO_TARGET",
+                "Redo target kind differs from Project history",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
         projected, _ = TimelineEditProjector.apply(timeline, edit_history)
         if original.kind in {
             TimelineEditKind.INSERT_CLIP,
@@ -688,6 +944,7 @@ class Task044TimelineEditApplication:
             expected_project_manifest_sha256,
             "REDO",
             commit_guard,
+            expected_project_history_sha256=project_history_sha256,
         )
 
     def prepare_placement(
@@ -719,7 +976,8 @@ class Task044TimelineEditApplication:
 
     def _prepare(self, timeline: InteractiveTimeline, command: TimelineEditCommand,
                  expected_manifest: str, history_action: str,
-                 commit_guard: CommitGuardFactory | None = None) -> dict[str, object]:
+                 commit_guard: CommitGuardFactory | None = None, *,
+                 expected_project_history_sha256: str | None = None) -> dict[str, object]:
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_manifest_sha256 != expected_manifest:
             raise ProductError("ERR_TIMELINE_EDIT_PROJECT_CONFLICT", "Project changed; reload first", ProductErrorCategory.STATE)
@@ -728,8 +986,24 @@ class Task044TimelineEditApplication:
         history = self._load(manifest)
         TimelineEditProjector.apply(timeline, history)
         project_history, project_history_sha = self._load_project_history()
+        self._validate_project_history_binding(history, project_history)
+        if (
+            expected_project_history_sha256 is not None
+            and project_history_sha != expected_project_history_sha256
+        ):
+            raise ProductError(
+                "ERR_PROJECT_HISTORY_CAS_CONFLICT",
+                "Project history changed while preparing the edit",
+                ProductErrorCategory.STATE,
+            )
         if project_history.records and project_history.records[-1].result_manifest_sha256 != manifest.project_manifest_sha256:
             raise ProductError("ERR_PROJECT_HISTORY_SOURCE_CONFLICT", "Project history is not at current Manifest", ProductErrorCategory.STATE)
+        if command.command_id in self._command_index(history):
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_COMMAND_DUPLICATE",
+                "Timeline edit command identity was already used",
+                ProductErrorCategory.STATE,
+            )
         with self._pending_lock:
             if len(self._pending) >= _MAX_PENDING_CONFIRMATIONS:
                 raise ProductError(
@@ -793,6 +1067,7 @@ class Task044TimelineEditApplication:
             updated_at=max(manifest.updated_at, utc_now_iso()),
         )
         project_history, current_history_sha = self._load_project_history()
+        self._validate_project_history_binding(self._load(manifest), project_history)
         if current_history_sha != pending.expected_history_sha256:
             raise ProductError("ERR_PROJECT_HISTORY_CAS_CONFLICT", "Project history changed after preparation", ProductErrorCategory.STATE)
         # The save coordinator deliberately requires an already-resolved parent

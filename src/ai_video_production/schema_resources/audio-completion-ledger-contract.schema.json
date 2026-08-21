@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/audio-completion-ledger-contract.schema.json",
+  "title": "TASK-041 Audio Completion Ledger Contract R1A",
+  "oneOf": [{"$ref": "#/$defs/key"}, {"$ref": "#/$defs/entry"}, {"$ref": "#/$defs/cas"}, {"$ref": "#/$defs/evaluation"}, {"$ref": "#/$defs/observation"}, {"$ref": "#/$defs/publicProjection"}],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "count": {"type": "integer", "minimum": 0, "maximum": 256},
+    "positiveCount": {"type": "integer", "minimum": 1, "maximum": 256},
+    "authorityFlags": {
+      "type": "object", "additionalProperties": false,
+      "required": ["native_append_authorized", "filesystem_persistence_verified", "storage_origin_authenticated", "upstream_owner_revalidated", "canonical_latest_authorized", "canonical_pass_authorized", "final_review_gate_issued"],
+      "properties": {
+        "native_append_authorized": {"const": false}, "filesystem_persistence_verified": {"const": false},
+        "storage_origin_authenticated": {"const": false}, "upstream_owner_revalidated": {"const": false},
+        "canonical_latest_authorized": {"const": false}, "canonical_pass_authorized": {"const": false},
+        "final_review_gate_issued": {"const": false}
+      }
+    },
+    "effectFlags": {
+      "type": "object", "additionalProperties": false,
+      "required": ["filesystem_read", "filesystem_written", "network_accessed", "provider_called", "audio_read", "audio_written", "model_loaded", "process_started", "release_started", "deployment_started"],
+      "properties": {
+        "filesystem_read": {"const": false}, "filesystem_written": {"const": false},
+        "network_accessed": {"const": false}, "provider_called": {"const": false},
+        "audio_read": {"const": false}, "audio_written": {"const": false},
+        "model_loaded": {"const": false}, "process_started": {"const": false},
+        "release_started": {"const": false}, "deployment_started": {"const": false}
+      }
+    },
+    "key": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "project_id", "timeline_id", "timeline_revision", "timeline_sha256", "scope_binding_sha256", "receipt_id", "ledger_key_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-contract.v1"},
+        "record_type": {"const": "AudioCompletionLedgerKeyBinding"}, "task_owner": {"const": "TASK-041"},
+        "project_id": {"$ref": "#/$defs/id"}, "timeline_id": {"$ref": "#/$defs/id"},
+        "timeline_revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "timeline_sha256": {"$ref": "#/$defs/digest"}, "scope_binding_sha256": {"$ref": "#/$defs/digest"},
+        "receipt_id": {"$ref": "#/$defs/id"}, "ledger_key_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "entry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "key_binding", "ledger_key_sha256", "entry_revision", "parent_entry_sha256", "prior_chain_sha256", "candidate", "candidate_receipt_sha256", "entry_state", "authority_flags", "effect_flags", "entry_sha256", "chain_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-contract.v1"},
+        "record_type": {"const": "AudioCompletionLedgerEntryEnvelope"}, "task_owner": {"const": "TASK-041"},
+        "key_binding": {"$ref": "#/$defs/key"}, "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "entry_revision": {"$ref": "#/$defs/positiveCount"},
+        "parent_entry_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "prior_chain_sha256": {"$ref": "#/$defs/digest"},
+        "candidate": {"$ref": "audio-completion-receipt.schema.json"},
+        "candidate_receipt_sha256": {"$ref": "https://baisound.dev/schemas/audio-completion-ledger-contract.schema.json#/$defs/digest"},
+        "entry_state": {"const": "PERSISTENCE_NOT_OBSERVED_BY_R1A"},
+        "authority_flags": {"$ref": "https://baisound.dev/schemas/audio-completion-ledger-contract.schema.json#/$defs/authorityFlags"}, "effect_flags": {"$ref": "https://baisound.dev/schemas/audio-completion-ledger-contract.schema.json#/$defs/effectFlags"},
+        "entry_sha256": {"$ref": "https://baisound.dev/schemas/audio-completion-ledger-contract.schema.json#/$defs/digest"}, "chain_sha256": {"$ref": "https://baisound.dev/schemas/audio-completion-ledger-contract.schema.json#/$defs/digest"}
+      },
+      "allOf": [{"if": {"properties": {"entry_revision": {"const": 1}}}, "then": {"properties": {"parent_entry_sha256": {"const": null}}}, "else": {"properties": {"parent_entry_sha256": {"$ref": "https://baisound.dev/schemas/audio-completion-ledger-contract.schema.json#/$defs/digest"}}}}]
+    },
+    "cas": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "ledger_key_sha256", "expected_entry_count", "expected_latest_entry_sha256", "expected_latest_candidate_sha256", "expected_chain_sha256", "expectation_is_authority", "expectation_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-contract.v1"},
+        "record_type": {"const": "AudioCompletionLedgerCasExpectation"}, "task_owner": {"const": "TASK-041"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"}, "expected_entry_count": {"$ref": "#/$defs/count"},
+        "expected_latest_entry_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "expected_latest_candidate_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "expected_chain_sha256": {"$ref": "#/$defs/digest"}, "expectation_is_authority": {"const": false},
+        "expectation_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "allOf": [{"if": {"properties": {"expected_entry_count": {"const": 0}}}, "then": {"properties": {"expected_latest_entry_sha256": {"const": null}, "expected_latest_candidate_sha256": {"const": null}, "expected_chain_sha256": {"const": "sha256:443a4951f590bcdd75c783da049dac4e52edf661a7480ba116694555c305ceb0"}}}, "else": {"properties": {"expected_latest_entry_sha256": {"$ref": "#/$defs/digest"}, "expected_latest_candidate_sha256": {"$ref": "#/$defs/digest"}}}}]
+    },
+    "evaluation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "decision", "reason_codes", "ledger_key_sha256", "observed_entry_count", "observed_latest_entry_sha256", "observed_latest_candidate_sha256", "observed_chain_sha256", "incoming_candidate_sha256", "expectation_sha256", "authority_flags", "effect_flags", "evaluation_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-contract.v1"},
+        "record_type": {"const": "AudioCompletionAppendEvaluation"}, "task_owner": {"const": "TASK-041"},
+        "decision": {"enum": ["CONTRACT_APPEND_ELIGIBLE_NOT_AUTHORIZED", "IDEMPOTENT_LATEST_MATCH_NOT_AUTHORIZED", "CAS_CONFLICT", "TRANSITION_CONFLICT", "LEDGER_KEY_CONFLICT"]},
+        "reason_codes": {"type": "array", "minItems": 1, "maxItems": 1, "uniqueItems": true, "items": {"enum": ["CONTRACT_APPEND_ELIGIBLE_NOT_AUTHORIZED", "IDEMPOTENT_LATEST_MATCH_NOT_AUTHORIZED", "CAS_CONFLICT", "TRANSITION_CONFLICT", "LEDGER_KEY_CONFLICT"]}},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"}, "observed_entry_count": {"$ref": "#/$defs/count"},
+        "observed_latest_entry_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "observed_latest_candidate_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "observed_chain_sha256": {"$ref": "#/$defs/digest"}, "incoming_candidate_sha256": {"$ref": "#/$defs/digest"},
+        "expectation_sha256": {"$ref": "#/$defs/digest"}, "authority_flags": {"$ref": "#/$defs/authorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/effectFlags"}, "evaluation_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"observed_entry_count": {"const": 0}}}, "then": {"properties": {"observed_latest_entry_sha256": {"const": null}, "observed_latest_candidate_sha256": {"const": null}, "observed_chain_sha256": {"const": "sha256:443a4951f590bcdd75c783da049dac4e52edf661a7480ba116694555c305ceb0"}}}, "else": {"properties": {"observed_latest_entry_sha256": {"$ref": "#/$defs/digest"}, "observed_latest_candidate_sha256": {"$ref": "#/$defs/digest"}}}},
+        {"if": {"properties": {"decision": {"const": "CONTRACT_APPEND_ELIGIBLE_NOT_AUTHORIZED"}}}, "then": {"properties": {"reason_codes": {"const": ["CONTRACT_APPEND_ELIGIBLE_NOT_AUTHORIZED"]}}}},
+        {"if": {"properties": {"decision": {"const": "IDEMPOTENT_LATEST_MATCH_NOT_AUTHORIZED"}}}, "then": {"properties": {"reason_codes": {"const": ["IDEMPOTENT_LATEST_MATCH_NOT_AUTHORIZED"]}}}},
+        {"if": {"properties": {"decision": {"const": "CAS_CONFLICT"}}}, "then": {"properties": {"reason_codes": {"const": ["CAS_CONFLICT"]}}}},
+        {"if": {"properties": {"decision": {"const": "TRANSITION_CONFLICT"}}}, "then": {"properties": {"reason_codes": {"const": ["TRANSITION_CONFLICT"]}}}},
+        {"if": {"properties": {"decision": {"const": "LEDGER_KEY_CONFLICT"}}}, "then": {"properties": {"reason_codes": {"const": ["LEDGER_KEY_CONFLICT"]}}}}
+      ]
+    },
+    "observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "observation_state", "ledger_key_sha256", "entry_count", "latest_entry_sha256", "latest_candidate_sha256", "chain_sha256", "latest_candidate_state", "canonical_state", "current_valid", "provided_chain_semantically_validated", "consumer_revalidation_required", "authority_flags", "effect_flags", "observation_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-contract.v1"},
+        "record_type": {"const": "AudioCompletionLatestObservation"}, "task_owner": {"const": "TASK-041"},
+        "observation_state": {"enum": ["EMPTY", "PROVIDED_CHAIN_DIAGNOSTIC"]}, "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "entry_count": {"$ref": "#/$defs/count"},
+        "latest_entry_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "latest_candidate_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+        "chain_sha256": {"$ref": "#/$defs/digest"}, "latest_candidate_state": {"enum": [null, "SOURCE_REVALIDATION_REQUIRED"]},
+        "canonical_state": {"const": "NOT_MINTED"}, "current_valid": {"const": false},
+        "provided_chain_semantically_validated": {"const": false}, "consumer_revalidation_required": {"const": true},
+        "authority_flags": {"$ref": "#/$defs/authorityFlags"}, "effect_flags": {"$ref": "#/$defs/effectFlags"},
+        "observation_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "allOf": [{"if": {"properties": {"observation_state": {"const": "EMPTY"}}}, "then": {"properties": {"entry_count": {"const": 0}, "latest_entry_sha256": {"const": null}, "latest_candidate_sha256": {"const": null}, "chain_sha256": {"const": "sha256:443a4951f590bcdd75c783da049dac4e52edf661a7480ba116694555c305ceb0"}, "latest_candidate_state": {"const": null}}}, "else": {"properties": {"entry_count": {"$ref": "#/$defs/positiveCount"}, "latest_entry_sha256": {"$ref": "#/$defs/digest"}, "latest_candidate_sha256": {"$ref": "#/$defs/digest"}, "latest_candidate_state": {"const": "SOURCE_REVALIDATION_REQUIRED"}}}}]
+    },
+    "publicProjection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "observation_state", "entry_count", "latest_candidate_state", "canonical_state", "current_valid", "provided_chain_semantically_validated", "consumer_revalidation_required", "storage_origin_authenticated", "native_append_authorized", "canonical_latest_authorized", "canonical_pass_authorized", "public_projection_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-contract.v1"},
+        "record_type": {"const": "AudioCompletionLedgerLatestPublicProjection"},
+        "observation_state": {"enum": ["EMPTY", "PROVIDED_CHAIN_DIAGNOSTIC"]}, "entry_count": {"$ref": "#/$defs/count"},
+        "latest_candidate_state": {"enum": [null, "SOURCE_REVALIDATION_REQUIRED"]},
+        "canonical_state": {"const": "NOT_MINTED"}, "current_valid": {"const": false},
+        "provided_chain_semantically_validated": {"const": false}, "consumer_revalidation_required": {"const": true}, "storage_origin_authenticated": {"const": false},
+        "native_append_authorized": {"const": false}, "canonical_latest_authorized": {"const": false},
+        "canonical_pass_authorized": {"const": false}, "public_projection_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "allOf": [{"if": {"properties": {"observation_state": {"const": "EMPTY"}}}, "then": {"properties": {"entry_count": {"const": 0}, "latest_candidate_state": {"const": null}}}, "else": {"properties": {"entry_count": {"$ref": "#/$defs/positiveCount"}, "latest_candidate_state": {"const": "SOURCE_REVALIDATION_REQUIRED"}}}}]
+    }
+  }
+}

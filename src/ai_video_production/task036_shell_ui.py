@@ -30,6 +30,8 @@ from .final_review import FinalReviewApprovalReceipt
 from .final_review_export_application import Task036FinalReviewExportApplication
 from .final_review_gate import (
     FinalReviewExternalGateReceipt,
+    FinalReviewGateId,
+    bind_edit_persistence_gate_receipt,
     validate_external_gate_receipts,
 )
 from .errors import ProductError, ProductErrorCategory
@@ -48,6 +50,7 @@ from .audio_workspace_application import Task041AudioWorkspaceApplication
 from .audio_placement_application import Task026AudioPlacementApplication
 from .quick_generation_application import Task042QuickGenerationApplication
 from .task044_nle_shell import Task044NleShellController
+from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 from .game_intelligence_shell import GameIntelligenceShellApplication
 from .interactive_timeline import (
     InteractiveTimeline, InteractiveTimelineClip, TimelineMediaKind, TimelineTrack,
@@ -213,6 +216,9 @@ class Task036ShellBridge:
         final_review_external_gate_provider: Callable[
             [], tuple[FinalReviewExternalGateReceipt, ...]
         ] | None = None,
+        final_review_edit_persistence_provider: Callable[
+            [], Task044EditPersistenceReceipt | None
+        ] | None = None,
         final_review_export_preparation_provider: Callable[
             [FinalReviewApprovalReceipt], ExportPreparation
         ] | None = None,
@@ -260,6 +266,11 @@ class Task036ShellBridge:
         if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
             raise ValueError("Final Review external Gate provider is invalid")
         self._final_review_external_gate_provider = final_review_external_gate_provider
+        if final_review_edit_persistence_provider is not None and not callable(
+            final_review_edit_persistence_provider
+        ):
+            raise ValueError("Final Review edit persistence provider is invalid")
+        self._final_review_edit_persistence_provider = final_review_edit_persistence_provider
         self._game_intelligence_application = game_intelligence_application
         # Keep the rich Python controller graph outside pywebview's public API
         # discovery. Only the typed bridge methods below are exported.
@@ -352,9 +363,25 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().prepare_trim(args)
 
+    def interactive_timeline_prepare_move(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_move(args)
+
+    def interactive_timeline_prepare_undo(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_undo(args)
+
+    def interactive_timeline_prepare_redo(self, args: Any) -> dict[str, Any]:
+        with self._nle_operation():
+            return self._require_nle_controller().prepare_redo(args)
+
     def interactive_timeline_apply_edit(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():
             return self._require_nle_controller().apply_edit(args)
+
+    def interactive_timeline_cancel_edit(self, args: Any) -> dict[str, object]:
+        with self._nle_operation():
+            return self._require_nle_controller().cancel_edit(args)
 
     def visual_asset_placement_snapshot(self, args: Any = None) -> dict[str, Any]:
         with self._nle_operation():
@@ -468,9 +495,53 @@ class Task036ShellBridge:
 
     def choose_and_ingest_media(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "media choose and ingest")
-        if self._pre_edit_runtime is None:
-            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self._pre_edit_runtime.choose_and_ingest_media()
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.choose_and_ingest_media()
+            if not isinstance(result, dict) or result.get("task_owner") != "TASK-036" or result.get("operation") != "MEDIA_CHOOSE_AND_INGEST":
+                raise ProductError(
+                    "ERR_TASK036_MEDIA_INGEST_RESULT_INVALID",
+                    "Media ingest returned an invalid private result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            status = result.get("status")
+            if status == "CANCELLED" and result.get("ingest_started") is False:
+                return {
+                    "task_owner": "TASK-036",
+                    "operation": "MEDIA_CHOOSE_AND_INGEST",
+                    "status": "CANCELLED",
+                    "ingest_started": False,
+                    "host_path_persisted": False,
+                }
+            session = result.get("editing_session")
+            asset_id = session.get("source_asset_id") if isinstance(session, dict) else None
+            asset_sha256 = session.get("source_asset_sha256") if isinstance(session, dict) else None
+            if (
+                status != "INGESTED"
+                or not isinstance(asset_id, str)
+                or not asset_id
+                or len(asset_id) > 200
+                or asset_id[0] not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+                or any(char not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._:-" for char in asset_id)
+                or not isinstance(asset_sha256, str)
+                or len(asset_sha256) != 71
+                or not asset_sha256.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in asset_sha256[7:])
+            ):
+                raise ProductError(
+                    "ERR_TASK036_MEDIA_INGEST_RESULT_INVALID",
+                    "Media ingest returned an invalid canonical Asset identity",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            return {
+                "task_owner": "TASK-036",
+                "operation": "MEDIA_CHOOSE_AND_INGEST",
+                "status": "INGESTED",
+                "asset_id": asset_id,
+                "asset_sha256": asset_sha256,
+                "host_path_persisted": False,
+            }
 
     def run_local_transcription(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "local transcription")
@@ -1334,6 +1405,29 @@ class Task036ShellBridge:
                 "Final Review external Gate provider returned invalid receipts",
                 ProductErrorCategory.DATA_INTEGRITY,
             ) from exc
+        if self._final_review_edit_persistence_provider is not None:
+            if any(
+                item.gate_id is FinalReviewGateId.EDIT_PERSISTENCE
+                for item in external_gate_receipts
+            ):
+                raise ProductError(
+                    "ERR_FINAL_REVIEW_EDIT_PERSISTENCE_AUTHORITY_SUBSTITUTION",
+                    "EDIT_PERSISTENCE must come from the bound TASK-044 reader",
+                    ProductErrorCategory.SECURITY,
+                )
+            source = self._final_review_edit_persistence_provider()
+            if source is not None:
+                try:
+                    external_gate_receipts = validate_external_gate_receipts((
+                        *external_gate_receipts,
+                        bind_edit_persistence_gate_receipt(source),
+                    ))
+                except (TypeError, ValueError) as exc:
+                    raise ProductError(
+                        "ERR_FINAL_REVIEW_EDIT_PERSISTENCE_BINDING_INVALID",
+                        "TASK-044 edit persistence receipt is invalid",
+                        ProductErrorCategory.DATA_INTEGRITY,
+                    ) from exc
         return {
             "available": True,
             **Task036FinalReviewReadinessProjection.project(

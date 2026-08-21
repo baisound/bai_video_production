@@ -174,6 +174,32 @@ def test_existing_product_authority_is_projected_into_mock_surfaces() -> None:
     assert "generation_queue_dispatch" not in SHELL_HTML
 
 
+def test_edit_screen_binds_move_trim_undo_redo_and_decline_cancel() -> None:
+    for marker in (
+        'id="undoEditButton" disabled',
+        'id="redoEditButton" disabled',
+        "function renderHistoryControls(model)",
+        "history_controls",
+        "interactive_timeline_prepare_move",
+        "interactive_timeline_prepare_undo",
+        "interactive_timeline_prepare_redo",
+        "interactive_timeline_cancel_edit",
+        "function timelineCommandId(prefix)",
+        "timelineCommandSequence+=1",
+        "function completePreparedEdit(prepared,message)",
+        "function promptNleMove(clip)",
+        "function promptNleTrim(clip,edge)",
+        "await call('interactive_timeline_cancel_edit'",
+        "currentPage!=='edit'",
+        "event.shiftKey?'redo':'undo'",
+        "target.closest('input, textarea, select')",
+    ):
+        assert marker in SHELL_HTML
+    assert "現在のTASK-044 Shell ControllerはUndo可否をまだ投影していません" not in SHELL_HTML
+    assert "現在のTASK-044 Shell ControllerはRedo可否をまだ投影していません" not in SHELL_HTML
+    assert "command_id:`ui-trim-${clip.clip_id}-${edge}-${frame}`" not in SHELL_HTML
+
+
 def test_asset_review_binds_exact_task038_human_decision_boundary() -> None:
     for marker in (
         "function renderAssetReview(audit)",

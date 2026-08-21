@@ -14,11 +14,17 @@ import re
 from typing import Any, Mapping
 
 from .game_commentary import CommentaryClaim, CommentaryClaimKind, CommentaryFact
+from .canonical_game_event import GameEnvironment
 from .ids import IdKind, validate_id
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
 
 
-SCHEMA_VERSION = "1.0.0"
+# Versions are deliberately per record kind; no global schema version may be
+# used for serialization or admission.
+BINDING_SCHEMA_VERSION = "1.0.0"
+CONTEXT_SCHEMA_VERSION = "1.1.0"
+PROPOSAL_SCHEMA_VERSION = "1.0.0"
+RECEIPT_SCHEMA_VERSION = "1.0.0"
 _LOCALE_RE = re.compile(r"[a-z]{2,3}(?:-[A-Z]{2})?")
 _STABLE_CODE_RE = re.compile(r"[A-Z][A-Z0-9_]{1,63}")
 _SAFE_REF_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s\\@?#]+")
@@ -291,7 +297,7 @@ class TunedModelBinding:
 
     def to_dict(self) -> dict[str, Any]:
         body = {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": BINDING_SCHEMA_VERSION,
             "binding_id": self.binding_id,
             "revision": self.revision,
             "status": self.status.value,
@@ -305,8 +311,8 @@ class TunedModelBinding:
             "evaluation_report_sha256": self.evaluation_report_sha256,
             "rights_manifest_sha256": self.rights_manifest_sha256,
             "supported_locales": list(self.supported_locales),
-            "context_schema": SCHEMA_VERSION,
-            "output_schema": SCHEMA_VERSION,
+            "context_schema": CONTEXT_SCHEMA_VERSION,
+            "output_schema": PROPOSAL_SCHEMA_VERSION,
             "route_capability": "DBD_TUNED_COMMENTARY_REASONING",
             "approved_at": self.approved_at,
             "approved_by_ref": self.approved_by_ref,
@@ -321,8 +327,11 @@ class DbDReasoningContextEnvelope:
     event_id: str
     event_revision: int
     event_sha256: str
+    evidence_snapshot_sha256: str
     timeline_sha256: str
     game_version: str
+    game_environment: GameEnvironment
+    rag_snapshot_sha256: str
     session_mode: ReasoningSessionMode
     freshness: ContextFreshness
     observed_facts: tuple[ReasoningFact, ...]
@@ -341,10 +350,14 @@ class DbDReasoningContextEnvelope:
         validate_id(self.match_id, IdKind.GAME_MATCH)
         validate_id(self.event_id, IdKind.GAME_EVENT)
         _text(self.game_version, name="game_version", maximum=128)
+        if self.game_environment not in {GameEnvironment.LIVE, GameEnvironment.PTB}:
+            raise ValueError("game_environment must be LIVE or PTB")
+        validate_sha256(self.rag_snapshot_sha256, field_name="rag_snapshot_sha256")
         if isinstance(self.event_revision, bool) or not isinstance(self.event_revision, int) or self.event_revision < 1:
             raise ValueError("event_revision must be positive")
         validate_sha256(self.timeline_sha256, field_name="timeline_sha256")
         validate_sha256(self.event_sha256, field_name="event_sha256")
+        validate_sha256(self.evidence_snapshot_sha256, field_name="evidence_snapshot_sha256")
         if not isinstance(self.session_mode, ReasoningSessionMode):
             raise ValueError("session_mode must be ReasoningSessionMode")
         if not isinstance(self.freshness, ContextFreshness):
@@ -381,28 +394,40 @@ class DbDReasoningContextEnvelope:
 
     @property
     def dispatchable(self) -> bool:
-        return self.freshness is ContextFreshness.CURRENT and all(
+        return self.freshness is ContextFreshness.CURRENT and self._canonical_body_size() <= MAX_CONTEXT_CANONICAL_BYTES and all(
             item.rights_status == "ADMITTED" and item.verification_state == "VERIFIED"
             for item in self.rag_chunks
         )
 
     def require_dispatchable(self) -> None:
+        if self._canonical_body_size() > MAX_CONTEXT_CANONICAL_BYTES:
+            raise ValueError("context canonical JSON exceeds maximum size")
         if not self.dispatchable:
             raise ValueError("only CURRENT, admitted, verified reasoning context is dispatchable")
 
-    def to_dict(self) -> dict[str, Any]:
-        body = {
-            "schema_version": SCHEMA_VERSION,
+    def _canonical_body(self) -> dict[str, Any]:
+        """Return the hashable Context body without calling dispatchability.
+
+        Size admission uses this same body directly so a direct oversized
+        envelope is non-dispatchable without a ``dispatchable -> to_dict``
+        recursion.
+        """
+
+        return {
+            "schema_version": CONTEXT_SCHEMA_VERSION,
             "context_id": self.context_id,
             "match_id": self.match_id,
             "event_id": self.event_id,
             "event_revision": self.event_revision,
             "event_sha256": self.event_sha256,
+            "evidence_snapshot_sha256": self.evidence_snapshot_sha256,
             "timeline_sha256": self.timeline_sha256,
             "game_version": self.game_version,
+            "game_environment": self.game_environment.value,
+            "rag_snapshot_sha256": self.rag_snapshot_sha256,
             "session_mode": self.session_mode.value,
             "freshness": self.freshness.value,
-            "policy_version": SCHEMA_VERSION,
+            "policy_version": CONTEXT_SCHEMA_VERSION,
             "observed_facts": [item.to_dict() for item in self.observed_facts],
             "canonical_facts": [item.to_dict() for item in self.canonical_facts],
             "evidence_refs": list(self.evidence_refs),
@@ -415,6 +440,12 @@ class DbDReasoningContextEnvelope:
             "style_profile_ref": self.style_profile_ref,
             "training_eligible": self.training_eligible,
         }
+
+    def _canonical_body_size(self) -> int:
+        return len(canonical_json_bytes(self._canonical_body()))
+
+    def to_dict(self) -> dict[str, Any]:
+        body = self._canonical_body()
         canonical = canonical_json_bytes(body)
         if len(canonical) > MAX_CONTEXT_CANONICAL_BYTES:
             raise ValueError("context canonical JSON exceeds maximum size")
@@ -507,7 +538,7 @@ class DbDReasoningProposal:
 
     def to_dict(self) -> dict[str, Any]:
         body = {
-            "schema_version": SCHEMA_VERSION,
+            "schema_version": PROPOSAL_SCHEMA_VERSION,
             "disposition": self.disposition.value,
             "observed_claims": [item.to_dict() for item in self.observed_claims],
             "canonical_claims": [item.to_dict() for item in self.canonical_claims],
@@ -527,10 +558,13 @@ def validate_context_freshness(
     *,
     current_event_revision: int,
     event_sha256: str,
+    expected_evidence_snapshot_sha256: str,
     timeline_sha256: str,
     game_version: str,
+    game_environment: GameEnvironment,
     knowledge_ref_sha256s: tuple[str, ...],
     rag_content_sha256s: tuple[str, ...],
+    rag_snapshot_sha256: str,
 ) -> ContextFreshness:
     """Purely compare a context with the current canonical dependency snapshot."""
 
@@ -539,8 +573,12 @@ def validate_context_freshness(
     if isinstance(current_event_revision, bool) or not isinstance(current_event_revision, int) or current_event_revision < 1:
         raise ValueError("current_event_revision must be positive")
     validate_sha256(event_sha256, field_name="event_sha256")
+    validate_sha256(expected_evidence_snapshot_sha256, field_name="expected_evidence_snapshot_sha256")
     validate_sha256(timeline_sha256, field_name="timeline_sha256")
+    validate_sha256(rag_snapshot_sha256, field_name="rag_snapshot_sha256")
     _text(game_version, name="game_version", maximum=128)
+    if game_environment not in {GameEnvironment.LIVE, GameEnvironment.PTB}:
+        raise ValueError("game_environment must be LIVE or PTB")
     _sorted_unique(knowledge_ref_sha256s, name="knowledge_ref_sha256s")
     _sorted_unique(rag_content_sha256s, name="rag_content_sha256s", maximum=16)
     for value in (*knowledge_ref_sha256s, *rag_content_sha256s):
@@ -548,10 +586,13 @@ def validate_context_freshness(
     matches = (
         context.event_revision == current_event_revision
         and context.event_sha256 == event_sha256
+        and context.evidence_snapshot_sha256 == expected_evidence_snapshot_sha256
         and context.timeline_sha256 == timeline_sha256
         and context.game_version == game_version
+        and context.game_environment is game_environment
         and context.knowledge_ref_sha256s == knowledge_ref_sha256s
         and tuple(item.content_sha256 for item in context.rag_chunks) == rag_content_sha256s
+        and context.rag_snapshot_sha256 == rag_snapshot_sha256
     )
     return ContextFreshness.CURRENT if matches else ContextFreshness.STALE
 
@@ -664,7 +705,7 @@ class DbDReasoningExecutionReceipt:
 
     def to_dict(self) -> dict[str, Any]:
         body = {
-            "schema_version": SCHEMA_VERSION, "receipt_id": self.receipt_id, "attempt_id": self.attempt_id,
+            "schema_version": RECEIPT_SCHEMA_VERSION, "receipt_id": self.receipt_id, "attempt_id": self.attempt_id,
             "session_mode": self.session_mode.value, "training_eligible": self.training_eligible,
             "context_sha256": self.context_sha256, "binding_revision": self.binding_revision,
             "binding_status": self.binding_status.value, "binding_sha256": self.binding_sha256,
@@ -693,8 +734,29 @@ class DbDReasoningExecutionReceipt:
 def admit_reasoning_contract_record(record: Mapping[str, Any]) -> Mapping[str, Any]:
     """Validate schema version, JSON Schema, canonical record and embedded RAG digests."""
 
-    if not isinstance(record, Mapping) or record.get("schema_version") != SCHEMA_VERSION:
-        raise ValueError("unsupported reasoning contract schema_version")
+    if not isinstance(record, Mapping):
+        raise ValueError("reasoning contract must be a mapping")
+    checksum_to_kind = {
+        "binding_sha256": ("binding", BINDING_SCHEMA_VERSION),
+        "context_sha256": ("context", CONTEXT_SCHEMA_VERSION),
+        "proposal_sha256": ("proposal", PROPOSAL_SCHEMA_VERSION),
+        "receipt_sha256": ("receipt", RECEIPT_SCHEMA_VERSION),
+    }
+    # Receipts intentionally *reference* a Context and Binding digest.  Their
+    # own receipt marker is therefore the only marker that may coexist with
+    # those dependency hashes.  Other record kinds may carry exactly one.
+    if "receipt_sha256" in record:
+        markers = tuple(field for field in ("receipt_sha256", "proposal_sha256") if field in record)
+    elif "proposal_sha256" in record:
+        markers = tuple(field for field in ("proposal_sha256", "binding_sha256", "context_sha256") if field in record)
+    else:
+        markers = tuple(field for field in ("binding_sha256", "context_sha256") if field in record)
+    if len(markers) != 1:
+        raise ValueError("reasoning contract must carry exactly one record-kind checksum marker")
+    checksum_field = markers[0]
+    record_kind, expected_schema_version = checksum_to_kind[checksum_field]
+    if record.get("schema_version") != expected_schema_version:
+        raise ValueError(f"unsupported {record_kind} reasoning contract schema_version")
     from importlib.resources import files
     from jsonschema import Draft202012Validator
 
@@ -702,10 +764,6 @@ def admit_reasoning_contract_record(record: Mapping[str, Any]) -> Mapping[str, A
     errors = list(Draft202012Validator(schema).iter_errors(dict(record)))
     if errors:
         raise ValueError("reasoning contract does not satisfy JSON Schema")
-    checksum_fields = ("receipt_sha256", "proposal_sha256", "context_sha256", "binding_sha256")
-    checksum_field = next((field for field in checksum_fields if field in record), None)
-    if checksum_field is None:
-        raise ValueError("reasoning contract checksum is required")
     verify_canonical_record_sha256(record, checksum_field=checksum_field)
 
     def require_sha256(name: str) -> None:
@@ -773,6 +831,10 @@ def admit_reasoning_contract_record(record: Mapping[str, Any]) -> Mapping[str, A
             raise ValueError("context canonical JSON exceeds maximum size")
         if record["freshness"] != ContextFreshness.CURRENT.value:
             raise ValueError("only CURRENT context is admissible for reasoning dispatch")
+        if record["game_environment"] not in {GameEnvironment.LIVE.value, GameEnvironment.PTB.value}:
+            raise ValueError("context game_environment must be LIVE or PTB")
+        require_sha256("evidence_snapshot_sha256")
+        require_sha256("rag_snapshot_sha256")
         if any(chunk["rights_status"] != "ADMITTED" or chunk["verification_state"] != "VERIFIED" for chunk in chunks):
             raise ValueError("only ADMITTED and VERIFIED RAG chunks are admissible for reasoning dispatch")
     elif checksum_field == "proposal_sha256":
@@ -810,6 +872,6 @@ def admit_reasoning_contract_record(record: Mapping[str, Any]) -> Mapping[str, A
 __all__ = [
     "AuthorizationDecision", "ContextFreshness", "DbDReasoningContextEnvelope", "DbDReasoningExecutionReceipt", "DbDReasoningProposal", "HumanReviewResult", "InferenceQualifier", "MAX_CONTEXT_CANONICAL_BYTES",
     "RagChunk", "ReasoningDisposition", "ReasoningFact", "ReasoningInference",
-    "ReasoningSessionMode", "SCHEMA_VERSION", "StyleMetrics", "TunedModelBinding",
+    "ReasoningSessionMode", "BINDING_SCHEMA_VERSION", "CONTEXT_SCHEMA_VERSION", "PROPOSAL_SCHEMA_VERSION", "RECEIPT_SCHEMA_VERSION", "StyleMetrics", "TunedModelBinding",
     "TunedModelBindingStatus", "admit_reasoning_contract_record", "validate_context_freshness", "verify_canonical_record_sha256",
 ]

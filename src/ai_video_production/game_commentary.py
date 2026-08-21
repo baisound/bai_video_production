@@ -29,7 +29,7 @@ from .dbd_perk_knowledge import DbDPerkKnowledgeStore, PerkEnvironment, PerkLook
 from .dbd_killer_knowledge import DbDKillerKnowledgeStore, KillerKnowledgeKind
 from .errors import ProductError, ProductErrorCategory
 from .ids import IdKind, generate_id, validate_id
-from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
+from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
 
 
 class CommentaryDisposition(str, Enum):
@@ -498,6 +498,7 @@ class CommentaryCandidateStore:
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
+        self._reasoning_review_current_resolver: Any | None = None
         if self.path.exists() and self.path.is_symlink():
             raise ProductError("ERR_COMMENTARY_STORE_PATH_SYMLINK", "Commentary store path must not be a symlink", ProductErrorCategory.SECURITY)
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -514,43 +515,60 @@ class CommentaryCandidateStore:
             with closing(self._connect()) as conn:
                 version = conn.execute("PRAGMA user_version").fetchone()[0]
                 tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-                if version > 2:
+                if version > 3:
                     raise ProductError("ERR_COMMENTARY_STORE_NEWER_VERSION", "Commentary store uses a newer schema", ProductErrorCategory.DATA_INTEGRITY)
                 if version == 0 and tables:
                     raise ProductError("ERR_COMMENTARY_STORE_FOREIGN_SCHEMA", "Existing SQLite is not an admitted Commentary store", ProductErrorCategory.DATA_INTEGRITY)
                 if version == 0:
-                    conn.executescript(
-                        """
-                        CREATE TABLE store_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
-                        CREATE TABLE commentary_candidates(candidate_id TEXT PRIMARY KEY,match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,status TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL,created_at TEXT NOT NULL);
-                        CREATE INDEX commentary_event_lookup ON commentary_candidates(event_id,event_revision,created_at,candidate_id);
-                        CREATE TABLE dbd_reasoning_candidate_lineage(candidate_id TEXT PRIMARY KEY REFERENCES commentary_candidates(candidate_id),parent_candidate_id TEXT UNIQUE REFERENCES commentary_candidates(candidate_id),match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,context_sha256 TEXT NOT NULL,commentary_plan_sha256 TEXT NOT NULL,structural_body_sha256 TEXT NOT NULL,proposal_sha256 TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL);
-                        CREATE INDEX dbd_reasoning_lineage_event_lookup ON dbd_reasoning_candidate_lineage(event_id,event_revision,candidate_id);
-                        """
-                    )
-                    conn.execute("INSERT INTO store_metadata VALUES('store_format','task049.game-commentary.sqlite')")
-                    conn.execute("PRAGMA user_version=2")
-                    conn.commit()
+                    try:
+                        conn.execute("BEGIN IMMEDIATE")
+                        conn.execute("CREATE TABLE store_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)")
+                        conn.execute("CREATE TABLE commentary_candidates(candidate_id TEXT PRIMARY KEY,match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,status TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL,created_at TEXT NOT NULL)")
+                        conn.execute("CREATE INDEX commentary_event_lookup ON commentary_candidates(event_id,event_revision,created_at,candidate_id)")
+                        self._create_v2_lineage_schema(conn)
+                        self._create_v3_review_schema(conn)
+                        conn.execute("INSERT INTO store_metadata VALUES('store_format','task049.game-commentary.sqlite')")
+                        self._validate_v3_schema(conn)
+                        conn.execute("PRAGMA user_version=3")
+                        conn.commit()
+                    except Exception:
+                        conn.rollback()
+                        raise
                 else:
                     metadata = dict(conn.execute("SELECT key,value FROM store_metadata"))
                     if metadata.get("store_format") != "task049.game-commentary.sqlite" or "commentary_candidates" not in tables:
                         raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary store format is not recognized", ProductErrorCategory.DATA_INTEGRITY)
                     self._validate_candidate_schema(conn)
-                    if version == 1:
+                    if version in {1, 2}:
                         try:
                             conn.execute("BEGIN IMMEDIATE")
-                            conn.execute("CREATE TABLE dbd_reasoning_candidate_lineage(candidate_id TEXT PRIMARY KEY REFERENCES commentary_candidates(candidate_id),parent_candidate_id TEXT UNIQUE REFERENCES commentary_candidates(candidate_id),match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,context_sha256 TEXT NOT NULL,commentary_plan_sha256 TEXT NOT NULL,structural_body_sha256 TEXT NOT NULL,proposal_sha256 TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL)")
-                            conn.execute("CREATE INDEX dbd_reasoning_lineage_event_lookup ON dbd_reasoning_candidate_lineage(event_id,event_revision,candidate_id)")
-                            conn.execute("PRAGMA user_version=2")
+                            if version == 1:
+                                self._create_v2_lineage_schema(conn)
+                            else:
+                                self._validate_v2_schema(conn)
+                            self._create_v3_review_schema(conn)
+                            self._validate_v3_schema(conn)
+                            conn.execute("PRAGMA user_version=3")
                             conn.commit()
-                        except sqlite3.DatabaseError:
+                        except Exception:
                             conn.rollback()
                             raise
-                    elif "dbd_reasoning_candidate_lineage" not in tables:
-                        raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v2 lineage table is missing", ProductErrorCategory.DATA_INTEGRITY)
-                self._validate_v2_schema(conn)
+                    elif "dbd_reasoning_candidate_lineage" not in tables or "dbd_reasoning_human_reviews" not in tables:
+                        raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v3 reasoning tables are missing", ProductErrorCategory.DATA_INTEGRITY)
+                self._validate_v3_schema(conn)
         except sqlite3.DatabaseError as exc:
             raise ProductError("ERR_COMMENTARY_STORE_CORRUPT", "Commentary SQLite is corrupt or unreadable", ProductErrorCategory.DATA_INTEGRITY) from exc
+
+    @staticmethod
+    def _create_v2_lineage_schema(conn: sqlite3.Connection) -> None:
+        conn.execute("CREATE TABLE dbd_reasoning_candidate_lineage(candidate_id TEXT PRIMARY KEY REFERENCES commentary_candidates(candidate_id),parent_candidate_id TEXT UNIQUE REFERENCES commentary_candidates(candidate_id),match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,context_sha256 TEXT NOT NULL,commentary_plan_sha256 TEXT NOT NULL,structural_body_sha256 TEXT NOT NULL,proposal_sha256 TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL)")
+        conn.execute("CREATE INDEX dbd_reasoning_lineage_event_lookup ON dbd_reasoning_candidate_lineage(event_id,event_revision,candidate_id)")
+
+    @staticmethod
+    def _create_v3_review_schema(conn: sqlite3.Connection) -> None:
+        conn.execute("CREATE TABLE dbd_reasoning_human_reviews(review_sha256 TEXT PRIMARY KEY,root_candidate_id TEXT NOT NULL REFERENCES dbd_reasoning_candidate_lineage(candidate_id),leaf_candidate_id TEXT NOT NULL REFERENCES dbd_reasoning_candidate_lineage(candidate_id),leaf_candidate_sha256 TEXT NOT NULL,leaf_lineage_sha256 TEXT NOT NULL,match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,context_sha256 TEXT NOT NULL,commentary_plan_sha256 TEXT NOT NULL,proposal_sha256 TEXT NOT NULL,review_revision INTEGER NOT NULL,previous_review_sha256 TEXT,decision TEXT NOT NULL,authority_binding_sha256 TEXT NOT NULL,confirmation_sha256 TEXT NOT NULL UNIQUE,reviewed_at TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL,UNIQUE(root_candidate_id,review_revision),UNIQUE(root_candidate_id,previous_review_sha256),UNIQUE(root_candidate_id,review_sha256),FOREIGN KEY(root_candidate_id,previous_review_sha256) REFERENCES dbd_reasoning_human_reviews(root_candidate_id,review_sha256))")
+        conn.execute("CREATE INDEX dbd_reasoning_review_root_lookup ON dbd_reasoning_human_reviews(root_candidate_id,review_revision DESC,review_sha256)")
+        conn.execute("CREATE INDEX dbd_reasoning_review_event_lookup ON dbd_reasoning_human_reviews(event_id,event_revision,root_candidate_id)")
 
     @staticmethod
     def _validate_v2_schema(conn: sqlite3.Connection) -> None:
@@ -580,6 +598,78 @@ class CommentaryCandidateStore:
         }
         if "dbd_reasoning_lineage_event_lookup" not in index_by_name or event_index != ("event_id", "event_revision", "candidate_id") or ("parent_candidate_id",) not in unique_shapes:
             raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v2 lineage index is missing", ProductErrorCategory.DATA_INTEGRITY)
+
+    @staticmethod
+    def _validate_v3_schema(conn: sqlite3.Connection) -> None:
+        CommentaryCandidateStore._validate_v2_schema(conn)
+        expected = (
+            ("review_sha256", "TEXT", 0, 1), ("root_candidate_id", "TEXT", 1, 0),
+            ("leaf_candidate_id", "TEXT", 1, 0), ("leaf_candidate_sha256", "TEXT", 1, 0),
+            ("leaf_lineage_sha256", "TEXT", 1, 0), ("match_id", "TEXT", 1, 0),
+            ("event_id", "TEXT", 1, 0), ("event_revision", "INTEGER", 1, 0),
+            ("context_sha256", "TEXT", 1, 0), ("commentary_plan_sha256", "TEXT", 1, 0),
+            ("proposal_sha256", "TEXT", 1, 0), ("review_revision", "INTEGER", 1, 0),
+            ("previous_review_sha256", "TEXT", 0, 0), ("decision", "TEXT", 1, 0),
+            ("authority_binding_sha256", "TEXT", 1, 0), ("confirmation_sha256", "TEXT", 1, 0),
+            ("reviewed_at", "TEXT", 1, 0), ("payload_json", "TEXT", 1, 0),
+            ("payload_sha256", "TEXT", 1, 0),
+        )
+        info = tuple(conn.execute("PRAGMA table_info(dbd_reasoning_human_reviews)"))
+        if tuple((row[1], row[2].upper(), row[3], row[5]) for row in info) != expected:
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v3 review table shape is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        foreign_rows = tuple(conn.execute("PRAGMA foreign_key_list(dbd_reasoning_human_reviews)"))
+        grouped: dict[int, list[sqlite3.Row]] = {}
+        for row in foreign_rows:
+            grouped.setdefault(row[0], []).append(row)
+        foreign = {
+            (
+                rows[0][2], tuple((row[3], row[4]) for row in sorted(rows, key=lambda item: item[1])),
+                rows[0][5], rows[0][6], rows[0][7],
+            )
+            for rows in grouped.values()
+        }
+        required_foreign = {
+            ("dbd_reasoning_candidate_lineage", (("root_candidate_id", "candidate_id"),), "NO ACTION", "NO ACTION", "NONE"),
+            ("dbd_reasoning_candidate_lineage", (("leaf_candidate_id", "candidate_id"),), "NO ACTION", "NO ACTION", "NONE"),
+            ("dbd_reasoning_human_reviews", (("root_candidate_id", "root_candidate_id"), ("previous_review_sha256", "review_sha256")), "NO ACTION", "NO ACTION", "NONE"),
+        }
+        if foreign != required_foreign:
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v3 review foreign keys are invalid", ProductErrorCategory.DATA_INTEGRITY)
+        indexes = tuple(conn.execute("PRAGMA index_list(dbd_reasoning_human_reviews)"))
+        shapes = {
+            (row[1], bool(row[2]), CommentaryCandidateStore._index_columns(conn, row[1]))
+            for row in indexes
+        }
+        named = {name: columns for name, unique, columns in shapes if not unique}
+        if named != {
+            "dbd_reasoning_review_root_lookup": ("root_candidate_id", "review_revision", "review_sha256"),
+            "dbd_reasoning_review_event_lookup": ("event_id", "event_revision", "root_candidate_id"),
+        } or any(row[4] != 0 for row in indexes):
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v3 review indexes are invalid", ProductErrorCategory.DATA_INTEGRITY)
+        unique_columns = {columns for _, unique, columns in shapes if unique}
+        if unique_columns != {
+            ("review_sha256",), ("confirmation_sha256",),
+            ("root_candidate_id", "review_revision"),
+            ("root_candidate_id", "previous_review_sha256"),
+            ("root_candidate_id", "review_sha256"),
+        }:
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v3 review uniqueness is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        root_signature = CommentaryCandidateStore._index_signature(conn, "dbd_reasoning_review_root_lookup")
+        event_signature = CommentaryCandidateStore._index_signature(conn, "dbd_reasoning_review_event_lookup")
+        if root_signature != (("root_candidate_id", False), ("review_revision", True), ("review_sha256", False)) or event_signature != (("event_id", False), ("event_revision", False), ("root_candidate_id", False)):
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v3 review index ordering is invalid", ProductErrorCategory.DATA_INTEGRITY)
+
+    @staticmethod
+    def _index_columns(conn: sqlite3.Connection, name: str) -> tuple[str, ...]:
+        if not isinstance(name, str) or "'" in name:
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary index name is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        return tuple(row[2] for row in conn.execute(f"PRAGMA index_xinfo('{name}')") if row[1] >= 0)
+
+    @staticmethod
+    def _index_signature(conn: sqlite3.Connection, name: str) -> tuple[tuple[str, bool], ...]:
+        if not isinstance(name, str) or "'" in name:
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary index name is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        return tuple((row[2], bool(row[3])) for row in conn.execute(f"PRAGMA index_xinfo('{name}')") if row[1] >= 0)
 
     @staticmethod
     def _validate_candidate_schema(conn: sqlite3.Connection) -> None:
@@ -636,6 +726,192 @@ class CommentaryCandidateStore:
                 admit_reasoning_candidate_lineage_record(lineage, candidate_payload=candidate)
             except (ValueError, TypeError, json.JSONDecodeError) as exc:
                 raise ProductError("ERR_COMMENTARY_REASONING_LINEAGE_INVALID", "Stored reasoning Candidate lineage is invalid", ProductErrorCategory.DATA_INTEGRITY) from exc
+
+    @staticmethod
+    def _audit_human_review_rows(conn: sqlite3.Connection) -> None:
+        from .dbd_reasoning_human_review import admit_reasoning_human_review_record
+        if tuple(conn.execute("PRAGMA foreign_key_check")):
+            raise ProductError("ERR_COMMENTARY_REASONING_REVIEW_INVALID", "Stored reasoning Human review foreign key is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        rows = conn.execute("SELECT review_sha256,root_candidate_id,leaf_candidate_id,leaf_candidate_sha256,leaf_lineage_sha256,match_id,event_id,event_revision,context_sha256,commentary_plan_sha256,proposal_sha256,review_revision,previous_review_sha256,decision,authority_binding_sha256,confirmation_sha256,reviewed_at,payload_json,payload_sha256 FROM dbd_reasoning_human_reviews ORDER BY root_candidate_id,review_revision").fetchall()
+        heads: dict[str, tuple[int, str]] = {}
+        for row in rows:
+            try:
+                payload = json.loads(row[17])
+                review = admit_reasoning_human_review_record(payload)
+                expected = (
+                    review.review_sha256, review.root_candidate_id, review.leaf_candidate_id,
+                    review.leaf_candidate_sha256, review.leaf_lineage_sha256, review.match_id,
+                    review.event_id, review.event_revision, review.context_sha256,
+                    review.commentary_plan_sha256, review.proposal_sha256, review.review_revision,
+                    review.previous_review_sha256, review.decision.value,
+                    review.authority_binding_sha256, review.confirmation_sha256,
+                    review.reviewed_at, review.review_sha256,
+                )
+                if tuple(row[:17]) + (row[18],) != expected:
+                    raise ValueError("review columns do not match payload")
+                owner = conn.execute("SELECT c.payload_sha256,l.payload_sha256,l.match_id,l.event_id,l.event_revision,l.context_sha256,l.commentary_plan_sha256,l.proposal_sha256 FROM commentary_candidates c JOIN dbd_reasoning_candidate_lineage l ON l.candidate_id=c.candidate_id WHERE c.candidate_id=?", (review.leaf_candidate_id,)).fetchone()
+                if owner is None or (
+                    review.leaf_candidate_sha256, review.leaf_lineage_sha256,
+                    review.match_id, review.event_id, review.event_revision,
+                    review.context_sha256, review.commentary_plan_sha256, review.proposal_sha256,
+                ) != tuple(owner):
+                    raise ValueError("review coordinates cross Candidate/lineage owner")
+                previous = heads.get(review.root_candidate_id)
+                if review.review_revision == 1:
+                    if previous is not None or review.previous_review_sha256 is not None:
+                        raise ValueError("review chain root is invalid")
+                elif previous != (review.review_revision - 1, review.previous_review_sha256):
+                    raise ValueError("review chain is not contiguous")
+                heads[review.root_candidate_id] = (review.review_revision, review.review_sha256)
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                raise ProductError("ERR_COMMENTARY_REASONING_REVIEW_INVALID", "Stored reasoning Human review is invalid", ProductErrorCategory.DATA_INTEGRITY) from exc
+
+    def _configure_reasoning_review_current_resolver(self, registration: Any, resolver: Any) -> None:
+        from .dbd_reasoning_human_review_application import _valid_registration
+        if not _valid_registration(registration, self):
+            raise ProductError("ERR_DBD_REVIEW_INTERNAL_AUTHORITY", "Human review Application registration is invalid", ProductErrorCategory.AUTHORIZATION)
+        if not callable(getattr(resolver, "resolve", None)):
+            raise TypeError("reasoning review current resolver is invalid")
+        if self._reasoning_review_current_resolver is not None and self._reasoning_review_current_resolver is not resolver:
+            raise ProductError("ERR_DBD_REVIEW_RESOLVER_CONFLICT", "Reasoning review current resolver is already configured", ProductErrorCategory.STATE)
+        self._reasoning_review_current_resolver = resolver
+
+    def _append_resolved_human_review(self, *, token: Any, authority: Any, current: Any, expected_head: Any, evaluated_at: str) -> Any:
+        from .dbd_reasoning_human_review import (
+            CurrentHumanReviewSnapshot, DbDReasoningHumanReviewAuthorityBinding,
+            admit_human_review, admit_reasoning_human_review_record,
+        )
+        from .dbd_reasoning_human_review_application import HumanReviewAppendResult, HumanReviewHeadExpectation, _valid_admission_token
+        if not isinstance(authority, DbDReasoningHumanReviewAuthorityBinding) or not isinstance(current, CurrentHumanReviewSnapshot) or not isinstance(expected_head, HumanReviewHeadExpectation):
+            raise TypeError("resolved Human review inputs are invalid")
+        if not _valid_admission_token(token, self, authority, current, evaluated_at):
+            raise ProductError("ERR_DBD_REVIEW_INTERNAL_AUTHORITY", "Human review Application admission token is invalid", ProductErrorCategory.AUTHORIZATION)
+        with closing(self._connect()) as conn:
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+                self._audit_candidate_rows(conn)
+                self._audit_reasoning_lineage_rows(conn)
+                self._audit_human_review_rows(conn)
+                row = conn.execute("SELECT c.payload_json,l.payload_json FROM commentary_candidates c JOIN dbd_reasoning_candidate_lineage l ON l.candidate_id=c.candidate_id WHERE c.candidate_id=?", (current.root_candidate_id,)).fetchone()
+                if row is None or canonical_json_bytes(current.leaf_candidate.to_dict()).decode("utf-8") != row[0] or canonical_json_bytes(current.leaf_lineage.to_dict()).decode("utf-8") != row[1]:
+                    raise ProductError("ERR_DBD_REVIEW_CURRENT_CROSSING", "Resolved current Candidate/lineage does not match Store", ProductErrorCategory.DATA_INTEGRITY)
+                head_row = conn.execute("SELECT payload_json FROM dbd_reasoning_human_reviews WHERE root_candidate_id=? ORDER BY review_revision DESC LIMIT 1", (current.root_candidate_id,)).fetchone()
+                previous = None if head_row is None else admit_reasoning_human_review_record(json.loads(head_row[0]))
+                actual_revision = 0 if previous is None else previous.review_revision
+                actual_sha = None if previous is None else previous.review_sha256
+                existing_confirmation = conn.execute("SELECT payload_json FROM dbd_reasoning_human_reviews WHERE confirmation_sha256=?", (authority.confirmation_sha256,)).fetchone()
+                if existing_confirmation is not None:
+                    stored = admit_reasoning_human_review_record(json.loads(existing_confirmation[0]))
+                    retry_previous_row = None if authority.expected_previous_review_sha256 is None else conn.execute("SELECT payload_json FROM dbd_reasoning_human_reviews WHERE review_sha256=?", (authority.expected_previous_review_sha256,)).fetchone()
+                    retry_previous = None if retry_previous_row is None else admit_reasoning_human_review_record(json.loads(retry_previous_row[0]))
+                    retry_current = CurrentHumanReviewSnapshot(
+                        current.root_candidate_id, current.leaf_candidate, current.leaf_lineage,
+                        current.context, current.plan, authority.expected_previous_review_revision,
+                        authority.expected_previous_review_sha256,
+                    )
+                    retry_admitted = admit_human_review(
+                        authority_record=authority.to_dict(), current=retry_current,
+                        previous_review=retry_previous, evaluated_at=authority.decided_at,
+                    )
+                    if retry_admitted.passed and retry_admitted.review_record == stored:
+                        conn.commit()
+                        return HumanReviewAppendResult("IDEMPOTENT_EXISTING", stored)
+                    raise ProductError("ERR_DBD_REVIEW_CONFIRMATION_REPLAY", "Human confirmation was already consumed by different review content", ProductErrorCategory.AUTHORIZATION)
+                if (expected_head.revision, expected_head.review_sha256) != (actual_revision, actual_sha):
+                    raise ProductError("ERR_DBD_REVIEW_HEAD_CONFLICT", "Reasoning review head changed", ProductErrorCategory.STATE)
+                trusted = CurrentHumanReviewSnapshot(
+                    current.root_candidate_id, current.leaf_candidate, current.leaf_lineage,
+                    current.context, current.plan, actual_revision, actual_sha,
+                )
+                admitted = admit_human_review(
+                    authority_record=authority.to_dict(), current=trusted,
+                    previous_review=previous, evaluated_at=evaluated_at,
+                )
+                if not admitted.passed or admitted.review_record is None:
+                    raise ProductError("ERR_DBD_REVIEW_ADMISSION_REJECTED", ",".join(admitted.error_codes), ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
+                review = admitted.review_record
+                text = canonical_json_bytes(review.to_dict()).decode("utf-8")
+                conn.execute("INSERT INTO dbd_reasoning_human_reviews VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
+                    review.review_sha256, review.root_candidate_id, review.leaf_candidate_id,
+                    review.leaf_candidate_sha256, review.leaf_lineage_sha256, review.match_id,
+                    review.event_id, review.event_revision, review.context_sha256,
+                    review.commentary_plan_sha256, review.proposal_sha256, review.review_revision,
+                    review.previous_review_sha256, review.decision.value, review.authority_binding_sha256,
+                    review.confirmation_sha256, review.reviewed_at, text, review.review_sha256,
+                ))
+                self._audit_human_review_rows(conn)
+                conn.commit()
+                return HumanReviewAppendResult("APPENDED", review)
+            except Exception:
+                conn.rollback()
+                raise
+
+    def get_reasoning_human_review_head(self, root_candidate_id: str) -> dict[str, Any] | None:
+        validate_id(root_candidate_id, IdKind.CANDIDATE)
+        with closing(self._connect()) as conn:
+            self._audit_human_review_rows(conn)
+            row = conn.execute("SELECT payload_json FROM dbd_reasoning_human_reviews WHERE root_candidate_id=? ORDER BY review_revision DESC LIMIT 1", (root_candidate_id,)).fetchone()
+        return None if row is None else json.loads(row[0])
+
+    def get_reasoning_human_review(self, review_sha256: str) -> dict[str, Any]:
+        validate_sha256(review_sha256, field_name="review_sha256")
+        with closing(self._connect()) as conn:
+            self._audit_human_review_rows(conn)
+            row = conn.execute("SELECT payload_json FROM dbd_reasoning_human_reviews WHERE review_sha256=?", (review_sha256,)).fetchone()
+        if row is None:
+            raise ProductError("ERR_DBD_REVIEW_NOT_FOUND", "Reasoning Human review was not found", ProductErrorCategory.STATE)
+        return json.loads(row[0])
+
+    def list_reasoning_human_reviews(self, root_candidate_id: str) -> tuple[dict[str, Any], ...]:
+        validate_id(root_candidate_id, IdKind.CANDIDATE)
+        with closing(self._connect()) as conn:
+            self._audit_human_review_rows(conn)
+            rows = conn.execute("SELECT payload_json FROM dbd_reasoning_human_reviews WHERE root_candidate_id=? ORDER BY review_revision", (root_candidate_id,)).fetchall()
+        return tuple(json.loads(row[0]) for row in rows)
+
+    def _approved_reasoning_payloads(self, conn: sqlite3.Connection, *, column: str, identity: str) -> tuple[str, ...]:
+        from .dbd_reasoning_human_review import CurrentHumanReviewSnapshot, admit_reasoning_human_review_record
+        resolver = self._reasoning_review_current_resolver
+        if resolver is None:
+            return ()
+        if column not in {"event_id", "match_id"}:
+            raise ValueError("unsupported reasoning review selection column")
+        rows = conn.execute(
+            f"SELECT c.payload_json,l.payload_json,r.payload_json FROM commentary_candidates c JOIN dbd_reasoning_candidate_lineage l ON l.candidate_id=c.candidate_id JOIN dbd_reasoning_human_reviews r ON r.root_candidate_id=c.candidate_id WHERE c.{column}=? AND c.status='VALIDATED' AND r.review_revision=(SELECT MAX(r2.review_revision) FROM dbd_reasoning_human_reviews r2 WHERE r2.root_candidate_id=c.candidate_id) AND r.decision='APPROVE' AND NOT EXISTS(SELECT 1 FROM dbd_reasoning_candidate_lineage child WHERE child.parent_candidate_id=c.candidate_id)",
+            (identity,),
+        ).fetchall()
+        admitted: list[str] = []
+        for candidate_text, lineage_text, review_text in rows:
+            candidate = json.loads(candidate_text)
+            lineage = json.loads(lineage_text)
+            review = admit_reasoning_human_review_record(json.loads(review_text))
+            try:
+                current = resolver.resolve(candidate["candidate_id"])
+            except Exception:
+                continue
+            if not isinstance(current, CurrentHumanReviewSnapshot):
+                continue
+            try:
+                CurrentHumanReviewSnapshot(
+                    current.root_candidate_id, current.leaf_candidate, current.leaf_lineage,
+                    current.context, current.plan, review.review_revision, review.review_sha256,
+                )
+            except (TypeError, ValueError):
+                continue
+            if (
+                current.root_candidate_id == candidate["candidate_id"]
+                and current.leaf_candidate.to_dict() == candidate
+                and current.leaf_lineage.to_dict() == lineage
+                and review.leaf_candidate_sha256 == candidate["commentary_candidate_sha256"]
+                and review.leaf_lineage_sha256 == lineage["lineage_sha256"]
+                and review.context_sha256 == current.context.to_dict()["context_sha256"]
+                and review.commentary_plan_sha256 == current.plan.to_dict()["commentary_plan_sha256"]
+                and (review.match_id, review.event_id, review.event_revision)
+                == (lineage["match_id"], lineage["event_id"], lineage["event_revision"])
+                and review.proposal_sha256 == lineage["proposal"]["proposal_sha256"]
+            ):
+                admitted.append(candidate_text)
+        return tuple(admitted)
 
     def append(self, candidate: CommentaryCandidate) -> None:
         if not isinstance(candidate, CommentaryCandidate):
@@ -738,9 +1014,12 @@ class CommentaryCandidateStore:
         validate_id(event_id, IdKind.GAME_EVENT)
         with closing(self._connect()) as conn:
             self._audit_reasoning_lineage_rows(conn)
+            self._audit_human_review_rows(conn)
             if validated_only:
                 self._audit_candidate_rows(conn)
-                rows = conn.execute("SELECT c.payload_json FROM commentary_candidates c WHERE c.event_id=? AND c.status='VALIDATED' AND c.candidate_id NOT LIKE 'CAND-R2D%' AND NOT EXISTS(SELECT 1 FROM dbd_reasoning_candidate_lineage l WHERE l.candidate_id=c.candidate_id) ORDER BY c.event_revision,c.created_at,c.candidate_id", (event_id,)).fetchall()
+                legacy = [row[0] for row in conn.execute("SELECT c.payload_json FROM commentary_candidates c WHERE c.event_id=? AND c.status='VALIDATED' AND c.candidate_id NOT LIKE 'CAND-R2D%' AND NOT EXISTS(SELECT 1 FROM dbd_reasoning_candidate_lineage l WHERE l.candidate_id=c.candidate_id)", (event_id,)).fetchall()]
+                reasoning = list(self._approved_reasoning_payloads(conn, column="event_id", identity=event_id))
+                rows = [(text,) for text in sorted(legacy + reasoning, key=lambda text: (json.loads(text)["event_revision"], json.loads(text)["created_at"], json.loads(text)["candidate_id"]))]
             else:
                 self._audit_candidate_rows(conn)
                 rows = conn.execute("SELECT payload_json FROM commentary_candidates WHERE event_id=? ORDER BY event_revision,created_at,candidate_id", (event_id,)).fetchall()
@@ -761,8 +1040,11 @@ class CommentaryCandidateStore:
         with closing(self._connect()) as conn:
             self._audit_candidate_rows(conn)
             self._audit_reasoning_lineage_rows(conn)
+            self._audit_human_review_rows(conn)
             if validated_only:
-                rows = conn.execute("SELECT c.payload_json FROM commentary_candidates c WHERE c.match_id=? AND c.status='VALIDATED' AND c.candidate_id NOT LIKE 'CAND-R2D%' AND NOT EXISTS(SELECT 1 FROM dbd_reasoning_candidate_lineage l WHERE l.candidate_id=c.candidate_id) ORDER BY c.event_id,c.event_revision,c.created_at,c.candidate_id", (match_id,)).fetchall()
+                legacy = [row[0] for row in conn.execute("SELECT c.payload_json FROM commentary_candidates c WHERE c.match_id=? AND c.status='VALIDATED' AND c.candidate_id NOT LIKE 'CAND-R2D%' AND NOT EXISTS(SELECT 1 FROM dbd_reasoning_candidate_lineage l WHERE l.candidate_id=c.candidate_id)", (match_id,)).fetchall()]
+                reasoning = list(self._approved_reasoning_payloads(conn, column="match_id", identity=match_id))
+                rows = [(text,) for text in sorted(legacy + reasoning, key=lambda text: (json.loads(text)["event_id"], json.loads(text)["event_revision"], json.loads(text)["created_at"], json.loads(text)["candidate_id"]))]
             else:
                 rows = conn.execute("SELECT payload_json FROM commentary_candidates WHERE match_id=? ORDER BY event_id,event_revision,created_at,candidate_id", (match_id,)).fetchall()
         lines: list[str] = []

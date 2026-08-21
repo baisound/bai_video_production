@@ -201,7 +201,7 @@ def test_store_v2_atomically_appends_reads_and_withholds_unreviewed_export(tmp_p
     assert result.candidate is not None and result.lineage is not None
     store = CommentaryCandidateStore(tmp_path / "commentary.sqlite3")
     with sqlite3.connect(store.path) as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
     store.append_reasoning_bundle(result.candidate, result.lineage)
     store.append_reasoning_bundle(result.candidate, result.lineage)
     assert store.get_reasoning_lineage(result.candidate.candidate_id) == result.lineage.to_dict()
@@ -310,7 +310,7 @@ def test_v1_store_migrates_additively_and_failed_migration_rolls_back(tmp_path: 
         conn.execute("PRAGMA user_version=1")
     migrated = CommentaryCandidateStore(path)
     with sqlite3.connect(path) as conn:
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
         assert conn.execute("SELECT payload_json FROM commentary_candidates").fetchone()[0] == text
         assert conn.execute("SELECT COUNT(*) FROM dbd_reasoning_candidate_lineage").fetchone()[0] == 0
     assert len(migrated.list_for_event(plan.event_id)) == 1

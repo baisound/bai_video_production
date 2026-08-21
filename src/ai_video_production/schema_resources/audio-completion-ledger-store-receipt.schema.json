@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/audio-completion-ledger-store-receipt.schema.json",
+  "title": "TASK-041 Audio Completion Native Immutable Ledger Store R1B",
+  "oneOf": [
+    {"$ref": "#/$defs/storeReceipt"},
+    {"$ref": "#/$defs/recoveryReceipt"},
+    {"$ref": "#/$defs/publicProjection"},
+    {"$ref": "#/$defs/storedEntry"}
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullableDigest": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "reason": {"type": "string", "pattern": "^[A-Z0-9_]{1,96}$"},
+    "operation": {"enum": ["OBSERVE", "APPEND", "INSPECT_PENDING", "RESUME_PENDING"]},
+    "decision": {"enum": ["OBSERVED", "APPENDED", "ALREADY_COMMITTED_RECONCILED", "RECOVERY_AVAILABLE", "NOT_COMMITTED", "BLOCKED", "INCOMPLETE", "COMMIT_STATE_UNKNOWN"]},
+    "renameState": {"enum": ["NOT_ATTEMPTED", "RETURNED_TRUE", "RETURNED_FALSE", "SYSCALL_COMPLETION_UNKNOWN"]},
+    "namespaceState": {"enum": ["PENDING_ONLY", "FINAL_ONLY", "BOTH", "NEITHER", "DIFFERENT_FINAL", "NOT_OBSERVED"]},
+    "contentState": {"enum": ["PENDING_VERIFIED", "FINAL_VERIFIED", "BOTH_IDENTICAL", "CONFLICT", "CORRUPT", "NOT_OBSERVED"]},
+    "observationState": {"enum": ["NOT_OBSERVED", "FILE_FLUSH_RETURNED_TRUE", "FINAL_REOPEN_VERIFIED", "INCOMPLETE"]},
+    "releaseState": {"enum": ["RELEASE_CONFIRMED", "INCOMPLETE", "UNKNOWN"]},
+    "pendingState": {"enum": ["NONE", "RECOVERABLE", "STALE", "CORRUPT", "AMBIGUOUS", "UNKNOWN"]},
+    "chainState": {"enum": ["VALID", "INVALID", "NOT_OBSERVED"]},
+    "commitState": {"enum": ["NOT_COMMITTED", "KNOWN_COMMITTED", "COMMIT_STATE_UNKNOWN"]},
+    "authorityFlags": {
+      "type": "object", "additionalProperties": false,
+      "required": ["storage_origin_authenticated", "upstream_owner_revalidated", "canonical_latest_authorized", "canonical_pass_authorized", "final_review_gate_issued", "consumer_execution_authorized", "r2_ready_claimed"],
+      "properties": {
+        "storage_origin_authenticated": {"const": false},
+        "upstream_owner_revalidated": {"const": false},
+        "canonical_latest_authorized": {"const": false},
+        "canonical_pass_authorized": {"const": false},
+        "final_review_gate_issued": {"const": false},
+        "consumer_execution_authorized": {"const": false},
+        "r2_ready_claimed": {"const": false}
+      }
+    },
+    "storeReceipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "operation", "decision", "reason_codes", "ledger_key_sha256", "entry_count", "pending_count", "chain_disk_bytes", "pending_disk_bytes", "stored_entry_sha256", "expected_cas_sha256", "rename_state", "namespace_state", "global_pending_state", "content_state", "resource_observation_state", "resource_release_state", "pending_state", "chain_state", "commit_state", "lock_acquired", "filesystem_read_attempted", "filesystem_read_observed", "filesystem_write_attempted", "filesystem_write_observed", "lock_release_confirmed", "unreleased_handle_count", "unreleased_native_allocation_count", "directory_flush_claimed", "power_loss_durability_claimed", "worm_claimed", "owner_death_detected", "receipt_is_authority", "consumer_revalidation_required", "post_return_state_guaranteed", "authority_flags", "receipt_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-store.v1"},
+        "record_type": {"const": "AudioCompletionLedgerStoreReceipt"},
+        "task_owner": {"const": "TASK-041"},
+        "operation": {"$ref": "#/$defs/operation"}, "decision": {"$ref": "#/$defs/decision"},
+        "reason_codes": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/reason"}},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "entry_count": {"type": "integer", "minimum": 0, "maximum": 256},
+        "pending_count": {"type": "integer", "minimum": 0, "maximum": 8},
+        "chain_disk_bytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+        "pending_disk_bytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+        "stored_entry_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "expected_cas_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "rename_state": {"$ref": "#/$defs/renameState"}, "namespace_state": {"$ref": "#/$defs/namespaceState"},
+        "global_pending_state": {"$ref": "#/$defs/pendingState"},
+        "content_state": {"$ref": "#/$defs/contentState"}, "resource_observation_state": {"$ref": "#/$defs/observationState"},
+        "resource_release_state": {"$ref": "#/$defs/releaseState"}, "pending_state": {"$ref": "#/$defs/pendingState"},
+        "chain_state": {"$ref": "#/$defs/chainState"}, "commit_state": {"$ref": "#/$defs/commitState"},
+        "lock_acquired": {"type": "boolean"}, "filesystem_read_attempted": {"type": "boolean"},
+        "filesystem_read_observed": {"type": "boolean"}, "filesystem_write_attempted": {"type": "boolean"},
+        "filesystem_write_observed": {"type": "boolean"}, "lock_release_confirmed": {"type": "boolean"},
+        "unreleased_handle_count": {"type": "integer", "minimum": 0, "maximum": 32},
+        "unreleased_native_allocation_count": {"type": "integer", "minimum": 0, "maximum": 64},
+        "directory_flush_claimed": {"const": false},
+        "power_loss_durability_claimed": {"const": false}, "worm_claimed": {"const": false},
+        "owner_death_detected": {"const": false}, "receipt_is_authority": {"const": false},
+        "consumer_revalidation_required": {"const": true}, "post_return_state_guaranteed": {"const": false},
+        "authority_flags": {"$ref": "#/$defs/authorityFlags"},
+        "receipt_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"decision": {"const": "APPENDED"}}, "required": ["decision"]}, "then": {"properties": {"commit_state": {"const": "KNOWN_COMMITTED"}, "rename_state": {"const": "RETURNED_TRUE"}, "namespace_state": {"const": "FINAL_ONLY"}, "content_state": {"const": "FINAL_VERIFIED"}, "pending_state": {"const": "NONE"}, "chain_state": {"const": "VALID"}, "resource_observation_state": {"const": "FINAL_REOPEN_VERIFIED"}, "lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "filesystem_write_attempted": {"const": true}, "filesystem_write_observed": {"const": true}}}},
+        {"if": {"properties": {"commit_state": {"const": "KNOWN_COMMITTED"}}, "required": ["commit_state"]}, "then": {"properties": {"namespace_state": {"enum": ["FINAL_ONLY", "BOTH", "NOT_OBSERVED"]}}}},
+        {"if": {"properties": {"decision": {"const": "COMMIT_STATE_UNKNOWN"}}, "required": ["decision"]}, "then": {"properties": {"commit_state": {"const": "COMMIT_STATE_UNKNOWN"}}}},
+        {"if": {"properties": {"resource_release_state": {"const": "RELEASE_CONFIRMED"}}, "required": ["resource_release_state"]}, "then": {"properties": {"lock_release_confirmed": {"const": true}, "unreleased_handle_count": {"const": 0}}}},
+        {"if": {"properties": {"unreleased_handle_count": {"minimum": 1}}, "required": ["unreleased_handle_count"]}, "then": {"properties": {"resource_release_state": {"const": "INCOMPLETE"}}}},
+        {"if": {"properties": {"operation": {"enum": ["OBSERVE", "INSPECT_PENDING"]}}, "required": ["operation"]}, "then": {"properties": {"filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}, "rename_state": {"const": "NOT_ATTEMPTED"}}}},
+        {"if": {"properties": {"filesystem_read_observed": {"const": true}}, "required": ["filesystem_read_observed"]}, "then": {"properties": {"filesystem_read_attempted": {"const": true}}}},
+        {"if": {"properties": {"filesystem_write_observed": {"const": true}}, "required": ["filesystem_write_observed"]}, "then": {"properties": {"filesystem_write_attempted": {"const": true}}}},
+        {"if": {"properties": {"filesystem_write_attempted": {"const": true}}, "required": ["filesystem_write_attempted"]}, "then": {"properties": {"operation": {"enum": ["APPEND", "RESUME_PENDING"]}, "lock_acquired": {"const": true}}}},
+        {"if": {"properties": {"chain_state": {"enum": ["NOT_OBSERVED", "INVALID"]}}, "required": ["chain_state"]}, "then": {"properties": {"entry_count": {"const": 0}, "pending_count": {"const": 0}, "chain_disk_bytes": {"const": 0}, "pending_disk_bytes": {"const": 0}}}},
+        {"if": {"properties": {"operation": {"const": "APPEND"}, "decision": {"const": "APPENDED"}}, "required": ["operation", "decision"]}, "then": {"properties": {"reason_codes": {"const": ["NO_REPLACE_APPEND_OBSERVED"]}}}},
+        {"if": {"properties": {"operation": {"const": "RESUME_PENDING"}, "decision": {"const": "APPENDED"}}, "required": ["operation", "decision"]}, "then": {"properties": {"reason_codes": {"const": ["RECOVERED_NO_REPLACE_APPEND_OBSERVED"]}}}}
+        ,{"if": {"properties": {"decision": {"const": "OBSERVED"}}, "required": ["decision"]}, "then": {"properties": {"operation": {"const": "OBSERVE"}, "reason_codes": {"enum": [["POINT_IN_TIME_NAMESPACE_OBSERVED"], ["POINT_IN_TIME_NAMESPACE_OBSERVED", "CORRUPT_PENDING_OBSERVED"]]}, "commit_state": {"const": "NOT_COMMITTED"}, "rename_state": {"const": "NOT_ATTEMPTED"}, "chain_state": {"const": "VALID"}, "lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}}}}
+        ,{"if": {"properties": {"decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}, "required": ["decision"]}, "then": {"properties": {"reason_codes": {"enum": [["EXACT_LATEST_REPLAY_RECONCILED"], ["EXACT_FINAL_ALREADY_PRESENT"], ["FINAL_ONLY_EXACT"]]}, "commit_state": {"const": "KNOWN_COMMITTED"}, "rename_state": {"const": "NOT_ATTEMPTED"}, "namespace_state": {"const": "FINAL_ONLY"}, "content_state": {"const": "FINAL_VERIFIED"}, "chain_state": {"const": "VALID"}, "entry_count": {"minimum": 1}, "lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}}}}
+        ,{"if": {"properties": {"decision": {"const": "RECOVERY_AVAILABLE"}}, "required": ["decision"]}, "then": {"properties": {"reason_codes": {"enum": [["EXACT_PENDING_PRESENT"], ["PENDING_ONLY_EXACT"]]}, "namespace_state": {"const": "PENDING_ONLY"}, "content_state": {"const": "PENDING_VERIFIED"}, "pending_state": {"const": "RECOVERABLE"}, "commit_state": {"const": "NOT_COMMITTED"}, "rename_state": {"const": "NOT_ATTEMPTED"}, "chain_state": {"const": "VALID"}, "filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}}}}
+        ,{"if": {"properties": {"decision": {"const": "NOT_COMMITTED"}}, "required": ["decision"]}, "then": {"properties": {"reason_codes": {"const": ["NEITHER_PRESENT"]}, "commit_state": {"const": "NOT_COMMITTED"}}}}
+        ,{"if": {"properties": {"rename_state": {"enum": ["RETURNED_TRUE", "RETURNED_FALSE", "SYSCALL_COMPLETION_UNKNOWN"]}}, "required": ["rename_state"]}, "then": {"properties": {"operation": {"enum": ["APPEND", "RESUME_PENDING"]}, "filesystem_write_attempted": {"const": true}}}}
+        ,{"if": {"properties": {"rename_state": {"const": "RETURNED_TRUE"}}, "required": ["rename_state"]}, "then": {"properties": {"commit_state": {"const": "KNOWN_COMMITTED"}}}}
+        ,{"if": {"properties": {"pending_count": {"const": 0}, "chain_state": {"const": "VALID"}}, "required": ["pending_count", "chain_state"]}, "then": {"properties": {"global_pending_state": {"const": "NONE"}}}}
+        ,{"if": {"properties": {"pending_count": {"minimum": 1}, "chain_state": {"const": "VALID"}}, "required": ["pending_count", "chain_state"]}, "then": {"properties": {"global_pending_state": {"enum": ["RECOVERABLE", "CORRUPT"]}}}}
+        ,{"if": {"properties": {"global_pending_state": {"const": "RECOVERABLE"}}, "required": ["global_pending_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}}}}
+        ,{"if": {"properties": {"pending_state": {"const": "RECOVERABLE"}}, "required": ["pending_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}}}}
+        ,{"if": {"properties": {"content_state": {"enum": ["PENDING_VERIFIED", "BOTH_IDENTICAL"]}}, "required": ["content_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}}}}
+        ,{"if": {"properties": {"unreleased_native_allocation_count": {"minimum": 1}}, "required": ["unreleased_native_allocation_count"]}, "then": {"properties": {"resource_release_state": {"const": "INCOMPLETE"}}}}
+        ,{"if": {"properties": {"unreleased_handle_count": {"minimum": 1}}, "required": ["unreleased_handle_count"]}, "then": {"properties": {"resource_release_state": {"const": "INCOMPLETE"}}}}
+        ,{"if": {"properties": {"lock_release_confirmed": {"const": false}}, "required": ["lock_release_confirmed"]}, "then": {"properties": {"resource_release_state": {"const": "INCOMPLETE"}}}}
+        ,{"if": {"properties": {"decision": {"const": "COMMIT_STATE_UNKNOWN"}}, "required": ["decision"]}, "then": {"properties": {"operation": {"enum": ["APPEND", "RESUME_PENDING"]}, "commit_state": {"const": "COMMIT_STATE_UNKNOWN"}, "rename_state": {"const": "SYSCALL_COMPLETION_UNKNOWN"}, "filesystem_write_attempted": {"const": true}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["EXACT_LATEST_REPLAY_RECONCILED"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "APPEND"}, "decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["EXACT_FINAL_ALREADY_PRESENT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "RESUME_PENDING"}, "decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["FINAL_ONLY_EXACT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "INSPECT_PENDING"}, "decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["EXACT_PENDING_PRESENT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "APPEND"}, "decision": {"const": "RECOVERY_AVAILABLE"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["PENDING_ONLY_EXACT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "INSPECT_PENDING"}, "decision": {"const": "RECOVERY_AVAILABLE"}}}}
+        ,{"if": {"properties": {"operation": {"const": "OBSERVE"}}, "required": ["operation"]}, "then": {"properties": {"decision": {"enum": ["OBSERVED", "BLOCKED", "INCOMPLETE"]}}}}
+        ,{"if": {"properties": {"operation": {"const": "APPEND"}}, "required": ["operation"]}, "then": {"properties": {"decision": {"enum": ["APPENDED", "ALREADY_COMMITTED_RECONCILED", "RECOVERY_AVAILABLE", "BLOCKED", "INCOMPLETE", "COMMIT_STATE_UNKNOWN"]}}}}
+        ,{"if": {"properties": {"operation": {"const": "INSPECT_PENDING"}}, "required": ["operation"]}, "then": {"properties": {"decision": {"enum": ["ALREADY_COMMITTED_RECONCILED", "RECOVERY_AVAILABLE", "NOT_COMMITTED", "BLOCKED", "INCOMPLETE"]}}}}
+        ,{"if": {"properties": {"operation": {"const": "RESUME_PENDING"}}, "required": ["operation"]}, "then": {"properties": {"decision": {"enum": ["APPENDED", "ALREADY_COMMITTED_RECONCILED", "BLOCKED", "INCOMPLETE", "COMMIT_STATE_UNKNOWN"]}}}}
+        ,{"if": {"properties": {"decision": {"const": "BLOCKED"}}, "required": ["decision"]}, "then": {"properties": {"commit_state": {"const": "NOT_COMMITTED"}, "rename_state": {"const": "NOT_ATTEMPTED"}}}}
+        ,{"if": {"properties": {"decision": {"const": "INCOMPLETE"}}, "required": ["decision"]}, "then": {"properties": {"commit_state": {"enum": ["NOT_COMMITTED", "KNOWN_COMMITTED"]}}}}
+        ,{"if": {"properties": {"rename_state": {"const": "RETURNED_TRUE"}}, "required": ["rename_state"]}, "then": {"properties": {"decision": {"enum": ["APPENDED", "INCOMPLETE"]}}}}
+        ,{"if": {"properties": {"rename_state": {"const": "RETURNED_FALSE"}}, "required": ["rename_state"]}, "then": {"properties": {"decision": {"const": "INCOMPLETE"}, "commit_state": {"const": "NOT_COMMITTED"}}}}
+        ,{"if": {"properties": {"commit_state": {"const": "COMMIT_STATE_UNKNOWN"}}, "required": ["commit_state"]}, "then": {"properties": {"decision": {"const": "COMMIT_STATE_UNKNOWN"}, "rename_state": {"const": "SYSCALL_COMPLETION_UNKNOWN"}}}}
+        ,{"if": {"properties": {"decision": {"enum": ["APPENDED", "ALREADY_COMMITTED_RECONCILED"]}}, "required": ["decision"]}, "then": {"properties": {"stored_entry_sha256": {"$ref": "#/$defs/digest"}, "expected_cas_sha256": {"$ref": "#/$defs/digest"}, "entry_count": {"minimum": 1}}}}
+        ,{"if": {"properties": {"decision": {"const": "RECOVERY_AVAILABLE"}}, "required": ["decision"]}, "then": {"properties": {"stored_entry_sha256": {"$ref": "#/$defs/digest"}, "expected_cas_sha256": {"$ref": "#/$defs/digest"}}}}
+        ,{"if": {"properties": {"reason_codes": {"enum": [["POINT_IN_TIME_NAMESPACE_OBSERVED"], ["POINT_IN_TIME_NAMESPACE_OBSERVED", "CORRUPT_PENDING_OBSERVED"]]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "OBSERVE"}, "decision": {"const": "OBSERVED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["NO_REPLACE_APPEND_OBSERVED"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "APPEND"}, "decision": {"const": "APPENDED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["RECOVERED_NO_REPLACE_APPEND_OBSERVED"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "RESUME_PENDING"}, "decision": {"const": "APPENDED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["NEITHER_PRESENT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "INSPECT_PENDING"}, "decision": {"const": "NOT_COMMITTED"}}}}
+        ,{"if": {"properties": {"pending_count": {"const": 0}}, "required": ["pending_count"]}, "then": {"properties": {"pending_state": {"enum": ["NONE", "STALE", "AMBIGUOUS", "UNKNOWN"]}}}}
+        ,{"if": {"properties": {"namespace_state": {"const": "NOT_OBSERVED"}}, "required": ["namespace_state"]}, "then": {"properties": {"chain_state": {"enum": ["NOT_OBSERVED", "INVALID"]}}}}
+        ,{"if": {"properties": {"decision": {"const": "APPENDED"}}, "required": ["decision"]}, "then": {"properties": {"reason_codes": {"enum": [["NO_REPLACE_APPEND_OBSERVED"], ["RECOVERED_NO_REPLACE_APPEND_OBSERVED"]]}, "pending_state": {"const": "NONE"}}}}
+        ,{"if": {"properties": {"decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}, "required": ["decision"]}, "then": {"properties": {"pending_state": {"const": "NONE"}, "resource_observation_state": {"const": "FINAL_REOPEN_VERIFIED"}}}}
+        ,{"if": {"properties": {"decision": {"const": "RECOVERY_AVAILABLE"}}, "required": ["decision"]}, "then": {"properties": {"lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "resource_observation_state": {"const": "NOT_OBSERVED"}}}}
+        ,{"if": {"properties": {"decision": {"const": "NOT_COMMITTED"}}, "required": ["decision"]}, "then": {"properties": {"operation": {"const": "INSPECT_PENDING"}, "rename_state": {"const": "NOT_ATTEMPTED"}, "namespace_state": {"const": "NEITHER"}, "content_state": {"const": "NOT_OBSERVED"}, "pending_state": {"const": "STALE"}, "resource_observation_state": {"const": "NOT_OBSERVED"}, "chain_state": {"const": "VALID"}, "lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}}}}
+        ,{"if": {"properties": {"decision": {"enum": ["OBSERVED", "APPENDED", "ALREADY_COMMITTED_RECONCILED", "RECOVERY_AVAILABLE", "NOT_COMMITTED"]}}, "required": ["decision"]}, "then": {"properties": {"resource_release_state": {"const": "RELEASE_CONFIRMED"}, "lock_release_confirmed": {"const": true}, "unreleased_handle_count": {"const": 0}, "unreleased_native_allocation_count": {"const": 0}}}}
+        ,{"if": {"properties": {"entry_count": {"const": 0}}, "required": ["entry_count"]}, "then": {"properties": {"chain_disk_bytes": {"const": 0}}}}
+        ,{"if": {"properties": {"entry_count": {"minimum": 1}}, "required": ["entry_count"]}, "then": {"properties": {"chain_disk_bytes": {"minimum": 1}}}}
+        ,{"if": {"properties": {"pending_count": {"const": 0}}, "required": ["pending_count"]}, "then": {"properties": {"pending_disk_bytes": {"const": 0}}}}
+        ,{"if": {"properties": {"pending_count": {"minimum": 1}, "pending_disk_bytes": {"const": 0}}, "required": ["pending_count", "pending_disk_bytes"]}, "then": {"properties": {"global_pending_state": {"const": "CORRUPT"}, "pending_state": {"enum": ["NONE", "STALE", "CORRUPT", "AMBIGUOUS", "UNKNOWN"]}, "content_state": {"enum": ["NOT_OBSERVED", "FINAL_VERIFIED", "CORRUPT", "CONFLICT", "UNKNOWN"]}}}}
+        ,{"if": {"properties": {"global_pending_state": {"const": "RECOVERABLE"}}, "required": ["global_pending_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}, "pending_disk_bytes": {"minimum": 1}}}}
+        ,{"if": {"properties": {"pending_state": {"const": "RECOVERABLE"}}, "required": ["pending_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}, "pending_disk_bytes": {"minimum": 1}}}}
+        ,{"if": {"properties": {"content_state": {"enum": ["PENDING_VERIFIED", "BOTH_IDENTICAL"]}}, "required": ["content_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}, "pending_disk_bytes": {"minimum": 1}}}}
+        ,{"if": {"properties": {"decision": {"const": "OBSERVED"}, "entry_count": {"const": 0}}, "required": ["decision", "entry_count"]}, "then": {"properties": {"reason_codes": {"const": ["POINT_IN_TIME_NAMESPACE_OBSERVED"]}, "namespace_state": {"const": "NEITHER"}, "content_state": {"const": "NOT_OBSERVED"}, "pending_state": {"const": "NONE"}, "resource_observation_state": {"const": "NOT_OBSERVED"}, "stored_entry_sha256": {"const": null}, "expected_cas_sha256": {"const": null}}}}
+        ,{"if": {"properties": {"decision": {"const": "OBSERVED"}, "entry_count": {"minimum": 1}}, "required": ["decision", "entry_count"]}, "then": {"properties": {"reason_codes": {"const": ["POINT_IN_TIME_NAMESPACE_OBSERVED"]}, "namespace_state": {"const": "FINAL_ONLY"}, "content_state": {"const": "FINAL_VERIFIED"}, "pending_state": {"const": "NONE"}, "resource_observation_state": {"const": "FINAL_REOPEN_VERIFIED"}, "stored_entry_sha256": {"$ref": "#/$defs/digest"}, "expected_cas_sha256": {"$ref": "#/$defs/digest"}}}}
+        ,{"if": {"properties": {"decision": {"const": "NOT_COMMITTED"}}, "required": ["decision"]}, "then": {"properties": {"stored_entry_sha256": {"const": null}, "expected_cas_sha256": {"const": null}}}}
+      ]
+    },
+    "recoveryReceipt": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "ledger_key_sha256", "entry_revision", "expected_cas_sha256", "token_sha256", "root_identity_sha256", "pending_file_identity_sha256", "rename_continuity_file_identity_sha256", "payload_sha256", "pending_name_sha256", "receipt_is_capability", "resume_requires_live_revalidation", "recovery_receipt_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-store.v1"},
+        "record_type": {"const": "AudioCompletionLedgerRecoveryReceipt"}, "task_owner": {"const": "TASK-041"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"}, "entry_revision": {"type": "integer", "minimum": 1, "maximum": 256},
+        "expected_cas_sha256": {"$ref": "#/$defs/digest"}, "token_sha256": {"$ref": "#/$defs/digest"},
+        "root_identity_sha256": {"$ref": "#/$defs/digest"}, "pending_file_identity_sha256": {"$ref": "#/$defs/digest"},
+        "rename_continuity_file_identity_sha256": {"$ref": "#/$defs/digest"},
+        "payload_sha256": {"$ref": "#/$defs/digest"}, "pending_name_sha256": {"$ref": "#/$defs/digest"},
+        "receipt_is_capability": {"const": false}, "resume_requires_live_revalidation": {"const": true},
+        "recovery_receipt_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "publicProjection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "operation", "decision", "reason_codes", "entry_count", "pending_count", "rename_state", "namespace_state", "global_pending_state", "content_state", "resource_observation_state", "resource_release_state", "pending_state", "chain_state", "commit_state", "lock_acquired", "filesystem_read_attempted", "filesystem_read_observed", "filesystem_write_attempted", "filesystem_write_observed", "lock_release_confirmed", "unreleased_handle_count", "unreleased_native_allocation_count", "receipt_is_authority", "consumer_revalidation_required", "post_return_state_guaranteed", "canonical_latest_authorized", "canonical_pass_authorized", "storage_origin_authenticated", "r2_ready_claimed", "public_projection_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-store.v1"},
+        "record_type": {"const": "AudioCompletionLedgerStorePublicProjection"},
+        "operation": {"$ref": "#/$defs/operation"}, "decision": {"$ref": "#/$defs/decision"},
+        "reason_codes": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/reason"}},
+        "entry_count": {"type": "integer", "minimum": 0, "maximum": 256},
+        "pending_count": {"type": "integer", "minimum": 0, "maximum": 8},
+        "rename_state": {"$ref": "#/$defs/renameState"}, "namespace_state": {"$ref": "#/$defs/namespaceState"},
+        "global_pending_state": {"$ref": "#/$defs/pendingState"},
+        "content_state": {"$ref": "#/$defs/contentState"}, "resource_observation_state": {"$ref": "#/$defs/observationState"},
+        "resource_release_state": {"$ref": "#/$defs/releaseState"}, "pending_state": {"$ref": "#/$defs/pendingState"},
+        "chain_state": {"$ref": "#/$defs/chainState"}, "commit_state": {"$ref": "#/$defs/commitState"},
+        "lock_acquired": {"type": "boolean"}, "filesystem_read_attempted": {"type": "boolean"},
+        "filesystem_read_observed": {"type": "boolean"}, "filesystem_write_attempted": {"type": "boolean"},
+        "filesystem_write_observed": {"type": "boolean"}, "lock_release_confirmed": {"type": "boolean"},
+        "unreleased_handle_count": {"type": "integer", "minimum": 0, "maximum": 32},
+        "unreleased_native_allocation_count": {"type": "integer", "minimum": 0, "maximum": 64},
+        "receipt_is_authority": {"const": false}, "consumer_revalidation_required": {"const": true},
+        "post_return_state_guaranteed": {"const": false},
+        "canonical_latest_authorized": {"const": false}, "canonical_pass_authorized": {"const": false},
+        "storage_origin_authenticated": {"const": false}, "r2_ready_claimed": {"const": false},
+        "public_projection_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "allOf": [
+        {"if": {"properties": {"decision": {"enum": ["APPENDED", "ALREADY_COMMITTED_RECONCILED"]}}, "required": ["decision"]}, "then": {"properties": {"entry_count": {"minimum": 1}}}},
+        {"if": {"properties": {"decision": {"const": "OBSERVED"}}, "required": ["decision"]}, "then": {"properties": {"operation": {"const": "OBSERVE"}, "reason_codes": {"enum": [["POINT_IN_TIME_NAMESPACE_OBSERVED"], ["POINT_IN_TIME_NAMESPACE_OBSERVED", "CORRUPT_PENDING_OBSERVED"]]}, "commit_state": {"const": "NOT_COMMITTED"}, "rename_state": {"const": "NOT_ATTEMPTED"}, "chain_state": {"const": "VALID"}, "lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}}}},
+        {"if": {"properties": {"decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}, "required": ["decision"]}, "then": {"properties": {"reason_codes": {"enum": [["EXACT_LATEST_REPLAY_RECONCILED"], ["EXACT_FINAL_ALREADY_PRESENT"], ["FINAL_ONLY_EXACT"]]}, "commit_state": {"const": "KNOWN_COMMITTED"}, "rename_state": {"const": "NOT_ATTEMPTED"}, "namespace_state": {"const": "FINAL_ONLY"}, "content_state": {"const": "FINAL_VERIFIED"}, "chain_state": {"const": "VALID"}, "entry_count": {"minimum": 1}, "lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}}}},
+        {"if": {"properties": {"decision": {"const": "RECOVERY_AVAILABLE"}}, "required": ["decision"]}, "then": {"properties": {"reason_codes": {"enum": [["EXACT_PENDING_PRESENT"], ["PENDING_ONLY_EXACT"]]}, "namespace_state": {"const": "PENDING_ONLY"}, "content_state": {"const": "PENDING_VERIFIED"}, "pending_state": {"const": "RECOVERABLE"}, "commit_state": {"const": "NOT_COMMITTED"}, "rename_state": {"const": "NOT_ATTEMPTED"}, "chain_state": {"const": "VALID"}, "filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}}}},
+        {"if": {"properties": {"decision": {"const": "NOT_COMMITTED"}}, "required": ["decision"]}, "then": {"properties": {"reason_codes": {"const": ["NEITHER_PRESENT"]}, "commit_state": {"const": "NOT_COMMITTED"}}}},
+        {"if": {"properties": {"decision": {"const": "APPENDED"}}, "required": ["decision"]}, "then": {"properties": {"commit_state": {"const": "KNOWN_COMMITTED"}, "rename_state": {"const": "RETURNED_TRUE"}, "namespace_state": {"const": "FINAL_ONLY"}, "content_state": {"const": "FINAL_VERIFIED"}, "pending_state": {"const": "NONE"}, "chain_state": {"const": "VALID"}, "resource_observation_state": {"const": "FINAL_REOPEN_VERIFIED"}, "lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "filesystem_write_attempted": {"const": true}, "filesystem_write_observed": {"const": true}}}},
+        {"if": {"properties": {"operation": {"enum": ["OBSERVE", "INSPECT_PENDING"]}}, "required": ["operation"]}, "then": {"properties": {"filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}, "rename_state": {"const": "NOT_ATTEMPTED"}}}},
+        {"if": {"properties": {"filesystem_read_observed": {"const": true}}, "required": ["filesystem_read_observed"]}, "then": {"properties": {"filesystem_read_attempted": {"const": true}}}},
+        {"if": {"properties": {"filesystem_write_observed": {"const": true}}, "required": ["filesystem_write_observed"]}, "then": {"properties": {"filesystem_write_attempted": {"const": true}}}},
+        {"if": {"properties": {"filesystem_write_attempted": {"const": true}}, "required": ["filesystem_write_attempted"]}, "then": {"properties": {"operation": {"enum": ["APPEND", "RESUME_PENDING"]}, "lock_acquired": {"const": true}}}},
+        {"if": {"properties": {"chain_state": {"enum": ["NOT_OBSERVED", "INVALID"]}}, "required": ["chain_state"]}, "then": {"properties": {"entry_count": {"const": 0}, "pending_count": {"const": 0}}}},
+        {"if": {"properties": {"commit_state": {"const": "KNOWN_COMMITTED"}}, "required": ["commit_state"]}, "then": {"properties": {"namespace_state": {"enum": ["FINAL_ONLY", "BOTH", "NOT_OBSERVED"]}}}},
+        {"if": {"properties": {"rename_state": {"const": "RETURNED_TRUE"}}, "required": ["rename_state"]}, "then": {"properties": {"commit_state": {"const": "KNOWN_COMMITTED"}, "operation": {"enum": ["APPEND", "RESUME_PENDING"]}, "filesystem_write_attempted": {"const": true}}}}
+        ,{"if": {"properties": {"pending_count": {"const": 0}, "chain_state": {"const": "VALID"}}, "required": ["pending_count", "chain_state"]}, "then": {"properties": {"global_pending_state": {"const": "NONE"}}}}
+        ,{"if": {"properties": {"pending_count": {"minimum": 1}, "chain_state": {"const": "VALID"}}, "required": ["pending_count", "chain_state"]}, "then": {"properties": {"global_pending_state": {"enum": ["RECOVERABLE", "CORRUPT"]}}}}
+        ,{"if": {"properties": {"global_pending_state": {"const": "RECOVERABLE"}}, "required": ["global_pending_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}}}}
+        ,{"if": {"properties": {"pending_state": {"const": "RECOVERABLE"}}, "required": ["pending_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}}}}
+        ,{"if": {"properties": {"content_state": {"enum": ["PENDING_VERIFIED", "BOTH_IDENTICAL"]}}, "required": ["content_state"]}, "then": {"properties": {"pending_count": {"minimum": 1}}}}
+        ,{"if": {"properties": {"unreleased_native_allocation_count": {"minimum": 1}}, "required": ["unreleased_native_allocation_count"]}, "then": {"properties": {"resource_release_state": {"const": "INCOMPLETE"}}}}
+        ,{"if": {"properties": {"unreleased_handle_count": {"minimum": 1}}, "required": ["unreleased_handle_count"]}, "then": {"properties": {"resource_release_state": {"const": "INCOMPLETE"}}}}
+        ,{"if": {"properties": {"lock_release_confirmed": {"const": false}}, "required": ["lock_release_confirmed"]}, "then": {"properties": {"resource_release_state": {"const": "INCOMPLETE"}}}}
+        ,{"if": {"properties": {"decision": {"const": "COMMIT_STATE_UNKNOWN"}}, "required": ["decision"]}, "then": {"properties": {"operation": {"enum": ["APPEND", "RESUME_PENDING"]}, "commit_state": {"const": "COMMIT_STATE_UNKNOWN"}, "rename_state": {"const": "SYSCALL_COMPLETION_UNKNOWN"}, "filesystem_write_attempted": {"const": true}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["EXACT_LATEST_REPLAY_RECONCILED"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "APPEND"}, "decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["EXACT_FINAL_ALREADY_PRESENT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "RESUME_PENDING"}, "decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["FINAL_ONLY_EXACT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "INSPECT_PENDING"}, "decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["EXACT_PENDING_PRESENT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "APPEND"}, "decision": {"const": "RECOVERY_AVAILABLE"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["PENDING_ONLY_EXACT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "INSPECT_PENDING"}, "decision": {"const": "RECOVERY_AVAILABLE"}}}}
+        ,{"if": {"properties": {"operation": {"const": "OBSERVE"}}, "required": ["operation"]}, "then": {"properties": {"decision": {"enum": ["OBSERVED", "BLOCKED", "INCOMPLETE"]}}}}
+        ,{"if": {"properties": {"operation": {"const": "APPEND"}}, "required": ["operation"]}, "then": {"properties": {"decision": {"enum": ["APPENDED", "ALREADY_COMMITTED_RECONCILED", "RECOVERY_AVAILABLE", "BLOCKED", "INCOMPLETE", "COMMIT_STATE_UNKNOWN"]}}}}
+        ,{"if": {"properties": {"operation": {"const": "INSPECT_PENDING"}}, "required": ["operation"]}, "then": {"properties": {"decision": {"enum": ["ALREADY_COMMITTED_RECONCILED", "RECOVERY_AVAILABLE", "NOT_COMMITTED", "BLOCKED", "INCOMPLETE"]}}}}
+        ,{"if": {"properties": {"operation": {"const": "RESUME_PENDING"}}, "required": ["operation"]}, "then": {"properties": {"decision": {"enum": ["APPENDED", "ALREADY_COMMITTED_RECONCILED", "BLOCKED", "INCOMPLETE", "COMMIT_STATE_UNKNOWN"]}}}}
+        ,{"if": {"properties": {"decision": {"const": "BLOCKED"}}, "required": ["decision"]}, "then": {"properties": {"commit_state": {"const": "NOT_COMMITTED"}, "rename_state": {"const": "NOT_ATTEMPTED"}}}}
+        ,{"if": {"properties": {"decision": {"const": "INCOMPLETE"}}, "required": ["decision"]}, "then": {"properties": {"commit_state": {"enum": ["NOT_COMMITTED", "KNOWN_COMMITTED"]}}}}
+        ,{"if": {"properties": {"rename_state": {"const": "RETURNED_TRUE"}}, "required": ["rename_state"]}, "then": {"properties": {"decision": {"enum": ["APPENDED", "INCOMPLETE"]}}}}
+        ,{"if": {"properties": {"rename_state": {"const": "RETURNED_FALSE"}}, "required": ["rename_state"]}, "then": {"properties": {"decision": {"const": "INCOMPLETE"}, "commit_state": {"const": "NOT_COMMITTED"}}}}
+        ,{"if": {"properties": {"commit_state": {"const": "COMMIT_STATE_UNKNOWN"}}, "required": ["commit_state"]}, "then": {"properties": {"decision": {"const": "COMMIT_STATE_UNKNOWN"}, "rename_state": {"const": "SYSCALL_COMPLETION_UNKNOWN"}}}}
+        ,{"if": {"properties": {"reason_codes": {"enum": [["POINT_IN_TIME_NAMESPACE_OBSERVED"], ["POINT_IN_TIME_NAMESPACE_OBSERVED", "CORRUPT_PENDING_OBSERVED"]]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "OBSERVE"}, "decision": {"const": "OBSERVED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["NO_REPLACE_APPEND_OBSERVED"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "APPEND"}, "decision": {"const": "APPENDED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["RECOVERED_NO_REPLACE_APPEND_OBSERVED"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "RESUME_PENDING"}, "decision": {"const": "APPENDED"}}}}
+        ,{"if": {"properties": {"reason_codes": {"const": ["NEITHER_PRESENT"]}}, "required": ["reason_codes"]}, "then": {"properties": {"operation": {"const": "INSPECT_PENDING"}, "decision": {"const": "NOT_COMMITTED"}}}}
+        ,{"if": {"properties": {"pending_count": {"const": 0}}, "required": ["pending_count"]}, "then": {"properties": {"pending_state": {"enum": ["NONE", "STALE", "AMBIGUOUS", "UNKNOWN"]}}}}
+        ,{"if": {"properties": {"namespace_state": {"const": "NOT_OBSERVED"}}, "required": ["namespace_state"]}, "then": {"properties": {"chain_state": {"enum": ["NOT_OBSERVED", "INVALID"]}}}}
+        ,{"if": {"properties": {"decision": {"const": "APPENDED"}}, "required": ["decision"]}, "then": {"properties": {"reason_codes": {"enum": [["NO_REPLACE_APPEND_OBSERVED"], ["RECOVERED_NO_REPLACE_APPEND_OBSERVED"]]}, "pending_state": {"const": "NONE"}}}}
+        ,{"if": {"properties": {"decision": {"const": "ALREADY_COMMITTED_RECONCILED"}}, "required": ["decision"]}, "then": {"properties": {"pending_state": {"const": "NONE"}, "resource_observation_state": {"const": "FINAL_REOPEN_VERIFIED"}}}}
+        ,{"if": {"properties": {"decision": {"const": "RECOVERY_AVAILABLE"}}, "required": ["decision"]}, "then": {"properties": {"lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "resource_observation_state": {"const": "NOT_OBSERVED"}}}}
+        ,{"if": {"properties": {"decision": {"const": "NOT_COMMITTED"}}, "required": ["decision"]}, "then": {"properties": {"operation": {"const": "INSPECT_PENDING"}, "rename_state": {"const": "NOT_ATTEMPTED"}, "namespace_state": {"const": "NEITHER"}, "content_state": {"const": "NOT_OBSERVED"}, "pending_state": {"const": "STALE"}, "resource_observation_state": {"const": "NOT_OBSERVED"}, "chain_state": {"const": "VALID"}, "lock_acquired": {"const": true}, "filesystem_read_attempted": {"const": true}, "filesystem_read_observed": {"const": true}, "filesystem_write_attempted": {"const": false}, "filesystem_write_observed": {"const": false}}}}
+        ,{"if": {"properties": {"decision": {"enum": ["OBSERVED", "APPENDED", "ALREADY_COMMITTED_RECONCILED", "RECOVERY_AVAILABLE", "NOT_COMMITTED"]}}, "required": ["decision"]}, "then": {"properties": {"resource_release_state": {"const": "RELEASE_CONFIRMED"}, "lock_release_confirmed": {"const": true}, "unreleased_handle_count": {"const": 0}, "unreleased_native_allocation_count": {"const": 0}}}}
+        ,{"if": {"properties": {"decision": {"const": "OBSERVED"}, "entry_count": {"const": 0}}, "required": ["decision", "entry_count"]}, "then": {"properties": {"reason_codes": {"const": ["POINT_IN_TIME_NAMESPACE_OBSERVED"]}, "namespace_state": {"const": "NEITHER"}, "content_state": {"const": "NOT_OBSERVED"}, "pending_state": {"const": "NONE"}, "resource_observation_state": {"const": "NOT_OBSERVED"}}}}
+        ,{"if": {"properties": {"decision": {"const": "OBSERVED"}, "entry_count": {"minimum": 1}}, "required": ["decision", "entry_count"]}, "then": {"properties": {"reason_codes": {"const": ["POINT_IN_TIME_NAMESPACE_OBSERVED"]}, "namespace_state": {"const": "FINAL_ONLY"}, "content_state": {"const": "FINAL_VERIFIED"}, "pending_state": {"const": "NONE"}, "resource_observation_state": {"const": "FINAL_REOPEN_VERIFIED"}}}}
+      ]
+    },
+    "storedEntry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "ledger_key_sha256", "entry_revision", "entry_envelope", "r1a_entry_sha256", "expected_cas_sha256", "token_sha256", "root_identity_sha256", "storage_origin_authenticated", "canonical_latest_authorized", "canonical_pass_authorized", "power_loss_durability_claimed", "worm_claimed", "r2_ready_claimed", "stored_entry_sha256"],
+      "properties": {
+        "schema_version": {"const": "bai.task041.audio-completion-ledger-store.v1"},
+        "record_type": {"const": "AudioCompletionStoredLedgerEntry"}, "task_owner": {"const": "TASK-041"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"}, "entry_revision": {"type": "integer", "minimum": 1, "maximum": 256},
+        "entry_envelope": {"$ref": "audio-completion-ledger-contract.schema.json#/$defs/entry"},
+        "r1a_entry_sha256": {"$ref": "#/$defs/digest"}, "expected_cas_sha256": {"$ref": "#/$defs/digest"},
+        "token_sha256": {"$ref": "#/$defs/digest"}, "root_identity_sha256": {"$ref": "#/$defs/digest"},
+        "storage_origin_authenticated": {"const": false}, "canonical_latest_authorized": {"const": false},
+        "canonical_pass_authorized": {"const": false}, "power_loss_durability_claimed": {"const": false},
+        "worm_claimed": {"const": false}, "r2_ready_claimed": {"const": false},
+        "stored_entry_sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R2B_COMPLETE / R3_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R3A_COMPLETE / R3B_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -64,5 +64,11 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   Survivor HUD four-slot switching, registered-image listing and unified review
   display (`13` focused / `38` TASK-052 / `161` affected PASS).
 - Windows packaged startup and bounded non-destructive interaction: `PASS`.
+- R3A temporal state-machine core: complete; profile-bound generator temporal
+  majority/impossible-increase handling, exact-subject chase hysteresis, Survivor
+  transition validation and same-subject hook-count reconciliation are implemented
+  as a pure deterministic layer. Focused/affected regression `35 PASS`; all current
+  TASK-052 tests `43 PASS`; broad DbD/TASK-052 regression `128 PASS`; unresolved
+  Critical/High `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R3 per-Survivor and generator temporal state machines.
+- Next dependency-ordered unit: R3B admitted Evidence / CGEL event integration.

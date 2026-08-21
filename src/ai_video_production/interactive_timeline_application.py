@@ -5,8 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import re
 import secrets
-from typing import Callable, Iterable
+from threading import Lock
+from typing import Any, Callable, ContextManager, Iterable, Mapping
 
 from .atomic import AtomicJsonWriter
 from .errors import ProductError, ProductErrorCategory
@@ -23,7 +25,9 @@ from .interactive_timeline_edit import (
 from .interactive_timeline_store import (
     FORMAT_ID,
     FORMAT_VERSION,
+    FORMAT_VERSION_V1_1,
     RELATIVE_PATH,
+    SUPPORTED_FORMAT_VERSIONS,
     TimelineEditSnapshotStore,
 )
 from .product_project import ProductProjectManifest, ProjectChildBinding
@@ -31,10 +35,23 @@ from .product_project_store import ProductProjectManifestStore
 from .project_history import (
     ProjectCommandHistory, ProjectCommandHistoryStore, parse_project_command_history,
 )
-from .project_save import ProductProjectSaveCoordinator
-from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
+from .project_save import (
+    ProductProjectSaveCoordinator,
+    ProjectSaveJournalStore,
+    ProjectSaveParticipantOutcome,
+    ProjectSaveParticipantPlan,
+    ProjectSaveParticipantResult,
+)
+from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
 
 TokenFactory = Callable[[], str]
+CommitGuardFactory = Callable[[], ContextManager[None]]
+PlacementGuardResolver = Callable[[TimelineEditCommand], CommitGuardFactory]
+_MAX_PENDING_CONFIRMATIONS = 256
+_MAX_HISTORY_RECOVERY_BYTES = 8 * 1024 * 1024
+_HISTORY_PARTICIPANT_ID = "TASK044/TIMELINE-HISTORY"
+_HISTORY_PARTICIPANT_VERSION = "1.0.0"
+_HISTORY_RECOVERY_VERSION = "1.1.0"
 
 
 @dataclass(slots=True)
@@ -45,22 +62,361 @@ class _Confirmation:
     base_timeline_sha256: str
     command: TimelineEditCommand
     history_action: str
-    consumed: bool = False
+    commit_guard: CommitGuardFactory | None = None
+
+
+class _TimelineHistoryParticipant:
+    participant_id = _HISTORY_PARTICIPANT_ID
+    participant_version = _HISTORY_PARTICIPANT_VERSION
+
+    def __init__(
+        self,
+        *,
+        project_id: str,
+        recovery_path: Path,
+        expected_history_sha256: str | None = None,
+        target_history: ProjectCommandHistory | None = None,
+    ) -> None:
+        self.project_id = project_id
+        self.recovery_path = recovery_path
+        self.expected_history_sha256 = expected_history_sha256
+        self.target_history = target_history
+
+    @staticmethod
+    def _body(
+        *,
+        project_id: str,
+        transaction_id: str,
+        plan: ProjectSaveParticipantPlan,
+        expected_history_sha256: str | None,
+        target_history: ProjectCommandHistory,
+    ) -> dict[str, object]:
+        return {
+            "recovery_version": _HISTORY_RECOVERY_VERSION,
+            "participant_id": _HISTORY_PARTICIPANT_ID,
+            "participant_version": _HISTORY_PARTICIPANT_VERSION,
+            "project_id": project_id,
+            "transaction_id": transaction_id,
+            "binding_sha256": plan.binding_sha256,
+            "source_manifest_sha256": plan.source_manifest_sha256,
+            "target_manifest_sha256": plan.target_manifest_sha256,
+            "expected_history_sha256": expected_history_sha256,
+            "target_history": target_history.to_dict(),
+        }
+
+    @classmethod
+    def parse_recovery(cls, document: Mapping[str, Any]) -> dict[str, object]:
+        fields = {
+            "recovery_version", "participant_id", "participant_version",
+            "project_id", "transaction_id", "binding_sha256",
+            "source_manifest_sha256", "target_manifest_sha256",
+            "expected_history_sha256", "target_history", "recovery_sha256",
+        }
+        if not isinstance(document, Mapping) or set(document) != fields:
+            raise ValueError("Timeline participant recovery fields are not exact")
+        if (
+            document["recovery_version"] != _HISTORY_RECOVERY_VERSION
+            or document["participant_id"] != _HISTORY_PARTICIPANT_ID
+            or document["participant_version"] != _HISTORY_PARTICIPANT_VERSION
+        ):
+            raise ValueError("Timeline participant recovery identity is invalid")
+        if (
+            not isinstance(document["transaction_id"], str)
+            or re.fullmatch(r"save-[0-9a-f]{64}", document["transaction_id"]) is None
+        ):
+            raise ValueError("Timeline participant transaction identity is invalid")
+        for name in (
+            "binding_sha256", "source_manifest_sha256",
+            "target_manifest_sha256", "recovery_sha256",
+        ):
+            validate_sha256(document[name], field_name=name)
+        if document["expected_history_sha256"] is not None:
+            validate_sha256(
+                document["expected_history_sha256"],
+                field_name="expected_history_sha256",
+            )
+        target_history = parse_project_command_history(document["target_history"])
+        if target_history.project_id != document["project_id"]:
+            raise ValueError("Timeline participant history belongs to another Project")
+        body = {key: value for key, value in document.items() if key != "recovery_sha256"}
+        if document["recovery_sha256"] != sha256_bytes(canonical_json_bytes(body)):
+            raise ValueError("Timeline participant recovery checksum is invalid")
+        return {**document, "target_history_object": target_history}
+
+    def _load_recovery(self) -> dict[str, object]:
+        path = self.recovery_path
+        if (
+            path.is_symlink()
+            or not path.is_file()
+            or not 0 < path.stat().st_size <= _MAX_HISTORY_RECOVERY_BYTES
+        ):
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline participant recovery is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        try:
+            return self.parse_recovery(json.loads(path.read_text(encoding="utf-8")))
+        except ProductError:
+            raise
+        except (OSError, UnicodeError, json.JSONDecodeError, TypeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline participant recovery is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+
+    def _require_scope(
+        self,
+        recovery: Mapping[str, object],
+        transaction_id: str,
+        plan: ProjectSaveParticipantPlan,
+        prepared_receipt_sha256: str,
+    ) -> ProjectCommandHistory:
+        if (
+            recovery["project_id"] != self.project_id
+            or recovery["transaction_id"] != transaction_id
+            or recovery["binding_sha256"] != plan.binding_sha256
+            or recovery["source_manifest_sha256"] != plan.source_manifest_sha256
+            or recovery["target_manifest_sha256"] != plan.target_manifest_sha256
+            or recovery["recovery_sha256"] != prepared_receipt_sha256
+        ):
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_CONFLICT",
+                "Timeline participant recovery differs from the Project transaction",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        history = recovery["target_history_object"]
+        if (
+            not isinstance(history, ProjectCommandHistory)
+            or history.history_sha256 != plan.target_content_sha256
+            or recovery["expected_history_sha256"] != plan.source_content_sha256
+        ):
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_CONFLICT",
+                "Timeline participant history differs from its immutable plan",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return history
+
+    @staticmethod
+    def _current_history(project_root: Path, project_id: str) -> tuple[ProjectCommandHistory | None, str | None]:
+        path = ProjectCommandHistoryStore.path(project_root)
+        if path.is_symlink():
+            raise ProductError(
+                "ERR_PROJECT_HISTORY_FILE_INVALID",
+                "Project command history file is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if not path.exists():
+            return None, None
+        history = ProjectCommandHistoryStore.load(project_root)
+        if history.project_id != project_id:
+            raise ProductError(
+                "ERR_PROJECT_HISTORY_IDENTITY_CONFLICT",
+                "Project history belongs to another Project",
+                ProductErrorCategory.SECURITY,
+            )
+        return history, history.history_sha256
+
+    def plan_locked(
+        self,
+        project_root: Path,
+        source_manifest: ProductProjectManifest,
+        target_manifest: ProductProjectManifest,
+    ) -> ProjectSaveParticipantPlan:
+        if self.target_history is None:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_PARTICIPANT_UNPREPARED",
+                "Timeline history participant lacks its target history",
+                ProductErrorCategory.INTERNAL,
+            )
+        _history, current_sha = self._current_history(project_root, self.project_id)
+        if current_sha != self.expected_history_sha256:
+            raise ProductError(
+                "ERR_PROJECT_HISTORY_CAS_CONFLICT",
+                "Project history changed before Project save",
+                ProductErrorCategory.STATE,
+            )
+        return ProjectSaveParticipantPlan.create(
+            participant_id=self.participant_id,
+            participant_version=self.participant_version,
+            project_id=self.project_id,
+            source_manifest_sha256=source_manifest.project_manifest_sha256,
+            target_manifest_sha256=target_manifest.project_manifest_sha256,
+            source_content_sha256=current_sha,
+            target_content_sha256=self.target_history.history_sha256,
+        )
+
+    def prepare_locked(
+        self,
+        project_root: Path,
+        transaction_id: str,
+        plan: ProjectSaveParticipantPlan,
+    ) -> str:
+        if self.target_history is None:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_PARTICIPANT_UNPREPARED",
+                "Timeline history participant lacks its target history",
+                ProductErrorCategory.INTERNAL,
+            )
+        body = self._body(
+            project_id=self.project_id,
+            transaction_id=transaction_id,
+            plan=plan,
+            expected_history_sha256=self.expected_history_sha256,
+            target_history=self.target_history,
+        )
+        document = {**body, "recovery_sha256": sha256_bytes(canonical_json_bytes(body))}
+        if self.recovery_path.exists():
+            current = self._load_recovery()
+            if current["recovery_sha256"] != document["recovery_sha256"]:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_CONFLICT",
+                    "Another Timeline history recovery already exists",
+                    ProductErrorCategory.STATE,
+                )
+            return str(document["recovery_sha256"])
+        AtomicJsonWriter.write(
+            self.recovery_path,
+            document,
+            validator=self.parse_recovery,
+        )
+        return str(document["recovery_sha256"])
+
+    def _delete_exact(self, expected_receipt_sha256: str) -> None:
+        current = self._load_recovery()
+        if current["recovery_sha256"] != expected_receipt_sha256:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_CONFLICT",
+                "Timeline history recovery changed before cleanup",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        self.recovery_path.unlink()
+
+    def reconcile_locked(
+        self,
+        project_root: Path,
+        transaction_id: str,
+        plan: ProjectSaveParticipantPlan,
+        prepared_receipt_sha256: str,
+        outcome: ProjectSaveParticipantOutcome,
+    ) -> ProjectSaveParticipantResult:
+        _current, current_sha = self._current_history(project_root, self.project_id)
+        if not self.recovery_path.exists():
+            expected_sha = (
+                plan.target_content_sha256
+                if outcome is ProjectSaveParticipantOutcome.COMPLETE
+                else plan.source_content_sha256
+            )
+            if current_sha != expected_sha:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_CONFLICT",
+                    "Timeline participant recovery is missing before reconciliation",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            return ProjectSaveParticipantResult.create(
+                participant_id=self.participant_id,
+                binding_sha256=plan.binding_sha256,
+                transaction_id=transaction_id,
+                outcome=outcome,
+                result_content_sha256=current_sha,
+            )
+        recovery = self._load_recovery()
+        target = self._require_scope(
+            recovery, transaction_id, plan, prepared_receipt_sha256,
+        )
+        if outcome is ProjectSaveParticipantOutcome.COMPLETE:
+            if current_sha != target.history_sha256:
+                if current_sha != plan.source_content_sha256:
+                    raise ProductError(
+                        "ERR_PROJECT_HISTORY_CAS_CONFLICT",
+                        "Project history changed before participant completion",
+                        ProductErrorCategory.STATE,
+                    )
+                ProjectCommandHistoryStore._save_unlocked(
+                    project_root,
+                    target,
+                    expected_previous_history_sha256=plan.source_content_sha256,
+                )
+            result_sha = target.history_sha256
+        else:
+            if current_sha != plan.source_content_sha256:
+                raise ProductError(
+                    "ERR_PROJECT_HISTORY_CAS_CONFLICT",
+                    "Project history changed before participant rollback",
+                    ProductErrorCategory.STATE,
+                )
+            result_sha = current_sha
+        self._delete_exact(prepared_receipt_sha256)
+        return ProjectSaveParticipantResult.create(
+            participant_id=self.participant_id,
+            binding_sha256=plan.binding_sha256,
+            transaction_id=transaction_id,
+            outcome=outcome,
+            result_content_sha256=result_sha,
+        )
+
+    def abort_prejournal_locked(
+        self,
+        project_root: Path,
+        transaction_id: str,
+        plan: ProjectSaveParticipantPlan,
+        prepared_receipt_sha256: str,
+    ) -> None:
+        recovery = self._load_recovery()
+        self._require_scope(recovery, transaction_id, plan, prepared_receipt_sha256)
+        self._delete_exact(prepared_receipt_sha256)
+
+    def reconcile_orphan_locked(
+        self,
+        project_root: Path,
+        current_manifest: ProductProjectManifest,
+    ) -> str | None:
+        if not self.recovery_path.exists():
+            return None
+        recovery = self._load_recovery()
+        if recovery["project_id"] != self.project_id:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_IDENTITY",
+                "Timeline history recovery belongs to another Project",
+                ProductErrorCategory.SECURITY,
+            )
+        if current_manifest.project_manifest_sha256 != recovery["source_manifest_sha256"]:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_CONFLICT",
+                "Orphan recovery cannot be removed after Project state changed",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            )
+        receipt = str(recovery["recovery_sha256"])
+        self._delete_exact(receipt)
+        return receipt
 
 
 class Task044TimelineEditApplication:
     """Adds immutable Timeline revisions; no provider or native mutation occurs."""
 
     def __init__(self, *, project_root: str | Path, project_id: str,
-                 token_factory: TokenFactory | None = None) -> None:
+                 token_factory: TokenFactory | None = None,
+                 save_coordinator: ProductProjectSaveCoordinator | None = None,
+                 placement_guard_resolver: PlacementGuardResolver | None = None) -> None:
         self.project_root = Path(project_root).resolve(strict=True)
         self.project_id = project_id
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_id != project_id:
             raise ProductError("ERR_TIMELINE_EDIT_PROJECT_MISMATCH", "Project identity differs", ProductErrorCategory.SECURITY)
+        self._save_coordinator = save_coordinator or ProductProjectSaveCoordinator()
+        self._participant = _TimelineHistoryParticipant(
+            project_id=project_id,
+            recovery_path=ProductProjectManifestStore.path(self.project_root).with_name(
+                "timeline-edit-command-recovery.json"
+            ),
+        )
         self._recover_command_history()
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
+        self._placement_guard_resolver = placement_guard_resolver
         self._pending: dict[str, _Confirmation] = {}
+        self._pending_lock = Lock()
 
     @property
     def _history_recovery_path(self) -> Path:
@@ -103,11 +459,31 @@ class Task044TimelineEditApplication:
             return
         if path.is_symlink() or not path.is_file() or path.stat().st_size > 8 * 1024 * 1024:
             raise ProductError("ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID", "Timeline history recovery is invalid", ProductErrorCategory.DATA_INTEGRITY)
-        if ProductProjectSaveCoordinator().recovery_status(self.project_root)["required"]:
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+            raise ProductError("ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID", "Timeline history recovery is invalid", ProductErrorCategory.DATA_INTEGRITY) from exc
+        if isinstance(document, Mapping) and document.get("recovery_version") == _HISTORY_RECOVERY_VERSION:
+            try:
+                _TimelineHistoryParticipant.parse_recovery(document)
+            except (TypeError, ValueError) as exc:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                    "Timeline participant recovery is invalid",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                ) from exc
+            if self._save_coordinator.recovery_status(self.project_root)["required"]:
+                return
+            self._save_coordinator.reconcile_participant_orphan(
+                self.project_root,
+                participant=self._participant,
+            )
+            return
+        if self._save_coordinator.recovery_status(self.project_root)["required"]:
             raise ProductError("ERR_TIMELINE_EDIT_PROJECT_RECOVERY_PENDING", "Complete or roll back the Project save first", ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
         try:
-            recovery = self._parse_history_recovery(json.loads(path.read_text(encoding="utf-8")))
-        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+            recovery = self._parse_history_recovery(document)
+        except (TypeError, ValueError) as exc:
             raise ProductError("ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID", "Timeline history recovery is invalid", ProductErrorCategory.DATA_INTEGRITY) from exc
         if recovery["project_id"] != self.project_id:
             raise ProductError("ERR_TIMELINE_EDIT_HISTORY_RECOVERY_IDENTITY", "Recovery belongs to another Project", ProductErrorCategory.SECURITY)
@@ -134,16 +510,38 @@ class Task044TimelineEditApplication:
     def snapshot_path(self) -> Path:
         return self.project_root / RELATIVE_PATH
 
+    def project_with_source_bindings(
+        self,
+        timeline: InteractiveTimeline,
+    ) -> tuple[InteractiveTimeline, dict[str, int | None], dict[str, object | None], str]:
+        """Read the current bound edit history and retain its typed source map."""
+
+        manifest = ProductProjectManifestStore.load(self.project_root)
+        history = self._load(manifest)
+        projected, in_out, bindings = TimelineEditProjector.apply_with_source_bindings(
+            timeline,
+            history,
+        )
+        return projected, in_out, bindings, manifest.project_manifest_sha256
+
     def _load(self, manifest: ProductProjectManifest) -> TimelineEditHistory:
         binding = next((item for item in manifest.child_bindings if item.identity == ("TASK-044", RELATIVE_PATH)), None)
         if binding is None:
             if self.snapshot_path.exists():
                 raise ProductError("ERR_TIMELINE_EDIT_UNBOUND_CHILD", "Unbound Timeline edit child exists", ProductErrorCategory.SECURITY)
             return TimelineEditHistory(self.project_id, f"timeline-edit:{self.project_id}")
-        if binding.format_id != FORMAT_ID or binding.format_version != FORMAT_VERSION:
+        if binding.format_id != FORMAT_ID or binding.format_version not in SUPPORTED_FORMAT_VERSIONS:
             raise ProductError("ERR_TIMELINE_EDIT_FORMAT_MISMATCH", "Timeline edit format is unsupported", ProductErrorCategory.NOT_SUPPORTED)
         history = TimelineEditSnapshotStore.load(self.snapshot_path, expected_project_id=self.project_id)
-        if sha256_bytes(TimelineEditSnapshotStore.serialize(history)) != binding.content_sha256:
+        serialized = TimelineEditSnapshotStore.serialize(history)
+        snapshot_version = json.loads(serialized)["snapshot_version"]
+        if snapshot_version != binding.format_version:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_FORMAT_MISMATCH",
+                "Timeline edit binding version differs from the serialized snapshot",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if sha256_bytes(serialized) != binding.content_sha256:
             raise ProductError("ERR_TIMELINE_EDIT_BINDING_CHECKSUM", "Timeline edit child differs from Project binding", ProductErrorCategory.DATA_INTEGRITY)
         return history
 
@@ -247,7 +645,21 @@ class Task044TimelineEditApplication:
         if original is None:
             raise ProductError("ERR_TIMELINE_EDIT_REDO_TARGET", "Redo target is missing", ProductErrorCategory.DATA_INTEGRITY)
         projected, _ = TimelineEditProjector.apply(timeline, edit_history)
-        if original.target_clip_id is not None:
+        if original.kind in {
+            TimelineEditKind.INSERT_CLIP,
+            TimelineEditKind.REMOVE_CLIP,
+            TimelineEditKind.REPLACE_CLIP,
+        }:
+            replay = TimelineEditCommand(
+                command_id=command_id,
+                kind=original.kind,
+                target_clip_id=original.target_clip_id,
+                before_clip=original.before_clip,
+                after_clip=original.after_clip,
+                before_source_binding=original.before_source_binding,
+                after_source_binding=original.after_source_binding,
+            )
+        elif original.target_clip_id is not None:
             clip = self._clip(projected, original.target_clip_id)
             replay = TimelineEditCommand(command_id, original.kind, target_clip_id=clip.clip_id,
                 before_start_frame=clip.start_frame, before_end_frame=clip.end_frame,
@@ -258,10 +670,56 @@ class Task044TimelineEditApplication:
         else:
             replay = TimelineEditCommand(command_id, original.kind,
                                          target_track_id=original.target_track_id, track=original.track)
-        return self._prepare(timeline, replay, expected_project_manifest_sha256, "REDO")
+        commit_guard = None
+        if replay.kind in {
+            TimelineEditKind.INSERT_CLIP,
+            TimelineEditKind.REPLACE_CLIP,
+        } and replay.after_source_binding is not None:
+            if self._placement_guard_resolver is None:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_PLACEMENT_GUARD_REQUIRED",
+                    "Placement redo requires the current visual Asset guard",
+                    ProductErrorCategory.NOT_SUPPORTED,
+                )
+            commit_guard = self._placement_guard_resolver(replay)
+        return self._prepare(
+            timeline,
+            replay,
+            expected_project_manifest_sha256,
+            "REDO",
+            commit_guard,
+        )
+
+    def prepare_placement(
+        self,
+        *,
+        timeline: InteractiveTimeline,
+        command: TimelineEditCommand,
+        expected_project_manifest_sha256: str,
+    ) -> dict[str, object]:
+        if command.kind not in {TimelineEditKind.INSERT_CLIP, TimelineEditKind.REPLACE_CLIP}:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_PLACEMENT_COMMAND_INVALID",
+                "Visual Asset placement accepts only INSERT_CLIP or REPLACE_CLIP",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._placement_guard_resolver is None:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_PLACEMENT_GUARD_REQUIRED",
+                "Visual Asset placement guard is unavailable",
+                ProductErrorCategory.NOT_SUPPORTED,
+            )
+        return self._prepare(
+            timeline,
+            command,
+            expected_project_manifest_sha256,
+            "APPLY",
+            self._placement_guard_resolver(command),
+        )
 
     def _prepare(self, timeline: InteractiveTimeline, command: TimelineEditCommand,
-                 expected_manifest: str, history_action: str) -> dict[str, object]:
+                 expected_manifest: str, history_action: str,
+                 commit_guard: CommitGuardFactory | None = None) -> dict[str, object]:
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_manifest_sha256 != expected_manifest:
             raise ProductError("ERR_TIMELINE_EDIT_PROJECT_CONFLICT", "Project changed; reload first", ProductErrorCategory.STATE)
@@ -272,33 +730,60 @@ class Task044TimelineEditApplication:
         project_history, project_history_sha = self._load_project_history()
         if project_history.records and project_history.records[-1].result_manifest_sha256 != manifest.project_manifest_sha256:
             raise ProductError("ERR_PROJECT_HISTORY_SOURCE_CONFLICT", "Project history is not at current Manifest", ProductErrorCategory.STATE)
-        token = self._token_factory()
-        if not isinstance(token, str) or not token or token in self._pending:
-            raise ProductError("ERR_TIMELINE_EDIT_CONFIRMATION_INVALID", "Confirmation identity is invalid", ProductErrorCategory.INTERNAL)
-        self._pending[token] = _Confirmation(token, expected_manifest, project_history_sha,
-                                             timeline.timeline_sha256, command, history_action)
+        with self._pending_lock:
+            if len(self._pending) >= _MAX_PENDING_CONFIRMATIONS:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_CONFIRMATION_CAPACITY",
+                    "Timeline edit confirmation capacity is exhausted",
+                    ProductErrorCategory.STATE,
+                )
+            token = self._token_factory()
+            if not isinstance(token, str) or not token or token in self._pending:
+                raise ProductError("ERR_TIMELINE_EDIT_CONFIRMATION_INVALID", "Confirmation identity is invalid", ProductErrorCategory.INTERNAL)
+            self._pending[token] = _Confirmation(
+                token, expected_manifest, project_history_sha,
+                timeline.timeline_sha256, command, history_action, commit_guard,
+            )
         return {"confirmation_id": token, "command": command.to_dict(),
                 "human_confirmation_required": True, "provider_execution_started": False,
                 "external_mutation_started": False}
 
     def apply(self, *, confirmation_id: str, timeline: InteractiveTimeline) -> dict[str, object]:
-        pending = self._pending.get(confirmation_id)
-        if pending is None or pending.consumed:
+        if not isinstance(confirmation_id, str) or not confirmation_id:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID",
+                "Confirmation identity is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        with self._pending_lock:
+            pending = self._pending.pop(confirmation_id, None)
+        if pending is None:
             raise ProductError("ERR_TIMELINE_EDIT_CONFIRMATION_INVALID", "Confirmation is missing or consumed", ProductErrorCategory.AUTHORIZATION)
-        pending.consumed = True
         manifest = ProductProjectManifestStore.load(self.project_root)
         if manifest.project_manifest_sha256 != pending.expected_manifest_sha256 or timeline.timeline_sha256 != pending.base_timeline_sha256:
             raise ProductError("ERR_TIMELINE_EDIT_PROJECT_CONFLICT", "Project or Timeline changed after preparation", ProductErrorCategory.STATE)
         history = self._load(manifest)
         TimelineEditProjector.apply(timeline, history)
+        revision_version = (
+            FORMAT_VERSION_V1_1
+            if history.current is not None and history.current.revision_version == FORMAT_VERSION_V1_1
+            or pending.command.kind in {
+                TimelineEditKind.INSERT_CLIP,
+                TimelineEditKind.REMOVE_CLIP,
+                TimelineEditKind.REPLACE_CLIP,
+            }
+            else FORMAT_VERSION
+        )
         revision = TimelineEditRevision(
             self.project_id, history.history_id, len(history.revisions) + 1, timeline.timeline_sha256,
             pending.command, None if history.current is None else history.current.revision_sha256,
+            revision_version=revision_version,
         )
         history.append(revision)
         TimelineEditProjector.apply(timeline, history)
         data = TimelineEditSnapshotStore.serialize(history)
-        binding = ProjectChildBinding("TASK-044", RELATIVE_PATH, FORMAT_ID, FORMAT_VERSION,
+        snapshot_version = json.loads(data)["snapshot_version"]
+        binding = ProjectChildBinding("TASK-044", RELATIVE_PATH, FORMAT_ID, snapshot_version,
                                       sha256_bytes(data), True, (timeline.timeline_sha256,))
         bindings = [item for item in manifest.child_bindings if item.identity != binding.identity] + [binding]
         target = ProductProjectManifest.create(
@@ -333,25 +818,231 @@ class Task044TimelineEditApplication:
                 result_manifest_sha256=target.project_manifest_sha256,
                 source_revision=manifest.project_revision,
             )
-        self._write_history_recovery(
-            source_manifest_sha256=manifest.project_manifest_sha256,
-            result_manifest_sha256=target.project_manifest_sha256,
-            expected_history_sha256=current_history_sha,
-            history=updated_project_history,
-        )
-        saved = ProductProjectSaveCoordinator().save(
+        participant = None
+        if snapshot_version == FORMAT_VERSION_V1_1:
+            participant = _TimelineHistoryParticipant(
+                project_id=self.project_id,
+                recovery_path=self._history_recovery_path,
+                expected_history_sha256=current_history_sha,
+                target_history=updated_project_history,
+            )
+        else:
+            self._write_history_recovery(
+                source_manifest_sha256=manifest.project_manifest_sha256,
+                result_manifest_sha256=target.project_manifest_sha256,
+                expected_history_sha256=current_history_sha,
+                history=updated_project_history,
+            )
+        saved = self._save_coordinator.save(
             self.project_root, target, {RELATIVE_PATH: data},
             expected_previous_manifest_sha256=manifest.project_manifest_sha256,
+            participant=participant,
+            commit_guard=pending.commit_guard,
         )
-        ProjectCommandHistoryStore.save(self.project_root, updated_project_history,
-                                        expected_previous_history_sha256=current_history_sha)
-        self._history_recovery_path.unlink()
+        if participant is None:
+            ProjectCommandHistoryStore.save(
+                self.project_root,
+                updated_project_history,
+                expected_previous_history_sha256=current_history_sha,
+            )
+            self._history_recovery_path.unlink()
         projected, in_out = TimelineEditProjector.apply(timeline, history)
         return {"project_manifest_sha256": saved.project_manifest_sha256,
                 "timeline_revision": revision.revision, "timeline_revision_sha256": revision.revision_sha256,
                 "project_history_sha256": updated_project_history.history_sha256,
                 "projected_timeline_sha256": projected.timeline_sha256, "in_out": in_out,
                 "provider_execution_started": False, "external_mutation_started": False}
+
+    def cancel(self, *, confirmation_id: str) -> dict[str, object]:
+        if not isinstance(confirmation_id, str) or not confirmation_id:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID",
+                "Confirmation identity is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        with self._pending_lock:
+            pending = self._pending.pop(confirmation_id, None)
+        if pending is None:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID",
+                "Confirmation is missing or consumed",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return {
+            "confirmation_id": confirmation_id,
+            "cancelled": True,
+            "provider_execution_started": False,
+            "external_mutation_started": False,
+        }
+
+    def project_save_recovery_status(self) -> dict[str, object]:
+        status = self._save_coordinator.recovery_status(self.project_root)
+        return {
+            **status,
+            "history_reconciliation_pending": bool(
+                status.get("participant_required")
+                and status.get("participant_id") == _HISTORY_PARTICIPANT_ID
+            ),
+        }
+
+    def recover_project_save(
+        self,
+        *,
+        transaction_id: str,
+        action: str,
+        commit_guard: CommitGuardFactory | None = None,
+    ) -> dict[str, object]:
+        if not isinstance(transaction_id, str) or not transaction_id:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_RECOVERY_REQUEST_INVALID",
+                "Project save recovery transaction is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        status = self._save_coordinator.recovery_status(self.project_root)
+        if not status["required"] or status.get("transaction_id") != transaction_id:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_RECOVERY_STALE",
+                "Project save recovery is missing or changed",
+                ProductErrorCategory.STATE,
+            )
+        if status.get("participant_id") != _HISTORY_PARTICIPANT_ID:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_RECOVERY_PARTICIPANT",
+                "Project save recovery does not belong to Timeline history",
+                ProductErrorCategory.NOT_SUPPORTED,
+            )
+        available = tuple(status["available_actions"])
+        if commit_guard is None and action in {"COMPLETE", "FINALIZE"}:
+            commit_guard = self._placement_recovery_guard()
+        if action in {"COMPLETE", "FINALIZE"}:
+            if action not in available:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_RECOVERY_ACTION",
+                    "Requested Project save recovery action is unavailable",
+                    ProductErrorCategory.STATE,
+                )
+            manifest = self._save_coordinator.recover_complete(
+                self.project_root,
+                transaction_id=transaction_id,
+                participant=self._participant,
+                commit_guard=commit_guard,
+            )
+        elif action == "ROLLBACK":
+            if action not in available:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_RECOVERY_ACTION",
+                    "Requested Project save recovery action is unavailable",
+                    ProductErrorCategory.STATE,
+                )
+            manifest = self._save_coordinator.recover_rollback(
+                self.project_root,
+                transaction_id=transaction_id,
+                participant=self._participant,
+                commit_guard=commit_guard,
+            )
+        else:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_RECOVERY_ACTION",
+                "Project save recovery action is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        history, history_sha = self._load_project_history()
+        return {
+            "transaction_id": transaction_id,
+            "action": action,
+            "project_manifest_sha256": manifest.project_manifest_sha256,
+            "project_history_sha256": history_sha,
+            "project_history_record_count": len(history.records),
+            "provider_execution_started": False,
+            "external_mutation_started": False,
+        }
+
+    def _placement_recovery_guard(self) -> CommitGuardFactory | None:
+        """Resolve only the exact pending APPLY/REDO placement guard."""
+
+        journal = ProjectSaveJournalStore.load(self.project_root)
+        if journal.participant_plan is None or journal.participant_plan.participant_id != _HISTORY_PARTICIPANT_ID:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_RECOVERY_PARTICIPANT",
+                "Project save recovery does not belong to Timeline history",
+                ProductErrorCategory.NOT_SUPPORTED,
+            )
+        if self._history_recovery_path.exists():
+            recovery = self._participant._load_recovery()
+            target_project_history = recovery["target_history_object"]
+        else:
+            # The participant sidecar is consumed before its COMPLETE result is
+            # journaled.  If that final journal write is interrupted, the
+            # canonical Project history is the only remaining target body.
+            target_project_history = ProjectCommandHistoryStore.load(self.project_root)
+            if target_project_history.history_sha256 != journal.participant_plan.target_content_sha256:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                    "Timeline participant target history differs from its journal plan",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+        if not isinstance(target_project_history, ProjectCommandHistory):
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline participant target history is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if not target_project_history.records:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline participant target history is empty",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        record = target_project_history.records[-1]
+        if record.action.value == "UNDO":
+            return None
+        entry = next((item for item in journal.entries if item.relative_path == RELATIVE_PATH), None)
+        if entry is None:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline participant target child is missing",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        current_manifest = ProductProjectManifestStore.load(self.project_root)
+        if current_manifest.project_manifest_sha256 == journal.target_manifest.project_manifest_sha256:
+            target_path = self.snapshot_path
+        else:
+            target_path = self.project_root / ".bai-project" / Path(*entry.staged_relative_path.split("/"))
+        target_history = TimelineEditSnapshotStore.load(
+            target_path,
+            expected_project_id=self.project_id,
+        )
+        if sha256_bytes(TimelineEditSnapshotStore.serialize(target_history)) != entry.target_sha256:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline participant target child differs from its journal",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        command = next(
+            (
+                item.command for item in reversed(target_history.revisions)
+                if item.command.command_id == record.target_identity
+            ),
+            None,
+        )
+        if command is None:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline participant target command is missing",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if (
+            command.kind in {TimelineEditKind.INSERT_CLIP, TimelineEditKind.REPLACE_CLIP}
+            and command.after_source_binding is not None
+        ):
+            if self._placement_guard_resolver is None:
+                raise ProductError(
+                    "ERR_TIMELINE_EDIT_PLACEMENT_GUARD_REQUIRED",
+                    "Placement recovery requires the current visual Asset guard",
+                    ProductErrorCategory.NOT_SUPPORTED,
+                )
+            return self._placement_guard_resolver(command)
+        return None
 
 
 __all__ = ["Task044TimelineEditApplication"]

@@ -315,7 +315,7 @@ def test_world_lock_registry_filters_exact_reference_slot_kinds() -> None:
 
 
 def test_world_lock_registry_is_read_only_and_does_not_invent_generation() -> None:
-    assert "renderLockRegistry(model);renderAssetIndex(model);if(!model?.available)" in SHELL_HTML
+    assert "renderLockRegistry(model);renderAssetIndex(model,placement);if(!model?.available)" in SHELL_HTML
     assert "production_register_candidate" not in SHELL_HTML
     assert "production_generate_lock" not in SHELL_HTML
     assert "正式LOCKを確認" in SHELL_HTML
@@ -335,10 +335,19 @@ def test_assets_projects_bounded_production_candidate_index() -> None:
         'data-asset-kind="BGM"',
         'data-asset-kind="AMBIENCE"',
         "function assetKindMatches(slot,candidate)",
-        "function renderAssetIndex(model)",
+        "function renderAssetIndex(model,placementModel)",
         "rows.slice(0,500)",
         "candidate.asset_sha256",
         "candidate.generation_job_id",
+        "visual_asset_placement_snapshot",
+        "visual_asset_placement_prepare_insert",
+        "visual_asset_placement_prepare_replace",
+        "visual_asset_placement_apply",
+        "visual_asset_placement_cancel",
+        "visual_asset_placement_recover",
+        "recoverVisualAssetPlacement",
+        "Timelineへ配置",
+        "選択Clipを置換",
     ):
         assert marker in SHELL_HTML
 

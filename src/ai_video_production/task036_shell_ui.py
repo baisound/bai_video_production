@@ -356,6 +356,33 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().apply_edit(args)
 
+    def visual_asset_placement_snapshot(self, args: Any = None) -> dict[str, Any]:
+        with self._nle_operation():
+            controller = self._ensure_nle_controller()
+            if controller is None:
+                return {"available": False}
+            return controller.visual_asset_placement_snapshot(args)
+
+    def visual_asset_placement_prepare_insert(self, args: Any) -> dict[str, object]:
+        with self._nle_operation():
+            return self._require_nle_controller().visual_asset_placement_prepare_insert(args)
+
+    def visual_asset_placement_prepare_replace(self, args: Any) -> dict[str, object]:
+        with self._nle_operation():
+            return self._require_nle_controller().visual_asset_placement_prepare_replace(args)
+
+    def visual_asset_placement_apply(self, args: Any) -> dict[str, object]:
+        with self._nle_operation():
+            return self._require_nle_controller().visual_asset_placement_apply(args)
+
+    def visual_asset_placement_cancel(self, args: Any) -> dict[str, object]:
+        with self._nle_operation():
+            return self._require_nle_controller().visual_asset_placement_cancel(args)
+
+    def visual_asset_placement_recover(self, args: Any) -> dict[str, object]:
+        with self._nle_operation():
+            return self._require_nle_controller().visual_asset_placement_recover(args)
+
     def export_queue_snapshot(self, args: Any = None) -> dict[str, Any]:
         with self._nle_operation():
             controller = self._ensure_nle_controller()
@@ -1280,6 +1307,10 @@ class Task036ShellBridge:
             "timeline": self.interactive_timeline_snapshot(),
             "export": self.export_queue_snapshot(),
         }
+        placement = self.visual_asset_placement_snapshot()
+        placement_count = sources["timeline"].get("visual_asset_placement_count", 0)
+        if placement.get("available") is not True and placement_count:
+            sources["placement"] = placement
         missing = sorted(name for name, source in sources.items() if source.get("available") is not True)
         if missing:
             return {
@@ -1311,6 +1342,9 @@ class Task036ShellBridge:
                 visual_handoff_snapshot=sources["visual"],
                 timeline_snapshot=sources["timeline"],
                 export_snapshot=sources["export"],
+                visual_asset_placement_snapshot=(
+                    placement if placement.get("available") is True else None
+                ),
                 external_gate_receipts=tuple(
                     receipt.to_readiness_dict()
                     for receipt in external_gate_receipts

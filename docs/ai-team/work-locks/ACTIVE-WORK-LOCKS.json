@@ -1,9 +1,9 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 28,
+  "registry_revision": 29,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "50a2f06b4d5b64764a521c5863aa1632992a1418",
+  "audit_base_main_sha": "385082ecfbdda39b93586bca27dfd6770a8819bd",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -1891,6 +1891,63 @@
       "github_release_url": "https://github.com/baisound/bai_video_production/releases/tag/v0.22.0",
       "release_reason": "EXACT_V0220_RELEASE_TARGET_MERGED_POST_MERGE_GREEN_ANNOTATED_TAG_AND_RELEASE_VERIFIED",
       "released_at": "2026-08-20T19:14:54Z",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK036-PUX2EFG-CHANGELOG-20260821",
+      "owner_agent": "開発2 / TASK-036 integration owner",
+      "owner_thread_id": "CURRENT_DEVELOPMENT2_THREAD_20260821",
+      "lock_host_authority": "OWNER_AUTONOMY_AND_ALL_GREEN_MERGE_DIRECTIVE_20260821",
+      "integration_effect_authority_state": "PENDING_LOCK_HOST_PR",
+      "target_merge_authority_state": "OWNER_CONDITIONAL_ALL_GREEN_APPROVAL",
+      "implementation_authority_state": "TASK036_PUX2E_2F_2G_IMPLEMENTATION_EXCLUDES_CHANGELOG_UNTIL_LOCK_HOSTED",
+      "hosting_branch": "codex/task-036-pux2efg-changelog-lock-hosting",
+      "hosting_base_sha": "385082ecfbdda39b93586bca27dfd6770a8819bd",
+      "status": "PENDING_HOST_PR",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "target_pull_request": 205,
+      "target_pull_request_state": "DRAFT_HOSTED_CHECKS_PENDING_CHANGELOG",
+      "target_branch": "codex/task-036-pux2e-export-dispatch-vertical",
+      "expected_pre_integration_head": "eed7b48268276a2b406f7c780ffde902a8520acf",
+      "purpose": "ONE_EXACT_TASK036_PUX2E_2F_2G_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+      "approved_changelog_bullet": "- TASK-036 P-UX-2E/2F/2Gとして、Final Reviewからdurable Export Queueへの境界、Ollamaによる無償ローカル企画とTASK-027保存、LOCAL_FREE_AIのFLUX画像生成、TASK-013実行制御、別確認によるIMAGE Asset/TASK-037 Candidate採用、V6.1.1 Shell操作を統合しました。実機ではproduction画像Portのexact 1回生成・PNG検証・read-backまでPASSですが、canonical Queue/Human GO/Shell/adoption/Final Exportの実機縦断完了、音声、Human ACCEPT/LOCK、公開、Release/Deployは未完または別Gateです。",
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
+      "immutable_target_path_count": 47,
+      "denied": [
+        "TASK036_PUX2E_2F_2G_IMPLEMENTATION_OR_EVIDENCE_MUTATION_DURING_INTEGRATION_EFFECT",
+        "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
+        ".github/**",
+        "OTHER_SHARED_INTEGRATION_FILES",
+        "PROVIDER_PAID_CLOUD_CREDENTIAL_AUDIO_OR_ADDITIONAL_NATIVE_EXECUTION",
+        "VERSION_TAG_RELEASE_DEPLOY_DURING_CHANGELOG_EFFECT",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_UNCHANGED_HEAD_RETRY",
+      "composition_rule": "TARGET_PR_EXACT_47_IMMUTABLE_PRODUCT_PATHS_PLUS_1_INTEGRATION_OWNED_CHANGELOG_FILE",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "LOCK_HOST_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "LOCK_HOST_MERGED_MAIN_EXACT_READ_BACK",
+        "LOCK_HOST_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "FRESH_MAIN_REGISTRY_TARGET_HEAD_AND_OVERLAP_REAUDIT",
+        "NORMAL_MAIN_INTO_TARGET_MERGE_NO_REBASE_NO_FORCE",
+        "EXACT_APPROVED_CHANGELOG_LINE_ONLY"
+      ],
+      "expiry_conditions": [
+        "TARGET_HEAD_MISMATCH",
+        "TARGET_PR_CLOSED_OR_MERGED",
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
+        "PATH_OR_OPEN_PR_OVERLAP",
+        "IMPLEMENTATION_BLOB_DRIFT",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
+        "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+      ],
+      "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_AND_APPEND_ONLY_CLOSURE_EVIDENCE",
+      "integration_effect_authority_id": "OWNER_AUTONOMY_AND_ALL_GREEN_MERGE_DIRECTIVE_20260821",
+      "target_merge_authority_id": "OWNER_CONDITIONAL_ALL_GREEN_APPROVAL_20260821",
       "automatic_retry": false,
       "automatic_rollback_or_revert": false
     }

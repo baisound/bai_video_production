@@ -153,6 +153,14 @@ def training_roi(
         if profile.killer_power_hud is None:
             raise ValueError("キラー能力HUDがこのHUDプロファイルで未設定です。")
         return profile.killer_power_hud
+    if domain is VisualTrainingDomain.STATUS_EFFECT_POSITIVE:
+        if profile.bottom_right_positive_effects is None:
+            raise ValueError("ポジティブ状態効果HUDがこのHUDプロファイルで未設定です。")
+        return profile.bottom_right_positive_effects
+    if domain is VisualTrainingDomain.STATUS_EFFECT_NEGATIVE:
+        if profile.bottom_right_negative_effects is None:
+            raise ValueError("ネガティブ状態効果HUDがこのHUDプロファイルで未設定です。")
+        return profile.bottom_right_negative_effects
     raise ValueError(f"未対応の学習対象です: {domain.value}")
 
 
@@ -222,4 +230,8 @@ def slot_specifications(
         return ((None, "アイテム"),)
     if domain is VisualTrainingDomain.KILLER_POWER:
         return ((None, "キラー能力"),)
+    if domain is VisualTrainingDomain.STATUS_EFFECT_POSITIVE:
+        return ((None, "ポジティブ状態効果"),)
+    if domain is VisualTrainingDomain.STATUS_EFFECT_NEGATIVE:
+        return ((None, "ネガティブ状態効果"),)
     return ()

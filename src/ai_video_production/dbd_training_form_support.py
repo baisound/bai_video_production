@@ -79,6 +79,8 @@ VISUAL_TRAINING_DOMAIN_JA = {
     "ADDON_ICON": "アドオンアイコン",
     "KILLER_POWER": "キラー能力アイコン",
     "KILLER_SPECIFIC_HUD": "キラー固有HUD（Teacher）",
+    "STATUS_EFFECT_POSITIVE": "ポジティブ状態効果",
+    "STATUS_EFFECT_NEGATIVE": "ネガティブ状態効果",
 }
 
 HUD_VISIBILITY_JA = {

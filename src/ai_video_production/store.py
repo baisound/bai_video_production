@@ -853,7 +853,7 @@ class SQLiteProductStore:
             raise ValueError("idempotency_key must be 1-200 characters")
         op_id = generate_id(IdKind.OPERATION)
         now = utc_now_iso()
-        with self._connect() as conn:
+        with self._managed_connection() as conn:
             try:
                 conn.execute(
                     "INSERT INTO operations(operation_id,job_id,command_type,idempotency_key,status,attempt,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
@@ -888,11 +888,77 @@ class SQLiteProductStore:
 
     def get_operation(self, operation_id: str) -> OperationRecord:
         validate_id(operation_id, IdKind.OPERATION)
-        with self._connect() as conn:
+        with self._managed_connection() as conn:
             row = conn.execute("SELECT * FROM operations WHERE operation_id=?", (operation_id,)).fetchone()
         if row is None:
             raise ProductError("ERR_INPUT_OPERATION_NOT_FOUND", "operation not found", ProductErrorCategory.VALIDATION)
         return self._row_to_operation(row)
+
+    def find_operation(self, job_id: str, idempotency_key: str) -> OperationRecord | None:
+        """Read one durable operation coordinate without creating it."""
+
+        validate_id(job_id, IdKind.JOB)
+        if not idempotency_key or len(idempotency_key) > 200:
+            raise ValueError("idempotency_key must be 1-200 characters")
+        with self._managed_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM operations WHERE job_id=? AND idempotency_key=?",
+                (job_id, idempotency_key),
+            ).fetchone()
+        return None if row is None else self._row_to_operation(row)
+
+    def compare_and_set_operation_status(
+        self,
+        operation_id: str,
+        *,
+        expected_statuses: tuple[str, ...],
+        status: str,
+        last_error_code: str | None = None,
+        increment_attempt: bool = False,
+        result_ref: str | None = None,
+        expected_result_refs: tuple[str | None, ...] | None = None,
+        replace_result_ref: bool = False,
+    ) -> tuple[OperationRecord, bool]:
+        """Atomically admit exactly one caller from an explicit status set."""
+
+        validate_id(operation_id, IdKind.OPERATION)
+        allowed = {"PENDING", "IN_PROGRESS", "PARTIAL", "COMPLETED", "FAILED"}
+        if not expected_statuses or any(item not in allowed for item in expected_statuses):
+            raise ValueError("expected_statuses are invalid")
+        if status not in allowed:
+            raise ValueError("unsupported operation status")
+        placeholders = ",".join("?" for _ in expected_statuses)
+        result_predicate = ""
+        result_parameters: list[str] = []
+        if expected_result_refs is not None:
+            if not expected_result_refs:
+                raise ValueError("expected_result_refs must not be empty")
+            non_null = [item for item in expected_result_refs if item is not None]
+            clauses = []
+            if any(item is None for item in expected_result_refs):
+                clauses.append("result_ref IS NULL")
+            if non_null:
+                clauses.append("result_ref IN (" + ",".join("?" for _ in non_null) + ")")
+                result_parameters.extend(non_null)
+            result_predicate = " AND (" + " OR ".join(clauses) + ")"
+        result_assignment = "result_ref=?" if replace_result_ref else "result_ref=COALESCE(?, result_ref)"
+        now = utc_now_iso()
+        with self._managed_connection() as conn:
+            cursor = conn.execute(
+                f"UPDATE operations SET status=?, last_error_code=?, updated_at=?, "
+                f"attempt=attempt+?, {result_assignment} "
+                f"WHERE operation_id=? AND status IN ({placeholders}){result_predicate}",
+                (
+                    status, last_error_code, now, 1 if increment_attempt else 0,
+                    result_ref, operation_id, *expected_statuses, *result_parameters,
+                ),
+            )
+            row = conn.execute(
+                "SELECT * FROM operations WHERE operation_id=?", (operation_id,),
+            ).fetchone()
+        if row is None:
+            raise ProductError("ERR_INPUT_OPERATION_NOT_FOUND", "operation not found", ProductErrorCategory.VALIDATION)
+        return self._row_to_operation(row), cursor.rowcount == 1
 
     def update_operation_status(
         self,
@@ -907,7 +973,7 @@ class SQLiteProductStore:
         if status not in {"PENDING", "IN_PROGRESS", "PARTIAL", "COMPLETED", "FAILED"}:
             raise ValueError("unsupported operation status")
         now = utc_now_iso()
-        with self._connect() as conn:
+        with self._managed_connection() as conn:
             cur = conn.execute(
                 "UPDATE operations SET status=?, last_error_code=?, updated_at=?, attempt=attempt+?, result_ref=COALESCE(?, result_ref) WHERE operation_id=?",
                 (status, last_error_code, now, 1 if increment_attempt else 0, result_ref, operation_id),

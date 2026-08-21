@@ -40,6 +40,7 @@ from .task036_product_ports import (
     Task036AssetIngestPort,
     Task036CutCandidatePort,
     Task036LocalTranscriptionPort,
+    _file_sha256,
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
 from .game_intelligence_shell import GameIntelligenceShellApplication
@@ -819,6 +820,15 @@ def build_trusted_launch(
             if exc.code != "ERR_INPUT_JOB_NOT_FOUND":
                 raise
             store.create_job(configuration.profile_snapshot_id, job_id=configuration.production_job_id)
+        # Bootstrap is a bounded initialization phase. Runtime operation CAS
+        # uses the same strict, lifetime-pinned existing-store contract as a
+        # pre-initialized Product Project.
+        store.close()
+        store = SQLiteProductStore(
+            configuration.database_path,
+            require_existing=True,
+            required_job_id=configuration.production_job_id,
+        )
     resolver = LogicalPathResolver(
         [
             PathMapping("asset://", configuration.asset_root),
@@ -838,11 +848,16 @@ def build_trusted_launch(
     transcription_port = Task036LocalTranscriptionPort(
         asr_provider or FasterWhisperProvider(configuration.asr_config),
         configuration.transcription_output,
+        store,
+        configuration.production_job_id,
         language=configuration.asr_language,
         timeline_rate=configuration.timeline_rate,
     )
     cut_port = Task036CutCandidatePort(
-        FixedAnalysisAudioBinding(configuration.analysis_source_path, configuration.analysis_audio_path),
+        FixedAnalysisAudioBinding(
+            "sha256:" + _file_sha256(configuration.analysis_source_path),
+            configuration.analysis_audio_path,
+        ),
         configuration.cut_output,
     )
     coordinator = DesktopEditingCoordinator.create(

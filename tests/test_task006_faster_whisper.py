@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from importlib import resources
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -129,3 +130,33 @@ def test_local_model_path_is_not_disclosed_as_manifest_model_id(tmp_path: Path) 
     provider = FasterWhisperProvider(FasterWhisperConfig(model=str(tmp_path / "private-model")), model_factory=FakeModel)
     assert provider.model_id.startswith("local-model-")
     assert str(tmp_path) not in provider.model_id
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX stable descriptor contract")
+def test_provider_preserves_stable_proc_descriptor_without_resolving_back_to_path(
+    tmp_path: Path,
+) -> None:
+    media = tmp_path / "sample.wav"
+    media.write_bytes(b"authorized-bytes")
+    descriptor = os.open(media, os.O_RDONLY)
+    descriptor_path = f"/proc/{os.getpid()}/fd/{descriptor}"
+    observed = {}
+
+    class DescriptorModel(FakeModel):
+        def transcribe(self, path: str, **kwargs):
+            observed["path"] = path
+            backup = media.with_suffix(".authorized")
+            media.replace(backup)
+            media.write_bytes(b"foreign-bytes")
+            observed["bytes"] = Path(path).read_bytes()
+            return super().transcribe(path, **kwargs)
+
+    try:
+        provider = FasterWhisperProvider(
+            FasterWhisperConfig(), model_factory=DescriptorModel,
+        )
+        provider.transcribe(AsrRequest(generate_id(IdKind.ASSET), descriptor_path))
+    finally:
+        os.close(descriptor)
+
+    assert observed == {"path": descriptor_path, "bytes": b"authorized-bytes"}

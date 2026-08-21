@@ -74,7 +74,10 @@ def test_github_community_health_files_exist() -> None:
 def test_ci_is_offline_first_and_cross_platform() -> None:
     ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     assert "ubuntu-latest" in ci and "windows-latest" in ci
-    assert "python -m pytest -q" in ci
+    assert "timeout-minutes: 20" in ci
+    assert "pytest-xdist==3.8.0 pytest-timeout==2.4.0" in ci
+    assert "python -m pytest -q -n 2 --dist loadfile" in ci
+    assert "--timeout=120 --max-worker-restart=0 --durations=20" in ci
     assert "python -m compileall -q src tests" in ci
     assert "sudo apt-get update && sudo apt-get install --yes ffmpeg" in ci
     assert "https://packages.chocolatey.org/ffmpeg.8.1.2.nupkg" in ci

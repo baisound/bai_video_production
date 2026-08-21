@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R7_COMPLETE / R8_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R8_CONTRACT_COMPLETE_DATA_GATE / R9_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -162,5 +162,14 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   references, require abstention and can never claim a CGEL event. R7 + canonical
   Provider/fusion focused regression `30 PASS`; external Provider calls `0`;
   unresolved Critical/High `0 / 0`.
+- R8 Human Gold/correction/KPI contract: complete; revisioned 5–10 match manifest
+  requirements preserve source/rights/patch/HUD/detector/model provenance and
+  reject source-group split leakage. Held-out per-domain KPIs expose TP/FP/FN/TN,
+  UNKNOWN, contradiction, validator failures, calibration, replay stability and
+  latency; corrections and rejection reasons remain durable/queryable. Focused
+  Gold regression `25 PASS`; TASK-049 DbD/Gold and TASK-052 affected regression
+  `291 PASS`. The current Owner inventory has no complete 5–10
+  match Human Gold corpus, so production accuracy remains `NOT_CONFIRMED` and no
+  accuracy claim was authorized.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R8 Gold / correction / KPI closure.
+- Next dependency-ordered unit: R9 Windows packaged Human acceptance, performance and backup/restore.

@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R4B_COMPLETE / R4C_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R4C1_COMPLETE / R4C2_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -94,5 +94,12 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   Unknown/power-only identity requests no specific overlays. Focused R3C-R4B,
   recorded-video and profile compatibility regression `31 PASS`; tkinter-independent
   TASK-052/Killer/recorded-video/profile/vision-slice affected regression `95 PASS`.
+- R4C1 Killer-specific Teacher backend: complete; the canonical Visual Training
+  manifest backward-reads old CSV while storing exact target/observed namespace,
+  role, subject and structured state. Capability-bound index construction requires
+  positive + registered hard-negative coverage, and the deterministic starter
+  reference detector preserves foreign namespaces for R4A rejection. Focused
+  backend/manifest regression `42 PASS`; affected Training Studio/TASK-052
+  regression `123 PASS`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R4C namespaced detector/Teacher registration and review routing.
+- Next dependency-ordered unit: R4C2 Safe Visual Learning / Training Studio UI and Human review routing.

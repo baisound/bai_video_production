@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R5C1_COMPLETE / R5C2_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R5C2A_COMPLETE / R5C2B_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -132,5 +132,14 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   filenames. Focused regression `16 PASS`; TASK-050/TASK-052 affected regression
   `179 PASS`; TASK-051 compatibility regression `118 PASS`; unresolved
   Critical/High `0 / 0`.
+- R5C2A Status Effect Gold/review/temporal bridge: complete; exact held-out Gold
+  coordinates report status/identity/polarity/source/visibility/abstention
+  separately, immutable Human corrections retain original/corrected identity and
+  provenance, and only registry/scope-complete IDENTIFIED observations enter the
+  existing R3C state machines. UNKNOWN, contradiction, incomplete segmentation or
+  missing exact region Evidence cannot infer disappearance. Focused R3C/R5B/R5C2A
+  regression `26 PASS`; TASK-049 DbD/TASK-052 affected regression `205 PASS`;
+  TASK-050/TASK-051 compatibility regression `186 PASS`; unresolved Critical/High
+  `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R5C2 Status Effect Teacher UI, Gold/review and R3C temporal wiring.
+- Next dependency-ordered unit: R5C2B Status Effect Teacher operator UI.

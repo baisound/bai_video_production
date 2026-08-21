@@ -50,6 +50,7 @@ from ai_video_production.project_save import (
 )
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.task044_nle_shell import Task044NleShellController
+from ai_video_production.task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 from ai_video_production.timebase import FrameRate
 
 CREATED = "2026-08-15T00:00:00.000Z"
@@ -402,6 +403,81 @@ def test_v1_1_application_mints_exact_binding_and_reopens(tmp_path: Path) -> Non
     projected, _in_out, bindings = TimelineEditProjector.apply_with_source_bindings(base, restored)
     assert next(item for item in projected.clips if item.clip_id == clip.clip_id) == clip
     assert bindings[clip.clip_id] == binding
+
+
+def test_current_edit_persistence_receipt_is_deterministic_and_requires_revision(
+    tmp_path: Path,
+) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-receipt",
+    )
+    assert app.current_edit_persistence_receipt(base) is None
+    prepared = app.prepare_move(
+        timeline=base, clip_id="clip-1", desired_start_frame=20,
+        command_id="move-for-receipt",
+        expected_project_manifest_sha256=current.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    first = app.current_edit_persistence_receipt(base)
+    second = app.current_edit_persistence_receipt(base)
+    assert first is not None and second == first
+    assert Task044EditPersistenceReceipt.from_dict(first.to_dict()) == first
+    assert first.timeline_sha256 == TimelineEditProjector.apply(
+        base, app._load(ProductProjectManifestStore.load(tmp_path)),
+    )[0].timeline_sha256
+    assert first.current_revision == 1
+    assert first.to_dict()["authority_effect_created"] is False
+    assert not any(str(tmp_path) in str(value) for value in first.to_dict().values())
+
+
+def test_current_edit_persistence_receipt_rejects_stale_base_and_tampered_child(
+    tmp_path: Path,
+) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-tamper",
+    )
+    prepared = app.prepare_move(
+        timeline=base, clip_id="clip-1", desired_start_frame=20,
+        command_id="move-for-tamper",
+        expected_project_manifest_sha256=current.project_manifest_sha256,
+    )
+    app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    stale = InteractiveTimeline(
+        base.project_id, "other-timeline", base.timeline_rate,
+        base.duration_frames, base.tracks, base.clips,
+    )
+    with pytest.raises(ProductError) as exc:
+        app.current_edit_persistence_receipt(stale)
+    assert exc.value.code == "ERR_TIMELINE_EDIT_BASE_STALE"
+    target = tmp_path / RELATIVE_PATH
+    target.write_bytes(target.read_bytes() + b"\n")
+    with pytest.raises(ProductError) as exc:
+        app.current_edit_persistence_receipt(base)
+    assert exc.value.code == "ERR_PROJECT_SAVE_RECOVERY_TARGET_CONFLICT"
+
+
+def test_current_edit_persistence_receipt_rejects_dangling_recovery_link(
+    tmp_path: Path,
+) -> None:
+    setup_project(tmp_path)
+    app = Task044TimelineEditApplication(project_root=tmp_path, project_id="project-1")
+    app._history_recovery_path.symlink_to(tmp_path / "missing-recovery.json")
+    with pytest.raises(ProductError) as exc:
+        app.current_edit_persistence_receipt(timeline())
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID"
+    app._history_recovery_path.unlink()
+    app._history_recovery_path.mkdir()
+    with pytest.raises(ProductError) as exc:
+        app.current_edit_persistence_receipt(timeline())
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID"
 
 
 def test_v1_1_binding_version_mismatch_and_unknown_version_fail_closed(tmp_path: Path) -> None:

@@ -206,6 +206,7 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert isinstance(launch.bridge._final_review_application, FinalReviewApprovalApplication)
     assert launch.bridge._final_review_application.project_root == config.project_root
     assert launch.bridge._final_review_external_gate_provider is None
+    assert callable(launch.bridge._final_review_edit_persistence_provider)
     final_review = launch.bridge.final_review_snapshot({})
     assert final_review["approval"]["available"] is True
     assert final_review["export_job_created"] is False
@@ -454,6 +455,9 @@ def test_trusted_launcher_lease_prevents_live_recovery_and_scopes_restart_recove
         with pytest.raises(ProductError) as exc:
             operation(args)
         assert exc.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    with pytest.raises(ProductError) as exc:
+        old_bridge._final_review_edit_persistence_provider()
+    assert exc.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
     assert DurableProductJobStore.load(config.project_root).get(job.job_id) == live_export
     restarted = build_trusted_launch(
         config,

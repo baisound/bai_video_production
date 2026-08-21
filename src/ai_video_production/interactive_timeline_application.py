@@ -43,6 +43,7 @@ from .project_save import (
     ProjectSaveParticipantResult,
 )
 from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
+from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 
 TokenFactory = Callable[[], str]
 CommitGuardFactory = Callable[[], ContextManager[None]]
@@ -523,6 +524,76 @@ class Task044TimelineEditApplication:
             history,
         )
         return projected, in_out, bindings, manifest.project_manifest_sha256
+
+    def current_edit_persistence_receipt(
+        self,
+        timeline: InteractiveTimeline,
+    ) -> Task044EditPersistenceReceipt | None:
+        """Read the latest current TASK-044 revision without creating new truth."""
+
+        self._require_no_history_recovery()
+        manifest = ProductProjectManifestStore.load(self.project_root)
+        if manifest.project_id != self.project_id:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_PROJECT_MISMATCH",
+                "Project identity differs",
+                ProductErrorCategory.SECURITY,
+            )
+        self._save_coordinator.require_current_integrity(self.project_root, manifest)
+        history = self._load(manifest)
+        current = history.current
+        if current is None:
+            return None
+        projected, _in_out, _bindings = TimelineEditProjector.apply_with_source_bindings(
+            timeline,
+            history,
+        )
+        binding = next(
+            item for item in manifest.child_bindings
+            if item.identity == ("TASK-044", RELATIVE_PATH)
+        )
+        live = ProductProjectManifestStore.load(self.project_root)
+        if live.project_manifest_sha256 != manifest.project_manifest_sha256:
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_RECEIPT_STALE",
+                "Project changed during Timeline receipt evaluation",
+                ProductErrorCategory.STATE,
+            )
+        self._save_coordinator.require_current_integrity(self.project_root, live)
+        self._require_no_history_recovery()
+        return Task044EditPersistenceReceipt(
+            receipt_id=f"task044-edit-persistence-r{current.revision}",
+            project_id=self.project_id,
+            timeline_sha256=projected.timeline_sha256,
+            project_manifest_sha256=manifest.project_manifest_sha256,
+            edit_snapshot_sha256=binding.content_sha256,
+            snapshot_version=binding.format_version,
+            history_id=history.history_id,
+            current_revision=current.revision,
+            current_revision_sha256=current.revision_sha256,
+            evaluated_at=manifest.updated_at,
+        )
+
+    def _require_no_history_recovery(self) -> None:
+        path = self._history_recovery_path
+        if path.is_symlink():
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline command history recovery path is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if path.exists() and not path.is_file():
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_INVALID",
+                "Timeline command history recovery path is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if path.exists():
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_RECOVERY_PENDING",
+                "Timeline command history recovery must finish first",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            )
 
     def _load(self, manifest: ProductProjectManifest) -> TimelineEditHistory:
         binding = next((item for item in manifest.child_bindings if item.identity == ("TASK-044", RELATIVE_PATH)), None)

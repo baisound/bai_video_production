@@ -15,7 +15,10 @@ This exact two-file governance transaction proposes one shared
 check for target PR `#218`. It changes no Product implementation, runtime,
 version, Tag, Release, Provider, native or audio state.
 
-- fresh base main: `36275dce542e898c8bf57435b5dd451ccb818270`
+- fresh base main: `df9e090e85973a7ebaceba9dfa006c94b1cb5afe`
+- intervening PR `#225` changed only `docs/ai-team/current-state.md`; it
+  merged as `df9e090e85973a7ebaceba9dfa006c94b1cb5afe` and has no CHANGELOG or
+  Registry overlap
 - Registry revision: `30 -> 31`
 - previous TASK-014 shared lock: `HOSTED_CLOSED_RELEASED`
 - open PR shared-path overlap: `0`

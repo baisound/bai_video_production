@@ -3,7 +3,7 @@
   "registry_revision": 31,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
-  "audit_base_main_sha": "36275dce542e898c8bf57435b5dd451ccb818270",
+  "audit_base_main_sha": "df9e090e85973a7ebaceba9dfa006c94b1cb5afe",
   "owner_directive": {
     "package_id": "BVP-PARALLEL-DEVELOPMENT-LOCK-HANDOFF-2026-08-15",
     "package_sha256": "e6297d54fbbe4f7d4418358ba57d243ecd81aca55b2c112b2a07954b58bb098d",
@@ -2060,7 +2060,7 @@
       "target_merge_authority_state": "OWNER_CONDITIONAL_ALL_GREEN_APPROVAL_ACTIVE",
       "implementation_authority_state": "TASK036_PUX2G_PR218_IMPLEMENTATION_IMMUTABLE_DURING_CHANGELOG_EFFECT",
       "hosting_branch": "codex/task-036-pux2g-changelog-lock-hosting",
-      "hosting_base_sha": "36275dce542e898c8bf57435b5dd451ccb818270",
+      "hosting_base_sha": "df9e090e85973a7ebaceba9dfa006c94b1cb5afe",
       "status": "PENDING_LOCK_HOST_PR",
       "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
       "target_pull_request": 218,

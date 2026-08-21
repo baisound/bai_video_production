@@ -83,6 +83,12 @@ def test_anchor_aligner_applies_parent_shift_to_perk_slots(tmp_path: Path) -> No
         profile_id="aligned",
         calibrated_frame_width=1000,
         calibrated_frame_height=1000,
+        bottom_right_positive_effects=NormalizedROI(
+            "bottom_right_positive_effects", 0.62, 0.70, 0.10, 0.20,
+        ),
+        bottom_right_negative_effects=NormalizedROI(
+            "bottom_right_negative_effects", 0.78, 0.54, 0.20, 0.08,
+        ),
         anchors=(HudAnchorReference("bottom_right_perks", f"{anchor_image.dhash64():016x}", sha256_bytes(anchor_path.read_bytes()), "anchor.pgm"),),
     )
     dx, dy = -4 / 1000, -4 / 1000
@@ -95,6 +101,12 @@ def test_anchor_aligner_applies_parent_shift_to_perk_slots(tmp_path: Path) -> No
     assert result.corrections[0].dy_normalized == pytest.approx(dy)
     assert result.profile.perk_slot_roi(0).x == pytest.approx(profile.perk_slot_roi(0).x + dx)
     assert result.profile.perk_slot_roi(0).y == pytest.approx(profile.perk_slot_roi(0).y + dy)
+    assert result.profile.bottom_right_positive_effects.x == pytest.approx(
+        profile.bottom_right_positive_effects.x + dx
+    )
+    assert result.profile.bottom_right_negative_effects.y == pytest.approx(
+        profile.bottom_right_negative_effects.y + dy
+    )
 
 
 def test_hud_profile_round_trip_supports_left_loadout_item_and_two_addon_slots() -> None:
@@ -108,7 +120,7 @@ def test_hud_profile_round_trip_supports_left_loadout_item_and_two_addon_slots()
         ),
     )
     restored = DBDHudRoiProfile.from_dict(profile.to_dict())
-    assert restored.to_dict()["schema_version"] == "2.2.0"
+    assert restored.to_dict()["schema_version"] == "2.3.0"
     assert restored.item_slot_roi().roi_id == "item_slot"
     assert restored.addon_slot_roi(0).roi_id == "addon_slot_0"
     assert restored.addon_slot_roi(1).roi_id == "addon_slot_1"

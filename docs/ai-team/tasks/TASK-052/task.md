@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R4_COMPLETE / R5A_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R5A_COMPLETE / R5B_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -109,5 +109,12 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   Focused regression `30 PASS`; TASK-050/TASK-052 dependency regression `161 PASS`;
   TASK-051/package-source affected regression `125 PASS`; unresolved Critical/High
   `0 / 0`.
+- R5A bottom-right status-icon segmentation: complete; HUD Profile schema `2.3.0`
+  adds backward-readable optional positive/negative regions, Training Studio can
+  calibrate both, and recorded-video recognition emits zero/one/multiple body-free
+  component candidates or explicit unavailable/overflow states. Polarity/region
+  namespace crossing and unbounded input/candidate counts fail closed. Focused
+  regression `29 PASS`; TASK-049 DbD + TASK-050/051/052 affected regression
+  `370 PASS`; unresolved Critical/High `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R5A bottom-right multi-status-icon segmentation.
+- Next dependency-ordered unit: R5B status-icon identity, polarity, source and visibility.

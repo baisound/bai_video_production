@@ -32,6 +32,8 @@ _PARENT_ROI_BY_PREFIX = {
     "perk_slot_": "bottom_right_perks",
     "addon_slot_": "lower_left_loadout_hud",
     "item_slot": "lower_left_loadout_hud",
+    "bottom_right_positive_effects": "bottom_right_perks",
+    "bottom_right_negative_effects": "bottom_right_perks",
 }
 
 
@@ -346,6 +348,14 @@ class HudAnchorAligner:
                 lower_left_survivor_hud=adjusted(profile.lower_left_survivor_hud),
                 upper_right_notifications=adjusted(profile.upper_right_notifications),
                 bottom_right_perks=adjusted(profile.bottom_right_perks),
+                bottom_right_positive_effects=(
+                    None if profile.bottom_right_positive_effects is None
+                    else adjusted(profile.bottom_right_positive_effects)
+                ),
+                bottom_right_negative_effects=(
+                    None if profile.bottom_right_negative_effects is None
+                    else adjusted(profile.bottom_right_negative_effects)
+                ),
                 lower_left_loadout_hud=None if profile.lower_left_loadout_hud is None else adjusted(profile.lower_left_loadout_hud),
                 item_slot=None if profile.item_slot is None else adjusted(profile.item_slot),
                 addon_slots=tuple(adjusted(item) for item in profile.addon_slots),

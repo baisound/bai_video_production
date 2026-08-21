@@ -3,7 +3,7 @@
 Date: 2026-08-21
 Owner state: `OWNER_SLEEPING=YES / SLEEP_WINDOW_ACTIVE=YES`
 Purpose: create an isolated Windows Python environment for Product-native
-provider and packaged-shell verification. This procedure does not alter the
+Provider and native-shell verification. This procedure does not alter the
 ComfyUI embedded Python, system Python, WSL environment or another project.
 
 ## Authorized boundary
@@ -16,8 +16,12 @@ ComfyUI embedded Python, system Python, WSL environment or another project.
   `C:\home\baisound\projects\bai-video-production`
 - Product version: `0.22.0`
 - Source commit used for this installation: `2aa53dfc4a516f5b9a1eb9cfffbbf41be7222580`
-- Install only the Product and its declared mandatory dependency
+- Phase 1 installs only the Product and its declared mandatory dependency
   `jsonschema>=4.20,<5`.
+- Phase 2 may install only the Product-declared native Shell dependency
+  `pywebview==6.2.1`. It does not install the remaining `windows-build`
+  dependencies because PyInstaller and FasterWhisper are not required for this
+  source-checkout Shell operation.
 - Do not install optional ASR, Windows-build, cloud/provider, model or
   credential packages in this operation.
 - Do not modify PATH, file associations, the registry or machine/user Python.
@@ -53,6 +57,18 @@ ComfyUI embedded Python, system Python, WSL environment or another project.
    ComfyUI process remains the separate loopback-only runtime documented in
    `comfyui-flux-schnell-installation-2026-08-21.md`.
 
+7. Before the native Shell gate, verify that `pywebview` is absent or already
+   exactly `6.2.1`. If absent, install only the pinned Product dependency:
+
+   ```text
+   E:\BAI_AI\envs\bvp-native-0.22.0\Scripts\python.exe
+     -m pip install --disable-pip-version-check --no-input pywebview==6.2.1
+   ```
+
+8. Run `pip check`, import `webview`, and report its version before launching
+   the Shell. Do not use this step to install or update WebView2, a browser,
+   PyInstaller, FasterWhisper, a Provider runtime or a model.
+
 ## Failure and rollback
 
 - If creation or installation fails, preserve the pip error output and stop.
@@ -73,4 +89,15 @@ ComfyUI embedded Python, system Python, WSL environment or another project.
 - jsonschema version: `4.26.0`
 - pip check: `No broken requirements found — PASS`
 - Provider dispatch count during installation: `0`
+- Paid/cloud call count: `0`
+
+### Native Shell dependency record
+
+- Requested dependency: `pywebview==6.2.1`
+- Target: the same isolated Product environment only
+- WebView2/system/browser installation or update: `NOT_AUTHORIZED_BY_THIS_STEP`
+- Installed version: `6.2.1 — PASS`
+- `import webview`: `PASS`
+- Post-install pip check: `No broken requirements found — PASS`
+- Provider dispatch count during Shell dependency installation: `0`
 - Paid/cloud call count: `0`

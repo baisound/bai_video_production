@@ -5,7 +5,7 @@ raw tuned-model bytes to the existing CommentaryCandidate owner.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import re
 import secrets
 from typing import Any, Mapping
@@ -22,7 +22,7 @@ from .game_commentary import (
     CommentaryDraft, CommentaryFact, CommentaryPlan,
 )
 from .ids import IdKind, validate_id
-from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
+from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, validate_sha256
 
 
 LINEAGE_SCHEMA_VERSION = "1.0.0"
@@ -50,10 +50,14 @@ class DbDReasoningCandidateLineage:
     parent_candidate_id: str | None = None
     parent_candidate_sha256: str | None = None
     correction_request_review_sha256: str | None = None
+    correction_submission_ref: str | None = None
+    correction_submission_binding_sha256: str | None = None
     lineage_sha256: str = ""
 
     def __post_init__(self) -> None:
-        if self.schema_version != LINEAGE_SCHEMA_VERSION or self.origin != "TUNED_REASONING":
+        root = self.schema_version == LINEAGE_SCHEMA_VERSION and self.origin == "TUNED_REASONING"
+        child = self.schema_version == "1.1.0" and self.origin == "TUNED_REASONING_CORRECTION"
+        if not (root or child):
             raise ValueError("unsupported root lineage contract")
         validate_id(self.candidate_id, IdKind.CANDIDATE)
         if not self.candidate_id.startswith("CAND-R2D"):
@@ -72,8 +76,23 @@ class DbDReasoningCandidateLineage:
             raise ValueError("lineage requires a passed R2C receipt")
         if not isinstance(self.proposal, DbDReasoningProposal):
             raise ValueError("lineage requires a canonical reasoning proposal")
-        if any(value is not None for value in (self.parent_candidate_id, self.parent_candidate_sha256, self.correction_request_review_sha256)):
+        parent_values = (
+            self.parent_candidate_id, self.parent_candidate_sha256, self.correction_request_review_sha256,
+            self.correction_submission_ref, self.correction_submission_binding_sha256,
+        )
+        if root and any(value is not None for value in parent_values):
             raise ValueError("TUNED_REASONING root lineage cannot have a parent or correction review")
+        if child:
+            if any(value is None for value in parent_values):
+                raise ValueError("correction lineage requires parent and correction review")
+            validate_id(self.parent_candidate_id, IdKind.CANDIDATE)
+            if self.parent_candidate_id == self.candidate_id:
+                raise ValueError("correction lineage cannot parent itself")
+            validate_sha256(self.parent_candidate_sha256, field_name="parent_candidate_sha256")
+            validate_sha256(self.correction_request_review_sha256, field_name="correction_request_review_sha256")
+            if not isinstance(self.correction_submission_ref, str) or not re.fullmatch(r"human-correction://dbd-review/[0-9A-HJKMNP-TV-Z]{26}", self.correction_submission_ref):
+                raise ValueError("correction_submission_ref is invalid")
+            validate_sha256(self.correction_submission_binding_sha256, field_name="correction_submission_binding_sha256")
         fact = self.fact_admission_receipt
         policy = self.policy_admission_receipt
         if (fact.structural_body_sha256, fact.context_sha256, fact.commentary_plan_sha256) != (
@@ -94,7 +113,7 @@ class DbDReasoningCandidateLineage:
         object.__setattr__(self, "lineage_sha256", expected)
 
     def _body(self) -> dict[str, object]:
-        return {
+        body: dict[str, object] = {
             "schema_version": self.schema_version, "record_kind": "DBD_REASONING_CANDIDATE_LINEAGE",
             "origin": self.origin, "candidate_id": self.candidate_id,
             "commentary_candidate_sha256": self.commentary_candidate_sha256,
@@ -108,6 +127,10 @@ class DbDReasoningCandidateLineage:
             "parent_candidate_sha256": self.parent_candidate_sha256,
             "correction_request_review_sha256": self.correction_request_review_sha256,
         }
+        if self.schema_version == "1.1.0":
+            body["correction_submission_ref"] = self.correction_submission_ref
+            body["correction_submission_binding_sha256"] = self.correction_submission_binding_sha256
+        return body
 
     def to_dict(self) -> dict[str, object]:
         return {**self._body(), "lineage_sha256": self.lineage_sha256}
@@ -141,6 +164,7 @@ class DbDReasoningCandidateCreationResult:
                 or self.lineage.raw_output_sha256 != self.raw_output_sha256
                 or not self.candidate.validation.passed
                 or not self.candidate.reasoning_lineage_required
+                or self.candidate.reasoning_origin != self.lineage.origin
                 or self.candidate.draft.provider_ref is not None
                 or self.candidate.plan.to_dict()["commentary_plan_sha256"] != self.lineage.commentary_plan_sha256
                 or self.candidate.draft.to_dict()["commentary_draft_sha256"] != self.lineage.fact_admission_receipt.commentary_draft_sha256
@@ -161,6 +185,12 @@ class DbDReasoningCandidateComposer:
     """Compose R2A -> R2B -> R2C internally; no receipt is an authority input."""
 
     def create(self, *, raw_output: bytes, context: DbDReasoningContextEnvelope, plan: CommentaryPlan) -> DbDReasoningCandidateCreationResult:
+        return self._create(raw_output=raw_output, context=context, plan=plan, candidate_id=None, created_at=None)
+
+    def _create(
+        self, *, raw_output: bytes, context: DbDReasoningContextEnvelope, plan: CommentaryPlan,
+        candidate_id: str | None, created_at: str | None,
+    ) -> DbDReasoningCandidateCreationResult:
         if not isinstance(raw_output, bytes):
             raise TypeError("raw_output must be bytes")
         if not isinstance(context, DbDReasoningContextEnvelope) or not isinstance(plan, CommentaryPlan):
@@ -182,7 +212,9 @@ class DbDReasoningCandidateComposer:
             raise ValueError("reasoning candidate draft must remain provider-neutral")
         candidate = CommentaryCandidate(
             plan, fact.draft, fact.existing_validation,
-            candidate_id=_generate_reasoning_candidate_id(), reasoning_lineage_required=True,
+            candidate_id=_generate_reasoning_candidate_id() if candidate_id is None else candidate_id,
+            created_at=utc_now_iso() if created_at is None else created_at,
+            reasoning_lineage_required=True,
         )
         candidate_payload = candidate.to_dict()
         lineage = DbDReasoningCandidateLineage(
@@ -194,13 +226,50 @@ class DbDReasoningCandidateComposer:
         )
         return DbDReasoningCandidateCreationResult(True, (), parsed.raw_output_sha256, candidate, lineage)
 
+    def create_correction(
+        self, *, raw_output: bytes, context: DbDReasoningContextEnvelope, plan: CommentaryPlan,
+        parent_candidate: CommentaryCandidate, parent_lineage: DbDReasoningCandidateLineage,
+        correction_request_review_sha256: str, correction_submission_ref: str,
+        correction_submission_binding_sha256: str, candidate_id: str | None = None, created_at: str | None = None,
+    ) -> DbDReasoningCandidateCreationResult:
+        """Run the same R2A/B/C path, then bind a Human-correction child lineage."""
+        if not isinstance(parent_candidate, CommentaryCandidate) or not isinstance(parent_lineage, DbDReasoningCandidateLineage):
+            raise TypeError("correction requires canonical parent Candidate/lineage")
+        admit_reasoning_candidate_lineage_record(parent_lineage.to_dict(), candidate_payload=parent_candidate.to_dict())
+        validate_sha256(correction_request_review_sha256, field_name="correction_request_review_sha256")
+        if not isinstance(correction_submission_ref, str) or not re.fullmatch(r"human-correction://dbd-review/[0-9A-HJKMNP-TV-Z]{26}", correction_submission_ref):
+            raise ValueError("correction_submission_ref is invalid")
+        validate_sha256(correction_submission_binding_sha256, field_name="correction_submission_binding_sha256")
+        created = self._create(raw_output=raw_output, context=context, plan=plan, candidate_id=candidate_id, created_at=created_at)
+        if not created.passed or created.candidate is None or created.lineage is None:
+            return created
+        if created.candidate.draft == parent_candidate.draft:
+            return DbDReasoningCandidateCreationResult(False, ("CORRECTION_NO_CHANGE",), created.raw_output_sha256, None, None)
+        child_candidate = replace(
+            created.candidate, reasoning_origin="TUNED_REASONING_CORRECTION",
+        )
+        child_lineage = replace(
+            created.lineage, schema_version="1.1.0", origin="TUNED_REASONING_CORRECTION",
+            commentary_candidate_sha256=child_candidate.to_dict()["commentary_candidate_sha256"],
+            parent_candidate_id=parent_candidate.candidate_id,
+            parent_candidate_sha256=parent_candidate.to_dict()["commentary_candidate_sha256"],
+            correction_request_review_sha256=correction_request_review_sha256,
+            correction_submission_ref=correction_submission_ref,
+            correction_submission_binding_sha256=correction_submission_binding_sha256,
+            lineage_sha256="",
+        )
+        return DbDReasoningCandidateCreationResult(True, (), created.raw_output_sha256, child_candidate, child_lineage)
 
-_LINEAGE_KEYS = frozenset({
+
+_ROOT_LINEAGE_KEYS = frozenset({
     "schema_version", "record_kind", "origin", "candidate_id", "commentary_candidate_sha256",
     "match_id", "event_id", "event_revision", "parser_version", "raw_output_sha256",
     "structural_body_sha256", "context_sha256", "commentary_plan_sha256",
     "fact_admission_receipt", "policy_admission_receipt", "proposal", "parent_candidate_id",
     "parent_candidate_sha256", "correction_request_review_sha256", "lineage_sha256",
+})
+_CHILD_LINEAGE_KEYS = _ROOT_LINEAGE_KEYS | frozenset({
+    "correction_submission_ref", "correction_submission_binding_sha256",
 })
 
 
@@ -209,7 +278,10 @@ def admit_reasoning_candidate_lineage_record(
 ) -> DbDReasoningCandidateLineage:
     """Re-admit serialized lineage and its existing Candidate fail-closed."""
 
-    if not isinstance(record, Mapping) or set(record) != _LINEAGE_KEYS:
+    if not isinstance(record, Mapping):
+        raise ValueError("lineage record has unknown or missing fields")
+    required_keys = _ROOT_LINEAGE_KEYS if record.get("schema_version") == LINEAGE_SCHEMA_VERSION else _CHILD_LINEAGE_KEYS if record.get("schema_version") == "1.1.0" else frozenset()
+    if set(record) != required_keys:
         raise ValueError("lineage record has unknown or missing fields")
     if record.get("record_kind") != "DBD_REASONING_CANDIDATE_LINEAGE":
         raise ValueError("lineage record_kind is invalid")
@@ -240,7 +312,8 @@ def admit_reasoning_candidate_lineage_record(
         record["match_id"], record["event_id"], record["event_revision"], record["parser_version"],
         record["raw_output_sha256"], record["structural_body_sha256"], record["context_sha256"],
         record["commentary_plan_sha256"], fact, policy, proposal, record["parent_candidate_id"],
-        record["parent_candidate_sha256"], record["correction_request_review_sha256"], record["lineage_sha256"],
+        record["parent_candidate_sha256"], record["correction_request_review_sha256"],
+        record.get("correction_submission_ref"), record.get("correction_submission_binding_sha256"), record["lineage_sha256"],
     )
     _verify_candidate_payload_against_lineage(candidate_payload, lineage)
     return lineage
@@ -281,7 +354,8 @@ def _verify_candidate_payload_against_lineage(candidate: Mapping[str, Any], line
     if not isinstance(created_at, str) or not created_at.strip() or len(created_at) > 64 or any(ord(char) < 32 for char in created_at):
         raise ValueError("candidate created_at is not canonical stable text")
     if (
-        candidate["schema_version"] != "1.1.0" or candidate["status"] != "VALIDATED" or candidate["reasoning_origin"] != "TUNED_REASONING"
+        candidate["schema_version"] != ("1.2.0" if lineage.origin == "TUNED_REASONING_CORRECTION" else "1.1.0")
+        or candidate["status"] != "VALIDATED" or candidate["reasoning_origin"] != lineage.origin
         or not candidate["candidate_id"].startswith("CAND-R2D")
         or validation != {"passed": True, "errors": []} or draft["provider_ref"] is not None
         or candidate["candidate_id"] != lineage.candidate_id

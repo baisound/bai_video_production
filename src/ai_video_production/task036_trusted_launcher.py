@@ -15,7 +15,7 @@ from pathlib import Path
 import threading
 from typing import Any, Callable
 
-from .ai_connections import ConnectionAvailability
+from .ai_connections import AiWorkload, ConnectionAvailability, CostClass, ProviderFamily
 from .comfyui import ComfyEndpointPolicy, ComfyUIClient
 from .creative_generation_execution_application import Task013CreativeGenerationExecutionApplication
 from .generation_output_adoption_application import (
@@ -69,6 +69,12 @@ from .quick_generation_application import Task042QuickGenerationApplication
 from .local_comfy_generation_port import (
     LocalComfyGenerationConfig, LocalComfyTextToVideoPort,
     MINIMAX_H3_NATIVE_WORKFLOW_SHA256, default_minimax_h3_workflow_path,
+)
+from .local_comfy_image_generation_port import (
+    FLUX1_SCHNELL_FP8_WORKFLOW_SHA256,
+    LocalComfyImageGenerationConfig,
+    LocalComfyTextToImagePort,
+    default_flux1_schnell_fp8_workflow_path,
 )
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
@@ -135,6 +141,7 @@ class Task036LaunchConfiguration:
     asr_config: FasterWhisperConfig
     asr_language: str | None
     local_generation: LocalComfyGenerationConfig | None
+    local_image_generation: LocalComfyImageGenerationConfig | None
 
     @classmethod
     def load(cls, path: str | Path) -> "Task036LaunchConfiguration":
@@ -166,14 +173,16 @@ class Task036LaunchConfiguration:
 
     @classmethod
     def from_dict(cls, raw: Any) -> "Task036LaunchConfiguration":
-        if not isinstance(raw, dict) or raw.get("launch_config_version") not in {"1.0.0", "1.1.0"}:
+        if not isinstance(raw, dict) or raw.get("launch_config_version") not in {"1.0.0", "1.1.0", "1.2.0"}:
             raise ValueError("unsupported launch_config_version")
         version = raw["launch_config_version"]
         allowed = {
             "launch_config_version", "project", "paths", "ingest", "asr", "resolve",
         }
-        if version == "1.1.0":
+        if version in {"1.1.0", "1.2.0"}:
             allowed.add("local_generation")
+        if version == "1.2.0":
+            allowed.add("local_image_generation")
         if set(raw) != allowed:
             raise ValueError("launch configuration contains unknown or missing sections")
         project = raw["project"]
@@ -248,7 +257,9 @@ class Task036LaunchConfiguration:
             return _contained(project_root, _path(paths[name], field=name), field=name)
 
         local_generation_config: LocalComfyGenerationConfig | None = None
-        if version == "1.1.0":
+        if version == "1.1.0" and raw["local_generation"] is None:
+            raise ValueError("launch config 1.1.0 requires local_generation")
+        if version in {"1.1.0", "1.2.0"} and raw["local_generation"] is not None:
             local_generation = raw["local_generation"]
             if not isinstance(local_generation, dict):
                 raise ValueError("local_generation must be an object")
@@ -262,13 +273,26 @@ class Task036LaunchConfiguration:
                 },
                 name="local_generation",
             )
-            local_roots = {
-                name: _contained(
+            video_comfy_output_root = _path(
+                local_generation["comfy_output_root"],
+                field="local_generation.comfy_output_root",
+            )
+            if version == "1.1.0":
+                video_comfy_output_root = _contained(
                     project_root,
-                    _path(local_generation[name], field=f"local_generation.{name}"),
-                    field=f"local_generation.{name}",
+                    video_comfy_output_root,
+                    field="local_generation.comfy_output_root",
                 )
-                for name in ("comfy_output_root", "project_output_root", "staging_root", "dispatch_journal_root")
+            local_roots = {
+                "comfy_output_root": video_comfy_output_root,
+                **{
+                    name: _contained(
+                        project_root,
+                        _path(local_generation[name], field=f"local_generation.{name}"),
+                        field=f"local_generation.{name}",
+                    )
+                    for name in ("project_output_root", "staging_root", "dispatch_journal_root")
+                },
             }
             if any(path.is_symlink() or not path.is_dir() for path in local_roots.values()):
                 raise ValueError("local_generation roots must be existing regular project directories")
@@ -295,6 +319,71 @@ class Task036LaunchConfiguration:
                 completion_timeout_seconds=local_generation["completion_timeout_seconds"],
                 max_output_bytes=local_generation["max_output_bytes"],
             )
+
+        local_image_generation_config: LocalComfyImageGenerationConfig | None = None
+        if version == "1.2.0" and raw["local_image_generation"] is not None:
+            local_image_generation = raw["local_image_generation"]
+            if not isinstance(local_image_generation, dict):
+                raise ValueError("local_image_generation must be an object or null")
+            _require_exact_keys(
+                local_image_generation,
+                {
+                    "endpoint", "comfy_output_root", "project_output_root", "staging_root",
+                    "dispatch_journal_root", "route_id", "provider_id", "model_id",
+                    "width", "height", "steps", "poll_interval_seconds",
+                    "completion_timeout_seconds", "max_output_bytes",
+                },
+                name="local_image_generation",
+            )
+            comfy_output_root = _path(
+                local_image_generation["comfy_output_root"],
+                field="local_image_generation.comfy_output_root",
+            )
+            image_project_roots = {
+                name: _contained(
+                    project_root,
+                    _path(local_image_generation[name], field=f"local_image_generation.{name}"),
+                    field=f"local_image_generation.{name}",
+                )
+                for name in ("project_output_root", "staging_root", "dispatch_journal_root")
+            }
+            if (
+                comfy_output_root.is_symlink() or not comfy_output_root.is_dir()
+                or any(path.is_symlink() or not path.is_dir() for path in image_project_roots.values())
+            ):
+                raise ValueError("local_image_generation roots must be existing regular directories")
+            local_image_generation_config = LocalComfyImageGenerationConfig(
+                endpoint=_required_text(
+                    local_image_generation["endpoint"],
+                    field="local_image_generation.endpoint",
+                    maximum=500,
+                ),
+                workflow_path=default_flux1_schnell_fp8_workflow_path(),
+                workflow_sha256=FLUX1_SCHNELL_FP8_WORKFLOW_SHA256,
+                comfy_output_root=comfy_output_root,
+                project_output_root=image_project_roots["project_output_root"],
+                staging_root=image_project_roots["staging_root"],
+                dispatch_journal_root=image_project_roots["dispatch_journal_root"],
+                route_id=_required_text(local_image_generation["route_id"], field="local_image_generation.route_id"),
+                provider_id=_required_text(local_image_generation["provider_id"], field="local_image_generation.provider_id"),
+                model_id=_required_text(local_image_generation["model_id"], field="local_image_generation.model_id"),
+                width=local_image_generation["width"],
+                height=local_image_generation["height"],
+                steps=local_image_generation["steps"],
+                poll_interval_seconds=local_image_generation["poll_interval_seconds"],
+                completion_timeout_seconds=local_image_generation["completion_timeout_seconds"],
+                max_output_bytes=local_image_generation["max_output_bytes"],
+            )
+        if version == "1.2.0" and local_generation_config is None and local_image_generation_config is None:
+            raise ValueError("launch config 1.2.0 requires at least one local generation runtime")
+        if local_generation_config is not None and local_image_generation_config is not None:
+            if (
+                local_generation_config.endpoint != local_image_generation_config.endpoint
+                or local_generation_config.comfy_output_root != local_image_generation_config.comfy_output_root
+                or local_generation_config.project_output_root != local_image_generation_config.project_output_root
+                or local_generation_config.route_id == local_image_generation_config.route_id
+            ):
+                raise ValueError("video/image local generation must share one runtime/output root and use distinct routes")
 
         analysis_source = _path(paths["analysis_source_path"], field="analysis_source_path")
         if analysis_source.is_symlink() or not analysis_source.is_file():
@@ -369,6 +458,7 @@ class Task036LaunchConfiguration:
             asr_config=asr_config,
             asr_language=None if language is None else language.strip(),
             local_generation=local_generation_config,
+            local_image_generation=local_image_generation_config,
         )
 
 
@@ -860,22 +950,84 @@ def build_trusted_launch(
         )
     generation_execution_application = None
     generation_output_adoption_application = None
-    if configuration.local_generation is not None:
-        local_client = comfy_client or ComfyUIClient(configuration.local_generation.endpoint)
-        local_port = LocalComfyTextToVideoPort(config=configuration.local_generation, client=local_client)
+    if configuration.local_generation is not None or configuration.local_image_generation is not None:
+        runtime_config = configuration.local_image_generation or configuration.local_generation
+        assert runtime_config is not None
+        local_client = comfy_client or ComfyUIClient(runtime_config.endpoint)
+        video_port = None
+        image_port = None
+        if configuration.local_generation is not None:
+            video_port = LocalComfyTextToVideoPort(config=configuration.local_generation, client=local_client)
+        if configuration.local_image_generation is not None:
+            image_port = LocalComfyTextToImagePort(config=configuration.local_image_generation, client=local_client)
+        route_ids = frozenset(
+            config.route_id
+            for config in (configuration.local_generation, configuration.local_image_generation)
+            if config is not None
+        )
+        selector = None
+        fixed_port = image_port or video_port
+        if image_port is not None and video_port is not None:
+            fixed_port = None
+
+            def matches_trusted_route(route, capability, config, workload):
+                return (
+                    route.enabled
+                    and route.workload is workload
+                    and route.cost_class is CostClass.LOCAL_FREE_AI
+                    and route.credential_ref is None
+                    and route.endpoint_ref is None
+                    and route.settings == {}
+                    and route.capabilities == (capability,)
+                    and route.route_id == config.route_id
+                    and route.provider_family is ProviderFamily.COMFYUI
+                    and route.provider_id == config.provider_id
+                    and route.model_id == config.model_id
+                )
+
+            def selector(route, capability):
+                if (
+                    capability == "TEXT_TO_IMAGE"
+                    and matches_trusted_route(
+                        route,
+                        capability,
+                        configuration.local_image_generation,
+                        AiWorkload.IMAGE,
+                    )
+                ):
+                    return image_port
+                if (
+                    capability == "TEXT_TO_VIDEO"
+                    and matches_trusted_route(
+                        route,
+                        capability,
+                        configuration.local_generation,
+                        AiWorkload.VIDEO,
+                    )
+                ):
+                    return video_port
+                raise ProductError(
+                    "ERR_TASK036_LOCAL_GENERATION_ROUTE_UNBOUND",
+                    "No trusted local generation port matches the exact local-free route and capability",
+                    ProductErrorCategory.NOT_SUPPORTED,
+                )
+
         generation_execution_application = Task013CreativeGenerationExecutionApplication(
             project_root=configuration.project_root,
             project_id=configuration.project_id,
             generation_queue=generation_queue_application,
-            execution_port=local_port,
+            execution_port=fixed_port,
+            execution_port_selector=selector,
             availability_factory=lambda: ConnectionAvailability(
-                frozenset({configuration.local_generation.route_id})
+                route_ids
             ),
         )
+        output_config = configuration.local_image_generation or configuration.local_generation
+        assert output_config is not None
         generated_output_ingest = AssetIngestService(
             store=store,
             resolver=resolver,
-            source_policy=SourcePathPolicy((configuration.local_generation.project_output_root,)),
+            source_policy=SourcePathPolicy((output_config.project_output_root,)),
         )
         generation_output_adoption_application = Task027GenerationOutputAdoptionApplication(
             project_root=configuration.project_root,
@@ -886,10 +1038,14 @@ def build_trusted_launch(
             prompt_evidence=prompt_evidence_application,
             asset_port=Task027GeneratedOutputAssetPort(
                 service=generated_output_ingest,
-                project_output_root=configuration.local_generation.project_output_root,
+                project_output_root=output_config.project_output_root,
                 production_job_id=configuration.production_job_id,
                 owner=configuration.owner,
-                max_output_bytes=configuration.local_generation.max_output_bytes,
+                max_output_bytes=max(
+                    config.max_output_bytes
+                    for config in (configuration.local_generation, configuration.local_image_generation)
+                    if config is not None
+                ),
             ),
         )
     final_review_application = FinalReviewApprovalApplication(

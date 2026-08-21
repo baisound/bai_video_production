@@ -155,7 +155,6 @@ class LocalGenerationExecutionPort(Protocol):
         request: LocalGenerationExecutionRequest,
     ) -> LocalGenerationExecutionResult: ...
 
-
 LocalGenerationExecutionPortSelector = Callable[
     [ModelRoute, str], LocalGenerationExecutionPort
 ]
@@ -460,8 +459,20 @@ class Task013CreativeGenerationExecutionApplication:
         if profile.profile_id != entry["provider_profile_id"] or profile.profile_version != entry["provider_profile_version"]:
             raise ProductError("ERR_GENERATION_EXECUTION_PROFILE_DRIFT", "Current Provider Profile differs from Queue/Human GO", ProductErrorCategory.AUTHORIZATION)
         route = AiConnectionResolver.resolve(profile, workload, self.availability_factory(), required_capabilities=(capability,))
-        if route.cost_class is not CostClass.LOCAL_FREE_AI or route.credential_ref is not None:
-            raise ProductError("ERR_GENERATION_EXECUTION_LOCAL_ONLY", "This R4 unit permits only credential-free LOCAL_FREE_AI routes", ProductErrorCategory.AUTHORIZATION, details={"cost_class": route.cost_class.value})
+        if (
+            not route.enabled
+            or route.cost_class is not CostClass.LOCAL_FREE_AI
+            or route.credential_ref is not None
+            or route.endpoint_ref is not None
+            or route.settings != {}
+            or route.capabilities != (capability,)
+        ):
+            raise ProductError(
+                "ERR_GENERATION_EXECUTION_LOCAL_ONLY",
+                "This unit permits only an enabled, exact-capability, configuration-free LOCAL_FREE_AI route",
+                ProductErrorCategory.AUTHORIZATION,
+                details={"cost_class": route.cost_class.value},
+            )
         prompt_text = self._prompt_text(prompt.get("body_ref"), entry["prompt_sha256"])
         return queue, entry, route, profile_sha, prompt_text, workload, capability, media_kind
 
@@ -476,12 +487,36 @@ class Task013CreativeGenerationExecutionApplication:
             {"queue_entry_id": item["queue_entry_id"], "scene_id": item["scene_id"], "slot_id": item["slot_id"], "prompt_id": item["prompt_id"], "prompt_version": item["prompt_version"]}
             for item in queue["entries"] if item["queue_entry_id"] not in dispatched_queue_ids
         ]
-        recovery = [event for event in latest.values() if event["state"] == "DISPATCHING"]
+        recovery = []
+        for event in latest.values():
+            if event["state"] != "DISPATCHING":
+                continue
+            recovery_supported = False
+            try:
+                _queue, _entry, route, _profile_sha, _prompt, _workload, capability, _media = self._derive(
+                    event["queue_entry_id"]
+                )
+                port = self._port_for(route=route, capability=capability)
+                recovery_supported = (
+                    route.route_id == event["route_id"]
+                    and route.provider_id == event["provider_id"]
+                    and route.model_id == event["model_id"]
+                    and capability == event["capability"]
+                    and callable(getattr(port, "recover", None))
+                )
+            except ProductError:
+                recovery_supported = False
+            recovery.append({**event, "recovery_supported": recovery_supported})
         return {
             "application_version": "1.0.0", "task_owner": "TASK-013", "project_id": self.project_id,
             "execution_snapshot_sha256": store["execution_snapshot_sha256"], "queue_snapshot_sha256": queue["queue_snapshot_sha256"],
             "events": list(store["events"]), "latest_executions": list(latest.values()), "available_queue_entries": available,
-            "recovery": {"required": bool(recovery), "dispatching": recovery, "automatic_retry_allowed": False},
+            "recovery": {
+                "required": bool(recovery),
+                "dispatching": recovery,
+                "human_recovery_available": any(item["recovery_supported"] for item in recovery),
+                "automatic_retry_allowed": False,
+            },
             "paid_execution_authorized": False, "candidate_creation_authorized": False, "resolve_mutation_started": False,
         }
 
@@ -663,6 +698,174 @@ class Task013CreativeGenerationExecutionApplication:
             "execution_history_created": False,
             "paid_execution_authorized": False,
         }
+
+    def recover_execution(
+        self,
+        *,
+        execution_id: str,
+        expected_execution_snapshot_sha256: str,
+    ) -> dict[str, Any]:
+        """Human-triggered reconciliation of one durable DISPATCHING execution.
+
+        This path never calls ``execute`` and therefore cannot enqueue Provider
+        work.  It only asks the exact selected port to reconcile its own
+        operation journal/history, then appends one matching terminal event.
+        """
+        if not isinstance(execution_id, str) or not _ID_RE.fullmatch(execution_id):
+            raise ProductError(
+                "ERR_GENERATION_EXECUTION_RECOVERY_ID",
+                "Generation execution recovery identity is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if (
+            not isinstance(expected_execution_snapshot_sha256, str)
+            or not _SHA_RE.fullmatch(expected_execution_snapshot_sha256)
+        ):
+            raise ProductError(
+                "ERR_GENERATION_EXECUTION_RECOVERY_SNAPSHOT",
+                "Generation execution recovery snapshot identity is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        with _exclusive_snapshot_lock(self.snapshot_path):
+            store = self._load()
+            if store["execution_snapshot_sha256"] != expected_execution_snapshot_sha256:
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_RECOVERY_CONFLICT",
+                    "Generation execution state changed; reload before recovery",
+                    ProductErrorCategory.STATE,
+                )
+            latest = next(
+                (
+                    event
+                    for event in reversed(store["events"])
+                    if event["execution_id"] == execution_id
+                ),
+                None,
+            )
+            if latest is None or latest["state"] != "DISPATCHING":
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_RECOVERY_STATE",
+                    "Only the exact current DISPATCHING execution can be recovered",
+                    ProductErrorCategory.STATE,
+                )
+            (
+                _queue,
+                entry,
+                route,
+                profile_sha,
+                prompt_text,
+                workload,
+                capability,
+                media_kind,
+            ) = self._derive(latest["queue_entry_id"])
+            identity = {
+                "project_id": entry["project_id"],
+                "queue_entry_id": entry["queue_entry_id"],
+                "prompt_id": entry["prompt_id"],
+                "prompt_version": entry["prompt_version"],
+                "prompt_sha256": entry["prompt_sha256"],
+                "profile_id": entry["provider_profile_id"],
+                "profile_version": entry["provider_profile_version"],
+                "profile_sha256": profile_sha,
+                "route_id": route.route_id,
+                "provider_family": route.provider_family.value,
+                "provider_id": route.provider_id,
+                "model_id": route.model_id,
+                "workload": workload.value,
+                "capability": capability,
+                "cost_class": route.cost_class.value,
+            }
+            if any(latest[name] != value for name, value in identity.items()):
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_RECOVERY_IDENTITY",
+                    "Current Queue, Prompt, Profile or route differs from the interrupted execution",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            port = self._port_for(route=route, capability=capability)
+            recover = getattr(port, "recover", None)
+            if not callable(recover):
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_RECOVERY_UNSUPPORTED",
+                    "The exact local execution port cannot reconcile interrupted work",
+                    ProductErrorCategory.NOT_SUPPORTED,
+                )
+            request = LocalGenerationExecutionRequest(
+                execution_id,
+                entry["queue_entry_id"],
+                entry["scene_id"],
+                entry["slot_id"],
+                capability,
+                prompt_text,
+                entry["prompt_sha256"],
+                tuple(entry["input_bindings"]),
+                f"rights://{self.project_id}/{entry['scene_id']}",
+            )
+            terminal_failure = False
+            try:
+                result = recover(route, request)
+            except ProductError as exc:
+                if exc.details.get("execution_state_terminal_failure") is not True:
+                    raise
+                failed = self._event_base(
+                    revision=store["revision"] + 1,
+                    execution_id=execution_id,
+                    entry=entry,
+                    profile_sha=profile_sha,
+                    route=route,
+                    workload=workload,
+                    capability=capability,
+                )
+                failed["state"] = "FAILED"
+                failed["failure_code"] = (
+                    exc.code
+                    if _ID_RE.fullmatch(exc.code)
+                    else "ERR_GENERATION_EXECUTION_RECOVERY_FAILED"
+                )
+                self._append(store, failed)
+                terminal_failure = True
+            except Exception as exc:
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_RECOVERY_PORT",
+                    "Local generation recovery failed without terminal Evidence",
+                    ProductErrorCategory.EXTERNAL_DEPENDENCY,
+                ) from exc
+            if not terminal_failure and (
+                not isinstance(result, LocalGenerationExecutionResult) or (
+                result.route_id != route.route_id
+                or result.provider_family is not route.provider_family
+                or result.provider_id != route.provider_id
+                or result.model_id != route.model_id
+                or result.capability != capability
+                or result.media_kind != media_kind
+                )
+            ):
+                raise ProductError(
+                    "ERR_GENERATION_EXECUTION_RECOVERY_RESULT",
+                    "Recovered local output differs from the interrupted execution identity",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            if not terminal_failure:
+                completed = self._event_base(
+                    revision=store["revision"] + 1,
+                    execution_id=execution_id,
+                    entry=entry,
+                    profile_sha=profile_sha,
+                    route=route,
+                    workload=workload,
+                    capability=capability,
+                )
+                completed.update(
+                    {
+                        "state": "COMPLETED",
+                        "provider_operation_id": result.provider_operation_id,
+                        "output_ref": result.output_ref,
+                        "output_sha256": result.output_sha256,
+                        "media_kind": result.media_kind,
+                        "latency_ms": result.latency_ms,
+                    }
+                )
+                self._append(store, completed)
+        return self.snapshot()
 
 
 __all__ = [

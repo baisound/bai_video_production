@@ -1,6 +1,6 @@
 # TASK-036 P-UX-2G local image Provider vertical design
 
-Status: `DETAILED_DESIGN_REVISED_AFTER_CRITIC / IMPLEMENTATION_PENDING`
+Status: `UNITS_D-A_D-B_D-C_CODE_COMPLETE / NATIVE_HUMAN_GATE_PENDING`
 Date: 2026-08-21
 Development depth: `DEV-3 HIGH ASSURANCE`
 
@@ -246,3 +246,35 @@ with Provider/store/Asset state unchanged for rejected calls.
 `tmp/`, operator workflows/prompts, generated media, shared runtime settings,
 BAI Development OS source, audio owner source, CHANGELOG and release metadata
 must not be modified by these units without a separate applicable gate.
+
+## D-C implementation evidence
+
+- The trusted launcher accepts image-only or dual image/video `1.2.0`
+  configuration while preserving the `1.1.0` video-only contract. One external
+  Comfy output root may be shared, but project output, staging and journals stay
+  inside the Product project.
+- Route selection closes enabled/workload/cost/credential/endpoint/settings and
+  exact capability before durable `DISPATCHING` admission.
+- Output Adoption derives and verifies the canonical Slot from the exact Queue
+  entry without changing the existing TASK-013 `1.0.0` event schema. TASK-013
+  exposes an explicit Human recovery operation for ports that support durable
+  reconciliation. Recovery
+  calls only the port journal/history reconciliation method and never execute or
+  queue; pending/unknown/tampered state remains `DISPATCHING`.
+- V6.1.1 stores readiness only for the exact Queue and execution snapshot
+  coordinate. The execution button is disabled until that entry passes current
+  runtime preflight, and every refresh invalidates the UI readiness cache.
+- A bound Shell fake vertical writes one structurally verified PNG, preserves
+  the exact output SHA through TASK-013 and TASK-003 ingestion, and ends with one
+  TASK-037 IMAGE Candidate in `READY_FOR_AUDIT`. It does not ACCEPT, LOCK,
+  publish, mutate Timeline/NLE, or start Export.
+- The launcher lease barrier rejects new execution/adoption calls after close
+  begins, waits for an already admitted operation, and prevents a successor
+  runtime from overlapping Provider/store/Asset mutation.
+- Final verification on the latest bytes: focused integration `192 passed`;
+  risk-proportional repository regression `2406 passed, 1 skipped` after
+  excluding two unrelated WSL collection modules that require `tkinter`;
+  changed Python compile, embedded JavaScript syntax and diff checks passed.
+- Independent Tester, Judge and Acceptance reviews passed. Final unresolved
+  findings are `C/H/M/L = 0/0/0/0`. Actual Comfy execution and packaged UI
+  read-back remain a separate native Human Gate and are not claimed here.

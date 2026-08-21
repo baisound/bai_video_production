@@ -1556,6 +1556,24 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution cancellation request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_execution_application().cancel_execution(confirmation_id=args["confirmation_id"])
 
+    @_nle_operation_guarded
+    def generation_execution_recover(self, args: Any) -> dict[str, Any]:
+        required = {"execution_id", "expected_execution_snapshot_sha256"}
+        if (
+            not isinstance(args, dict)
+            or set(args) != required
+            or not all(isinstance(args[name], str) and args[name].strip() for name in required)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Generation execution recovery request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_generation_execution_application().recover_execution(
+            execution_id=args["execution_id"],
+            expected_execution_snapshot_sha256=args["expected_execution_snapshot_sha256"],
+        )
+
     def _require_generation_output_adoption_application(self) -> Task027GenerationOutputAdoptionApplication:
         if self._generation_output_adoption_application is None:
             raise ProductError("ERR_TASK027_OUTPUT_ADOPTION_NOT_BOUND", "Generation output adoption is not bound to this Shell", ProductErrorCategory.STATE)

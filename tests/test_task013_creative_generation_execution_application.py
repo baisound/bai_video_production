@@ -52,9 +52,16 @@ class QueueStub:
 
 
 class FakePort:
-    def __init__(self, *, failure: BaseException | None = None):
+    def __init__(
+        self,
+        *,
+        failure: BaseException | None = None,
+        recovery_failure: BaseException | None = None,
+    ):
         self.calls = []
+        self.recover_calls = []
         self.failure = failure
+        self.recovery_failure = recovery_failure
 
     def preflight(self):
         return LocalGenerationRuntimeReadiness(
@@ -66,6 +73,16 @@ class FakePort:
         self.calls.append((route, request))
         if self.failure is not None:
             raise self.failure
+        return LocalGenerationExecutionResult(
+            route.route_id, route.provider_family, route.provider_id, route.model_id,
+            request.capability, "operation-1", "project-output://generated/result.mp4",
+            "sha256:" + "9" * 64, "VIDEO", 125,
+        )
+
+    def recover(self, route, request):
+        self.recover_calls.append((route, request))
+        if self.recovery_failure is not None:
+            raise self.recovery_failure
         return LocalGenerationExecutionResult(
             route.route_id, route.provider_family, route.provider_id, route.model_id,
             request.capability, "operation-1", "project-output://generated/result.mp4",
@@ -522,6 +539,133 @@ def test_structured_uncertain_port_error_remains_recovery_required(tmp_path: Pat
     assert [event["state"] for event in app.snapshot()["events"]] == ["DISPATCHING"]
     assert app.snapshot()["recovery"]["required"] is True
     assert port.calls and len(port.calls) == 1
+
+
+def test_human_recovery_reconciles_dispatching_without_execute_replay(tmp_path: Path):
+    uncertain = ProductError(
+        "ERR_GENERATION_COMFY_TIMEOUT_UNCERTAIN", "uncertain", ProductErrorCategory.STATE,
+        details={"execution_state_uncertain": True, "automatic_retry_allowed": False},
+    )
+    app, queue, port = fixture(tmp_path, failure=uncertain)
+    prepare(app, queue)
+    with pytest.raises(ProductError):
+        app.apply_execution(confirmation_id="execution-confirm")
+    before = app.snapshot()
+    execution_id = before["recovery"]["dispatching"][0]["execution_id"]
+    recovered = app.recover_execution(
+        execution_id=execution_id,
+        expected_execution_snapshot_sha256=before["execution_snapshot_sha256"],
+    )
+    assert [event["state"] for event in recovered["events"]] == ["DISPATCHING", "COMPLETED"]
+    assert recovered["recovery"]["required"] is False
+    assert len(port.calls) == 1
+    assert len(port.recover_calls) == 1
+
+
+def test_human_recovery_pending_or_tampered_identity_leaves_dispatching_unchanged(tmp_path: Path):
+    uncertain = ProductError(
+        "ERR_GENERATION_COMFY_TIMEOUT_UNCERTAIN", "uncertain", ProductErrorCategory.STATE,
+        details={"execution_state_uncertain": True, "automatic_retry_allowed": False},
+    )
+    app, queue, port = fixture(tmp_path, failure=uncertain)
+    prepare(app, queue)
+    with pytest.raises(ProductError):
+        app.apply_execution(confirmation_id="execution-confirm")
+    before = app.snapshot()
+    execution_id = before["recovery"]["dispatching"][0]["execution_id"]
+    port.recovery_failure = ProductError(
+        "ERR_GENERATION_COMFY_IMAGE_RECOVERY_PENDING",
+        "pending",
+        ProductErrorCategory.STATE,
+        details={"execution_state_uncertain": True, "automatic_retry_allowed": False},
+    )
+    with pytest.raises(ProductError) as pending:
+        app.recover_execution(
+            execution_id=execution_id,
+            expected_execution_snapshot_sha256=before["execution_snapshot_sha256"],
+        )
+    assert pending.value.code == "ERR_GENERATION_COMFY_IMAGE_RECOVERY_PENDING"
+    assert app.snapshot()["execution_snapshot_sha256"] == before["execution_snapshot_sha256"]
+    assert [event["state"] for event in app.snapshot()["events"]] == ["DISPATCHING"]
+    assert len(port.calls) == 1
+    assert len(port.recover_calls) == 1
+
+    current = ConnectionSettingsStore.load(tmp_path / "ai-connection-settings.json").record
+    changed_route = ModelRoute(
+        "local-video", AiWorkload.VIDEO, ProviderFamily.COMFYUI,
+        "comfy", "changed-model", CostClass.LOCAL_FREE_AI,
+        capabilities=("TEXT_TO_VIDEO",),
+    )
+    ConnectionSettingsStore.save(
+        tmp_path / "ai-connection-settings.json",
+        AiConnectionProfile("profile-1", "v1", SelectionMode.AUTO, (changed_route,)),
+        expected_revision=current.revision,
+    )
+    with pytest.raises(ProductError) as drift:
+        app.recover_execution(
+            execution_id=execution_id,
+            expected_execution_snapshot_sha256=before["execution_snapshot_sha256"],
+        )
+    assert drift.value.code == "ERR_GENERATION_EXECUTION_RECOVERY_IDENTITY"
+    assert len(port.recover_calls) == 1
+    assert app.snapshot()["execution_snapshot_sha256"] == before["execution_snapshot_sha256"]
+
+
+def test_human_recovery_records_explicit_terminal_failure_without_execute_replay(tmp_path: Path):
+    uncertain = ProductError(
+        "ERR_GENERATION_COMFY_TIMEOUT_UNCERTAIN", "uncertain", ProductErrorCategory.STATE,
+        details={"execution_state_uncertain": True, "automatic_retry_allowed": False},
+    )
+    app, queue, port = fixture(tmp_path, failure=uncertain)
+    prepare(app, queue)
+    with pytest.raises(ProductError):
+        app.apply_execution(confirmation_id="execution-confirm")
+    before = app.snapshot()
+    port.recovery_failure = ProductError(
+        "ERR_GENERATION_COMFY_IMAGE_RECOVERY_FAILED",
+        "failed",
+        ProductErrorCategory.STATE,
+        details={"execution_state_terminal_failure": True},
+    )
+    recovered = app.recover_execution(
+        execution_id=before["recovery"]["dispatching"][0]["execution_id"],
+        expected_execution_snapshot_sha256=before["execution_snapshot_sha256"],
+    )
+    assert [event["state"] for event in recovered["events"]] == ["DISPATCHING", "FAILED"]
+    assert recovered["recovery"]["required"] is False
+    assert len(port.calls) == 1
+    assert len(port.recover_calls) == 1
+
+
+def test_dispatching_fixed_port_without_recovery_is_truthfully_projected_unsupported(tmp_path: Path):
+    uncertain = ProductError(
+        "ERR_GENERATION_COMFY_TIMEOUT_UNCERTAIN", "uncertain", ProductErrorCategory.STATE,
+        details={"execution_state_uncertain": True, "automatic_retry_allowed": False},
+    )
+    app, queue, backing = fixture(tmp_path, failure=uncertain)
+
+    class NoRecoveryPort:
+        def preflight(self):
+            return backing.preflight()
+
+        def execute(self, route, request):
+            return backing.execute(route, request)
+
+    app.execution_port = NoRecoveryPort()
+    prepare(app, queue)
+    with pytest.raises(ProductError):
+        app.apply_execution(confirmation_id="execution-confirm")
+    state = app.snapshot()
+    assert state["recovery"]["required"] is True
+    assert state["recovery"]["human_recovery_available"] is False
+    assert state["recovery"]["dispatching"][0]["recovery_supported"] is False
+    with pytest.raises(ProductError) as unsupported:
+        app.recover_execution(
+            execution_id=state["recovery"]["dispatching"][0]["execution_id"],
+            expected_execution_snapshot_sha256=state["execution_snapshot_sha256"],
+        )
+    assert unsupported.value.code == "ERR_GENERATION_EXECUTION_RECOVERY_UNSUPPORTED"
+    assert len(backing.calls) == 1
 
 
 def test_confirmation_is_consumed_before_stale_queue_revalidation(tmp_path: Path):

@@ -454,16 +454,35 @@ def test_ai_video_connects_queue_admission_without_execution() -> None:
         "expected_upstream_snapshots:model.upstream_snapshots",
         "generation_queue_apply",
         "Admission Evidenceを登録",
-        "Queue登録は実行許可ではありません。",
+        "Queue登録だけではProviderを呼びません。",
     ):
         assert marker in SHELL_HTML
 
 
-def test_ai_video_keeps_execution_read_only_in_this_slice() -> None:
-    assert 'data-disabled-reason="Local executionはQueue admissionと別の明示確認が必要です"' in SHELL_HTML
-    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
-    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
+def test_ai_video_connects_scoped_preflight_and_individual_local_execution() -> None:
+    for marker in (
+        "function generationReadinessCoordinate(model,entry)",
+        "function preflightLocalGeneration(model,entry)",
+        "generation_execution_preflight',{queue_entry_id:entry.queue_entry_id}",
+        "generationRuntimeReadiness.set(entry.queue_entry_id",
+        "function prepareLocalGenerationExecution(model,entry)",
+        "readiness.coordinate!==generationReadinessCoordinate(model,entry)",
+        "generation_execution_prepare',{queue_entry_id:entry.queue_entry_id",
+        "generation_execution_apply',{confirmation_id:prepared.confirmation_id}",
+        "generation_execution_cancel',{confirmation_id:prepared.confirmation_id}",
+        "function recoverLocalGeneration(model,item)",
+        "generation_execution_recover',{execution_id:item.execution_id",
+        "if(item.recovery_supported)",
+        "このRuntimeは履歴照合未対応です。新しいJobは送信しません。",
+        "Provider履歴を照合",
+        "Runtimeを確認",
+        "この1件を確認して生成",
+        "一括生成（利用不可）",
+        "有償・Cloud Providerは使用しません。",
+    ):
+        assert marker in SHELL_HTML
     assert "中断したlocal dispatchは自動再実行しません。" in SHELL_HTML
+    assert "async function refreshQueue(){generationRuntimeReadiness.clear();" in SHELL_HTML
 
 
 def test_prompt_evidence_projects_versioned_metadata_and_exact_receipts() -> None:
@@ -498,8 +517,6 @@ def test_prompt_evidence_preserves_private_and_provider_boundaries() -> None:
         assert marker in SHELL_HTML
     assert "body_text" not in SHELL_HTML
     assert "body_content" not in SHELL_HTML
-    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
-    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
 
 
 def test_audio_workspace_connects_review_and_task026_plan_boundaries() -> None:
@@ -558,11 +575,9 @@ def test_output_adoption_does_not_gain_provider_or_human_accept_authority() -> N
         "button.disabled=!!adoption.recovery?.required||item.adoption_status!=='READY'",
         "中断した監査候補登録の残りだけを再開しますか？",
         "Provider再実行・課金・Human ACCEPT/LOCK・公開は行いません。",
-        "監査候補登録もProvider再実行・課金・Human ACCEPT/LOCK・公開・NLE操作を行いません。",
+        "生成済み出力の監査候補登録は別々の明示確認です。",
     ):
         assert marker in SHELL_HTML
-    assert "generation_execution_prepare',{queue_entry_id" not in SHELL_HTML
-    assert "generation_execution_apply',{confirmation_id" not in SHELL_HTML
 
 
 def test_visual_generation_handoff_projects_exact_non_audio_lifecycle_without_effect_authority() -> None:

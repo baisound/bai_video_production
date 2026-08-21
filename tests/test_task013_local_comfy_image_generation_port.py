@@ -779,6 +779,19 @@ def test_completed_recovery_is_read_only_and_failed_recovery_stays_failed(tmp_pa
     assert json.loads((failed_roots["journal"] / "EXEC-IMAGE-1.json").read_text())["state"] == "FAILED"
 
 
+def test_first_recovery_output_failure_signals_terminal_after_durable_failed_journal(tmp_path: Path):
+    port, client, route, request, roots = fixture(tmp_path, images=2)
+    path, journal = port._reserve(route, request)
+    port._advance(path, journal, state="QUEUED", prompt_id="prompt-image-1")
+    with pytest.raises(ProductError) as failed:
+        port.recover(route, request)
+    assert failed.value.code == "ERR_GENERATION_COMFY_IMAGE_OUTPUT_AMBIGUOUS"
+    assert failed.value.details["execution_state_terminal_failure"] is True
+    stored = json.loads((roots["journal"] / "EXEC-IMAGE-1.json").read_text())
+    assert stored["state"] == "FAILED"
+    assert client.queued == 0
+
+
 def test_config_rejects_non_loopback_endpoint(tmp_path: Path):
     roots = [tmp_path / name for name in ("out", "project", "stage", "journal")]
     for root in roots:

@@ -816,12 +816,39 @@ class LocalComfyTextToImagePort:
             raise ProductError("ERR_GENERATION_COMFY_IMAGE_PROJECT_CHECKSUM", "Canonical image changed after publication", ProductErrorCategory.DATA_INTEGRITY)
         return f"project-output://{relative.as_posix()}", target_sha
 
+    def _fail_output(
+        self,
+        path: Path,
+        journal: dict[str, Any],
+        prompt_id: str,
+        error: ProductError,
+    ) -> None:
+        try:
+            self._advance(path, journal, state="FAILED", prompt_id=prompt_id)
+        except ProductError as exc:
+            raise self._uncertain(
+                "ERR_GENERATION_COMFY_IMAGE_FAILURE_JOURNAL_UNCERTAIN",
+                "Failed image output could not be durably reconciled",
+                prompt_id=prompt_id,
+            ) from exc
+        error.details = {**error.details, "execution_state_terminal_failure": True}
+        raise error
+
     def _complete(self, path: Path, journal: dict[str, Any], prompt_id: str,
                   entry: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
         images = _image_descriptors(entry)
         if len(images) != 1:
-            self._advance(path, journal, state="FAILED", prompt_id=prompt_id)
-            raise ProductError("ERR_GENERATION_COMFY_IMAGE_OUTPUT_AMBIGUOUS", "ComfyUI did not return exactly one image", ProductErrorCategory.HUMAN_REVIEW_REQUIRED, details={"image_count": len(images)})
+            self._fail_output(
+                path,
+                journal,
+                prompt_id,
+                ProductError(
+                    "ERR_GENERATION_COMFY_IMAGE_OUTPUT_AMBIGUOUS",
+                    "ComfyUI did not return exactly one image",
+                    ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                    details={"image_count": len(images)},
+                ),
+            )
         try:
             descriptor = images[0]
             expected_subfolder = f"bai-task013-image/{journal['execution_id']}"
@@ -840,11 +867,17 @@ class LocalComfyTextToImagePort:
                             raise ProductError("ERR_GENERATION_COMFY_IMAGE_SUFFIX", "FLUX output must be PNG", ProductErrorCategory.DATA_INTEGRITY)
                         output_ref, output_sha = self._publish(source_raw, journal["execution_id"])
         except (FileNotFoundError, ValueError) as exc:
-            self._advance(path, journal, state="FAILED", prompt_id=prompt_id)
-            raise ProductError("ERR_GENERATION_COMFY_IMAGE_OUTPUT_IDENTITY", "Image output is outside its execution prefix", ProductErrorCategory.SECURITY) from exc
-        except ProductError:
-            self._advance(path, journal, state="FAILED", prompt_id=prompt_id)
-            raise
+            error = ProductError(
+                "ERR_GENERATION_COMFY_IMAGE_OUTPUT_IDENTITY",
+                "Image output is outside its execution prefix",
+                ProductErrorCategory.SECURITY,
+            )
+            try:
+                self._fail_output(path, journal, prompt_id, error)
+            except ProductError as terminal:
+                raise terminal from exc
+        except ProductError as exc:
+            self._fail_output(path, journal, prompt_id, exc)
         try:
             completed = self._advance(path, journal, state="COMPLETED", prompt_id=prompt_id, output_ref=output_ref, output_sha256=output_sha)
         except ProductError as exc:
@@ -912,7 +945,12 @@ class LocalComfyTextToImagePort:
         if journal["state"] == "PREPARED":
             raise self._uncertain("ERR_GENERATION_COMFY_IMAGE_RECOVERY_PROMPT_UNKNOWN", "Image dispatch prompt identity was not durably recorded")
         if journal["state"] == "FAILED":
-            raise ProductError("ERR_GENERATION_COMFY_IMAGE_RECOVERY_FAILED", "Image execution is already terminal failed", ProductErrorCategory.STATE)
+            raise ProductError(
+                "ERR_GENERATION_COMFY_IMAGE_RECOVERY_FAILED",
+                "Image execution is already terminal failed",
+                ProductErrorCategory.STATE,
+                details={"execution_state_terminal_failure": True},
+            )
         if journal["state"] == "COMPLETED":
             prefix = "project-output://"
             ref = journal["output_ref"]
@@ -940,7 +978,12 @@ class LocalComfyTextToImagePort:
         status = entry.get("status")
         if isinstance(status, dict) and str(status.get("status_str", "")).lower() in {"error", "failed"}:
             self._advance(path, journal, state="FAILED", prompt_id=prompt_id)
-            raise ProductError("ERR_GENERATION_COMFY_IMAGE_EXECUTION_FAILED", "ComfyUI reported image generation failure", ProductErrorCategory.EXTERNAL_DEPENDENCY)
+            raise ProductError(
+                "ERR_GENERATION_COMFY_IMAGE_EXECUTION_FAILED",
+                "ComfyUI reported image generation failure",
+                ProductErrorCategory.EXTERNAL_DEPENDENCY,
+                details={"execution_state_terminal_failure": True},
+            )
         if not (
             isinstance(status, dict)
             and str(status.get("status_str", "")).lower() in {"success", "completed"}

@@ -369,13 +369,15 @@ def test_html_exposes_queue_admission_and_separate_bounded_local_execution_contr
     assert "generation_queue_snapshot" in HTML
     assert "generation_queue_prepare" in HTML
     assert "generation_queue_apply" in HTML
-    assert "EXECUTION_NOT_AUTHORIZED" in HTML
+    assert "Execution: ${entry.execution_status}" in HTML
     assert "generation_queue_dispatch" not in HTML
     assert "generation_execution_prepare" in HTML
     assert "generation_execution_apply" in HTML
+    assert "generation_execution_preflight" in HTML
+    assert "generation_execution_cancel" in HTML
     assert "LOCAL_FREE_AI" in HTML
     assert "RECOVERY_REQUIRED" in HTML
-    assert "Provider呼出し・課金・Budget予約・Candidate作成" in HTML
+    assert "Queue登録だけではProviderを呼びません。" in HTML
 
 
 def test_html_promotes_audio_workspace_without_provider_or_nle_shortcut():
@@ -941,6 +943,8 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
             self.calls.append(("apply", values)); return {"events": [{"state": "COMPLETED"}]}
         def cancel_execution(self, **values):
             self.calls.append(("cancel", values)); return {"cancelled": True}
+        def recover_execution(self, **values):
+            self.calls.append(("recover", values)); return {"events": [{"state": "COMPLETED"}]}
 
     execution = ExecutionStub()
     bridge = Task036ShellBridge(
@@ -965,7 +969,12 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
     assert result["events"][0]["state"] == "COMPLETED"
     cancelled = bridge.generation_execution_cancel({"confirmation_id": "cancel-local"})
     assert cancelled["cancelled"] is True
-    assert [name for name, _ in execution.calls] == ["preflight", "preflight", "prepare", "apply", "cancel"]
+    recovered = bridge.generation_execution_recover({
+        "execution_id": "EXEC-1",
+        "expected_execution_snapshot_sha256": "sha256:" + "2" * 64,
+    })
+    assert recovered["events"][0]["state"] == "COMPLETED"
+    assert [name for name, _ in execution.calls] == ["preflight", "preflight", "prepare", "apply", "cancel", "recover"]
     assert execution.calls[0][1]["queue_entry_id"] is None
     assert execution.calls[1][1]["queue_entry_id"] == "QUEUE-1"
     with pytest.raises(ProductError) as exc:
@@ -980,6 +989,15 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
     for invalid in ({}, {"confirmation_id": ""}, {"confirmation_id": 1}, {"confirmation_id": None}):
         with pytest.raises(ProductError) as invalid_exc:
             bridge.generation_execution_cancel(invalid)
+        assert invalid_exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    for invalid in (
+        {},
+        {"execution_id": "", "expected_execution_snapshot_sha256": "sha256:" + "2" * 64},
+        {"execution_id": 1, "expected_execution_snapshot_sha256": "sha256:" + "2" * 64},
+        {"execution_id": "EXEC-1", "expected_execution_snapshot_sha256": None},
+    ):
+        with pytest.raises(ProductError) as invalid_exc:
+            bridge.generation_execution_recover(invalid)
         assert invalid_exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 

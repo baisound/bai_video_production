@@ -44,6 +44,9 @@ from ai_video_production.durable_product_job import (
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.serialization import sha256_bytes
+from ai_video_production.local_comfy_image_generation_port import LocalComfyTextToImagePort
+from ai_video_production.local_comfy_generation_port import LocalComfyTextToVideoPort
+from ai_video_production.creative_generation_execution_application import LocalGenerationRuntimeReadiness
 
 
 class DialogBackend:
@@ -734,6 +737,15 @@ def test_v11_launch_explicitly_composes_bounded_local_generation_without_executi
         comfy_client=ComfyClient(),
     )
     assert launch.bridge._generation_execution_application is not None
+    execution = launch.bridge._generation_execution_application
+    assert isinstance(execution.execution_port, LocalComfyTextToVideoPort)
+    assert execution.execution_port_selector is None
+    execution.execution_port.preflight = lambda: LocalGenerationRuntimeReadiness(
+        "local-video", "comfy", "minimax-h3-native",
+        "sha256:" + "8" * 64, 13,
+        "DEFAULT_DYNAMIC_VRAM_INCIDENT_HARDENED_V1",
+    )
+    assert launch.bridge.generation_execution_preflight({})["route_id"] == "local-video"
     assert launch.bridge._generation_output_adoption_application is not None
     snapshot = launch.bridge.generation_execution_snapshot({})
     assert snapshot["available"] is True
@@ -766,12 +778,373 @@ def test_v11_local_generation_rejects_non_loopback_or_out_of_project_root(tmp_pa
     }
     with pytest.raises(ValueError):
         Task036LaunchConfiguration.from_dict(raw)
+
     raw["local_generation"]["endpoint"] = "http://127.0.0.1:8188"
+    external_comfy = tmp_path / "external-comfy"
+    external_comfy.mkdir()
+    raw["local_generation"]["comfy_output_root"] = str(external_comfy)
+    with pytest.raises(ValueError):
+        Task036LaunchConfiguration.from_dict(raw)
+    raw["local_generation"]["comfy_output_root"] = str(roots["comfy-output"])
     outside = tmp_path / "outside"
     outside.mkdir()
     raw["local_generation"]["project_output_root"] = str(outside)
     with pytest.raises(ValueError):
         Task036LaunchConfiguration.from_dict(raw)
+
+
+def test_v11_local_generation_remains_required_for_backward_compatibility(tmp_path: Path):
+    _path, raw = config_document(tmp_path)
+    raw["launch_config_version"] = "1.1.0"
+    raw["local_generation"] = None
+    with pytest.raises(ValueError, match="requires local_generation"):
+        Task036LaunchConfiguration.from_dict(raw)
+
+
+def test_v12_launch_composes_image_selector_without_provider_execution(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    runtime_output = tmp_path / "external-comfy-output"
+    roots = {
+        name: project / name
+        for name in ("generation-output", "image-stage", "image-journal")
+    }
+    runtime_output.mkdir()
+    for root in roots.values():
+        root.mkdir()
+    raw["launch_config_version"] = "1.2.0"
+    raw["local_generation"] = None
+    raw["local_image_generation"] = {
+        "endpoint": "http://127.0.0.1:8188",
+        "comfy_output_root": str(runtime_output),
+        "project_output_root": str(roots["generation-output"]),
+        "staging_root": str(roots["image-stage"]),
+        "dispatch_journal_root": str(roots["image-journal"]),
+        "route_id": "local-image",
+        "provider_id": "comfy-image",
+        "model_id": "flux-schnell-fp8",
+        "width": 64,
+        "height": 64,
+        "steps": 4,
+        "poll_interval_seconds": 1.0,
+        "completion_timeout_seconds": 3600,
+        "max_output_bytes": 16 * 1024 * 1024,
+    }
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    config = Task036LaunchConfiguration.load(path)
+    assert config.local_generation is None
+    assert config.local_image_generation is not None
+    assert config.local_image_generation.comfy_output_root == runtime_output
+    ProductProjectManifestStore.save(
+        config.project_root,
+        ProductProjectManifest.create(
+            project_id=config.project_id,
+            project_revision=1,
+            product_version="0.22.0",
+            timebase=ProjectTimebase(
+                config.timeline_rate.numerator, config.timeline_rate.denominator,
+            ),
+            child_bindings=(),
+            created_at="2026-08-21T00:00:00.000Z",
+            updated_at="2026-08-21T00:00:00.000Z",
+        ),
+    )
+    launch = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        comfy_client=ComfyClient(),
+    )
+    application = launch.bridge._generation_execution_application
+    assert application is not None
+    assert isinstance(application.execution_port, LocalComfyTextToImagePort)
+    assert application.execution_port_selector is None
+    assert not any(runtime_output.iterdir())
+    assert not any(roots["generation-output"].iterdir())
+    assert not any(roots["image-journal"].iterdir())
+    bridge = launch.bridge
+    launch.close()
+    with pytest.raises(ProductError) as closed:
+        bridge.generation_execution_snapshot({})
+    assert closed.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert not any(runtime_output.iterdir())
+
+
+def test_v12_image_config_rejects_project_output_escape_and_empty_runtimes(tmp_path: Path):
+    _path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    runtime_output = tmp_path / "external-comfy-output"
+    runtime_output.mkdir()
+    for name in ("generation-output", "image-stage", "image-journal"):
+        (project / name).mkdir()
+    raw["launch_config_version"] = "1.2.0"
+    raw["local_generation"] = None
+    raw["local_image_generation"] = None
+    with pytest.raises(ValueError):
+        Task036LaunchConfiguration.from_dict(raw)
+    raw["local_image_generation"] = {
+        "endpoint": "http://127.0.0.1:8188",
+        "comfy_output_root": str(runtime_output),
+        "project_output_root": str(tmp_path / "outside-project"),
+        "staging_root": str(project / "image-stage"),
+        "dispatch_journal_root": str(project / "image-journal"),
+        "route_id": "local-image", "provider_id": "comfy-image",
+        "model_id": "flux-schnell-fp8", "width": 64, "height": 64,
+        "steps": 4, "poll_interval_seconds": 1.0,
+        "completion_timeout_seconds": 3600,
+        "max_output_bytes": 16 * 1024 * 1024,
+    }
+    with pytest.raises(ValueError):
+        Task036LaunchConfiguration.from_dict(raw)
+
+
+def test_v12_dual_runtime_shares_external_comfy_root_and_selects_exact_ports(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    runtime_output = tmp_path / "external-comfy-output"
+    runtime_output.mkdir()
+    roots = {
+        name: project / name
+        for name in (
+            "generation-output",
+            "video-stage",
+            "video-journal",
+            "image-stage",
+            "image-journal",
+        )
+    }
+    for root in roots.values():
+        root.mkdir()
+    raw["launch_config_version"] = "1.2.0"
+    raw["local_generation"] = {
+        "endpoint": "http://127.0.0.1:8188",
+        "comfy_output_root": str(runtime_output),
+        "project_output_root": str(roots["generation-output"]),
+        "staging_root": str(roots["video-stage"]),
+        "dispatch_journal_root": str(roots["video-journal"]),
+        "route_id": "local-video",
+        "provider_id": "comfy-video",
+        "model_id": "minimax-h3-native",
+        "width": 832,
+        "height": 480,
+        "length": 124,
+        "steps": 20,
+        "poll_interval_seconds": 1.0,
+        "completion_timeout_seconds": 3600,
+        "max_output_bytes": 16 * 1024**3,
+    }
+    raw["local_image_generation"] = {
+        "endpoint": "http://127.0.0.1:8188",
+        "comfy_output_root": str(runtime_output),
+        "project_output_root": str(roots["generation-output"]),
+        "staging_root": str(roots["image-stage"]),
+        "dispatch_journal_root": str(roots["image-journal"]),
+        "route_id": "local-image",
+        "provider_id": "comfy-image",
+        "model_id": "flux-schnell-fp8",
+        "width": 64,
+        "height": 64,
+        "steps": 4,
+        "poll_interval_seconds": 1.0,
+        "completion_timeout_seconds": 3600,
+        "max_output_bytes": 16 * 1024 * 1024,
+    }
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    config = Task036LaunchConfiguration.load(path)
+    assert config.local_generation.comfy_output_root == runtime_output
+    assert config.local_image_generation.comfy_output_root == runtime_output
+    launch = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        comfy_client=ComfyClient(),
+    )
+    application = launch.bridge._generation_execution_application
+    assert application is not None
+    assert application.execution_port is None
+    assert application.execution_port_selector is not None
+    image = application.execution_port_selector(
+        ModelRoute(
+            "local-image", AiWorkload.IMAGE, ProviderFamily.COMFYUI,
+            "comfy-image", "flux-schnell-fp8", CostClass.LOCAL_FREE_AI,
+            capabilities=("TEXT_TO_IMAGE",),
+        ),
+        "TEXT_TO_IMAGE",
+    )
+    video = application.execution_port_selector(
+        ModelRoute(
+            "local-video", AiWorkload.VIDEO, ProviderFamily.COMFYUI,
+            "comfy-video", "minimax-h3-native", CostClass.LOCAL_FREE_AI,
+            capabilities=("TEXT_TO_VIDEO",),
+        ),
+        "TEXT_TO_VIDEO",
+    )
+    assert isinstance(image, LocalComfyTextToImagePort)
+    assert isinstance(video, LocalComfyTextToVideoPort)
+    route_body = {
+        "route_id": "local-image",
+        "workload": AiWorkload.IMAGE,
+        "provider_family": ProviderFamily.COMFYUI,
+        "provider_id": "comfy-image",
+        "model_id": "flux-schnell-fp8",
+        "cost_class": CostClass.LOCAL_FREE_AI,
+        "capabilities": ("TEXT_TO_IMAGE",),
+    }
+    for override in (
+        {"enabled": False},
+        {"workload": AiWorkload.VIDEO},
+        {"cost_class": CostClass.CLOUD_PAID_AI},
+        {"credential_ref": "credential://must-not-be-used"},
+        {"endpoint_ref": "endpoint://must-not-be-used"},
+        {"settings": {"ignored": True}},
+        {"capabilities": ("TEXT_TO_IMAGE", "TEXT_TO_VIDEO")},
+    ):
+        with pytest.raises(ProductError) as unbound:
+            application.execution_port_selector(
+                ModelRoute(**{**route_body, **override}),
+                "TEXT_TO_IMAGE",
+            )
+        assert unbound.value.code == "ERR_TASK036_LOCAL_GENERATION_ROUTE_UNBOUND"
+    assert not any(runtime_output.iterdir())
+    launch.close()
+
+
+def test_generation_and_adoption_bridge_obey_inflight_close_lease_barrier(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    runtime_output = tmp_path / "external-comfy-output"
+    runtime_output.mkdir()
+    roots = {
+        name: project / name
+        for name in ("generation-output", "image-stage", "image-journal")
+    }
+    for root in roots.values():
+        root.mkdir()
+    raw["launch_config_version"] = "1.2.0"
+    raw["local_generation"] = None
+    raw["local_image_generation"] = {
+        "endpoint": "http://127.0.0.1:8188",
+        "comfy_output_root": str(runtime_output),
+        "project_output_root": str(roots["generation-output"]),
+        "staging_root": str(roots["image-stage"]),
+        "dispatch_journal_root": str(roots["image-journal"]),
+        "route_id": "local-image", "provider_id": "comfy-image",
+        "model_id": "flux-schnell-fp8", "width": 64, "height": 64,
+        "steps": 4, "poll_interval_seconds": 1.0,
+        "completion_timeout_seconds": 3600,
+        "max_output_bytes": 16 * 1024 * 1024,
+    }
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    config = Task036LaunchConfiguration.load(path)
+    ProductProjectManifestStore.save(
+        config.project_root,
+        ProductProjectManifest.create(
+            project_id=config.project_id,
+            project_revision=1,
+            product_version="0.22.0",
+            timebase=ProjectTimebase(
+                config.timeline_rate.numerator, config.timeline_rate.denominator,
+            ),
+            child_bindings=(),
+            created_at="2026-08-21T00:00:00.000Z",
+            updated_at="2026-08-21T00:00:00.000Z",
+        ),
+    )
+    launch = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        comfy_client=ComfyClient(),
+    )
+    bridge = launch.bridge
+    entered, release = Event(), Event()
+    counters = {"provider": 0, "execution_store": 0, "asset": 0}
+
+    class BlockingExecution:
+        def apply_execution(self, *, confirmation_id):
+            assert confirmation_id == "inflight-confirm"
+            entered.set()
+            assert release.wait(5)
+            counters["provider"] += 1
+            counters["execution_store"] += 1
+            return {"events": [{"state": "COMPLETED"}]}
+
+        def snapshot(self):
+            return {
+                "execution_snapshot_sha256": "sha256:" + "2" * 64,
+                "latest_executions": [],
+                "recovery": {"required": False},
+            }
+
+    class BlockingAdoption:
+        def apply_adoption(self, *, confirmation_id):
+            counters["asset"] += 1
+            return {"confirmation_id": confirmation_id}
+
+        def snapshot(self):
+            return {
+                "adoption_snapshot_sha256": "sha256:" + "3" * 64,
+                "latest_adoptions": [],
+                "eligible_completed_outputs": [],
+                "recovery": {"required": False},
+            }
+
+    bridge._generation_execution_application = BlockingExecution()
+    bridge._generation_output_adoption_application = BlockingAdoption()
+    result = []
+    operation_thread = Thread(
+        target=lambda: result.append(
+            bridge.generation_execution_apply({"confirmation_id": "inflight-confirm"})
+        ),
+    )
+    operation_thread.start()
+    assert entered.wait(5)
+    lease = launch._runtime_lease
+    assert lease is not None
+    close_thread = Thread(target=launch.close)
+    close_thread.start()
+    deadline = monotonic() + 5
+    while not lease._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+        sleep(0.01)
+    assert lease._closing  # type: ignore[attr-defined]
+    assert counters == {"provider": 0, "execution_store": 0, "asset": 0}
+    with pytest.raises(ProductError) as rejected_execution:
+        bridge.generation_execution_apply({"confirmation_id": "new-confirm"})
+    assert rejected_execution.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    with pytest.raises(ProductError) as rejected_adoption:
+        bridge.generation_output_adoption_apply({"confirmation_id": "adopt-confirm"})
+    assert rejected_adoption.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert counters == {"provider": 0, "execution_store": 0, "asset": 0}
+    with pytest.raises(ProductError) as successor_error:
+        build_trusted_launch(
+            config,
+            native_dialog=Task036NativeDialogService(DialogBackend()),
+            asr_provider=AsrProvider(),
+            resolve_adapter=ResolveAdapter(),
+            comfy_client=ComfyClient(),
+        )
+    assert successor_error.value.code == "ERR_TASK036_RUNTIME_ALREADY_ACTIVE"
+    release.set()
+    operation_thread.join(5)
+    close_thread.join(5)
+    assert not operation_thread.is_alive() and not close_thread.is_alive()
+    assert result == [{"events": [{"state": "COMPLETED"}]}]
+    assert counters == {"provider": 1, "execution_store": 1, "asset": 0}
+    with pytest.raises(ProductError) as after_close:
+        bridge.generation_output_adoption_apply({"confirmation_id": "after-close"})
+    assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert counters == {"provider": 1, "execution_store": 1, "asset": 0}
+    successor = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        comfy_client=ComfyClient(),
+    )
+    successor.close()
 
 
 def test_trusted_resolve_bindings_use_managed_derived_subtitle_path(tmp_path: Path):

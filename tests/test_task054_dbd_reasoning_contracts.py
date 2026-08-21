@@ -10,9 +10,12 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 from ai_video_production.game_commentary import CommentaryClaimKind
+from ai_video_production.canonical_game_event import GameEnvironment
 
 from ai_video_production.dbd_reasoning_contracts import (
     AuthorizationDecision,
+    BINDING_SCHEMA_VERSION,
+    CONTEXT_SCHEMA_VERSION,
     ContextFreshness,
     DbDReasoningContextEnvelope,
     DbDReasoningExecutionReceipt,
@@ -20,10 +23,12 @@ from ai_video_production.dbd_reasoning_contracts import (
     HumanReviewResult,
     InferenceQualifier,
     RagChunk,
+    RECEIPT_SCHEMA_VERSION,
     ReasoningDisposition,
     ReasoningFact,
     ReasoningInference,
     ReasoningSessionMode,
+    PROPOSAL_SCHEMA_VERSION,
     StyleMetrics,
     TunedModelBinding,
     TunedModelBindingStatus,
@@ -74,8 +79,11 @@ def _context(mode: ReasoningSessionMode, freshness: ContextFreshness = ContextFr
         event_id=EVENT_ID,
         event_revision=1,
         event_sha256=SHA,
+        evidence_snapshot_sha256=SHA,
         timeline_sha256=SHA,
         game_version="dbd-9.0",
+        game_environment=GameEnvironment.LIVE,
+        rag_snapshot_sha256=SHA,
         session_mode=mode,
         freshness=freshness,
         observed_facts=(ReasoningFact(CommentaryClaimKind.EVENT_OCCURRED, "EVENT", "HOOK"),),
@@ -130,6 +138,15 @@ def test_normal_records_serialize_to_contracts() -> None:
     assert _context(ReasoningSessionMode.PREVIEW_NO_LEARNING).to_dict()["session_mode"] == "PREVIEW_NO_LEARNING"
     assert _proposal().to_dict()["disposition"] == "PROPOSE"
     assert _receipt().to_dict()["training_eligible"] is False
+
+
+def test_record_kind_versions_are_explicit_and_binding_targets_context_1_1() -> None:
+    assert _binding().to_dict()["schema_version"] == BINDING_SCHEMA_VERSION
+    assert _binding().to_dict()["context_schema"] == CONTEXT_SCHEMA_VERSION
+    assert _binding().to_dict()["output_schema"] == PROPOSAL_SCHEMA_VERSION
+    assert _context(ReasoningSessionMode.PREVIEW_NO_LEARNING).to_dict()["schema_version"] == CONTEXT_SCHEMA_VERSION
+    assert _proposal().to_dict()["schema_version"] == PROPOSAL_SCHEMA_VERSION
+    assert _receipt().to_dict()["schema_version"] == RECEIPT_SCHEMA_VERSION
 
 
 def test_canonical_hashes_are_deterministic() -> None:
@@ -248,8 +265,11 @@ def test_stale_context_cannot_dispatch_and_freshness_comparison_is_exact() -> No
     with pytest.raises(ValueError, match="only CURRENT"):
         context.require_dispatchable()
     current = _context(ReasoningSessionMode.PREVIEW_NO_LEARNING)
-    assert validate_context_freshness(current, current_event_revision=1, event_sha256=SHA, timeline_sha256=SHA, game_version="dbd-9.0", knowledge_ref_sha256s=(SHA,), rag_content_sha256s=()) is ContextFreshness.CURRENT
-    assert validate_context_freshness(current, current_event_revision=2, event_sha256=SHA, timeline_sha256=SHA, game_version="dbd-9.0", knowledge_ref_sha256s=(SHA,), rag_content_sha256s=()) is ContextFreshness.STALE
+    assert validate_context_freshness(current, current_event_revision=1, event_sha256=SHA, expected_evidence_snapshot_sha256=SHA, timeline_sha256=SHA, game_version="dbd-9.0", game_environment=GameEnvironment.LIVE, knowledge_ref_sha256s=(SHA,), rag_content_sha256s=(), rag_snapshot_sha256=SHA) is ContextFreshness.CURRENT
+    assert validate_context_freshness(current, current_event_revision=2, event_sha256=SHA, expected_evidence_snapshot_sha256=SHA, timeline_sha256=SHA, game_version="dbd-9.0", game_environment=GameEnvironment.LIVE, knowledge_ref_sha256s=(SHA,), rag_content_sha256s=(), rag_snapshot_sha256=SHA) is ContextFreshness.STALE
+    assert validate_context_freshness(current, current_event_revision=1, event_sha256=SHA, expected_evidence_snapshot_sha256="sha256:" + "b" * 64, timeline_sha256=SHA, game_version="dbd-9.0", game_environment=GameEnvironment.LIVE, knowledge_ref_sha256s=(SHA,), rag_content_sha256s=(), rag_snapshot_sha256=SHA) is ContextFreshness.STALE
+    with pytest.raises(ValueError, match="expected_evidence_snapshot_sha256"):
+        validate_context_freshness(current, current_event_revision=1, event_sha256=SHA, expected_evidence_snapshot_sha256="invalid", timeline_sha256=SHA, game_version="dbd-9.0", game_environment=GameEnvironment.LIVE, knowledge_ref_sha256s=(SHA,), rag_content_sha256s=(), rag_snapshot_sha256=SHA)
 
 
 def test_preview_receipt_forbids_learning_state_change_and_admits_contract() -> None:
@@ -274,9 +294,48 @@ def test_admission_rejects_rehashed_preview_mutation_and_unsorted_inference_refs
         admit_reasoning_contract_record(proposal)
 
 
+@pytest.mark.parametrize("environment", [GameEnvironment.LIVE, GameEnvironment.PTB])
+def test_context_admission_accepts_live_and_ptb(environment: GameEnvironment) -> None:
+    context = replace(_context(ReasoningSessionMode.PREVIEW_NO_LEARNING), game_environment=environment).to_dict()
+    assert admit_reasoning_contract_record(context)["game_environment"] == environment.value
+
+
+def test_context_legacy_schema_environment_snapshot_and_markers_fail_closed() -> None:
+    context = _context(ReasoningSessionMode.PREVIEW_NO_LEARNING).to_dict()
+    legacy = _rehash({**context, "schema_version": "1.0.0", "policy_version": "1.0.0"}, "context_sha256")
+    with pytest.raises(ValueError, match="unsupported context"):
+        admit_reasoning_contract_record(legacy)
+    unknown = _rehash({**context, "game_environment": "UNKNOWN"}, "context_sha256")
+    with pytest.raises(ValueError):
+        admit_reasoning_contract_record(unknown)
+    snapshot = {**context, "rag_snapshot_sha256": "sha256:" + "b" * 64}
+    with pytest.raises(ValueError, match="does not match"):
+        admit_reasoning_contract_record(snapshot)
+    multiple = {**context, "proposal_sha256": SHA}
+    with pytest.raises(ValueError, match="exactly one"):
+        admit_reasoning_contract_record(multiple)
+    mismatch = _rehash({**_binding().to_dict(), "schema_version": CONTEXT_SCHEMA_VERSION}, "binding_sha256")
+    with pytest.raises(ValueError, match="unsupported binding"):
+        admit_reasoning_contract_record(mismatch)
+
+
+def test_context_evidence_snapshot_is_required_hashed_and_tamper_evident() -> None:
+    context = _context(ReasoningSessionMode.PREVIEW_NO_LEARNING).to_dict()
+    assert admit_reasoning_contract_record(context)["evidence_snapshot_sha256"] == SHA
+    missing = {key: value for key, value in context.items() if key != "evidence_snapshot_sha256"}
+    with pytest.raises(ValueError, match="JSON Schema"):
+        admit_reasoning_contract_record(missing)
+    tampered = {**context, "evidence_snapshot_sha256": "sha256:" + "b" * 64}
+    with pytest.raises(ValueError, match="does not match"):
+        admit_reasoning_contract_record(tampered)
+
+
 def test_context_canonical_size_limit_rejects_large_fact_fixture() -> None:
     facts = tuple(ReasoningFact(CommentaryClaimKind.EVENT_OCCURRED, f"A{index:03d}", "x" * 4096) for index in range(128))
     oversized = replace(_context(ReasoningSessionMode.PREVIEW_NO_LEARNING), observed_facts=facts, canonical_facts=facts)
+    assert oversized.dispatchable is False
+    with pytest.raises(ValueError, match="maximum size"):
+        oversized.require_dispatchable()
     with pytest.raises(ValueError, match="maximum size"):
         oversized.to_dict()
 

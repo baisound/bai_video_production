@@ -421,12 +421,18 @@ class CommentaryCandidate:
     validation: FactValidationResult
     candidate_id: str = field(default_factory=lambda: generate_id(IdKind.CANDIDATE))
     created_at: str = field(default_factory=utc_now_iso)
+    reasoning_lineage_required: bool = field(default=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         validate_id(self.candidate_id, IdKind.CANDIDATE)
         if not isinstance(self.plan, CommentaryPlan) or not isinstance(self.draft, CommentaryDraft) or not isinstance(self.validation, FactValidationResult):
             raise ValueError("candidate requires canonical plan/draft/validation")
         _stable_text(self.created_at, field_name="created_at", maximum=64)
+        if not isinstance(self.reasoning_lineage_required, bool):
+            raise ValueError("reasoning_lineage_required must be bool")
+        reserved = self.candidate_id.startswith("CAND-R2D")
+        if self.reasoning_lineage_required != reserved:
+            raise ValueError("reserved R2D Candidate identity must match lineage requirement")
 
     @property
     def status(self) -> CommentaryCandidateStatus:
@@ -434,7 +440,7 @@ class CommentaryCandidate:
 
     def to_dict(self) -> dict[str, Any]:
         body = {
-            "schema_version": "1.0.0",
+            "schema_version": "1.1.0" if self.reasoning_lineage_required else "1.0.0",
             "candidate_id": self.candidate_id,
             "match_id": self.plan.match_id,
             "event_id": self.plan.event_id,
@@ -445,12 +451,19 @@ class CommentaryCandidate:
             "validation": {"passed": self.validation.passed, "errors": list(self.validation.errors)},
             "created_at": self.created_at,
         }
+        if self.reasoning_lineage_required:
+            body["reasoning_origin"] = "TUNED_REASONING"
         return {**body, "commentary_candidate_sha256": sha256_bytes(canonical_json_bytes(body))}
 
 
 def _verify_commentary_candidate_payload(payload: Any) -> None:
-    if not isinstance(payload, dict) or payload.get("schema_version") != "1.0.0":
+    if not isinstance(payload, dict) or payload.get("schema_version") not in {"1.0.0", "1.1.0"}:
         raise ValueError("invalid Commentary candidate payload")
+    legacy_keys = {"schema_version", "candidate_id", "match_id", "event_id", "event_revision", "status", "plan", "draft", "validation", "created_at", "commentary_candidate_sha256"}
+    reasoning_keys = legacy_keys | {"reasoning_origin"}
+    expected_keys = reasoning_keys if payload.get("schema_version") == "1.1.0" else legacy_keys
+    if set(payload) != expected_keys:
+        raise ValueError("invalid Commentary candidate payload fields")
     body = dict(payload)
     candidate_hash = body.pop("commentary_candidate_sha256", None)
     if candidate_hash != sha256_bytes(canonical_json_bytes(body)):
@@ -475,6 +488,9 @@ def _verify_commentary_candidate_payload(payload: Any) -> None:
     expected_status = CommentaryCandidateStatus.VALIDATED.value if passed and not errors else CommentaryCandidateStatus.REJECTED.value
     if payload.get("status") != expected_status:
         raise ValueError("Commentary candidate status does not match validation")
+    reserved = isinstance(payload.get("candidate_id"), str) and payload["candidate_id"].startswith("CAND-R2D")
+    if (payload.get("schema_version") == "1.1.0") != reserved or (reserved and payload.get("reasoning_origin") != "TUNED_REASONING"):
+        raise ValueError("Commentary candidate reasoning_origin is invalid")
 
 
 class CommentaryCandidateStore:
@@ -490,6 +506,7 @@ class CommentaryCandidateStore:
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
         return conn
 
     def _initialize(self) -> None:
@@ -497,7 +514,7 @@ class CommentaryCandidateStore:
             with closing(self._connect()) as conn:
                 version = conn.execute("PRAGMA user_version").fetchone()[0]
                 tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-                if version > 1:
+                if version > 2:
                     raise ProductError("ERR_COMMENTARY_STORE_NEWER_VERSION", "Commentary store uses a newer schema", ProductErrorCategory.DATA_INTEGRITY)
                 if version == 0 and tables:
                     raise ProductError("ERR_COMMENTARY_STORE_FOREIGN_SCHEMA", "Existing SQLite is not an admitted Commentary store", ProductErrorCategory.DATA_INTEGRITY)
@@ -507,24 +524,128 @@ class CommentaryCandidateStore:
                         CREATE TABLE store_metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
                         CREATE TABLE commentary_candidates(candidate_id TEXT PRIMARY KEY,match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,status TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL,created_at TEXT NOT NULL);
                         CREATE INDEX commentary_event_lookup ON commentary_candidates(event_id,event_revision,created_at,candidate_id);
+                        CREATE TABLE dbd_reasoning_candidate_lineage(candidate_id TEXT PRIMARY KEY REFERENCES commentary_candidates(candidate_id),parent_candidate_id TEXT UNIQUE REFERENCES commentary_candidates(candidate_id),match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,context_sha256 TEXT NOT NULL,commentary_plan_sha256 TEXT NOT NULL,structural_body_sha256 TEXT NOT NULL,proposal_sha256 TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL);
+                        CREATE INDEX dbd_reasoning_lineage_event_lookup ON dbd_reasoning_candidate_lineage(event_id,event_revision,candidate_id);
                         """
                     )
                     conn.execute("INSERT INTO store_metadata VALUES('store_format','task049.game-commentary.sqlite')")
-                    conn.execute("PRAGMA user_version=1")
+                    conn.execute("PRAGMA user_version=2")
                     conn.commit()
                 else:
                     metadata = dict(conn.execute("SELECT key,value FROM store_metadata"))
                     if metadata.get("store_format") != "task049.game-commentary.sqlite" or "commentary_candidates" not in tables:
                         raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary store format is not recognized", ProductErrorCategory.DATA_INTEGRITY)
+                    self._validate_candidate_schema(conn)
+                    if version == 1:
+                        try:
+                            conn.execute("BEGIN IMMEDIATE")
+                            conn.execute("CREATE TABLE dbd_reasoning_candidate_lineage(candidate_id TEXT PRIMARY KEY REFERENCES commentary_candidates(candidate_id),parent_candidate_id TEXT UNIQUE REFERENCES commentary_candidates(candidate_id),match_id TEXT NOT NULL,event_id TEXT NOT NULL,event_revision INTEGER NOT NULL,context_sha256 TEXT NOT NULL,commentary_plan_sha256 TEXT NOT NULL,structural_body_sha256 TEXT NOT NULL,proposal_sha256 TEXT NOT NULL,payload_json TEXT NOT NULL,payload_sha256 TEXT NOT NULL)")
+                            conn.execute("CREATE INDEX dbd_reasoning_lineage_event_lookup ON dbd_reasoning_candidate_lineage(event_id,event_revision,candidate_id)")
+                            conn.execute("PRAGMA user_version=2")
+                            conn.commit()
+                        except sqlite3.DatabaseError:
+                            conn.rollback()
+                            raise
+                    elif "dbd_reasoning_candidate_lineage" not in tables:
+                        raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v2 lineage table is missing", ProductErrorCategory.DATA_INTEGRITY)
+                self._validate_v2_schema(conn)
         except sqlite3.DatabaseError as exc:
             raise ProductError("ERR_COMMENTARY_STORE_CORRUPT", "Commentary SQLite is corrupt or unreadable", ProductErrorCategory.DATA_INTEGRITY) from exc
+
+    @staticmethod
+    def _validate_v2_schema(conn: sqlite3.Connection) -> None:
+        CommentaryCandidateStore._validate_candidate_schema(conn)
+        expected = (
+            ("candidate_id", "TEXT", 0, 1), ("parent_candidate_id", "TEXT", 0, 0),
+            ("match_id", "TEXT", 1, 0), ("event_id", "TEXT", 1, 0), ("event_revision", "INTEGER", 1, 0),
+            ("context_sha256", "TEXT", 1, 0), ("commentary_plan_sha256", "TEXT", 1, 0),
+            ("structural_body_sha256", "TEXT", 1, 0), ("proposal_sha256", "TEXT", 1, 0),
+            ("payload_json", "TEXT", 1, 0), ("payload_sha256", "TEXT", 1, 0),
+        )
+        info = tuple(conn.execute("PRAGMA table_info(dbd_reasoning_candidate_lineage)"))
+        if tuple((row[1], row[2].upper(), row[3], row[5]) for row in info) != expected:
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v2 lineage table shape is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        foreign = {(row[3], row[2], row[4], row[5], row[6]) for row in conn.execute("PRAGMA foreign_key_list(dbd_reasoning_candidate_lineage)")}
+        if foreign != {
+            ("candidate_id", "commentary_candidates", "candidate_id", "NO ACTION", "NO ACTION"),
+            ("parent_candidate_id", "commentary_candidates", "candidate_id", "NO ACTION", "NO ACTION"),
+        }:
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v2 lineage foreign key is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        indexes = tuple(conn.execute("PRAGMA index_list(dbd_reasoning_candidate_lineage)"))
+        index_by_name = {row[1]: row for row in indexes}
+        event_index = tuple(row[2] for row in conn.execute("PRAGMA index_info(dbd_reasoning_lineage_event_lookup)"))
+        unique_shapes = {
+            tuple(item[0] for item in conn.execute("SELECT name FROM pragma_index_info(?) ORDER BY seqno", (row[1],)))
+            for row in indexes if row[2] == 1
+        }
+        if "dbd_reasoning_lineage_event_lookup" not in index_by_name or event_index != ("event_id", "event_revision", "candidate_id") or ("parent_candidate_id",) not in unique_shapes:
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary v2 lineage index is missing", ProductErrorCategory.DATA_INTEGRITY)
+
+    @staticmethod
+    def _validate_candidate_schema(conn: sqlite3.Connection) -> None:
+        expected = (
+            ("candidate_id", "TEXT", 0, 1), ("match_id", "TEXT", 1, 0), ("event_id", "TEXT", 1, 0),
+            ("event_revision", "INTEGER", 1, 0), ("status", "TEXT", 1, 0), ("payload_json", "TEXT", 1, 0),
+            ("payload_sha256", "TEXT", 1, 0), ("created_at", "TEXT", 1, 0),
+        )
+        info = tuple(conn.execute("PRAGMA table_info(commentary_candidates)"))
+        event_index = tuple(row[2] for row in conn.execute("PRAGMA index_info(commentary_event_lookup)"))
+        if tuple((row[1], row[2].upper(), row[3], row[5]) for row in info) != expected or event_index != ("event_id", "event_revision", "created_at", "candidate_id"):
+            raise ProductError("ERR_COMMENTARY_STORE_FORMAT", "Commentary candidate table shape is invalid", ProductErrorCategory.DATA_INTEGRITY)
+
+    @staticmethod
+    def _audit_candidate_rows(conn: sqlite3.Connection) -> None:
+        rows = conn.execute("SELECT payload_json,payload_sha256,match_id,event_id,event_revision,status,created_at,candidate_id FROM commentary_candidates").fetchall()
+        for row in rows:
+            try:
+                payload = json.loads(row[0])
+                _verify_commentary_candidate_payload(payload)
+                if (
+                    row[1] != payload.get("commentary_candidate_sha256")
+                    or (row[2], row[3], row[4], row[5], row[6], row[7])
+                    != (payload.get("match_id"), payload.get("event_id"), payload.get("event_revision"), payload.get("status"), payload.get("created_at"), payload.get("candidate_id"))
+                ):
+                    raise ValueError("candidate columns do not match payload")
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                raise ProductError("ERR_COMMENTARY_STORE_RECORD_INVALID", "Stored Commentary candidate canonical payload/hash is invalid", ProductErrorCategory.DATA_INTEGRITY) from exc
+
+    @staticmethod
+    def _audit_reasoning_lineage_rows(conn: sqlite3.Connection) -> None:
+        from .dbd_reasoning_candidate_lineage import admit_reasoning_candidate_lineage_record
+        if tuple(conn.execute("PRAGMA foreign_key_check")):
+            raise ProductError("ERR_COMMENTARY_REASONING_LINEAGE_INVALID", "Stored reasoning Candidate lineage foreign key is invalid", ProductErrorCategory.DATA_INTEGRITY)
+        rows = conn.execute(
+            "SELECT l.candidate_id,l.parent_candidate_id,l.match_id,l.event_id,l.event_revision,l.context_sha256,l.commentary_plan_sha256,l.structural_body_sha256,l.proposal_sha256,l.payload_json,l.payload_sha256,c.payload_json FROM dbd_reasoning_candidate_lineage l JOIN commentary_candidates c ON c.candidate_id=l.candidate_id"
+        ).fetchall()
+        for row in rows:
+            try:
+                lineage = json.loads(row[9])
+                candidate = json.loads(row[11])
+                proposal = lineage.get("proposal") if isinstance(lineage, Mapping) else None
+                proposal_sha256 = proposal.get("proposal_sha256") if isinstance(proposal, Mapping) else None
+                if (
+                    (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[10])
+                    != (
+                        lineage.get("candidate_id"), lineage.get("parent_candidate_id"), lineage.get("match_id"),
+                        lineage.get("event_id"), lineage.get("event_revision"), lineage.get("context_sha256"),
+                        lineage.get("commentary_plan_sha256"), lineage.get("structural_body_sha256"),
+                        proposal_sha256, lineage.get("lineage_sha256"),
+                    )
+                ):
+                    raise ValueError("lineage columns do not match payload")
+                admit_reasoning_candidate_lineage_record(lineage, candidate_payload=candidate)
+            except (ValueError, TypeError, json.JSONDecodeError) as exc:
+                raise ProductError("ERR_COMMENTARY_REASONING_LINEAGE_INVALID", "Stored reasoning Candidate lineage is invalid", ProductErrorCategory.DATA_INTEGRITY) from exc
 
     def append(self, candidate: CommentaryCandidate) -> None:
         if not isinstance(candidate, CommentaryCandidate):
             raise TypeError("candidate must be CommentaryCandidate")
+        if candidate.reasoning_lineage_required or candidate.candidate_id.startswith("CAND-R2D"):
+            raise ProductError("ERR_COMMENTARY_REASONING_BUNDLE_REQUIRED", "Reasoning Candidate must be appended with its lineage bundle", ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
         payload = candidate.to_dict()
         text = canonical_json_bytes(payload).decode("utf-8")
         with closing(self._connect()) as conn:
+            self._audit_candidate_rows(conn)
             row = conn.execute("SELECT payload_json FROM commentary_candidates WHERE candidate_id=?", (candidate.candidate_id,)).fetchone()
             if row is not None:
                 if row[0] == text:
@@ -536,12 +657,92 @@ class CommentaryCandidateStore:
             )
             conn.commit()
 
+    def append_reasoning_bundle(self, candidate: CommentaryCandidate, lineage: Any) -> None:
+        """Atomically append the existing Candidate and its admitted R2D lineage."""
+
+        from .dbd_reasoning_candidate_lineage import (
+            DbDReasoningCandidateLineage, admit_reasoning_candidate_lineage_record,
+        )
+        if not isinstance(candidate, CommentaryCandidate) or not isinstance(lineage, DbDReasoningCandidateLineage):
+            raise TypeError("reasoning bundle requires CommentaryCandidate and DbDReasoningCandidateLineage")
+        if not candidate.reasoning_lineage_required:
+            raise ValueError("reasoning bundle candidate must carry the lineage-required marker")
+        candidate_payload = candidate.to_dict()
+        lineage_payload = lineage.to_dict()
+        admit_reasoning_candidate_lineage_record(lineage_payload, candidate_payload=candidate_payload)
+        candidate_text = canonical_json_bytes(candidate_payload).decode("utf-8")
+        lineage_text = canonical_json_bytes(lineage_payload).decode("utf-8")
+        with closing(self._connect()) as conn:
+            try:
+                conn.execute("BEGIN IMMEDIATE")
+                self._audit_candidate_rows(conn)
+                self._audit_reasoning_lineage_rows(conn)
+                candidate_row = conn.execute("SELECT payload_json,payload_sha256 FROM commentary_candidates WHERE candidate_id=?", (candidate.candidate_id,)).fetchone()
+                lineage_row = conn.execute("SELECT payload_json,payload_sha256 FROM dbd_reasoning_candidate_lineage WHERE candidate_id=?", (candidate.candidate_id,)).fetchone()
+                if candidate_row is not None or lineage_row is not None:
+                    if (
+                        candidate_row is not None and lineage_row is not None
+                        and candidate_row[0] == candidate_text and candidate_row[1] == candidate_payload["commentary_candidate_sha256"]
+                        and lineage_row[0] == lineage_text and lineage_row[1] == lineage.lineage_sha256
+                    ):
+                        conn.commit()
+                        return
+                    raise ProductError("ERR_COMMENTARY_REASONING_BUNDLE_CONFLICT", "Reasoning Candidate/lineage bundle is partial or conflicting", ProductErrorCategory.DATA_INTEGRITY)
+                conn.execute(
+                    "INSERT INTO commentary_candidates VALUES(?,?,?,?,?,?,?,?)",
+                    (candidate.candidate_id, candidate.plan.match_id, candidate.plan.event_id, candidate.plan.event_revision, candidate.status.value, candidate_text, candidate_payload["commentary_candidate_sha256"], candidate.created_at),
+                )
+                conn.execute(
+                    "INSERT INTO dbd_reasoning_candidate_lineage VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                    (candidate.candidate_id, lineage.parent_candidate_id, lineage.match_id, lineage.event_id, lineage.event_revision, lineage.context_sha256, lineage.commentary_plan_sha256, lineage.structural_body_sha256, lineage.proposal.to_dict()["proposal_sha256"], lineage_text, lineage.lineage_sha256),
+                )
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+
+    def get_reasoning_lineage(self, candidate_id: str) -> dict[str, Any]:
+        from .dbd_reasoning_candidate_lineage import admit_reasoning_candidate_lineage_record
+        validate_id(candidate_id, IdKind.CANDIDATE)
+        with closing(self._connect()) as conn:
+            self._audit_candidate_rows(conn)
+            self._audit_reasoning_lineage_rows(conn)
+            row = conn.execute(
+                "SELECT c.payload_json,c.payload_sha256,l.payload_json,l.payload_sha256,l.match_id,l.event_id,l.event_revision,l.context_sha256,l.commentary_plan_sha256,l.structural_body_sha256,l.proposal_sha256 FROM commentary_candidates c JOIN dbd_reasoning_candidate_lineage l ON l.candidate_id=c.candidate_id WHERE c.candidate_id=?",
+                (candidate_id,),
+            ).fetchone()
+        if row is None:
+            raise ProductError("ERR_COMMENTARY_REASONING_LINEAGE_NOT_FOUND", "Reasoning Candidate lineage was not found", ProductErrorCategory.STATE)
+        try:
+            candidate_payload = json.loads(row[0])
+            lineage_payload = json.loads(row[2])
+            proposal = lineage_payload.get("proposal") if isinstance(lineage_payload, Mapping) else None
+            proposal_sha256 = proposal.get("proposal_sha256") if isinstance(proposal, Mapping) else None
+            if (
+                row[1] != candidate_payload.get("commentary_candidate_sha256")
+                or row[3] != lineage_payload.get("lineage_sha256")
+                or (row[4], row[5], row[6], row[7], row[8], row[9], row[10])
+                != (
+                    lineage_payload.get("match_id"), lineage_payload.get("event_id"), lineage_payload.get("event_revision"),
+                    lineage_payload.get("context_sha256"), lineage_payload.get("commentary_plan_sha256"),
+                    lineage_payload.get("structural_body_sha256"), proposal_sha256,
+                )
+            ):
+                raise ValueError("stored reasoning lineage columns do not match canonical payload")
+            admitted = admit_reasoning_candidate_lineage_record(lineage_payload, candidate_payload=candidate_payload)
+        except (ValueError, TypeError, json.JSONDecodeError) as exc:
+            raise ProductError("ERR_COMMENTARY_REASONING_LINEAGE_INVALID", "Stored reasoning Candidate lineage is invalid", ProductErrorCategory.DATA_INTEGRITY) from exc
+        return admitted.to_dict()
+
     def list_for_event(self, event_id: str, *, validated_only: bool = False) -> tuple[dict[str, Any], ...]:
         validate_id(event_id, IdKind.GAME_EVENT)
         with closing(self._connect()) as conn:
+            self._audit_reasoning_lineage_rows(conn)
             if validated_only:
-                rows = conn.execute("SELECT payload_json FROM commentary_candidates WHERE event_id=? AND status='VALIDATED' ORDER BY event_revision,created_at,candidate_id", (event_id,)).fetchall()
+                self._audit_candidate_rows(conn)
+                rows = conn.execute("SELECT c.payload_json FROM commentary_candidates c WHERE c.event_id=? AND c.status='VALIDATED' AND c.candidate_id NOT LIKE 'CAND-R2D%' AND NOT EXISTS(SELECT 1 FROM dbd_reasoning_candidate_lineage l WHERE l.candidate_id=c.candidate_id) ORDER BY c.event_revision,c.created_at,c.candidate_id", (event_id,)).fetchall()
             else:
+                self._audit_candidate_rows(conn)
                 rows = conn.execute("SELECT payload_json FROM commentary_candidates WHERE event_id=? ORDER BY event_revision,created_at,candidate_id", (event_id,)).fetchall()
         results: list[dict[str, Any]] = []
         for row in rows:
@@ -558,8 +759,10 @@ class CommentaryCandidateStore:
         target = Path(destination)
         target.parent.mkdir(parents=True, exist_ok=True)
         with closing(self._connect()) as conn:
+            self._audit_candidate_rows(conn)
+            self._audit_reasoning_lineage_rows(conn)
             if validated_only:
-                rows = conn.execute("SELECT payload_json FROM commentary_candidates WHERE match_id=? AND status='VALIDATED' ORDER BY event_id,event_revision,created_at,candidate_id", (match_id,)).fetchall()
+                rows = conn.execute("SELECT c.payload_json FROM commentary_candidates c WHERE c.match_id=? AND c.status='VALIDATED' AND c.candidate_id NOT LIKE 'CAND-R2D%' AND NOT EXISTS(SELECT 1 FROM dbd_reasoning_candidate_lineage l WHERE l.candidate_id=c.candidate_id) ORDER BY c.event_id,c.event_revision,c.created_at,c.candidate_id", (match_id,)).fetchall()
             else:
                 rows = conn.execute("SELECT payload_json FROM commentary_candidates WHERE match_id=? ORDER BY event_id,event_revision,created_at,candidate_id", (match_id,)).fetchall()
         lines: list[str] = []

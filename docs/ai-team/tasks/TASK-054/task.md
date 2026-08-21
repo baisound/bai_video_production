@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R3A_BINDING_REGISTRY_COMPLETE / COMMIT_READY / R3B_NEXT`
+Status: `R3B_ROUTE_CAPABILITY_COMPLETE / COMMIT_READY / R3C_NEXT`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -68,18 +68,33 @@ Product effect exists in this unit. Focused Evidence is `19 PASS`; TASK-054
 R0-R3A plus TASK-049 direct regression is `351 PASS`; compileall, schema mirror
 and diff-check pass. R3B route capability is next.
 
+## R3B completion checkpoint
+
+R3B route capability is complete and commit-ready. The pure resolver reuses the
+existing `AiConnectionResolver`, requires the exact
+`DBD_TUNED_COMMENTARY_REASONING` capability, and binds one latest APPROVED R3A
+binding to an exact connection-profile route pin. The body-free decision records
+Provider/model/cost and binding/profile/registry identities without credential or
+endpoint references, settings, prompt or output bodies. It always remains
+`NOT_AUTHORIZED_R3D_REQUIRED`; later consumers must re-resolve current
+Registry/Profile/availability state instead of treating the checksum as an
+authentication token. R3B focused Evidence is `27 PASS`; R3B + R3A + TASK-028
+direct boundary Evidence is `57 PASS`; TASK-054 plus TASK-049 direct regression
+is `380 PASS`; compileall, schema mirror and diff-check pass. R3C deterministic
+fake adapter/fault tests are next.
+
 ## Authority boundary
 
-This checkpoint closes the bounded local R3A Binding Registry unit and
-leaves R3B eligible as the next bounded local unit. It does not authorize Dataset adoption,
+This checkpoint closes the bounded local R3B Route Capability unit and
+leaves R3C eligible as the next bounded local unit. It does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,
 Timeline adoption, binding approval, Product Activation, release or deployment.
 Those remain Human-Gated.
 
 ## Current decision
 
-R3A Binding Registry is complete and commit-ready under the Owner's exact
+R3B Route Capability is complete and commit-ready under the Owner's exact
 bounded instruction. The tuned model design remains after CGEL + compatible
-Knowledge/RAG and before deterministic Fact/Policy validation. R3B is next;
+Knowledge/RAG and before deterministic Fact/Policy validation. R3C is next;
 all Dataset, runtime, training, Provider, TTS, Timeline, release and deploy
 effects remain blocked by their Human Gates.

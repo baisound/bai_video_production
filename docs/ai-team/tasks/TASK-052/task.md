@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R3B_COMPLETE / R3C_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R4C1_COMPLETE / R4C2_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -76,5 +76,30 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   subjectless candidates retain their global compatibility path. Focused regression
   `42 PASS`; TASK-049/TASK-052 affected regression `243 PASS`; unresolved
   Critical/High `0 / 0`.
+- R3C Killer/status temporal state: complete; exact Killer/effect registry routing,
+  profile-bound stage/progress monotonicity, positive/negative effect namespace
+  isolation, appearance/disappearance hysteresis and contradiction recovery are
+  implemented as state Evidence only. R3A-R3C focused regression `33 PASS`;
+  TASK-049/TASK-052 affected regression `252 PASS`; unresolved Critical/High `0 / 0`.
+- R4A Killer Capability Registry: complete; exact Killer/effect/ROI/detector/teacher
+  namespace contracts, Ghost Face/Onryo/Doctor starter fixtures, identity-first
+  detector selection, four-slot Survivor routing and runtime cross-Killer hard
+  negatives fail closed to UNKNOWN. Focused R4A/R3C regression `18 PASS`;
+  tkinter-independent TASK-052/Killer/recorded-video affected regression `80 PASS`.
+  The lightweight WSL test environment lacks tkinter, so the packaged-startup
+  module was not rerun in this unit; its prior Windows native PASS remains unchanged.
+- R4B recorded-video routing: complete; the resolved/aligned HUD Profile maps
+  existing Survivor slots and Killer-power ROI into R4A, reuses common Survivor
+  slices, requires bounded match identity and persists body-free digest Evidence.
+  Unknown/power-only identity requests no specific overlays. Focused R3C-R4B,
+  recorded-video and profile compatibility regression `31 PASS`; tkinter-independent
+  TASK-052/Killer/recorded-video/profile/vision-slice affected regression `95 PASS`.
+- R4C1 Killer-specific Teacher backend: complete; the canonical Visual Training
+  manifest backward-reads old CSV while storing exact target/observed namespace,
+  role, subject and structured state. Capability-bound index construction requires
+  positive + registered hard-negative coverage, and the deterministic starter
+  reference detector preserves foreign namespaces for R4A rejection. Focused
+  backend/manifest regression `42 PASS`; affected Training Studio/TASK-052
+  regression `123 PASS`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R3C killer-specific progress/stage and status-effect temporal state.
+- Next dependency-ordered unit: R4C2 Safe Visual Learning / Training Studio UI and Human review routing.

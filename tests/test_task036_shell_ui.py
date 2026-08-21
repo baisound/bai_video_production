@@ -331,7 +331,8 @@ def test_html_exposes_native_chooser_controls_without_starting_product_operation
     assert 'id="dialogStatus"' in HTML
     assert 'aria-live="polite"' in HTML
     assert "choose_project_folder" in HTML
-    assert "choose_media_source" in HTML
+    assert "choose_and_ingest_media" in HTML
+    assert "chooseAndReport('choose_media_source','メディア')" not in HTML
     assert "choose_handoff_folder" in HTML
     assert "操作は未開始" in HTML
 

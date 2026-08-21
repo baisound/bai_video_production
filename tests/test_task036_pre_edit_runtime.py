@@ -102,6 +102,13 @@ def test_bridge_composes_trusted_media_transcript_subtitle_and_cut_route(tmp_pat
 
     assert bridge.workflow_status()["next_recommended_action"] == "media.choose_and_ingest"
     ingest_result = bridge.choose_and_ingest_media({})
+    assert set(ingest_result) == {
+        "task_owner", "operation", "status", "asset_id", "asset_sha256", "host_path_persisted",
+    }
+    assert ingest_result["asset_id"] == "ASSET-00000000000000000000000000"
+    assert ingest_result["asset_sha256"] == sha("a")
+    assert "source.mp4" not in json.dumps(ingest_result)
+    assert "receipt" not in ingest_result
     assert ingest_result["host_path_persisted"] is False
     assert bridge.workflow_status()["next_recommended_action"] == "transcription.start"
 
@@ -154,6 +161,29 @@ def test_bridge_rejects_javascript_paths_and_provider_configuration(tmp_path: Pa
         bridge.run_local_transcription({"model": "remote-paid-model", "allow_download": True})
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
     assert transcription.calls == []
+
+
+def test_bridge_projects_picker_cancel_as_closed_no_effect_envelope(tmp_path: Path):
+    _, runtime, ingest, _, _ = make_runtime(tmp_path)
+
+    class CancelDialog:
+        def choose_open_media(self): return None
+        def choose_project_folder(self): return None
+        def choose_handoff_folder(self): return None
+
+    runtime.media.native_dialog = Task036NativeDialogService(CancelDialog())
+    result = Task036ShellBridge(
+        runtime.coordinator.shell, pre_edit_runtime=runtime,
+    ).choose_and_ingest_media({})
+    assert result == {
+        "task_owner": "TASK-036",
+        "operation": "MEDIA_CHOOSE_AND_INGEST",
+        "status": "CANCELLED",
+        "ingest_started": False,
+        "host_path_persisted": False,
+    }
+    assert ingest.paths == []
+    assert runtime.coordinator.state.source_asset_id is None
 
 
 def test_trusted_factory_binds_post_review_runtime_after_cut_promotion(tmp_path: Path):

@@ -495,9 +495,53 @@ class Task036ShellBridge:
 
     def choose_and_ingest_media(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "media choose and ingest")
-        if self._pre_edit_runtime is None:
-            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self._pre_edit_runtime.choose_and_ingest_media()
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.choose_and_ingest_media()
+            if not isinstance(result, dict) or result.get("task_owner") != "TASK-036" or result.get("operation") != "MEDIA_CHOOSE_AND_INGEST":
+                raise ProductError(
+                    "ERR_TASK036_MEDIA_INGEST_RESULT_INVALID",
+                    "Media ingest returned an invalid private result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            status = result.get("status")
+            if status == "CANCELLED" and result.get("ingest_started") is False:
+                return {
+                    "task_owner": "TASK-036",
+                    "operation": "MEDIA_CHOOSE_AND_INGEST",
+                    "status": "CANCELLED",
+                    "ingest_started": False,
+                    "host_path_persisted": False,
+                }
+            session = result.get("editing_session")
+            asset_id = session.get("source_asset_id") if isinstance(session, dict) else None
+            asset_sha256 = session.get("source_asset_sha256") if isinstance(session, dict) else None
+            if (
+                status != "INGESTED"
+                or not isinstance(asset_id, str)
+                or not asset_id
+                or len(asset_id) > 200
+                or asset_id[0] not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+                or any(char not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._:-" for char in asset_id)
+                or not isinstance(asset_sha256, str)
+                or len(asset_sha256) != 71
+                or not asset_sha256.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in asset_sha256[7:])
+            ):
+                raise ProductError(
+                    "ERR_TASK036_MEDIA_INGEST_RESULT_INVALID",
+                    "Media ingest returned an invalid canonical Asset identity",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            return {
+                "task_owner": "TASK-036",
+                "operation": "MEDIA_CHOOSE_AND_INGEST",
+                "status": "INGESTED",
+                "asset_id": asset_id,
+                "asset_sha256": asset_sha256,
+                "host_path_persisted": False,
+            }
 
     def run_local_transcription(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "local transcription")

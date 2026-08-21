@@ -182,6 +182,16 @@ class SQLiteProductStore:
             conn.execute("PRAGMA journal_mode=WAL")
         return conn
 
+    @contextmanager
+    def _managed_connection(self):
+        """Commit or roll back, then deterministically close the SQLite handle."""
+        conn = self._connect()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
     @staticmethod
     def _process_descriptor_snapshot() -> dict[int, tuple[int, int]] | None:
         directory = Path("/proc/self/fd")
@@ -395,14 +405,10 @@ class SQLiteProductStore:
         with tempfile.TemporaryDirectory(prefix="bai-product-schema-") as directory:
             canonical_path = Path(directory) / "canonical.sqlite3"
             canonical_store = cls(canonical_path)
-            canonical = canonical_store._connect()
             try:
-                expected = cls._schema_fingerprint(canonical)
+                with canonical_store._managed_connection() as canonical:
+                    expected = cls._schema_fingerprint(canonical)
             finally:
-                # sqlite Connection.__exit__ does not close the file handle.
-                # Close explicitly before TemporaryDirectory cleanup, which is
-                # mandatory on Windows where an open database denies deletion.
-                canonical.close()
                 canonical_store.close()
         versions = tuple(
             int(row[0])
@@ -428,7 +434,7 @@ class SQLiteProductStore:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
 
     def _initialize(self) -> None:
-        with self._connect() as conn:
+        with self._managed_connection() as conn:
             conn.executescript("""
             CREATE TABLE IF NOT EXISTS schema_migrations (
               version INTEGER PRIMARY KEY,

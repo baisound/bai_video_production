@@ -21,6 +21,24 @@ def test_mvp_tables_exist(tmp_path):
     assert expected <= store.table_names()
 
 
+def test_store_initialization_closes_its_sqlite_connection(tmp_path, monkeypatch):
+    opened = []
+    real_connect = sqlite3.connect
+
+    def tracked_connect(*args, **kwargs):
+        connection = real_connect(*args, **kwargs)
+        opened.append(connection)
+        return connection
+
+    monkeypatch.setattr(sqlite3, "connect", tracked_connect)
+    SQLiteProductStore(tmp_path / "db.sqlite3")
+
+    assert opened
+    for connection in opened:
+        with pytest.raises(sqlite3.ProgrammingError):
+            connection.execute("SELECT 1")
+
+
 def test_asset_checksum_must_be_exact_sha256(tmp_path):
     ps=ProfileSnapshot.create("default","1",{})
     store=SQLiteProductStore(tmp_path/"db.sqlite3")

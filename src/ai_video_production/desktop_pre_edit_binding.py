@@ -62,6 +62,41 @@ class Task036PreEditBinding:
             "next_recommended_action": self.coordinator.state.next_recommended_action,
         }
 
+    def bind_transcript_if_current(
+        self,
+        transcript: TranscriptManifest,
+        *,
+        expected_project_id: str,
+        expected_revision: int,
+        expected_source_asset_id: str,
+        expected_source_asset_sha256: str,
+        expected_context_revision: int,
+    ) -> dict[str, Any]:
+        if transcript.source_asset_id != expected_source_asset_id:
+            raise ProductError(
+                "ERR_SHELL_TRANSCRIPT_SOURCE_MISMATCH",
+                "Completed transcript belongs to a different source Asset",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        transcript_sha = transcript.to_dict()["manifest_sha256"]
+        self.coordinator.bind_transcript_if_current(
+            transcript_sha,
+            expected_project_id=expected_project_id,
+            expected_revision=expected_revision,
+            expected_source_asset_id=expected_source_asset_id,
+            expected_source_asset_sha256=expected_source_asset_sha256,
+            expected_context_revision=expected_context_revision,
+        )
+        self.transcript = transcript
+        return {
+            "task_owner": "TASK-036",
+            "operation": "TRANSCRIPT_RESULT_BIND",
+            "transcript_manifest_sha256": transcript_sha,
+            "provider_execution_started": False,
+            "editing_session": self.coordinator.state.to_dict(),
+            "next_recommended_action": self.coordinator.state.next_recommended_action,
+        }
+
     def create_subtitle_workspace(self) -> dict[str, Any]:
         state = self.coordinator.state
         if self.transcript is None:

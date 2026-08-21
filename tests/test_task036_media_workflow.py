@@ -24,7 +24,7 @@ class Ingest:
     def __init__(self): self.paths = []
     def ingest_local_media(self, source_path: Path):
         self.paths.append(source_path)
-        return IngestedMediaIdentity("asset-1", H)
+        return IngestedMediaIdentity("asset-1", H, source_path)
 
 
 def coordinator():
@@ -43,6 +43,25 @@ def test_native_choose_and_ingest_binds_asset_without_persisting_host_path(tmp_p
     assert result["receipt"]["result"]["source_name"] == media.name
     assert "host_path" not in result["receipt"]["result"]
     assert result["next_recommended_action"] == "transcription.start"
+
+
+def test_runtime_uses_managed_canonical_asset_instead_of_original_picker_path(tmp_path: Path):
+    selected = tmp_path / "selected.mp4"; selected.write_bytes(b"untrusted original")
+    managed = tmp_path / "managed" / "asset.mp4"; managed.parent.mkdir(); managed.write_bytes(b"canonical copy")
+
+    class ManagedIngest(Ingest):
+        def ingest_local_media(self, source_path: Path):
+            self.paths.append(source_path)
+            return IngestedMediaIdentity("asset-1", H, managed)
+
+    facade = Task036MediaWorkflowFacade(
+        coordinator(), Task036NativeDialogService(Backend(str(selected))), ManagedIngest(),
+    )
+    facade.choose_and_ingest()
+    selected.write_bytes(b"changed after ingest")
+
+    assert facade.runtime_source_path == managed
+    assert facade.runtime_source_path.read_bytes() == b"canonical copy"
 
 
 def test_cancelled_native_dialog_does_not_call_ingest_or_change_state():

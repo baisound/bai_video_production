@@ -477,21 +477,22 @@ class Task036ShellBridge:
 
     def workflow_status(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "workflow status")
-        if self._workflow_runtime is not None:
-            return self._workflow_runtime.status()
-        if self._pre_edit_runtime is not None:
-            status = self._pre_edit_runtime.status()
-            if status["next_recommended_action"] not in {
-                "media.choose_and_ingest",
-                "transcription.start",
-                "subtitle.save",
-                "cut_candidates.generate",
-                "edit_plan.approve",
-            }:
-                status["available"] = False
-                status["post_review_runtime_bound"] = False
-            return status
-        return {"available": False}
+        with self._nle_operation():
+            if self._workflow_runtime is not None:
+                return self._workflow_runtime.status()
+            if self._pre_edit_runtime is not None:
+                status = self._pre_edit_runtime.status()
+                if status["next_recommended_action"] not in {
+                    "media.choose_and_ingest",
+                    "transcription.start",
+                    "subtitle.save",
+                    "cut_candidates.generate",
+                    "edit_plan.approve",
+                }:
+                    status["available"] = False
+                    status["post_review_runtime_bound"] = False
+                return status
+            return {"available": False}
 
     def choose_and_ingest_media(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "media choose and ingest")
@@ -543,11 +544,116 @@ class Task036ShellBridge:
                 "host_path_persisted": False,
             }
 
+    def prepare_local_transcription(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "local transcription prepare")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            return self._pre_edit_runtime.prepare_local_transcription()
+
+    def prepare_local_transcription_recovery(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "local transcription recovery prepare")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            return self._pre_edit_runtime.prepare_local_transcription(recovery=True)
+
+    @staticmethod
+    def _transcription_confirmation(args: Any, operation: str) -> str:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID", f"{operation} request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        confirmation_id = args.get("confirmation_id")
+        if not isinstance(confirmation_id, str) or not confirmation_id.strip() or len(confirmation_id) > 256:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID", f"{operation} confirmation is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return confirmation_id
+
+    def cancel_local_transcription(self, args: Any = None) -> dict[str, Any]:
+        confirmation_id = self._transcription_confirmation(args, "local transcription cancel")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            return self._pre_edit_runtime.cancel_local_transcription(confirmation_id)
+
     def run_local_transcription(self, args: Any = None) -> dict[str, Any]:
-        self._empty_args(args, "local transcription")
-        if self._pre_edit_runtime is None:
-            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self._pre_edit_runtime.run_local_transcription()
+        confirmation_id = self._transcription_confirmation(args, "local transcription apply")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.run_local_transcription(confirmation_id)
+            digest = result.get("transcript_manifest_sha256") if isinstance(result, dict) else None
+            next_action = result.get("next_recommended_action") if isinstance(result, dict) else None
+            if (
+                not isinstance(result, dict)
+                or result.get("task_owner") != "TASK-036"
+                or result.get("operation") != "TRANSCRIPT_RESULT_BIND"
+                or not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or next_action != "subtitle.save"
+                or result.get("provider_execution_started") is not True
+                or result.get("provider_execution_completed") is not True
+                or result.get("provider_execution_mode") != "LOCAL"
+                or result.get("provider_configuration_from_javascript") is not False
+                or not isinstance(result.get("recovered_from_durable_result"), bool)
+            ):
+                raise ProductError(
+                    "ERR_TASK036_TRANSCRIPTION_RESULT_INVALID",
+                    "Local transcription returned an invalid private result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            return {
+                "task_owner": "TASK-036",
+                "operation": "TRANSCRIPT_RESULT_BIND",
+                "status": "TRANSCRIBED",
+                "transcript_manifest_sha256": digest,
+                "next_recommended_action": "subtitle.save",
+                "provider_execution_started": True,
+                "provider_execution_completed": True,
+                "provider_execution_mode": "LOCAL",
+                "provider_configuration_from_javascript": False,
+                "transcript_text_exposed": False,
+                "host_path_exposed": False,
+                "recovered_from_durable_result": result["recovered_from_durable_result"],
+            }
+
+    def recover_local_transcription(self, args: Any = None) -> dict[str, Any]:
+        confirmation_id = self._transcription_confirmation(args, "local transcription recovery apply")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.recover_local_transcription(confirmation_id)
+            digest = result.get("transcript_manifest_sha256") if isinstance(result, dict) else None
+            if (
+                not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or result.get("provider_execution_started") is not False
+                or result.get("provider_execution_completed") is not True
+                or result.get("recovered_from_durable_result") is not True
+            ):
+                raise ProductError("ERR_TASK036_TRANSCRIPTION_RESULT_INVALID", "Local transcription recovery returned an invalid private result", ProductErrorCategory.DATA_INTEGRITY)
+            return {
+                "task_owner": "TASK-036",
+                "operation": "TRANSCRIPT_RESULT_BIND",
+                "status": "TRANSCRIBED",
+                "transcript_manifest_sha256": digest,
+                "next_recommended_action": "subtitle.save",
+                "provider_execution_started": False,
+                "provider_execution_completed": True,
+                "provider_execution_mode": "LOCAL",
+                "provider_configuration_from_javascript": False,
+                "transcript_text_exposed": False,
+                "host_path_exposed": False,
+                "recovered_from_durable_result": True,
+            }
 
     def create_runtime_subtitle_workspace(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Subtitle Workspace creation")

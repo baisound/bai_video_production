@@ -4,6 +4,7 @@ from ai_video_production.errors import ProductError
 import os
 import sqlite3
 import ai_video_production.store as store_module
+from threading import Barrier, Thread
 
 def test_asset_registry_and_rights_gate(tmp_path):
     ps=ProfileSnapshot.create("default","1",{})
@@ -141,3 +142,85 @@ def test_existing_store_rejects_database_above_admission_size_bound(tmp_path, mo
     with pytest.raises(ProductError) as rejected:
         SQLiteProductStore(path, require_existing=True, required_job_id=job.job_id)
     assert rejected.value.code == "ERR_STORE_EXISTING_DATABASE_INVALID"
+
+
+def test_operation_status_compare_and_set_admits_exactly_one_concurrent_caller(tmp_path):
+    store = SQLiteProductStore(tmp_path / "db.sqlite3")
+    profile = ProfileSnapshot.create("x", "1.0.0", {})
+    job = store.create_job(profile.profile_snapshot_id)
+    operation, created = store.reserve_operation(job.job_id, "test.command", "same-key")
+    assert created is True
+    assert store.find_operation(job.job_id, "same-key") == operation
+
+    barrier = Barrier(3)
+    observations = []
+
+    def claim() -> None:
+        barrier.wait()
+        observations.append(
+            store.compare_and_set_operation_status(
+                operation.operation_id,
+                expected_statuses=("PENDING",),
+                status="IN_PROGRESS",
+                increment_attempt=True,
+            )
+        )
+
+    threads = [Thread(target=claim) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    barrier.wait()
+    for thread in threads:
+        thread.join(5)
+        assert not thread.is_alive()
+
+    assert sorted(changed for _record, changed in observations) == [False, True]
+    current = store.get_operation(operation.operation_id)
+    assert current.status == "IN_PROGRESS"
+    assert current.attempt == 1
+
+
+def test_operation_read_and_compare_and_set_close_all_sqlite_connections(tmp_path, monkeypatch):
+    store = SQLiteProductStore(tmp_path / "db.sqlite3")
+    profile = ProfileSnapshot.create("x", "1.0.0", {})
+    job = store.create_job(profile.profile_snapshot_id)
+    operation, _created = store.reserve_operation(job.job_id, "test.command", "closed-key")
+    opened = []
+    real_connect = sqlite3.connect
+
+    def tracked_connect(*args, **kwargs):
+        connection = real_connect(*args, **kwargs)
+        opened.append(connection)
+        return connection
+
+    monkeypatch.setattr(sqlite3, "connect", tracked_connect)
+    assert store.find_operation(job.job_id, "closed-key") == operation
+    _current, changed = store.compare_and_set_operation_status(
+        operation.operation_id,
+        expected_statuses=("PENDING",),
+        expected_result_refs=(None,),
+        status="IN_PROGRESS",
+        result_ref="lease-1",
+        replace_result_ref=True,
+    )
+    assert changed is True
+    assert opened
+    for connection in opened:
+        with pytest.raises(sqlite3.ProgrammingError):
+            connection.execute("SELECT 1")
+
+
+@pytest.mark.parametrize("invalid", ["", "bad\x00ref", "\ud800", 7])
+def test_operation_compare_and_set_rejects_invalid_result_ref(tmp_path, invalid):
+    store = SQLiteProductStore(tmp_path / "db.sqlite3")
+    profile = ProfileSnapshot.create("x", "1.0.0", {})
+    job = store.create_job(profile.profile_snapshot_id)
+    operation, _created = store.reserve_operation(job.job_id, "test.command", "invalid-ref")
+    with pytest.raises(ValueError, match="result_ref"):
+        store.compare_and_set_operation_status(
+            operation.operation_id,
+            expected_statuses=("PENDING",),
+            status="IN_PROGRESS",
+            result_ref=invalid,
+            replace_result_ref=True,
+        )

@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R5_COMPLETE / R6_NEXT`
+Status: `IMPLEMENTATION_COMPLETE_THROUGH_R9 / REAL_VIDEO_HUMAN_GOLD_DATA_GATE`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -148,5 +148,45 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   Human confirmation. Focused regression `17 PASS`; TASK-050/TASK-052 affected
   regression `193 PASS`; TASK-051 compatibility/source gate `118 PASS`; unresolved
   Critical/High `0 / 0`.
-- Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R6 Tier 3 object/scene gaps selected from the traceability matrix.
+- R6 Tier 3 object/scene baseline: complete; canonical definitions keep pallets
+  and windows under MECHANIC, map features/main buildings under MAP and tiles
+  under TILE, while deterministic reference-crop classification requires identity
+  plus hard-negative coverage and fails closed on ambiguity, foreign map namespace
+  or unregistered labels. Object visibility cannot claim PALLET_DROP/WINDOW_VAULT.
+  Focused regression `18 PASS`; TASK-049 DbD/TASK-052 affected regression
+  `214 PASS`; unresolved Critical/High `0 / 0`.
+- R7 selective Vision escalation: complete; high-value/contradictory exact source
+  windows and bounded ROIs route only through the canonical Product IMAGE Provider
+  resolver, and missing explicit authority, cost ceiling, capability or available
+  route fails closed before request construction/dispatch. Plans retain Evidence
+  references, require abstention and can never claim a CGEL event. R7 + canonical
+  Provider/fusion focused regression `30 PASS`; external Provider calls `0`;
+  unresolved Critical/High `0 / 0`.
+- R8 Human Gold/correction/KPI contract: complete; revisioned 5–10 match manifest
+  requirements preserve source/rights/patch/HUD/detector/model provenance and
+  reject source-group split leakage. Held-out per-domain KPIs expose TP/FP/FN/TN,
+  UNKNOWN, contradiction, validator failures, calibration, replay stability and
+  latency; corrections and rejection reasons remain durable/queryable. Focused
+  Gold regression `25 PASS`; TASK-049 DbD/Gold and TASK-052 affected regression
+  `291 PASS`. The current Owner inventory has no complete 5–10
+  match Human Gold corpus, so production accuracy remains `NOT_CONFIRMED` and no
+  accuracy claim was authorized.
+- R8 final Critic hardening: complete; real Gold rows now require `media://`,
+  `rights://` and `human://` labeler provenance, secret-like references fail
+  closed, and explicit claim authority cannot turn below-threshold precision,
+  recall, UNKNOWN, calibration, replay stability or contradiction results into
+  PASS. Focused regression `7 PASS`.
+- R9 available-scope Windows packaged acceptance: complete; exact EXE SHA-256
+  `45ACB23BC17B1EA2A6BADEC99A8B037541D0021CF352F102948230971D35ED06`,
+  size `15,098,447 bytes`, clean startup `12,162 ms`, Japanese search, HUD/image
+  learning/review/backup screens and cached PNG pixel rotation through
+  `0/90/180/270` with reopen/restart persistence all passed. The temporary map
+  orientation was restored to the original `0°`. Native Windows migration,
+  backup/workspace and packaged-startup regression: `8 PASS`.
+- Overall TASK-052 implementation through R9: complete for available local
+  Evidence. Real-video multi-Killer/UI-scale/process performance, complete 5–10
+  match Human Gold and production accuracy remain `NOT_CONFIRMED` behind the
+  explicit Human/data gate; no further safe implementation unit is pending.
+- Final integration regression: `3106 PASS / 2 platform-specific SKIP` in the
+  existing WSL validation environment; native Windows focused regression remains
+  `8 PASS`; unresolved Critical/High findings `0 / 0`.

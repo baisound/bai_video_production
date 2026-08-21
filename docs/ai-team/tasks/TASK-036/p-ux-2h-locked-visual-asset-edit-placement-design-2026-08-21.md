@@ -1,7 +1,7 @@
 # TASK-036 P-UX-2H locked visual Asset edit placement design
 
 Date: `2026-08-21`
-Status: `ARCHITECTURE_ESCALATION_PASS / H-A_IMPLEMENTATION_PASS / H-B_H-A_INTEGRATION_GATED / DEV-3 HIGH ASSURANCE`
+Status: `ARCHITECTURE_ESCALATION_PASS / H-A_MERGED / H-B_IMPLEMENTED_VERIFIED / COMMIT_READY / DEV-3 HIGH ASSURANCE`
 
 The initial design exhausted its two ordinary DEV-3 review/fix cycles with two
 cross-cutting persistence questions still open. This document therefore does
@@ -337,6 +337,7 @@ Public bridge methods:
 - `visual_asset_placement_prepare_replace`
 - `visual_asset_placement_apply`
 - `visual_asset_placement_cancel`
+- `visual_asset_placement_recover`
 
 All calls are guarded for the full operation by the existing NLE runtime lease.
 The Assets page exposes Insert only for eligible LOCKED IMAGE rows. Replace is
@@ -386,3 +387,25 @@ identity and checksum.
 This does not claim the complete application flow. Audio completion remains a
 consume-only dependency from the Development audio lane, and real packaged
 Windows model-to-export read-back remains P-UX-2E.
+
+## 11. H-B implementation evidence
+
+H-B was implemented after H-A reached merged main. The implementation keeps
+Audio-domain source, Provider adapters, Resolve, Export, `CHANGELOG.md` and
+release files unchanged. It adds one placement-only TASK-036 application,
+wires the existing TASK-044/TASK-043 recovery boundary into the trusted Shell,
+and makes stale active source bindings block Final Review.
+
+Observed on the fresh-main-integrated worktree:
+
+- placement/recovery/UI focused regression: `118 passed`;
+- impacted TASK-036/TASK-043/TASK-044 regression: `219 passed`;
+- final full regression: `3131 passed, 2 skipped`;
+- changed Python module compilation: PASS;
+- embedded V6.1.1 JavaScript syntax: PASS;
+- `git diff --check`: PASS.
+
+Final scope review found exactly the H-B design, seven Product source files and
+six focused test files; no unrelated user file is present in the worktree. No
+Provider, paid/cloud, native runtime, Candidate ACCEPT/LOCK, rights approval,
+Resolve, Export, publication or Audio authority action was performed.

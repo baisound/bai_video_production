@@ -84,6 +84,90 @@ def test_bridge_fails_closed_for_stale_or_extra_timeline_requests() -> None:
     assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
 
 
+def test_visual_asset_placement_bridge_is_allowlisted_and_lease_guarded() -> None:
+    value = timeline()
+
+    class Placement:
+        def __init__(self):
+            self.calls = []
+
+        def snapshot(self, *, timeline):
+            self.calls.append(("snapshot", timeline.timeline_id))
+            return {"available": True, "placement_count": 0, "eligible_sources": []}
+
+        def prepare_insert(self, **values):
+            self.calls.append(("insert", values))
+            return {"confirmation_id": "placement-confirm", "command": {"kind": "INSERT_CLIP"}}
+
+        def prepare_replace(self, **values):
+            self.calls.append(("replace", values))
+            return {"confirmation_id": "placement-confirm", "command": {"kind": "REPLACE_CLIP"}}
+
+        def apply(self, **values):
+            self.calls.append(("apply", values))
+            return {"applied": True}
+
+        def cancel(self, **values):
+            self.calls.append(("cancel", values))
+            return {"cancelled": True}
+
+        def recover_project_save(self, **values):
+            self.calls.append(("recover", values))
+            return {"recovered": True}
+
+    placement = Placement()
+    controller = Task044NleShellController(timeline=value, visual_asset_placement=placement)
+    service = ShellApplicationService(product_version="0.22.0")
+    service.open_project_context(project_id="project-1", display_name="Project 1")
+    active = True
+
+    @contextmanager
+    def lease():
+        if not active:
+            raise ProductError("ERR_TEST_LEASE_CLOSED", "Runtime lease is closed")
+        yield
+
+    shell = Task036ShellBridge(service, nle_controller=controller, nle_runtime_guard=lease)
+    assert shell.visual_asset_placement_snapshot({})["available"] is True
+    prepared = shell.visual_asset_placement_prepare_insert({
+        "candidate_id": "candidate-1",
+        "target_track_id": "V1",
+        "start_frame": 0,
+        "end_frame": 1,
+        "command_id": "insert-1",
+        "expected_project_manifest_sha256": sha256_bytes(b"manifest"),
+        "expected_production_snapshot_sha256": sha256_bytes(b"production"),
+    })
+    assert prepared["confirmation_id"] == "placement-confirm"
+    assert shell.visual_asset_placement_apply({"confirmation_id": "placement-confirm"}) == {"applied": True}
+    with pytest.raises(ProductError) as exc:
+        shell.visual_asset_placement_cancel({"confirmation_id": "placement-confirm", "force": True})
+    assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+    invalid_insert = {
+        "candidate_id": True,
+        "target_track_id": "V1",
+        "start_frame": 0,
+        "end_frame": 1,
+        "command_id": "insert-invalid",
+        "expected_project_manifest_sha256": sha256_bytes(b"manifest"),
+        "expected_production_snapshot_sha256": sha256_bytes(b"production"),
+    }
+    with pytest.raises(ProductError) as exc:
+        shell.visual_asset_placement_prepare_insert(invalid_insert)
+    assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+    with pytest.raises(ProductError) as exc:
+        shell.visual_asset_placement_recover({
+            "transaction_id": "save-" + "0" * 64,
+            "action": [],
+        })
+    assert exc.value.code == "ERR_NLE_SHELL_REQUEST_INVALID"
+    assert not any(call[0] == "recover" for call in placement.calls)
+    active = False
+    with pytest.raises(ProductError) as exc:
+        shell.visual_asset_placement_snapshot({})
+    assert exc.value.code == "ERR_TEST_LEASE_CLOSED"
+
+
 def test_track_controls_are_python_owned_and_media_aware() -> None:
     value = timeline()
     shell, _controller = bridge(value)

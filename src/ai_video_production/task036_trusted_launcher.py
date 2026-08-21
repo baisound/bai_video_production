@@ -53,6 +53,7 @@ from .final_review_application import FinalReviewApprovalApplication
 from .final_review_gate import FinalReviewExternalGateReceipt
 from .product_project_store import ProductProjectManifestStore
 from .production_control_application import Task037ProductionControlApplication
+from .production_control_store import _exclusive_snapshot_lock
 from .audit_application import Task038AuditApplication
 from .planning_application import Task027PlanningApplication
 from .task036_planning_generation_application import Task036PlanningGenerationApplication
@@ -77,6 +78,7 @@ from .local_comfy_image_generation_port import (
     default_flux1_schnell_fp8_workflow_path,
 )
 from .task036_workflow_runtime import Task036WorkflowRuntime
+from .task036_visual_asset_placement import Task036VisualAssetPlacementApplication
 from .timebase import FrameRate
 
 
@@ -937,6 +939,7 @@ def build_trusted_launch(
             projection=application.projection(),
         )
         edit_application = None
+        visual_asset_placement = None
         export_application = None
         if has_mutation_composition:
             if runtime_lease is None:
@@ -946,9 +949,36 @@ def build_trusted_launch(
                     ProductErrorCategory.STATE,
                 )
             runtime_lease.require_operation_active()
+            placement_holder: dict[str, Task036VisualAssetPlacementApplication] = {}
             edit_application = Task044TimelineEditApplication(
-                project_root=configuration.project_root, project_id=configuration.project_id,
+                project_root=configuration.project_root,
+                project_id=configuration.project_id,
+                placement_guard_resolver=lambda command: placement_holder[
+                    "application"
+                ].commit_guard_for_command(command),
             )
+
+            @contextmanager
+            def production_guard(expected_snapshot_sha256: str):
+                with _exclusive_snapshot_lock(production_control.snapshot_path):
+                    guarded_snapshot = production_control.snapshot()
+                    if guarded_snapshot["snapshot_sha256"] != expected_snapshot_sha256:
+                        raise ProductError(
+                            "ERR_VISUAL_PLACEMENT_SOURCE_STALE",
+                            "Production Control changed before Timeline commit",
+                            ProductErrorCategory.STATE,
+                        )
+                    yield guarded_snapshot
+
+            visual_asset_placement = Task036VisualAssetPlacementApplication(
+                project_id=configuration.project_id,
+                product_job_id=configuration.production_job_id,
+                production_snapshot_provider=production_control.snapshot,
+                production_guard_factory=production_guard,
+                asset_provider=store.get_asset,
+                timeline_application=edit_application,
+            )
+            placement_holder["application"] = visual_asset_placement
             export_application = ExportQueueApplication(
                 project_root=configuration.project_root, project_id=configuration.project_id,
             )
@@ -988,6 +1018,7 @@ def build_trusted_launch(
             export_preparation_provider=preparation_provider,
             export_destination_provider=destination_provider,
             export_dispatcher=dispatcher,
+            visual_asset_placement=visual_asset_placement,
         )
     generation_execution_application = None
     generation_output_adoption_application = None

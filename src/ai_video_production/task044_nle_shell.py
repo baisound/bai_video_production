@@ -20,6 +20,7 @@ from .interactive_timeline import (
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_edit import SnapAnchor, SnapKind
 from .product_project_store import ProductProjectManifestStore
+from .task036_visual_asset_placement import Task036VisualAssetPlacementApplication
 
 
 ExportPreparationProvider = Callable[[str], ExportPreparation]
@@ -33,6 +34,16 @@ def _frame(value: object, name: str, *, minimum: int = 0) -> int:
     return value
 
 
+def _request_text(value: object, name: str) -> str:
+    if not isinstance(value, str) or not value or len(value) > 240 or "\x00" in value:
+        raise ProductError(
+            "ERR_NLE_SHELL_REQUEST_INVALID",
+            f"{name} is invalid",
+            ProductErrorCategory.VALIDATION,
+        )
+    return value
+
+
 class Task044NleShellController:
     """Keeps reversible interaction in Python and delegates durable truth to applications."""
 
@@ -42,7 +53,8 @@ class Task044NleShellController:
                  export_preparations: Mapping[str, ExportPreparation] | None = None,
                  export_preparation_provider: ExportPreparationProvider | None = None,
                  export_destination_provider: ExportDestinationProvider | None = None,
-                 export_dispatcher: DispatchCallback | None = None) -> None:
+                 export_dispatcher: DispatchCallback | None = None,
+                 visual_asset_placement: Task036VisualAssetPlacementApplication | None = None) -> None:
         self.timeline = timeline
         self.edit_application = edit_application
         self.export_application = export_application
@@ -50,6 +62,7 @@ class Task044NleShellController:
         self.export_preparation_provider = export_preparation_provider
         self.export_destination_provider = export_destination_provider
         self.export_dispatcher = export_dispatcher
+        self.visual_asset_placement = visual_asset_placement
         self._pending_dispatch_preparations: dict[str, tuple[str, ExportPreparation]] = {}
         self._pending_dispatch_lock = Lock()
         self._track_presentation: dict[str, dict[str, object]] = {}
@@ -111,11 +124,15 @@ class Task044NleShellController:
                     and not track.minimum_required
                 ),
             })
+        placement_count = 0
+        if self.visual_asset_placement is not None:
+            placement_count = int(self.visual_asset_placement.snapshot(timeline=self.timeline)["placement_count"])
         return {"available": True, "task_owner": "TASK-044/P-NLE-4",
                 "timeline_id": timeline.timeline_id,
                 "timeline_sha256": self.timeline.timeline_sha256,
                 "projected_timeline_sha256": timeline.timeline_sha256,
                 "project_manifest_sha256": manifest_sha256,
+                "visual_asset_placement_count": placement_count,
                 "duration_frames": timeline.duration_frames,
                 "total_track_count": len(timeline.tracks),
                 "timeline_rate": {"numerator": timeline.timeline_rate.numerator,
@@ -348,6 +365,107 @@ class Task044NleShellController:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Timeline apply request is invalid", ProductErrorCategory.VALIDATION)
         return self.edit_application.apply(confirmation_id=str(args["confirmation_id"]), timeline=self.timeline)
+
+    def visual_asset_placement_snapshot(self, args: Any = None) -> dict[str, Any]:
+        if args is not None and args != {}:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Visual placement snapshot request is invalid", ProductErrorCategory.VALIDATION)
+        if self.visual_asset_placement is None:
+            return {"available": False}
+        return self.visual_asset_placement.snapshot(timeline=self.timeline)
+
+    def visual_asset_placement_prepare_insert(self, args: Any) -> dict[str, object]:
+        required = {
+            "candidate_id", "target_track_id", "start_frame", "end_frame", "command_id",
+            "expected_project_manifest_sha256", "expected_production_snapshot_sha256",
+        }
+        if self.visual_asset_placement is None:
+            raise ProductError("ERR_VISUAL_PLACEMENT_NOT_BOUND", "Visual Asset placement is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Visual placement insert request is invalid", ProductErrorCategory.VALIDATION)
+        candidate_id = _request_text(args["candidate_id"], "candidate_id")
+        target_track_id = _request_text(args["target_track_id"], "target_track_id")
+        command_id = _request_text(args["command_id"], "command_id")
+        expected_manifest = _request_text(
+            args["expected_project_manifest_sha256"], "expected_project_manifest_sha256"
+        )
+        expected_production = _request_text(
+            args["expected_production_snapshot_sha256"], "expected_production_snapshot_sha256"
+        )
+        track_state = self._track_presentation.get(target_track_id, {})
+        if track_state.get("locked") is True:
+            raise ProductError("ERR_TIMELINE_TRACK_LOCKED", "Locked track cannot accept a visual placement", ProductErrorCategory.STATE)
+        return self.visual_asset_placement.prepare_insert(
+            timeline=self.timeline,
+            candidate_id=candidate_id,
+            target_track_id=target_track_id,
+            start_frame=_frame(args["start_frame"], "start_frame"),
+            end_frame=_frame(args["end_frame"], "end_frame", minimum=1),
+            command_id=command_id,
+            expected_project_manifest_sha256=expected_manifest,
+            expected_production_snapshot_sha256=expected_production,
+        )
+
+    def visual_asset_placement_prepare_replace(self, args: Any) -> dict[str, object]:
+        required = {
+            "candidate_id", "target_clip_id", "command_id",
+            "expected_project_manifest_sha256", "expected_production_snapshot_sha256",
+        }
+        if self.visual_asset_placement is None:
+            raise ProductError("ERR_VISUAL_PLACEMENT_NOT_BOUND", "Visual Asset placement is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Visual placement replace request is invalid", ProductErrorCategory.VALIDATION)
+        candidate_id = _request_text(args["candidate_id"], "candidate_id")
+        target_clip_id = _request_text(args["target_clip_id"], "target_clip_id")
+        command_id = _request_text(args["command_id"], "command_id")
+        expected_manifest = _request_text(
+            args["expected_project_manifest_sha256"], "expected_project_manifest_sha256"
+        )
+        expected_production = _request_text(
+            args["expected_production_snapshot_sha256"], "expected_production_snapshot_sha256"
+        )
+        projected = self._effective_timeline()
+        clip = next((item for item in projected.clips if item.clip_id == target_clip_id), None)
+        if clip is not None and self._track_presentation.get(clip.track_id, {}).get("locked") is True:
+            raise ProductError("ERR_TIMELINE_TRACK_LOCKED", "Locked track cannot accept a visual replacement", ProductErrorCategory.STATE)
+        return self.visual_asset_placement.prepare_replace(
+            timeline=self.timeline,
+            candidate_id=candidate_id,
+            target_clip_id=target_clip_id,
+            command_id=command_id,
+            expected_project_manifest_sha256=expected_manifest,
+            expected_production_snapshot_sha256=expected_production,
+        )
+
+    def visual_asset_placement_apply(self, args: Any) -> dict[str, object]:
+        if self.visual_asset_placement is None:
+            raise ProductError("ERR_VISUAL_PLACEMENT_NOT_BOUND", "Visual Asset placement is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str) or not args["confirmation_id"]:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Visual placement apply request is invalid", ProductErrorCategory.VALIDATION)
+        return self.visual_asset_placement.apply(confirmation_id=args["confirmation_id"], timeline=self.timeline)
+
+    def visual_asset_placement_cancel(self, args: Any) -> dict[str, object]:
+        if self.visual_asset_placement is None:
+            raise ProductError("ERR_VISUAL_PLACEMENT_NOT_BOUND", "Visual Asset placement is unavailable", ProductErrorCategory.STATE)
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str) or not args["confirmation_id"]:
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Visual placement cancel request is invalid", ProductErrorCategory.VALIDATION)
+        return self.visual_asset_placement.cancel(confirmation_id=args["confirmation_id"])
+
+    def visual_asset_placement_recover(self, args: Any) -> dict[str, object]:
+        if self.visual_asset_placement is None:
+            raise ProductError("ERR_VISUAL_PLACEMENT_NOT_BOUND", "Visual Asset placement is unavailable", ProductErrorCategory.STATE)
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"transaction_id", "action"}
+            or not isinstance(args["transaction_id"], str)
+            or not args["transaction_id"]
+            or not isinstance(args["action"], str)
+            or args["action"] not in {"COMPLETE", "FINALIZE", "ROLLBACK"}
+        ):
+            raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Visual placement recovery request is invalid", ProductErrorCategory.VALIDATION)
+        return self.visual_asset_placement.recover_project_save(
+            transaction_id=args["transaction_id"],
+            action=args["action"],
+        )
 
     def _export_preparation(self, job_id: str) -> ExportPreparation:
         preparation = self.export_preparations.get(job_id)

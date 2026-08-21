@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .errors import ProductError, ProductErrorCategory
-from .interactive_timeline import TimelineMediaKind, TimelineTrack, TimelineTrackRole
+from .interactive_timeline import (
+    InteractiveTimelineClip,
+    TimelineMediaKind,
+    TimelineTrack,
+    TimelineTrackRole,
+)
 from .interactive_timeline_edit import (
     SnapAnchor,
     SnapDecision,
@@ -16,11 +21,14 @@ from .interactive_timeline_edit import (
     TimelineEditHistory,
     TimelineEditKind,
     TimelineEditRevision,
+    TimelineSourceBinding,
 )
 from .serialization import canonical_json_bytes, sha256_bytes
 
 FORMAT_ID = "bai-video-production.interactive-timeline-edit-history"
 FORMAT_VERSION = "1.0.0"
+FORMAT_VERSION_V1_1 = "1.1.0"
+SUPPORTED_FORMAT_VERSIONS = (FORMAT_VERSION, FORMAT_VERSION_V1_1)
 RELATIVE_PATH = "state/interactive-timeline-edits.json"
 _MAX_BYTES = 16 * 1024 * 1024
 _FIELDS = {
@@ -56,15 +64,65 @@ def _snap(value: Mapping[str, Any] | None) -> SnapDecision | None:
     return SnapDecision(value["desired_frame"], value["effective_frame"], anchor)
 
 
-def _command(value: Mapping[str, Any]) -> TimelineEditCommand:
+def _clip(value: Mapping[str, Any] | None) -> InteractiveTimelineClip | None:
+    if value is None:
+        return None
     expected = {
+        "clip_id", "track_id", "start_frame", "end_frame", "source_owner",
+        "source_ref", "source_sha256", "label", "state", "review_candidate_id",
+    }
+    if not isinstance(value, Mapping) or set(value) != expected:
+        raise ValueError("clip fields are not exact")
+    return InteractiveTimelineClip(
+        value["clip_id"], value["track_id"], value["start_frame"],
+        value["end_frame"], value["source_owner"], value["source_ref"],
+        value["source_sha256"], value["label"], value["state"],
+        value["review_candidate_id"],
+    )
+
+
+def _source_binding(value: Mapping[str, Any] | None) -> TimelineSourceBinding | None:
+    if value is None:
+        return None
+    expected = {
+        "project_id", "production_snapshot_sha256", "scene_id", "slot_id",
+        "candidate_id", "asset_id", "asset_sha256", "product_job_id",
+        "generation_execution_id", "queue_entry_id", "publication_authorized",
+    }
+    if not isinstance(value, Mapping) or set(value) != expected:
+        raise ValueError("source binding fields are not exact")
+    return TimelineSourceBinding(
+        project_id=value["project_id"],
+        production_snapshot_sha256=value["production_snapshot_sha256"],
+        scene_id=value["scene_id"],
+        slot_id=value["slot_id"],
+        candidate_id=value["candidate_id"],
+        asset_id=value["asset_id"],
+        asset_sha256=value["asset_sha256"],
+        product_job_id=value["product_job_id"],
+        generation_execution_id=value["generation_execution_id"],
+        queue_entry_id=value["queue_entry_id"],
+        publication_authorized=value["publication_authorized"],
+    )
+
+
+def _command(value: Mapping[str, Any], *, revision_version: str) -> TimelineEditCommand:
+    legacy_fields = {
         "command_id", "kind", "target_clip_id", "target_track_id",
         "before_start_frame", "before_end_frame", "after_start_frame",
         "after_end_frame", "in_frame", "out_frame", "track", "snap",
         "command_sha256",
     }
-    if set(value) != expected:
+    placement_fields = legacy_fields | {
+        "before_clip", "after_clip", "before_source_binding", "after_source_binding",
+    }
+    if not isinstance(value, Mapping) or frozenset(value) not in {
+        frozenset(legacy_fields), frozenset(placement_fields),
+    }:
         raise ValueError("command fields are not exact")
+    is_placement_shape = set(value) == placement_fields
+    if is_placement_shape and revision_version != FORMAT_VERSION_V1_1:
+        raise ValueError("placement command requires revision version 1.1.0")
     claimed = value["command_sha256"]
     command = TimelineEditCommand(
         command_id=value["command_id"], kind=TimelineEditKind(value["kind"]),
@@ -73,7 +131,24 @@ def _command(value: Mapping[str, Any]) -> TimelineEditCommand:
         after_start_frame=value["after_start_frame"], after_end_frame=value["after_end_frame"],
         in_frame=value["in_frame"], out_frame=value["out_frame"],
         track=None if value["track"] is None else _track(value["track"]), snap=_snap(value["snap"]),
+        before_clip=_clip(value["before_clip"]) if is_placement_shape else None,
+        after_clip=_clip(value["after_clip"]) if is_placement_shape else None,
+        before_source_binding=(
+            _source_binding(value["before_source_binding"])
+            if is_placement_shape else None
+        ),
+        after_source_binding=(
+            _source_binding(value["after_source_binding"])
+            if is_placement_shape else None
+        ),
     )
+    is_placement_kind = command.kind in {
+        TimelineEditKind.INSERT_CLIP,
+        TimelineEditKind.REMOVE_CLIP,
+        TimelineEditKind.REPLACE_CLIP,
+    }
+    if is_placement_shape != is_placement_kind:
+        raise ValueError("command kind/shape version is inconsistent")
     if claimed != command.command_sha256:
         raise ValueError("command checksum mismatch")
     return command
@@ -87,11 +162,13 @@ def parse_timeline_edit_history(document: Mapping[str, Any]) -> TimelineEditHist
         body = {key: value for key, value in document.items() if key != "snapshot_sha256"}
         if claimed != sha256_bytes(canonical_json_bytes(body)):
             raise ValueError("snapshot checksum mismatch")
-        if document["snapshot_version"] != FORMAT_VERSION or document["task_owner"] != "TASK-044/P-NLE-2":
+        snapshot_version = document["snapshot_version"]
+        if snapshot_version not in SUPPORTED_FORMAT_VERSIONS or document["task_owner"] != "TASK-044/P-NLE-2":
             raise ValueError("snapshot identity is invalid")
         if document["external_mutation_authorized"] is not False:
             raise ValueError("external authority boundary is invalid")
         history = TimelineEditHistory(document["project_id"], document["history_id"])
+        saw_v1_1 = False
         for row in document["revisions"]:
             expected = {
                 "revision_version", "task_owner", "project_id", "history_id", "revision",
@@ -100,16 +177,28 @@ def parse_timeline_edit_history(document: Mapping[str, Any]) -> TimelineEditHist
             }
             if not isinstance(row, Mapping) or set(row) != expected:
                 raise ValueError("revision fields are not exact")
+            revision_version = row["revision_version"]
+            if revision_version not in SUPPORTED_FORMAT_VERSIONS:
+                raise ValueError("revision version is unsupported")
+            if saw_v1_1 and revision_version == FORMAT_VERSION:
+                raise ValueError("revision history downgrades after v1.1")
+            saw_v1_1 = saw_v1_1 or revision_version == FORMAT_VERSION_V1_1
             revision = TimelineEditRevision(
                 project_id=row["project_id"], history_id=row["history_id"], revision=row["revision"],
-                base_timeline_sha256=row["base_timeline_sha256"], command=_command(row["command"]),
+                base_timeline_sha256=row["base_timeline_sha256"],
+                command=_command(row["command"], revision_version=revision_version),
                 previous_revision_sha256=row["previous_revision_sha256"],
+                revision_version=revision_version,
             )
-            if row["revision_version"] != FORMAT_VERSION or row["task_owner"] != "TASK-044/P-NLE-2":
+            if row["task_owner"] != "TASK-044/P-NLE-2":
                 raise ValueError("revision identity is invalid")
             if row["external_mutation_authorized"] is not False or row["revision_sha256"] != revision.revision_sha256:
                 raise ValueError("revision checksum or authority mismatch")
             history.append(revision)
+        if snapshot_version == FORMAT_VERSION and saw_v1_1:
+            raise ValueError("v1.0 snapshot contains a v1.1 revision")
+        if snapshot_version == FORMAT_VERSION_V1_1 and not saw_v1_1:
+            raise ValueError("v1.1 snapshot requires at least one v1.1 revision")
         current = history.current
         if document["current_revision"] != (0 if current is None else current.revision):
             raise ValueError("current revision mismatch")
@@ -130,8 +219,13 @@ class TimelineEditSnapshotStore:
     @staticmethod
     def serialize(history: TimelineEditHistory) -> bytes:
         current = history.current
+        snapshot_version = (
+            FORMAT_VERSION_V1_1
+            if any(item.revision_version == FORMAT_VERSION_V1_1 for item in history.revisions)
+            else FORMAT_VERSION
+        )
         body = {
-            "snapshot_version": FORMAT_VERSION,
+            "snapshot_version": snapshot_version,
             "task_owner": "TASK-044/P-NLE-2",
             "project_id": history.project_id,
             "history_id": history.history_id,
@@ -158,6 +252,6 @@ class TimelineEditSnapshotStore:
 
 
 __all__ = [
-    "FORMAT_ID", "FORMAT_VERSION", "RELATIVE_PATH", "TimelineEditSnapshotStore",
-    "parse_timeline_edit_history",
+    "FORMAT_ID", "FORMAT_VERSION", "FORMAT_VERSION_V1_1", "RELATIVE_PATH",
+    "SUPPORTED_FORMAT_VERSIONS", "TimelineEditSnapshotStore", "parse_timeline_edit_history",
 ]

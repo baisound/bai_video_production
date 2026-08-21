@@ -37,6 +37,7 @@ from ai_video_production.generation_queue_application import Task027GenerationQu
 from ai_video_production.audio_workspace_application import Task041AudioWorkspaceApplication
 from ai_video_production.final_review_application import FinalReviewApprovalApplication
 from ai_video_production.desktop_shell_projection import EditingProjection
+from ai_video_production.desktop_media_workflow import IngestedMediaIdentity
 from ai_video_production.durable_product_job import (
     DurableProductJobService,
     DurableProductJobState,
@@ -726,6 +727,70 @@ def test_trusted_launcher_without_manifest_creates_no_runtime_lease_or_job_store
     assert not (config.project_root / ".bai-project" / ".task036-runtime.lock").exists()
     assert not DurableProductJobStore.path(config.project_root).exists()
     launch.close()
+
+
+def test_pre_manifest_media_ingest_holds_launch_lifetime_until_operation_finishes(tmp_path: Path) -> None:
+    path, raw = config_document(tmp_path)
+    source = Path(raw["paths"]["analysis_source_path"])
+    entered, release = Event(), Event()
+
+    class BlockingDialogBackend(DialogBackend):
+        calls = 0
+
+        def choose_open_media(self):
+            self.calls += 1
+            entered.set()
+            assert release.wait(5)
+            return str(source)
+
+    dialog_backend = BlockingDialogBackend()
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(dialog_backend),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+    ingested = []
+
+    class IngestStub:
+        def ingest_local_media(self, source_path):
+            assert launch._product_store is not None
+            ingested.append(source_path)
+            return IngestedMediaIdentity(
+                "ASSET-00000000000000000000000000", "sha256:" + "a" * 64,
+            )
+
+    launch.pre_edit_runtime.media.ingest_port = IngestStub()
+    bridge = launch.bridge
+    completed = []
+    operation = Thread(target=lambda: completed.append(bridge.choose_and_ingest_media({})))
+    operation.start()
+    assert entered.wait(5)
+    lifetime = launch._local_operation_lifetime
+    assert lifetime is not None
+    closing = Thread(target=launch.close)
+    closing.start()
+    deadline = monotonic() + 5
+    while not lifetime._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+        sleep(0.01)
+    assert lifetime._closing  # type: ignore[attr-defined]
+    assert closing.is_alive()
+    with pytest.raises(ProductError) as rejected:
+        bridge.choose_and_ingest_media({})
+    assert rejected.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert dialog_backend.calls == 1
+    release.set()
+    operation.join(5)
+    closing.join(5)
+    assert not operation.is_alive() and not closing.is_alive()
+    assert completed[0]["status"] == "INGESTED"
+    assert completed[0]["asset_sha256"].startswith("sha256:")
+    assert ingested == [source]
+    with pytest.raises(ProductError) as after_close:
+        bridge.choose_and_ingest_media({})
+    assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert dialog_backend.calls == 1
+    assert launch._product_store is None
 
 
 def test_trusted_launch_binds_existing_task028_settings_without_provider_execution(tmp_path: Path):

@@ -104,3 +104,33 @@ def test_background_jobs_keeps_generation_and_export_recovery_visible() -> None:
         "No replay",
     ):
         assert marker in HTML
+
+
+def test_home_and_file_media_controls_use_the_canonical_ingest_route() -> None:
+    for marker in (
+        "async function chooseAndIngestMedia()",
+        "workflow.next_recommended_action==='media.choose_and_ingest'",
+        "call('choose_and_ingest_media',{})",
+        "result.status==='CANCELLED'",
+        "result.status==='INGESTED'?mediaIngestIdentity(result):null",
+        "Assetは登録していません",
+        "動画をTASK-003 Assetへ登録しました",
+        "$('chooseMediaButton').addEventListener('click',chooseAndIngestMedia)",
+        "$('homeMediaButton').addEventListener('click',chooseAndIngestMedia)",
+    ):
+        assert marker in HTML
+    assert "chooseAndReport('choose_media_source','メディア')" not in HTML
+    assert "source_name" not in HTML
+    assert "source_path" not in HTML
+
+
+def test_media_controls_fail_closed_after_the_single_source_stage() -> None:
+    for marker in (
+        "const mediaReady=workflow?.available===true&&workflow.next_recommended_action==='media.choose_and_ingest'",
+        "action.disabled=!mediaReady",
+        "現在のProjectではSource Media追加工程を実行できません",
+        "trusted pre-edit runtimeが接続されていません",
+        "function mediaIngestIdentity(result)",
+        "/^sha256:[0-9a-f]{64}$/",
+    ):
+        assert marker in HTML

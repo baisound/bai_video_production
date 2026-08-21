@@ -145,6 +145,10 @@ def training_roi(
         if slot is None:
             raise ValueError("サバイバーHUD学習にはスロットが必要です。")
         return profile.survivor_slot_roi(slot)
+    if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+        if slot is None:
+            raise ValueError("キラー固有HUD学習にはサバイバースロットが必要です。")
+        return profile.survivor_slot_roi(slot)
     if domain is VisualTrainingDomain.KILLER_POWER:
         if profile.killer_power_hud is None:
             raise ValueError("キラー能力HUDがこのHUDプロファイルで未設定です。")
@@ -211,6 +215,8 @@ def slot_specifications(
     if domain is VisualTrainingDomain.ADDON_ICON:
         return tuple((index, label) for index, label in enumerate(ADDON_SLOT_LABELS))
     if domain is VisualTrainingDomain.SURVIVOR_HUD:
+        return ((0, "サバイバー1"), (1, "サバイバー2"), (2, "サバイバー3"), (3, "サバイバー4"))
+    if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
         return ((0, "サバイバー1"), (1, "サバイバー2"), (2, "サバイバー3"), (3, "サバイバー4"))
     if domain is VisualTrainingDomain.ITEM_ICON:
         return ((None, "アイテム"),)

@@ -35,6 +35,9 @@ from .dbd_loadout_knowledge import (
     DbDLoadoutKnowledgeStore, LoadoutKnowledgeKind, LoadoutVisualObservation, LoadoutVisualRecognizer,
 )
 from .dbd_perk_knowledge import DbDPerkKnowledgeStore, PerkEnvironment
+from .dbd_killer_status_temporal import EffectPolarity
+from .dbd_status_effect_recognition import StatusEffectIconRecognizer, StatusIconRecognition
+from .dbd_status_icon_segmentation import StatusIconSegmentationResult, StatusIconSegmenter
 from .dbd_vision_slices import DBDHudRoiProfile, FFmpegSliceExtractor, GrayImage, NormalizedROI
 from .dbd_hud_calibration import DBDHudVideoProfileResolver, FFmpegFrameInspector, HudAnchorAligner
 from .game_event_evidence import SourceFrameRange
@@ -70,6 +73,8 @@ class DBDFrameRecognition:
     item: LoadoutVisualObservation | None = None
     addons: tuple[LoadoutVisualObservation, ...] = ()
     killer_specific: KillerConditionedRouteResult | None = None
+    status_effect_regions: tuple[StatusIconSegmentationResult, ...] = ()
+    status_effects: tuple[StatusIconRecognition, ...] = ()
 
     def __post_init__(self) -> None:
         if self.frame_index < 0:
@@ -84,6 +89,19 @@ class DBDFrameRecognition:
             item.frame_index != self.frame_index for item in self.killer_specific.observations
         ):
             raise ValueError("killer_specific observations must match the frame")
+        polarities = tuple(item.polarity for item in self.status_effect_regions)
+        if len(polarities) != len(set(polarities)):
+            raise ValueError("status_effect_regions must contain at most one result per polarity")
+        status_keys = tuple((item.polarity, item.ordinal) for item in self.status_effects)
+        if len(status_keys) != len(set(status_keys)):
+            raise ValueError("status_effects must contain unique polarity/ordinal observations")
+        segmented_keys = {
+            (region.polarity, candidate.ordinal)
+            for region in self.status_effect_regions
+            for candidate in region.candidates
+        }
+        if not set(status_keys).issubset(segmented_keys):
+            raise ValueError("status_effects must refer to candidates in status_effect_regions")
 
 
 _NOTIFICATION_EVENT_MAP = {
@@ -181,6 +199,8 @@ class DbDRecordedVideoRecognizer:
         extractor: SliceExtractor | None = None,
         survivor_detector: SurvivorHudStateDetector | None = None,
         perk_detector: PerkIconDetector | None = None,
+        status_icon_segmenter: StatusIconSegmenter | None = None,
+        status_effect_recognizer: StatusEffectIconRecognizer | None = None,
         notification_detector: DBDNotificationTextDetector | None = None,
         killer_power_recognizer: KillerPowerVisualRecognizer | None = None,
         killer_capability_registry: KillerCapabilityRegistry | None = None,
@@ -197,6 +217,10 @@ class DbDRecordedVideoRecognizer:
         self.extractor = extractor or FFmpegSliceExtractor()
         self.survivor_detector = survivor_detector
         self.perk_detector = perk_detector
+        self.status_icon_segmenter = status_icon_segmenter
+        self.status_effect_recognizer = status_effect_recognizer
+        if status_effect_recognizer is not None and status_icon_segmenter is None:
+            raise ValueError("status_effect_recognizer requires status_icon_segmenter")
         self.notification_detector = notification_detector
         self.killer_power_recognizer = killer_power_recognizer
         self.killer_capability_registry = killer_capability_registry
@@ -274,6 +298,8 @@ class DbDRecordedVideoRecognizer:
         notification: NotificationTextObservation | None = None
         killer_power: KillerPowerVisualObservation | None = None
         killer_specific: KillerConditionedRouteResult | None = None
+        status_effect_regions: list[StatusIconSegmentationResult] = []
+        status_effects: list[StatusIconRecognition] = []
         survivor_slices: dict[int, tuple[GrayImage, SliceArtifact]] = {}
         killer_power_slice: tuple[GrayImage, SliceArtifact] | None = None
         try:
@@ -297,6 +323,47 @@ class DbDRecordedVideoRecognizer:
                     )
                     artifacts.append(artifact)
                     perks.append(self.perk_detector.detect_slot(image, slot=slot))
+
+            if self.status_icon_segmenter is not None:
+                status_regions = (
+                    (
+                        EffectPolarity.POSITIVE,
+                        "bottom_right_positive_effects",
+                        profile.bottom_right_positive_effects,
+                    ),
+                    (
+                        EffectPolarity.NEGATIVE,
+                        "bottom_right_negative_effects",
+                        profile.bottom_right_negative_effects,
+                    ),
+                )
+                for polarity, region_roi_id, roi in status_regions:
+                    if roi is None:
+                        status_effect_regions.append(
+                            StatusIconSegmentationResult.unavailable(polarity, region_roi_id)
+                        )
+                        continue
+                    image, artifact = self._slice(
+                        video_path=video_path, frame_index=frame_index, roi=roi,
+                        target=root / f"{polarity.value.casefold()}-status-effects.pgm",
+                        width=384, height=192,
+                    )
+                    artifacts.append(artifact)
+                    segmentation = self.status_icon_segmenter.segment(
+                        image, polarity=polarity, region_roi_id=roi.roi_id,
+                    )
+                    status_effect_regions.append(segmentation)
+                    if self.status_effect_recognizer is not None:
+                        for candidate in segmentation.candidates:
+                            crop = self.status_effect_recognizer.crop_segment(image, candidate)
+                            status_effects.append(self.status_effect_recognizer.recognize(
+                                crop,
+                                candidate=candidate,
+                                evidence_ref=(
+                                    f"{artifact.evidence_ref}/{candidate.crop_roi.roi_id}/"
+                                    f"{candidate.crop_sha256}"
+                                ),
+                            ))
 
             if self.item_recognizer is not None:
                 roi = profile.item_slot_roi()
@@ -386,6 +453,8 @@ class DbDRecordedVideoRecognizer:
                 killer_power=killer_power,
                 slice_artifacts=tuple(sorted(artifacts, key=lambda x: x.roi_id)),
                 killer_specific=killer_specific,
+                status_effect_regions=tuple(status_effect_regions),
+                status_effects=tuple(status_effects),
             )
         finally:
             if temporary is not None:

@@ -177,7 +177,7 @@ def test_safe_preview_receipt_and_confirm_keep_survivor_subject(tmp_path: Path) 
         signal_kind=SurvivorSignalKind.CHASE_STATE,
     )
     receipt = json.loads((tmp_path / "staging" / "visual-learning" / staged.staging_id / "receipt.json").read_text(encoding="utf-8"))
-    assert receipt["schema_version"] == "1.1.0"
+    assert receipt["schema_version"] == "1.2.0"
     assert (receipt["match_id"], receipt["survivor_slot"], receipt["signal_kind"]) == ("match-1", 1, "CHASE_STATE")
     assert service.confirm_register(staged)
     row = manifest.list()[0]

@@ -14,8 +14,10 @@ instead of substituting synthetic fixtures.
 ## Dataset manifest
 
 Each manifest pins dataset revision, detector/model versions and canonically sorted
-matches. Every match retains source/rights provenance, patch, HUD Profile, split,
-real-media status and covered domains. A source group cannot cross TRAIN,
+matches. Every match retains source/rights/Human-labeler provenance, patch, HUD
+Profile, split, real-media status and covered domains. Real rows require
+`media://`, `rights://` and `human://` references. Authority, credential and secret
+references are rejected from dataset/review provenance. A source group cannot cross TRAIN,
 VALIDATION and TEST, preventing match/source leakage.
 
 Pilot completeness requires 5–10 matches containing generator, chase, Survivor
@@ -31,8 +33,11 @@ claim whose validator is not `VERIFIED` is counted as invalid. The report record
 the exact manifest digest.
 
 An accuracy result remains `NOT_CONFIRMED` unless all completeness, held-out,
-real-media and validator conditions pass and an explicit production-accuracy claim
-gate is supplied. Synthetic tests cannot authorize a production claim.
+real-media and validator conditions pass, precision/recall are at least `0.900`,
+UNKNOWN is at most `0.200`, calibration error is at most `0.150`, replay stability
+is at least `0.950`, contradictions are zero, and an explicit production-accuracy
+claim gate is supplied. Claim authority cannot override failed Evidence. Synthetic
+tests cannot authorize a production claim.
 
 ## Human feedback
 
@@ -45,7 +50,8 @@ can query rejection counts by reason without reading private media bodies.
 
 - R8 + existing Event/HUD/Status Gold focused regression: `25 PASS`;
 - TASK-049 DbD/Gold and TASK-052 affected regression: `291 PASS`;
-- split leakage, incomplete pilots, non-real media and unvalidated claims fail closed;
+- split leakage, incomplete pilots, non-real media, unsafe provenance, unvalidated
+  claims and below-threshold KPI results fail closed;
 - production accuracy from current Owner data: `NOT_CONFIRMED`;
 - unresolved Critical/High findings: `0 / 0`.
 

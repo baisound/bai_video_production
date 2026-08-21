@@ -12,6 +12,7 @@ from .serialization import canonical_json_bytes, sha256_bytes
 
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
 _REF = re.compile(r"^[a-z][a-z0-9+.-]*://[^\s]{1,1000}$")
+_FORBIDDEN_REF_SCHEMES = frozenset({"authorization", "credential", "secret"})
 
 
 class GoldSplit(str, Enum):
@@ -58,11 +59,26 @@ RECOGNITION_KPI_DOMAINS = frozenset({
     GoldDomain.HOOK, GoldDomain.PERK, GoldDomain.KILLER, GoldDomain.MAP,
     GoldDomain.STATUS_EFFECT, GoldDomain.OBJECT_SCENE, GoldDomain.ADD_ON,
 })
+MINIMUM_PRECISION_MILLI = 900
+MINIMUM_RECALL_MILLI = 900
+MAXIMUM_UNKNOWN_RATE_MILLI = 200
+MAXIMUM_CALIBRATION_ERROR_MILLI = 150
+MINIMUM_REPLAY_STABILITY_MILLI = 950
 
 
 def _bounded(value: str, name: str, maximum: int = 256) -> None:
     if not isinstance(value, str) or not value.strip() or len(value) > maximum or any(ord(x) < 32 for x in value):
         raise ValueError(f"{name} must be bounded text")
+
+
+def _safe_ref(value: str, name: str, *, required_scheme: str | None = None) -> None:
+    if not isinstance(value, str) or not _REF.fullmatch(value):
+        raise ValueError(f"{name} must be a bounded reference")
+    scheme = value.split(":", 1)[0]
+    if scheme in _FORBIDDEN_REF_SCHEMES:
+        raise ValueError(f"{name} must not disclose an authority, credential or secret reference")
+    if required_scheme is not None and scheme != required_scheme:
+        raise ValueError(f"{name} must use {required_scheme}://")
 
 
 def _milli(n: int, d: int) -> int | None:
@@ -80,14 +96,14 @@ class GoldMatch:
     hud_profile_version: str
     domains: frozenset[GoldDomain]
     real_media: bool
+    labeler_ref: str
 
     def __post_init__(self) -> None:
         if not _ID.fullmatch(self.match_id) or not _ID.fullmatch(self.source_group_id):
             raise ValueError("match_id and source_group_id must be safe identifiers")
-        if not _REF.fullmatch(self.source_ref):
-            raise ValueError("source_ref must be a bounded reference")
-        if not self.rights_ref.startswith("rights://") or not _REF.fullmatch(self.rights_ref):
-            raise ValueError("rights_ref must use rights://")
+        _safe_ref(self.source_ref, "source_ref", required_scheme="media" if self.real_media else None)
+        _safe_ref(self.rights_ref, "rights_ref", required_scheme="rights")
+        _safe_ref(self.labeler_ref, "labeler_ref", required_scheme="human")
         if not isinstance(self.split, GoldSplit) or not isinstance(self.real_media, bool):
             raise ValueError("invalid Gold match split or real_media flag")
         _bounded(self.patch_version, "patch_version", 64)
@@ -102,6 +118,7 @@ class GoldMatch:
             "split": self.split.value, "patch_version": self.patch_version,
             "hud_profile_version": self.hud_profile_version,
             "domains": sorted(x.value for x in self.domains), "real_media": self.real_media,
+            "labeler_ref": self.labeler_ref,
         }
 
 
@@ -172,8 +189,8 @@ class GoldPrediction:
             raise ValueError("confidence_milli must be 0..1000")
         if isinstance(self.latency_ms, bool) or not isinstance(self.latency_ms, int) or self.latency_ms < 0:
             raise ValueError("latency_ms must be non-negative")
-        if self.validator_source_ref is not None and not _REF.fullmatch(self.validator_source_ref):
-            raise ValueError("validator_source_ref must be a bounded reference")
+        if self.validator_source_ref is not None:
+            _safe_ref(self.validator_source_ref, "validator_source_ref")
         if self.validator_status is ClaimValidatorStatus.VERIFIED and self.validator_source_ref is None:
             raise ValueError("VERIFIED claim requires validator source provenance")
 
@@ -198,8 +215,8 @@ class GoldCorrection:
                 _bounded(value, name, 256)
         for value, name in ((self.reviewer_ref, "reviewer_ref"), (self.reason_code, "reason_code"), (self.provenance_ref, "provenance_ref")):
             _bounded(value, name, 1024)
-        if not _REF.fullmatch(self.reviewer_ref) or not _REF.fullmatch(self.provenance_ref):
-            raise ValueError("reviewer/provenance must be references")
+        _safe_ref(self.reviewer_ref, "reviewer_ref", required_scheme="human")
+        _safe_ref(self.provenance_ref, "provenance_ref")
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,8 +234,7 @@ class GoldRejection:
         if not isinstance(self.domain, GoldDomain):
             raise ValueError("rejection domain is invalid")
         for value, name in ((self.candidate_ref, "candidate_ref"), (self.reviewer_ref, "reviewer_ref"), (self.provenance_ref, "provenance_ref")):
-            if not _REF.fullmatch(value):
-                raise ValueError(f"{name} must be a bounded reference")
+            _safe_ref(value, name, required_scheme="human" if name == "reviewer_ref" else None)
         _bounded(self.reason_code, "reason_code", 128)
 
 
@@ -266,6 +282,8 @@ class DbDGoldKpiEvaluator:
     ) -> DbDGoldKpiReport:
         if not isinstance(manifest, DbDGoldManifest):
             raise ValueError("manifest must be DbDGoldManifest")
+        if not isinstance(production_accuracy_claim_authorized, bool):
+            raise ValueError("production_accuracy_claim_authorized must be bool")
         rows = tuple(predictions)
         fixes = tuple(corrections)
         rejected = tuple(rejections)
@@ -329,6 +347,18 @@ class DbDGoldKpiEvaluator:
             reasons.append("RECOGNITION_DOMAIN_KPI_MISSING")
         if any(x.invalid_claim_count for x in metrics):
             reasons.append("UNVALIDATED_PREDICTION_CLAIM")
+        if any(x.precision_milli is not None and x.precision_milli < MINIMUM_PRECISION_MILLI for x in metrics):
+            reasons.append("PRECISION_BELOW_THRESHOLD")
+        if any(x.recall_milli is not None and x.recall_milli < MINIMUM_RECALL_MILLI for x in metrics):
+            reasons.append("RECALL_BELOW_THRESHOLD")
+        if any(x.unknown_rate_milli > MAXIMUM_UNKNOWN_RATE_MILLI for x in metrics):
+            reasons.append("UNKNOWN_RATE_ABOVE_THRESHOLD")
+        if any(x.calibration_error_milli > MAXIMUM_CALIBRATION_ERROR_MILLI for x in metrics):
+            reasons.append("CALIBRATION_ERROR_ABOVE_THRESHOLD")
+        if any(x.stability_milli < MINIMUM_REPLAY_STABILITY_MILLI for x in metrics):
+            reasons.append("REPLAY_STABILITY_BELOW_THRESHOLD")
+        if any(x.contradiction_count for x in metrics):
+            reasons.append("CONTRADICTION_PRESENT")
         if production_accuracy_claim_authorized and reasons:
             raise ValueError("production accuracy authority requires complete held-out real-media evidence")
         if not production_accuracy_claim_authorized:
@@ -347,5 +377,7 @@ __all__ = [
     "ClaimValidatorStatus", "DbDGoldKpiEvaluator", "DbDGoldKpiReport",
     "DbDGoldManifest", "DomainKpi", "GoldAcceptanceStatus", "GoldCorrection",
     "GoldDomain", "GoldMatch", "GoldPrediction", "GoldRejection", "GoldSplit",
-    "PILOT_REQUIRED_DOMAINS", "RECOGNITION_KPI_DOMAINS",
+    "PILOT_REQUIRED_DOMAINS", "RECOGNITION_KPI_DOMAINS", "MINIMUM_PRECISION_MILLI",
+    "MINIMUM_RECALL_MILLI", "MAXIMUM_UNKNOWN_RATE_MILLI",
+    "MAXIMUM_CALIBRATION_ERROR_MILLI", "MINIMUM_REPLAY_STABILITY_MILLI",
 ]

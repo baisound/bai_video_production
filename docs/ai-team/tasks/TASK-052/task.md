@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R8_CONTRACT_COMPLETE_DATA_GATE / R9_NEXT`
+Status: `IMPLEMENTATION_COMPLETE_THROUGH_R9 / REAL_VIDEO_HUMAN_GOLD_DATA_GATE`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -171,5 +171,22 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   `291 PASS`. The current Owner inventory has no complete 5–10
   match Human Gold corpus, so production accuracy remains `NOT_CONFIRMED` and no
   accuracy claim was authorized.
-- Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R9 Windows packaged Human acceptance, performance and backup/restore.
+- R8 final Critic hardening: complete; real Gold rows now require `media://`,
+  `rights://` and `human://` labeler provenance, secret-like references fail
+  closed, and explicit claim authority cannot turn below-threshold precision,
+  recall, UNKNOWN, calibration, replay stability or contradiction results into
+  PASS. Focused regression `7 PASS`.
+- R9 available-scope Windows packaged acceptance: complete; exact EXE SHA-256
+  `45ACB23BC17B1EA2A6BADEC99A8B037541D0021CF352F102948230971D35ED06`,
+  size `15,098,447 bytes`, clean startup `12,162 ms`, Japanese search, HUD/image
+  learning/review/backup screens and cached PNG pixel rotation through
+  `0/90/180/270` with reopen/restart persistence all passed. The temporary map
+  orientation was restored to the original `0°`. Native Windows migration,
+  backup/workspace and packaged-startup regression: `8 PASS`.
+- Overall TASK-052 implementation through R9: complete for available local
+  Evidence. Real-video multi-Killer/UI-scale/process performance, complete 5–10
+  match Human Gold and production accuracy remain `NOT_CONFIRMED` behind the
+  explicit Human/data gate; no further safe implementation unit is pending.
+- Final integration regression: `3106 PASS / 2 platform-specific SKIP` in the
+  existing WSL validation environment; native Windows focused regression remains
+  `8 PASS`; unresolved Critical/High findings `0 / 0`.

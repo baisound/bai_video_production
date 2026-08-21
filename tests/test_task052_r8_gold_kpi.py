@@ -16,7 +16,7 @@ def _match(index: int, split: GoldSplit, *, real: bool = True, complete: bool = 
     return GoldMatch(
         f"match-{index}", f"source-{index}", f"media://owned/match-{index}",
         f"rights://owner/match-{index}", split, "9.1.0", "hud-2.3.0",
-        frozenset(domains), real,
+        frozenset(domains), real, f"human://labeler-{index}",
     )
 
 
@@ -86,6 +86,13 @@ def test_wrong_unknown_contradiction_latency_and_unvalidated_claim_are_reported(
     assert wrong.mean_latency_ms == 30
     assert wrong.stability_milli == 0
     assert "UNVALIDATED_PREDICTION_CLAIM" in report.reason_codes
+    assert "RECALL_BELOW_THRESHOLD" in report.reason_codes
+    assert "CALIBRATION_ERROR_ABOVE_THRESHOLD" in report.reason_codes
+    assert "REPLAY_STABILITY_BELOW_THRESHOLD" in report.reason_codes
+    with pytest.raises(ValueError, match="complete held-out"):
+        DbDGoldKpiEvaluator.evaluate(
+            _manifest(), rows, production_accuracy_claim_authorized=True,
+        )
 
 
 def test_manifest_rejects_split_leakage_and_prediction_scope_mismatch() -> None:
@@ -128,4 +135,23 @@ def test_rejection_reasons_are_durable_and_queryable() -> None:
     with pytest.raises(ValueError, match="rejection_id values must be unique"):
         DbDGoldKpiEvaluator.evaluate(
             _manifest(), _predictions(), rejections=(rejected[0], rejected[0]),
+        )
+
+
+def test_gold_provenance_is_human_traceable_and_secret_refs_fail_closed() -> None:
+    with pytest.raises(ValueError, match="source_ref must use media"):
+        replace(_match(1, GoldSplit.TEST), source_ref="synthetic://match-1")
+    with pytest.raises(ValueError, match="labeler_ref must use human"):
+        replace(_match(1, GoldSplit.TEST), labeler_ref="automation://labeler-1")
+    with pytest.raises(ValueError, match="must not disclose"):
+        replace(_predictions()[0], validator_source_ref="secret://token-name")
+    with pytest.raises(ValueError, match="reviewer_ref must use human"):
+        GoldCorrection(
+            "correction-unsafe", _predictions()[0].sample_id, "wrong", "expected",
+            "automation://reviewer", "WRONG_IDENTITY", "evidence://review/frame-10",
+        )
+    with pytest.raises(ValueError, match="must not disclose"):
+        GoldRejection(
+            "reject-unsafe", "credential://provider/key", GoldDomain.MAP,
+            "UNSAFE_REFERENCE", "human://reviewer-1", "evidence://review/unsafe",
         )

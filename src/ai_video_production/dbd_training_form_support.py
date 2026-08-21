@@ -22,6 +22,7 @@ EVENT_TYPE_JA = {
     GameEventType.MATCH_START: "試合開始",
     GameEventType.CHASE_START: "チェイス開始",
     GameEventType.CHASE_END: "チェイス終了",
+    GameEventType.GENERATOR_COMPLETE: "発電機修理完了",
     GameEventType.INJURY: "負傷",
     GameEventType.DOWN: "ダウン",
     GameEventType.HOOK: "フック",

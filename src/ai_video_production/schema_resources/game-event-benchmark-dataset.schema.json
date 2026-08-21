@@ -94,6 +94,7 @@
             "MATCH_START",
             "CHASE_START",
             "CHASE_END",
+            "GENERATOR_COMPLETE",
             "INJURY",
             "DOWN",
             "HOOK",

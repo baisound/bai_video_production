@@ -207,6 +207,7 @@ class CommentaryPlanner:
         GameEventType.MATCH_START: 200,
         GameEventType.CHASE_START: 650,
         GameEventType.CHASE_END: 650,
+        GameEventType.GENERATOR_COMPLETE: 760,
         GameEventType.INJURY: 750,
         GameEventType.DOWN: 820,
         GameEventType.HOOK: 850,

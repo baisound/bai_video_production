@@ -192,6 +192,16 @@ def _read_stable_file(path: Path, *, max_bytes: int) -> bytes:
     return raw
 
 
+def _windows_move_replace_write_through(source: Path, target: Path) -> bool:
+    import ctypes
+    from ctypes import wintypes
+
+    move_file = ctypes.windll.kernel32.MoveFileExW
+    move_file.argtypes = (wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD)
+    move_file.restype = wintypes.BOOL
+    return bool(move_file(str(source), str(target), 0x1 | 0x8))
+
+
 class _PinnedDirectory(AbstractContextManager["_PinnedDirectory"]):
     """Pin a non-reparse directory and perform child I/O relative to it."""
 
@@ -442,9 +452,6 @@ class _PinnedDirectory(AbstractContextManager["_PinnedDirectory"]):
             finally:
                 os.close(descriptor)
         else:
-            import ctypes
-            from ctypes import wintypes
-
             temp_path, target_path = self.path / temporary, self.path / target
             try:
                 with temp_path.open("xb") as handle:
@@ -454,10 +461,7 @@ class _PinnedDirectory(AbstractContextManager["_PinnedDirectory"]):
             except FileExistsError:
                 if self.read(temporary, max_bytes=max(1, len(data))) != data:
                     raise ProductError("ERR_GENERATION_COMFY_IMAGE_TEMP_CONFLICT", "Residual image temporary file differs from the authorized bytes", ProductErrorCategory.DATA_INTEGRITY)
-            move_file = ctypes.windll.kernel32.MoveFileExW
-            move_file.argtypes = (wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD)
-            move_file.restype = wintypes.BOOL
-            if not move_file(str(temp_path), str(target_path), 0x1 | 0x8):
+            if not _windows_move_replace_write_through(temp_path, target_path):
                 raise ProductError("ERR_GENERATION_COMFY_IMAGE_DURABILITY", "Image file rename could not be made durable", ProductErrorCategory.DATA_INTEGRITY)
             if self.read(target, max_bytes=max(1, len(data))) != data:
                 raise ProductError("ERR_GENERATION_COMFY_IMAGE_ATOMIC_BYTES", "Image atomic target bytes changed during publication", ProductErrorCategory.DATA_INTEGRITY)

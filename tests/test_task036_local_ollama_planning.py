@@ -234,12 +234,16 @@ def test_proxy_environment_is_bypassed_and_redirect_target_is_never_called(monke
             thread.join(timeout=2)
 
 
-@pytest.mark.parametrize("method,url,body", [
-    ("GET", "http://127.0.0.1:11434/api/tags", b"{}"),
-    ("POST", "http://127.0.0.1:11434/api/chat", None),
-    ("POST", "http://127.0.0.1:11434/api/chat", b""),
-    ("POST", "http://127.0.0.1:11434/api/chat", b"x" * (512 * 1024 + 1)),
-])
+@pytest.mark.parametrize(
+    "method,url,body",
+    [
+        ("GET", "http://127.0.0.1:11434/api/tags", b"{}"),
+        ("POST", "http://127.0.0.1:11434/api/chat", None),
+        ("POST", "http://127.0.0.1:11434/api/chat", b""),
+        ("POST", "http://127.0.0.1:11434/api/chat", b"x" * (512 * 1024 + 1)),
+    ],
+    ids=("get-with-body", "post-without-body", "post-empty-body", "post-oversized-body"),
+)
 def test_production_transport_rejects_invalid_method_body_combinations(method, url, body):
     with pytest.raises(ProductError) as exc:
         UrllibLocalOllamaTransport().request(method, url, body, 1)

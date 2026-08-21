@@ -495,30 +495,45 @@ def test_crash_left_exact_journal_temp_is_reconciled_without_requeue(tmp_path: P
 def test_journal_temp_name_substitution_never_returns_terminal_success(tmp_path: Path, monkeypatch):
     port, client, route, request, roots = fixture(tmp_path)
     from ai_video_production import local_comfy_image_generation_port as module
-    original = module.os.replace
     journal_moves = 0
 
-    def substitute(source, target, *args, **kwargs):
-        nonlocal journal_moves
-        if isinstance(target, str) and target.endswith(".json"):
-            journal_moves += 1
-            if journal_moves == 3:
-                directory_fd = kwargs["src_dir_fd"]
-                module.os.unlink(source, dir_fd=directory_fd)
-                descriptor = module.os.open(
-                    source,
-                    module.os.O_WRONLY | module.os.O_CREAT | module.os.O_EXCL | module.os.O_NOFOLLOW,
-                    0o600,
-                    dir_fd=directory_fd,
-                )
-                try:
-                    module.os.write(descriptor, b"{}")
-                    module.os.fsync(descriptor)
-                finally:
-                    module.os.close(descriptor)
-        return original(source, target, *args, **kwargs)
+    if module.os.name == "nt":
+        original_windows_move = module._windows_move_replace_write_through
 
-    monkeypatch.setattr(module.os, "replace", substitute)
+        def substitute_windows(source: Path, target: Path) -> bool:
+            nonlocal journal_moves
+            if target.name.endswith(".json"):
+                journal_moves += 1
+                if journal_moves == 3:
+                    source.unlink()
+                    source.write_bytes(b"{}")
+            return original_windows_move(source, target)
+
+        monkeypatch.setattr(module, "_windows_move_replace_write_through", substitute_windows)
+    else:
+        original_replace = module.os.replace
+
+        def substitute_posix(source, target, *args, **kwargs):
+            nonlocal journal_moves
+            if isinstance(target, str) and target.endswith(".json"):
+                journal_moves += 1
+                if journal_moves == 3:
+                    directory_fd = kwargs["src_dir_fd"]
+                    module.os.unlink(source, dir_fd=directory_fd)
+                    descriptor = module.os.open(
+                        source,
+                        module.os.O_WRONLY | module.os.O_CREAT | module.os.O_EXCL | module.os.O_NOFOLLOW,
+                        0o600,
+                        dir_fd=directory_fd,
+                    )
+                    try:
+                        module.os.write(descriptor, b"{}")
+                        module.os.fsync(descriptor)
+                    finally:
+                        module.os.close(descriptor)
+            return original_replace(source, target, *args, **kwargs)
+
+        monkeypatch.setattr(module.os, "replace", substitute_posix)
     with pytest.raises(ProductError) as exc:
         port.execute(route, request)
     assert exc.value.code == "ERR_GENERATION_COMFY_IMAGE_COMPLETION_JOURNAL_UNCERTAIN"

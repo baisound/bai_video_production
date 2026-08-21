@@ -237,7 +237,7 @@ Owner判断により、**動画編集そのものと直結する補助機能を�
 - TASK-013 R4 execution control + exact local/free ComfyUI adapter: **HOSTED CLOSED**
 - TASK-013 native H3 completion: **PARKED_TO_SAFE_RUNTIME_REVIEW**; automatic replay prohibited
 - TASK-014 ElevenLabs Owner Voice narration: **DESIGN RECORDED / ADAPTER FOUNDATION EXISTS**
-- TASK-026 SE/BGM/ナレーション配置Plan、BGM loop/fade、Audio Bed: **P-AUDIO-1 PRODUCT PROMOTION IMPLEMENTATION LOCAL PASS / HOSTED PENDING**; TASK-010/Resolve/Cubase execution remains separate and unstarted
+- TASK-026 SE/BGM/ナレーション配置Plan、BGM loop/fade、Audio Bed: **P-AUDIO-1 PRODUCT PROMOTION HOSTED CLOSED / PR #86 / MAIN 0e457e69**; TASK-010/Resolve/Cubase execution remains separate and unstarted
 - TASK-041 Audio Workspace: **PRODUCT PROMOTION HOSTED CLOSED / FUTURE SLICES REMAIN**
 - TASK-042 V6 Product Workflow: **P-V6-4 HOSTED CLOSED**
 - TASK-043 Product Project / Migration / Recovery: **P-FND-3 HOSTED CLOSED / P-FND-4 LOCAL PASS HOSTED PENDING**

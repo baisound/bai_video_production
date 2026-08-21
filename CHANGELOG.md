@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-036 P-UX-2Eとして、TASK-044のappend-only Timeline編集履歴とProject Manifest/ProjectSave整合性からcurrent EDIT_PERSISTENCE receiptをread-only投影し、空履歴、recovery、改ざん、stale Timeline、caller差替え、旧runtime leaseをfail-closedにしました。Audio/Privacy/Resource/Rightsのowner receipt、実Windows packaged render/output QA、公開、Release/Deployは引き続き別Gateです。
+
 - TASK-041 Audio Completion Contract R0として、6音声roleとTimeline item単位のclosed typed refsを持つpure候補契約を追加し、SOURCE_REVALIDATION_REQUIRED / NOT_MINTED固定によってproject-local JSONや自己SHAからFinal Review PASSを生成しない境界を定義しました。canonical store/latest、upstream再検証、TASK-036 wrapper、audio/network/model/provider/native、Release/Deployは引き続き別Gateです。
 
 - TASK-054 R1として、CGEL Event/Timeline、Game Evidence、Knowledge、Trivia、RAGを現在のcanonical snapshotへ厳密に束縛する決定的Context AssemblerとContext Schema 1.1を追加しました。Evidence/RAG snapshot、LIVE/PTB環境、既存Perk/Killer/Power patch境界、untrusted RAG隔離、Event/Perk Activation一致、128 KiB上限をfail closedで検証します。Provider実行、学習、Dataset採用、TTS、Timeline採用、Release/Deployは引き続き別Human Gateです。

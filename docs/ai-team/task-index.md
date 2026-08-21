@@ -49,6 +49,7 @@
 | TASK-048 | Voice Quality Calibration | CANONICAL_FOUNDATION_HOSTED_CLOSED_LIVE_CALIBRATION_GATED | HOSTED_CLOSED_FOUNDATION_FUTURE_EFFECTS_REQUIRE_FRESH_AUTHORITY | DEV-4 | P-QC-1A metadata contract and P-QC-1B local GAIN receipt admission passed PR #106/#136 at exact main `458b671f`/`82c91917`; lock closures passed PR #108/#137. Real calibration, Gold-label evaluation and Auto Approve/Reject remain OFF. |
 | TASK-051 | v0.22.0 Release Closure | FORMAL_RELEASE_COMPLETE_V0_22_0 | OWNER_EXPLICIT_V0220_TAG_AND_RELEASE | DEV-4 | PR #191 merged at exact release-code main `50a2f06b`; annotated `v0.22.0`, workflow `32407505931` and all six published asset digests PASS. Production Deploy and unfinished native Gates remain excluded. |
 | TASK-052 | DbD Design-to-Implementation Gap Audit / Recognition Completion | IMPLEMENTATION_COMPLETE_THROUGH_R9_REAL_VIDEO_HUMAN_GOLD_GATE | OWNER_EXPLICIT_TASK052_AUTONOMY | DEV-3 | R1-R8 implementation and fail-closed Gold/KPI boundaries are complete. R9 exact Windows EXE startup, bounded UI, cached-map pixel rotation persistence and native backup/restore contracts PASS. Multi-Killer/UI-scale real video, complete 5-10 match Human Gold and production accuracy remain NOT_CONFIRMED behind the Human/data gate. |
+| TASK-054 | DbD Tuned LLM Intermediate Reasoning Layer | DESIGN_COMPLETE_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_FUTURE_DESIGN_REQUEST | DEV-3 | Tuned model is placed after CGEL + compatible Knowledge/RAG and before deterministic Fact/Policy validation. Model binding, narration実況/解説 intake, non-learning ordinary-video confirmation mode, controlled learning mode, setup/SFT-QLoRA/evaluation/rollback Runbook and DbD-specialized Operator UX are designed; no download, training, Provider execution or activation authority. |
 
 ## Roadmap authority
 
@@ -64,6 +65,7 @@ TASK-004, TASK-036 Minimum Editing MVP plus P-UX-1C V6.1.1 visual parity, R2/R3 
 |---|---|---|---|
 | `BVP-KNOWLEDGE-REFIMG-001` Scene-Compatible Reference Image Rule | TASK-013 | REMAINING_REFERENCE_SLICES_DESIGN_ONLY | Character identity, Room master and Scene Shot composition remain separate reference roles; R3 Shot Feasibility promotion is complete, but the remaining Scene-Compatible Reference slices require separate authorization; DIRECT_CONTINUATION reuses exact previous End Asset |
 | `PRODUCT-CONTROL-001` Production Control Plane | TASK-036..041 + existing owners | DESIGN_REGISTERED / ROADMAP_CANONICAL | Plan -> Scene -> Asset Slot -> Candidate -> Audit -> Human Decision -> Lock traceability; no silent overwrite; Reject != Delete; LOCK/STALE; regeneration Evidence |
+| `DBD-TUNED-LLM-001` Tuned LLM Intermediate Reasoning Layer | TASK-054 | DESIGN_COMPLETE / IMPLEMENTATION_NOT_AUTHORIZED | CGEL + compatible Knowledge/RAG -> bounded tuned reasoning/style adapter -> deterministic Fact/Policy validation -> Human-reviewed Commentary Candidate; includes narration実況/解説 intake, no-learning video confirmation, controlled learning, gated setup/tuning and specialized Operator UX |
 
 This registration does not change editing-first execution order and does not reopen TASK-004.
 

@@ -80,6 +80,8 @@ class KillerCapability:
             raise ValueError("invalid killer capability enum")
         if not isinstance(self.survivor_scoped, bool):
             raise ValueError("survivor_scoped must be bool")
+        if (self.required_roi_family is KillerRoiFamily.SURVIVOR_PORTRAIT_OVERLAY) != self.survivor_scoped:
+            raise ValueError("Survivor overlay ROI and survivor_scoped must agree")
         expected_namespace = f"KILLER_SPECIFIC_HUD/{self.killer_id}/{self.effect_id}"
         if self.training_label_namespace != expected_namespace or not _NAMESPACE.fullmatch(expected_namespace):
             raise ValueError("training_label_namespace must match the exact killer/effect namespace")
@@ -114,6 +116,8 @@ class KillerSpecificRoiKey:
             raise ValueError("survivor_slot must be 0..3 when known")
         if self.family is KillerRoiFamily.SURVIVOR_PORTRAIT_OVERLAY and self.survivor_slot is None:
             raise ValueError("Survivor overlay ROI requires a survivor_slot")
+        if self.family is not KillerRoiFamily.SURVIVOR_PORTRAIT_OVERLAY and self.survivor_slot is not None:
+            raise ValueError("non-Survivor ROI cannot carry a survivor_slot")
 
 
 @dataclass(frozen=True, slots=True)
@@ -200,6 +204,19 @@ class KillerCapabilityRegistry:
         self.detectors = dict(detectors)
         self.identity_confidence_milli = identity_confidence_milli
         self.detection_confidence_milli = detection_confidence_milli
+
+    def required_roi_keys(self, identity: KillerPowerVisualObservation) -> tuple[KillerSpecificRoiKey, ...]:
+        """Return only the exact specific ROIs admitted by a known Killer identity."""
+        killer_id = self._selected_killer(identity)
+        if killer_id is None:
+            return ()
+        keys: set[KillerSpecificRoiKey] = set()
+        for capability in self.capabilities:
+            if capability.killer_id != killer_id:
+                continue
+            slots: tuple[int | None, ...] = (0, 1, 2, 3) if capability.survivor_scoped else (None,)
+            keys.update(KillerSpecificRoiKey(capability.required_roi_family, slot) for slot in slots)
+        return tuple(sorted(keys, key=lambda item: (item.family.value, -1 if item.survivor_slot is None else item.survivor_slot)))
 
     def route(
         self,

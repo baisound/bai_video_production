@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R4A_COMPLETE / R4B_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R4B_COMPLETE / R4C_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -88,5 +88,11 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   tkinter-independent TASK-052/Killer/recorded-video affected regression `80 PASS`.
   The lightweight WSL test environment lacks tkinter, so the packaged-startup
   module was not rerun in this unit; its prior Windows native PASS remains unchanged.
+- R4B recorded-video routing: complete; the resolved/aligned HUD Profile maps
+  existing Survivor slots and Killer-power ROI into R4A, reuses common Survivor
+  slices, requires bounded match identity and persists body-free digest Evidence.
+  Unknown/power-only identity requests no specific overlays. Focused R3C-R4B,
+  recorded-video and profile compatibility regression `31 PASS`; tkinter-independent
+  TASK-052/Killer/recorded-video/profile/vision-slice affected regression `95 PASS`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R4B recorded-video ROI/profile orchestration over the R4A registry.
+- Next dependency-ordered unit: R4C namespaced detector/Teacher registration and review routing.

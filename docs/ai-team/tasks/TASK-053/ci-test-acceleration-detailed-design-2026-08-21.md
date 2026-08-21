@@ -1,7 +1,7 @@
 # TASK-053 CI Test Acceleration Detailed Design
 
 Date: 2026-08-21
-Status: IMPLEMENTED / HOSTED VALIDATION PENDING
+Status: IMPLEMENTED / HOSTED 9 OF 9 PASS
 Development depth: DEV-2 STANDARD
 
 ## 1. Goal and authority
@@ -67,3 +67,7 @@ Acceptance:
 - no per-item timeout, worker crash or replay occurred
 - unfiltered WSL run's only residuals were the environment's missing `tkinter` module (1 failure, 3 collection errors); this is kept separate from the parallel-run technical result
 - hosted Linux/Windows matrix remains the final acceptance authority
+
+## 8. Hosted acceptance evidence
+
+PR #208のfirst hosted runは全9 checks PASS。Linuxは1分11〜17秒、Windowsは2分40秒〜3分09秒で完了し、timeout/worker crash/replayは発生しなかった。これにより固定2 worker・file distribution・bounded timeoutのcross-platform compatibilityを確認した。

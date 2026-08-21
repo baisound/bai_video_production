@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-041 Audio Completion Contract R0として、6音声roleとTimeline item単位のclosed typed refsを持つpure候補契約を追加し、SOURCE_REVALIDATION_REQUIRED / NOT_MINTED固定によってproject-local JSONや自己SHAからFinal Review PASSを生成しない境界を定義しました。canonical store/latest、upstream再検証、TASK-036 wrapper、audio/network/model/provider/native、Release/Deployは引き続き別Gateです。
+
 - TASK-054 R0として、既存CGEL/Commentary正本ID・Claim型を再利用するDbDチューニングLLM中間層のBinding、Context、Proposal、Execution Receiptとcanonical Schemaを追加しました。確認モードはDataset・Binding・Training Jobの前後完全一致を強制し、stale、未検証RAG、秘密値、過大Context、未知Schema、改ざん、silent fallback/retryをfail closedにします。Dataset採用、モデル/runtime取得、学習、Provider実行、TTS、Timeline採用、Release/Deployは引き続き別Human Gateです。
 
 - TASK-014として、packaging 25.0提案pinの公式PyPIメタデータをcredential-free・no-redirect・no-retryのbounded HTTPS observerでexact 1回診断観測し、DNS/TLS/request/response phase receipt、schema mirror、fail-closed parserを追加しました。観測はdiagnostic-onlyで、pin acceptance、artifact download、parser import、resolver/install/runtime/model/audio authorityは引き続き未認可です。

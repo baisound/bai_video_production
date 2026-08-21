@@ -1,0 +1,871 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/audio-completion-receipt.schema.json",
+  "title": "TASK-041 Audio Completion admission candidate R0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "task_owner",
+    "receipt_id",
+    "revision",
+    "parent_receipt_sha256",
+    "scope_binding",
+    "scope_binding_sha256",
+    "role_declarations",
+    "evidence_bindings",
+    "candidate_state",
+    "canonical_state",
+    "reason_codes",
+    "evaluated_at",
+    "current_valid",
+    "invalidation_epoch",
+    "inputs_origin_authenticated",
+    "source_records_semantically_revalidated",
+    "chain_diagnostic",
+    "authority_flags",
+    "effect_flags",
+    "receipt_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "bai.task041.audio-completion-admission-candidate.v1"
+    },
+    "record_type": {
+      "const": "AudioCompletionAdmissionCandidate"
+    },
+    "task_owner": {
+      "const": "TASK-041"
+    },
+    "receipt_id": {
+      "$ref": "#/$defs/id"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "parent_receipt_sha256": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/digest"
+        }
+      ]
+    },
+    "scope_binding": {
+      "$ref": "#/$defs/scope"
+    },
+    "scope_binding_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "role_declarations": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/role"
+            },
+            {
+              "properties": {
+                "role": {
+                  "const": "SOURCE"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/role"
+            },
+            {
+              "properties": {
+                "role": {
+                  "const": "SE"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/role"
+            },
+            {
+              "properties": {
+                "role": {
+                  "const": "BGM"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/role"
+            },
+            {
+              "properties": {
+                "role": {
+                  "const": "AMBIENCE"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/role"
+            },
+            {
+              "properties": {
+                "role": {
+                  "const": "NARRATION"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/role"
+            },
+            {
+              "properties": {
+                "role": {
+                  "const": "MIX_STEM"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "items": false
+    },
+    "evidence_bindings": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "candidate_state": {
+      "const": "SOURCE_REVALIDATION_REQUIRED"
+    },
+    "canonical_state": {
+      "const": "NOT_MINTED"
+    },
+    "reason_codes": {
+      "const": [
+        "SOURCE_RECORDS_REQUIRE_OWNER_API_REVALIDATION"
+      ]
+    },
+    "evaluated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "current_valid": {
+      "type": "boolean"
+    },
+    "invalidation_epoch": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "inputs_origin_authenticated": {
+      "const": false
+    },
+    "source_records_semantically_revalidated": {
+      "const": false
+    },
+    "chain_diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent_link_checked_in_memory",
+        "parent_link_matches",
+        "revision_gap_absence_verified",
+        "fork_absence_verified",
+        "latest_state_verified",
+        "persistence_verified"
+      ],
+      "properties": {
+        "parent_link_checked_in_memory": {
+          "const": false
+        },
+        "parent_link_matches": {
+          "const": false
+        },
+        "revision_gap_absence_verified": {
+          "const": false
+        },
+        "fork_absence_verified": {
+          "const": false
+        },
+        "latest_state_verified": {
+          "const": false
+        },
+        "persistence_verified": {
+          "const": false
+        }
+      }
+    },
+    "authority_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_admission_authorized",
+        "canonical_receipt_minted",
+        "source_authority_reissued",
+        "store_write_authorized",
+        "latest_state_authorized",
+        "final_review_gate_issued"
+      ],
+      "properties": {
+        "canonical_admission_authorized": {
+          "const": false
+        },
+        "canonical_receipt_minted": {
+          "const": false
+        },
+        "source_authority_reissued": {
+          "const": false
+        },
+        "store_write_authorized": {
+          "const": false
+        },
+        "latest_state_authorized": {
+          "const": false
+        },
+        "final_review_gate_issued": {
+          "const": false
+        }
+      }
+    },
+    "effect_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesystem_read",
+        "filesystem_written",
+        "network_accessed",
+        "provider_called",
+        "paid_call_started",
+        "audio_read",
+        "audio_written",
+        "asset_published",
+        "placement_mutated",
+        "daw_operation_started",
+        "release_started",
+        "deployment_started"
+      ],
+      "properties": {
+        "filesystem_read": {
+          "const": false
+        },
+        "filesystem_written": {
+          "const": false
+        },
+        "network_accessed": {
+          "const": false
+        },
+        "provider_called": {
+          "const": false
+        },
+        "paid_call_started": {
+          "const": false
+        },
+        "audio_read": {
+          "const": false
+        },
+        "audio_written": {
+          "const": false
+        },
+        "asset_published": {
+          "const": false
+        },
+        "placement_mutated": {
+          "const": false
+        },
+        "daw_operation_started": {
+          "const": false
+        },
+        "release_started": {
+          "const": false
+        },
+        "deployment_started": {
+          "const": false
+        }
+      }
+    },
+    "receipt_sha256": {
+      "$ref": "#/$defs/digest"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "revision": {
+            "const": 1
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parent_receipt_sha256": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "parent_receipt_sha256": {
+            "$ref": "#/$defs/digest"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "canonical_state": {
+            "const": "NOT_MINTED"
+          }
+        },
+        "required": [
+          "canonical_state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "current_valid": {
+            "const": false
+          },
+          "invalidation_epoch": {
+            "const": 0
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id",
+        "project_revision",
+        "project_manifest_sha256",
+        "timeline_id",
+        "timeline_revision",
+        "timeline_sha256",
+        "workspace_snapshot_sha256",
+        "source_truth_receipt_id",
+        "source_truth_receipt_sha256",
+        "source_truth_owner",
+        "source_truth_record_type",
+        "role_policy_receipt_id",
+        "role_policy_receipt_sha256",
+        "role_policy_owner",
+        "role_policy_record_type",
+        "requirements_authority_verified",
+        "source_origin_authenticated",
+        "scope_binding_sha256"
+      ],
+      "properties": {
+        "project_id": {
+          "$ref": "#/$defs/id"
+        },
+        "project_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "project_manifest_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "timeline_id": {
+          "$ref": "#/$defs/id"
+        },
+        "timeline_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "timeline_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "workspace_snapshot_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "source_truth_receipt_id": {
+          "$ref": "#/$defs/id"
+        },
+        "source_truth_receipt_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "source_truth_owner": {
+          "const": "TASK-041"
+        },
+        "source_truth_record_type": {
+          "const": "AudioCompletionSourceTruthReceipt"
+        },
+        "role_policy_receipt_id": {
+          "$ref": "#/$defs/id"
+        },
+        "role_policy_receipt_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "role_policy_owner": {
+          "const": "TASK-041"
+        },
+        "role_policy_record_type": {
+          "const": "AudioCompletionRolePolicy"
+        },
+        "requirements_authority_verified": {
+          "const": false
+        },
+        "source_origin_authenticated": {
+          "const": false
+        },
+        "scope_binding_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_owner",
+        "record_type",
+        "record_id",
+        "record_sha256"
+      ],
+      "properties": {
+        "authority_owner": {
+          "const": "TASK-041"
+        },
+        "record_type": {
+          "const": "AudioMediaReviewDecision"
+        },
+        "record_id": {
+          "$ref": "#/$defs/id"
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "externalReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_owner",
+        "record_type",
+        "record_id",
+        "record_sha256"
+      ],
+      "properties": {
+        "authority_owner": {
+          "const": "TASK-041"
+        },
+        "record_type": {
+          "const": "ExternalAudioReviewReceiptBinding"
+        },
+        "record_id": {
+          "$ref": "#/$defs/id"
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "placement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_owner",
+        "record_type",
+        "record_id",
+        "record_sha256"
+      ],
+      "properties": {
+        "authority_owner": {
+          "const": "TASK-026"
+        },
+        "record_type": {
+          "const": "AudioPlacementCompilationRecord"
+        },
+        "record_id": {
+          "$ref": "#/$defs/id"
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "narration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_owner",
+        "record_type",
+        "record_id",
+        "record_sha256"
+      ],
+      "properties": {
+        "authority_owner": {
+          "const": "TASK-014"
+        },
+        "record_type": {
+          "const": "NarrationPublicationReceipt"
+        },
+        "record_id": {
+          "$ref": "#/$defs/id"
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "finishing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_owner",
+        "record_type",
+        "record_id",
+        "record_sha256"
+      ],
+      "properties": {
+        "authority_owner": {
+          "const": "TASK-035"
+        },
+        "record_type": {
+          "const": "AudioRoundTripManifest"
+        },
+        "record_id": {
+          "$ref": "#/$defs/id"
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "item_id",
+        "role",
+        "item_source_sha256",
+        "review_receipt",
+        "external_review_receipt",
+        "placement_receipt",
+        "narration_publication_receipt",
+        "finishing_receipt",
+        "evidence_state",
+        "evidence_current_at_evaluation",
+        "evidence_invalidation_epoch",
+        "source_authority_reissued",
+        "evidence_binding_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "AudioCompletionEvidenceBinding"
+        },
+        "item_id": {
+          "$ref": "#/$defs/id"
+        },
+        "role": {
+          "enum": [
+            "SOURCE",
+            "SE",
+            "BGM",
+            "AMBIENCE",
+            "NARRATION",
+            "MIX_STEM"
+          ]
+        },
+        "item_source_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "review_receipt": {
+          "$ref": "#/$defs/review"
+        },
+        "external_review_receipt": {
+          "$ref": "#/$defs/externalReview"
+        },
+        "placement_receipt": {
+          "$ref": "#/$defs/placement"
+        },
+        "narration_publication_receipt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/narration"
+            }
+          ]
+        },
+        "finishing_receipt": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/finishing"
+            }
+          ]
+        },
+        "evidence_state": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "UNKNOWN",
+            "STALE",
+            "REVOKED"
+          ]
+        },
+        "evidence_current_at_evaluation": {
+          "type": "boolean"
+        },
+        "evidence_invalidation_epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        },
+        "source_authority_reissued": {
+          "const": false
+        },
+        "evidence_binding_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "role": {
+                "const": "NARRATION"
+              }
+            },
+            "required": [
+              "role"
+            ]
+          },
+          "then": {
+            "properties": {
+              "narration_publication_receipt": {
+                "$ref": "#/$defs/narration"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "narration_publication_receipt": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_state": {
+                "enum": [
+                  "PASS",
+                  "FAIL",
+                  "UNKNOWN"
+                ]
+              }
+            },
+            "required": [
+              "evidence_state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_current_at_evaluation": {
+                "const": true
+              },
+              "evidence_invalidation_epoch": {
+                "const": 0
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidence_state": {
+                "enum": [
+                  "STALE",
+                  "REVOKED"
+                ]
+              }
+            },
+            "required": [
+              "evidence_state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "evidence_current_at_evaluation": {
+                "const": false
+              },
+              "evidence_invalidation_epoch": {
+                "minimum": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "requirement",
+        "presence",
+        "finishing_requirement",
+        "expected_item_ids",
+        "expected_item_binding_sha256s"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "SOURCE",
+            "SE",
+            "BGM",
+            "AMBIENCE",
+            "NARRATION",
+            "MIX_STEM"
+          ]
+        },
+        "requirement": {
+          "enum": [
+            "REQUIRED",
+            "OPTIONAL"
+          ]
+        },
+        "presence": {
+          "enum": [
+            "PRESENT",
+            "ABSENT_CONFIRMED",
+            "UNKNOWN"
+          ]
+        },
+        "finishing_requirement": {
+          "enum": [
+            "REQUIRED",
+            "OPTIONAL",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "expected_item_ids": {
+          "type": "array",
+          "maxItems": 1024,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "expected_item_binding_sha256s": {
+          "type": "array",
+          "maxItems": 1024,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/digest"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "requirement": {
+                "const": "REQUIRED"
+              }
+            },
+            "required": [
+              "requirement"
+            ]
+          },
+          "then": {
+            "properties": {
+              "expected_item_ids": {
+                "minItems": 1
+              },
+              "expected_item_binding_sha256s": {
+                "minItems": 1
+              },
+              "presence": {
+                "enum": [
+                  "PRESENT",
+                  "UNKNOWN"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "presence": {
+                "const": "ABSENT_CONFIRMED"
+              }
+            },
+            "required": [
+              "presence"
+            ]
+          },
+          "then": {
+            "properties": {
+              "requirement": {
+                "const": "OPTIONAL"
+              },
+              "expected_item_ids": {
+                "maxItems": 0
+              },
+              "expected_item_binding_sha256s": {
+                "maxItems": 0
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

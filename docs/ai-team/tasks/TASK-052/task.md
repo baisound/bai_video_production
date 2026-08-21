@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R5C2A_COMPLETE / R5C2B_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R5_COMPLETE / R6_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -141,5 +141,12 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   regression `26 PASS`; TASK-049 DbD/TASK-052 affected regression `205 PASS`;
   TASK-050/TASK-051 compatibility regression `186 PASS`; unresolved Critical/High
   `0 / 0`.
+- R5C2B Status Effect Teacher operator UI: complete; workspace-scoped atomic and
+  revisioned definition registry binds effect identity/polarity/source/scope,
+  Training Studio exposes both calibrated positive/negative regions and canonical
+  Perk hard-negatives, and whole-region batch intake requires explicit single-icon
+  Human confirmation. Focused regression `17 PASS`; TASK-050/TASK-052 affected
+  regression `193 PASS`; TASK-051 compatibility/source gate `118 PASS`; unresolved
+  Critical/High `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R5C2B Status Effect Teacher operator UI.
+- Next dependency-ordered unit: R6 Tier 3 object/scene gaps selected from the traceability matrix.

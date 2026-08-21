@@ -30,6 +30,10 @@ from .dbd_game_knowledge_presentation import (
 from .dbd_image_assets import ImageAssetDecodeError, decode_image_for_preview
 from .dbd_killer_capability_registry import KillerCapabilityRegistry, initial_killer_capabilities
 from .dbd_killer_specific_detector import KillerSpecificTeacherLabel, KillerSpecificTeacherRole
+from .dbd_killer_status_temporal import (
+    EffectPolarity, EffectSourceKind, StatusEffectDefinition,
+)
+from .dbd_status_effect_registry import StatusEffectRegistry, status_effect_teacher_label
 from .dbd_observation_envelope import SurvivorSignalKind
 from .dbd_map_intelligence import MapIntelligenceStore, MapRecord
 from .dbd_video_analysis_workspace import DbDVideoAnalysisWorkspaceService
@@ -196,6 +200,9 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     map_intelligence_store = MapIntelligenceStore(
         workspace.root / "knowledge" / "map-intelligence.json"
     )
+    status_effect_registry = StatusEffectRegistry(
+        workspace.root / "knowledge" / "status-effect-definitions.json"
+    )
     video_analysis_service = DbDVideoAnalysisWorkspaceService(
         workspace, ffprobe_executable=runtime_ffprobe, ffmpeg_executable=runtime_ffmpeg,
         tesseract_executable=runtime_tesseract, model_cache=runtime_model_cache,
@@ -205,6 +212,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         workspace_root=workspace.root,
         manifest=workspace.visual,
         killer_capability_registry=killer_capability_registry,
+        status_effect_definitions=status_effect_registry.snapshot().definitions,
     )
     notification_semantics = NotificationSemanticStore(
         workspace.root / "knowledge" / "upper-right-notification-semantics.json"
@@ -471,6 +479,12 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         "teacher_active": tk.StringVar(value="true"),
         "teacher_stage": tk.StringVar(),
         "teacher_progress_milli": tk.StringVar(),
+        "status_effect_definition": tk.StringVar(),
+        "status_effect_id": tk.StringVar(),
+        "status_effect_polarity": tk.StringVar(value=EffectPolarity.POSITIVE.value),
+        "status_effect_source": tk.StringVar(value=EffectSourceKind.GAME_MECHANIC.value),
+        "status_effect_survivor_scoped": tk.BooleanVar(value=False),
+        "status_single_icon_confirmed": tk.BooleanVar(value=False),
         "ffmpeg": tk.StringVar(value=runtime_ffmpeg),
     }
 
@@ -649,6 +663,81 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     killer_teacher_role_combo.bind("<<ComboboxSelected>>", sync_killer_teacher_options)
     sync_killer_teacher_options()
 
+    status_teacher_frame = ttk.LabelFrame(
+        video_source_box,
+        text="状態効果Teacher契約（正負状態効果時のみ使用）",
+        padding=6,
+    )
+    status_teacher_frame.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(0, 6))
+    status_teacher_frame.columnconfigure(1, weight=1)
+    status_definition_combo = ttk.Combobox(
+        status_teacher_frame, textvariable=video_vars["status_effect_definition"],
+        state="readonly",
+    )
+    ttk.Label(status_teacher_frame, text="登録済み定義").grid(row=0, column=0, sticky="w")
+    status_definition_combo.grid(row=0, column=1, columnspan=3, sticky="ew", padx=4)
+    ttk.Label(status_teacher_frame, text="effect_id").grid(row=1, column=0, sticky="w")
+    ttk.Entry(status_teacher_frame, textvariable=video_vars["status_effect_id"]).grid(row=1, column=1, sticky="ew", padx=4)
+    ttk.Combobox(
+        status_teacher_frame, textvariable=video_vars["status_effect_polarity"],
+        values=[item.value for item in EffectPolarity], state="readonly", width=11,
+    ).grid(row=1, column=2, sticky="ew", padx=4)
+    ttk.Combobox(
+        status_teacher_frame, textvariable=video_vars["status_effect_source"],
+        values=[item.value for item in EffectSourceKind if item is not EffectSourceKind.UNKNOWN],
+        state="readonly", width=16,
+    ).grid(row=1, column=3, sticky="ew", padx=4)
+    ttk.Checkbutton(
+        status_teacher_frame, text="サバイバー主体", variable=video_vars["status_effect_survivor_scoped"],
+    ).grid(row=2, column=1, sticky="w", padx=4)
+    ttk.Checkbutton(
+        status_teacher_frame,
+        text="選択範囲の状態効果領域は全フレームで対象アイコン1個だけ（必須）",
+        variable=video_vars["status_single_icon_confirmed"],
+    ).grid(row=3, column=0, columnspan=4, sticky="w", padx=4, pady=(3, 0))
+
+    def refresh_status_effect_definitions(*, select_id: str = "") -> None:
+        snapshot = status_effect_registry.snapshot()
+        safe_visual_learning.status_effect_definitions = snapshot.definitions
+        choices = {
+            f"{item.effect_id} / {item.polarity.value} / {item.source_kind.value}": item
+            for item in snapshot.definitions
+        }
+        status_definition_combo.configure(values=list(choices))
+        selected = next(
+            (label for label, item in choices.items() if item.effect_id == select_id),
+            next(iter(choices), ""),
+        )
+        video_vars["status_effect_definition"].set(selected)
+        status_definition_choices.clear()
+        status_definition_choices.update(choices)
+
+    def register_status_effect_definition() -> None:
+        try:
+            definition = StatusEffectDefinition(
+                video_vars["status_effect_id"].get().strip(),
+                EffectPolarity(video_vars["status_effect_polarity"].get()),
+                EffectSourceKind(video_vars["status_effect_source"].get()),
+                survivor_scoped=video_vars["status_effect_survivor_scoped"].get(),
+            )
+            snapshot = status_effect_registry.snapshot()
+            status_effect_registry.upsert(definition, expected_revision=snapshot.revision)
+            refresh_status_effect_definitions(select_id=definition.effect_id)
+            rebuild_video_slot_rows()
+            status.set(f"状態効果定義を登録: {definition.effect_id}")
+        except Exception as exc:
+            show_operation_error(
+                "状態効果定義", "ERR_DBD_STATUS_EFFECT_DEFINITION",
+                "状態効果定義を登録できませんでした。",
+                "effect_id、極性、出所と同時編集の有無を確認してください。", exc,
+            )
+
+    ttk.Button(
+        status_teacher_frame, text="状態効果定義を登録", command=register_status_effect_definition,
+    ).grid(row=2, column=2, columnspan=2, sticky="e", padx=4)
+    status_definition_choices: dict[str, StatusEffectDefinition] = {}
+    refresh_status_effect_definitions()
+
     kind_map = {
         VisualTrainingDomain.PERK_ICON: GameKnowledgeKind.PERK,
         VisualTrainingDomain.ITEM_ICON: GameKnowledgeKind.ITEM,
@@ -684,9 +773,17 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         if internal:
             video_vars["domain"].set(internal)
         domain = VisualTrainingDomain(video_vars["domain"].get())
+        is_status_domain = domain in {
+            VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+            VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+        }
         clear_slot_frame()
         specs = slot_specifications(domain)
-        expected_kind = kind_map.get(domain)
+        expected_kind = (
+            GameKnowledgeKind.PERK
+            if is_status_domain and video_vars["group"].get() == "hard-negative"
+            else kind_map.get(domain)
+        )
         choices = (
             alias_choices(entity_alias_catalog, knowledge_kind=expected_kind)
             if expected_kind is not None
@@ -709,7 +806,12 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             }
             video_slot_rows.append(row_state)
 
-            if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+            if is_status_domain and video_vars["group"].get() != "hard-negative":
+                ttk.Label(
+                    slot_frame,
+                    text="上の登録済み状態効果定義を正解identityとして使用します。",
+                ).grid(row=row_no, column=1, columnspan=2, sticky="w", pady=3)
+            elif domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
                 enabled_var = tk.BooleanVar(value=False)
                 row_state["enabled"] = enabled_var
                 ttk.Checkbutton(
@@ -782,10 +884,12 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     video_visibility_combo.bind("<<ComboboxSelected>>", sync_video_visibility)
 
     ttk.Label(video_condition_box, text="画像グループ").grid(row=1, column=0, sticky="w", pady=3)
-    ttk.Combobox(
+    video_group_combo = ttk.Combobox(
         video_condition_box, textvariable=video_vars["group"],
         values=VISUAL_GROUP_PRESETS, state="normal",
-    ).grid(row=1, column=1, columnspan=2, sticky="ew", pady=3)
+    )
+    video_group_combo.grid(row=1, column=1, columnspan=2, sticky="ew", pady=3)
+    video_group_combo.bind("<<ComboboxSelected>>", rebuild_video_slot_rows)
     ttk.Label(
         video_condition_box, text=VISUAL_GROUP_HELP_JA, wraplength=520,
     ).grid(row=2, column=1, columnspan=2, sticky="w", pady=(0, 4))
@@ -863,12 +967,47 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     def active_slot_selections() -> list[tuple[int | None, str, str]]:
         selections = []
         domain = VisualTrainingDomain(video_vars["domain"].get())
+        is_status_domain = domain in {
+            VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+            VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+        }
+        if is_status_domain and not video_vars["status_single_icon_confirmed"].get():
+            raise ValueError(
+                "状態効果Teacherは、選択範囲の領域が全フレームで対象アイコン1個だけであることを確認してください。"
+            )
         for row_state in video_slot_rows:
             if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
                 if not row_state["enabled"].get():
                     continue
                 capability = killer_capability_choices[video_vars["killer_capability"].get()]
                 entity_id = f"{capability.effect_id}-{video_vars['teacher_role'].get().lower()}"
+            elif is_status_domain and video_vars["group"].get() != "hard-negative":
+                definition = status_definition_choices.get(
+                    video_vars["status_effect_definition"].get()
+                )
+                if definition is None:
+                    raise ValueError("先に状態効果定義を登録・選択してください。")
+                polarity = (
+                    EffectPolarity.POSITIVE
+                    if domain is VisualTrainingDomain.STATUS_EFFECT_POSITIVE
+                    else EffectPolarity.NEGATIVE
+                )
+                entity_id = status_effect_teacher_label(
+                    polarity=polarity, definition=definition,
+                )
+            elif is_status_domain:
+                perk_id = row_state["entity_id"].get().strip()
+                entity_id = (
+                    status_effect_teacher_label(
+                        polarity=(
+                            EffectPolarity.POSITIVE
+                            if domain is VisualTrainingDomain.STATUS_EFFECT_POSITIVE
+                            else EffectPolarity.NEGATIVE
+                        ),
+                        hard_negative_perk_id=perk_id,
+                    )
+                    if perk_id else ""
+                )
             else:
                 entity_id = row_state["entity_id"].get().strip()
             if entity_id:

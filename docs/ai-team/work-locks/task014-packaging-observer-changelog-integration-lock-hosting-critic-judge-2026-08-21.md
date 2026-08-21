@@ -15,7 +15,7 @@ This exact two-file governance transaction reserves one shared
 check for target PR `#207`. It changes no Product implementation, runtime,
 version, Tag, Release, Provider or audio state.
 
-- fresh base main: `41b312f9ccc45cd98f1f025a9e86807c6e7623d8`
+- fresh base main: `da2848bd363c2880ff3bceb89b6aa11dee3c49b9`
 - Registry revision: `29 -> 30`
 - previous TASK-036 shared lock: `HOSTED_CLOSED_RELEASED`
 - intervening TASK-052 PR `#212`: merged as
@@ -27,6 +27,9 @@ version, Tag, Release, Provider or audio state.
   `32449834356` completed successfully
 - intervening TASK-052 PR `#220`: merged as
   `41b312f9ccc45cd98f1f025a9e86807c6e7623d8`; its CHANGELOG line is
+  preserved in fresh main
+- intervening TASK-052 PR `#221`: merged as
+  `da2848bd363c2880ff3bceb89b6aa11dee3c49b9`; its CHANGELOG line is
   preserved in fresh main
 - target branch: `codex/task-014-packaging-parser-pin-observation-r0`
 - expected target head: `dcc923cb3363656475b7b82167a02f1ec0793f7b`
@@ -46,7 +49,7 @@ version, Tag, Release, Provider or audio state.
 ## Pre-host review
 
 - fresh main / closed previous lock read-back: PASS
-- fresh post-`#220` open PR shared-path overlap: `0`
+- fresh post-`#221` open PR shared-path overlap: `0`
 - target PR exact five-file scope and head: PASS
 - one-line append-only effect and authority boundaries: PASS
 - JSON parse / exact lock read-back: PASS (`revision=30`, lock count `1`)
@@ -56,10 +59,15 @@ version, Tag, Release, Provider or audio state.
   xdist worker-process crash while running the native installer acceptance;
   no unchanged-head retry was performed
 - TASK-053 repair and main post-merge gate: PASS
-- fresh-main integration merge commit:
-  `e8b0da59fa87cf7b43e6a297bc03ded7a319c171`
+- post-`#220` refreshed hosting-head checks: `9 / 9 PASS`; no retry,
+  workflow exception or CI weakening
+- PR `#221` appeared with a `CHANGELOG.md` overlap before the hosting merge;
+  the hosting merge was stopped until `#221` completed `9 / 9 PASS` and
+  merged normally
+- current fresh-main integration merge commit:
+  `ea1a83f6ccf91d2010dbdea543458c7c5abbafdd`
 - Registry parse/read-back after refresh: PASS (`revision=30`, nonclosed
-  integration lock count `1`, base `41b312f9ccc45cd98f1f025a9e86807c6e7623d8`)
+  integration lock count `1`, base `da2848bd363c2880ff3bceb89b6aa11dee3c49b9`)
 - OSS readiness direct execution: `12 PASS`; the existing isolated pytest
   entrypoint was inaccessible, so the twelve no-fixture test functions were
   invoked directly with the bundled Python and no install or network access
@@ -76,6 +84,11 @@ Independent final review after PR `#212` merge and fresh-main re-audit:
 - Critic/Judge: Critical `0`, High `0`, Medium `0`; exact-two stage / draft PR GO
 
 Independent freshness review after TASK-053 repair and PR `#220` merge:
+
+- Tester: Critical `0`, High `0`, Medium `0`; exact-two commit / push GO
+- Critic/Judge: Critical `0`, High `0`, Medium `0`; exact-two commit / push GO
+
+Independent final freshness review after PR `#221` merge:
 
 - Tester: Critical `0`, High `0`, Medium `0`; exact-two commit / push GO
 - Critic/Judge: Critical `0`, High `0`, Medium `0`; exact-two commit / push GO

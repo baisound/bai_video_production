@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R3_COMPLETE / R4A_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R4A_COMPLETE / R4B_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -81,5 +81,12 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   isolation, appearance/disappearance hysteresis and contradiction recovery are
   implemented as state Evidence only. R3A-R3C focused regression `33 PASS`;
   TASK-049/TASK-052 affected regression `252 PASS`; unresolved Critical/High `0 / 0`.
+- R4A Killer Capability Registry: complete; exact Killer/effect/ROI/detector/teacher
+  namespace contracts, Ghost Face/Onryo/Doctor starter fixtures, identity-first
+  detector selection, four-slot Survivor routing and runtime cross-Killer hard
+  negatives fail closed to UNKNOWN. Focused R4A/R3C regression `18 PASS`;
+  tkinter-independent TASK-052/Killer/recorded-video affected regression `80 PASS`.
+  The lightweight WSL test environment lacks tkinter, so the packaged-startup
+  module was not rerun in this unit; its prior Windows native PASS remains unchanged.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R4A Killer-conditioned detector registry and observation routing.
+- Next dependency-ordered unit: R4B recorded-video ROI/profile orchestration over the R4A registry.

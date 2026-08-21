@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R3B_COMPLETE / R3C_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R3_COMPLETE / R4A_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -76,5 +76,10 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   subjectless candidates retain their global compatibility path. Focused regression
   `42 PASS`; TASK-049/TASK-052 affected regression `243 PASS`; unresolved
   Critical/High `0 / 0`.
+- R3C Killer/status temporal state: complete; exact Killer/effect registry routing,
+  profile-bound stage/progress monotonicity, positive/negative effect namespace
+  isolation, appearance/disappearance hysteresis and contradiction recovery are
+  implemented as state Evidence only. R3A-R3C focused regression `33 PASS`;
+  TASK-049/TASK-052 affected regression `252 PASS`; unresolved Critical/High `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R3C killer-specific progress/stage and status-effect temporal state.
+- Next dependency-ordered unit: R4A Killer-conditioned detector registry and observation routing.

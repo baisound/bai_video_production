@@ -6,6 +6,7 @@ and GameKnowledgeKind; this module does not create competing entity truth.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 from enum import Enum
 import sqlite3
@@ -87,8 +88,9 @@ class EntityAliasCatalog:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(self.path) as conn:
-            conn.executescript("""
+        with closing(sqlite3.connect(self.path)) as conn:
+            with conn:
+                conn.executescript("""
             CREATE TABLE IF NOT EXISTS entity_alias(
               entity_id TEXT NOT NULL,
               knowledge_kind TEXT NOT NULL,
@@ -102,32 +104,63 @@ class EntityAliasCatalog:
               source_ref TEXT NOT NULL,
               PRIMARY KEY(entity_id, knowledge_kind, normalized_alias, alias_type)
             );
-            CREATE INDEX IF NOT EXISTS entity_alias_lookup
-              ON entity_alias(normalized_alias, locale, review_status, priority DESC);
-            """)
+                CREATE INDEX IF NOT EXISTS entity_alias_lookup
+                  ON entity_alias(normalized_alias, locale, review_status, priority DESC);
+                """)
 
     def put(self, record: EntityAliasRecord) -> None:
-        with sqlite3.connect(self.path) as conn:
-            conn.execute(
-                """INSERT INTO entity_alias(
-                   entity_id,knowledge_kind,alias_text,normalized_alias,alias_type,
-                   locale,reading,priority,review_status,source_ref)
-                   VALUES(?,?,?,?,?,?,?,?,?,?)
-                   ON CONFLICT(entity_id,knowledge_kind,normalized_alias,alias_type)
-                   DO UPDATE SET alias_text=excluded.alias_text, locale=excluded.locale,
-                     reading=excluded.reading, priority=excluded.priority,
-                     review_status=excluded.review_status, source_ref=excluded.source_ref""",
-                (
-                    record.entity_id, record.knowledge_kind.value, record.alias_text,
-                    record.normalized_alias, record.alias_type.value, record.locale,
-                    record.reading, record.priority, record.review_status.value,
-                    record.source_ref,
-                ),
-            )
+        with closing(sqlite3.connect(self.path)) as conn:
+            with conn:
+                conn.execute(
+                    """INSERT INTO entity_alias(
+                       entity_id,knowledge_kind,alias_text,normalized_alias,alias_type,
+                       locale,reading,priority,review_status,source_ref)
+                       VALUES(?,?,?,?,?,?,?,?,?,?)
+                       ON CONFLICT(entity_id,knowledge_kind,normalized_alias,alias_type)
+                       DO UPDATE SET alias_text=excluded.alias_text, locale=excluded.locale,
+                         reading=excluded.reading, priority=excluded.priority,
+                         review_status=excluded.review_status, source_ref=excluded.source_ref""",
+                    (
+                        record.entity_id, record.knowledge_kind.value, record.alias_text,
+                        record.normalized_alias, record.alias_type.value, record.locale,
+                        record.reading, record.priority, record.review_status.value,
+                        record.source_ref,
+                    ),
+                )
 
     def put_many(self, records: Iterable[EntityAliasRecord]) -> None:
         for record in records:
             self.put(record)
+
+    def replace_entity_aliases(self, entity_id: str, knowledge_kind: GameKnowledgeKind, records: Iterable[EntityAliasRecord]) -> None:
+        """Replace the searchable aliases for one entity as one bounded catalog operation."""
+        rows = tuple(records)
+        if any(row.entity_id != entity_id or row.knowledge_kind is not knowledge_kind for row in rows):
+            raise ValueError("replacement aliases must belong to the same entity and knowledge kind")
+        with closing(sqlite3.connect(self.path)) as conn:
+            with conn:
+                conn.execute(
+                    "DELETE FROM entity_alias WHERE entity_id=? AND knowledge_kind=?",
+                    (entity_id, knowledge_kind.value),
+                )
+                for record in rows:
+                    conn.execute(
+                        """INSERT INTO entity_alias(
+                           entity_id,knowledge_kind,alias_text,normalized_alias,alias_type,
+                           locale,reading,priority,review_status,source_ref)
+                           VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                        (
+                            record.entity_id, record.knowledge_kind.value, record.alias_text,
+                            record.normalized_alias, record.alias_type.value, record.locale,
+                            record.reading, record.priority, record.review_status.value,
+                            record.source_ref,
+                        ),
+                    )
+
+    def count(self) -> int:
+        with closing(sqlite3.connect(self.path)) as conn:
+            row = conn.execute("SELECT COUNT(*) FROM entity_alias").fetchone()
+        return 0 if row is None else int(row[0])
 
     def search(
         self,
@@ -138,20 +171,43 @@ class EntityAliasCatalog:
         verified_only: bool = False,
         limit: int = 50,
     ) -> tuple[EntityAliasResolution, ...]:
-        normalized = normalize_entity_alias(query)
+        if not isinstance(query, str):
+            raise ValueError("query must be text")
+
+        raw_query = query.strip()
+
         sql = """SELECT entity_id,knowledge_kind,alias_text,alias_type,priority
                  FROM entity_alias
-                 WHERE locale=? AND normalized_alias LIKE ?"""
-        params: list[object] = [locale, f"%{normalized}%"]
+                 WHERE locale=?"""
+        params: list[object] = [locale]
+
+        normalized: str | None = None
+
+        if raw_query:
+            normalized = normalize_entity_alias(query)
+            sql += " AND normalized_alias LIKE ?"
+            params.append(f"%{normalized}%")
+
         if knowledge_kind is not None:
             sql += " AND knowledge_kind=?"
             params.append(knowledge_kind.value)
+
         if verified_only:
             sql += " AND review_status='VERIFIED'"
-        sql += " ORDER BY CASE WHEN normalized_alias=? THEN 0 ELSE 1 END, priority DESC, entity_id LIMIT ?"
-        params.extend([normalized, limit])
-        with sqlite3.connect(self.path) as conn:
+
+        if normalized is not None:
+            sql += (
+                " ORDER BY CASE WHEN normalized_alias=? THEN 0 ELSE 1 END,"
+                " priority DESC, entity_id LIMIT ?"
+            )
+            params.extend([normalized, limit])
+        else:
+            sql += " ORDER BY priority DESC, normalized_alias, entity_id LIMIT ?"
+            params.append(limit)
+
+        with closing(sqlite3.connect(self.path)) as conn:
             rows = conn.execute(sql, params).fetchall()
+
         return tuple(
             EntityAliasResolution(
                 entity_id=row[0],
@@ -178,7 +234,7 @@ class EntityAliasCatalog:
         if verified_only:
             sql += " AND review_status='VERIFIED'"
         sql += " ORDER BY priority DESC, entity_id"
-        with sqlite3.connect(self.path) as conn:
+        with closing(sqlite3.connect(self.path)) as conn:
             rows = conn.execute(sql, params).fetchall()
         if not rows:
             return None

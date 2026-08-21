@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/qwen3-tts-pinned-snapshot-verification.schema.json",
+  "title": "TASK-014 Qwen3-TTS Pinned Snapshot Verification Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "task_owner", "model_id", "revision", "manifest_entries_sha256",
+    "manifest_semantic_sha256", "file_count", "total_bytes", "evaluated_at", "decision",
+    "reason_codes", "snapshot_root_fingerprint", "filesystem_enumerated", "file_bodies_hashed",
+    "snapshot_modified", "diagnostic_only", "persistent_receipt_is_capability",
+    "model_reuse_authorized", "model_load_authorized", "post_return_state_guaranteed",
+    "consumer_revalidation_required", "model_weights_downloaded", "package_installed", "package_imported",
+    "model_loaded", "owner_audio_read", "inference_executed", "firewall_changed", "receipt_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "bai.task014.qwen3-tts-pinned-snapshot-verification.v1"},
+    "task_owner": {"const": "TASK-014"},
+    "model_id": {"type": "string", "minLength": 1},
+    "revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "manifest_entries_sha256": {"$ref": "#/$defs/plainSha256"},
+    "manifest_semantic_sha256": {"$ref": "#/$defs/plainSha256"},
+    "file_count": {"type": "integer", "minimum": 1, "maximum": 64},
+    "total_bytes": {"type": "integer", "minimum": 1},
+    "evaluated_at": {"$ref": "#/$defs/timestamp"},
+    "decision": {"enum": ["VERIFIED", "BLOCKED", "UNKNOWN"]},
+    "reason_codes": {"type": "array", "uniqueItems": true, "items": {"enum": ["UNACCEPTED_MODEL_ID", "UNACCEPTED_REVISION", "UNACCEPTED_ENTRIES_DIGEST", "UNACCEPTED_SEMANTIC_DIGEST", "UNACCEPTED_FILE_COUNT", "UNACCEPTED_TOTAL_BYTES", "SNAPSHOT_ROOT_NOT_ADMITTED", "SNAPSHOT_ROOT_ACCESS_UNKNOWN", "SNAPSHOT_REPARSE_POINT", "SNAPSHOT_EXTRA_DIRECTORY", "SNAPSHOT_EXTRA_ENTRY", "SNAPSHOT_FILE_MISSING", "SNAPSHOT_PATH_CASE_MISMATCH", "SNAPSHOT_FILE_SIZE_MISMATCH", "SNAPSHOT_FILE_DIGEST_MISMATCH", "SNAPSHOT_FILE_ACCESS_UNKNOWN", "SNAPSHOT_MODIFIED_DURING_VERIFICATION"]}},
+    "snapshot_root_fingerprint": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+    "filesystem_enumerated": {"type": "boolean"},
+    "file_bodies_hashed": {"type": "boolean"},
+    "snapshot_modified": {"type": "boolean"},
+    "diagnostic_only": {"const": true},
+    "persistent_receipt_is_capability": {"const": false},
+    "model_reuse_authorized": {"const": false},
+    "model_load_authorized": {"const": false},
+    "post_return_state_guaranteed": {"const": false},
+    "consumer_revalidation_required": {"const": true},
+    "model_weights_downloaded": {"const": false},
+    "package_installed": {"const": false},
+    "package_imported": {"const": false},
+    "model_loaded": {"const": false},
+    "owner_audio_read": {"const": false},
+    "inference_executed": {"const": false},
+    "firewall_changed": {"const": false},
+    "receipt_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {"if": {"properties": {"decision": {"const": "VERIFIED"}}}, "then": {"properties": {"reason_codes": {"maxItems": 0}, "model_id": {"const": "Qwen/Qwen3-TTS-12Hz-0.6B-Base"}, "revision": {"const": "5d83992436eae1d760afd27aff78a71d676296fc"}, "manifest_entries_sha256": {"const": "8c40ca449eb8fcf1bd55c4b272d40a29dd6dd91d1c419120ae24795d0c9482a3"}, "manifest_semantic_sha256": {"const": "8ee07dcddf13d95aa225df9167d4695b42e245b431686d8acb26bbd4a5e80935"}, "file_count": {"const": 13}, "total_bytes": {"const": 2516106051}, "snapshot_root_fingerprint": {"$ref": "#/$defs/sha256"}, "filesystem_enumerated": {"const": true}, "file_bodies_hashed": {"const": true}, "snapshot_modified": {"const": false}}}},
+    {"if": {"properties": {"decision": {"const": "BLOCKED"}}}, "then": {"properties": {"reason_codes": {"minItems": 1, "contains": {"enum": ["UNACCEPTED_MODEL_ID", "UNACCEPTED_REVISION", "UNACCEPTED_ENTRIES_DIGEST", "UNACCEPTED_SEMANTIC_DIGEST", "UNACCEPTED_FILE_COUNT", "UNACCEPTED_TOTAL_BYTES", "SNAPSHOT_ROOT_NOT_ADMITTED", "SNAPSHOT_REPARSE_POINT", "SNAPSHOT_EXTRA_DIRECTORY", "SNAPSHOT_EXTRA_ENTRY", "SNAPSHOT_FILE_MISSING", "SNAPSHOT_PATH_CASE_MISMATCH", "SNAPSHOT_FILE_SIZE_MISMATCH", "SNAPSHOT_FILE_DIGEST_MISMATCH"]}}}}},
+    {"if": {"properties": {"decision": {"const": "UNKNOWN"}}}, "then": {"properties": {"reason_codes": {"minItems": 1, "items": {"enum": ["SNAPSHOT_ROOT_ACCESS_UNKNOWN", "SNAPSHOT_FILE_ACCESS_UNKNOWN", "SNAPSHOT_MODIFIED_DURING_VERIFICATION"]}}}}},
+    {"if": {"properties": {"reason_codes": {"contains": {"enum": ["SNAPSHOT_ROOT_ACCESS_UNKNOWN", "SNAPSHOT_FILE_ACCESS_UNKNOWN", "SNAPSHOT_MODIFIED_DURING_VERIFICATION"]}}}}, "then": {"properties": {"filesystem_enumerated": {"const": false}, "file_bodies_hashed": {"const": false}}}},
+    {"if": {"properties": {"reason_codes": {"contains": {"enum": ["UNACCEPTED_MODEL_ID", "UNACCEPTED_REVISION", "UNACCEPTED_ENTRIES_DIGEST", "UNACCEPTED_SEMANTIC_DIGEST", "UNACCEPTED_FILE_COUNT", "UNACCEPTED_TOTAL_BYTES", "SNAPSHOT_ROOT_NOT_ADMITTED"]}}}}, "then": {"properties": {"snapshot_root_fingerprint": {"type": "null"}, "filesystem_enumerated": {"const": false}, "file_bodies_hashed": {"const": false}}}},
+    {"if": {"properties": {"snapshot_modified": {"const": true}}}, "then": {"properties": {"reason_codes": {"contains": {"const": "SNAPSHOT_MODIFIED_DURING_VERIFICATION"}}}}},
+    {"if": {"properties": {"snapshot_modified": {"const": false}}}, "then": {"not": {"properties": {"reason_codes": {"contains": {"const": "SNAPSHOT_MODIFIED_DURING_VERIFICATION"}}}}}}
+  ],
+  "$defs": {
+    "plainSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "timestamp": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?Z$"}
+  }
+}

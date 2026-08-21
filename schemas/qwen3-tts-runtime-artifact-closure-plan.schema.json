@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.example/schemas/qwen3-tts-runtime-artifact-closure-plan.schema.json",
+  "title": "TASK-014 Qwen3-TTS provisional runtime artifact closure plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "status", "plan_id", "revision", "target", "resolver",
+    "request_observations", "candidate_snapshots", "candidates", "constraints",
+    "proposed_selections", "native_sox_executable_requirement", "counts",
+    "contract_only", "candidate_snapshots_authenticated",
+    "deterministic_selection_verified", "active_dependency_closure_verified",
+    "plan_review_accepted", "acquisition_eligible",
+    "diagnostic_only", "persistent_plan_is_capability",
+    "metadata_network_authorized", "artifact_download_authorized",
+    "install_authorized", "runtime_reuse_authorized", "model_load_authorized",
+    "consumer_execution_authorized", "post_return_state_guaranteed",
+    "consumer_revalidation_required", "no_effect_flags",
+    "semantic_plan_sha256", "observation_receipt_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "bai.task014.qwen3-tts-runtime-artifact-closure-plan.v1"},
+    "status": {"const": "CONTRACT_ONLY_UNRESOLVED"},
+    "plan_id": {"$ref": "#/$defs/id"},
+    "revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "target": {"$ref": "#/$defs/target"},
+    "resolver": {"$ref": "#/$defs/resolver"},
+    "request_observations": {
+      "type": "array", "minItems": 1, "maxItems": 512,
+      "items": {"$ref": "#/$defs/observation"}
+    },
+    "candidate_snapshots": {
+      "type": "array", "minItems": 1, "maxItems": 256,
+      "items": {"$ref": "#/$defs/snapshot"}
+    },
+    "candidates": {
+      "type": "array", "minItems": 1, "maxItems": 4096,
+      "items": {"$ref": "#/$defs/candidate"}
+    },
+    "constraints": {
+      "type": "array", "minItems": 1, "maxItems": 512,
+      "items": {"$ref": "#/$defs/constraint"}
+    },
+    "proposed_selections": {
+      "type": "array", "minItems": 1, "maxItems": 256,
+      "items": {"$ref": "#/$defs/selection"}
+    },
+    "native_sox_executable_requirement": {"const": "UNKNOWN"},
+    "counts": {"$ref": "#/$defs/counts"},
+    "contract_only": {"const": true},
+    "candidate_snapshots_authenticated": {"const": false},
+    "deterministic_selection_verified": {"const": false},
+    "active_dependency_closure_verified": {"const": false},
+    "plan_review_accepted": {"const": false},
+    "acquisition_eligible": {"const": false},
+    "diagnostic_only": {"const": true},
+    "persistent_plan_is_capability": {"const": false},
+    "metadata_network_authorized": {"const": false},
+    "artifact_download_authorized": {"const": false},
+    "install_authorized": {"const": false},
+    "runtime_reuse_authorized": {"const": false},
+    "model_load_authorized": {"const": false},
+    "consumer_execution_authorized": {"const": false},
+    "post_return_state_guaranteed": {"const": false},
+    "consumer_revalidation_required": {"const": true},
+    "no_effect_flags": {"$ref": "#/$defs/no_effect_flags"},
+    "semantic_plan_sha256": {"$ref": "#/$defs/sha256"},
+    "observation_receipt_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"},
+    "dist": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "timestamp": {
+      "type": "string",
+      "pattern": "^(?:19|20)\\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\\d|3[01])T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{3,7})?Z$"
+    },
+    "url": {
+      "type": "string", "maxLength": 2048,
+      "pattern": "^(?![\\s\\S]*[\\u0000-\\u0020\\u007f-\\uffff])https://(?:python\\.org|www\\.python\\.org|pypi\\.org|files\\.pythonhosted\\.org|download\\.pytorch\\.org|ffmpeg\\.org|www\\.ffmpeg\\.org|github\\.com|api\\.github\\.com)/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"
+    },
+    "target": {
+      "type": "object", "additionalProperties": false,
+      "required": ["os", "platform", "python_tag", "python_version", "cuda", "attention"],
+      "properties": {
+        "os": {"const": "WINDOWS"}, "platform": {"const": "win_amd64"},
+        "python_tag": {"const": "cp312"}, "python_version": {"const": "3.12.4"},
+        "cuda": {"const": "cu130"}, "attention": {"const": "SDPA"}
+      }
+    },
+    "resolver": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "resolver_id", "resolver_revision", "resolver_sha256", "parser_distribution",
+        "parser_version", "parser_artifact_sha256", "parser_pin_accepted"
+      ],
+      "properties": {
+        "resolver_id": {"$ref": "#/$defs/id"},
+        "resolver_revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "resolver_sha256": {"$ref": "#/$defs/sha256"},
+        "parser_distribution": {"const": "packaging"},
+        "parser_version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+!-]{0,127}$"},
+        "parser_artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "parser_pin_accepted": {"const": false}
+      }
+    },
+    "observation": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "observation_id", "source", "evaluated_at", "provider", "project_id", "index_identity",
+        "observer_id", "observer_revision", "observer_sha256", "observation_kind",
+        "canonical_url", "method", "status", "content_type", "declared_bytes",
+        "observed_bytes", "redirect_count", "final_host_class",
+        "safe_content_path_sha256", "response_sha256", "candidate_count", "asserted_artifact_sha256",
+        "transport_policy_passed"
+      ],
+      "properties": {
+        "observation_id": {"$ref": "#/$defs/id"},
+        "source": {"const": "SYNTHETIC_CONTRACT_FIXTURE"},
+        "evaluated_at": {"$ref": "#/$defs/timestamp"},
+        "provider": {"enum": ["PYTHON_ORG", "PYPI", "PYTORCH_INDEX", "FFMPEG_ORG", "GITHUB_RELEASE"]},
+        "project_id": {"$ref": "#/$defs/dist"},
+        "index_identity": {"$ref": "#/$defs/id"},
+        "observer_id": {"$ref": "#/$defs/id"},
+        "observer_revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "observer_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_kind": {"enum": ["PROJECT_INDEX_GET", "PROJECT_RELEASE_GET", "METADATA_SIDECAR_GET", "ARTIFACT_HEAD", "CHECKSUM_ASSET_GET", "UPSTREAM_REFERENCE_GET"]},
+        "canonical_url": {"$ref": "#/$defs/url"},
+        "method": {"enum": ["GET", "HEAD"]},
+        "status": {"type": "integer", "minimum": 200, "maximum": 299},
+        "content_type": {"enum": ["APPLICATION_JSON", "APPLICATION_VND_PYPI_SIMPLE_V1_JSON", "APPLICATION_OCTET_STREAM_METADATA", "APPLICATION_OCTET_STREAM_ARTIFACT", "TEXT_HTML", "TEXT_PLAIN"]},
+        "declared_bytes": {"type": ["integer", "null"], "minimum": 0, "maximum": 17179869184},
+        "observed_bytes": {"type": "integer", "minimum": 0, "maximum": 16777216},
+        "redirect_count": {"type": "integer", "minimum": 0, "maximum": 3},
+        "final_host_class": {"$ref": "#/$defs/id"},
+        "safe_content_path_sha256": {"$ref": "#/$defs/sha256"},
+        "response_sha256": {"$ref": "#/$defs/sha256"},
+        "candidate_count": {"type": "integer", "minimum": 0, "maximum": 4096},
+        "asserted_artifact_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "transport_policy_passed": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"provider": {"const": "PYTHON_ORG"}}, "required": ["provider"]},
+          "then": {"properties": {"canonical_url": {"pattern": "^https://(?:python\\.org|www\\.python\\.org)/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"}}}
+        },
+        {
+          "if": {"properties": {"provider": {"const": "PYPI"}}, "required": ["provider"]},
+          "then": {"properties": {"canonical_url": {"pattern": "^https://(?:pypi\\.org|files\\.pythonhosted\\.org)/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"}}}
+        },
+        {
+          "if": {"properties": {"provider": {"const": "PYTORCH_INDEX"}}, "required": ["provider"]},
+          "then": {"properties": {"canonical_url": {"pattern": "^https://download\\.pytorch\\.org/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"}}}
+        },
+        {
+          "if": {"properties": {"provider": {"const": "FFMPEG_ORG"}}, "required": ["provider"]},
+          "then": {"properties": {"canonical_url": {"pattern": "^https://(?:ffmpeg\\.org|www\\.ffmpeg\\.org)/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"}}}
+        },
+        {
+          "if": {"properties": {"provider": {"const": "GITHUB_RELEASE"}}, "required": ["provider"]},
+          "then": {"properties": {"canonical_url": {"pattern": "^https://(?:github\\.com|api\\.github\\.com)/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"}}}
+        },
+        {
+          "if": {"properties": {"project_id": {"const": "btbn-ffmpeg-builds"}}, "required": ["project_id"]},
+          "then": {"properties": {"canonical_url": {"pattern": "^https://(?:api\\.github\\.com/repos/BtbN/FFmpeg-Builds/releases/tags/|github\\.com/BtbN/FFmpeg-Builds/releases/download/)[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"}}}
+        },
+        {
+          "if": {"properties": {"project_id": {"const": "ffmpeg"}}, "required": ["project_id"]},
+          "then": {"properties": {"provider": {"const": "FFMPEG_ORG"}, "canonical_url": {"pattern": "^https://(?:ffmpeg\\.org|www\\.ffmpeg\\.org)/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"}}}
+        },
+        {
+          "if": {"properties": {"method": {"const": "GET"}}, "required": ["method"]},
+          "then": {"properties": {"declared_bytes": {"maximum": 16777216}, "observed_bytes": {"maximum": 16777216}}},
+          "else": {"properties": {"observed_bytes": {"const": 0}}}
+        },
+        {
+          "if": {"properties": {"content_type": {"const": "APPLICATION_OCTET_STREAM_METADATA"}}, "required": ["content_type"]},
+          "then": {"properties": {"declared_bytes": {"maximum": 4194304}, "observed_bytes": {"maximum": 4194304}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"enum": ["PROJECT_INDEX_GET", "PROJECT_RELEASE_GET"]}}, "required": ["observation_kind"]},
+          "then": {"properties": {"method": {"const": "GET"}, "candidate_count": {"minimum": 1}, "asserted_artifact_sha256": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "PROJECT_INDEX_GET"}}, "required": ["observation_kind"]},
+          "then": {"properties": {"provider": {"enum": ["PYPI", "PYTORCH_INDEX"]}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "PROJECT_RELEASE_GET"}}, "required": ["observation_kind"]},
+          "then": {"properties": {"provider": {"enum": ["PYTHON_ORG", "GITHUB_RELEASE"]}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "PROJECT_INDEX_GET"}, "provider": {"const": "PYPI"}}, "required": ["observation_kind", "provider"]},
+          "then": {"properties": {"content_type": {"const": "APPLICATION_VND_PYPI_SIMPLE_V1_JSON"}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "PROJECT_INDEX_GET"}, "provider": {"const": "PYTORCH_INDEX"}}, "required": ["observation_kind", "provider"]},
+          "then": {"properties": {"content_type": {"const": "TEXT_HTML"}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "PROJECT_RELEASE_GET"}, "provider": {"const": "PYTHON_ORG"}}, "required": ["observation_kind", "provider"]},
+          "then": {"properties": {"content_type": {"const": "TEXT_HTML"}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "PROJECT_RELEASE_GET"}, "provider": {"const": "GITHUB_RELEASE"}}, "required": ["observation_kind", "provider"]},
+          "then": {"properties": {"content_type": {"const": "APPLICATION_JSON"}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "METADATA_SIDECAR_GET"}}, "required": ["observation_kind"]},
+          "then": {"properties": {"method": {"const": "GET"}, "candidate_count": {"const": 0}, "content_type": {"const": "APPLICATION_OCTET_STREAM_METADATA"}, "asserted_artifact_sha256": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "ARTIFACT_HEAD"}}, "required": ["observation_kind"]},
+          "then": {"properties": {"method": {"const": "HEAD"}, "candidate_count": {"const": 0}, "content_type": {"const": "APPLICATION_OCTET_STREAM_ARTIFACT"}, "declared_bytes": {"type": "integer", "minimum": 1}, "observed_bytes": {"const": 0}, "asserted_artifact_sha256": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "CHECKSUM_ASSET_GET"}}, "required": ["observation_kind"]},
+          "then": {"properties": {"method": {"const": "GET"}, "candidate_count": {"const": 0}, "content_type": {"const": "TEXT_PLAIN"}, "asserted_artifact_sha256": {"$ref": "#/$defs/sha256"}}}
+        },
+        {
+          "if": {"properties": {"observation_kind": {"const": "UPSTREAM_REFERENCE_GET"}}, "required": ["observation_kind"]},
+          "then": {"properties": {"provider": {"const": "FFMPEG_ORG"}, "method": {"const": "GET"}, "candidate_count": {"const": 0}, "content_type": {"const": "TEXT_HTML"}, "asserted_artifact_sha256": {"type": "null"}}}
+        }
+      ]
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "candidate_id", "artifact_kind", "project_id", "provider", "index_identity", "version",
+        "canonical_url", "filename", "bytes", "sha256", "metadata_sha256",
+        "metadata_bytes", "requires_python", "wheel_tags", "yanked",
+        "prerelease", "development", "postrelease", "local_version",
+        "requires_dist", "index_observation_id", "metadata_observation_id",
+        "artifact_head_observation_id", "checksum_observation_id", "license_id",
+        "manual_legal_review_required", "root_reachable", "availability",
+        "classification_state", "upstream_observation_id", "tool_release_contract",
+        "required_tool_kinds", "tool_member_mapping_state"
+      ],
+      "properties": {
+        "candidate_id": {"$ref": "#/$defs/id"},
+        "artifact_kind": {"enum": ["PYTHON_INSTALLER", "DISTRIBUTION_WHEEL", "NATIVE_TOOL_ARCHIVE"]},
+        "project_id": {"$ref": "#/$defs/dist"},
+        "provider": {"enum": ["PYTHON_ORG", "PYPI", "PYTORCH_INDEX", "GITHUB_RELEASE"]},
+        "index_identity": {"$ref": "#/$defs/id"},
+        "version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+!-]{0,127}$"},
+        "canonical_url": {"$ref": "#/$defs/url"},
+        "filename": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+!-]{0,254}$"},
+        "bytes": {"type": "integer", "minimum": 1, "maximum": 17179869184},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "metadata_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "metadata_bytes": {"type": ["integer", "null"], "minimum": 1, "maximum": 4194304},
+        "requires_python": {"oneOf": [{"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[\\x20-\\x7e]+$"}, {"type": "null"}]},
+        "wheel_tags": {
+          "type": "array", "maxItems": 16, "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$"}
+        },
+        "yanked": {"type": "boolean"}, "prerelease": {"type": "boolean"},
+        "development": {"type": "boolean"}, "postrelease": {"type": "boolean"},
+        "local_version": {"oneOf": [{"const": "cu130"}, {"type": "null"}]},
+        "requires_dist": {
+          "type": "array", "maxItems": 512, "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[\\x20-\\x7e]+$"}
+        },
+        "index_observation_id": {"$ref": "#/$defs/id"},
+        "metadata_observation_id": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "artifact_head_observation_id": {"$ref": "#/$defs/id"},
+        "checksum_observation_id": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "license_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]{0,63}$"},
+        "manual_legal_review_required": {"type": "boolean"},
+        "root_reachable": {"type": "boolean"},
+        "availability": {"const": "NOT_CONFIRMED"},
+        "classification_state": {"const": "CALLER_REPORTED_UNVERIFIED"},
+        "upstream_observation_id": {"oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "tool_release_contract": {"oneOf": [{"$ref": "#/$defs/tool_release_contract"}, {"type": "null"}]},
+        "required_tool_kinds": {
+          "type": "array", "maxItems": 2, "uniqueItems": true,
+          "items": {"enum": ["FFMPEG", "FFPROBE"]}
+        },
+        "tool_member_mapping_state": {"enum": ["NOT_APPLICABLE", "UNRESOLVED_UNACQUIRED"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"project_id": {"const": "python"}}, "required": ["project_id"]},
+          "then": {
+            "properties": {
+              "provider": {"const": "PYTHON_ORG"},
+              "artifact_kind": {"const": "PYTHON_INSTALLER"},
+              "canonical_url": {"pattern": "^https://(?:python\\.org|www\\.python\\.org)/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"},
+              "filename": {"pattern": "\\.exe$"},
+              "metadata_sha256": {"type": "null"}, "metadata_bytes": {"type": "null"},
+              "requires_python": {"type": "null"}, "wheel_tags": {"maxItems": 0},
+              "requires_dist": {"maxItems": 0}, "local_version": {"type": "null"},
+              "metadata_observation_id": {"type": "null"}, "checksum_observation_id": {"type": "null"},
+              "upstream_observation_id": {"type": "null"}, "tool_release_contract": {"type": "null"},
+              "required_tool_kinds": {"maxItems": 0}, "tool_member_mapping_state": {"const": "NOT_APPLICABLE"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"project_id": {"enum": ["torch", "torchaudio"]}}, "required": ["project_id"]},
+          "then": {
+            "properties": {
+              "provider": {"const": "PYTORCH_INDEX"}, "artifact_kind": {"const": "DISTRIBUTION_WHEEL"},
+              "canonical_url": {"pattern": "^https://download\\.pytorch\\.org/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"},
+              "filename": {"pattern": "\\.whl$"}, "wheel_tags": {"minItems": 1},
+              "metadata_observation_id": {"$ref": "#/$defs/id"}, "checksum_observation_id": {"type": "null"},
+              "upstream_observation_id": {"type": "null"}, "tool_release_contract": {"type": "null"},
+              "required_tool_kinds": {"maxItems": 0}, "tool_member_mapping_state": {"const": "NOT_APPLICABLE"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"project_id": {"const": "btbn-ffmpeg-builds"}}, "required": ["project_id"]},
+          "then": {
+            "properties": {
+              "provider": {"const": "GITHUB_RELEASE"}, "artifact_kind": {"const": "NATIVE_TOOL_ARCHIVE"},
+              "canonical_url": {"pattern": "^https://github\\.com/BtbN/FFmpeg-Builds/releases/download/[A-Za-z0-9._-]+/[A-Za-z0-9._+!-]+\\.zip$"},
+              "filename": {"pattern": "\\.zip$"},
+              "metadata_sha256": {"type": "null"}, "metadata_bytes": {"type": "null"},
+              "requires_python": {"type": "null"}, "wheel_tags": {"maxItems": 0},
+              "requires_dist": {"maxItems": 0}, "local_version": {"type": "null"},
+              "metadata_observation_id": {"type": "null"}, "checksum_observation_id": {"$ref": "#/$defs/id"},
+              "upstream_observation_id": {"$ref": "#/$defs/id"},
+              "tool_release_contract": {"$ref": "#/$defs/tool_release_contract"},
+              "required_tool_kinds": {"const": ["FFMPEG", "FFPROBE"]},
+              "tool_member_mapping_state": {"const": "UNRESOLVED_UNACQUIRED"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"project_id": {"not": {"enum": ["python", "torch", "torchaudio", "btbn-ffmpeg-builds"]}}}, "required": ["project_id"]},
+          "then": {
+            "properties": {
+              "provider": {"const": "PYPI"}, "artifact_kind": {"const": "DISTRIBUTION_WHEEL"},
+              "canonical_url": {"pattern": "^https://(?:pypi\\.org|files\\.pythonhosted\\.org)/[A-Za-z0-9!$&'()+,./:;=@_%~-]*$"},
+              "filename": {"pattern": "\\.whl$"}, "wheel_tags": {"minItems": 1},
+              "local_version": {"type": "null"},
+              "metadata_observation_id": {"$ref": "#/$defs/id"}, "checksum_observation_id": {"type": "null"},
+              "upstream_observation_id": {"type": "null"}, "tool_release_contract": {"type": "null"},
+              "required_tool_kinds": {"maxItems": 0}, "tool_member_mapping_state": {"const": "NOT_APPLICABLE"}
+            }
+          }
+        }
+      ]
+    },
+    "tool_release_contract": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "repository_id", "release_id", "release_tag", "asset_id",
+        "upstream_ffmpeg_version", "upstream_commit_id",
+        "build_configuration_sha256", "checksum_provenance", "state"
+      ],
+      "properties": {
+        "repository_id": {"const": "BtbN/FFmpeg-Builds"},
+        "release_id": {"$ref": "#/$defs/id"},
+        "release_tag": {"$ref": "#/$defs/id"},
+        "asset_id": {"$ref": "#/$defs/id"},
+        "upstream_ffmpeg_version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+!-]{0,127}$"},
+        "upstream_commit_id": {"type": "string", "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"},
+        "build_configuration_sha256": {"$ref": "#/$defs/sha256"},
+        "checksum_provenance": {"const": "PUBLISHER_CONTROLLED_RELEASE_CHECKSUM_UNVERIFIED"},
+        "state": {"const": "CALLER_REPORTED_UNVERIFIED"}
+      }
+    },
+    "snapshot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["project_id", "source_observation_id", "candidate_ids", "candidate_set_sha256"],
+      "properties": {
+        "project_id": {"$ref": "#/$defs/dist"},
+        "source_observation_id": {"$ref": "#/$defs/id"},
+        "candidate_ids": {
+          "type": "array", "minItems": 1, "maxItems": 4096, "uniqueItems": true,
+          "items": {"$ref": "#/$defs/id"}
+        },
+        "candidate_set_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "constraint": {
+      "type": "object", "additionalProperties": false,
+      "required": ["constraint_id", "project_id", "requirement", "parent_project_id", "marker_state", "root"],
+      "properties": {
+        "constraint_id": {"$ref": "#/$defs/id"},
+        "project_id": {"$ref": "#/$defs/dist"},
+        "requirement": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[\\x20-\\x7e]+$"},
+        "parent_project_id": {"oneOf": [{"$ref": "#/$defs/dist"}, {"type": "null"}]},
+        "marker_state": {"const": "ACTIVE"},
+        "root": {"type": "boolean"}
+      }
+    },
+    "selection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["project_id", "candidate_id", "version_rank", "tag_rank", "filename_rank", "selection_state"],
+      "properties": {
+        "project_id": {"$ref": "#/$defs/dist"}, "candidate_id": {"$ref": "#/$defs/id"},
+        "version_rank": {"const": 0}, "tag_rank": {"const": 0}, "filename_rank": {"const": 0},
+        "selection_state": {"const": "CALLER_PROPOSED_UNVERIFIED"}
+      }
+    },
+    "counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["observation_count", "project_count", "candidate_count", "constraint_count", "proposed_selection_count"],
+      "properties": {
+        "observation_count": {"type": "integer", "minimum": 1, "maximum": 512},
+        "project_count": {"type": "integer", "minimum": 1, "maximum": 256},
+        "candidate_count": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "constraint_count": {"type": "integer", "minimum": 1, "maximum": 512},
+        "proposed_selection_count": {"type": "integer", "minimum": 1, "maximum": 256}
+      }
+    },
+    "no_effect_flags": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "network_accessed", "artifact_body_downloaded", "file_written",
+        "package_installed", "target_python_executed", "package_imported",
+        "model_loaded", "owner_audio_read", "inference_executed", "native_tool_executed"
+      ],
+      "properties": {
+        "network_accessed": {"const": false}, "artifact_body_downloaded": {"const": false},
+        "file_written": {"const": false}, "package_installed": {"const": false},
+        "target_python_executed": {"const": false}, "package_imported": {"const": false},
+        "model_loaded": {"const": false}, "owner_audio_read": {"const": false},
+        "inference_executed": {"const": false}, "native_tool_executed": {"const": false}
+      }
+    }
+  }
+}

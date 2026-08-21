@@ -13,6 +13,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shutil
 import time
 from typing import Iterable
 from urllib.parse import urljoin, urlparse
@@ -23,7 +24,11 @@ from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso
 SURVIVOR_PERKS_URL = "https://kamigame.jp/dbd/page/207150682694767780.html"
 KILLER_PERKS_URL = "https://kamigame.jp/dbd/page/207148601481152853.html"
 KILLERS_URL = "https://kamigame.jp/dbd/page/93384114123571207.html"
+ITEMS_URL = "https://kamigame.jp/dbd/page/94107608092246023.html"
+ADDONS_URL = "https://kamigame.jp/dbd/page/93674768519135239.html"
+MAPS_URL = "https://kamigame.jp/dbd/page/94254357779841031.html"
 _ALLOWED_PAGE_HOSTS = {"kamigame.jp", "www.kamigame.jp"}
+_ALLOWED_ASSET_HOST_SUFFIXES = ("kamigame.jp", ".googleusercontent.com", ".googleapis.com")
 _NEXT_TEXT = {"次へ", "次のページ", "次", ">", "›", "»"}
 _WS_RE = re.compile(r"\s+")
 _STARS_RE = re.compile(r"[★☆]+")
@@ -52,6 +57,23 @@ class Cell:
 @dataclass(slots=True)
 class Row:
     cells: list[Cell] = field(default_factory=list)
+    section_heading: str = ""
+
+
+def _row_source_sections(row: Row) -> list[dict[str, object]]:
+    """Preserve source fields that do not yet have a dedicated normalized column."""
+    sections: list[dict[str, object]] = []
+    for index, cell in enumerate(row.cells, start=1):
+        value = cell.text
+        if not value:
+            continue
+        sections.append({
+            "heading": row.section_heading,
+            "label": f"列{index}",
+            "value": value[:12000],
+            "order": index,
+        })
+    return sections
 
 
 class _KamigameHTMLParser(HTMLParser):
@@ -61,6 +83,7 @@ class _KamigameHTMLParser(HTMLParser):
         self.rows: list[Row] = []
         self.links: list[Link] = []
         self.images: list[str] = []
+        self.section_images: list[tuple[str, str]] = []
         self.headings: list[tuple[str, str]] = []
         self._row: Row | None = None
         self._cell: Cell | None = None
@@ -69,6 +92,7 @@ class _KamigameHTMLParser(HTMLParser):
         self._heading_tag: str | None = None
         self._heading_text: list[str] = []
         self._all_text: list[str] = []
+        self._current_heading: str = ""
 
     @property
     def text(self) -> str:
@@ -77,7 +101,7 @@ class _KamigameHTMLParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attr = {k: v for k, v in attrs}
         if tag == "tr":
-            self._row = Row()
+            self._row = Row(section_heading=self._current_heading)
         elif tag in {"td", "th"} and self._row is not None:
             self._cell = Cell()
         elif tag == "a":
@@ -89,6 +113,7 @@ class _KamigameHTMLParser(HTMLParser):
             if src:
                 absolute = urljoin(self.base_url, src)
                 self.images.append(absolute)
+                self.section_images.append((self._current_heading, absolute))
                 if self._cell is not None:
                     self._cell.images.append(absolute)
         elif tag in {"h1", "h2", "h3", "h4"}:
@@ -114,6 +139,7 @@ class _KamigameHTMLParser(HTMLParser):
             text = _clean_text(" ".join(self._heading_text))
             if text:
                 self.headings.append((tag, text))
+                self._current_heading = text
             self._heading_tag = None
             self._heading_text = []
 
@@ -162,11 +188,16 @@ def _aliases(name: str, cell: Cell) -> list[str]:
 
 
 def _effect(text: str) -> str:
-    if "〖効果〗" not in text:
+    effect_marker = next((marker for marker in ("【効果】", "〖効果〗") if marker in text), None)
+    if effect_marker is None:
         return ""
-    value = text.split("〖効果〗", 1)[1]
-    if "〖一致するカテゴリ〗" in value:
-        value = value.split("〖一致するカテゴリ〗", 1)[0]
+    value = text.split(effect_marker, 1)[1]
+    category_marker = next(
+        (marker for marker in ("【一致するカテゴリ】", "〖一致するカテゴリ〗") if marker in value),
+        None,
+    )
+    if category_marker is not None:
+        value = value.split(category_marker, 1)[0]
     return _clean_text(value)
 
 
@@ -200,7 +231,7 @@ def parse_perk_page(html_text: str, *, page_url: str, role: str) -> list[dict[st
             "source_categories_ja": list(dict.fromkeys(link.text for link in detail.links if link.text and link.text != owner)) if "一致するカテゴリ" in detail.text else [],
             "detail_url": name_cell.links[0].href if _same_kamigame_page(name_cell.links[0].href) else page_url,
             "image_urls": list(dict.fromkeys(name_cell.images)), "review_status": "CANDIDATE",
-            "source_authority": "COMMUNITY_REFERENCE", "source_page_url": page_url,
+            "source_authority": "COMMUNITY_REFERENCE", "source_section_heading": row.section_heading, "source_sections": _row_source_sections(row), "source_page_url": page_url,
         })
     return records
 
@@ -229,7 +260,7 @@ def parse_killer_list_page(html_text: str, *, page_url: str) -> list[dict[str, o
             "unique_perks_ja": [link.text for link in perks.links if link.text],
             "detail_url": detail_url if _same_kamigame_page(detail_url) else None,
             "image_urls": list(dict.fromkeys(name_cell.images)), "review_status": "CANDIDATE",
-            "source_authority": "COMMUNITY_REFERENCE", "source_page_url": page_url,
+            "source_authority": "COMMUNITY_REFERENCE", "source_section_heading": row.section_heading, "source_sections": _row_source_sections(row), "source_page_url": page_url,
         })
     return records
 
@@ -246,6 +277,202 @@ def parse_killer_detail_page(html_text: str, *, page_url: str) -> dict[str, obje
         "linked_dbd_pages": [link.href for link in parser.links if _same_kamigame_page(link.href)][:512],
     }
 
+
+
+
+def _first_name_and_image(cell: Cell) -> tuple[str, list[str], str | None]:
+    name = ""
+    detail_url: str | None = None
+    if cell.links:
+        name = _clean_text(cell.links[0].text)
+        detail_url = cell.links[0].href if _same_kamigame_page(cell.links[0].href) else None
+    if not name:
+        name = cell.text.split(" ", 1)[0].strip()
+    return name, list(dict.fromkeys(cell.images)), detail_url
+
+
+def _parse_rarity(text: str) -> str:
+    for value in ("Ultra Rare", "Very Rare", "Rare", "Uncommon", "Common", "common", "event"):
+        if value in text:
+            return value
+    return ""
+
+
+def _section_key(text: str) -> str:
+    value = _clean_text(text)
+    value = re.sub(r"一覧.*$", "", value).strip()
+    value = re.sub(r"系アイテム.*$", "", value).strip()
+    value = re.sub(r"の?アドオン$", "", value).strip()
+    return value
+
+
+def parse_item_page(html_text: str, *, page_url: str) -> list[dict[str, object]]:
+    parser = _KamigameHTMLParser(base_url=page_url); parser.feed(html_text)
+    rows: list[dict[str, object]] = []; seen: set[str] = set()
+    for row in parser.rows:
+        if len(row.cells) < 2:
+            continue
+        name_cell, detail = row.cells[0], row.cells[1]
+        if "効果" not in detail.text and "基礎チャージ" not in detail.text:
+            continue
+        name, images, detail_url = _first_name_and_image(name_cell)
+        if not name or name in {"アイテム", "性能"} or name in seen:
+            continue
+        seen.add(name)
+        charge = ""
+        m = re.search(r"基礎チャージ量[〗】]?\s*([0-9]+(?:秒)?)", detail.text)
+        if m: charge = m.group(1)
+        rows.append({
+            "schema_version": "1.0.0", "record_kind": "ITEM_CANDIDATE",
+            "candidate_id": _stable_candidate_id("item", name), "canonical_item_id": None,
+            "name_ja": name, "aliases_ja": _aliases(name, name_cell),
+            "category_ja": _section_key(row.section_heading),
+            "rarity": _parse_rarity(detail.text), "base_charges_text": charge,
+            "source_effect_ja": _effect(detail.text),
+            "detail_url": detail_url, "image_urls": images,
+            "review_status": "CANDIDATE", "source_authority": "COMMUNITY_REFERENCE",
+            "source_section_heading": row.section_heading, "source_sections": _row_source_sections(row), "source_page_url": page_url,
+        })
+    return rows
+
+
+def parse_addon_page(html_text: str, *, page_url: str) -> list[dict[str, object]]:
+    parser = _KamigameHTMLParser(base_url=page_url); parser.feed(html_text)
+    rows: list[dict[str, object]] = []; seen: set[tuple[str, str]] = set()
+    for row in parser.rows:
+        if len(row.cells) < 2:
+            continue
+        name_cell, detail = row.cells[0], row.cells[1]
+        if "効果" not in detail.text and not name_cell.images:
+            continue
+        name, images, detail_url = _first_name_and_image(name_cell)
+        owner = _section_key(row.section_heading)
+        if not name or name in {"アドオン", "性能", "名前"} or not owner:
+            continue
+        key=(owner,name)
+        if key in seen: continue
+        seen.add(key)
+        rows.append({
+            "schema_version": "1.0.0", "record_kind": "ADDON_CANDIDATE",
+            "candidate_id": _stable_candidate_id("addon", f"{owner}:{name}"), "canonical_addon_id": None,
+            "name_ja": name, "aliases_ja": _aliases(name, name_cell),
+            "owner_killer_name_ja": owner, "rarity": _parse_rarity(detail.text),
+            "source_effect_ja": _effect(detail.text) or detail.text[:4000],
+            "detail_url": detail_url, "image_urls": images,
+            "review_status": "CANDIDATE", "source_authority": "COMMUNITY_REFERENCE",
+            "source_section_heading": row.section_heading, "source_sections": _row_source_sections(row), "source_page_url": page_url,
+        })
+    return rows
+
+
+def parse_map_page(html_text: str, *, page_url: str) -> list[dict[str, object]]:
+    parser = _KamigameHTMLParser(base_url=page_url); parser.feed(html_text)
+    records: dict[str, dict[str, object]] = {}
+    for row in parser.rows:
+        if len(row.cells) < 2:
+            continue
+        first, second = row.cells[0], row.cells[1]
+        detail_text = _clean_text(" ".join(cell.text for cell in row.cells[1:]))
+        links = [link for link in first.links if link.text]
+        if not links:
+            continue
+        # Map rows contain a map detail link followed by a Realm link/text.
+        map_name = _clean_text(links[0].text)
+        if not map_name or map_name in {"マップ", "マップ名/エリア名"}:
+            continue
+        realm_name = _clean_text(links[1].text) if len(links) > 1 else ""
+        detail_url = links[0].href if _same_kamigame_page(links[0].href) else None
+        text = detail_text
+        area_m2 = None
+        pallet_text = ""
+        m_area = re.search(r"(?:面積|広さ)?\s*([0-9]{4,6})", text)
+        if m_area:
+            try: area_m2 = int(m_area.group(1))
+            except ValueError: pass
+        m_pallet = re.search(r"板(?:最大|枚数)?\s*([0-9]+(?:[~〜-][0-9]+)?)", text)
+        if m_pallet: pallet_text = m_pallet.group(1)
+        size = ""
+        for token in ("面積大", "面積中", "面積小"):
+            if token in text: size = token[-1]; break
+        candidate_id = _stable_candidate_id("map", map_name)
+        previous = records.get(candidate_id, {})
+        records[candidate_id] = {
+            "schema_version": "1.0.0", "record_kind": "MAP_CANDIDATE",
+            "candidate_id": candidate_id, "canonical_map_id": None,
+            "name_ja": map_name, "aliases_ja": [], "realm_name_ja": realm_name or previous.get("realm_name_ja", ""),
+            "detail_url": detail_url or previous.get("detail_url"),
+            "image_urls": list(dict.fromkeys([*previous.get("image_urls", []), *first.images, *[img for cell in row.cells[1:] for img in cell.images]])),
+            "area_m2": area_m2 if area_m2 is not None else previous.get("area_m2"),
+            "pallet_text": pallet_text or previous.get("pallet_text", ""),
+            "size_class": size or previous.get("size_class", ""),
+            "environment_type": "INDOOR" if "室内" in text else ("OUTDOOR" if "室外" in text else previous.get("environment_type", "")),
+            "review_status": "CANDIDATE", "source_authority": "COMMUNITY_REFERENCE",
+            "source_section_heading": row.section_heading, "source_sections": _row_source_sections(row), "source_page_url": page_url,
+        }
+    return list(records.values())
+
+
+def parse_map_detail_page(html_text: str, *, page_url: str) -> dict[str, object]:
+    """Extract bounded map-detail metadata without promoting community data to canonical truth."""
+    parser = _KamigameHTMLParser(base_url=page_url); parser.feed(html_text)
+    realm_name = ""; offering_name = ""; pallet_text = ""; area_m2 = None; size_class = ""
+    for row in parser.rows:
+        texts = [cell.text for cell in row.cells]
+        if len(row.cells) >= 2:
+            joined = " ".join(texts)
+            if not realm_name and any("領域名" in x for x in texts):
+                continue
+            # The realm/offering data row normally contains one link per cell.
+            if not realm_name and len(row.cells) >= 2 and row.cells[0].links and row.cells[1].links:
+                left = _clean_text(row.cells[0].links[0].text)
+                right = _clean_text(row.cells[1].links[0].text)
+                if left and right and "マップ" not in left:
+                    realm_name, offering_name = left, right
+            if len(row.cells) >= 3:
+                p, a, z = texts[0], texts[1], texts[2]
+                if "枚" in p and "㎡" in a:
+                    pallet_text = p.replace("枚", "").strip()
+                    m = re.search(r"([0-9]{4,6})", a)
+                    if m:
+                        area_m2 = int(m.group(1))
+                    size_class = z.strip()
+    text = parser.text
+    features = ""
+    match = re.search(r"特徴・固有オブジェクト\s*(.*?)\s*有利度", text)
+    if match:
+        features = _clean_text(match.group(1))[:4000]
+    favorability = ""
+    match = re.search(r"有利度\s*(.*?)\s*板\s+面積", text)
+    if match:
+        favorability = _clean_text(match.group(1))[:256]
+    # Images directly underneath the map-overview section are preferred over article/header images.
+    map_images = [url for heading, url in parser.section_images if "見取り図" in heading]
+    return {
+        "realm_name_ja": realm_name,
+        "offering_name_ja": offering_name,
+        "features": features,
+        "unique_objects": features,
+        "favorability": favorability,
+        "pallet_text": pallet_text,
+        "area_m2": area_m2,
+        "size_class": size_class,
+        "map_image_urls": list(dict.fromkeys(map_images))[:8],
+        "all_image_urls": list(dict.fromkeys(parser.images))[:128],
+        "detail_url": page_url,
+    }
+
+
+def _asset_allowed(url: str) -> bool:
+    p = urlparse(url)
+    host = (p.hostname or "").casefold()
+    return p.scheme == "https" and any(host == suffix or (suffix.startswith(".") and host.endswith(suffix)) for suffix in _ALLOWED_ASSET_HOST_SUFFIXES)
+
+
+def _image_extension(content_type: str) -> str:
+    return {
+        "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif",
+        "image/webp": ".webp", "image/bmp": ".bmp",
+    }.get(content_type.casefold(), ".img")
 
 def discover_next_pages(html_text: str, *, page_url: str) -> list[str]:
     parser = _KamigameHTMLParser(base_url=page_url); parser.feed(html_text)
@@ -284,6 +511,26 @@ class KamigameHTTPClient:
         self._last_request_at = time.monotonic(); output_path.parent.mkdir(parents=True, exist_ok=True); output_path.write_bytes(body)
         return FetchReceipt(url, output_path, hashlib.sha256(body).hexdigest(), utc_now_iso(), content_type)
 
+    def fetch_asset(self, url: str, *, output_stem: Path) -> FetchReceipt:
+        if not _asset_allowed(url):
+            raise ValueError("collector asset URL is outside the bounded image allow-list")
+        delay = self.minimum_delay_seconds - (time.monotonic() - self._last_request_at)
+        if delay > 0:
+            time.sleep(delay)
+        request = Request(url, headers={"User-Agent": self.user_agent, "Accept": "image/*"})
+        with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310 - allow-listed image hosts
+            content_type = response.headers.get_content_type()
+            if not content_type.startswith("image/"):
+                raise ValueError(f"unexpected asset content type: {content_type}")
+            body = response.read(12 * 1024 * 1024 + 1)
+            if len(body) > 12 * 1024 * 1024:
+                raise ValueError("asset exceeds 12 MiB safety limit")
+        self._last_request_at = time.monotonic()
+        output_path = output_stem.with_suffix(_image_extension(content_type))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(body)
+        return FetchReceipt(url, output_path, hashlib.sha256(body).hexdigest(), utc_now_iso(), content_type)
+
 
 def _write_jsonl(path: Path, rows: Iterable[dict[str, object]]) -> int:
     rows = list(rows); path.parent.mkdir(parents=True, exist_ok=True)
@@ -297,48 +544,241 @@ def _dedupe(records: Iterable[dict[str, object]], key: str) -> list[dict[str, ob
 
 
 class KamigameDbDKnowledgeCollector:
-    def __init__(self, output_root: str | Path, *, client: KamigameHTTPClient | None = None) -> None:
-        self.output_root = Path(output_root); self.client = client or KamigameHTTPClient(); self.raw_root = self.output_root / "raw"; self.normalized_root = self.output_root / "normalized"
+    _PERF_STAGES = (
+        "source_index_fetch", "candidate_discovery", "detail_page_fetch", "parse",
+        "image_fetch", "normalize", "db_upsert", "alias_index_update", "post_process",
+    )
+
+    def __init__(
+        self, output_root: str | Path, *, client: KamigameHTTPClient | None = None,
+        dedupe_within_run: bool = True,
+    ) -> None:
+        self.output_root = Path(output_root)
+        self.client = client or KamigameHTTPClient()
+        self.raw_root = self.output_root / "raw"
+        self.normalized_root = self.output_root / "normalized"
+        self.dedupe_within_run = bool(dedupe_within_run)
+        self._html_fetch_cache: dict[str, FetchReceipt] = {}
+        self._asset_fetch_cache: dict[str, FetchReceipt] = {}
+        self._perf_seconds: dict[str, float] = {}
+        self._perf_counts: dict[str, int] = {}
+
+    def _reset_metrics(self) -> None:
+        self._html_fetch_cache.clear()
+        self._asset_fetch_cache.clear()
+        self._perf_seconds = {stage: 0.0 for stage in self._PERF_STAGES}
+        self._perf_counts = {
+            "html_requests": 0, "html_cache_hits": 0,
+            "asset_requests": 0, "asset_cache_hits": 0,
+            "list_pages": 0, "detail_pages": 0, "parsed_records": 0,
+        }
+
+    def _add_elapsed(self, stage: str, started: float) -> None:
+        self._perf_seconds[stage] = self._perf_seconds.get(stage, 0.0) + max(0.0, time.monotonic() - started)
+
+    @staticmethod
+    def _clone_receipt(receipt: FetchReceipt, output_path: Path) -> FetchReceipt:
+        return FetchReceipt(receipt.url, output_path, receipt.content_sha256, receipt.retrieved_at, receipt.content_type)
+
+    def _fetch_html(self, url: str, *, output_path: Path, stage: str) -> FetchReceipt:
+        started = time.monotonic()
+        try:
+            cached = self._html_fetch_cache.get(url) if self.dedupe_within_run else None
+            if cached is not None and cached.path.is_file():
+                self._perf_counts["html_cache_hits"] += 1
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                if cached.path.resolve() != output_path.resolve():
+                    shutil.copyfile(cached.path, output_path)
+                return self._clone_receipt(cached, output_path)
+            receipt = self.client.fetch_html(url, output_path=output_path)
+            self._perf_counts["html_requests"] += 1
+            if self.dedupe_within_run:
+                self._html_fetch_cache[url] = receipt
+            return receipt
+        finally:
+            self._add_elapsed(stage, started)
+
+    def _fetch_asset(self, url: str, *, output_stem: Path) -> FetchReceipt:
+        started = time.monotonic()
+        try:
+            cached = self._asset_fetch_cache.get(url) if self.dedupe_within_run else None
+            if cached is not None and cached.path.is_file():
+                self._perf_counts["asset_cache_hits"] += 1
+                output_path = output_stem.with_suffix(cached.path.suffix)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                if cached.path.resolve() != output_path.resolve():
+                    shutil.copyfile(cached.path, output_path)
+                return self._clone_receipt(cached, output_path)
+            receipt = self.client.fetch_asset(url, output_stem=output_stem)
+            self._perf_counts["asset_requests"] += 1
+            if self.dedupe_within_run:
+                self._asset_fetch_cache[url] = receipt
+            return receipt
+        finally:
+            self._add_elapsed("image_fetch", started)
 
     def _crawl_list(self, start_url: str, *, kind: str, max_pages: int) -> tuple[list[dict[str, object]], list[FetchReceipt]]:
         pending=[start_url]; visited:set[str]=set(); receipts:list[FetchReceipt]=[]; records:list[dict[str, object]]=[]
         while pending and len(visited)<max_pages:
             url=pending.pop(0)
             if url in visited: continue
-            visited.add(url); raw=self.raw_root/kind/f"page-{len(visited):03d}.html"; receipt=self.client.fetch_html(url, output_path=raw); receipts.append(receipt)
+            visited.add(url); raw=self.raw_root/kind/f"page-{len(visited):03d}.html"
+            receipt=self._fetch_html(url, output_path=raw, stage="source_index_fetch"); receipts.append(receipt)
+            self._perf_counts["list_pages"] += 1
             text=raw.read_text(encoding="utf-8", errors="replace")
-            if kind=="survivor-perks": records.extend(parse_perk_page(text,page_url=url,role="SURVIVOR"))
-            elif kind=="killer-perks": records.extend(parse_perk_page(text,page_url=url,role="KILLER"))
-            else: records.extend(parse_killer_list_page(text,page_url=url))
-            for nxt in discover_next_pages(text,page_url=url):
+            parse_started = time.monotonic(); before = len(records)
+            try:
+                if kind=="survivor-perks": records.extend(parse_perk_page(text,page_url=url,role="SURVIVOR"))
+                elif kind=="killer-perks": records.extend(parse_perk_page(text,page_url=url,role="KILLER"))
+                elif kind=="killers": records.extend(parse_killer_list_page(text,page_url=url))
+                elif kind=="items": records.extend(parse_item_page(text,page_url=url))
+                elif kind=="addons": records.extend(parse_addon_page(text,page_url=url))
+                elif kind=="maps": records.extend(parse_map_page(text,page_url=url))
+                else: raise ValueError(f"unsupported collector kind: {kind}")
+            finally:
+                self._add_elapsed("parse", parse_started)
+            self._perf_counts["parsed_records"] += len(records) - before
+            discovery_started = time.monotonic()
+            try:
+                next_pages = discover_next_pages(text,page_url=url)
+            finally:
+                self._add_elapsed("candidate_discovery", discovery_started)
+            for nxt in next_pages:
                 if nxt not in visited and nxt not in pending: pending.append(nxt)
         return records,receipts
 
-    def collect(self, *, follow_killer_details: bool=True, max_pages: int=20, max_killer_details: int=128) -> dict[str, object]:
+    def collect(self, *, follow_killer_details: bool=True, follow_map_details: bool=True, max_pages: int=20, max_killer_details: int=128, max_map_details: int=128) -> dict[str, object]:
+        total_started = time.monotonic()
+        self._reset_metrics()
         self.output_root.mkdir(parents=True, exist_ok=True)
-        survivor, rs=self._crawl_list(SURVIVOR_PERKS_URL,kind="survivor-perks",max_pages=max_pages)
-        killer_perks, rkp=self._crawl_list(KILLER_PERKS_URL,kind="killer-perks",max_pages=max_pages)
-        killers, rk=self._crawl_list(KILLERS_URL,kind="killers",max_pages=max_pages)
-        details={}; rd=[]
+        survivor, rs = self._crawl_list(SURVIVOR_PERKS_URL, kind="survivor-perks", max_pages=max_pages)
+        killer_perks, rkp = self._crawl_list(KILLER_PERKS_URL, kind="killer-perks", max_pages=max_pages)
+        killers, rk = self._crawl_list(KILLERS_URL, kind="killers", max_pages=max_pages)
+        items, ri = self._crawl_list(ITEMS_URL, kind="items", max_pages=max_pages)
+        addons, ra = self._crawl_list(ADDONS_URL, kind="addons", max_pages=max_pages)
+        maps, rm = self._crawl_list(MAPS_URL, kind="maps", max_pages=max_pages)
+        map_details: dict[str, dict[str, object]] = {}; rmd: list[FetchReceipt] = []
+        if follow_map_details:
+            for i, map_row in enumerate(maps[:max_map_details], 1):
+                url = map_row.get("detail_url")
+                if not isinstance(url, str) or not url:
+                    continue
+                raw = self.raw_root / "map-details" / f"{i:03d}-{map_row['candidate_id']}.html"
+                receipt = self._fetch_html(url, output_path=raw, stage="detail_page_fetch"); rmd.append(receipt)
+                self._perf_counts["detail_pages"] += 1
+                parse_started = time.monotonic()
+                try:
+                    map_details[str(map_row["candidate_id"])] = parse_map_detail_page(
+                        raw.read_text(encoding="utf-8", errors="replace"), page_url=url
+                    )
+                finally:
+                    self._add_elapsed("parse", parse_started)
+        details: dict[str, dict[str, object]] = {}; rd: list[FetchReceipt] = []
         if follow_killer_details:
-            for i,killer in enumerate(killers[:max_killer_details],1):
-                url=killer.get("detail_url")
-                if not isinstance(url,str) or not url: continue
-                raw=self.raw_root/"killer-details"/f"{i:03d}-{killer['candidate_id']}.html"; receipt=self.client.fetch_html(url,output_path=raw); rd.append(receipt)
-                details[str(killer["candidate_id"])]=parse_killer_detail_page(raw.read_text(encoding="utf-8",errors="replace"),page_url=url)
-        survivor=_dedupe(survivor,"candidate_id"); killer_perks=_dedupe(killer_perks,"candidate_id"); killers=_dedupe(killers,"candidate_id")
+            for i, killer in enumerate(killers[:max_killer_details], 1):
+                url = killer.get("detail_url")
+                if not isinstance(url, str) or not url:
+                    continue
+                raw = self.raw_root / "killer-details" / f"{i:03d}-{killer['candidate_id']}.html"
+                receipt = self._fetch_html(url, output_path=raw, stage="detail_page_fetch"); rd.append(receipt)
+                self._perf_counts["detail_pages"] += 1
+                parse_started = time.monotonic()
+                try:
+                    details[str(killer["candidate_id"])] = parse_killer_detail_page(
+                        raw.read_text(encoding="utf-8", errors="replace"), page_url=url
+                    )
+                finally:
+                    self._add_elapsed("parse", parse_started)
+        normalize_started = time.monotonic()
+        survivor = _dedupe(survivor, "candidate_id")
+        killer_perks = _dedupe(killer_perks, "candidate_id")
+        killers = _dedupe(killers, "candidate_id")
+        items = _dedupe(items, "candidate_id")
+        addons = _dedupe(addons, "candidate_id")
+        maps = _dedupe(maps, "candidate_id")
+        asset_receipts: list[FetchReceipt] = []
+        for map_row in maps:
+            detail = map_details.get(str(map_row["candidate_id"]))
+            if detail:
+                for key in ("realm_name_ja","offering_name_ja","features","unique_objects","favorability","pallet_text","area_m2","size_class"):
+                    value = detail.get(key)
+                    if value not in (None, ""):
+                        map_row[key] = value
+                map_row["image_urls"] = list(dict.fromkeys([*detail.get("map_image_urls", []), *map_row.get("image_urls", []), *detail.get("all_image_urls", [])]))
+            urls = [str(x) for x in map_row.get("image_urls", []) if str(x)]
+            if urls and hasattr(self.client, "fetch_asset"):
+                try:
+                    asset = self._fetch_asset(urls[0], output_stem=self.output_root / "assets" / "maps" / str(map_row["candidate_id"]))
+                    asset_receipts.append(asset)
+                    map_row["local_image_path"] = asset.path.relative_to(self.output_root).as_posix()
+                except Exception as exc:
+                    map_row["image_cache_warning"] = f"{type(exc).__name__}: {exc}"
+        # Cache representative item/add-on icons when available; failures remain non-fatal evidence warnings.
+        for kind_name, records in (("items", items), ("addons", addons)):
+            for row in records:
+                urls = [str(x) for x in row.get("image_urls", []) if str(x)]
+                if not urls or not hasattr(self.client, "fetch_asset"):
+                    continue
+                try:
+                    asset = self._fetch_asset(urls[0], output_stem=self.output_root / "assets" / kind_name / str(row["candidate_id"]))
+                    asset_receipts.append(asset)
+                    row["local_image_path"] = asset.path.relative_to(self.output_root).as_posix()
+                except Exception as exc:
+                    row["image_cache_warning"] = f"{type(exc).__name__}: {exc}"
         for killer in killers:
-            if str(killer["candidate_id"]) in details: killer["detail"]=details[str(killer["candidate_id"])]
-        _write_jsonl(self.normalized_root/"survivor-perks.jsonl",survivor); _write_jsonl(self.normalized_root/"killer-perks.jsonl",killer_perks); _write_jsonl(self.normalized_root/"killers.jsonl",killers)
+            if str(killer["candidate_id"]) in details:
+                killer["detail"] = details[str(killer["candidate_id"])]
+        outputs = {
+            "survivor_perks": ("survivor-perks.jsonl", survivor),
+            "killer_perks": ("killer-perks.jsonl", killer_perks),
+            "killers": ("killers.jsonl", killers),
+            "items": ("items.jsonl", items),
+            "addons": ("addons.jsonl", addons),
+            "maps": ("maps.jsonl", maps),
+        }
+        for _key, (filename, rows) in outputs.items():
+            _write_jsonl(self.normalized_root / filename, rows)
         sources=[]
-        for r in [*rs,*rkp,*rk,*rd]:
-            sources.append({"schema_version":"1.0.0","source_id":_source_id(r.url,r.content_sha256),"source_type":"KAMIGAME_HTML","authority":"COMMUNITY_REFERENCE","url":r.url,"retrieved_at":r.retrieved_at,"content_sha256":r.content_sha256,"raw_path":r.path.relative_to(self.output_root).as_posix(),"locale":"ja-JP"})
+        for r in [*rs,*rkp,*rk,*ri,*ra,*rm,*rmd,*rd,*asset_receipts]:
+            sources.append({"schema_version":"1.0.0","source_id":_source_id(r.url,r.content_sha256),"source_type":"KAMIGAME_ASSET" if r.content_type.startswith("image/") else "KAMIGAME_HTML","authority":"COMMUNITY_REFERENCE","url":r.url,"retrieved_at":r.retrieved_at,"content_sha256":r.content_sha256,"raw_path":r.path.relative_to(self.output_root).as_posix(),"locale":"ja-JP"})
         sources=_dedupe(sources,"source_id"); _write_jsonl(self.normalized_root/"sources.jsonl",sources)
         aliases=self.normalized_root/"aliases.csv"; aliases.parent.mkdir(parents=True,exist_ok=True)
         with aliases.open("w",encoding="utf-8-sig",newline="") as h:
             w=csv.writer(h); w.writerow(["record_kind","candidate_id","canonical_id","locale","alias","review_status"])
             for record in [*survivor,*killer_perks]:
+                w.writerow(["PERK",record["candidate_id"],"","ja-JP",record["name_ja"],"CANDIDATE"])
                 for alias in record.get("aliases_ja",[]): w.writerow(["PERK",record["candidate_id"],"","ja-JP",alias,"CANDIDATE"])
-            for record in killers: w.writerow(["KILLER",record["candidate_id"],"","ja-JP",record["name_ja"],"CANDIDATE"])
-        body={"schema_version":"1.0.0","collector":"KAMIGAME_DBD_KNOWLEDGE","generated_at":utc_now_iso(),"authority":"COMMUNITY_REFERENCE","automatic_verification":False,"canonical_write_performed":False,"source_urls":[SURVIVOR_PERKS_URL,KILLER_PERKS_URL,KILLERS_URL],"counts":{"survivor_perks":len(survivor),"killer_perks":len(killer_perks),"killers":len(killers),"killer_details":len(details),"source_snapshots":len(sources)},"outputs":{"survivor_perks":"normalized/survivor-perks.jsonl","killer_perks":"normalized/killer-perks.jsonl","killers":"normalized/killers.jsonl","aliases":"normalized/aliases.csv","sources":"normalized/sources.jsonl"}}
-        manifest={**body,"manifest_sha256":sha256_bytes(canonical_json_bytes(body))}; (self.output_root/"manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2,sort_keys=True)+"\n",encoding="utf-8"); return manifest
+            for kind, records in (("KILLER", killers),("ITEM",items),("ADDON",addons),("MAP",maps)):
+                for record in records:
+                    w.writerow([kind,record["candidate_id"],"","ja-JP",record["name_ja"],"CANDIDATE"])
+                    for alias in record.get("aliases_ja",[]): w.writerow([kind,record["candidate_id"],"","ja-JP",alias,"CANDIDATE"])
+        self._add_elapsed("normalize", normalize_started)
+        total_seconds = max(0.0, time.monotonic() - total_started)
+        performance = {
+            "elapsed_seconds": {
+                "total": round(total_seconds, 6),
+                **{stage: round(self._perf_seconds.get(stage, 0.0), 6) for stage in self._PERF_STAGES},
+            },
+            "counts": dict(self._perf_counts),
+            "dedupe_within_run": self.dedupe_within_run,
+            "note": "db_upsert/alias_index_update are outside the collector and remain zero here; Training Studio measures them separately.",
+        }
+        body={
+            "schema_version":"1.1.0","collector":"KAMIGAME_DBD_KNOWLEDGE","generated_at":utc_now_iso(),
+            "authority":"COMMUNITY_REFERENCE","automatic_verification":False,"canonical_write_performed":False,
+            "performance":performance,
+            "source_urls":[SURVIVOR_PERKS_URL,KILLER_PERKS_URL,KILLERS_URL,ITEMS_URL,ADDONS_URL,MAPS_URL],
+            "counts":{
+                "survivor_perks":len(survivor),"killer_perks":len(killer_perks),"killers":len(killers),
+                "items":len(items),"addons":len(addons),"maps":len(maps),
+                "killer_details":len(details),"map_details":len(map_details),"cached_images":len(asset_receipts),"source_snapshots":len(sources),
+            },
+            "outputs":{
+                "survivor_perks":"normalized/survivor-perks.jsonl","killer_perks":"normalized/killer-perks.jsonl",
+                "killers":"normalized/killers.jsonl","items":"normalized/items.jsonl","addons":"normalized/addons.jsonl",
+                "maps":"normalized/maps.jsonl","aliases":"normalized/aliases.csv","sources":"normalized/sources.jsonl",
+            },
+        }
+        manifest={**body,"manifest_sha256":sha256_bytes(canonical_json_bytes(body))}
+        (self.output_root/"manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+        return manifest

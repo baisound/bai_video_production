@@ -9,7 +9,7 @@ def build_workspace_management_panel(parent: ttk.Frame, *, workspace, on_workspa
     state={"workspace":workspace}
     info=tk.StringVar(value=f"{workspace.display_name}\n{workspace.root_path}")
     box=ttk.LabelFrame(parent,text="ワークスペース管理",padding=10)
-    box.pack(fill="x",pady=(12,0))
+    box.grid(row=2, column=0, sticky="ew", pady=(12, 0))
     ttk.Label(box,textvariable=info,justify="left",wraplength=820).pack(anchor="w",pady=(0,8))
     buttons=ttk.Frame(box); buttons.pack(anchor="w")
     def notify(updated):

@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+- TASK-014 AU2C2B1b0-Aとして、`packaging 25.0` wheelの提案pinを同一immutable bytesからZIP・METADATA・WHEEL・RECORDまで検証する診断専用契約を追加しました。公式metadata観測とpin受理は未確認のまま保持し、network、download、install、parser import、resolver利用、runtime、model、audioのAuthorityを付与しません。
+
+- TASK-014 AU2C2B1aとして、Qwen3-TTS runtime artifact closure planのno-I/O契約を追加しました。index/release・metadata・artifact HEAD・checksum・upstream観測を候補へ完全結合し、Python installer・distribution wheel・BtbN FFmpeg archiveのprovisional shapeを固定します。契約は未解決・診断専用で、network、download、install、runtime、model、audioのAuthorityを付与しません。
+
+- TASK-014として、Windows/cp312 Qwen3-TTS runtimeのretained artifact、distribution closure、runtime file/native tool ownership、固定marker環境を表すno-I/O manifest契約を追加しました。契約はmerged Qwen wheel pinを参照し、diagnostic-onlyかつruntime reuse・model load・consumer executionのAuthorityを付与しません。
+
+- Dead by Daylight??? `BAI DbD Training Studio` ????????Workspace??????????HUD Calibration??????Teacher Data?OCR/FasterWhisper?Game Knowledge?Kamigame???Human Review?Map Intelligence?????????????Editing Intelligence???Windows Packaging/Backup/Restore??????????????TASK-052?????DbD Vision????Gap Audit?Survivor?????/?????Killer??HUD??????Game Knowledge???HTML???????Map?????Safe Delete?Visual Learning?Windows process storm????Human Acceptance?????????????????????
+
+- TASK-014として、固定Qwen3-TTS 0.6B Base manifestを厳格parseし、既存local snapshotのexact 13-file setをfixed-local drive・path/reparse・size/hash・bounded race観測で検査する診断専用verifierを追加しました。private/public receiptはcapabilityではなく、runtime再利用、model load、post-return状態保証、Owner音声読取、推論、network、filesystem変更のAuthorityを作りません。
+- TASK-014として、固定Qwen-TTS wheel／installed payloadのbounded read-only診断と、Windows上で祖先・wheel handleを保持してidentity・non-reparse・non-inherit・reverse closeを検証するone-shot locked sessionを追加しました。永続receiptは診断Evidenceのみで、runtime再利用、target package import、model load、Owner音声読取、推論、network、filesystem変更、Release/DeployのAuthorityを作りません。
+
 ## [0.22.0] - 2026-08-21
 
 - Added TASK-036 P-UX-2D4/D5 trusted Final Review handoff from current typed approval through private ExportPreparation to exactly one durable TASK-044 Export Queue Job, with explicit Human confirmation, Project-scoped exclusive admission, restart-safe EXPORT recovery, runtime lease isolation and Shell projection that exposes no host path or dispatch/render authority. P-UX-2E packaged-native output read-back, per-Job dispatch/render, publication, Release and Deploy remain separate Gates.

@@ -15,8 +15,12 @@ def test_training_studio_build_contract_and_entrypoint_exist():
     assert "BAI DbD Training Studio.exe" in text
     assert "task049_training_studio.spec" in text
     assert "PyInstaller" in text
-    assert "BAI DbD Training Studio" in spec.read_text(encoding="utf-8")
-    assert '"faster_whisper"' in spec.read_text(encoding="utf-8")
+    spec_text = spec.read_text(encoding="utf-8")
+    assert "BAI DbD Training Studio" in spec_text
+    assert '"faster_whisper"' in spec_text
+    assert "collect_data_files" in spec_text
+    assert 'collect_data_files("jsonschema_specifications")' in spec_text
+    assert '"av"' in spec_text
     assert "dbd_training_studio" in entry.read_text(encoding="utf-8")
 
 
@@ -49,9 +53,10 @@ def test_training_studio_exposes_portable_backup_restore_and_user_guide():
 
 def test_training_studio_exposes_hud_calibration_profile_and_anchor_controls():
     source = (ROOT / "src" / "ai_video_production" / "dbd_training_studio.py").read_text(encoding="utf-8")
-    assert 'notebook.add(calibration_tab, text="HUD位置を設定")' in source
-    assert "Save versioned profile + anchors" in source
-    assert "Test auto profile + anchor correction" in source
+    assert 'notebook.add(calibration_page, text="HUD位置を設定")' in source
+    assert "HUD設定を保存" in source
+    assert "自動補正をテスト" in source
+    assert "登録済みHUD設定" in source
     assert "HudProfileRegistry" in source
     assert "DBDHudVideoProfileResolver" in source
     assert "HudAnchorAligner" in source

@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-014 AU2C2B1b0-Aとして、`packaging 25.0` wheelの提案pinを同一immutable bytesからZIP・METADATA・WHEEL・RECORDまで検証する診断専用契約を追加しました。公式metadata観測とpin受理は未確認のまま保持し、network、download、install、parser import、resolver利用、runtime、model、audioのAuthorityを付与しません。
+
 - TASK-014 AU2C2B1aとして、Qwen3-TTS runtime artifact closure planのno-I/O契約を追加しました。index/release・metadata・artifact HEAD・checksum・upstream観測を候補へ完全結合し、Python installer・distribution wheel・BtbN FFmpeg archiveのprovisional shapeを固定します。契約は未解決・診断専用で、network、download、install、runtime、model、audioのAuthorityを付与しません。
 
 - TASK-014として、Windows/cp312 Qwen3-TTS runtimeのretained artifact、distribution closure、runtime file/native tool ownership、固定marker環境を表すno-I/O manifest契約を追加しました。契約はmerged Qwen wheel pinを参照し、diagnostic-onlyかつruntime reuse・model load・consumer executionのAuthorityを付与しません。

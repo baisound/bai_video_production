@@ -20,7 +20,7 @@
     "journal_sha256"
   ],
   "properties": {
-    "journal_version": {"const": "1.0.0"},
+    "journal_version": {"enum": ["1.0.0", "1.1.0"]},
     "transaction_id": {"type": "string", "pattern": "^save-[0-9a-f]{64}$"},
     "project_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,63}$"},
     "source_manifest_sha256": {"$ref": "#/$defs/checksum"},
@@ -40,8 +40,76 @@
         "migration_apply_authorized": {"const": false}
       }
     },
+    "participant_plan": {"$ref": "#/$defs/participantPlan"},
+    "participant_prepared_receipt_sha256": {"$ref": "#/$defs/checksum"},
+    "participant_result": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/participantResult"}
+      ]
+    },
     "journal_sha256": {"$ref": "#/$defs/checksum"}
   },
+  "allOf": [
+    {
+      "if": {"properties": {"journal_version": {"const": "1.0.0"}}},
+      "then": {
+        "not": {
+          "anyOf": [
+            {"required": ["participant_plan"]},
+            {"required": ["participant_prepared_receipt_sha256"]},
+            {"required": ["participant_result"]}
+          ]
+        }
+      }
+    },
+    {
+      "if": {"properties": {"journal_version": {"const": "1.1.0"}}},
+      "then": {
+        "required": [
+          "participant_plan",
+          "participant_prepared_receipt_sha256",
+          "participant_result"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "journal_version": {"const": "1.1.0"},
+          "state": {"const": "COMMITTED"}
+        }
+      },
+      "then": {
+        "properties": {
+          "participant_result": {
+            "allOf": [
+              {"$ref": "#/$defs/participantResult"},
+              {"properties": {"outcome": {"const": "COMPLETE"}}}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "journal_version": {"const": "1.1.0"},
+          "state": {"const": "ABANDONED"}
+        }
+      },
+      "then": {
+        "properties": {
+          "participant_result": {
+            "allOf": [
+              {"$ref": "#/$defs/participantResult"},
+              {"properties": {"outcome": {"const": "ROLLBACK"}}}
+            ]
+          }
+        }
+      }
+    }
+  ],
   "$defs": {
     "checksum": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "relativePath": {
@@ -59,6 +127,50 @@
         "staged_relative_path": {"$ref": "#/$defs/relativePath"},
         "backup_relative_path": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/relativePath"}]},
         "committed": {"type": "boolean"}
+      }
+    },
+    "participantPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "participant_id",
+        "participant_version",
+        "project_id",
+        "source_manifest_sha256",
+        "target_manifest_sha256",
+        "source_content_sha256",
+        "target_content_sha256",
+        "binding_sha256"
+      ],
+      "properties": {
+        "participant_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:[-./][A-Z0-9]+){1,7}$"},
+        "participant_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "project_id": {"type": "string", "minLength": 1, "maxLength": 200},
+        "source_manifest_sha256": {"$ref": "#/$defs/checksum"},
+        "target_manifest_sha256": {"$ref": "#/$defs/checksum"},
+        "source_content_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/checksum"}]},
+        "target_content_sha256": {"$ref": "#/$defs/checksum"},
+        "binding_sha256": {"$ref": "#/$defs/checksum"}
+      }
+    },
+    "participantResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "participant_id",
+        "binding_sha256",
+        "transaction_id",
+        "outcome",
+        "result_content_sha256",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "participant_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9]*(?:[-./][A-Z0-9]+){1,7}$"},
+        "binding_sha256": {"$ref": "#/$defs/checksum"},
+        "transaction_id": {"type": "string", "pattern": "^save-[0-9a-f]{64}$"},
+        "outcome": {"enum": ["COMPLETE", "ROLLBACK"]},
+        "result_content_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/checksum"}]},
+        "receipt_sha256": {"$ref": "#/$defs/checksum"}
       }
     }
   }

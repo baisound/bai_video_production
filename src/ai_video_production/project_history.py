@@ -338,15 +338,29 @@ class ProjectCommandHistoryStore:
 
     @staticmethod
     def save(project_root: str | Path, history: ProjectCommandHistory, *, expected_previous_history_sha256: str | None = None) -> AtomicWriteResult:
-        target = ProjectCommandHistoryStore.path(project_root, create=True)
         with _exclusive_project_lock(_manifest_path(project_root, create_control_dir=True)):
-            if target.exists():
-                current = ProjectCommandHistoryStore.load(project_root)
-                if expected_previous_history_sha256 != current.history_sha256:
-                    raise ProductError("ERR_PROJECT_HISTORY_CAS_CONFLICT", "Command history changed before save", ProductErrorCategory.STATE)
-            elif expected_previous_history_sha256 is not None:
-                raise ProductError("ERR_PROJECT_HISTORY_PREVIOUS_MISSING", "Expected command history is missing", ProductErrorCategory.STATE)
-            return AtomicJsonWriter.write(target, history.to_dict(), validator=parse_project_command_history)
+            return ProjectCommandHistoryStore._save_unlocked(
+                project_root,
+                history,
+                expected_previous_history_sha256=expected_previous_history_sha256,
+            )
+
+    @staticmethod
+    def _save_unlocked(
+        project_root: str | Path,
+        history: ProjectCommandHistory,
+        *,
+        expected_previous_history_sha256: str | None = None,
+    ) -> AtomicWriteResult:
+        """CAS-write while the caller already owns the Project manifest lock."""
+        target = ProjectCommandHistoryStore.path(project_root, create=True)
+        if target.exists():
+            current = ProjectCommandHistoryStore.load(project_root)
+            if expected_previous_history_sha256 != current.history_sha256:
+                raise ProductError("ERR_PROJECT_HISTORY_CAS_CONFLICT", "Command history changed before save", ProductErrorCategory.STATE)
+        elif expected_previous_history_sha256 is not None:
+            raise ProductError("ERR_PROJECT_HISTORY_PREVIOUS_MISSING", "Expected command history is missing", ProductErrorCategory.STATE)
+        return AtomicJsonWriter.write(target, history.to_dict(), validator=parse_project_command_history)
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R3C_FAKE_ADAPTER_COMPLETE / COMMIT_READY / R3D_HUMAN_GATED`
+Status: `R4A_DATASET_RIGHTS_MANIFEST_COMPLETE / COMMIT_READY / ADOPTION_HUMAN_GATED`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -98,9 +98,20 @@ and R2A direct boundary Evidence is `160 PASS`; TASK-054 plus TASK-049 direct
 regression is `398 PASS`; compileall and diff-check pass. R3D canonical
 Provider/local adapter integration remains a separate Human Gate.
 
+## R4A completion checkpoint
+
+R4A Dataset rights/provenance manifest is complete and commit-ready. It binds
+existing CAND-R2D and Game Match identities to opaque media, rights, Consent,
+provenance and Human-review SHA references, fixes each source group to one split,
+and derives disposition fail-closed. The body-free manifest is always
+`CANDIDATE_ONLY_NO_ADOPTION`, performs no I/O and carries no transcript/media
+body. Focused Evidence is `9 PASS`; R4A plus direct R0/R2D lineage Evidence is
+`85 PASS`. Dataset adoption, narration intake and training remain Human-Gated.
+
 ## Authority boundary
 
-This checkpoint closes the bounded local R3C deterministic fake adapter unit.
+This checkpoint closes the bounded local R3C deterministic fake adapter and R4A
+Dataset rights/provenance manifest units. It does not adopt a Dataset or authorize training.
 R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,
 Timeline adoption, binding approval, Product Activation, release or deployment.
@@ -108,7 +119,8 @@ Those remain Human-Gated.
 
 ## Current decision
 
-R3C deterministic fake adapter/fault harness is complete and commit-ready under the Owner's exact
+R3C deterministic fake adapter/fault harness and the independent R4A body-free
+rights/provenance manifest are complete and commit-ready under the Owner's exact
 bounded instruction. The tuned model design remains after CGEL + compatible
 Knowledge/RAG and before deterministic Fact/Policy validation. R3D is Human-Gated;
 all Dataset, runtime, training, Provider, TTS, Timeline, release and deploy

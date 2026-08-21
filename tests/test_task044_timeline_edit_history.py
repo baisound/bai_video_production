@@ -26,8 +26,10 @@ from ai_video_production.interactive_timeline_edit import (
     TimelineEditProjector,
     TimelineEditRevision,
     TimelineSnapService,
+    TimelineSourceBinding,
 )
 from ai_video_production.interactive_timeline_store import (
+    FORMAT_VERSION_V1_1,
     RELATIVE_PATH,
     TimelineEditSnapshotStore,
     parse_timeline_edit_history,
@@ -35,7 +37,7 @@ from ai_video_production.interactive_timeline_store import (
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.project_history import ProjectCommandAction, ProjectCommandHistoryStore
-from ai_video_production.serialization import sha256_bytes
+from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.task044_nle_shell import Task044NleShellController
 from ai_video_production.timebase import FrameRate
 
@@ -62,6 +64,30 @@ def timeline() -> InteractiveTimeline:
         sha256_bytes(b"source"), "Clip 1", "APPROVED",
     ),)
     return InteractiveTimeline("project-1", "timeline-1", FrameRate(30, 1), 300, tracks, clips)
+
+
+def source_binding(suffix: str) -> TimelineSourceBinding:
+    return TimelineSourceBinding(
+        project_id="project-1",
+        production_snapshot_sha256=sha256_bytes(f"production-{suffix}".encode()),
+        scene_id="scene-1",
+        slot_id="slot-IMAGE-1",
+        candidate_id=f"candidate-{suffix}",
+        asset_id=f"asset-{suffix}",
+        asset_sha256=sha256_bytes(f"asset-{suffix}".encode()),
+        product_job_id="job-1",
+        generation_execution_id=f"execution-{suffix}",
+        queue_entry_id=f"queue-{suffix}",
+    )
+
+
+def placed_clip(suffix: str, *, clip_id: str = "placed-clip") -> InteractiveTimelineClip:
+    binding = source_binding(suffix)
+    return InteractiveTimelineClip(
+        clip_id, "video-main", 60, 90, "TASK-003", binding.asset_id,
+        binding.asset_sha256, f"Placed {suffix}", "PLACED_LOCKED_ASSET",
+        binding.candidate_id,
+    )
 
 
 def test_snap_is_frame_exact_and_ties_use_priority_then_identity() -> None:
@@ -117,6 +143,142 @@ def test_snapshot_is_exact_append_only_and_tamper_evident() -> None:
     changed["current_revision"] = 2
     with pytest.raises(ProductError) as exc:
         parse_timeline_edit_history(changed)
+    assert exc.value.code == "ERR_TIMELINE_EDIT_SNAPSHOT_INVALID"
+
+
+def test_v1_0_snapshot_bytes_and_hash_remain_frozen() -> None:
+    base = timeline()
+    history = TimelineEditHistory("project-1", "history-1")
+    history.append(TimelineEditRevision(
+        "project-1", "history-1", 1, base.timeline_sha256,
+        TimelineEditCommand(
+            "cmd-1", TimelineEditKind.MOVE, target_clip_id="clip-1",
+            before_start_frame=10, before_end_frame=40,
+            after_start_frame=20, after_end_frame=50,
+        ),
+    ))
+    document = json.loads(TimelineEditSnapshotStore.serialize(history))
+    assert document["snapshot_version"] == "1.0.0"
+    assert document["snapshot_sha256"] == "sha256:9f210f9518dce1521e502a139070bb86dc6eb5e5e771f33326eaea603731cf15"
+    assert document["revisions"][0]["revision_sha256"] == "sha256:5129f517f3d781353d42580c774d5d39dc63496b645303a0220eaa80c09ff637"
+    assert document["revisions"][0]["command"]["command_sha256"] == "sha256:6f535287b747c7f7234afd81d8140de7351b099b1a331344f31caa473c371bbf"
+
+
+def test_v1_1_binding_pairs_project_inverse_and_round_trip() -> None:
+    base = timeline()
+    binding_a = source_binding("a")
+    binding_b = source_binding("b")
+    clip_a = placed_clip("a")
+    clip_b = InteractiveTimelineClip(
+        clip_a.clip_id, clip_a.track_id, clip_a.start_frame, clip_a.end_frame,
+        "TASK-003", binding_b.asset_id, binding_b.asset_sha256, "Placed b",
+        "PLACED_LOCKED_ASSET", binding_b.candidate_id,
+    )
+    insert = TimelineEditCommand(
+        "insert-a", TimelineEditKind.INSERT_CLIP,
+        after_clip=clip_a, after_source_binding=binding_a,
+    )
+    replace = TimelineEditCommand(
+        "replace-b", TimelineEditKind.REPLACE_CLIP,
+        before_clip=clip_a, after_clip=clip_b,
+        before_source_binding=binding_a, after_source_binding=binding_b,
+    )
+    undo = replace.inverse(command_id="undo-replace")
+    history = TimelineEditHistory("project-1", "history-v11")
+    history.append(TimelineEditRevision(
+        "project-1", "history-v11", 1, base.timeline_sha256, insert,
+        revision_version=FORMAT_VERSION_V1_1,
+    ))
+    history.append(TimelineEditRevision(
+        "project-1", "history-v11", 2, base.timeline_sha256, replace,
+        previous_revision_sha256=history.current.revision_sha256,
+        revision_version=FORMAT_VERSION_V1_1,
+    ))
+    history.append(TimelineEditRevision(
+        "project-1", "history-v11", 3, base.timeline_sha256, undo,
+        previous_revision_sha256=history.current.revision_sha256,
+        revision_version=FORMAT_VERSION_V1_1,
+    ))
+    serialized = TimelineEditSnapshotStore.serialize(history)
+    restored = parse_timeline_edit_history(json.loads(serialized))
+    projected, _in_out, bindings = TimelineEditProjector.apply_with_source_bindings(base, restored)
+    assert json.loads(serialized)["snapshot_version"] == FORMAT_VERSION_V1_1
+    assert next(item for item in projected.clips if item.clip_id == clip_a.clip_id) == clip_a
+    assert bindings[clip_a.clip_id] == binding_a
+    assert restored.revisions[1].command.before_source_binding == binding_a
+    assert restored.revisions[1].command.after_source_binding == binding_b
+
+
+def test_v1_1_legacy_replace_restores_null_binding_and_version_cannot_downgrade() -> None:
+    base = timeline()
+    before = base.clips[0]
+    binding = source_binding("b")
+    after = InteractiveTimelineClip(
+        before.clip_id, before.track_id, before.start_frame, before.end_frame,
+        "TASK-003", binding.asset_id, binding.asset_sha256, "Generated",
+        "PLACED_LOCKED_ASSET", binding.candidate_id,
+    )
+    replacement = TimelineEditCommand(
+        "replace-legacy", TimelineEditKind.REPLACE_CLIP,
+        before_clip=before, after_clip=after,
+        before_source_binding=None, after_source_binding=binding,
+    )
+    history = TimelineEditHistory("project-1", "history-v11")
+    history.append(TimelineEditRevision(
+        "project-1", "history-v11", 1, base.timeline_sha256, replacement,
+        revision_version=FORMAT_VERSION_V1_1,
+    ))
+    inverse = replacement.inverse(command_id="undo-legacy")
+    history.append(TimelineEditRevision(
+        "project-1", "history-v11", 2, base.timeline_sha256, inverse,
+        previous_revision_sha256=history.current.revision_sha256,
+        revision_version=FORMAT_VERSION_V1_1,
+    ))
+    projected, _in_out, bindings = TimelineEditProjector.apply_with_source_bindings(base, history)
+    assert projected.clips[0] == before
+    assert bindings[before.clip_id] is None
+    with pytest.raises(ProductError) as exc:
+        history.append(TimelineEditRevision(
+            "project-1", "history-v11", 3, base.timeline_sha256,
+            TimelineEditCommand(
+                "move-after-v11", TimelineEditKind.MOVE, target_clip_id=before.clip_id,
+                before_start_frame=before.start_frame, before_end_frame=before.end_frame,
+                after_start_frame=20, after_end_frame=50,
+            ),
+            previous_revision_sha256=history.current.revision_sha256,
+        ))
+    assert exc.value.code == "ERR_TIMELINE_EDIT_HISTORY_VERSION_DOWNGRADE"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("candidate_id", "candidate-foreign"),
+    ("project_id", "project-foreign"),
+])
+def test_checksum_valid_foreign_source_binding_fails_closed(field: str, value: str) -> None:
+    base = timeline()
+    binding = source_binding("a")
+    clip = placed_clip("a")
+    history = TimelineEditHistory("project-1", "history-v11")
+    history.append(TimelineEditRevision(
+        "project-1", "history-v11", 1, base.timeline_sha256,
+        TimelineEditCommand(
+            "insert-a", TimelineEditKind.INSERT_CLIP,
+            after_clip=clip, after_source_binding=binding,
+        ),
+        revision_version=FORMAT_VERSION_V1_1,
+    ))
+    document = json.loads(TimelineEditSnapshotStore.serialize(history))
+    command = document["revisions"][0]["command"]
+    command["after_source_binding"][field] = value
+    command_body = {key: item for key, item in command.items() if key != "command_sha256"}
+    command["command_sha256"] = sha256_bytes(canonical_json_bytes(command_body))
+    revision = document["revisions"][0]
+    revision_body = {key: item for key, item in revision.items() if key != "revision_sha256"}
+    revision["revision_sha256"] = sha256_bytes(canonical_json_bytes(revision_body))
+    snapshot_body = {key: item for key, item in document.items() if key != "snapshot_sha256"}
+    document["snapshot_sha256"] = sha256_bytes(canonical_json_bytes(snapshot_body))
+    with pytest.raises(ProductError) as exc:
+        parse_timeline_edit_history(document)
     assert exc.value.code == "ERR_TIMELINE_EDIT_SNAPSHOT_INVALID"
 
 

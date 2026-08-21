@@ -37,6 +37,9 @@ class TimelineEditKind(str, Enum):
     SET_IN_OUT = "SET_IN_OUT"
     ADD_TRACK = "ADD_TRACK"
     REMOVE_TRACK = "REMOVE_TRACK"
+    INSERT_CLIP = "INSERT_CLIP"
+    REMOVE_CLIP = "REMOVE_CLIP"
+    REPLACE_CLIP = "REPLACE_CLIP"
 
 
 class SnapKind(str, Enum):
@@ -46,6 +49,51 @@ class SnapKind(str, Enum):
     NARRATION_CUE = "NARRATION_CUE"
     MARKER = "MARKER"
     FRAME_GRID = "FRAME_GRID"
+
+
+@dataclass(frozen=True, slots=True)
+class TimelineSourceBinding:
+    """Body-free, immutable source proof for a v1.1 placed Timeline clip."""
+
+    project_id: str
+    production_snapshot_sha256: str
+    scene_id: str
+    slot_id: str
+    candidate_id: str
+    asset_id: str
+    asset_sha256: str
+    product_job_id: str
+    generation_execution_id: str
+    queue_entry_id: str
+    publication_authorized: bool = False
+
+    def __post_init__(self) -> None:
+        for name in (
+            "project_id", "scene_id", "slot_id", "candidate_id", "asset_id",
+            "product_job_id", "generation_execution_id", "queue_entry_id",
+        ):
+            _identity(getattr(self, name), name)
+        for name in ("production_snapshot_sha256", "asset_sha256"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not _SHA.fullmatch(value):
+                raise ValueError(f"{name} is invalid")
+        if self.publication_authorized is not False:
+            raise ValueError("source binding cannot authorize publication")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "project_id": self.project_id,
+            "production_snapshot_sha256": self.production_snapshot_sha256,
+            "scene_id": self.scene_id,
+            "slot_id": self.slot_id,
+            "candidate_id": self.candidate_id,
+            "asset_id": self.asset_id,
+            "asset_sha256": self.asset_sha256,
+            "product_job_id": self.product_job_id,
+            "generation_execution_id": self.generation_execution_id,
+            "queue_entry_id": self.queue_entry_id,
+            "publication_authorized": False,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +167,10 @@ class TimelineEditCommand:
     out_frame: int | None = None
     track: TimelineTrack | None = None
     snap: SnapDecision | None = None
+    before_clip: InteractiveTimelineClip | None = None
+    after_clip: InteractiveTimelineClip | None = None
+    before_source_binding: TimelineSourceBinding | None = None
+    after_source_binding: TimelineSourceBinding | None = None
 
     def __post_init__(self) -> None:
         _identity(self.command_id, "command_id")
@@ -126,7 +178,67 @@ class TimelineEditCommand:
             raise ValueError("edit kind is invalid")
         if self.snap is not None and not isinstance(self.snap, SnapDecision):
             raise ValueError("snap decision is invalid")
-        if self.kind in {TimelineEditKind.TRIM_START, TimelineEditKind.TRIM_END, TimelineEditKind.MOVE}:
+        placement_kinds = {TimelineEditKind.INSERT_CLIP, TimelineEditKind.REMOVE_CLIP, TimelineEditKind.REPLACE_CLIP}
+        if self.kind in placement_kinds:
+            if self.target_clip_id is not None or self.target_track_id is not None:
+                raise ValueError("clip placement does not use legacy target ids")
+            if any(value is not None for value in (
+                self.before_start_frame, self.before_end_frame, self.after_start_frame,
+                self.after_end_frame, self.in_frame, self.out_frame, self.track, self.snap,
+            )):
+                raise ValueError("clip placement cannot carry legacy command data")
+            if self.kind is TimelineEditKind.INSERT_CLIP:
+                if (
+                    self.before_clip is not None
+                    or self.before_source_binding is not None
+                    or self.after_clip is None
+                    or self.after_source_binding is None
+                ):
+                    raise ValueError("INSERT_CLIP requires an exact absent-before pair")
+            elif self.kind is TimelineEditKind.REMOVE_CLIP:
+                if (
+                    self.before_clip is None
+                    or self.before_source_binding is None
+                    or self.after_clip is not None
+                    or self.after_source_binding is not None
+                ):
+                    raise ValueError("REMOVE_CLIP requires an exact absent-after pair")
+            elif (
+                self.before_clip is None
+                or self.after_clip is None
+                or (
+                    self.before_source_binding is None
+                    and self.after_source_binding is None
+                )
+            ):
+                raise ValueError("REPLACE_CLIP requires exact before/after clips")
+            for clip, binding, name in (
+                (self.before_clip, self.before_source_binding, "before"),
+                (self.after_clip, self.after_source_binding, "after"),
+            ):
+                if binding is not None and not isinstance(binding, TimelineSourceBinding):
+                    raise ValueError(f"{name}_source_binding is invalid")
+                if clip is None and binding is not None:
+                    raise ValueError(f"{name}_source_binding requires its clip")
+                if clip is not None and binding is not None and (
+                    clip.source_owner != "TASK-003" or clip.source_ref != binding.asset_id
+                    or clip.source_sha256 != binding.asset_sha256
+                    or clip.review_candidate_id != binding.candidate_id
+                    or clip.state != "PLACED_LOCKED_ASSET"
+                ):
+                    raise ValueError(f"{name} clip/source binding differs")
+            if self.kind is TimelineEditKind.REPLACE_CLIP and (
+                self.before_clip.clip_id != self.after_clip.clip_id
+                or self.before_clip.track_id != self.after_clip.track_id
+                or self.before_clip.start_frame != self.after_clip.start_frame
+                or self.before_clip.end_frame != self.after_clip.end_frame
+            ):
+                raise ValueError("REPLACE_CLIP must preserve clip identity and placement")
+        elif any(value is not None for value in (
+            self.before_clip, self.after_clip, self.before_source_binding, self.after_source_binding,
+        )):
+            raise ValueError("legacy command cannot carry v1.1 clip placement data")
+        elif self.kind in {TimelineEditKind.TRIM_START, TimelineEditKind.TRIM_END, TimelineEditKind.MOVE}:
             if self.target_clip_id is None:
                 raise ValueError("clip edit requires target_clip_id")
             _identity(self.target_clip_id, "target_clip_id")
@@ -151,6 +263,20 @@ class TimelineEditCommand:
                 raise ValueError("REMOVE_TRACK requires the exact removed track snapshot")
 
     def to_dict(self) -> dict[str, Any]:
+        if self.kind in {TimelineEditKind.INSERT_CLIP, TimelineEditKind.REMOVE_CLIP, TimelineEditKind.REPLACE_CLIP}:
+            body = {
+                "command_id": self.command_id, "kind": self.kind.value,
+                "target_clip_id": None, "target_track_id": None,
+                "before_start_frame": None, "before_end_frame": None,
+                "after_start_frame": None, "after_end_frame": None,
+                "in_frame": None, "out_frame": None, "track": None, "snap": None,
+                "before_clip": None if self.before_clip is None else self.before_clip.to_dict(),
+                "after_clip": None if self.after_clip is None else self.after_clip.to_dict(),
+                "before_source_binding": None if self.before_source_binding is None else self.before_source_binding.to_dict(),
+                "after_source_binding": None if self.after_source_binding is None else self.after_source_binding.to_dict(),
+            }
+            body["command_sha256"] = sha256_bytes(canonical_json_bytes(body))
+            return body
         body = {"command_id": self.command_id, "kind": self.kind.value,
           "target_clip_id": self.target_clip_id, "target_track_id": self.target_track_id,
           "before_start_frame": self.before_start_frame, "before_end_frame": self.before_end_frame,
@@ -177,6 +303,23 @@ class TimelineEditCommand:
                 after_start_frame=self.before_start_frame,
                 after_end_frame=self.before_end_frame,
             )
+        if self.kind is TimelineEditKind.INSERT_CLIP:
+            return TimelineEditCommand(
+                command_id, TimelineEditKind.REMOVE_CLIP,
+                before_clip=self.after_clip, before_source_binding=self.after_source_binding,
+            )
+        if self.kind is TimelineEditKind.REMOVE_CLIP:
+            return TimelineEditCommand(
+                command_id, TimelineEditKind.INSERT_CLIP,
+                after_clip=self.before_clip, after_source_binding=self.before_source_binding,
+            )
+        if self.kind is TimelineEditKind.REPLACE_CLIP:
+            return TimelineEditCommand(
+                command_id, TimelineEditKind.REPLACE_CLIP,
+                before_clip=self.after_clip, after_clip=self.before_clip,
+                before_source_binding=self.after_source_binding,
+                after_source_binding=self.before_source_binding,
+            )
         if self.kind is TimelineEditKind.ADD_TRACK:
             return TimelineEditCommand(command_id, TimelineEditKind.REMOVE_TRACK,
                                        target_track_id=self.track.track_id, track=self.track)
@@ -199,6 +342,7 @@ class TimelineEditRevision:
     base_timeline_sha256: str
     command: TimelineEditCommand
     previous_revision_sha256: str | None = None
+    revision_version: str = "1.0.0"
 
     def __post_init__(self) -> None:
         _identity(self.project_id, "project_id")
@@ -210,9 +354,24 @@ class TimelineEditRevision:
             raise ValueError("revision chain is invalid")
         if self.previous_revision_sha256 is not None and not _SHA.fullmatch(self.previous_revision_sha256):
             raise ValueError("previous hash is invalid")
+        if self.revision_version not in {"1.0.0", "1.1.0"}:
+            raise ValueError("revision_version is unsupported")
+        placement = self.command.kind in {
+            TimelineEditKind.INSERT_CLIP,
+            TimelineEditKind.REMOVE_CLIP,
+            TimelineEditKind.REPLACE_CLIP,
+        }
+        if placement and self.revision_version != "1.1.0":
+            raise ValueError("clip placement requires revision version 1.1.0")
+        for binding in (
+            self.command.before_source_binding,
+            self.command.after_source_binding,
+        ):
+            if binding is not None and binding.project_id != self.project_id:
+                raise ValueError("source binding crosses revision Project scope")
 
     def to_dict(self) -> dict[str, Any]:
-        body = {"revision_version": "1.0.0", "task_owner": "TASK-044/P-NLE-2",
+        body = {"revision_version": self.revision_version, "task_owner": "TASK-044/P-NLE-2",
           "project_id": self.project_id, "history_id": self.history_id, "revision": self.revision,
           "base_timeline_sha256": self.base_timeline_sha256,
           "previous_revision_sha256": self.previous_revision_sha256,
@@ -240,15 +399,36 @@ class TimelineEditHistory:
             (current is not None and value.revision == current.revision+1 and value.previous_revision_sha256 == current.revision_sha256 and value.base_timeline_sha256 == current.base_timeline_sha256))
         if not valid:
             raise ProductError("ERR_TIMELINE_EDIT_HISTORY_FORK", "Edit revision does not append to current history", ProductErrorCategory.DATA_INTEGRITY)
+        if current is not None and current.revision_version == "1.1.0" and value.revision_version != "1.1.0":
+            raise ProductError(
+                "ERR_TIMELINE_EDIT_HISTORY_VERSION_DOWNGRADE",
+                "Timeline edit history cannot append a v1.0 revision after v1.1",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
         self.revisions.append(value)
 
 
 class TimelineEditProjector:
     @staticmethod
     def apply(timeline: InteractiveTimeline, history: TimelineEditHistory) -> tuple[InteractiveTimeline, tuple[int, int] | None]:
+        projected, in_out, _bindings = TimelineEditProjector.apply_with_source_bindings(timeline, history)
+        return projected, in_out
+
+    @staticmethod
+    def apply_with_source_bindings(
+        timeline: InteractiveTimeline,
+        history: TimelineEditHistory,
+    ) -> tuple[
+        InteractiveTimeline,
+        tuple[int, int] | None,
+        dict[str, TimelineSourceBinding | None],
+    ]:
         if history.current is not None and history.current.base_timeline_sha256 != timeline.timeline_sha256:
             raise ProductError("ERR_TIMELINE_EDIT_BASE_STALE", "Edit history targets an older Timeline", ProductErrorCategory.STATE)
         clips = {item.clip_id: item for item in timeline.clips}
+        bindings: dict[str, TimelineSourceBinding | None] = {
+            item.clip_id: None for item in timeline.clips
+        }
         tracks = {item.track_id: item for item in timeline.tracks}
         in_out = None
         for revision in history.revisions:
@@ -283,10 +463,56 @@ class TimelineEditProjector:
                         ProductErrorCategory.STATE,
                     )
                 tracks.pop(command.target_track_id)
+            elif command.kind is TimelineEditKind.INSERT_CLIP:
+                after = command.after_clip
+                if after.clip_id in clips:
+                    raise ProductError(
+                        "ERR_TIMELINE_EDIT_TARGET_STALE",
+                        "Clip exists before INSERT_CLIP projection",
+                        ProductErrorCategory.STATE,
+                    )
+                if after.track_id not in tracks or after.end_frame > timeline.duration_frames:
+                    raise ProductError(
+                        "ERR_TIMELINE_EDIT_RANGE",
+                        "Inserted clip targets an invalid track or range",
+                        ProductErrorCategory.STATE,
+                    )
+                clips[after.clip_id] = after
+                bindings[after.clip_id] = command.after_source_binding
+            elif command.kind is TimelineEditKind.REMOVE_CLIP:
+                before = command.before_clip
+                active = clips.get(before.clip_id)
+                if active != before or bindings.get(before.clip_id) != command.before_source_binding:
+                    raise ProductError(
+                        "ERR_TIMELINE_EDIT_TARGET_STALE",
+                        "Clip/source binding changed before REMOVE_CLIP projection",
+                        ProductErrorCategory.STATE,
+                    )
+                clips.pop(before.clip_id)
+                bindings.pop(before.clip_id)
+            elif command.kind is TimelineEditKind.REPLACE_CLIP:
+                before = command.before_clip
+                after = command.after_clip
+                active = clips.get(before.clip_id)
+                if active != before or bindings.get(before.clip_id) != command.before_source_binding:
+                    raise ProductError(
+                        "ERR_TIMELINE_EDIT_TARGET_STALE",
+                        "Clip/source binding changed before REPLACE_CLIP projection",
+                        ProductErrorCategory.STATE,
+                    )
+                if after.track_id not in tracks or after.end_frame > timeline.duration_frames:
+                    raise ProductError(
+                        "ERR_TIMELINE_EDIT_RANGE",
+                        "Replacement clip targets an invalid track or range",
+                        ProductErrorCategory.STATE,
+                    )
+                clips[after.clip_id] = after
+                bindings[after.clip_id] = command.after_source_binding
         projected = InteractiveTimeline(timeline.project_id, timeline.timeline_id, timeline.timeline_rate, timeline.duration_frames,
             tuple(sorted(tracks.values(), key=lambda item: (item.order, item.track_id))), tuple(clips.values()))
-        return projected, in_out
+        return projected, in_out, bindings
 
 
 __all__ = ["SnapAnchor", "SnapDecision", "SnapKind", "TimelineEditCommand", "TimelineEditHistory",
- "TimelineEditKind", "TimelineEditProjector", "TimelineEditRevision", "TimelineSnapService"]
+ "TimelineEditKind", "TimelineEditProjector", "TimelineEditRevision", "TimelineSnapService",
+ "TimelineSourceBinding"]

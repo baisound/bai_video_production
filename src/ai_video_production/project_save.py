@@ -5,12 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from datetime import datetime
 from enum import Enum
+from contextlib import nullcontext
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, ContextManager, Mapping, Protocol
 
 from .atomic import AtomicJsonWriter, AtomicWriteResult
 from .errors import ProductError, ProductErrorCategory
@@ -31,9 +33,12 @@ from .serialization import canonical_json_bytes, sha256_bytes, utc_now_iso, vali
 
 FailureInjector = Callable[[str, Path], None]
 _JOURNAL_VERSION = "1.0.0"
+_PARTICIPANT_JOURNAL_VERSION = "1.1.0"
 _MAX_JOURNAL_BYTES = 8 * 1024 * 1024
 _MAX_CHILD_BYTES = 64 * 1024 * 1024
 _MAX_TOTAL_STAGED_BYTES = 256 * 1024 * 1024
+_PARTICIPANT_ID = re.compile(r"[A-Z][A-Z0-9]*(?:[-./][A-Z0-9]+){1,7}")
+_PARTICIPANT_VERSION = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+")
 
 
 class ProjectSaveState(str, Enum):
@@ -44,6 +49,173 @@ class ProjectSaveState(str, Enum):
     RECOVERY_REQUIRED = "RECOVERY_REQUIRED"
     COMMITTED = "COMMITTED"
     ABANDONED = "ABANDONED"
+
+
+class ProjectSaveParticipantOutcome(str, Enum):
+    COMPLETE = "COMPLETE"
+    ROLLBACK = "ROLLBACK"
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectSaveParticipantPlan:
+    participant_id: str
+    participant_version: str
+    project_id: str
+    source_manifest_sha256: str
+    target_manifest_sha256: str
+    source_content_sha256: str | None
+    target_content_sha256: str
+    binding_sha256: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.participant_id, str) or not _PARTICIPANT_ID.fullmatch(self.participant_id):
+            raise ValueError("participant_id is invalid")
+        if not isinstance(self.participant_version, str) or not _PARTICIPANT_VERSION.fullmatch(self.participant_version):
+            raise ValueError("participant_version is invalid")
+        if not isinstance(self.project_id, str) or not self.project_id:
+            raise ValueError("participant project_id is invalid")
+        for name in ("source_manifest_sha256", "target_manifest_sha256", "target_content_sha256"):
+            validate_sha256(getattr(self, name), field_name=name)
+        if self.source_content_sha256 is not None:
+            validate_sha256(self.source_content_sha256, field_name="source_content_sha256")
+        validate_sha256(self.binding_sha256, field_name="binding_sha256")
+        if self.binding_sha256 != sha256_bytes(canonical_json_bytes(self._body())):
+            raise ValueError("participant binding checksum mismatch")
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        participant_id: str,
+        participant_version: str,
+        project_id: str,
+        source_manifest_sha256: str,
+        target_manifest_sha256: str,
+        source_content_sha256: str | None,
+        target_content_sha256: str,
+    ) -> "ProjectSaveParticipantPlan":
+        values = {
+            "participant_id": participant_id,
+            "participant_version": participant_version,
+            "project_id": project_id,
+            "source_manifest_sha256": source_manifest_sha256,
+            "target_manifest_sha256": target_manifest_sha256,
+            "source_content_sha256": source_content_sha256,
+            "target_content_sha256": target_content_sha256,
+        }
+        return cls(**values, binding_sha256=sha256_bytes(canonical_json_bytes(values)))
+
+    def _body(self) -> dict[str, object]:
+        return {
+            "participant_id": self.participant_id,
+            "participant_version": self.participant_version,
+            "project_id": self.project_id,
+            "source_manifest_sha256": self.source_manifest_sha256,
+            "target_manifest_sha256": self.target_manifest_sha256,
+            "source_content_sha256": self.source_content_sha256,
+            "target_content_sha256": self.target_content_sha256,
+        }
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._body(), "binding_sha256": self.binding_sha256}
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectSaveParticipantResult:
+    participant_id: str
+    binding_sha256: str
+    transaction_id: str
+    outcome: ProjectSaveParticipantOutcome
+    result_content_sha256: str | None
+    receipt_sha256: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.participant_id, str) or not _PARTICIPANT_ID.fullmatch(self.participant_id):
+            raise ValueError("participant result identity is invalid")
+        if not isinstance(self.transaction_id, str) or not re.fullmatch(r"save-[0-9a-f]{64}", self.transaction_id):
+            raise ValueError("participant transaction identity is invalid")
+        if not isinstance(self.outcome, ProjectSaveParticipantOutcome):
+            raise ValueError("participant outcome is invalid")
+        for name in ("binding_sha256", "receipt_sha256"):
+            validate_sha256(getattr(self, name), field_name=name)
+        if self.result_content_sha256 is not None:
+            validate_sha256(self.result_content_sha256, field_name="result_content_sha256")
+        if self.receipt_sha256 != sha256_bytes(canonical_json_bytes(self._body())):
+            raise ValueError("participant result checksum mismatch")
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        participant_id: str,
+        binding_sha256: str,
+        transaction_id: str,
+        outcome: ProjectSaveParticipantOutcome,
+        result_content_sha256: str | None,
+    ) -> "ProjectSaveParticipantResult":
+        values = {
+            "participant_id": participant_id,
+            "binding_sha256": binding_sha256,
+            "transaction_id": transaction_id,
+            "outcome": outcome,
+            "result_content_sha256": result_content_sha256,
+        }
+        body = {**values, "outcome": outcome.value}
+        return cls(**values, receipt_sha256=sha256_bytes(canonical_json_bytes(body)))
+
+    def _body(self) -> dict[str, object]:
+        return {
+            "participant_id": self.participant_id,
+            "binding_sha256": self.binding_sha256,
+            "transaction_id": self.transaction_id,
+            "outcome": self.outcome.value,
+            "result_content_sha256": self.result_content_sha256,
+        }
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._body(), "receipt_sha256": self.receipt_sha256}
+
+
+class ProjectSaveParticipant(Protocol):
+    participant_id: str
+    participant_version: str
+
+    def plan_locked(
+        self,
+        project_root: Path,
+        source_manifest: ProductProjectManifest,
+        target_manifest: ProductProjectManifest,
+    ) -> ProjectSaveParticipantPlan: ...
+
+    def prepare_locked(
+        self,
+        project_root: Path,
+        transaction_id: str,
+        plan: ProjectSaveParticipantPlan,
+    ) -> str: ...
+
+    def reconcile_locked(
+        self,
+        project_root: Path,
+        transaction_id: str,
+        plan: ProjectSaveParticipantPlan,
+        prepared_receipt_sha256: str,
+        outcome: ProjectSaveParticipantOutcome,
+    ) -> ProjectSaveParticipantResult: ...
+
+    def abort_prejournal_locked(
+        self,
+        project_root: Path,
+        transaction_id: str,
+        plan: ProjectSaveParticipantPlan,
+        prepared_receipt_sha256: str,
+    ) -> None: ...
+
+    def reconcile_orphan_locked(
+        self,
+        project_root: Path,
+        current_manifest: ProductProjectManifest,
+    ) -> str | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +251,7 @@ class ProjectSaveEntry:
 
 @dataclass(frozen=True, slots=True)
 class ProjectSaveJournal:
+    journal_version: str
     transaction_id: str
     project_id: str
     source_manifest_sha256: str
@@ -89,11 +262,16 @@ class ProjectSaveJournal:
     created_at: str
     updated_at: str
     last_error_code: str | None
+    participant_plan: ProjectSaveParticipantPlan | None
+    participant_prepared_receipt_sha256: str | None
+    participant_result: ProjectSaveParticipantResult | None
     journal_sha256: str
 
     def __post_init__(self) -> None:
         if not self.transaction_id.startswith("save-") or len(self.transaction_id) != 69:
             raise ValueError("transaction_id is invalid")
+        if self.journal_version not in {_JOURNAL_VERSION, _PARTICIPANT_JOURNAL_VERSION}:
+            raise ValueError("journal_version is invalid")
         if self.project_id != self.target_manifest.project_id:
             raise ValueError("journal project identity mismatch")
         validate_sha256(self.source_manifest_sha256, field_name="source_manifest_sha256")
@@ -106,6 +284,43 @@ class ProjectSaveJournal:
             raise ValueError("journal entries contain duplicate paths")
         if self.last_error_code is not None and not self.last_error_code.startswith("ERR_"):
             raise ValueError("last_error_code must be a Product error code")
+        if self.journal_version == _JOURNAL_VERSION:
+            if any(value is not None for value in (
+                self.participant_plan,
+                self.participant_prepared_receipt_sha256,
+                self.participant_result,
+            )):
+                raise ValueError("v1.0 journal cannot carry a participant")
+        else:
+            if self.participant_plan is None or self.participant_prepared_receipt_sha256 is None:
+                raise ValueError("v1.1 journal requires a prepared participant")
+            validate_sha256(
+                self.participant_prepared_receipt_sha256,
+                field_name="participant_prepared_receipt_sha256",
+            )
+            if (
+                self.participant_plan.project_id != self.project_id
+                or self.participant_plan.source_manifest_sha256 != self.source_manifest_sha256
+                or self.participant_plan.target_manifest_sha256
+                != self.target_manifest.project_manifest_sha256
+            ):
+                raise ValueError("participant plan crosses Project save scope")
+            if self.participant_result is not None and (
+                self.participant_result.participant_id != self.participant_plan.participant_id
+                or self.participant_result.binding_sha256 != self.participant_plan.binding_sha256
+                or self.participant_result.transaction_id != self.transaction_id
+            ):
+                raise ValueError("participant result crosses its plan")
+            if self.state is ProjectSaveState.COMMITTED and (
+                self.participant_result is None
+                or self.participant_result.outcome is not ProjectSaveParticipantOutcome.COMPLETE
+            ):
+                raise ValueError("committed participant journal lacks COMPLETE result")
+            if self.state is ProjectSaveState.ABANDONED and (
+                self.participant_result is None
+                or self.participant_result.outcome is not ProjectSaveParticipantOutcome.ROLLBACK
+            ):
+                raise ValueError("abandoned participant journal lacks ROLLBACK result")
         target_by_path = {binding.relative_path: binding for binding in self.target_manifest.child_bindings}
         for entry in self.entries:
             binding = target_by_path.get(entry.relative_path)
@@ -120,6 +335,9 @@ class ProjectSaveJournal:
             self.source_manifest_sha256,
             self.target_manifest.project_manifest_sha256,
             {entry.relative_path: entry.target_sha256 for entry in self.entries},
+            participant_binding_sha256=(
+                None if self.participant_plan is None else self.participant_plan.binding_sha256
+            ),
         )
         if self.transaction_id != expected_transaction_id:
             raise ValueError("transaction_id does not match the save operation identity")
@@ -135,9 +353,14 @@ class ProjectSaveJournal:
         source_manifest_sha256: str,
         target_manifest: ProductProjectManifest,
         entries: tuple[ProjectSaveEntry, ...],
+        participant_plan: ProjectSaveParticipantPlan | None = None,
+        participant_prepared_receipt_sha256: str | None = None,
     ) -> "ProjectSaveJournal":
         now = utc_now_iso()
         return _journal(
+            journal_version=(
+                _JOURNAL_VERSION if participant_plan is None else _PARTICIPANT_JOURNAL_VERSION
+            ),
             transaction_id=transaction_id,
             project_id=target_manifest.project_id,
             source_manifest_sha256=source_manifest_sha256,
@@ -148,6 +371,9 @@ class ProjectSaveJournal:
             created_at=now,
             updated_at=now,
             last_error_code=None,
+            participant_plan=participant_plan,
+            participant_prepared_receipt_sha256=participant_prepared_receipt_sha256,
+            participant_result=None,
         )
 
     def transition(
@@ -174,6 +400,7 @@ class ProjectSaveJournal:
         if state not in allowed[self.state]:
             raise ValueError(f"invalid Project save transition {self.state.value} -> {state.value}")
         return _journal(
+            journal_version=self.journal_version,
             transaction_id=self.transaction_id,
             project_id=self.project_id,
             source_manifest_sha256=self.source_manifest_sha256,
@@ -184,10 +411,39 @@ class ProjectSaveJournal:
             created_at=self.created_at,
             updated_at=utc_now_iso(),
             last_error_code=last_error_code,
+            participant_plan=self.participant_plan,
+            participant_prepared_receipt_sha256=self.participant_prepared_receipt_sha256,
+            participant_result=self.participant_result,
+        )
+
+    def record_participant_result(
+        self,
+        result: ProjectSaveParticipantResult,
+    ) -> "ProjectSaveJournal":
+        if self.journal_version != _PARTICIPANT_JOURNAL_VERSION:
+            raise ValueError("v1.0 journal cannot record a participant result")
+        if self.participant_result is not None and self.participant_result != result:
+            raise ValueError("participant result conflicts with the durable result")
+        return _journal(
+            journal_version=self.journal_version,
+            transaction_id=self.transaction_id,
+            project_id=self.project_id,
+            source_manifest_sha256=self.source_manifest_sha256,
+            target_manifest=self.target_manifest,
+            state=self.state,
+            entries=self.entries,
+            journal_revision=self.journal_revision + 1,
+            created_at=self.created_at,
+            updated_at=utc_now_iso(),
+            last_error_code=self.last_error_code,
+            participant_plan=self.participant_plan,
+            participant_prepared_receipt_sha256=self.participant_prepared_receipt_sha256,
+            participant_result=result,
         )
 
     def _body(self) -> dict[str, object]:
         return _journal_body(
+            journal_version=self.journal_version,
             transaction_id=self.transaction_id,
             project_id=self.project_id,
             source_manifest_sha256=self.source_manifest_sha256,
@@ -198,6 +454,9 @@ class ProjectSaveJournal:
             created_at=self.created_at,
             updated_at=self.updated_at,
             last_error_code=self.last_error_code,
+            participant_plan=self.participant_plan,
+            participant_prepared_receipt_sha256=self.participant_prepared_receipt_sha256,
+            participant_result=self.participant_result,
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -211,6 +470,7 @@ def _journal(**values: Any) -> ProjectSaveJournal:
 
 def _journal_body(
     *,
+    journal_version: str,
     transaction_id: str,
     project_id: str,
     source_manifest_sha256: str,
@@ -221,9 +481,12 @@ def _journal_body(
     created_at: str,
     updated_at: str,
     last_error_code: str | None,
+    participant_plan: ProjectSaveParticipantPlan | None,
+    participant_prepared_receipt_sha256: str | None,
+    participant_result: ProjectSaveParticipantResult | None,
 ) -> dict[str, object]:
-    return {
-        "journal_version": _JOURNAL_VERSION,
+    body: dict[str, object] = {
+        "journal_version": journal_version,
         "transaction_id": transaction_id,
         "project_id": project_id,
         "source_manifest_sha256": source_manifest_sha256,
@@ -236,17 +499,62 @@ def _journal_body(
         "last_error_code": last_error_code,
         "authority": {"external_replay_authorized": False, "migration_apply_authorized": False},
     }
+    if journal_version == _PARTICIPANT_JOURNAL_VERSION:
+        body.update({
+            "participant_plan": None if participant_plan is None else participant_plan.to_dict(),
+            "participant_prepared_receipt_sha256": participant_prepared_receipt_sha256,
+            "participant_result": None if participant_result is None else participant_result.to_dict(),
+        })
+    return body
+
+
+def _parse_participant_plan(value: Mapping[str, Any]) -> ProjectSaveParticipantPlan:
+    fields = {
+        "participant_id", "participant_version", "project_id",
+        "source_manifest_sha256", "target_manifest_sha256",
+        "source_content_sha256", "target_content_sha256", "binding_sha256",
+    }
+    if not isinstance(value, Mapping) or set(value) != fields:
+        raise ValueError("participant plan fields are not exact")
+    return ProjectSaveParticipantPlan(**{name: value[name] for name in fields})
+
+
+def _parse_participant_result(value: Mapping[str, Any] | None) -> ProjectSaveParticipantResult | None:
+    if value is None:
+        return None
+    fields = {
+        "participant_id", "binding_sha256", "transaction_id", "outcome",
+        "result_content_sha256", "receipt_sha256",
+    }
+    if not isinstance(value, Mapping) or set(value) != fields:
+        raise ValueError("participant result fields are not exact")
+    return ProjectSaveParticipantResult(
+        participant_id=value["participant_id"],
+        binding_sha256=value["binding_sha256"],
+        transaction_id=value["transaction_id"],
+        outcome=ProjectSaveParticipantOutcome(value["outcome"]),
+        result_content_sha256=value["result_content_sha256"],
+        receipt_sha256=value["receipt_sha256"],
+    )
 
 
 def parse_project_save_journal(document: Mapping[str, Any]) -> ProjectSaveJournal:
     if not isinstance(document, Mapping):
         raise ProductError("ERR_PROJECT_SAVE_JOURNAL_INVALID", "Project save journal root must be an object", ProductErrorCategory.DATA_INTEGRITY)
-    fields = {
+    version = document.get("journal_version")
+    fields_v1 = {
         "journal_version", "transaction_id", "project_id", "source_manifest_sha256",
         "target_manifest", "state", "entries", "journal_revision", "created_at",
         "updated_at", "last_error_code", "authority", "journal_sha256",
     }
-    if set(document) != fields or document.get("journal_version") != _JOURNAL_VERSION:
+    fields_v1_1 = fields_v1 | {
+        "participant_plan", "participant_prepared_receipt_sha256", "participant_result",
+    }
+    if (
+        (version == _JOURNAL_VERSION and set(document) != fields_v1)
+        or (version == _PARTICIPANT_JOURNAL_VERSION and set(document) != fields_v1_1)
+        or version not in {_JOURNAL_VERSION, _PARTICIPANT_JOURNAL_VERSION}
+    ):
         raise ProductError("ERR_PROJECT_SAVE_JOURNAL_VERSION", "Project save journal version/fields are unsupported", ProductErrorCategory.DATA_INTEGRITY)
     if document.get("authority") != {"external_replay_authorized": False, "migration_apply_authorized": False}:
         raise ProductError("ERR_PROJECT_SAVE_JOURNAL_AUTHORITY", "Project save journal violates authority boundaries", ProductErrorCategory.SECURITY)
@@ -259,13 +567,31 @@ def parse_project_save_journal(document: Mapping[str, Any]) -> ProjectSaveJourna
             target_sha256=row["target_sha256"], staged_relative_path=row["staged_relative_path"],
             backup_relative_path=row["backup_relative_path"], committed=row["committed"],
         ) for row in raw_entries)
+        participant_plan = (
+            None
+            if version == _JOURNAL_VERSION
+            else _parse_participant_plan(document["participant_plan"])
+        )
+        participant_result = (
+            None
+            if version == _JOURNAL_VERSION
+            else _parse_participant_result(document["participant_result"])
+        )
         return ProjectSaveJournal(
+            journal_version=version,
             transaction_id=document["transaction_id"], project_id=document["project_id"],
             source_manifest_sha256=document["source_manifest_sha256"],
             target_manifest=parse_product_project_manifest(document["target_manifest"]),
             state=ProjectSaveState(document["state"]), entries=entries,
             journal_revision=document["journal_revision"], created_at=document["created_at"],
             updated_at=document["updated_at"], last_error_code=document["last_error_code"],
+            participant_plan=participant_plan,
+            participant_prepared_receipt_sha256=(
+                None
+                if version == _JOURNAL_VERSION
+                else document["participant_prepared_receipt_sha256"]
+            ),
+            participant_result=participant_result,
             journal_sha256=document["journal_sha256"],
         )
     except ProductError:
@@ -308,49 +634,107 @@ class ProductProjectSaveCoordinator:
         child_documents: Mapping[str, bytes],
         *,
         expected_previous_manifest_sha256: str,
+        participant: ProjectSaveParticipant | None = None,
+        commit_guard: Callable[[], ContextManager[None]] | None = None,
     ) -> ProductProjectManifest:
         root = _project_root(project_root)
         lock_target = _manifest_path(root, create_control_dir=True)
         with _exclusive_project_lock(lock_target):
-            self._require_no_pending_recovery(root)
-            current = ProductProjectManifestStore.load(root)
-            self._require_manifest_transition(current, target_manifest, expected_previous_manifest_sha256)
-            normalized = self._validate_documents(root, current, target_manifest, child_documents)
-            transaction_id = self._transaction_id(current, target_manifest, normalized)
-            entries = self._prepare_entries(root, transaction_id, current, target_manifest, normalized)
-            journal = ProjectSaveJournal.create(
-                transaction_id=transaction_id,
-                source_manifest_sha256=current.project_manifest_sha256,
-                target_manifest=target_manifest,
-                entries=entries,
-            )
-            ProjectSaveJournalStore.save(root, journal)
-            try:
-                self._stage_documents(root, journal, normalized)
-                journal = journal.transition(ProjectSaveState.STAGED)
-                ProjectSaveJournalStore.save(root, journal)
-                self._inject("after_journal_staged", root)
-                self._validate_staging(root, journal)
-                journal = journal.transition(ProjectSaveState.VALIDATED)
-                ProjectSaveJournalStore.save(root, journal)
-                self._inject("after_journal_validated", root)
-                self._revalidate_source(root, current, journal)
-                journal = journal.transition(ProjectSaveState.COMMITTING)
-                ProjectSaveJournalStore.save(root, journal)
-                journal = self._commit_children(root, journal)
-                self._inject("before_manifest_commit", root)
-                ProductProjectManifestStore._save_unlocked(
+            guard = nullcontext() if commit_guard is None else commit_guard()
+            if not hasattr(guard, "__enter__") or not hasattr(guard, "__exit__"):
+                raise ProductError(
+                    "ERR_PROJECT_SAVE_COMMIT_GUARD_INVALID",
+                    "Project save commit guard is invalid",
+                    ProductErrorCategory.INTERNAL,
+                )
+            with guard:
+                return self._save_locked(
                     root,
                     target_manifest,
-                    expected_previous_manifest_sha256=current.project_manifest_sha256,
+                    child_documents,
+                    expected_previous_manifest_sha256=expected_previous_manifest_sha256,
+                    participant=participant,
                 )
-                self._inject("after_manifest_commit", root)
-                journal = journal.transition(ProjectSaveState.COMMITTED)
+
+    def _save_locked(
+        self,
+        root: Path,
+        target_manifest: ProductProjectManifest,
+        child_documents: Mapping[str, bytes],
+        *,
+        expected_previous_manifest_sha256: str,
+        participant: ProjectSaveParticipant | None,
+    ) -> ProductProjectManifest:
+        self._require_no_pending_recovery(root)
+        current = ProductProjectManifestStore.load(root)
+        self._require_manifest_transition(current, target_manifest, expected_previous_manifest_sha256)
+        normalized = self._validate_documents(root, current, target_manifest, child_documents)
+        plan = None
+        if participant is not None:
+            plan = participant.plan_locked(root, current, target_manifest)
+            self._validate_participant(participant, plan, current, target_manifest)
+        transaction_id = self._transaction_id(
+            current,
+            target_manifest,
+            normalized,
+            participant_binding_sha256=None if plan is None else plan.binding_sha256,
+        )
+        entries = self._prepare_entries(root, transaction_id, current, target_manifest, normalized)
+        prepared_receipt = None
+        if participant is not None:
+            prepared_receipt = participant.prepare_locked(root, transaction_id, plan)
+            validate_sha256(prepared_receipt, field_name="participant_prepared_receipt_sha256")
+        journal = ProjectSaveJournal.create(
+            transaction_id=transaction_id,
+            source_manifest_sha256=current.project_manifest_sha256,
+            target_manifest=target_manifest,
+            entries=entries,
+            participant_plan=plan,
+            participant_prepared_receipt_sha256=prepared_receipt,
+        )
+        try:
+            ProjectSaveJournalStore.save(root, journal)
+        except Exception:
+            if participant is not None and not self._journal_matches(root, transaction_id):
+                participant.abort_prejournal_locked(root, transaction_id, plan, prepared_receipt)
+            raise
+        try:
+            self._stage_documents(root, journal, normalized)
+            journal = journal.transition(ProjectSaveState.STAGED)
+            ProjectSaveJournalStore.save(root, journal)
+            self._inject("after_journal_staged", root)
+            self._validate_staging(root, journal)
+            journal = journal.transition(ProjectSaveState.VALIDATED)
+            ProjectSaveJournalStore.save(root, journal)
+            self._inject("after_journal_validated", root)
+            self._revalidate_source(root, current, journal)
+            journal = journal.transition(ProjectSaveState.COMMITTING)
+            ProjectSaveJournalStore.save(root, journal)
+            journal = self._commit_children(root, journal)
+            self._inject("before_manifest_commit", root)
+            ProductProjectManifestStore._save_unlocked(
+                root,
+                target_manifest,
+                expected_previous_manifest_sha256=current.project_manifest_sha256,
+            )
+            self._inject("after_manifest_commit", root)
+            if participant is not None:
+                result = participant.reconcile_locked(
+                    root,
+                    transaction_id,
+                    plan,
+                    prepared_receipt,
+                    ProjectSaveParticipantOutcome.COMPLETE,
+                )
+                self._validate_participant_result(journal, result, ProjectSaveParticipantOutcome.COMPLETE)
+                journal = journal.record_participant_result(result)
                 ProjectSaveJournalStore.save(root, journal)
-                return target_manifest
-            except Exception as exc:
-                self._mark_recovery_required(root, journal, exc)
-                raise
+            journal = journal.transition(ProjectSaveState.COMMITTED)
+            ProjectSaveJournalStore.save(root, journal)
+            return target_manifest
+        except Exception as exc:
+            self._mark_recovery_required(root, journal, exc)
+            raise
 
     def recovery_status(self, project_root: str | Path) -> dict[str, object]:
         root = _project_root(project_root)
@@ -361,8 +745,57 @@ class ProductProjectSaveCoordinator:
         if journal.state in {ProjectSaveState.COMMITTED, ProjectSaveState.ABANDONED}:
             return {"required": False, "state": journal.state.value, "transaction_id": journal.transaction_id, "available_actions": []}
         current = ProductProjectManifestStore.load(root)
-        actions = ["FINALIZE"] if current.project_manifest_sha256 == journal.target_manifest.project_manifest_sha256 else ["COMPLETE", "ROLLBACK"]
-        return {"required": True, "state": journal.state.value, "transaction_id": journal.transaction_id, "available_actions": actions}
+        if (
+            journal.participant_result is not None
+            and journal.participant_result.outcome is ProjectSaveParticipantOutcome.ROLLBACK
+        ):
+            actions = ["ROLLBACK"]
+        elif (
+            journal.participant_result is not None
+            and journal.participant_result.outcome is ProjectSaveParticipantOutcome.COMPLETE
+        ):
+            actions = ["FINALIZE"]
+        else:
+            actions = ["FINALIZE"] if current.project_manifest_sha256 == journal.target_manifest.project_manifest_sha256 else ["COMPLETE", "ROLLBACK"]
+        return {
+            "required": True,
+            "state": journal.state.value,
+            "transaction_id": journal.transaction_id,
+            "available_actions": actions,
+            "participant_required": journal.participant_plan is not None,
+            "participant_id": (
+                None if journal.participant_plan is None else journal.participant_plan.participant_id
+            ),
+        }
+
+    def reconcile_participant_orphan(
+        self,
+        project_root: str | Path,
+        *,
+        participant: ProjectSaveParticipant,
+    ) -> dict[str, object]:
+        """Reconcile a participant receipt left before the first journal write."""
+        root = _project_root(project_root)
+        lock_target = _manifest_path(root, create_control_dir=True)
+        with _exclusive_project_lock(lock_target):
+            path = ProjectSaveJournalStore.path(root)
+            if path.exists():
+                journal = ProjectSaveJournalStore.load(root)
+                if journal.state not in {ProjectSaveState.COMMITTED, ProjectSaveState.ABANDONED}:
+                    raise ProductError(
+                        "ERR_PROJECT_SAVE_RECOVERY_REQUIRED",
+                        "Project save recovery must finish before orphan reconciliation",
+                        ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                    )
+            current = ProductProjectManifestStore.load(root)
+            receipt = participant.reconcile_orphan_locked(root, current)
+            if receipt is not None:
+                validate_sha256(receipt, field_name="orphan_receipt_sha256")
+            return {
+                "participant_id": participant.participant_id,
+                "reconciled": receipt is not None,
+                "orphan_receipt_sha256": receipt,
+            }
 
     def require_current_integrity(
         self,
@@ -386,60 +819,226 @@ class ProductProjectSaveCoordinator:
             )
         self._validate_target_children(root, manifest)
 
-    def recover_complete(self, project_root: str | Path, *, transaction_id: str) -> ProductProjectManifest:
+    def recover_complete(
+        self,
+        project_root: str | Path,
+        *,
+        transaction_id: str,
+        participant: ProjectSaveParticipant | None = None,
+        commit_guard: Callable[[], ContextManager[None]] | None = None,
+    ) -> ProductProjectManifest:
         root = _project_root(project_root)
         lock_target = _manifest_path(root, create_control_dir=True)
         with _exclusive_project_lock(lock_target):
-            journal = self._require_recovery(root, transaction_id)
-            current = ProductProjectManifestStore.load(root)
-            if current.project_manifest_sha256 == journal.target_manifest.project_manifest_sha256:
-                self._validate_target_children(root, journal.target_manifest)
-                final = journal.transition(ProjectSaveState.COMMITTED)
-                ProjectSaveJournalStore.save(root, final)
-                return current
-            if current.project_manifest_sha256 != journal.source_manifest_sha256:
-                raise ProductError("ERR_PROJECT_SAVE_RECOVERY_MANIFEST_CONFLICT", "Current manifest is neither the source nor target transaction revision", ProductErrorCategory.STATE)
-            committing = journal.transition(ProjectSaveState.COMMITTING)
-            ProjectSaveJournalStore.save(root, committing)
-            committing = self._commit_children(root, committing)
-            ProductProjectManifestStore._save_unlocked(
-                root,
-                committing.target_manifest,
-                expected_previous_manifest_sha256=committing.source_manifest_sha256,
-            )
-            final = committing.transition(ProjectSaveState.COMMITTED)
-            ProjectSaveJournalStore.save(root, final)
-            return committing.target_manifest
-
-    def recover_rollback(self, project_root: str | Path, *, transaction_id: str) -> ProductProjectManifest:
-        root = _project_root(project_root)
-        lock_target = _manifest_path(root, create_control_dir=True)
-        with _exclusive_project_lock(lock_target):
-            journal = self._require_recovery(root, transaction_id)
-            current = ProductProjectManifestStore.load(root)
-            if current.project_manifest_sha256 == journal.target_manifest.project_manifest_sha256:
-                raise ProductError("ERR_PROJECT_SAVE_ROLLBACK_AFTER_MANIFEST", "Committed manifest cannot be rolled back without a new restore transaction", ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
-            if current.project_manifest_sha256 != journal.source_manifest_sha256:
-                raise ProductError("ERR_PROJECT_SAVE_RECOVERY_MANIFEST_CONFLICT", "Current manifest changed outside the interrupted transaction", ProductErrorCategory.STATE)
-            for entry in reversed(journal.entries):
-                target = self._safe_child_target(root, entry.relative_path, create_parent=True)
-                if entry.before_sha256 is None:
-                    if target.exists():
-                        if target.is_symlink() or sha256_file_exact(target) != entry.target_sha256:
-                            raise ProductError("ERR_PROJECT_SAVE_ROLLBACK_CHILD_CONFLICT", "New child changed before rollback", ProductErrorCategory.STATE, details={"relative_path": entry.relative_path})
-                        target.unlink()
+            guard = nullcontext() if commit_guard is None else commit_guard()
+            with guard:
+                journal = self._require_recovery(root, transaction_id)
+                self._require_participant(journal, participant)
+                if (
+                    journal.participant_result is not None
+                    and journal.participant_result.outcome is not ProjectSaveParticipantOutcome.COMPLETE
+                ):
+                    raise ProductError(
+                        "ERR_PROJECT_SAVE_PARTICIPANT_OUTCOME_CONFLICT",
+                        "A rolled-back participant transaction cannot be completed",
+                        ProductErrorCategory.STATE,
+                    )
+                current = ProductProjectManifestStore.load(root)
+                if current.project_manifest_sha256 == journal.target_manifest.project_manifest_sha256:
+                    self._validate_target_children(root, journal.target_manifest)
+                    committing = journal
+                    result_manifest = current
                 else:
-                    backup = self._internal_path(root, entry.backup_relative_path)
-                    if not backup.is_file() or sha256_file_exact(backup) != entry.before_sha256:
-                        raise ProductError("ERR_PROJECT_SAVE_ROLLBACK_BACKUP_INVALID", "Project save backup is missing or changed", ProductErrorCategory.DATA_INTEGRITY, details={"relative_path": entry.relative_path})
-                    if target.exists() and not target.is_symlink():
-                        actual = sha256_file_exact(target)
-                        if actual not in {entry.before_sha256, entry.target_sha256}:
-                            raise ProductError("ERR_PROJECT_SAVE_ROLLBACK_CHILD_CONFLICT", "Child changed outside the interrupted transaction", ProductErrorCategory.STATE, details={"relative_path": entry.relative_path})
-                    self._replace_from_stage(backup, target)
-            final = journal.transition(ProjectSaveState.ABANDONED)
-            ProjectSaveJournalStore.save(root, final)
-            return current
+                    if current.project_manifest_sha256 != journal.source_manifest_sha256:
+                        raise ProductError("ERR_PROJECT_SAVE_RECOVERY_MANIFEST_CONFLICT", "Current manifest is neither the source nor target transaction revision", ProductErrorCategory.STATE)
+                    committing = journal.transition(ProjectSaveState.COMMITTING)
+                    ProjectSaveJournalStore.save(root, committing)
+                    committing = self._commit_children(root, committing)
+                    ProductProjectManifestStore._save_unlocked(
+                        root,
+                        committing.target_manifest,
+                        expected_previous_manifest_sha256=committing.source_manifest_sha256,
+                    )
+                    result_manifest = committing.target_manifest
+                if participant is not None:
+                    result = participant.reconcile_locked(
+                        root,
+                        transaction_id,
+                        committing.participant_plan,
+                        committing.participant_prepared_receipt_sha256,
+                        ProjectSaveParticipantOutcome.COMPLETE,
+                    )
+                    self._validate_participant_result(
+                        committing,
+                        result,
+                        ProjectSaveParticipantOutcome.COMPLETE,
+                    )
+                    committing = committing.record_participant_result(result)
+                    ProjectSaveJournalStore.save(root, committing)
+                final = committing.transition(ProjectSaveState.COMMITTED)
+                ProjectSaveJournalStore.save(root, final)
+                return result_manifest
+
+    def recover_rollback(
+        self,
+        project_root: str | Path,
+        *,
+        transaction_id: str,
+        participant: ProjectSaveParticipant | None = None,
+        commit_guard: Callable[[], ContextManager[None]] | None = None,
+    ) -> ProductProjectManifest:
+        root = _project_root(project_root)
+        lock_target = _manifest_path(root, create_control_dir=True)
+        with _exclusive_project_lock(lock_target):
+            guard = nullcontext() if commit_guard is None else commit_guard()
+            with guard:
+                return self._recover_rollback_locked(root, transaction_id, participant)
+
+    def _recover_rollback_locked(
+        self,
+        root: Path,
+        transaction_id: str,
+        participant: ProjectSaveParticipant | None,
+    ) -> ProductProjectManifest:
+        journal = self._require_recovery(root, transaction_id)
+        self._require_participant(journal, participant)
+        if (
+            journal.participant_result is not None
+            and journal.participant_result.outcome is not ProjectSaveParticipantOutcome.ROLLBACK
+        ):
+            raise ProductError(
+                "ERR_PROJECT_SAVE_PARTICIPANT_OUTCOME_CONFLICT",
+                "A completed participant transaction cannot be rolled back",
+                ProductErrorCategory.STATE,
+            )
+        current = ProductProjectManifestStore.load(root)
+        if current.project_manifest_sha256 == journal.target_manifest.project_manifest_sha256:
+            raise ProductError("ERR_PROJECT_SAVE_ROLLBACK_AFTER_MANIFEST", "Committed manifest cannot be rolled back without a new restore transaction", ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
+        if current.project_manifest_sha256 != journal.source_manifest_sha256:
+            raise ProductError("ERR_PROJECT_SAVE_RECOVERY_MANIFEST_CONFLICT", "Current manifest changed outside the interrupted transaction", ProductErrorCategory.STATE)
+        for entry in reversed(journal.entries):
+            target = self._safe_child_target(root, entry.relative_path, create_parent=True)
+            if entry.before_sha256 is None:
+                if target.exists():
+                    if target.is_symlink() or sha256_file_exact(target) != entry.target_sha256:
+                        raise ProductError("ERR_PROJECT_SAVE_ROLLBACK_CHILD_CONFLICT", "New child changed before rollback", ProductErrorCategory.STATE, details={"relative_path": entry.relative_path})
+                    target.unlink()
+            else:
+                backup = self._internal_path(root, entry.backup_relative_path)
+                if not backup.is_file() or sha256_file_exact(backup) != entry.before_sha256:
+                    raise ProductError("ERR_PROJECT_SAVE_ROLLBACK_BACKUP_INVALID", "Project save backup is missing or changed", ProductErrorCategory.DATA_INTEGRITY, details={"relative_path": entry.relative_path})
+                if target.exists() and not target.is_symlink():
+                    actual = sha256_file_exact(target)
+                    if actual not in {entry.before_sha256, entry.target_sha256}:
+                        raise ProductError("ERR_PROJECT_SAVE_ROLLBACK_CHILD_CONFLICT", "Child changed outside the interrupted transaction", ProductErrorCategory.STATE, details={"relative_path": entry.relative_path})
+                self._replace_from_stage(backup, target)
+        if participant is not None:
+            result = participant.reconcile_locked(
+                root,
+                transaction_id,
+                journal.participant_plan,
+                journal.participant_prepared_receipt_sha256,
+                ProjectSaveParticipantOutcome.ROLLBACK,
+            )
+            self._validate_participant_result(
+                journal,
+                result,
+                ProjectSaveParticipantOutcome.ROLLBACK,
+            )
+            journal = journal.record_participant_result(result)
+            ProjectSaveJournalStore.save(root, journal)
+        final = journal.transition(ProjectSaveState.ABANDONED)
+        ProjectSaveJournalStore.save(root, final)
+        return current
+
+    @staticmethod
+    def _validate_participant(
+        participant: ProjectSaveParticipant,
+        plan: ProjectSaveParticipantPlan,
+        current: ProductProjectManifest,
+        target: ProductProjectManifest,
+    ) -> None:
+        if not isinstance(plan, ProjectSaveParticipantPlan):
+            raise ProductError(
+                "ERR_PROJECT_SAVE_PARTICIPANT_PLAN_INVALID",
+                "Project save participant plan is invalid",
+                ProductErrorCategory.INTERNAL,
+            )
+        if (
+            participant.participant_id != plan.participant_id
+            or participant.participant_version != plan.participant_version
+            or plan.project_id != current.project_id
+            or plan.source_manifest_sha256 != current.project_manifest_sha256
+            or plan.target_manifest_sha256 != target.project_manifest_sha256
+        ):
+            raise ProductError(
+                "ERR_PROJECT_SAVE_PARTICIPANT_SCOPE_CONFLICT",
+                "Project save participant crosses the save operation",
+                ProductErrorCategory.SECURITY,
+            )
+
+    @staticmethod
+    def _require_participant(
+        journal: ProjectSaveJournal,
+        participant: ProjectSaveParticipant | None,
+    ) -> None:
+        plan = journal.participant_plan
+        if plan is None:
+            if participant is not None:
+                raise ProductError(
+                    "ERR_PROJECT_SAVE_PARTICIPANT_UNEXPECTED",
+                    "A v1.0 Project save cannot use a recovery participant",
+                    ProductErrorCategory.VALIDATION,
+                )
+            return
+        if (
+            participant is None
+            or participant.participant_id != plan.participant_id
+            or participant.participant_version != plan.participant_version
+        ):
+            raise ProductError(
+                "ERR_PROJECT_SAVE_PARTICIPANT_REQUIRED",
+                "The exact Project save participant is required for recovery",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                details={"participant_id": plan.participant_id},
+            )
+
+    @staticmethod
+    def _validate_participant_result(
+        journal: ProjectSaveJournal,
+        result: ProjectSaveParticipantResult,
+        outcome: ProjectSaveParticipantOutcome,
+    ) -> None:
+        plan = journal.participant_plan
+        if (
+            not isinstance(result, ProjectSaveParticipantResult)
+            or plan is None
+            or result.participant_id != plan.participant_id
+            or result.binding_sha256 != plan.binding_sha256
+            or result.transaction_id != journal.transaction_id
+            or result.outcome is not outcome
+            or result.result_content_sha256
+            != (
+                plan.target_content_sha256
+                if outcome is ProjectSaveParticipantOutcome.COMPLETE
+                else plan.source_content_sha256
+            )
+        ):
+            raise ProductError(
+                "ERR_PROJECT_SAVE_PARTICIPANT_RESULT_INVALID",
+                "Project save participant returned an invalid result",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+
+    @staticmethod
+    def _journal_matches(root: Path, transaction_id: str) -> bool:
+        path = ProjectSaveJournalStore.path(root)
+        if not path.exists():
+            return False
+        try:
+            return ProjectSaveJournalStore.load(root).transaction_id == transaction_id
+        except ProductError:
+            return True
 
     @staticmethod
     def _require_manifest_transition(current: ProductProjectManifest, target: ProductProjectManifest, expected: str) -> None:
@@ -495,12 +1094,19 @@ class ProductProjectSaveCoordinator:
         return normalized
 
     @staticmethod
-    def _transaction_id(current: ProductProjectManifest, target: ProductProjectManifest, documents: Mapping[str, bytes]) -> str:
+    def _transaction_id(
+        current: ProductProjectManifest,
+        target: ProductProjectManifest,
+        documents: Mapping[str, bytes],
+        *,
+        participant_binding_sha256: str | None = None,
+    ) -> str:
         return _save_transaction_id(
             current.project_id,
             current.project_manifest_sha256,
             target.project_manifest_sha256,
             {path: sha256_bytes(data) for path, data in documents.items()},
+            participant_binding_sha256=participant_binding_sha256,
         )
 
     def _prepare_entries(
@@ -687,7 +1293,16 @@ class ProductProjectSaveCoordinator:
     @staticmethod
     def _mark_recovery_required(root: Path, journal: ProjectSaveJournal, exc: Exception) -> None:
         if journal.state in {ProjectSaveState.COMMITTED, ProjectSaveState.ABANDONED}:
-            return
+            try:
+                durable = ProjectSaveJournalStore.load(root)
+            except ProductError:
+                return
+            if (
+                durable.transaction_id != journal.transaction_id
+                or durable.state in {ProjectSaveState.COMMITTED, ProjectSaveState.ABANDONED}
+            ):
+                return
+            journal = durable
         code = exc.code if isinstance(exc, ProductError) else "ERR_PROJECT_SAVE_INTERRUPTED"
         try:
             recovery = journal.transition(ProjectSaveState.RECOVERY_REQUIRED, last_error_code=code)
@@ -716,6 +1331,8 @@ def _save_transaction_id(
     source_manifest_sha256: str,
     target_manifest_sha256: str,
     document_hashes: Mapping[str, str],
+    *,
+    participant_binding_sha256: str | None = None,
 ) -> str:
     identity = {
         "project_id": project_id,
@@ -723,4 +1340,7 @@ def _save_transaction_id(
         "target_manifest_sha256": target_manifest_sha256,
         "documents": dict(sorted(document_hashes.items())),
     }
+    if participant_binding_sha256 is not None:
+        validate_sha256(participant_binding_sha256, field_name="participant_binding_sha256")
+        identity["participant_binding_sha256"] = participant_binding_sha256
     return "save-" + sha256_bytes(canonical_json_bytes(identity)).split(":", 1)[1]

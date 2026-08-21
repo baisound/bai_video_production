@@ -208,3 +208,19 @@ def test_operation_read_and_compare_and_set_close_all_sqlite_connections(tmp_pat
     for connection in opened:
         with pytest.raises(sqlite3.ProgrammingError):
             connection.execute("SELECT 1")
+
+
+@pytest.mark.parametrize("invalid", ["", "bad\x00ref", "\ud800", 7])
+def test_operation_compare_and_set_rejects_invalid_result_ref(tmp_path, invalid):
+    store = SQLiteProductStore(tmp_path / "db.sqlite3")
+    profile = ProfileSnapshot.create("x", "1.0.0", {})
+    job = store.create_job(profile.profile_snapshot_id)
+    operation, _created = store.reserve_operation(job.job_id, "test.command", "invalid-ref")
+    with pytest.raises(ValueError, match="result_ref"):
+        store.compare_and_set_operation_status(
+            operation.operation_id,
+            expected_statuses=("PENDING",),
+            status="IN_PROGRESS",
+            result_ref=invalid,
+            replace_result_ref=True,
+        )

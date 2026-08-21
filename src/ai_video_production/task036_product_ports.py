@@ -188,13 +188,23 @@ class Task036LocalTranscriptionPort:
         }
         return "task036-transcription-slot-" + hashlib.sha256(canonical_json_bytes(body)).hexdigest()
 
-    def _acquire_output_slot(self, project_id: str, operation_id: str):
+    def _acquire_output_slot(
+        self,
+        project_id: str,
+        operation_id: str,
+        *,
+        allow_existing_owner: bool = False,
+    ):
         slot, _created = self.store.reserve_operation(
             self.production_job_id,
             "task036.local_transcription_output_slot",
             self._slot_key(project_id),
         )
-        if slot.status == "IN_PROGRESS" and slot.result_ref == operation_id:
+        if (
+            allow_existing_owner
+            and slot.status == "IN_PROGRESS"
+            and slot.result_ref == operation_id
+        ):
             return slot
         acquired, changed = self.store.compare_and_set_operation_status(
             slot.operation_id,
@@ -546,11 +556,33 @@ class Task036LocalTranscriptionPort:
                 for name, maximum in bounds.items():
                     if output.child_exists(name):
                         output.read(name, max_bytes=maximum)
+                if output.child_exists(".task036-publications"):
+                    with output.pin_child(".task036-publications") as generations:
+                        generations.assert_current()
                 output.assert_current()
         except (OSError, ValueError) as exc:
             raise ProductError(
                 "ERR_TASK036_TRANSCRIPTION_PUBLICATION_INVALID",
                 "Trusted transcription publication target is unsafe",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+
+    def _preflight_generation_target(self, operation_id: str) -> None:
+        """Create/pin the exact private generation directory before Provider use."""
+
+        try:
+            with self._pinned_output_directory() as output:
+                output.mkdir(".task036-publications", exist_ok=True)
+                with output.pin_child(".task036-publications") as generations:
+                    generations.mkdir(operation_id, exist_ok=True)
+                    with generations.pin_child(operation_id) as generation:
+                        generation.assert_current()
+                    generations.assert_current()
+                output.assert_current()
+        except (OSError, ValueError, ProductError) as exc:
+            raise ProductError(
+                "ERR_TASK036_TRANSCRIPTION_PUBLICATION_SET_INVALID",
+                "Immutable transcription target is unsafe",
                 ProductErrorCategory.DATA_INTEGRITY,
             ) from exc
 
@@ -892,7 +924,7 @@ class Task036LocalTranscriptionPort:
                     "Durable transcription already exists; explicit recovery is required",
                     ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
                 )
-            slot = self._acquire_output_slot(project_id, operation.operation_id)
+            self._preflight_generation_target(operation.operation_id)
             operation, claimed = self.store.compare_and_set_operation_status(
                 operation.operation_id,
                 expected_statuses=("PENDING",),
@@ -900,12 +932,30 @@ class Task036LocalTranscriptionPort:
                 increment_attempt=True,
             )
             if not claimed:
-                self._release_output_slot(slot.operation_id, operation.operation_id)
                 raise ProductError(
                     "ERR_TASK036_TRANSCRIPTION_RECOVERY_REQUIRED",
                     "Durable transcription already exists; explicit recovery is required",
                     ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
                 )
+            try:
+                slot = self._acquire_output_slot(project_id, operation.operation_id)
+            except BaseException as exc:
+                code = (
+                    exc.code
+                    if isinstance(exc, ProductError)
+                    and re.fullmatch(r"ERR_[A-Z0-9_]{1,120}", exc.code)
+                    else "ERR_TASK036_TRANSCRIPTION_OUTPUT_SLOT_BUSY"
+                )
+                self.store.compare_and_set_operation_status(
+                    operation.operation_id,
+                    expected_statuses=("IN_PROGRESS",),
+                    expected_result_refs=(None,),
+                    status="PENDING",
+                    last_error_code=code,
+                    result_ref=None,
+                    replace_result_ref=True,
+                )
+                raise
             try:
                 with self._provider_snapshot(
                     validated_snapshot,
@@ -1042,7 +1092,9 @@ class Task036LocalTranscriptionPort:
                 "Durable transcription has no bound immutable publication",
                 ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
             )
-        slot = self._acquire_output_slot(project_id, operation.operation_id)
+        slot = self._acquire_output_slot(
+            project_id, operation.operation_id, allow_existing_owner=True,
+        )
         values, transcript = self._load_immutable_publication_set(
             operation.operation_id,
             operation.result_ref,

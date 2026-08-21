@@ -171,9 +171,9 @@ regression and independent implementation review remain completion gates.
 
 Fresh-main local Evidence after merge of `origin/main` at `f6548b5`:
 
-- impacted Product/Shell/UI/operation/ingest tests: `220 PASS`;
+- impacted Product/Shell/UI/operation/ingest tests: `225 PASS`;
 - Subtitle/Cut/editing/downstream compatibility tests: `52 PASS`;
-- combined focused/affected result: `272 PASS`;
+- combined focused/affected result: `277 PASS`;
 - changed Python compile and `git diff --check`: PASS;
 - full repository collection: `NOT_CONFIRMED` because the WSL environment
   lacks the declared `referencing` dependency. No dependency was installed;

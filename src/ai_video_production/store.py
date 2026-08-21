@@ -927,6 +927,23 @@ class SQLiteProductStore:
             raise ValueError("expected_statuses are invalid")
         if status not in allowed:
             raise ValueError("unsupported operation status")
+        for value in (
+            *((expected_result_refs or ())),
+            result_ref,
+        ):
+            if value is None:
+                continue
+            if (
+                not isinstance(value, str)
+                or not value
+                or len(value) > 2048
+                or "\x00" in value
+            ):
+                raise ValueError("operation result_ref is invalid")
+            try:
+                value.encode("utf-8")
+            except UnicodeEncodeError as exc:
+                raise ValueError("operation result_ref is invalid") from exc
         placeholders = ",".join("?" for _ in expected_statuses)
         result_predicate = ""
         result_parameters: list[str] = []

@@ -198,7 +198,7 @@ def test_cross_process_admission_executes_provider_exactly_once(tmp_path: Path) 
         assert process.exitcode == 0
 
     observed = sorted(results.get(timeout=2) for _ in range(2))
-    assert observed == ["COMPLETED", "ERR_TASK036_TRANSCRIPTION_OUTPUT_SLOT_BUSY"]
+    assert observed == ["COMPLETED", "ERR_TASK036_TRANSCRIPTION_RECOVERY_REQUIRED"]
     assert marker.read_text(encoding="utf-8").splitlines() == ["provider-call"]
 
 
@@ -255,7 +255,9 @@ def test_provider_download_authority_must_be_exactly_false_before_execution(
     assert not (tmp_path / "transcription" / ".task036-transcription").exists()
 
 
-@pytest.mark.parametrize("tamper", ["output-root", "transcript", "subtitle", "report"])
+@pytest.mark.parametrize(
+    "tamper", ["output-root", "publication-root", "transcript", "subtitle", "report"],
+)
 def test_output_symlinks_fail_closed_without_replacement_or_provider(tmp_path: Path, tamper: str) -> None:
     source = tmp_path / "canonical.mp4"
     source.write_bytes(b"canonical media")
@@ -265,6 +267,10 @@ def test_output_symlinks_fail_closed_without_replacement_or_provider(tmp_path: P
     outside.mkdir()
     if tamper == "output-root":
         link = output
+        link.symlink_to(outside, target_is_directory=True)
+    elif tamper == "publication-root":
+        output.mkdir()
+        link = output / ".task036-publications"
         link.symlink_to(outside, target_is_directory=True)
     else:
         output.mkdir()
@@ -286,6 +292,7 @@ def test_output_symlinks_fail_closed_without_replacement_or_provider(tmp_path: P
     assert invalid.value.code in {
         "ERR_TASK036_TRANSCRIPTION_PRIVATE_PATH_INVALID",
         "ERR_TASK036_TRANSCRIPTION_PUBLICATION_INVALID",
+        "ERR_TASK036_TRANSCRIPTION_PUBLICATION_SET_INVALID",
     }
     assert provider.calls == 0
     assert link.is_symlink()
@@ -545,6 +552,15 @@ def test_different_sources_share_one_project_fixed_output_slot(tmp_path: Path) -
     assert busy.value.code == "ERR_TASK036_TRANSCRIPTION_OUTPUT_SLOT_BUSY"
     assert provider.calls == 1
     assert len(first_result) == 1
+    waiting = second.store.find_operation(
+        JOB_ID,
+        second._operation_key(
+            PROJECT_ID, "ASSET-11111111111111111111111111", file_sha(source_b),
+        ),
+    )
+    assert waiting is not None
+    assert waiting.status == "PENDING"
+    assert waiting.result_ref is None
 
 
 def test_asr_configuration_is_part_of_durable_operation_identity(tmp_path: Path) -> None:

@@ -80,7 +80,7 @@ from .task036_workflow_runtime import Task036WorkflowRuntime
 from .timebase import FrameRate
 
 
-_MAX_CONFIG_BYTES = 256 * 1024
+TASK036_LAUNCH_CONFIG_MAX_BYTES = 256 * 1024
 
 
 def _path(value: Any, *, field: str) -> Path:
@@ -152,7 +152,7 @@ class Task036LaunchConfiguration:
                 "TASK-036 launch configuration must be a regular non-symlink file",
                 ProductErrorCategory.VALIDATION,
             )
-        if not 0 < source.stat().st_size <= _MAX_CONFIG_BYTES:
+        if not 0 < source.stat().st_size <= TASK036_LAUNCH_CONFIG_MAX_BYTES:
             raise ProductError(
                 "ERR_TASK036_LAUNCH_CONFIG_SIZE",
                 "TASK-036 launch configuration is outside the allowed size bound",
@@ -477,6 +477,7 @@ class Task036TrustedLaunch:
     pre_edit_runtime: Task036PreEditRuntime
     bridge: Task036ShellBridge
     _runtime_lease: "_Task036ProjectRuntimeLease | None" = field(default=None, repr=False)
+    _product_store: SQLiteProductStore | None = field(default=None, repr=False)
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
@@ -485,6 +486,10 @@ class Task036TrustedLaunch:
         if lease is not None:
             lease.close()
             self._runtime_lease = None
+        store = self._product_store
+        if store is not None:
+            store.close()
+            self._product_store = None
 
     def __enter__(self) -> "Task036TrustedLaunch":
         return self
@@ -692,25 +697,61 @@ def build_trusted_launch(
     final_review_export_preparation_provider: Callable[
         [FinalReviewApprovalReceipt], ExportPreparation
     ] | None = None,
+    allow_product_job_bootstrap: bool = True,
 ) -> Task036TrustedLaunch:
-    for directory in (
-        configuration.asset_root,
-        configuration.job_root,
-        configuration.transcription_output,
-        configuration.cut_output,
-        configuration.handoff_destination,
-        configuration.native_render_evidence_root.parent,
-        configuration.native_render_report_path.parent,
-    ):
-        directory.mkdir(parents=True, exist_ok=True)
+    if not allow_product_job_bootstrap:
+        for directory in (
+            configuration.asset_root,
+            configuration.job_root,
+            configuration.transcription_output,
+            configuration.cut_output,
+            configuration.handoff_destination,
+            configuration.native_render_evidence_root.parent,
+            configuration.native_render_report_path.parent,
+        ):
+            if directory.is_symlink() or not directory.is_dir():
+                raise ProductError(
+                    "ERR_TASK036_TRUSTED_PROJECT_NOT_INITIALIZED",
+                    "The trusted Product Project directories must already exist",
+                    ProductErrorCategory.STATE,
+                )
+    if allow_product_job_bootstrap:
+        for directory in (
+            configuration.asset_root,
+            configuration.job_root,
+            configuration.transcription_output,
+            configuration.cut_output,
+            configuration.handoff_destination,
+            configuration.native_render_evidence_root.parent,
+            configuration.native_render_report_path.parent,
+        ):
+            directory.mkdir(parents=True, exist_ok=True)
 
-    store = SQLiteProductStore(configuration.database_path)
     try:
-        store.get_job_state(configuration.production_job_id)
+        store = SQLiteProductStore(
+            configuration.database_path,
+            require_existing=not allow_product_job_bootstrap,
+            required_job_id=(
+                configuration.production_job_id
+                if not allow_product_job_bootstrap
+                else None
+            ),
+        )
     except ProductError as exc:
-        if exc.code != "ERR_INPUT_JOB_NOT_FOUND":
-            raise
-        store.create_job(configuration.profile_snapshot_id, job_id=configuration.production_job_id)
+        if exc.code == "ERR_STORE_EXISTING_JOB_REQUIRED":
+            raise ProductError(
+                "ERR_TASK036_TRUSTED_PROJECT_NOT_INITIALIZED",
+                "The trusted Product Project must already contain its configured Product Job",
+                ProductErrorCategory.STATE,
+            ) from exc
+        raise
+    if allow_product_job_bootstrap:
+        try:
+            store.get_job_state(configuration.production_job_id)
+        except ProductError as exc:
+            if exc.code != "ERR_INPUT_JOB_NOT_FOUND":
+                raise
+            store.create_job(configuration.profile_snapshot_id, job_id=configuration.production_job_id)
     resolver = LogicalPathResolver(
         [
             PathMapping("asset://", configuration.asset_root),
@@ -1096,11 +1137,12 @@ def build_trusted_launch(
             ),
         )
         return Task036TrustedLaunch(
-            configuration, coordinator, pre_edit, bridge, runtime_lease,
+            configuration, coordinator, pre_edit, bridge, runtime_lease, store,
         )
     except BaseException:
         if runtime_lease is not None:
             runtime_lease.close()
+        store.close()
         raise
 
 

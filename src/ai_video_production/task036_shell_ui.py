@@ -1531,12 +1531,14 @@ class Task036ShellBridge:
     @_nle_operation_guarded
     def generation_execution_prepare(self, args: Any) -> dict[str, Any]:
         required = {"queue_entry_id", "expected_queue_snapshot_sha256", "expected_execution_snapshot_sha256"}
-        if not isinstance(args, dict) or set(args) != required or not all(isinstance(args[name], str) for name in required):
+        extended = required | {"expected_project_manifest_sha256"}
+        if not isinstance(args, dict) or frozenset(args) not in {frozenset(required), frozenset(extended)} or not all(isinstance(args[name], str) for name in args):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution preparation request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_execution_application().prepare_execution(
             queue_entry_id=args["queue_entry_id"],
             expected_queue_snapshot_sha256=args["expected_queue_snapshot_sha256"],
             expected_execution_snapshot_sha256=args["expected_execution_snapshot_sha256"],
+            expected_project_manifest_sha256=args.get("expected_project_manifest_sha256"),
         )
 
     @_nle_operation_guarded
@@ -1586,7 +1588,8 @@ class Task036ShellBridge:
             "expected_queue_snapshot_sha256", "expected_production_snapshot_sha256",
             "expected_prompt_snapshot_sha256", "expected_adoption_snapshot_sha256",
         }
-        if not isinstance(args, dict) or set(args) != required or not all(isinstance(args[name], str) for name in required):
+        extended = required | {"expected_project_manifest_sha256"}
+        if not isinstance(args, dict) or frozenset(args) not in {frozenset(required), frozenset(extended)} or not all(isinstance(args[name], str) for name in args):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption preparation request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_output_adoption_application().prepare_adoption(**args)
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import gc
 from pathlib import Path
+import sqlite3
 from threading import Event, Thread
 from time import monotonic, sleep
 
@@ -44,9 +45,11 @@ from ai_video_production.durable_product_job import (
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.serialization import sha256_bytes
+from ai_video_production.store import SQLiteProductStore
 from ai_video_production.local_comfy_image_generation_port import LocalComfyTextToImagePort
 from ai_video_production.local_comfy_generation_port import LocalComfyTextToVideoPort
 from ai_video_production.creative_generation_execution_application import LocalGenerationRuntimeReadiness
+from ai_video_production.task036_native_image_vertical_cli import _load_config_scope
 
 
 class DialogBackend:
@@ -145,6 +148,27 @@ def config_document(tmp_path: Path) -> tuple[Path, dict]:
     return path, raw
 
 
+def test_native_cli_loads_one_stable_launch_config_identity(tmp_path: Path):
+    path, _raw = config_document(tmp_path)
+    config, config_sha = _load_config_scope(path)
+    assert config.project_id == "phase-g-w2-sandbox"
+    assert config_sha == sha256_bytes(path.read_bytes())
+
+    link = path.with_name("task036-launch-link.json")
+    try:
+        link.symlink_to(path)
+    except OSError:
+        pytest.skip("symlink creation is unavailable on this test host")
+    with pytest.raises(ProductError) as rejected:
+        _load_config_scope(link)
+    assert rejected.value.code == "ERR_TASK036_NATIVE_LAUNCH_CONFIG_INVALID"
+
+    path.write_bytes(b" " * (256 * 1024 + 1))
+    with pytest.raises(ProductError) as oversized:
+        _load_config_scope(path)
+    assert oversized.value.code == "ERR_TASK036_NATIVE_LAUNCH_CONFIG_INVALID"
+
+
 def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_execution(tmp_path: Path):
     path, raw = config_document(tmp_path)
     config = Task036LaunchConfiguration.load(path)
@@ -225,6 +249,102 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert production["project_id"] == config.project_id
     assert production["provider_execution_started"] is False
     assert production["resolve_mutation_started"] is False
+
+
+def test_trusted_launcher_can_refuse_missing_product_job_bootstrap(tmp_path: Path):
+    path, _raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    store = SQLiteProductStore(config.database_path)
+    with pytest.raises(ProductError) as missing_before:
+        store.get_job_state(config.production_job_id)
+    assert missing_before.value.code == "ERR_INPUT_JOB_NOT_FOUND"
+    database_before = config.database_path.read_bytes()
+    sidecars = tuple(
+        config.database_path.with_name(config.database_path.name + suffix)
+        for suffix in ("-wal", "-shm")
+    )
+    sidecars_before = {
+        item: item.read_bytes() if item.exists() else None
+        for item in sidecars
+    }
+
+    with pytest.raises(ProductError) as blocked:
+        build_trusted_launch(
+            config,
+            native_dialog=Task036NativeDialogService(DialogBackend()),
+            asr_provider=AsrProvider(),
+            resolve_adapter=ResolveAdapter(),
+            allow_product_job_bootstrap=False,
+        )
+    assert blocked.value.code == "ERR_TASK036_TRUSTED_PROJECT_NOT_INITIALIZED"
+    with pytest.raises(ProductError) as still_missing:
+        store.get_job_state(config.production_job_id)
+    assert still_missing.value.code == "ERR_INPUT_JOB_NOT_FOUND"
+    assert config.database_path.read_bytes() == database_before
+    assert {
+        item: item.read_bytes() if item.exists() else None
+        for item in sidecars
+    } == sidecars_before
+
+
+def test_trusted_launcher_refuses_partial_existing_database_without_mutation(tmp_path: Path):
+    path, _raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    for directory in (
+        config.asset_root,
+        config.job_root,
+        config.transcription_output,
+        config.cut_output,
+        config.handoff_destination,
+        config.native_render_evidence_root.parent,
+        config.native_render_report_path.parent,
+    ):
+        directory.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(config.database_path) as conn:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute(
+            "CREATE TABLE production_jobs ("
+            "job_id TEXT PRIMARY KEY, state TEXT NOT NULL, state_version INTEGER NOT NULL, "
+            "profile_snapshot_id TEXT NOT NULL, resume_to_state TEXT, last_error_code TEXT, "
+            "created_at TEXT NOT NULL, updated_at TEXT NOT NULL)"
+        )
+        conn.execute(
+            "INSERT INTO production_jobs VALUES (?,?,?,?,?,?,?,?)",
+            (
+                config.production_job_id,
+                "CREATED",
+                1,
+                config.profile_snapshot_id,
+                None,
+                None,
+                "2026-08-21T00:00:00.000Z",
+                "2026-08-21T00:00:00.000Z",
+            ),
+        )
+    before = config.database_path.read_bytes()
+    sidecars = tuple(
+        config.database_path.with_name(config.database_path.name + suffix)
+        for suffix in ("-wal", "-shm")
+    )
+    sidecars_before = {
+        item: item.read_bytes() if item.exists() else None
+        for item in sidecars
+    }
+    with pytest.raises(ProductError) as blocked:
+        build_trusted_launch(
+            config,
+            native_dialog=Task036NativeDialogService(DialogBackend()),
+            asr_provider=AsrProvider(),
+            resolve_adapter=ResolveAdapter(),
+            comfy_client=ComfyClient(),
+            allow_product_job_bootstrap=False,
+        )
+    assert blocked.value.code == "ERR_STORE_EXISTING_DATABASE_INVALID"
+    assert config.database_path.read_bytes() == before
+    assert {
+        item: item.read_bytes() if item.exists() else None
+        for item in sidecars
+    } == sidecars_before
 
 
 @pytest.mark.parametrize(

@@ -7,6 +7,7 @@ Provider adapter, credential lookup, Candidate publication or paid route.
 
 from __future__ import annotations
 
+from contextlib import nullcontext
 from dataclasses import dataclass
 import json
 from pathlib import Path, PurePosixPath
@@ -29,6 +30,8 @@ from .errors import ProductError, ProductErrorCategory
 from .generation_queue_application import Task027GenerationQueueApplication
 from .production_control import SlotKind
 from .production_control_store import _exclusive_snapshot_lock
+from .product_project_store import ProductProjectManifestStore, _exclusive_project_lock
+from .project_save import ProductProjectSaveCoordinator
 from .serialization import canonical_json_bytes, sha256_bytes
 
 
@@ -175,6 +178,7 @@ class _PendingExecution:
     workflow_sha256: str
     required_class_count: int
     runtime_policy: str
+    project_manifest_sha256: str | None
 
 
 def _with_hash(value: Mapping[str, Any]) -> dict[str, Any]:
@@ -536,8 +540,21 @@ class Task013CreativeGenerationExecutionApplication:
         readiness = self._preflight_port(port, route=route)
         return readiness.as_dict()
 
-    def prepare_execution(self, *, queue_entry_id: str, expected_queue_snapshot_sha256: str, expected_execution_snapshot_sha256: str) -> dict[str, Any]:
+    def prepare_execution(
+        self,
+        *,
+        queue_entry_id: str,
+        expected_queue_snapshot_sha256: str,
+        expected_execution_snapshot_sha256: str,
+        expected_project_manifest_sha256: str | None = None,
+    ) -> dict[str, Any]:
         store = self._load()
+        if expected_project_manifest_sha256 is not None:
+            if not isinstance(expected_project_manifest_sha256, str) or not _SHA_RE.fullmatch(expected_project_manifest_sha256):
+                raise ProductError("ERR_GENERATION_EXECUTION_MANIFEST_EXPECTED_INVALID", "Expected Project manifest identity is invalid", ProductErrorCategory.VALIDATION)
+            manifest = ProductProjectManifestStore.load(self.project_root)
+            if manifest.project_id != self.project_id or manifest.project_manifest_sha256 != expected_project_manifest_sha256:
+                raise ProductError("ERR_GENERATION_EXECUTION_MANIFEST_CONFLICT", "Project manifest changed before execution confirmation", ProductErrorCategory.AUTHORIZATION)
         queue, entry, route, profile_sha, _prompt_text, _workload, capability, media_kind = self._derive(queue_entry_id)
         if queue["queue_snapshot_sha256"] != expected_queue_snapshot_sha256 or store["execution_snapshot_sha256"] != expected_execution_snapshot_sha256:
             raise ProductError("ERR_GENERATION_EXECUTION_CONFLICT", "Queue or execution state changed; reload before execution", ProductErrorCategory.STATE)
@@ -552,6 +569,7 @@ class Task013CreativeGenerationExecutionApplication:
             entry["prompt_sha256"], readiness.provider_id, readiness.model_id,
             readiness.workflow_sha256, readiness.required_class_count,
             readiness.runtime_policy,
+            expected_project_manifest_sha256,
         )
         with self._confirmation_lock:
             if not isinstance(token, str) or not token.strip() or token in self._confirmations:
@@ -620,35 +638,46 @@ class Task013CreativeGenerationExecutionApplication:
                 "Local runtime identity changed after confirmation",
                 ProductErrorCategory.AUTHORIZATION,
             )
-        with _exclusive_snapshot_lock(self.snapshot_path):
-            store = self._load()
-            if store["execution_snapshot_sha256"] != pending.execution_snapshot_sha256:
-                raise ProductError("ERR_GENERATION_EXECUTION_CONFLICT", "Execution state changed after confirmation", ProductErrorCategory.STATE)
-            # This post-preflight re-derive is the admission linearization point
-            # for Queue/Prompt/Profile currentness. No Provider side effect or
-            # DISPATCHING record exists before this exact recheck.
-            queue, entry, route, profile_sha, prompt_text, workload, capability, media_kind = self._derive(pending.queue_entry_id)
-            if (
-                queue["queue_snapshot_sha256"] != pending.queue_snapshot_sha256
-                or profile_sha != pending.profile_sha256
-                or route.route_id != pending.route_id
-                or entry["prompt_sha256"] != pending.prompt_sha256
-                or capability != pending.capability
-                or route.provider_id != pending.provider_id
-                or route.model_id != pending.model_id
-            ):
-                raise ProductError(
-                    "ERR_GENERATION_EXECUTION_CONFIRMATION_STALE",
-                    "Queue, Prompt, Profile, route or runtime changed during preflight",
-                    ProductErrorCategory.AUTHORIZATION,
-                )
-            if any(event["queue_entry_id"] == entry["queue_entry_id"] for event in store["events"]):
-                raise ProductError("ERR_GENERATION_EXECUTION_ALREADY_DISPATCHED", "Queue entry already has execution history", ProductErrorCategory.STATE)
-            seed = {"queue_entry_id": entry["queue_entry_id"], "profile_sha256": profile_sha, "route_id": route.route_id, "capability": capability}
-            execution_id = "EXEC-" + sha256_bytes(canonical_json_bytes(seed)).split(":", 1)[1][:24].upper()
-            event = self._event_base(revision=store["revision"] + 1, execution_id=execution_id, entry=entry, profile_sha=profile_sha, route=route, workload=workload, capability=capability)
-            event["state"] = "DISPATCHING"
-            self._append(store, event)
+        project_guard = (
+            nullcontext()
+            if pending.project_manifest_sha256 is None
+            else _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root))
+        )
+        with project_guard:
+            if pending.project_manifest_sha256 is not None:
+                manifest = ProductProjectManifestStore.load(self.project_root)
+                if manifest.project_id != self.project_id or manifest.project_manifest_sha256 != pending.project_manifest_sha256:
+                    raise ProductError("ERR_GENERATION_EXECUTION_MANIFEST_CONFLICT", "Project manifest changed after execution confirmation", ProductErrorCategory.AUTHORIZATION)
+                ProductProjectSaveCoordinator().require_current_integrity(self.project_root, manifest)
+            with _exclusive_snapshot_lock(self.snapshot_path):
+                store = self._load()
+                if store["execution_snapshot_sha256"] != pending.execution_snapshot_sha256:
+                    raise ProductError("ERR_GENERATION_EXECUTION_CONFLICT", "Execution state changed after confirmation", ProductErrorCategory.STATE)
+                # This post-preflight re-derive is the admission linearization point
+                # for Queue/Prompt/Profile currentness. No Provider side effect or
+                # DISPATCHING record exists before this exact recheck.
+                queue, entry, route, profile_sha, prompt_text, workload, capability, media_kind = self._derive(pending.queue_entry_id)
+                if (
+                    queue["queue_snapshot_sha256"] != pending.queue_snapshot_sha256
+                    or profile_sha != pending.profile_sha256
+                    or route.route_id != pending.route_id
+                    or entry["prompt_sha256"] != pending.prompt_sha256
+                    or capability != pending.capability
+                    or route.provider_id != pending.provider_id
+                    or route.model_id != pending.model_id
+                ):
+                    raise ProductError(
+                        "ERR_GENERATION_EXECUTION_CONFIRMATION_STALE",
+                        "Queue, Prompt, Profile, route or runtime changed during preflight",
+                        ProductErrorCategory.AUTHORIZATION,
+                    )
+                if any(event["queue_entry_id"] == entry["queue_entry_id"] for event in store["events"]):
+                    raise ProductError("ERR_GENERATION_EXECUTION_ALREADY_DISPATCHED", "Queue entry already has execution history", ProductErrorCategory.STATE)
+                seed = {"queue_entry_id": entry["queue_entry_id"], "profile_sha256": profile_sha, "route_id": route.route_id, "capability": capability}
+                execution_id = "EXEC-" + sha256_bytes(canonical_json_bytes(seed)).split(":", 1)[1][:24].upper()
+                event = self._event_base(revision=store["revision"] + 1, execution_id=execution_id, entry=entry, profile_sha=profile_sha, route=route, workload=workload, capability=capability)
+                event["state"] = "DISPATCHING"
+                self._append(store, event)
         request = LocalGenerationExecutionRequest(
             execution_id, entry["queue_entry_id"], entry["scene_id"], entry["slot_id"], capability,
             prompt_text, entry["prompt_sha256"], tuple(entry["input_bindings"]), f"rights://{self.project_id}/{entry['scene_id']}",

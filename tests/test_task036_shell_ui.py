@@ -965,6 +965,13 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
         "expected_execution_snapshot_sha256": "sha256:" + "2" * 64,
     })
     assert prepared["confirmation_id"] == "confirm-local"
+    extended_prepared = bridge.generation_execution_prepare({
+        "queue_entry_id": "QUEUE-1",
+        "expected_queue_snapshot_sha256": "sha256:" + "1" * 64,
+        "expected_execution_snapshot_sha256": "sha256:" + "2" * 64,
+        "expected_project_manifest_sha256": "sha256:" + "3" * 64,
+    })
+    assert extended_prepared["confirmation_id"] == "confirm-local"
     result = bridge.generation_execution_apply({"confirmation_id": "confirm-local"})
     assert result["events"][0]["state"] == "COMPLETED"
     cancelled = bridge.generation_execution_cancel({"confirmation_id": "cancel-local"})
@@ -974,7 +981,7 @@ def test_generation_execution_bridge_keeps_queue_and_external_mutation_authority
         "expected_execution_snapshot_sha256": "sha256:" + "2" * 64,
     })
     assert recovered["events"][0]["state"] == "COMPLETED"
-    assert [name for name, _ in execution.calls] == ["preflight", "preflight", "prepare", "apply", "cancel", "recover"]
+    assert [name for name, _ in execution.calls] == ["preflight", "preflight", "prepare", "prepare", "apply", "cancel", "recover"]
     assert execution.calls[0][1]["queue_entry_id"] is None
     assert execution.calls[1][1]["queue_entry_id"] == "QUEUE-1"
     with pytest.raises(ProductError) as exc:
@@ -1080,9 +1087,11 @@ def test_generation_output_adoption_bridge_is_allowlisted_and_separate_from_prov
     }
     prepared = bridge.generation_output_adoption_prepare(values)
     assert prepared["action_label"] == "検証して監査候補へ登録"
+    extended = {**values, "expected_project_manifest_sha256": "sha256:" + "6" * 64}
+    assert bridge.generation_output_adoption_prepare(extended)["confirmation_id"] == "adopt-confirm"
     assert bridge.generation_output_adoption_apply({"confirmation_id": "adopt-confirm"})["records"][0]["state"] == "READY_FOR_AUDIT"
     assert bridge.generation_output_adoption_recover({"adoption_id": "adoption-1"})["recovery"]["required"] is False
-    assert [name for name, _ in adoption.calls] == ["prepare", "apply", "recover"]
+    assert [name for name, _ in adoption.calls] == ["prepare", "prepare", "apply", "recover"]
     with pytest.raises(ProductError) as exc:
         bridge.generation_output_adoption_prepare({"execution_id": "execution-1"})
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"

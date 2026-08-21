@@ -18,6 +18,9 @@ from ai_video_production.creative_generation_execution_application import (
     Task013CreativeGenerationExecutionApplication,
 )
 from ai_video_production.errors import ProductError, ProductErrorCategory
+from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
+from ai_video_production.product_project_store import ProductProjectManifestStore
+from ai_video_production.project_save import ProductProjectSaveCoordinator
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 
 
@@ -140,6 +143,62 @@ def prepare(app: Task013CreativeGenerationExecutionApplication, queue: QueueStub
         expected_queue_snapshot_sha256=state["queue_snapshot_sha256"],
         expected_execution_snapshot_sha256=state["execution_snapshot_sha256"],
     )
+
+
+def test_manifest_drift_after_confirmation_blocks_dispatch_and_history(tmp_path: Path):
+    app, queue, port = fixture(tmp_path)
+    initial = ProductProjectManifest.create(
+        project_id="project-1", project_revision=1, product_version="0.22.0",
+        timebase=ProjectTimebase(30, 1), child_bindings=(),
+    )
+    ProductProjectManifestStore.save(tmp_path, initial)
+    state = app.snapshot()
+    prepared = app.prepare_execution(
+        queue_entry_id=queue.value["entries"][0]["queue_entry_id"],
+        expected_queue_snapshot_sha256=state["queue_snapshot_sha256"],
+        expected_execution_snapshot_sha256=state["execution_snapshot_sha256"],
+        expected_project_manifest_sha256=initial.project_manifest_sha256,
+    )
+    changed = ProductProjectManifest.create(
+        project_id="project-1", project_revision=2, product_version="0.22.0",
+        timebase=initial.timebase, child_bindings=(), created_at=initial.created_at,
+        updated_at=initial.updated_at,
+    )
+    ProductProjectManifestStore.save(
+        tmp_path, changed,
+        expected_previous_manifest_sha256=initial.project_manifest_sha256,
+    )
+    with pytest.raises(ProductError) as blocked:
+        app.apply_execution(confirmation_id=prepared["confirmation_id"])
+    assert blocked.value.code == "ERR_GENERATION_EXECUTION_MANIFEST_CONFLICT"
+    assert port.calls == []
+    assert app.snapshot()["events"] == []
+
+
+def test_project_recovery_gate_blocks_dispatch_before_history(tmp_path: Path, monkeypatch):
+    app, queue, port = fixture(tmp_path)
+    manifest = ProductProjectManifest.create(
+        project_id="project-1", project_revision=1, product_version="0.22.0",
+        timebase=ProjectTimebase(30, 1), child_bindings=(),
+    )
+    ProductProjectManifestStore.save(tmp_path, manifest)
+    state = app.snapshot()
+    prepared = app.prepare_execution(
+        queue_entry_id=queue.value["entries"][0]["queue_entry_id"],
+        expected_queue_snapshot_sha256=state["queue_snapshot_sha256"],
+        expected_execution_snapshot_sha256=state["execution_snapshot_sha256"],
+        expected_project_manifest_sha256=manifest.project_manifest_sha256,
+    )
+
+    def blocked(_self, _root, _manifest):
+        raise ProductError("ERR_PROJECT_SAVE_RECOVERY_REQUIRED", "blocked", ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
+
+    monkeypatch.setattr(ProductProjectSaveCoordinator, "require_current_integrity", blocked)
+    with pytest.raises(ProductError) as rejected:
+        app.apply_execution(confirmation_id=prepared["confirmation_id"])
+    assert rejected.value.code == "ERR_PROJECT_SAVE_RECOVERY_REQUIRED"
+    assert port.calls == []
+    assert app.snapshot()["events"] == []
 
 
 def test_runtime_preflight_is_explicit_read_only_and_creates_no_project_state(tmp_path: Path):

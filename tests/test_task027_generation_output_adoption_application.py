@@ -39,6 +39,9 @@ from ai_video_production.production_control import AssetCandidate, ProductionCon
 from ai_video_production.production_control_application import Task037ProductionControlApplication
 from ai_video_production.production_control_store import ProductionControlSnapshotStore
 from ai_video_production.profile import ProfileSnapshot
+from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
+from ai_video_production.product_project_store import ProductProjectManifestStore
+from ai_video_production.project_save import ProductProjectSaveCoordinator
 from ai_video_production.prompt_evidence_application import Task040PromptEvidenceApplication
 from ai_video_production.prompt_registry import (
     GenerationAttempt,
@@ -244,6 +247,68 @@ def prepare(app, execution, queue, production, prompt):
         expected_prompt_snapshot_sha256=prompt_sha,
         expected_adoption_snapshot_sha256=state["adoption_snapshot_sha256"],
     )
+
+
+def test_manifest_drift_after_confirmation_blocks_asset_adoption(tmp_path: Path):
+    app, execution, queue, production, prompt, port = fixture(tmp_path)
+    initial = ProductProjectManifest.create(
+        project_id="project-1", project_revision=1, product_version="0.22.0",
+        timebase=ProjectTimebase(30, 1), child_bindings=(),
+    )
+    ProductProjectManifestStore.save(tmp_path, initial)
+    state = app.snapshot()
+    prepared = app.prepare_adoption(
+        execution_id="execution-1",
+        expected_execution_snapshot_sha256=execution.sha,
+        expected_queue_snapshot_sha256=queue.sha,
+        expected_production_snapshot_sha256=production.sha,
+        expected_prompt_snapshot_sha256=prompt.sha,
+        expected_adoption_snapshot_sha256=state["adoption_snapshot_sha256"],
+        expected_project_manifest_sha256=initial.project_manifest_sha256,
+    )
+    changed = ProductProjectManifest.create(
+        project_id="project-1", project_revision=2, product_version="0.22.0",
+        timebase=initial.timebase, child_bindings=(), created_at=initial.created_at,
+        updated_at=initial.updated_at,
+    )
+    ProductProjectManifestStore.save(
+        tmp_path, changed,
+        expected_previous_manifest_sha256=initial.project_manifest_sha256,
+    )
+    with pytest.raises(ProductError) as blocked:
+        app.apply_adoption(confirmation_id=prepared["confirmation_id"])
+    assert blocked.value.code == "ERR_OUTPUT_ADOPTION_MANIFEST_CONFLICT"
+    assert port.calls == 0
+    assert app.snapshot()["records"] == []
+
+
+def test_project_recovery_gate_blocks_adoption_before_asset(tmp_path: Path, monkeypatch):
+    app, execution, queue, production, prompt, port = fixture(tmp_path)
+    manifest = ProductProjectManifest.create(
+        project_id="project-1", project_revision=1, product_version="0.22.0",
+        timebase=ProjectTimebase(30, 1), child_bindings=(),
+    )
+    ProductProjectManifestStore.save(tmp_path, manifest)
+    state = app.snapshot()
+    prepared = app.prepare_adoption(
+        execution_id="execution-1",
+        expected_execution_snapshot_sha256=execution.sha,
+        expected_queue_snapshot_sha256=queue.sha,
+        expected_production_snapshot_sha256=production.sha,
+        expected_prompt_snapshot_sha256=prompt.sha,
+        expected_adoption_snapshot_sha256=state["adoption_snapshot_sha256"],
+        expected_project_manifest_sha256=manifest.project_manifest_sha256,
+    )
+
+    def blocked(_self, _root, _manifest):
+        raise ProductError("ERR_PROJECT_SAVE_RECOVERY_REQUIRED", "blocked", ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
+
+    monkeypatch.setattr(ProductProjectSaveCoordinator, "require_current_integrity", blocked)
+    with pytest.raises(ProductError) as rejected:
+        app.apply_adoption(confirmation_id=prepared["confirmation_id"])
+    assert rejected.value.code == "ERR_PROJECT_SAVE_RECOVERY_REQUIRED"
+    assert port.calls == 0
+    assert app.snapshot()["records"] == []
 
 
 def test_completed_output_becomes_ready_for_human_audit_without_wider_authority(tmp_path: Path):

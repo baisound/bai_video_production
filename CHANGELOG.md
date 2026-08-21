@@ -6,6 +6,12 @@
 
 - TASK-052として、DbD設計・実装ギャップ監査、分類体系とHuman-first詳細・安全削除、マップ画像decode/回転、Survivor主体Observation/Gold/Teacher契約、transactionalな一括画像登録を追加しました。実機Windows EXEでネストしたKnowledge詳細が起動を停止する`unhashable type: 'dict'`も修正し、Ownerワークスペースで起動・検索・主要画面操作を確認しています。全体のreal-media packaged acceptance、Provider、Release、Deployは別Gateです。
 
+- TASK-014 AU2C2B1b0-Aとして、`packaging 25.0` wheelの提案pinを同一immutable bytesからZIP・METADATA・WHEEL・RECORDまで検証する診断専用契約を追加しました。公式metadata観測とpin受理は未確認のまま保持し、network、download、install、parser import、resolver利用、runtime、model、audioのAuthorityを付与しません。
+
+- TASK-014 AU2C2B1aとして、Qwen3-TTS runtime artifact closure planのno-I/O契約を追加しました。index/release・metadata・artifact HEAD・checksum・upstream観測を候補へ完全結合し、Python installer・distribution wheel・BtbN FFmpeg archiveのprovisional shapeを固定します。契約は未解決・診断専用で、network、download、install、runtime、model、audioのAuthorityを付与しません。
+
+- TASK-014として、Windows/cp312 Qwen3-TTS runtimeのretained artifact、distribution closure、runtime file/native tool ownership、固定marker環境を表すno-I/O manifest契約を追加しました。契約はmerged Qwen wheel pinを参照し、diagnostic-onlyかつruntime reuse・model load・consumer executionのAuthorityを付与しません。
+
 - Dead by Daylight??? `BAI DbD Training Studio` ????????Workspace??????????HUD Calibration??????Teacher Data?OCR/FasterWhisper?Game Knowledge?Kamigame???Human Review?Map Intelligence?????????????Editing Intelligence???Windows Packaging/Backup/Restore??????????????TASK-052?????DbD Vision????Gap Audit?Survivor?????/?????Killer??HUD??????Game Knowledge???HTML???????Map?????Safe Delete?Visual Learning?Windows process storm????Human Acceptance?????????????????????
 
 - TASK-014として、固定Qwen3-TTS 0.6B Base manifestを厳格parseし、既存local snapshotのexact 13-file setをfixed-local drive・path/reparse・size/hash・bounded race観測で検査する診断専用verifierを追加しました。private/public receiptはcapabilityではなく、runtime再利用、model load、post-return状態保証、Owner音声読取、推論、network、filesystem変更のAuthorityを作りません。

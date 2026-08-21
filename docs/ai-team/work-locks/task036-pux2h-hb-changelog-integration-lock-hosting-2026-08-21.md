@@ -15,7 +15,7 @@ Provider or native execution, or authorize release/deploy.
 
 - repository: `baisound/bai_video_production`
 - hosting branch: `codex/task-036-pux2h-hb-changelog-lock-hosting`
-- hosting base / audit base: `1abdc2fe2136c48513a9daee7c2129746e69e68e`
+- hosting base / audit base: `1abdc2fa80797915e4dbc5dbc573dc6bc75711f6`
 - registry revision: `34 -> 35`
 - open pull requests at proposal time: target PR 243 only
 - CHANGELOG or registry overlap from another open PR: `0`

@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-036 P-UX-2Iとして、既存TASK-044のMOVE/TRIM/UNDO/REDOをV6.1.1 Edit画面へ接続し、Project履歴SHAのprepare/apply CAS、Timeline edit履歴とのcross-store exact binding、重複command ID拒否、Human確認拒否時cancel、runtime leaseを追加しました。Provider/Audio/Resolve/Export/公開/Release/Deployは引き続き別Gateです。
+
 - TASK-041 Audio Completion Ledger Contract R1Aとして、SOURCE_REVALIDATION_REQUIRED / NOT_MINTED候補を包むpure immutable entry/chain/CAS契約を追加し、false-empty、malformed chain、fork/replay/gap、stale CAS、resource amplification、自己SHA diagnosticからのvalidation authority再発行をfail closedにしました。filesystem永続化、native CAS、canonical latest/PASS、upstream owner再検証、TASK-036 wrapper、audio/network/model/provider/native、Release/Deployは引き続き別Gateです。
 
 - TASK-036 P-UX-2Eとして、TASK-044のappend-only Timeline編集履歴とProject Manifest/ProjectSave整合性からcurrent EDIT_PERSISTENCE receiptをread-only投影し、空履歴、recovery、改ざん、stale Timeline、caller差替え、旧runtime leaseをfail-closedにしました。Audio/Privacy/Resource/Rightsのowner receipt、実Windows packaged render/output QA、公開、Release/Deployは引き続き別Gateです。

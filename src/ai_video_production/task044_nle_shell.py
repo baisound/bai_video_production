@@ -20,6 +20,7 @@ from .interactive_timeline import (
 from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_edit import SnapAnchor, SnapKind
 from .product_project_store import ProductProjectManifestStore
+from .serialization import validate_sha256
 from .task036_visual_asset_placement import Task036VisualAssetPlacementApplication
 from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 
@@ -43,6 +44,19 @@ def _request_text(value: object, name: str) -> str:
             ProductErrorCategory.VALIDATION,
         )
     return value
+
+
+def _request_sha256(value: object, name: str) -> str:
+    text = _request_text(value, name)
+    try:
+        validate_sha256(text, field_name=name)
+    except ValueError as exc:
+        raise ProductError(
+            "ERR_NLE_SHELL_REQUEST_INVALID",
+            f"{name} is invalid",
+            ProductErrorCategory.VALIDATION,
+        ) from exc
+    return text
 
 
 class Task044NleShellController:
@@ -133,6 +147,16 @@ class Task044NleShellController:
         placement_count = 0
         if self.visual_asset_placement is not None:
             placement_count = int(self.visual_asset_placement.snapshot(timeline=self.timeline)["placement_count"])
+        history_controls: dict[str, object] = {
+            "available": False,
+            "project_history_sha256": None,
+            "undo": {"available": False},
+            "redo": {"available": False},
+            "provider_execution_started": False,
+            "external_mutation_started": False,
+        }
+        if self.edit_application is not None:
+            history_controls = self.edit_application.history_control_snapshot(self.timeline)
         return {"available": True, "task_owner": "TASK-044/P-NLE-4",
                 "timeline_id": timeline.timeline_id,
                 "timeline_sha256": self.timeline.timeline_sha256,
@@ -151,6 +175,7 @@ class Task044NleShellController:
                     TimelineTrackCategory.BGM,
                 )],
                 "track_mutation_available": self.edit_application is not None,
+                "history_controls": history_controls,
                 "durable_state_in_javascript": False,
                 "external_mutation_started": False}
 
@@ -356,11 +381,109 @@ class Task044NleShellController:
             raise ProductError("ERR_TIMELINE_TRACK_LOCKED", "Locked track cannot be edited", ProductErrorCategory.STATE)
         anchors = (SnapAnchor("playhead", self.interaction.playhead_frame, SnapKind.PLAYHEAD, 0),)
         return self.edit_application.prepare_trim(
-            timeline=self.timeline, clip_id=str(args["clip_id"]), edge=str(args["edge"]),
+            timeline=self.timeline,
+            clip_id=_request_text(args["clip_id"], "clip_id"),
+            edge=_request_text(args["edge"], "edge"),
             desired_frame=_frame(args["desired_frame"], "desired_frame"),
-            snap_tolerance_frames=2, snap_anchors=anchors, command_id=str(args["command_id"]),
-            expected_project_manifest_sha256=str(args["expected_project_manifest_sha256"]),
+            snap_tolerance_frames=2,
+            snap_anchors=anchors,
+            command_id=_request_text(args["command_id"], "command_id"),
+            expected_project_manifest_sha256=_request_sha256(
+                args["expected_project_manifest_sha256"],
+                "expected_project_manifest_sha256",
+            ),
         )
+
+    def prepare_move(self, args: Any) -> dict[str, Any]:
+        required = {
+            "clip_id", "desired_start_frame", "command_id",
+            "expected_project_manifest_sha256", "expected_timeline_sha256",
+        }
+        if self.edit_application is None:
+            raise ProductError(
+                "ERR_NLE_SHELL_EDIT_NOT_BOUND",
+                "Timeline edit application is unavailable",
+                ProductErrorCategory.STATE,
+            )
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError(
+                "ERR_NLE_SHELL_REQUEST_INVALID",
+                "Move request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if args["expected_timeline_sha256"] != self.timeline.timeline_sha256:
+            raise ProductError(
+                "ERR_NLE_SHELL_TIMELINE_STALE",
+                "Timeline changed; reload first",
+                ProductErrorCategory.STATE,
+            )
+        clip_id = _request_text(args["clip_id"], "clip_id")
+        projected = self._effective_timeline()
+        clip = next((item for item in projected.clips if item.clip_id == clip_id), None)
+        if clip is not None and self._track_presentation.get(clip.track_id, {}).get("locked") is True:
+            raise ProductError(
+                "ERR_TIMELINE_TRACK_LOCKED",
+                "Locked track cannot be edited",
+                ProductErrorCategory.STATE,
+            )
+        anchors = (SnapAnchor("playhead", self.interaction.playhead_frame, SnapKind.PLAYHEAD, 0),)
+        return self.edit_application.prepare_move(
+            timeline=self.timeline,
+            clip_id=clip_id,
+            desired_start_frame=_frame(args["desired_start_frame"], "desired_start_frame"),
+            snap_tolerance_frames=2,
+            snap_anchors=anchors,
+            command_id=_request_text(args["command_id"], "command_id"),
+            expected_project_manifest_sha256=_request_sha256(
+                args["expected_project_manifest_sha256"],
+                "expected_project_manifest_sha256",
+            ),
+        )
+
+    def _prepare_history_action(self, args: Any, *, action: str) -> dict[str, Any]:
+        required = {
+            "command_id", "expected_project_manifest_sha256",
+            "expected_timeline_sha256", "expected_project_history_sha256",
+        }
+        if self.edit_application is None:
+            raise ProductError(
+                "ERR_NLE_SHELL_EDIT_NOT_BOUND",
+                "Timeline edit application is unavailable",
+                ProductErrorCategory.STATE,
+            )
+        if not isinstance(args, dict) or set(args) != required:
+            raise ProductError(
+                "ERR_NLE_SHELL_REQUEST_INVALID",
+                f"{action.title()} request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if args["expected_timeline_sha256"] != self.timeline.timeline_sha256:
+            raise ProductError(
+                "ERR_NLE_SHELL_TIMELINE_STALE",
+                "Timeline changed; reload first",
+                ProductErrorCategory.STATE,
+            )
+        values = {
+            "timeline": self.timeline,
+            "command_id": _request_text(args["command_id"], "command_id"),
+            "expected_project_manifest_sha256": _request_sha256(
+                args["expected_project_manifest_sha256"],
+                "expected_project_manifest_sha256",
+            ),
+            "expected_project_history_sha256": _request_sha256(
+                args["expected_project_history_sha256"],
+                "expected_project_history_sha256",
+            ),
+        }
+        if action == "undo":
+            return self.edit_application.prepare_undo(**values)
+        return self.edit_application.prepare_redo(**values)
+
+    def prepare_undo(self, args: Any) -> dict[str, Any]:
+        return self._prepare_history_action(args, action="undo")
+
+    def prepare_redo(self, args: Any) -> dict[str, Any]:
+        return self._prepare_history_action(args, action="redo")
 
     def apply_edit(self, args: Any) -> dict[str, Any]:
         if self.edit_application is None:
@@ -370,7 +493,27 @@ class Task044NleShellController:
             )
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError("ERR_NLE_SHELL_REQUEST_INVALID", "Timeline apply request is invalid", ProductErrorCategory.VALIDATION)
-        return self.edit_application.apply(confirmation_id=str(args["confirmation_id"]), timeline=self.timeline)
+        return self.edit_application.apply(
+            confirmation_id=_request_text(args["confirmation_id"], "confirmation_id"),
+            timeline=self.timeline,
+        )
+
+    def cancel_edit(self, args: Any) -> dict[str, object]:
+        if self.edit_application is None:
+            raise ProductError(
+                "ERR_NLE_SHELL_EDIT_NOT_BOUND",
+                "Timeline edit application is unavailable",
+                ProductErrorCategory.STATE,
+            )
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
+            raise ProductError(
+                "ERR_NLE_SHELL_REQUEST_INVALID",
+                "Timeline cancel request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self.edit_application.cancel(
+            confirmation_id=_request_text(args["confirmation_id"], "confirmation_id")
+        )
 
     def visual_asset_placement_snapshot(self, args: Any = None) -> dict[str, Any]:
         if args is not None and args != {}:

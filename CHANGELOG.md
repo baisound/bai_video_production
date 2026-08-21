@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-054 R0として、既存CGEL/Commentary正本ID・Claim型を再利用するDbDチューニングLLM中間層のBinding、Context、Proposal、Execution Receiptとcanonical Schemaを追加しました。確認モードはDataset・Binding・Training Jobの前後完全一致を強制し、stale、未検証RAG、秘密値、過大Context、未知Schema、改ざん、silent fallback/retryをfail closedにします。Dataset採用、モデル/runtime取得、学習、Provider実行、TTS、Timeline採用、Release/Deployは引き続き別Human Gateです。
+
 - TASK-014として、packaging 25.0提案pinの公式PyPIメタデータをcredential-free・no-redirect・no-retryのbounded HTTPS observerでexact 1回診断観測し、DNS/TLS/request/response phase receipt、schema mirror、fail-closed parserを追加しました。観測はdiagnostic-onlyで、pin acceptance、artifact download、parser import、resolver/install/runtime/model/audio authorityは引き続き未認可です。
 
 - TASK-036 P-UX-2Gとして、canonical Human GO済みQueueからLOCAL_FREE_AIのComfyUI画像生成を別Human確認で実行し、構造検証済みPNGを別確認でTASK-003 IMAGE Asset/TASK-037 Candidate（READY_FOR_AUDIT）へ採用するtrusted Shell/CLI縦断と、再起動・排他・no-replay recovery境界を追加しました。実Windows/Comfy Provider実行、Human ACCEPT/LOCK、公開、Export、Release/Deployは引き続き別Gateです。

@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R5_COMPLETE / R6_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R6_COMPLETE / R7_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -148,5 +148,12 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   Human confirmation. Focused regression `17 PASS`; TASK-050/TASK-052 affected
   regression `193 PASS`; TASK-051 compatibility/source gate `118 PASS`; unresolved
   Critical/High `0 / 0`.
+- R6 Tier 3 object/scene baseline: complete; canonical definitions keep pallets
+  and windows under MECHANIC, map features/main buildings under MAP and tiles
+  under TILE, while deterministic reference-crop classification requires identity
+  plus hard-negative coverage and fails closed on ambiguity, foreign map namespace
+  or unregistered labels. Object visibility cannot claim PALLET_DROP/WINDOW_VAULT.
+  Focused regression `18 PASS`; TASK-049 DbD/TASK-052 affected regression
+  `214 PASS`; unresolved Critical/High `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R6 Tier 3 object/scene gaps selected from the traceability matrix.
+- Next dependency-ordered unit: R7 selective Vision escalation and contradiction routing.

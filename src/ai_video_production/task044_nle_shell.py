@@ -21,6 +21,7 @@ from .interactive_timeline_application import Task044TimelineEditApplication
 from .interactive_timeline_edit import SnapAnchor, SnapKind
 from .product_project_store import ProductProjectManifestStore
 from .task036_visual_asset_placement import Task036VisualAssetPlacementApplication
+from .task044_edit_persistence_receipt import Task044EditPersistenceReceipt
 
 
 ExportPreparationProvider = Callable[[str], ExportPreparation]
@@ -80,6 +81,11 @@ class Task044NleShellController:
         history = self.edit_application._load(manifest)
         from .interactive_timeline_edit import TimelineEditProjector
         return TimelineEditProjector.apply(self.timeline, history)[0]
+
+    def edit_persistence_receipt(self) -> Task044EditPersistenceReceipt | None:
+        if self.edit_application is None:
+            return None
+        return self.edit_application.current_edit_persistence_receipt(self.timeline)
 
     def snapshot(self, args: Any = None) -> dict[str, Any]:
         args = {} if args is None else args

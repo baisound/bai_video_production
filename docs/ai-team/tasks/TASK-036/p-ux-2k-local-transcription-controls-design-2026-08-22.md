@@ -1,7 +1,7 @@
 # TASK-036 P-UX-2K local transcription controls design
 
 Date: `2026-08-22`
-Status: `R1 IMPLEMENTED / VERIFICATION IN PROGRESS / NATIVE NO-GO`
+Status: `R1 LOCAL VERIFIED / INDEPENDENT REVIEW PENDING / NATIVE NO-GO`
 Atomic unit: `P-UX-2K_LOCAL_TRANSCRIPTION_CONTROLS_R1`
 
 ## 1. Goal
@@ -168,3 +168,13 @@ database identity and connection closure.
 
 Fake-provider verification does not authorize or claim native success. Full
 regression and independent implementation review remain completion gates.
+
+Fresh-main local Evidence after merge of `origin/main` at `f6548b5`:
+
+- impacted Product/Shell/UI/operation/ingest tests: `220 PASS`;
+- Subtitle/Cut/editing/downstream compatibility tests: `52 PASS`;
+- combined focused/affected result: `272 PASS`;
+- changed Python compile and `git diff --check`: PASS;
+- full repository collection: `NOT_CONFIRMED` because the WSL environment
+  lacks the declared `referencing` dependency. No dependency was installed;
+- real FasterWhisper/model/native/network execution: zero.

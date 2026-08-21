@@ -34,8 +34,8 @@ class CountingClient:
             KILLERS_URL: _KILLERS,
             ITEMS_URL: blank,
             ADDONS_URL: blank,
-            MAPS_URL: blank,
-            _DUPLICATE_DETAIL: "<html><body><h2>特殊能力</h2><p>detail</p></body></html>",
+            MAPS_URL: '<main id="main" class="article"><article><h1>全マップ一覧</h1></article></main>',
+            _DUPLICATE_DETAIL: '<main id="main" class="article"><article><h1>ハグ</h1><h2>特殊能力</h2><p>detail</p></article></main>',
         }
 
     def fetch_html(self, url: str, *, output_path: Path) -> FetchReceipt:

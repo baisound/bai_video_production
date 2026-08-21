@@ -46,10 +46,13 @@ class KamigameCandidateSummary:
             GameKnowledgeKind.MAP: "マップ",
             GameKnowledgeKind.REALM: "領域",
             GameKnowledgeKind.OFFERING: "オファリング",
-            GameKnowledgeKind.CHARACTER: "キャラクター",
+            GameKnowledgeKind.UNKNOWN: "未分類・要確認",
             GameKnowledgeKind.SURVIVOR: "サバイバー",
             GameKnowledgeKind.KNOWLEDGE: "ナレッジ系",
-        }.get(self.knowledge_kind, self.knowledge_kind.value)
+        }.get(
+            self.knowledge_kind,
+            "未分類・要確認" if self.knowledge_kind is GameKnowledgeKind.CHARACTER else self.knowledge_kind.value,
+        )
 
 
 @dataclass(frozen=True, slots=True)

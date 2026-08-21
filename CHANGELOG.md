@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-052として、DbD設計・実装ギャップ監査、分類体系とHuman-first詳細・安全削除、マップ画像decode/回転、Survivor主体Observation/Gold/Teacher契約、transactionalな一括画像登録を追加しました。実機Windows EXEでネストしたKnowledge詳細が起動を停止する`unhashable type: 'dict'`も修正し、Ownerワークスペースで起動・検索・主要画面操作を確認しています。全体のreal-media packaged acceptance、Provider、Release、Deployは別Gateです。
+
 - TASK-014 AU2C2B1b0-Aとして、`packaging 25.0` wheelの提案pinを同一immutable bytesからZIP・METADATA・WHEEL・RECORDまで検証する診断専用契約を追加しました。公式metadata観測とpin受理は未確認のまま保持し、network、download、install、parser import、resolver利用、runtime、model、audioのAuthorityを付与しません。
 
 - TASK-014 AU2C2B1aとして、Qwen3-TTS runtime artifact closure planのno-I/O契約を追加しました。index/release・metadata・artifact HEAD・checksum・upstream観測を候補へ完全結合し、Python installer・distribution wheel・BtbN FFmpeg archiveのprovisional shapeを固定します。契約は未解決・診断専用で、network、download、install、runtime、model、audioのAuthorityを付与しません。

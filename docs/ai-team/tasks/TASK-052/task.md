@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R6_COMPLETE / R7_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R7_COMPLETE / R8_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -155,5 +155,12 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   or unregistered labels. Object visibility cannot claim PALLET_DROP/WINDOW_VAULT.
   Focused regression `18 PASS`; TASK-049 DbD/TASK-052 affected regression
   `214 PASS`; unresolved Critical/High `0 / 0`.
+- R7 selective Vision escalation: complete; high-value/contradictory exact source
+  windows and bounded ROIs route only through the canonical Product IMAGE Provider
+  resolver, and missing explicit authority, cost ceiling, capability or available
+  route fails closed before request construction/dispatch. Plans retain Evidence
+  references, require abstention and can never claim a CGEL event. R7 + canonical
+  Provider/fusion focused regression `30 PASS`; external Provider calls `0`;
+  unresolved Critical/High `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R7 selective Vision escalation and contradiction routing.
+- Next dependency-ordered unit: R8 Gold / correction / KPI closure.

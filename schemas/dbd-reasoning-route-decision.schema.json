@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/dbd-reasoning-route-decision.schema.json",
+  "title": "DbD Reasoning Route Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_kind",
+    "binding_id",
+    "binding_revision",
+    "binding_sha256",
+    "registry_record_sha256",
+    "profile_id",
+    "profile_version",
+    "profile_sha256",
+    "route_id",
+    "provider_family",
+    "provider_id",
+    "model_id",
+    "cost_class",
+    "reasoning_effort",
+    "credential_required",
+    "endpoint_configured",
+    "route_capability",
+    "execution_authority_state",
+    "route_decision_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "DBD_REASONING_ROUTE_DECISION"},
+    "binding_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "binding_revision": {"type": "integer", "minimum": 1},
+    "binding_sha256": {"$ref": "#/$defs/sha256"},
+    "registry_record_sha256": {"$ref": "#/$defs/sha256"},
+    "profile_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "profile_version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "profile_sha256": {"$ref": "#/$defs/sha256"},
+    "route_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "provider_family": {
+      "enum": [
+        "OPENAI", "ANTHROPIC", "GOOGLE", "ELEVENLABS", "SUNO_API", "RUNWAY",
+        "LUMA", "STABILITY_AI", "REPLICATE", "FAL_AI", "MINIMAX", "KLING",
+        "COMFYUI", "AUDACITY_OPENVINO", "LOCAL_OPEN_SOURCE", "NON_AI_LIBRARY", "OTHER"
+      ]
+    },
+    "provider_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "model_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/:-]{0,127}$"},
+    "cost_class": {
+      "enum": [
+        "CLOUD_PAID_AI", "CLOUD_FREE_TIER_AI", "LOCAL_FREE_AI",
+        "LOCAL_LICENSED_AI", "NON_AI_FREE"
+      ]
+    },
+    "reasoning_effort": {"enum": ["none", "low", "medium", "high", "xhigh", "max"]},
+    "credential_required": {"type": "boolean"},
+    "endpoint_configured": {"type": "boolean"},
+    "route_capability": {"const": "DBD_TUNED_COMMENTARY_REASONING"},
+    "execution_authority_state": {"const": "NOT_AUTHORIZED_R3D_REQUIRED"},
+    "route_decision_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}
+

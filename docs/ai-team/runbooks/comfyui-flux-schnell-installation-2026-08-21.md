@@ -73,10 +73,17 @@ Primary references:
    ```text
    python_embeded\python.exe -s ComfyUI\main.py
      --listen 127.0.0.1 --port 8188 --disable-auto-launch
+     --disable-metadata
      --input-directory E:\BAI_AI\datasets\task036-comfy-input
      --output-directory E:\BAI_AI\outputs\task036-comfy-output
      --temp-directory E:\BAI_AI\cache\task036-comfy-temp
    ```
+
+   `--disable-metadata` is mandatory for Product generation. It prevents the
+   private Comfy workflow and prompt from being embedded in generated PNG
+   metadata. If an already running process lacks this flag, stop only that
+   exact ComfyUI process and restart it with the full command above before
+   queueing any workflow.
 
 10. Read only `/system_stats` and `/object_info`. Confirm exact loopback,
     NVIDIA runtime, checkpoint inventory and required core node classes. Do not
@@ -114,5 +121,6 @@ Primary references:
   VAEDecode, SaveImage — PASS`
 - Checkpoint inventory: `flux1-schnell-fp8.safetensors — PASS`
 - Endpoint: `http://127.0.0.1:8188 — PASS`
+- Prompt/workflow metadata disabled: `--disable-metadata — REQUIRED`
 - Provider dispatch count: `0`
 - Paid/cloud call count: `0`

@@ -23,6 +23,7 @@ _EVENT_LABEL_JA = {
     GameEventType.MATCH_START: "試合開始",
     GameEventType.CHASE_START: "チェイス開始",
     GameEventType.CHASE_END: "チェイス終了",
+    GameEventType.GENERATOR_COMPLETE: "発電機修理完了",
     GameEventType.INJURY: "負傷",
     GameEventType.DOWN: "ダウン",
     GameEventType.HOOK: "フック",
@@ -38,6 +39,7 @@ _BASE_SCORE = {
     GameEventType.MATCH_START: 20,
     GameEventType.CHASE_START: 65,
     GameEventType.CHASE_END: 60,
+    GameEventType.GENERATOR_COMPLETE: 76,
     GameEventType.INJURY: 65,
     GameEventType.DOWN: 82,
     GameEventType.HOOK: 78,
@@ -52,6 +54,7 @@ _BASE_SCORE = {
 _MARKER_COLORS = {
     GameEventType.CHASE_START: "Blue",
     GameEventType.CHASE_END: "Blue",
+    GameEventType.GENERATOR_COMPLETE: "Yellow",
     GameEventType.DOWN: "Red",
     GameEventType.HOOK: "Red",
     GameEventType.UNHOOK: "Green",

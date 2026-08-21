@@ -96,6 +96,7 @@ class DBDEventCandidate:
     producer: str
     producer_version: str
     observation_state: Mapping[str, Any] = field(default_factory=dict)
+    survivor_slot: int | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.match_id, str) or not self.match_id:
@@ -116,6 +117,12 @@ class DBDEventCandidate:
         if not isinstance(self.producer, str) or not self.producer.strip() or len(self.producer) > 128:
             raise ValueError("producer must be a bounded non-empty string")
         SemVer.parse(self.producer_version)
+        if self.survivor_slot is not None and (
+            isinstance(self.survivor_slot, bool)
+            or not isinstance(self.survivor_slot, int)
+            or not 0 <= self.survivor_slot <= 3
+        ):
+            raise ValueError("survivor_slot must be 0..3 when known")
         object.__setattr__(
             self,
             "observation_state",
@@ -136,22 +143,70 @@ class DBDResolutionPolicy:
 
 
 @dataclass(frozen=True, slots=True)
+class DBDResolverSurvivorState:
+    survivor_slot: int
+    chase_active: DBDTriState = DBDTriState.UNKNOWN
+    survivor_hooked: DBDTriState = DBDTriState.UNKNOWN
+
+    def __post_init__(self) -> None:
+        if isinstance(self.survivor_slot, bool) or not isinstance(self.survivor_slot, int) or not 0 <= self.survivor_slot <= 3:
+            raise ValueError("survivor_slot must be 0..3")
+        for name in ("chase_active", "survivor_hooked"):
+            if not isinstance(getattr(self, name), DBDTriState):
+                raise ValueError(f"{name} must be a DBDTriState")
+
+    def to_dict(self) -> dict[str, int | str]:
+        return {
+            "survivor_slot": self.survivor_slot,
+            "chase_active": self.chase_active.value,
+            "survivor_hooked": self.survivor_hooked.value,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class DBDResolverState:
     match_started: DBDTriState = DBDTriState.UNKNOWN
     chase_active: DBDTriState = DBDTriState.UNKNOWN
     survivor_hooked: DBDTriState = DBDTriState.UNKNOWN
+    survivors: tuple[DBDResolverSurvivorState, ...] = ()
 
     def __post_init__(self) -> None:
         for name in ("match_started", "chase_active", "survivor_hooked"):
             if not isinstance(getattr(self, name), DBDTriState):
                 raise ValueError(f"{name} must be a DBDTriState")
+        if not isinstance(self.survivors, tuple) or any(not isinstance(item, DBDResolverSurvivorState) for item in self.survivors):
+            raise ValueError("survivors must be a tuple of DBDResolverSurvivorState")
+        slots = tuple(item.survivor_slot for item in self.survivors)
+        if slots != tuple(sorted(set(slots))):
+            raise ValueError("survivors must have unique sorted slots")
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "match_started": self.match_started.value,
             "chase_active": self.chase_active.value,
             "survivor_hooked": self.survivor_hooked.value,
+            "survivors": [item.to_dict() for item in self.survivors],
         }
+
+    def survivor_state(self, survivor_slot: int) -> DBDResolverSurvivorState:
+        if isinstance(survivor_slot, bool) or not isinstance(survivor_slot, int) or not 0 <= survivor_slot <= 3:
+            raise ValueError("survivor_slot must be 0..3")
+        return next(
+            (item for item in self.survivors if item.survivor_slot == survivor_slot),
+            DBDResolverSurvivorState(survivor_slot),
+        )
+
+    def with_survivor(self, survivor: DBDResolverSurvivorState) -> "DBDResolverState":
+        if not isinstance(survivor, DBDResolverSurvivorState):
+            raise ValueError("survivor must be a DBDResolverSurvivorState")
+        values = {item.survivor_slot: item for item in self.survivors}
+        values[survivor.survivor_slot] = survivor
+        return DBDResolverState(
+            match_started=self.match_started,
+            chase_active=self.chase_active,
+            survivor_hooked=self.survivor_hooked,
+            survivors=tuple(values[slot] for slot in sorted(values)),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -376,7 +431,9 @@ class DBDEventResolver:
         )
         direct_evidence = any(item.evidence_type in self._DIRECT_EVIDENCE_TYPES for item in admitted)
         current_state = state or DBDResolverState()
-        transition_valid, transition_reason, next_state = self._evaluate_transition(current_state, candidate.event_type)
+        transition_valid, transition_reason, next_state = self._evaluate_transition(
+            current_state, candidate.event_type, candidate.survivor_slot,
+        )
 
         reasons: list[str] = []
         if not transition_valid:
@@ -424,6 +481,7 @@ class DBDEventResolver:
             "resolver_state_before": current_state.to_dict(),
             "resolver_state_after": state_after.to_dict(),
             "observation": dict(candidate.observation_state),
+            "survivor_slot": candidate.survivor_slot,
         }
         event = CanonicalGameEvent(
             match_id=match.match_id,
@@ -445,6 +503,7 @@ class DBDEventResolver:
     def _evaluate_transition(
         state: DBDResolverState,
         event_type: GameEventType,
+        survivor_slot: int | None = None,
     ) -> tuple[bool, str, DBDResolverState]:
         if event_type is GameEventType.MATCH_START:
             if state.match_started is DBDTriState.ACTIVE:
@@ -453,41 +512,86 @@ class DBDEventResolver:
                 match_started=DBDTriState.ACTIVE,
                 chase_active=state.chase_active,
                 survivor_hooked=state.survivor_hooked,
+                survivors=state.survivors,
             )
         if event_type is GameEventType.CHASE_START:
+            if survivor_slot is not None:
+                survivor = state.survivor_state(survivor_slot)
+                if survivor.chase_active is DBDTriState.ACTIVE:
+                    return False, "CHASE_ALREADY_ACTIVE", state
+                return True, "CHASE_START_APPLIED", state.with_survivor(DBDResolverSurvivorState(
+                    survivor_slot,
+                    chase_active=DBDTriState.ACTIVE,
+                    survivor_hooked=survivor.survivor_hooked,
+                ))
             if state.chase_active is DBDTriState.ACTIVE:
                 return False, "CHASE_ALREADY_ACTIVE", state
             return True, "CHASE_START_APPLIED", DBDResolverState(
                 match_started=state.match_started,
                 chase_active=DBDTriState.ACTIVE,
                 survivor_hooked=state.survivor_hooked,
+                survivors=state.survivors,
             )
         if event_type is GameEventType.CHASE_END:
+            if survivor_slot is not None:
+                survivor = state.survivor_state(survivor_slot)
+                if survivor.chase_active is DBDTriState.INACTIVE:
+                    return False, "CHASE_ALREADY_INACTIVE", state
+                return True, "CHASE_END_APPLIED", state.with_survivor(DBDResolverSurvivorState(
+                    survivor_slot,
+                    chase_active=DBDTriState.INACTIVE,
+                    survivor_hooked=survivor.survivor_hooked,
+                ))
             if state.chase_active is DBDTriState.INACTIVE:
                 return False, "CHASE_ALREADY_INACTIVE", state
             return True, "CHASE_END_APPLIED", DBDResolverState(
                 match_started=state.match_started,
                 chase_active=DBDTriState.INACTIVE,
                 survivor_hooked=state.survivor_hooked,
+                survivors=state.survivors,
             )
         if event_type is GameEventType.HOOK:
+            if survivor_slot is not None:
+                survivor = state.survivor_state(survivor_slot)
+                if survivor.survivor_hooked is DBDTriState.ACTIVE:
+                    return False, "SURVIVOR_ALREADY_HOOKED", state
+                return True, "HOOK_APPLIED", state.with_survivor(DBDResolverSurvivorState(
+                    survivor_slot,
+                    chase_active=survivor.chase_active,
+                    survivor_hooked=DBDTriState.ACTIVE,
+                ))
             if state.survivor_hooked is DBDTriState.ACTIVE:
                 return False, "SURVIVOR_ALREADY_HOOKED", state
             return True, "HOOK_APPLIED", DBDResolverState(
                 match_started=state.match_started,
                 chase_active=state.chase_active,
                 survivor_hooked=DBDTriState.ACTIVE,
+                survivors=state.survivors,
             )
         if event_type is GameEventType.UNHOOK:
+            if survivor_slot is not None:
+                survivor = state.survivor_state(survivor_slot)
+                if survivor.survivor_hooked is DBDTriState.INACTIVE:
+                    return False, "SURVIVOR_ALREADY_UNHOOKED", state
+                return True, "UNHOOK_APPLIED", state.with_survivor(DBDResolverSurvivorState(
+                    survivor_slot,
+                    chase_active=survivor.chase_active,
+                    survivor_hooked=DBDTriState.INACTIVE,
+                ))
             if state.survivor_hooked is DBDTriState.INACTIVE:
                 return False, "SURVIVOR_ALREADY_UNHOOKED", state
             return True, "UNHOOK_APPLIED", DBDResolverState(
                 match_started=state.match_started,
                 chase_active=state.chase_active,
                 survivor_hooked=DBDTriState.INACTIVE,
+                survivors=state.survivors,
             )
         if event_type in {
             GameEventType.INJURY,
+            GameEventType.DOWN,
+            GameEventType.GENERATOR_COMPLETE,
+            GameEventType.KILL,
+            GameEventType.ESCAPE,
             GameEventType.WINDOW_VAULT,
             GameEventType.PALLET_DROP,
             GameEventType.UNKNOWN_EVENT,
@@ -505,6 +609,7 @@ __all__ = [
     "DBDResolutionPolicy",
     "DBDResolutionResult",
     "DBDResolverState",
+    "DBDResolverSurvivorState",
     "DBDTriState",
     "DBDVisualMarkerKind",
 ]

@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R3A_COMPLETE / R3B_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R3B_COMPLETE / R3C_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -70,5 +70,11 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   as a pure deterministic layer. Focused/affected regression `35 PASS`; all current
   TASK-052 tests `43 PASS`; broad DbD/TASK-052 regression `128 PASS`; unresolved
   Critical/High `0 / 0`.
+- R3B admitted Evidence / CGEL integration: complete; confirmed temporal decisions
+  map to synchronized generator/chase/Survivor taxonomy, while subject-bound
+  Resolver chase/hook state prevents cross-slot contamination and legacy
+  subjectless candidates retain their global compatibility path. Focused regression
+  `42 PASS`; TASK-049/TASK-052 affected regression `243 PASS`; unresolved
+  Critical/High `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R3B admitted Evidence / CGEL event integration.
+- Next dependency-ordered unit: R3C killer-specific progress/stage and status-effect temporal state.

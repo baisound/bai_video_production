@@ -76,9 +76,16 @@ def test_unknown_low_confidence_and_power_identity_never_invoke_specific_detecto
     ):
         result = route(registry, observed, {roi(0): IMAGE}, {roi(0): "roi-0"})
         assert result.selected_killer_id is None
+        assert registry.required_roi_keys(observed) == ()
         assert result.records[0].reason_codes == ("KILLER_IDENTITY_UNKNOWN",)
         assert result.observations[0].killer_id is None
     assert detector.calls == []
+
+
+def test_known_killer_exposes_only_exact_required_roi_keys() -> None:
+    registry = KillerCapabilityRegistry(initial_killer_capabilities(), {})
+    assert registry.required_roi_keys(identity("killer_onryo")) == tuple(roi(slot) for slot in range(4))
+    assert registry.required_roi_keys(identity("killer_trapper")) == ()
 
 
 def test_exact_killer_routes_only_its_detector_and_preserves_four_survivor_subjects() -> None:
@@ -154,12 +161,16 @@ def test_capability_rejects_namespace_drift_and_detector_without_contract() -> N
         KillerCapabilityRegistry((base,), {("killer_onryo", "condemn"): FakeDetector()})
     with pytest.raises(ValueError, match="requires a survivor_slot"):
         KillerSpecificRoiKey(KillerRoiFamily.SURVIVOR_PORTRAIT_OVERLAY, None)
+    with pytest.raises(ValueError, match="cannot carry"):
+        KillerSpecificRoiKey(KillerRoiFamily.KILLER_POWER_HUD, 0)
     with pytest.raises(ValueError, match="cross-namespace"):
         KillerCapability(
             "killer_test", "effect", KillerEffectFamily.POWER_STATE,
             KillerRoiFamily.KILLER_POWER_HUD, KillerDetectorType.REFERENCE_SLICE,
             False, "KILLER_SPECIFIC_HUD/killer_test/effect", (),
         )
+    with pytest.raises(ValueError, match="must agree"):
+        replace(base, survivor_scoped=False)
 
 
 def test_runtime_hard_negative_namespace_and_impossible_stage_abstain() -> None:

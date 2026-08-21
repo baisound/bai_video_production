@@ -1,7 +1,7 @@
 # TASK-026 — Audio Placement & Bed Worker
 
-- Status: `FOUNDATION_IMPLEMENTED / P_AUDIO_1_PRODUCT_PROMOTION_IMPLEMENTATION_LOCAL_PASS / HOSTED_IMPLEMENTATION_PENDING`
-- Current authority: `OWNER_DIRECTED_PRODUCT_PROMOTION_IMPLEMENTATION`
+- Status: `FOUNDATION_IMPLEMENTED / P_AUDIO_1_PRODUCT_PROMOTION_HOSTED_CLOSED`
+- Current authority: `HOSTED_CLOSED / FUTURE_SLICE_REQUIRES_FRESH_AUTHORITY`
 - DEV Profile: `DEV-4 PRODUCT ORCHESTRATION CRITICAL`
 
 ## Current implementation truth
@@ -30,16 +30,17 @@
 
 P-AUDIO-1 does not generate audio or execute TASK-010, Resolve or Cubase.
 
-## Owner P0 immediately after hosted closure
+## Hosted closure and successor boundary
 
-The V6.1.1 HTML mock is the canonical visual and interaction design authority.
-Deviation between that mock and the packaged EXE is an absolute NG. After this
-implementation reaches all-green `main` and branch/checkout cleanup, the next
-unit is `TASK-036 P-UX-1 / V6.1.1 MOCK-TO-EXE VISUAL CONVERGENCE`, before any
-further user-facing feature surface is added. This TASK-026 unit does not claim
-that visual convergence.
+PR #86 exact head `a907d199a0f70cf05dc24361f512d84cd71163f6`
+passed all hosted `9 / 9` checks and merged at exact main
+`0e457e697a8099eac885d7edb88d5e77b0eca431`; branch/checkout cleanup and a clean
+fresh-main read-back were recorded in the canonical Task Index. The successor
+TASK-036 P-UX-1 visual-convergence route is independently governed and is not
+reopened by this TASK-026 closure.
 
 ## Next gate
 
-Implementation PR -> hosted `9 / 9` -> exact main merge -> branch/checkout
-cleanup -> fresh-main TASK-036 P-UX-1 Builder/Critic and implementation.
+Any additional TASK-026 placement or bed capability requires a fresh bounded
+Atomic Unit. P-AUDIO-1 closure grants no Provider, paid, audio-generation,
+media-write, TASK-010, Resolve or Cubase execution authority.

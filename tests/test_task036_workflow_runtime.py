@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -9,6 +11,14 @@ from ai_video_production.desktop_editing_application import Task036EditingApplic
 from ai_video_production.desktop_post_resolve_workflow import Task036PostResolveWorkflowFacade
 from ai_video_production.desktop_resolve_workflow import Task036ResolveWorkflowFacade
 from ai_video_production.errors import ProductError
+from ai_video_production.durable_product_job import DurableProductJob, DurableProductJobState
+from ai_video_production.export_queue import (
+    ExportAuthorityClass,
+    ExportOutputContract,
+    ExportPreparation,
+    ExportPreset,
+)
+from ai_video_production.final_review import FinalReviewApprovalReceipt
 from ai_video_production.media_probe import MediaProbeResult
 from ai_video_production.render_qa import RenderQAReport
 from ai_video_production.resolve_assembly import ResolveAssemblyResult, ResolveAssetBindings
@@ -187,3 +197,143 @@ def test_native_render_bridge_rejects_javascript_target_or_destination(tmp_path:
         )
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
     assert value.native_render_port.calls == []
+
+
+class ExportNativeRenderPort:
+    destination_label = "render-output"
+
+    def __init__(self, destination: Path):
+        self.destination = destination
+        self.calls = 0
+
+    def execute(self, **kwargs):
+        self.calls += 1
+        self.destination.mkdir(parents=True, exist_ok=True)
+        artifact = self.destination / "master.mp4"
+        artifact.write_bytes(b"synthetic-offline-export-bytes")
+        digest = "sha256:" + hashlib.sha256(artifact.read_bytes()).hexdigest()
+        report = RenderQAReport(
+            digest,
+            artifact.stat().st_size,
+            MediaProbeResult(
+                "mov,mp4,m4a,3gp,3g2,mj2",
+                4_000_000,
+                artifact.stat().st_size,
+                None,
+                (
+                    {
+                        "codec_type": "video", "codec_name": "h264",
+                        "width": 1920, "height": 1080, "avg_frame_rate": "30/1",
+                    },
+                    {
+                        "codec_type": "audio", "codec_name": "aac",
+                        "sample_rate": 48000, "channels": 2,
+                    },
+                ),
+            ),
+            None,
+            None,
+            kwargs["expected_duration_frames"],
+            kwargs["timeline_rate"],
+            2,
+            ({"check": "synthetic-offline", "status": "PASS"},),
+        )
+        return NativeRenderCompletion(report, artifact, H("8"))
+
+
+def _export_preparation(value: Task036WorkflowRuntime) -> ExportPreparation:
+    plan = value.resolve.assembly_plan
+    assert plan is not None
+    receipt = FinalReviewApprovalReceipt(
+        receipt_id="FINAL-RUNTIME-EXPORT",
+        project_id="project-1",
+        project_manifest_sha256=H("6"),
+        timeline_sha256=H("7"),
+        readiness_projection_sha256=H("8"),
+        source_snapshot_sha256s=(
+            ("audit", H("1")), ("production", H("2")),
+            ("project_manifest", H("6")), ("timeline", H("7")),
+            ("visual_handoff", H("3")),
+        ),
+        external_gate_receipt_sha256s=(
+            ("AUDIO_COMPLETION", H("4")), ("EDIT_PERSISTENCE", H("5")),
+            ("PRIVACY", H("6")), ("RESOURCE", H("7")),
+            ("RIGHTS_LICENSE", H("8")),
+        ),
+        approved_by="owner",
+        approved_at="2026-08-21T00:00:00.000Z",
+    )
+    return ExportPreparation(
+        project_id="project-1",
+        project_manifest_sha256=H("6"),
+        product_version="0.22.0",
+        timeline_plan_id="timeline-main",
+        timeline_revision=1,
+        timeline_sha256=H("7"),
+        edit_plan_sha256=plan.source_edit_plan_sha256,
+        assembly_plan_sha256=plan.to_dict()["assembly_sha256"],
+        final_approval=receipt,
+        preset=ExportPreset(
+            "preset-synthetic-offline", "1.0.0",
+            ExportOutputContract(1920, 1080, 30, 1, 48000, 2, "mp4", "h264", "aac"),
+        ),
+        output_target_identity="export:master",
+        authority_class=ExportAuthorityClass.RESOLVE_RENDER,
+        resolve_project_identity=value.target_project,
+        resolve_timeline_identity=plan.timeline_name,
+    )
+
+
+def test_queue_confirmed_export_reuses_native_port_and_validates_exact_output(tmp_path: Path):
+    value, _adapter = runtime(tmp_path)
+    value.compile_resolve_assembly()
+    applied = value.prepare_resolve_apply()
+    value.apply_resolve_assembly(str(applied["confirmation_id"]))
+    destination = tmp_path / "render-output"
+    native = ExportNativeRenderPort(destination)
+    value.native_render_port = native
+    preparation = _export_preparation(value)
+    job = DurableProductJob.create(
+        kind="EXPORT", target_identity=preparation.output_target_identity,
+        input_hashes=preparation.input_hashes,
+        created_at="2026-08-21T00:00:01.000Z",
+    )
+    job = job.transition(DurableProductJobState.PREFLIGHT, updated_at="2026-08-21T00:00:02.000Z")
+    job = job.transition(DurableProductJobState.READY, updated_at="2026-08-21T00:00:03.000Z")
+    job = job.transition(DurableProductJobState.DISPATCHING, updated_at="2026-08-21T00:00:04.000Z")
+    result = value.dispatch_export(job, preparation, destination)
+    artifact = destination / "master.mp4"
+    expected = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    assert result.state == "SUCCEEDED"
+    assert result.result_identity == "render-artifact:" + expected
+    assert result.render_qa_sha256 == value.render_qa.to_dict()["report_sha256"]
+    assert value.render_path == artifact
+    assert native.calls == 1
+
+
+def test_queue_confirmed_export_rejects_media_contract_mismatch(tmp_path: Path):
+    value, _adapter = runtime(tmp_path)
+    value.compile_resolve_assembly()
+    applied = value.prepare_resolve_apply()
+    value.apply_resolve_assembly(str(applied["confirmation_id"]))
+    destination = tmp_path / "render-output"
+    native = ExportNativeRenderPort(destination)
+    value.native_render_port = native
+    preparation = _export_preparation(value)
+    bad = replace(
+        preparation,
+        preset=ExportPreset(
+            "preset-wrong-size", "1.0.0",
+            ExportOutputContract(3840, 2160, 30, 1, 48000, 2, "mp4", "h264", "aac"),
+        ),
+    )
+    job = DurableProductJob.create(
+        kind="EXPORT", target_identity=bad.output_target_identity,
+        input_hashes=bad.input_hashes, created_at="2026-08-21T00:00:01.000Z",
+    )
+    job = job.transition(DurableProductJobState.PREFLIGHT, updated_at="2026-08-21T00:00:02.000Z")
+    job = job.transition(DurableProductJobState.READY, updated_at="2026-08-21T00:00:03.000Z")
+    job = job.transition(DurableProductJobState.DISPATCHING, updated_at="2026-08-21T00:00:04.000Z")
+    with pytest.raises(ProductError) as exc:
+        value.dispatch_export(job, bad, destination)
+    assert exc.value.code == "ERR_TASK036_EXPORT_OUTPUT_CONTRACT"

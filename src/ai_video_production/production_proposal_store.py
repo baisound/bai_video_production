@@ -27,14 +27,28 @@ from .production_proposal import (
 )
 from .serialization import canonical_json_bytes, sha256_bytes
 from .production_control_store import _exclusive_snapshot_lock
+from .ids import validate_project_id
 
 
 _MAX_BYTES = 16 * 1024 * 1024
 
 
-def _body(registry: ProductionProposalRegistry) -> dict[str, Any]:
+def _body(
+    registry: ProductionProposalRegistry,
+    *,
+    project_id: str | None = None,
+) -> dict[str, Any]:
+    if project_id is not None:
+        try:
+            validate_project_id(project_id)
+        except ValueError as exc:
+            raise ProductError(
+                "ERR_PROPOSAL_SNAPSHOT_PROJECT_ID_INVALID",
+                "Production Proposal snapshot project_id is invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
     body: dict[str, Any] = {
-        "snapshot_version": "1.0.0",
+        "snapshot_version": "1.1.0" if project_id is not None else "1.0.0",
         "task_owner": "TASK-027",
         "registry": registry.to_dict(),
         "credential_values_embedded": False,
@@ -43,6 +57,8 @@ def _body(registry: ProductionProposalRegistry) -> dict[str, Any]:
         "resolve_mutation_authorized": False,
         "publish_authorized": False,
     }
+    if project_id is not None:
+        body["project_id"] = project_id
     body["snapshot_sha256"] = sha256_bytes(canonical_json_bytes(body))
     return body
 
@@ -51,13 +67,39 @@ def _blueprint(row: dict[str, Any]) -> ProductionBlueprint | ProductionBlueprint
     return parse_production_blueprint_document(row)
 
 
-def _parse(document: dict[str, Any]) -> ProductionProposalRegistry:
-    if document.get("snapshot_version") != "1.0.0":
+def _parse(
+    document: dict[str, Any],
+    *,
+    expected_project_id: str | None = None,
+) -> ProductionProposalRegistry:
+    version = document.get("snapshot_version")
+    if version not in {"1.0.0", "1.1.0"}:
         raise ProductError("ERR_PROPOSAL_SNAPSHOT_VERSION", "Unsupported Production Proposal snapshot version", ProductErrorCategory.DATA_INTEGRITY)
     expected = document.get("snapshot_sha256")
     body = {key: value for key, value in document.items() if key != "snapshot_sha256"}
     if expected != sha256_bytes(canonical_json_bytes(body)):
         raise ProductError("ERR_PROPOSAL_SNAPSHOT_CHECKSUM", "Production Proposal snapshot checksum mismatch", ProductErrorCategory.DATA_INTEGRITY)
+    project_id = document.get("project_id")
+    if version == "1.0.0":
+        if project_id is not None:
+            raise ProductError("ERR_PROPOSAL_SNAPSHOT_INVALID", "Legacy Production Proposal snapshot cannot declare project_id", ProductErrorCategory.DATA_INTEGRITY)
+        if expected_project_id is not None:
+            raise ProductError(
+                "ERR_PROPOSAL_SNAPSHOT_PROJECT_SCOPE_REQUIRED",
+                "Product runtime requires a Project-scoped Production Proposal snapshot",
+                ProductErrorCategory.SECURITY,
+            )
+    else:
+        try:
+            validate_project_id(project_id)
+        except (TypeError, ValueError) as exc:
+            raise ProductError("ERR_PROPOSAL_SNAPSHOT_PROJECT_ID_INVALID", "Production Proposal snapshot project_id is invalid", ProductErrorCategory.DATA_INTEGRITY) from exc
+        if expected_project_id is not None and project_id != expected_project_id:
+            raise ProductError(
+                "ERR_PROPOSAL_SNAPSHOT_PROJECT_SCOPE_MISMATCH",
+                "Production Proposal snapshot belongs to a different Product Project",
+                ProductErrorCategory.SECURITY,
+            )
     if (
         document.get("credential_values_embedded") is not False
         or document.get("host_paths_embedded") is not False
@@ -158,26 +200,39 @@ def _parse(document: dict[str, Any]) -> ProductionProposalRegistry:
     return registry
 
 
+def _read_document(target: Path) -> dict[str, Any]:
+    if target.is_symlink() or not target.is_file():
+        raise ProductError("ERR_PROPOSAL_SNAPSHOT_FILE_INVALID", "Production Proposal snapshot must be a regular non-symlink file", ProductErrorCategory.VALIDATION)
+    size = target.stat().st_size
+    if size <= 0 or size > _MAX_BYTES:
+        raise ProductError("ERR_PROPOSAL_SNAPSHOT_SIZE", "Production Proposal snapshot size is outside the allowed bound", ProductErrorCategory.VALIDATION, details={"size_bytes": size})
+    try:
+        document = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ProductError("ERR_PROPOSAL_SNAPSHOT_READ", "Production Proposal snapshot could not be read as UTF-8 JSON", ProductErrorCategory.DATA_INTEGRITY) from exc
+    if not isinstance(document, dict):
+        raise ProductError("ERR_PROPOSAL_SNAPSHOT_INVALID", "Production Proposal snapshot root must be an object", ProductErrorCategory.DATA_INTEGRITY)
+    return document
+
+
 class ProductionProposalSnapshotStore:
     @staticmethod
-    def snapshot(registry: ProductionProposalRegistry) -> dict[str, Any]:
-        return _body(registry)
+    def snapshot(
+        registry: ProductionProposalRegistry,
+        *,
+        project_id: str | None = None,
+    ) -> dict[str, Any]:
+        return _body(registry, project_id=project_id)
 
     @staticmethod
-    def load(path: str | Path) -> ProductionProposalRegistry:
+    def load(
+        path: str | Path,
+        *,
+        expected_project_id: str | None = None,
+    ) -> ProductionProposalRegistry:
         target = Path(path)
-        if target.is_symlink() or not target.is_file():
-            raise ProductError("ERR_PROPOSAL_SNAPSHOT_FILE_INVALID", "Production Proposal snapshot must be a regular non-symlink file", ProductErrorCategory.VALIDATION)
-        size = target.stat().st_size
-        if size <= 0 or size > _MAX_BYTES:
-            raise ProductError("ERR_PROPOSAL_SNAPSHOT_SIZE", "Production Proposal snapshot size is outside the allowed bound", ProductErrorCategory.VALIDATION, details={"size_bytes": size})
-        try:
-            document = json.loads(target.read_text(encoding="utf-8"))
-        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-            raise ProductError("ERR_PROPOSAL_SNAPSHOT_READ", "Production Proposal snapshot could not be read as UTF-8 JSON", ProductErrorCategory.DATA_INTEGRITY) from exc
-        if not isinstance(document, dict):
-            raise ProductError("ERR_PROPOSAL_SNAPSHOT_INVALID", "Production Proposal snapshot root must be an object", ProductErrorCategory.DATA_INTEGRITY)
-        return _parse(document)
+        document = _read_document(target)
+        return _parse(document, expected_project_id=expected_project_id)
 
     @staticmethod
     def save(
@@ -185,6 +240,7 @@ class ProductionProposalSnapshotStore:
         registry: ProductionProposalRegistry,
         *,
         expected_previous_snapshot_sha256: str | None = None,
+        project_id: str | None = None,
     ) -> AtomicWriteResult:
         target = Path(path)
         with _exclusive_snapshot_lock(target):
@@ -195,10 +251,26 @@ class ProductionProposalSnapshotStore:
                     raise ProductError("ERR_PROPOSAL_SNAPSHOT_FILE_INVALID", "Production Proposal snapshot target must be a regular file", ProductErrorCategory.VALIDATION)
                 if expected_previous_snapshot_sha256 is None:
                     raise ProductError("ERR_PROPOSAL_SNAPSHOT_CAS_REQUIRED", "Replacing a Production Proposal snapshot requires its exact previous checksum", ProductErrorCategory.AUTHORIZATION)
-                current = _body(ProductionProposalSnapshotStore.load(target))["snapshot_sha256"]
+                current_document = _read_document(target)
+                _parse(current_document, expected_project_id=project_id)
+                requested_version = "1.1.0" if project_id is not None else "1.0.0"
+                if (
+                    current_document.get("snapshot_version") != requested_version
+                    or current_document.get("project_id") != project_id
+                ):
+                    raise ProductError(
+                        "ERR_PROPOSAL_SNAPSHOT_SCOPE_CHANGE_FORBIDDEN",
+                        "Production Proposal snapshot scope/version cannot change through ordinary CAS save",
+                        ProductErrorCategory.SECURITY,
+                    )
+                current = current_document.get("snapshot_sha256")
                 if current != expected_previous_snapshot_sha256:
                     raise ProductError("ERR_PROPOSAL_SNAPSHOT_REVISION_CONFLICT", "Production Proposal snapshot changed before save; reload before retry", ProductErrorCategory.STATE, details={"current_snapshot_sha256": current})
             elif expected_previous_snapshot_sha256 is not None:
                 raise ProductError("ERR_PROPOSAL_SNAPSHOT_PREVIOUS_MISSING", "Expected previous Production Proposal snapshot does not exist", ProductErrorCategory.STATE)
-            document = _body(registry)
-            return AtomicJsonWriter.write(target, document, validator=lambda value: _parse(value))
+            document = _body(registry, project_id=project_id)
+            return AtomicJsonWriter.write(
+                target,
+                document,
+                validator=lambda value: _parse(value, expected_project_id=project_id),
+            )

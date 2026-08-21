@@ -152,12 +152,31 @@ class ExportPreparation:
             _identity(self.estimate_source, "estimate_source")
 
     @property
+    def export_profile_sha256(self) -> str:
+        """Digest every logical field that can change Export execution.
+
+        Host destinations and one-shot authority tokens are deliberately absent;
+        those remain launcher-private.  The digest is persisted as a Job input so
+        a changed preset, output contract, logical target or Resolve target cannot
+        reuse an older durable Job after restart.
+        """
+        body = {
+            "preset": self.preset.to_dict(),
+            "output_target_identity": self.output_target_identity,
+            "authority_class": self.authority_class.value,
+            "resolve_project_identity": self.resolve_project_identity,
+            "resolve_timeline_identity": self.resolve_timeline_identity,
+        }
+        return sha256_bytes(canonical_json_bytes(body))
+
+    @property
     def input_hashes(self) -> Mapping[str, str]:
         return {"project_manifest": self.project_manifest_sha256,
                 "timeline": self.timeline_sha256, "edit_plan": self.edit_plan_sha256,
                 "assembly_plan": self.assembly_plan_sha256,
                 "final_approval": self.final_approval.final_approval_receipt_sha256,
-                "preset": self.preset.preset_sha256}
+                "preset": self.preset.preset_sha256,
+                "export_profile": self.export_profile_sha256}
 
     def to_dict(self) -> dict[str, Any]:
         body = {"preparation_version": "1.0.0", "task_owner": "TASK-044/P-NLE-3",
@@ -171,6 +190,7 @@ class ExportPreparation:
                 "assembly_plan_sha256": self.assembly_plan_sha256,
                 "final_approval_receipt_sha256": self.final_approval.final_approval_receipt_sha256,
                 "preset": self.preset.to_dict(),
+                "export_profile_sha256": self.export_profile_sha256,
                 "output_target_identity": self.output_target_identity,
                 "authority_class": self.authority_class.value,
                 "resolve_project_identity": self.resolve_project_identity,

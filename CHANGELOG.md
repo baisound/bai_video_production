@@ -6,6 +6,8 @@
 
 - TASK-014として、packaging 25.0提案pinの公式PyPIメタデータをcredential-free・no-redirect・no-retryのbounded HTTPS observerでexact 1回診断観測し、DNS/TLS/request/response phase receipt、schema mirror、fail-closed parserを追加しました。観測はdiagnostic-onlyで、pin acceptance、artifact download、parser import、resolver/install/runtime/model/audio authorityは引き続き未認可です。
 
+- TASK-036 P-UX-2H H-Bとして、Human LOCK済みのcanonical IMAGE AssetをTASK-044 TimelineへINSERT/REPLACEするplacement-only Shell/UIを追加し、Production/Candidate/Asset currentnessをapply・redo・ProjectSave回復時に再検証し、stale配置/回復待ちをFinal Review blockerへ接続しました。rights approval、Provider/native、Candidate ACCEPT/LOCK、Resolve、Export、公開、Release/Deployは引き続き別Gateです。
+
 - TASK-036 P-UX-2Gとして、canonical Human GO済みQueueからLOCAL_FREE_AIのComfyUI画像生成を別Human確認で実行し、構造検証済みPNGを別確認でTASK-003 IMAGE Asset/TASK-037 Candidate（READY_FOR_AUDIT）へ採用するtrusted Shell/CLI縦断と、再起動・排他・no-replay recovery境界を追加しました。実Windows/Comfy Provider実行、Human ACCEPT/LOCK、公開、Export、Release/Deployは引き続き別Gateです。
 
 - TASK-036 P-UX-2H H-Aとして、Timeline編集v1.1の可逆source bindingとProjectSave participant transactionを追加し、INSERT/REMOVE/REPLACEのUNDO/REDO、COMPLETE/ROLLBACK、再起動・pre-journal orphan回復をv1.0互換を保ってfail-closedにしました。Task036 Shellへのplacement統合（H-B）、Provider/native、Asset mutation、Export、公開、Release/Deployは引き続き別Gateです。

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier, Lock
 
 import pytest
 
@@ -34,14 +37,31 @@ from ai_video_production.interactive_timeline_store import (
     TimelineEditSnapshotStore,
     parse_timeline_edit_history,
 )
-from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
+from ai_video_production.product_project import (
+    ProductProjectManifest,
+    ProjectChildBinding,
+    ProjectTimebase,
+)
 from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.project_history import ProjectCommandAction, ProjectCommandHistoryStore
+from ai_video_production.project_save import (
+    ProductProjectSaveCoordinator,
+    ProjectSaveJournalStore,
+)
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.task044_nle_shell import Task044NleShellController
 from ai_video_production.timebase import FrameRate
 
 CREATED = "2026-08-15T00:00:00.000Z"
+
+
+@contextmanager
+def _allow_placement_recovery():
+    yield
+
+
+def _placement_guard_resolver(_command: TimelineEditCommand):
+    return _allow_placement_recovery
 
 
 def setup_project(root: Path) -> ProductProjectManifest:
@@ -342,6 +362,360 @@ def test_confirmation_and_manifest_cas_fail_closed(tmp_path: Path) -> None:
     with pytest.raises(ProductError) as exc:
         app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
     assert exc.value.code == "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID"
+
+
+def test_v1_1_application_mints_exact_binding_and_reopens(tmp_path: Path) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    binding = source_binding("app")
+    clip = placed_clip("app")
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-v11",
+    )
+    command = TimelineEditCommand(
+        "insert-v11",
+        TimelineEditKind.INSERT_CLIP,
+        after_clip=clip,
+        after_source_binding=binding,
+    )
+    prepared = app._prepare(
+        base,
+        command,
+        current.project_manifest_sha256,
+        "APPLY",
+    )
+    result = app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    manifest = ProductProjectManifestStore.load(tmp_path)
+    child = next(
+        item
+        for item in manifest.child_bindings
+        if item.identity == ("TASK-044", RELATIVE_PATH)
+    )
+    assert child.format_version == FORMAT_VERSION_V1_1
+    assert json.loads((tmp_path / RELATIVE_PATH).read_text(encoding="utf-8"))["snapshot_version"] == FORMAT_VERSION_V1_1
+    assert result["project_history_sha256"] == ProjectCommandHistoryStore.load(tmp_path).history_sha256
+    assert not app._history_recovery_path.exists()
+    reopened = Task044TimelineEditApplication(project_root=tmp_path, project_id="project-1")
+    restored = reopened._load(manifest)
+    projected, _in_out, bindings = TimelineEditProjector.apply_with_source_bindings(base, restored)
+    assert next(item for item in projected.clips if item.clip_id == clip.clip_id) == clip
+    assert bindings[clip.clip_id] == binding
+
+
+def test_v1_1_binding_version_mismatch_and_unknown_version_fail_closed(tmp_path: Path) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    binding = source_binding("mismatch")
+    clip = placed_clip("mismatch")
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-mismatch",
+    )
+    prepared = app._prepare(
+        base,
+        TimelineEditCommand(
+            "insert-mismatch",
+            TimelineEditKind.INSERT_CLIP,
+            after_clip=clip,
+            after_source_binding=binding,
+        ),
+        current.project_manifest_sha256,
+        "APPLY",
+    )
+    app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    manifest = ProductProjectManifestStore.load(tmp_path)
+    child = next(item for item in manifest.child_bindings if item.identity == ("TASK-044", RELATIVE_PATH))
+    for version in ("1.0.0", "9.9.9"):
+        changed = ProjectChildBinding(
+            child.domain_owner,
+            child.relative_path,
+            child.format_id,
+            version,
+            child.content_sha256,
+            child.required,
+            child.dependency_hashes,
+        )
+        bindings = [item for item in manifest.child_bindings if item.identity != child.identity] + [changed]
+        tampered = ProductProjectManifest.create(
+            project_id=manifest.project_id,
+            project_revision=manifest.project_revision + 1,
+            product_version=manifest.product_version,
+            timebase=manifest.timebase,
+            child_bindings=bindings,
+            created_at=manifest.created_at,
+            updated_at=manifest.updated_at,
+        )
+        with pytest.raises(ProductError) as exc:
+            app._load(tampered)
+        assert exc.value.code == "ERR_TIMELINE_EDIT_FORMAT_MISMATCH"
+
+
+def test_confirmation_cancel_is_single_use_and_releases_capacity(tmp_path: Path) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-cancel",
+    )
+    prepared = app.prepare_move(
+        timeline=base,
+        clip_id="clip-1",
+        desired_start_frame=20,
+        command_id="move-cancel",
+        expected_project_manifest_sha256=current.project_manifest_sha256,
+    )
+    cancelled = app.cancel(confirmation_id=prepared["confirmation_id"])
+    assert cancelled["cancelled"] is True
+    with pytest.raises(ProductError) as exc:
+        app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    assert exc.value.code == "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID"
+
+
+def test_confirmation_capacity_is_bounded_and_cancel_releases_one_slot(tmp_path: Path) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    tokens = iter(f"confirm-capacity-{index}" for index in range(257))
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: next(tokens),
+    )
+    prepared = []
+    for index in range(256):
+        prepared.append(app.prepare_move(
+            timeline=base,
+            clip_id="clip-1",
+            desired_start_frame=20,
+            command_id=f"move-capacity-{index}",
+            expected_project_manifest_sha256=current.project_manifest_sha256,
+        ))
+    with pytest.raises(ProductError) as exc:
+        app.prepare_move(
+            timeline=base,
+            clip_id="clip-1",
+            desired_start_frame=20,
+            command_id="move-capacity-overflow",
+            expected_project_manifest_sha256=current.project_manifest_sha256,
+        )
+    assert exc.value.code == "ERR_TIMELINE_EDIT_CONFIRMATION_CAPACITY"
+
+    app.cancel(confirmation_id=prepared[0]["confirmation_id"])
+    replacement = app.prepare_move(
+        timeline=base,
+        clip_id="clip-1",
+        desired_start_frame=20,
+        command_id="move-capacity-replacement",
+        expected_project_manifest_sha256=current.project_manifest_sha256,
+    )
+    assert replacement["confirmation_id"] == "confirm-capacity-256"
+
+
+def test_parallel_apply_and_cancel_admit_exactly_one_consumer(tmp_path: Path) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-race",
+    )
+    prepared = app.prepare_move(
+        timeline=base,
+        clip_id="clip-1",
+        desired_start_frame=20,
+        command_id="move-race",
+        expected_project_manifest_sha256=current.project_manifest_sha256,
+    )
+    barrier = Barrier(2)
+    outcomes: list[str] = []
+    outcome_lock = Lock()
+
+    def consume(action: str) -> None:
+        barrier.wait()
+        try:
+            if action == "apply":
+                app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+            else:
+                app.cancel(confirmation_id=prepared["confirmation_id"])
+            outcome = action
+        except ProductError as exc:
+            assert exc.code == "ERR_TIMELINE_EDIT_CONFIRMATION_INVALID"
+            outcome = "rejected"
+        with outcome_lock:
+            outcomes.append(outcome)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(consume, action) for action in ("apply", "cancel")]
+        for future in futures:
+            future.result()
+
+    assert outcomes.count("rejected") == 1
+    assert len(outcomes) == 2
+    assert sum(item in {"apply", "cancel"} for item in outcomes) == 1
+    history_path = ProjectCommandHistoryStore.path(tmp_path)
+    if "apply" in outcomes:
+        assert len(ProjectCommandHistoryStore.load(tmp_path).records) == 1
+    else:
+        assert not history_path.exists()
+
+
+def test_v1_1_participant_finalizes_history_after_manifest_interruption(tmp_path: Path) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    binding = source_binding("recover")
+    clip = placed_clip("recover")
+
+    def fail_after_manifest(stage: str, _root: Path) -> None:
+        if stage == "after_manifest_commit":
+            raise OSError("interrupted after Manifest commit")
+
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-participant-recovery",
+        save_coordinator=ProductProjectSaveCoordinator(failure_injector=fail_after_manifest),
+    )
+    prepared = app._prepare(
+        base,
+        TimelineEditCommand(
+            "insert-recovery",
+            TimelineEditKind.INSERT_CLIP,
+            after_clip=clip,
+            after_source_binding=binding,
+        ),
+        current.project_manifest_sha256,
+        "APPLY",
+    )
+    with pytest.raises(OSError):
+        app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    assert app._history_recovery_path.is_file()
+    unguarded = Task044TimelineEditApplication(project_root=tmp_path, project_id="project-1")
+    pending = unguarded.project_save_recovery_status()
+    with pytest.raises(ProductError) as exc_info:
+        unguarded.recover_project_save(
+            transaction_id=pending["transaction_id"],
+            action="FINALIZE",
+        )
+    assert exc_info.value.code == "ERR_TIMELINE_EDIT_PLACEMENT_GUARD_REQUIRED"
+    assert not ProjectCommandHistoryStore.path(tmp_path).exists()
+    reopened = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        placement_guard_resolver=_placement_guard_resolver,
+    )
+    status = reopened.project_save_recovery_status()
+    assert status["required"] is True
+    assert status["available_actions"] == ["FINALIZE"]
+    assert status["history_reconciliation_pending"] is True
+    recovered = reopened.recover_project_save(
+        transaction_id=status["transaction_id"],
+        action="FINALIZE",
+    )
+    assert recovered["project_history_record_count"] == 1
+    assert not app._history_recovery_path.exists()
+    assert ProjectCommandHistoryStore.load(tmp_path).records[0].target_identity == "insert-recovery"
+
+
+def test_v1_1_participant_rollback_keeps_source_history_exact(tmp_path: Path) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    binding = source_binding("rollback")
+    clip = placed_clip("rollback")
+
+    def fail_before_commit(stage: str, _root: Path) -> None:
+        if stage == "after_journal_validated":
+            raise OSError("interrupted before Project commit")
+
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-participant-rollback",
+        save_coordinator=ProductProjectSaveCoordinator(failure_injector=fail_before_commit),
+    )
+    prepared = app._prepare(
+        base,
+        TimelineEditCommand(
+            "insert-rollback",
+            TimelineEditKind.INSERT_CLIP,
+            after_clip=clip,
+            after_source_binding=binding,
+        ),
+        current.project_manifest_sha256,
+        "APPLY",
+    )
+    with pytest.raises(OSError):
+        app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    reopened = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        placement_guard_resolver=_placement_guard_resolver,
+    )
+    status = reopened.project_save_recovery_status()
+    assert status["available_actions"] == ["COMPLETE", "ROLLBACK"]
+    recovered = reopened.recover_project_save(
+        transaction_id=status["transaction_id"],
+        action="ROLLBACK",
+    )
+    assert recovered["project_manifest_sha256"] == current.project_manifest_sha256
+    assert recovered["project_history_record_count"] == 0
+    assert not (tmp_path / RELATIVE_PATH).exists()
+    assert not reopened._history_recovery_path.exists()
+
+
+def test_v1_1_participant_retries_after_result_journal_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    current = setup_project(tmp_path)
+    base = timeline()
+    binding = source_binding("result-retry")
+    clip = placed_clip("result-retry")
+    app = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        token_factory=lambda: "confirm-result-retry",
+    )
+    prepared = app._prepare(
+        base,
+        TimelineEditCommand(
+            "insert-result-retry",
+            TimelineEditKind.INSERT_CLIP,
+            after_clip=clip,
+            after_source_binding=binding,
+        ),
+        current.project_manifest_sha256,
+        "APPLY",
+    )
+    original_save = ProjectSaveJournalStore.save
+    failed = False
+
+    def fail_first_result(project_root, journal):
+        nonlocal failed
+        if journal.participant_result is not None and not failed:
+            failed = True
+            raise OSError("participant result journal write interrupted")
+        return original_save(project_root, journal)
+
+    monkeypatch.setattr(ProjectSaveJournalStore, "save", staticmethod(fail_first_result))
+    with pytest.raises(OSError):
+        app.apply(confirmation_id=prepared["confirmation_id"], timeline=base)
+    assert ProjectCommandHistoryStore.load(tmp_path).records[0].target_identity == "insert-result-retry"
+    assert not app._history_recovery_path.exists()
+    monkeypatch.setattr(ProjectSaveJournalStore, "save", staticmethod(original_save))
+    reopened = Task044TimelineEditApplication(
+        project_root=tmp_path,
+        project_id="project-1",
+        placement_guard_resolver=_placement_guard_resolver,
+    )
+    status = reopened.project_save_recovery_status()
+    assert status["available_actions"] == ["FINALIZE"]
+    recovered = reopened.recover_project_save(
+        transaction_id=status["transaction_id"],
+        action="FINALIZE",
+    )
+    assert recovered["project_history_record_count"] == 1
 
 
 def test_reopen_completes_command_history_after_post_manifest_interruption(

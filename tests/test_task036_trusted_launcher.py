@@ -546,6 +546,7 @@ def test_close_waits_for_inflight_export_mutation_before_releasing_runtime_lease
     bridge.export_queue_snapshot({})
     controller = bridge._nle_controller
     assert controller is not None and controller.export_application is not None
+    assert controller.visual_asset_placement is not None
     export = controller.export_application
     job = DurableProductJobService().enqueue(
         config.project_root, kind="EXPORT", target_identity="export:lease-barrier",

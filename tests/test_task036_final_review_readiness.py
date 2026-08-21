@@ -46,6 +46,7 @@ def sources():
         "available": True,
         "projected_timeline_sha256": h("4"),
         "project_manifest_sha256": h("5"),
+        "visual_asset_placement_count": 0,
     }
     export = {"available": True, "rows": []}
     gates = [{
@@ -60,6 +61,23 @@ def sources():
     return production, audit, visual, timeline, export, gates
 
 
+def placement_snapshot(production, timeline):
+    return {
+            "available": True,
+            "project_id": "project-1",
+            "production_snapshot_sha256": production["snapshot_sha256"],
+            "projected_timeline_sha256": timeline["projected_timeline_sha256"],
+            "project_manifest_sha256": timeline["project_manifest_sha256"],
+            "projection_sha256": h("a"),
+            "placements": [],
+            "project_save_recovery": {"required": False},
+            "rights_approved": False,
+            "publication_authorized": False,
+            "provider_execution_started": False,
+            "external_mutation_started": False,
+        }
+
+
 def project(values):
     production, audit, visual, timeline, export, gates = values
     return Task036FinalReviewReadinessProjection.project(
@@ -68,6 +86,7 @@ def project(values):
         visual_handoff_snapshot=visual,
         timeline_snapshot=timeline,
         export_snapshot=export,
+        visual_asset_placement_snapshot=placement_snapshot(production, timeline),
         external_gate_receipts=gates,
     )
 
@@ -126,6 +145,89 @@ def test_external_fail_unknown_stale_and_revoked_never_become_pass() -> None:
         result = project(values)
         assert result["state"] == "BLOCKED_EXTERNAL_GATES"
         assert result["external_gates"][0]["state"] == state
+
+
+def test_stale_visual_asset_placement_blocks_final_review() -> None:
+    production, audit, visual, timeline, export, gates = sources()
+    timeline["visual_asset_placement_count"] = 1
+    placement = placement_snapshot(production, timeline)
+    placement["placements"] = [{
+            "clip_id": "visual-1",
+            "candidate_id": "candidate-old",
+            "asset_id": "asset-old",
+            "asset_sha256": h("b"),
+            "state": "STALE",
+            "reason_code": "ERR_VISUAL_PLACEMENT_SOURCE_NOT_LOCKED",
+            "publication_authorized": False,
+        }]
+    result = Task036FinalReviewReadinessProjection.project(
+        production_snapshot=production,
+        audit_snapshot=audit,
+        visual_handoff_snapshot=visual,
+        timeline_snapshot=timeline,
+        export_snapshot=export,
+        visual_asset_placement_snapshot=placement,
+        external_gate_receipts=gates,
+    )
+    assert result["state"] == "BLOCKED_PRODUCT_GATES"
+    assert result["visual_asset_placement_snapshot_sha256"] == h("a")
+    assert result["product_blockers"] == [{
+        "code": "STALE_VISUAL_ASSET_PLACEMENT",
+        "owner": "TASK-036/TASK-003/037/044",
+        "identity": "visual-1",
+    }]
+
+
+def test_missing_visual_placement_projection_fails_closed_when_timeline_is_bound() -> None:
+    production, audit, visual, timeline, export, gates = sources()
+    timeline["visual_asset_placement_count"] = 1
+    result = Task036FinalReviewReadinessProjection.project(
+        production_snapshot=production,
+        audit_snapshot=audit,
+        visual_handoff_snapshot=visual,
+        timeline_snapshot=timeline,
+        export_snapshot=export,
+        external_gate_receipts=gates,
+    )
+    assert result["state"] == "BLOCKED_PRODUCT_GATES"
+    assert result["product_blockers"][0]["code"] == "VISUAL_ASSET_PLACEMENT_CURRENTNESS_UNAVAILABLE"
+
+
+def test_visual_placement_project_save_recovery_blocks_final_review() -> None:
+    production, audit, visual, timeline, export, gates = sources()
+    placement = placement_snapshot(production, timeline)
+    placement["project_save_recovery"] = {"required": True}
+    result = Task036FinalReviewReadinessProjection.project(
+        production_snapshot=production,
+        audit_snapshot=audit,
+        visual_handoff_snapshot=visual,
+        timeline_snapshot=timeline,
+        export_snapshot=export,
+        visual_asset_placement_snapshot=placement,
+        external_gate_receipts=gates,
+    )
+    assert result["state"] == "BLOCKED_PRODUCT_GATES"
+    assert result["product_blockers"] == [{
+        "code": "VISUAL_ASSET_PLACEMENT_RECOVERY_REQUIRED",
+        "owner": "TASK-043/044",
+        "identity": None,
+    }]
+
+
+def test_visual_placement_projection_cannot_expand_authority() -> None:
+    production, audit, visual, timeline, export, gates = sources()
+    placement = placement_snapshot(production, timeline)
+    placement["publication_authorized"] = True
+    with pytest.raises(ValueError, match="must remain false"):
+        Task036FinalReviewReadinessProjection.project(
+            production_snapshot=production,
+            audit_snapshot=audit,
+            visual_handoff_snapshot=visual,
+            timeline_snapshot=timeline,
+            export_snapshot=export,
+            visual_asset_placement_snapshot=placement,
+            external_gate_receipts=gates,
+        )
 
 
 def test_cross_scope_duplicate_unknown_and_cap_plus_one_are_rejected() -> None:

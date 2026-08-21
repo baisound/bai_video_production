@@ -31,6 +31,7 @@ _GATE_OWNERS = {
 _MAX_SLOTS = 256
 _MAX_CANDIDATES = 1024
 _MAX_EXPORT_ROWS = 256
+_MAX_PLACEMENTS = 1024
 
 
 def _mapping(value: object, name: str) -> Mapping[str, object]:
@@ -85,6 +86,7 @@ class Task036FinalReviewReadinessProjection:
         visual_handoff_snapshot: Mapping[str, object],
         timeline_snapshot: Mapping[str, object],
         export_snapshot: Mapping[str, object],
+        visual_asset_placement_snapshot: Mapping[str, object] | None = None,
         external_gate_receipts: Sequence[Mapping[str, object]] = (),
     ) -> dict[str, Any]:
         production = _mapping(production_snapshot, "production_snapshot")
@@ -115,6 +117,44 @@ class Task036FinalReviewReadinessProjection:
         project_manifest_sha = timeline.get("project_manifest_sha256")
         if project_manifest_sha is not None:
             project_manifest_sha = _sha(project_manifest_sha, "project manifest")
+
+        placement_sha: str | None = None
+        placement_rows: list[Mapping[str, object]] = []
+        placement_recovery_required = False
+        if visual_asset_placement_snapshot is not None:
+            placement = _mapping(
+                visual_asset_placement_snapshot,
+                "visual_asset_placement_snapshot",
+            )
+            _available(placement, "visual asset placement")
+            if _text(placement.get("project_id"), "placement.project_id") != project_id:
+                raise ValueError("visual asset placement crosses project scope")
+            if _sha(placement.get("production_snapshot_sha256"), "placement production snapshot") != production_sha:
+                raise ValueError("visual asset placement crosses production snapshot")
+            if _sha(placement.get("projected_timeline_sha256"), "placement timeline") != timeline_sha:
+                raise ValueError("visual asset placement crosses Timeline projection")
+            if placement.get("project_manifest_sha256") != project_manifest_sha:
+                raise ValueError("visual asset placement crosses Project Manifest")
+            placement_sha = _sha(placement.get("projection_sha256"), "visual asset placement projection")
+            for field in (
+                "rights_approved",
+                "publication_authorized",
+                "provider_execution_started",
+                "external_mutation_started",
+            ):
+                if placement.get(field) is not False:
+                    raise ValueError(f"visual asset placement {field} must remain false")
+            placement_recovery = _mapping(
+                placement.get("project_save_recovery"),
+                "visual asset placement project save recovery",
+            )
+            if not isinstance(placement_recovery.get("required"), bool):
+                raise ValueError("visual asset placement recovery state is invalid")
+            placement_recovery_required = placement_recovery["required"] is True
+            placement_rows = [
+                _mapping(row, "visual asset placement row")
+                for row in _rows(placement.get("placements", []), "visual asset placements", _MAX_PLACEMENTS)
+            ]
 
         product_blockers: list[dict[str, object]] = []
         slots = [_mapping(row, "production slot") for row in _production_slots(production)]
@@ -161,6 +201,47 @@ class Task036FinalReviewReadinessProjection:
             product_blockers.append(_blocker("VISUAL_REQUIRED_BLOCKERS_PRESENT", "TASK-036/TASK-013"))
         if project_manifest_sha is None:
             product_blockers.append(_blocker("TIMELINE_PROJECT_MANIFEST_UNBOUND", "TASK-043/044"))
+
+        placement_ids: set[str] = set()
+        for row in placement_rows:
+            clip_id = _text(row.get("clip_id"), "placement.clip_id")
+            if clip_id in placement_ids:
+                raise ValueError("duplicate visual Asset placement")
+            placement_ids.add(clip_id)
+            _text(row.get("candidate_id"), "placement.candidate_id")
+            _text(row.get("asset_id"), "placement.asset_id")
+            _sha(row.get("asset_sha256"), "placement asset SHA")
+            state = _text(row.get("state"), "placement.state")
+            if state not in {"CURRENT", "STALE"}:
+                raise ValueError("visual Asset placement state is not closed")
+            if row.get("publication_authorized") is not False:
+                raise ValueError("visual Asset placement cannot authorize publication")
+            if state == "STALE":
+                product_blockers.append(_blocker(
+                    "STALE_VISUAL_ASSET_PLACEMENT",
+                    "TASK-036/TASK-003/037/044",
+                    clip_id,
+                ))
+        expected_placement_count = timeline.get("visual_asset_placement_count", 0)
+        if (
+            isinstance(expected_placement_count, bool)
+            or not isinstance(expected_placement_count, int)
+            or expected_placement_count < 0
+            or expected_placement_count > _MAX_PLACEMENTS
+        ):
+            raise ValueError("timeline visual Asset placement count is invalid")
+        if visual_asset_placement_snapshot is None and expected_placement_count:
+            product_blockers.append(_blocker(
+                "VISUAL_ASSET_PLACEMENT_CURRENTNESS_UNAVAILABLE",
+                "TASK-036/TASK-003/037/044",
+            ))
+        elif visual_asset_placement_snapshot is not None and len(placement_rows) != expected_placement_count:
+            raise ValueError("visual Asset placement count differs from Timeline projection")
+        if placement_recovery_required:
+            product_blockers.append(_blocker(
+                "VISUAL_ASSET_PLACEMENT_RECOVERY_REQUIRED",
+                "TASK-043/044",
+            ))
 
         export_rows = [_mapping(row, "export row") for row in _rows(
             export.get("rows", []), "export rows", _MAX_EXPORT_ROWS,
@@ -224,6 +305,8 @@ class Task036FinalReviewReadinessProjection:
                 "timeline": timeline_sha,
                 "project_manifest": project_manifest_sha,
             },
+            "visual_asset_placement_snapshot_sha256": placement_sha,
+            "visual_asset_placement_count": len(placement_rows),
             "required_slot_count": len(required_slots),
             "audit_candidate_count": len(candidates),
             "export_job_count": len(export_rows),

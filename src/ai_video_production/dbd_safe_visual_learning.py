@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
 import threading
@@ -17,9 +18,14 @@ from uuid import uuid4
 from .dbd_hud_visibility import HudVisibility
 from .dbd_killer_capability_registry import KillerCapabilityRegistry
 from .dbd_killer_specific_detector import KillerSpecificTeacherLabel, KillerSpecificTeacherRole
+from .dbd_killer_status_temporal import EffectPolarity, StatusEffectDefinition
 from .dbd_observation_envelope import SurvivorSignalKind, normalize_survivor_signal_value
+from .dbd_status_effect_recognition import StatusEffectReferenceKind, StatusEffectReferenceLabel
 from .dbd_training_workspace import VisualTrainingDomain, VisualTrainingManifest, VisualTrainingSample
 from .dbd_vision_slices import FFmpegSliceExtractor, NormalizedROI
+
+
+_SAFE_ROI_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 class TrainingReviewState(str, Enum):
@@ -121,11 +127,13 @@ class SafeVisualLearningService:
         self, *, workspace_root: str | Path, manifest: VisualTrainingManifest,
         ffmpeg_executable: str = "ffmpeg",
         killer_capability_registry: KillerCapabilityRegistry | None = None,
+        status_effect_definitions: Sequence[StatusEffectDefinition] = (),
     ) -> None:
         self.workspace_root = Path(workspace_root)
         self.manifest = manifest
         self.extractor = FFmpegSliceExtractor(ffmpeg_executable)
         self.killer_capability_registry = killer_capability_registry
+        self.status_effect_definitions = tuple(status_effect_definitions)
         self.staging_root = self.workspace_root / "staging" / "visual-learning"
         self.staging_root.mkdir(parents=True, exist_ok=True)
 
@@ -165,6 +173,39 @@ class SafeVisualLearningService:
             teacher_role, label_namespace, active, stage, progress_milli,
         )
 
+    def _validate_status_effect_teacher(
+        self, *, domain: VisualTrainingDomain, label: str, roi_id: str, group: str,
+    ) -> None:
+        target = (
+            EffectPolarity.POSITIVE
+            if domain is VisualTrainingDomain.STATUS_EFFECT_POSITIVE
+            else EffectPolarity.NEGATIVE
+        )
+        region = (
+            "bottom_right_positive_effects"
+            if target is EffectPolarity.POSITIVE
+            else "bottom_right_negative_effects"
+        )
+        if roi_id != region and not roi_id.startswith(f"{region}/segment_"):
+            raise ValueError("Status Effect学習の極性とROIが一致しません。")
+        decoded = StatusEffectReferenceLabel.decode(label)
+        if decoded.kind is StatusEffectReferenceKind.IDENTITY:
+            definitions = {item.effect_id: item for item in self.status_effect_definitions}
+            definition = definitions.get(decoded.effect_id or "")
+            if definition is None:
+                raise ValueError("未登録のStatus Effect Teacherです。")
+            if definition.polarity is not decoded.polarity:
+                raise ValueError("Status Effect定義とTeacher極性が一致しません。")
+        hard_negative = group.casefold() == "hard-negative"
+        if decoded.kind is StatusEffectReferenceKind.PERK_HARD_NEGATIVE:
+            if not hard_negative:
+                raise ValueError("Perk Status Effect Teacherはhard-negativeが必要です。")
+        elif decoded.polarity is not target:
+            if decoded.kind is not StatusEffectReferenceKind.IDENTITY or not hard_negative:
+                raise ValueError("逆極性Teacherはidentity hard-negativeのみ許可されます。")
+        elif hard_negative:
+            raise ValueError("同極性Teacherをhard-negativeとして登録できません。")
+
     def preview_video_frame(
         self, *, domain: VisualTrainingDomain, label: str, visibility: HudVisibility,
         video_path: str | Path, frame_index: int, roi: NormalizedROI,
@@ -189,6 +230,13 @@ class SafeVisualLearningService:
                 signal_kind=signal_kind, killer_id=killer_id, effect_id=effect_id,
                 label_namespace=label_namespace, teacher_role=teacher_role,
                 active=active, stage=stage, progress_milli=progress_milli,
+            )
+        elif domain in {
+            VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+            VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+        }:
+            self._validate_status_effect_teacher(
+                domain=domain, label=label, roi_id=roi.roi_id, group=group,
             )
         elif domain is VisualTrainingDomain.SURVIVOR_HUD:
             if not match_id.strip() or len(match_id) > 256:
@@ -215,7 +263,8 @@ class SafeVisualLearningService:
         staging_id = f"preview-{uuid4().hex}"
         directory = self.staging_root / staging_id
         directory.mkdir(parents=True, exist_ok=False)
-        image_path = directory / f"frame-{frame_index:09d}-{roi.roi_id}.pgm"
+        safe_roi_id = _SAFE_ROI_FILENAME.sub("_", roi.roi_id).strip("._-") or "roi"
+        image_path = directory / f"frame-{frame_index:09d}-{safe_roi_id[:128]}.pgm"
         try:
             result = self.extractor.extract_frame_roi(
                 video_path=source, frame_index=frame_index, roi=roi,
@@ -354,6 +403,14 @@ class SafeVisualLearningService:
                         teacher_role=current.teacher_role, active=current.active,
                         stage=current.stage, progress_milli=current.progress_milli,
                     )
+                elif current.domain in {
+                    VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+                    VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+                }:
+                    self._validate_status_effect_teacher(
+                        domain=current.domain, label=current.label,
+                        roi_id=current.roi_id, group=current.group,
+                    )
                 source = Path(current.image_path)
                 if not source.is_file():
                     raise ValueError(f"プレビュー画像が見つかりません: {current.staging_id}")
@@ -444,6 +501,13 @@ class SafeVisualLearningService:
                             self.killer_capability_registry
                             if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD else None
                         ),
+                        status_effect_definitions=(
+                            self.status_effect_definitions
+                            if domain in {
+                                VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+                                VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+                            } else ()
+                        ),
                     )
                     index_paths.append(str(path))
                 except Exception as exc:
@@ -490,6 +554,14 @@ class SafeVisualLearningService:
                 label_namespace=current.label_namespace,
                 teacher_role=current.teacher_role, active=current.active,
                 stage=current.stage, progress_milli=current.progress_milli,
+            )
+        elif current.domain in {
+            VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+            VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+        }:
+            self._validate_status_effect_teacher(
+                domain=current.domain, label=current.label,
+                roi_id=current.roi_id, group=current.group,
             )
         source = Path(current.image_path)
         if not source.is_file():

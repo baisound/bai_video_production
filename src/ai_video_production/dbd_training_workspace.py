@@ -31,8 +31,14 @@ from .dbd_hud_detectors import (
 )
 from .dbd_killer_capability_registry import KillerCapabilityRegistry
 from .dbd_killer_specific_detector import KillerSpecificTeacherLabel, KillerSpecificTeacherRole
+from .dbd_killer_status_temporal import EffectPolarity, StatusEffectDefinition
 from .dbd_observation_envelope import SurvivorSignalKind, normalize_survivor_signal_value
 from .dbd_perk_knowledge import PerkEnvironment
+from .dbd_status_effect_recognition import (
+    StatusEffectIconRecognizer,
+    StatusEffectReferenceKind,
+    StatusEffectReferenceLabel,
+)
 from .dbd_vision_slices import DBDHudRoiProfile, FFmpegSliceExtractor, NormalizedROI, ReferenceSliceIndex
 from .faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService
 from .cut_candidates import load_transcript_manifest
@@ -45,6 +51,8 @@ class VisualTrainingDomain(str, Enum):
     ADDON_ICON = "ADDON_ICON"
     KILLER_POWER = "KILLER_POWER"
     KILLER_SPECIFIC_HUD = "KILLER_SPECIFIC_HUD"
+    STATUS_EFFECT_POSITIVE = "STATUS_EFFECT_POSITIVE"
+    STATUS_EFFECT_NEGATIVE = "STATUS_EFFECT_NEGATIVE"
 
 
 _SAFE_COMPONENT = re.compile(r"[^A-Za-z0-9._-]+")
@@ -249,6 +257,31 @@ class VisualTrainingSample:
             KillerSpecificTeacherLabel(
                 self.teacher_role, self.label_namespace, self.active, self.stage, self.progress_milli
             )
+        elif self.domain in {
+            VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+            VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+        }:
+            if self.match_id or self.survivor_slot is not None or self.signal_kind is not None:
+                raise ValueError("status-effect samples do not use Survivor subject fields")
+            decoded = StatusEffectReferenceLabel.decode(self.label)
+            target = (
+                EffectPolarity.POSITIVE
+                if self.domain is VisualTrainingDomain.STATUS_EFFECT_POSITIVE
+                else EffectPolarity.NEGATIVE
+            )
+            hard_negative = self.group.casefold() == "hard-negative"
+            if decoded.kind is StatusEffectReferenceKind.PERK_HARD_NEGATIVE:
+                if not hard_negative:
+                    raise ValueError("Perk status-effect reference must be a hard-negative sample")
+            elif decoded.polarity is not target:
+                if decoded.kind is not StatusEffectReferenceKind.IDENTITY or not hard_negative:
+                    raise ValueError("opposite-polarity status reference must be an identity hard-negative")
+            elif hard_negative:
+                raise ValueError("same-polarity status reference cannot be a hard-negative sample")
+            if any((self.killer_id, self.effect_id, self.label_namespace)) or self.teacher_role is not None or any(
+                value is not None for value in (self.active, self.stage, self.progress_milli)
+            ):
+                raise ValueError("status-effect samples do not use Killer-specific teacher fields")
         elif self.match_id or self.survivor_slot is not None or self.signal_kind is not None:
             raise ValueError("survivor subject fields require SURVIVOR_HUD domain")
         elif any((self.killer_id, self.effect_id, self.label_namespace)) or self.teacher_role is not None or any(
@@ -459,6 +492,7 @@ class VisualTrainingManifest:
         index_id: str,
         ffmpeg_executable: str = "ffmpeg",
         killer_capability_registry: KillerCapabilityRegistry | None = None,
+        status_effect_definitions: Sequence[StatusEffectDefinition] = (),
     ) -> Path:
         samples = self.list(domain=domain)
         if not samples:
@@ -489,6 +523,24 @@ class VisualTrainingManifest:
             }
             if any(roles != required_roles for roles in coverage.values()):
                 raise ValueError("each Killer-specific teacher target requires positive and hard-negative samples")
+        status_domain = domain in {
+            VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+            VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+        }
+        if status_domain:
+            target = (
+                EffectPolarity.POSITIVE
+                if domain is VisualTrainingDomain.STATUS_EFFECT_POSITIVE
+                else EffectPolarity.NEGATIVE
+            )
+            decoded = tuple(StatusEffectReferenceLabel.decode(sample.label) for sample in samples)
+            has_identity = any(
+                item.kind is StatusEffectReferenceKind.IDENTITY and item.polarity is target
+                for item in decoded
+            )
+            has_hard_negative = any(sample.group.casefold() == "hard-negative" for sample in samples)
+            if not has_identity or not has_hard_negative:
+                raise ValueError("status-effect index requires identity and hard-negative samples")
         extractor = FFmpegSliceExtractor(ffmpeg_executable)
         with tempfile.TemporaryDirectory(prefix="bvp-dbd-training-") as td:
             normalized: list[tuple] = []
@@ -514,6 +566,8 @@ class VisualTrainingManifest:
                         "" if sample.signal_kind is None else sample.signal_kind.value,
                     ))
             reference = ReferenceSliceIndex.train_from_pgm(index_id=index_id, samples=normalized)
+            if status_domain:
+                StatusEffectIconRecognizer(reference, definitions=status_effect_definitions)
             return reference.save(output_path)
 
 

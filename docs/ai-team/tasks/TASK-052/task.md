@@ -1,6 +1,6 @@
 # TASK-052 — DbD Design-to-Implementation Gap Audit / Recognition Completion Roadmap
 
-Status: `IMPLEMENTATION_ACTIVE / R5B_COMPLETE / R5C_NEXT`
+Status: `IMPLEMENTATION_ACTIVE / R5C1_COMPLETE / R5C2_NEXT`
 Profile: `DEV-3 HIGH ASSURANCE`
 Depends on: `TASK-049`, `TASK-050`, `TASK-051`
 Owner intent: explicit inventory/design/remediation request in conversation on 2026-08-21
@@ -124,5 +124,13 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
   to R5A candidates. R5A/R5B focused regression `14 PASS`; TASK-049 DbD/TASK-052
   affected regression `192 PASS`; TASK-050/TASK-051 compatibility regression
   `186 PASS`; unresolved Critical/High `0 / 0`.
+- R5C1 Status Effect Teacher backend: complete; canonical Visual Training domains
+  preserve R5B positive/negative/visibility/Perk hard-negative labels, reject
+  polarity/group/subject/registry crossings during preview and confirmation, and
+  require identity plus hard-negative coverage before an R5B-valid index is
+  published. Hierarchical segment ROI IDs are normalized into safe preview
+  filenames. Focused regression `16 PASS`; TASK-050/TASK-052 affected regression
+  `179 PASS`; TASK-051 compatibility regression `118 PASS`; unresolved
+  Critical/High `0 / 0`.
 - Overall Windows packaged real-media TASK-052 acceptance: `NOT_CONFIRMED`.
-- Next dependency-ordered unit: R5C status-effect Teacher/Gold/review and R3C temporal wiring.
+- Next dependency-ordered unit: R5C2 Status Effect Teacher UI, Gold/review and R3C temporal wiring.

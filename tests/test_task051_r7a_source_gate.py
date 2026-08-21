@@ -3,7 +3,7 @@ import hashlib
 
 ROOT=Path(__file__).resolve().parents[1]
 STUDIO=ROOT/"src"/"ai_video_production"/"dbd_training_studio.py"
-EXPECTED_CANONICAL_TEXT_SHA256 = "8b4d57c9a5625dd650a22cadc28155519bc5dcdd66bdbdebe63e6fd1b2b01949"
+EXPECTED_CANONICAL_TEXT_SHA256 = "74784d2d8699200300e1b95217c54b2ea126ebbd9636333d04c90ad6e1e12f89"
 
 
 def test_r7_training_studio_gate_uses_current_accepted_source():

@@ -108,6 +108,8 @@ class DBDHudRoiProfile:
     lower_left_survivor_hud: NormalizedROI = field(default_factory=lambda: NormalizedROI("lower_left_survivor_hud", 0.0, 0.60, 0.30, 0.40))
     upper_right_notifications: NormalizedROI = field(default_factory=lambda: NormalizedROI("upper_right_notifications", 0.55, 0.0, 0.45, 0.38))
     bottom_right_perks: NormalizedROI = field(default_factory=lambda: NormalizedROI("bottom_right_perks", 0.72, 0.64, 0.28, 0.36))
+    bottom_right_positive_effects: NormalizedROI | None = None
+    bottom_right_negative_effects: NormalizedROI | None = None
     lower_left_loadout_hud: NormalizedROI | None = None
     item_slot: NormalizedROI | None = None
     addon_slots: tuple[NormalizedROI, ...] = ()
@@ -141,6 +143,10 @@ class DBDHudRoiProfile:
             raise ValueError("DbD HUD profile requires exactly four survivor and four perk slot ROIs")
         if len(self.addon_slots) not in {0, 2}:
             raise ValueError("addon_slots must be empty or contain exactly two add-on ROIs")
+        for field_name in ("bottom_right_positive_effects", "bottom_right_negative_effects"):
+            status_roi = getattr(self, field_name)
+            if status_roi is not None and status_roi.roi_id != field_name:
+                raise ValueError("status-effect ROI identifiers must match their canonical region")
         slot_rows = self.survivor_slots + self.perk_slots + self.addon_slots
         if self.item_slot is not None:
             slot_rows += (self.item_slot,)
@@ -165,7 +171,7 @@ class DBDHudRoiProfile:
         if not isinstance(payload, dict):
             raise ValueError("ROI profile must be an object")
         schema_version = str(payload.get("schema_version", "1.1.0"))
-        if schema_version not in {"1.1.0", "2.0.0", "2.1.0", "2.2.0"}:
+        if schema_version not in {"1.1.0", "2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("unsupported HUD ROI profile schema")
         def roi(name: str, value: object) -> NormalizedROI:
             if not isinstance(value, dict):
@@ -192,6 +198,14 @@ class DBDHudRoiProfile:
             lower_left_survivor_hud=roi("lower_left_survivor_hud", payload.get("lower_left_survivor_hud", defaults.lower_left_survivor_hud.to_dict())),
             upper_right_notifications=roi("upper_right_notifications", payload.get("upper_right_notifications", defaults.upper_right_notifications.to_dict())),
             bottom_right_perks=roi("bottom_right_perks", payload.get("bottom_right_perks", defaults.bottom_right_perks.to_dict())),
+            bottom_right_positive_effects=(
+                None if payload.get("bottom_right_positive_effects") is None
+                else roi("bottom_right_positive_effects", payload["bottom_right_positive_effects"])
+            ),
+            bottom_right_negative_effects=(
+                None if payload.get("bottom_right_negative_effects") is None
+                else roi("bottom_right_negative_effects", payload["bottom_right_negative_effects"])
+            ),
             lower_left_loadout_hud=None if payload.get("lower_left_loadout_hud") is None else roi("lower_left_loadout_hud", payload["lower_left_loadout_hud"]),
             item_slot=None if payload.get("item_slot") is None else roi("item_slot", payload["item_slot"]),
             addon_slots=tuple(roi(f"addon_slot_{index}", value) for index, value in enumerate(payload.get("addon_slots", []))) if isinstance(payload.get("addon_slots", []), list) else (),
@@ -229,6 +243,10 @@ class DBDHudRoiProfile:
             self.upper_right_notifications.roi_id: self.upper_right_notifications,
             self.bottom_right_perks.roi_id: self.bottom_right_perks,
         }
+        if self.bottom_right_positive_effects is not None:
+            direct[self.bottom_right_positive_effects.roi_id] = self.bottom_right_positive_effects
+        if self.bottom_right_negative_effects is not None:
+            direct[self.bottom_right_negative_effects.roi_id] = self.bottom_right_negative_effects
         if self.lower_left_loadout_hud is not None:
             direct[self.lower_left_loadout_hud.roi_id] = self.lower_left_loadout_hud
         if self.item_slot is not None:
@@ -244,7 +262,7 @@ class DBDHudRoiProfile:
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "schema_version": "2.2.0",
+            "schema_version": "2.3.0",
             "profile_id": self.profile_id,
             "profile_version": self.profile_version,
             "calibrated_frame_width": self.calibrated_frame_width,
@@ -257,6 +275,14 @@ class DBDHudRoiProfile:
             "lower_left_survivor_hud": self.lower_left_survivor_hud.to_dict(),
             "upper_right_notifications": self.upper_right_notifications.to_dict(),
             "bottom_right_perks": self.bottom_right_perks.to_dict(),
+            "bottom_right_positive_effects": (
+                None if self.bottom_right_positive_effects is None
+                else self.bottom_right_positive_effects.to_dict()
+            ),
+            "bottom_right_negative_effects": (
+                None if self.bottom_right_negative_effects is None
+                else self.bottom_right_negative_effects.to_dict()
+            ),
             "lower_left_loadout_hud": None if self.lower_left_loadout_hud is None else self.lower_left_loadout_hud.to_dict(),
             "item_slot": None if self.item_slot is None else self.item_slot.to_dict(),
             "addon_slots": [item.to_dict() for item in self.addon_slots],

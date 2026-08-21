@@ -28,6 +28,8 @@ from .dbd_game_knowledge_presentation import (
     human_knowledge_fields,
 )
 from .dbd_image_assets import ImageAssetDecodeError, decode_image_for_preview
+from .dbd_killer_capability_registry import KillerCapabilityRegistry, initial_killer_capabilities
+from .dbd_killer_specific_detector import KillerSpecificTeacherLabel, KillerSpecificTeacherRole
 from .dbd_observation_envelope import SurvivorSignalKind
 from .dbd_map_intelligence import MapIntelligenceStore, MapRecord
 from .dbd_video_analysis_workspace import DbDVideoAnalysisWorkspaceService
@@ -198,9 +200,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         workspace, ffprobe_executable=runtime_ffprobe, ffmpeg_executable=runtime_ffmpeg,
         tesseract_executable=runtime_tesseract, model_cache=runtime_model_cache,
     )
+    killer_capability_registry = KillerCapabilityRegistry(initial_killer_capabilities(), {})
     safe_visual_learning = SafeVisualLearningService(
         workspace_root=workspace.root,
         manifest=workspace.visual,
+        killer_capability_registry=killer_capability_registry,
     )
     notification_semantics = NotificationSemanticStore(
         workspace.root / "knowledge" / "upper-right-notification-semantics.json"
@@ -461,6 +465,12 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         "max_samples": tk.StringVar(value="500"),
         "match_id": tk.StringVar(),
         "signal_kind": tk.StringVar(value=SurvivorSignalKind.SURVIVOR_STATE.value),
+        "killer_capability": tk.StringVar(),
+        "teacher_role": tk.StringVar(value=KillerSpecificTeacherRole.POSITIVE.value),
+        "label_namespace": tk.StringVar(),
+        "teacher_active": tk.StringVar(value="true"),
+        "teacher_stage": tk.StringVar(),
+        "teacher_progress_milli": tk.StringVar(),
         "ffmpeg": tk.StringVar(value=runtime_ffmpeg),
     }
 
@@ -555,7 +565,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     slot_frame.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(6,6))
     slot_frame.columnconfigure(1, weight=1)
 
-    survivor_subject_frame = ttk.LabelFrame(video_source_box, text="サバイバー主体（SURVIVOR_HUD時は必須）", padding=6)
+    survivor_subject_frame = ttk.LabelFrame(
+        video_source_box,
+        text="サバイバー主体（SURVIVOR_HUD時は必須）",
+        padding=6,
+    )
     survivor_subject_frame.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(0, 6))
     survivor_subject_frame.columnconfigure(1, weight=1)
     ttk.Label(survivor_subject_frame, text="match_id").grid(row=0, column=0, sticky="w")
@@ -565,6 +579,75 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         survivor_subject_frame, textvariable=video_vars["signal_kind"],
         values=list(SURVIVOR_SIGNAL_KIND_JA), state="readonly",
     ).grid(row=1, column=1, sticky="ew", padx=4)
+    ttk.Label(
+        survivor_subject_frame,
+        text="キラー固有HUDでもmatch_idが必須です（signal_kindは使用しません）。",
+    ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(3, 0))
+
+    killer_teacher_frame = ttk.LabelFrame(
+        video_source_box,
+        text="キラー固有Teacher契約（キラー固有HUD時のみ使用）",
+        padding=6,
+    )
+    killer_teacher_frame.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 6))
+    killer_teacher_frame.columnconfigure(1, weight=1)
+    killer_capability_choices = {
+        f"{item.killer_id} / {item.effect_id}": item
+        for item in killer_capability_registry.capabilities
+    }
+    video_vars["killer_capability"].set(next(iter(killer_capability_choices)))
+    ttk.Label(killer_teacher_frame, text="キラー / 効果").grid(row=0, column=0, sticky="w")
+    killer_capability_combo = ttk.Combobox(
+        killer_teacher_frame, textvariable=video_vars["killer_capability"],
+        values=list(killer_capability_choices), state="readonly",
+    )
+    killer_capability_combo.grid(row=0, column=1, sticky="ew", padx=4)
+    ttk.Label(killer_teacher_frame, text="Teacher role").grid(row=1, column=0, sticky="w")
+    killer_teacher_role_combo = ttk.Combobox(
+        killer_teacher_frame, textvariable=video_vars["teacher_role"],
+        values=[item.value for item in KillerSpecificTeacherRole], state="readonly",
+    )
+    killer_teacher_role_combo.grid(row=1, column=1, sticky="ew", padx=4)
+    ttk.Label(killer_teacher_frame, text="名前空間").grid(row=2, column=0, sticky="w")
+    killer_namespace_combo = ttk.Combobox(
+        killer_teacher_frame, textvariable=video_vars["label_namespace"], state="readonly",
+    )
+    killer_namespace_combo.grid(row=2, column=1, sticky="ew", padx=4)
+    teacher_state_frame = ttk.Frame(killer_teacher_frame)
+    teacher_state_frame.grid(row=3, column=1, sticky="ew", padx=4, pady=(3, 0))
+    for index in range(3):
+        teacher_state_frame.columnconfigure(index, weight=1)
+    ttk.Combobox(
+        teacher_state_frame, textvariable=video_vars["teacher_active"],
+        values=("true", "false"), state="readonly", width=8,
+    ).grid(row=0, column=0, sticky="ew", padx=(0, 3))
+    ttk.Entry(
+        teacher_state_frame, textvariable=video_vars["teacher_stage"], width=8,
+    ).grid(row=0, column=1, sticky="ew", padx=3)
+    ttk.Entry(
+        teacher_state_frame, textvariable=video_vars["teacher_progress_milli"], width=12,
+    ).grid(row=0, column=2, sticky="ew", padx=(3, 0))
+    ttk.Label(
+        teacher_state_frame, text="active / stage（任意） / progress 0..1000（任意）",
+    ).grid(row=1, column=0, columnspan=3, sticky="w")
+
+    def sync_killer_teacher_options(_event=None) -> None:
+        capability = killer_capability_choices[video_vars["killer_capability"].get()]
+        role = KillerSpecificTeacherRole(video_vars["teacher_role"].get())
+        namespaces = (
+            (capability.training_label_namespace,)
+            if role is KillerSpecificTeacherRole.POSITIVE
+            else capability.hard_negative_namespaces
+        )
+        killer_namespace_combo.configure(values=namespaces)
+        video_vars["label_namespace"].set(namespaces[0])
+        if role is KillerSpecificTeacherRole.HARD_NEGATIVE:
+            video_vars["teacher_stage"].set("")
+            video_vars["teacher_progress_milli"].set("")
+
+    killer_capability_combo.bind("<<ComboboxSelected>>", sync_killer_teacher_options)
+    killer_teacher_role_combo.bind("<<ComboboxSelected>>", sync_killer_teacher_options)
+    sync_killer_teacher_options()
 
     kind_map = {
         VisualTrainingDomain.PERK_ICON: GameKnowledgeKind.PERK,
@@ -626,7 +709,15 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             }
             video_slot_rows.append(row_state)
 
-            if expected_kind is not None:
+            if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+                enabled_var = tk.BooleanVar(value=False)
+                row_state["enabled"] = enabled_var
+                ttk.Checkbutton(
+                    slot_frame,
+                    text="このスロットをTeacher対象に含める",
+                    variable=enabled_var,
+                ).grid(row=row_no, column=1, columnspan=2, sticky="w", pady=3)
+            elif expected_kind is not None:
                 combo = ttk.Combobox(
                     slot_frame,
                     textvariable=display_var,
@@ -771,8 +862,15 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     def active_slot_selections() -> list[tuple[int | None, str, str]]:
         selections = []
+        domain = VisualTrainingDomain(video_vars["domain"].get())
         for row_state in video_slot_rows:
-            entity_id = row_state["entity_id"].get().strip()
+            if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+                if not row_state["enabled"].get():
+                    continue
+                capability = killer_capability_choices[video_vars["killer_capability"].get()]
+                entity_id = f"{capability.effect_id}-{video_vars['teacher_role'].get().lower()}"
+            else:
+                entity_id = row_state["entity_id"].get().strip()
             if entity_id:
                 selections.append(
                     (
@@ -782,6 +880,41 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                     )
                 )
         return selections
+
+    def selected_killer_teacher_values():
+        capability = killer_capability_choices[video_vars["killer_capability"].get()]
+        role = KillerSpecificTeacherRole(video_vars["teacher_role"].get())
+        namespace = video_vars["label_namespace"].get()
+        if role is KillerSpecificTeacherRole.POSITIVE:
+            active = video_vars["teacher_active"].get() == "true"
+            stage = (
+                None if not video_vars["teacher_stage"].get().strip()
+                else int(video_vars["teacher_stage"].get())
+            )
+            progress = (
+                None if not video_vars["teacher_progress_milli"].get().strip()
+                else int(video_vars["teacher_progress_milli"].get())
+            )
+        else:
+            active = None
+            stage = None
+            progress = None
+        if role is KillerSpecificTeacherRole.POSITIVE and namespace != capability.training_label_namespace:
+            raise ValueError("Positive名前空間が選択中のキラー/効果と一致しません。")
+        if role is KillerSpecificTeacherRole.HARD_NEGATIVE and namespace not in capability.hard_negative_namespaces:
+            raise ValueError("Hard Negative名前空間が選択中のキラー/効果に登録されていません。")
+        if capability.max_stage is not None and stage is not None and stage > capability.max_stage:
+            raise ValueError(f"stageは{capability.max_stage}以下で指定してください。")
+        KillerSpecificTeacherLabel(role, namespace, active, stage, progress)
+        state = "hard-negative"
+        if role is KillerSpecificTeacherRole.POSITIVE:
+            state = "active" if active else "inactive"
+            if stage is not None:
+                state += f"-stage-{stage}"
+            if progress is not None:
+                state += f"-progress-{progress}"
+        label = f"{capability.effect_id}-{role.value.lower().replace('_', '-')}-{state}"
+        return capability, role, namespace, active, stage, progress, label
 
     def resolve_active_profile():
         source = video_vars["video"].get().strip()
@@ -830,7 +963,11 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 "先に学習元動画を選択してください。",
             )
             return
-        selections = active_slot_selections()
+        try:
+            selections = active_slot_selections()
+        except Exception as exc:
+            messagebox.showerror("動画から一括学習", f"Teacher条件を確認してください: {exc}")
+            return
         if not selections:
             messagebox.showwarning(
                 "動画から一括学習",
@@ -847,9 +984,17 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             domain = VisualTrainingDomain(video_vars["domain"].get())
             group = video_vars["group"].get().strip() or "normal"
             visibility = HudVisibility(video_visibility.get())
+            teacher_values = (
+                selected_killer_teacher_values()
+                if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD else None
+            )
             targets: list[BatchVisualTarget] = []
             target_labels: dict[str, str] = {}
             for slot, slot_label, entity_id in selections:
+                if teacher_values is not None:
+                    capability, teacher_role, namespace, active, stage, progress, entity_id = teacher_values
+                else:
+                    capability = teacher_role = namespace = active = stage = progress = None
                 roi = training_roi(binding.profile, domain, slot)
                 rect = roi_pixel_rect(
                     binding.profile, domain=domain, slot=slot,
@@ -860,14 +1005,33 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 targets.append(
                     BatchVisualTarget(
                         domain=domain, label=entity_id, visibility=visibility, roi=roi,
-                        group=group, notes=(
+                        group=(
+                            "hard-negative"
+                            if teacher_role is KillerSpecificTeacherRole.HARD_NEGATIVE else group
+                        ), notes=(
                             f"hud_profile={binding.profile.profile_id} "
                             f"roi={roi.roi_id} "
                             f"pixel={rect.x},{rect.y},{rect.width},{rect.height}"
                         ),
-                        match_id=(video_vars["match_id"].get().strip() if domain is VisualTrainingDomain.SURVIVOR_HUD else ""),
-                        survivor_slot=(slot if domain is VisualTrainingDomain.SURVIVOR_HUD else None),
+                        match_id=(
+                            video_vars["match_id"].get().strip()
+                            if domain in {
+                                VisualTrainingDomain.SURVIVOR_HUD,
+                                VisualTrainingDomain.KILLER_SPECIFIC_HUD,
+                            } else ""
+                        ),
+                        survivor_slot=(
+                            slot if domain in {
+                                VisualTrainingDomain.SURVIVOR_HUD,
+                                VisualTrainingDomain.KILLER_SPECIFIC_HUD,
+                            } else None
+                        ),
                         signal_kind=(SurvivorSignalKind(video_vars["signal_kind"].get()) if domain is VisualTrainingDomain.SURVIVOR_HUD else None),
+                        killer_id=("" if capability is None else capability.killer_id),
+                        effect_id=("" if capability is None else capability.effect_id),
+                        label_namespace=("" if namespace is None else namespace),
+                        teacher_role=teacher_role, active=active, stage=stage,
+                        progress_milli=progress,
                     )
                 )
         except Exception as exc:
@@ -1502,7 +1666,12 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         visual_rows.clear()
         needle = visual_list_filter.get().strip().casefold()
         for item in workspace.visual.list():
-            if needle and needle not in f"{item.domain.value} {item.label} {item.group} {item.slot} {item.match_id} {item.survivor_slot} {item.signal_kind}".casefold():
+            if needle and needle not in (
+                f"{item.domain.value} {item.label} {item.group} {item.slot} "
+                f"{item.match_id} {item.survivor_slot} {item.signal_kind} "
+                f"{item.killer_id} {item.effect_id} {item.label_namespace} "
+                f"{item.teacher_role} {item.active} {item.stage} {item.progress_milli}"
+            ).casefold():
                 continue
             index = len(visual_rows)
             visual_rows.append(item)
@@ -1511,7 +1680,15 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 values=(
                     visual_domain_display(item.domain.value), item.label,
                     item.registration_origin,
-                    (f"S{item.survivor_slot + 1}/{item.signal_kind.value}" if item.survivor_slot is not None and item.signal_kind is not None else item.slot or "-"),
+                    (
+                        f"S{item.survivor_slot + 1}/{item.signal_kind.value}"
+                        if item.survivor_slot is not None and item.signal_kind is not None
+                        else (
+                            f"S{item.survivor_slot + 1}/{item.teacher_role.value}"
+                            if item.survivor_slot is not None and item.teacher_role is not None
+                            else item.slot or "-"
+                        )
+                    ),
                     item.group,
                     "手入力" if item.source_ref == "manual://owner" else item.source_ref,
                 ),
@@ -1529,6 +1706,13 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         original = selected_visual()
         if original is None:
             messagebox.showinfo("画像学習データ", "編集する登録済みデータを選択してください。")
+            return
+        if original.domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+            messagebox.showinfo(
+                "キラー固有Teacherデータ",
+                "能力・名前空間・状態の整合性を保つため汎用編集は使用できません。"
+                "修正する場合は対象行を削除し、動画から一括学習で再登録してください。",
+            )
             return
         modal = tk.Toplevel(root)
         modal.title("画像学習データを編集")
@@ -2775,6 +2959,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     target_ids = [
         "lower_left_survivor_hud", "lower_left_loadout_hud", "upper_right_notifications", "bottom_right_perks",
+        "bottom_right_positive_effects", "bottom_right_negative_effects",
         *[f"survivor_slot_{i}" for i in range(4)],
         "item_slot", *[f"addon_slot_{i}" for i in range(2)],
         *[f"perk_slot_{i}" for i in range(4)],
@@ -2790,6 +2975,10 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         }
         if profile.lower_left_loadout_hud is not None:
             rows[profile.lower_left_loadout_hud.roi_id] = profile.lower_left_loadout_hud
+        if profile.bottom_right_positive_effects is not None:
+            rows[profile.bottom_right_positive_effects.roi_id] = profile.bottom_right_positive_effects
+        if profile.bottom_right_negative_effects is not None:
+            rows[profile.bottom_right_negative_effects.roi_id] = profile.bottom_right_negative_effects
         if profile.item_slot is not None:
             rows[profile.item_slot.roi_id] = profile.item_slot
         rows.update({item.roi_id: item for item in profile.addon_slots})
@@ -3344,6 +3533,8 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             lower_left_survivor_hud=rois["lower_left_survivor_hud"],
             upper_right_notifications=rois["upper_right_notifications"],
             bottom_right_perks=rois["bottom_right_perks"],
+            bottom_right_positive_effects=rois.get("bottom_right_positive_effects"),
+            bottom_right_negative_effects=rois.get("bottom_right_negative_effects"),
             lower_left_loadout_hud=rois.get("lower_left_loadout_hud"),
             item_slot=rois.get("item_slot"),
             addon_slots=tuple(rois[f"addon_slot_{i}"] for i in range(2)) if all(f"addon_slot_{i}" in rois for i in range(2)) else (),

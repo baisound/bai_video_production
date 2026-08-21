@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import tempfile
 import threading
@@ -15,9 +16,16 @@ from typing import Callable, Sequence
 from uuid import uuid4
 
 from .dbd_hud_visibility import HudVisibility
+from .dbd_killer_capability_registry import KillerCapabilityRegistry
+from .dbd_killer_specific_detector import KillerSpecificTeacherLabel, KillerSpecificTeacherRole
+from .dbd_killer_status_temporal import EffectPolarity, StatusEffectDefinition
 from .dbd_observation_envelope import SurvivorSignalKind, normalize_survivor_signal_value
+from .dbd_status_effect_recognition import StatusEffectReferenceKind, StatusEffectReferenceLabel
 from .dbd_training_workspace import VisualTrainingDomain, VisualTrainingManifest, VisualTrainingSample
 from .dbd_vision_slices import FFmpegSliceExtractor, NormalizedROI
+
+
+_SAFE_ROI_FILENAME = re.compile(r"[^A-Za-z0-9._-]+")
 
 
 class TrainingReviewState(str, Enum):
@@ -45,6 +53,13 @@ class StagedTrainingSample:
     match_id: str = ""
     survivor_slot: int | None = None
     signal_kind: SurvivorSignalKind | None = None
+    killer_id: str = ""
+    effect_id: str = ""
+    label_namespace: str = ""
+    teacher_role: KillerSpecificTeacherRole | None = None
+    active: bool | None = None
+    stage: int | None = None
+    progress_milli: int | None = None
 
 @dataclass(frozen=True, slots=True)
 class BatchVisualTarget:
@@ -57,6 +72,13 @@ class BatchVisualTarget:
     match_id: str = ""
     survivor_slot: int | None = None
     signal_kind: SurvivorSignalKind | None = None
+    killer_id: str = ""
+    effect_id: str = ""
+    label_namespace: str = ""
+    teacher_role: KillerSpecificTeacherRole | None = None
+    active: bool | None = None
+    stage: int | None = None
+    progress_milli: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,12 +123,88 @@ class BatchConfirmReport:
 
 
 class SafeVisualLearningService:
-    def __init__(self, *, workspace_root: str | Path, manifest: VisualTrainingManifest, ffmpeg_executable: str = "ffmpeg") -> None:
+    def __init__(
+        self, *, workspace_root: str | Path, manifest: VisualTrainingManifest,
+        ffmpeg_executable: str = "ffmpeg",
+        killer_capability_registry: KillerCapabilityRegistry | None = None,
+        status_effect_definitions: Sequence[StatusEffectDefinition] = (),
+    ) -> None:
         self.workspace_root = Path(workspace_root)
         self.manifest = manifest
         self.extractor = FFmpegSliceExtractor(ffmpeg_executable)
+        self.killer_capability_registry = killer_capability_registry
+        self.status_effect_definitions = tuple(status_effect_definitions)
         self.staging_root = self.workspace_root / "staging" / "visual-learning"
         self.staging_root.mkdir(parents=True, exist_ok=True)
+
+    def _validate_killer_specific_teacher(
+        self, *, match_id: str, survivor_slot: int | None, roi_id: str,
+        signal_kind: SurvivorSignalKind | None, killer_id: str, effect_id: str,
+        label_namespace: str, teacher_role: KillerSpecificTeacherRole | None,
+        active: bool | None, stage: int | None, progress_milli: int | None,
+    ) -> None:
+        if self.killer_capability_registry is None:
+            raise ValueError("キラー固有HUD学習にはKiller Capability Registryが必要です。")
+        if not match_id.strip() or len(match_id) > 256:
+            raise ValueError("キラー固有HUD学習にはmatch_idが必要です。")
+        if survivor_slot is None or not 0 <= survivor_slot <= 3:
+            raise ValueError("キラー固有HUD学習にはスロット0..3が必要です。")
+        if signal_kind is not None:
+            raise ValueError("キラー固有HUD学習ではsignal_kindを使用しません。")
+        if roi_id != f"survivor_slot_{survivor_slot}":
+            raise ValueError("キラー固有HUDのスロットとROIが一致しません。")
+        capability = next((
+            item for item in self.killer_capability_registry.capabilities
+            if item.killer_id == killer_id and item.effect_id == effect_id
+        ), None)
+        if capability is None:
+            raise ValueError("未登録のキラー固有Teacher対象です。")
+        if teacher_role is KillerSpecificTeacherRole.POSITIVE:
+            if label_namespace != capability.training_label_namespace:
+                raise ValueError("Positive名前空間がKiller Capabilityと一致しません。")
+        elif teacher_role is KillerSpecificTeacherRole.HARD_NEGATIVE:
+            if label_namespace not in capability.hard_negative_namespaces:
+                raise ValueError("Hard Negative名前空間がKiller Capabilityに登録されていません。")
+        else:
+            raise ValueError("キラー固有HUD学習にはTeacher roleが必要です。")
+        if capability.max_stage is not None and stage is not None and stage > capability.max_stage:
+            raise ValueError("Teacher stageがKiller Capabilityの上限を超えています。")
+        KillerSpecificTeacherLabel(
+            teacher_role, label_namespace, active, stage, progress_milli,
+        )
+
+    def _validate_status_effect_teacher(
+        self, *, domain: VisualTrainingDomain, label: str, roi_id: str, group: str,
+    ) -> None:
+        target = (
+            EffectPolarity.POSITIVE
+            if domain is VisualTrainingDomain.STATUS_EFFECT_POSITIVE
+            else EffectPolarity.NEGATIVE
+        )
+        region = (
+            "bottom_right_positive_effects"
+            if target is EffectPolarity.POSITIVE
+            else "bottom_right_negative_effects"
+        )
+        if roi_id != region and not roi_id.startswith(f"{region}/segment_"):
+            raise ValueError("Status Effect学習の極性とROIが一致しません。")
+        decoded = StatusEffectReferenceLabel.decode(label)
+        if decoded.kind is StatusEffectReferenceKind.IDENTITY:
+            definitions = {item.effect_id: item for item in self.status_effect_definitions}
+            definition = definitions.get(decoded.effect_id or "")
+            if definition is None:
+                raise ValueError("未登録のStatus Effect Teacherです。")
+            if definition.polarity is not decoded.polarity:
+                raise ValueError("Status Effect定義とTeacher極性が一致しません。")
+        hard_negative = group.casefold() == "hard-negative"
+        if decoded.kind is StatusEffectReferenceKind.PERK_HARD_NEGATIVE:
+            if not hard_negative:
+                raise ValueError("Perk Status Effect Teacherはhard-negativeが必要です。")
+        elif decoded.polarity is not target:
+            if decoded.kind is not StatusEffectReferenceKind.IDENTITY or not hard_negative:
+                raise ValueError("逆極性Teacherはidentity hard-negativeのみ許可されます。")
+        elif hard_negative:
+            raise ValueError("同極性Teacherをhard-negativeとして登録できません。")
 
     def preview_video_frame(
         self, *, domain: VisualTrainingDomain, label: str, visibility: HudVisibility,
@@ -114,6 +212,10 @@ class SafeVisualLearningService:
         group: str = "normal", notes: str = "", registration_origin: str = "VIDEO_SINGLE",
         match_id: str = "", survivor_slot: int | None = None,
         signal_kind: SurvivorSignalKind | None = None,
+        killer_id: str = "", effect_id: str = "", label_namespace: str = "",
+        teacher_role: KillerSpecificTeacherRole | None = None,
+        active: bool | None = None, stage: int | None = None,
+        progress_milli: int | None = None,
     ) -> StagedTrainingSample:
         source = Path(video_path).expanduser().resolve()
         if not source.is_file():
@@ -122,7 +224,21 @@ class SafeVisualLearningService:
             raise ValueError("フレーム位置は0以上で指定してください。")
         if not label.strip():
             raise ValueError("正解ラベルを選択してください。")
-        if domain is VisualTrainingDomain.SURVIVOR_HUD:
+        if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+            self._validate_killer_specific_teacher(
+                match_id=match_id, survivor_slot=survivor_slot, roi_id=roi.roi_id,
+                signal_kind=signal_kind, killer_id=killer_id, effect_id=effect_id,
+                label_namespace=label_namespace, teacher_role=teacher_role,
+                active=active, stage=stage, progress_milli=progress_milli,
+            )
+        elif domain in {
+            VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+            VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+        }:
+            self._validate_status_effect_teacher(
+                domain=domain, label=label, roi_id=roi.roi_id, group=group,
+            )
+        elif domain is VisualTrainingDomain.SURVIVOR_HUD:
             if not match_id.strip() or len(match_id) > 256:
                 raise ValueError("サバイバーHUD学習にはmatch_idが必要です。")
             if survivor_slot is None or not 0 <= survivor_slot <= 3:
@@ -132,13 +248,23 @@ class SafeVisualLearningService:
             normalize_survivor_signal_value(signal_kind, label)
             if roi.roi_id != f"survivor_slot_{survivor_slot}":
                 raise ValueError("サバイバースロットとROIが一致しません。")
-        elif match_id or survivor_slot is not None or signal_kind is not None:
-            raise ValueError("サバイバー主体情報はSURVIVOR_HUD専用です。")
+            if (
+                killer_id or effect_id or label_namespace or teacher_role is not None
+                or any(value is not None for value in (active, stage, progress_milli))
+            ):
+                raise ValueError("Killer-specific Teacher情報はキラー固有HUD専用です。")
+        elif (
+            match_id or survivor_slot is not None or signal_kind is not None
+            or killer_id or effect_id or label_namespace or teacher_role is not None
+            or any(value is not None for value in (active, stage, progress_milli))
+        ):
+            raise ValueError("主体・Teacher情報は対応するHUD学習専用です。")
 
         staging_id = f"preview-{uuid4().hex}"
         directory = self.staging_root / staging_id
         directory.mkdir(parents=True, exist_ok=False)
-        image_path = directory / f"frame-{frame_index:09d}-{roi.roi_id}.pgm"
+        safe_roi_id = _SAFE_ROI_FILENAME.sub("_", roi.roi_id).strip("._-") or "roi"
+        image_path = directory / f"frame-{frame_index:09d}-{safe_roi_id[:128]}.pgm"
         try:
             result = self.extractor.extract_frame_roi(
                 video_path=source, frame_index=frame_index, roi=roi,
@@ -165,6 +291,9 @@ class SafeVisualLearningService:
             sha256=f"sha256:{hashlib.sha256(raw).hexdigest()}",
             match_id=match_id.strip(), survivor_slot=survivor_slot,
             signal_kind=signal_kind,
+            killer_id=killer_id, effect_id=effect_id,
+            label_namespace=label_namespace, teacher_role=teacher_role,
+            active=active, stage=stage, progress_milli=progress_milli,
         )
         self._write_receipt(staged)
         return staged
@@ -214,6 +343,10 @@ class SafeVisualLearningService:
                             match_id=target.match_id,
                             survivor_slot=target.survivor_slot,
                             signal_kind=target.signal_kind,
+                            killer_id=target.killer_id, effect_id=target.effect_id,
+                            label_namespace=target.label_namespace,
+                            teacher_role=target.teacher_role, active=target.active,
+                            stage=target.stage, progress_milli=target.progress_milli,
                         )
                     )
                     processed += 1
@@ -261,6 +394,23 @@ class SafeVisualLearningService:
                 if current.state is not TrainingReviewState.PREVIEWED:
                     duplicates += 1
                     continue
+                if current.domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+                    self._validate_killer_specific_teacher(
+                        match_id=current.match_id, survivor_slot=current.survivor_slot,
+                        roi_id=current.roi_id, signal_kind=current.signal_kind,
+                        killer_id=current.killer_id, effect_id=current.effect_id,
+                        label_namespace=current.label_namespace,
+                        teacher_role=current.teacher_role, active=current.active,
+                        stage=current.stage, progress_milli=current.progress_milli,
+                    )
+                elif current.domain in {
+                    VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+                    VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+                }:
+                    self._validate_status_effect_teacher(
+                        domain=current.domain, label=current.label,
+                        roi_id=current.roi_id, group=current.group,
+                    )
                 source = Path(current.image_path)
                 if not source.is_file():
                     raise ValueError(f"プレビュー画像が見つかりません: {current.staging_id}")
@@ -278,6 +428,10 @@ class SafeVisualLearningService:
                     display_state=current.visibility.value, source_video=current.source_video,
                     source_frame=current.source_frame, match_id=current.match_id,
                     survivor_slot=current.survivor_slot, signal_kind=current.signal_kind,
+                    killer_id=current.killer_id, effect_id=current.effect_id,
+                    label_namespace=current.label_namespace, teacher_role=current.teacher_role,
+                    active=current.active, stage=current.stage,
+                    progress_milli=current.progress_milli,
                 )
                 if self.manifest._identity(item) in existing_ids:
                     duplicates += 1
@@ -343,6 +497,17 @@ class SafeVisualLearningService:
                         output_path=self.workspace_root / "indexes" / f"{domain.value.lower()}-reference.json",
                         index_id=f"{domain.value.lower()}-reference",
                         ffmpeg_executable=self.extractor.ffmpeg_executable,
+                        killer_capability_registry=(
+                            self.killer_capability_registry
+                            if domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD else None
+                        ),
+                        status_effect_definitions=(
+                            self.status_effect_definitions
+                            if domain in {
+                                VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+                                VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+                            } else ()
+                        ),
                     )
                     index_paths.append(str(path))
                 except Exception as exc:
@@ -381,6 +546,23 @@ class SafeVisualLearningService:
         current = self.load_staged(staged.staging_id)
         if current.state is not TrainingReviewState.PREVIEWED:
             raise ValueError("このプレビューは既に処理済みです。")
+        if current.domain is VisualTrainingDomain.KILLER_SPECIFIC_HUD:
+            self._validate_killer_specific_teacher(
+                match_id=current.match_id, survivor_slot=current.survivor_slot,
+                roi_id=current.roi_id, signal_kind=current.signal_kind,
+                killer_id=current.killer_id, effect_id=current.effect_id,
+                label_namespace=current.label_namespace,
+                teacher_role=current.teacher_role, active=current.active,
+                stage=current.stage, progress_milli=current.progress_milli,
+            )
+        elif current.domain in {
+            VisualTrainingDomain.STATUS_EFFECT_POSITIVE,
+            VisualTrainingDomain.STATUS_EFFECT_NEGATIVE,
+        }:
+            self._validate_status_effect_teacher(
+                domain=current.domain, label=current.label,
+                roi_id=current.roi_id, group=current.group,
+            )
         source = Path(current.image_path)
         if not source.is_file():
             raise ValueError("プレビュー画像が見つかりません。")
@@ -404,6 +586,10 @@ class SafeVisualLearningService:
             source_frame=current.source_frame,
             match_id=current.match_id, survivor_slot=current.survivor_slot,
             signal_kind=current.signal_kind,
+            killer_id=current.killer_id, effect_id=current.effect_id,
+            label_namespace=current.label_namespace, teacher_role=current.teacher_role,
+            active=current.active, stage=current.stage,
+            progress_milli=current.progress_milli,
         )
         if not self.manifest.append(item):
             final_path.unlink(missing_ok=True)
@@ -431,6 +617,17 @@ class SafeVisualLearningService:
             match_id=p.get("match_id", ""),
             survivor_slot=(None if p.get("survivor_slot") is None else int(p["survivor_slot"])),
             signal_kind=(None if not p.get("signal_kind") else SurvivorSignalKind(p["signal_kind"])),
+            killer_id=p.get("killer_id", ""), effect_id=p.get("effect_id", ""),
+            label_namespace=p.get("label_namespace", ""),
+            teacher_role=(
+                None if not p.get("teacher_role")
+                else KillerSpecificTeacherRole(p["teacher_role"])
+            ),
+            active=p.get("active"),
+            stage=(None if p.get("stage") is None else int(p["stage"])),
+            progress_milli=(
+                None if p.get("progress_milli") is None else int(p["progress_milli"])
+            ),
         )
 
     def _with_state(self, current: StagedTrainingSample, state: TrainingReviewState) -> StagedTrainingSample:
@@ -443,13 +640,17 @@ class SafeVisualLearningService:
             state=state, sha256=current.sha256,
             match_id=current.match_id, survivor_slot=current.survivor_slot,
             signal_kind=current.signal_kind,
+            killer_id=current.killer_id, effect_id=current.effect_id,
+            label_namespace=current.label_namespace, teacher_role=current.teacher_role,
+            active=current.active, stage=current.stage,
+            progress_milli=current.progress_milli,
         )
 
     def _write_receipt(self, staged: StagedTrainingSample) -> None:
         directory = self.staging_root / staged.staging_id
         directory.mkdir(parents=True, exist_ok=True)
         payload = {
-            "schema_version": "1.1.0", "staging_id": staged.staging_id,
+            "schema_version": "1.2.0", "staging_id": staged.staging_id,
             "domain": staged.domain.value, "label": staged.label,
             "visibility": staged.visibility.value, "source_video": staged.source_video,
             "source_frame": staged.source_frame, "roi_id": staged.roi_id,
@@ -459,6 +660,11 @@ class SafeVisualLearningService:
             "sha256": staged.sha256,
             "match_id": staged.match_id, "survivor_slot": staged.survivor_slot,
             "signal_kind": None if staged.signal_kind is None else staged.signal_kind.value,
+            "killer_id": staged.killer_id, "effect_id": staged.effect_id,
+            "label_namespace": staged.label_namespace,
+            "teacher_role": None if staged.teacher_role is None else staged.teacher_role.value,
+            "active": staged.active, "stage": staged.stage,
+            "progress_milli": staged.progress_milli,
         }
         target = directory / "receipt.json"
         fd, raw_temp = tempfile.mkstemp(prefix=".receipt.", suffix=".tmp", dir=directory)
@@ -500,6 +706,10 @@ class TrainingDataReviewService:
                     source_frame=item.source_frame,
                     match_id=item.match_id, survivor_slot=item.survivor_slot,
                     signal_kind=item.signal_kind,
+                    killer_id=item.killer_id, effect_id=item.effect_id,
+                    label_namespace=item.label_namespace, teacher_role=item.teacher_role,
+                    active=item.active, stage=item.stage,
+                    progress_milli=item.progress_milli,
                 ))
                 changed = True
             else:

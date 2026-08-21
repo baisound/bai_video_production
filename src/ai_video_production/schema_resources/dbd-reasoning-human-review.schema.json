@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/dbd-reasoning-human-review.schema.json",
+  "title": "TASK-054 DbD Reasoning Human Review",
+  "oneOf": [{"$ref":"#/$defs/authorityBinding"},{"$ref":"#/$defs/reviewRecord"}],
+  "$defs": {
+    "sha":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},
+    "candidateId":{"type":"string","pattern":"^CAND-R2D[0-9A-HJKMNP-TV-Z]{23}$"},
+    "confirmationRef":{"type":"string","pattern":"^human-confirmation://dbd-review/[0-9A-HJKMNP-TV-Z]{26}$"},
+    "evidenceRef":{"type":"string","pattern":"^human-evidence://dbd-review/sha256/[0-9a-f]{64}$"},
+    "codes":{"type":"array","maxItems":16,"uniqueItems":true,"items":{"type":"string","pattern":"^[A-Z][A-Z0-9_]{1,63}$"}},
+    "authorityBinding":{
+      "type":"object","additionalProperties":false,
+      "required":["schema_version","record_kind","contract_state","confirmation_ref","confirmation_revision","confirmation_sha256","reviewer_kind","decision","decided_at","expires_at","one_shot","authority_evidence_ref","authority_evidence_sha256","root_candidate_id","expected_leaf_candidate_id","expected_leaf_candidate_sha256","expected_leaf_lineage_sha256","expected_context_sha256","expected_commentary_plan_sha256","expected_proposal_sha256","expected_previous_review_revision","expected_previous_review_sha256","reason_codes","correction_request_sha256","binding_sha256"],
+      "properties":{
+        "schema_version":{"const":"1.0.0"},"record_kind":{"const":"DBD_REASONING_HUMAN_REVIEW_AUTHORITY_BINDING"},"contract_state":{"enum":["CANONICAL_REF_NOT_PROVIDED","BOUND_VERIFIED"]},
+        "confirmation_ref":{"oneOf":[{"$ref":"#/$defs/confirmationRef"},{"type":"null"}]},"confirmation_revision":{"type":["integer","null"],"minimum":1},"confirmation_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},
+        "reviewer_kind":{"enum":["HUMAN",null]},"decision":{"enum":["APPROVE","REJECT","REVISE",null]},"decided_at":{"type":["string","null"],"format":"date-time","maxLength":40},"expires_at":{"type":["string","null"],"format":"date-time","maxLength":40},"one_shot":{"enum":[true,null]},
+        "authority_evidence_ref":{"oneOf":[{"$ref":"#/$defs/evidenceRef"},{"type":"null"}]},"authority_evidence_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},
+        "root_candidate_id":{"oneOf":[{"$ref":"#/$defs/candidateId"},{"type":"null"}]},"expected_leaf_candidate_id":{"oneOf":[{"$ref":"#/$defs/candidateId"},{"type":"null"}]},
+        "expected_leaf_candidate_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},"expected_leaf_lineage_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},"expected_context_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},"expected_commentary_plan_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},"expected_proposal_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},
+        "expected_previous_review_revision":{"type":["integer","null"],"minimum":0},"expected_previous_review_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},
+        "reason_codes":{"oneOf":[{"$ref":"#/$defs/codes"},{"type":"null"}]},"correction_request_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},"binding_sha256":{"$ref":"#/$defs/sha"}
+      },
+      "allOf":[
+        {"if":{"properties":{"contract_state":{"const":"CANONICAL_REF_NOT_PROVIDED"}},"required":["contract_state"]},"then":{"properties":{"confirmation_ref":{"type":"null"},"confirmation_revision":{"type":"null"},"confirmation_sha256":{"type":"null"},"reviewer_kind":{"type":"null"},"decision":{"type":"null"},"decided_at":{"type":"null"},"expires_at":{"type":"null"},"one_shot":{"type":"null"},"authority_evidence_ref":{"type":"null"},"authority_evidence_sha256":{"type":"null"},"root_candidate_id":{"type":"null"},"expected_leaf_candidate_id":{"type":"null"},"expected_leaf_candidate_sha256":{"type":"null"},"expected_leaf_lineage_sha256":{"type":"null"},"expected_context_sha256":{"type":"null"},"expected_commentary_plan_sha256":{"type":"null"},"expected_proposal_sha256":{"type":"null"},"expected_previous_review_revision":{"type":"null"},"expected_previous_review_sha256":{"type":"null"},"reason_codes":{"type":"null"},"correction_request_sha256":{"type":"null"}}}},
+        {"if":{"properties":{"contract_state":{"const":"BOUND_VERIFIED"}},"required":["contract_state"]},"then":{"properties":{"confirmation_ref":{"$ref":"#/$defs/confirmationRef"},"confirmation_revision":{"type":"integer","minimum":1},"confirmation_sha256":{"$ref":"#/$defs/sha"},"reviewer_kind":{"const":"HUMAN"},"decision":{"enum":["APPROVE","REJECT","REVISE"]},"decided_at":{"type":"string"},"expires_at":{"type":"string"},"one_shot":{"const":true},"authority_evidence_ref":{"$ref":"#/$defs/evidenceRef"},"authority_evidence_sha256":{"$ref":"#/$defs/sha"},"root_candidate_id":{"$ref":"#/$defs/candidateId"},"expected_leaf_candidate_id":{"$ref":"#/$defs/candidateId"},"expected_leaf_candidate_sha256":{"$ref":"#/$defs/sha"},"expected_leaf_lineage_sha256":{"$ref":"#/$defs/sha"},"expected_context_sha256":{"$ref":"#/$defs/sha"},"expected_commentary_plan_sha256":{"$ref":"#/$defs/sha"},"expected_proposal_sha256":{"$ref":"#/$defs/sha"},"expected_previous_review_revision":{"type":"integer","minimum":0},"reason_codes":{"$ref":"#/$defs/codes"}}}}
+      ]
+    },
+    "reviewRecord":{
+      "type":"object","additionalProperties":false,
+      "required":["schema_version","record_kind","root_candidate_id","leaf_candidate_id","leaf_candidate_sha256","leaf_lineage_sha256","match_id","event_id","event_revision","context_sha256","commentary_plan_sha256","proposal_sha256","review_revision","previous_review_sha256","decision","reason_codes","correction_request_sha256","authority_binding_sha256","confirmation_sha256","reviewed_at","review_sha256"],
+      "properties":{
+        "schema_version":{"const":"1.0.0"},"record_kind":{"const":"DBD_REASONING_HUMAN_REVIEW"},"root_candidate_id":{"$ref":"#/$defs/candidateId"},"leaf_candidate_id":{"$ref":"#/$defs/candidateId"},"leaf_candidate_sha256":{"$ref":"#/$defs/sha"},"leaf_lineage_sha256":{"$ref":"#/$defs/sha"},
+        "match_id":{"type":"string","pattern":"^MATCH-[0-9A-HJKMNP-TV-Z]{26}$"},"event_id":{"type":"string","pattern":"^GEVT-[0-9A-HJKMNP-TV-Z]{26}$"},"event_revision":{"type":"integer","minimum":1},
+        "context_sha256":{"$ref":"#/$defs/sha"},"commentary_plan_sha256":{"$ref":"#/$defs/sha"},"proposal_sha256":{"$ref":"#/$defs/sha"},"review_revision":{"type":"integer","minimum":1},"previous_review_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},
+        "decision":{"enum":["APPROVE","REJECT","REVISE"]},"reason_codes":{"$ref":"#/$defs/codes"},"correction_request_sha256":{"oneOf":[{"$ref":"#/$defs/sha"},{"type":"null"}]},"authority_binding_sha256":{"$ref":"#/$defs/sha"},"confirmation_sha256":{"$ref":"#/$defs/sha"},"reviewed_at":{"type":"string","format":"date-time","maxLength":40},"review_sha256":{"$ref":"#/$defs/sha"}
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/dbd-reasoning-human-correction-submission.schema.json",
+  "title": "TASK-054 DbD Reasoning Human Correction Submission",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version","record_kind","correction_ref","reviewer_kind","one_shot","submitted_at","expires_at","parent_candidate_id","parent_candidate_sha256","parent_lineage_sha256","correction_review_sha256","correction_request_sha256","context_sha256","commentary_plan_sha256","proposal_sha256","child_candidate_id","child_created_at","edited_output_sha256","evidence_ref","evidence_sha256","binding_sha256"],
+  "properties": {
+    "schema_version":{"const":"1.0.0"},"record_kind":{"const":"DBD_REASONING_HUMAN_CORRECTION_SUBMISSION"},
+    "correction_ref":{"type":"string","pattern":"^human-correction://dbd-review/[0-9A-HJKMNP-TV-Z]{26}$"},"reviewer_kind":{"const":"HUMAN"},"one_shot":{"const":true},
+    "submitted_at":{"type":"string","format":"date-time"},"expires_at":{"type":"string","format":"date-time"},
+    "parent_candidate_id":{"$ref":"#/$defs/candidateId"},"parent_candidate_sha256":{"$ref":"#/$defs/sha"},"parent_lineage_sha256":{"$ref":"#/$defs/sha"},
+    "correction_review_sha256":{"$ref":"#/$defs/sha"},"correction_request_sha256":{"$ref":"#/$defs/sha"},"context_sha256":{"$ref":"#/$defs/sha"},"commentary_plan_sha256":{"$ref":"#/$defs/sha"},"proposal_sha256":{"$ref":"#/$defs/sha"},
+    "child_candidate_id":{"$ref":"#/$defs/candidateId"},"child_created_at":{"type":"string","format":"date-time"},"edited_output_sha256":{"$ref":"#/$defs/sha"},
+    "evidence_ref":{"type":"string","pattern":"^human-evidence://dbd-review/sha256/[0-9a-f]{64}$"},"evidence_sha256":{"$ref":"#/$defs/sha"},"binding_sha256":{"$ref":"#/$defs/sha"}
+  },
+  "$defs":{"sha":{"type":"string","pattern":"^sha256:[0-9a-f]{64}$"},"candidateId":{"type":"string","pattern":"^CAND-R2D[0-9A-HJKMNP-TV-Z]{23}$"}}
+}

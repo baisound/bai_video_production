@@ -63,8 +63,16 @@ from .timebase import FFprobeTimingProbe, FrameRate, FrameRounding, TimingInspec
 from .timeline_mapping import AffineTimeMap, EditSegment, TimelineMappingPlan, TimelineMappingService, TimelinePlacement
 from .subtitles import (
     AsrProvider, AsrRequest, SrtRenderer, SubtitleCue, SubtitlePlan,
-    SubtitlePlanningService, TranscriptManifest, TranscriptSegment,
+    SubtitlePlanningService, TranscriptManifest, TranscriptSegment, TranscriptWord,
 )
+from .semantic_audio_cues import (
+    CueReviewState, KeywordMatchMode, KeywordProfile, KeywordRule,
+    SpeechCueDetectionService, SpeechCueHit, SpeechCueManifest,
+    SpeechCuePublication, SpeechCuePublicationService, TimingGranularity,
+    build_montage_semantic_audio_cues_projection, load_keyword_profile,
+    parse_montage_semantic_audio_cues_projection,
+)
+from .speech_cue_application import SpeechCueApplicationResult, SpeechCueApplicationService
 from .faster_whisper_asr import (
     FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService,
     TranscriptionPublication,
@@ -207,7 +215,13 @@ __all__ = [
     "AssetPage", "RightsStatus", "SQLiteProductStore", "SourcePathPolicy", "TimelineOwner", "TimelineRef",
     "TimelineWriteGuard", "assert_resume_compatible", "authorize_mutation_probe", "generate_id",
     "AsrProvider", "AsrRequest", "SrtRenderer", "SubtitleCue", "SubtitlePlan",
-    "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment",
+    "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment", "TranscriptWord",
+    "CueReviewState", "KeywordMatchMode", "KeywordProfile", "KeywordRule",
+    "SpeechCueDetectionService", "SpeechCueHit", "SpeechCueManifest",
+    "SpeechCuePublication", "SpeechCuePublicationService", "TimingGranularity",
+    "build_montage_semantic_audio_cues_projection", "load_keyword_profile",
+    "parse_montage_semantic_audio_cues_projection",
+    "SpeechCueApplicationResult", "SpeechCueApplicationService",
     "FasterWhisperConfig", "FasterWhisperProvider", "LocalTranscriptionService",
     "TranscriptionPublication",
     "ChunkedTranscriptionConfig", "FfmpegAudioChunkExtractor", "ResumableTranscriptionService",

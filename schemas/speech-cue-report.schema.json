@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/speech-cue-report.schema.json",
+  "title": "BAI Speech Cue Operational Report",
+  "type": "object",
+  "required": [
+    "report_version",
+    "ok",
+    "source_asset_id",
+    "manifest_id",
+    "manifest_sha256",
+    "projection_sha256",
+    "keyword_profile_id",
+    "confirmed_count",
+    "review_count",
+    "rejected_count",
+    "projection_file",
+    "manifest_file",
+    "transcript_text_in_report",
+    "host_path_in_report",
+    "canonical_timeline",
+    "auto_apply_authorized",
+    "publication_complete"
+  ],
+  "properties": {
+    "report_version": {
+      "const": "1.0.0"
+    },
+    "ok": {
+      "const": true
+    },
+    "source_asset_id": {
+      "type": "string",
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "manifest_id": {
+      "type": "string",
+      "pattern": "^SCM-[0-9a-f]{32}$"
+    },
+    "manifest_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "keyword_profile_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "confirmed_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "review_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "rejected_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "projection_file": {
+      "const": "montage-semantic-audio-cues.json"
+    },
+    "manifest_file": {
+      "const": "speech-cues.json"
+    },
+    "transcript_text_in_report": {
+      "const": false
+    },
+    "host_path_in_report": {
+      "const": false
+    },
+    "canonical_timeline": {
+      "const": false
+    },
+    "auto_apply_authorized": {
+      "const": false
+    },
+    "projection_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "publication_complete": {
+      "const": true
+    }
+  },
+  "additionalProperties": false
+}

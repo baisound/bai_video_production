@@ -34,6 +34,37 @@ def _text(value: str) -> str:
     return normalized
 
 
+def _word_text(value: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError("transcript word text must be text")
+    normalized = value.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not normalized or len(normalized) > 512 or not _SAFE_TEXT.fullmatch(normalized):
+        raise ValueError("transcript word text must be non-empty bounded text without NUL")
+    return normalized
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptWord:
+    start_us: int
+    end_us: int
+    text: str
+    confidence: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.start_us < 0 or self.end_us <= self.start_us:
+            raise ValueError("transcript word range must be positive and end-exclusive")
+        object.__setattr__(self, "text", _word_text(self.text))
+        if self.confidence is not None and not 0 <= self.confidence <= 1:
+            raise ValueError("word confidence must be 0-1")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "range_us": {"start": self.start_us, "end_exclusive": self.end_us},
+            "text": self.text,
+            "confidence": self.confidence,
+        }
+
+
 @dataclass(frozen=True, slots=True)
 class TranscriptSegment:
     segment_id: str
@@ -42,6 +73,7 @@ class TranscriptSegment:
     text: str
     confidence: float | None = None
     speaker: str | None = None
+    words: tuple[TranscriptWord, ...] = ()
 
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", self.segment_id):
@@ -54,14 +86,29 @@ class TranscriptSegment:
         if self.speaker is not None and not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", self.speaker):
             raise ValueError("speaker is invalid")
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
+        words = tuple(self.words)
+        if any(not isinstance(word, TranscriptWord) for word in words):
+            raise ValueError("transcript words must contain TranscriptWord values")
+        object.__setattr__(self, "words", words)
+        previous_end = self.start_us
+        for word in words:
+            if word.start_us < self.start_us or word.end_us > self.end_us:
+                raise ValueError("transcript word must be contained by its segment")
+            if word.start_us < previous_end:
+                raise ValueError("transcript words overlap or are out of order")
+            previous_end = word.end_us
+
+    def to_dict(self, *, include_words: bool = False) -> dict[str, Any]:
+        body = {
             "segment_id": self.segment_id,
             "range_us": {"start": self.start_us, "end_exclusive": self.end_us},
             "text": self.text,
             "confidence": self.confidence,
             "speaker": self.speaker,
         }
+        if include_words:
+            body["words"] = [word.to_dict() for word in self.words]
+        return body
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +118,7 @@ class TranscriptManifest:
     provider_id: str
     model_id: str
     segments: tuple[TranscriptSegment, ...]
+    word_timestamps_included: bool = False
 
     def __post_init__(self) -> None:
         validate_id(self.source_asset_id, IdKind.ASSET)
@@ -88,15 +136,21 @@ class TranscriptManifest:
                 raise ValueError("transcript segments overlap or are out of order")
             ids.add(segment.segment_id)
             previous_end = segment.end_us
+            if segment.words and not self.word_timestamps_included:
+                raise ValueError("word-timed segments require word_timestamps_included=True")
 
     def to_dict(self) -> dict[str, Any]:
+        version = "1.1.0" if self.word_timestamps_included else "1.0.0"
         body = {
-            "manifest_version": "1.0.0",
+            "manifest_version": version,
             "source_asset_id": self.source_asset_id,
             "language": self.language,
             "provider_id": self.provider_id,
             "model_id": self.model_id,
-            "segments": [item.to_dict() for item in self.segments],
+            "segments": [
+                item.to_dict(include_words=self.word_timestamps_included)
+                for item in self.segments
+            ],
         }
         body["manifest_sha256"] = sha256_bytes(canonical_json_bytes(body))
         return body
@@ -107,6 +161,7 @@ class AsrRequest:
     source_asset_id: str
     media_path: str
     language: str | None = None
+    include_word_timestamps: bool = False
 
     def __post_init__(self) -> None:
         validate_id(self.source_asset_id, IdKind.ASSET)

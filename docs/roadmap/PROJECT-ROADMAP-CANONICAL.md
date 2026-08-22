@@ -1,6 +1,6 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.93
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.94
 - Project: `ai-video-production`
-- Date: 2026-08-18
+- Date: 2026-08-23
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
 - Product Design Baseline: `AI動画制作自動化システム 基本・詳細統合設計書 Ver.0.6 外部SKILL統合版`
 - Governance: BAI Development OS Consumer Project Mode
@@ -2707,3 +2707,31 @@ This lane is **candidate intake only**:
 - canonical Perk/Killer/Power stores are not mutated by collection.
 
 Training Studio now exposes a `Knowledge Import` tab and README links to `DBD-KAMIGAME-KNOWLEDGE-IMPORT.md`. Local fixture/parser/bundle/UI/CLI verification is required; live-source execution remains an operator/network-host evidence gate.
+
+
+## Addendum XCIV - TASK-056 Priority Chase Keyword Cue / Semantic Audio Cue Bridge
+
+Date: `2026-08-23`
+
+Owner priority temporarily raises the creator-workflow baseline before the complete Montage Product UX is available. TASK-056 is allocated as a new DEV-3 cross-cutting Task rather than reopening TASK-006/023/036/049/052/054. TASK-055 is intentionally skipped here because an existing local, not-yet-main Montage integration branch already uses that identity.
+
+### Priority sequence
+
+```text
+R0  existing local FasterWhisper -> opt-in word timing
+    -> deterministic Keyword Profile / SpeechCueManifest
+    -> exact rational source frames
+    -> text-free Montage sidecar / zero-hit legacy fallback
+
+R1  after TASK-036 P-UX-2K PR #269 overlap re-audit
+    -> canonical BVP Product Application Service / GUI Human review
+
+R2  Montage adapter consumption
+    -> audio Cue + video semantic evidence gate
+    -> Human-reviewed non-canonical proposal
+    -> existing canonical Timeline mapping/review route
+```
+
+R0 explicitly does not modify TASK-036 Product/Shell files while PR #269 is open. The unavoidable `faster_whisper_asr.py` overlap is limited to opt-in word timestamp semantics and must be recomposed against the then-current P-UX-2K implementation before merge. No model download, paid/cloud provider, automatic Timeline mutation, Resolve write, Render, Release or Deploy authority is added.
+
+Core consumer use remains local and does not require Codex/ChatGPT or a paid AI subscription.

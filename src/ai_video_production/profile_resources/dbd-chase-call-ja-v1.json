@@ -1,0 +1,12 @@
+{
+  "profile_id": "dbd-chase-call-ja-v1",
+  "language": "ja",
+  "keywords": [
+    {
+      "keyword_id": "CHASE_CALL",
+      "aliases": ["チェイス", "チェース", "chase"],
+      "match_mode": "PHRASE",
+      "minimum_confidence": 0.65
+    }
+  ]
+}

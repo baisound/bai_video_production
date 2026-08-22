@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/keyword-profile.schema.json",
+  "title": "BAI Semantic Audio Keyword Profile",
+  "type": "object",
+  "required": ["profile_id", "language", "keywords"],
+  "properties": {
+    "profile_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+    "language": {"type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"},
+    "keywords": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "required": ["keyword_id", "aliases", "match_mode", "minimum_confidence"],
+        "properties": {
+          "keyword_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"},
+          "aliases": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {"type": "string", "minLength": 1, "maxLength": 128}
+          },
+          "match_mode": {"enum": ["EXACT", "PHRASE"]},
+          "minimum_confidence": {"type": "number", "minimum": 0, "maximum": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

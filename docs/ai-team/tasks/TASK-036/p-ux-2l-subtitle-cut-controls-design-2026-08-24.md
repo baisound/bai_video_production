@@ -19,6 +19,7 @@ May modify:
 - `desktop_shell.py`
 - `task036_pre_edit_runtime.py`
 - `task036_shell_ui.py`
+- `task036_trusted_launcher.py`
 - `task036_shell_v611.py`
 - directly focused TASK-036 tests
 - this design document

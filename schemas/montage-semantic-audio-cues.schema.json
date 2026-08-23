@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/montage-semantic-audio-cues.schema.json",
+  "title": "BAI Montage Semantic Audio Cue Projection",
+  "type": "object",
+  "required": [
+    "projection_version", "manifest_id", "manifest_sha256", "keyword_profile_id",
+    "source_asset_id", "confirmed_count", "review_count", "projection_mode",
+    "canonical_timeline", "auto_apply_authorized", "cues", "projection_sha256"
+  ],
+  "properties": {
+    "projection_version": {"const": "1.0.0"},
+    "manifest_id": {"type": "string", "pattern": "^SCM-[0-9a-f]{32}$"},
+    "manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "keyword_profile_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "source_asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "confirmed_count": {"type": "integer", "minimum": 0},
+    "review_count": {"type": "integer", "minimum": 0},
+    "projection_mode": {"enum": ["CONFIRMED_ONLY", "WITH_REVIEW"]},
+    "canonical_timeline": {"const": false},
+    "auto_apply_authorized": {"const": false},
+    "cues": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "required": [
+          "cue_id", "keyword_id", "source_asset_id", "source_fps", "source_start_frame",
+          "source_end_frame_exclusive", "confidence", "review_state", "timing_granularity"
+        ],
+        "properties": {
+          "cue_id": {"type": "string", "pattern": "^CUE-[0-9a-f]{24}$"},
+          "keyword_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"},
+          "source_asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+          "source_fps": {"$ref": "#/$defs/rationalFps"},
+          "source_start_frame": {"type": "integer", "minimum": 0},
+          "source_end_frame_exclusive": {"type": "integer", "minimum": 1},
+          "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "review_state": {"enum": ["CONFIRMED", "REVIEW"]},
+          "timing_granularity": {"enum": ["WORD", "SEGMENT_FALLBACK"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "projection_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "rationalFps": {
+      "type": "object",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": {"type": "integer", "minimum": 1},
+        "denominator": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

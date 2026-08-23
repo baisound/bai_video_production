@@ -25,7 +25,7 @@ from .atomic import AtomicJsonWriter
 from .errors import ProductError, ProductErrorCategory
 from .ids import IdKind, validate_id
 from .serialization import canonical_json_bytes, sha256_bytes
-from .subtitles import TranscriptManifest, TranscriptSegment
+from .subtitles import TranscriptManifest, TranscriptSegment, TranscriptWord
 
 
 _SHA256_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -884,6 +884,10 @@ def load_transcript_manifest(path: str | Path, *, max_bytes: int = 64 * 1024 * 1
             ProductErrorCategory.DATA_INTEGRITY,
         )
     try:
+        manifest_version = body.get("manifest_version")
+        if manifest_version not in {"1.0.0", "1.1.0"}:
+            raise ValueError("unsupported transcript manifest version")
+        include_word_timestamps = manifest_version == "1.1.0"
         segments_raw = body["segments"]
         if not isinstance(segments_raw, list):
             raise ValueError("segments must be a list")
@@ -895,6 +899,15 @@ def load_transcript_manifest(path: str | Path, *, max_bytes: int = 64 * 1024 * 1
                 text=item["text"],
                 confidence=item.get("confidence"),
                 speaker=item.get("speaker"),
+                words=tuple(
+                    TranscriptWord(
+                        start_us=word["range_us"]["start"],
+                        end_us=word["range_us"]["end_exclusive"],
+                        text=word["text"],
+                        confidence=word.get("confidence"),
+                    )
+                    for word in item.get("words", [])
+                ) if include_word_timestamps else (),
             )
             for item in segments_raw
         )
@@ -904,6 +917,7 @@ def load_transcript_manifest(path: str | Path, *, max_bytes: int = 64 * 1024 * 1
             provider_id=body["provider_id"],
             model_id=body["model_id"],
             segments=segments,
+            word_timestamps_included=include_word_timestamps,
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise ProductError(

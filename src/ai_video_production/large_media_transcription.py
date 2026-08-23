@@ -18,7 +18,7 @@ from .faster_whisper_asr import FasterWhisperProvider, LocalTranscriptionService
 from .ids import IdKind, generate_id, validate_id
 from .media_probe import FFprobeMediaProbe, MediaProbeResult
 from .serialization import sha256_json, validate_sha256
-from .subtitles import AsrRequest, TranscriptManifest, TranscriptSegment
+from .subtitles import AsrRequest, TranscriptManifest, TranscriptSegment, TranscriptWord
 from .timebase import FrameRate
 
 
@@ -330,6 +330,7 @@ def _config_sha(
     *,
     language: str | None,
     timeline_rate: FrameRate,
+    include_word_timestamps: bool,
 ) -> str:
     provider_config = provider.config
     return sha256_json(
@@ -342,6 +343,7 @@ def _config_sha(
             "vad_filter": provider_config.vad_filter,
             "allow_model_download": provider_config.allow_model_download,
             "requested_language": language,
+            "include_word_timestamps": bool(include_word_timestamps),
             "chunk_seconds": config.chunk_seconds,
             "overlap_seconds": config.overlap_seconds,
             "ffmpeg_executable": config.ffmpeg_executable,
@@ -436,6 +438,27 @@ def _owned_segments(
         end = min(chunk.core_end_us, absolute_end)
         if end <= start:
             continue
+        words: list[TranscriptWord] = []
+        previous_word_end = start
+        for word in segment.words:
+            word_start = chunk.extraction_start_us + word.start_us
+            word_end = min(
+                chunk.extraction_end_us,
+                chunk.extraction_start_us + word.end_us,
+            )
+            word_start = max(start, previous_word_end, word_start)
+            word_end = min(end, word_end)
+            if word_end <= word_start:
+                continue
+            words.append(
+                TranscriptWord(
+                    start_us=word_start,
+                    end_us=word_end,
+                    text=word.text,
+                    confidence=word.confidence,
+                )
+            )
+            previous_word_end = word_end
         owned.append(
             TranscriptSegment(
                 segment_id=f"{chunk.chunk_id}-seg-{index:06d}",
@@ -444,6 +467,7 @@ def _owned_segments(
                 text=segment.text,
                 confidence=segment.confidence,
                 speaker=segment.speaker,
+                words=tuple(words),
             )
         )
     return tuple(owned)
@@ -454,13 +478,18 @@ def _partial_dict(
     source_asset_id: str,
     language: str,
     segments: tuple[TranscriptSegment, ...],
+    *,
+    word_timestamps_included: bool,
 ) -> dict[str, Any]:
     return {
-        "partial_version": "1.0.0",
+        "partial_version": "1.1.0" if word_timestamps_included else "1.0.0",
         "chunk_id": chunk.chunk_id,
         "source_asset_id": source_asset_id,
         "language": language,
-        "segments": [segment.to_dict() for segment in segments],
+        "segments": [
+            segment.to_dict(include_words=word_timestamps_included)
+            for segment in segments
+        ],
     }
 
 
@@ -470,7 +499,7 @@ def _load_partial(
     checksum: str,
     chunk: TranscriptionChunk,
     source_asset_id: str,
-) -> tuple[str, tuple[TranscriptSegment, ...]]:
+) -> tuple[str, tuple[TranscriptSegment, ...], bool]:
     if path.is_symlink():
         raise ProductError(
             "ERR_ASR_WORK_STATE_UNSAFE",
@@ -491,8 +520,10 @@ def _load_partial(
             details={"chunk_id": chunk.chunk_id},
         )
     try:
-        if value.get("partial_version") != "1.0.0":
+        partial_version = value.get("partial_version")
+        if partial_version not in {"1.0.0", "1.1.0"}:
             raise ValueError("unsupported partial version")
+        word_timestamps_included = partial_version == "1.1.0"
         if value.get("chunk_id") != chunk.chunk_id:
             raise ValueError("chunk id mismatch")
         if value.get("source_asset_id") != source_asset_id:
@@ -515,6 +546,15 @@ def _load_partial(
                 text=str(raw["text"]),
                 confidence=raw.get("confidence"),
                 speaker=raw.get("speaker"),
+                words=tuple(
+                    TranscriptWord(
+                        start_us=int(item["range_us"]["start"]),
+                        end_us=int(item["range_us"]["end_exclusive"]),
+                        text=str(item["text"]),
+                        confidence=item.get("confidence"),
+                    )
+                    for item in raw.get("words", [])
+                ) if word_timestamps_included else (),
             )
             if (
                 segment.start_us < chunk.core_start_us
@@ -524,7 +564,7 @@ def _load_partial(
                 raise ValueError("segment is outside canonical chunk ownership")
             previous_end = segment.end_us
             segments.append(segment)
-        return language, tuple(segments)
+        return language, tuple(segments), word_timestamps_included
     except (KeyError, TypeError, ValueError) as exc:
         raise ProductError(
             "ERR_ASR_PARTIAL_INVALID",
@@ -550,6 +590,7 @@ class ResumableTranscriptionService:
         source_asset_id: str | None = None,
         language: str | None = None,
         timeline_rate: FrameRate = FrameRate(30000, 1001),
+        include_word_timestamps: bool = False,
         resume: bool = False,
         restart: bool = False,
         probe: MediaProbe | None = None,
@@ -633,6 +674,7 @@ class ResumableTranscriptionService:
             config,
             language=language,
             timeline_rate=timeline_rate,
+            include_word_timestamps=include_word_timestamps,
         )
 
         if checkpoint is None:
@@ -691,7 +733,12 @@ class ResumableTranscriptionService:
                 if effective_language is None and checkpoint.detected_language not in {None, "und"}:
                     effective_language = checkpoint.detected_language
                 transcript = provider.transcribe(
-                    AsrRequest(asset_id, str(audio_path), effective_language)
+                    AsrRequest(
+                        asset_id,
+                        str(audio_path),
+                        effective_language,
+                        include_word_timestamps=include_word_timestamps,
+                    )
                 )
                 _assert_source_unchanged(
                     source, size_bytes=source_size, mtime_ns=source_mtime_ns
@@ -705,6 +752,7 @@ class ResumableTranscriptionService:
                     asset_id,
                     transcript.language,
                     owned,
+                    word_timestamps_included=include_word_timestamps,
                 )
                 result = AtomicJsonWriter.write(
                     partial_root / f"{chunk.chunk_id}.json",
@@ -732,12 +780,19 @@ class ResumableTranscriptionService:
                     ProductErrorCategory.DATA_INTEGRITY,
                     details={"chunk_id": chunk.chunk_id},
                 )
-            partial_language, segments = _load_partial(
+            partial_language, segments, partial_word_timestamps = _load_partial(
                 partial_root / f"{chunk.chunk_id}.json",
                 checksum=checksum,
                 chunk=chunk,
                 source_asset_id=asset_id,
             )
+            if partial_word_timestamps != include_word_timestamps:
+                raise ProductError(
+                    "ERR_INTEGRITY_CHECKPOINT_MISMATCH",
+                    "transcription partial word-timestamp mode does not match the active request",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                    details={"chunk_id": chunk.chunk_id},
+                )
             if partial_language != "und":
                 observed_languages.append(partial_language)
             all_segments.extend(segments)
@@ -763,6 +818,7 @@ class ResumableTranscriptionService:
             provider_id=provider.provider_id,
             model_id=provider.model_id,
             segments=tuple(all_segments),
+            word_timestamps_included=include_word_timestamps,
         )
         publication = LocalTranscriptionService.publish(
             transcript,

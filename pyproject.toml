@@ -47,6 +47,7 @@ ai-video-dbd-trivia-editor = "ai_video_production.dbd_trivia_editor:main"
 ai-video-dbd-training-studio = "ai_video_production.dbd_training_studio:main"
 ai-video-dbd-kamigame-collect = "ai_video_production.dbd_kamigame_cli:main"
 ai-video-faster-whisper-evidence = "ai_video_production.faster_whisper_reconciliation_cli:main"
+ai-video-speech-cues = "ai_video_production.speech_cue_cli:main"
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
 asr = ["faster-whisper>=1.2.1,<2"]
@@ -69,4 +70,4 @@ testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.setuptools.package-data]
-ai_video_production = ["schema_resources/*.json", "workflow_resources/*.json"]
+ai_video_production = ["schema_resources/*.json", "workflow_resources/*.json", "profile_resources/*.json"]

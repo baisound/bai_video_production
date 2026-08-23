@@ -71,7 +71,7 @@ def make_port(provider, root: Path) -> Task036LocalTranscriptionPort:
     return Task036LocalTranscriptionPort(provider, output, store, JOB_ID)
 
 
-def process_execute(source: str, root: str, marker: str, result_queue) -> None:
+def process_execute(source: str, root: str, marker: str, admission_barrier, result_queue) -> None:
     provider = ProcessProvider(Path(marker))
     store = SQLiteProductStore(
         Path(root) / "product.sqlite3", require_existing=True, required_job_id=JOB_ID,
@@ -80,6 +80,7 @@ def process_execute(source: str, root: str, marker: str, result_queue) -> None:
         provider, Path(root) / "transcription", store, JOB_ID,
     )
     try:
+        admission_barrier.wait(10)
         execute(port, Path(source))
         result_queue.put("COMPLETED")
     except ProductError as exc:
@@ -183,12 +184,17 @@ def test_cross_instance_admission_executes_provider_exactly_once(tmp_path: Path)
 def test_cross_process_admission_executes_provider_exactly_once(tmp_path: Path) -> None:
     source = tmp_path / "canonical.mp4"
     source.write_bytes(b"canonical media")
-    make_port(FakeProvider(), tmp_path)
+    seed_port = make_port(FakeProvider(), tmp_path)
+    seed_port.store.close()
     marker = tmp_path / "provider-calls.txt"
     context = multiprocessing.get_context("spawn")
+    admission_barrier = context.Barrier(2)
     results = context.Queue()
     processes = [
-        context.Process(target=process_execute, args=(str(source), str(tmp_path), str(marker), results))
+        context.Process(
+            target=process_execute,
+            args=(str(source), str(tmp_path), str(marker), admission_barrier, results),
+        )
         for _ in range(2)
     ]
     for process in processes:

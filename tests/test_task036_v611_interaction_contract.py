@@ -134,3 +134,26 @@ def test_media_controls_fail_closed_after_the_single_source_stage() -> None:
         "/^sha256:[0-9a-f]{64}$/",
     ):
         assert marker in HTML
+
+
+def test_recommended_transcription_controls_use_one_local_safe_route() -> None:
+    for marker in (
+        "let transcriptionInFlight=false",
+        "function transcriptionIdentity(result)",
+        "async function runLocalTranscription()",
+        "workflow.next_recommended_action!=='transcription.start'",
+        "無償ローカルFasterWhisper",
+        "モデルの自動ダウンロード・有償Provider・Cloudは使用しません",
+        "call(recovery?'recover_local_transcription':'run_local_transcription',{confirmation_id:prepared.confirmation_id})",
+        "prepare_local_transcription_recovery",
+        "cancel_local_transcription",
+        "result?.status!=='TRANSCRIBED'",
+        "result.provider_execution_mode!=='LOCAL'",
+        "result.transcript_text_exposed!==false",
+        "button.setAttribute('aria-busy','true')",
+        "action.disabled=transcriptionInFlight||!workflow.next_recommended_action",
+        "if(next==='transcription.start'){await runLocalTranscription();return}",
+    ):
+        assert marker in HTML
+    assert "run_local_transcription',{model" not in HTML
+    assert "allow_model_download" not in HTML

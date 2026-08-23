@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from threading import Event, Thread
 
 import pytest
 
@@ -11,7 +12,7 @@ from ai_video_production.desktop_media_workflow import IngestedMediaIdentity
 from ai_video_production.errors import ProductError
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_native_dialog import Task036NativeDialogService
-from ai_video_production.task036_pre_edit_runtime import Task036PreEditRuntime
+from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome, Task036PreEditRuntime
 from ai_video_production.task036_shell_ui import Task036ShellBridge
 
 
@@ -39,22 +40,24 @@ class IngestPort:
 
     def ingest_local_media(self, source_path: Path):
         self.paths.append(source_path)
-        return IngestedMediaIdentity("ASSET-00000000000000000000000000", sha("a"))
+        return IngestedMediaIdentity("ASSET-00000000000000000000000000", sha("a"), source_path)
 
 
 class TranscriptionPort:
     def __init__(self):
         self.calls: list[tuple[Path, str]] = []
 
-    def transcribe_local_media(self, *, source_path: Path, source_asset_id: str):
+    def transcribe_local_media(self, *, project_id: str, source_path: Path, source_asset_id: str, source_asset_sha256: str):
         self.calls.append((source_path, source_asset_id))
-        return TranscriptManifest(
-            source_asset_id,
-            "ja",
-            "faster-whisper",
-            "local-cached-model",
-            (TranscriptSegment("seg-000001", 0, 1_000_000, "hello"),),
+        return LocalTranscriptionOutcome(
+            TranscriptManifest(
+                source_asset_id, "ja", "faster-whisper", "local-cached-model",
+                (TranscriptSegment("seg-000001", 0, 1_000_000, "hello"),),
+            ), True,
         )
+
+    def recover_local_media(self, **kwargs):
+        raise AssertionError("recovery must not execute")
 
 
 class CutPort:
@@ -96,6 +99,11 @@ def make_runtime(tmp_path: Path):
     return source, runtime, ingest, transcription, cut
 
 
+def run_transcription(bridge: Task036ShellBridge) -> dict:
+    prepared = bridge.prepare_local_transcription({})
+    return bridge.run_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+
+
 def test_bridge_composes_trusted_media_transcript_subtitle_and_cut_route(tmp_path: Path):
     source, runtime, ingest, transcription, cut = make_runtime(tmp_path)
     bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
@@ -112,10 +120,23 @@ def test_bridge_composes_trusted_media_transcript_subtitle_and_cut_route(tmp_pat
     assert ingest_result["host_path_persisted"] is False
     assert bridge.workflow_status()["next_recommended_action"] == "transcription.start"
 
-    transcript_result = bridge.run_local_transcription({})
+    transcript_result = run_transcription(bridge)
+    assert set(transcript_result) == {
+        "task_owner", "operation", "status", "transcript_manifest_sha256",
+        "next_recommended_action", "provider_execution_started",
+        "provider_execution_completed", "provider_execution_mode",
+        "provider_configuration_from_javascript", "transcript_text_exposed",
+        "host_path_exposed", "recovered_from_durable_result",
+    }
+    assert transcript_result["status"] == "TRANSCRIBED"
     assert transcript_result["provider_execution_started"] is True
     assert transcript_result["provider_execution_completed"] is True
     assert transcript_result["provider_execution_mode"] == "LOCAL"
+    assert transcript_result["provider_configuration_from_javascript"] is False
+    assert transcript_result["transcript_text_exposed"] is False
+    assert transcript_result["host_path_exposed"] is False
+    assert "hello" not in json.dumps(transcript_result)
+    assert "editing_session" not in transcript_result
     assert bridge.workflow_status()["next_recommended_action"] == "subtitle.save"
 
     bridge.create_runtime_subtitle_workspace({})
@@ -163,6 +184,60 @@ def test_bridge_rejects_javascript_paths_and_provider_configuration(tmp_path: Pa
     assert transcription.calls == []
 
 
+def test_local_transcription_requires_single_use_python_confirmation(tmp_path: Path):
+    _, runtime, _, transcription, _ = make_runtime(tmp_path)
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+
+    for invalid in ({}, {"confirmation_id": 1}, {"confirmation_id": "unknown"}):
+        with pytest.raises(ProductError):
+            bridge.run_local_transcription(invalid)
+    assert transcription.calls == []
+
+    prepared = bridge.prepare_local_transcription({})
+    cancelled = bridge.cancel_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+    assert cancelled["provider_execution_started"] is False
+    with pytest.raises(ProductError) as consumed:
+        bridge.run_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+    assert consumed.value.code == "ERR_TASK036_TRANSCRIPTION_CONFIRMATION_INVALID"
+    assert transcription.calls == []
+
+
+def test_explicit_recovery_binds_completed_transcript_without_provider_execution(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+
+    class RecoveryPort(TranscriptionPort):
+        recovery_calls = 0
+
+        def recovery_required(self, project_id, source_asset_id, source_asset_sha256):
+            return True
+
+        def recover_local_media(self, *, project_id, source_path, source_asset_id, source_asset_sha256):
+            self.recovery_calls += 1
+            return LocalTranscriptionOutcome(
+                TranscriptManifest(
+                    source_asset_id, "ja", "faster-whisper", "local-cached-model",
+                    (TranscriptSegment("seg-000001", 0, 1_000_000, "private recovered text"),),
+                ),
+                False,
+                True,
+            )
+
+    recovery = RecoveryPort()
+    runtime.transcription_port = recovery
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    assert bridge.workflow_status()["transcription_recovery_required"] is True
+    prepared = bridge.prepare_local_transcription_recovery({})
+    result = bridge.recover_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+
+    assert recovery.calls == []
+    assert recovery.recovery_calls == 1
+    assert result["provider_execution_started"] is False
+    assert result["recovered_from_durable_result"] is True
+    assert result["transcript_text_exposed"] is False
+    assert runtime.coordinator.state.next_recommended_action == "subtitle.save"
+
 def test_bridge_projects_picker_cancel_as_closed_no_effect_envelope(tmp_path: Path):
     _, runtime, ingest, _, _ = make_runtime(tmp_path)
 
@@ -184,6 +259,112 @@ def test_bridge_projects_picker_cancel_as_closed_no_effect_envelope(tmp_path: Pa
     }
     assert ingest.paths == []
     assert runtime.coordinator.state.source_asset_id is None
+
+
+def test_local_transcription_is_single_flight_and_repeated_call_does_not_reexecute(tmp_path: Path):
+    source, runtime, _, _, _ = make_runtime(tmp_path)
+    entered, release = Event(), Event()
+
+    class BlockingTranscriptionPort(TranscriptionPort):
+        def transcribe_local_media(self, *, project_id: str, source_path: Path, source_asset_id: str, source_asset_sha256: str):
+            self.calls.append((source_path, source_asset_id))
+            entered.set()
+            assert release.wait(5)
+            return LocalTranscriptionOutcome(
+                TranscriptManifest(
+                    source_asset_id, "ja", "faster-whisper", "local-cached-model",
+                    (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+                ), True,
+            )
+
+    port = BlockingTranscriptionPort()
+    runtime.transcription_port = port
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    completed: list[dict] = []
+    prepared = bridge.prepare_local_transcription({})
+    worker = Thread(target=lambda: completed.append(bridge.run_local_transcription({"confirmation_id": prepared["confirmation_id"]})))
+    worker.start()
+    assert entered.wait(5)
+    with pytest.raises(ProductError) as parallel:
+        second = bridge.prepare_local_transcription({})
+        bridge.run_local_transcription({"confirmation_id": second["confirmation_id"]})
+    assert parallel.value.code == "ERR_TASK036_TRANSCRIPTION_IN_PROGRESS"
+    assert port.calls == [(source, "ASSET-00000000000000000000000000")]
+    release.set()
+    worker.join(5)
+    assert not worker.is_alive()
+    assert completed[0]["status"] == "TRANSCRIBED"
+    with pytest.raises(ProductError) as repeated:
+        run_transcription(bridge)
+    assert repeated.value.code == "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE"
+    assert len(port.calls) == 1
+
+
+def test_local_transcription_source_drift_after_provider_fails_before_binding(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    entered, release = Event(), Event()
+
+    class BlockingTranscriptionPort(TranscriptionPort):
+        def transcribe_local_media(self, *, project_id: str, source_path: Path, source_asset_id: str, source_asset_sha256: str):
+            self.calls.append((source_path, source_asset_id))
+            entered.set()
+            assert release.wait(5)
+            return LocalTranscriptionOutcome(
+                TranscriptManifest(
+                    source_asset_id, "ja", "faster-whisper", "local-cached-model",
+                    (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+                ), True,
+            )
+
+    port = BlockingTranscriptionPort()
+    runtime.transcription_port = port
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    errors: list[ProductError] = []
+
+    def invoke() -> None:
+        try:
+            run_transcription(bridge)
+        except ProductError as exc:
+            errors.append(exc)
+
+    worker = Thread(target=invoke)
+    worker.start()
+    assert entered.wait(5)
+    runtime.coordinator.bind_source(asset_id="ASSET-11111111111111111111111111", asset_sha256=sha("b"))
+    release.set()
+    worker.join(5)
+    assert not worker.is_alive()
+    assert [error.code for error in errors] == ["ERR_TASK036_TRANSCRIPTION_CONTEXT_STALE"]
+    assert runtime.coordinator.state.transcript_sha256 is None
+    assert runtime.binding.transcript is None
+
+
+def test_bridge_rejects_malformed_private_transcription_result_without_leaking_it(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+
+    class InvalidRuntime:
+        coordinator = runtime.coordinator
+
+        def run_local_transcription(self, confirmation_id):
+            return {
+                "task_owner": "TASK-036",
+                "operation": "TRANSCRIPT_RESULT_BIND",
+                "transcript_manifest_sha256": "C:/private/transcript.json",
+                "next_recommended_action": "subtitle.save",
+                "provider_execution_started": True,
+                "provider_execution_completed": True,
+                "provider_execution_mode": "LOCAL",
+                "provider_configuration_from_javascript": False,
+                "private_text": "do not expose",
+            }
+
+    invalid_runtime = InvalidRuntime()
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=invalid_runtime)
+    with pytest.raises(ProductError) as invalid:
+        bridge.run_local_transcription({"confirmation_id": "confirm"})
+    assert invalid.value.code == "ERR_TASK036_TRANSCRIPTION_RESULT_INVALID"
 
 
 def test_trusted_factory_binds_post_review_runtime_after_cut_promotion(tmp_path: Path):
@@ -212,7 +393,7 @@ def test_trusted_factory_binds_post_review_runtime_after_cut_promotion(tmp_path:
         workflow_runtime_factory=factory,
     )
     bridge.choose_and_ingest_media()
-    bridge.run_local_transcription()
+    run_transcription(bridge)
     bridge.create_runtime_subtitle_workspace()
     bridge.generate_runtime_cut_candidates()
 

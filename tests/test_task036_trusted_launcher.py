@@ -4,12 +4,14 @@ import json
 import gc
 from pathlib import Path
 import sqlite3
+import subprocess
 from threading import Event, Thread
 from time import monotonic, sleep
 
 import pytest
 
 from ai_video_production.errors import ProductError
+from ai_video_production.faster_whisper_asr import FasterWhisperConfig
 from ai_video_production.ai_connections import (
     AiConnectionProfile,
     AiWorkload,
@@ -51,6 +53,8 @@ from ai_video_production.local_comfy_image_generation_port import LocalComfyText
 from ai_video_production.local_comfy_generation_port import LocalComfyTextToVideoPort
 from ai_video_production.creative_generation_execution_application import LocalGenerationRuntimeReadiness
 from ai_video_production.task036_native_image_vertical_cli import _load_config_scope
+from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
+from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
 
 
 class DialogBackend:
@@ -65,10 +69,33 @@ class DialogBackend:
 
 
 class AsrProvider:
-    config = type("Config", (), {"allow_model_download": False})()
+    provider_id = "faster-whisper"
+    model_id = "cached-local-model"
+    config = FasterWhisperConfig(model="cached-local-model", allow_model_download=False)
 
     def transcribe(self, request):
         raise AssertionError("provider must not execute during launch")
+
+
+class ExecutingAsrProvider:
+    provider_id = "faster-whisper"
+    model_id = "cached-local-model"
+    config = FasterWhisperConfig(model="cached-local-model", allow_model_download=False)
+
+    def __init__(self):
+        self.calls = 0
+        self.media_bytes = []
+
+    def transcribe(self, request):
+        self.calls += 1
+        self.media_bytes.append(Path(request.media_path).read_bytes())
+        return TranscriptManifest(
+            request.source_asset_id,
+            "ja",
+            self.provider_id,
+            self.model_id,
+            (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+        )
 
 
 class ResolveAdapter:
@@ -246,6 +273,63 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert audio["provider_execution_started"] is False
     assert audio["task026_compile_started"] is False
     assert audio["resolve_mutation_started"] is False
+
+
+def test_trusted_composition_transcribes_managed_asset_and_promotes_fixed_outputs(
+    tmp_path: Path,
+):
+    path, raw = config_document(tmp_path)
+    source = Path(raw["paths"]["analysis_source_path"])
+    subprocess.run(
+        [
+            "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+            "-f", "lavfi", "-i", "color=c=black:s=64x64:r=24:d=0.2",
+            "-c:v", "mpeg4", "-y", str(source),
+        ],
+        check=True,
+    )
+
+    class SelectionBackend(DialogBackend):
+        def choose_open_media(self):
+            return source
+
+    provider = ExecutingAsrProvider()
+    config = Task036LaunchConfiguration.load(path)
+    launch = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(SelectionBackend()),
+        asr_provider=provider,
+        resolve_adapter=ResolveAdapter(),
+    )
+    bridge = launch.bridge
+    ingested = bridge.choose_and_ingest_media({})
+    assert ingested["status"] == "INGESTED"
+    managed = launch.pre_edit_runtime.media.runtime_source_path
+    assert managed is not None
+    assert managed != source
+    assert managed.is_relative_to(config.asset_root)
+    assert managed.read_bytes() == source.read_bytes()
+    source_bytes = source.read_bytes()
+    source.unlink()
+
+    prepared = bridge.prepare_local_transcription({})
+    result = bridge.run_local_transcription(
+        {"confirmation_id": prepared["confirmation_id"]},
+    )
+    assert result["provider_execution_started"] is True
+    assert result["provider_execution_mode"] == "LOCAL"
+    assert provider.calls == 1
+    assert provider.media_bytes == [source_bytes]
+    assert (config.transcription_output / "transcript.json").is_file()
+    assert (config.transcription_output / "subtitles.srt").is_file()
+    assert (config.transcription_output / "transcription-report.json").is_file()
+    analysis_binding = launch.pre_edit_runtime.cut_candidate_port.analysis_audio
+    assert analysis_binding.analysis_audio_for(managed) == config.analysis_audio_path.resolve()
+
+    launch.close()
+    with pytest.raises(ProductError) as closed:
+        bridge.workflow_status({})
+    assert closed.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
     production = launch.bridge.production_snapshot({})
     assert production["available"] is True
     assert production["project_id"] == config.project_id
@@ -758,6 +842,7 @@ def test_pre_manifest_media_ingest_holds_launch_lifetime_until_operation_finishe
             ingested.append(source_path)
             return IngestedMediaIdentity(
                 "ASSET-00000000000000000000000000", "sha256:" + "a" * 64,
+                source_path,
             )
 
     launch.pre_edit_runtime.media.ingest_port = IngestStub()
@@ -790,6 +875,81 @@ def test_pre_manifest_media_ingest_holds_launch_lifetime_until_operation_finishe
         bridge.choose_and_ingest_media({})
     assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
     assert dialog_backend.calls == 1
+    assert launch._product_store is None
+
+
+def test_pre_manifest_transcription_holds_launch_lifetime_and_old_bridge_cannot_reexecute(tmp_path: Path) -> None:
+    path, raw = config_document(tmp_path)
+    source = Path(raw["paths"]["analysis_source_path"])
+
+    class SourceDialogBackend(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    entered, release = Event(), Event()
+
+    class BlockingTranscriptionPort:
+        calls = 0
+
+        def transcribe_local_media(self, *, project_id, source_path, source_asset_id, source_asset_sha256):
+            self.calls += 1
+            assert source_path == source
+            entered.set()
+            assert release.wait(5)
+            return LocalTranscriptionOutcome(
+                TranscriptManifest(
+                    source_asset_id, "ja", "faster-whisper", "local-cached-model",
+                    (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+                ), True,
+            )
+
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(SourceDialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+
+    class IngestStub:
+        def ingest_local_media(self, source_path):
+            return IngestedMediaIdentity(
+                "ASSET-00000000000000000000000000", "sha256:" + "a" * 64,
+                source_path,
+            )
+
+    transcription = BlockingTranscriptionPort()
+    launch.pre_edit_runtime.media.ingest_port = IngestStub()
+    launch.pre_edit_runtime.transcription_port = transcription
+    bridge = launch.bridge
+    assert bridge.choose_and_ingest_media({})["status"] == "INGESTED"
+    completed = []
+    prepared = bridge.prepare_local_transcription({})
+    operation = Thread(target=lambda: completed.append(bridge.run_local_transcription({"confirmation_id": prepared["confirmation_id"]})))
+    operation.start()
+    assert entered.wait(5)
+    lifetime = launch._local_operation_lifetime
+    assert lifetime is not None
+    closing = Thread(target=launch.close)
+    closing.start()
+    deadline = monotonic() + 5
+    while not lifetime._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+        sleep(0.01)
+    assert lifetime._closing  # type: ignore[attr-defined]
+    assert closing.is_alive()
+    with pytest.raises(ProductError) as rejected:
+        bridge.run_local_transcription({"confirmation_id": "blocked-after-close"})
+    assert rejected.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert transcription.calls == 1
+    release.set()
+    operation.join(5)
+    closing.join(5)
+    assert not operation.is_alive() and not closing.is_alive()
+    assert completed[0]["status"] == "TRANSCRIBED"
+    assert completed[0]["transcript_text_exposed"] is False
+    with pytest.raises(ProductError) as after_close:
+        bridge.run_local_transcription({"confirmation_id": "blocked-after-close"})
+    assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert transcription.calls == 1
     assert launch._product_store is None
 
 

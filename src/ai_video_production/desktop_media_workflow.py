@@ -23,12 +23,16 @@ from .task036_native_dialog import Task036NativeDialogService
 class IngestedMediaIdentity:
     asset_id: str
     asset_sha256: str
+    canonical_source_path: Path
 
     def __post_init__(self) -> None:
         if not self.asset_id.strip():
             raise ValueError("asset_id must be non-empty")
         if not self.asset_sha256.startswith("sha256:") or len(self.asset_sha256) != 71:
             raise ValueError("asset_sha256 must be sha256:...")
+        source = self.canonical_source_path
+        if not source.is_absolute() or source.is_symlink() or not source.is_file():
+            raise ValueError("canonical_source_path must be an existing absolute regular non-symlink file")
 
 
 class MediaIngestPort(Protocol):
@@ -92,7 +96,7 @@ class Task036MediaWorkflowFacade:
             def execute(_: ShellCommand) -> Mapping[str, Any]:
                 identity = self.ingest_port.ingest_local_media(source_path)
                 self.coordinator.bind_source(asset_id=identity.asset_id, asset_sha256=identity.asset_sha256)
-                self._runtime_source_path = source_path
+                self._runtime_source_path = identity.canonical_source_path
                 return {
                     "asset_id": identity.asset_id,
                     "asset_sha256": identity.asset_sha256,

@@ -8,10 +8,12 @@ workflow identity changes.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from threading import RLock
 from typing import Any
 
 from .desktop_editing_session import EditingSessionState
 from .desktop_shell import ShellApplicationService, ShellSnapshot
+from .errors import ProductError, ProductErrorCategory
 
 
 _ALWAYS_AVAILABLE = (
@@ -26,6 +28,7 @@ _ALWAYS_AVAILABLE = (
 class DesktopEditingCoordinator:
     shell: ShellApplicationService
     state: EditingSessionState
+    _state_lock: RLock
 
     @classmethod
     def create(
@@ -38,7 +41,7 @@ class DesktopEditingCoordinator:
     ) -> "DesktopEditingCoordinator":
         shell = ShellApplicationService(product_version=product_version, token_factory=token_factory)
         state = EditingSessionState(project_id=project_id)
-        value = cls(shell=shell, state=state)
+        value = cls(shell=shell, state=state, _state_lock=RLock())
         shell.bind_command_policy(value._policy)
         shell.open_project_context(project_id=project_id, display_name=display_name)
         value._sync_recommendation()
@@ -60,10 +63,44 @@ class DesktopEditingCoordinator:
         return self.state
 
     def bind_source(self, *, asset_id: str, asset_sha256: str) -> EditingSessionState:
-        return self._advance(self.state.bind_source(asset_id=asset_id, asset_sha256=asset_sha256), selection_changed=True)
+        with self._state_lock:
+            return self._advance(self.state.bind_source(asset_id=asset_id, asset_sha256=asset_sha256), selection_changed=True)
 
     def bind_transcript(self, transcript_sha256: str) -> EditingSessionState:
-        return self._advance(self.state.bind_transcript(transcript_sha256))
+        with self._state_lock:
+            return self._advance(self.state.bind_transcript(transcript_sha256))
+
+    def bind_transcript_if_current(
+        self,
+        transcript_sha256: str,
+        *,
+        expected_project_id: str,
+        expected_revision: int,
+        expected_source_asset_id: str,
+        expected_source_asset_sha256: str,
+        expected_context_revision: int,
+    ) -> EditingSessionState:
+        """Atomically compare the full pre-edit coordinate and bind Transcript."""
+
+        with self._state_lock:
+            project = self.shell.project
+            state = self.state
+            if (
+                state.project_id != expected_project_id
+                or state.revision != expected_revision
+                or state.source_asset_id != expected_source_asset_id
+                or state.source_asset_sha256 != expected_source_asset_sha256
+                or state.next_recommended_action != "transcription.start"
+                or project is None
+                or project.project_id != expected_project_id
+                or project.context_revision != expected_context_revision
+            ):
+                raise ProductError(
+                    "ERR_TASK036_TRANSCRIPTION_CONTEXT_STALE",
+                    "Editing source changed before Transcript binding",
+                    ProductErrorCategory.STATE,
+                )
+            return self._advance(state.bind_transcript(transcript_sha256))
 
     def bind_subtitle_workspace(self, workspace_sha256: str) -> EditingSessionState:
         return self._advance(self.state.bind_subtitle_workspace(workspace_sha256))

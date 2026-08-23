@@ -6,8 +6,10 @@ from dataclasses import dataclass
 from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
 import hashlib
 import importlib
+import os
 from pathlib import Path
 import re
+import stat
 from typing import Any, Callable, Iterable, Mapping
 
 from .atomic import AtomicJsonWriter
@@ -97,8 +99,20 @@ class FasterWhisperProvider:
         return self._loaded_model
 
     def transcribe(self, request: AsrRequest) -> TranscriptManifest:
-        source = Path(request.media_path).expanduser().resolve()
-        if not source.exists() or not source.is_file():
+        source = Path(request.media_path).expanduser()
+        if not source.is_absolute():
+            source = source.absolute()
+        stable_descriptor = bool(
+            os.name == "posix"
+            and re.fullmatch(r"/proc/[0-9]+/fd/[0-9]+", source.as_posix())
+        )
+        try:
+            observed = os.stat(source, follow_symlinks=True)
+            unsafe_link = source.is_symlink() and not stable_descriptor
+        except OSError:
+            observed = None
+            unsafe_link = True
+        if observed is None or not stat.S_ISREG(observed.st_mode) or unsafe_link:
             raise ProductError(
                 "ERR_ASR_MEDIA_NOT_FOUND", "Input media must be an existing regular file",
                 ProductErrorCategory.VALIDATION,

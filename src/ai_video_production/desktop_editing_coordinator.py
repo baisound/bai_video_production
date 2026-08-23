@@ -129,7 +129,10 @@ class DesktopEditingCoordinator:
         action_admitted = (
             state.next_recommended_action == expected_action
             if require_recommended_action
-            else expected_action in state.available_commands()
+            else (
+                expected_action in state.available_commands()
+                and state.cut_candidate_manifest_sha256 is None
+            )
         )
         if (
             state.project_id != expected_project_id

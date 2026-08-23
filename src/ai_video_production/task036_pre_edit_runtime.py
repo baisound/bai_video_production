@@ -450,7 +450,10 @@ class Task036PreEditRuntime:
         action_admitted = (
             state.next_recommended_action == expected_action
             if expected_action == "subtitle.save"
-            else expected_action in state.available_commands()
+            else (
+                expected_action in state.available_commands()
+                and state.cut_candidate_manifest_sha256 is None
+            )
         )
         if not action_admitted:
             raise ProductError(
@@ -541,6 +544,7 @@ class Task036PreEditRuntime:
                 expected_subtitle_workspace_sha256=coordinate.subtitle_workspace_sha256,
             )
             promoted_workflow_runtime = None
+            workflow_runtime_publisher = None
             if workflow_runtime_factory is not None:
                 promoted_workflow_runtime = workflow_runtime_factory(application)
                 if (
@@ -548,6 +552,9 @@ class Task036PreEditRuntime:
                     or promoted_workflow_runtime.application is not application
                 ):
                     raise ValueError("trusted runtime factory returned a different editing application")
+                workflow_runtime_publisher = getattr(workflow_runtime_factory, "publish", None)
+                if workflow_runtime_publisher is not None and not callable(workflow_runtime_publisher):
+                    raise ValueError("trusted runtime factory publisher is not callable")
             self._require_runtime_source_current(coordinate)
             application = self.binding.commit_cut_candidates_if_current(
                 application,
@@ -558,6 +565,8 @@ class Task036PreEditRuntime:
                 expected_transcript_sha256=coordinate.transcript_sha256,
                 expected_context_revision=coordinate.context_revision,
             )
+            if workflow_runtime_publisher is not None:
+                workflow_runtime_publisher(application, promoted_workflow_runtime)
             self.application = application
             self._promoted_workflow_runtime = promoted_workflow_runtime
             return {

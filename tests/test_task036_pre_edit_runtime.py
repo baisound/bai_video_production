@@ -168,6 +168,12 @@ def test_bridge_composes_trusted_media_transcript_subtitle_and_cut_route(tmp_pat
     assert downstream["next_recommended_action"] == "resolve.assembly.prepare"
     assert downstream["available"] is False
     assert downstream["post_review_runtime_bound"] is False
+    approved_state = runtime.coordinator.state
+    with pytest.raises(ProductError) as repeated:
+        bridge.generate_runtime_cut_candidates({})
+    assert repeated.value.code == "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE"
+    assert runtime.coordinator.state == approved_state
+    assert len(cut.calls) == 1
 
 
 def test_bridge_rejects_javascript_paths_and_provider_configuration(tmp_path: Path):
@@ -597,12 +603,41 @@ def test_cut_factory_failure_never_partially_promotes_and_retry_remains_availabl
     assert runtime.application is None
     assert runtime.promoted_workflow_runtime is None
 
-    bridge._workflow_runtime_factory = lambda application: DownstreamRuntime(application)
+    class PublishingFactory:
+        def __init__(self):
+            self.prepared = []
+            self.published = []
+
+        def __call__(self, application):
+            self.prepared.append(application)
+            if len(self.prepared) == 1:
+                runtime.coordinator.shell.bind_resolve_target(
+                    resolve_project_name="drifted-project",
+                    resolve_timeline_name="drifted-timeline",
+                )
+            return DownstreamRuntime(application)
+
+        def publish(self, application, downstream_runtime):
+            self.published.append((application, downstream_runtime))
+
+    publishing_factory = PublishingFactory()
+    bridge._workflow_runtime_factory = publishing_factory
+    with pytest.raises(ProductError) as drifted:
+        bridge.generate_runtime_cut_candidates({})
+    assert drifted.value.code == "ERR_TASK036_CUT_CONTEXT_STALE"
+    assert publishing_factory.published == []
+    assert runtime.coordinator.state.cut_candidate_manifest_sha256 is None
+    assert runtime.application is None
+    assert runtime.promoted_workflow_runtime is None
+
     result = bridge.generate_runtime_cut_candidates({})
     assert result["status"] == "CUT_CANDIDATES_READY"
     assert runtime.coordinator.state.cut_candidate_manifest_sha256 is not None
     assert bridge._workflow_runtime is runtime.promoted_workflow_runtime
-    assert len(cut.calls) == 3
+    assert publishing_factory.published == [
+        (runtime.application, runtime.promoted_workflow_runtime)
+    ]
+    assert len(cut.calls) == 4
 
 def test_cut_commit_serializes_shell_context_mutation_with_state_cas(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,

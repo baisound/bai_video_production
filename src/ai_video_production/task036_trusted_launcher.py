@@ -905,8 +905,14 @@ def build_trusted_launch(
             handoff_destination=configuration.handoff_destination,
             subtitle_srt_path=_handoff_subtitle_path(configuration.transcription_output / "subtitles.srt"),
         )
-        workflow_runtimes[id(application)] = runtime
         return runtime
+
+    def publish_downstream(application, runtime):
+        """Publish an already-validated runtime only after the Cut state CAS commits."""
+
+        workflow_runtimes[id(application)] = runtime
+
+    setattr(downstream, "publish", publish_downstream)
 
     production_control = Task037ProductionControlApplication(
         project_root=configuration.project_root,

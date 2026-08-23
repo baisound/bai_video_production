@@ -3,7 +3,7 @@
 Date: 2026-08-24
 Task: TASK-036 / P-UX-2L
 Governance: DEV-3 HIGH ASSURANCE
-Status: REVIEW REMEDIATION VERIFIED / INDEPENDENT RE-REVIEW PENDING
+Status: SECOND REVIEW REMEDIATION VERIFIED / FINAL INDEPENDENT RE-REVIEW PENDING
 
 ## 1. Goal
 
@@ -63,13 +63,13 @@ Wrong stage or missing inputs fails before the deterministic constructor/port is
 After construction/generation, the binding asks `DesktopEditingCoordinator` to compare the full expected coordinate under its state lock and advance only when still current.
 
 - Subtitle requires exact `subtitle.save`, then binds the computed workspace SHA-256.
-- Cut requires `cut_candidates.generate` to be admitted by the canonical state command set, preserving the optional Subtitle route, plus exact source/Transcript binding before the generated manifest SHA-256 is bound.
+- Cut requires `cut_candidates.generate` to be admitted by the canonical state command set while no Cut manifest is bound, preserving only the first-generation optional Subtitle route, plus exact source/Transcript binding before the generated manifest SHA-256 is bound. Regeneration after Cut review or downstream progress is rejected before port execution.
 - Project, revision, source, Transcript, context, or stage drift fails closed with a stable TASK-036 stale-context error.
 - A rejected result must not publish `subtitle_workspace`, `application`, or a Cut Candidate state binding.
 
 The generated Cut manifest must independently match the expected source Asset and Transcript identity before promotion.
 
-Cut promotion is prepare/validate/commit: application and optional workflow-runtime factories complete before the final coordinator CAS; only then are state, application, and workflow runtime published. Factory failure or identity mismatch leaves the original coordinate retryable. The same re-entrant lock serializes Shell context mutation with the coordinator CAS.
+Cut promotion is prepare/validate/commit: application and optional workflow-runtime construction complete without cache publication before the final coordinator CAS. The trusted runtime publisher runs only after CAS success; only then are application and workflow runtime published. Factory failure, identity mismatch, or CAS drift leaves no canonical or cached runtime promotion and keeps the original Cut coordinate retryable. The same re-entrant lock serializes Shell context mutation with the coordinator CAS.
 
 ## 5. Bridge and lifetime contract
 
@@ -112,4 +112,5 @@ The Python runtime remains authoritative; the JavaScript gate is defense in dept
 - Diff whitespace check: PASS.
 - Provider/model download, paid Provider, Resolve, render, native GUI, and Owner media execution: not performed.
 - Initial independent review at `56ba4a1`: Tester PASS, Judge Technical GO, Critic Technical NO-GO with C0/H2/M2/L1.
-- All initial Critic findings have corresponding implementation or behavioral-test remediation; independent re-review is pending, so no final independent PASS is claimed by this checkpoint.
+- First re-review at `61446ca`: Tester PASS (201 tests), Critic/Judge Technical NO-GO with C0/H1/M1/L0 for repeat Cut admission and pre-CAS trusted runtime cache publication.
+- Both reopened findings have direct negative-test remediation; final independent re-review is pending, so no final independent PASS is claimed by this checkpoint.

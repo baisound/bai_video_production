@@ -699,7 +699,12 @@ class Task036ShellBridge:
         with self._nle_operation():
             if self._pre_edit_runtime is None:
                 raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-            result = self._pre_edit_runtime.generate_cut_candidates()
+            if self._workflow_runtime_factory is None:
+                result = self._pre_edit_runtime.generate_cut_candidates()
+            else:
+                result = self._pre_edit_runtime.generate_cut_candidates(
+                    workflow_runtime_factory=self._workflow_runtime_factory,
+                )
             digest = result.get("manifest_sha256") if isinstance(result, dict) else None
             candidate_count = result.get("candidate_count") if isinstance(result, dict) else None
             application = self._pre_edit_runtime.application
@@ -724,9 +729,9 @@ class Task036ShellBridge:
                     ProductErrorCategory.DATA_INTEGRITY,
                 )
             if self._workflow_runtime_factory is not None:
-                runtime = self._workflow_runtime_factory(application)
-                if runtime.application is not application:
-                    raise ValueError("trusted runtime factory returned a different editing application")
+                runtime = self._pre_edit_runtime.promoted_workflow_runtime
+                if runtime is None or runtime.application is not application:
+                    raise ValueError("trusted runtime factory result was not committed")
                 self._workflow_runtime = runtime
             return {
                 "task_owner": "TASK-036",

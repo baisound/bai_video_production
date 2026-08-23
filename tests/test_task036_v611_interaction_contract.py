@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
+
+import pytest
 
 from ai_video_production.task036_shell_v611 import HTML
 
@@ -177,3 +181,83 @@ def test_subtitle_and_cut_controls_share_a_fail_closed_single_flight_route() -> 
         "await runDeterministicPreEdit(next)",
     ):
         assert marker in HTML
+
+def test_subtitle_and_cut_single_flight_route_behaves_fail_closed_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the V6.1.1 behavioral contract")
+
+    def javascript_function(name: str) -> str:
+        match = re.search(
+            rf"(?:async )?function {re.escape(name)}\([^\r\n]+",
+            HTML,
+        )
+        assert match is not None
+        return match.group(0)
+
+    identity = javascript_function("deterministicPreEditIdentity")
+    runner = javascript_function("runDeterministicPreEdit")
+    script = f"""
+const assert=require('node:assert/strict');
+const calls=[];
+const notifications=[];
+const buttons={{
+  workflowActionButton:{{disabled:false,attrs:new Map(),setAttribute(k,v){{this.attrs.set(k,v)}},removeAttribute(k){{this.attrs.delete(k)}}}},
+  homeWorkflowButton:{{disabled:false,attrs:new Map(),setAttribute(k,v){{this.attrs.set(k,v)}},removeAttribute(k){{this.attrs.delete(k)}}}},
+}};
+function $(id){{return buttons[id]}}
+function notify(message,isError=false){{notifications.push({{message,isError}})}}
+let refreshCount=0;
+async function refreshShell(){{refreshCount+=1}}
+let workflowAction='subtitle.save';
+let releaseSubtitle;
+const subtitleGate=new Promise(resolve=>{{releaseSubtitle=resolve}});
+let cutResult={{status:'INVALID'}};
+async function call(method){{
+  calls.push(method);
+  if(method==='workflow_status')return {{available:true,next_recommended_action:workflowAction}};
+  if(method==='create_runtime_subtitle_workspace'){{
+    await subtitleGate;
+    return {{status:'SUBTITLE_READY',subtitle_workspace_sha256:'sha256:'+'a'.repeat(64),cue_count:2,next_recommended_action:'cut_candidates.generate',provider_execution_started:false,host_path_exposed:false,transcript_text_exposed:false}};
+  }}
+  if(method==='generate_runtime_cut_candidates')return cutResult;
+  throw new Error('unexpected method '+method);
+}}
+let transcriptionInFlight=false;
+let preEditStageInFlight=false;
+{identity}
+{runner}
+(async()=>{{
+  const first=runDeterministicPreEdit('subtitle.save');
+  const second=runDeterministicPreEdit('subtitle.save');
+  assert.equal(buttons.workflowActionButton.attrs.get('aria-busy'),'true');
+  assert.equal(buttons.homeWorkflowButton.attrs.get('aria-busy'),'true');
+  releaseSubtitle();
+  await Promise.all([first,second]);
+  assert.equal(calls.filter(method=>method==='create_runtime_subtitle_workspace').length,1);
+  assert.equal(refreshCount,1);
+  assert.equal(buttons.workflowActionButton.attrs.has('aria-busy'),false);
+  assert.equal(buttons.homeWorkflowButton.attrs.has('aria-busy'),false);
+
+  workflowAction='cut_candidates.generate';
+  await runDeterministicPreEdit('subtitle.save');
+  assert.equal(calls.filter(method=>method==='create_runtime_subtitle_workspace').length,1);
+  assert.equal(notifications.at(-1).isError,true);
+  assert.equal(refreshCount,2);
+
+  await runDeterministicPreEdit('cut_candidates.generate');
+  assert.equal(calls.filter(method=>method==='generate_runtime_cut_candidates').length,1);
+  assert.equal(notifications.at(-1).isError,true);
+  assert.equal(refreshCount,3);
+  console.log('OK');
+}})().catch(error=>{{console.error(error);process.exitCode=1}});
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"

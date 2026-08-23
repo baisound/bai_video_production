@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import secrets
 from threading import Lock
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 from .cut_candidates import CutCandidateManifest
 from .desktop_editing_application import Task036EditingApplication
@@ -94,6 +94,7 @@ class _PreEditCoordinate:
     source_asset_sha256: str
     source_path: Path
     transcript_sha256: str
+    subtitle_workspace_sha256: str | None
     context_revision: int
     transcript: TranscriptManifest
 
@@ -119,6 +120,7 @@ class Task036PreEditRuntime:
     media: Task036MediaWorkflowFacade = field(init=False)
     binding: Task036PreEditBinding = field(init=False)
     application: Task036EditingApplication | None = field(default=None, init=False)
+    _promoted_workflow_runtime: Any | None = field(default=None, init=False, repr=False)
     _transcription_lock: Lock = field(default_factory=Lock, init=False, repr=False)
     _pre_edit_stage_lock: Lock = field(default_factory=Lock, init=False, repr=False)
     _confirmation_lock: Lock = field(default_factory=Lock, init=False, repr=False)
@@ -445,7 +447,12 @@ class Task036PreEditRuntime:
                 "Pre-edit stage requires the trusted source and Transcript objects",
                 ProductErrorCategory.STATE,
             )
-        if state.next_recommended_action != expected_action:
+        action_admitted = (
+            state.next_recommended_action == expected_action
+            if expected_action == "subtitle.save"
+            else expected_action in state.available_commands()
+        )
+        if not action_admitted:
             raise ProductError(
                 "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE",
                 "Pre-edit operation is not available in the current editing stage",
@@ -469,6 +476,7 @@ class Task036PreEditRuntime:
             state.source_asset_sha256,
             source_path,
             transcript_sha,
+            state.subtitle_workspace_sha256,
             project.context_revision,
             transcript,
         )
@@ -504,7 +512,15 @@ class Task036PreEditRuntime:
         finally:
             self._pre_edit_stage_lock.release()
 
-    def generate_cut_candidates(self) -> dict[str, Any]:
+    @property
+    def promoted_workflow_runtime(self) -> Any | None:
+        return self._promoted_workflow_runtime
+
+    def generate_cut_candidates(
+        self,
+        *,
+        workflow_runtime_factory: Callable[[Task036EditingApplication], Any] | None = None,
+    ) -> dict[str, Any]:
         if not self._pre_edit_stage_lock.acquire(blocking=False):
             raise ProductError(
                 "ERR_TASK036_PRE_EDIT_STAGE_IN_PROGRESS",
@@ -518,8 +534,23 @@ class Task036PreEditRuntime:
                 transcript=coordinate.transcript,
             )
             self._require_runtime_source_current(coordinate)
-            application = self.binding.bind_cut_candidates(
+            application = self.binding.prepare_cut_candidates(
                 manifest,
+                expected_source_asset_id=coordinate.source_asset_id,
+                expected_transcript_sha256=coordinate.transcript_sha256,
+                expected_subtitle_workspace_sha256=coordinate.subtitle_workspace_sha256,
+            )
+            promoted_workflow_runtime = None
+            if workflow_runtime_factory is not None:
+                promoted_workflow_runtime = workflow_runtime_factory(application)
+                if (
+                    promoted_workflow_runtime is None
+                    or promoted_workflow_runtime.application is not application
+                ):
+                    raise ValueError("trusted runtime factory returned a different editing application")
+            self._require_runtime_source_current(coordinate)
+            application = self.binding.commit_cut_candidates_if_current(
+                application,
                 expected_project_id=coordinate.project_id,
                 expected_revision=coordinate.session_revision,
                 expected_source_asset_id=coordinate.source_asset_id,
@@ -528,6 +559,7 @@ class Task036PreEditRuntime:
                 expected_context_revision=coordinate.context_revision,
             )
             self.application = application
+            self._promoted_workflow_runtime = promoted_workflow_runtime
             return {
                 "task_owner": "TASK-036",
                 "operation": "CUT_CANDIDATE_GENERATE_AND_BIND",

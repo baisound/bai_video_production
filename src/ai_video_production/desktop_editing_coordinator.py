@@ -39,9 +39,14 @@ class DesktopEditingCoordinator:
         display_name: str,
         token_factory: Any | None = None,
     ) -> "DesktopEditingCoordinator":
-        shell = ShellApplicationService(product_version=product_version, token_factory=token_factory)
+        state_lock = RLock()
+        shell = ShellApplicationService(
+            product_version=product_version,
+            token_factory=token_factory,
+            context_lock=state_lock,
+        )
         state = EditingSessionState(project_id=project_id)
-        value = cls(shell=shell, state=state, _state_lock=RLock())
+        value = cls(shell=shell, state=state, _state_lock=state_lock)
         shell.bind_command_policy(value._policy)
         shell.open_project_context(project_id=project_id, display_name=display_name)
         value._sync_recommendation()
@@ -117,16 +122,22 @@ class DesktopEditingCoordinator:
         expected_context_revision: int,
         error_code: str,
         error_message: str,
+        require_recommended_action: bool = True,
     ) -> EditingSessionState:
         project = self.shell.project
         state = self.state
+        action_admitted = (
+            state.next_recommended_action == expected_action
+            if require_recommended_action
+            else expected_action in state.available_commands()
+        )
         if (
             state.project_id != expected_project_id
             or state.revision != expected_revision
             or state.source_asset_id != expected_source_asset_id
             or state.source_asset_sha256 != expected_source_asset_sha256
             or state.transcript_sha256 != expected_transcript_sha256
-            or state.next_recommended_action != expected_action
+            or not action_admitted
             or project is None
             or project.project_id != expected_project_id
             or project.context_revision != expected_context_revision
@@ -188,6 +199,7 @@ class DesktopEditingCoordinator:
                 expected_context_revision=expected_context_revision,
                 error_code="ERR_TASK036_CUT_CONTEXT_STALE",
                 error_message="Editing source changed before Cut Candidate binding",
+                require_recommended_action=False,
             )
             return self._advance(state.bind_cut_candidates(manifest_sha256))
 

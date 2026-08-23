@@ -190,6 +190,76 @@ class Task036PreEditBinding:
             "next_recommended_action": self.coordinator.state.next_recommended_action,
         }
 
+    def prepare_cut_candidates(
+        self,
+        manifest: CutCandidateManifest,
+        *,
+        expected_source_asset_id: str,
+        expected_transcript_sha256: str,
+        expected_subtitle_workspace_sha256: str | None,
+    ) -> Task036EditingApplication:
+        """Build and validate the review application without publishing state."""
+
+        if manifest.source_asset_id != expected_source_asset_id:
+            raise ProductError(
+                "ERR_SHELL_CUT_SOURCE_MISMATCH",
+                "Cut Candidate manifest belongs to a different source Asset",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        if (
+            manifest.transcript_manifest_sha256 is None
+            or manifest.transcript_manifest_sha256 != expected_transcript_sha256
+        ):
+            raise ProductError(
+                "ERR_SHELL_CUT_TRANSCRIPT_MISMATCH",
+                "Cut Candidate manifest does not reference the current Transcript",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return Task036EditingApplication.prepare_from_pre_edit_results(
+            coordinator=self.coordinator,
+            cut_manifest=manifest,
+            subtitle_workspace=self.subtitle_workspace,
+            expected_source_asset_id=expected_source_asset_id,
+            expected_transcript_sha256=expected_transcript_sha256,
+            expected_subtitle_workspace_sha256=expected_subtitle_workspace_sha256,
+        )
+
+    def commit_cut_candidates_if_current(
+        self,
+        application: Task036EditingApplication,
+        *,
+        expected_project_id: str,
+        expected_revision: int,
+        expected_source_asset_id: str,
+        expected_source_asset_sha256: str,
+        expected_transcript_sha256: str,
+        expected_context_revision: int,
+    ) -> Task036EditingApplication:
+        """Publish one already-prepared review application after final CAS admission."""
+
+        if application.coordinator is not self.coordinator:
+            raise ValueError("prepared Cut Candidate application uses a different coordinator")
+        manifest = application.cut_manifest
+        if (
+            manifest.source_asset_id != expected_source_asset_id
+            or manifest.transcript_manifest_sha256 != expected_transcript_sha256
+        ):
+            raise ProductError(
+                "ERR_TASK036_CUT_CONTEXT_STALE",
+                "Prepared Cut Candidate application no longer matches the expected coordinate",
+                ProductErrorCategory.STATE,
+            )
+        self.coordinator.bind_cut_candidates_if_current(
+            manifest.to_dict()["manifest_sha256"],
+            expected_project_id=expected_project_id,
+            expected_revision=expected_revision,
+            expected_source_asset_id=expected_source_asset_id,
+            expected_source_asset_sha256=expected_source_asset_sha256,
+            expected_transcript_sha256=expected_transcript_sha256,
+            expected_context_revision=expected_context_revision,
+        )
+        return application
+
     def bind_cut_candidates(
         self,
         manifest: CutCandidateManifest,
@@ -232,32 +302,18 @@ class Task036PreEditBinding:
             or isinstance(expected_context_revision, bool)
         ):
             raise ValueError("Cut Candidate expected coordinate is invalid")
-        if manifest.source_asset_id != expected_source_asset_id:
-            raise ProductError(
-                "ERR_SHELL_CUT_SOURCE_MISMATCH",
-                "Cut Candidate manifest belongs to a different source Asset",
-                ProductErrorCategory.DATA_INTEGRITY,
-            )
-        if (
-            manifest.transcript_manifest_sha256 is None
-            or manifest.transcript_manifest_sha256 != expected_transcript_sha256
-        ):
-            raise ProductError(
-                "ERR_SHELL_CUT_TRANSCRIPT_MISMATCH",
-                "Cut Candidate manifest does not reference the current Transcript",
-                ProductErrorCategory.DATA_INTEGRITY,
-            )
-        self.coordinator.bind_cut_candidates_if_current(
-            manifest.to_dict()["manifest_sha256"],
+        application = self.prepare_cut_candidates(
+            manifest,
+            expected_source_asset_id=expected_source_asset_id,
+            expected_transcript_sha256=expected_transcript_sha256,
+            expected_subtitle_workspace_sha256=self.coordinator.state.subtitle_workspace_sha256,
+        )
+        return self.commit_cut_candidates_if_current(
+            application,
             expected_project_id=expected_project_id,
             expected_revision=expected_revision,
             expected_source_asset_id=expected_source_asset_id,
             expected_source_asset_sha256=expected_source_asset_sha256,
             expected_transcript_sha256=expected_transcript_sha256,
             expected_context_revision=expected_context_revision,
-        )
-        return Task036EditingApplication.from_pre_edit_results(
-            coordinator=self.coordinator,
-            cut_manifest=manifest,
-            subtitle_workspace=self.subtitle_workspace,
         )

@@ -8,6 +8,7 @@ import pytest
 
 from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
 from ai_video_production.desktop_editing_coordinator import DesktopEditingCoordinator
+from ai_video_production.desktop_editing_session import EditingSessionState
 from ai_video_production.desktop_media_workflow import IngestedMediaIdentity
 from ai_video_production.errors import ProductError
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
@@ -524,16 +525,17 @@ def test_cut_stage_is_single_flight_and_transcript_drift_rejects_application(tmp
     assert runtime.coordinator.state.cut_candidate_manifest_sha256 is None
 
 
-def test_cut_generation_rejects_wrong_stage_before_port_call(tmp_path: Path):
+def test_cut_generation_preserves_the_optional_subtitle_route(tmp_path: Path):
     _, runtime, _, _, cut = make_runtime(tmp_path)
     bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
     bridge.choose_and_ingest_media({})
     run_transcription(bridge)
 
-    with pytest.raises(ProductError) as exc:
-        bridge.generate_runtime_cut_candidates({})
-    assert exc.value.code == "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE"
-    assert cut.calls == []
+    result = bridge.generate_runtime_cut_candidates({})
+    assert result["status"] == "CUT_CANDIDATES_READY"
+    assert len(cut.calls) == 1
+    assert runtime.coordinator.state.subtitle_workspace_sha256 is None
+    assert runtime.coordinator.state.next_recommended_action == "edit_plan.approve"
 
 
 def test_subtitle_and_cut_bridges_reject_javascript_inputs_before_runtime(tmp_path: Path):
@@ -549,3 +551,99 @@ def test_subtitle_and_cut_bridges_reject_javascript_inputs_before_runtime(tmp_pa
     assert cut.calls == []
     assert runtime.binding.subtitle_workspace is None
     assert runtime.application is None
+
+
+def test_cut_factory_failure_never_partially_promotes_and_retry_remains_available(
+    tmp_path: Path,
+):
+    _, runtime, _, _, cut = make_runtime(tmp_path)
+
+    class DownstreamRuntime:
+        def __init__(self, application):
+            self.application = application
+
+        def status(self):
+            return {"available": True}
+
+    def failing_factory(application):
+        raise RuntimeError("factory failed")
+
+    bridge = Task036ShellBridge(
+        runtime.coordinator.shell,
+        pre_edit_runtime=runtime,
+        workflow_runtime_factory=failing_factory,
+    )
+    bridge.choose_and_ingest_media({})
+    run_transcription(bridge)
+    bridge.create_runtime_subtitle_workspace({})
+    before = runtime.coordinator.state
+    before_context = runtime.coordinator.shell.project.context_revision
+
+    with pytest.raises(RuntimeError, match="factory failed"):
+        bridge.generate_runtime_cut_candidates({})
+    assert runtime.coordinator.state == before
+    assert runtime.coordinator.shell.project.context_revision == before_context
+    assert runtime.coordinator.state.cut_candidate_manifest_sha256 is None
+    assert runtime.coordinator.state.next_recommended_action == "cut_candidates.generate"
+    assert runtime.application is None
+    assert runtime.promoted_workflow_runtime is None
+    assert bridge._workflow_runtime is None
+
+    bridge._workflow_runtime_factory = lambda application: DownstreamRuntime(object())
+    with pytest.raises(ValueError, match="different editing application"):
+        bridge.generate_runtime_cut_candidates({})
+    assert runtime.coordinator.state == before
+    assert runtime.coordinator.state.cut_candidate_manifest_sha256 is None
+    assert runtime.application is None
+    assert runtime.promoted_workflow_runtime is None
+
+    bridge._workflow_runtime_factory = lambda application: DownstreamRuntime(application)
+    result = bridge.generate_runtime_cut_candidates({})
+    assert result["status"] == "CUT_CANDIDATES_READY"
+    assert runtime.coordinator.state.cut_candidate_manifest_sha256 is not None
+    assert bridge._workflow_runtime is runtime.promoted_workflow_runtime
+    assert len(cut.calls) == 3
+
+def test_cut_commit_serializes_shell_context_mutation_with_state_cas(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    run_transcription(bridge)
+    entered, release = Event(), Event()
+    original = EditingSessionState.bind_cut_candidates
+
+    def blocking_bind(state, manifest_sha256):
+        entered.set()
+        assert release.wait(5)
+        return original(state, manifest_sha256)
+
+    monkeypatch.setattr(EditingSessionState, "bind_cut_candidates", blocking_bind)
+    completed: list[dict] = []
+    worker = Thread(target=lambda: completed.append(bridge.generate_runtime_cut_candidates({})))
+    worker.start()
+    assert entered.wait(5)
+
+    mutation_started, mutation_completed = Event(), Event()
+
+    def mutate_shell_context() -> None:
+        mutation_started.set()
+        runtime.coordinator.shell.bind_resolve_target(
+            resolve_project_name="Sandbox",
+            resolve_timeline_name="Timeline",
+        )
+        mutation_completed.set()
+
+    mutator = Thread(target=mutate_shell_context)
+    mutator.start()
+    assert mutation_started.wait(5)
+    assert not mutation_completed.wait(0.2)
+    release.set()
+    worker.join(5)
+    mutator.join(5)
+    assert not worker.is_alive() and not mutator.is_alive()
+    assert completed[0]["status"] == "CUT_CANDIDATES_READY"
+    assert mutation_completed.is_set()
+    assert runtime.coordinator.state.cut_candidate_manifest_sha256 is not None
+    assert runtime.coordinator.shell.project.resolve_timeline_name == "Timeline"

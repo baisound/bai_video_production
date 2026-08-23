@@ -3,7 +3,7 @@
 Date: 2026-08-24
 Task: TASK-036 / P-UX-2L
 Governance: DEV-3 HIGH ASSURANCE
-Status: IMPLEMENTED / LOCAL VERIFICATION PASS / INDEPENDENT REVIEW PENDING
+Status: REVIEW REMEDIATION VERIFIED / INDEPENDENT RE-REVIEW PENDING
 
 ## 1. Goal
 
@@ -13,8 +13,10 @@ Connect the existing deterministic Subtitle Workspace and Cut Candidate stages t
 
 May modify:
 
+- `desktop_editing_application.py`
 - `desktop_editing_coordinator.py`
 - `desktop_pre_edit_binding.py`
+- `desktop_shell.py`
 - `task036_pre_edit_runtime.py`
 - `task036_shell_ui.py`
 - `task036_shell_v611.py`
@@ -33,7 +35,7 @@ Must not modify:
 
 - `SubtitleWorkspace.from_transcript()` remains the only workspace constructor.
 - `CutCandidateGenerationPort.generate_cut_candidates()` remains the only candidate generator.
-- `Task036EditingApplication.from_pre_edit_results()` remains the Human cut-review application constructor.
+- `Task036EditingApplication.prepare_from_pre_edit_results()` builds a review application from one captured coordinate without publishing state; the compatibility constructor remains available.
 - The Shell stage machine remains authoritative for `subtitle.save` and `cut_candidates.generate` admission.
 - These stages are local deterministic operations and do not gain Provider, paid, download, Resolve, or native mutation authority.
 
@@ -61,11 +63,13 @@ Wrong stage or missing inputs fails before the deterministic constructor/port is
 After construction/generation, the binding asks `DesktopEditingCoordinator` to compare the full expected coordinate under its state lock and advance only when still current.
 
 - Subtitle requires exact `subtitle.save`, then binds the computed workspace SHA-256.
-- Cut requires exact `cut_candidates.generate`, exact source/Transcript binding, then binds the generated manifest SHA-256.
+- Cut requires `cut_candidates.generate` to be admitted by the canonical state command set, preserving the optional Subtitle route, plus exact source/Transcript binding before the generated manifest SHA-256 is bound.
 - Project, revision, source, Transcript, context, or stage drift fails closed with a stable TASK-036 stale-context error.
 - A rejected result must not publish `subtitle_workspace`, `application`, or a Cut Candidate state binding.
 
 The generated Cut manifest must independently match the expected source Asset and Transcript identity before promotion.
+
+Cut promotion is prepare/validate/commit: application and optional workflow-runtime factories complete before the final coordinator CAS; only then are state, application, and workflow runtime published. Factory failure or identity mismatch leaves the original coordinate retryable. The same re-entrant lock serializes Shell context mutation with the coordinator CAS.
 
 ## 5. Bridge and lifetime contract
 
@@ -102,9 +106,10 @@ The Python runtime remains authoritative; the JavaScript gate is defense in dept
 
 ## 8. Local verification
 
-- Python compile check: PASS for the five modified Product modules.
+- Python compile check: PASS for the six modified Product modules.
 - Embedded V6.1.1 JavaScript `node --check`: PASS.
-- Focused and targeted regression: 151 passed.
+- Focused and targeted regression: 175 passed across eight directly impacted test files.
 - Diff whitespace check: PASS.
 - Provider/model download, paid Provider, Resolve, render, native GUI, and Owner media execution: not performed.
-- Independent Tester/Critic/Judge review: pending; no independent PASS is claimed by this implementation checkpoint.
+- Initial independent review at `56ba4a1`: Tester PASS, Judge Technical GO, Critic Technical NO-GO with C0/H2/M2/L1.
+- All initial Critic findings have corresponding implementation or behavioral-test remediation; independent re-review is pending, so no final independent PASS is claimed by this checkpoint.

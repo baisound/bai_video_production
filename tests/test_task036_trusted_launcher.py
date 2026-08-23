@@ -53,6 +53,7 @@ from ai_video_production.local_comfy_image_generation_port import LocalComfyText
 from ai_video_production.local_comfy_generation_port import LocalComfyTextToVideoPort
 from ai_video_production.creative_generation_execution_application import LocalGenerationRuntimeReadiness
 from ai_video_production.task036_native_image_vertical_cli import _load_config_scope
+from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
 
@@ -1659,4 +1660,105 @@ def test_subtitle_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
     with pytest.raises(ProductError) as after_close:
         bridge.create_runtime_subtitle_workspace({})
     assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert launch._product_store is None
+
+def test_cut_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
+    tmp_path: Path,
+) -> None:
+    path, raw = config_document(tmp_path)
+    source = Path(raw["paths"]["analysis_source_path"])
+
+    class SourceDialogBackend(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(SourceDialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+
+    class IngestStub:
+        def ingest_local_media(self, source_path):
+            return IngestedMediaIdentity(
+                "ASSET-00000000000000000000000000",
+                "sha256:" + "a" * 64,
+                source_path,
+            )
+
+    entered, release = Event(), Event()
+
+    class BlockingCutPort:
+        calls = 0
+
+        def generate_cut_candidates(self, *, source_path, transcript):
+            self.calls += 1
+            assert source_path == source
+            entered.set()
+            assert release.wait(5)
+            return CutCandidateManifest(
+                transcript.source_asset_id,
+                "sha256:" + "a" * 64,
+                48_000,
+                2_000_000,
+                "sha256:" + "c" * 64,
+                transcript.to_dict()["manifest_sha256"],
+                (
+                    CutCandidate(
+                        "cut-000001",
+                        CutCandidateKind.SILENCE,
+                        1_000_000,
+                        1_500_000,
+                        90,
+                        ("SILENCE",),
+                    ),
+                ),
+                (),
+            )
+
+    runtime = launch.pre_edit_runtime
+    runtime.media.ingest_port = IngestStub()
+    cut_port = BlockingCutPort()
+    runtime.cut_candidate_port = cut_port
+    bridge = launch.bridge
+    assert bridge.choose_and_ingest_media({})["status"] == "INGESTED"
+    runtime.binding.bind_transcript(
+        TranscriptManifest(
+            "ASSET-00000000000000000000000000",
+            "ja",
+            "faster-whisper",
+            "local-cached-model",
+            (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+        )
+    )
+    completed: list[dict[str, object]] = []
+    operation = Thread(
+        target=lambda: completed.append(bridge.generate_runtime_cut_candidates({}))
+    )
+    operation.start()
+    assert entered.wait(5)
+    lifetime = launch._local_operation_lifetime
+    assert lifetime is not None
+    closing = Thread(target=launch.close)
+    closing.start()
+    deadline = monotonic() + 5
+    while not lifetime._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+        sleep(0.01)
+    assert lifetime._closing  # type: ignore[attr-defined]
+    assert closing.is_alive()
+    with pytest.raises(ProductError) as rejected:
+        bridge.generate_runtime_cut_candidates({})
+    assert rejected.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert cut_port.calls == 1
+    release.set()
+    operation.join(5)
+    closing.join(5)
+    assert not operation.is_alive() and not closing.is_alive()
+    assert completed[0]["status"] == "CUT_CANDIDATES_READY"
+    assert completed[0]["candidate_details_exposed"] is False
+    with pytest.raises(ProductError) as after_close:
+        bridge.generate_runtime_cut_candidates({})
+    assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert cut_port.calls == 1
     assert launch._product_store is None

@@ -67,6 +67,34 @@ class Task036EditingApplication:
         return cls(coordinator, cut_manifest, review, subtitle_workspace)
 
     @classmethod
+    def prepare_from_pre_edit_results(
+        cls,
+        *,
+        coordinator: DesktopEditingCoordinator,
+        cut_manifest: CutCandidateManifest,
+        subtitle_workspace: SubtitleWorkspace | None = None,
+        expected_source_asset_id: str,
+        expected_transcript_sha256: str,
+        expected_subtitle_workspace_sha256: str | None,
+    ) -> "Task036EditingApplication":
+        """Build the review application from one captured coordinate without publishing state."""
+
+        if expected_source_asset_id != cut_manifest.source_asset_id:
+            raise ValueError("pre-edit Cut Candidate source does not match captured source Asset")
+        if (
+            cut_manifest.transcript_manifest_sha256 is None
+            or expected_transcript_sha256 != cut_manifest.transcript_manifest_sha256
+        ):
+            raise ValueError("pre-edit Cut Candidate transcript does not match captured transcript")
+        prepared_subtitle_sha256 = (
+            _workspace_sha256(subtitle_workspace) if subtitle_workspace is not None else None
+        )
+        if prepared_subtitle_sha256 != expected_subtitle_workspace_sha256:
+            raise ValueError("prepared Subtitle Workspace does not match captured editing coordinate")
+        review = Task036ReviewFacade(coordinator.shell, ReviewWorkspaceState(cut_manifest))
+        return cls(coordinator, cut_manifest, review, subtitle_workspace)
+
+    @classmethod
     def from_pre_edit_results(
         cls,
         *,
@@ -99,8 +127,15 @@ class Task036EditingApplication:
                 coordinator.bind_subtitle_workspace(workspace_sha)
             elif coordinator.state.subtitle_workspace_sha256 != workspace_sha:
                 raise ValueError("desktop session already references a different Subtitle Workspace")
-        review = Task036ReviewFacade(coordinator.shell, ReviewWorkspaceState(cut_manifest))
-        return cls(coordinator, cut_manifest, review, subtitle_workspace)
+        current = coordinator.state
+        return cls.prepare_from_pre_edit_results(
+            coordinator=coordinator,
+            cut_manifest=cut_manifest,
+            subtitle_workspace=subtitle_workspace,
+            expected_source_asset_id=current.source_asset_id,
+            expected_transcript_sha256=current.transcript_sha256,
+            expected_subtitle_workspace_sha256=current.subtitle_workspace_sha256,
+        )
 
     @classmethod
     def from_recovered(

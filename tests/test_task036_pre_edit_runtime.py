@@ -400,3 +400,152 @@ def test_trusted_factory_binds_post_review_runtime_after_cut_promotion(tmp_path:
     assert len(created) == 1
     assert created[0].application is runtime.application
     assert bridge.workflow_status()["next_recommended_action"] == "edit_plan.approve"
+
+
+def test_subtitle_and_cut_bridge_results_are_closed_public_envelopes(tmp_path: Path):
+    source, runtime, _, _, _ = make_runtime(tmp_path)
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    run_transcription(bridge)
+
+    subtitle = bridge.create_runtime_subtitle_workspace({})
+    assert set(subtitle) == {
+        "task_owner", "operation", "status", "subtitle_workspace_sha256",
+        "cue_count", "next_recommended_action", "provider_execution_started",
+        "transcript_text_exposed", "host_path_exposed",
+    }
+    assert subtitle["status"] == "SUBTITLE_READY"
+    assert subtitle["transcript_text_exposed"] is False
+    assert subtitle["host_path_exposed"] is False
+
+    cut = bridge.generate_runtime_cut_candidates({})
+    assert set(cut) == {
+        "task_owner", "operation", "status", "manifest_sha256",
+        "candidate_count", "next_recommended_action", "provider_execution_started",
+        "provider_configuration_from_javascript", "candidate_details_exposed",
+        "host_path_exposed",
+    }
+    assert cut["status"] == "CUT_CANDIDATES_READY"
+    assert cut["candidate_details_exposed"] is False
+    assert cut["host_path_exposed"] is False
+    public = json.dumps([subtitle, cut], ensure_ascii=False)
+    assert str(source) not in public
+    assert "hello" not in public
+    assert "editing_session" not in public
+
+
+def test_subtitle_stage_is_single_flight_and_drift_rejects_promotion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    run_transcription(bridge)
+    entered, release = Event(), Event()
+    calls = 0
+    original = runtime.binding.__class__.bind_subtitle_workspace_if_current
+
+    def blocking(binding, workspace, **kwargs):
+        nonlocal calls
+        calls += 1
+        entered.set()
+        assert release.wait(5)
+        return original(binding, workspace, **kwargs)
+
+    monkeypatch.setattr(runtime.binding.__class__, "bind_subtitle_workspace_if_current", blocking)
+    errors: list[ProductError] = []
+
+    def invoke() -> None:
+        try:
+            bridge.create_runtime_subtitle_workspace({})
+        except ProductError as exc:
+            errors.append(exc)
+
+    worker = Thread(target=invoke)
+    worker.start()
+    assert entered.wait(5)
+    with pytest.raises(ProductError) as parallel:
+        bridge.create_runtime_subtitle_workspace({})
+    assert parallel.value.code == "ERR_TASK036_PRE_EDIT_STAGE_IN_PROGRESS"
+    with pytest.raises(ProductError) as cross_action:
+        bridge.generate_runtime_cut_candidates({})
+    assert cross_action.value.code == "ERR_TASK036_PRE_EDIT_STAGE_IN_PROGRESS"
+    runtime.coordinator.bind_source(
+        asset_id="ASSET-11111111111111111111111111",
+        asset_sha256=sha("d"),
+    )
+    release.set()
+    worker.join(5)
+    assert not worker.is_alive()
+    assert calls == 1
+    assert [error.code for error in errors] == ["ERR_TASK036_SUBTITLE_CONTEXT_STALE"]
+    assert runtime.binding.subtitle_workspace is None
+    assert runtime.coordinator.state.subtitle_workspace_sha256 is None
+
+
+def test_cut_stage_is_single_flight_and_transcript_drift_rejects_application(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    run_transcription(bridge)
+    bridge.create_runtime_subtitle_workspace({})
+    entered, release = Event(), Event()
+
+    class BlockingCutPort(CutPort):
+        def generate_cut_candidates(self, *, source_path: Path, transcript: TranscriptManifest):
+            self.calls.append((source_path, transcript))
+            entered.set()
+            assert release.wait(5)
+            return CutPort().generate_cut_candidates(source_path=source_path, transcript=transcript)
+
+    cut = BlockingCutPort()
+    runtime.cut_candidate_port = cut
+    errors: list[ProductError] = []
+
+    def invoke() -> None:
+        try:
+            bridge.generate_runtime_cut_candidates({})
+        except ProductError as exc:
+            errors.append(exc)
+
+    worker = Thread(target=invoke)
+    worker.start()
+    assert entered.wait(5)
+    with pytest.raises(ProductError) as parallel:
+        bridge.generate_runtime_cut_candidates({})
+    assert parallel.value.code == "ERR_TASK036_PRE_EDIT_STAGE_IN_PROGRESS"
+    runtime.coordinator.bind_transcript(sha("d"))
+    release.set()
+    worker.join(5)
+    assert not worker.is_alive()
+    assert len(cut.calls) == 1
+    assert [error.code for error in errors] == ["ERR_TASK036_CUT_CONTEXT_STALE"]
+    assert runtime.application is None
+    assert runtime.coordinator.state.cut_candidate_manifest_sha256 is None
+
+
+def test_cut_generation_rejects_wrong_stage_before_port_call(tmp_path: Path):
+    _, runtime, _, _, cut = make_runtime(tmp_path)
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    run_transcription(bridge)
+
+    with pytest.raises(ProductError) as exc:
+        bridge.generate_runtime_cut_candidates({})
+    assert exc.value.code == "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE"
+    assert cut.calls == []
+
+
+def test_subtitle_and_cut_bridges_reject_javascript_inputs_before_runtime(tmp_path: Path):
+    _, runtime, _, _, cut = make_runtime(tmp_path)
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+
+    with pytest.raises(ProductError) as subtitle:
+        bridge.create_runtime_subtitle_workspace({"transcript_text": "private"})
+    with pytest.raises(ProductError) as candidate:
+        bridge.generate_runtime_cut_candidates({"source_path": "C:/private/source.mp4"})
+    assert subtitle.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    assert candidate.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+    assert cut.calls == []
+    assert runtime.binding.subtitle_workspace is None
+    assert runtime.application is None

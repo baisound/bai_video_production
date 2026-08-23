@@ -151,9 +151,29 @@ def test_recommended_transcription_controls_use_one_local_safe_route() -> None:
         "result.provider_execution_mode!=='LOCAL'",
         "result.transcript_text_exposed!==false",
         "button.setAttribute('aria-busy','true')",
-        "action.disabled=transcriptionInFlight||!workflow.next_recommended_action",
+        "action.disabled=transcriptionInFlight||preEditStageInFlight||!workflow.next_recommended_action",
         "if(next==='transcription.start'){await runLocalTranscription();return}",
     ):
         assert marker in HTML
     assert "run_local_transcription',{model" not in HTML
     assert "allow_model_download" not in HTML
+
+
+def test_subtitle_and_cut_controls_share_a_fail_closed_single_flight_route() -> None:
+    for marker in (
+        "let preEditStageInFlight=false",
+        "function deterministicPreEditIdentity(result,next)",
+        "async function runDeterministicPreEdit(next)",
+        "if(preEditStageInFlight||transcriptionInFlight)return",
+        "preEditStageInFlight=true",
+        "workflow.next_recommended_action!==next",
+        "create_runtime_subtitle_workspace",
+        "generate_runtime_cut_candidates",
+        "result.transcript_text_exposed!==false",
+        "result.candidate_details_exposed!==false",
+        "result.host_path_exposed!==false",
+        "button.setAttribute('aria-busy','true')",
+        "if(next==='subtitle.save'||next==='cut_candidates.generate')",
+        "await runDeterministicPreEdit(next)",
+    ):
+        assert marker in HTML

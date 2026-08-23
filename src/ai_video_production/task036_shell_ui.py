@@ -657,22 +657,89 @@ class Task036ShellBridge:
 
     def create_runtime_subtitle_workspace(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Subtitle Workspace creation")
-        if self._pre_edit_runtime is None:
-            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self._pre_edit_runtime.create_subtitle_workspace()
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.create_subtitle_workspace()
+            digest = result.get("subtitle_workspace_sha256") if isinstance(result, dict) else None
+            cue_count = result.get("cue_count") if isinstance(result, dict) else None
+            if (
+                not isinstance(result, dict)
+                or result.get("task_owner") != "TASK-036"
+                or result.get("operation") != "SUBTITLE_WORKSPACE_CREATE"
+                or not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or not isinstance(cue_count, int)
+                or isinstance(cue_count, bool)
+                or cue_count < 0
+                or result.get("next_recommended_action") != "cut_candidates.generate"
+                or result.get("provider_execution_started") is not False
+            ):
+                raise ProductError(
+                    "ERR_TASK036_SUBTITLE_RESULT_INVALID",
+                    "Subtitle Workspace creation returned an invalid private result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            return {
+                "task_owner": "TASK-036",
+                "operation": "SUBTITLE_WORKSPACE_CREATE",
+                "status": "SUBTITLE_READY",
+                "subtitle_workspace_sha256": digest,
+                "cue_count": cue_count,
+                "next_recommended_action": "cut_candidates.generate",
+                "provider_execution_started": False,
+                "transcript_text_exposed": False,
+                "host_path_exposed": False,
+            }
 
     def generate_runtime_cut_candidates(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Cut Candidate generation")
-        if self._pre_edit_runtime is None:
-            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        result = self._pre_edit_runtime.generate_cut_candidates()
-        application = self._pre_edit_runtime.application
-        if application is not None and self._workflow_runtime_factory is not None:
-            runtime = self._workflow_runtime_factory(application)
-            if runtime.application is not application:
-                raise ValueError("trusted runtime factory returned a different editing application")
-            self._workflow_runtime = runtime
-        return result
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.generate_cut_candidates()
+            digest = result.get("manifest_sha256") if isinstance(result, dict) else None
+            candidate_count = result.get("candidate_count") if isinstance(result, dict) else None
+            application = self._pre_edit_runtime.application
+            if (
+                not isinstance(result, dict)
+                or result.get("task_owner") != "TASK-036"
+                or result.get("operation") != "CUT_CANDIDATE_GENERATE_AND_BIND"
+                or not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or not isinstance(candidate_count, int)
+                or isinstance(candidate_count, bool)
+                or candidate_count < 0
+                or result.get("next_recommended_action") != "edit_plan.approve"
+                or result.get("provider_execution_started") is not False
+                or application is None
+            ):
+                raise ProductError(
+                    "ERR_TASK036_CUT_RESULT_INVALID",
+                    "Cut Candidate generation returned an invalid private result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            if self._workflow_runtime_factory is not None:
+                runtime = self._workflow_runtime_factory(application)
+                if runtime.application is not application:
+                    raise ValueError("trusted runtime factory returned a different editing application")
+                self._workflow_runtime = runtime
+            return {
+                "task_owner": "TASK-036",
+                "operation": "CUT_CANDIDATE_GENERATE_AND_BIND",
+                "status": "CUT_CANDIDATES_READY",
+                "manifest_sha256": digest,
+                "candidate_count": candidate_count,
+                "next_recommended_action": "edit_plan.approve",
+                "provider_execution_started": False,
+                "provider_configuration_from_javascript": False,
+                "candidate_details_exposed": False,
+                "host_path_exposed": False,
+            }
 
     def compile_resolve_assembly(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Resolve assembly compile")

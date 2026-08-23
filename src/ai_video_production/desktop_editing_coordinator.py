@@ -105,8 +105,91 @@ class DesktopEditingCoordinator:
     def bind_subtitle_workspace(self, workspace_sha256: str) -> EditingSessionState:
         return self._advance(self.state.bind_subtitle_workspace(workspace_sha256))
 
+    def _require_current_pre_edit_coordinate(
+        self,
+        *,
+        expected_action: str,
+        expected_project_id: str,
+        expected_revision: int,
+        expected_source_asset_id: str,
+        expected_source_asset_sha256: str,
+        expected_transcript_sha256: str,
+        expected_context_revision: int,
+        error_code: str,
+        error_message: str,
+    ) -> EditingSessionState:
+        project = self.shell.project
+        state = self.state
+        if (
+            state.project_id != expected_project_id
+            or state.revision != expected_revision
+            or state.source_asset_id != expected_source_asset_id
+            or state.source_asset_sha256 != expected_source_asset_sha256
+            or state.transcript_sha256 != expected_transcript_sha256
+            or state.next_recommended_action != expected_action
+            or project is None
+            or project.project_id != expected_project_id
+            or project.context_revision != expected_context_revision
+        ):
+            raise ProductError(error_code, error_message, ProductErrorCategory.STATE)
+        return state
+
+    def bind_subtitle_workspace_if_current(
+        self,
+        workspace_sha256: str,
+        *,
+        expected_project_id: str,
+        expected_revision: int,
+        expected_source_asset_id: str,
+        expected_source_asset_sha256: str,
+        expected_transcript_sha256: str,
+        expected_context_revision: int,
+    ) -> EditingSessionState:
+        """Atomically admit and bind a Subtitle Workspace to the current coordinate."""
+
+        with self._state_lock:
+            state = self._require_current_pre_edit_coordinate(
+                expected_action="subtitle.save",
+                expected_project_id=expected_project_id,
+                expected_revision=expected_revision,
+                expected_source_asset_id=expected_source_asset_id,
+                expected_source_asset_sha256=expected_source_asset_sha256,
+                expected_transcript_sha256=expected_transcript_sha256,
+                expected_context_revision=expected_context_revision,
+                error_code="ERR_TASK036_SUBTITLE_CONTEXT_STALE",
+                error_message="Editing source changed before Subtitle Workspace binding",
+            )
+            return self._advance(state.bind_subtitle_workspace(workspace_sha256))
+
     def bind_cut_candidates(self, manifest_sha256: str) -> EditingSessionState:
         return self._advance(self.state.bind_cut_candidates(manifest_sha256))
+
+    def bind_cut_candidates_if_current(
+        self,
+        manifest_sha256: str,
+        *,
+        expected_project_id: str,
+        expected_revision: int,
+        expected_source_asset_id: str,
+        expected_source_asset_sha256: str,
+        expected_transcript_sha256: str,
+        expected_context_revision: int,
+    ) -> EditingSessionState:
+        """Atomically admit and bind Cut Candidates to the current coordinate."""
+
+        with self._state_lock:
+            state = self._require_current_pre_edit_coordinate(
+                expected_action="cut_candidates.generate",
+                expected_project_id=expected_project_id,
+                expected_revision=expected_revision,
+                expected_source_asset_id=expected_source_asset_id,
+                expected_source_asset_sha256=expected_source_asset_sha256,
+                expected_transcript_sha256=expected_transcript_sha256,
+                expected_context_revision=expected_context_revision,
+                error_code="ERR_TASK036_CUT_CONTEXT_STALE",
+                error_message="Editing source changed before Cut Candidate binding",
+            )
+            return self._advance(state.bind_cut_candidates(manifest_sha256))
 
     def bind_edit_plan(self, *, plan_sha256: str, approved: bool) -> EditingSessionState:
         return self._advance(self.state.bind_edit_plan(plan_sha256=plan_sha256, approved=approved))

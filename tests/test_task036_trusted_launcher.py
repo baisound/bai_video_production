@@ -1581,3 +1581,82 @@ def test_launch_config_rejects_explicit_symlink_path(tmp_path: Path):
     with pytest.raises(ProductError) as exc:
         Task036LaunchConfiguration.load(path)
     assert exc.value.code == "ERR_TASK036_LAUNCH_CONFIG_INVALID"
+
+
+def test_subtitle_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path, raw = config_document(tmp_path)
+    source = Path(raw["paths"]["analysis_source_path"])
+
+    class SourceDialogBackend(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(SourceDialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+
+    class IngestStub:
+        def ingest_local_media(self, source_path):
+            return IngestedMediaIdentity(
+                "ASSET-00000000000000000000000000",
+                "sha256:" + "a" * 64,
+                source_path,
+            )
+
+    runtime = launch.pre_edit_runtime
+    runtime.media.ingest_port = IngestStub()
+    bridge = launch.bridge
+    assert bridge.choose_and_ingest_media({})["status"] == "INGESTED"
+    runtime.binding.bind_transcript(
+        TranscriptManifest(
+            "ASSET-00000000000000000000000000",
+            "ja",
+            "faster-whisper",
+            "local-cached-model",
+            (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+        )
+    )
+    entered, release = Event(), Event()
+    runtime_type = runtime.__class__
+    original = runtime_type.create_subtitle_workspace
+
+    def blocking_create(self):
+        assert self is runtime
+        entered.set()
+        assert release.wait(5)
+        return original(self)
+
+    monkeypatch.setattr(runtime_type, "create_subtitle_workspace", blocking_create)
+    completed: list[dict[str, object]] = []
+    operation = Thread(
+        target=lambda: completed.append(bridge.create_runtime_subtitle_workspace({}))
+    )
+    operation.start()
+    assert entered.wait(5)
+    lifetime = launch._local_operation_lifetime
+    assert lifetime is not None
+    closing = Thread(target=launch.close)
+    closing.start()
+    deadline = monotonic() + 5
+    while not lifetime._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+        sleep(0.01)
+    assert lifetime._closing  # type: ignore[attr-defined]
+    assert closing.is_alive()
+    with pytest.raises(ProductError) as rejected:
+        bridge.create_runtime_subtitle_workspace({})
+    assert rejected.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    release.set()
+    operation.join(5)
+    closing.join(5)
+    assert not operation.is_alive() and not closing.is_alive()
+    assert completed[0]["status"] == "SUBTITLE_READY"
+    assert completed[0]["transcript_text_exposed"] is False
+    with pytest.raises(ProductError) as after_close:
+        bridge.create_runtime_subtitle_workspace({})
+    assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert launch._product_store is None

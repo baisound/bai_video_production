@@ -1,9 +1,9 @@
 # P-UX-2L Subtitle and Cut Controls R0 Detailed Design
 
-Date: 2026-08-24  
-Task: TASK-036 / P-UX-2L  
-Governance: DEV-3 HIGH ASSURANCE  
-Status: IMPLEMENTATION AUTHORIZED
+Date: 2026-08-24
+Task: TASK-036 / P-UX-2L
+Governance: DEV-3 HIGH ASSURANCE
+Status: IMPLEMENTED / LOCAL VERIFICATION PASS / INDEPENDENT REVIEW PENDING
 
 ## 1. Goal
 
@@ -100,3 +100,11 @@ The Python runtime remains authoritative; the JavaScript gate is defense in dept
 - No Provider/native/paid/download/Resolve call is introduced or executed by focused tests.
 - Existing transcription, review promotion, and workflow tests remain green.
 
+## 8. Local verification
+
+- Python compile check: PASS for the five modified Product modules.
+- Embedded V6.1.1 JavaScript `node --check`: PASS.
+- Focused and targeted regression: 151 passed.
+- Diff whitespace check: PASS.
+- Provider/model download, paid Provider, Resolve, render, native GUI, and Owner media execution: not performed.
+- Independent Tester/Critic/Judge review: pending; no independent PASS is claimed by this implementation checkpoint.

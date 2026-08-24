@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_HOSTED_CLOSED / R2_OWNER_PROFILE_MATERIALIZATION_IMPLEMENTED_LOCAL_HOSTING_PENDING`
+- Status: `R0_R1_R2_HOSTED_CLOSED / R3_OWNER_PROFILE_STORE_IMPLEMENTED_LOCAL_HOSTING_PENDING`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -53,7 +53,21 @@ R2はhosted closed済みTASK-019 R1のexact Proposal/Owner Decision Bindingと�
 - history/proposal/binding/baseline/proposed/rollback hashとsource decision IDを固定し、payload/source driftをfail closedにする。
 - Owner Profile Store、Model/Profile Registry、Knowledge Pack、automatic promotion、rollback execution、Timeline/Resolve、external effect authorityはすべてfalseに固定する。
 
-R2はfilesystem/database/DPAPI/Store I/Oを持たない。Human materialization confirmation、durable Owner Profile Store write、Registry登録、Knowledge Pack昇格・rollbackは別の後続Atomic Unitである。
+R2はfilesystem/database/DPAPI/Store I/Oを持たない。target PR #300、closure PR #302、registry revision 66でhosted closedとなった。初回main CIの既存TASK-036 Windows 3.12 multiprocessing試験は固定10秒を超えてFAILしたが、同一commit failed-job再実行で6/6 matrix PASS、Security PASSとなり、shared CHANGELOG reservationを解放済み。
+
+## R3 implementation — explicit-Human-confirmed encrypted Owner Profile Store
+
+R3はR2候補を保存直前にexact sourceから再生成し、別recordの明示Human確認が候補hash、Owner scope、proposed Profile hashへ一致した場合だけ、Owner-local Profile revisionを暗号化appendする。
+
+- Windows Current User DPAPIを既定とし、Owner Decision Storeとは別のentropy domainを使う。
+- disk envelopeはciphertextとintegrity metadataだけを持ち、Owner scope、candidate/confirmation ID、Profile snapshotを平文保存しない。
+- cross-process lock、expected-revision CAS、append-only hash chain、atomic replace、restart read-backを必須にする。
+- 同一Owner scope/Profile identity、previous active Profileと次baselineの連続性、candidate/confirmation/Profile version非replayを検証する。
+- wrong-key、tamper、plaintext、symlink、partial writeをfail closedにする。
+
+R3の確認は1回のencrypted Store appendだけを許可する。runtime scoringへの適用、Model/Profile Registry write、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deployは許可しない。
+
+R3 focused＋直接依存は`36 PASS`、TASK-019/029全体は`61 PASS`、全Product regressionは`3681 PASS / 6 SKIP / 0 FAIL`。compileall、schema mirror、diff-checkもPASSであり、local commit-ready。hostingは次のgateである。
 
 ## Objective
 

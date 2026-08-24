@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-029 R3として、R2 Owner Profile materialization candidateを保存直前にexact再検証し、別recordの明示Human確認がcandidate/Owner scope/Profile hashへ一致した場合だけ、Windows Current User DPAPI既定のencrypted append-only Owner Profile Storeへmaterializeする機能を実装しました。cross-process CAS、hash chain、atomic replace、scope/baseline continuity/replay/tamper/wrong-key/symlink/partial-write fail-closedを備えます。Model/Profile Registry、Knowledge Pack promotion、automatic promotion、runtime scoring apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
 - TASK-029 R2として、hosted closed済みTASK-019 Profile Tuning Proposal/Owner Decision Bindingと最新TASK-029 Owner Decision Historyをexact再検証し、Owner-wide Profile materialization candidateをpure in-memoryで決定的に生成しました。全adjustmentが相異なる明示ADOPTED decisionへbindされたREADY状態のみexact ScoringProfile snapshotを公開し、proposal非READY、REJECTED、history/proposal/binding driftをfail-closedにしました。Owner Profile Store/Model Profile Registry write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。
 
 - TASK-019 R1として、既存R0 Profile Tuning Proposalの全adjustmentをTASK-029 encrypted Owner Decision History内の相異なる明示Human decisionへexact bindし、proposal/history drift、support欠落・重複、REJECTED decision、非READY proposalをfail-closedにしました。latest history再検証を必須とし、Owner Decision Store/DPAPI I/O、Profile materialization/write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。

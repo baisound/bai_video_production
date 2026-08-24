@@ -19,8 +19,8 @@ from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
 
 _MANIFEST_RE = re.compile(r"ART-[0-9A-HJKMNP-TV-Z]{26}")
 _QUARANTINE_RE = re.compile(r"model-quarantine://task054/[0-9A-HJKMNP-TV-Z]{26}")
-_MODEL_REF_RE = re.compile(r"model-cache://task054/[A-Za-z0-9][A-Za-z0-9._-]{0,95}")
-_ADAPTER_REF_RE = re.compile(r"model-quarantine://task054/[0-9A-HJKMNP-TV-Z]{26}/adapter")
+_MODEL_REF_RE = re.compile(r"model://registry/[A-Za-z0-9][A-Za-z0-9._/-]{0,95}")
+_ADAPTER_REF_RE = re.compile(r"model-adapter://registry/[A-Za-z0-9][A-Za-z0-9._/-]{0,95}")
 _PATH_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,239}")
 _STATE = "QUARANTINED_EVALUATED_NO_APPROVAL_OR_ACTIVATION"
 _MAX_FILES = 4096
@@ -103,8 +103,8 @@ class QuarantinedArtifactManifest:
             raise ValueError("base_model_ref is invalid")
         if not isinstance(self.adapter_ref, str) or not _ADAPTER_REF_RE.fullmatch(self.adapter_ref):
             raise ValueError("adapter_ref is invalid")
-        if not self.adapter_ref.startswith(self.quarantine_ref + "/"):
-            raise ValueError("adapter_ref crosses quarantine identity")
+        if self.artifact_manifest_id.removeprefix("ART-") != self.quarantine_ref.rsplit("/", 1)[1]:
+            raise ValueError("artifact manifest crosses quarantine identity")
         for name in (
             "base_model_sha256", "adapter_sha256", "training_dataset_sha256",
             "training_recipe_sha256", "evaluation_report_sha256",

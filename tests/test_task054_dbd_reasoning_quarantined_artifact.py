@@ -69,9 +69,9 @@ def _manifest(**changes: object):
     values: dict[str, object] = {
         "artifact_manifest_id": ART_ID,
         "quarantine_ref": QUARANTINE,
-        "base_model_ref": "model-cache://task054/qwen-base",
+        "base_model_ref": "model://registry/qwen-base",
         "base_model_sha256": SHA_A,
-        "adapter_ref": QUARANTINE + "/adapter",
+        "adapter_ref": "model-adapter://registry/task054/dbd-ja",
         "adapter_sha256": artifact_role_set_sha256(_files(), ArtifactFileRole.ADAPTER),
         "files": _files(),
         "training_dataset_sha256": SHA_C,
@@ -131,7 +131,7 @@ def test_manifest_cannot_approve_or_activate() -> None:
 
 def test_crossed_quarantine_adapter_identity_fails() -> None:
     with pytest.raises(ValueError, match="crosses quarantine"):
-        _manifest(adapter_ref="model-quarantine://task054/01BX5ZZKBKACTAV9WEVGEMMVRZ/adapter")
+        _manifest(quarantine_ref="model-quarantine://task054/01BX5ZZKBKACTAV9WEVGEMMVRZ")
 
 
 def test_failed_tuned_evaluation_cannot_be_sealed() -> None:

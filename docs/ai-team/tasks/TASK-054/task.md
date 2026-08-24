@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R5B_COMMENTARY_PREVIEW_COMPLETE / COMMIT_READY / R5C_NEXT`
+Status: `R5C_MODEL_PANEL_COMPLETE / COMMIT_READY / R5D_NEXT`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -210,6 +210,23 @@ learning are unchanged. TTS and new model execution are not performed: R5C is
 the separate model status/execute/review connection. R5B plus direct TASK-049
 export and R5A focused Evidence is `26 PASS`; TASK-054 plus direct TASK-049 and
 OSS boundary regression is `656 PASS`; compileall, Schema mirror and diff checks pass.
+
+## R5C completion checkpoint
+
+R5C model status/preflight/execute/review presentation is complete and
+commit-ready. It projects the exact current R3A Registry and R3B Route decision,
+showing lifecycle, Japanese/schema compatibility, rights/evaluation Evidence and
+truthful `GPU: 未確認` without persisting another model source. `事前チェック`
+may prove current Binding/Profile/availability compatibility, but every R3B
+decision remains `NOT_AUTHORIZED_R3D_REQUIRED`; the
+`現在の実況・解説を確認` action is structurally disabled and cannot be enabled by
+forging view flags. Review is enabled only from a positive pending-review count.
+No approved model, route unavailable and invalid configuration remain separate
+actionable states. Missing capability or binding-pin mismatch cannot fallback.
+R5C/R3B/R5B focused Evidence is `43 PASS`; TASK-054 plus direct TASK-049 and OSS
+boundary regression is `663 PASS`; compileall and diff checks pass.
+R5D Training Studio Dataset/evaluation view is next. Provider/model execution,
+TTS, Dataset/training and Timeline/Resolve effects remain Human-Gated.
 
 ## Authority boundary
 

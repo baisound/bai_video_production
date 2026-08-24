@@ -1245,3 +1245,123 @@ def test_final_review_readiness_bridge_keeps_missing_external_gates_explicit(mon
     assert result["state"] == "BLOCKED_EXTERNAL_GATES"
     assert [gate["state"] for gate in result["external_gates"]] == ["MISSING"] * 5
     assert result["final_approval_created"] is False
+
+
+def test_subtitle_and_cut_bridges_enter_runtime_guard_before_touching_runtime():
+    service = ShellApplicationService(product_version="0.20.1")
+
+    class CoordinatorStub:
+        pass
+
+    coordinator = CoordinatorStub()
+    coordinator.shell = service
+
+    class PreEditStub:
+        def __init__(self):
+            self.coordinator = coordinator
+            self.application = None
+            self.subtitle_calls = 0
+            self.cut_calls = 0
+
+        def create_subtitle_workspace(self):
+            self.subtitle_calls += 1
+            return {
+                "task_owner": "TASK-036",
+                "operation": "SUBTITLE_WORKSPACE_CREATE",
+                "subtitle_workspace_sha256": "sha256:" + "1" * 64,
+                "cue_count": 1,
+                "next_recommended_action": "cut_candidates.generate",
+                "provider_execution_started": False,
+            }
+
+        def generate_cut_candidates(self):
+            self.cut_calls += 1
+            self.application = object()
+            return {
+                "task_owner": "TASK-036",
+                "operation": "CUT_CANDIDATE_GENERATE_AND_BIND",
+                "manifest_sha256": "sha256:" + "2" * 64,
+                "candidate_count": 1,
+                "next_recommended_action": "edit_plan.approve",
+                "provider_execution_started": False,
+            }
+
+    lease_active = False
+
+    @contextmanager
+    def guard():
+        if not lease_active:
+            raise ProductError(
+                "ERR_TASK036_RUNTIME_LEASE_REQUIRED",
+                "closed",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        yield
+
+    runtime = PreEditStub()
+    bridge = Task036ShellBridge(
+        service,
+        pre_edit_runtime=runtime,
+        nle_runtime_guard=guard,
+    )
+    with pytest.raises(ProductError) as subtitle_closed:
+        bridge.create_runtime_subtitle_workspace({})
+    with pytest.raises(ProductError) as cut_closed:
+        bridge.generate_runtime_cut_candidates({})
+    assert subtitle_closed.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert cut_closed.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert runtime.subtitle_calls == 0
+    assert runtime.cut_calls == 0
+
+    lease_active = True
+    subtitle = bridge.create_runtime_subtitle_workspace({})
+    cut = bridge.generate_runtime_cut_candidates({})
+    assert subtitle["status"] == "SUBTITLE_READY"
+    assert cut["status"] == "CUT_CANDIDATES_READY"
+    assert runtime.subtitle_calls == 1
+    assert runtime.cut_calls == 1
+
+
+def test_subtitle_and_cut_bridges_reject_malformed_private_results():
+    service = ShellApplicationService(product_version="0.20.1")
+
+    class CoordinatorStub:
+        pass
+
+    coordinator = CoordinatorStub()
+    coordinator.shell = service
+
+    class InvalidPreEditStub:
+        def __init__(self):
+            self.coordinator = coordinator
+            self.application = object()
+
+        def create_subtitle_workspace(self):
+            return {
+                "task_owner": "TASK-036",
+                "operation": "SUBTITLE_WORKSPACE_CREATE",
+                "subtitle_workspace_sha256": "C:/private/subtitle.json",
+                "cue_count": 1,
+                "next_recommended_action": "cut_candidates.generate",
+                "provider_execution_started": False,
+                "private_text": "must not escape",
+            }
+
+        def generate_cut_candidates(self):
+            return {
+                "task_owner": "TASK-036",
+                "operation": "CUT_CANDIDATE_GENERATE_AND_BIND",
+                "manifest_sha256": "sha256:" + "2" * 64,
+                "candidate_count": True,
+                "next_recommended_action": "edit_plan.approve",
+                "provider_execution_started": False,
+                "private_path": "C:/private/source.mp4",
+            }
+
+    bridge = Task036ShellBridge(service, pre_edit_runtime=InvalidPreEditStub())
+    with pytest.raises(ProductError) as subtitle:
+        bridge.create_runtime_subtitle_workspace({})
+    with pytest.raises(ProductError) as cut:
+        bridge.generate_runtime_cut_candidates({})
+    assert subtitle.value.code == "ERR_TASK036_SUBTITLE_RESULT_INVALID"
+    assert cut.value.code == "ERR_TASK036_CUT_RESULT_INVALID"

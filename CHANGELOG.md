@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-029 R1として、R0のREADY_FOR_HUMAN_REVIEW Candidateに対する明示Human ADOPT/REJECTを、Windows Current User DPAPI既定の暗号化append-only Owner Decision Storeへ接続しました。disk envelopeへOwner scope・Candidate・理由コードを平文保存せず、CAS、chain/replay/scope、restart read-back、wrong-key/tamper/symlink/power-lossをfail-closedにしました。Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、plaintext export、physical delete、Timeline/Resolve、Release/Deploy権限は付与しません。
+
 - TASK-029 R0として、TASK-055のadmitted Human Edit Evidenceをbody-freeなcanonical Human Action Evidenceへ接続し、do-not-learn、Undo、後工程再修正、Safety/Rights、UNKNOWN/STALE/REVOKEDをfail-closedに分離し、複数記録とquality/rework/time/QA/Human acceptance/sample confidenceの6軸からOwner Decision Candidateを決定的に生成しました。filesystem/database/network/media/provider I/O、Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、Edit Plan/Timeline/Resolve、Release/Deploy権限は付与しません。
 
 - TASK-056 R1として、既存P-UX-2Kローカル文字起こしのword timingからProject固定のtext-free音声キューを生成・表示し、1件ごとのHuman ACCEPT/REJECTをprepare/confirm/apply/cancel、immutable原子的保存、再起動read-backへ接続しました。confirmation token・Transcript本文・host pathは保存せず、元の検出EvidenceとCONFIRMED_ONLY sidecarを変更せず、Timeline/Resolve/auto-apply、model download、paid/cloud、Release/Deploy権限は付与しません。

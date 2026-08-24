@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_CANONICAL_EVIDENCE_DECISION_BOUNDARY_IMPLEMENTED_LOCAL / HOSTING_PENDING`
+- Status: `R1_ENCRYPTED_OWNER_DECISION_STORE_IMPLEMENTED_LOCAL / HOSTING_PENDING`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -34,9 +34,13 @@ R0はfilesystem/database Storeを作らない。Owner Decision Storeのencrypted
 persistence、Human adoption、Owner-wide Profile、TASK-019 bridge、Cloud、Knowledge Packは
 後続のbounded Atomic Unitである。
 
-Local Evidenceはfocused `16 PASS`、TASK-055/TASK-019/OSS直接回帰
-`47 PASS`、full repository `3644 PASS / 5 SKIP / 0 FAIL`、compileall、
-Schema mirrorおよびdiff-check PASS。hosted checksとshared CHANGELOG transactionは未実施。
+R0はPR #286でmergeされ、closure PR #288、registry revision 57、post-main CI/Security PASSによりshared CHANGELOG lockを解放済み。
+
+## R1 implementation — encrypted Owner Decision Store
+
+R1は`READY_FOR_HUMAN_REVIEW` Candidateへの明示Human ADOPT/REJECTを、Windows Current User DPAPI既定の暗号化append-only historyへ保存する。cross-process CAS、chain/replay/scope検証、atomic replace、restart read-back、wrong-key/tamper/symlink/power-loss fail-closedを実装する。disk envelopeへOwner scope、Candidate、理由コードを平文保存しない。
+
+R1はOwner Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、plaintext export、physical delete、Timeline/Resolve、external effect authorityを生成しない。retention/purgeはTASK-017、Profile proposalはTASK-019、Profile materializationとPack promotionは後続Unitである。focused R0/R1は`27 PASS`。
 
 ## Objective
 

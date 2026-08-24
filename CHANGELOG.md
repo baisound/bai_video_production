@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-029 R2として、hosted closed済みTASK-019 Profile Tuning Proposal/Owner Decision Bindingと最新TASK-029 Owner Decision Historyをexact再検証し、Owner-wide Profile materialization candidateをpure in-memoryで決定的に生成しました。全adjustmentが相異なる明示ADOPTED decisionへbindされたREADY状態のみexact ScoringProfile snapshotを公開し、proposal非READY、REJECTED、history/proposal/binding driftをfail-closedにしました。Owner Profile Store/Model Profile Registry write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。
+
 - TASK-019 R1として、既存R0 Profile Tuning Proposalの全adjustmentをTASK-029 encrypted Owner Decision History内の相異なる明示Human decisionへexact bindし、proposal/history drift、support欠落・重複、REJECTED decision、非READY proposalをfail-closedにしました。latest history再検証を必須とし、Owner Decision Store/DPAPI I/O、Profile materialization/write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。
 
 - TASK-057として、Windowsでfresh empty snapshot lockへ複数callerが同時進入するとexclusive lock取得前のbyte初期化write/flushが競合しPermissionErrorになるraceを、canonical OS lock取得後のexclusive region内でのみ初期化するよう修正しました。retry、sleep、別lock、workflow緩和を追加せず、CAS、atomic replace、symlink拒否、lock path/release、Provider、media、Timeline/Resolve、Release/Deploy権限は変更しません。

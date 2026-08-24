@@ -78,8 +78,9 @@ automation was attempted.
 ## Regression Evidence
 
 - R7 integration plus R5B-R5E panels: `36 passed in 5.76s`
-- TASK-054 plus direct TASK-049 and OSS boundary:
-  `716 passed in 41.06s`
+- TASK-051 accepted-source gate plus R7 integration: `5 passed in 0.17s`
+- TASK-051 gate, TASK-054, direct TASK-049 and OSS boundary:
+  `717 passed in 41.96s`
 - `git diff --check`: `PASS`
 
 ## Critic / Boundary Review

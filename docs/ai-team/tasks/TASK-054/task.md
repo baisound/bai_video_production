@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R5F_WORKER_LIFECYCLE_COMPLETE / COMMIT_READY / R6_GATE_AUDIT_NEXT`
+Status: `R6A_PROBE_CONTRACT_COMPLETE / COMMIT_READY / REAL_GATE_A_PROBE_NOT_EXECUTED`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -284,6 +284,24 @@ observation remain R7 `NOT_CONFIRMED`. R6 gated-pilot eligibility audit is next;
 model/runtime acquisition, Dataset adoption, training, Provider/paid execution,
 promotion and Product mutation remain Human-Gated.
 
+
+## R6A completion checkpoint
+
+R6A gated environment-probe contract is complete and commit-ready. An exact
+active `HOST_RUNTIME_PROBE_ONLY` binding is required before the first command.
+The fixed shell-free/no-console set observes WSL, Ubuntu Python, bounded GPU
+name/memory/driver and storage, with 15-second and 64-KiB ceilings. The canonical
+report persists only Gate/digest, bounded safe summaries, stable detail codes and
+raw-observation digests in WSL/PYTHON/GPU/STORAGE order; raw output and host paths
+are not persisted. Non-zero, malformed, empty, timed-out or oversized output is
+`BLOCKED_RUNTIME`, never permission to install. Schema/mirror and exact admission
+reject order/status/checksum/authority-state forgery. R6A fixture Evidence is
+`8 PASS`; TASK-054 plus direct TASK-049 and OSS boundary regression is
+`699 PASS`; compileall, schema mirror and diff checks pass. No real host command was executed. The real Gate A probe remains
+`NOT_EXECUTED / NOT_CONFIRMED` because Dataset rights, model license/download,
+runtime/storage/encryption, resource/device ownership and separate download/
+training receipts are not all bound. R6B acquisition/training is parked behind
+those Human Gates.
 
 This checkpoint closes R3C, bounded R4A-R4E-B evidence-contract work and R5A-R5D Operator views.
 It does not run media intake, adopt a Dataset, authorize training or execute inference.

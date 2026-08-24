@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/dbd-reasoning-mode-selection-receipt.schema.json",
+  "title": "DbD Reasoning Mode Selection Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "receipt_id", "workspace_id", "previous_mode",
+    "selected_mode", "selected_at", "effect", "training_eligible",
+    "training_authorized", "provider_execution_authorized",
+    "dataset_mutation_authorized", "binding_mutation_authorized", "receipt_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "receipt_id": {"type": "string", "pattern": "^dbd-mode-selection-[0-9a-f]{32}$"},
+    "workspace_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "previous_mode": {
+      "oneOf": [
+        {"enum": ["PREVIEW_NO_LEARNING", "LEARNING"]},
+        {"type": "null"}
+      ]
+    },
+    "selected_mode": {"enum": ["PREVIEW_NO_LEARNING", "LEARNING"]},
+    "selected_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{3}Z$"},
+    "effect": {"enum": ["PREVIEW_ISOLATED", "LEARNING_PREPARATION_ONLY"]},
+    "training_eligible": {"type": "boolean"},
+    "training_authorized": {"const": false},
+    "provider_execution_authorized": {"const": false},
+    "dataset_mutation_authorized": {"const": false},
+    "binding_mutation_authorized": {"const": false},
+    "receipt_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"selected_mode": {"const": "PREVIEW_NO_LEARNING"}}},
+      "then": {
+        "properties": {
+          "training_eligible": {"const": false},
+          "effect": {"const": "PREVIEW_ISOLATED"}
+        }
+      },
+      "else": {
+        "properties": {
+          "training_eligible": {"const": true},
+          "effect": {"const": "LEARNING_PREPARATION_ONLY"}
+        }
+      }
+    }
+  ]
+}

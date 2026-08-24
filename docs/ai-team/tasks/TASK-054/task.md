@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R4E_B_PROMOTION_CANDIDATE_COMPLETE / COMMIT_READY / OWNER_PROMOTION_HUMAN_GATED`
+Status: `R5A_MODE_SELECTOR_COMPLETE / COMMIT_READY / R5B_NEXT`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -175,10 +175,27 @@ style score, sufficient agreement and PASS R4D can produce
 `8 PASS`; R4E-B/R4E-A/R4D focused Evidence is `27 PASS`; TASK-054 plus direct
 TASK-049 and OSS boundary regression is `637 PASS`.
 
+## R5A completion checkpoint
+
+R5A Operator mode selection is complete and commit-ready. The existing
+canonical `ReasoningSessionMode` remains authoritative; the global Japanese
+Training Studio control exposes `確認モード（学習しない）` and `学習モード`
+without creating a parallel mode model. Every explicit selection creates an
+append-only, checksum-bound Workspace receipt. Selection alone fixes training,
+Provider execution, Dataset mutation and Binding mutation authority to false;
+`LEARNING` is preparation eligibility only. The default confirmation mode causes
+no startup write, active background operations block switching, and corrupt,
+tampered, foreign-Workspace or noncanonical receipts fail closed. Raw hashes are
+available only through `詳細`, while the normal view continuously explains the
+learning effect in Japanese. R5A plus R0 focused Evidence is `47 PASS`;
+TASK-054 plus direct TASK-049 and OSS boundary regression is `647 PASS`;
+compileall, Schema mirror and diff checks pass. R5B time-aligned ordinary-video commentary
+preview is next.
+
 ## Authority boundary
 
-This checkpoint closes R3C and bounded R4A-R4E-B evidence-contract work.
-It does not run media intake, adopt a Dataset or authorize training.
+This checkpoint closes R3C, bounded R4A-R4E-B evidence-contract work and R5A mode selection.
+It does not run media intake, adopt a Dataset, authorize training or execute inference.
 R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,
 Timeline adoption, binding approval, Product Activation, release or deployment.
@@ -189,8 +206,8 @@ budget acceptance and tuned-model promotion remain separately Human-Gated.
 
 ## Current decision
 
-R3C fake adapter and the R4A-R4E-B Dataset/evaluation/review evidence contracts are complete and
-commit-ready under the Owner's exact bounded instruction. The tuned model remains
+R3C, the R4A-R4E-B Dataset/evaluation/review evidence contracts and R5A Operator mode control are
+complete and commit-ready under the Owner's exact bounded instruction. The tuned model remains
 after CGEL + compatible Knowledge/RAG and before deterministic Fact/Policy
 validation. R3D and actual review/promotion are Human-Gated; all media intake, Dataset adoption, runtime,
 training, Provider, TTS, Timeline, release and deploy effects remain blocked by

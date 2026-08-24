@@ -103,6 +103,7 @@ from .dbd_training_studio_foundation_ui import (
 )
 from .dbd_training_studio_foundation import resolve_workspace_runtime_profile
 from .errors import ProductError
+from .dbd_reasoning_mode_selector_ui import build_reasoning_mode_selector_panel
 from .dbd_runtime_options import (
     WHISPER_MODEL_OPTIONS_JA, DEVICE_OPTIONS_JA, COMPUTE_OPTIONS_JA,
     display_for_value,
@@ -223,7 +224,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     root.geometry("1440x900")
     root.minsize(1180, 760)
     root.columnconfigure(0, weight=1)
-    root.rowconfigure(1, weight=1)
+    root.rowconfigure(2, weight=1)
 
     header = ttk.Frame(root, padding=(12, 10, 12, 4))
     header.grid(row=0, column=0, sticky="ew")
@@ -241,8 +242,20 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             text="diagnostics/latest.jsonl",
         ).grid(row=1, column=2, sticky="e", padx=(12, 0), pady=(4, 0))
 
+    # Global mode control stays visible across every Training Studio tab. A
+    # selection records intent only; downstream learning and Provider gates
+    # remain separate.
+    background_state = {"active": False}
+    mode_panel = build_reasoning_mode_selector_panel(
+        root,
+        workspace_id=workspace_descriptor.workspace_id,
+        workspace_root=workspace.root,
+        is_operation_active=lambda: bool(background_state["active"]),
+    )
+    mode_panel.grid(row=1, column=0, sticky="ew", padx=12, pady=(4, 4))
+
     notebook = ttk.Notebook(root)
-    notebook.grid(row=1, column=0, sticky="nsew", padx=12, pady=(4, 12))
+    notebook.grid(row=2, column=0, sticky="nsew", padx=12, pady=(4, 12))
 
     intro_tab, runtime_tab, review_tab = build_foundation_tabs(
         notebook,
@@ -251,7 +264,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     )
 
     status = tk.StringVar(value="準備完了")
-    ttk.Label(root, textvariable=status, anchor="w").grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 8))
+    ttk.Label(root, textvariable=status, anchor="w").grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 8))
 
     def show_operation_error(
         title: str,
@@ -288,8 +301,6 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 lines.append(f"... ほか {len(report.errors)-12}件")
         status.set(f"{title}: 登録={report.accepted} 除外={report.rejected}")
         (messagebox.showinfo if report.rejected == 0 else messagebox.showwarning)(title, "\n".join(lines))
-
-    background_state = {"active": False}
 
     def run_background(title: str, fn, on_success, *, progress_queue=None, on_finish=None) -> None:
         """Keep long jobs off Tk; worker threads never call Tk APIs directly."""

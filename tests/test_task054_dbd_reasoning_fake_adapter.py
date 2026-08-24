@@ -145,7 +145,11 @@ def test_success_is_deterministic_quarantined_and_raw_is_not_retained() -> None:
     assert "フック" not in repr(first)
 
 
-@pytest.mark.parametrize("raw", [b"{", b'{"x":1,"x":2}', b"x" * (MAX_RAW_OUTPUT_BYTES + 1)])
+@pytest.mark.parametrize(
+    "raw",
+    [b"{", b'{"x":1,"x":2}', b"x" * (MAX_RAW_OUTPUT_BYTES + 1)],
+    ids=("truncated-json", "duplicate-key", "oversized-output"),
+)
 def test_malformed_duplicate_and_oversized_output_stay_in_r2a_failure(raw: bytes) -> None:
     result = _run(DbDReasoningFakeScenario("malformed", FakeAdapterOutcome.MALFORMED_OUTPUT, raw, 1, 1, 1))
     assert result.error_code == "FAKE_OUTPUT_REJECTED"

@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R5C_MODEL_PANEL_COMPLETE / COMMIT_READY / R5D_NEXT`
+Status: `R5D_DATASET_EVALUATION_VIEW_COMPLETE / COMMIT_READY / R5E_NEXT`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -228,9 +228,26 @@ boundary regression is `663 PASS`; compileall and diff checks pass.
 R5D Training Studio Dataset/evaluation view is next. Provider/model execution,
 TTS, Dataset/training and Timeline/Resolve effects remain Human-Gated.
 
+## R5D completion checkpoint
+
+R5D read-only Dataset/evaluation view is complete and commit-ready. It
+re-admits canonical R4A-R4E-B Evidence and projects split counts, leakage
+status, BASELINE/GENERIC/TUNED metrics, blind-review availability and
+promotion-candidate status without creating another canonical source. TEST is
+permanently target-hidden, non-editable and non-movable from the normal screen.
+Exact manifest, leakage, offline evaluation, presentation and TEST sample-set
+links fail closed when crossed. AVAILABLE stages cannot expose empty evidence,
+and forged Dataset-adoption or model-promotion flags are rejected. The Japanese
+UI keeps `Dataset採用: 不可`, `モデル昇格: Owner判断が必要` and
+`Evidence閲覧専用` visible. Focused R5D/R4A/R4C Evidence is `21 PASS`;
+TASK-054 plus direct TASK-049 and OSS boundary regression is `670 PASS`; compileall and diff checks pass.
+Provider/model execution, actual Dataset adoption, training, promotion,
+Timeline/Resolve mutation, release and deploy remain Human-Gated. R5E
+progress/cancel/error/recovery is next.
+
 ## Authority boundary
 
-This checkpoint closes R3C, bounded R4A-R4E-B evidence-contract work and R5A mode selection.
+This checkpoint closes R3C, bounded R4A-R4E-B evidence-contract work and R5A-R5D Operator views.
 It does not run media intake, adopt a Dataset, authorize training or execute inference.
 R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,

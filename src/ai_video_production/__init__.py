@@ -73,6 +73,15 @@ from .semantic_audio_cues import (
     parse_montage_semantic_audio_cues_projection,
 )
 from .speech_cue_application import SpeechCueApplicationResult, SpeechCueApplicationService
+from .montage_contracts import (
+    MontageContractDocument, MontageContractError,
+    admit_montage_approved_plan, admit_montage_human_edit_evidence,
+    admit_montage_resolve_handoff,
+    admit_montage_proposal_bundle, parse_bvp_montage_skill_input,
+    parse_montage_approved_plan, parse_montage_human_edit_evidence,
+    parse_montage_preference_profile, parse_montage_proposal_bundle,
+    parse_montage_resolve_handoff,
+)
 from .faster_whisper_asr import (
     FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService,
     TranscriptionPublication,
@@ -222,6 +231,13 @@ __all__ = [
     "build_montage_semantic_audio_cues_projection", "load_keyword_profile",
     "parse_montage_semantic_audio_cues_projection",
     "SpeechCueApplicationResult", "SpeechCueApplicationService",
+    "MontageContractDocument", "MontageContractError",
+    "admit_montage_approved_plan", "admit_montage_human_edit_evidence",
+    "admit_montage_resolve_handoff",
+    "admit_montage_proposal_bundle", "parse_bvp_montage_skill_input",
+    "parse_montage_approved_plan", "parse_montage_human_edit_evidence",
+    "parse_montage_preference_profile", "parse_montage_proposal_bundle",
+    "parse_montage_resolve_handoff",
     "FasterWhisperConfig", "FasterWhisperProvider", "LocalTranscriptionService",
     "TranscriptionPublication",
     "ChunkedTranscriptionConfig", "FfmpegAudioChunkExtractor", "ResumableTranscriptionService",

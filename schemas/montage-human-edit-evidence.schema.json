@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/montage-human-edit-evidence.schema.json",
+  "title": "TASK-055 Montage Human Edit Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evidence_version",
+    "task_owner",
+    "source_proposal_sha256",
+    "source_approved_plan_sha256",
+    "placement_id",
+    "style_profile_id",
+    "event_type",
+    "music_anchor_kind",
+    "proposed_target_timeline_frame",
+    "human_review_target_timeline_frame",
+    "final_target_timeline_frame",
+    "disposition",
+    "delta_from_proposal_frames",
+    "delta_from_review_frames",
+    "preset_families",
+    "do_not_learn",
+    "raw_media_included",
+    "absolute_host_path_included",
+    "automatic_learning_promotion_authorized",
+    "automatic_edit_plan_mutation_authorized",
+    "evidence_sha256"
+  ],
+  "properties": {
+    "evidence_version": {
+      "const": "1.0.0"
+    },
+    "task_owner": {
+      "const": "TASK-055"
+    },
+    "placement_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+    },
+    "style_profile_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    },
+    "event_type": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+    },
+    "music_anchor_kind": {
+      "enum": [
+        "BEAT",
+        "DOWNBEAT",
+        "PHRASE_HEAD",
+        "BUILD",
+        "DROP",
+        "BREAKDOWN",
+        "MICRO_PAUSE",
+        "OUTRO"
+      ]
+    },
+    "proposed_target_timeline_frame": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "human_review_target_timeline_frame": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "final_target_timeline_frame": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "disposition": {
+      "enum": [
+        "UNCHANGED",
+        "MOVED",
+        "DELETED"
+      ]
+    },
+    "delta_from_proposal_frames": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "delta_from_review_frames": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "preset_families": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+      }
+    },
+    "do_not_learn": {
+      "type": "boolean"
+    },
+    "raw_media_included": {
+      "const": false
+    },
+    "absolute_host_path_included": {
+      "const": false
+    },
+    "automatic_learning_promotion_authorized": {
+      "const": false
+    },
+    "automatic_edit_plan_mutation_authorized": {
+      "const": false
+    },
+    "evidence_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_proposal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_approved_plan_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+- TASK-029 R2として、hosted closed済みTASK-019 Profile Tuning Proposal/Owner Decision Bindingと最新TASK-029 Owner Decision Historyをexact再検証し、Owner-wide Profile materialization candidateをpure in-memoryで決定的に生成しました。全adjustmentが相異なる明示ADOPTED decisionへbindされたREADY状態のみexact ScoringProfile snapshotを公開し、proposal非READY、REJECTED、history/proposal/binding driftをfail-closedにしました。Owner Profile Store/Model Profile Registry write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。
+
+- TASK-019 R1として、既存R0 Profile Tuning Proposalの全adjustmentをTASK-029 encrypted Owner Decision History内の相異なる明示Human decisionへexact bindし、proposal/history drift、support欠落・重複、REJECTED decision、非READY proposalをfail-closedにしました。latest history再検証を必須とし、Owner Decision Store/DPAPI I/O、Profile materialization/write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。
+
+- TASK-057として、Windowsでfresh empty snapshot lockへ複数callerが同時進入するとexclusive lock取得前のbyte初期化write/flushが競合しPermissionErrorになるraceを、canonical OS lock取得後のexclusive region内でのみ初期化するよう修正しました。retry、sleep、別lock、workflow緩和を追加せず、CAS、atomic replace、symlink拒否、lock path/release、Provider、media、Timeline/Resolve、Release/Deploy権限は変更しません。
+
+- TASK-029 R1として、R0のREADY_FOR_HUMAN_REVIEW Candidateに対する明示Human ADOPT/REJECTを、Windows Current User DPAPI既定の暗号化append-only Owner Decision Storeへ接続しました。disk envelopeへOwner scope・Candidate・理由コードを平文保存せず、CAS、chain/replay/scope、restart read-back、wrong-key/tamper/symlink/power-lossをfail-closedにしました。Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、plaintext export、physical delete、Timeline/Resolve、Release/Deploy権限は付与しません。
+
+- TASK-029 R0として、TASK-055のadmitted Human Edit Evidenceをbody-freeなcanonical Human Action Evidenceへ接続し、do-not-learn、Undo、後工程再修正、Safety/Rights、UNKNOWN/STALE/REVOKEDをfail-closedに分離し、複数記録とquality/rework/time/QA/Human acceptance/sample confidenceの6軸からOwner Decision Candidateを決定的に生成しました。filesystem/database/network/media/provider I/O、Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、Edit Plan/Timeline/Resolve、Release/Deploy権限は付与しません。
+
+- TASK-056 R1として、既存P-UX-2Kローカル文字起こしのword timingからProject固定のtext-free音声キューを生成・表示し、1件ごとのHuman ACCEPT/REJECTをprepare/confirm/apply/cancel、immutable原子的保存、再起動read-backへ接続しました。confirmation token・Transcript本文・host pathは保存せず、元の検出EvidenceとCONFIRMED_ONLY sidecarを変更せず、Timeline/Resolve/auto-apply、model download、paid/cloud、Release/Deploy権限は付与しません。
+
+- TASK-055 R0として、外部bai-davinci-montage-skills mainの6つのMontage契約をbyte-exactでBVPへ収容し、canonical hash、rational FPS、source range、preset allowlist、Proposal・承認Plan・Human Evidence・Resolve handoff lineageをfail-closedで検証するProduct側admissionを追加しました。ProposalはHuman review必須で、Timeline/Resolve/自動学習、Provider/paid/cloud/private media、Release/Deploy権限は付与しません。
+
 - TASK-056 Chase Keyword Cue / Montage Speech Event Bridge: added deterministic speech-cue extraction from FasterWhisper word timestamps, a text-free semantic audio cue sidecar for BAI DaVinci Montage SKILL integration, resumable long-video processing, exact rational FPS mapping, audio-plus-video Evidence double gating, and Human Review / fail-closed boundaries.
 
 - TASK-036 P-UX-2Kとして、V6.1.1のローカル文字起こしをHuman prepare/apply/cancelへ接続し、TASK-003管理Assetのstable bytes、Product Operations CAS、Project固定出力slot、immutable publication setと明示recoveryによりcross-process exact-oneと固定Transcript/SRT/reportの耐障害promotionを実装しました。実FasterWhisper/model download、paid/cloud、Audio authority、Resolve/Export、公開、Release/Deployは引き続き別Gateです。

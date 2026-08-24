@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/montage-approved-plan.schema.json",
+  "title": "TASK-055 Human-approved Montage Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "plan_version",
+    "task_owner",
+    "source_proposal_sha256",
+    "approved_by",
+    "placements",
+    "rejected",
+    "review_do_not_learn_placement_ids",
+    "approval_state",
+    "ready_for_timeline_projection",
+    "automatic_timeline_mutation_authorized",
+    "resolve_write_authorized",
+    "plan_sha256"
+  ],
+  "properties": {
+    "plan_version": {
+      "const": "1.0.0"
+    },
+    "task_owner": {
+      "const": "TASK-055"
+    },
+    "source_proposal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "approved_by": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "placements": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "placement",
+          "proposed_target_timeline_frame",
+          "final_target_timeline_frame",
+          "delta_frames",
+          "accepted_composition_ids"
+        ],
+        "properties": {
+          "placement": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "placement_id",
+              "source_asset_id",
+              "source_rate",
+              "source_start_frame",
+              "source_end_frame_exclusive",
+              "source_anchor_frame",
+              "event_ref",
+              "event_type",
+              "target_music_anchor_id",
+              "target_timeline_frame",
+              "highlight_score_milli",
+              "confidence_milli",
+              "reason_codes"
+            ],
+            "properties": {
+              "placement_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+              },
+              "source_asset_id": {
+                "type": "string",
+                "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+              },
+              "source_rate": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "numerator",
+                  "denominator"
+                ],
+                "properties": {
+                  "numerator": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000
+                  },
+                  "denominator": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000000
+                  }
+                }
+              },
+              "source_start_frame": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "source_end_frame_exclusive": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "source_anchor_frame": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "event_ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+              },
+              "event_type": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+              },
+              "target_music_anchor_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+              },
+              "target_timeline_frame": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "highlight_score_milli": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "confidence_milli": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              },
+              "reason_codes": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 16,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+                }
+              }
+            }
+          },
+          "proposed_target_timeline_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "final_target_timeline_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "delta_frames": {
+            "type": "integer"
+          },
+          "accepted_composition_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+            }
+          }
+        }
+      }
+    },
+    "rejected": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "placement_id",
+          "proposed_target_timeline_frame",
+          "do_not_learn"
+        ],
+        "properties": {
+          "placement_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "proposed_target_timeline_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "do_not_learn": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "review_do_not_learn_placement_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+      }
+    },
+    "approval_state": {
+      "const": "APPROVED"
+    },
+    "ready_for_timeline_projection": {
+      "const": true
+    },
+    "automatic_timeline_mutation_authorized": {
+      "const": false
+    },
+    "resolve_write_authorized": {
+      "const": false
+    },
+    "plan_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

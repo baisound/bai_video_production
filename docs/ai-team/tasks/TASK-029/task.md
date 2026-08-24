@@ -1,7 +1,59 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN`
-- Governance candidate: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
+- Status: `R0_R1_HOSTED_CLOSED / R2_OWNER_PROFILE_MATERIALIZATION_IMPLEMENTED_LOCAL_HOSTING_PENDING`
+- Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
+
+## Owner priority routing — 2026-08-24
+
+The Owner assigned this Task to the current developer lane and moved it ahead of the remaining general Learning & Operations queue. The exact lane order is:
+
+```text
+TASK-055 local lane recovery/integration audit
+-> TASK-056 final BVP integration
+-> TASK-029 Human Edit Learning R0
+-> TASK-019 Profile Auto-Tuner hosting/integration
+```
+
+This routing authorizes bounded local implementation planning and implementation under DEV-4. It does not by itself authorize private production-data ingestion, Cloud telemetry, automatic Owner Profile or Knowledge Pack promotion, Release, Deploy, or Production effects.
+## R0 implementation — canonical Evidence / Decision boundary
+
+R0は、既存Product ownerのadmitted Human Evidenceをbody-freeな
+`HumanActionEvidence`へ正規化し、複数記録と6つの独立評価軸から
+`OwnerDecisionCandidate`を決定的に作るpure contractを実装する。
+
+- TASK-055 Montage Human Edit Evidenceをexact Proposal/Plan/Evidence lineageでadmitする。
+- do-not-learn、即時Undo、後工程再修正を学習対象から除外する。
+- Safety/Rights FAILまたはUNKNOWNをHard Gateとして加重点で相殺しない。
+- UNKNOWN / STALE / REVOKED / sample不足 / context混在 / axis regressionを別状態で保持する。
+- quality、rework、time、QA、Human acceptance、sample confidenceを別軸で保持する。
+- raw media、本文、host path、credentialをrecordへ含めない。
+- Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、Edit Plan/Timeline、
+  Resolve、external effect authorityをすべてfalseに固定する。
+
+R0はfilesystem/database Storeを作らない。Owner Decision Storeのencrypted durable
+persistence、Human adoption、Owner-wide Profile、TASK-019 bridge、Cloud、Knowledge Packは
+後続のbounded Atomic Unitである。
+
+R0はPR #286でmergeされ、closure PR #288、registry revision 57、post-main CI/Security PASSによりshared CHANGELOG lockを解放済み。
+
+## R1 implementation — encrypted Owner Decision Store
+
+R1は`READY_FOR_HUMAN_REVIEW` Candidateへの明示Human ADOPT/REJECTを、Windows Current User DPAPI既定の暗号化append-only historyへ保存する。cross-process CAS、chain/replay/scope検証、atomic replace、restart read-back、wrong-key/tamper/symlink/power-loss fail-closedを実装する。disk envelopeへOwner scope、Candidate、理由コードを平文保存しない。
+
+R1はOwner Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、plaintext export、physical delete、Timeline/Resolve、external effect authorityを生成しない。retention/purgeはTASK-017、Profile proposalはTASK-019、Profile materializationとPack promotionは後続Unitである。focused R0/R1は`27 PASS`。
+
+R1はtarget PR #289、closure PR #291でhosted closedとなり、shared CHANGELOG reservationを解放済み。
+
+## R2 implementation — pure Owner Profile materialization candidate
+
+R2はhosted closed済みTASK-019 R1のexact Proposal/Owner Decision Bindingと、最新TASK-029 Owner Decision Historyを毎回再検証し、immutableな`OwnerProfileMaterializationCandidate`をin-memoryで決定的に生成する。
+
+- 全adjustmentが相異なる明示ADOPTED decisionへexact bindされたREADY状態だけ、提案済み`ScoringProfile` snapshotを公開する。
+- proposal非READYまたはselected REJECTED decisionを別stateに保ち、Profile snapshotを公開しない。
+- history/proposal/binding/baseline/proposed/rollback hashとsource decision IDを固定し、payload/source driftをfail closedにする。
+- Owner Profile Store、Model/Profile Registry、Knowledge Pack、automatic promotion、rollback execution、Timeline/Resolve、external effect authorityはすべてfalseに固定する。
+
+R2はfilesystem/database/DPAPI/Store I/Oを持たない。Human materialization confirmation、durable Owner Profile Store write、Registry登録、Knowledge Pack昇格・rollbackは別の後続Atomic Unitである。
 
 ## Objective
 

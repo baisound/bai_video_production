@@ -969,6 +969,7 @@ class Task036LocalTranscriptionPort:
                         source_asset_id=source_asset_id,
                         language=self.language,
                         timeline_rate=self.timeline_rate,
+                        include_word_timestamps=True,
                     )
                 if (
                     publication.transcript.provider_id != provider_id

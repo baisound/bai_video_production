@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_HOSTED_CLOSED / R4_OWNER_PROFILE_REGISTRY_CANDIDATE_IMPLEMENTED_LOCAL`
+- Status: `R0_R1_R2_R3_R4_HOSTED_CLOSED / R5_OWNER_PROFILE_REGISTRY_STORE_IMPLEMENTED_LOCAL`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -82,6 +82,23 @@ R4はR3 encrypted Owner Profile Historyのlatest revisionを毎回exact再検証
 R4はModel/Profile Registry write、runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy authorityを生成しない。別の明示Human registry confirmationと後続Unitが必要である。
 
 R4 focused＋R2/R3直接依存は`23 PASS`、TASK-019/029 chainは`68 PASS`、最終全Product regressionは`3688 PASS / 6 SKIP / 0 FAIL`。compileall、strict Schema validation、schema mirror、diff-checkもPASS。
+
+## R5 implementation — explicit-Human-confirmed encrypted Owner Profile Registry Store
+
+R5はR4候補とは別の明示Human registry confirmationを必須にし、R3 encrypted Owner Profile StoreとR5 Registry Storeを決定的path順で同時lockした上でsourceを再読込し、R4候補をexact再生成して1回だけ登録する。
+
+- source history revision/hash、source Profile revision hash、Owner scope、candidate/Profile hashをconfirmationへ固定する。
+- destinationはexpected registry revision CAS、append-only hash chain、strict source revision advance、Owner/source store/Profile identity、active Profile baseline continuityを検証する。
+- candidate/confirmation/source Profile revision/Profile version replayを拒否する。
+- Windows Current User DPAPIを既定とし、R1 Decision Store/R3 Owner Profile Storeとは別entropy domainを使う。
+- disk envelopeはciphertextとintegrity metadataだけを持ち、Owner scope、candidate/confirmation ID、Profile snapshot、lineageを平文保存しない。
+- source/destination同一path、symlink、wrong-key、tamper、plaintext、partial writeをfail closedにする。
+
+R5の1 appendはModel/Profile Registryへの登録だけを行う。runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deployは許可しない。
+
+R5 focused＋R4回帰は`14 PASS`、R2-R5直接依存は`30 PASS`、TASK-019/029 chainは`75 PASS`、全Product regressionは`3781 PASS / 6 SKIP / 0 FAIL`。Windows実DPAPI synthetic round-trip、compileall、strict Schema validation、schema mirror、diff-checkもPASS。
+
+R5 Design/Critic/Judge: `owner-profile-registry-store-r5-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。
 
 ## Objective
 

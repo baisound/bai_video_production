@@ -3,7 +3,15 @@
 Date: 2026-08-25
 Task: TASK-036 / P-UX-2L
 Governance: DEV-3 HIGH ASSURANCE
-State: LOCAL TECHNICAL PASS / FRESH MAIN PENDING
+State: LOCAL TECHNICAL PASS / HOSTED PENDING
+
+## Fresh-main checkpoint
+
+- Integrated origin/main: `ed597b8c351ae550016f59fd21fd09f8b45cef6c`.
+- Fresh-main merge: `d442b5b086163dbb19aa4105b3bfaa1ff70f62fe`.
+- Reviewed test blob: `0c00ed72b2d92aaf040d48dc4a2c1b83e931a23d`.
+- Pre-checkpoint exact target-path drift after merge: 0/2; this Evidence update only adds the fresh-main checkpoint.
+- Fresh-main Node boundary: 10/10 PASS; related contracts: 67/67 PASS.
 
 ## Trigger
 

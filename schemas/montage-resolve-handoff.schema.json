@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/montage-resolve-handoff.schema.json",
+  "title": "TASK-055 Resolve Handoff Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "handoff_version",
+    "task_owner",
+    "existing_resolve_assembly_owner",
+    "canonical_timeline_mapping_owner",
+    "source_proposal_sha256",
+    "source_approved_plan_sha256",
+    "source_projection_sha256",
+    "timeline_mapping_sha256",
+    "preset_manifest_sha256",
+    "compositions",
+    "required_native_capability",
+    "native_runtime_capability_status",
+    "runtime_qa_status",
+    "external_write_authorization_required",
+    "resolve_write_authorized",
+    "preset_installation_authorized",
+    "handoff_sha256"
+  ],
+  "properties": {
+    "handoff_version": {
+      "const": "1.0.0"
+    },
+    "task_owner": {
+      "const": "TASK-055"
+    },
+    "existing_resolve_assembly_owner": {
+      "const": "TASK-010"
+    },
+    "canonical_timeline_mapping_owner": {
+      "const": "TASK-022"
+    },
+    "source_proposal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_approved_plan_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_projection_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timeline_mapping_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "preset_manifest_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "compositions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "composition_id",
+          "placement_id",
+          "operations",
+          "complexity_score",
+          "visibility_score"
+        ],
+        "properties": {
+          "composition_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "placement_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "operations": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation_id",
+                "preset_id",
+                "family",
+                "offset_frames",
+                "intensity_milli"
+              ],
+              "properties": {
+                "operation_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+                },
+                "preset_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+                },
+                "family": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+                },
+                "offset_frames": {
+                  "type": "integer",
+                  "minimum": -6000,
+                  "maximum": 6000
+                },
+                "intensity_milli": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                }
+              }
+            }
+          },
+          "complexity_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "visibility_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        }
+      }
+    },
+    "required_native_capability": {
+      "const": "RESOLVE_FUSION_TEMPLATE_APPLICATION"
+    },
+    "native_runtime_capability_status": {
+      "const": "NOT_CONFIRMED"
+    },
+    "runtime_qa_status": {
+      "const": "NOT_RUN"
+    },
+    "external_write_authorization_required": {
+      "const": true
+    },
+    "resolve_write_authorized": {
+      "const": false
+    },
+    "preset_installation_authorized": {
+      "const": false
+    },
+    "handoff_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

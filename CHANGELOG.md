@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-055 R0として、外部bai-davinci-montage-skills mainの6つのMontage契約をbyte-exactでBVPへ収容し、canonical hash、rational FPS、source range、preset allowlist、Proposal・承認Plan・Human Evidence・Resolve handoff lineageをfail-closedで検証するProduct側admissionを追加しました。ProposalはHuman review必須で、Timeline/Resolve/自動学習、Provider/paid/cloud/private media、Release/Deploy権限は付与しません。
+
 - TASK-056 Chase Keyword Cue / Montage Speech Event Bridge: added deterministic speech-cue extraction from FasterWhisper word timestamps, a text-free semantic audio cue sidecar for BAI DaVinci Montage SKILL integration, resumable long-video processing, exact rational FPS mapping, audio-plus-video Evidence double gating, and Human Review / fail-closed boundaries.
 
 - TASK-036 P-UX-2Kとして、V6.1.1のローカル文字起こしをHuman prepare/apply/cancelへ接続し、TASK-003管理Assetのstable bytes、Product Operations CAS、Project固定出力slot、immutable publication setと明示recoveryによりcross-process exact-oneと固定Transcript/SRT/reportの耐障害promotionを実装しました。実FasterWhisper/model download、paid/cloud、Audio authority、Resolve/Export、公開、Release/Deployは引き続き別Gateです。

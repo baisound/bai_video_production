@@ -1,0 +1,356 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/montage-proposal.schema.json",
+  "title": "TASK-055 Montage Proposal Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_kind",
+    "project_id",
+    "production_job_id",
+    "timeline_rate",
+    "music_asset_id",
+    "style_profile_id",
+    "preset_manifest_sha256",
+    "external_generator",
+    "generated_at",
+    "music_anchors",
+    "placements",
+    "compositions",
+    "external_input_untrusted",
+    "human_review_required",
+    "timeline_mutation_authorized",
+    "resolve_write_authorized",
+    "automatic_learning_promotion_authorized",
+    "proposal_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "record_kind": {
+      "const": "MONTAGE_PROPOSAL_BUNDLE"
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "production_job_id": {
+      "type": "string",
+      "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "timeline_rate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "properties": {
+        "numerator": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        }
+      }
+    },
+    "music_asset_id": {
+      "type": "string",
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "style_profile_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    },
+    "preset_manifest_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "external_generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generator_id",
+        "version",
+        "sha256"
+      ],
+      "properties": {
+        "generator_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "music_anchors": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "anchor_id",
+          "timeline_frame",
+          "bar_index",
+          "beat_index",
+          "kind",
+          "strength_milli"
+        ],
+        "properties": {
+          "anchor_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "timeline_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "bar_index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "beat_index": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32
+          },
+          "kind": {
+            "enum": [
+              "BEAT",
+              "DOWNBEAT",
+              "PHRASE_HEAD",
+              "BUILD",
+              "DROP",
+              "BREAKDOWN",
+              "MICRO_PAUSE",
+              "OUTRO"
+            ]
+          },
+          "strength_milli": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        }
+      }
+    },
+    "placements": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "placement_id",
+          "source_asset_id",
+          "source_rate",
+          "source_start_frame",
+          "source_end_frame_exclusive",
+          "source_anchor_frame",
+          "event_ref",
+          "event_type",
+          "target_music_anchor_id",
+          "target_timeline_frame",
+          "highlight_score_milli",
+          "confidence_milli",
+          "reason_codes"
+        ],
+        "properties": {
+          "placement_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "source_asset_id": {
+            "type": "string",
+            "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+          },
+          "source_rate": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "numerator",
+              "denominator"
+            ],
+            "properties": {
+              "numerator": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              },
+              "denominator": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1000000
+              }
+            }
+          },
+          "source_start_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_end_frame_exclusive": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "source_anchor_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "event_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "event_type": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "target_music_anchor_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "target_timeline_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "highlight_score_milli": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "confidence_milli": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "reason_codes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+            }
+          }
+        }
+      }
+    },
+    "compositions": {
+      "type": "array",
+      "maxItems": 20000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "composition_id",
+          "placement_id",
+          "operations",
+          "complexity_score",
+          "visibility_score"
+        ],
+        "properties": {
+          "composition_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "placement_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+          },
+          "operations": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation_id",
+                "preset_id",
+                "family",
+                "offset_frames",
+                "intensity_milli"
+              ],
+              "properties": {
+                "operation_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+                },
+                "preset_id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+                },
+                "family": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+                },
+                "offset_frames": {
+                  "type": "integer",
+                  "minimum": -6000,
+                  "maximum": 6000
+                },
+                "intensity_milli": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                }
+              }
+            }
+          },
+          "complexity_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "visibility_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        }
+      }
+    },
+    "external_input_untrusted": {
+      "const": true
+    },
+    "human_review_required": {
+      "const": true
+    },
+    "timeline_mutation_authorized": {
+      "const": false
+    },
+    "resolve_write_authorized": {
+      "const": false
+    },
+    "automatic_learning_promotion_authorized": {
+      "const": false
+    },
+    "proposal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

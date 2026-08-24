@@ -2713,7 +2713,7 @@ Training Studio now exposes a `Knowledge Import` tab and README links to `DBD-KA
 
 Date: `2026-08-23`
 
-Owner priority temporarily raises the creator-workflow baseline before the complete Montage Product UX is available. TASK-056 is allocated as a new DEV-3 cross-cutting Task rather than reopening TASK-006/023/036/049/052/054. TASK-055 is intentionally skipped here because an existing local, not-yet-main Montage integration branch already uses that identity.
+Owner priority temporarily raises the creator-workflow baseline before the complete Montage Product UX is available. TASK-056 is allocated as a new DEV-3 cross-cutting Task rather than reopening TASK-006/023/036/049/052/054. TASK-055 already owns Montage proposal/Human-edit interchange; its source is committed on external `bai-davinci-montage-skills` main and requires a separate BVP admission/integration lane.
 
 ### Priority sequence
 
@@ -2743,7 +2743,7 @@ Date: `2026-08-24`
 The Owner assigns the creator-learning integration lane to the current developer and changes its execution priority to:
 
 ```text
-1. TASK-055 — recover and audit the local unmerged Montage proposal/learning lane, then integrate without creating a second canonical Timeline or learning store
+1. TASK-055 — audit the fully committed external `bai-davinci-montage-skills` main source and integrate it into BVP without creating a second canonical Timeline or learning store
 2. TASK-056 — complete final BVP integration on the current TASK-036 transcription controls while preserving the R0/R2 contracts
 3. TASK-029 — implement Human Edit Learning R0 with canonical Human Action Evidence and Owner Decision boundaries
 4. TASK-019 — host and integrate the existing no-effect Profile Auto-Tuner foundation against TASK-029's canonical Owner-learning boundary

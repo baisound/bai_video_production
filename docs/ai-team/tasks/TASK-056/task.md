@@ -15,9 +15,9 @@ The feature must remain usable without Codex, ChatGPT, paid AI subscriptions or 
 
 ## Why this is a new Task
 
-TASK-006 owns canonical ASR/Transcript/Subtitle foundations, TASK-023 owns the existing FasterWhisper reconciliation/provider identity, TASK-036 owns Product Shell integration, TASK-022 owns canonical Timeline Mapping, and the local unmerged TASK-055 lane already owns Montage proposal/learning integration. Keyword-to-semantic-edit-cue ownership is a new cross-cutting responsibility and must not rewrite those historical boundaries.
+TASK-006 owns canonical ASR/Transcript/Subtitle foundations, TASK-023 owns the existing FasterWhisper reconciliation/provider identity, TASK-036 owns Product Shell integration, TASK-022 owns canonical Timeline Mapping, and TASK-055 owns Montage proposal/learning integration with source committed on external `bai-davinci-montage-skills` main. Keyword-to-semantic-edit-cue ownership is a new cross-cutting responsibility and must not rewrite those historical boundaries.
 
-`TASK-056` is intentionally used instead of `TASK-055` to avoid colliding with the already-created local Montage integration branch that is not yet present on current main.
+`TASK-056` is intentionally separate from `TASK-055`: TASK-055 owns Montage proposal/Human-edit interchange and BVP admission, while TASK-056 owns the keyword-to-semantic-audio-cue bridge.
 
 ## R0 — Core contract and local sidecar
 

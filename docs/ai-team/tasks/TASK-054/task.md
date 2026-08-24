@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R4D_OFFLINE_EVALUATOR_COMPLETE / COMMIT_READY / PROMOTION_HUMAN_GATED`
+Status: `R4E_A_BLIND_HUMAN_REVIEW_EVIDENCE_COMPLETE / COMMIT_READY / REVIEW_AND_PROMOTION_HUMAN_GATED`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -143,23 +143,38 @@ code forgery. State remains `EVIDENCE_ONLY_NO_PROMOTION`. R4D plus direct R4C
 focused Evidence is `18 PASS`; TASK-054 plus direct TASK-049 and OSS boundary
 regression is `619 PASS`.
 
+## R4E-A completion checkpoint
+
+R4E-A blind comparative Human-review evidence is complete and commit-ready. A
+UI-facing body-free presentation exposes only A/B/C and candidate-output
+digests. A separately sealed reveal manifest maps a per-sample permutation to
+BASELINE/GENERIC/TUNED and exact R4D binding/output Evidence. Human submissions
+bind one presentation/sample/reviewer, all three candidate digests, factual
+acceptability, five 1..5 quality scores, preference, an allowlisted blind reason
+set and one-shot external Human confirmation coordinates. Exact re-admission
+rejects identity leakage fields, R4D/presentation/sample/candidate crossing,
+non-Human evidence, secret-like refs, score/reason/checksum forgery and unknown
+fields. State remains `BLIND_HUMAN_EVIDENCE_NO_PROMOTION`. R4E-A plus direct
+R4D/R2 Human-review focused Evidence is `45 PASS`; TASK-054 plus direct TASK-049
+and OSS boundary regression is `629 PASS`.
+
 ## Authority boundary
 
-This checkpoint closes R3C and bounded R4A-R4D evidence work.
+This checkpoint closes R3C and bounded R4A-R4E-A evidence-contract work.
 It does not run media intake, adopt a Dataset or authorize training.
 R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,
 Timeline adoption, binding approval, Product Activation, release or deployment.
 Those remain Human-Gated.
 
-Blind Human factual/style review, budget acceptance and tuned-model promotion
-remain R4E Human-Gated responsibilities.
+Actual blind Human review collection, R4E-B aggregation/promotion candidate,
+budget acceptance and tuned-model promotion remain separately Human-Gated.
 
 ## Current decision
 
-R3C fake adapter and the R4A-R4D Dataset/evaluation evidence contracts are complete and
+R3C fake adapter and the R4A-R4E-A Dataset/evaluation/review evidence contracts are complete and
 commit-ready under the Owner's exact bounded instruction. The tuned model remains
 after CGEL + compatible Knowledge/RAG and before deterministic Fact/Policy
-validation. R3D and R4E are Human-Gated; all media intake, Dataset adoption, runtime,
+validation. R3D and R4E-B/actual review are Human-Gated; all media intake, Dataset adoption, runtime,
 training, Provider, TTS, Timeline, release and deploy effects remain blocked by
 their Human Gates.

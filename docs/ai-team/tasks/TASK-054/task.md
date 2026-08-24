@@ -346,6 +346,20 @@ TASK-049 and OSS boundary regression is `716 PASS`; compileall and diff checks p
 rendering and interaction remain NOT_CONFIRMED until the next Windows build/start
 unit. Real Evidence loaders and all execution/adoption gates remain unchanged.
 
+## R7 Windows package acceptance checkpoint
+
+The canonical unified Product shell and TASK-049 Training Studio packages were
+rebuilt on the Windows host with Python `3.12.4` / PyInstaller `6.22.0`. The
+new Training Studio EXE produced a responsive `BAI DbD Training Studio` window,
+showed no unhandled-exception title and accepted graceful close. Exact output
+hashes and the 10-to-30-second initial-window observation are recorded in the R7
+Windows acceptance Evidence. Packaged build/startup/shutdown are `PASS`.
+Accessibility/DPI/scroll and actual click traversal remain `NOT_CONFIRMED`
+because the approved Computer Use helper failed twice at app enumeration; the
+existing `94 PASS` focused UI tests remain separate deterministic Evidence.
+No installation, settings change, model/runtime acquisition, training, Provider,
+Dataset, Binding, Timeline, Resolve, release or deploy side effect occurred.
+
 model/runtime download, local or paid training, Provider inference, TTS,
 Timeline adoption, binding approval, Product Activation, release or deployment.
 Those remain Human-Gated.

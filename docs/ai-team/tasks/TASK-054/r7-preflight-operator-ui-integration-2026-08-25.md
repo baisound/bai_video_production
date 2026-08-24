@@ -2,7 +2,7 @@
 
 Date: `2026-08-25`
 Development depth: `DEV-3 HIGH ASSURANCE`
-State: `INTEGRATED / PACKAGED BUILD NEXT`
+State: `INTEGRATED / PACKAGED STARTUP PASS / NATIVE INTERACTION NOT_CONFIRMED`
 
 ## Outcome
 
@@ -25,6 +25,17 @@ BAI DbD Training Studio
 
 The existing packaged `task049_training_studio_windows_entry.py -> main()` and PyInstaller spec remain authoritative. Static imports ensure the panels enter the package without another EXE.
 
-## Remaining acceptance
+## Windows package acceptance
 
-Focused tests prove source wiring, labels, existing packaged entrypoint and R5 panel contracts. Real Tk rendering, DPI/scroll behavior, button interaction and packaged startup are R7 native observations, not yet PASS. Real Evidence loading and execution stay blocked by their application-service/Human Gates.
+The canonical unified shell and TASK-049 Training Studio one-dir packages were
+rebuilt on Windows with Python `3.12.4` and PyInstaller `6.22.0`. The exact new
+Training Studio EXE opened a responsive titled window and closed normally.
+Build, packaged startup and graceful shutdown are `PASS`; exact artifact hashes,
+timing and boundary review are recorded in
+`r7-windows-package-acceptance-2026-08-25.md`.
+
+Focused tests prove source wiring, labels, existing packaged entrypoint and R5
+panel contracts. Native accessibility/DPI/scroll and button traversal remain
+`NOT_CONFIRMED` because the approved Computer Use helper failed during window
+enumeration. Real Evidence loading and execution stay blocked by their
+application-service/Human Gates.

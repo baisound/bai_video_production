@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/dbd-reasoning-promotion-candidate-report.schema.json",
+  "title": "DbD Reasoning Promotion Candidate Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_kind", "offline_evaluation_report_sha256",
+    "presentation_sha256", "reveal_manifest_sha256", "test_sample_set_sha256",
+    "review_evidence_set_sha256", "evaluated_at", "reviewer_refs", "sample_count",
+    "submission_count", "aggregates", "preference_agreement_milli", "finding_codes",
+    "status", "report_state", "promotion_candidate_report_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "DBD_REASONING_PROMOTION_CANDIDATE_REPORT"},
+    "offline_evaluation_report_sha256": {"$ref": "#/$defs/sha"},
+    "presentation_sha256": {"$ref": "#/$defs/sha"},
+    "reveal_manifest_sha256": {"$ref": "#/$defs/sha"},
+    "test_sample_set_sha256": {"$ref": "#/$defs/sha"},
+    "review_evidence_set_sha256": {"$ref": "#/$defs/sha"},
+    "evaluated_at": {"type": "string", "format": "date-time", "maxLength": 40},
+    "reviewer_refs": {
+      "type": "array", "minItems": 2, "maxItems": 20, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^reviewer://sha256/[0-9a-f]{64}$"}
+    },
+    "sample_count": {"type": "integer", "minimum": 1, "maximum": 1000},
+    "submission_count": {"type": "integer", "minimum": 2, "maximum": 20000},
+    "aggregates": {
+      "type": "array", "minItems": 3, "maxItems": 3,
+      "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/aggregate"}, {"properties": {"arm": {"const": "BASELINE"}}}]},
+        {"allOf": [{"$ref": "#/$defs/aggregate"}, {"properties": {"arm": {"const": "GENERIC"}}}]},
+        {"allOf": [{"$ref": "#/$defs/aggregate"}, {"properties": {"arm": {"const": "TUNED"}}}]}
+      ],
+      "items": false
+    },
+    "preference_agreement_milli": {"$ref": "#/$defs/milli"},
+    "finding_codes": {
+      "type": "array", "maxItems": 3, "uniqueItems": true,
+      "items": {"enum": ["FACTUAL_ACCEPTABILITY_REGRESSION", "INTER_REVIEWER_AGREEMENT_LOW", "STYLE_IMPROVEMENT_NOT_JUSTIFIED"]}
+    },
+    "status": {"enum": ["READY_FOR_OWNER_REVIEW", "NOT_ELIGIBLE", "NOT_CONFIRMED"]},
+    "report_state": {"const": "PROMOTION_CANDIDATE_ONLY_OWNER_DECISION_REQUIRED"},
+    "promotion_candidate_report_sha256": {"$ref": "#/$defs/sha"}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "milli": {"type": "integer", "minimum": 0, "maximum": 1000},
+    "aggregate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["arm", "observation_count", "factual_acceptable_count", "factual_acceptability_milli", "preference_count", "style_score_milli"],
+      "properties": {
+        "arm": {"enum": ["BASELINE", "GENERIC", "TUNED"]},
+        "observation_count": {"type": "integer", "minimum": 1, "maximum": 20000},
+        "factual_acceptable_count": {"type": "integer", "minimum": 0, "maximum": 20000},
+        "factual_acceptability_milli": {"$ref": "#/$defs/milli"},
+        "preference_count": {"type": "integer", "minimum": 0, "maximum": 20000},
+        "style_score_milli": {"$ref": "#/$defs/milli"}
+      }
+    }
+  }
+}

@@ -183,6 +183,70 @@ class OwnerProfileRegistryCandidate:
         return body
 
 
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "OwnerProfileRegistryCandidate":
+        expected = {
+            "registry_candidate_version", "record_type", "task_owner",
+            "registry_candidate_id", "owner_scope_sha256", "source_store_id",
+            "source_history_revision", "source_history_sha256",
+            "source_profile_revision_sha256", "source_materialization_sha256",
+            "source_confirmation_sha256", "source_proposal_sha256",
+            "source_binding_sha256", "source_decision_history_sha256",
+            "source_decision_ids", "baseline_profile_sha256",
+            "rollback_profile_sha256", "profile_snapshot",
+            "compatibility_contract", "state", "owner_local_profile_only",
+            "latest_owner_profile_history_revalidation_required",
+            "explicit_human_registry_confirmation_required",
+            "in_memory_candidate_only", "model_profile_registry_write_authorized",
+            "runtime_profile_apply_authorized", "knowledge_pack_promotion_authorized",
+            "automatic_promotion_authorized", "rollback_execution_authorized",
+            "edit_plan_mutation_authorized", "external_effect_authorized",
+            "registry_candidate_sha256",
+        }
+        if not isinstance(value, Mapping) or set(value) != expected:
+            raise ValueError("registry candidate fields are incomplete or unknown")
+        if (
+            value["registry_candidate_version"] != REGISTRY_CANDIDATE_VERSION
+            or value["record_type"] != "OWNER_PROFILE_REGISTRY_CANDIDATE"
+            or value["task_owner"] != "TASK-029"
+            or value["compatibility_contract"] != SCORING_PROFILE_COMPATIBILITY_CONTRACT
+            or value["state"]
+            != OwnerProfileRegistryCandidateState.READY_FOR_HUMAN_REGISTRY_REVIEW.value
+        ):
+            raise ValueError("registry candidate identity mismatch")
+        for field in (
+            "owner_local_profile_only",
+            "latest_owner_profile_history_revalidation_required",
+            "explicit_human_registry_confirmation_required",
+            "in_memory_candidate_only",
+        ):
+            if value[field] is not True:
+                raise ValueError(f"{field} must remain true")
+        for field in (
+            "model_profile_registry_write_authorized",
+            "runtime_profile_apply_authorized",
+            "knowledge_pack_promotion_authorized", "automatic_promotion_authorized",
+            "rollback_execution_authorized", "edit_plan_mutation_authorized",
+            "external_effect_authorized",
+        ):
+            if value[field] is not False:
+                raise ValueError(f"{field} must remain false")
+        profile = _profile_from_payload(value["profile_snapshot"])
+        result = cls(
+            value["registry_candidate_id"], value["owner_scope_sha256"],
+            value["source_store_id"], value["source_history_revision"],
+            value["source_history_sha256"], value["source_profile_revision_sha256"],
+            value["source_materialization_sha256"], value["source_confirmation_sha256"],
+            value["source_proposal_sha256"], value["source_binding_sha256"],
+            value["source_decision_history_sha256"], tuple(value["source_decision_ids"]),
+            value["baseline_profile_sha256"], value["rollback_profile_sha256"], profile,
+            OwnerProfileRegistryCandidateState(value["state"]),
+        )
+        if result.to_dict() != dict(value):
+            raise ValueError("registry candidate hash or derived fields mismatch")
+        return result
+
+
 def compile_owner_profile_registry_candidate(
     registry_candidate_id: str,
     history: OwnerProfileHistory,

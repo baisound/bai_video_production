@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/owner-profile-registry-store.schema.json",
+  "title": "TASK-029 encrypted Owner Profile Registry Store",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "task_owner", "cipher_suite", "ciphertext_b64", "ciphertext_sha256", "plaintext_fields_present", "document_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "OWNER_PROFILE_REGISTRY_STORE_ENCRYPTED"},
+    "task_owner": {"const": "TASK-029"},
+    "cipher_suite": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},
+    "ciphertext_b64": {"type": "string", "minLength": 1, "maxLength": 22369624, "contentEncoding": "base64"},
+    "ciphertext_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "plaintext_fields_present": {"const": false},
+    "document_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

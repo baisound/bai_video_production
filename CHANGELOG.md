@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-054 R3B-R4Cとして、canonical接続解決に基づく純粋Route Capability、Provider非実行の決定的fake adapter、権利・同意・由来・splitを固定するbody-free Dataset manifest、映像/Event/Human reviewへ結合した解説・実況ナレーション候補、監査対象候補集合digest付きのsplit crossing・重複・phrase overlap監査を追加しました。Provider実行、実媒体取込、Dataset採用、学習、model/runtime download、TTS、Timeline採用、Product Activation、Release/Deploy権限は付与しません。
+
 - TASK-029 R3として、R2 Owner Profile materialization candidateを保存直前にexact再検証し、別recordの明示Human確認がcandidate/Owner scope/Profile hashへ一致した場合だけ、Windows Current User DPAPI既定のencrypted append-only Owner Profile Storeへmaterializeする機能を実装しました。cross-process CAS、hash chain、atomic replace、scope/baseline continuity/replay/tamper/wrong-key/symlink/partial-write fail-closedを備えます。Model/Profile Registry、Knowledge Pack promotion、automatic promotion、runtime scoring apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
 
 - TASK-029 R2として、hosted closed済みTASK-019 Profile Tuning Proposal/Owner Decision Bindingと最新TASK-029 Owner Decision Historyをexact再検証し、Owner-wide Profile materialization candidateをpure in-memoryで決定的に生成しました。全adjustmentが相異なる明示ADOPTED decisionへbindされたREADY状態のみexact ScoringProfile snapshotを公開し、proposal非READY、REJECTED、history/proposal/binding driftをfail-closedにしました。Owner Profile Store/Model Profile Registry write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。

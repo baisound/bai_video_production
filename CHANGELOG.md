@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-029 R5として、R3 encrypted Owner Profile StoreとR5 Registry Storeを決定的path順で同時lockし、latest R4 candidateをsourceから再生成して別の明示Human registry confirmationとexact照合した場合だけ、別DPAPI entropy domainのOwner-local Model/Profile RegistryへCAS appendするstoreを実装しました。runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
 - TASK-029 R4として、R3 encrypted Owner Profile Historyのlatest revisionをexpected revisionとexact照合し、history/revision/materialization/confirmation/proposal/binding/decision lineageを保持したまま、TASK-008 ScoringProfileへsemantic再構築してModel/Profile Registry登録前のimmutable in-memory候補を生成するpure contractを実装しました。Model/Profile Registry write、runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
 
 - TASK-054 R3B-R4Cとして、canonical接続解決に基づく純粋Route Capability、Provider非実行の決定的fake adapter、権利・同意・由来・splitを固定するbody-free Dataset manifest、映像/Event/Human reviewへ結合した解説・実況ナレーション候補、監査対象候補集合digest付きのsplit crossing・重複・phrase overlap監査を追加しました。Provider実行、実媒体取込、Dataset採用、学習、model/runtime download、TTS、Timeline採用、Product Activation、Release/Deploy権限は付与しません。

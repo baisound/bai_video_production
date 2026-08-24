@@ -8,6 +8,9 @@ import pytest
 
 from ai_video_production.task036_shell_v611 import HTML
 
+# Node startup can exceed 10 seconds under a contended Windows xdist worker.
+NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS = 30
+
 
 def test_top_menu_uses_explicit_command_registry_and_focus_contract() -> None:
     commands = set(re.findall(r'data-command="([^"]+)"', HTML))
@@ -257,7 +260,7 @@ let preEditStageInFlight=false;
         check=False,
         capture_output=True,
         text=True,
-        timeout=10,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
     )
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip() == "OK"

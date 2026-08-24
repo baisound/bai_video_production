@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/owner-profile-registry-candidate.schema.json",
+  "title": "TASK-029 Owner Profile Registry Candidate",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "stableId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+    "sourceSelector": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "producer_task_id": { "type": "string", "pattern": "^TASK-[0-9]{3}$" },
+        "contract_id": { "$ref": "#/$defs/stableId" }
+      },
+      "required": ["producer_task_id", "contract_id"]
+    },
+    "rule": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "feature_key": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+){0,7}$" },
+        "modality": { "enum": ["AUDIO", "VISUAL", "LANGUAGE_TEXT", "OCR_TEXT"] },
+        "weight_milli": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "raw_range": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "minimum": { "type": "integer", "minimum": -1000000000, "maximum": 1000000000 },
+            "maximum": { "type": "integer", "minimum": -1000000000, "maximum": 1000000000 }
+          },
+          "required": ["minimum", "maximum"]
+        },
+        "polarity": { "enum": ["DIRECT", "INVERSE"] },
+        "required": { "type": "boolean" },
+        "optional_missing_value_milli": { "type": ["integer", "null"], "minimum": 0, "maximum": 1000 },
+        "allowed_sources": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/sourceSelector" } }
+      },
+      "required": ["feature_key", "modality", "weight_milli", "raw_range", "polarity", "required", "optional_missing_value_milli", "allowed_sources"]
+    },
+    "profile": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/stableId" },
+        "profile_version": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
+        "rules": { "type": "array", "minItems": 2, "maxItems": 128, "items": { "$ref": "#/$defs/rule" } },
+        "profile_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "required": ["profile_id", "profile_version", "rules", "profile_sha256"]
+    }
+  },
+  "properties": {
+    "registry_candidate_version": { "const": "1.0.0" },
+    "record_type": { "const": "OWNER_PROFILE_REGISTRY_CANDIDATE" },
+    "task_owner": { "const": "TASK-029" },
+    "registry_candidate_id": { "$ref": "#/$defs/stableId" },
+    "owner_scope_sha256": { "$ref": "#/$defs/sha256" },
+    "source_store_id": { "$ref": "#/$defs/stableId" },
+    "source_history_revision": { "type": "integer", "minimum": 1, "maximum": 1000000000 },
+    "source_history_sha256": { "$ref": "#/$defs/sha256" },
+    "source_profile_revision_sha256": { "$ref": "#/$defs/sha256" },
+    "source_materialization_sha256": { "$ref": "#/$defs/sha256" },
+    "source_confirmation_sha256": { "$ref": "#/$defs/sha256" },
+    "source_proposal_sha256": { "$ref": "#/$defs/sha256" },
+    "source_binding_sha256": { "$ref": "#/$defs/sha256" },
+    "source_decision_history_sha256": { "$ref": "#/$defs/sha256" },
+    "source_decision_ids": { "type": "array", "minItems": 1, "maxItems": 512, "uniqueItems": true, "items": { "$ref": "#/$defs/stableId" } },
+    "baseline_profile_sha256": { "$ref": "#/$defs/sha256" },
+    "rollback_profile_sha256": { "$ref": "#/$defs/sha256" },
+    "profile_snapshot": { "$ref": "#/$defs/profile" },
+    "compatibility_contract": { "const": "TASK-008/SCORING_PROFILE/1.0.0" },
+    "state": { "const": "READY_FOR_HUMAN_REGISTRY_REVIEW" },
+    "owner_local_profile_only": { "const": true },
+    "latest_owner_profile_history_revalidation_required": { "const": true },
+    "explicit_human_registry_confirmation_required": { "const": true },
+    "in_memory_candidate_only": { "const": true },
+    "model_profile_registry_write_authorized": { "const": false },
+    "runtime_profile_apply_authorized": { "const": false },
+    "knowledge_pack_promotion_authorized": { "const": false },
+    "automatic_promotion_authorized": { "const": false },
+    "rollback_execution_authorized": { "const": false },
+    "edit_plan_mutation_authorized": { "const": false },
+    "external_effect_authorized": { "const": false },
+    "registry_candidate_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "required": [
+    "registry_candidate_version", "record_type", "task_owner", "registry_candidate_id",
+    "owner_scope_sha256", "source_store_id", "source_history_revision", "source_history_sha256",
+    "source_profile_revision_sha256", "source_materialization_sha256",
+    "source_confirmation_sha256", "source_proposal_sha256", "source_binding_sha256",
+    "source_decision_history_sha256", "source_decision_ids", "baseline_profile_sha256",
+    "rollback_profile_sha256", "profile_snapshot", "compatibility_contract", "state",
+    "owner_local_profile_only", "latest_owner_profile_history_revalidation_required",
+    "explicit_human_registry_confirmation_required", "in_memory_candidate_only",
+    "model_profile_registry_write_authorized", "runtime_profile_apply_authorized",
+    "knowledge_pack_promotion_authorized", "automatic_promotion_authorized",
+    "rollback_execution_authorized", "edit_plan_mutation_authorized",
+    "external_effect_authorized", "registry_candidate_sha256"
+  ]
+}

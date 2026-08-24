@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_HOSTED_CLOSED / R3_OWNER_PROFILE_STORE_IMPLEMENTED_LOCAL_HOSTING_PENDING`
+- Status: `R0_R1_R2_R3_HOSTED_CLOSED / R4_OWNER_PROFILE_REGISTRY_CANDIDATE_IMPLEMENTED_LOCAL`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -67,7 +67,21 @@ R3はR2候補を保存直前にexact sourceから再生成し、別recordの明�
 
 R3の確認は1回のencrypted Store appendだけを許可する。runtime scoringへの適用、Model/Profile Registry write、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deployは許可しない。
 
-R3 focused＋直接依存は`36 PASS`、TASK-019/029全体は`61 PASS`、全Product regressionは`3681 PASS / 6 SKIP / 0 FAIL`。compileall、schema mirror、diff-checkもPASSであり、local commit-ready。hostingは次のgateである。
+R3 focused＋直接依存は`36 PASS`、TASK-019/029全体は`61 PASS`、全Product regressionは`3681 PASS / 6 SKIP / 0 FAIL`。target PR #303、lock-host PR #304、closure PR #305がmergeされ、fresh main `797feb073cf50d3a440b070265e2dbed7fc59cad`、registry revision 68、post-main CI/Security PASSでshared CHANGELOG lockを解放済み。
+
+## R4 implementation — pure Owner Profile Registry admission candidate
+
+R4はR3 encrypted Owner Profile Historyのlatest revisionを毎回exact再検証し、TASK-008 `ScoringProfile`へsemantic再構築した上で、Model/Profile Registry登録前のimmutable in-memory候補を生成する。
+
+- history/revision/materialization/confirmation/proposal/binding/decision lineageをhashで固定する。
+- callerの`expected_history_revision`とlatest revisionが一致しない場合はstaleとしてfail closedにする。
+- rule、modality、weight、source selector、semantic version、Profile hashをTASK-008型で再検証する。
+- compatibility contractは`TASK-008/SCORING_PROFILE/1.0.0`へ固定する。
+- Owner scopeはbody-free SHA-256 coordinateだけを保持する。
+
+R4はModel/Profile Registry write、runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy authorityを生成しない。別の明示Human registry confirmationと後続Unitが必要である。
+
+R4 focused＋R2/R3直接依存は`23 PASS`、TASK-019/029 chainは`68 PASS`、最終全Product regressionは`3688 PASS / 6 SKIP / 0 FAIL`。compileall、strict Schema validation、schema mirror、diff-checkもPASS。
 
 ## Objective
 

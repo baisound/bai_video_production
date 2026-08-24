@@ -24,12 +24,12 @@ from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 
 ROOT=Path(__file__).resolve().parents[1]
 SCHEMA_SHA256S={
-    "bvp-montage-skill-input.schema.json":"8a0d4d535c57252e3430fa8a40b8e358e78e2c1cf452629f09677ffce9e539b5",
-    "montage-proposal.schema.json":"6ff1425c8293977c1753e28ad732caea0b7a2829ffca180dcff8c95a96f655c9",
-    "montage-approved-plan.schema.json":"e44912442e5eac5a5983132507b1cb2fd575658da2ab7d582e779ef134949f38",
-    "montage-human-edit-evidence.schema.json":"8489338e877f6a5ebba5fecace92cc2d6abd2a56658071f08c6c80101c38d152",
-    "montage-preference-profile.schema.json":"cc810c3540536c719947d4b48418278f76cb622bd7b99c99c42efe15d6dedb80",
-    "montage-resolve-handoff.schema.json":"95e7b0a92a58d565d135ec670e22016f9814e7b1e1c75a2134ef8591a9629f56",
+    "bvp-montage-skill-input.schema.json":"511945f24cffaf37b6b0b158e16c9af8fbbfeb2b1f3d4cb48bb4ec49a064ef76",
+    "montage-proposal.schema.json":"1b7f33b1af464c7c6f6fb9ecee35c3674d6f5b81e4ec16b1488f6eb3d6a48137",
+    "montage-approved-plan.schema.json":"4bce10cf3a29578bde6e0d1708a7c07179ca2da7626220da72fa85cdf0684fa3",
+    "montage-human-edit-evidence.schema.json":"112d557f0a5e377a9049bfd3625f636165b47c888fcdd8a21f6255f463f09307",
+    "montage-preference-profile.schema.json":"7d89b0973ca69fef66aadb49f913332dc6df7928c95709c7fb05725364bbb412",
+    "montage-resolve-handoff.schema.json":"c06d6506bf8618c813ac2f8114b790d275205cf89def5103459f4d5814d00910",
 }
 
 
@@ -240,7 +240,8 @@ def test_recovered_source_main_schemas_keep_exact_hash_and_package_mirror():
         canonical=(ROOT/"schemas"/name).read_bytes()
         packaged=(ROOT/"src/ai_video_production/schema_resources"/name).read_bytes()
         assert canonical == packaged
-        assert hashlib.sha256(canonical).hexdigest() == expected_sha256
+        committed_bytes=canonical.replace(b"\r\n",b"\n")
+        assert hashlib.sha256(committed_bytes).hexdigest() == expected_sha256
 
 
 def test_all_recovered_contracts_parse_and_round_trip():

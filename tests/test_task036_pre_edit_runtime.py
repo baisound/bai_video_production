@@ -606,7 +606,7 @@ def test_cut_factory_failure_never_partially_promotes_and_retry_remains_availabl
     class PublishingFactory:
         def __init__(self):
             self.prepared = []
-            self.published = []
+            self.publisher_called = False
 
         def __call__(self, application):
             self.prepared.append(application)
@@ -618,14 +618,15 @@ def test_cut_factory_failure_never_partially_promotes_and_retry_remains_availabl
             return DownstreamRuntime(application)
 
         def publish(self, application, downstream_runtime):
-            self.published.append((application, downstream_runtime))
+            self.publisher_called = True
+            raise AssertionError("publisher-like attributes are not part of the runtime contract")
 
     publishing_factory = PublishingFactory()
     bridge._workflow_runtime_factory = publishing_factory
     with pytest.raises(ProductError) as drifted:
         bridge.generate_runtime_cut_candidates({})
     assert drifted.value.code == "ERR_TASK036_CUT_CONTEXT_STALE"
-    assert publishing_factory.published == []
+    assert publishing_factory.publisher_called is False
     assert runtime.coordinator.state.cut_candidate_manifest_sha256 is None
     assert runtime.application is None
     assert runtime.promoted_workflow_runtime is None
@@ -634,9 +635,7 @@ def test_cut_factory_failure_never_partially_promotes_and_retry_remains_availabl
     assert result["status"] == "CUT_CANDIDATES_READY"
     assert runtime.coordinator.state.cut_candidate_manifest_sha256 is not None
     assert bridge._workflow_runtime is runtime.promoted_workflow_runtime
-    assert publishing_factory.published == [
-        (runtime.application, runtime.promoted_workflow_runtime)
-    ]
+    assert publishing_factory.publisher_called is False
     assert len(cut.calls) == 4
 
 def test_cut_commit_serializes_shell_context_mutation_with_state_cas(

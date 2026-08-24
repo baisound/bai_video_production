@@ -3,7 +3,7 @@
 Date: 2026-08-24
 Task: TASK-036 / P-UX-2L
 Governance: DEV-3 HIGH ASSURANCE
-Status: SECOND REVIEW REMEDIATION VERIFIED / FINAL INDEPENDENT RE-REVIEW PENDING
+Status: RECOVERY IMPLEMENTED / FRESH-MAIN INTEGRATION AND INDEPENDENT REVIEW PENDING
 
 ## 1. Goal
 
@@ -70,7 +70,7 @@ After construction/generation, the binding asks `DesktopEditingCoordinator` to c
 
 The generated Cut manifest must independently match the expected source Asset and Transcript identity before promotion.
 
-Cut promotion is prepare/validate/commit: application and optional workflow-runtime construction complete without cache publication before the final coordinator CAS. The trusted runtime publisher runs only after CAS success; only then are application and workflow runtime published. Factory failure, identity mismatch, or CAS drift leaves no canonical or cached runtime promotion and keeps the original Cut coordinate retryable. The same re-entrant lock serializes Shell context mutation with the coordinator CAS.
+Cut promotion is prepare/validate/commit: application and optional workflow-runtime construction complete before the final coordinator CAS. No publisher callback or launcher-side runtime cache exists in the promotion path. After CAS, only direct in-process reference assignments remain; they do not call external or user-injected code. The trusted Export dispatcher reuses the exact workflow runtime already held by the bridge and fails closed on application identity mismatch. Factory failure, identity mismatch, or CAS drift leaves no canonical runtime promotion and keeps the original Cut coordinate retryable. The same re-entrant lock serializes Shell context mutation with the coordinator CAS.
 
 ## 5. Bridge and lifetime contract
 
@@ -114,4 +114,5 @@ The Python runtime remains authoritative; the JavaScript gate is defense in dept
 - Provider/model download, paid Provider, Resolve, render, native GUI, and Owner media execution: not performed.
 - Initial independent review at `56ba4a1`: Tester PASS, Judge Technical GO, Critic Technical NO-GO with C0/H2/M2/L1.
 - First re-review at `61446ca`: Tester PASS (201 tests), Critic/Judge Technical NO-GO with C0/H1/M1/L0 for repeat Cut admission and pre-CAS trusted runtime cache publication.
-- Both reopened findings have direct negative-test remediation; final independent re-review is pending, so no final independent PASS is claimed by this checkpoint.
+- Second re-review at `3b7f425`: Tester/Critic/Judge Technical NO-GO with C0/H1/M0/L0 because the post-CAS publisher remained a fallible partial-promotion boundary.
+- Recovery removes the publisher/cache contract entirely and injects an explosive publisher-like attribute to prove it is ignored. Fresh-main integration and independent re-review remain pending; no final PASS is claimed.

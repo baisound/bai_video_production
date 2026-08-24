@@ -277,6 +277,13 @@ def _unsafe_free_text(value: str) -> bool:
     )
 
 
+def contains_unsafe_reasoning_free_text(value: str) -> bool:
+    """Return the canonical R2C DLP decision without creating policy authority."""
+    if not isinstance(value, str):
+        raise ValueError("free text must be a string")
+    return _unsafe_free_text(value)
+
+
 def _has_high_entropy_token(value: str) -> bool:
     for match in _ENTROPY_TOKEN_RE.finditer(value):
         token = match.group()
@@ -294,4 +301,5 @@ def _has_high_entropy_token(value: str) -> bool:
 __all__ = [
     "ContextReferenceIndex", "DbDReasoningPolicyAdmission", "POLICY_VERSION",
     "ReasoningPolicyAdmissionReceipt", "ReasoningPolicyAdmissionResult",
+    "contains_unsafe_reasoning_free_text",
 ]

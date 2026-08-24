@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R5E_OPERATION_RECOVERY_COMPLETE / COMMIT_READY / R5F_NEXT`
+Status: `R5F_WORKER_LIFECYCLE_COMPLETE / COMMIT_READY / R6_GATE_AUDIT_NEXT`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -264,6 +264,26 @@ inference, paid/external retry, promotion and Product mutation remain
 Human-Gated. R5F no-console bounded worker lifecycle is next.
 
 ## Authority boundary
+## R5F completion checkpoint
+
+R5F bounded no-console worker lifecycle is complete and commit-ready. An
+immutable exact-digest request binds action, idempotency, Workspace, expected
+Dataset/Binding revisions, plan, authorization reference, resource ceilings,
+progress total and retry effect without granting execution authority. Exact
+duplicate clicks reuse one record; conflicting idempotency and stale revisions
+fail closed. Progress/elapsed are monotonic, cancel after work requires a
+verified Checkpoint, and failures retain it as RECOVERY_REQUIRED. Time, memory
+and output ceilings stop with stable `ERR_TASK054_RESOURCE_LIMIT`; no retry or
+plan change is automatic. The injected process boundary uses an argument vector,
+`shell=False`, DEVNULL streams, Windows `CREATE_NO_WINDOW`, minimal allowlisted
+environment and bounded terminate/kill. Secret-like arguments are rejected.
+R5F plus R5E focused Evidence is `21 PASS`; TASK-054 plus direct TASK-049 and
+OSS boundary regression is `691 PASS`; compileall and diff checks pass. No real subprocess, model, training
+or Provider was executed. Durable restart/replay and packaged Windows worker
+observation remain R7 `NOT_CONFIRMED`. R6 gated-pilot eligibility audit is next;
+model/runtime acquisition, Dataset adoption, training, Provider/paid execution,
+promotion and Product mutation remain Human-Gated.
+
 
 This checkpoint closes R3C, bounded R4A-R4E-B evidence-contract work and R5A-R5D Operator views.
 It does not run media intake, adopt a Dataset, authorize training or execute inference.

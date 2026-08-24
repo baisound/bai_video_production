@@ -1,10 +1,10 @@
 # TASK-056 — Chase Keyword Cue / Semantic Audio Cue Bridge
 
-- Status: `R0_CORE_AND_R2_SKILL_INTEGRATION_COMPLETE / R1_PRODUCT_GUI_DEFERRED`
+- Status: `R0_CORE_R1_PRODUCT_INTEGRATION_R2_SKILL_INTEGRATION_IMPLEMENTED_LOCAL / HOSTING_PENDING`
 - Priority: `OWNER_PRIORITY_CREATOR_WORKFLOW_INSERTION`
 - Governance: `DEV-3 HIGH ASSURANCE`
-- Base main: `5ab75abf199a639b8f7fdfff5767c535df631f63`
-- Branch: `codex/priority-chase-keyword-cue-r1-latest-main`
+- Base main: `6050c4764dff9bdca0c8f6d4f175f74e8b0442c0`
+- Branch: `codex/task-056-r1-product-integration`
 - Intake: `BVP_Chase_Keyword_Cue_Handoff_v1_2026-08-23`
 
 ## Owner goal
@@ -72,7 +72,7 @@ R0 does **not** own:
 
 ## Explicit overlap restrictions
 
-PR #269 (`TASK-036 P-UX-2K`) is open and changes local transcription Product-control files. R0 must not modify:
+During R0, PR #269 (`TASK-036 P-UX-2K`) was open and changed local transcription Product-control files. R0 therefore did not modify:
 
 - `src/ai_video_production/task036_product_ports.py`
 - `src/ai_video_production/task036_pre_edit_runtime.py`
@@ -85,7 +85,16 @@ PR #269 (`TASK-036 P-UX-2K`) is open and changes local transcription Product-con
 
 ## R1 — Product integration after overlap re-audit
 
-After PR #269 state is resolved/re-audited:
+PR #269 is merged and the overlap was re-audited. R1A now implements the Product generation/read side:
+
+- the durable P-UX-2K operation requests word timestamps and remains the only Product transcription job;
+- a Project-bound Application Service derives one fixed private semantic-cue publication under the configured transcription output;
+- the Shell exposes only no-argument snapshot/generate operations and never accepts a path, profile or Provider from JavaScript;
+- the Edit GUI shows confirmed/review/rejected counts plus text-free frame metadata for REVIEW items;
+- REVIEW items remain excluded from the Montage projection and receive no Timeline/apply authority;
+- focused R1A Product/Core/Shell/Launcher verification is `121 PASS`; R1A full regression is `3625 PASS / 5 SKIP`; R1B focused verification is `135 PASS`; R1 final full regression is `3628 PASS / 5 SKIP`.
+
+R1B now adds explicit per-cue `ACCEPT / REJECT`, prepare/confirm/apply/cancel Human gates, immutable per-manifest Project records, atomic locked writes, restart read-back and exact Schema mirrors. Confirmation tokens, transcript text and host paths are never persisted; base detection Evidence and the `CONFIRMED_ONLY` Montage sidecar remain immutable. Human ACCEPT is a separate decision record and does not grant Timeline/Resolve/auto-apply authority. R1 local implementation now satisfies:
 
 - reuse the durable P-UX-2K local transcription operation rather than creating a competing Product job;
 - expose a GUI action in the appropriate Subtitle/Montage workflow;

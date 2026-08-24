@@ -43,6 +43,7 @@ from .task036_product_ports import (
     _file_sha256,
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
+from .task056_product_integration import Task056SpeechCueProductApplication
 from .game_intelligence_shell import GameIntelligenceShellApplication
 from .task044_nle_shell import Task044NleShellController
 from .interactive_timeline_application import Task044TimelineEditApplication
@@ -853,6 +854,12 @@ def build_trusted_launch(
         language=configuration.asr_language,
         timeline_rate=configuration.timeline_rate,
     )
+    speech_cue_application = Task056SpeechCueProductApplication(
+        project_root=configuration.project_root,
+        project_id=configuration.project_id,
+        output_directory=configuration.transcription_output / "semantic-cues",
+        source_frame_rate=configuration.timeline_rate,
+    )
     cut_port = Task036CutCandidatePort(
         FixedAnalysisAudioBinding(
             "sha256:" + _file_sha256(configuration.analysis_source_path),
@@ -866,7 +873,14 @@ def build_trusted_launch(
         display_name=configuration.display_name,
     )
     dialog = native_dialog or Task036NativeDialogService()
-    pre_edit = Task036PreEditRuntime(coordinator, dialog, ingest_port, transcription_port, cut_port)
+    pre_edit = Task036PreEditRuntime(
+        coordinator,
+        dialog,
+        ingest_port,
+        transcription_port,
+        cut_port,
+        speech_cue_application,
+    )
     adapter = resolve_adapter or ResolveScriptingAssemblyAdapter()
 
     workflow_runtimes: dict[int, Task036WorkflowRuntime] = {}

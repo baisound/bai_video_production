@@ -1,7 +1,20 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `PROPOSED / OWNER-DIRECTED DESIGN`
-- Governance candidate: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
+- Status: `OWNER_PRIORITY_IMPLEMENTATION_QUEUED / R0_NEXT_AFTER_TASK055_TASK056_INTEGRATION`
+- Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
+
+## Owner priority routing — 2026-08-24
+
+The Owner assigned this Task to the current developer lane and moved it ahead of the remaining general Learning & Operations queue. The exact lane order is:
+
+```text
+TASK-055 local lane recovery/integration audit
+-> TASK-056 final BVP integration
+-> TASK-029 Human Edit Learning R0
+-> TASK-019 Profile Auto-Tuner hosting/integration
+```
+
+This routing authorizes bounded local implementation planning and implementation under DEV-4. It does not by itself authorize private production-data ingestion, Cloud telemetry, automatic Owner Profile or Knowledge Pack promotion, Release, Deploy, or Production effects.
 
 ## Objective
 

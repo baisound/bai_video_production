@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 70,
+  "registry_revision": 71,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
   "audit_base_main_sha": "dc8a1949b58f7a5fa298a4d9153a2d410a1388da",
@@ -3564,6 +3564,79 @@
       "closure_open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_OPEN_PRS_270_273_307_311",
       "release_reason": "TASK036_PUX2L_CHANGELOG_TARGET_MERGED_AND_APPROVED_POST_MAIN_CI_REPAIR_MERGED_POST_MAIN_GREEN",
       "released_at": "2026-08-24T20:16:36Z",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK029-R4-OWNER-PROFILE-REGISTRY-CANDIDATE-CHANGELOG-20260825",
+      "owner_agent": "開発 / TASK-029 integration owner",
+      "owner_thread_id": "CURRENT_DEVELOPMENT_THREAD_20260825",
+      "lock_host_authority": "OWNER_EXPLICIT_AUTONOMY_NO_CONFIRMATION_REQUIRED_20260824",
+      "integration_effect_authority_state": "AUTHORIZED_PENDING_HOST_MAIN_READBACK",
+      "target_merge_authority_state": "OWNER_MERGE_AUTHORIZED_PENDING_PR307",
+      "implementation_authority_state": "TASK029_R4_PR307_DRAFT_HOSTED_8_OF_9_CHANGELOG_ONLY_FAILURE",
+      "hosting_branch": "codex/task-029-r4-changelog-lock-hosting",
+      "hosting_base_sha": "28b9d0560a3c1e61ec3040c3e6a6a3cbbb791cf5",
+      "status": "PENDING_HOST_PR",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "target_pull_request": 307,
+      "target_pull_request_state": "DRAFT_MERGEABLE_8_OF_9_CHANGELOG_ONLY_FAILURE",
+      "target_branch": "codex/task-029-r4-profile-registry",
+      "expected_pre_integration_head": "bc4efa576cf94ffc1767e9861c8ddc47e5979c04",
+      "purpose": "ONE_EXACT_TASK029_R4_OWNER_PROFILE_REGISTRY_CANDIDATE_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+      "approved_changelog_bullet": "- TASK-029 R4として、R3 encrypted Owner Profile Historyのlatest revisionをexpected revisionとexact照合し、history/revision/materialization/confirmation/proposal/binding/decision lineageを保持したまま、TASK-008 ScoringProfileへsemantic再構築してModel/Profile Registry登録前のimmutable in-memory候補を生成するpure contractを実装しました。Model/Profile Registry write、runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。",
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
+      "immutable_target_path_count": 6,
+      "controlled_shared_target_paths": [
+        "docs/ai-team/current-state.md",
+        "docs/ai-team/task-index.md"
+      ],
+      "controlled_shared_target_path_rule": "PRESERVE_EXACT_PR307_SEMANTIC_DELTA_WHILE_ADMITTING_FRESH_MAIN_CHANGES_NO_OTHER_TARGET_AUTHORED_MUTATION",
+      "open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_OPEN_PRS_270_273_307_311_313_315",
+      "merge_order_reservation": "PR307_NEXT_SHARED_CHANGELOG_CONSUMER_AFTER_TASK036_PUX2L_REVISION70_CLOSED_AND_PR314_POST_MAIN_GREEN",
+      "denied": [
+        "TASK029_R4_IMPLEMENTATION_SCHEMA_TEST_DESIGN_OR_TASK_DOCUMENT_MUTATION_DURING_INTEGRATION_EFFECT",
+        "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
+        ".github/**",
+        "OTHER_SHARED_INTEGRATION_FILES",
+        "OWNER_PROFILE_STORE_OR_OWNER_DECISION_STORE_MUTATION",
+        "MODEL_PROFILE_REGISTRY_WRITE_RUNTIME_PROFILE_APPLY_OR_KNOWLEDGE_PACK_PROMOTION",
+        "AUTOMATIC_PROMOTION_ROLLBACK_EXECUTION_OR_EDIT_PLAN_MUTATION",
+        "TIMELINE_RESOLVE_PROVIDER_CLOUD_PRIVATE_BODY_OR_PRODUCTION_EFFECT",
+        "VERSION_TAG_RELEASE_DEPLOY_DURING_CHANGELOG_EFFECT",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_UNCHANGED_HEAD_RETRY",
+      "composition_rule": "TARGET_PR_EXACT_6_IMMUTABLE_TASK029_R4_PATHS_PLUS_2_CONTROLLED_SHARED_CANONICAL_DOC_PATHS_PLUS_1_INTEGRATION_OWNED_CHANGELOG_FILE",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "TARGET_NON_CHANGELOG_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "TASK036_PUX2L_REVISION70_HOSTED_CLOSED_RELEASED",
+        "PR314_REPAIR_MERGED_MAIN_28B9D056_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "LOCK_HOST_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "LOCK_HOST_MERGED_MAIN_EXACT_READ_BACK",
+        "LOCK_HOST_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "FRESH_MAIN_REGISTRY_TARGET_HEAD_AND_OVERLAP_REAUDIT",
+        "NORMAL_MAIN_INTO_TARGET_MERGE_NO_REBASE_NO_FORCE",
+        "SIX_IMMUTABLE_BLOBS_PRESERVED_AND_TWO_SHARED_DOC_SEMANTIC_DELTAS_PRESERVED",
+        "EXACT_APPROVED_CHANGELOG_LINE_ONLY"
+      ],
+      "expiry_conditions": [
+        "TARGET_HEAD_MISMATCH",
+        "TARGET_PR_CLOSED_OR_MERGED",
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
+        "NEW_CHANGELOG_OR_REGISTRY_OVERLAP",
+        "SIX_IMMUTABLE_IMPLEMENTATION_SCHEMA_TEST_OR_EVIDENCE_BLOB_DRIFT",
+        "CONTROLLED_SHARED_TARGET_SEMANTIC_DELTA_LOSS_OR_UNRELATED_TARGET_MUTATION",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
+        "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+      ],
+      "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_SHARED_PATH_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_AND_APPEND_ONLY_CLOSURE_EVIDENCE",
+      "integration_effect_authority_id": "OWNER_EXPLICIT_AUTONOMY_NO_CONFIRMATION_REQUIRED_20260824",
+      "target_merge_authority_id": "OWNER_EXPLICIT_AUTONOMY_NO_CONFIRMATION_REQUIRED_20260824",
+      "closure_authority_id": "OWNER_EXPLICIT_AUTONOMY_NO_CONFIRMATION_REQUIRED_20260824",
       "automatic_retry": false,
       "automatic_rollback_or_revert": false
     }

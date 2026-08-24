@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-057として、Windowsでfresh empty snapshot lockへ複数callerが同時進入するとexclusive lock取得前のbyte初期化write/flushが競合しPermissionErrorになるraceを、canonical OS lock取得後のexclusive region内でのみ初期化するよう修正しました。retry、sleep、別lock、workflow緩和を追加せず、CAS、atomic replace、symlink拒否、lock path/release、Provider、media、Timeline/Resolve、Release/Deploy権限は変更しません。
+
 - TASK-029 R1として、R0のREADY_FOR_HUMAN_REVIEW Candidateに対する明示Human ADOPT/REJECTを、Windows Current User DPAPI既定の暗号化append-only Owner Decision Storeへ接続しました。disk envelopeへOwner scope・Candidate・理由コードを平文保存せず、CAS、chain/replay/scope、restart read-back、wrong-key/tamper/symlink/power-lossをfail-closedにしました。Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、plaintext export、physical delete、Timeline/Resolve、Release/Deploy権限は付与しません。
 
 - TASK-029 R0として、TASK-055のadmitted Human Edit Evidenceをbody-freeなcanonical Human Action Evidenceへ接続し、do-not-learn、Undo、後工程再修正、Safety/Rights、UNKNOWN/STALE/REVOKEDをfail-closedに分離し、複数記録とquality/rework/time/QA/Human acceptance/sample confidenceの6軸からOwner Decision Candidateを決定的に生成しました。filesystem/database/network/media/provider I/O、Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、Edit Plan/Timeline/Resolve、Release/Deploy権限は付与しません。

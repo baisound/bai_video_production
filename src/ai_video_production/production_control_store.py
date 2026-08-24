@@ -47,10 +47,6 @@ def _exclusive_snapshot_lock(target: Path) -> Iterator[None]:
         )
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+b") as handle:
-        handle.seek(0, os.SEEK_END)
-        if handle.tell() == 0:
-            handle.write(b"0")
-            handle.flush()
         handle.seek(0)
         locked = False
         try:
@@ -63,6 +59,11 @@ def _exclusive_snapshot_lock(target: Path) -> Iterator[None]:
 
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             locked = True
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"0")
+                handle.flush()
+            handle.seek(0)
             yield
         finally:
             if locked:

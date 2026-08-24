@@ -3561,7 +3561,7 @@
       "repair_pre_merge_security_run": 32771058927,
       "repair_post_merge_ci_run": 32771823377,
       "repair_post_merge_security_run": 32771823235,
-      "closure_open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_OPEN_PRS_270_273_307",
+      "closure_open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_OPEN_PRS_270_273_307_311",
       "release_reason": "TASK036_PUX2L_CHANGELOG_TARGET_MERGED_AND_APPROVED_POST_MAIN_CI_REPAIR_MERGED_POST_MAIN_GREEN",
       "released_at": "2026-08-24T20:16:36Z",
       "automatic_retry": false,

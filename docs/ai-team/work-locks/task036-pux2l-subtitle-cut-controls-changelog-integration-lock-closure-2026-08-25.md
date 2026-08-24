@@ -51,7 +51,7 @@ Status: HOSTED_CLOSED_RELEASED (authoritative only after merged-main read-back)
 - integration effect authority: AUTHORIZED_SCOPE_CONSUMED_CLOSED
 - target merge authority: OWNER_MERGE_COMPLETED_CLOSED
 - target PR state: MERGED_POST_MERGE_GREEN_AFTER_PR310_CI_REPAIR
-- open PR #270/#273/#307 CHANGELOG or Registry overlap: 0
+- open PR #270/#273/#307/#311 CHANGELOG or Registry overlap: 0
 - nonclosed integration locks after closure: 0
 
 Original target blob read-back:

@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R4B_NARRATION_INTAKE_CONTRACT_COMPLETE / COMMIT_READY / ADOPTION_HUMAN_GATED`
+Status: `R4C_DATASET_LEAKAGE_AUDIT_COMPLETE / COMMIT_READY / ADOPTION_HUMAN_GATED`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -119,9 +119,19 @@ the original is digest-only. Existing R2C DLP is reused fail-closed, all rights,
 match/source/Human-review crossing is rejected, and state remains
 `CANDIDATE_ONLY_NO_ADOPTION`. R4B/R4A/R2C focused Evidence is `80 PASS`.
 
+## R4C completion checkpoint
+
+R4C Dataset leakage audit is complete and commit-ready. It exact re-admits R4A
+and R4B, detects source-group/Match split crossing, exact corrected-transcript
+duplicates and normalized 32-character phrase overlap, and emits only IDs,
+split, stable kind and digests. The audit uses bounded inverted indexes, has a
+canonical mirrored Schema, binds the exact audited candidate set and has exact report re-admission, and remains
+`EVIDENCE_ONLY_NO_ADOPTION`. Focused Evidence is `27 PASS`; TASK-054 plus direct
+TASK-049 and OSS boundary regression is `610 PASS`.
+
 ## Authority boundary
 
-This checkpoint closes R3C, R4A and the bounded R4B narration intake contract.
+This checkpoint closes R3C, R4A, R4B and the bounded R4C leakage audit.
 It does not run media intake, adopt a Dataset or authorize training.
 R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,
@@ -130,9 +140,9 @@ Those remain Human-Gated.
 
 ## Current decision
 
-R3C fake adapter, R4A rights/provenance manifest and R4B narration intake
-candidate contract are complete and commit-ready under the Owner's exact bounded
-instruction. The tuned model remains after CGEL + compatible Knowledge/RAG and
-before deterministic Fact/Policy validation. R3D is Human-Gated; all media intake,
-Dataset adoption, runtime, training, Provider, TTS, Timeline, release and deploy
-effects remain blocked by their Human Gates.
+R3C fake adapter and the R4A-R4C Dataset evidence contracts are complete and
+commit-ready under the Owner's exact bounded instruction. The tuned model remains
+after CGEL + compatible Knowledge/RAG and before deterministic Fact/Policy
+validation. R3D is Human-Gated; all media intake, Dataset adoption, runtime,
+training, Provider, TTS, Timeline, release and deploy effects remain blocked by
+their Human Gates.

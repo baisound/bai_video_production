@@ -1,6 +1,6 @@
 # TASK-056 — Chase Keyword Cue / Semantic Audio Cue Bridge
 
-- Status: `R0_CORE_AND_R2_SKILL_INTEGRATION_COMPLETE / R1A_PRODUCT_GENERATION_AND_REVIEW_QUEUE_IMPLEMENTED_LOCAL / R1B_HUMAN_DECISION_NEXT`
+- Status: `R0_CORE_R1_PRODUCT_INTEGRATION_R2_SKILL_INTEGRATION_IMPLEMENTED_LOCAL / HOSTING_PENDING`
 - Priority: `OWNER_PRIORITY_CREATOR_WORKFLOW_INSERTION`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Base main: `6050c4764dff9bdca0c8f6d4f175f74e8b0442c0`
@@ -92,9 +92,9 @@ PR #269 is merged and the overlap was re-audited. R1A now implements the Product
 - the Shell exposes only no-argument snapshot/generate operations and never accepts a path, profile or Provider from JavaScript;
 - the Edit GUI shows confirmed/review/rejected counts plus text-free frame metadata for REVIEW items;
 - REVIEW items remain excluded from the Montage projection and receive no Timeline/apply authority;
-- focused Product/Core/Shell/Launcher verification is `121 PASS; full regression `3625 PASS / 5 SKIP``.
+- focused R1A Product/Core/Shell/Launcher verification is `121 PASS`; R1A full regression is `3625 PASS / 5 SKIP`; R1B focused verification is `135 PASS`; R1 final full regression is `3628 PASS / 5 SKIP`.
 
-R1B remains next and owns explicit Human review decisions plus durable canonical Project persistence. Its original requirements remain:
+R1B now adds explicit per-cue `ACCEPT / REJECT`, prepare/confirm/apply/cancel Human gates, immutable per-manifest Project records, atomic locked writes, restart read-back and exact Schema mirrors. Confirmation tokens, transcript text and host paths are never persisted; base detection Evidence and the `CONFIRMED_ONLY` Montage sidecar remain immutable. Human ACCEPT is a separate decision record and does not grant Timeline/Resolve/auto-apply authority. R1 local implementation now satisfies:
 
 - reuse the durable P-UX-2K local transcription operation rather than creating a competing Product job;
 - expose a GUI action in the appropriate Subtitle/Montage workflow;

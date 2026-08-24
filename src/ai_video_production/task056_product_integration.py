@@ -12,10 +12,17 @@ from .errors import ProductError, ProductErrorCategory
 from .semantic_audio_cues import (
     CueReviewState,
     KeywordProfile,
+    SpeechCueManifest,
     SpeechCuePublicationService,
 )
 from .speech_cue_application import SpeechCueApplicationService
 from .subtitles import TranscriptManifest
+from .task056_human_review import (
+    Clock,
+    SpeechCueHumanReviewService,
+    SpeechCueHumanReviewStore,
+    TokenFactory,
+)
 from .timebase import FrameRate
 
 
@@ -42,6 +49,8 @@ class Task056SpeechCueProductApplication:
         output_directory: str | Path,
         source_frame_rate: FrameRate,
         keyword_profile: KeywordProfile | None = None,
+        token_factory: TokenFactory | None = None,
+        clock: Clock | None = None,
     ) -> None:
         root = Path(project_root)
         if root.is_symlink() or not root.is_dir():
@@ -67,7 +76,12 @@ class Task056SpeechCueProductApplication:
                 "TASK-056 output must be a regular directory",
                 ProductErrorCategory.SECURITY,
             )
-        if not isinstance(project_id, str) or not project_id.strip():
+        if (
+            not isinstance(project_id, str)
+            or not project_id.strip()
+            or len(project_id) > 256
+            or "\x00" in project_id
+        ):
             raise ProductError(
                 "ERR_TASK056_PROJECT_ID_INVALID",
                 "TASK-056 project identity is invalid",
@@ -78,6 +92,14 @@ class Task056SpeechCueProductApplication:
         self.output_directory = resolved_output
         self.source_frame_rate = source_frame_rate
         self.keyword_profile = keyword_profile or _default_profile()
+        self.human_review = SpeechCueHumanReviewService(
+            SpeechCueHumanReviewStore(
+                output_directory=self.output_directory,
+                project_id=self.project_id,
+            ),
+            token_factory=token_factory,
+            clock=clock,
+        )
 
     def _empty_snapshot(self, *, available: bool, can_generate: bool) -> dict[str, Any]:
         return {
@@ -90,6 +112,11 @@ class Task056SpeechCueProductApplication:
             "review_count": 0,
             "rejected_count": 0,
             "review_items": [],
+            "human_accepted_count": 0,
+            "human_rejected_count": 0,
+            "pending_review_count": 0,
+            "review_revision": 0,
+            "human_decisions": {},
             "transcript_text_exposed": False,
             "host_path_exposed": False,
             "canonical_timeline": False,
@@ -121,6 +148,8 @@ class Task056SpeechCueProductApplication:
                 "Speech cue publication differs from the bound Product Transcript",
                 ProductErrorCategory.DATA_INTEGRITY,
             ) from exc
+        human_review = self.human_review.snapshot(publication.manifest)
+        human_decisions = human_review.pop("decisions")
         review_items = [
             {
                 "cue_id": cue.cue_id,
@@ -132,7 +161,10 @@ class Task056SpeechCueProductApplication:
                 "review_state": cue.review_state.value,
             }
             for cue in publication.manifest.cues
-            if cue.review_state is CueReviewState.REVIEW
+            if (
+                cue.review_state is CueReviewState.REVIEW
+                and cue.cue_id not in human_decisions
+            )
         ]
         counts = publication.manifest.counts
         return {
@@ -148,11 +180,58 @@ class Task056SpeechCueProductApplication:
             "review_count": counts["review"],
             "rejected_count": counts["rejected"],
             "review_items": review_items,
+            "human_decisions": human_decisions,
+            **human_review,
             "transcript_text_exposed": False,
             "host_path_exposed": False,
             "canonical_timeline": False,
             "auto_apply_authorized": False,
         }
+
+    def _bound_manifest(self, transcript: TranscriptManifest) -> SpeechCueManifest:
+        publication = SpeechCuePublicationService.read_verified(self.output_directory)
+        try:
+            publication.manifest.assert_bound_to(
+                transcript=transcript,
+                keyword_profile=self.keyword_profile,
+            )
+        except ValueError as exc:
+            raise ProductError(
+                "ERR_TASK056_PUBLICATION_BINDING_INVALID",
+                "Speech cue publication differs from the bound Product Transcript",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+        return publication.manifest
+
+    def prepare_human_decision(
+        self,
+        *,
+        transcript: TranscriptManifest,
+        cue_id: str,
+        decision: str,
+    ) -> dict[str, Any]:
+        manifest = self._bound_manifest(transcript)
+        return self.human_review.prepare(
+            manifest,
+            cue_id=cue_id,
+            decision=decision,
+        )
+
+    def cancel_human_decision(self, *, confirmation_id: str) -> dict[str, Any]:
+        return self.human_review.cancel(confirmation_id=confirmation_id)
+
+    def apply_human_decision(
+        self,
+        *,
+        transcript: TranscriptManifest,
+        confirmation_id: str,
+    ) -> dict[str, Any]:
+        manifest = self._bound_manifest(transcript)
+        return self.human_review.apply(
+            manifest,
+            confirmation_id=confirmation_id,
+            actor_id="desktop-owner",
+        )
 
     def generate(
         self,

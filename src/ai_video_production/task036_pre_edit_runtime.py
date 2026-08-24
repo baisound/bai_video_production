@@ -104,6 +104,23 @@ class SpeechCueGenerationPort(Protocol):
         transcript: TranscriptManifest,
     ) -> dict[str, Any]: ...
 
+    def prepare_human_decision(
+        self,
+        *,
+        transcript: TranscriptManifest,
+        cue_id: str,
+        decision: str,
+    ) -> dict[str, Any]: ...
+
+    def apply_human_decision(
+        self,
+        *,
+        transcript: TranscriptManifest,
+        confirmation_id: str,
+    ) -> dict[str, Any]: ...
+
+    def cancel_human_decision(self, *, confirmation_id: str) -> dict[str, Any]: ...
+
 
 @dataclass(slots=True)
 class Task036PreEditRuntime:
@@ -191,6 +208,92 @@ class Task036PreEditRuntime:
             raise ProductError(
                 "ERR_TASK056_PRODUCT_RESULT_INVALID",
                 "TASK-056 Product integration returned an invalid result",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return result
+
+    def prepare_speech_cue_decision(
+        self,
+        *,
+        cue_id: str,
+        decision: str,
+    ) -> dict[str, Any]:
+        if self.speech_cue_port is None:
+            raise ProductError(
+                "ERR_TASK056_PRODUCT_INTEGRATION_NOT_BOUND",
+                "TASK-056 Product integration is not bound",
+                ProductErrorCategory.STATE,
+            )
+        transcript = self.binding.transcript
+        if transcript is None:
+            raise ProductError(
+                "ERR_TASK056_TRANSCRIPT_NOT_BOUND",
+                "Speech cue review requires the bound Product Transcript",
+                ProductErrorCategory.STATE,
+            )
+        return self.speech_cue_port.prepare_human_decision(
+            transcript=transcript,
+            cue_id=cue_id,
+            decision=decision,
+        )
+
+    def cancel_speech_cue_decision(self, *, confirmation_id: str) -> dict[str, Any]:
+        if self.speech_cue_port is None:
+            raise ProductError(
+                "ERR_TASK056_PRODUCT_INTEGRATION_NOT_BOUND",
+                "TASK-056 Product integration is not bound",
+                ProductErrorCategory.STATE,
+            )
+        result = self.speech_cue_port.cancel_human_decision(
+            confirmation_id=confirmation_id,
+        )
+        if (
+            not isinstance(result, dict)
+            or result.get("status") != "HUMAN_DECISION_CANCELLED"
+            or result.get("task_owner") != "TASK-056"
+            or result.get("decision_persisted") is not False
+            or result.get("confirmation_token_persisted") is not False
+            or result.get("canonical_timeline") is not False
+            or result.get("auto_apply_authorized") is not False
+        ):
+            raise ProductError(
+                "ERR_TASK056_HUMAN_DECISION_RESULT_INVALID",
+                "TASK-056 Human decision cancellation violated Product boundaries",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return result
+
+    def apply_speech_cue_decision(self, *, confirmation_id: str) -> dict[str, Any]:
+        if self.speech_cue_port is None:
+            raise ProductError(
+                "ERR_TASK056_PRODUCT_INTEGRATION_NOT_BOUND",
+                "TASK-056 Product integration is not bound",
+                ProductErrorCategory.STATE,
+            )
+        transcript = self.binding.transcript
+        if transcript is None:
+            raise ProductError(
+                "ERR_TASK056_TRANSCRIPT_NOT_BOUND",
+                "Speech cue review requires the bound Product Transcript",
+                ProductErrorCategory.STATE,
+            )
+        result = self.speech_cue_port.apply_human_decision(
+            transcript=transcript,
+            confirmation_id=confirmation_id,
+        )
+        if (
+            not isinstance(result, dict)
+            or result.get("status") != "HUMAN_DECISION_RECORDED"
+            or result.get("task_owner") != "TASK-056"
+            or result.get("confirmation_token_persisted") is not False
+            or result.get("transcript_text_exposed") is not False
+            or result.get("host_path_exposed") is not False
+            or result.get("canonical_timeline") is not False
+            or result.get("auto_apply_authorized") is not False
+        ):
+            raise ProductError(
+                "ERR_TASK056_HUMAN_DECISION_RESULT_INVALID",
+                "TASK-056 Human decision result violated Product boundaries",
                 ProductErrorCategory.DATA_INTEGRITY,
             )
         return result

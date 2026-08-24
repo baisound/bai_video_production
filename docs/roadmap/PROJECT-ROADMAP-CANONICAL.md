@@ -2736,7 +2736,7 @@ R0 explicitly does not modify TASK-036 Product/Shell files while PR #269 is open
 
 Core consumer use remains local and does not require Codex/ChatGPT or a paid AI subscription.
 
-R1A Product generation/read integration is implemented locally after PR #269 re-audit: it reuses the durable P-UX-2K transcription operation, derives a fixed Project-private publication, and exposes only text-free counts/review frames through no-argument Shell operations. R1B durable Human decisions remain next; REVIEW cues are not projected or applied automatically.
+R1 Product integration is implemented locally after PR #269 re-audit: R1A reuses durable P-UX-2K transcription and exposes text-free Project-bound cue generation/read; R1B adds explicit per-cue Human `ACCEPT / REJECT` with prepare/confirm/apply/cancel, immutable atomic Project records and restart read-back. Confirmation tokens, transcript text and host paths are not persisted. Base detection Evidence and the CONFIRMED_ONLY sidecar remain unchanged; Human decisions do not grant Timeline/Resolve/auto-apply authority.
 
 ## Addendum XCV - Owner Priority Learning Integration Re-route
 

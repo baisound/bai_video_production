@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R5A_MODE_SELECTOR_COMPLETE / COMMIT_READY / R5B_NEXT`
+Status: `R5B_COMMENTARY_PREVIEW_COMPLETE / COMMIT_READY / R5C_NEXT`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -191,6 +191,25 @@ learning effect in Japanese. R5A plus R0 focused Evidence is `47 PASS`;
 TASK-054 plus direct TASK-049 and OSS boundary regression is `647 PASS`;
 compileall, Schema mirror and diff checks pass. R5B time-aligned ordinary-video commentary
 preview is next.
+
+## R5B completion checkpoint
+
+R5B read-only time-aligned Commentary Preview is complete and commit-ready. It
+reuses the exact TASK-049 Game Intelligence analysis export, canonical Event
+frame range/rational rate and validated Commentary Candidate admission instead
+of creating another Timeline or Candidate store. Exact Match/Event fields,
+nested checksums, side-effect flags, Candidate/Event/Match crossing, duplicate
+or orphan Candidate bindings, 10,000-record bounds and video-duration containment
+fail closed. Only CONFIRMED and admitted-review Events render. Empty output and
+an Operator-selected video without canonical Asset identity are respectively
+`NO_VALIDATED_COMMENTARY` and `NOT_CONFIRMED_MEDIA_IDENTITY`, never implicit
+PASS. The reusable Japanese panel presents start/end, `実況 / 解説 / 戦術 / 反応`,
+confidence and validation; supports prior/next, `前後10秒`, and
+`解説あり / 解説なし`; and permanently states that Dataset, model and automatic
+learning are unchanged. TTS and new model execution are not performed: R5C is
+the separate model status/execute/review connection. R5B plus direct TASK-049
+export and R5A focused Evidence is `26 PASS`; TASK-054 plus direct TASK-049 and
+OSS boundary regression is `656 PASS`; compileall, Schema mirror and diff checks pass.
 
 ## Authority boundary
 

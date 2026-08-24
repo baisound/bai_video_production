@@ -109,11 +109,11 @@ The Python runtime remains authoritative; the JavaScript gate is defense in dept
 
 - Python compile check: PASS for the eight modified Product modules.
 - Embedded V6.1.1 JavaScript `node --check`: PASS.
-- Fresh-main focused and targeted regression: 204 passed across twelve directly impacted test files, including TASK-056 pre-edit compatibility and TASK-044 NLE dispatcher coverage.
+- Fresh-main focused and targeted regression: 205 passed across twelve directly impacted test files, including TASK-056 pre-edit compatibility and TASK-044 NLE dispatcher coverage.
 - Fresh main integrated without conflict: `origin/main` `02f8008a752cd0dc4910c68fdf9de97128f6cc15`; merge commit `29e3891c14cc9af3804ea34a10edfb10b1ea6c74`.
 - Diff whitespace check: PASS.
 - Provider/model download, paid Provider, Resolve, render, native GUI, and Owner media execution: not performed.
 - Initial independent review at `56ba4a1`: Tester PASS, Judge Technical GO, Critic Technical NO-GO with C0/H2/M2/L1.
 - First re-review at `61446ca`: Tester PASS (201 tests), Critic/Judge Technical NO-GO with C0/H1/M1/L0 for repeat Cut admission and pre-CAS trusted runtime cache publication.
 - Second re-review at `3b7f425`: Tester/Critic/Judge Technical NO-GO with C0/H1/M0/L0 because the post-CAS publisher remained a fallible partial-promotion boundary.
-- Recovery removes the publisher/cache contract entirely and injects an explosive publisher-like attribute to prove it is ignored. Fresh-main integration and independent re-review remain pending; no final PASS is claimed.
+- Recovery removes the publisher/cache contract entirely and injects an explosive publisher-like attribute to prove it is ignored. A direct trusted-launch fixture verifies exact promoted-runtime Export dispatch, missing-runtime fail-closed behavior, and application-identity mismatch rejection before dispatch. Fresh-main integration is complete; independent re-review remains pending, so no final PASS is claimed.

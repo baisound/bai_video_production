@@ -1762,3 +1762,131 @@ def test_cut_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
     assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
     assert cut_port.calls == 1
     assert launch._product_store is None
+
+
+def test_trusted_export_dispatcher_uses_only_exact_promoted_workflow_runtime(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path, raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    source = Path(raw["paths"]["analysis_source_path"])
+    ProductProjectManifestStore.save(
+        config.project_root,
+        ProductProjectManifest.create(
+            project_id=config.project_id,
+            project_revision=1,
+            product_version="0.22.0",
+            timebase=ProjectTimebase(
+                config.timeline_rate.numerator,
+                config.timeline_rate.denominator,
+            ),
+            child_bindings=(),
+            created_at="2026-08-25T00:00:00.000Z",
+            updated_at="2026-08-25T00:00:00.000Z",
+        ),
+    )
+
+    class SourceDialogBackend(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    launch = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(SourceDialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        final_review_export_preparation_provider=lambda _receipt: None,
+    )
+    bridge = launch.bridge
+    promoted = None
+    try:
+        class IngestStub:
+            def ingest_local_media(self, source_path):
+                return IngestedMediaIdentity(
+                    "ASSET-00000000000000000000000000",
+                    "sha256:" + "a" * 64,
+                    source_path,
+                )
+
+        class CutPort:
+            def generate_cut_candidates(self, *, source_path, transcript):
+                assert source_path == source
+                return CutCandidateManifest(
+                    transcript.source_asset_id,
+                    "sha256:" + "a" * 64,
+                    48_000,
+                    2_000_000,
+                    "sha256:" + "c" * 64,
+                    transcript.to_dict()["manifest_sha256"],
+                    (
+                        CutCandidate(
+                            "cut-000001",
+                            CutCandidateKind.SILENCE,
+                            1_000_000,
+                            1_500_000,
+                            90,
+                            ("SILENCE",),
+                        ),
+                    ),
+                    (),
+                )
+
+        runtime = launch.pre_edit_runtime
+        runtime.media.ingest_port = IngestStub()
+        runtime.cut_candidate_port = CutPort()
+        assert bridge.choose_and_ingest_media({})["status"] == "INGESTED"
+        runtime.binding.bind_transcript(
+            TranscriptManifest(
+                "ASSET-00000000000000000000000000",
+                "ja",
+                "faster-whisper",
+                "local-cached-model",
+                (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+            )
+        )
+        assert bridge.generate_runtime_cut_candidates({})["status"] == "CUT_CANDIDATES_READY"
+        promoted = bridge._workflow_runtime
+        assert promoted is runtime.promoted_workflow_runtime
+        assert promoted is not None
+        with bridge._nle_operation():
+            controller = bridge._ensure_nle_controller()
+        assert controller is not None
+        dispatcher = controller.export_dispatcher
+        assert dispatcher is not None
+
+        observed = []
+
+        def dispatch_export(self, job, preparation, destination):
+            assert self is promoted
+            observed.append((job, preparation, destination))
+            return "DISPATCHED"
+
+        monkeypatch.setattr(type(promoted), "dispatch_export", dispatch_export)
+        job, preparation = object(), object()
+        destination = config.native_render_evidence_root / "exports" / "job" / "render-output"
+        with bridge._nle_operation():
+            assert dispatcher(job, preparation, destination) == "DISPATCHED"
+        assert observed == [(job, preparation, destination)]
+
+        bridge._workflow_runtime = None
+        with bridge._nle_operation(), pytest.raises(ProductError) as missing:
+            dispatcher(job, preparation, destination)
+        assert missing.value.code == "ERR_TASK036_WORKFLOW_RUNTIME_IDENTITY"
+        assert observed == [(job, preparation, destination)]
+
+        class ForeignRuntime:
+            application = object()
+
+            def dispatch_export(self, *_args):
+                raise AssertionError("identity mismatch must reject before external dispatch")
+
+        bridge._workflow_runtime = ForeignRuntime()
+        with bridge._nle_operation(), pytest.raises(ProductError) as mismatched:
+            dispatcher(job, preparation, destination)
+        assert mismatched.value.code == "ERR_TASK036_WORKFLOW_RUNTIME_IDENTITY"
+        assert observed == [(job, preparation, destination)]
+    finally:
+        if promoted is not None:
+            bridge._workflow_runtime = promoted
+        launch.close()

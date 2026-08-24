@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/dbd-reasoning-offline-evaluation-report.schema.json",
+  "title": "DbD Reasoning Offline Evaluation Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_kind",
+    "leakage_report_sha256",
+    "rights_manifest_sha256",
+    "audited_segments_sha256",
+    "test_sample_set_sha256",
+    "seeds",
+    "evaluations",
+    "tuned_gate_status",
+    "evaluation_state",
+    "evaluation_report_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "DBD_REASONING_OFFLINE_EVALUATION_REPORT"},
+    "leakage_report_sha256": {"$ref": "#/$defs/sha"},
+    "rights_manifest_sha256": {"$ref": "#/$defs/sha"},
+    "audited_segments_sha256": {"$ref": "#/$defs/sha"},
+    "test_sample_set_sha256": {"$ref": "#/$defs/sha"},
+    "seeds": {
+      "type": "array",
+      "prefixItems": [
+        {"const": 104729},
+        {"const": 130363},
+        {"const": 155921}
+      ],
+      "items": false,
+      "minItems": 3
+    },
+    "evaluations": {
+      "type": "array",
+      "prefixItems": [
+        {"allOf": [{"$ref": "#/$defs/evaluation"}, {"properties": {"arm": {"const": "BASELINE"}}}]},
+        {"allOf": [{"$ref": "#/$defs/evaluation"}, {"properties": {"arm": {"const": "GENERIC"}}}]},
+        {"allOf": [{"$ref": "#/$defs/evaluation"}, {"properties": {"arm": {"const": "TUNED"}}}]}
+      ],
+      "items": false,
+      "minItems": 3
+    },
+    "tuned_gate_status": {"$ref": "#/$defs/status"},
+    "evaluation_state": {"const": "EVIDENCE_ONLY_NO_PROMOTION"},
+    "evaluation_report_sha256": {"$ref": "#/$defs/sha"}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "status": {"enum": ["PASS", "FAIL", "NOT_CONFIRMED"]},
+    "bindingRef": {
+      "type": "string",
+      "pattern": "^(baseline|generic|model-quarantine)://[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$"
+    },
+    "milli": {"type": "integer", "minimum": 0, "maximum": 1000},
+    "count": {"type": "integer", "minimum": 0},
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "arm", "binding_ref", "binding_sha256", "output_evidence_set_sha256",
+        "sample_count", "observation_count", "schema_valid_milli",
+        "unsupported_admitted_fact_count", "patch_incompatible_claim_count",
+        "citation_coverage_milli", "secret_pii_leak_count", "split_leakage_count",
+        "replay_stability_milli", "safe_negative_abstention_milli", "latency_p95_ms",
+        "total_cost_milli", "peak_memory_mib", "failure_codes", "status"
+      ],
+      "properties": {
+        "arm": {"enum": ["BASELINE", "GENERIC", "TUNED"]},
+        "binding_ref": {"$ref": "#/$defs/bindingRef"},
+        "binding_sha256": {"$ref": "#/$defs/sha"},
+        "output_evidence_set_sha256": {"$ref": "#/$defs/sha"},
+        "sample_count": {"type": "integer", "minimum": 1, "maximum": 20000},
+        "observation_count": {"$ref": "#/$defs/count"},
+        "schema_valid_milli": {"$ref": "#/$defs/milli"},
+        "unsupported_admitted_fact_count": {"$ref": "#/$defs/count"},
+        "patch_incompatible_claim_count": {"$ref": "#/$defs/count"},
+        "citation_coverage_milli": {"$ref": "#/$defs/milli"},
+        "secret_pii_leak_count": {"$ref": "#/$defs/count"},
+        "split_leakage_count": {"$ref": "#/$defs/count"},
+        "replay_stability_milli": {"$ref": "#/$defs/milli"},
+        "safe_negative_abstention_milli": {
+          "anyOf": [{"$ref": "#/$defs/milli"}, {"type": "null"}]
+        },
+        "latency_p95_ms": {"$ref": "#/$defs/count"},
+        "total_cost_milli": {"$ref": "#/$defs/count"},
+        "peak_memory_mib": {"$ref": "#/$defs/count"},
+        "failure_codes": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"}
+        },
+        "status": {"$ref": "#/$defs/status"}
+      }
+    }
+  }
+}

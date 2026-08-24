@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/bvp-montage-skill-input.schema.json",
+  "title": "TASK-055 BVP Montage Skill Input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_kind",
+    "project_id",
+    "production_job_id",
+    "match_id",
+    "source_asset_id",
+    "source_rate",
+    "timeline_rate",
+    "music_asset_id",
+    "style_profile_id",
+    "preset_manifest_sha256",
+    "editing_plan_sha256",
+    "candidates",
+    "media_bytes_included",
+    "absolute_host_paths_included",
+    "external_skill_output_untrusted",
+    "timeline_mutation_authorized",
+    "resolve_write_authorized",
+    "input_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "record_kind": {
+      "const": "BVP_MONTAGE_SKILL_INPUT"
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "production_job_id": {
+      "type": "string",
+      "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "match_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"
+    },
+    "source_asset_id": {
+      "type": "string",
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "source_rate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "properties": {
+        "numerator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "timeline_rate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "properties": {
+        "numerator": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "denominator": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "music_asset_id": {
+      "type": "string",
+      "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "style_profile_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "preset_manifest_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "editing_plan_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "source_start_frame",
+          "source_end_frame_exclusive",
+          "event_refs",
+          "reason_codes",
+          "highlight_score_milli",
+          "confidence_milli",
+          "human_review_required"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"
+          },
+          "source_start_frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_end_frame_exclusive": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "event_refs": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"
+            }
+          },
+          "reason_codes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$"
+            }
+          },
+          "highlight_score_milli": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "confidence_milli": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "human_review_required": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "media_bytes_included": {
+      "const": false
+    },
+    "absolute_host_paths_included": {
+      "const": false
+    },
+    "external_skill_output_untrusted": {
+      "const": true
+    },
+    "timeline_mutation_authorized": {
+      "const": false
+    },
+    "resolve_write_authorized": {
+      "const": false
+    },
+    "input_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

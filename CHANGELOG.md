@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-056 R1として、既存P-UX-2Kローカル文字起こしのword timingからProject固定のtext-free音声キューを生成・表示し、1件ごとのHuman ACCEPT/REJECTをprepare/confirm/apply/cancel、immutable原子的保存、再起動read-backへ接続しました。confirmation token・Transcript本文・host pathは保存せず、元の検出EvidenceとCONFIRMED_ONLY sidecarを変更せず、Timeline/Resolve/auto-apply、model download、paid/cloud、Release/Deploy権限は付与しません。
+
 - TASK-055 R0として、外部bai-davinci-montage-skills mainの6つのMontage契約をbyte-exactでBVPへ収容し、canonical hash、rational FPS、source range、preset allowlist、Proposal・承認Plan・Human Evidence・Resolve handoff lineageをfail-closedで検証するProduct側admissionを追加しました。ProposalはHuman review必須で、Timeline/Resolve/自動学習、Provider/paid/cloud/private media、Release/Deploy権限は付与しません。
 
 - TASK-056 Chase Keyword Cue / Montage Speech Event Bridge: added deterministic speech-cue extraction from FasterWhisper word timestamps, a text-free semantic audio cue sidecar for BAI DaVinci Montage SKILL integration, resumable long-video processing, exact rational FPS mapping, audio-plus-video Evidence double gating, and Human Review / fail-closed boundaries.

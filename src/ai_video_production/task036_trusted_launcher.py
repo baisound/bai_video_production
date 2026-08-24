@@ -883,18 +883,7 @@ def build_trusted_launch(
     )
     adapter = resolve_adapter or ResolveScriptingAssemblyAdapter()
 
-    workflow_runtimes: dict[int, Task036WorkflowRuntime] = {}
-
     def downstream(application):
-        cached = workflow_runtimes.get(id(application))
-        if cached is not None:
-            if cached.application is not application:
-                raise ProductError(
-                    "ERR_TASK036_WORKFLOW_RUNTIME_IDENTITY",
-                    "Trusted workflow runtime identity changed",
-                    ProductErrorCategory.INTERNAL,
-                )
-            return cached
         source_path = pre_edit.media.runtime_source_path
         if source_path is None:
             raise ProductError(
@@ -919,8 +908,8 @@ def build_trusted_launch(
             handoff_destination=configuration.handoff_destination,
             subtitle_srt_path=_handoff_subtitle_path(configuration.transcription_output / "subtitles.srt"),
         )
-        workflow_runtimes[id(application)] = runtime
         return runtime
+
 
     production_control = Task037ProductionControlApplication(
         project_root=configuration.project_root,
@@ -1104,9 +1093,15 @@ def build_trusted_launch(
                         ProductErrorCategory.SECURITY,
                     ) from exc
                 return destination
-            dispatcher = lambda job, preparation, destination: downstream(
-                application
-            ).dispatch_export(job, preparation, destination)
+            def dispatcher(job, preparation, destination):
+                runtime = bridge._workflow_runtime
+                if runtime is None or runtime.application is not application:
+                    raise ProductError(
+                        "ERR_TASK036_WORKFLOW_RUNTIME_IDENTITY",
+                        "Trusted workflow runtime is not bound to the editing application",
+                        ProductErrorCategory.INTERNAL,
+                    )
+                return runtime.dispatch_export(job, preparation, destination)
         return Task044NleShellController(
             timeline=timeline, edit_application=edit_application,
             export_application=export_application,

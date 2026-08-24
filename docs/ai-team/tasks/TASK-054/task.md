@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R3A_BINDING_REGISTRY_COMPLETE / COMMIT_READY / R3B_NEXT`
+Status: `R4C_DATASET_LEAKAGE_AUDIT_COMPLETE / COMMIT_READY / ADOPTION_HUMAN_GATED`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -68,18 +68,81 @@ Product effect exists in this unit. Focused Evidence is `19 PASS`; TASK-054
 R0-R3A plus TASK-049 direct regression is `351 PASS`; compileall, schema mirror
 and diff-check pass. R3B route capability is next.
 
+## R3B completion checkpoint
+
+R3B route capability is complete and commit-ready. The pure resolver reuses the
+existing `AiConnectionResolver`, requires the exact
+`DBD_TUNED_COMMENTARY_REASONING` capability, and binds one latest APPROVED R3A
+binding to an exact connection-profile route pin. The body-free decision records
+Provider/model/cost and binding/profile/registry identities without credential or
+endpoint references, settings, prompt or output bodies. It always remains
+`NOT_AUTHORIZED_R3D_REQUIRED`; later consumers must re-resolve current
+Registry/Profile/availability state instead of treating the checksum as an
+authentication token. R3B focused Evidence is `27 PASS`; R3B + R3A + TASK-028
+direct boundary Evidence is `57 PASS`; TASK-054 plus TASK-049 direct regression
+is `380 PASS`; compileall, schema mirror and diff-check pass. R3C deterministic
+fake adapter/fault tests are next.
+
+## R3C completion checkpoint
+
+R3C deterministic fake adapter/fault harness is complete and commit-ready. The
+test-only in-memory harness revalidates the current R3B decision before every
+emission, accepts only the canonical R2A strict parser and provides deterministic
+SUCCESS, malformed, timeout, cancellation, runtime-unavailable and resource-limit
+scenarios. Raw fixture bytes exist only while R2A parses them; the returned
+Attempt retains only digests, stable fault codes, metrics and the structural
+quarantine result. It cannot mint an ExecutionReceipt, Proposal, Candidate,
+review, Dataset or execution authority, and fixed state remains
+`TEST_ONLY_NO_PROVIDER_EXECUTION`. R3C focused Evidence is `18 PASS`; R3C + R3B
+and R2A direct boundary Evidence is `160 PASS`; TASK-054 plus TASK-049 direct
+regression is `398 PASS`; compileall and diff-check pass. R3D canonical
+Provider/local adapter integration remains a separate Human Gate.
+
+## R4A completion checkpoint
+
+R4A Dataset rights/provenance manifest is complete and commit-ready. It binds
+existing CAND-R2D and Game Match identities to opaque media, rights, Consent,
+provenance and Human-review SHA references, fixes each source group to one split,
+and derives disposition fail-closed. The body-free manifest is always
+`CANDIDATE_ONLY_NO_ADOPTION`, performs no I/O and carries no transcript/media
+body. Focused Evidence is `9 PASS`; R4A plus direct R0/R2D lineage Evidence is
+`85 PASS`. Dataset adoption, narration intake and training remain Human-Gated.
+
+## R4B completion checkpoint
+
+R4B narration intake candidate contract is complete and commit-ready. It binds
+one exact eligible R4A entry to source video/audio ranges, canonical ASR and
+diarization revisions, a pseudonymous speaker, CGEL Event/Context coordinates,
+Human review and the PLAY_BY_PLAY/ANALYSIS/TACTICAL/REACTION/TRANSITION/FILLER/
+UNCERTAIN role set. Only the Human-reviewed redacted transcript is retained;
+the original is digest-only. Existing R2C DLP is reused fail-closed, all rights,
+match/source/Human-review crossing is rejected, and state remains
+`CANDIDATE_ONLY_NO_ADOPTION`. R4B/R4A/R2C focused Evidence is `80 PASS`.
+
+## R4C completion checkpoint
+
+R4C Dataset leakage audit is complete and commit-ready. It exact re-admits R4A
+and R4B, detects source-group/Match split crossing, exact corrected-transcript
+duplicates and normalized 32-character phrase overlap, and emits only IDs,
+split, stable kind and digests. The audit uses bounded inverted indexes, has a
+canonical mirrored Schema, binds the exact audited candidate set and has exact report re-admission, and remains
+`EVIDENCE_ONLY_NO_ADOPTION`. Focused Evidence is `27 PASS`; TASK-054 plus direct
+TASK-049 and OSS boundary regression is `610 PASS`.
+
 ## Authority boundary
 
-This checkpoint closes the bounded local R3A Binding Registry unit and
-leaves R3B eligible as the next bounded local unit. It does not authorize Dataset adoption,
+This checkpoint closes R3C, R4A, R4B and the bounded R4C leakage audit.
+It does not run media intake, adopt a Dataset or authorize training.
+R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,
 Timeline adoption, binding approval, Product Activation, release or deployment.
 Those remain Human-Gated.
 
 ## Current decision
 
-R3A Binding Registry is complete and commit-ready under the Owner's exact
-bounded instruction. The tuned model design remains after CGEL + compatible
-Knowledge/RAG and before deterministic Fact/Policy validation. R3B is next;
-all Dataset, runtime, training, Provider, TTS, Timeline, release and deploy
-effects remain blocked by their Human Gates.
+R3C fake adapter and the R4A-R4C Dataset evidence contracts are complete and
+commit-ready under the Owner's exact bounded instruction. The tuned model remains
+after CGEL + compatible Knowledge/RAG and before deterministic Fact/Policy
+validation. R3D is Human-Gated; all media intake, Dataset adoption, runtime,
+training, Provider, TTS, Timeline, release and deploy effects remain blocked by
+their Human Gates.

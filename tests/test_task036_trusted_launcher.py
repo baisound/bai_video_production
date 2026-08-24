@@ -53,6 +53,7 @@ from ai_video_production.local_comfy_image_generation_port import LocalComfyText
 from ai_video_production.local_comfy_generation_port import LocalComfyTextToVideoPort
 from ai_video_production.creative_generation_execution_application import LocalGenerationRuntimeReadiness
 from ai_video_production.task036_native_image_vertical_cli import _load_config_scope
+from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
 
@@ -1581,3 +1582,311 @@ def test_launch_config_rejects_explicit_symlink_path(tmp_path: Path):
     with pytest.raises(ProductError) as exc:
         Task036LaunchConfiguration.load(path)
     assert exc.value.code == "ERR_TASK036_LAUNCH_CONFIG_INVALID"
+
+
+def test_subtitle_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path, raw = config_document(tmp_path)
+    source = Path(raw["paths"]["analysis_source_path"])
+
+    class SourceDialogBackend(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(SourceDialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+
+    class IngestStub:
+        def ingest_local_media(self, source_path):
+            return IngestedMediaIdentity(
+                "ASSET-00000000000000000000000000",
+                "sha256:" + "a" * 64,
+                source_path,
+            )
+
+    runtime = launch.pre_edit_runtime
+    runtime.media.ingest_port = IngestStub()
+    bridge = launch.bridge
+    assert bridge.choose_and_ingest_media({})["status"] == "INGESTED"
+    runtime.binding.bind_transcript(
+        TranscriptManifest(
+            "ASSET-00000000000000000000000000",
+            "ja",
+            "faster-whisper",
+            "local-cached-model",
+            (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+        )
+    )
+    entered, release = Event(), Event()
+    runtime_type = runtime.__class__
+    original = runtime_type.create_subtitle_workspace
+
+    def blocking_create(self):
+        assert self is runtime
+        entered.set()
+        assert release.wait(5)
+        return original(self)
+
+    monkeypatch.setattr(runtime_type, "create_subtitle_workspace", blocking_create)
+    completed: list[dict[str, object]] = []
+    operation = Thread(
+        target=lambda: completed.append(bridge.create_runtime_subtitle_workspace({}))
+    )
+    operation.start()
+    assert entered.wait(5)
+    lifetime = launch._local_operation_lifetime
+    assert lifetime is not None
+    closing = Thread(target=launch.close)
+    closing.start()
+    deadline = monotonic() + 5
+    while not lifetime._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+        sleep(0.01)
+    assert lifetime._closing  # type: ignore[attr-defined]
+    assert closing.is_alive()
+    with pytest.raises(ProductError) as rejected:
+        bridge.create_runtime_subtitle_workspace({})
+    assert rejected.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    release.set()
+    operation.join(5)
+    closing.join(5)
+    assert not operation.is_alive() and not closing.is_alive()
+    assert completed[0]["status"] == "SUBTITLE_READY"
+    assert completed[0]["transcript_text_exposed"] is False
+    with pytest.raises(ProductError) as after_close:
+        bridge.create_runtime_subtitle_workspace({})
+    assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert launch._product_store is None
+
+def test_cut_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
+    tmp_path: Path,
+) -> None:
+    path, raw = config_document(tmp_path)
+    source = Path(raw["paths"]["analysis_source_path"])
+
+    class SourceDialogBackend(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(SourceDialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+
+    class IngestStub:
+        def ingest_local_media(self, source_path):
+            return IngestedMediaIdentity(
+                "ASSET-00000000000000000000000000",
+                "sha256:" + "a" * 64,
+                source_path,
+            )
+
+    entered, release = Event(), Event()
+
+    class BlockingCutPort:
+        calls = 0
+
+        def generate_cut_candidates(self, *, source_path, transcript):
+            self.calls += 1
+            assert source_path == source
+            entered.set()
+            assert release.wait(5)
+            return CutCandidateManifest(
+                transcript.source_asset_id,
+                "sha256:" + "a" * 64,
+                48_000,
+                2_000_000,
+                "sha256:" + "c" * 64,
+                transcript.to_dict()["manifest_sha256"],
+                (
+                    CutCandidate(
+                        "cut-000001",
+                        CutCandidateKind.SILENCE,
+                        1_000_000,
+                        1_500_000,
+                        90,
+                        ("SILENCE",),
+                    ),
+                ),
+                (),
+            )
+
+    runtime = launch.pre_edit_runtime
+    runtime.media.ingest_port = IngestStub()
+    cut_port = BlockingCutPort()
+    runtime.cut_candidate_port = cut_port
+    bridge = launch.bridge
+    assert bridge.choose_and_ingest_media({})["status"] == "INGESTED"
+    runtime.binding.bind_transcript(
+        TranscriptManifest(
+            "ASSET-00000000000000000000000000",
+            "ja",
+            "faster-whisper",
+            "local-cached-model",
+            (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+        )
+    )
+    completed: list[dict[str, object]] = []
+    operation = Thread(
+        target=lambda: completed.append(bridge.generate_runtime_cut_candidates({}))
+    )
+    operation.start()
+    assert entered.wait(5)
+    lifetime = launch._local_operation_lifetime
+    assert lifetime is not None
+    closing = Thread(target=launch.close)
+    closing.start()
+    deadline = monotonic() + 5
+    while not lifetime._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+        sleep(0.01)
+    assert lifetime._closing  # type: ignore[attr-defined]
+    assert closing.is_alive()
+    with pytest.raises(ProductError) as rejected:
+        bridge.generate_runtime_cut_candidates({})
+    assert rejected.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert cut_port.calls == 1
+    release.set()
+    operation.join(5)
+    closing.join(5)
+    assert not operation.is_alive() and not closing.is_alive()
+    assert completed[0]["status"] == "CUT_CANDIDATES_READY"
+    assert completed[0]["candidate_details_exposed"] is False
+    with pytest.raises(ProductError) as after_close:
+        bridge.generate_runtime_cut_candidates({})
+    assert after_close.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+    assert cut_port.calls == 1
+    assert launch._product_store is None
+
+
+def test_trusted_export_dispatcher_uses_only_exact_promoted_workflow_runtime(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path, raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    source = Path(raw["paths"]["analysis_source_path"])
+    ProductProjectManifestStore.save(
+        config.project_root,
+        ProductProjectManifest.create(
+            project_id=config.project_id,
+            project_revision=1,
+            product_version="0.22.0",
+            timebase=ProjectTimebase(
+                config.timeline_rate.numerator,
+                config.timeline_rate.denominator,
+            ),
+            child_bindings=(),
+            created_at="2026-08-25T00:00:00.000Z",
+            updated_at="2026-08-25T00:00:00.000Z",
+        ),
+    )
+
+    class SourceDialogBackend(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    launch = build_trusted_launch(
+        config,
+        native_dialog=Task036NativeDialogService(SourceDialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        final_review_export_preparation_provider=lambda _receipt: None,
+    )
+    bridge = launch.bridge
+    promoted = None
+    try:
+        class IngestStub:
+            def ingest_local_media(self, source_path):
+                return IngestedMediaIdentity(
+                    "ASSET-00000000000000000000000000",
+                    "sha256:" + "a" * 64,
+                    source_path,
+                )
+
+        class CutPort:
+            def generate_cut_candidates(self, *, source_path, transcript):
+                assert source_path == source
+                return CutCandidateManifest(
+                    transcript.source_asset_id,
+                    "sha256:" + "a" * 64,
+                    48_000,
+                    2_000_000,
+                    "sha256:" + "c" * 64,
+                    transcript.to_dict()["manifest_sha256"],
+                    (
+                        CutCandidate(
+                            "cut-000001",
+                            CutCandidateKind.SILENCE,
+                            1_000_000,
+                            1_500_000,
+                            90,
+                            ("SILENCE",),
+                        ),
+                    ),
+                    (),
+                )
+
+        runtime = launch.pre_edit_runtime
+        runtime.media.ingest_port = IngestStub()
+        runtime.cut_candidate_port = CutPort()
+        assert bridge.choose_and_ingest_media({})["status"] == "INGESTED"
+        runtime.binding.bind_transcript(
+            TranscriptManifest(
+                "ASSET-00000000000000000000000000",
+                "ja",
+                "faster-whisper",
+                "local-cached-model",
+                (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+            )
+        )
+        assert bridge.generate_runtime_cut_candidates({})["status"] == "CUT_CANDIDATES_READY"
+        promoted = bridge._workflow_runtime
+        assert promoted is runtime.promoted_workflow_runtime
+        assert promoted is not None
+        with bridge._nle_operation():
+            controller = bridge._ensure_nle_controller()
+        assert controller is not None
+        dispatcher = controller.export_dispatcher
+        assert dispatcher is not None
+
+        observed = []
+
+        def dispatch_export(self, job, preparation, destination):
+            assert self is promoted
+            observed.append((job, preparation, destination))
+            return "DISPATCHED"
+
+        monkeypatch.setattr(type(promoted), "dispatch_export", dispatch_export)
+        job, preparation = object(), object()
+        destination = config.native_render_evidence_root / "exports" / "job" / "render-output"
+        with bridge._nle_operation():
+            assert dispatcher(job, preparation, destination) == "DISPATCHED"
+        assert observed == [(job, preparation, destination)]
+
+        bridge._workflow_runtime = None
+        with bridge._nle_operation(), pytest.raises(ProductError) as missing:
+            dispatcher(job, preparation, destination)
+        assert missing.value.code == "ERR_TASK036_WORKFLOW_RUNTIME_IDENTITY"
+        assert observed == [(job, preparation, destination)]
+
+        class ForeignRuntime:
+            application = object()
+
+            def dispatch_export(self, *_args):
+                raise AssertionError("identity mismatch must reject before external dispatch")
+
+        bridge._workflow_runtime = ForeignRuntime()
+        with bridge._nle_operation(), pytest.raises(ProductError) as mismatched:
+            dispatcher(job, preparation, destination)
+        assert mismatched.value.code == "ERR_TASK036_WORKFLOW_RUNTIME_IDENTITY"
+        assert observed == [(job, preparation, destination)]
+    finally:
+        if promoted is not None:
+            bridge._workflow_runtime = promoted
+        launch.close()

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/dbd-reasoning-dataset-rights-manifest.schema.json",
+  "title": "DbD Reasoning Dataset Rights Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_kind", "manifest_id", "revision", "manifest_state", "entries", "rights_manifest_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "DBD_REASONING_DATASET_RIGHTS_MANIFEST"},
+    "manifest_id": {"pattern": "^MAN-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "revision": {"type": "integer", "minimum": 1},
+    "manifest_state": {"const": "CANDIDATE_ONLY_NO_ADOPTION"},
+    "entries": {"type": "array", "minItems": 1, "maxItems": 2048, "items": {"$ref": "#/$defs/entry"}},
+    "rights_manifest_sha256": {"$ref": "#/$defs/sha"}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "mediaRef": {"type": "string", "pattern": "^media://sha256/[0-9a-f]{64}$"},
+    "rightsRef": {"type": "string", "pattern": "^rights://sha256/[0-9a-f]{64}$"},
+    "consentRef": {"type": "string", "pattern": "^consent://sha256/[0-9a-f]{64}$"},
+    "provenanceRef": {"type": "string", "pattern": "^provenance://sha256/[0-9a-f]{64}$"},
+    "humanReviewRef": {"type": "string", "pattern": "^human-review://sha256/[0-9a-f]{64}$"},
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_id", "candidate_sha256", "lineage_sha256", "human_review_sha256", "human_review_ref", "match_id", "source_group_id", "source_ref", "split", "patch_version", "locale", "rights_decision", "rights_ref", "consent_decision", "consent_ref", "provenance_ref", "disposition", "reason_codes"],
+      "properties": {
+        "candidate_id": {"type": "string", "pattern": "^CAND-R2D[0-9A-HJKMNP-TV-Z]{23}$"},
+        "candidate_sha256": {"$ref": "#/$defs/sha"},
+        "lineage_sha256": {"$ref": "#/$defs/sha"},
+        "human_review_sha256": {"$ref": "#/$defs/sha"},
+        "human_review_ref": {"$ref": "#/$defs/humanReviewRef"},
+        "match_id": {"type": "string", "pattern": "^MATCH-[0-9A-HJKMNP-TV-Z]{26}$"},
+        "source_group_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+        "source_ref": {"$ref": "#/$defs/mediaRef"},
+        "split": {"enum": ["TRAIN", "VALIDATION", "TEST"]},
+        "patch_version": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$"},
+        "locale": {"type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"},
+        "rights_decision": {"enum": ["ADMITTED_FOR_TRAINING", "REJECTED", "REVOKED", "UNKNOWN"]},
+        "rights_ref": {"$ref": "#/$defs/rightsRef"},
+        "consent_decision": {"enum": ["EXPLICIT_TRAINING", "NOT_REQUIRED_NON_PERSONAL", "REJECTED", "REVOKED", "UNKNOWN"]},
+        "consent_ref": {"$ref": "#/$defs/consentRef"},
+        "provenance_ref": {"$ref": "#/$defs/provenanceRef"},
+        "disposition": {"enum": ["ELIGIBLE_CANDIDATE", "NEEDS_REVIEW", "REJECTED"]},
+        "reason_codes": {"type": "array", "uniqueItems": true, "maxItems": 32, "items": {"type": "string", "pattern": "^[A-Z0-9][A-Z0-9._+-]{0,63}$"}}
+      }
+    }
+  }
+}

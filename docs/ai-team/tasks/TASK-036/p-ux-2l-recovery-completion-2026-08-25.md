@@ -12,6 +12,8 @@ State: TECHNICAL GO / COMMIT-READY
 - Reviewed feature HEAD: `f9287200f2f8c6633fc31fb6b07ed9a4325d44f1`
 - Integrated `origin/main`: `47e176559c358375126af194bde37a008707444d`
 - Fresh-main merge: `d8dd6043a53ba587a00931cb172ebf18979bfa82`
+- Later TASK-029 R3 lock-closure main integrated: `origin/main` `797feb073cf50d3a440b070265e2dbed7fc59cad`; merge `31dcae0d68ed4cf4f09d9309c4c0c41b235d704e`
+- Post-closure Registry read-back: revision 68, nonclosed integration locks 0
 - Reviewed implementation/recovery scope: 14 approved files; this completion adds one Evidence file; CHANGELOG and shared Registry excluded
 - Worktree: clean before this completion record
 - Original TASK-029 worktree and user-owned untracked `tmp/`: not read, staged, modified, or deleted

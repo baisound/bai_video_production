@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R6C_QUARANTINE_CONTRACT_COMPLETE / COMMIT_READY / R6B_AND_REAL_R6C_GATED`
+Status: `R6D_EVALUATED_BRIDGE_COMPLETE / COMMIT_READY / REAL_R6B_R6D_GATED`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -319,6 +319,19 @@ artifact was read or created. Real R6B output/hash/evaluation and R6D proposal
 remain gated on exact real Evidence.
 
 This checkpoint closes R3C, bounded R4A-R4E-B evidence-contract work and R5A-R5D Operator views.
+## R6D completion checkpoint
+
+R6D EVALUATED-only bridge is complete and commit-ready. It reuses the R3A
+Registry, exact re-admits DRAFT and R6C, requires canonical Registry base/adapter
+coordinates and digests to match, and projects Dataset/recipe/evaluation/rights
+lineage into revision+1 with `EVALUATE`. Approval fields remain null and an
+EVALUATED-only chain cannot resolve for runtime. The bridge exposes no APPROVE,
+activation or execution action. R6C storage `quarantine_ref` is explicitly
+separate from R3A model/model-adapter refs; the discovered mismatch was corrected
+on R6C PR #327 before this unit. R6D/R6C/Registry focused Evidence is `32 PASS`;
+TASK-054 plus direct TASK-049 and OSS boundary regression is `712 PASS`; compileall and diff checks pass.
+No real binding record was issued because real R6B/R6C Evidence is unavailable.
+
 It does not run media intake, adopt a Dataset, authorize training or execute inference.
 R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
 model/runtime download, local or paid training, Provider inference, TTS,

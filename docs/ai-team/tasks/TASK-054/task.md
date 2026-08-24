@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R6D_EVALUATED_BRIDGE_COMPLETE / COMMIT_READY / REAL_R6B_R6D_GATED`
+Status: `R7_PREFLIGHT_UI_INTEGRATED / COMMIT_READY / WINDOWS_BUILD_NEXT`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -334,6 +334,18 @@ No real binding record was issued because real R6B/R6C Evidence is unavailable.
 
 It does not run media intake, adopt a Dataset, authorize training or execute inference.
 R3D is not eligible without its separate Human Gate. This checkpoint does not authorize Dataset adoption,
+## R7 preflight UI integration checkpoint
+
+The R5B-R5E panels are now reachable from one `実況・解説AI` Training Studio tab
+with four task-specific subtabs; R5A remains global. Opening the tab is a safe
+empty-state operation only. Missing R3D returns stable preflight failure;
+cancel/resume callbacks state that no request was sent. Existing TASK-049
+Windows entry/spec remain authoritative, so no second Product entrypoint exists.
+R5 panel plus integration focused Evidence is `94 PASS`; TASK-054 plus direct
+TASK-049 and OSS boundary regression is `716 PASS`; compileall and diff checks pass. Real Tk/package
+rendering and interaction remain NOT_CONFIRMED until the next Windows build/start
+unit. Real Evidence loaders and all execution/adoption gates remain unchanged.
+
 model/runtime download, local or paid training, Provider inference, TTS,
 Timeline adoption, binding approval, Product Activation, release or deployment.
 Those remain Human-Gated.

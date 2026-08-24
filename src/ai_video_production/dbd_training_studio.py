@@ -102,8 +102,12 @@ from .dbd_training_studio_foundation_ui import (
     choose_workspace_before_launch,
 )
 from .dbd_training_studio_foundation import resolve_workspace_runtime_profile
-from .errors import ProductError
+from .errors import ProductError, ProductErrorCategory
 from .dbd_reasoning_mode_selector_ui import build_reasoning_mode_selector_panel
+from .dbd_reasoning_commentary_preview_ui import CommentaryPreviewPanel
+from .dbd_reasoning_dataset_evaluation_view_ui import DatasetEvaluationPanel
+from .dbd_reasoning_model_panel_ui import ReasoningModelPanel
+from .dbd_reasoning_operation_view_ui import TrainingStudioOperationPanel
 from .dbd_runtime_options import (
     WHISPER_MODEL_OPTIONS_JA, DEVICE_OPTIONS_JA, COMPUTE_OPTIONS_JA,
     display_for_value,
@@ -265,6 +269,67 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     status = tk.StringVar(value="準備完了")
     ttk.Label(root, textvariable=status, anchor="w").grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 8))
+    # TASK-054 Operator surface.  These panels remain safely empty until exact
+    # canonical Evidence is loaded; opening the tab never starts inference,
+    # training, a Provider call or a worker process.
+    reasoning_tab = ttk.Frame(notebook, padding=8)
+    reasoning_tab.columnconfigure(0, weight=1)
+    reasoning_tab.rowconfigure(1, weight=1)
+    notebook.add(reasoning_tab, text="実況・解説AI")
+    ttk.Label(
+        reasoning_tab,
+        text="動画の実況・解説を確認し、モデル・Dataset・処理Evidenceを安全に確認します。",
+        wraplength=1100,
+    ).grid(row=0, column=0, sticky="w", pady=(0, 8))
+    reasoning_notebook = ttk.Notebook(reasoning_tab)
+    reasoning_notebook.grid(row=1, column=0, sticky="nsew")
+
+    preview_page = ttk.Frame(reasoning_notebook, padding=8)
+    model_page = ttk.Frame(reasoning_notebook, padding=8)
+    dataset_page = ttk.Frame(reasoning_notebook, padding=8)
+    operation_page = ttk.Frame(reasoning_notebook, padding=8)
+    for page in (preview_page, model_page, dataset_page, operation_page):
+        page.columnconfigure(0, weight=1)
+        page.rowconfigure(0, weight=1)
+    reasoning_notebook.add(preview_page, text="現在の実況・解説")
+    reasoning_notebook.add(model_page, text="モデルと事前チェック")
+    reasoning_notebook.add(dataset_page, text="Datasetと評価")
+    reasoning_notebook.add(operation_page, text="処理状況と復旧")
+
+    commentary_panel = CommentaryPreviewPanel(
+        preview_page,
+        seek_to_ms=lambda milliseconds: status.set(
+            f"実況・解説位置: {milliseconds / 1000:.3f}秒（動画Evidence読込後にseekします）"
+        ),
+    )
+    commentary_panel.grid(row=0, column=0, sticky="nsew")
+
+    def reasoning_preflight_unavailable():
+        raise ProductError(
+            "ERR_TASK054_R3D_REQUIRED",
+            "実行可能な承認済みBinding/routeはまだありません",
+            ProductErrorCategory.STATE,
+        )
+
+    model_panel = ReasoningModelPanel(
+        model_page,
+        run_preflight=reasoning_preflight_unavailable,
+        open_review=lambda: status.set("レビュー対象はまだありません。"),
+    )
+    model_panel.grid(row=0, column=0, sticky="nsew")
+    dataset_panel = DatasetEvaluationPanel(dataset_page)
+    dataset_panel.grid(row=0, column=0, sticky="nsew")
+    operation_panel = TrainingStudioOperationPanel(
+        operation_page,
+        on_cancel_request=lambda operation_id, revision: status.set(
+            f"取消要求は未送信です: {operation_id} r{revision}"
+        ),
+        on_resume_plan_request=lambda operation_id, revision, _checkpoint: status.set(
+            f"再開計画要求は未送信です: {operation_id} r{revision}"
+        ),
+    )
+    operation_panel.grid(row=0, column=0, sticky="nsew")
+
 
     def show_operation_error(
         title: str,
@@ -4712,6 +4777,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         visual_tab,
         ocr_tab,
         trivia_tab,
+        reasoning_tab,
         review_tab,
         migration_tab,
     )

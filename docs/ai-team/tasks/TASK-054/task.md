@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R6A_PROBE_CONTRACT_COMPLETE / COMMIT_READY / REAL_GATE_A_PROBE_NOT_EXECUTED`
+Status: `R6C_QUARANTINE_CONTRACT_COMPLETE / COMMIT_READY / R6B_AND_REAL_R6C_GATED`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -302,6 +302,21 @@ reject order/status/checksum/authority-state forgery. R6A fixture Evidence is
 runtime/storage/encryption, resource/device ownership and separate download/
 training receipts are not all bound. R6B acquisition/training is parked behind
 those Human Gates.
+
+## R6C completion checkpoint
+
+R6C quarantined-artifact seal contract is complete and commit-ready while R6B
+remains parked. It exact re-admits a PASS TUNED R4D report and binds quarantine,
+base-model, adapter aggregate, sorted logical file inventory, total bytes,
+Dataset/recipe, evaluation, rights, held-out TEST set and TUNED binding digests.
+Single and sharded adapters use one canonical ADAPTER-role-set digest. Traversal,
+duplicates, unsorted paths, empty/mismatched adapter sets, identity crossing,
+size/checksum/lineage forgery and non-PASS TUNED evaluation fail closed. State is
+fixed to `QUARANTINED_EVALUATED_NO_APPROVAL_OR_ACTIVATION`; schema/mirror and
+admission cannot grant approval. R6C fixture Evidence is `9 PASS`; TASK-054 plus
+direct TASK-049 and OSS boundary regression is `708 PASS`; compileall, schema mirror and diff checks pass. No real model
+artifact was read or created. Real R6B output/hash/evaluation and R6D proposal
+remain gated on exact real Evidence.
 
 This checkpoint closes R3C, bounded R4A-R4E-B evidence-contract work and R5A-R5D Operator views.
 It does not run media intake, adopt a Dataset, authorize training or execute inference.

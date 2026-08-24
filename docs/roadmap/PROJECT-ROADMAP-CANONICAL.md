@@ -2736,6 +2736,8 @@ R0 explicitly does not modify TASK-036 Product/Shell files while PR #269 is open
 
 Core consumer use remains local and does not require Codex/ChatGPT or a paid AI subscription.
 
+R1A Product generation/read integration is implemented locally after PR #269 re-audit: it reuses the durable P-UX-2K transcription operation, derives a fixed Project-private publication, and exposes only text-free counts/review frames through no-argument Shell operations. R1B durable Human decisions remain next; REVIEW cues are not projected or applied automatically.
+
 ## Addendum XCV - Owner Priority Learning Integration Re-route
 
 Date: `2026-08-24`

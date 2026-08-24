@@ -94,6 +94,17 @@ class CutCandidateGenerationPort(Protocol):
     ) -> CutCandidateManifest: ...
 
 
+class SpeechCueGenerationPort(Protocol):
+    def snapshot(self, transcript: TranscriptManifest | None) -> dict[str, Any]: ...
+
+    def generate(
+        self,
+        *,
+        project_id: str,
+        transcript: TranscriptManifest,
+    ) -> dict[str, Any]: ...
+
+
 @dataclass(slots=True)
 class Task036PreEditRuntime:
     """Compose Media, local ASR, Subtitle and Cut services behind one gate."""
@@ -103,6 +114,7 @@ class Task036PreEditRuntime:
     ingest_port: MediaIngestPort
     transcription_port: LocalTranscriptionPort
     cut_candidate_port: CutCandidateGenerationPort
+    speech_cue_port: SpeechCueGenerationPort | None = None
     media: Task036MediaWorkflowFacade = field(init=False)
     binding: Task036PreEditBinding = field(init=False)
     application: Task036EditingApplication | None = field(default=None, init=False)
@@ -140,7 +152,48 @@ class Task036PreEditRuntime:
             "host_paths_exposed": False,
             "provider_configuration_from_javascript": False,
             "transcription_recovery_required": recovery_required,
+            "speech_cues": self.speech_cue_snapshot(),
         }
+
+    def speech_cue_snapshot(self) -> dict[str, Any]:
+        if self.speech_cue_port is None:
+            return {"available": False, "task_owner": "TASK-056"}
+        return self.speech_cue_port.snapshot(self.binding.transcript)
+
+    def generate_speech_cues(self) -> dict[str, Any]:
+        if self.speech_cue_port is None:
+            raise ProductError(
+                "ERR_TASK056_PRODUCT_INTEGRATION_NOT_BOUND",
+                "TASK-056 Product integration is not bound",
+                ProductErrorCategory.STATE,
+            )
+        transcript = self.binding.transcript
+        if transcript is None:
+            raise ProductError(
+                "ERR_TASK056_TRANSCRIPT_NOT_BOUND",
+                "Speech cue generation requires the bound Product Transcript",
+                ProductErrorCategory.STATE,
+            )
+        result = self.speech_cue_port.generate(
+            project_id=self.coordinator.state.project_id,
+            transcript=transcript,
+        )
+        if (
+            not isinstance(result, dict)
+            or result.get("available") is not True
+            or result.get("generated") is not True
+            or result.get("task_owner") != "TASK-056"
+            or result.get("transcript_text_exposed") is not False
+            or result.get("host_path_exposed") is not False
+            or result.get("canonical_timeline") is not False
+            or result.get("auto_apply_authorized") is not False
+        ):
+            raise ProductError(
+                "ERR_TASK056_PRODUCT_RESULT_INVALID",
+                "TASK-056 Product integration returned an invalid result",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return result
 
     def choose_and_ingest_media(self) -> dict[str, Any]:
         return self.media.choose_and_ingest()

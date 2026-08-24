@@ -184,6 +184,64 @@ def test_bridge_rejects_javascript_paths_and_provider_configuration(tmp_path: Pa
     assert transcription.calls == []
 
 
+class SpeechCuePort:
+    def __init__(self):
+        self.generated: list[tuple[str, TranscriptManifest]] = []
+
+    def snapshot(self, transcript: TranscriptManifest | None):
+        return {
+            "available": True,
+            "task_owner": "TASK-056",
+            "generated": False,
+            "can_generate": transcript is not None,
+        }
+
+    def generate(self, *, project_id: str, transcript: TranscriptManifest):
+        self.generated.append((project_id, transcript))
+        return {
+            "available": True,
+            "task_owner": "TASK-056",
+            "generated": True,
+            "can_generate": True,
+            "confirmed_count": 1,
+            "review_count": 0,
+            "rejected_count": 0,
+            "review_items": [],
+            "transcript_text_exposed": False,
+            "host_path_exposed": False,
+            "canonical_timeline": False,
+            "auto_apply_authorized": False,
+        }
+
+
+def test_speech_cue_bridge_reuses_bound_transcript_and_rejects_javascript_configuration(
+    tmp_path: Path,
+):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    cues = SpeechCuePort()
+    runtime.speech_cue_port = cues
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+
+    assert bridge.speech_cue_snapshot()["can_generate"] is False
+    with pytest.raises(ProductError) as absent:
+        bridge.generate_speech_cues()
+    assert absent.value.code == "ERR_TASK056_TRANSCRIPT_NOT_BOUND"
+
+    bridge.choose_and_ingest_media()
+    run_transcription(bridge)
+    assert bridge.speech_cue_snapshot()["can_generate"] is True
+    with pytest.raises(ProductError) as configured:
+        bridge.generate_speech_cues({"output_path": "C:/private", "profile": "other"})
+    assert configured.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+    result = bridge.generate_speech_cues()
+    assert result["generated"] is True
+    assert result["transcript_text_exposed"] is False
+    assert result["host_path_exposed"] is False
+    assert cues.generated[0][0] == "phase-g-sandbox"
+    assert cues.generated[0][1] is runtime.binding.transcript
+    assert "hello" not in json.dumps(result)
+
 def test_local_transcription_requires_single_use_python_confirmation(tmp_path: Path):
     _, runtime, _, transcription, _ = make_runtime(tmp_path)
     bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)

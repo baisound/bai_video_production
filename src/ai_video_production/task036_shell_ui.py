@@ -655,6 +655,24 @@ class Task036ShellBridge:
                 "recovered_from_durable_result": True,
             }
 
+    def speech_cue_snapshot(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "speech cue snapshot")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                return {"available": False, "task_owner": "TASK-056"}
+            return self._pre_edit_runtime.speech_cue_snapshot()
+
+    def generate_speech_cues(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "speech cue generation")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError(
+                    "ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND",
+                    "Trusted pre-edit runtime is not bound",
+                    ProductErrorCategory.STATE,
+                )
+            return self._pre_edit_runtime.generate_speech_cues()
+
     def create_runtime_subtitle_workspace(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Subtitle Workspace creation")
         if self._pre_edit_runtime is None:

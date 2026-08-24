@@ -8,8 +8,10 @@ existing Product application services.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import wraps
 from enum import Enum
 import secrets
+from threading import RLock
 from typing import Any, Callable, Mapping
 
 from .errors import ProductError, ProductErrorCategory
@@ -343,6 +345,15 @@ class BackgroundJobRegistry:
         return tuple(job for job in self.active() if not job.safe_cancel)
 
 
+def _context_mutation_guarded(method: Callable[..., Any]) -> Callable[..., Any]:
+    @wraps(method)
+    def guarded(self: "ShellApplicationService", *args: Any, **kwargs: Any) -> Any:
+        with self._context_lock:
+            return method(self, *args, **kwargs)
+
+    return guarded
+
+
 class ShellApplicationService:
     """Transport-neutral TASK-036 shell authority boundary.
 
@@ -355,6 +366,7 @@ class ShellApplicationService:
         *,
         product_version: str,
         token_factory: TokenFactory | None = None,
+        context_lock: Any | None = None,
     ) -> None:
         if not product_version.strip():
             raise ValueError("product_version must be non-empty")
@@ -366,6 +378,12 @@ class ShellApplicationService:
         self._confirmations: dict[str, _PendingConfirmation] = {}
         self._token_factory = token_factory or (lambda: secrets.token_urlsafe(24))
         self._command_policy_provider: CommandPolicyProvider | None = None
+        if context_lock is not None and (
+            not hasattr(context_lock, "__enter__")
+            or not hasattr(context_lock, "__exit__")
+        ):
+            raise ValueError("context_lock must be a context manager")
+        self._context_lock = context_lock or RLock()
         self.next_recommended_action: str | None = "project.open"
 
     @staticmethod
@@ -380,6 +398,7 @@ class ShellApplicationService:
                 details={"command_type": command_type},
             ) from exc
 
+    @_context_mutation_guarded
     def open_project_context(
         self,
         *,
@@ -403,6 +422,7 @@ class ShellApplicationService:
         self.next_recommended_action = "media.choose_and_ingest" if selected_asset_id is None else "transcription.start"
         return self.project
 
+    @_context_mutation_guarded
     def update_project_selection(self, *, selected_asset_id: str | None) -> ShellProjectContext:
         if self.project is None:
             raise ProductError("ERR_SHELL_PROJECT_REQUIRED", "No Project is open", ProductErrorCategory.STATE)
@@ -418,6 +438,7 @@ class ShellApplicationService:
         )
         return self.project
 
+    @_context_mutation_guarded
     def bind_resolve_target(self, *, resolve_project_name: str, resolve_timeline_name: str) -> ShellProjectContext:
         """Bind the exact external Resolve target and invalidate stale confirmations."""
         if self.project is None:
@@ -455,6 +476,7 @@ class ShellApplicationService:
         """
         self._command_policy_provider = provider
 
+    @_context_mutation_guarded
     def advance_context_revision(self) -> ShellProjectContext:
         """Invalidate one-shot confirmations after an upstream state change."""
         if self.project is None:

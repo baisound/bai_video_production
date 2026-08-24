@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import secrets
 from threading import Lock
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 from .cut_candidates import CutCandidateManifest
 from .desktop_editing_application import Task036EditingApplication
@@ -21,6 +21,7 @@ from .desktop_pre_edit_binding import Task036PreEditBinding
 from .desktop_shell import ShellCommand
 from .errors import ProductError, ProductErrorCategory
 from .subtitles import TranscriptManifest
+from .subtitle_workspace import SubtitleWorkspace
 from .task036_native_dialog import Task036NativeDialogService
 
 
@@ -85,6 +86,19 @@ class _PendingTranscription:
     recovery: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class _PreEditCoordinate:
+    project_id: str
+    session_revision: int
+    source_asset_id: str
+    source_asset_sha256: str
+    source_path: Path
+    transcript_sha256: str
+    subtitle_workspace_sha256: str | None
+    context_revision: int
+    transcript: TranscriptManifest
+
+
 class CutCandidateGenerationPort(Protocol):
     def generate_cut_candidates(
         self,
@@ -135,7 +149,9 @@ class Task036PreEditRuntime:
     media: Task036MediaWorkflowFacade = field(init=False)
     binding: Task036PreEditBinding = field(init=False)
     application: Task036EditingApplication | None = field(default=None, init=False)
+    _promoted_workflow_runtime: Any | None = field(default=None, init=False, repr=False)
     _transcription_lock: Lock = field(default_factory=Lock, init=False, repr=False)
+    _pre_edit_stage_lock: Lock = field(default_factory=Lock, init=False, repr=False)
     _confirmation_lock: Lock = field(default_factory=Lock, init=False, repr=False)
     _transcription_confirmations: dict[str, _PendingTranscription] = field(default_factory=dict, init=False, repr=False)
 
@@ -569,30 +585,150 @@ class Task036PreEditRuntime:
         finally:
             self._transcription_lock.release()
 
-    def create_subtitle_workspace(self) -> dict[str, Any]:
-        return self.binding.create_subtitle_workspace()
-
-    def generate_cut_candidates(self) -> dict[str, Any]:
+    def _capture_pre_edit_coordinate(self, expected_action: str) -> _PreEditCoordinate:
+        state = self.coordinator.state
+        project = self.coordinator.shell.project
         source_path = self.media.runtime_source_path
         transcript = self.binding.transcript
-        if source_path is None or transcript is None:
+        if (
+            state.source_asset_id is None
+            or state.source_asset_sha256 is None
+            or state.transcript_sha256 is None
+            or source_path is None
+            or transcript is None
+            or project is None
+        ):
             raise ProductError(
                 "ERR_TASK036_RUNTIME_PRE_EDIT_INPUT_NOT_BOUND",
-                "Cut Candidate generation requires the trusted source and Transcript objects",
+                "Pre-edit stage requires the trusted source and Transcript objects",
                 ProductErrorCategory.STATE,
             )
-        manifest = self.cut_candidate_port.generate_cut_candidates(
-            source_path=source_path,
-            transcript=transcript,
+        action_admitted = (
+            state.next_recommended_action == expected_action
+            if expected_action == "subtitle.save"
+            else (
+                expected_action in state.available_commands()
+                and state.cut_candidate_manifest_sha256 is None
+            )
         )
-        self.application = self.binding.bind_cut_candidates(manifest)
-        return {
-            "task_owner": "TASK-036",
-            "operation": "CUT_CANDIDATE_GENERATE_AND_BIND",
-            "candidate_count": len(manifest.candidates),
-            "manifest_sha256": manifest.to_dict()["manifest_sha256"],
-            "host_path_persisted": False,
-            "provider_configuration_from_javascript": False,
-            "editing_session": self.coordinator.state.to_dict(),
-            "next_recommended_action": self.coordinator.state.next_recommended_action,
-        }
+        if not action_admitted:
+            raise ProductError(
+                "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE",
+                "Pre-edit operation is not available in the current editing stage",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        transcript_sha = transcript.to_dict()["manifest_sha256"]
+        if (
+            transcript.source_asset_id != state.source_asset_id
+            or transcript_sha != state.transcript_sha256
+            or project.project_id != state.project_id
+        ):
+            raise ProductError(
+                "ERR_TASK036_PRE_EDIT_CONTEXT_STALE",
+                "Trusted pre-edit inputs do not match the current editing coordinate",
+                ProductErrorCategory.STATE,
+            )
+        return _PreEditCoordinate(
+            state.project_id,
+            state.revision,
+            state.source_asset_id,
+            state.source_asset_sha256,
+            source_path,
+            transcript_sha,
+            state.subtitle_workspace_sha256,
+            project.context_revision,
+            transcript,
+        )
+
+    def _require_runtime_source_current(self, coordinate: _PreEditCoordinate) -> None:
+        if self.media.runtime_source_path != coordinate.source_path:
+            raise ProductError(
+                "ERR_TASK036_PRE_EDIT_CONTEXT_STALE",
+                "Trusted source path changed while the pre-edit operation was running",
+                ProductErrorCategory.STATE,
+            )
+
+    def create_subtitle_workspace(self) -> dict[str, Any]:
+        if not self._pre_edit_stage_lock.acquire(blocking=False):
+            raise ProductError(
+                "ERR_TASK036_PRE_EDIT_STAGE_IN_PROGRESS",
+                "A deterministic pre-edit stage operation is already active",
+                ProductErrorCategory.STATE,
+            )
+        try:
+            coordinate = self._capture_pre_edit_coordinate("subtitle.save")
+            workspace = SubtitleWorkspace.from_transcript(coordinate.transcript)
+            self._require_runtime_source_current(coordinate)
+            return self.binding.bind_subtitle_workspace_if_current(
+                workspace,
+                expected_project_id=coordinate.project_id,
+                expected_revision=coordinate.session_revision,
+                expected_source_asset_id=coordinate.source_asset_id,
+                expected_source_asset_sha256=coordinate.source_asset_sha256,
+                expected_transcript_sha256=coordinate.transcript_sha256,
+                expected_context_revision=coordinate.context_revision,
+            )
+        finally:
+            self._pre_edit_stage_lock.release()
+
+    @property
+    def promoted_workflow_runtime(self) -> Any | None:
+        return self._promoted_workflow_runtime
+
+    def generate_cut_candidates(
+        self,
+        *,
+        workflow_runtime_factory: Callable[[Task036EditingApplication], Any] | None = None,
+    ) -> dict[str, Any]:
+        if not self._pre_edit_stage_lock.acquire(blocking=False):
+            raise ProductError(
+                "ERR_TASK036_PRE_EDIT_STAGE_IN_PROGRESS",
+                "A deterministic pre-edit stage operation is already active",
+                ProductErrorCategory.STATE,
+            )
+        try:
+            coordinate = self._capture_pre_edit_coordinate("cut_candidates.generate")
+            manifest = self.cut_candidate_port.generate_cut_candidates(
+                source_path=coordinate.source_path,
+                transcript=coordinate.transcript,
+            )
+            self._require_runtime_source_current(coordinate)
+            application = self.binding.prepare_cut_candidates(
+                manifest,
+                expected_source_asset_id=coordinate.source_asset_id,
+                expected_transcript_sha256=coordinate.transcript_sha256,
+                expected_subtitle_workspace_sha256=coordinate.subtitle_workspace_sha256,
+            )
+            promoted_workflow_runtime = None
+            if workflow_runtime_factory is not None:
+                promoted_workflow_runtime = workflow_runtime_factory(application)
+                if (
+                    promoted_workflow_runtime is None
+                    or promoted_workflow_runtime.application is not application
+                ):
+                    raise ValueError("trusted runtime factory returned a different editing application")
+            self._require_runtime_source_current(coordinate)
+            application = self.binding.commit_cut_candidates_if_current(
+                application,
+                expected_project_id=coordinate.project_id,
+                expected_revision=coordinate.session_revision,
+                expected_source_asset_id=coordinate.source_asset_id,
+                expected_source_asset_sha256=coordinate.source_asset_sha256,
+                expected_transcript_sha256=coordinate.transcript_sha256,
+                expected_context_revision=coordinate.context_revision,
+            )
+            self.application = application
+            self._promoted_workflow_runtime = promoted_workflow_runtime
+            return {
+                "task_owner": "TASK-036",
+                "operation": "CUT_CANDIDATE_GENERATE_AND_BIND",
+                "candidate_count": len(manifest.candidates),
+                "manifest_sha256": manifest.to_dict()["manifest_sha256"],
+                "provider_execution_started": False,
+                "host_path_persisted": False,
+                "provider_configuration_from_javascript": False,
+                "editing_session": self.coordinator.state.to_dict(),
+                "next_recommended_action": self.coordinator.state.next_recommended_action,
+            }
+        finally:
+            self._pre_edit_stage_lock.release()

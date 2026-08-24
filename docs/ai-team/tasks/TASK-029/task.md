@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `OWNER_PRIORITY_IMPLEMENTATION_QUEUED / R0_NEXT_AFTER_TASK055_TASK056_INTEGRATION`
+- Status: `R0_CANONICAL_EVIDENCE_DECISION_BOUNDARY_IMPLEMENTED_LOCAL / HOSTING_PENDING`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -15,6 +15,28 @@ TASK-055 local lane recovery/integration audit
 ```
 
 This routing authorizes bounded local implementation planning and implementation under DEV-4. It does not by itself authorize private production-data ingestion, Cloud telemetry, automatic Owner Profile or Knowledge Pack promotion, Release, Deploy, or Production effects.
+## R0 implementation — canonical Evidence / Decision boundary
+
+R0は、既存Product ownerのadmitted Human Evidenceをbody-freeな
+`HumanActionEvidence`へ正規化し、複数記録と6つの独立評価軸から
+`OwnerDecisionCandidate`を決定的に作るpure contractを実装する。
+
+- TASK-055 Montage Human Edit Evidenceをexact Proposal/Plan/Evidence lineageでadmitする。
+- do-not-learn、即時Undo、後工程再修正を学習対象から除外する。
+- Safety/Rights FAILまたはUNKNOWNをHard Gateとして加重点で相殺しない。
+- UNKNOWN / STALE / REVOKED / sample不足 / context混在 / axis regressionを別状態で保持する。
+- quality、rework、time、QA、Human acceptance、sample confidenceを別軸で保持する。
+- raw media、本文、host path、credentialをrecordへ含めない。
+- Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、Edit Plan/Timeline、
+  Resolve、external effect authorityをすべてfalseに固定する。
+
+R0はfilesystem/database Storeを作らない。Owner Decision Storeのencrypted durable
+persistence、Human adoption、Owner-wide Profile、TASK-019 bridge、Cloud、Knowledge Packは
+後続のbounded Atomic Unitである。
+
+Local Evidenceはfocused `16 PASS`、TASK-055/TASK-019/OSS直接回帰
+`47 PASS`、full repository `3644 PASS / 5 SKIP / 0 FAIL`、compileall、
+Schema mirrorおよびdiff-check PASS。hosted checksとshared CHANGELOG transactionは未実施。
 
 ## Objective
 

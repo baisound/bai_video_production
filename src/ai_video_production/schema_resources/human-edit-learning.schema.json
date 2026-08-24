@@ -1,0 +1,307 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/human-edit-learning.schema.json",
+  "title": "TASK-029 Human Edit Learning R0",
+  "oneOf": [
+    { "$ref": "#/$defs/humanActionEvidence" },
+    { "$ref": "#/$defs/ownerDecisionCandidate" }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "nullableSha256": {
+      "oneOf": [
+        { "$ref": "#/$defs/sha256" },
+        { "type": "null" }
+      ]
+    },
+    "stableId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+    },
+    "taskId": {
+      "type": "string",
+      "pattern": "^TASK-[0-9]{3}$"
+    },
+    "validity": {
+      "enum": ["CURRENT_VALID", "STALE", "REVOKED", "UNKNOWN"]
+    },
+    "hardGateState": {
+      "enum": ["PASS", "FAIL", "UNKNOWN"]
+    },
+    "disposition": {
+      "enum": [
+        "ACCEPTED_AS_PROPOSED",
+        "MODIFIED",
+        "REJECTED",
+        "UNDONE",
+        "REVISED_AFTER_ACCEPTANCE"
+      ]
+    },
+    "admissionState": {
+      "enum": [
+        "ELIGIBLE_FOR_EVALUATION",
+        "DO_NOT_LEARN",
+        "IMMEDIATE_UNDO",
+        "LATER_REVISION",
+        "SAFETY_BLOCKED",
+        "RIGHTS_BLOCKED",
+        "UNKNOWN_EVIDENCE",
+        "STALE_OR_REVOKED_EVIDENCE"
+      ]
+    },
+    "metricId": {
+      "enum": [
+        "human_acceptance",
+        "qa_compliance",
+        "quality_improvement",
+        "rework_reduction",
+        "sample_confidence",
+        "time_reduction"
+      ]
+    },
+    "metricEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric_id",
+        "baseline_milli",
+        "observed_milli",
+        "delta_milli",
+        "sample_count",
+        "validity"
+      ],
+      "properties": {
+        "metric_id": { "$ref": "#/$defs/metricId" },
+        "baseline_milli": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "observed_milli": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "delta_milli": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "sample_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        "validity": { "$ref": "#/$defs/validity" }
+      }
+    },
+    "learningPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policy_id",
+        "policy_version",
+        "minimum_evidence_records",
+        "minimum_samples_per_axis",
+        "minimum_weighted_benefit_milli",
+        "maximum_axis_regression_milli",
+        "policy_sha256"
+      ],
+      "properties": {
+        "policy_id": { "$ref": "#/$defs/stableId" },
+        "policy_version": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+        },
+        "minimum_evidence_records": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256
+        },
+        "minimum_samples_per_axis": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        "minimum_weighted_benefit_milli": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "maximum_axis_regression_milli": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "policy_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "humanActionEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_version",
+        "record_type",
+        "task_owner",
+        "evidence_id",
+        "owner_scope_sha256",
+        "project_scope_sha256",
+        "producer_task_id",
+        "source_record_sha256",
+        "action_type",
+        "condition_keys",
+        "condition_fingerprint_sha256",
+        "before_snapshot_sha256",
+        "proposed_snapshot_sha256",
+        "final_snapshot_sha256",
+        "disposition",
+        "validity",
+        "do_not_learn",
+        "immediate_undo",
+        "later_revision",
+        "safety_state",
+        "rights_state",
+        "admission_state",
+        "observed_at_epoch_ms",
+        "work_duration_ms",
+        "raw_media_included",
+        "text_body_included",
+        "absolute_host_path_included",
+        "credential_included",
+        "automatic_learning_promotion_authorized",
+        "external_effect_authorized",
+        "evidence_sha256"
+      ],
+      "properties": {
+        "record_version": { "const": "1.0.0" },
+        "record_type": { "const": "HUMAN_ACTION_EVIDENCE" },
+        "task_owner": { "const": "TASK-029" },
+        "evidence_id": { "$ref": "#/$defs/stableId" },
+        "owner_scope_sha256": { "$ref": "#/$defs/sha256" },
+        "project_scope_sha256": { "$ref": "#/$defs/sha256" },
+        "producer_task_id": { "$ref": "#/$defs/taskId" },
+        "source_record_sha256": { "$ref": "#/$defs/sha256" },
+        "action_type": { "$ref": "#/$defs/stableId" },
+        "condition_keys": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/stableId" }
+        },
+        "condition_fingerprint_sha256": { "$ref": "#/$defs/sha256" },
+        "before_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "proposed_snapshot_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "final_snapshot_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "disposition": { "$ref": "#/$defs/disposition" },
+        "validity": { "$ref": "#/$defs/validity" },
+        "do_not_learn": { "type": "boolean" },
+        "immediate_undo": { "type": "boolean" },
+        "later_revision": { "type": "boolean" },
+        "safety_state": { "$ref": "#/$defs/hardGateState" },
+        "rights_state": { "$ref": "#/$defs/hardGateState" },
+        "admission_state": { "$ref": "#/$defs/admissionState" },
+        "observed_at_epoch_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9223372036854775807
+        },
+        "work_duration_ms": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 604800000
+        },
+        "raw_media_included": { "const": false },
+        "text_body_included": { "const": false },
+        "absolute_host_path_included": { "const": false },
+        "credential_included": { "const": false },
+        "automatic_learning_promotion_authorized": { "const": false },
+        "external_effect_authorized": { "const": false },
+        "evidence_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "ownerDecisionCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_version",
+        "record_type",
+        "task_owner",
+        "candidate_id",
+        "owner_scope_sha256",
+        "hypothesis_id",
+        "action_type",
+        "condition_fingerprint_sha256",
+        "source_evidence_sha256s",
+        "source_producer_task_ids",
+        "metric_evaluations",
+        "learning_policy",
+        "state",
+        "weighted_benefit_milli",
+        "regressed_metric_ids",
+        "human_review_required",
+        "owner_profile_write_authorized",
+        "knowledge_pack_promotion_authorized",
+        "cloud_telemetry_authorized",
+        "automatic_rollback_authorized",
+        "edit_plan_mutation_authorized",
+        "external_effect_authorized",
+        "candidate_sha256"
+      ],
+      "properties": {
+        "record_version": { "const": "1.0.0" },
+        "record_type": { "const": "OWNER_DECISION_CANDIDATE" },
+        "task_owner": { "const": "TASK-029" },
+        "candidate_id": { "$ref": "#/$defs/stableId" },
+        "owner_scope_sha256": { "$ref": "#/$defs/sha256" },
+        "hypothesis_id": { "$ref": "#/$defs/stableId" },
+        "action_type": { "$ref": "#/$defs/stableId" },
+        "condition_fingerprint_sha256": { "$ref": "#/$defs/sha256" },
+        "source_evidence_sha256s": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sha256" }
+        },
+        "source_producer_task_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/taskId" }
+        },
+        "metric_evaluations": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": { "$ref": "#/$defs/metricEvaluation" }
+        },
+        "learning_policy": { "$ref": "#/$defs/learningPolicy" },
+        "state": {
+          "enum": [
+            "READY_FOR_HUMAN_REVIEW",
+            "INSUFFICIENT_EVIDENCE",
+            "EXCLUDED_EVIDENCE_PRESENT",
+            "CONFLICTING_CONTEXT",
+            "UNKNOWN_EVIDENCE",
+            "STALE_OR_REVOKED_EVIDENCE",
+            "SAFETY_OR_RIGHTS_BLOCKED",
+            "AXIS_REGRESSION",
+            "NO_MEASURED_BENEFIT"
+          ]
+        },
+        "weighted_benefit_milli": {
+          "type": ["integer", "null"],
+          "minimum": -1000,
+          "maximum": 1000
+        },
+        "regressed_metric_ids": {
+          "type": "array",
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/metricId" }
+        },
+        "human_review_required": { "const": true },
+        "owner_profile_write_authorized": { "const": false },
+        "knowledge_pack_promotion_authorized": { "const": false },
+        "cloud_telemetry_authorized": { "const": false },
+        "automatic_rollback_authorized": { "const": false },
+        "edit_plan_mutation_authorized": { "const": false },
+        "external_effect_authorized": { "const": false },
+        "candidate_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

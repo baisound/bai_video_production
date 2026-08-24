@@ -5,6 +5,10 @@
 - Dependency: TASK-008 Multimodal Scoring、TASK-015 YouTube Feedback
 - Downstream: Human-reviewed scoring profile promotion and later rollback execution Gates
 
+## Owner priority routing — 2026-08-24
+
+The existing R0 no-effect foundation is retained. Its hosting and Product integration now follow TASK-029 R0 so that auto-tuning consumes the canonical Owner-learning boundary instead of creating a competing profile store. The priority sequence is `TASK-055 -> TASK-056 -> TASK-029 -> TASK-019`. No automatic Profile promotion or rollback authority is added.
+
 ## R0 scope
 
 R0は、TASK-008 baseline ScoringProfile、TASK-015 aggregate Feedback Snapshot、bounded weight adjustments、current-valid holdout evaluationsをexact bindし、決定的なProfile Tuning Proposalを作るno-effect contractである。

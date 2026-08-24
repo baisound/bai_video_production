@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R5D_DATASET_EVALUATION_VIEW_COMPLETE / COMMIT_READY / R5E_NEXT`
+Status: `R5E_OPERATION_RECOVERY_COMPLETE / COMMIT_READY / R5F_NEXT`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -244,6 +244,24 @@ TASK-054 plus direct TASK-049 and OSS boundary regression is `670 PASS`; compile
 Provider/model execution, actual Dataset adoption, training, promotion,
 Timeline/Resolve mutation, release and deploy remain Human-Gated. R5E
 progress/cancel/error/recovery is next.
+
+## R5E completion checkpoint
+
+R5E accessible progress/cancel/error/recovery presentation is complete and
+commit-ready. Its immutable snapshot exposes bounded phase, progress, elapsed
+and remaining estimate across QUEUED/RUNNING/CHECKPOINTING/CANCELLING and
+terminal/recovery states. Safe cancel is offered only at eligible stages and
+repeat cancellation is disabled. Recovery requires an opaque verified
+Checkpoint reference and only requests a new plan. Every action carries exact
+operation identity and state revision for stale-click rejection by the R5F
+lifecycle owner. FAILED/RECOVERY_REQUIRED panels answer what happened, data
+safety, saved Evidence, next safe action and retry cost/external effect in
+Japanese with stable error code and bounded secret-rejecting technical detail.
+No automatic retry or execution authority exists. R5E focused Evidence is
+`9 PASS`; TASK-054 plus direct TASK-049 and OSS boundary regression is
+`679 PASS`; compileall and diff checks pass. Model/runtime acquisition, Dataset adoption, training, Provider
+inference, paid/external retry, promotion and Product mutation remain
+Human-Gated. R5F no-console bounded worker lifecycle is next.
 
 ## Authority boundary
 

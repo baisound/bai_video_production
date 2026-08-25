@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/montage-learning-file-bridge.schema.json",
+  "title": "TASK-058 Generic Montage Learning File Bridge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "contract_profile",
+    "record_id",
+    "learning_sha256",
+    "canonical_timeline",
+    "auto_admit_authorized",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "message_type": { "const": "BvpMontageLearningDelivery" },
+    "contract_profile": { "const": "bvp-task029-file-bridge-v1" },
+    "record_id": { "$ref": "#/$defs/record_id" },
+    "learning_sha256": { "$ref": "#/$defs/sha256" },
+    "canonical_timeline": { "const": false },
+    "auto_admit_authorized": { "const": false },
+    "payload": { "$ref": "#/$defs/learning_payload" }
+  },
+  "$defs": {
+    "record_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$"
+    },
+    "nonempty_string": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": ".*\\S.*"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "fps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": { "type": "integer", "minimum": 1 },
+        "denominator": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "validation_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planning", "static", "package", "runtime"],
+      "properties": {
+        "planning": { "$ref": "#/$defs/status" },
+        "static": { "$ref": "#/$defs/status" },
+        "package": { "$ref": "#/$defs/status" },
+        "runtime": { "$ref": "#/$defs/status" }
+      }
+    },
+    "status": {
+      "enum": ["NOT_RUN", "NOT_TESTED", "PARTIAL", "PASS", "FAIL", "REVIEW"]
+    },
+    "learning_payload": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "message_type",
+        "record_id",
+        "source_feedback_id",
+        "proposal_id",
+        "timeline_fps",
+        "style_profile",
+        "music_context",
+        "video_context",
+        "proposal",
+        "human_final",
+        "delta_frames",
+        "result",
+        "privacy",
+        "validation_status",
+        "adapter_metadata"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "message_type": { "const": "MontageLearningExport" },
+        "record_id": { "$ref": "#/$defs/record_id" },
+        "source_feedback_id": { "$ref": "#/$defs/nonempty_string" },
+        "proposal_id": { "$ref": "#/$defs/nonempty_string" },
+        "timeline_fps": { "$ref": "#/$defs/fps" },
+        "style_profile": {
+          "oneOf": [
+            { "type": "string" },
+            { "type": "object" }
+          ]
+        },
+        "music_context": { "type": "object" },
+        "video_context": { "type": "object" },
+        "proposal": {
+          "type": "object",
+          "required": ["timeline_frame"],
+          "properties": {
+            "timeline_frame": { "type": "integer" }
+          }
+        },
+        "human_final": {
+          "type": "object",
+          "required": ["timeline_frame", "status", "provenance"],
+          "properties": {
+            "timeline_frame": { "type": "integer" },
+            "status": { "$ref": "#/$defs/result" },
+            "provenance": { "type": "object" }
+          }
+        },
+        "delta_frames": { "type": "integer" },
+        "result": { "$ref": "#/$defs/result" },
+        "privacy": {
+          "type": "object",
+          "required": ["safe_export", "raw_actor_exported"],
+          "properties": {
+            "safe_export": { "const": true },
+            "raw_actor_exported": { "const": false }
+          }
+        },
+        "validation_status": { "$ref": "#/$defs/validation_status" },
+        "adapter_metadata": {
+          "type": "object",
+          "required": ["canonical_timeline"],
+          "properties": {
+            "canonical_timeline": { "const": false }
+          }
+        },
+        "runtime_evidence": {
+          "type": "object",
+          "properties": {
+            "executed": { "type": "boolean" },
+            "evidence_id": { "type": "string" },
+            "report_ref": { "type": "string" }
+          }
+        }
+      }
+    },
+    "result": {
+      "enum": [
+        "accepted",
+        "accepted_with_adjustment",
+        "rejected",
+        "moved",
+        "deleted",
+        "replaced"
+      ]
+    }
+  }
+}

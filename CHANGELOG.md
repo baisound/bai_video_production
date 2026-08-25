@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-058 P1Aとして、Exact EvidenceとGeneric Observationを分離するBvpMontageLearningAdmissionReceipt/v2のstrict read契約、domain-separated idempotency/self-hash、lane/status/store claim matrix、body-free public projectionを追加しました。caller-supplied構造の検証に限定し、origin/store commit/duplicate lineageは未検証、Generic automatic promotion、receipt mint/write、filesystem/importer/UI/native/Release/Deploy/Production authorityは生成しません。
+
 - TASK-029 R9Aとして、exact再検証済みR8 request、canonical trusted signer policy、raw Ed25519 public key identity、detached signatureをfail-closedに束縛し、signature/key本文を保持しないverification receiptを追加しました。Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback、Release/Deploy/external effectは許可しません。
 
 - TASK-058 P0として、TASK-055のproposal→approved plan→Human edit evidence本文を既存lineage admissionで再検証するExact laneと、bvp-montage-learning-adapter v1 exportをOwner scope未bindingのreview-only候補として再検証するGeneric laneを分離し、hash/FPS/delta/privacy/runtime claim/authority flagsをfail-closedに検証するbody-free contractを追加しました。canonical Timeline/learning store、receipt mint、automatic promotion、connector/UI/native/Resolve/runtime authorityは生成しません。

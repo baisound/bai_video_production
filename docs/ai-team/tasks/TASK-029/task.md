@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_R4_R5_HOSTED_CLOSED / R6_KNOWLEDGE_PACK_PROMOTION_CANDIDATE_IMPLEMENTED_LOCAL`
+- Status: `R0_R1_R2_R3_R4_R5_R6_HOSTED_CLOSED / R7_KNOWLEDGE_PACK_SIGNING_CANDIDATE_IMPLEMENTED_LOCAL`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -116,6 +116,21 @@ R6はR5 Owner Profile Registry Historyと、そのlatest revisionが固定した
 R6はKnowledge Pack write/promotion、signature、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。Human review、independent Critic、signature、latest-source revalidationは後続Gateである。
 
 R6 focusedは`5 PASS`、TASK-019/029 direct regressionは`80 PASS`、全Product regressionは`3786 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-promotion-candidate-r6-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。hosted integrationはpending。
+
+## R7 implementation — Human/Critic-bound unsigned Knowledge Pack signing candidate
+
+R7はR6候補をexact current R5/R1/R0 sourcesから毎回再生成し、同一候補hashへbindされた別々のHuman reviewとIndependent Critic reviewを結合して、外部署名Gate直前のbody-free immutable候補をpure in-memoryで生成する。
+
+- Human/Critic review IDとreviewer coordinateを相異ならせる。
+- Critic reviewはHuman reviewより後でなければならない。
+- Criticの署名待ちACCEPTはunresolved Critical/Highが0の場合だけ許す。
+- Human rejectionとCritic rejectionを別stateに保持する。
+- Owner/Project/reviewer座標は出力へ含めず、exact review hashだけを保持する。
+- candidate/feature rule/policy/predecessor Pack lineageをhashで固定する。
+
+R7は署名鍵を受け取らず、signature create/verify、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。
+
+R7 focusedは`6 PASS`。schema mirror、compileall、no-I/O/static boundaryも検証する。Design/Critic/Judgeは`knowledge-pack-signing-candidate-r7-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。hosted integrationはpending。
 
 ## Objective
 

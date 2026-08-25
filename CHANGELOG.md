@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-029 R6として、R5 Owner Profile Registryとexact R1 Human Decision/R0 Human Action Evidenceを再検証し、複数Owner・複数Projectで同一仮説・条件・FeatureRuleが再現したかを6軸で評価するbody-freeなKnowledge Pack promotion candidateを実装しました。Owner/Project座標は候補へ保存せず、Knowledge Pack write/sign/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
 - TASK-029 R5として、R3 encrypted Owner Profile StoreとR5 Registry Storeを決定的path順で同時lockし、latest R4 candidateをsourceから再生成して別の明示Human registry confirmationとexact照合した場合だけ、別DPAPI entropy domainのOwner-local Model/Profile RegistryへCAS appendするstoreを実装しました。runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
 
 - TASK-029 R4として、R3 encrypted Owner Profile Historyのlatest revisionをexpected revisionとexact照合し、history/revision/materialization/confirmation/proposal/binding/decision lineageを保持したまま、TASK-008 ScoringProfileへsemantic再構築してModel/Profile Registry登録前のimmutable in-memory候補を生成するpure contractを実装しました。Model/Profile Registry write、runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。

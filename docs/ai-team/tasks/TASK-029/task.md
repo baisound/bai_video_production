@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_R4_R5_R6_HOSTED_CLOSED / R7_KNOWLEDGE_PACK_SIGNING_CANDIDATE_IMPLEMENTED_LOCAL`
+- Status: `R0_R1_R2_R3_R4_R5_R6_R7_HOSTED_CLOSED / R8_SIGNATURE_VERIFICATION_REQUEST_IMPLEMENTED_LOCAL`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -115,7 +115,7 @@ R6はR5 Owner Profile Registry Historyと、そのlatest revisionが固定した
 
 R6はKnowledge Pack write/promotion、signature、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。Human review、independent Critic、signature、latest-source revalidationは後続Gateである。
 
-R6 focusedは`5 PASS`、TASK-019/029 direct regressionは`80 PASS`、全Product regressionは`3786 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-promotion-candidate-r6-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。hosted integrationはpending。
+R6 focusedは`5 PASS`、TASK-019/029 direct regressionは`80 PASS`、全Product regressionは`3786 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-promotion-candidate-r6-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。target PR #332、closure PR #335、registry revision 76でhosted closedとなり、shared CHANGELOG reservationを解放済み。
 
 ## R7 implementation — Human/Critic-bound unsigned Knowledge Pack signing candidate
 
@@ -130,7 +130,22 @@ R7はR6候補をexact current R5/R1/R0 sourcesから毎回再生成し、同一�
 
 R7は署名鍵を受け取らず、signature create/verify、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。
 
-R7 focusedは`6 PASS`。schema mirror、compileall、no-I/O/static boundaryも検証する。Design/Critic/Judgeは`knowledge-pack-signing-candidate-r7-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。hosted integrationはpending。
+R7 focusedは`6 PASS`、TASK-019/029 direct regressionは`86 PASS`、全Product regressionは`3792 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-signing-candidate-r7-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。target PR #336、closure PR #338、registry revision 78、fresh main `a18ad35469d60583082cab4ffc09f74092c175e9`、post-main CI 6/6とSecurity PASSでhosted closedとなり、shared CHANGELOG reservationを解放済み。
+
+## R8 implementation — body-free external signature verification request
+
+R8はR7 signing candidateをexact compile inputsから毎回再生成し、Pack lineage、trusted signer policy SHA-256、signer key ID SHA-256、allowlist済みalgorithmをversioned canonical message hashへ束縛するimmutableな外部署名検証依頼をpure in-memoryで生成する。外部署名対象はversioned input contractにより、`sha256:`接頭辞を含むmessage hash文字列のASCII bytesへ固定する。
+
+- R7 payloadとlatest recompile結果の完全一致を要求する。
+- R7 stateが`READY_FOR_EXTERNAL_SIGNATURE`の場合だけrequestを生成する。
+- algorithmは`ED25519`だけを許可する。
+- requestはsignature bytes、public/private key material、credential本文を含めない。
+
+R8は暗号署名・暗号検証、key store access、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。`signature_present=false`、`signature_verified=false`であり、外部暗号検証PASS authorityを生成しない。
+
+R8 focusedは`5 PASS`、TASK-019/029 direct regressionは`91 PASS`、全Product regressionは`3797 PASS / 6 SKIP / 0 FAIL`。compile、strict Schema validation、schema mirror、no-I/O/no-crypto-import、diff/scopeもPASS。Design/Critic/Judgeは`knowledge-pack-signature-verification-request-r8-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。hosted integrationはpending。
+
+実署名、trusted public key解決、署名本文を用いた暗号検証、署名済みKnowledge Pack receiptおよびPack writeは別の明示Human Gateと後続Atomic Unitを必要とする。
 
 ## Objective
 

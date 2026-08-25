@@ -4093,7 +4093,7 @@
       "integration_effect_authority_id": "OWNER_EXPLICIT_AUTONOMY_NO_CONFIRMATION_REQUIRED_20260824",
       "target_merge_authority_id": "OWNER_EXPLICIT_AUTONOMY_NO_CONFIRMATION_REQUIRED_20260824",
       "automatic_retry": false,
-      "hosting_pull_request": null,
+      "hosting_pull_request": 345,
       "automatic_rollback_or_revert": false
     }
   ],

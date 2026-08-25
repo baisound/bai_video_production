@@ -23,7 +23,7 @@ Status: PENDING_HOST_PR
 - nonclosed integration locks before proposal: 0
 - nonclosed integration locks after proposal: exactly 1
 - open PR overlap with CHANGELOG.md or ACTIVE-WORK-LOCKS.json: 0
-- hosting pull request: PENDING_ASSIGNMENT
+- hosting pull request: #345
 
 ## Reserved effect
 

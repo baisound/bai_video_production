@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/montage-exact-evidence-delivery.schema.json",
+  "title": "TASK-058 Montage Exact Evidence Delivery",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "contract_profile",
+    "record_id",
+    "proposal_sha256",
+    "approved_plan_sha256",
+    "evidence_sha256",
+    "owner_scope_hash",
+    "canonical_timeline",
+    "auto_admit_authorized",
+    "proposal",
+    "approved_plan",
+    "human_edit_evidence",
+    "authority_flags",
+    "effect_flags"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "message_type": { "const": "BvpMontageExactEvidenceDelivery" },
+    "contract_profile": { "const": "bvp-task058-montage-exact-evidence-v1" },
+    "record_id": { "$ref": "#/$defs/record_id" },
+    "proposal_sha256": { "$ref": "#/$defs/sha256" },
+    "approved_plan_sha256": { "$ref": "#/$defs/sha256" },
+    "evidence_sha256": { "$ref": "#/$defs/sha256" },
+    "owner_scope_hash": { "$ref": "#/$defs/sha256" },
+    "canonical_timeline": { "const": false },
+    "auto_admit_authorized": { "const": false },
+    "proposal": { "type": "object", "minProperties": 1 },
+    "approved_plan": { "type": "object", "minProperties": 1 },
+    "human_edit_evidence": { "type": "object", "minProperties": 1 },
+    "authority_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exact_lineage_is_canonical_admission",
+        "canonical_store_write_authorized",
+        "automatic_learning_promotion_authorized",
+        "timeline_mutation_authorized",
+        "resolve_write_authorized",
+        "receipt_mint_authorized"
+      ],
+      "properties": {
+        "exact_lineage_is_canonical_admission": { "const": false },
+        "canonical_store_write_authorized": { "const": false },
+        "automatic_learning_promotion_authorized": { "const": false },
+        "timeline_mutation_authorized": { "const": false },
+        "resolve_write_authorized": { "const": false },
+        "receipt_mint_authorized": { "const": false }
+      }
+    },
+    "effect_flags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesystem_written",
+        "network_accessed",
+        "database_accessed",
+        "native_application_started",
+        "canonical_store_written",
+        "receipt_minted"
+      ],
+      "properties": {
+        "filesystem_written": { "const": false },
+        "network_accessed": { "const": false },
+        "database_accessed": { "const": false },
+        "native_application_started": { "const": false },
+        "canonical_store_written": { "const": false },
+        "receipt_minted": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "record_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

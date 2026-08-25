@@ -21,6 +21,7 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+  "cryptography>=46,<51",
   "jsonschema>=4.20,<5",
 ]
 

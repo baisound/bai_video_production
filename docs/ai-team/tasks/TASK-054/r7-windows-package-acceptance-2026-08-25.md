@@ -2,7 +2,7 @@
 
 Date: `2026-08-25`
 Development depth: `DEV-3 HIGH ASSURANCE`
-State: `PARTIAL PASS / ACCESSIBILITY INTERACTION NOT_CONFIRMED`
+State: `PARTIAL PASS / NATIVE TK TRAVERSAL PASS / EXTERNAL ACCESSIBILITY NOT_CONFIRMED`
 
 ## Scope
 
@@ -75,6 +75,27 @@ automation was attempted.
 - real Evidence loading, inference, training and Provider execution:
   `NOT_EXECUTED / HUMAN-GATED`
 
+### Native Tk runtime interaction retry (`2026-08-26`)
+
+The unchanged Product launcher was executed with a real Windows Tk root and an
+isolated temporary Workspace. The acceptance harness selected the one
+`実況・解説AI` outer tab and all four nested tabs in order, forced native layout,
+and verified every selected page had a non-trivial requested size. It also
+invoked `事前チェック`, observed `ERR_TASK054_R3D_REQUIRED`, and confirmed that
+execute, review, cancel and resume remained disabled. The model panel was
+corrected to expose stable ProductError codes to the Operator; unknown failures
+use `ERR_TASK054_PREFLIGHT_FAILED`.
+
+- Windows real-Tk focused result: `12 passed in 4.51s`
+- WSL collection/regression result: `11 passed, 1 intentional Windows skip`
+- model/runtime download, Provider call, learning, training and Dataset mutation:
+  none
+
+This is native Tk widget traversal and callback invocation, not evidence of an
+external mouse/keyboard driver, accessibility tree, DPI/scroll behavior or
+packaged-EXE pixel review. Those remaining observations are still
+`NOT_CONFIRMED` after the Computer Use helper failure.
+
 ## Regression Evidence
 
 - R7 integration plus R5B-R5E panels: `36 passed in 5.76s`
@@ -91,14 +112,16 @@ automation was attempted.
    side effect.
 3. A responsive top-level window disproves the original startup exception class
    for this exact build, but does not prove every native interaction.
-4. UI interaction is not reported as PASS. Deterministic tests remain separate
-   evidence, not a substitute claim of observed clicks.
+4. Native Tk widget traversal is `PASS`; external click/accessibility/DPI/scroll
+   interaction remains `NOT_CONFIRMED`. The former is not substituted for the
+   latter.
 5. No settings change or installation occurred, so the sleep-window settings /
    installation runbook obligation was not triggered.
 
 ## Decision
 
-R7 packaged build/startup acceptance is `PASS` for the exact artifacts above.
-Native click/DPI/accessibility interaction remains `NOT_CONFIRMED` and may be
-re-observed when the approved helper is healthy. This does not widen R3D, R6B,
-promotion, release, deploy or Product Activation authority.
+R7 packaged build/startup acceptance and real Windows Tk tab traversal are
+`PASS` for their exact scopes. External click/DPI/accessibility interaction
+remains `NOT_CONFIRMED` and may be re-observed when the approved helper is
+healthy. This does not widen R3D, R6B, promotion, release, deploy or Product
+Activation authority.

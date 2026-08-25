@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Callable
 
 from .dbd_reasoning_model_panel import ModelPanelSnapshot
+from .errors import ProductError
 
 
 class ReasoningModelPanel:
@@ -69,8 +70,14 @@ class ReasoningModelPanel:
         try:
             self.show(self.run_preflight())
         except Exception as exc:
-            self.status_var.set("事前チェックを完了できませんでした。設定を確認してください。")
-            self._messagebox.showerror("解説AIの事前チェック", f"技術詳細: {type(exc).__name__}: {exc}")
+            error_code = exc.code if isinstance(exc, ProductError) else "ERR_TASK054_PREFLIGHT_FAILED"
+            self.status_var.set(
+                f"事前チェックを完了できませんでした。設定を確認してください。 [{error_code}]"
+            )
+            self._messagebox.showerror(
+                "解説AIの事前チェック",
+                f"エラーコード: {error_code}\n技術詳細: {type(exc).__name__}: {exc}",
+            )
 
     def _details(self) -> None:
         if self.snapshot is None:

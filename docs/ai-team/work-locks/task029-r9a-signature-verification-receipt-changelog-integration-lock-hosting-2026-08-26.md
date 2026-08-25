@@ -13,10 +13,10 @@ Status: PENDING_HOST_PR
 - lock-host PR: #348
 - target PR: #347
 - target branch: codex/task-029-r9a-signature-verification-receipt
-- exact target head: cf0d9dbf3b2f01f1bea20c6335918c93227dae20
+- exact target head: 8db751d93ee7046d03bdddffa28b442853679986
 - fresh main: d4257b11ee071cc562107e4b71dacb8bb45cd11f
 - immutable target paths: 9
-- hosted checks: 8 / 9 PASS; only changelog-and-version FAIL
+- hosted checks: rerun pending after runbook-only documentation update
 - focused R8/R9A: 13 PASS
 - TASK-019/TASK-029 targeted regression: 99 PASS
 - local full regression: 3852 PASS / 6 SKIP / 0 FAIL
@@ -39,7 +39,7 @@ Immutable pre-integration blob identities:
 | Path | Blob |
 |---|---|
 | docs/ai-team/tasks/TASK-029/knowledge-pack-signature-verification-receipt-r9a-design-critic-judge.md | 7a3ca35ea3dcc1492aa669176d61bfeade7f5b8d |
-| docs/ai-team/tasks/TASK-029/r9a-cryptography-development-dependency-installation-runbook.md | 5992808ed37c851e91e0b74a2733b699f3960548 |
+| docs/ai-team/tasks/TASK-029/r9a-cryptography-development-dependency-installation-runbook.md | d258c3c8141b36b2566572c9a752b7f985661c35 |
 | pyproject.toml | 5b768b6bb13ac0f89170db2de0cdaf23e182ef1e |
 | schemas/knowledge-pack-signature-verification-receipt.schema.json | 08774825255a652e9f6b49d29177756df58cf61b |
 | schemas/trusted-knowledge-pack-signer-policy.schema.json | 915013ebf8fec4daad3b826c676436c0c7e733ff |
@@ -52,7 +52,7 @@ Immutable pre-integration blob identities:
 
 - PR #347 exact head read-back: PASS
 - PR #347 mergeable Draft read-back: PASS
-- all eight non-CHANGELOG hosted checks: PASS
+- all eight non-CHANGELOG hosted checks: RERUN PENDING after runbook-only documentation update
 - dependency-audit and secret-scan: PASS
 - Schema mirror byte identity: PASS
 - unresolved DEV-4 Critical/High/Medium findings: 0 / 0 / 0

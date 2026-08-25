@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-029 R9Bとして、明示Human確認をexact custody/Owner scope/public-key IDへ束縛し、raw Ed25519 seedをWindows Current User DPAPIで一回限り暗号化保管するOwner signing-key custodyとbody-free receiptを追加しました。sign/export/replace/rotate、PuTTY PPK変換、real signing、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。
+
 - TASK-058 P1Aとして、Exact EvidenceとGeneric Observationを分離するBvpMontageLearningAdmissionReceipt/v2のstrict read契約、domain-separated idempotency/self-hash、lane/status/store claim matrix、body-free public projectionを追加しました。caller-supplied構造の検証に限定し、origin/store commit/duplicate lineageは未検証、Generic automatic promotion、receipt mint/write、filesystem/importer/UI/native/Release/Deploy/Production authorityは生成しません。
 
 - TASK-029 R9Aとして、exact再検証済みR8 request、canonical trusted signer policy、raw Ed25519 public key identity、detached signatureをfail-closedに束縛し、signature/key本文を保持しないverification receiptを追加しました。Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback、Release/Deploy/external effectは許可しません。

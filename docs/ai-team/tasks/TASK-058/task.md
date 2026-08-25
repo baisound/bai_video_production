@@ -1,6 +1,6 @@
 # TASK-058 — Montage Learning Bridge
 
-Status: `ACTIVE — P0 HOSTED CLOSED / P1A RECEIPT CONTRACT IN PROGRESS`
+Status: `ACTIVE — P0 HOSTED CLOSED / P1A IMPLEMENTED LOCAL REVIEW GREEN`
 
 ## Objective
 
@@ -104,3 +104,20 @@ pure source module, and one focused test module.
 P1B/P1C filesystem store, CAS/recovery, importer classification, Human binding,
 and actual receipt issuance require separate bounded designs after P1A is
 hosted and fresh-main green.
+
+## P1A local completion checkpoint
+
+- fresh-main composition HEAD: `5d94f06825062afd6fa73403fb04c94e3956691e`
+- exact scope: `6 / 6`
+- focused tests: `32 / 32 PASS`
+- P0/TASK-055 related regression: `57 / 57 PASS`
+- custom JSON-like TOCTOU matrix: `11 / 11 PASS`, hook invocation `0`
+- schema Draft 2020-12, packaged mirror, fixed vectors, compile, and diff:
+  `PASS`
+- independent Tester, Critic, and final Judge: `GO`
+- unresolved Critical/High findings: `0 / 0`
+- filesystem/store/importer/native/provider/paid/Release/Deploy/Production
+  effects: `NOT EXECUTED`
+
+P1A remains hosting-pending until its dedicated CHANGELOG lock transaction,
+hosted checks, merge, post-main checks, and closure read-back are complete.

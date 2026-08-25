@@ -402,6 +402,8 @@ def compile_knowledge_pack_signing_candidate(
         raise ValueError("Human and Critic review IDs must be distinct")
     if human.reviewer_coordinate_sha256 == critic.reviewer_coordinate_sha256:
         raise ValueError("Human and Critic reviewers must be independent")
+    if critic.reviewed_at_epoch_ms <= human.reviewed_at_epoch_ms:
+        raise ValueError("Critic review must occur after the Human review")
     if human.decision is HumanKnowledgePackDecision.REJECT:
         state = KnowledgePackSigningState.HUMAN_REJECTED
     elif critic.decision is CriticKnowledgePackDecision.REJECT:

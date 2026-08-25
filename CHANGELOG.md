@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-029 R7として、R6 Knowledge Pack promotion candidateをexact current sourceから再生成し、同一候補hashへbindされた別々のHuman reviewと後続Independent Critic reviewを結合するbody-freeなunsigned signing candidateを実装しました。Owner/Project/reviewer座標と署名鍵は保持せず、signature create/verify、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
 
 - TASK-029 R6として、R5 Owner Profile Registryとexact R1 Human Decision/R0 Human Action Evidenceを再検証し、複数Owner・複数Projectで同一仮説・条件・FeatureRuleが再現したかを6軸で評価するbody-freeなKnowledge Pack promotion candidateを実装しました。Owner/Project座標は候補へ保存せず、Knowledge Pack write/sign/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
 

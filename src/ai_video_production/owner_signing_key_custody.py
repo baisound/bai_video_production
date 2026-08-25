@@ -170,6 +170,14 @@ class OwnerSigningKeyCustodyStore:
         return OwnerSigningKeyCustodyReceipt(secret.receipt_id, secret.custody_id, secret.owner_scope_sha256, secret.signer_key_id_sha256, secret.confirmation.to_dict()["confirmation_sha256"], secret.custodied_at_epoch_ms, self.cipher.cipher_suite)
     def read_receipt(self) -> OwnerSigningKeyCustodyReceipt:
         return self._receipt(self._load_secret())
+    def _sign_exact_message(self, *, message: bytes, expected_receipt: OwnerSigningKeyCustodyReceipt) -> tuple[bytes, bytes]:
+        """R9C internal boundary: sign without exporting the custodied seed."""
+        if not isinstance(message, bytes) or not message: raise ValueError("message must be non-empty bytes")
+        if not isinstance(expected_receipt, OwnerSigningKeyCustodyReceipt): raise ValueError("expected_receipt must be an OwnerSigningKeyCustodyReceipt")
+        with exclusive_file_update_lock(self.path):
+            secret = self._load_secret()
+            if self._receipt(secret) != expected_receipt: raise _fail("ERR_OWNER_SIGNING_KEY_CUSTODY_DRIFT", "Owner signing key custody changed before signing", ProductErrorCategory.DATA_INTEGRITY)
+            return secret.signer_public_key, Ed25519PrivateKey.from_private_bytes(secret.private_key_seed).sign(message)
     def provision(self, *, receipt_id: str, custody_id: str, owner_scope_sha256: str, private_key_seed: bytes, confirmation: OwnerSigningKeyCustodyConfirmation, custodied_at_epoch_ms: int, failure_injector: FailureInjector | None = None) -> OwnerSigningKeyCustodySaveResult:
         public = _public_from_seed(private_key_seed)
         secret = _Secret(custody_id, owner_scope_sha256, sha256_bytes(public), private_key_seed, public, confirmation, custodied_at_epoch_ms, receipt_id)

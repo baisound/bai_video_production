@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_HOSTED_CLOSED / R9B_OWNER_SIGNING_KEY_CUSTODY_IMPLEMENTED_LOCAL`
+- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_R9B_HOSTED_CLOSED / R9C_LOCAL_SIGNING_CEREMONY_IMPLEMENTED_LOCAL`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -158,6 +158,14 @@ R9B admits one raw 32-byte Ed25519 seed only after explicit Human confirmation b
 The public read API returns a body-free custody receipt. There is no signing, export, replacement, rotation, PuTTY/OpenSSH conversion, Knowledge Pack write/promotion, runtime Profile apply, rollback, Release, Deploy, Production, Resolve/Timeline, provider, or Cloud authority. Tests use synthetic keys only; no real Owner secret is generated, printed, committed, or sent to CI.
 
 Focused R9B is `13 PASS`, including Windows DPAPI synthetic round-trip, Schema mirror validation, tamper/wrong-cipher/plaintext/symlink/atomic-failure negatives, confirmation binding, and one-shot overwrite rejection. Design/Critic/Judge is `owner-signing-key-custody-r9b-design-critic-judge.md`. Residual Critical/High/Medium/Low is `0/0/0/0`. TASK-029全体は `94 PASS`、全Product回帰は `3865 PASS / 6 SKIP / 0 FAIL`。hosted integrationと独立reviewはpending。
+
+R9Bはtarget PR #353、lock-host PR #357、closure PR #358でhosted closedとなり、fresh main `eea0296dbbd49c5dfe43fe46df6d2955dbd711fe`、registry revision 88、active nonclosed integration locks 0、closure post-main CI 6/6とSecurity PASSでshared CHANGELOG reservationを解放済み。
+
+## R9C implementation — exact local signing ceremony with immediate verification
+
+R9CはR8 exact sourceを鍵アクセス前に再検証し、ACTIVE trusted signer policy、fresh R9B custody receipt、exact Human confirmationを結合する。custody内部のseedでR8 sha256-prefixed ASCII messageだけを署名し、署名を外へ返さず同一呼出し内でR9A検証する。返却値はbody-free ceremony/verification receiptだけである。
+
+永続ceremony journalは持たないためdurable one-shot replay preventionを主張せず、`persistent_replay_prevention_present=false`を固定する。signature export、Knowledge Pack write/promotion、automatic promotion、runtime apply、rollback、Release/Deploy/Production authorityは生成しない。focused synthetic testは`7 PASS`、R8-R9C directは`33 PASS`、TASK-029全体は`101 PASS`、full Product regressionは`3906 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-local-signing-ceremony-r9c-design-critic-judge.md`。real Owner key/signing executionは`NOT_EXECUTED`。
 
 ## Objective
 

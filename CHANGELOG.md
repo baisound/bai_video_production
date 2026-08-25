@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-029 R8として、R7 unsigned signing candidateをexact current sourceから再生成し、Pack lineage、trusted signer policy、signer key identity、ED25519とversioned署名input bytesをcanonical hashへ束縛するbody-freeな外部署名検証requestを実装しました。signature/key本文は保持せず、署名生成・暗号検証、key store access、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
 - TASK-029 R7として、R6 Knowledge Pack promotion candidateをexact current sourceから再生成し、同一候補hashへbindされた別々のHuman reviewと後続Independent Critic reviewを結合するbody-freeなunsigned signing candidateを実装しました。Owner/Project/reviewer座標と署名鍵は保持せず、signature create/verify、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
 
 

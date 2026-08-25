@@ -13,6 +13,77 @@ from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.ids import IdKind, generate_id
 
 
+def _open_rejected_loopback(
+    req: request.Request,
+    *,
+    opener=request.urlopen,
+):
+    for attempt in range(3):
+        try:
+            return opener(req, timeout=3)
+        except ConnectionAbortedError as exc:
+            # The rejected request has no mutation, so this exact Windows
+            # transient is safe to retry before asserting the HTTP 400.
+            if getattr(exc, "winerror", None) != 10053 or attempt == 2:
+                raise
+    raise AssertionError("bounded rejected-request retry exhausted")
+
+
+def test_rejected_loopback_retries_only_windows_abort_10053() -> None:
+    class WindowsAbort10053(ConnectionAbortedError):
+        winerror = 10053
+
+    calls: list[int] = []
+
+    def opener(req: request.Request, timeout: int):
+        del req, timeout
+        calls.append(1)
+        if len(calls) == 1:
+            raise WindowsAbort10053()
+        raise error.HTTPError("http://127.0.0.1/", 400, "bad", {}, None)
+
+    with pytest.raises(error.HTTPError) as exc_info:
+        _open_rejected_loopback(request.Request("http://127.0.0.1/"), opener=opener)
+    assert exc_info.value.code == 400
+    assert len(calls) == 2
+
+
+def test_rejected_loopback_retry_exhaustion_and_other_errors_fail_closed() -> None:
+    class WindowsAbort10053(ConnectionAbortedError):
+        winerror = 10053
+
+    exact_calls: list[int] = []
+
+    def exact_opener(req: request.Request, timeout: int):
+        del req, timeout
+        exact_calls.append(1)
+        raise WindowsAbort10053()
+
+    with pytest.raises(WindowsAbort10053):
+        _open_rejected_loopback(
+            request.Request("http://127.0.0.1/"),
+            opener=exact_opener,
+        )
+    assert len(exact_calls) == 3
+
+    class OtherAbort(ConnectionAbortedError):
+        winerror = 10054
+
+    other_calls: list[int] = []
+
+    def other_opener(req: request.Request, timeout: int):
+        del req, timeout
+        other_calls.append(1)
+        raise OtherAbort()
+
+    with pytest.raises(OtherAbort):
+        _open_rejected_loopback(
+            request.Request("http://127.0.0.1/"),
+            opener=other_opener,
+        )
+    assert len(other_calls) == 1
+
+
 def test_planned_narration_creates_editable_draft_without_claiming_measured_timing() -> None:
     workspace = SubtitleWorkspace.from_narration((
         NarrationCue(0, 4000, "企画から作る字幕"), NarrationCue(4000, 9000, "次の字幕"),
@@ -163,7 +234,7 @@ def test_loopback_dialog_endpoint_requires_csrf_and_returns_selected_path(tmp_pa
             headers={"Content-Type": "application/json", "X-BAI-CSRF": "wrong"},
         )
         with pytest.raises(error.HTTPError) as exc_info:
-            request.urlopen(bad, timeout=3)
+            _open_rejected_loopback(bad)
         assert exc_info.value.code == 400
 
         good = request.Request(

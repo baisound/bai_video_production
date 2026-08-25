@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-029 R9Cとして、exact R8再検証、ACTIVE signer policy、fresh R9B custody receipt、明示Human確認を束縛し、custody内部で署名してR9A即時検証するbody-free local signing ceremonyを追加しました。永続replay prevention、signature export、Knowledge Pack write/promotion、runtime apply、Release/Deploy/Production authorityは生成しません。
+
 - TASK-029 R9Bとして、明示Human確認をexact custody/Owner scope/public-key IDへ束縛し、raw Ed25519 seedをWindows Current User DPAPIで一回限り暗号化保管するOwner signing-key custodyとbody-free receiptを追加しました。sign/export/replace/rotate、PuTTY PPK変換、real signing、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。
 
 - TASK-058 P1Aとして、Exact EvidenceとGeneric Observationを分離するBvpMontageLearningAdmissionReceipt/v2のstrict read契約、domain-separated idempotency/self-hash、lane/status/store claim matrix、body-free public projectionを追加しました。caller-supplied構造の検証に限定し、origin/store commit/duplicate lineageは未検証、Generic automatic promotion、receipt mint/write、filesystem/importer/UI/native/Release/Deploy/Production authorityは生成しません。

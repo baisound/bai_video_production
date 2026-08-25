@@ -4180,6 +4180,7 @@
       "integration_effect_authority_id": "OWNER_EXPLICIT_TASK029_R9_SIGNATURE_AND_KEY_APPROVAL_20260826",
       "target_merge_authority_id": "OWNER_EXPLICIT_TASK029_R9_SIGNATURE_AND_KEY_APPROVAL_20260826",
       "automatic_retry": false,
+      "hosting_pull_request": 348,
       "automatic_rollback_or_revert": false
     }
   ],

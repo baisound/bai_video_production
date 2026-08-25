@@ -10,6 +10,7 @@ Status: PENDING_HOST_PR
 
 ## Target identity
 
+- lock-host PR: #348
 - target PR: #347
 - target branch: codex/task-029-r9a-signature-verification-receipt
 - exact target head: cf0d9dbf3b2f01f1bea20c6335918c93227dae20

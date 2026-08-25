@@ -1,6 +1,6 @@
 # TASK-019 Profile Auto-Tuner
 
-- Status: `R0 HOSTED / R1 TASK-029 DECISION BRIDGE IMPLEMENTED LOCAL HOSTING PENDING`
+- Status: `R0_R1_HOSTED_CLOSED`
 - Owner: 開発担当
 - Dependency: TASK-008 Multimodal Scoring、TASK-015 YouTube Feedback
 - Downstream: Human-reviewed scoring profile promotion and later rollback execution Gates

@@ -14,16 +14,21 @@ Status: PENDING_HOST_PR
 - target PR: #351
 - target branch: codex/task-058-montage-learning-bridge-p1a-receipt-contract
 - exact target head: 6edaaf6d60352a68f4e479435511b638db5b738f
-- fresh main: ee8ed50723ff2925ad3eb3da0c45b013b6237936
+- fresh main: bbfb9cee8bd0b04ce38ccd02f2a03e32ed58a3e7
 - immutable target paths: 6
-- hosted checks: 8 / 9 PASS; only changelog-and-version FAIL
+- target hosted checks: 8 / 9 PASS; only changelog-and-version FAIL
+- lock-host initial checks: Windows 3.13 only FAIL in unrelated TASK-006
+  rejected-loopback test
+- integration repair PR: #355 / merge bbfb9cee8bd0b04ce38ccd02f2a03e32ed58a3e7
+- repair post-main CI 32889913199 and Security 32889913146: PASS
+- lock-host hosted checks: rerun pending after fresh-main composition
 - focused P1A: 32 PASS
 - P0/TASK-055 related regression: 57 PASS
 - custom JSON-like TOCTOU matrix: 11 PASS; hook invocation 0
 - registry revision: 84 -> 85
 - nonclosed integration locks before proposal: 0
 - nonclosed integration locks after proposal: exactly 1
-- open pull requests: 17
+- open pull requests: 19
 - other open PR overlap with CHANGELOG.md or ACTIVE-WORK-LOCKS.json: 0
 
 ## Reserved effect

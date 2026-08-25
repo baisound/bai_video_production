@@ -59,6 +59,27 @@ def preview(source="clip.mp4", index=5):
     return PersistentPreviewFrame(source, index, geom, geom, b"\x00\x40\x80\xff")
 
 
+def _wait_for_diagnostic_events(
+    latest: Path,
+    expected_events: set[str],
+    *,
+    timeout: float = 5.0,
+) -> list[dict]:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            lines = latest.read_text(encoding="utf-8").splitlines()
+            records = [json.loads(line) for line in lines]
+        except (FileNotFoundError, json.JSONDecodeError):
+            records = []
+        if expected_events.issubset({row.get("event") for row in records}):
+            return records
+        time.sleep(0.01)
+    pytest.fail(
+        f"diagnostic events were not written within {timeout:.1f}s: {sorted(expected_events)}"
+    )
+
+
 def test_worker_callback_only_deposits_mailbox_until_ui_thread_drains(tmp_path):
     root = FakeRoot()
     worker = FakeWorker()
@@ -120,8 +141,9 @@ def test_diagnostics_marker_enables_async_jsonl_and_redacts_paths(tmp_path):
     logger.close(join_timeout=2.0)
 
     latest = tmp_path / "diagnostics" / LATEST_LOG_NAME
-    assert latest.is_file()
-    records = [json.loads(line) for line in latest.read_text(encoding="utf-8").splitlines()]
+    records = _wait_for_diagnostic_events(
+        latest, {"DIAGNOSTICS_ENABLED", "FRAME_REQUESTED", "SAMPLE_ERROR"}
+    )
     events = {row["event"] for row in records}
     assert "DIAGNOSTICS_ENABLED" in events
     assert "FRAME_REQUESTED" in events

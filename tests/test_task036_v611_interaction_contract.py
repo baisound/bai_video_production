@@ -8,8 +8,9 @@ import pytest
 
 from ai_video_production.task036_shell_v611 import HTML
 
-# Node startup can exceed 10 seconds under a contended Windows xdist worker.
-NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS = 30
+# Node startup exceeded 30 seconds under a contended Windows xdist worker.
+# Keep this below the outer 120-second pytest timeout while preserving all assertions.
+NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS = 90
 
 
 def test_top_menu_uses_explicit_command_registry_and_focus_contract() -> None:

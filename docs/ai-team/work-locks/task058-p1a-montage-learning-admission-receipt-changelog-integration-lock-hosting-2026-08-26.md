@@ -10,6 +10,7 @@ Status: PENDING_HOST_PR
 
 ## Target identity
 
+- lock-host PR: #352
 - target PR: #351
 - target branch: codex/task-058-montage-learning-bridge-p1a-receipt-contract
 - exact target head: 6edaaf6d60352a68f4e479435511b638db5b738f

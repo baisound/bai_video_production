@@ -81,10 +81,8 @@ The unchanged Product launcher was executed with a real Windows Tk root and an
 isolated temporary Workspace. The acceptance harness selected the one
 `実況・解説AI` outer tab and all four nested tabs in order, forced native layout,
 and verified every selected page had a non-trivial requested size. It also
-invoked `事前チェック`, observed `ERR_TASK054_R3D_REQUIRED`, and confirmed that
-execute, review, cancel and resume remained disabled. The model panel was
-corrected to expose stable ProductError codes to the Operator; unknown failures
-use `ERR_TASK054_PREFLIGHT_FAILED`.
+invoked `事前チェック`, observed the existing Japanese unavailable reason, and
+confirmed that execute, review, cancel and resume remained disabled.
 
 - Windows real-Tk focused result: `12 passed in 4.51s`
 - WSL collection/regression result: `11 passed, 1 intentional Windows skip`

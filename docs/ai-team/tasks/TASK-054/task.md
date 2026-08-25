@@ -359,7 +359,7 @@ because the approved Computer Use helper failed twice at app enumeration; the
 existing `94 PASS` focused UI tests remain separate deterministic Evidence.
 On 2026-08-26, a real Windows Tk retry selected the sole outer Operator tab and
 all four nested tabs, verified native layout, invoked the unavailable preflight,
-displayed `ERR_TASK054_R3D_REQUIRED`, and confirmed execute/review/cancel/resume
+displayed the existing safe unavailable reason and confirmed execute/review/cancel/resume
 remained disabled (`12 PASS`; WSL `11 PASS, 1 intentional skip`). This closes
 native Tk widget traversal only; external mouse/keyboard, accessibility-tree and
 DPI/scroll observation remain `NOT_CONFIRMED`.

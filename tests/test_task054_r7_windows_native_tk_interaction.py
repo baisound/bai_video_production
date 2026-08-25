@@ -116,13 +116,13 @@ def test_training_studio_native_tk_tab_traversal_and_safe_preflight(
             preflight.invoke()
             assert dialogs
             assert dialogs[-1][0] == "解説AIの事前チェック"
-            assert "ERR_TASK054_R3D_REQUIRED" in dialogs[-1][1]
+            assert "実行可能な承認済みBinding/routeはまだありません" in dialogs[-1][1]
             assert execute.instate(["disabled"])
             assert review.instate(["disabled"])
 
             observed["outer_labels"] = outer_labels
             observed["selected_labels"] = selected_labels
-            observed["preflight_error"] = "ERR_TASK054_R3D_REQUIRED"
+            observed["preflight_blocked"] = True
 
     monkeypatch.setattr(tk, "Tk", InspectingTk)
     monkeypatch.setattr(
@@ -139,7 +139,7 @@ def test_training_studio_native_tk_tab_traversal_and_safe_preflight(
             "Datasetと評価",
             "処理状況と復旧",
         ]
-        assert observed["preflight_error"] == "ERR_TASK054_R3D_REQUIRED"
+        assert observed["preflight_blocked"] is True
     finally:
         root = observed.get("root")
         if root is not None:

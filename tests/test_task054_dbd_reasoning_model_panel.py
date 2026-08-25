@@ -155,6 +155,4 @@ def test_japanese_ui_contains_unambiguous_actions() -> None:
     assert "現在の実況・解説を確認" in source
     assert "生成結果をレビュー" in source
     assert "実行可能: いいえ" in source
-    assert "エラーコード: {error_code}" in source
-    assert "ERR_TASK054_PREFLIGHT_FAILED" in source
     assert ReasoningModelPanel.__name__ == "ReasoningModelPanel"

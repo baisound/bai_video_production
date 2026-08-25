@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_R4_HOSTED_CLOSED / R5_OWNER_PROFILE_REGISTRY_STORE_IMPLEMENTED_LOCAL`
+- Status: `R0_R1_R2_R3_R4_R5_HOSTED_CLOSED / R6_KNOWLEDGE_PACK_PROMOTION_CANDIDATE_IMPLEMENTED_LOCAL`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -99,6 +99,23 @@ R5の1 appendはModel/Profile Registryへの登録だけを行う。runtime scor
 R5 focused＋R4回帰は`14 PASS`、R2-R5直接依存は`30 PASS`、TASK-019/029 chainは`75 PASS`、全Product regressionは`3781 PASS / 6 SKIP / 0 FAIL`。Windows実DPAPI synthetic round-trip、compileall、strict Schema validation、schema mirror、diff-checkもPASS。
 
 R5 Design/Critic/Judge: `owner-profile-registry-store-r5-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。
+
+R5はtarget PR #325、lock-host PR #326、closure PR #330でhosted closedとなり、fresh main `621e20f3b4e62f47b5fb131aba6c322ffaf916f9`、registry revision 74、active nonclosed integration locks 0、closure post-main CI 6/6とSecurity PASSでshared CHANGELOG reservationを解放済み。
+
+## R6 implementation — pure cross-Owner Knowledge Pack promotion candidate
+
+R6はR5 Owner Profile Registry Historyと、そのlatest revisionが固定したR1 Owner Decision History、選択済みADOPTED decision、exact R0 Human Action Evidenceを毎回再検証し、複数Owner・複数Projectで同じ仮説・条件・FeatureRuleが再現したかを評価するimmutable in-memory候補を作る。
+
+- Owner/Project scope座標はdistinct countにだけ使い、候補へ保存しない。
+- one-source-per-OwnerとEvidence hash replay拒否により、同一Ownerの水増しを防ぐ。
+- quality、rework、time、QA、Human acceptance、sample confidenceを別軸のまま集約する。
+- 平均ではなく各軸のminimum deltaとminimum Owner benefitを保持し、悪化を他Ownerの加点で隠さない。
+- Owner不足、Project不足、sample不足、axis regression、効果不足を別stateにする。
+- lineage、Evidence、hypothesis/context、active FeatureRule不一致はstate化せずfail closedにする。
+
+R6はKnowledge Pack write/promotion、signature、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。Human review、independent Critic、signature、latest-source revalidationは後続Gateである。
+
+R6 focusedは`5 PASS`、TASK-019/029 direct regressionは`80 PASS`、全Product regressionは`3786 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-promotion-candidate-r6-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。hosted integrationはpending。
 
 ## Objective
 

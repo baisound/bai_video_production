@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_R4_R5_R6_R7_HOSTED_CLOSED / R8_SIGNATURE_VERIFICATION_REQUEST_IMPLEMENTED_LOCAL`
+- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_HOSTED_CLOSED / R9B_OWNER_SIGNING_KEY_CUSTODY_IMPLEMENTED_LOCAL`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -146,6 +146,18 @@ R8は暗号署名・暗号検証、key store access、Knowledge Pack write/promo
 R8 focusedは`5 PASS`、TASK-019/029 direct regressionは`91 PASS`、全Product regressionは`3797 PASS / 6 SKIP / 0 FAIL`。compile、strict Schema validation、schema mirror、no-I/O/no-crypto-import、diff/scopeもPASS。Design/Critic/Judgeは`knowledge-pack-signature-verification-request-r8-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。hosted integrationはpending。
 
 実署名、trusted public key解決、署名本文を用いた暗号検証、署名済みKnowledge Pack receiptおよびPack writeは別の明示Human Gateと後続Atomic Unitを必要とする。
+
+## R9A implementation — Ed25519 verification with body-free receipt
+
+R9A verifies an exact R8 request against a strict trusted-signer policy, raw 32-byte Ed25519 public key, and detached 64-byte signature. It returns only a body-free verification receipt and never stores key/signature bodies. target PR #347, repair PR #349, and closure PR #350 merged; fresh main `ee8ed50723ff2925ad3eb3da0c45b013b6237936`, registry revision 84, post-main CI/Security PASS, and shared CHANGELOG lock released.
+
+## R9B implementation — one-shot encrypted Owner signing-key custody
+
+R9B admits one raw 32-byte Ed25519 seed only after explicit Human confirmation bound to the exact custody ID, Owner-scope SHA-256, and public-key-derived signer key ID. Windows Current User DPAPI is the default with a dedicated entropy domain. The disk envelope contains ciphertext and integrity metadata only; validated atomic replace, cross-process lock, symlink rejection, and one-shot no-overwrite behavior fail closed.
+
+The public read API returns a body-free custody receipt. There is no signing, export, replacement, rotation, PuTTY/OpenSSH conversion, Knowledge Pack write/promotion, runtime Profile apply, rollback, Release, Deploy, Production, Resolve/Timeline, provider, or Cloud authority. Tests use synthetic keys only; no real Owner secret is generated, printed, committed, or sent to CI.
+
+Focused R9B is `13 PASS`, including Windows DPAPI synthetic round-trip, Schema mirror validation, tamper/wrong-cipher/plaintext/symlink/atomic-failure negatives, confirmation binding, and one-shot overwrite rejection. Design/Critic/Judge is `owner-signing-key-custody-r9b-design-critic-judge.md`. Residual Critical/High/Medium/Low is `0/0/0/0`. TASK-029全体は `94 PASS`、全Product回帰は `3865 PASS / 6 SKIP / 0 FAIL`。hosted integrationと独立reviewはpending。
 
 ## Objective
 

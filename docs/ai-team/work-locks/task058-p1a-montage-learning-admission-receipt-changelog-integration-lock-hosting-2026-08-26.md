@@ -21,7 +21,7 @@ Status: PENDING_HOST_PR
   rejected-loopback test
 - integration repair PR: #355 / merge bbfb9cee8bd0b04ce38ccd02f2a03e32ed58a3e7
 - repair post-main CI 32889913199 and Security 32889913146: PASS
-- lock-host hosted checks: rerun pending after fresh-main composition
+- lock-host fresh-main composition head 8b054db hosted checks: 9 / 9 PASS
 - focused P1A: 32 PASS
 - P0/TASK-055 related regression: 57 PASS
 - custom JSON-like TOCTOU matrix: 11 PASS; hook invocation 0

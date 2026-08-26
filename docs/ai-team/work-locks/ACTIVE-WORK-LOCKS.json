@@ -4760,7 +4760,9 @@
       "expected_pre_integration_head": "b5d59d103e2a1ce28b69ccd73ec0776d00bc3b98",
       "purpose": "ONE_EXACT_TASK029_R9D_PATH_LOCAL_DURABLE_SIGNING_JOURNAL_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
       "approved_changelog_bullet": "- TASK-029 R9Dとして、R9C署名前にexact ceremony identityをcaller-selected local journalへ予約し、trusted R9C/R9A結果をcross-bind後にbody-free receipt hashだけを確定するpath-local no-replay state machineを追加しました。別path・削除・directory durability・power loss・hostile raceは保証せず、実Owner鍵/署名、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。",
-      "allowed_files": ["CHANGELOG.md"],
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
       "immutable_target_path_count": 6,
       "controlled_shared_target_paths": [],
       "open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_OPEN_PRS",

@@ -7,7 +7,7 @@ is non-authoritative on its own and grants no promotion effect.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields as dataclass_fields, is_dataclass, replace
 from enum import Enum
 import re
 from typing import Any, Mapping
@@ -38,6 +38,8 @@ _PROMOTION_INTENT_COMPILE_FIELDS = {
     "signing_journal_receipt_payload",
     "created_at_epoch_ms",
 }
+_MAX_COMPILE_SNAPSHOT_DEPTH = 64
+_MAX_COMPILE_SNAPSHOT_NODES = 262_144
 
 
 def _id(value: object, field: str) -> str:
@@ -86,6 +88,87 @@ def _freeze_exact_object(value: object, field: str) -> dict[str, Any]:
     return frozen
 
 
+def _freeze_compile_value(
+    value: object,
+    field: str,
+    *,
+    active: set[int],
+    budget: list[int],
+    depth: int = 0,
+) -> Any:
+    """Rebuild the mutable R6-R8 compile tree into a detached snapshot."""
+
+    if depth > _MAX_COMPILE_SNAPSHOT_DEPTH:
+        raise ValueError("signature request compile tree exceeds depth limit")
+    budget[0] += 1
+    if budget[0] > _MAX_COMPILE_SNAPSHOT_NODES:
+        raise ValueError("signature request compile tree exceeds node limit")
+    if value is None or type(value) in (str, int, bool):
+        return value
+    if isinstance(value, Enum):
+        if not type(value).__module__.startswith("ai_video_production."):
+            raise ValueError(f"{field} enum is outside the Product contract")
+        return value
+
+    identity = id(value)
+    if identity in active:
+        raise ValueError("signature request compile tree must not be cyclic")
+    active.add(identity)
+    try:
+        if type(value) is dict:
+            result: dict[str, Any] = {}
+            for key, item in value.items():
+                if type(key) is not str:
+                    raise ValueError(f"{field} keys must be exact strings")
+                result[key] = _freeze_compile_value(
+                    item,
+                    f"{field}.{key}",
+                    active=active,
+                    budget=budget,
+                    depth=depth + 1,
+                )
+            return result
+        if type(value) in (list, tuple):
+            items = [
+                _freeze_compile_value(
+                    item,
+                    f"{field}[{index}]",
+                    active=active,
+                    budget=budget,
+                    depth=depth + 1,
+                )
+                for index, item in enumerate(value)
+            ]
+            return items if type(value) is list else tuple(items)
+        if is_dataclass(value) and not isinstance(value, type):
+            value_type = type(value)
+            params = getattr(value_type, "__dataclass_params__", None)
+            if (
+                not value_type.__module__.startswith("ai_video_production.")
+                or params is None
+                or not params.frozen
+            ):
+                raise ValueError(
+                    f"{field} must use an exact frozen Product dataclass"
+                )
+            replacements = {
+                item.name: _freeze_compile_value(
+                    getattr(value, item.name),
+                    f"{field}.{item.name}",
+                    active=active,
+                    budget=budget,
+                    depth=depth + 1,
+                )
+                for item in dataclass_fields(value)
+            }
+            return replace(value, **replacements)
+        raise ValueError(
+            f"{field} must contain only exact TASK-029 compile contract values"
+        )
+    finally:
+        active.remove(identity)
+
+
 def _freeze_promotion_compile_kwargs(
     value: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -100,14 +183,19 @@ def _freeze_promotion_compile_kwargs(
         raise ValueError(
             "signature_request_compile_kwargs must be an exact built-in dict"
         )
+    frozen_request_compile_kwargs = _freeze_compile_value(
+        request_compile_kwargs,
+        "signature_request_compile_kwargs",
+        active=set(),
+        budget=[0],
+    )
+    assert isinstance(frozen_request_compile_kwargs, dict)
     return {
         "intent_id": value["intent_id"],
         "signature_request_payload": _freeze_exact_object(
             value["signature_request_payload"], "signature_request_payload"
         ),
-        # The nested source objects are immutable TASK-029 contract objects.
-        # Copy the exact top-level dict once so custom Mapping hooks cannot run.
-        "signature_request_compile_kwargs": request_compile_kwargs.copy(),
+        "signature_request_compile_kwargs": frozen_request_compile_kwargs,
         "verification_receipt_payload": _freeze_exact_object(
             value["verification_receipt_payload"],
             "verification_receipt_payload",

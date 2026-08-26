@@ -234,6 +234,34 @@ def test_stateful_mappings_are_rejected_without_hook_reads(
     assert chameleon.read_count == 0
 
 
+def test_nested_stateful_compile_mapping_is_rejected_without_hook_reads(
+    tmp_path: Path,
+) -> None:
+    _, _, _, _, _, arguments = signed_case(tmp_path)
+    compile_kwargs = dict(arguments["promotion_intent_compile_kwargs"])
+    request_compile_kwargs = dict(compile_kwargs["signature_request_compile_kwargs"])
+    first = dict(request_compile_kwargs["signing_candidate_compile_kwargs"])
+    second = dict(first, pack_version="9.9.9")
+    chameleon = ChameleonMapping(first, second)
+    request_compile_kwargs["signing_candidate_compile_kwargs"] = chameleon
+    compile_kwargs["signature_request_compile_kwargs"] = request_compile_kwargs
+
+    with pytest.raises(ValueError, match="exact TASK-029"):
+        compile_knowledge_pack_trusted_signature_admission(
+            **dict(arguments, promotion_intent_compile_kwargs=compile_kwargs)
+        )
+    assert chameleon.read_count == 0
+
+    cycle: dict[str, object] = {}
+    cycle["self"] = cycle
+    request_compile_kwargs["source_signing_candidate_payload"] = cycle
+    request_compile_kwargs["signing_candidate_compile_kwargs"] = first
+    with pytest.raises(ValueError, match="must not be cyclic"):
+        compile_knowledge_pack_trusted_signature_admission(
+            **dict(arguments, promotion_intent_compile_kwargs=compile_kwargs)
+        )
+
+
 def test_concurrent_request_mutation_cannot_switch_verified_snapshot(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -242,6 +270,11 @@ def test_concurrent_request_mutation_cannot_switch_verified_snapshot(
     original = dict(compile_kwargs["signature_request_payload"])
     live = dict(original)
     compile_kwargs["signature_request_payload"] = live
+    request_compile_kwargs = dict(compile_kwargs["signature_request_compile_kwargs"])
+    original_candidate = dict(request_compile_kwargs["source_signing_candidate_payload"])
+    live_candidate = dict(original_candidate)
+    request_compile_kwargs["source_signing_candidate_payload"] = live_candidate
+    compile_kwargs["signature_request_compile_kwargs"] = request_compile_kwargs
     verifier_entered = Event()
     mutation_done = Event()
     trusted_verifier = admission_module.verify_detached_knowledge_pack_signature
@@ -255,6 +288,8 @@ def test_concurrent_request_mutation_cannot_switch_verified_snapshot(
         assert verifier_entered.wait(5)
         live.clear()
         live.update(dict(original, pack_version="9.9.9"))
+        live_candidate.clear()
+        live_candidate.update(dict(original_candidate, pack_version="9.9.9"))
         mutation_done.set()
 
     monkeypatch.setattr(
@@ -270,6 +305,7 @@ def test_concurrent_request_mutation_cannot_switch_verified_snapshot(
         worker.join(5)
     assert not worker.is_alive()
     assert live["pack_version"] == "9.9.9"
+    assert live_candidate["pack_version"] == "9.9.9"
     assert admission.pack_version == original["pack_version"]
     assert admission.signature_request_sha256 == original["signature_request_sha256"]
 

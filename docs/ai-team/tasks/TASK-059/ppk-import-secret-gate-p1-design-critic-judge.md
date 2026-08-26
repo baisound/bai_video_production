@@ -2,7 +2,7 @@
 
 Date: `2026-08-26`
 
-Status: `DESIGN_BOUND_IMPLEMENTATION_HUMAN_GATE`
+Status: `DESIGN_BOUND_P1A_IMPLEMENTED_LOCAL_P1B_NEXT`
 
 Development depth: `DEV-4 PRIVACY, AUTHORIZATION AND RELEASE INTEGRITY`
 
@@ -215,9 +215,28 @@ Residual Critical/High/Medium/Low: `0 / 0 / 0 / 0` for design.
 
 Decision: `GO` for this P1 design as the implementation contract.
 
-Implementation remains `HUMAN GATE`. It must bind exact allowed files, pinned
-runtime compatibility and synthetic-only tests. Real key selection, passphrase,
+At this design decision, implementation remained `HUMAN GATE` and required
+exact allowed files, pinned runtime compatibility and synthetic-only tests.
+The later Owner continuation opened P1A only; real key selection, passphrase,
 decryption, DPAPI custody and signing remain separately gated.
+
+## P1A implementation checkpoint
+
+Owner continuation authority admitted a synthetic-only implementation slice.
+`owner_signing_key_ppk_secret_auth.py` implements Phases A-D as an internal,
+non-exported core. It revalidates exact P0 coordinates, performs Argon2id/AES/
+HMAC authentication, normalizes the authenticated Ed25519 mpint, rederives the
+public key and exposes the seed only through a helper-local one-shot internal
+object. Mutable passphrase, KDF material, plaintext and failure-path seed
+buffers are cleared best-effort on every exit.
+
+No filesystem, subprocess, UI, DPAPI, R9B provision, signing or external effect
+is present. P1A synthetic tests are `14 PASS`, P0 regression is `26 PASS`, and
+P1A plus direct Windows R9A/R9B/R9C regression is `42 PASS`.
+
+P1B next owns only body-free READY/confirmation/receipt contracts and a
+fake-cipher/store-tested in-memory R9B orchestrator. Process isolation, UI and
+real secret/native execution remain later gates.
 
 ## Primary references
 

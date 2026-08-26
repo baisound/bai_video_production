@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/dbd-reasoning-dataset-evidence-preflight.schema.json",
+  "title": "DbD Reasoning Dataset Evidence Preflight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_kind",
+    "created_at",
+    "discovery_observed_at",
+    "discovery_report_sha256",
+    "mode",
+    "status",
+    "detail_code",
+    "selected_logical_path_sha256",
+    "selected_observation_sha256",
+    "selected_manifest_id",
+    "selected_revision",
+    "selected_rights_manifest_sha256",
+    "entry_count",
+    "eligible_candidate_count",
+    "needs_review_count",
+    "rejected_count",
+    "train_count",
+    "validation_count",
+    "test_count",
+    "requires_dataset_adoption_gate",
+    "dataset_adoption_authorized",
+    "training_authorized",
+    "state",
+    "preflight_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "DBD_REASONING_DATASET_EVIDENCE_PREFLIGHT"},
+    "created_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "discovery_observed_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "discovery_report_sha256": {"$ref": "#/$defs/sha256"},
+    "mode": {"enum": ["CONFIRMATION_ONLY", "LEARNING_PREPARATION"]},
+    "status": {
+      "enum": [
+        "BLOCKED_DISCOVERY",
+        "SELECTION_REQUIRED",
+        "EVIDENCE_REVIEW_READY",
+        "BLOCKED_NO_ELIGIBLE_CANDIDATE",
+        "DATASET_ADOPTION_REVIEW_REQUIRED"
+      ]
+    },
+    "detail_code": {"$ref": "#/$defs/code"},
+    "selected_logical_path_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "selected_observation_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "selected_manifest_id": {
+      "type": ["string", "null"],
+      "pattern": "^MAN-[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "selected_revision": {"type": ["integer", "null"], "minimum": 1},
+    "selected_rights_manifest_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "entry_count": {"$ref": "#/$defs/count"},
+    "eligible_candidate_count": {"$ref": "#/$defs/count"},
+    "needs_review_count": {"$ref": "#/$defs/count"},
+    "rejected_count": {"$ref": "#/$defs/count"},
+    "train_count": {"$ref": "#/$defs/count"},
+    "validation_count": {"$ref": "#/$defs/count"},
+    "test_count": {"$ref": "#/$defs/count"},
+    "requires_dataset_adoption_gate": {"type": "boolean"},
+    "dataset_adoption_authorized": {"const": false},
+    "training_authorized": {"const": false},
+    "state": {"const": "PREFLIGHT_ONLY_NO_DATASET_ADOPTION_OR_TRAINING_AUTHORITY"},
+    "preflight_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "BLOCKED_DISCOVERY"}}},
+      "then": {
+        "properties": {
+          "detail_code": {"enum": ["NO_DATASET_EVIDENCE", "INVALID_DATASET_EVIDENCE"]},
+          "requires_dataset_adoption_gate": {"const": false}
+        },
+        "$ref": "#/$defs/noSelection"
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "SELECTION_REQUIRED"}}},
+      "then": {
+        "properties": {
+          "detail_code": {"const": "SELECT_DATASET_REVISION"},
+          "requires_dataset_adoption_gate": {"const": false}
+        },
+        "$ref": "#/$defs/noSelection"
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "EVIDENCE_REVIEW_READY"}}},
+      "then": {
+        "properties": {
+          "mode": {"const": "CONFIRMATION_ONLY"},
+          "detail_code": {"const": "PASS_EVIDENCE_REVIEW"},
+          "requires_dataset_adoption_gate": {"const": false}
+        },
+        "$ref": "#/$defs/withSelection"
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "BLOCKED_NO_ELIGIBLE_CANDIDATE"}}},
+      "then": {
+        "properties": {
+          "mode": {"const": "LEARNING_PREPARATION"},
+          "detail_code": {"const": "NO_ELIGIBLE_CANDIDATE"},
+          "eligible_candidate_count": {"const": 0},
+          "requires_dataset_adoption_gate": {"const": false}
+        },
+        "$ref": "#/$defs/withSelection"
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "DATASET_ADOPTION_REVIEW_REQUIRED"}}},
+      "then": {
+        "properties": {
+          "mode": {"const": "LEARNING_PREPARATION"},
+          "detail_code": {"const": "HUMAN_DATASET_ADOPTION_REQUIRED"},
+          "eligible_candidate_count": {"minimum": 1},
+          "requires_dataset_adoption_gate": {"const": true}
+        },
+        "$ref": "#/$defs/withSelection"
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"},
+    "count": {"type": "integer", "minimum": 0, "maximum": 2048},
+    "noSelection": {
+      "properties": {
+        "selected_logical_path_sha256": {"type": "null"},
+        "selected_observation_sha256": {"type": "null"},
+        "selected_manifest_id": {"type": "null"},
+        "selected_revision": {"type": "null"},
+        "selected_rights_manifest_sha256": {"type": "null"},
+        "entry_count": {"const": 0},
+        "eligible_candidate_count": {"const": 0},
+        "needs_review_count": {"const": 0},
+        "rejected_count": {"const": 0},
+        "train_count": {"const": 0},
+        "validation_count": {"const": 0},
+        "test_count": {"const": 0}
+      }
+    },
+    "withSelection": {
+      "properties": {
+        "selected_logical_path_sha256": {"$ref": "#/$defs/sha256"},
+        "selected_observation_sha256": {"$ref": "#/$defs/sha256"},
+        "selected_manifest_id": {"type": "string"},
+        "selected_revision": {"type": "integer"},
+        "selected_rights_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "entry_count": {"minimum": 1}
+      }
+    }
+  }
+}

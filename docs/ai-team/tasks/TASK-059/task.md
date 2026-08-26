@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1C_WIRE_CONTRACT_IMPLEMENTED_LOCAL_PROCESS_CONTROLLER_NEXT`
+Status: `P1CB_PROCESS_CONTROLLER_IMPLEMENTED_LOCAL_HELPER_RUNTIME_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -94,3 +94,22 @@ The next bounded unit is the one-process-per-attempt, no-console,
 shell-free controller/helper lifecycle with synthetic secrets only. Operator UI,
 real PPK/passphrase, DPAPI custody, signing and public integration remain
 separate Gates.
+
+
+## P1C-B controller checkpoint
+
+P1C-B adds the fixed, shell-free, no-console and one-use process controller.
+Only anonymous stdin/stdout pipes carry canonical frames; stderr is DEVNULL and
+the environment is allowlisted. Pipe direction, five-second header,
+ten-second frame, five-minute attempt and bounded terminate/kill behavior fail
+closed with fixed body-free errors. The parent's mutable encoded frame is
+zeroed after every write attempt.
+
+P1C-B focused Evidence is `15 PASS`; P1C-B plus wire is `54 PASS`; direct
+P1C-B/wire/P1A/P1B/R9B regression is `91 PASS`; compileall passes. Detailed
+Evidence is `ppk-helper-process-controller-p1cb-evidence.md`.
+
+P1C-C next owns the fixed helper runtime composition and synthetic-only
+P1A/P1B binding. No real helper was launched in P1C-B. Real PPK/passphrase,
+DPAPI custody, signing, Operator UI and public integration remain separate
+Gates.

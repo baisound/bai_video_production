@@ -1,6 +1,6 @@
 # TASK-058 — Montage Learning Bridge
 
-Status: ACTIVE — P0/P1A/P1B/P1C-A HOSTED CLOSED / P1C-B IMPLEMENTATION IN PROGRESS
+Status: ACTIVE — P0/P1A/P1B/P1C-A/P1C-B HOSTED CLOSED / P1C-C IMPLEMENTED LOCAL / TECHNICAL GO / HOSTING PENDING
 
 ## Objective
 
@@ -301,4 +301,47 @@ receipt issuance.
   protection, post-return stability, monotonic anchor, rollback detection,
   canonical promotion/recovery, receipt issuance, Timeline, Resolve, native,
   provider, network, paid, Release, Deploy, and Production effects:
+  NOT IMPLEMENTED / NOT EXECUTED.
+
+## P1C-C Atomic Unit
+
+P1C-C freezes the pure, no-I/O canonical promotion ledger candidate contract.
+It can copy exact body-free coordinates only from an in-process exact P1C-B
+read-back object into an append-only candidate chain, evaluate structural CAS,
+detect exact duplicate and identity collision, and return a proposed next
+candidate. Every serialized entry, ledger, expectation, and evaluation remains
+`SOURCE_REVALIDATION_REQUIRED / NOT_MINTED` and explicitly denies persistence,
+store origin, Product Project binding, monotonic anchor, rollback, receipt, and
+runtime authority.
+
+P1C-C does not accept a serialized P1C-B projection as an input capability and
+does not write a file, Project manifest, receipt, Timeline, or Resolve state. A
+later writer Unit must rerun the raw P1C-B verifier internally while holding the
+canonical Product Project transaction boundary, establish the external
+monotonic anchor, persist and recover the canonical ledger, and mint the public
+v2 receipt only after durable commit read-back.
+
+The P1C-C exact scope is six files: this task record, one detailed design, one
+public Schema and byte-identical packaged mirror, one pure source module, and
+one focused contract test module. P1B/P1C-A/P1C-B source, Product Project and
+ProjectSave code, CHANGELOG, active locks, current state, task index, TASK-029,
+filesystem data, Provider/network/native, Release, Deploy, and Production are
+outside this source Unit.
+
+P1C-C local completion checkpoint:
+
+- exact source/design/schema mirror/test/task scope: 6 paths;
+- pure/no-I/O append-only entry/ledger/CAS/evaluation contract: IMPLEMENTED;
+- recursive exact-JSON snapshot, malicious container/scalar subclass rejection,
+  chain/fork/tamper/collision/stale-CAS rejection: PASS;
+- P1C-B identifier boundary: 192-character accept / 193-character reject;
+- complete ledger boundary: 4096-entry accept / 4097-entry reject;
+- public/package Schema Draft 2020-12 and byte identity: PASS;
+- focused P1C-C: 46 / 46 PASS;
+- TASK-055/TASK-058 direct regression: 203 / 203 PASS;
+- pre-integration Product regression: 4178 PASS / 6 platform-condition skips;
+- independent Critic/Tester/Final Judge: C/H/M/L=0/0/0/0 / GO;
+- filesystem persistence, Project manifest binding, monotonic anchor, rollback
+  authority, receipt mint, canonical admission, automatic learning, Timeline,
+  Resolve, Provider/network/native, Release, Deploy, and Production effects:
   NOT IMPLEMENTED / NOT EXECUTED.

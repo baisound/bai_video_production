@@ -98,8 +98,14 @@ C/H/M/L `0/2/2/0`: missing R9C/R9D time causality, canonical trust-root
 overclaim, shallow nested snapshots and public Mapping hook execution. The
 bounded rework adds exact ceremony/journal causality, supplied-policy-only
 claims, explicit exact-type deep snapshots and hook-free public admission
-parsing. Independent re-review and final Judge status are pending current-head
-validation; no GO is claimed in this section yet.
+parsing. Second independent review of head `7704289` closed those four findings
+but found one High scalar-subclass bypass (`0/1/0/0`): caller-defined `int`
+comparison and same-value `str` subclasses survived public scalar validation.
+The second bounded rework now requires exact built-in `int`, `str` and `bytes`
+at the security boundary, validates promotion `intent_id` and
+`created_at_epoch_ms` before reuse, and directly rejects EvilInt/EvilStr for
+causal time, IDs, digests and semantic version. Independent current-head
+re-review and final Judge remain pending; no GO is claimed in this section yet.
 
 Builder rework validation: focused R10B `19 PASS`, TASK-029 `151 PASS`, full
 Product `4162 PASS / 6 SKIP / 0 FAIL`, schema/package mirror, compile and

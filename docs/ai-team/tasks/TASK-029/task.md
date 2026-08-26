@@ -270,6 +270,8 @@ R8 request, caller-supplied self-validating signer policy, transient public key
 and detached signature. The complete nested R6-R8 compile tree is rebuilt from
 an explicit allowlist of exact Product enums and frozen dataclasses; every public
 JSON surface requires one recursively frozen exact built-in tree before parsing.
+Security-relevant scalar boundaries require exact built-in `str`, `int` and
+`bytes`; same-value subclasses cannot override causality or survive projection.
 The verifier result must reproduce the R10A verification claim exactly, after
 which R10A is recompiled and matched to the supplied intent. This closes the
 constructible verification-receipt execution gap for the current call without

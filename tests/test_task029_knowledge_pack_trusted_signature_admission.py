@@ -53,6 +53,15 @@ class ChameleonMapping(Mapping[str, object]):
         return len(self._current())
 
 
+class CausalityBypassInt(int):
+    def __lt__(self, other: object) -> bool:
+        return False
+
+
+class ExactValueStrSubclass(str):
+    pass
+
+
 def signed_case(tmp_path: Path):
     values, ceremony_arguments, journal, result, intent_arguments = promotion_case(
         tmp_path
@@ -339,9 +348,38 @@ def test_projection_tamper_unknown_fields_and_bool_time_fail_closed(
         compile_knowledge_pack_trusted_signature_admission(
             **dict(arguments, verified_at_epoch_ms=True)
         )
+    with pytest.raises(ValueError, match="integer"):
+        compile_knowledge_pack_trusted_signature_admission(
+            **dict(arguments, verified_at_epoch_ms=CausalityBypassInt(1))
+        )
     with pytest.raises(ValueError, match="precedes signed Evidence"):
         compile_knowledge_pack_trusted_signature_admission(
             **dict(arguments, verified_at_epoch_ms=399)
+        )
+    with pytest.raises(ValueError, match="stable identifier"):
+        compile_knowledge_pack_trusted_signature_admission(
+            **dict(
+                arguments,
+                admission_id=ExactValueStrSubclass(
+                    arguments["admission_id"]
+                ),
+            )
+        )
+
+    compile_kwargs = dict(arguments["promotion_intent_compile_kwargs"])
+    compile_kwargs["intent_id"] = ExactValueStrSubclass(compile_kwargs["intent_id"])
+    with pytest.raises(ValueError, match="stable identifier"):
+        compile_knowledge_pack_trusted_signature_admission(
+            **dict(arguments, promotion_intent_compile_kwargs=compile_kwargs)
+        )
+
+    compile_kwargs = dict(arguments["promotion_intent_compile_kwargs"])
+    compile_kwargs["created_at_epoch_ms"] = CausalityBypassInt(
+        compile_kwargs["created_at_epoch_ms"]
+    )
+    with pytest.raises(ValueError, match="integer"):
+        compile_knowledge_pack_trusted_signature_admission(
+            **dict(arguments, promotion_intent_compile_kwargs=compile_kwargs)
         )
 
 
@@ -409,6 +447,17 @@ def test_replacement_state_requires_exact_predecessor_rollback() -> None:
         state=KnowledgePackTrustedSignatureAdmissionState.READY_FOR_REPLACEMENT_SIGNATURE_ARTIFACT_CUSTODY,
     )
     assert replacement.to_dict()["rollback_plan_required"] is True
+    with pytest.raises(ValueError, match="stable identifier"):
+        replace(base, admission_id=ExactValueStrSubclass(base.admission_id))
+    with pytest.raises(ValueError, match="sha256"):
+        replace(
+            base,
+            signer_key_id_sha256=ExactValueStrSubclass(
+                base.signer_key_id_sha256
+            ),
+        )
+    with pytest.raises(ValueError, match="semantic version"):
+        replace(base, pack_version=ExactValueStrSubclass(base.pack_version))
     with pytest.raises(ValueError, match="rollback target"):
         replace(replacement, rollback_target_pack_sha256="sha256:" + "b" * 64)
 

@@ -115,19 +115,19 @@ _ALLOWED_COMPILE_DATACLASS_TYPES = frozenset(
 
 
 def _id(value: object, field: str) -> str:
-    if not isinstance(value, str) or _ID.fullmatch(value) is None:
+    if type(value) is not str or _ID.fullmatch(value) is None:
         raise ValueError(f"{field} must be a stable identifier")
     return value
 
 
 def _sha(value: object, field: str) -> str:
-    if not isinstance(value, str) or _SHA.fullmatch(value) is None:
+    if type(value) is not str or _SHA.fullmatch(value) is None:
         raise ValueError(f"{field} must be a lowercase sha256 coordinate")
     return value
 
 
 def _positive(value: object, field: str) -> int:
-    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+    if type(value) is not int or value < 1:
         raise ValueError(f"{field} must be an integer >= 1")
     return value
 
@@ -288,8 +288,12 @@ def _freeze_promotion_compile_kwargs(
         budget=[0],
     )
     assert isinstance(frozen_request_compile_kwargs, dict)
+    intent_id = _id(value["intent_id"], "intent_id")
+    created_at_epoch_ms = _positive(
+        value["created_at_epoch_ms"], "created_at_epoch_ms"
+    )
     return {
-        "intent_id": value["intent_id"],
+        "intent_id": intent_id,
         "signature_request_payload": _freeze_exact_object(
             value["signature_request_payload"], "signature_request_payload"
         ),
@@ -302,7 +306,7 @@ def _freeze_promotion_compile_kwargs(
             value["signing_journal_receipt_payload"],
             "signing_journal_receipt_payload",
         ),
-        "created_at_epoch_ms": value["created_at_epoch_ms"],
+        "created_at_epoch_ms": created_at_epoch_ms,
     }
 
 
@@ -339,7 +343,7 @@ class KnowledgePackTrustedSignatureAdmission:
     def __post_init__(self) -> None:
         for field in ("admission_id", "promotion_intent_id", "pack_id"):
             _id(getattr(self, field), field)
-        if not isinstance(self.pack_version, str) or _SEMVER.fullmatch(
+        if type(self.pack_version) is not str or _SEMVER.fullmatch(
             self.pack_version
         ) is None:
             raise ValueError("pack_version must be semantic version x.y.z")

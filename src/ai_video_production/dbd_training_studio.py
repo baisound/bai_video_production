@@ -102,7 +102,12 @@ from .dbd_training_studio_foundation_ui import (
     choose_workspace_before_launch,
 )
 from .dbd_training_studio_foundation import resolve_workspace_runtime_profile
-from .errors import ProductError
+from .errors import ProductError, ProductErrorCategory
+from .dbd_reasoning_mode_selector_ui import build_reasoning_mode_selector_panel
+from .dbd_reasoning_commentary_preview_ui import CommentaryPreviewPanel
+from .dbd_reasoning_dataset_evaluation_view_ui import DatasetEvaluationPanel
+from .dbd_reasoning_model_panel_ui import ReasoningModelPanel
+from .dbd_reasoning_operation_view_ui import TrainingStudioOperationPanel
 from .dbd_runtime_options import (
     WHISPER_MODEL_OPTIONS_JA, DEVICE_OPTIONS_JA, COMPUTE_OPTIONS_JA,
     display_for_value,
@@ -223,7 +228,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     root.geometry("1440x900")
     root.minsize(1180, 760)
     root.columnconfigure(0, weight=1)
-    root.rowconfigure(1, weight=1)
+    root.rowconfigure(2, weight=1)
 
     header = ttk.Frame(root, padding=(12, 10, 12, 4))
     header.grid(row=0, column=0, sticky="ew")
@@ -241,8 +246,20 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
             text="diagnostics/latest.jsonl",
         ).grid(row=1, column=2, sticky="e", padx=(12, 0), pady=(4, 0))
 
+    # Global mode control stays visible across every Training Studio tab. A
+    # selection records intent only; downstream learning and Provider gates
+    # remain separate.
+    background_state = {"active": False}
+    mode_panel = build_reasoning_mode_selector_panel(
+        root,
+        workspace_id=workspace_descriptor.workspace_id,
+        workspace_root=workspace.root,
+        is_operation_active=lambda: bool(background_state["active"]),
+    )
+    mode_panel.grid(row=1, column=0, sticky="ew", padx=12, pady=(4, 4))
+
     notebook = ttk.Notebook(root)
-    notebook.grid(row=1, column=0, sticky="nsew", padx=12, pady=(4, 12))
+    notebook.grid(row=2, column=0, sticky="nsew", padx=12, pady=(4, 12))
 
     intro_tab, runtime_tab, review_tab = build_foundation_tabs(
         notebook,
@@ -251,7 +268,68 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     )
 
     status = tk.StringVar(value="準備完了")
-    ttk.Label(root, textvariable=status, anchor="w").grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 8))
+    ttk.Label(root, textvariable=status, anchor="w").grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 8))
+    # TASK-054 Operator surface.  These panels remain safely empty until exact
+    # canonical Evidence is loaded; opening the tab never starts inference,
+    # training, a Provider call or a worker process.
+    reasoning_tab = ttk.Frame(notebook, padding=8)
+    reasoning_tab.columnconfigure(0, weight=1)
+    reasoning_tab.rowconfigure(1, weight=1)
+    notebook.add(reasoning_tab, text="実況・解説AI")
+    ttk.Label(
+        reasoning_tab,
+        text="動画の実況・解説を確認し、モデル・Dataset・処理Evidenceを安全に確認します。",
+        wraplength=1100,
+    ).grid(row=0, column=0, sticky="w", pady=(0, 8))
+    reasoning_notebook = ttk.Notebook(reasoning_tab)
+    reasoning_notebook.grid(row=1, column=0, sticky="nsew")
+
+    preview_page = ttk.Frame(reasoning_notebook, padding=8)
+    model_page = ttk.Frame(reasoning_notebook, padding=8)
+    dataset_page = ttk.Frame(reasoning_notebook, padding=8)
+    operation_page = ttk.Frame(reasoning_notebook, padding=8)
+    for page in (preview_page, model_page, dataset_page, operation_page):
+        page.columnconfigure(0, weight=1)
+        page.rowconfigure(0, weight=1)
+    reasoning_notebook.add(preview_page, text="現在の実況・解説")
+    reasoning_notebook.add(model_page, text="モデルと事前チェック")
+    reasoning_notebook.add(dataset_page, text="Datasetと評価")
+    reasoning_notebook.add(operation_page, text="処理状況と復旧")
+
+    commentary_panel = CommentaryPreviewPanel(
+        preview_page,
+        seek_to_ms=lambda milliseconds: status.set(
+            f"実況・解説位置: {milliseconds / 1000:.3f}秒（動画Evidence読込後にseekします）"
+        ),
+    )
+    commentary_panel.grid(row=0, column=0, sticky="nsew")
+
+    def reasoning_preflight_unavailable():
+        raise ProductError(
+            "ERR_TASK054_R3D_REQUIRED",
+            "実行可能な承認済みBinding/routeはまだありません",
+            ProductErrorCategory.STATE,
+        )
+
+    model_panel = ReasoningModelPanel(
+        model_page,
+        run_preflight=reasoning_preflight_unavailable,
+        open_review=lambda: status.set("レビュー対象はまだありません。"),
+    )
+    model_panel.grid(row=0, column=0, sticky="nsew")
+    dataset_panel = DatasetEvaluationPanel(dataset_page)
+    dataset_panel.grid(row=0, column=0, sticky="nsew")
+    operation_panel = TrainingStudioOperationPanel(
+        operation_page,
+        on_cancel_request=lambda operation_id, revision: status.set(
+            f"取消要求は未送信です: {operation_id} r{revision}"
+        ),
+        on_resume_plan_request=lambda operation_id, revision, _checkpoint: status.set(
+            f"再開計画要求は未送信です: {operation_id} r{revision}"
+        ),
+    )
+    operation_panel.grid(row=0, column=0, sticky="nsew")
+
 
     def show_operation_error(
         title: str,
@@ -288,8 +366,6 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
                 lines.append(f"... ほか {len(report.errors)-12}件")
         status.set(f"{title}: 登録={report.accepted} 除外={report.rejected}")
         (messagebox.showinfo if report.rejected == 0 else messagebox.showwarning)(title, "\n".join(lines))
-
-    background_state = {"active": False}
 
     def run_background(title: str, fn, on_success, *, progress_queue=None, on_finish=None) -> None:
         """Keep long jobs off Tk; worker threads never call Tk APIs directly."""
@@ -4701,6 +4777,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         visual_tab,
         ocr_tab,
         trivia_tab,
+        reasoning_tab,
         review_tab,
         migration_tab,
     )

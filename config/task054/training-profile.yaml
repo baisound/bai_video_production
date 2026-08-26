@@ -1,0 +1,50 @@
+schema_version: 1
+task_id: TASK-054
+profile_id: qwen3-8b-qlora-sft-pilot-v1
+state: admitted_dataset_required_no_automatic_promotion
+method: qlora_sft
+base_model_candidate_id: qwen3-8b-b968826d
+seed_set:
+  - 104729
+  - 130363
+  - 155921
+sequence_length: 4096
+quantization:
+  bits: 4
+  type: nf4
+  double_quant: true
+compute_dtype: bf16
+lora:
+  rank: 32
+  alpha: 64
+  dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+optimizer: paged_adamw_8bit
+learning_rate: 0.0001
+epoch_range:
+  minimum: 1
+  maximum: 3
+effective_batch_size: 32
+warmup_ratio: 0.03
+weight_decay: 0.01
+gradient_clip: 1.0
+evaluation_strategy: steps
+early_stop_on_safety_regression: true
+fail_closed_on:
+  - missing_dataset_manifest
+  - dataset_rights_or_consent_failure
+  - split_leakage
+  - base_model_digest_mismatch
+  - unsupported_target_module
+  - nan_or_loss_explosion
+  - out_of_memory
+  - disk_ceiling
+  - device_loss
+artifact_state_after_training: quarantined_no_approval_or_activation

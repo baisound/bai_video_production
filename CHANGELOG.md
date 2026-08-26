@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-054として、DbD実況・解説AIのPreview/学習分離、Evidence基盤、Operator UI、固定Qwen3-8B実行環境およびlocal/free/no-credentialの一回限りR3D推論境界を追加しました。実Dataset学習・学習済みadapter・実データ評価は未開始で、Binding promotion、Timeline/Resolve、Release/Deploy/Production authorityは生成しません。
+
 - TASK-058 P1Bとして、BVP所有のbody-free admission staging ledgerへExact lane座標をCAS appendし、duplicate read-back、replay/collision拒否、atomic replace、restart recoveryを行う非正本storeを追加しました。Generic laneは拒否し、source/Human origin、canonical store、monotonic/rollback、receipt、Timeline/Resolve/runtime authorityは生成しません。path securityはcooperative local writer限定で、hostile raceとdirectory durabilityはNOT_CONFIRMED、P1C canonical promotionにはhandle-bound writerを必須とします。
 
 - TASK-029 R9Cとして、exact R8再検証、ACTIVE signer policy、fresh R9B custody receipt、明示Human確認を束縛し、custody内部で署名してR9A即時検証するbody-free local signing ceremonyを追加しました。永続replay prevention、signature export、Knowledge Pack write/promotion、runtime apply、Release/Deploy/Production authorityは生成しません。

@@ -504,6 +504,12 @@ def _verify_commentary_candidate_payload(payload: Any) -> None:
         raise ValueError("Commentary candidate reasoning_origin is invalid")
 
 
+def verify_commentary_candidate_payload(payload: Any) -> None:
+    """Public read-only admission boundary for canonical Candidate payloads."""
+
+    _verify_commentary_candidate_payload(payload)
+
+
 class CommentaryCandidateStore:
     """Append-only local store/export for provider-neutral Commentary candidates."""
 
@@ -1243,6 +1249,7 @@ __all__ = [
     "CommentaryCandidate",
     "CommentaryCandidateStatus",
     "CommentaryCandidateStore",
+    "verify_commentary_candidate_payload",
     "CommentaryClaim",
     "CommentaryClaimKind",
     "CommentaryDisposition",

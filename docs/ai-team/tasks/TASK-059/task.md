@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P0_COMMITTED_P1A_SECRET_AUTH_IMPLEMENTED_LOCAL_P1B_NEXT`
+Status: `P1B_CUSTODY_IMPORT_CONTRACT_IMPLEMENTED_LOCAL_P1C_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.

@@ -173,6 +173,10 @@ class SignatureArtifactCustodyCandidate:
             "source_graph_currentness_confirmed": False,
             "owner_scope_origin_authenticated": False,
             "credential_included": False,
+            "signature_artifact_store_implemented": False,
+            "storage_security_model_confirmed": False,
+            "directory_durability_confirmed": False,
+            "hostile_path_race_protection_confirmed": False,
             "artifact_custody_write_authorized": False,
             "signature_artifact_custody_confirmed": False,
             "canonical_receipt_minted": False,
@@ -182,6 +186,10 @@ class SignatureArtifactCustodyCandidate:
             "knowledge_pack_promotion_authorized": False,
             "automatic_promotion_authorized": False,
             "runtime_profile_apply_authorized": False,
+            "timeline_mutation_authorized": False,
+            "resolve_mutation_authorized": False,
+            "deploy_authorized": False,
+            "production_authorized": False,
             "rollback_execution_authorized": False,
             "release_authorized": False,
             "external_effect_authorized": False,
@@ -241,6 +249,10 @@ class SignatureArtifactCustodyCandidate:
             "automatic_promotion_authorized", "runtime_profile_apply_authorized",
             "rollback_execution_authorized", "release_authorized",
             "external_effect_authorized",
+            "signature_artifact_store_implemented", "storage_security_model_confirmed",
+            "directory_durability_confirmed", "hostile_path_race_protection_confirmed",
+            "timeline_mutation_authorized", "resolve_mutation_authorized",
+            "deploy_authorized", "production_authorized",
         ):
             if snapshot[field] is not False:
                 raise ValueError(f"{field} must remain false")

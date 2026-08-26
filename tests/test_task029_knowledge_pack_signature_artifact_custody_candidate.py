@@ -126,6 +126,8 @@ def test_remaining_gates_and_effects_are_machine_readable(tmp_path: Path) -> Non
         "project_scope_coordinates_included", "reviewer_coordinates_included",
         "source_graph_currentness_confirmed", "owner_scope_origin_authenticated",
         "signature_artifact_body_included", "public_key_material_included",
+        "signature_artifact_store_implemented", "storage_security_model_confirmed",
+        "directory_durability_confirmed", "hostile_path_race_protection_confirmed",
         "private_key_material_included", "absolute_host_path_included",
         "credential_included", "artifact_custody_write_authorized",
         "signature_artifact_custody_confirmed", "canonical_receipt_minted",
@@ -134,6 +136,8 @@ def test_remaining_gates_and_effects_are_machine_readable(tmp_path: Path) -> Non
         "automatic_promotion_authorized", "runtime_profile_apply_authorized",
         "rollback_execution_authorized", "release_authorized", "external_effect_authorized",
     ):
+        "timeline_mutation_authorized", "resolve_mutation_authorized",
+        "deploy_authorized", "production_authorized",
         assert payload[field] is False
 
 

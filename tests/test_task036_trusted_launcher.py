@@ -78,6 +78,24 @@ class AsrProvider:
         raise AssertionError("provider must not execute during launch")
 
 
+class OwnerSigningKeyImportStub:
+    def __init__(self, *, fail_close: bool = False):
+        self.close_count = 0
+        self.fail_close = fail_close
+
+    def snapshot(self):
+        return {
+            "available": True,
+            "state": "IDLE_NOT_CONFIGURED",
+            "passphrase_exposed": False,
+        }
+
+    def close(self):
+        self.close_count += 1
+        if self.fail_close:
+            raise RuntimeError("owner signing key import close failed")
+
+
 class ExecutingAsrProvider:
     provider_id = "faster-whisper"
     model_id = "cached-local-model"
@@ -223,6 +241,7 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert isinstance(launch.bridge._audit_application, Task038AuditApplication)
     assert launch.bridge._audit_application.project_root == config.project_root
     assert launch.bridge._audit_application.project_id == config.project_id
+
     assert isinstance(launch.bridge._planning_application, Task027PlanningApplication)
     assert launch.bridge._planning_application.project_root == config.project_root
     assert launch.bridge._planning_application.project_id == config.project_id
@@ -274,6 +293,55 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert audio["provider_execution_started"] is False
     assert audio["task026_compile_started"] is False
     assert audio["resolve_mutation_started"] is False
+
+
+def test_trusted_launch_owns_body_free_signing_key_service_lifetime(tmp_path: Path):
+    path, _raw = config_document(tmp_path)
+    service = OwnerSigningKeyImportStub()
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        owner_signing_key_import=service,
+    )
+
+    snapshot = launch.bridge.owner_signing_key_import_snapshot({})
+    assert snapshot == {
+        "available": True,
+        "state": "IDLE_NOT_CONFIGURED",
+        "passphrase_exposed": False,
+    }
+    assert launch._owner_signing_key_import is service
+
+    launch.close()
+    launch.close()
+    assert service.close_count == 1
+    assert launch._owner_signing_key_import is None
+
+
+def test_trusted_launch_releases_other_resources_when_signing_service_close_fails(
+    tmp_path: Path,
+):
+    path, _raw = config_document(tmp_path)
+    service = OwnerSigningKeyImportStub(fail_close=True)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        owner_signing_key_import=service,
+    )
+
+    with pytest.raises(RuntimeError, match="owner signing key import close failed"):
+        launch.close()
+
+    assert service.close_count == 1
+    assert launch._owner_signing_key_import is None
+    assert launch._local_operation_lifetime is None
+    assert launch._runtime_lease is None
+    assert launch._product_store is None
+    launch.close()
 
 
 def test_trusted_composition_transcribes_managed_asset_and_promotes_fixed_outputs(

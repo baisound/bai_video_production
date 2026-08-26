@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CI_SHELL_API_UI_PASS_NATIVE_QA_NEXT`
+Status: `P1CJ1_TRUSTED_LIFETIME_BINDING_PASS_NATIVE_MANUAL_GATE`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -338,3 +338,32 @@ native Windows focus/accessibility/Cancel/OK/timeout/result-lost QA and exact
 trusted runtime binding. Real PPK/passphrase, DPAPI custody, signing,
 Authenticode, installer, publish, promote, Release, Deploy and Production
 remain separate Gates.
+
+## P1C-J1 trusted launcher lifetime binding checkpoint
+
+P1C-J1 adds one optional trusted `OwnerSigningKeyPpkShellService` dependency
+to `build_trusted_launch`, passes that exact instance to the canonical
+TASK-036 Shell bridge and makes `Task036TrustedLaunch` own its transient
+lifetime. Normal close is idempotent. If the signing-key service close fails,
+the launch still closes its local-operation lifetime, runtime lease and Product
+store before re-raising the service error. Existing in-flight lease close
+failure semantics remain retryable and preserve the lease field until close
+succeeds.
+
+No expected fingerprint, Owner-scope digest, custody destination, key path or
+helper digest is inferred, hardcoded or loaded from an untrusted UI request.
+This unit therefore establishes the trusted composition seam without enabling
+an unconfigured or real-key import.
+
+P1C-J1 focused lifetime/parallel-close Evidence is `3 PASS`; the full trusted
+launcher module is `39 PASS`; launcher plus direct P1C-I Shell bridge/service
+regression is `53 PASS`. Residual Critical/High/Medium/Low is
+`0 / 0 / 0 / 0`. Detailed Evidence is
+`ppk-trusted-launcher-lifetime-binding-p1cj1-evidence.md`.
+
+Actual Credential UI observation remains `NOT_CONFIRMED`. The applicable
+Computer Use policy prohibits authentication-dialog automation, and the
+available GUI-control kernel did not initialize. Manual native
+focus/accessibility/Cancel/OK/timeout/result-lost QA, real PPK/passphrase,
+DPAPI custody, signing, Authenticode, installer, publish, promote, Release,
+Deploy and Production remain separate Human Gates.

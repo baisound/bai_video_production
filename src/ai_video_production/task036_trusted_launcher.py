@@ -33,6 +33,7 @@ from .paths import LogicalPathResolver, PathMapping, SourcePathPolicy
 from .resolve_assembly import ResolveAssetBindings, ResolveScriptingAssemblyAdapter
 from .store import SQLiteProductStore
 from .task036_native_dialog import Task036NativeDialogService
+from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_native_render_port import Task036Task011NativeRenderPort
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_product_ports import (
@@ -480,6 +481,9 @@ class Task036TrustedLaunch:
     coordinator: DesktopEditingCoordinator
     pre_edit_runtime: Task036PreEditRuntime
     bridge: Task036ShellBridge
+    _owner_signing_key_import: OwnerSigningKeyPpkShellService | None = field(
+        default=None, repr=False
+    )
     _runtime_lease: "_Task036ProjectRuntimeLease | None" = field(default=None, repr=False)
     _local_operation_lifetime: "_Task036LocalOperationLifetime | None" = field(default=None, repr=False)
     _product_store: SQLiteProductStore | None = field(default=None, repr=False)
@@ -487,6 +491,14 @@ class Task036TrustedLaunch:
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
 
+        owner_signing_key_import = self._owner_signing_key_import
+        self._owner_signing_key_import = None
+        owner_signing_key_close_error: Exception | None = None
+        if owner_signing_key_import is not None:
+            try:
+                owner_signing_key_import.close()
+            except Exception as exc:
+                owner_signing_key_close_error = exc
         local_lifetime = self._local_operation_lifetime
         if local_lifetime is not None:
             local_lifetime.close()
@@ -499,6 +511,8 @@ class Task036TrustedLaunch:
         if store is not None:
             store.close()
             self._product_store = None
+        if owner_signing_key_close_error is not None:
+            raise owner_signing_key_close_error
 
     def __enter__(self) -> "Task036TrustedLaunch":
         return self
@@ -766,6 +780,7 @@ def build_trusted_launch(
     final_review_export_preparation_provider: Callable[
         [FinalReviewApprovalReceipt], ExportPreparation
     ] | None = None,
+    owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
     allow_product_job_bootstrap: bool = True,
 ) -> Task036TrustedLaunch:
     if not allow_product_job_bootstrap:
@@ -1260,6 +1275,7 @@ def build_trusted_launch(
             audio_placement_application=audio_placement_application,
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
+            owner_signing_key_import=owner_signing_key_import,
             final_review_application=final_review_application,
             final_review_external_gate_provider=final_review_external_gate_provider,
             final_review_edit_persistence_provider=edit_persistence_provider,
@@ -1277,11 +1293,17 @@ def build_trusted_launch(
             coordinator=coordinator,
             pre_edit_runtime=pre_edit,
             bridge=bridge,
+            _owner_signing_key_import=owner_signing_key_import,
             _runtime_lease=runtime_lease,
             _local_operation_lifetime=local_operation_lifetime,
             _product_store=store,
         )
     except BaseException:
+        if owner_signing_key_import is not None:
+            try:
+                owner_signing_key_import.close()
+            except Exception:
+                pass
         if local_operation_lifetime is not None:
             local_operation_lifetime.close()
         if runtime_lease is not None:

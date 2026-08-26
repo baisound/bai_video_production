@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-029 R10Aとして、R8署名要求をhook-free単一snapshotで再検証し、body-free R9A/R9D receiptをPack・predecessor・signer・message・journal座標へcross-bindするKnowledge Pack昇格preflightを追加しました。公開constructible receiptから暗号学的生成元は認証せず、signature verified/昇格確認可能性はfalseのままです。Pack write/promotion、runtime apply、rollback実行、Release/Deploy/Production authorityは生成しません。
+
 - TASK-058 P1C-Bとして、raw Exact BVP/TASK-055 deliveryをP1C-Aで再検証し、固定P1B staging ledgerをWindows pinned handle / POSIX openat+O_NOFOLLOWで一点時点read-backして、exact entry membershipとpath identityをcross-bindするbody-free診断projectionを追加しました。live/serialized projectionは非authoritativeで、writer/store origin、Project root正本性、hostile ancestor、post-return安定性、monotonic anchor、canonical promotion/receipt、Timeline/Resolve/runtime authorityは生成しません。
 
 - TASK-054 R6B-Bとして、R6B-Aのbody-free discovery reportをexact再Admissionし、Operatorが単一manifest revisionを明示選択する確認専用・学習準備preflightを追加しました。観測時刻、report・item・manifest digest、aggregate countをcross-bindし、raw path・media・transcript・narration本文を保持せず、Dataset採用・学習Authorityは常にfalseで別Human Gate前に停止します。

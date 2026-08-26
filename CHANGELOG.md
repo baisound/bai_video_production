@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-029 R10Bとして、exact R9C/R9D署名Evidenceの時刻・座標をcross-bindし、deep-frozen R8入力と一時的な公開鍵／署名からcaller-supplied policyに対するEd25519検証を同一呼出しで再実行するbody-free admissionを追加しました。canonical trust-root／Owner signer binding／artifact custody／Pack promotionは未成立で、runtime apply、rollback、Release/Deploy/Production authorityは生成しません。
+
 - TASK-029 R10Aとして、R8署名要求をhook-free単一snapshotで再検証し、body-free R9A/R9D receiptをPack・predecessor・signer・message・journal座標へcross-bindするKnowledge Pack昇格preflightを追加しました。公開constructible receiptから暗号学的生成元は認証せず、signature verified/昇格確認可能性はfalseのままです。Pack write/promotion、runtime apply、rollback実行、Release/Deploy/Production authorityは生成しません。
 
 - TASK-058 P1C-Bとして、raw Exact BVP/TASK-055 deliveryをP1C-Aで再検証し、固定P1B staging ledgerをWindows pinned handle / POSIX openat+O_NOFOLLOWで一点時点read-backして、exact entry membershipとpath identityをcross-bindするbody-free診断projectionを追加しました。live/serialized projectionは非authoritativeで、writer/store origin、Project root正本性、hostile ancestor、post-return安定性、monotonic anchor、canonical promotion/receipt、Timeline/Resolve/runtime authorityは生成しません。

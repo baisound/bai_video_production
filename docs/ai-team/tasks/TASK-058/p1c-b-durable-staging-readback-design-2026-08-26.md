@@ -31,9 +31,11 @@ serialized P1C-A projection as source evidence. It obtains the staged entry
 from the pinned ledger bytes and invokes the P1C-A compiler with the raw
 delivery plus that entry.
 
-Public construction of a runtime-attested projection is not exposed. A JSON
-document conforming to the public Schema is diagnostic data only and is never
-an input to this entrypoint or a substitute for executing it.
+Public construction of the projection is not exposed. The live object and a
+JSON document conforming to the public Schema are diagnostic data only; neither
+is an admission capability. P1C-C or later must invoke this verifier internally
+from raw delivery and expected staging coordinates and must never accept a
+caller-supplied live or serialized projection as verification input.
 
 ## 3. Handle-bound read
 
@@ -67,9 +69,10 @@ P1C-B requires all of the following in the same invocation:
   idempotency, Human-binding, and entry coordinates;
 - preservation of `DELETED` as negative feedback.
 
-The live returned object carries a private process-local runtime marker.
-Downstream code must require `runtime_attested is True`; a serialized mapping
-cannot recreate that marker.
+The projection carries no reusable runtime capability marker. Its true
+observation fields describe only this completed invocation; downstream effects
+must not trust or rehydrate the projection and must rerun this verifier inside
+their own trusted operation.
 
 ## 5. Claims deliberately left false
 

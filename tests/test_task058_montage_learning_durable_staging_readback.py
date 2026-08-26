@@ -102,7 +102,6 @@ def test_real_host_handle_read_recompiles_raw_delivery_and_proves_membership(
     result = _verify(tmp_path, delivery, staged)
     body = result.to_dict()
 
-    assert result.runtime_attested is True
     assert body["admission_state"] == (
         "NONAUTHORITATIVE_DURABLE_STAGING_READBACK_PROJECTION"
     )
@@ -266,13 +265,12 @@ def test_relative_project_root_and_non_builtin_delivery_fail_before_read(tmp_pat
         )
 
 
-def test_runtime_attested_projection_has_no_public_constructor() -> None:
+def test_diagnostic_projection_has_no_public_constructor_or_verified_factory() -> None:
     with pytest.raises(TypeError):
         MontageLearningDurableStagingReadback()  # type: ignore[call-arg]
+    assert not hasattr(MontageLearningDurableStagingReadback, "_verified")
     forged = object.__new__(MontageLearningDurableStagingReadback)
-    object.__setattr__(forged, "_token", object())
-    assert forged.runtime_attested is False
-    with pytest.raises(MontageLearningDurableStagingReadbackError):
+    with pytest.raises(AttributeError):
         forged.to_dict()
 
 

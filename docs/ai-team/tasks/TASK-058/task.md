@@ -261,8 +261,9 @@ exact TASK-055 delivery, opens the fixed P1B staging ledger through pinned,
 non-inheritable handles, validates exact canonical ledger bytes and the full
 P1B hash chain, locates one expected entry digest, and reruns the P1C-A
 compiler against that handle-read entry. The body-free output is
-`NONAUTHORITATIVE_DURABLE_STAGING_READBACK_PROJECTION` and carries a private
-process-local runtime marker that serialized mappings cannot recreate.
+`NONAUTHORITATIVE_DURABLE_STAGING_READBACK_PROJECTION`. The live object and
+serialized mapping are diagnostic only and are never accepted as a reusable
+verification capability; later effects must rerun the raw verifier internally.
 
 P1C-B proves point-in-time raw recompilation, pinned-file read, fixed staging
 path identity, and exact ledger membership only. It does not prove the writer

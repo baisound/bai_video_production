@@ -35,7 +35,6 @@ FILE_IDENTITY_DOMAIN = b"TASK058_MONTAGE_LEARNING_STAGING_FILE_IDENTITY_V1\0"
 _MAX_STORE_BYTES = 32 * 1024 * 1024
 _DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$")
-_RUNTIME_TOKEN = object()
 
 _GENERIC_READ = 0x80000000
 _FILE_READ_ATTRIBUTES = 0x0080
@@ -547,53 +546,13 @@ class MontageLearningDurableStagingReadback:
     canonical_evidence_sha256: str
     human_binding_sha256: str
     negative_feedback_preserved: bool
-    _token: object
 
     def __new__(cls) -> "MontageLearningDurableStagingReadback":
         raise TypeError(
             "durable staging read-back results are created only by verification"
         )
 
-    @classmethod
-    def _verified(
-        cls,
-        *,
-        project_id: str,
-        store_id: str,
-        store_revision: int,
-        ledger_sha256: str,
-        staging_file_identity_sha256: str,
-        platform_security_model: str,
-        source_record_id: str,
-        source_sha256: str,
-        owner_scope_hash: str,
-        proposal_sha256: str,
-        approved_plan_sha256: str,
-        idempotency_key_sha256: str,
-        staging_entry_sha256: str,
-        canonical_evidence_id: str,
-        canonical_evidence_sha256: str,
-        human_binding_sha256: str,
-        negative_feedback_preserved: bool,
-    ) -> "MontageLearningDurableStagingReadback":
-        result = object.__new__(cls)
-        values = locals()
-        for name in cls.__dataclass_fields__:
-            if name == "_token":
-                object.__setattr__(result, name, _RUNTIME_TOKEN)
-            else:
-                object.__setattr__(result, name, values[name])
-        return result
-
-    @property
-    def runtime_attested(self) -> bool:
-        return self._token is _RUNTIME_TOKEN
-
     def to_dict(self) -> dict[str, object]:
-        if not self.runtime_attested:
-            raise MontageLearningDurableStagingReadbackError(
-                "runtime attestation is absent"
-            )
         body: dict[str, object] = {
             "schema_version": SCHEMA_VERSION,
             "record_type": RECORD_TYPE,
@@ -698,25 +657,29 @@ def verify_montage_learning_durable_staging_readback(
             "recompiled entry digest mismatch"
         )
     ledger_sha = _digest(ledger.to_dict()["ledger_sha256"], "ledger_sha256")
-    return MontageLearningDurableStagingReadback._verified(
-        project_id=preflight.project_id,
-        store_id=store,
-        store_revision=revision,
-        ledger_sha256=ledger_sha,
-        staging_file_identity_sha256=pinned.file_identity_sha256,
-        platform_security_model=pinned.platform_security_model,
-        source_record_id=preflight.source_record_id,
-        source_sha256=preflight.source_sha256,
-        owner_scope_hash=preflight.owner_scope_hash,
-        proposal_sha256=preflight.proposal_sha256,
-        approved_plan_sha256=preflight.approved_plan_sha256,
-        idempotency_key_sha256=preflight.idempotency_key_sha256,
-        staging_entry_sha256=preflight.staging_entry_sha256,
-        canonical_evidence_id=preflight.canonical_evidence_id,
-        canonical_evidence_sha256=preflight.canonical_evidence_sha256,
-        human_binding_sha256=preflight.human_binding_sha256,
-        negative_feedback_preserved=preflight.negative_feedback_preserved,
-    )
+    result = object.__new__(MontageLearningDurableStagingReadback)
+    values: dict[str, object] = {
+        "project_id": preflight.project_id,
+        "store_id": store,
+        "store_revision": revision,
+        "ledger_sha256": ledger_sha,
+        "staging_file_identity_sha256": pinned.file_identity_sha256,
+        "platform_security_model": pinned.platform_security_model,
+        "source_record_id": preflight.source_record_id,
+        "source_sha256": preflight.source_sha256,
+        "owner_scope_hash": preflight.owner_scope_hash,
+        "proposal_sha256": preflight.proposal_sha256,
+        "approved_plan_sha256": preflight.approved_plan_sha256,
+        "idempotency_key_sha256": preflight.idempotency_key_sha256,
+        "staging_entry_sha256": preflight.staging_entry_sha256,
+        "canonical_evidence_id": preflight.canonical_evidence_id,
+        "canonical_evidence_sha256": preflight.canonical_evidence_sha256,
+        "human_binding_sha256": preflight.human_binding_sha256,
+        "negative_feedback_preserved": preflight.negative_feedback_preserved,
+    }
+    for name, value in values.items():
+        object.__setattr__(result, name, value)
+    return result
 
 
 __all__ = [

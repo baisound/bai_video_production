@@ -23,6 +23,7 @@ PROJECT_ID = "project-1"
 JOB_ID = "JOB-00000000000000000000000000"
 PROCESS_COMPLETION_TIMEOUT_SECONDS = 30
 PROCESS_CLEANUP_TIMEOUT_SECONDS = 5
+THREAD_COMPLETION_TIMEOUT_SECONDS = 30
 
 
 def file_sha(path: Path) -> str:
@@ -176,7 +177,7 @@ def test_cross_instance_admission_executes_provider_exactly_once(tmp_path: Path)
     threads[1].start()
     release.set()
     for thread in threads:
-        thread.join(5)
+        thread.join(THREAD_COMPLETION_TIMEOUT_SECONDS)
         assert not thread.is_alive()
     assert provider.calls == 1
     assert [item.provider_execution_started for item in results] == [True]

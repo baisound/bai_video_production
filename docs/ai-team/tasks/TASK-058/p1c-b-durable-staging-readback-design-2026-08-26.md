@@ -116,7 +116,7 @@ paths.
   is exercised with real temporary files.
 - raw delivery, store/scope/revision/entry, JSON/hash-chain, reparse/symlink,
   size, identity drift, read, and close failures fail closed.
-- serialized projection cannot recreate the runtime marker.
+- live or serialized projections remain diagnostic-only and cannot replace an internal raw-verifier rerun.
 - focused P1C-B and related P0/P1A/P1B/P1C-A regressions pass.
 - independent Critic, Tester, and Final Judge report zero unresolved Critical,
   High, Medium, or Low findings.

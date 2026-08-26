@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.baisound.local/owner-signing-key-ppk-import-preflight.schema.json",
+  "title": "Owner Signing Key PPK Import Preflight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_kind", "observed_at_epoch_ms",
+    "ppk_file_sha256", "public_key_file_sha256", "ppk_public_blob_sha256",
+    "private_ciphertext_sha256", "signer_key_id_sha256",
+    "openssh_sha256_fingerprint", "argon2_memory_kib",
+    "argon2_passes", "argon2_parallelism", "ppk_format_version", "algorithm",
+    "encryption", "key_derivation", "public_coordinates_match",
+    "expected_fingerprint_match", "passphrase_received", "private_mac_verified",
+    "private_key_decrypted", "custody_import_authorized",
+    "custody_import_started", "signing_authorized", "external_effect_authorized",
+    "state", "preflight_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "OWNER_SIGNING_KEY_PPK_IMPORT_PREFLIGHT"},
+    "observed_at_epoch_ms": {"type": "integer", "minimum": 1, "maximum": 9999999999999},
+    "ppk_file_sha256": {"$ref": "#/$defs/sha256"},
+    "public_key_file_sha256": {"$ref": "#/$defs/sha256"},
+    "ppk_public_blob_sha256": {"$ref": "#/$defs/sha256"},
+    "private_ciphertext_sha256": {"$ref": "#/$defs/sha256"},
+    "signer_key_id_sha256": {"$ref": "#/$defs/sha256"},
+    "openssh_sha256_fingerprint": {
+      "type": "string",
+      "pattern": "^SHA256:[A-Za-z0-9+/]{43}$"
+    },
+    "argon2_memory_kib": {"type": "integer", "minimum": 8192, "maximum": 262144},
+    "argon2_passes": {"type": "integer", "minimum": 3, "maximum": 128},
+    "argon2_parallelism": {"type": "integer", "minimum": 1, "maximum": 16},
+    "ppk_format_version": {"const": 3},
+    "algorithm": {"const": "ssh-ed25519"},
+    "encryption": {"const": "aes256-cbc"},
+    "key_derivation": {"const": "Argon2id"},
+    "public_coordinates_match": {"const": true},
+    "expected_fingerprint_match": {"const": true},
+    "passphrase_received": {"const": false},
+    "private_mac_verified": {"const": false},
+    "private_key_decrypted": {"const": false},
+    "custody_import_authorized": {"const": false},
+    "custody_import_started": {"const": false},
+    "signing_authorized": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "state": {"const": "READY_FOR_PASSPHRASE_MAC_GATE_NO_CUSTODY_IMPORT"},
+    "preflight_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

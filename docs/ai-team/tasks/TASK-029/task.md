@@ -292,3 +292,28 @@ runtime-compatibility validation and explicit Human promotion confirmation
 remain later Gates. Knowledge Pack write/promotion, automatic promotion,
 runtime apply, rollback execution, Release, Deploy and Production remain
 unauthorized.
+
+## R10C implementation - body-free signature artifact custody candidate
+
+R10C consumes R10B's exact next state and prepares a body-free, in-memory
+candidate for a later Owner-local signature-artifact custody transaction. It
+reconstructs exact R9B key-custody, R9C signing-ceremony and R10B trusted
+signature admission payloads from bounded hook-free built-in JSON snapshots.
+R9C must bind the exact R9B custody receipt, and its ceremony, request, signer,
+detached-signature digest and verification receipt coordinates must equal R10B.
+The Owner scope comes only from the R9B encrypted key-custody receipt, whose
+signer must equal the R10B signer. Candidate creation cannot predate R9B
+custody, R9C completion or R10B verification.
+
+The output contains only stable identifiers and hashes. It requires a later
+write boundary to direct-recompile R10B with transient public-key and detached
+signature bytes, repeat cryptographic verification, receive explicit Human
+custody confirmation, and use an Owner-local encrypted one-shot store. The
+candidate itself remains publicly constructible and non-authoritative.
+
+Artifact bytes, public/private key material, host paths and credentials are not
+included. Artifact custody write/confirmation, canonical receipt, canonical
+trust root, Owner signer binding, Knowledge Pack write/promotion, automatic
+promotion, runtime apply, rollback, Release, Deploy and Production remain
+unauthorized. Project/reviewer coordinates and actual artifact custody remain
+later Gates.

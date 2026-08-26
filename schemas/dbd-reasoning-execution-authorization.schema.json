@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/dbd-reasoning-execution-authorization.schema.json",
+  "title": "DbD Reasoning Execution Authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_kind",
+    "authorization_id",
+    "authority_evidence_sha256",
+    "route_decision_sha256",
+    "binding_id",
+    "binding_revision",
+    "binding_sha256",
+    "session_mode",
+    "not_before",
+    "expires_at",
+    "max_attempts",
+    "cost_ceiling_milli",
+    "max_output_tokens",
+    "authorization_state",
+    "authorization_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "DBD_REASONING_EXECUTION_AUTHORIZATION"},
+    "authorization_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "authority_evidence_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "route_decision_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "binding_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "binding_revision": {"type": "integer", "minimum": 1},
+    "binding_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "session_mode": {"const": "PREVIEW_NO_LEARNING"},
+    "not_before": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "expires_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+    "max_attempts": {"const": 1},
+    "cost_ceiling_milli": {"const": 0},
+    "max_output_tokens": {"type": "integer", "minimum": 1, "maximum": 4096},
+    "authorization_state": {"const": "ALLOWED_SINGLE_LOCAL_PREVIEW"},
+    "authorization_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

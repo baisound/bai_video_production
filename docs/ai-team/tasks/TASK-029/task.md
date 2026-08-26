@@ -262,3 +262,21 @@ The result is an in-memory preflight only. Explicit Human confirmation,
 canonical storage, runtime compatibility validation and signature-artifact
 custody remain later gates. Pack write/promotion, automatic promotion, runtime
 apply, rollback execution, Release, Deploy and Production remain unauthorized.
+
+## R10B implementation - trusted in-call signature admission
+
+R10B re-runs the R9A Ed25519 verifier in the current call with the exact frozen
+R8 request, trusted signer policy, transient public key and detached signature.
+The verifier result must reproduce the R10A verification claim exactly, after
+which R10A is recompiled and matched to the supplied intent. This closes the
+constructible-receipt origin gap for the current call without trusting a caller
+selected success object.
+
+The public key and detached signature are not returned or persisted, and
+private key material is not accepted. The body-free admission is itself public
+constructible and therefore non-authoritative when detached from direct
+recompilation. Signature-artifact custody, canonical receipt/store,
+runtime-compatibility validation and explicit Human promotion confirmation
+remain later Gates. Knowledge Pack write/promotion, automatic promotion,
+runtime apply, rollback execution, Release, Deploy and Production remain
+unauthorized.

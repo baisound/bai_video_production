@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.local/schemas/knowledge-pack-trusted-signature-admission.schema.json",
+  "title": "TASK-029 Knowledge Pack Trusted Signature Admission",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"},
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "semver": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"}
+  },
+  "properties": {
+    "admission_version": {"const": "1.0.0"},
+    "record_type": {"const": "KNOWLEDGE_PACK_TRUSTED_SIGNATURE_ADMISSION"},
+    "task_owner": {"const": "TASK-029"},
+    "admission_contract": {"const": "TASK-029/KNOWLEDGE_PACK/TRUSTED_SIGNATURE_ADMISSION/1.0.0"},
+    "admission_id": {"$ref": "#/$defs/id"},
+    "promotion_intent_id": {"$ref": "#/$defs/id"},
+    "promotion_intent_sha256": {"$ref": "#/$defs/sha256"},
+    "pack_id": {"$ref": "#/$defs/id"},
+    "pack_version": {"$ref": "#/$defs/semver"},
+    "predecessor_pack_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "rollback_target_pack_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "signing_candidate_sha256": {"$ref": "#/$defs/sha256"},
+    "signature_request_sha256": {"$ref": "#/$defs/sha256"},
+    "signature_message_sha256": {"$ref": "#/$defs/sha256"},
+    "trusted_signer_policy_sha256": {"$ref": "#/$defs/sha256"},
+    "signer_key_id_sha256": {"$ref": "#/$defs/sha256"},
+    "detached_signature_sha256": {"$ref": "#/$defs/sha256"},
+    "verification_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "signing_journal_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "signing_ceremony_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "verified_at_epoch_ms": {"type": "integer", "minimum": 1},
+    "state": {
+      "enum": [
+        "READY_FOR_INITIAL_SIGNATURE_ARTIFACT_CUSTODY",
+        "READY_FOR_REPLACEMENT_SIGNATURE_ARTIFACT_CUSTODY"
+      ]
+    },
+    "latest_source_revalidated": {"const": true},
+    "trusted_r9a_verifier_executed_in_current_call": {"const": true},
+    "verification_claim_reproduced_exactly": {"const": true},
+    "signature_origin_authenticated_in_current_call": {"const": true},
+    "signature_verified_in_current_call": {"const": true},
+    "trusted_signer_policy_revalidated": {"const": true},
+    "signature_artifact_observed_during_verification": {"const": true},
+    "signature_artifact_custody_confirmed": {"const": false},
+    "standalone_admission_payload_authoritative": {"const": false},
+    "direct_recompile_required_for_downstream": {"const": true},
+    "canonical_receipt_minted": {"const": false},
+    "promotion_confirmation_eligible": {"const": false},
+    "explicit_human_promotion_confirmation_required": {"const": true},
+    "canonical_store_transaction_required": {"const": true},
+    "runtime_compatibility_validation_required": {"const": true},
+    "signature_artifact_custody_required": {"const": true},
+    "rollback_plan_required": {"type": "boolean"},
+    "owner_scope_coordinates_included": {"const": false},
+    "project_scope_coordinates_included": {"const": false},
+    "reviewer_coordinates_included": {"const": false},
+    "raw_media_included": {"const": false},
+    "text_body_included": {"const": false},
+    "absolute_host_path_included": {"const": false},
+    "credential_included": {"const": false},
+    "signature_bytes_included": {"const": false},
+    "public_key_material_included": {"const": false},
+    "private_key_material_included": {"const": false},
+    "in_memory_admission_only": {"const": true},
+    "knowledge_pack_write_authorized": {"const": false},
+    "knowledge_pack_promotion_authorized": {"const": false},
+    "automatic_promotion_authorized": {"const": false},
+    "runtime_profile_apply_authorized": {"const": false},
+    "rollback_execution_authorized": {"const": false},
+    "release_authorized": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "trusted_signature_admission_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "required": [
+    "admission_version", "record_type", "task_owner", "admission_contract",
+    "admission_id", "promotion_intent_id", "promotion_intent_sha256",
+    "pack_id", "pack_version", "predecessor_pack_sha256",
+    "rollback_target_pack_sha256", "signing_candidate_sha256",
+    "signature_request_sha256", "signature_message_sha256",
+    "trusted_signer_policy_sha256", "signer_key_id_sha256",
+    "detached_signature_sha256", "verification_receipt_sha256",
+    "signing_journal_receipt_sha256", "signing_ceremony_receipt_sha256",
+    "verified_at_epoch_ms", "state", "latest_source_revalidated",
+    "trusted_r9a_verifier_executed_in_current_call",
+    "verification_claim_reproduced_exactly",
+    "signature_origin_authenticated_in_current_call",
+    "signature_verified_in_current_call", "trusted_signer_policy_revalidated",
+    "signature_artifact_observed_during_verification",
+    "signature_artifact_custody_confirmed",
+    "standalone_admission_payload_authoritative",
+    "direct_recompile_required_for_downstream", "canonical_receipt_minted",
+    "promotion_confirmation_eligible",
+    "explicit_human_promotion_confirmation_required",
+    "canonical_store_transaction_required",
+    "runtime_compatibility_validation_required",
+    "signature_artifact_custody_required", "rollback_plan_required",
+    "owner_scope_coordinates_included", "project_scope_coordinates_included",
+    "reviewer_coordinates_included", "raw_media_included",
+    "text_body_included", "absolute_host_path_included",
+    "credential_included", "signature_bytes_included",
+    "public_key_material_included", "private_key_material_included",
+    "in_memory_admission_only", "knowledge_pack_write_authorized",
+    "knowledge_pack_promotion_authorized", "automatic_promotion_authorized",
+    "runtime_profile_apply_authorized", "rollback_execution_authorized",
+    "release_authorized", "external_effect_authorized",
+    "trusted_signature_admission_sha256"
+  ],
+  "allOf": [
+    {
+      "if": {"properties": {"predecessor_pack_sha256": {"type": "null"}}},
+      "then": {
+        "properties": {
+          "rollback_target_pack_sha256": {"type": "null"},
+          "rollback_plan_required": {"const": false},
+          "state": {"const": "READY_FOR_INITIAL_SIGNATURE_ARTIFACT_CUSTODY"}
+        }
+      },
+      "else": {
+        "properties": {
+          "rollback_target_pack_sha256": {"$ref": "#/$defs/sha256"},
+          "rollback_plan_required": {"const": true},
+          "state": {"const": "READY_FOR_REPLACEMENT_SIGNATURE_ARTIFACT_CUSTODY"}
+        }
+      }
+    }
+  ]
+}

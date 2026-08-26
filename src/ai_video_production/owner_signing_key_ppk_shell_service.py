@@ -8,6 +8,7 @@ destination stay inside the Python/native adapter boundary.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 import re
 from typing import Callable
 
@@ -214,6 +215,9 @@ class OwnerSigningKeyPpkShellService:
     def open_native_secret_dialog(self, *, candidate_id: str) -> dict[str, object]:
         if self._state != "PUBLIC_IDENTITY_CONFIRMED":
             return self._invalid_state()
+        if os.path.lexists(self._destination_path):
+            self._set_error("ERR_PPK_CUSTODY_IMPORT_DESTINATION_EXISTS")
+            return self.snapshot()
         try:
             ready = self._adapter.open_secret_dialog(
                 candidate_id=candidate_id,

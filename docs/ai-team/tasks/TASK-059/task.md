@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CJ1_TRUSTED_LIFETIME_BINDING_PASS_NATIVE_MANUAL_GATE`
+Status: `P1CJ2_TRUSTED_RUNTIME_BINDING_PASS_NATIVE_MANUAL_GATE`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -367,3 +367,36 @@ available GUI-control kernel did not initialize. Manual native
 focus/accessibility/Cancel/OK/timeout/result-lost QA, real PPK/passphrase,
 DPAPI custody, signing, Authenticode, installer, publish, promote, Release,
 Deploy and Production remain separate Human Gates.
+
+## P1C-J2 trusted runtime configuration checkpoint
+
+P1C-J2 adds strict launch configuration version `1.3.0`. It binds exactly one
+public OpenSSH SHA-256 fingerprint, one Owner-scope SHA-256 coordinate and one
+absolute custody destination inside the existing private TASK-036 launch
+configuration boundary. Legacy versions `1.0.0` through `1.2.0` remain
+unbound and backward compatible.
+
+The canonical launcher constructs the existing Windows native dialog adapter,
+packaged-helper session and TASK-029 R9B receipt read-back service from those
+trusted non-secret coordinates. No WebView method, environment variable, CLI
+argument or alternate settings store accepts the coordinates. The nested
+configuration has a redacted repr so custody destination and Owner scope cannot
+appear through normal launcher representation.
+
+The Shell service now rejects an existing file, directory or broken symlink at
+the custody destination before opening the native secret dialog. The helper
+still performs its independent exact destination check, closing the race before
+custody mutation.
+
+Focused P1C-J2 configuration/factory/destination Evidence is `5 PASS`.
+Trusted launcher plus direct P1C-I bridge/service is `57 PASS`. TASK-036
+Shell/launcher plus all direct TASK-059 Windows regression is
+`273 PASS / 5 DESELECTED`; the five known oversized-parameter cases are
+`5 PASS` under WSL. Residual Critical/High/Medium/Low is
+`0 / 0 / 0 / 0`. Design and Evidence are
+`ppk-trusted-runtime-configuration-p1cj2-design-critic-judge.md` and
+`ppk-trusted-runtime-configuration-p1cj2-evidence.md`.
+
+No real `1.3.0` launch configuration was written and no real-key operation was
+executed. Exact Owner values, actual Credential UI observation and real DPAPI
+custody remain Human Gates.

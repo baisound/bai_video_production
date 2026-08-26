@@ -12,6 +12,8 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import re
+import secrets
 import threading
 from typing import Any, Callable
 
@@ -33,7 +35,10 @@ from .paths import LogicalPathResolver, PathMapping, SourcePathPolicy
 from .resolve_assembly import ResolveAssetBindings, ResolveScriptingAssemblyAdapter
 from .store import SQLiteProductStore
 from .task036_native_dialog import Task036NativeDialogService
+from .owner_signing_key_custody import OwnerSigningKeyCustodyStore
+from .owner_signing_key_ppk_native_adapter import PpkNativeOperatorAdapter
 from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
+from .owner_signing_key_ppk_windows_dialog import WindowsPpkNativeDialogBackend
 from .task036_native_render_port import Task036Task011NativeRenderPort
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_product_ports import (
@@ -86,6 +91,8 @@ from .timebase import FrameRate
 
 
 TASK036_LAUNCH_CONFIG_MAX_BYTES = 256 * 1024
+_OWNER_SIGNING_KEY_FINGERPRINT = re.compile(r"^SHA256:[A-Za-z0-9+/]{43}$")
+_OWNER_SIGNING_KEY_SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def _path(value: Any, *, field: str) -> Path:
@@ -121,6 +128,32 @@ def _contained(root: Path, candidate: Path, *, field: str) -> Path:
     return candidate
 
 
+@dataclass(frozen=True, slots=True, repr=False)
+class OwnerSigningKeyPpkLaunchConfiguration:
+    expected_openssh_sha256_fingerprint: str
+    owner_scope_sha256: str
+    custody_destination_path: Path
+
+    def __post_init__(self) -> None:
+        if (
+            _OWNER_SIGNING_KEY_FINGERPRINT.fullmatch(
+                self.expected_openssh_sha256_fingerprint
+            )
+            is None
+        ):
+            raise ValueError("owner signing key fingerprint is invalid")
+        if _OWNER_SIGNING_KEY_SHA256.fullmatch(self.owner_scope_sha256) is None:
+            raise ValueError("owner signing key scope digest is invalid")
+        destination = self.custody_destination_path
+        if (
+            not isinstance(destination, Path)
+            or not destination.is_absolute()
+            or destination.is_symlink()
+            or (destination.exists() and not destination.is_file())
+        ):
+            raise ValueError("owner signing key custody destination is invalid")
+
+
 @dataclass(frozen=True, slots=True)
 class Task036LaunchConfiguration:
     project_id: str
@@ -147,6 +180,7 @@ class Task036LaunchConfiguration:
     asr_language: str | None
     local_generation: LocalComfyGenerationConfig | None
     local_image_generation: LocalComfyImageGenerationConfig | None
+    owner_signing_key_import: OwnerSigningKeyPpkLaunchConfiguration | None
 
     @classmethod
     def load(cls, path: str | Path) -> "Task036LaunchConfiguration":
@@ -178,16 +212,23 @@ class Task036LaunchConfiguration:
 
     @classmethod
     def from_dict(cls, raw: Any) -> "Task036LaunchConfiguration":
-        if not isinstance(raw, dict) or raw.get("launch_config_version") not in {"1.0.0", "1.1.0", "1.2.0"}:
+        if not isinstance(raw, dict) or raw.get("launch_config_version") not in {
+            "1.0.0",
+            "1.1.0",
+            "1.2.0",
+            "1.3.0",
+        }:
             raise ValueError("unsupported launch_config_version")
         version = raw["launch_config_version"]
         allowed = {
             "launch_config_version", "project", "paths", "ingest", "asr", "resolve",
         }
-        if version in {"1.1.0", "1.2.0"}:
+        if version in {"1.1.0", "1.2.0", "1.3.0"}:
             allowed.add("local_generation")
-        if version == "1.2.0":
+        if version in {"1.2.0", "1.3.0"}:
             allowed.add("local_image_generation")
+        if version == "1.3.0":
+            allowed.add("owner_signing_key_import")
         if set(raw) != allowed:
             raise ValueError("launch configuration contains unknown or missing sections")
         project = raw["project"]
@@ -251,6 +292,45 @@ class Task036LaunchConfiguration:
         if project_root.is_symlink() or not project_root.is_dir():
             raise ValueError("project_root must be an existing regular directory")
 
+        owner_signing_key_import_config: (
+            OwnerSigningKeyPpkLaunchConfiguration | None
+        ) = None
+        if version == "1.3.0":
+            owner_signing_key_import = raw["owner_signing_key_import"]
+            if not isinstance(owner_signing_key_import, dict):
+                raise ValueError("owner_signing_key_import must be an object")
+            _require_exact_keys(
+                owner_signing_key_import,
+                {
+                    "expected_openssh_sha256_fingerprint",
+                    "owner_scope_sha256",
+                    "custody_destination_path",
+                },
+                name="owner_signing_key_import",
+            )
+            destination = _path(
+                owner_signing_key_import["custody_destination_path"],
+                field="owner_signing_key_import.custody_destination_path",
+            )
+            owner_signing_key_import_config = (
+                OwnerSigningKeyPpkLaunchConfiguration(
+                    expected_openssh_sha256_fingerprint=_required_text(
+                        owner_signing_key_import[
+                            "expected_openssh_sha256_fingerprint"
+                        ],
+                        field=(
+                            "owner_signing_key_import."
+                            "expected_openssh_sha256_fingerprint"
+                        ),
+                    ),
+                    owner_scope_sha256=_required_text(
+                        owner_signing_key_import["owner_scope_sha256"],
+                        field="owner_signing_key_import.owner_scope_sha256",
+                    ),
+                    custody_destination_path=destination,
+                )
+            )
+
         roots_raw = paths["source_roots"]
         if not isinstance(roots_raw, list) or not roots_raw:
             raise ValueError("source_roots must be a non-empty list")
@@ -264,7 +344,10 @@ class Task036LaunchConfiguration:
         local_generation_config: LocalComfyGenerationConfig | None = None
         if version == "1.1.0" and raw["local_generation"] is None:
             raise ValueError("launch config 1.1.0 requires local_generation")
-        if version in {"1.1.0", "1.2.0"} and raw["local_generation"] is not None:
+        if (
+            version in {"1.1.0", "1.2.0", "1.3.0"}
+            and raw["local_generation"] is not None
+        ):
             local_generation = raw["local_generation"]
             if not isinstance(local_generation, dict):
                 raise ValueError("local_generation must be an object")
@@ -326,7 +409,10 @@ class Task036LaunchConfiguration:
             )
 
         local_image_generation_config: LocalComfyImageGenerationConfig | None = None
-        if version == "1.2.0" and raw["local_image_generation"] is not None:
+        if (
+            version in {"1.2.0", "1.3.0"}
+            and raw["local_image_generation"] is not None
+        ):
             local_image_generation = raw["local_image_generation"]
             if not isinstance(local_image_generation, dict):
                 raise ValueError("local_image_generation must be an object or null")
@@ -464,6 +550,7 @@ class Task036LaunchConfiguration:
             asr_language=None if language is None else language.strip(),
             local_generation=local_generation_config,
             local_image_generation=local_image_generation_config,
+            owner_signing_key_import=owner_signing_key_import_config,
         )
 
 
@@ -473,6 +560,31 @@ def _is_within(root: Path, candidate: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def _new_owner_signing_key_import_identity(kind: str) -> str:
+    return f"task059-{kind}-{secrets.token_hex(16)}"
+
+
+def _build_owner_signing_key_import_service(
+    configuration: OwnerSigningKeyPpkLaunchConfiguration,
+) -> OwnerSigningKeyPpkShellService:
+    destination_path = os.fspath(configuration.custody_destination_path)
+    adapter = PpkNativeOperatorAdapter(
+        dialog_backend=WindowsPpkNativeDialogBackend(),
+        identity=_new_owner_signing_key_import_identity,
+    )
+    return OwnerSigningKeyPpkShellService(
+        adapter=adapter,
+        expected_openssh_sha256_fingerprint=(
+            configuration.expected_openssh_sha256_fingerprint
+        ),
+        owner_scope_sha256=configuration.owner_scope_sha256,
+        destination_path=destination_path,
+        custody_readback=lambda: OwnerSigningKeyCustodyStore(
+            destination_path
+        ).read_receipt(),
+    )
 
 
 @dataclass(slots=True)
@@ -1244,6 +1356,14 @@ def build_trusted_launch(
         local_operation_lifetime = _Task036LocalOperationLifetime()
     planning_generation_application = None
     try:
+        if (
+            owner_signing_key_import is None
+            and configuration.owner_signing_key_import is not None
+        ):
+            owner_signing_key_import = _build_owner_signing_key_import_service(
+                configuration.owner_signing_key_import
+            )
+
         def edit_persistence_provider():
             if runtime_lease is None:
                 return None

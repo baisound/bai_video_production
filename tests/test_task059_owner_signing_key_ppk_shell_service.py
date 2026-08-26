@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 from ai_video_production.owner_signing_key_custody import (
@@ -112,12 +113,13 @@ def _service(
     adapter: AdapterStub,
     *,
     readback=None,
+    destination: str = DESTINATION,
 ) -> OwnerSigningKeyPpkShellService:
     return OwnerSigningKeyPpkShellService(
         adapter=adapter,
         expected_openssh_sha256_fingerprint=FINGERPRINT,
         owner_scope_sha256=OWNER_SCOPE,
-        destination_path=DESTINATION,
+        destination_path=destination,
         custody_readback=readback,
     )
 
@@ -247,3 +249,24 @@ def test_invalid_confirmation_never_opens_secret_dialog() -> None:
     assert failed["state"] == "IDLE_NOT_CONFIGURED"
     assert failed["error_code"] == "ERR_PPK_NATIVE_PUBLIC_CONFIRMATION_REQUIRED"
     assert adapter.open_coordinates is None
+
+
+def test_existing_destination_is_rejected_before_native_secret_dialog(
+    tmp_path: Path,
+) -> None:
+    destination = tmp_path / "owner-signing-key.json"
+    destination.write_text("occupied", encoding="utf-8")
+    adapter = AdapterStub()
+    service = _service(adapter, destination=str(destination))
+    candidate_id = service.choose_files()["candidate"]["candidate_id"]
+    service.confirm_public_identity(
+        candidate_id=candidate_id,
+        explicit_human_confirmation=True,
+    )
+
+    rejected = service.open_native_secret_dialog(candidate_id=candidate_id)
+
+    assert rejected["state"] == "IDLE_NOT_CONFIGURED"
+    assert rejected["error_code"] == "ERR_PPK_CUSTODY_IMPORT_DESTINATION_EXISTS"
+    assert adapter.open_coordinates is None
+    assert Path(destination).read_text(encoding="utf-8") == "occupied"

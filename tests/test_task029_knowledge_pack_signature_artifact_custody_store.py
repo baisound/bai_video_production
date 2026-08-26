@@ -417,6 +417,23 @@ def test_production_constructor_rejects_all_caller_supplied_ciphers(
         )
 
 
+def test_store_cipher_configuration_is_sealed_and_revalidated(tmp_path: Path) -> None:
+    _, _, _, _, _, store, arguments = store_case(tmp_path)
+    with pytest.raises(AttributeError, match="immutable"):
+        store.cipher = PrefixCipher()  # type: ignore[misc]
+    with pytest.raises(AttributeError, match="immutable"):
+        store._cipher = PrefixCipher()  # type: ignore[misc]
+    with pytest.raises(AttributeError, match="immutable"):
+        store.production_dpapi_cipher_verified = True  # type: ignore[misc]
+    with pytest.raises(AttributeError):
+        _ = store.__dict__
+
+    object.__setattr__(store, "_production_dpapi_cipher_verified", True)
+    with pytest.raises(ValueError, match="exact R10D DPAPI cipher"):
+        store.provision(**arguments)
+    assert not store.path.exists()
+
+
 @pytest.mark.parametrize("cipher", [PrefixCipher(), RotationCipher()])
 def test_test_only_unauthenticated_ciphers_cannot_mint_encryption_or_custody_claims(
     tmp_path: Path,
@@ -434,18 +451,35 @@ def test_test_only_unauthenticated_ciphers_cannot_mint_encryption_or_custody_cla
 def test_arbitrary_store_paths_never_mint_owner_local_or_canonical_path_claims(
     tmp_path: Path,
 ) -> None:
-    for path in (
-        tmp_path / "alternate" / "artifact.json",
-        Path("//server/share/task029-artifact.json"),
+    _, _, _, _, _, _, arguments = store_case(tmp_path / "source-graph")
+    for index, path in enumerate(
+        (
+            tmp_path / "alternate" / "artifact.json",
+            tmp_path / "other-root" / "artifact.json",
+        )
     ):
-        if str(path).startswith("//"):
-            store = SignatureArtifactCustodyStore._for_test(path, SyntheticCipher())
-            assert store.path == path
-            continue
-        payload = provision(tmp_path / "path-case", path=path)[-1].receipt.to_dict()
+        store = SignatureArtifactCustodyStore._for_test(
+            path, SyntheticCipher(0x30 + index)
+        )
+        payload = store.provision(**arguments).receipt.to_dict()
         assert payload["owner_local_path_verified"] is False
         assert payload["canonical_store_path_binding_confirmed"] is False
         assert payload["owner_local_encrypted_store_implemented"] is False
+    unc = Path("//server/share/task029-artifact.json")
+    unc_store = SignatureArtifactCustodyStore._for_test(unc, SyntheticCipher())
+    assert unc_store.path == unc
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows Current User DPAPI only")
+def test_production_instance_post_init_cipher_spoof_is_rejected(
+    tmp_path: Path,
+) -> None:
+    _, _, _, _, _, _, arguments = store_case(tmp_path / "sources")
+    store = SignatureArtifactCustodyStore(tmp_path / "artifact.json")
+    object.__setattr__(store, "_cipher", SpoofedDpapiCipher())
+    with pytest.raises(ValueError, match="exact R10D DPAPI cipher"):
+        store.provision(**arguments)
+    assert not store.path.exists()
 
 
 def test_post_replace_readback_failure_returns_no_receipt(tmp_path: Path) -> None:

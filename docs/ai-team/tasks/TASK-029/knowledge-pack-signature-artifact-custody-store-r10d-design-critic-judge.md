@@ -149,11 +149,23 @@ Owner-local path/store, Human confirmation origin, custody write authority,
 custody completion, and canonical receipt claims are all false. Independent
 Critic and Tester rereview remain required.
 
+The first rereview found `0/1/1/0`. A production store's public mutable
+`cipher` attribute could be replaced after initialization, recreating the
+cipher-suite spoof, and the arbitrary-path fixture conflicted with a reused
+Windows source-store topology. The second bounded rework seals store state with
+slots and read-only properties, rejects normal or `__dict__` mutation, and
+revalidates exact production DPAPI type/suite/mode at encrypt, decrypt, and
+receipt boundaries. A direct forced post-init spoof using
+`object.__setattr__` is rejected before write. The path fixture now compiles one
+source graph and supplies its immutable arguments to isolated destination
+stores. Independent rereview and current-head Windows Hosted execution remain
+required.
+
 Builder Evidence:
 
-- focused R10D after bounded security rework: `18 PASS / 1 Windows-only DPAPI SKIP` on WSL;
-- R9B-R10D direct chain: `101 PASS / 2 Windows-only DPAPI SKIP`;
-- TASK-029 complete: `179 PASS / 5 Windows-only DPAPI SKIP`;
+- focused R10D after second bounded security rework: `19 PASS / 2 Windows-only DPAPI SKIP` on WSL;
+- R9B-R10D direct chain: `102 PASS / 3 Windows-only DPAPI SKIP`;
+- TASK-029 complete: `180 PASS / 6 Windows-only DPAPI SKIP`;
 - public/package receipt Schema byte identity and strict Draft 2020-12
   validation: PASS; final SHA-256
   `D552EF8611183B3C9366A67C31C8FA8BEA4688A8345CAE9C480356F11DED139F`;

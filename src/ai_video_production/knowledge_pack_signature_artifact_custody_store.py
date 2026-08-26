@@ -652,12 +652,40 @@ class SignatureArtifactCustodySaveResult:
 
 
 class SignatureArtifactCustodyStore:
+    __slots__ = (
+        "_path",
+        "_cipher",
+        "_production_dpapi_cipher_verified",
+        "_sealed",
+    )
+
     def __init__(self, path: str | Path) -> None:
-        self.path = Path(path)
-        self.cipher: SignatureArtifactCustodyCipher = (
-            WindowsDpapiSignatureArtifactCustodyCipher()
+        object.__setattr__(self, "_path", Path(path))
+        object.__setattr__(
+            self,
+            "_cipher",
+            WindowsDpapiSignatureArtifactCustodyCipher(),
         )
-        self._production_dpapi_cipher_verified = True
+        object.__setattr__(self, "_production_dpapi_cipher_verified", True)
+        object.__setattr__(self, "_sealed", True)
+        self._validate_cipher_boundary()
+
+    def __setattr__(self, name: str, value: object) -> None:
+        if getattr(self, "_sealed", False):
+            raise AttributeError("signature artifact store configuration is immutable")
+        object.__setattr__(self, name, value)
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    @property
+    def cipher(self) -> SignatureArtifactCustodyCipher:
+        return self._cipher
+
+    @property
+    def production_dpapi_cipher_verified(self) -> bool:
+        return self._production_dpapi_cipher_verified
 
     @classmethod
     def _for_test(
@@ -668,19 +696,38 @@ class SignatureArtifactCustodyStore:
         """Build a non-production test store that cannot mint encryption claims."""
 
         instance = cls.__new__(cls)
-        instance.path = Path(path)
-        instance.cipher = cipher
-        if not isinstance(instance.cipher, SignatureArtifactCustodyCipher):
+        object.__setattr__(instance, "_path", Path(path))
+        object.__setattr__(instance, "_cipher", cipher)
+        if not isinstance(instance._cipher, SignatureArtifactCustodyCipher):
             raise ValueError("cipher does not implement SignatureArtifactCustodyCipher")
-        _logical_id(instance.cipher.cipher_suite, "cipher_suite")
-        if instance.cipher.cipher_suite == SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE:
+        _logical_id(instance._cipher.cipher_suite, "cipher_suite")
+        if instance._cipher.cipher_suite == SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE:
             raise ValueError("test-only cipher cannot claim the production DPAPI suite")
-        instance._production_dpapi_cipher_verified = False
+        object.__setattr__(instance, "_production_dpapi_cipher_verified", False)
+        object.__setattr__(instance, "_sealed", True)
+        instance._validate_cipher_boundary()
         return instance
+
+    def _validate_cipher_boundary(self) -> None:
+        if type(self._production_dpapi_cipher_verified) is not bool:
+            raise ValueError("store cipher mode must be an exact boolean")
+        if self._production_dpapi_cipher_verified:
+            if (
+                type(self._cipher) is not WindowsDpapiSignatureArtifactCustodyCipher
+                or self._cipher.cipher_suite != SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE
+            ):
+                raise ValueError("production store requires the exact R10D DPAPI cipher")
+        else:
+            if (
+                type(self._cipher) is WindowsDpapiSignatureArtifactCustodyCipher
+                or self._cipher.cipher_suite == SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE
+            ):
+                raise ValueError("test store cannot claim the production DPAPI cipher")
 
     def _receipt(
         self, secret: _SignatureArtifactCustodySecret
     ) -> SignatureArtifactCustodyReceipt:
+        self._validate_cipher_boundary()
         candidate = secret.candidate
         return SignatureArtifactCustodyReceipt(
             secret.receipt_id,
@@ -706,6 +753,7 @@ class SignatureArtifactCustodyStore:
         )
 
     def _envelope(self, secret: _SignatureArtifactCustodySecret) -> dict[str, Any]:
+        self._validate_cipher_boundary()
         plaintext = canonical_json_bytes(secret.to_dict())
         ciphertext = self.cipher.encrypt(plaintext)
         if (
@@ -730,6 +778,7 @@ class SignatureArtifactCustodyStore:
     def _parse_envelope(
         self, value: Mapping[str, Any]
     ) -> _SignatureArtifactCustodySecret:
+        self._validate_cipher_boundary()
         snapshot = _snapshot_json_object(value, "signature_artifact_envelope")
         expected = {
             "schema_version",

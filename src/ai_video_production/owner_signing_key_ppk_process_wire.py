@@ -37,9 +37,11 @@ MAX_JSON_LIST_ITEMS = 256
 MAX_PPK_DOCUMENT_BYTES = 65_536
 MAX_PUBLIC_KEY_BYTES = 16_384
 MAX_PASSPHRASE_UTF8_BYTES = 4_096
+MAX_DESTINATION_PATH_UTF8_BYTES = 4_096
 
 _SESSION_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _B64 = re.compile(r"^[A-Za-z0-9+/]*={0,2}$")
+_SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 _FAILED_PHASES = frozenset(
     {"HELLO", "AUTHENTICATION", "READY", "CONFIRMATION", "CUSTODY", "PROTOCOL"}
 )
@@ -81,7 +83,13 @@ def _stable_text(value: object, pattern: re.Pattern[str] = _SESSION_ID) -> str:
     return value
 
 
-def _strict_b64(value: object, *, maximum: int, strict_utf8: bool = False) -> None:
+def _strict_b64(
+    value: object,
+    *,
+    maximum: int,
+    strict_utf8: bool = False,
+    reject_nul: bool = False,
+) -> None:
     if not isinstance(value, str) or not value or len(value) > (maximum * 4 // 3) + 4:
         raise _fail()
     if len(value) % 4 != 0 or _B64.fullmatch(value) is None:
@@ -91,7 +99,7 @@ def _strict_b64(value: object, *, maximum: int, strict_utf8: bool = False) -> No
     except (ValueError, TypeError):
         raise _fail() from None
     try:
-        if not decoded or len(decoded) > maximum:
+        if not decoded or len(decoded) > maximum or (reject_nul and 0 in decoded):
             raise _fail()
         if strict_utf8:
             try:
@@ -213,9 +221,27 @@ def validate_frame(value: object) -> dict[str, Any]:
             | {
                 "preflight",
                 "ppk_document_b64",
+                "custody_request",
                 "rfc4716_public_key_b64",
                 "passphrase_utf8_b64",
             },
+        )
+        custody_request = frame["custody_request"]
+        if not isinstance(custody_request, Mapping):
+            raise _fail()
+        _exact_fields(
+            custody_request,
+            {"owner_scope_sha256", "destination_path_utf8_b64"},
+        )
+        if not isinstance(custody_request["owner_scope_sha256"], str) or (
+            _SHA256.fullmatch(custody_request["owner_scope_sha256"]) is None
+        ):
+            raise _fail()
+        _strict_b64(
+            custody_request["destination_path_utf8_b64"],
+            maximum=MAX_DESTINATION_PATH_UTF8_BYTES,
+            strict_utf8=True,
+            reject_nul=True,
         )
         _preflight_from_dict(frame["preflight"])
         _strict_b64(frame["ppk_document_b64"], maximum=MAX_PPK_DOCUMENT_BYTES)

@@ -74,6 +74,10 @@ def _auth_request(secret_text: str = "synthetic-passphrase") -> dict[str, object
     return {
         **_base("AUTH_REQUEST"),
         "preflight": _preflight().to_dict(),
+        "custody_request": {
+            "owner_scope_sha256": SHA,
+            "destination_path_utf8_b64": base64.b64encode(b"C:\\\\BVP\\\\custody.json").decode("ascii"),
+        },
         "ppk_document_b64": base64.b64encode(b"synthetic encrypted PPK").decode("ascii"),
         "rfc4716_public_key_b64": base64.b64encode(b"synthetic RFC4716 public").decode("ascii"),
         "passphrase_utf8_b64": base64.b64encode(secret_text.encode("utf-8")).decode("ascii"),
@@ -446,3 +450,30 @@ def test_invalid_reader_frame_clears_unconsumed_bytes() -> None:
     with pytest.raises(PpkProcessWireError):
         reader.feed(_raw(payload) + secret)
     assert reader._buffer == bytearray()
+
+
+def test_auth_request_requires_exact_body_safe_custody_coordinates() -> None:
+    missing = _auth_request()
+    del missing["custody_request"]
+    with pytest.raises(PpkProcessWireError):
+        validate_frame(missing)
+
+    cases = [
+        {"owner_scope_sha256": "bad", "destination_path_utf8_b64": base64.b64encode(b"C:\\x").decode()},
+        {"owner_scope_sha256": SHA, "destination_path_utf8_b64": base64.b64encode(b"bad\x00path").decode()},
+        {"owner_scope_sha256": SHA, "destination_path_utf8_b64": base64.b64encode(b"\xff").decode()},
+        {"owner_scope_sha256": SHA, "destination_path_utf8_b64": ""},
+        {
+            "owner_scope_sha256": SHA,
+            "destination_path_utf8_b64": base64.b64encode(b"C:\\x").decode(),
+            "unknown": True,
+        },
+    ]
+    for custody_request in cases:
+        frame = _auth_request()
+        frame["custody_request"] = custody_request
+        with pytest.raises(PpkProcessWireError) as caught:
+            validate_frame(frame)
+        rendered = f"{caught.value!s} {caught.value!r}"
+        assert "bad" not in rendered
+        assert "C:\\x" not in rendered

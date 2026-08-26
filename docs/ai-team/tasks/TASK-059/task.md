@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CB_PROCESS_CONTROLLER_IMPLEMENTED_LOCAL_HELPER_RUNTIME_NEXT`
+Status: `P1CC_AUTH_REQUEST_COORDINATES_CORRECTED_LOCAL_HELPER_RUNTIME_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -113,3 +113,19 @@ P1C-C next owns the fixed helper runtime composition and synthetic-only
 P1A/P1B binding. No real helper was launched in P1C-B. Real PPK/passphrase,
 DPAPI custody, signing, Operator UI and public integration remain separate
 Gates.
+
+
+## P1C-C helper contract correction
+
+Pre-helper review found that P1B READY could not be constructed from the
+original AUTH_REQUEST because Owner scope and custody destination were absent.
+The sole secret-bearing frame now includes exact `custody_request` coordinates:
+canonical Owner-scope digest and bounded strict-UTF-8 base64 destination path.
+The path remains pipe-only and never appears in READY, receipt, error or
+Evidence. Helper-generated identities and timestamps remain internal.
+
+Corrected wire plus controller Evidence is `55 PASS`; direct P1A/P1B/R9B
+regression is `92 PASS`; compile passes. Detailed Evidence is
+`ppk-helper-auth-request-custody-coordinates-p1cc-evidence.md`. The fixed
+helper runtime is next; real PPK/passphrase, DPAPI custody and signing remain
+separate Gates.

@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-054 R6B-Bとして、R6B-Aのbody-free discovery reportをexact再Admissionし、Operatorが単一manifest revisionを明示選択する確認専用・学習準備preflightを追加しました。観測時刻、report・item・manifest digest、aggregate countをcross-bindし、raw path・media・transcript・narration本文を保持せず、Dataset採用・学習Authorityは常にfalseで別Human Gate前に停止します。
+
 - TASK-058 P1C-Aとして、Exact BVP/TASK-055 deliveryとP1B entry-shaped candidateをhook-free strict snapshot上で再検証し、Project・Owner scope・proposal・approved plan・Human Edit Evidence・idempotency・staging座標をcross-bindするbody-free preflightを追加しました。public projectionは非authoritativeで、compiler/source/Human/staging origin、ledger membership/store origin、monotonic anchor、canonical store、receipt、Timeline/Resolve/runtime authorityは生成しません。
 
 - TASK-054 R6B-Aとして、固定Dataset Evidence配置をread-only探索し、既存R4A rights/provenance manifestで再Admissionするbody-free発見境界を追加しました。raw path・JSON本文・media・transcript・narrationを保持せず、symlink/junction、identity crossing、非正規revision、oversize、read error、探索上限はfail closedです。実Dataset採用・学習・評価・昇格・runtime実行Authorityは生成しません。

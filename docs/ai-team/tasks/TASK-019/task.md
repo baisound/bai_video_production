@@ -1,6 +1,6 @@
 # TASK-019 Profile Auto-Tuner
 
-- Status: `R0 HOSTED / R1 TASK-029 DECISION BRIDGE IMPLEMENTED LOCAL HOSTING PENDING`
+- Status: `R0_R1_HOSTED_CLOSED / TASK029_R2_R5_DOWNSTREAM_MATERIALIZATION_AND_REGISTRY_HOSTED_CLOSED`
 - Owner: 開発担当
 - Dependency: TASK-008 Multimodal Scoring、TASK-015 YouTube Feedback
 - Downstream: Human-reviewed scoring profile promotion and later rollback execution Gates
@@ -43,3 +43,10 @@ R1はOwner Decision Storeをload/writeせず、DPAPI plaintextをexportせず、
 - incomplete/insufficient/no-gain/regression/UNKNOWN/stale/revoked negative matrix
 - schema mirror and no-effect API/import surface
 - Critic/Judge residual C/H/M=`0/0/0`
+
+## Hosted completion read-back — 2026-08-26
+
+- R0 no-effect foundation: PR #155 / hosted on main.
+- R1 exact TASK-029 Owner Decision bridge: target PR #292 and closure PR #299 / hosted closed.
+- The downstream Human materialization, encrypted Owner Profile Store and Model/Profile Registry responsibilities are implemented canonically by TASK-029 R2 through R5. TASK-019 does not create a second Profile or Decision Store.
+- Automatic Profile promotion, rollback execution, Knowledge Pack promotion, Release, Deploy and Production remain separate Human Gates.

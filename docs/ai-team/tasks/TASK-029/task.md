@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_R9B_HOSTED_CLOSED / R9C_LOCAL_SIGNING_CEREMONY_IMPLEMENTED_LOCAL`
+- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_R9B_R9C_R9D_HOSTED_CLOSED`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -166,6 +166,17 @@ R9Bはtarget PR #353、lock-host PR #357、closure PR #358でhosted closedとな
 R9CはR8 exact sourceを鍵アクセス前に再検証し、ACTIVE trusted signer policy、fresh R9B custody receipt、exact Human confirmationを結合する。custody内部のseedでR8 sha256-prefixed ASCII messageだけを署名し、署名を外へ返さず同一呼出し内でR9A検証する。返却値はbody-free ceremony/verification receiptだけである。
 
 永続ceremony journalは持たないためdurable one-shot replay preventionを主張せず、`persistent_replay_prevention_present=false`を固定する。signature export、Knowledge Pack write/promotion、automatic promotion、runtime apply、rollback、Release/Deploy/Production authorityは生成しない。focused synthetic testは`7 PASS`、R8-R9C directは`33 PASS`、TASK-029全体は`101 PASS`、full Product regressionは`3906 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-local-signing-ceremony-r9c-design-critic-judge.md`。real Owner key/signing executionは`NOT_EXECUTED`。
+R9Cはtarget PR #359、lock-host PR #360、closure PR #362でhosted closedとなり、fresh main `931c7faabe3c7e6ea9af7066e2d3a7d5bd3480d7`、registry revision 90、active nonclosed integration locks 0、closure post-main CI 6/6とSecurity PASSでshared CHANGELOG reservationを解放済み。
+
+## R9D implementation — path-local signing ceremony journal and no-replay recovery
+
+R9DはR9Cの署名処理をcaller-selected local journal lock内で実行し、R9C署名前にexact ceremony identityを`SIGNING_RESERVED`としてatomic fileへ保存する。production success callbackは持たずtrusted `execute_local_signing_ceremony`を直呼びし、exact typed R9C/R9A resultを全coordinateでcross-bindしてからreceipt hashだけを`SIGNED_AND_VERIFIED`へcommitする。test seamは成功値を返せないafter-reservation fault hookだけとする。保持された同一path内の既知失敗またはprocess interruptionは`RECOVERY_REQUIRED`へ固定する。
+
+journalはkey/public-key/signature bytesを保存せず、R9Cのbody-free境界を維持する。別path・削除・directory durability・power lossを越える保証はなく、`persistent_replay_prevention_present=false`、canonical binding/deletion detection/directory durability/power-loss flagsもfalse、`path_local_replay_prevention_present=true`を固定する。path security modelは`COOPERATIVE_PROTECTED_LOCAL_WRITER_ONLY`、hostile race protection=false、symlink rejection=trueとしてmachine-readableに固定する。signature export、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback、Release/Deploy/Production authorityは生成しない。
+
+shared metadata順序はOwner指示によりTASK-058 P1B closure、TASK-054、TASK-029 R9Dの順とする。R9D source Unitは`CHANGELOG.md`と`ACTIVE-WORK-LOCKS.json`を変更せず、R9D専用lockはTASK-054 canonical closure後にfresh mainから別transactionで取得する。
+
+R9D third rework focusedは`20 PASS`、R8-R9D directは`59 PASS`、TASK-029全体は`121 PASS`。無除外full Product回帰は`3954 PASS / 6 SKIP / 0 FAIL`。multiprocess fixtureはcleanup例外を蓄積して全started childのbounded join→terminate→join→kill→final joinとdead handle closeを先に完了し、その後だけraise可能とする。queue close/join_threadはnested finallyでhelper失敗から独立し、forced-live-child fixture自身も外側fallback回収を持つ。
 
 ## Objective
 
@@ -221,3 +232,11 @@ Owner提供の11制作資料から、次を「正解」ではなく検証対象�
 ## Dependencies
 
 TASK-003 Evidence/Asset、TASK-007 Cut Plan、TASK-010 Resolve Assembly、TASK-011 QA、TASK-012 Manual Handoff、TASK-019 Profile Auto-TunerおよびTASK-021 Dashboardと接続する。初回基本編集完成を妨げない後続機能とする。
+
+## R9D hosted closure read-back — 2026-08-26
+
+- target PR #364: merged at 4e698fd47c9308a696bdf43549f322f390a9b3fd; hosted checks 9 / 9 PASS; post-main CI 32937505491 PASS (6 / 6) and Security 32937505492 PASS.
+- lock-host PR #371: merged at 563c72be100fb2b7c5bd786693a499d537314cd0.
+- closure PR #373: merged at fresh main fc9398950b07759f82b91801f76f9f3eea195462; hosted checks 9 / 9 PASS; post-main CI 32939237218 PASS (6 / 6) and Security 32939237213 PASS.
+- Registry revision 97 records HOSTED_CLOSED_RELEASED, AUTHORIZED_SCOPE_CONSUMED_CLOSED, target MERGED_POST_MERGE_GREEN, active nonclosed integration locks 0 and the approved CHANGELOG bullet exact 1.
+- Real Owner key/signing, Knowledge Pack write/promotion, automatic promotion, runtime Profile apply, rollback execution, Release, Deploy and Production remain unexecuted or denied by their existing Gates.

@@ -377,12 +377,16 @@ minting the public v2 receipt only after that read-back.
 
 P1C-D local implementation checkpoint:
 
-- fresh origin/main base: `80618661d941ce15ac5fac49abfaf3f64b6ff80c`;
+- initial origin/main base: `80618661d941ce15ac5fac49abfaf3f64b6ff80c`;
+- TASK-059 canonical closure fresh main integrated:
+  `8c59c18caa61debe258141c8a094f7fd964705c5`;
 - exact source/design/schema mirror/test/task scope: 6 paths;
 - bootstrap/advance/unchanged/rollback/fork/scope/stale decision contract:
   IMPLEMENTED;
 - focused P1C-D tests: 21 / 21 PASS;
 - TASK-055/TASK-058 direct regression: 224 / 224 PASS;
+- full Product regression: 4442 PASS / 6 platform-condition SKIP /
+  2 deprecation warnings / 0 FAIL;
 - Schema Draft 2020-12 and packaged byte identity: PASS;
 - independent Critic/Tester/Final Judge: PENDING;
 - unresolved Critical/High/Medium/Low findings: PENDING;

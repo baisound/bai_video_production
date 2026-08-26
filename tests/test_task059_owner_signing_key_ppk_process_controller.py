@@ -10,7 +10,10 @@ import pytest
 from ai_video_production.owner_signing_key_ppk_process_controller import (
     ATTEMPT_TIMEOUT_SECONDS,
     HELPER_MODULE,
+    MAX_PACKAGED_HELPER_BYTES,
+    PACKAGED_HELPER_FILENAME,
     PpkHelperLaunchSpec,
+    PpkHelperLaunchMode,
     PpkHelperProcessController,
     PpkHelperProcessError,
     ppk_helper_popen_options,
@@ -19,6 +22,7 @@ from ai_video_production.owner_signing_key_ppk_process_wire import (
     PROTOCOL_VERSION,
     encode_frame,
 )
+from ai_video_production.serialization import sha256_bytes
 
 
 SESSION = "task059-p1c-controller-session"
@@ -162,6 +166,155 @@ def test_launch_spec_is_fixed_non_secret_argv() -> None:
     for invalid in ("", "relative.exe", "x\n--password=bad", "x\x00bad"):
         with pytest.raises(ValueError):
             PpkHelperLaunchSpec(invalid)
+
+
+def test_packaged_launch_spec_requires_exact_file_digest_and_command(tmp_path) -> None:
+    path = tmp_path / PACKAGED_HELPER_FILENAME
+    body = b"synthetic packaged helper"
+    path.write_bytes(body)
+    spec = PpkHelperLaunchSpec(
+        str(path),
+        mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+        expected_executable_sha256=sha256_bytes(body),
+    )
+    assert spec.command == (
+        str(path),
+        "--protocol-version",
+        str(PROTOCOL_VERSION),
+    )
+    assert HELPER_MODULE not in spec.command
+    spec.verify_identity()
+
+    path.write_bytes(b"tampered helper")
+    with pytest.raises(ValueError, match="identity"):
+        spec.verify_identity()
+
+
+def test_packaged_identity_launches_only_exact_command_on_windows(tmp_path) -> None:
+    path = tmp_path / PACKAGED_HELPER_FILENAME
+    body = b"synthetic packaged helper"
+    path.write_bytes(body)
+    spec = PpkHelperLaunchSpec(
+        str(path),
+        mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+        expected_executable_sha256=sha256_bytes(body),
+    )
+    calls: list[tuple[list[str], dict[str, object]]] = []
+    controller = _controller(_FakeProcess(), calls=calls)
+
+    controller.start(spec)
+
+    assert len(calls) == 1
+    command, options = calls[0]
+    assert command == list(spec.command)
+    assert HELPER_MODULE not in command
+    assert options["shell"] is False
+    assert options["stderr"] is subprocess.DEVNULL
+    assert options["creationflags"] == getattr(
+        subprocess, "CREATE_NO_WINDOW", 0x08000000
+    )
+    assert "OPENAI_API_KEY" not in options["env"]
+    assert "PASSWORD" not in options["env"]
+
+
+def test_packaged_identity_rejects_non_regular_or_unbounded_file(tmp_path) -> None:
+    empty = tmp_path / "empty" / PACKAGED_HELPER_FILENAME
+    empty.parent.mkdir()
+    empty.write_bytes(b"")
+    empty_spec = PpkHelperLaunchSpec(
+        str(empty),
+        mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+        expected_executable_sha256=sha256_bytes(b""),
+    )
+    with pytest.raises(ValueError, match="identity"):
+        empty_spec.verify_identity()
+
+    oversized = tmp_path / "oversized" / PACKAGED_HELPER_FILENAME
+    oversized.parent.mkdir()
+    with oversized.open("wb") as stream:
+        stream.truncate(MAX_PACKAGED_HELPER_BYTES + 1)
+    oversized_spec = PpkHelperLaunchSpec(
+        str(oversized),
+        mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+        expected_executable_sha256="sha256:" + "0" * 64,
+    )
+    with pytest.raises(ValueError, match="identity"):
+        oversized_spec.verify_identity()
+
+    directory = tmp_path / "directory" / PACKAGED_HELPER_FILENAME
+    directory.mkdir(parents=True)
+    directory_spec = PpkHelperLaunchSpec(
+        str(directory),
+        mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+        expected_executable_sha256="sha256:" + "0" * 64,
+    )
+    with pytest.raises(ValueError, match="identity"):
+        directory_spec.verify_identity()
+
+
+def test_packaged_launch_spec_rejects_implicit_or_unpinned_identity(tmp_path) -> None:
+    exact = tmp_path / PACKAGED_HELPER_FILENAME
+    for path, digest in (
+        (tmp_path / "python.exe", "sha256:" + "0" * 64),
+        (exact, None),
+        (exact, "not-a-sha256"),
+    ):
+        with pytest.raises(ValueError):
+            PpkHelperLaunchSpec(
+                str(path),
+                mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+                expected_executable_sha256=digest,
+            )
+    with pytest.raises(ValueError):
+        PpkHelperLaunchSpec(
+            str(exact),
+            expected_executable_sha256="sha256:" + "0" * 64,
+        )
+
+
+def test_packaged_identity_mismatch_blocks_popen_and_consumes_controller(tmp_path) -> None:
+    path = tmp_path / PACKAGED_HELPER_FILENAME
+    path.write_bytes(b"synthetic packaged helper")
+    spec = PpkHelperLaunchSpec(
+        str(path),
+        mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+        expected_executable_sha256="sha256:" + "0" * 64,
+    )
+    calls: list[tuple[list[str], dict[str, object]]] = []
+    controller = _controller(_FakeProcess(), calls=calls)
+    with pytest.raises(PpkHelperProcessError) as mismatch:
+        controller.start(spec)
+    assert mismatch.value.code == "ERR_PPK_HELPER_IDENTITY_MISMATCH"
+    assert calls == []
+    with pytest.raises(PpkHelperProcessError) as reused:
+        controller.start(spec)
+    assert reused.value.code == "ERR_PPK_HELPER_ALREADY_STARTED"
+
+
+def test_packaged_mode_is_windows_only(tmp_path) -> None:
+    path = tmp_path / PACKAGED_HELPER_FILENAME
+    body = b"synthetic packaged helper"
+    path.write_bytes(body)
+    calls: list[tuple[list[str], dict[str, object]]] = []
+
+    def factory(command: list[str], **options: object) -> _FakeProcess:
+        calls.append((command, options))
+        return _FakeProcess()
+
+    controller = PpkHelperProcessController(
+        popen_factory=factory,
+        platform_name="posix",
+        environment={},
+    )
+    spec = PpkHelperLaunchSpec(
+        str(path),
+        mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+        expected_executable_sha256=sha256_bytes(body),
+    )
+    with pytest.raises(PpkHelperProcessError) as error:
+        controller.start(spec)
+    assert error.value.code == "ERR_PPK_HELPER_IDENTITY_MISMATCH"
+    assert calls == []
 
 
 def test_windows_options_are_exact_pipes_no_console_and_sanitized() -> None:

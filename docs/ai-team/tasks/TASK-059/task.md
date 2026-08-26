@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CF_CANONICAL_OPERATOR_UI_ROUTE_BOUND_PACKAGED_HELPER_NEXT`
+Status: `P1CG1_PACKAGED_HELPER_IDENTITY_IMPLEMENTED_LOCAL_PACKAGING_COMPOSITION_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -172,6 +172,7 @@ P1C-E focused Evidence is `10 PASS`; P1C-E plus direct P1C-D/P1C-B/P1C/P1B/
 P1A/R9B regression is `117 PASS`; compile passes. Detailed Evidence is
 `ppk-parent-operator-session-p1ce-evidence.md`.
 
+
 The next bounded unit is synthetic-only Tk Operator wiring. Real PPK selection,
 passphrase entry, helper launch, DPAPI custody and signing remain separate Human
 Gates.
@@ -195,3 +196,28 @@ identity. P1C-G must therefore implement the exact adjacent packaged-helper
 identity/command before any UI action is enabled. Detailed design and
 Critic/Judge decision are in
 `ppk-canonical-operator-ui-route-p1cf-design.md`.
+
+## P1C-G1 packaged helper identity checkpoint
+
+P1C-G1 separates the existing development Python-module launch from one exact
+packaged-helper launch variant. The packaged variant requires an absolute
+`BAI Video Production Key Helper.exe` path, a lowercase pinned SHA-256
+coordinate and the fixed `--protocol-version 1` argv. It never falls back to
+PATH or accepts caller-supplied extra arguments.
+
+Immediately before process creation, the controller rejects a symlink,
+non-regular file, empty file, file above the 128 MiB bound, unstable file
+metadata or digest mismatch. The verified file handle remains open across the
+process-creation call, and packaged mode is admitted only on Windows. Admission
+failure consumes the one-use controller and returns the body-free
+`ERR_PPK_HELPER_IDENTITY_MISMATCH` code.
+
+P1C-G1 focused Evidence is `21 PASS`; P1C-G1 plus direct P1C-E/P1C-D/P1C-B/
+wire/P1B/P1A/R9B regression is `123 PASS`; compile passes. Detailed Evidence
+is `ppk-packaged-helper-identity-p1cg1-evidence.md`.
+
+P1C-G1 does not build, install, sign or launch a real packaged helper. The
+trusted digest source, exact adjacency to the unified Product, packaging
+composition, installation ACL, Authenticode policy and synthetic native smoke
+belong to P1C-G2. Real PPK selection, passphrase entry, DPAPI custody, signing,
+publish, promote, Release, Deploy and Production remain unexecuted.

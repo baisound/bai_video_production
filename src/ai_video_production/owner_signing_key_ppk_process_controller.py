@@ -7,14 +7,19 @@ wire module; PPK authentication and custody remain in P1A/P1B.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
+from enum import Enum
+import hashlib
 import math
 import ntpath
 import os
+from pathlib import Path
+import stat
 import subprocess
 import threading
 import time
-from typing import Any, BinaryIO, Callable, Mapping
+from typing import Any, BinaryIO, Callable, Iterator, Mapping
 
 from .owner_signing_key_ppk_process_wire import (
     MAX_FRAME_BYTES,
@@ -26,6 +31,8 @@ from .owner_signing_key_ppk_process_wire import (
 
 
 HELPER_MODULE = "ai_video_production.owner_signing_key_ppk_helper"
+PACKAGED_HELPER_FILENAME = "BAI Video Production Key Helper.exe"
+MAX_PACKAGED_HELPER_BYTES = 128 * 1024 * 1024
 HEADER_TIMEOUT_SECONDS = 5.0
 FRAME_TIMEOUT_SECONDS = 10.0
 ATTEMPT_TIMEOUT_SECONDS = 300.0
@@ -62,11 +69,22 @@ def _bounded_timeout(value: object, *, maximum: float) -> float:
     return result
 
 
+class _PpkHelperIdentityError(ValueError):
+    pass
+
+
+class PpkHelperLaunchMode(str, Enum):
+    DEVELOPMENT_PYTHON_MODULE = "DEVELOPMENT_PYTHON_MODULE"
+    PACKAGED_HELPER = "PACKAGED_HELPER"
+
+
 @dataclass(frozen=True, slots=True)
 class PpkHelperLaunchSpec:
     """Fixed non-secret argv for one packaged helper attempt."""
 
     executable: str
+    mode: PpkHelperLaunchMode = PpkHelperLaunchMode.DEVELOPMENT_PYTHON_MODULE
+    expected_executable_sha256: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.executable, str) or not self.executable:
@@ -81,9 +99,33 @@ class PpkHelperLaunchSpec:
             or any(character in self.executable for character in ("\x00", "\r", "\n"))
         ):
             raise ValueError("helper executable identity is invalid")
+        if not isinstance(self.mode, PpkHelperLaunchMode):
+            raise ValueError("helper launch mode is invalid")
+        if self.mode is PpkHelperLaunchMode.DEVELOPMENT_PYTHON_MODULE:
+            if self.expected_executable_sha256 is not None:
+                raise ValueError("development helper cannot pin a packaged digest")
+            return
+        if ntpath.basename(self.executable).casefold() != (
+            PACKAGED_HELPER_FILENAME.casefold()
+        ):
+            raise ValueError("packaged helper filename is invalid")
+        expected = self.expected_executable_sha256
+        if (
+            not isinstance(expected, str)
+            or len(expected) != 71
+            or not expected.startswith("sha256:")
+            or any(character not in "0123456789abcdef" for character in expected[7:])
+        ):
+            raise ValueError("packaged helper digest is invalid")
 
     @property
     def command(self) -> tuple[str, ...]:
+        if self.mode is PpkHelperLaunchMode.PACKAGED_HELPER:
+            return (
+                self.executable,
+                "--protocol-version",
+                str(PROTOCOL_VERSION),
+            )
         return (
             self.executable,
             "-I",
@@ -93,6 +135,56 @@ class PpkHelperLaunchSpec:
             "--protocol-version",
             str(PROTOCOL_VERSION),
         )
+
+    def verify_identity(self) -> None:
+        """Admit the exact packaged helper immediately before process start."""
+
+        with self.hold_verified_identity():
+            pass
+
+    @contextmanager
+    def hold_verified_identity(self) -> Iterator[None]:
+        """Hold the verified executable handle through process creation."""
+
+        if self.mode is PpkHelperLaunchMode.DEVELOPMENT_PYTHON_MODULE:
+            yield
+            return
+        path = Path(self.executable)
+        stream: BinaryIO | None = None
+        try:
+            if path.is_symlink():
+                raise _PpkHelperIdentityError
+            stream = path.open("rb")
+            before = os.fstat(stream.fileno())
+            size = before.st_size
+            if (
+                not stat.S_ISREG(before.st_mode)
+                or size < 1
+                or size > MAX_PACKAGED_HELPER_BYTES
+            ):
+                raise _PpkHelperIdentityError
+            digest = hashlib.sha256()
+            while chunk := stream.read(1024 * 1024):
+                digest.update(chunk)
+            after = os.fstat(stream.fileno())
+            coordinates = ("st_dev", "st_ino", "st_size", "st_mtime_ns")
+            if any(
+                getattr(before, name) != getattr(after, name)
+                for name in coordinates
+            ):
+                raise _PpkHelperIdentityError
+            if "sha256:" + digest.hexdigest() != self.expected_executable_sha256:
+                raise _PpkHelperIdentityError
+        except (OSError, _PpkHelperIdentityError):
+            if stream is not None:
+                stream.close()
+            raise _PpkHelperIdentityError(
+                "packaged helper identity could not be verified"
+            ) from None
+        try:
+            yield
+        finally:
+            stream.close()
 
 
 def _sanitized_helper_environment(
@@ -164,14 +256,25 @@ class PpkHelperProcessController:
             if self._started_once:
                 raise _error("ERR_PPK_HELPER_ALREADY_STARTED")
             self._started_once = True
+            platform = (
+                os.name if self._platform_name is None else self._platform_name
+            )
+            if (
+                spec.mode is PpkHelperLaunchMode.PACKAGED_HELPER
+                and platform != "nt"
+            ):
+                raise _error("ERR_PPK_HELPER_IDENTITY_MISMATCH") from None
             try:
-                process = self._popen_factory(
-                    list(spec.command),
-                    **ppk_helper_popen_options(
-                        platform_name=self._platform_name,
-                        environment=self._environment,
-                    ),
-                )
+                with spec.hold_verified_identity():
+                    process = self._popen_factory(
+                        list(spec.command),
+                        **ppk_helper_popen_options(
+                            platform_name=self._platform_name,
+                            environment=self._environment,
+                        ),
+                    )
+            except _PpkHelperIdentityError:
+                raise _error("ERR_PPK_HELPER_IDENTITY_MISMATCH") from None
             except Exception:
                 raise _error("ERR_PPK_HELPER_START_FAILED") from None
             if process.stdin is None or process.stdout is None:
@@ -394,7 +497,10 @@ __all__ = [
     "FRAME_TIMEOUT_SECONDS",
     "HEADER_TIMEOUT_SECONDS",
     "HELPER_MODULE",
+    "MAX_PACKAGED_HELPER_BYTES",
+    "PACKAGED_HELPER_FILENAME",
     "PpkHelperLaunchSpec",
+    "PpkHelperLaunchMode",
     "PpkHelperProcessController",
     "PpkHelperProcessError",
     "STOP_TIMEOUT_SECONDS",

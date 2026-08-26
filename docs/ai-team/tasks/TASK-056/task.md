@@ -1,6 +1,6 @@
 # TASK-056 — Chase Keyword Cue / Semantic Audio Cue Bridge
 
-- Status: `R0_CORE_R1_PRODUCT_INTEGRATION_R2_SKILL_INTEGRATION_IMPLEMENTED_LOCAL / HOSTING_PENDING`
+- Status: `R0_R1_R2_HOSTED_CLOSED`
 - Priority: `OWNER_PRIORITY_CREATOR_WORKFLOW_INSERTION`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Base main: `6050c4764dff9bdca0c8f6d4f175f74e8b0442c0`
@@ -121,3 +121,10 @@ Cross-repository E2E: BVP Transcript 1.1 -> SpeechCueManifest -> semantic sideca
 ## Completion truth
 
 Static/fake/provider unit PASS does not imply native FasterWhisper/Windows/Resolve runtime PASS. Real model execution remains `NOT_RUN` unless explicitly executed under the existing runtime/model gate.
+
+## Hosted completion read-back — 2026-08-26
+
+- R0 core and Montage bridge target PR #275: merged.
+- R1 Product integration target PR #283, lock-host PR #284 and closure PR #285: merged; shared CHANGELOG reservation released.
+- R2 external Montage SKILL integration remains the validated text-free, Human-review-only bridge described above and creates no Timeline/Resolve authority.
+- Real FasterWhisper model execution, private media operation, Timeline/Resolve mutation, Release, Deploy and Production remain outside this hosted completion.

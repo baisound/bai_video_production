@@ -240,3 +240,25 @@ TASK-003 Evidence/Asset、TASK-007 Cut Plan、TASK-010 Resolve Assembly、TASK-0
 - closure PR #373: merged at fresh main fc9398950b07759f82b91801f76f9f3eea195462; hosted checks 9 / 9 PASS; post-main CI 32939237218 PASS (6 / 6) and Security 32939237213 PASS.
 - Registry revision 97 records HOSTED_CLOSED_RELEASED, AUTHORIZED_SCOPE_CONSUMED_CLOSED, target MERGED_POST_MERGE_GREEN, active nonclosed integration locks 0 and the approved CHANGELOG bullet exact 1.
 - Real Owner key/signing, Knowledge Pack write/promotion, automatic promotion, runtime Profile apply, rollback execution, Release, Deploy and Production remain unexecuted or denied by their existing Gates.
+
+## R10A implementation - body-free Knowledge Pack promotion preflight
+
+R10A transitively recompiles the exact R8 signature request and its R6/R7
+inputs, then cross-binds a body-free R9A verification receipt and a terminal
+R9D signing-journal receipt. The output binds every Pack, predecessor, signer,
+message, detached-signature digest, verification, journal and ceremony
+coordinate without accepting key bytes, signature bytes, secrets or paths.
+The request payload is copied once from an exact built-in dict before any
+verification read; the verifier and typed read-back consume only that same
+hook-free snapshot. Stateful Mapping hooks are rejected and concurrent caller
+mutation cannot switch the request between validation phases.
+
+R9A and R9D body-free receipt objects remain publicly constructible. Therefore
+R10A records the upstream verification claim but does not authenticate its
+cryptographic origin. The projection fixes signature origin authentication,
+signature verification and promotion-confirmation eligibility to false.
+
+The result is an in-memory preflight only. Explicit Human confirmation,
+canonical storage, runtime compatibility validation and signature-artifact
+custody remain later gates. Pack write/promotion, automatic promotion, runtime
+apply, rollback execution, Release, Deploy and Production remain unauthorized.

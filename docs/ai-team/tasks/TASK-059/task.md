@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CE_PARENT_OPERATOR_SESSION_IMPLEMENTED_LOCAL_TK_UI_NEXT`
+Status: `P1CF_CANONICAL_OPERATOR_UI_ROUTE_BOUND_PACKAGED_HELPER_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -175,3 +175,23 @@ P1A/R9B regression is `117 PASS`; compile passes. Detailed Evidence is
 The next bounded unit is synthetic-only Tk Operator wiring. Real PPK selection,
 passphrase entry, helper launch, DPAPI custody and signing remain separate Human
 Gates.
+
+## P1C-F canonical Operator UI route
+
+Canonical entrypoint review supersedes the provisional `Tk UI next` routing
+label without rewriting P1C-E Evidence. The import flow belongs in the unified
+`BAI Video Production.exe` Settings `Connection / Secret` card. A native
+local dialog is only an adapter for file selection and masked passphrase input;
+it is not a second Product or Settings route.
+
+Passphrase input must never cross WebView JavaScript or JSON RPC. File paths and
+bodies remain Python-local; Shell snapshots receive opaque candidate IDs and
+body-free coordinates only. READY/Confirm/Cancel reuse the P1C-E one-use
+Session, and custody-result loss exposes read-back recovery with retry disabled.
+
+Review also found that P1C-B currently launches only a development Python
+module. A frozen unified Product cannot use that argv as its packaged helper
+identity. P1C-G must therefore implement the exact adjacent packaged-helper
+identity/command before any UI action is enabled. Detailed design and
+Critic/Judge decision are in
+`ppk-canonical-operator-ui-route-p1cf-design.md`.

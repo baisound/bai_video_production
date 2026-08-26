@@ -240,3 +240,83 @@ TASK-003 Evidence/Asset、TASK-007 Cut Plan、TASK-010 Resolve Assembly、TASK-0
 - closure PR #373: merged at fresh main fc9398950b07759f82b91801f76f9f3eea195462; hosted checks 9 / 9 PASS; post-main CI 32939237218 PASS (6 / 6) and Security 32939237213 PASS.
 - Registry revision 97 records HOSTED_CLOSED_RELEASED, AUTHORIZED_SCOPE_CONSUMED_CLOSED, target MERGED_POST_MERGE_GREEN, active nonclosed integration locks 0 and the approved CHANGELOG bullet exact 1.
 - Real Owner key/signing, Knowledge Pack write/promotion, automatic promotion, runtime Profile apply, rollback execution, Release, Deploy and Production remain unexecuted or denied by their existing Gates.
+
+## R10A implementation - body-free Knowledge Pack promotion preflight
+
+R10A transitively recompiles the exact R8 signature request and its R6/R7
+inputs, then cross-binds a body-free R9A verification receipt and a terminal
+R9D signing-journal receipt. The output binds every Pack, predecessor, signer,
+message, detached-signature digest, verification, journal and ceremony
+coordinate without accepting key bytes, signature bytes, secrets or paths.
+The request payload is copied once from an exact built-in dict before any
+verification read; the verifier and typed read-back consume only that same
+hook-free snapshot. Stateful Mapping hooks are rejected and concurrent caller
+mutation cannot switch the request between validation phases.
+
+R9A and R9D body-free receipt objects remain publicly constructible. Therefore
+R10A records the upstream verification claim but does not authenticate its
+cryptographic origin. The projection fixes signature origin authentication,
+signature verification and promotion-confirmation eligibility to false.
+
+The result is an in-memory preflight only. Explicit Human confirmation,
+canonical storage, runtime compatibility validation and signature-artifact
+custody remain later gates. Pack write/promotion, automatic promotion, runtime
+apply, rollback execution, Release, Deploy and Production remain unauthorized.
+
+## R10B implementation - trusted in-call signature admission
+
+R10B re-runs the R9A Ed25519 verifier in the current call with the exact frozen
+R8 request, caller-supplied self-validating signer policy, transient public key
+and detached signature. The complete nested R6-R8 compile tree is rebuilt from
+an explicit allowlist of exact Product enums and frozen dataclasses; every public
+JSON surface requires one recursively frozen exact built-in tree before parsing.
+Security-relevant scalar boundaries require exact built-in `str`, `int` and
+`bytes`; same-value subclasses cannot override causality or survive projection.
+The verifier result must reproduce the R10A verification claim exactly, after
+which R10A is recompiled and matched to the supplied intent. This closes the
+constructible verification-receipt execution gap for the current call without
+trusting a caller-selected success object. The exact R9C ceremony receipt is
+cross-bound to the terminal R9D journal, request, signer, signature and
+verification coordinates. R10B verification time must be at or after the R10A
+intent, R9C completion and R9D terminal journal update.
+
+The public key and detached signature are not returned or persisted, and
+private key material is not accepted. The body-free admission is itself public
+constructible and therefore non-authoritative when detached from direct
+recompilation. Because this Unit has no canonical Owner trust-root or latest
+policy reader, it claims only mathematical verification against the supplied
+policy. Canonical/latest source revalidation, canonical signer-origin
+authentication, Owner signer binding and canonical trusted-policy revalidation
+are fixed false. Signature-artifact custody, canonical receipt/store,
+runtime-compatibility validation and explicit Human promotion confirmation
+remain later Gates. Knowledge Pack write/promotion, automatic promotion,
+runtime apply, rollback execution, Release, Deploy and Production remain
+unauthorized.
+
+## R10C implementation - body-free signature artifact custody candidate
+
+R10C consumes R10B's exact next state and prepares a body-free, in-memory
+candidate for a later Owner-local signature-artifact custody transaction. It
+reconstructs exact R9B key-custody, R9C signing-ceremony and R10B trusted
+signature admission payloads from bounded hook-free built-in JSON snapshots.
+R9C must bind the exact R9B custody receipt, and its ceremony, request, signer,
+detached-signature digest and verification receipt coordinates must equal R10B.
+The Owner scope comes only from the R9B encrypted key-custody receipt, whose
+signer must equal the R10B signer. Source causality is hard-gated: R9C cannot
+complete before R9B custody, and R10B cannot verify before R9C completion.
+Candidate creation cannot predate any of those exact source events. The
+artifact store coordinate is a logical ID only; host paths and URI-like values
+are rejected by both runtime validation and the public schema.
+
+The output contains only stable identifiers and hashes. It requires a later
+write boundary to direct-recompile R10B with transient public-key and detached
+signature bytes, repeat cryptographic verification, receive explicit Human
+custody confirmation, and use an Owner-local encrypted one-shot store. The
+candidate itself remains publicly constructible and non-authoritative.
+
+Artifact bytes, public/private key material, host paths and credentials are not
+included. Artifact custody write/confirmation, canonical receipt, canonical
+trust root, Owner signer binding, Knowledge Pack write/promotion, automatic
+promotion, runtime apply, rollback, Release, Deploy and Production remain
+unauthorized. Project/reviewer coordinates and actual artifact custody remain
+later Gates.

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
+import ntpath
 import os
 import secrets
 import time
@@ -127,7 +128,9 @@ class PpkImportOperatorSession:
             for value in buffers:
                 _clear(value)
             raise PpkImportOperatorError("ERR_PPK_OPERATOR_INPUT_INVALID")
-        if not isinstance(destination_path, str) or not os.path.isabs(destination_path):
+        if not isinstance(destination_path, str) or not (
+            os.path.isabs(destination_path) or ntpath.isabs(destination_path)
+        ):
             for value in buffers:
                 _clear(value)
             raise PpkImportOperatorError("ERR_PPK_OPERATOR_INPUT_INVALID")

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 from dataclasses import dataclass
+import ntpath
 import os
 import secrets
 import sys
@@ -223,7 +224,9 @@ class PpkHelperRuntime:
                 )
             )
             destination_path = destination.decode("utf-8", errors="strict")
-            if not os.path.isabs(destination_path):
+            if not (
+                os.path.isabs(destination_path) or ntpath.isabs(destination_path)
+            ):
                 raise ValueError("custody destination must be absolute")
             authenticated = self._dependencies.authenticate(
                 bytes(ppk),

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
 import inspect
 import json
 from pathlib import Path
+from threading import Event, Thread
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -24,6 +26,52 @@ from test_task029_knowledge_pack_durable_signing_journal import kwargs as signin
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "schemas" / "knowledge-pack-promotion-intent.schema.json"
 MIRROR = ROOT / "src" / "ai_video_production" / "schema_resources" / SCHEMA.name
+
+
+class ChameleonMapping(Mapping[str, object]):
+    def __init__(self, first: dict[str, object], second: dict[str, object]) -> None:
+        self.first = first
+        self.second = second
+        self.read_count = 0
+
+    def _current(self) -> dict[str, object]:
+        self.read_count += 1
+        return self.first if self.read_count == 1 else self.second
+
+    def __getitem__(self, key: str) -> object:
+        return self._current()[key]
+
+    def __iter__(self):
+        return iter(self._current())
+
+    def __len__(self) -> int:
+        return len(self._current())
+
+
+class BlockingCompileKwargs(Mapping[str, object]):
+    def __init__(
+        self,
+        values: Mapping[str, object],
+        snapshot_taken: Event,
+        mutation_done: Event,
+    ) -> None:
+        self.values = dict(values)
+        self.snapshot_taken = snapshot_taken
+        self.mutation_done = mutation_done
+        self.signalled = False
+
+    def __getitem__(self, key: str) -> object:
+        return self.values[key]
+
+    def __iter__(self):
+        if not self.signalled:
+            self.signalled = True
+            self.snapshot_taken.set()
+            assert self.mutation_done.wait(5)
+        return iter(self.values)
+
+    def __len__(self) -> int:
+        return len(self.values)
 
 
 def case(tmp_path: Path):
@@ -127,6 +175,63 @@ def test_exact_source_recompile_drift_is_rejected_before_projection(tmp_path: Pa
     drifted["signature_request_payload"] = request_payload
     with pytest.raises(ValueError, match="exact current sources"):
         compile_knowledge_pack_promotion_intent(**drifted)
+
+
+def test_stateful_mapping_is_rejected_without_invoking_mapping_hooks(
+    tmp_path: Path,
+) -> None:
+    _, _, _, _, arguments = case(tmp_path)
+    first = dict(arguments["signature_request_payload"])
+    second = dict(first, pack_version="9.9.9")
+    chameleon = ChameleonMapping(first, second)
+
+    with pytest.raises(ValueError, match="exact built-in dict"):
+        compile_knowledge_pack_promotion_intent(
+            **dict(arguments, signature_request_payload=chameleon)
+        )
+    assert chameleon.read_count == 0
+
+
+def test_concurrent_mutation_cannot_change_the_frozen_request_snapshot(
+    tmp_path: Path,
+) -> None:
+    _, _, _, _, arguments = case(tmp_path)
+    original = dict(arguments["signature_request_payload"])
+    live = dict(original)
+    snapshot_taken = Event()
+    mutation_done = Event()
+
+    def mutate_original() -> None:
+        assert snapshot_taken.wait(5)
+        live.clear()
+        live.update(dict(original, pack_version="9.9.9"))
+        mutation_done.set()
+
+    worker = Thread(target=mutate_original)
+    worker.start()
+    try:
+        intent = compile_knowledge_pack_promotion_intent(
+            **dict(
+                arguments,
+                signature_request_payload=live,
+                signature_request_compile_kwargs=BlockingCompileKwargs(
+                    arguments["signature_request_compile_kwargs"],
+                    snapshot_taken,
+                    mutation_done,
+                ),
+            )
+        )
+    finally:
+        worker.join(5)
+    assert not worker.is_alive()
+    assert live["pack_version"] == "9.9.9"
+    assert intent.pack_version == original["pack_version"]
+    assert intent.to_dict()["signature_request_sha256"] == original[
+        "signature_request_sha256"
+    ]
+    assert intent.to_dict()["latest_source_revalidated"] is True
+
+
 
 
 def test_forged_typed_verification_receipt_is_cross_bound_and_rejected(tmp_path: Path) -> None:

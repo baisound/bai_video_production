@@ -53,6 +53,24 @@ def _positive(value: object, field: str) -> int:
     return value
 
 
+def _freeze_signature_request_payload(
+    value: Mapping[str, Any],
+) -> dict[str, str | bool | None]:
+    """Take one hook-free snapshot before any verification reads."""
+
+    if type(value) is not dict:
+        raise ValueError("signature_request_payload must be an exact built-in dict")
+    snapshot = value.copy()
+    if any(type(key) is not str for key in snapshot):
+        raise ValueError("signature_request_payload keys must be exact strings")
+    if any(
+        item is not None and type(item) not in (str, bool)
+        for item in snapshot.values()
+    ):
+        raise ValueError("signature_request_payload values must be exact primitives")
+    return snapshot
+
+
 class KnowledgePackPromotionIntentState(str, Enum):
     READY_FOR_INITIAL_PROMOTION_PREFLIGHT = (
         "READY_FOR_INITIAL_PROMOTION_PREFLIGHT"
@@ -230,13 +248,15 @@ def compile_knowledge_pack_promotion_intent(
 ) -> KnowledgePackPromotionIntent:
     """Compile a no-effect intent from exact R6-R9D body-free Evidence."""
 
+    request_snapshot = _freeze_signature_request_payload(signature_request_payload)
     if not isinstance(signature_request_compile_kwargs, Mapping):
         raise ValueError("signature_request_compile_kwargs must be a mapping")
+    compile_kwargs_snapshot = dict(signature_request_compile_kwargs)
     verify_knowledge_pack_signature_verification_request(
-        signature_request_payload, **dict(signature_request_compile_kwargs)
+        request_snapshot, **compile_kwargs_snapshot
     )
     request = KnowledgePackSignatureVerificationRequest.from_dict(
-        signature_request_payload
+        request_snapshot
     )
     verification = KnowledgePackSignatureVerificationReceipt.from_dict(
         verification_receipt_payload

@@ -47,6 +47,9 @@ eligibility to false.
 ## Failure modes
 
 - source/compiler drift: reject before projection;
+- non-exact or stateful request Mapping: reject before invoking Mapping hooks;
+- concurrent mutation after the single built-in snapshot cannot alter verifier
+  or typed read-back input;
 - coordinate-mismatched R9A receipt: reject;
 - coordinate-consistent constructible receipt: never elevate to verified;
 - nonterminal or mismatched R9D receipt: reject;
@@ -73,7 +76,8 @@ does not authorize those effects.
 1. exact R6-R9D synthetic Evidence compilation;
 2. public schema and package mirror validation;
 3. body-free and effect-false assertions;
-4. source drift, coordinate mismatch and nonterminal/mismatched R9D negatives;
+4. source drift, stateful Mapping, concurrent mutation, coordinate mismatch and
+   nonterminal/mismatched R9D negatives;
 5. predecessor/rollback invariant and projection tamper negatives;
 6. focused R10A, direct R8-R10A and TASK-029 regression;
 7. independent Critic/Tester/Judge before Technical GO;

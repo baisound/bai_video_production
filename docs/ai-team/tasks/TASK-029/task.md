@@ -248,6 +248,10 @@ inputs, then cross-binds a body-free R9A verification receipt and a terminal
 R9D signing-journal receipt. The output binds every Pack, predecessor, signer,
 message, detached-signature digest, verification, journal and ceremony
 coordinate without accepting key bytes, signature bytes, secrets or paths.
+The request payload is copied once from an exact built-in dict before any
+verification read; the verifier and typed read-back consume only that same
+hook-free snapshot. Stateful Mapping hooks are rejected and concurrent caller
+mutation cannot switch the request between validation phases.
 
 R9A and R9D body-free receipt objects remain publicly constructible. Therefore
 R10A records the upstream verification claim but does not authenticate its

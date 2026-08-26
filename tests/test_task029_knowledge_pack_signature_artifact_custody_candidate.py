@@ -104,6 +104,9 @@ def test_schema_and_package_mirror_are_exact(tmp_path: Path) -> None:
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(payload)
+    invalid = dict(payload)
+    invalid["artifact_store_id"] = "C:/Users/user/private/key-store"
+    assert list(Draft202012Validator(schema).iter_errors(invalid))
 
 
 def test_remaining_gates_and_effects_are_machine_readable(tmp_path: Path) -> None:
@@ -135,10 +138,48 @@ def test_remaining_gates_and_effects_are_machine_readable(tmp_path: Path) -> Non
         "knowledge_pack_write_authorized", "knowledge_pack_promotion_authorized",
         "automatic_promotion_authorized", "runtime_profile_apply_authorized",
         "rollback_execution_authorized", "release_authorized", "external_effect_authorized",
-    ):
         "timeline_mutation_authorized", "resolve_mutation_authorized",
         "deploy_authorized", "production_authorized",
+    ):
         assert payload[field] is False
+
+
+def test_source_receipt_causality_is_hard_gated(tmp_path: Path) -> None:
+    _, _, result, admission, arguments = custody_case(tmp_path)
+    custody = OwnerSigningKeyCustodyReceipt.from_dict(arguments["key_custody_receipt_payload"])
+    custody = replace(
+        custody, custodied_at_epoch_ms=result.receipt.completed_at_epoch_ms + 1
+    )
+    arguments["key_custody_receipt_payload"] = custody.to_dict()
+    ceremony = replace(
+        result.receipt,
+        custody_receipt_sha256=custody.to_dict()["custody_receipt_sha256"],
+    )
+    arguments["signing_ceremony_receipt_payload"] = ceremony.to_dict()
+    arguments["trusted_signature_admission_payload"] = replace(
+        admission,
+        signing_ceremony_receipt_sha256=ceremony.to_dict()["ceremony_receipt_sha256"],
+    ).to_dict()
+    with pytest.raises(ValueError, match="R9C completion precedes R9B"):
+        compile_signature_artifact_custody_candidate(**arguments)
+
+    _, _, result, admission, arguments = custody_case(tmp_path / "admission-time")
+    arguments["trusted_signature_admission_payload"] = replace(
+        admission, verified_at_epoch_ms=result.receipt.completed_at_epoch_ms - 1
+    ).to_dict()
+    with pytest.raises(ValueError, match="R10B verification precedes R9C"):
+        compile_signature_artifact_custody_candidate(**arguments)
+
+
+def test_artifact_store_id_rejects_host_paths_and_uris(tmp_path: Path) -> None:
+    _, _, _, _, arguments = custody_case(tmp_path)
+    arguments["artifact_store_id"] = "C:/Users/user/private/key-store"
+    with pytest.raises(ValueError, match="logical identifier"):
+        compile_signature_artifact_custody_candidate(**arguments)
+
+    arguments["artifact_store_id"] = "file://owner/key-store"
+    with pytest.raises(ValueError, match="logical identifier"):
+        compile_signature_artifact_custody_candidate(**arguments)
 
 
 def test_custody_ceremony_and_admission_cross_binding_fail_closed(tmp_path: Path) -> None:
@@ -208,6 +249,7 @@ def test_output_tamper_unknown_field_and_custom_mapping_fail_closed(tmp_path: Pa
     payload = compile_signature_artifact_custody_candidate(**arguments).to_dict()
     for field, value in (
         ("artifact_custody_write_authorized", True),
+        ("production_authorized", True),
         ("custody_candidate_sha256", "sha256:" + "0" * 64),
     ):
         changed = dict(payload)

@@ -37,7 +37,7 @@
     "record_type": {"const": "KNOWLEDGE_PACK_SIGNATURE_ARTIFACT_CUSTODY_CANDIDATE"},
     "task_owner": {"const": "TASK-029"},
     "candidate_id": {"$ref": "#/$defs/stableId"},
-    "artifact_store_id": {"$ref": "#/$defs/stableId"},
+    "artifact_store_id": {"$ref": "#/$defs/logicalId"},
     "owner_scope_sha256": {"$ref": "#/$defs/sha256"},
     "source_key_custody_receipt_sha256": {"$ref": "#/$defs/sha256"},
     "source_signing_ceremony_receipt_sha256": {"$ref": "#/$defs/sha256"},
@@ -99,6 +99,7 @@
   "$defs": {
     "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "stableId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"},
+    "logicalId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$"},
     "semver": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"}
   }
 }

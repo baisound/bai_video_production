@@ -302,8 +302,11 @@ signature admission payloads from bounded hook-free built-in JSON snapshots.
 R9C must bind the exact R9B custody receipt, and its ceremony, request, signer,
 detached-signature digest and verification receipt coordinates must equal R10B.
 The Owner scope comes only from the R9B encrypted key-custody receipt, whose
-signer must equal the R10B signer. Candidate creation cannot predate R9B
-custody, R9C completion or R10B verification.
+signer must equal the R10B signer. Source causality is hard-gated: R9C cannot
+complete before R9B custody, and R10B cannot verify before R9C completion.
+Candidate creation cannot predate any of those exact source events. The
+artifact store coordinate is a logical ID only; host paths and URI-like values
+are rejected by both runtime validation and the public schema.
 
 The output contains only stable identifiers and hashes. It requires a later
 write boundary to direct-recompile R10B with transient public-key and detached

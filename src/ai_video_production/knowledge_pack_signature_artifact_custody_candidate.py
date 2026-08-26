@@ -25,6 +25,7 @@ SIGNATURE_ARTIFACT_CUSTODY_CANDIDATE_VERSION = "1.0.0"
 SIGNATURE_ARTIFACT_CUSTODY_CONTRACT = "TASK-029/SIGNATURE_ARTIFACT_CUSTODY/1.0.0"
 _SHA = re.compile(r"^sha256:[0-9a-f]{64}$")
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$")
+_LOGICAL_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$")
 _SEMVER = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 _MAX_DEPTH = 16
 _MAX_NODES = 4096
@@ -33,6 +34,12 @@ _MAX_NODES = 4096
 def _id(value: object, field: str) -> str:
     if type(value) is not str or _ID.fullmatch(value) is None:
         raise ValueError(f"{field} is invalid")
+    return value
+
+
+def _logical_id(value: object, field: str) -> str:
+    if type(value) is not str or _LOGICAL_ID.fullmatch(value) is None:
+        raise ValueError(f"{field} must be a logical identifier without a path or URI")
     return value
 
 
@@ -107,8 +114,9 @@ class SignatureArtifactCustodyCandidate:
     )
 
     def __post_init__(self) -> None:
-        for field in ("candidate_id", "artifact_store_id", "pack_id"):
+        for field in ("candidate_id", "pack_id"):
             _id(getattr(self, field), field)
+        _logical_id(self.artifact_store_id, "artifact_store_id")
         if type(self.pack_version) is not str or _SEMVER.fullmatch(self.pack_version) is None:
             raise ValueError("pack_version must be semantic version x.y.z")
         for field in (
@@ -283,7 +291,7 @@ def compile_signature_artifact_custody_candidate(
     """Compile a no-write custody candidate from exact body-free R9B/R9C/R10B receipts."""
 
     _id(candidate_id, "candidate_id")
-    _id(artifact_store_id, "artifact_store_id")
+    _logical_id(artifact_store_id, "artifact_store_id")
     _positive(created_at_epoch_ms, "created_at_epoch_ms")
     custody = OwnerSigningKeyCustodyReceipt.from_dict(
         _snapshot_json_object(key_custody_receipt_payload, "key_custody_receipt_payload")
@@ -315,6 +323,10 @@ def compile_signature_artifact_custody_candidate(
         raise ValueError("R9C ceremony does not match the exact R10B admission")
     if custody.signer_key_id_sha256 != admission.signer_key_id_sha256:
         raise ValueError("Owner key custody signer does not match R10B")
+    if ceremony.completed_at_epoch_ms < custody.custodied_at_epoch_ms:
+        raise ValueError("R9C completion precedes R9B key custody")
+    if admission.verified_at_epoch_ms < ceremony.completed_at_epoch_ms:
+        raise ValueError("R10B verification precedes R9C completion")
     if created_at_epoch_ms < max(
         custody.custodied_at_epoch_ms, ceremony.completed_at_epoch_ms,
         admission.verified_at_epoch_ms,

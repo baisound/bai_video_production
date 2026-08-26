@@ -33,9 +33,12 @@ runtime Profile application, release and production paths are outside this Unit.
    receipt coordinates to equal R10B exactly.
 5. Carry the Owner scope only from the R9B encrypted signing-key custody
    receipt. Require that custodied signer to equal the R10B signer.
-6. Require candidate creation time to be at or after R9B custody, R9C
+6. Require exact source causality: R9C completion must be at or after R9B
+   custody, and R10B verification must be at or after R9C completion.
+7. Require candidate creation time to be at or after R9B custody, R9C
    completion and R10B verification.
-7. Return an immutable candidate containing hashes and stable identifiers only.
+8. Require `artifact_store_id` to be a path-free and URI-free logical ID, then
+   return an immutable candidate containing hashes and stable identifiers only.
 
 ## Output and authority boundary
 
@@ -47,11 +50,11 @@ The candidate records that a later write must:
 - use an Owner-local encrypted, one-shot artifact store.
 
 The candidate is publicly constructible and non-authoritative. It includes no
-artifact body, public/private key material, host path or credential. Artifact
-The R9B/R9C/R10B receipts are self-validated, but source-graph currentness and
+artifact body, public/private key material, host path or credential. The
+R9B/R9C/R10B receipts are self-validated, but source-graph currentness and
 Owner-scope origin authentication remain false until the later write boundary
 directly recompiles R10B and consults a canonical Owner trust source.
-custody write, custody confirmation, canonical receipt, canonical trust root,
+Artifact custody write, custody confirmation, canonical receipt, canonical trust root,
 Owner signer binding, Knowledge Pack write/promotion, automatic promotion,
 runtime apply, rollback, Release and external effects are fixed false.
 Project and reviewer coordinates are not yet present.
@@ -66,7 +69,9 @@ Project and reviewer coordinates are not yet present.
 | R9C custody/request/signer/signature/verification drift | reject |
 | R10B state or self-hash drift | reject |
 | Owner signer mismatch | reject |
+| R9C time before R9B or R10B time before R9C | reject |
 | candidate time before any exact source | reject |
+| path-like or URI-like artifact store identifier | reject |
 | output authority flag or hash tamper | reject |
 | unknown output field | reject |
 | raw artifact/key/path/credential persistence | impossible from public output |
@@ -103,8 +108,14 @@ Resolved Medium findings:
 2. Candidate output could be mistaken for custody authority. All write,
    confirmation, trust-root, promotion, runtime and external flags are false.
 
-Builder Evidence: focused R10C `12 PASS`; R9B-R10C direct `82 PASS`; TASK-029
-`164 PASS`; schema mirror, JSON schema check, compile and diff-check PASS. Full
+Independent review on head `73222ca` found source-order causality and logical
+store-ID gaps plus one false-flag test-loop defect. The bounded rework adds
+both source-order hard gates, runtime/schema rejection of path-like and URI-like
+store IDs, direct adversarial fixtures and a representative Production-flag
+tamper fixture. Re-review remains required.
+
+Builder Evidence: focused R10C `14 PASS`; R8-R10C direct `77 PASS`; TASK-029
+`166 PASS`; schema mirror, JSON schema check, compile and diff-check PASS. Full
 Product produced `4174 PASS / 5 SKIP / 1 FAIL`; the sole failure is unrelated
 TASK-054 native Tk startup because the local Python installation lacks
 `tk8.6/listbox.tcl`. It is retained as environment Evidence and the full Product

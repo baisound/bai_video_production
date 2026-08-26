@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CJ2_TRUSTED_RUNTIME_BINDING_PASS_NATIVE_MANUAL_GATE`
+Status: `P1CJ3_WINDOWS_PACKAGE_BUILD_PASS_NATIVE_MANUAL_GATE`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -400,3 +400,27 @@ Shell/launcher plus all direct TASK-059 Windows regression is
 No real `1.3.0` launch configuration was written and no real-key operation was
 executed. Exact Owner values, actual Credential UI observation and real DPAPI
 custody remain Human Gates.
+
+## P1C-J3 current Windows package build checkpoint
+
+P1C-J3 builds exact commit
+`fd539054fa70706eece166d59358b2a1e9cfef78` through the canonical
+`build-windows-exe.bat` using the existing Windows Python `3.12.4` and
+PyInstaller `6.22.0`. The helper one-file build, Main one-directory build,
+three-way packaged-helper identity verification and recursive Main archive
+inspection all pass.
+
+The Main EXE is `16426395` bytes with SHA-256
+`b6d4936959e48b0e52931dd823ce64732147181c35413c8cc106f17268bd5d39`.
+The bundled and staging helpers are exact matches at `17229174` bytes with
+SHA-256
+`5aefebf7a53806a7d8555206d1f805c3dae1f14c8f36521edc58b6b63a574ca0`.
+Secret-free helper protocol v1 empty-input smoke exits `0`; invalid-version
+refusal exits `64`.
+
+The Main Product UI and Credential UI were not launched. No real Owner
+configuration, PPK, public key, passphrase, DPAPI custody, signing, installer,
+publication, promotion, Release, Deploy or Production operation was performed.
+Detailed Evidence is `ppk-current-windows-package-build-p1cj3-evidence.md`.
+Native manual UI QA and real Owner-value configuration remain separate Human
+Gates.

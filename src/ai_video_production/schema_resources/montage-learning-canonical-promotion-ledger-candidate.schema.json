@@ -1,0 +1,229 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/montage-learning-canonical-promotion-ledger-candidate.schema.json",
+  "title": "TASK-058 P1C-C canonical promotion ledger candidate records",
+  "oneOf": [
+    {"$ref": "#/$defs/entry"},
+    {"$ref": "#/$defs/ledger"},
+    {"$ref": "#/$defs/cas"},
+    {"$ref": "#/$defs/evaluation"}
+  ],
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "revision": {"type": "integer", "minimum": 0, "maximum": 4096},
+    "positiveRevision": {"type": "integer", "minimum": 1, "maximum": 4096},
+    "stagingRevision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "authorityFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_source_revalidated_under_canonical_transaction",
+        "canonical_project_root_verified",
+        "canonical_store_origin_verified",
+        "canonical_store_commit_verified",
+        "monotonic_anchor_verified",
+        "rollback_detection_authority_created",
+        "receipt_mint_authorized",
+        "canonical_admission_authority_created",
+        "automatic_learning_promotion_authorized"
+      ],
+      "properties": {
+        "raw_source_revalidated_under_canonical_transaction": {"const": false},
+        "canonical_project_root_verified": {"const": false},
+        "canonical_store_origin_verified": {"const": false},
+        "canonical_store_commit_verified": {"const": false},
+        "monotonic_anchor_verified": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "receipt_mint_authorized": {"const": false},
+        "canonical_admission_authority_created": {"const": false},
+        "automatic_learning_promotion_authorized": {"const": false}
+      }
+    },
+    "effectFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesystem_read",
+        "filesystem_written",
+        "project_manifest_written",
+        "receipt_minted",
+        "timeline_mutated",
+        "resolve_written",
+        "network_accessed",
+        "provider_called",
+        "process_started",
+        "release_started",
+        "deployment_started",
+        "production_activated"
+      ],
+      "properties": {
+        "filesystem_read": {"const": false},
+        "filesystem_written": {"const": false},
+        "project_manifest_written": {"const": false},
+        "receipt_minted": {"const": false},
+        "timeline_mutated": {"const": false},
+        "resolve_written": {"const": false},
+        "network_accessed": {"const": false},
+        "provider_called": {"const": false},
+        "process_started": {"const": false},
+        "release_started": {"const": false},
+        "deployment_started": {"const": false},
+        "production_activated": {"const": false}
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_type", "task_owner", "project_id",
+        "canonical_store_id", "owner_scope_hash", "ledger_key_sha256",
+        "entry_revision", "parent_entry_sha256", "prior_chain_sha256",
+        "source_record_id", "source_sha256", "proposal_sha256",
+        "approved_plan_sha256", "idempotency_key_sha256", "staging_store_id",
+        "staging_store_revision", "staging_entry_sha256", "staging_ledger_sha256",
+        "staging_file_identity_sha256", "staging_readback_sha256", "staging_platform_security_model",
+        "canonical_evidence_id", "canonical_evidence_sha256",
+        "human_binding_sha256", "negative_feedback_preserved", "candidate_state",
+        "canonical_state", "authority_flags", "effect_flags", "entry_sha256",
+        "chain_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_CANONICAL_PROMOTION_LEDGER_ENTRY_CANDIDATE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "canonical_store_id": {"$ref": "#/$defs/identifier"},
+        "owner_scope_hash": {"$ref": "#/$defs/digest"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "entry_revision": {"$ref": "#/$defs/positiveRevision"},
+        "parent_entry_sha256": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+        "prior_chain_sha256": {"$ref": "#/$defs/digest"},
+        "source_record_id": {"$ref": "#/$defs/identifier"},
+        "source_sha256": {"$ref": "#/$defs/digest"},
+        "proposal_sha256": {"$ref": "#/$defs/digest"},
+        "approved_plan_sha256": {"$ref": "#/$defs/digest"},
+        "idempotency_key_sha256": {"$ref": "#/$defs/digest"},
+        "staging_store_id": {"$ref": "#/$defs/identifier"},
+        "staging_store_revision": {"$ref": "#/$defs/stagingRevision"},
+        "staging_entry_sha256": {"$ref": "#/$defs/digest"},
+        "staging_ledger_sha256": {"$ref": "#/$defs/digest"},
+        "staging_file_identity_sha256": {"$ref": "#/$defs/digest"},
+        "staging_readback_sha256": {"$ref": "#/$defs/digest"},
+        "staging_platform_security_model": {"enum": ["WINDOWS_PINNED_HANDLE_READ_V1", "POSIX_OPENAT_NOFOLLOW_READ_V1"]},
+        "canonical_evidence_id": {"$ref": "#/$defs/identifier"},
+        "canonical_evidence_sha256": {"$ref": "#/$defs/digest"},
+        "human_binding_sha256": {"$ref": "#/$defs/digest"},
+        "negative_feedback_preserved": {"type": "boolean"},
+        "candidate_state": {"const": "SOURCE_REVALIDATION_REQUIRED"},
+        "canonical_state": {"const": "NOT_MINTED"},
+        "authority_flags": {"$ref": "#/$defs/authorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/effectFlags"},
+        "entry_sha256": {"$ref": "#/$defs/digest"},
+        "chain_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_type", "task_owner", "project_id",
+        "canonical_store_id", "owner_scope_hash", "ledger_key_sha256",
+        "ledger_revision", "entry_count", "latest_entry_sha256", "chain_sha256",
+        "entries", "contract_state", "canonical_state", "persistence_observed",
+        "store_origin_authenticated", "project_manifest_binding_verified",
+        "monotonic_anchor_present", "rollback_detection_authority_created",
+        "consumer_revalidation_required", "authority_flags", "effect_flags",
+        "ledger_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_CANONICAL_PROMOTION_LEDGER_CANDIDATE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "canonical_store_id": {"$ref": "#/$defs/identifier"},
+        "owner_scope_hash": {"$ref": "#/$defs/digest"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "ledger_revision": {"$ref": "#/$defs/revision"},
+        "entry_count": {"$ref": "#/$defs/revision"},
+        "latest_entry_sha256": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+        "chain_sha256": {"$ref": "#/$defs/digest"},
+        "entries": {"type": "array", "maxItems": 4096, "items": {"$ref": "#/$defs/entry"}},
+        "contract_state": {"const": "SOURCE_REVALIDATION_REQUIRED"},
+        "canonical_state": {"const": "NOT_MINTED"},
+        "persistence_observed": {"const": false},
+        "store_origin_authenticated": {"const": false},
+        "project_manifest_binding_verified": {"const": false},
+        "monotonic_anchor_present": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "consumer_revalidation_required": {"const": true},
+        "authority_flags": {"$ref": "#/$defs/authorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/effectFlags"},
+        "ledger_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "cas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_type", "task_owner", "ledger_key_sha256",
+        "expected_ledger_revision", "expected_latest_entry_sha256",
+        "expected_chain_sha256", "expected_ledger_sha256",
+        "expectation_is_authority", "expectation_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_CANONICAL_PROMOTION_LEDGER_CAS_EXPECTATION"},
+        "task_owner": {"const": "TASK-058"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "expected_ledger_revision": {"$ref": "#/$defs/revision"},
+        "expected_latest_entry_sha256": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+        "expected_chain_sha256": {"$ref": "#/$defs/digest"},
+        "expected_ledger_sha256": {"$ref": "#/$defs/digest"},
+        "expectation_is_authority": {"const": false},
+        "expectation_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_type", "task_owner", "decision", "reason_codes",
+        "ledger_key_sha256", "observed_ledger_revision",
+        "observed_latest_entry_sha256", "observed_chain_sha256",
+        "observed_ledger_sha256", "incoming_source_record_id",
+        "incoming_idempotency_key_sha256", "incoming_canonical_evidence_id",
+        "incoming_readback_sha256", "expectation_sha256",
+        "existing_entry_sha256", "proposed_ledger", "contract_state",
+        "canonical_state", "authority_flags", "effect_flags", "evaluation_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_CANONICAL_PROMOTION_APPEND_EVALUATION"},
+        "task_owner": {"const": "TASK-058"},
+        "decision": {"enum": ["APPEND_CANDIDATE", "DUPLICATE_CANDIDATE", "ID_COLLISION_REJECTED", "STALE_CAS_REJECTED"]},
+        "reason_codes": {
+          "type": "array", "minItems": 1, "maxItems": 1, "uniqueItems": true,
+          "items": {"enum": ["APPEND_CANDIDATE", "DUPLICATE_CANDIDATE", "ID_COLLISION_REJECTED", "STALE_CAS_REJECTED"]}
+        },
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "observed_ledger_revision": {"$ref": "#/$defs/revision"},
+        "observed_latest_entry_sha256": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+        "observed_chain_sha256": {"$ref": "#/$defs/digest"},
+        "observed_ledger_sha256": {"$ref": "#/$defs/digest"},
+        "incoming_source_record_id": {"$ref": "#/$defs/identifier"},
+        "incoming_idempotency_key_sha256": {"$ref": "#/$defs/digest"},
+        "incoming_canonical_evidence_id": {"$ref": "#/$defs/identifier"},
+        "incoming_readback_sha256": {"$ref": "#/$defs/digest"},
+        "expectation_sha256": {"$ref": "#/$defs/digest"},
+        "existing_entry_sha256": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+        "proposed_ledger": {"oneOf": [{"$ref": "#/$defs/ledger"}, {"type": "null"}]},
+        "contract_state": {"const": "SOURCE_REVALIDATION_REQUIRED"},
+        "canonical_state": {"const": "NOT_MINTED"},
+        "authority_flags": {"$ref": "#/$defs/authorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/effectFlags"},
+        "evaluation_sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

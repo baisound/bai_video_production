@@ -3,6 +3,16 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-059として、Owner保有の暗号化PuTTY PPK v3 Ed25519鍵をbody-free公開座標preflight、one-shot helper、Windows Credential UI、strict trusted launch configを介して既存TASK-029 R9B Owner-local DPAPI custodyへ取り込むfail-closed bridgeを追加しました。秘密値をWebView・ログ・receiptへ返さず、実PPK・passphrase・DPAPI custody・signing、Knowledge Pack promotion、Release／Deploy／Productionは別Human Gateのままです。
+- TASK-058 P1C-Cとして、P1C-Bの検証済みdurable staging read-backをproject／timeline／source receipt／staged artifact／prior ledgerへexact cross-bindし、append-only revision chainとpredecessor hashを検証するpure／no-I/O canonical promotion ledger候補contractを追加しました。canonical receipt／store／CAS／filesystem I/O／実promotion／runtime apply／rollback／Release／Deploy／Production authorityは生成しません。
+- TASK-029 R10Cとして、R9B鍵保管・R9C署名ceremony・R10B trusted signature admissionをexact cross-bindし、source因果順序とpath-free logical store IDをfail-closedに検証するbody-free署名artifact保管候補contractを追加しました。candidateはconstructible／non-authoritativeで、artifact custody write、canonical trust root、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは生成しません。
+
+- TASK-029 R10Bとして、exact R9C/R9D署名Evidenceの時刻・座標をcross-bindし、deep-frozen R8入力と一時的な公開鍵／署名からcaller-supplied policyに対するEd25519検証を同一呼出しで再実行するbody-free admissionを追加しました。canonical trust-root／Owner signer binding／artifact custody／Pack promotionは未成立で、runtime apply、rollback、Release/Deploy/Production authorityは生成しません。
+
+- TASK-029 R10Aとして、R8署名要求をhook-free単一snapshotで再検証し、body-free R9A/R9D receiptをPack・predecessor・signer・message・journal座標へcross-bindするKnowledge Pack昇格preflightを追加しました。公開constructible receiptから暗号学的生成元は認証せず、signature verified/昇格確認可能性はfalseのままです。Pack write/promotion、runtime apply、rollback実行、Release/Deploy/Production authorityは生成しません。
+
+- TASK-058 P1C-Bとして、raw Exact BVP/TASK-055 deliveryをP1C-Aで再検証し、固定P1B staging ledgerをWindows pinned handle / POSIX openat+O_NOFOLLOWで一点時点read-backして、exact entry membershipとpath identityをcross-bindするbody-free診断projectionを追加しました。live/serialized projectionは非authoritativeで、writer/store origin、Project root正本性、hostile ancestor、post-return安定性、monotonic anchor、canonical promotion/receipt、Timeline/Resolve/runtime authorityは生成しません。
+
 - TASK-054 R6B-Bとして、R6B-Aのbody-free discovery reportをexact再Admissionし、Operatorが単一manifest revisionを明示選択する確認専用・学習準備preflightを追加しました。観測時刻、report・item・manifest digest、aggregate countをcross-bindし、raw path・media・transcript・narration本文を保持せず、Dataset採用・学習Authorityは常にfalseで別Human Gate前に停止します。
 
 - TASK-058 P1C-Aとして、Exact BVP/TASK-055 deliveryとP1B entry-shaped candidateをhook-free strict snapshot上で再検証し、Project・Owner scope・proposal・approved plan・Human Edit Evidence・idempotency・staging座標をcross-bindするbody-free preflightを追加しました。public projectionは非authoritativeで、compiler/source/Human/staging origin、ledger membership/store origin、monotonic anchor、canonical store、receipt、Timeline/Resolve/runtime authorityは生成しません。

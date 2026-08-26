@@ -17,6 +17,7 @@ Status: PENDING_HOST_PR
 - fresh main: 931c7faabe3c7e6ea9af7066e2d3a7d5bd3480d7
 - immutable target paths: 6
 - target hosted checks: 8 / 9 PASS; only changelog-and-version FAIL
+- lock-host reviewed composition head 6a84c48: hosted checks 9 / 9 PASS
 - focused P1B: 28 PASS
 - independent related regression: 119 PASS
 - independent path-security delta observations: 9 PASS

@@ -443,3 +443,23 @@ R6B-B plus direct R6B-A focused Evidence is `20 PASS`; Dataset contract
 regression is `45 PASS`; TASK-054 plus direct TASK-049 regression is
 `735 PASS, 1 intentional Windows-native skip`. Compileall, JSON Schema runtime
 validation, schema mirror and diff checks pass.
+
+## R6B-C Dataset adoption authority admission checkpoint
+
+R6B-C exact-admits one separate body-free Human Dataset-adoption Authority
+against one R6B-B `DATASET_ADOPTION_REVIEW_REQUIRED` preflight. The Authority
+binds its Evidence digest, complete selected Dataset coordinates, validity
+window, exact one-request scope and checksum. Stale/crossed/inactive/untrusted
+Authority fails before the injected atomic one-shot use Store is claimed.
+
+The resulting request is proposal-only: Dataset adoption is requested but not
+started, while training authorization and training start are fixed false. Raw
+paths, manifests, media, transcripts and narration remain outside the record.
+No Dataset Store, training, evaluation, model/Binding, Provider, paid, Release,
+Deploy or Production effect is implemented or executed. Actual Dataset adoption
+and training remain separate executors and Human Gates.
+
+R6B-C plus direct R6B-B/R6B-A/R4A focused Evidence is `50 PASS`;
+TASK-054 plus direct TASK-049 regression is `756 PASS, 1 intentional
+Windows-native skip`. Compileall, JSON Schema runtime validation, schema mirror
+and diff checks pass. No real Dataset or external operation was executed.

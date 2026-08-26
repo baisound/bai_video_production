@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CJ3_WINDOWS_PACKAGE_BUILD_PASS_NATIVE_MANUAL_GATE`
+Status: `P1CJ4_CURRENT_BUILD_PASS_GUI_NOT_CONFIRMED`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -113,7 +113,6 @@ P1C-C next owns the fixed helper runtime composition and synthetic-only
 P1A/P1B binding. No real helper was launched in P1C-B. Real PPK/passphrase,
 DPAPI custody, signing, Operator UI and public integration remain separate
 Gates.
-
 
 ## P1C-C helper contract correction
 
@@ -424,3 +423,21 @@ publication, promotion, Release, Deploy or Production operation was performed.
 Detailed Evidence is `ppk-current-windows-package-build-p1cj3-evidence.md`.
 Native manual UI QA and real Owner-value configuration remain separate Human
 Gates.
+
+## P1C-J4 current Windows Product launch checkpoint
+
+P1C-J4 rebuilt exact commit
+`0813c057eb7214e8308e9d156da9252c258ad964` after the Hosted
+cross-platform and Windows fixture-ID repairs. The canonical Main and helper
+build, packaged-helper identity check and secret-free helper native smoke pass.
+The Main EXE is `16426435` bytes with SHA-256
+`8f0cb24dcee4d85342a87d060c338834480d36fec9eeca02fc0838613b8d6a67`;
+the staging and bundled helpers are exact matches at `17229588` bytes with
+SHA-256
+`b9b8b79353697b785fcc048dc0474773a224327a031d88dee4fd08d91cf4180c`.
+
+Computer Use failed before app discovery with a missing kernel-assets path and
+failed identically after the required session reset and one recovery attempt.
+The Product was not launched, no fallback UI automation was used, and startup
+remains `NOT_CONFIRMED`. Detailed Evidence is
+`ppk-current-windows-product-launch-p1cj4-evidence.md`.

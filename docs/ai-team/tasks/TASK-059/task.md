@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1B_CUSTODY_IMPORT_CONTRACT_IMPLEMENTED_LOCAL_P1C_NEXT`
+Status: `P1C_WIRE_CONTRACT_IMPLEMENTED_LOCAL_PROCESS_CONTROLLER_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -74,3 +74,23 @@ units.
 Real PPK selection, passphrase entry, private-key decryption, DPAPI custody,
 real signing, Knowledge Pack mutation/promotion, runtime apply, Release, Deploy
 and Production remain separate Human Gates and are not authorized by P0.
+
+
+## P1C wire checkpoint
+
+The first P1C Atomic Unit implements the pure canonical wire codec, bounded
+incremental reader and parent-side exact state machine. It permits one
+secret-bearing `AUTH_REQUEST` frame only; every response and failure remains
+body-free. READY, confirmation, import receipt and R9B custody receipt
+coordinates are cross-bound, while replay, ordering drift, mixed receipts,
+invalid UTF-8, non-canonical JSON and frame smuggling fail closed.
+
+P1C focused Evidence is `39 PASS`; P1C + P1A + P1B is `68 PASS`; Windows
+P1C/P1A/P1B/R9B direct regression is `76 PASS`; complete P0 including its two
+oversized cases is `26 PASS` under WSL. Compileall passes. Detailed Evidence is
+`ppk-helper-process-wire-p1c-evidence.md`.
+
+The next bounded unit is the one-process-per-attempt, no-console,
+shell-free controller/helper lifecycle with synthetic secrets only. Operator UI,
+real PPK/passphrase, DPAPI custody, signing and public integration remain
+separate Gates.

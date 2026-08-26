@@ -381,8 +381,8 @@ P1C-D local implementation checkpoint:
 - exact source/design/schema mirror/test/task scope: 6 paths;
 - bootstrap/advance/unchanged/rollback/fork/scope/stale decision contract:
   IMPLEMENTED;
-- focused P1C-D tests: 19 / 19 PASS;
-- P1C-A/P1C-B/P1C-C/P1C-D direct regression: 105 / 105 PASS;
+- focused P1C-D tests: 21 / 21 PASS;
+- TASK-055/TASK-058 direct regression: 224 / 224 PASS;
 - Schema Draft 2020-12 and packaged byte identity: PASS;
 - independent Critic/Tester/Final Judge: PENDING;
 - unresolved Critical/High/Medium/Low findings: PENDING;

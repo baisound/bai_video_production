@@ -292,6 +292,60 @@ def test_expectation_absent_sentinel_requires_all_nullable_coordinates(
         MontageLearningExternalMonotonicAnchorExpectation.from_dict(body)
 
 
+def test_existing_expectation_and_evaluation_reject_partial_null_coordinates(
+    tmp_path: Path,
+) -> None:
+    _, first, _, _, _ = _ledgers(tmp_path)
+    anchor, evaluation = _bootstrap(first)
+    expectation = MontageLearningExternalMonotonicAnchorExpectation.for_anchor(
+        anchor
+    ).to_dict()
+    expectation["expected_anchored_chain_sha256"] = None
+    _resign_expectation(expectation)
+    with pytest.raises(ValueError, match="ledger sentinel"):
+        MontageLearningExternalMonotonicAnchorExpectation.from_dict(expectation)
+    evaluation_body = evaluation.to_dict()
+    evaluation_body["observed_anchor_revision"] = 1
+    evaluation_body["observed_anchor_sha256"] = anchor.to_dict()["anchor_sha256"]
+    evaluation_body["observed_ledger_revision"] = 1
+    evaluation_body["observed_latest_entry_sha256"] = None
+    evaluation_body["observed_chain_sha256"] = first.to_dict()["chain_sha256"]
+    evaluation_body["observed_ledger_sha256"] = first.to_dict()["ledger_sha256"]
+    evaluation_body["existing_anchor_sha256"] = anchor.to_dict()["anchor_sha256"]
+    _resign_evaluation(evaluation_body)
+    with pytest.raises(ValueError, match="ledger sentinel"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(evaluation_body)
+
+
+def test_evaluation_decision_revision_semantics_fail_closed(tmp_path: Path) -> None:
+    _, first, second, _, _ = _ledgers(tmp_path)
+    anchor, _ = _bootstrap(first)
+    advance = evaluate_montage_learning_external_monotonic_anchor(
+        anchor,
+        MontageLearningExternalMonotonicAnchorExpectation.for_anchor(anchor),
+        first,
+        second,
+    ).to_dict()
+    advance["decision"] = AnchorDecision.ROLLBACK_REJECTED.value
+    advance["reason_codes"] = [AnchorDecision.ROLLBACK_REJECTED.value]
+    advance["proposed_anchor"] = None
+    _resign_evaluation(advance)
+    with pytest.raises(ValueError, match="rollback evaluation"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(advance)
+
+    unchanged = evaluate_montage_learning_external_monotonic_anchor(
+        anchor,
+        MontageLearningExternalMonotonicAnchorExpectation.for_anchor(anchor),
+        first,
+        first,
+    ).to_dict()
+    unchanged["decision"] = AnchorDecision.FORK_REJECTED.value
+    unchanged["reason_codes"] = [AnchorDecision.FORK_REJECTED.value]
+    _resign_evaluation(unchanged)
+    with pytest.raises(ValueError, match="fork evaluation"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(unchanged)
+
+
 def test_anchor_revision_predecessor_and_bounds_fail_closed(tmp_path: Path) -> None:
     _, first, _, _, _ = _ledgers(tmp_path)
     anchor, _ = _bootstrap(first)

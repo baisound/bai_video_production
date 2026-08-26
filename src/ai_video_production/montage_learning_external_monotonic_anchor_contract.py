@@ -395,13 +395,12 @@ class MontageLearningExternalMonotonicAnchorExpectation(_SealedRecord):
         absent = revision == 0
         if absent != (anchor_sha is None):
             raise ValueError("anchor expectation revision/hash sentinel mismatch")
-        if absent != (
-            ledger_revision is None and chain is None and ledger_sha is None
-        ):
+        nullable_coordinates = (ledger_revision, chain, ledger_sha)
+        if absent and any(item is not None for item in nullable_coordinates):
             raise ValueError("anchor expectation ledger sentinel mismatch")
-        if not absent and (
-            ledger_revision is None or ledger_revision < revision
-        ):
+        if not absent and any(item is None for item in nullable_coordinates):
+            raise ValueError("anchor expectation ledger sentinel mismatch")
+        if not absent and ledger_revision < revision:
             raise ValueError("anchor expectation revision ordering is invalid")
         if body["expectation_is_authority"] is not False:
             raise ValueError("anchor expectation cannot be authority")
@@ -469,11 +468,16 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
         if (observed_anchor_revision == 0) != (observed_anchor_sha is None):
             raise ValueError("evaluation observed anchor sentinel mismatch")
         observed_absent = observed_anchor_revision == 0
-        if observed_absent != (
-            observed_ledger_revision is None
-            and observed_latest is None
-            and observed_chain is None
-            and observed_ledger_sha is None
+        observed_coordinates = (
+            observed_ledger_revision, observed_latest, observed_chain,
+            observed_ledger_sha,
+        )
+        if observed_absent and any(
+            item is not None for item in observed_coordinates
+        ):
+            raise ValueError("evaluation observed ledger sentinel mismatch")
+        if not observed_absent and any(
+            item is None for item in observed_coordinates
         ):
             raise ValueError("evaluation observed ledger sentinel mismatch")
         proposed_revision = _positive_revision(
@@ -525,6 +529,33 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
             raise ValueError("evaluation existing anchor mismatch")
         if observed_absent and existing is not None:
             raise ValueError("absent evaluation cannot report an existing anchor")
+        if decision is AnchorDecision.ADVANCE_CANDIDATE and (
+            observed_ledger_revision is None
+            or proposed_revision <= observed_ledger_revision
+        ):
+            raise ValueError("advance evaluation revision ordering is invalid")
+        if decision is AnchorDecision.UNCHANGED_CANDIDATE and (
+            observed_ledger_revision is None
+            or proposed_revision != observed_ledger_revision
+            or body["proposed_latest_entry_sha256"] != observed_latest
+            or body["proposed_chain_sha256"] != observed_chain
+            or body["proposed_ledger_sha256"] != observed_ledger_sha
+        ):
+            raise ValueError("unchanged evaluation coordinates are invalid")
+        if decision is AnchorDecision.ROLLBACK_REJECTED and (
+            observed_ledger_revision is None
+            or proposed_revision >= observed_ledger_revision
+        ):
+            raise ValueError("rollback evaluation revision ordering is invalid")
+        if decision is AnchorDecision.FORK_REJECTED and (
+            observed_ledger_revision is None
+            or proposed_revision < observed_ledger_revision
+            or (
+                proposed_revision == observed_ledger_revision
+                and body["proposed_ledger_sha256"] == observed_ledger_sha
+            )
+        ):
+            raise ValueError("fork evaluation coordinates are invalid")
         if body["contract_state"] != CONTRACT_STATE or body["anchor_state"] != ANCHOR_STATE:
             raise ValueError("evaluation cannot claim anchor establishment")
         _false_maps(body, "anchor evaluation")

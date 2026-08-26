@@ -1,6 +1,6 @@
 # TASK-058 — Montage Learning Bridge
 
-Status: ACTIVE — P0/P1A HOSTED CLOSED / P1B LOCAL REVIEW GREEN, HOSTING PENDING
+Status: ACTIVE — P0/P1A/P1B HOSTED CLOSED / P1C-A IMPLEMENTATION IN PROGRESS
 
 ## Objective
 
@@ -171,9 +171,9 @@ store module, and one focused fault/recovery test module.
   mutation before a separate hosted integration lock.
 
 P1C remains responsible for importer classification, exact Human binding
-verification, monotonic Project binding, canonical promotion, and public v2
-receipt issuance/recovery. A P1B staging digest cannot be used as
-canonical_store_commit_sha256.
+verification, durable staging membership/store-origin verification, monotonic
+Project binding, canonical promotion, and public v2 receipt issuance/recovery.
+A P1B staging digest cannot be used as canonical_store_commit_sha256.
 
 ## P1B local completion checkpoint
 
@@ -194,4 +194,45 @@ canonical_store_commit_sha256.
   provider, network, paid, Release, Deploy, and Production effects:
   NOT EXECUTED
 
-P1B remains hosting-pending until its dedicated CHANGELOG lock transaction,
+## P1B hosted closure
+
+- target PR: #361
+- target merge: 423fc827a62510c39b702e47814ba23178a395c5
+- CHANGELOG lock closure PR: #365
+- closure merge: 38c9364f00750db7f33c7ee779f2f3ab05a7e344
+- registry revision: 92
+- hosted and post-main checks: PASS
+- immutable P1B blobs: 6 / 6 preserved
+
+## P1C-A Atomic Unit
+
+P1C-A is the validation-only source/Human-binding preflight slice of P1C. It snapshots
+one untrusted exact delivery and one caller-supplied P1B staging entry as JSON,
+reruns the P0/TASK-055 exact lineage admission, rejects `do_not_learn`, derives
+a stable canonical Evidence ID, recomputes a domain-separated Human binding,
+and requires every entry coordinate to match before returning a body-free
+`NONAUTHORITATIVE_SOURCE_HUMAN_PREFLIGHT_PROJECTION`. Its public constructor and
+parser prove self-consistency only; compiler execution, source/Human origin, entry
+origin, durable ledger membership, and store origin remain false.
+
+Deleted Human edits remain eligible as explicit negative feedback when their
+exact TASK-055 lineage is valid and `do_not_learn=false`; P1C-A does not
+rewrite or erase the source Evidence. Generic SKILL observations cannot enter
+this preflight.
+
+P1C-A is DEV-4 `NO_MUTABLE_OR_EXTERNAL_I/O`; the existing TASK-055 validator
+may lazily read only packaged immutable Schemas. Its result fixes staging
+membership/store origin, monotonic Project anchor, rollback detection, canonical
+store write/commit, receipt mint, canonical admission, automatic promotion,
+Timeline, Resolve, and external effect flags to false. P1C-B or later remains
+responsible for recompile from raw delivery plus handle-bound durable staging
+readback, staging membership/store-origin verification, the handle-bound writer,
+monotonic Project anchor, canonical promotion transaction, recovery, and public
+v2 receipt issuance. A serialized P1C-A projection or `from_dict()` result alone
+must never be admitted.
+
+The P1C-A exact scope is six files: this task record, one detailed design, one
+public Schema and byte-identical packaged mirror, one bounded source module, and
+one focused test module. `CHANGELOG.md`, active locks, current state, task
+index, TASK-029, P0/P1A/P1B source/schema/test, and Product Project data are
+outside this source Unit.

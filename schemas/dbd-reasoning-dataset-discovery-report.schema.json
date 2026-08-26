@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/dbd-reasoning-dataset-discovery-report.schema.json",
+  "title": "DbD Reasoning Dataset Discovery Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_kind",
+    "observed_at",
+    "root_observation_sha256",
+    "discovery_policy_sha256",
+    "status",
+    "detail_code",
+    "items",
+    "state",
+    "report_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "DBD_REASONING_DATASET_DISCOVERY_REPORT"},
+    "observed_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "root_observation_sha256": {"$ref": "#/$defs/sha256"},
+    "discovery_policy_sha256": {"$ref": "#/$defs/sha256"},
+    "status": {
+      "enum": [
+        "NO_MANIFEST_FOUND",
+        "DISCOVERED_CANDIDATE_ONLY",
+        "BLOCKED_INVALID_EVIDENCE"
+      ]
+    },
+    "detail_code": {"$ref": "#/$defs/code"},
+    "items": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {"$ref": "#/$defs/item"}
+    },
+    "state": {"const": "EVIDENCE_ONLY_NO_DATASET_ADOPTION_OR_TRAINING_AUTHORITY"},
+    "report_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "NO_MANIFEST_FOUND"}}},
+      "then": {
+        "properties": {
+          "detail_code": {"enum": ["ROOT_NOT_FOUND", "NO_MANIFEST_FOUND"]},
+          "items": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "DISCOVERED_CANDIDATE_ONLY"}}},
+      "then": {
+        "properties": {
+          "detail_code": {"const": "PASS"},
+          "items": {
+            "minItems": 1,
+            "items": {
+              "allOf": [
+                {"$ref": "#/$defs/item"},
+                {"properties": {"status": {"const": "ADMITTED"}}}
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "BLOCKED_INVALID_EVIDENCE"}}},
+      "then": {
+        "properties": {
+          "detail_code": {"const": "INVALID_EVIDENCE"},
+          "items": {
+            "minItems": 1,
+            "contains": {
+              "properties": {"status": {"const": "INVALID"}},
+              "required": ["status"]
+            },
+            "minContains": 1
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"},
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_path_sha256",
+        "observation_sha256",
+        "status",
+        "detail_code",
+        "manifest_id",
+        "revision",
+        "rights_manifest_sha256",
+        "entry_count",
+        "eligible_candidate_count",
+        "needs_review_count",
+        "rejected_count",
+        "train_count",
+        "validation_count",
+        "test_count"
+      ],
+      "properties": {
+        "logical_path_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_sha256": {"$ref": "#/$defs/sha256"},
+        "status": {"enum": ["ADMITTED", "INVALID"]},
+        "detail_code": {"$ref": "#/$defs/code"},
+        "manifest_id": {
+          "type": ["string", "null"],
+          "pattern": "^MAN-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "revision": {"type": ["integer", "null"], "minimum": 1},
+        "rights_manifest_sha256": {
+          "oneOf": [
+            {"$ref": "#/$defs/sha256"},
+            {"type": "null"}
+          ]
+        },
+        "entry_count": {"type": "integer", "minimum": 0, "maximum": 2048},
+        "eligible_candidate_count": {"type": "integer", "minimum": 0, "maximum": 2048},
+        "needs_review_count": {"type": "integer", "minimum": 0, "maximum": 2048},
+        "rejected_count": {"type": "integer", "minimum": 0, "maximum": 2048},
+        "train_count": {"type": "integer", "minimum": 0, "maximum": 2048},
+        "validation_count": {"type": "integer", "minimum": 0, "maximum": 2048},
+        "test_count": {"type": "integer", "minimum": 0, "maximum": 2048}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "ADMITTED"}}},
+          "then": {
+            "properties": {
+              "detail_code": {"const": "PASS"},
+              "manifest_id": {"type": "string"},
+              "revision": {"type": "integer"},
+              "rights_manifest_sha256": {"$ref": "#/$defs/sha256"},
+              "entry_count": {"minimum": 1}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "INVALID"}}},
+          "then": {
+            "properties": {
+              "detail_code": {"not": {"const": "PASS"}},
+              "manifest_id": {"type": "null"},
+              "revision": {"type": "null"},
+              "rights_manifest_sha256": {"type": "null"},
+              "entry_count": {"const": 0},
+              "eligible_candidate_count": {"const": 0},
+              "needs_review_count": {"const": 0},
+              "rejected_count": {"const": 0},
+              "train_count": {"const": 0},
+              "validation_count": {"const": 0},
+              "test_count": {"const": 0}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

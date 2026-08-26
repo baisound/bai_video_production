@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CD_HELPER_RUNTIME_IMPLEMENTED_LOCAL_OPERATOR_GATE_NEXT`
+Status: `P1CE_PARENT_OPERATOR_SESSION_IMPLEMENTED_LOCAL_TK_UI_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -153,3 +153,25 @@ Detailed Evidence is `ppk-helper-runtime-p1cd-evidence.md`.
 The next bounded unit is parent/Operator integration with synthetic fixtures.
 Real PPK/passphrase, DPAPI custody, signing and public integration remain
 separate Human Gates.
+
+## P1C-E parent Operator Session checkpoint
+
+P1C-E adds the transient one-use parent Session over P1C-B. It transfers the
+secret-bearing AUTH_REQUEST without retaining it, clears all transferred
+mutable buffers on success and failure, and exposes only a destination-redacted
+repr of the Japanese READY projection.
+
+The parent re-admits P0 and independently cross-binds READY to the preflight
+hash, PPK hash, signer ID, fingerprint, Owner scope and canonical destination
+hash. Explicit confirmation is compiled from current READY only; false
+confirmation sends nothing and Cancel remains available. Helper failure codes,
+including custody-result-lost/read-back-required, remain terminal and never
+trigger an automatic retry.
+
+P1C-E focused Evidence is `10 PASS`; P1C-E plus direct P1C-D/P1C-B/P1C/P1B/
+P1A/R9B regression is `117 PASS`; compile passes. Detailed Evidence is
+`ppk-parent-operator-session-p1ce-evidence.md`.
+
+The next bounded unit is synthetic-only Tk Operator wiring. Real PPK selection,
+passphrase entry, helper launch, DPAPI custody and signing remain separate Human
+Gates.

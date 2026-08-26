@@ -1,6 +1,6 @@
 # TASK-058 — Montage Learning Bridge
 
-Status: ACTIVE — P0/P1A/P1B HOSTED CLOSED / P1C-A IMPLEMENTATION IN PROGRESS
+Status: ACTIVE — P0/P1A/P1B/P1C-A HOSTED CLOSED / P1C-B IMPLEMENTATION IN PROGRESS
 
 ## Objective
 
@@ -253,4 +253,52 @@ outside this source Unit.
 - unresolved Critical/High/Medium/Low findings: 0 / 0 / 0 / 0;
 - durable staging membership/store origin, monotonic Project anchor, canonical
   promotion/recovery, receipt issuance, Timeline/Resolve/native/provider effects:
+  NOT IMPLEMENTED / NOT EXECUTED.
+## P1C-B Atomic Unit
+
+P1C-B is the durable staging read-back slice of P1C. It snapshots one raw
+exact TASK-055 delivery, opens the fixed P1B staging ledger through pinned,
+non-inheritable handles, validates exact canonical ledger bytes and the full
+P1B hash chain, locates one expected entry digest, and reruns the P1C-A
+compiler against that handle-read entry. The body-free output is
+`NONAUTHORITATIVE_DURABLE_STAGING_READBACK_PROJECTION`. The live object and
+serialized mapping are diagnostic only and are never accepted as a reusable
+verification capability; later effects must rerun the raw verifier internally.
+
+P1C-B proves point-in-time raw recompilation, pinned-file read, fixed staging
+path identity, and exact ledger membership only. It does not prove the writer
+or staging-store origin, Product Project root canonical ownership, hostile
+ancestor namespace race protection, or post-return state. Source/Human actor
+origin, monotonic Project anchor, rollback detection, canonical promotion,
+receipt mint, canonical admission, automatic promotion, Timeline, Resolve, and
+external effects remain false.
+
+The P1C-B exact scope is six files: this task record, one detailed design, one
+public Schema and byte-identical packaged mirror, one bounded reader module,
+and one focused fault/boundary test module. P1B/P1C-A source, CHANGELOG, active
+locks, current state, task index, TASK-029, and Product Project data are outside
+this source Unit. P1C-C or later remains responsible for handle-bound writing,
+external monotonic anchoring, canonical promotion/recovery, and public v2
+receipt issuance.
+## P1C-B local completion checkpoint
+
+- source/review composition HEAD before this Evidence-only commit:
+  `9847ad292bb6f109b0c8bedf79053116d4013886`;
+- fresh origin/main integrated: `cc85d88`;
+- exact Product delta: 6 / 6 files;
+- focused P1C-B fault/boundary tests: 19 / 19 PASS;
+- direct P0/P1A/P1B/P1C-A/P1C-B/TASK-055 regression: 157 / 157 PASS;
+- full Product regression: 4122 PASS / 6 SKIPPED / 2 WARNINGS;
+- Schema Draft 2020-12 and packaged byte identity: PASS;
+- Schema bytes / SHA-256: 4775 /
+  `60FC3325F92B33128C2A8711C95D8A507745FEF0643074D02716FCCA0EC253AD`;
+- independent Tester and Critic: GO;
+- final Judge: GO;
+- unresolved Critical/High/Medium/Low findings: 0 / 0 / 0 / 0;
+- Windows host-native pinned-handle read/cleanup: EXECUTED / PASS;
+- POSIX host-native execution: NOT EXECUTED (static contract covered);
+- staging writer/store origin, Project-root canonical ownership, hostile ancestor
+  protection, post-return stability, monotonic anchor, rollback detection,
+  canonical promotion/recovery, receipt issuance, Timeline, Resolve, native,
+  provider, network, paid, Release, Deploy, and Production effects:
   NOT IMPLEMENTED / NOT EXECUTED.

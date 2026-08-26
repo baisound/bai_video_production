@@ -3,6 +3,28 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-058 P1Bとして、BVP所有のbody-free admission staging ledgerへExact lane座標をCAS appendし、duplicate read-back、replay/collision拒否、atomic replace、restart recoveryを行う非正本storeを追加しました。Generic laneは拒否し、source/Human origin、canonical store、monotonic/rollback、receipt、Timeline/Resolve/runtime authorityは生成しません。path securityはcooperative local writer限定で、hostile raceとdirectory durabilityはNOT_CONFIRMED、P1C canonical promotionにはhandle-bound writerを必須とします。
+
+- TASK-029 R9Cとして、exact R8再検証、ACTIVE signer policy、fresh R9B custody receipt、明示Human確認を束縛し、custody内部で署名してR9A即時検証するbody-free local signing ceremonyを追加しました。永続replay prevention、signature export、Knowledge Pack write/promotion、runtime apply、Release/Deploy/Production authorityは生成しません。
+
+- TASK-029 R9Bとして、明示Human確認をexact custody/Owner scope/public-key IDへ束縛し、raw Ed25519 seedをWindows Current User DPAPIで一回限り暗号化保管するOwner signing-key custodyとbody-free receiptを追加しました。sign/export/replace/rotate、PuTTY PPK変換、real signing、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。
+
+- TASK-058 P1Aとして、Exact EvidenceとGeneric Observationを分離するBvpMontageLearningAdmissionReceipt/v2のstrict read契約、domain-separated idempotency/self-hash、lane/status/store claim matrix、body-free public projectionを追加しました。caller-supplied構造の検証に限定し、origin/store commit/duplicate lineageは未検証、Generic automatic promotion、receipt mint/write、filesystem/importer/UI/native/Release/Deploy/Production authorityは生成しません。
+
+- TASK-029 R9Aとして、exact再検証済みR8 request、canonical trusted signer policy、raw Ed25519 public key identity、detached signatureをfail-closedに束縛し、signature/key本文を保持しないverification receiptを追加しました。Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback、Release/Deploy/external effectは許可しません。
+
+- TASK-058 P0として、TASK-055のproposal→approved plan→Human edit evidence本文を既存lineage admissionで再検証するExact laneと、bvp-montage-learning-adapter v1 exportをOwner scope未bindingのreview-only候補として再検証するGeneric laneを分離し、hash/FPS/delta/privacy/runtime claim/authority flagsをfail-closedに検証するbody-free contractを追加しました。canonical Timeline/learning store、receipt mint、automatic promotion、connector/UI/native/Resolve/runtime authorityは生成しません。
+
+- TASK-029 R8として、R7 unsigned signing candidateをexact current sourceから再生成し、Pack lineage、trusted signer policy、signer key identity、ED25519とversioned署名input bytesをcanonical hashへ束縛するbody-freeな外部署名検証requestを実装しました。signature/key本文は保持せず、署名生成・暗号検証、key store access、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+- TASK-029 R7として、R6 Knowledge Pack promotion candidateをexact current sourceから再生成し、同一候補hashへbindされた別々のHuman reviewと後続Independent Critic reviewを結合するbody-freeなunsigned signing candidateを実装しました。Owner/Project/reviewer座標と署名鍵は保持せず、signature create/verify、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+
+- TASK-029 R6として、R5 Owner Profile Registryとexact R1 Human Decision/R0 Human Action Evidenceを再検証し、複数Owner・複数Projectで同一仮説・条件・FeatureRuleが再現したかを6軸で評価するbody-freeなKnowledge Pack promotion candidateを実装しました。Owner/Project座標は候補へ保存せず、Knowledge Pack write/sign/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+- TASK-029 R5として、R3 encrypted Owner Profile StoreとR5 Registry Storeを決定的path順で同時lockし、latest R4 candidateをsourceから再生成して別の明示Human registry confirmationとexact照合した場合だけ、別DPAPI entropy domainのOwner-local Model/Profile RegistryへCAS appendするstoreを実装しました。runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+- TASK-029 R4として、R3 encrypted Owner Profile Historyのlatest revisionをexpected revisionとexact照合し、history/revision/materialization/confirmation/proposal/binding/decision lineageを保持したまま、TASK-008 ScoringProfileへsemantic再構築してModel/Profile Registry登録前のimmutable in-memory候補を生成するpure contractを実装しました。Model/Profile Registry write、runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
 
 - TASK-054 R3B-R4Cとして、canonical接続解決に基づく純粋Route Capability、Provider非実行の決定的fake adapter、権利・同意・由来・splitを固定するbody-free Dataset manifest、映像/Event/Human reviewへ結合した解説・実況ナレーション候補、監査対象候補集合digest付きのsplit crossing・重複・phrase overlap監査を追加しました。Provider実行、実媒体取込、Dataset採用、学習、model/runtime download、TTS、Timeline採用、Product Activation、Release/Deploy権限は付与しません。
 

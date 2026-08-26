@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.video.production/schemas/knowledge-pack-local-signing-ceremony-receipt.schema.json",
+  "title": "TASK-029 R9C Local Signing Ceremony Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_version",
+    "record_type",
+    "task_owner",
+    "receipt_id",
+    "ceremony_id",
+    "custody_receipt_sha256",
+    "signature_request_sha256",
+    "signer_key_id_sha256",
+    "detached_signature_sha256",
+    "verification_receipt_sha256",
+    "confirmation_sha256",
+    "completed_at_epoch_ms",
+    "state",
+    "latest_source_revalidated",
+    "custody_revalidated_at_signing",
+    "explicit_human_confirmation_received",
+    "persistent_replay_prevention_present",
+    "signature_bytes_included",
+    "public_key_material_included",
+    "private_key_material_included",
+    "private_key_export_authorized",
+    "knowledge_pack_write_authorized",
+    "knowledge_pack_promotion_authorized",
+    "automatic_promotion_authorized",
+    "runtime_profile_apply_authorized",
+    "rollback_execution_authorized",
+    "release_authorized",
+    "external_effect_authorized",
+    "ceremony_receipt_sha256"
+  ],
+  "properties": {
+    "receipt_version": {
+      "const": "1.0.0"
+    },
+    "record_type": {
+      "const": "KNOWLEDGE_PACK_LOCAL_SIGNING_CEREMONY_RECEIPT"
+    },
+    "task_owner": {
+      "const": "TASK-029"
+    },
+    "receipt_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$",
+      "type": "string"
+    },
+    "ceremony_id": {
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$",
+      "type": "string"
+    },
+    "custody_receipt_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "signature_request_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "signer_key_id_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "detached_signature_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "verification_receipt_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "confirmation_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "completed_at_epoch_ms": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "state": {
+      "const": "SIGNED_AND_VERIFIED"
+    },
+    "latest_source_revalidated": {
+      "const": true
+    },
+    "custody_revalidated_at_signing": {
+      "const": true
+    },
+    "explicit_human_confirmation_received": {
+      "const": true
+    },
+    "persistent_replay_prevention_present": {
+      "const": false
+    },
+    "signature_bytes_included": {
+      "const": false
+    },
+    "public_key_material_included": {
+      "const": false
+    },
+    "private_key_material_included": {
+      "const": false
+    },
+    "private_key_export_authorized": {
+      "const": false
+    },
+    "knowledge_pack_write_authorized": {
+      "const": false
+    },
+    "knowledge_pack_promotion_authorized": {
+      "const": false
+    },
+    "automatic_promotion_authorized": {
+      "const": false
+    },
+    "runtime_profile_apply_authorized": {
+      "const": false
+    },
+    "rollback_execution_authorized": {
+      "const": false
+    },
+    "release_authorized": {
+      "const": false
+    },
+    "external_effect_authorized": {
+      "const": false
+    },
+    "ceremony_receipt_sha256": {
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "type": "string"
+    }
+  }
+}

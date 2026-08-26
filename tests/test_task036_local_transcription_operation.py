@@ -21,6 +21,8 @@ from ai_video_production.task036_product_ports import Task036LocalTranscriptionP
 ASSET_ID = "ASSET-00000000000000000000000000"
 PROJECT_ID = "project-1"
 JOB_ID = "JOB-00000000000000000000000000"
+PROCESS_COMPLETION_TIMEOUT_SECONDS = 30
+PROCESS_CLEANUP_TIMEOUT_SECONDS = 5
 
 
 def file_sha(path: Path) -> str:
@@ -197,15 +199,26 @@ def test_cross_process_admission_executes_provider_exactly_once(tmp_path: Path) 
         )
         for _ in range(2)
     ]
-    for process in processes:
-        process.start()
-    for process in processes:
-        process.join(10)
-        assert process.exitcode == 0
+    try:
+        for process in processes:
+            process.start()
+        for process in processes:
+            process.join(PROCESS_COMPLETION_TIMEOUT_SECONDS)
+            assert not process.is_alive(), "spawned transcription process exceeded completion timeout"
+            assert process.exitcode == 0
 
-    observed = sorted(results.get(timeout=2) for _ in range(2))
-    assert observed == ["COMPLETED", "ERR_TASK036_TRANSCRIPTION_RECOVERY_REQUIRED"]
-    assert marker.read_text(encoding="utf-8").splitlines() == ["provider-call"]
+        observed = sorted(results.get(timeout=2) for _ in range(2))
+        assert observed == ["COMPLETED", "ERR_TASK036_TRANSCRIPTION_RECOVERY_REQUIRED"]
+        assert marker.read_text(encoding="utf-8").splitlines() == ["provider-call"]
+    finally:
+        for process in processes:
+            if process.is_alive():
+                process.terminate()
+                process.join(PROCESS_CLEANUP_TIMEOUT_SECONDS)
+            if process.is_alive():
+                process.kill()
+                process.join(PROCESS_CLEANUP_TIMEOUT_SECONDS)
+            assert not process.is_alive(), "spawned transcription process could not be stopped"
 
 
 def test_source_mismatch_and_symlink_fail_before_provider(tmp_path: Path) -> None:

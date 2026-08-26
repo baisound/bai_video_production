@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/montage-learning-admission-receipt.schema.json",
+  "title": "TASK-058 Montage Learning Admission Receipt v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "contract_profile",
+    "receipt_id",
+    "admission_class",
+    "source_contract_profile",
+    "source_record_id",
+    "source_sha256",
+    "owner_scope_hash",
+    "idempotency_key_sha256",
+    "status",
+    "canonical_store_written",
+    "canonical_evidence_id",
+    "canonical_evidence_sha256",
+    "canonical_store_commit_sha256",
+    "duplicate_of_receipt_sha256",
+    "reason_codes",
+    "attempt",
+    "processed_at",
+    "bridge_instance_id",
+    "receipt_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "2.0.0"},
+    "message_type": {"const": "BvpMontageLearningAdmissionReceipt"},
+    "contract_profile": {"const": "bvp-task058-montage-learning-admission-receipt-v2"},
+    "receipt_id": {"$ref": "#/$defs/id"},
+    "admission_class": {"enum": ["EXACT_EVIDENCE", "GENERIC_OBSERVATION"]},
+    "source_contract_profile": {
+      "enum": [
+        "bvp-task058-montage-exact-evidence-v1",
+        "bvp-task029-file-bridge-v1"
+      ]
+    },
+    "source_record_id": {"$ref": "#/$defs/id"},
+    "source_sha256": {"$ref": "#/$defs/digest"},
+    "owner_scope_hash": {"$ref": "#/$defs/digest"},
+    "idempotency_key_sha256": {"$ref": "#/$defs/digest"},
+    "status": {"enum": ["ACCEPTED", "DUPLICATE", "REJECTED", "REVIEW_REQUIRED"]},
+    "canonical_store_written": {"type": "boolean"},
+    "canonical_evidence_id": {"$ref": "#/$defs/nullableId"},
+    "canonical_evidence_sha256": {"$ref": "#/$defs/nullableDigest"},
+    "canonical_store_commit_sha256": {"$ref": "#/$defs/nullableDigest"},
+    "duplicate_of_receipt_sha256": {"$ref": "#/$defs/nullableDigest"},
+    "reason_codes": {
+      "type": "array",
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/reasonCode"}
+    },
+    "attempt": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "processed_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+    },
+    "bridge_instance_id": {"$ref": "#/$defs/id"},
+    "receipt_sha256": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullableId": {
+      "oneOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]
+    },
+    "nullableDigest": {
+      "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+    },
+    "reasonCode": {
+      "enum": [
+        "SCHEMA_INVALID",
+        "HASH_MISMATCH",
+        "OWNER_SCOPE_MISMATCH",
+        "ID_COLLISION",
+        "LINEAGE_NOT_FOUND",
+        "LINEAGE_MISMATCH",
+        "REVIEW_BINDING_REQUIRED",
+        "FORBIDDEN_DATA_PRESENT",
+        "PATH_UNSAFE",
+        "FILE_UNSTABLE",
+        "STORE_COMMIT_FAILED",
+        "DUPLICATE_IDEMPOTENCY_KEY"
+      ]
+    },
+    "terminalRejectionReason": {
+      "enum": [
+        "SCHEMA_INVALID",
+        "HASH_MISMATCH",
+        "OWNER_SCOPE_MISMATCH",
+        "ID_COLLISION",
+        "LINEAGE_NOT_FOUND",
+        "LINEAGE_MISMATCH",
+        "FORBIDDEN_DATA_PRESENT",
+        "PATH_UNSAFE",
+        "FILE_UNSTABLE",
+        "STORE_COMMIT_FAILED"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"admission_class": {"const": "EXACT_EVIDENCE"}}},
+      "then": {
+        "properties": {
+          "source_contract_profile": {"const": "bvp-task058-montage-exact-evidence-v1"},
+          "status": {"enum": ["ACCEPTED", "DUPLICATE", "REJECTED"]}
+        }
+      },
+      "else": {
+        "properties": {
+          "source_contract_profile": {"const": "bvp-task029-file-bridge-v1"},
+          "status": {"enum": ["REVIEW_REQUIRED", "REJECTED"]},
+          "canonical_store_written": {"const": false}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "ACCEPTED"}}},
+      "then": {
+        "properties": {
+          "admission_class": {"const": "EXACT_EVIDENCE"},
+          "reason_codes": {"const": []},
+          "duplicate_of_receipt_sha256": {"const": null}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "DUPLICATE"}}},
+      "then": {
+        "properties": {
+          "admission_class": {"const": "EXACT_EVIDENCE"},
+          "reason_codes": {"const": ["DUPLICATE_IDEMPOTENCY_KEY"]},
+          "duplicate_of_receipt_sha256": {"$ref": "#/$defs/digest"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "REVIEW_REQUIRED"}}},
+      "then": {
+        "properties": {
+          "admission_class": {"const": "GENERIC_OBSERVATION"},
+          "reason_codes": {"const": ["REVIEW_BINDING_REQUIRED"]},
+          "canonical_store_written": {"const": false},
+          "duplicate_of_receipt_sha256": {"const": null}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "REJECTED"}}},
+      "then": {
+        "properties": {
+          "reason_codes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 10,
+            "uniqueItems": true,
+            "items": {"$ref": "#/$defs/terminalRejectionReason"}
+          },
+          "canonical_store_written": {"const": false},
+          "duplicate_of_receipt_sha256": {"const": null}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"canonical_store_written": {"const": true}}},
+      "then": {
+        "properties": {
+          "admission_class": {"const": "EXACT_EVIDENCE"},
+          "status": {"enum": ["ACCEPTED", "DUPLICATE"]},
+          "canonical_evidence_id": {"$ref": "#/$defs/id"},
+          "canonical_evidence_sha256": {"$ref": "#/$defs/digest"},
+          "canonical_store_commit_sha256": {"$ref": "#/$defs/digest"}
+        }
+      },
+      "else": {
+        "properties": {
+          "canonical_evidence_id": {"const": null},
+          "canonical_evidence_sha256": {"const": null},
+          "canonical_store_commit_sha256": {"const": null}
+        }
+      }
+    }
+  ]
+}

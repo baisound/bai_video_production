@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_HOSTED_CLOSED / R3_OWNER_PROFILE_STORE_IMPLEMENTED_LOCAL_HOSTING_PENDING`
+- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_R9B_HOSTED_CLOSED / R9C_LOCAL_SIGNING_CEREMONY_IMPLEMENTED_LOCAL`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -67,7 +67,105 @@ R3はR2候補を保存直前にexact sourceから再生成し、別recordの明�
 
 R3の確認は1回のencrypted Store appendだけを許可する。runtime scoringへの適用、Model/Profile Registry write、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deployは許可しない。
 
-R3 focused＋直接依存は`36 PASS`、TASK-019/029全体は`61 PASS`、全Product regressionは`3681 PASS / 6 SKIP / 0 FAIL`。compileall、schema mirror、diff-checkもPASSであり、local commit-ready。hostingは次のgateである。
+R3 focused＋直接依存は`36 PASS`、TASK-019/029全体は`61 PASS`、全Product regressionは`3681 PASS / 6 SKIP / 0 FAIL`。target PR #303、lock-host PR #304、closure PR #305がmergeされ、fresh main `797feb073cf50d3a440b070265e2dbed7fc59cad`、registry revision 68、post-main CI/Security PASSでshared CHANGELOG lockを解放済み。
+
+## R4 implementation — pure Owner Profile Registry admission candidate
+
+R4はR3 encrypted Owner Profile Historyのlatest revisionを毎回exact再検証し、TASK-008 `ScoringProfile`へsemantic再構築した上で、Model/Profile Registry登録前のimmutable in-memory候補を生成する。
+
+- history/revision/materialization/confirmation/proposal/binding/decision lineageをhashで固定する。
+- callerの`expected_history_revision`とlatest revisionが一致しない場合はstaleとしてfail closedにする。
+- rule、modality、weight、source selector、semantic version、Profile hashをTASK-008型で再検証する。
+- compatibility contractは`TASK-008/SCORING_PROFILE/1.0.0`へ固定する。
+- Owner scopeはbody-free SHA-256 coordinateだけを保持する。
+
+R4はModel/Profile Registry write、runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy authorityを生成しない。別の明示Human registry confirmationと後続Unitが必要である。
+
+R4 focused＋R2/R3直接依存は`23 PASS`、TASK-019/029 chainは`68 PASS`、最終全Product regressionは`3688 PASS / 6 SKIP / 0 FAIL`。compileall、strict Schema validation、schema mirror、diff-checkもPASS。
+
+## R5 implementation — explicit-Human-confirmed encrypted Owner Profile Registry Store
+
+R5はR4候補とは別の明示Human registry confirmationを必須にし、R3 encrypted Owner Profile StoreとR5 Registry Storeを決定的path順で同時lockした上でsourceを再読込し、R4候補をexact再生成して1回だけ登録する。
+
+- source history revision/hash、source Profile revision hash、Owner scope、candidate/Profile hashをconfirmationへ固定する。
+- destinationはexpected registry revision CAS、append-only hash chain、strict source revision advance、Owner/source store/Profile identity、active Profile baseline continuityを検証する。
+- candidate/confirmation/source Profile revision/Profile version replayを拒否する。
+- Windows Current User DPAPIを既定とし、R1 Decision Store/R3 Owner Profile Storeとは別entropy domainを使う。
+- disk envelopeはciphertextとintegrity metadataだけを持ち、Owner scope、candidate/confirmation ID、Profile snapshot、lineageを平文保存しない。
+- source/destination同一path、symlink、wrong-key、tamper、plaintext、partial writeをfail closedにする。
+
+R5の1 appendはModel/Profile Registryへの登録だけを行う。runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deployは許可しない。
+
+R5 focused＋R4回帰は`14 PASS`、R2-R5直接依存は`30 PASS`、TASK-019/029 chainは`75 PASS`、全Product regressionは`3781 PASS / 6 SKIP / 0 FAIL`。Windows実DPAPI synthetic round-trip、compileall、strict Schema validation、schema mirror、diff-checkもPASS。
+
+R5 Design/Critic/Judge: `owner-profile-registry-store-r5-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。
+
+R5はtarget PR #325、lock-host PR #326、closure PR #330でhosted closedとなり、fresh main `621e20f3b4e62f47b5fb131aba6c322ffaf916f9`、registry revision 74、active nonclosed integration locks 0、closure post-main CI 6/6とSecurity PASSでshared CHANGELOG reservationを解放済み。
+
+## R6 implementation — pure cross-Owner Knowledge Pack promotion candidate
+
+R6はR5 Owner Profile Registry Historyと、そのlatest revisionが固定したR1 Owner Decision History、選択済みADOPTED decision、exact R0 Human Action Evidenceを毎回再検証し、複数Owner・複数Projectで同じ仮説・条件・FeatureRuleが再現したかを評価するimmutable in-memory候補を作る。
+
+- Owner/Project scope座標はdistinct countにだけ使い、候補へ保存しない。
+- one-source-per-OwnerとEvidence hash replay拒否により、同一Ownerの水増しを防ぐ。
+- quality、rework、time、QA、Human acceptance、sample confidenceを別軸のまま集約する。
+- 平均ではなく各軸のminimum deltaとminimum Owner benefitを保持し、悪化を他Ownerの加点で隠さない。
+- Owner不足、Project不足、sample不足、axis regression、効果不足を別stateにする。
+- lineage、Evidence、hypothesis/context、active FeatureRule不一致はstate化せずfail closedにする。
+
+R6はKnowledge Pack write/promotion、signature、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。Human review、independent Critic、signature、latest-source revalidationは後続Gateである。
+
+R6 focusedは`5 PASS`、TASK-019/029 direct regressionは`80 PASS`、全Product regressionは`3786 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-promotion-candidate-r6-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。target PR #332、closure PR #335、registry revision 76でhosted closedとなり、shared CHANGELOG reservationを解放済み。
+
+## R7 implementation — Human/Critic-bound unsigned Knowledge Pack signing candidate
+
+R7はR6候補をexact current R5/R1/R0 sourcesから毎回再生成し、同一候補hashへbindされた別々のHuman reviewとIndependent Critic reviewを結合して、外部署名Gate直前のbody-free immutable候補をpure in-memoryで生成する。
+
+- Human/Critic review IDとreviewer coordinateを相異ならせる。
+- Critic reviewはHuman reviewより後でなければならない。
+- Criticの署名待ちACCEPTはunresolved Critical/Highが0の場合だけ許す。
+- Human rejectionとCritic rejectionを別stateに保持する。
+- Owner/Project/reviewer座標は出力へ含めず、exact review hashだけを保持する。
+- candidate/feature rule/policy/predecessor Pack lineageをhashで固定する。
+
+R7は署名鍵を受け取らず、signature create/verify、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。
+
+R7 focusedは`6 PASS`、TASK-019/029 direct regressionは`86 PASS`、全Product regressionは`3792 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-signing-candidate-r7-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。target PR #336、closure PR #338、registry revision 78、fresh main `a18ad35469d60583082cab4ffc09f74092c175e9`、post-main CI 6/6とSecurity PASSでhosted closedとなり、shared CHANGELOG reservationを解放済み。
+
+## R8 implementation — body-free external signature verification request
+
+R8はR7 signing candidateをexact compile inputsから毎回再生成し、Pack lineage、trusted signer policy SHA-256、signer key ID SHA-256、allowlist済みalgorithmをversioned canonical message hashへ束縛するimmutableな外部署名検証依頼をpure in-memoryで生成する。外部署名対象はversioned input contractにより、`sha256:`接頭辞を含むmessage hash文字列のASCII bytesへ固定する。
+
+- R7 payloadとlatest recompile結果の完全一致を要求する。
+- R7 stateが`READY_FOR_EXTERNAL_SIGNATURE`の場合だけrequestを生成する。
+- algorithmは`ED25519`だけを許可する。
+- requestはsignature bytes、public/private key material、credential本文を含めない。
+
+R8は暗号署名・暗号検証、key store access、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Git release、Timeline/Resolve、Provider/Cloud、Release/Deployを実装・許可しない。`signature_present=false`、`signature_verified=false`であり、外部暗号検証PASS authorityを生成しない。
+
+R8 focusedは`5 PASS`、TASK-019/029 direct regressionは`91 PASS`、全Product regressionは`3797 PASS / 6 SKIP / 0 FAIL`。compile、strict Schema validation、schema mirror、no-I/O/no-crypto-import、diff/scopeもPASS。Design/Critic/Judgeは`knowledge-pack-signature-verification-request-r8-design-critic-judge.md`。Residual Critical/High/Mediumは`0/0/0`。hosted integrationはpending。
+
+実署名、trusted public key解決、署名本文を用いた暗号検証、署名済みKnowledge Pack receiptおよびPack writeは別の明示Human Gateと後続Atomic Unitを必要とする。
+
+## R9A implementation — Ed25519 verification with body-free receipt
+
+R9A verifies an exact R8 request against a strict trusted-signer policy, raw 32-byte Ed25519 public key, and detached 64-byte signature. It returns only a body-free verification receipt and never stores key/signature bodies. target PR #347, repair PR #349, and closure PR #350 merged; fresh main `ee8ed50723ff2925ad3eb3da0c45b013b6237936`, registry revision 84, post-main CI/Security PASS, and shared CHANGELOG lock released.
+
+## R9B implementation — one-shot encrypted Owner signing-key custody
+
+R9B admits one raw 32-byte Ed25519 seed only after explicit Human confirmation bound to the exact custody ID, Owner-scope SHA-256, and public-key-derived signer key ID. Windows Current User DPAPI is the default with a dedicated entropy domain. The disk envelope contains ciphertext and integrity metadata only; validated atomic replace, cross-process lock, symlink rejection, and one-shot no-overwrite behavior fail closed.
+
+The public read API returns a body-free custody receipt. There is no signing, export, replacement, rotation, PuTTY/OpenSSH conversion, Knowledge Pack write/promotion, runtime Profile apply, rollback, Release, Deploy, Production, Resolve/Timeline, provider, or Cloud authority. Tests use synthetic keys only; no real Owner secret is generated, printed, committed, or sent to CI.
+
+Focused R9B is `13 PASS`, including Windows DPAPI synthetic round-trip, Schema mirror validation, tamper/wrong-cipher/plaintext/symlink/atomic-failure negatives, confirmation binding, and one-shot overwrite rejection. Design/Critic/Judge is `owner-signing-key-custody-r9b-design-critic-judge.md`. Residual Critical/High/Medium/Low is `0/0/0/0`. TASK-029全体は `94 PASS`、全Product回帰は `3865 PASS / 6 SKIP / 0 FAIL`。hosted integrationと独立reviewはpending。
+
+R9Bはtarget PR #353、lock-host PR #357、closure PR #358でhosted closedとなり、fresh main `eea0296dbbd49c5dfe43fe46df6d2955dbd711fe`、registry revision 88、active nonclosed integration locks 0、closure post-main CI 6/6とSecurity PASSでshared CHANGELOG reservationを解放済み。
+
+## R9C implementation — exact local signing ceremony with immediate verification
+
+R9CはR8 exact sourceを鍵アクセス前に再検証し、ACTIVE trusted signer policy、fresh R9B custody receipt、exact Human confirmationを結合する。custody内部のseedでR8 sha256-prefixed ASCII messageだけを署名し、署名を外へ返さず同一呼出し内でR9A検証する。返却値はbody-free ceremony/verification receiptだけである。
+
+永続ceremony journalは持たないためdurable one-shot replay preventionを主張せず、`persistent_replay_prevention_present=false`を固定する。signature export、Knowledge Pack write/promotion、automatic promotion、runtime apply、rollback、Release/Deploy/Production authorityは生成しない。focused synthetic testは`7 PASS`、R8-R9C directは`33 PASS`、TASK-029全体は`101 PASS`、full Product regressionは`3906 PASS / 6 SKIP / 0 FAIL`。Design/Critic/Judgeは`knowledge-pack-local-signing-ceremony-r9c-design-critic-judge.md`。real Owner key/signing executionは`NOT_EXECUTED`。
 
 ## Objective
 

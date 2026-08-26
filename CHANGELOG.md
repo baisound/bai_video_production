@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-054 R6B-Aとして、固定Dataset Evidence配置をread-only探索し、既存R4A rights/provenance manifestで再Admissionするbody-free発見境界を追加しました。raw path・JSON本文・media・transcript・narrationを保持せず、symlink/junction、identity crossing、非正規revision、oversize、read error、探索上限はfail closedです。実Dataset採用・学習・評価・昇格・runtime実行Authorityは生成しません。
+
 - TASK-029 R9Dとして、R9C署名前にexact ceremony identityをcaller-selected local journalへ予約し、trusted R9C/R9A結果をcross-bind後にbody-free receipt hashだけを確定するpath-local no-replay state machineを追加しました。別path・削除・directory durability・power loss・hostile raceは保証せず、実Owner鍵/署名、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。
 
 - TASK-054として、DbD実況・解説AIのPreview/学習分離、Evidence基盤、Operator UI、固定Qwen3-8B実行環境およびlocal/free/no-credentialの一回限りR3D推論境界を追加しました。実Dataset学習・学習済みadapter・実データ評価は未開始で、Binding promotion、Timeline/Resolve、Release/Deploy/Production authorityは生成しません。

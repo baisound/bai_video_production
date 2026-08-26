@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CG2_PACKAGING_NATIVE_PASS_NATIVE_OPERATOR_ADAPTER_NEXT`
+Status: `P1CH1_NATIVE_SECRET_ADAPTER_PASS_WINDOWS_BACKEND_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -253,3 +253,30 @@ oversized functional cases passed under WSL. Detailed Evidence is
 The next unit is P1C-H native file selection and masked passphrase adapter.
 Real PPK/passphrase use, DPAPI custody, signing, Authenticode, installer,
 publish, promote, Release, Deploy and Production remain separate Gates.
+
+## P1C-H1 native secret adapter contract checkpoint
+
+P1C-H1 adds the Python-local transient adapter over P0, P1C-E and the P1C-G2
+packaged-helper identity. It validates the helper before file selection and
+again before secret collection, retains selected paths only inside Python,
+returns path/body-free candidate and READY projections, requires explicit
+public-identity confirmation, and re-reads both files with exact P0 equality
+immediately before Session begin.
+
+The secret backend can write only into one caller-owned bounded mutable buffer.
+H1 validates UTF-8 without a string/immutable-secret conversion and clears that
+buffer plus both file buffers on every success, cancel and failure path. Helper
+or selected-file drift fails before Session dispatch. Final Confirm/Cancel
+remain one-use P1C-E operations.
+
+P1C-H1 focused Evidence is `17 PASS`; P1C-H1 plus P1C-E is `27 PASS`.
+All TASK-059 direct Windows suites are `160 PASS` plus the two already-known
+Pytest 9 oversized parameter-ID setup errors; the complete pure P0 suite is
+`26 PASS` under WSL. Critic found and resolved the helper-preflight timing
+gap; residual Critical/High/Medium/Low is `0 / 0 / 0 / 0`. Detailed Evidence
+is `ppk-native-secret-adapter-contract-p1ch1-evidence.md`.
+
+P1C-H2 next owns the concrete Windows masked secret dialog and fixed PPK/public
+file filters. Real PPK/passphrase use, DPAPI custody, signing, Authenticode,
+installer, publish, promote, Release, Deploy and Production remain separate
+Gates.

@@ -176,7 +176,7 @@ journalはkey/public-key/signature bytesを保存せず、R9Cのbody-free境界�
 
 shared metadata順序はOwner指示によりTASK-058 P1B closure、TASK-054、TASK-029 R9Dの順とする。R9D source Unitは`CHANGELOG.md`と`ACTIVE-WORK-LOCKS.json`を変更せず、R9D専用lockはTASK-054 canonical closure後にfresh mainから別transactionで取得する。
 
-R9D focusedは`9 PASS`、R8-R9D directは`42 PASS`、TASK-029全体は`110 PASS`。現行full Product回帰は既知のCドライブ低容量安全ゲート1件を除外して`3914 PASS / 6 SKIP / 1 DESELECT`。無除外runはR9D外のTASK-036 native image CLIが実空き`8.78 GiB`に対する`ERR_RESOURCE_LOCAL_DISK_LOW`で正しくfail-closedし、`3913 PASS / 6 SKIP / 1 FAIL`だったため、full unfiltered technical resultは`NOT_CONFIRMED`として分離する。
+R9D focusedは`9 PASS`、R8-R9D directは`48 PASS`、TASK-029全体は`110 PASS`。現行full Product回帰は既知のCドライブ低容量安全ゲート1件を除外して`3914 PASS / 6 SKIP / 1 DESELECT`。無除外runはR9D外のTASK-036 native image CLIが実空き`8.78 GiB`に対する`ERR_RESOURCE_LOCAL_DISK_LOW`で正しくfail-closedし、`3913 PASS / 6 SKIP / 1 FAIL`だったため、full unfiltered technical resultは`NOT_CONFIRMED`として分離する。
 
 ## Objective
 

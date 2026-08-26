@@ -84,7 +84,7 @@ Independent Critic/Tester/Judge: `PENDING` before PR Ready/merge. This document 
 ## Local acceptance
 
 - focused R9D state-machine, crash, conflict, atomic-failure, schema and privacy tests: `9 PASS`;
-- R8/R9A/R9B/R9C/R9D direct regression: `42 PASS`;
+- R8/R9A/R9B/R9C/R9D direct regression: `48 PASS`;
 - TASK-029 regression: `110 PASS`;
 - current broad Product regression excluding the exact low-disk-gated TASK-036 test: `3914 PASS / 6 SKIP / 1 DESELECT`;
 - unfiltered Product run: `3913 PASS / 6 SKIP / 1 FAIL`; the sole failure was `ERR_RESOURCE_LOCAL_DISK_LOW` from the unrelated TASK-036 native image CLI with actual C-drive free space `8.78 GiB`, so the unfiltered technical result remains `NOT_CONFIRMED` without deleting Owner data;

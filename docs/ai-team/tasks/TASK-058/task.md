@@ -1,6 +1,6 @@
 # TASK-058 — Montage Learning Bridge
 
-Status: `ACTIVE — P0 HOSTED CLOSED / P1A IMPLEMENTED LOCAL REVIEW GREEN`
+Status: ACTIVE — P0/P1A HOSTED CLOSED / P1B LOCAL REVIEW GREEN, HOSTING PENDING
 
 ## Objective
 
@@ -121,3 +121,77 @@ hosted and fresh-main green.
 
 P1A remains hosting-pending until its dedicated CHANGELOG lock transaction,
 hosted checks, merge, post-main checks, and closure read-back are complete.
+
+## P1A hosted closure
+
+- target PR: #351
+- target merge: f524781b88fafb469b55f7853976ebd73ec3c1bd
+- CHANGELOG lock closure PR: #356
+- closure merge: 85ddb70601898046826f869a9a9a1f2856ebdfb3
+- registry revision: 86
+- hosted and post-main checks: PASS
+- immutable P1A blobs: 6 / 6 preserved
+
+## P1B Atomic Unit
+
+P1B adds a BVP-owned, body-free admission staging ledger. The ledger provides
+an in-file hash chain, optimistic CAS, exact duplicate read-back, collision
+rejection, atomic replacement, and restart read-back. It accepts only claimed
+P0 exact-profile coordinates and never accepts the generic SKILL profile.
+
+P1B is a DEV-4 filesystem/state-machine unit. It stores identifiers, digests,
+timestamps, and explicit false authority flags only. It does not store proposal,
+plan, evidence, actor, account, transcript, media, path, or secret bodies.
+P1B does not verify P0 source origin, Human-binding origin, monotonic head, or
+rollback resistance and does not create a canonical store commit. P1C must
+revalidate the source, verify the exact Human binding, establish an external
+monotonic anchor, and atomically promote before any public receipt can claim a
+canonical store commit.
+P1B's exact path security model is COOPERATIVE_LOCAL_WRITER_ONLY. Its path
+checks reject pre-existing and observed unsafe paths, but hostile concurrent
+junction/reparse replacement protection is NOT_CONFIRMED. P1C must use a
+handle-bound writer for canonical promotion; the P1B staging writer and
+external_effect_authorized=false flag are not filesystem-race security proof.
+
+
+The P1B completion scope contains exactly six files: this task record, one
+detailed design, one public schema and its byte-identical packaged mirror, one
+store module, and one focused fault/recovery test module.
+
+### P1B prohibited effects
+
+- importer scan/claim/move/quarantine, connector, watcher, queue, UI, installer,
+  or capability handshake;
+- Generic observation canonical admission or automatic promotion;
+- Human binding creation/verification and public receipt mint/publication;
+- Timeline, Resolve, native, provider, network, database, Release, Deploy, or
+  Production effects;
+- real Product Project/store mutation outside isolated tests;
+- CHANGELOG, active-lock Registry, current-state, task-index, or TASK-029
+  mutation before a separate hosted integration lock.
+
+P1C remains responsible for importer classification, exact Human binding
+verification, monotonic Project binding, canonical promotion, and public v2
+receipt issuance/recovery. A P1B staging digest cannot be used as
+canonical_store_commit_sha256.
+
+## P1B local completion checkpoint
+
+- fresh-main composition HEAD: e22945635abc398d102283b11598bd1452eb196c
+- exact scope: 6 / 6
+- schema Draft 2020-12 and packaged byte-identical mirror: PASS
+- compile and diff check: PASS
+- focused fault/recovery tests: 28 / 28 PASS
+- related TASK-058/TASK-055/atomic regression: 119 / 119 PASS
+- independent path-security delta observations: 9 / 9 PASS
+- full repository regression: 3927 PASS / 6 SKIPPED / 2 WARNINGS
+- final Judge: GO
+- independent Tester and Critic: GO
+- unresolved Critical/High/Medium/Low findings: 0 / 0 / 0 / 0
+- hostile path-race protection, directory durability, P1C handle-bound
+  canonical promotion implementation/execution: NOT_CONFIRMED
+- Product Project, canonical store, receipt, Timeline, Resolve, native,
+  provider, network, paid, Release, Deploy, and Production effects:
+  NOT EXECUTED
+
+P1B remains hosting-pending until its dedicated CHANGELOG lock transaction,

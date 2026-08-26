@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-058 P1Bとして、BVP所有のbody-free admission staging ledgerへExact lane座標をCAS appendし、duplicate read-back、replay/collision拒否、atomic replace、restart recoveryを行う非正本storeを追加しました。Generic laneは拒否し、source/Human origin、canonical store、monotonic/rollback、receipt、Timeline/Resolve/runtime authorityは生成しません。path securityはcooperative local writer限定で、hostile raceとdirectory durabilityはNOT_CONFIRMED、P1C canonical promotionにはhandle-bound writerを必須とします。
+
 - TASK-029 R9Cとして、exact R8再検証、ACTIVE signer policy、fresh R9B custody receipt、明示Human確認を束縛し、custody内部で署名してR9A即時検証するbody-free local signing ceremonyを追加しました。永続replay prevention、signature export、Knowledge Pack write/promotion、runtime apply、Release/Deploy/Production authorityは生成しません。
 
 - TASK-029 R9Bとして、明示Human確認をexact custody/Owner scope/public-key IDへ束縛し、raw Ed25519 seedをWindows Current User DPAPIで一回限り暗号化保管するOwner signing-key custodyとbody-free receiptを追加しました。sign/export/replace/rotate、PuTTY PPK変換、real signing、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。

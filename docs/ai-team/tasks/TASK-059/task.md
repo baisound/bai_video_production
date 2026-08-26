@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P0_PREFLIGHT_IMPLEMENTED_COMMIT_READY`
+Status: `P0_COMMITTED_P1_DESIGN_BOUND_IMPLEMENTATION_HUMAN_GATE`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -44,14 +44,17 @@ P0 synthetic Evidence is `26 PASS`; P0 plus direct R9A/R9B/R9C is `53 PASS,
 admission and diff checks pass. No real PPK, private key, seed, passphrase or
 Owner custody was read, created, imported, logged or persisted.
 
-## Next gated unit
+## P1 design checkpoint
 
-P1 may implement a short-lived Windows-only secret-bearing helper only after a
-separate detailed design/Critic/Judge gate. It must use masked direct Owner
-passphrase entry, authenticate PPK MAC before trusting decrypted material,
-derive and cross-check the exact Ed25519 public key, require explicit Human
-confirmation, call the existing R9B confirmation/provision boundary once, emit
-only a body-free receipt and terminate without secret persistence.
+P1 design is bound in
+`ppk-import-secret-gate-p1-design-critic-judge.md`. It specifies a short-lived
+Windows-only helper, anonymous-pipe secret transport, exact Argon2id/AES/HMAC
+PPK v3 authentication, public-key rederivation, an in-session Owner confirmation
+and exactly one call to the existing R9B provision/read-back boundary.
+
+P1 implementation remains a separate Human Gate. The gate must bind exact
+allowed files, the pinned crypto/runtime compatibility target and synthetic-only
+test scope before mutation.
 
 Real PPK selection, passphrase entry, private-key decryption, DPAPI custody,
 real signing, Knowledge Pack mutation/promotion, runtime apply, Release, Deploy

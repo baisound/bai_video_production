@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/montage-learning-external-monotonic-anchor-candidate.schema.json",
+  "title": "TASK-058 P1C-D external monotonic anchor candidate records",
+  "oneOf": [
+    {"$ref": "#/$defs/anchor"},
+    {"$ref": "#/$defs/expectation"},
+    {"$ref": "#/$defs/evaluation"}
+  ],
+  "$defs": {
+    "identifier": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "revision": {"type": "integer", "minimum": 0, "maximum": 4096},
+    "positiveRevision": {"type": "integer", "minimum": 1, "maximum": 4096},
+    "nullableDigest": {
+      "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+    },
+    "nullableRevision": {
+      "oneOf": [{"$ref": "#/$defs/revision"}, {"type": "null"}]
+    },
+    "authorityFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_source_revalidated_under_canonical_transaction",
+        "canonical_project_transaction_held",
+        "canonical_store_commit_verified",
+        "external_monotonic_anchor_verified",
+        "external_anchor_origin_authenticated",
+        "rollback_detection_authority_created",
+        "public_v2_receipt_mint_authorized",
+        "canonical_admission_authority_created",
+        "automatic_learning_promotion_authorized"
+      ],
+      "properties": {
+        "raw_source_revalidated_under_canonical_transaction": {"const": false},
+        "canonical_project_transaction_held": {"const": false},
+        "canonical_store_commit_verified": {"const": false},
+        "external_monotonic_anchor_verified": {"const": false},
+        "external_anchor_origin_authenticated": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "public_v2_receipt_mint_authorized": {"const": false},
+        "canonical_admission_authority_created": {"const": false},
+        "automatic_learning_promotion_authorized": {"const": false}
+      }
+    },
+    "effectFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesystem_read", "filesystem_written", "canonical_ledger_written",
+        "external_anchor_read", "external_anchor_written",
+        "project_manifest_written", "receipt_minted", "timeline_mutated",
+        "resolve_written", "network_accessed", "provider_called",
+        "process_started", "release_started", "deployment_started",
+        "production_activated"
+      ],
+      "properties": {
+        "filesystem_read": {"const": false},
+        "filesystem_written": {"const": false},
+        "canonical_ledger_written": {"const": false},
+        "external_anchor_read": {"const": false},
+        "external_anchor_written": {"const": false},
+        "project_manifest_written": {"const": false},
+        "receipt_minted": {"const": false},
+        "timeline_mutated": {"const": false},
+        "resolve_written": {"const": false},
+        "network_accessed": {"const": false},
+        "provider_called": {"const": false},
+        "process_started": {"const": false},
+        "release_started": {"const": false},
+        "deployment_started": {"const": false},
+        "production_activated": {"const": false}
+      }
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_type", "task_owner", "project_id",
+        "canonical_store_id", "owner_scope_hash", "ledger_key_sha256",
+        "anchor_revision", "anchored_ledger_revision",
+        "anchored_latest_entry_sha256", "anchored_chain_sha256",
+        "anchored_ledger_sha256", "previous_anchor_sha256",
+        "contract_state", "anchor_state", "external_anchor_observed",
+        "external_anchor_origin_authenticated", "canonical_store_commit_verified",
+        "rollback_detection_authority_created", "consumer_revalidation_required",
+        "authority_flags", "effect_flags", "anchor_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_EXTERNAL_MONOTONIC_ANCHOR_CANDIDATE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "canonical_store_id": {"$ref": "#/$defs/identifier"},
+        "owner_scope_hash": {"$ref": "#/$defs/digest"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "anchor_revision": {"$ref": "#/$defs/positiveRevision"},
+        "anchored_ledger_revision": {"$ref": "#/$defs/positiveRevision"},
+        "anchored_latest_entry_sha256": {"$ref": "#/$defs/digest"},
+        "anchored_chain_sha256": {"$ref": "#/$defs/digest"},
+        "anchored_ledger_sha256": {"$ref": "#/$defs/digest"},
+        "previous_anchor_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "contract_state": {"const": "EXTERNAL_ANCHOR_REVALIDATION_REQUIRED"},
+        "anchor_state": {"const": "NOT_ESTABLISHED"},
+        "external_anchor_observed": {"const": false},
+        "external_anchor_origin_authenticated": {"const": false},
+        "canonical_store_commit_verified": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "consumer_revalidation_required": {"const": true},
+        "authority_flags": {"$ref": "#/$defs/authorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/effectFlags"},
+        "anchor_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_type", "task_owner", "ledger_key_sha256",
+        "expected_anchor_revision", "expected_anchor_sha256",
+        "expected_anchored_ledger_revision", "expected_anchored_chain_sha256",
+        "expected_anchored_ledger_sha256", "expectation_is_authority",
+        "expectation_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_EXTERNAL_MONOTONIC_ANCHOR_EXPECTATION"},
+        "task_owner": {"const": "TASK-058"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "expected_anchor_revision": {"$ref": "#/$defs/revision"},
+        "expected_anchor_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "expected_anchored_ledger_revision": {"$ref": "#/$defs/nullableRevision"},
+        "expected_anchored_chain_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "expected_anchored_ledger_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "expectation_is_authority": {"const": false},
+        "expectation_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_type", "task_owner", "decision", "reason_codes",
+        "ledger_key_sha256", "observed_anchor_revision", "observed_anchor_sha256",
+        "observed_ledger_revision", "observed_latest_entry_sha256",
+        "observed_chain_sha256", "observed_ledger_sha256",
+        "proposed_ledger_revision", "proposed_latest_entry_sha256",
+        "proposed_chain_sha256", "proposed_ledger_sha256", "expectation_sha256",
+        "existing_anchor_sha256", "proposed_anchor", "contract_state",
+        "anchor_state", "authority_flags", "effect_flags", "evaluation_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_EXTERNAL_MONOTONIC_ANCHOR_EVALUATION"},
+        "task_owner": {"const": "TASK-058"},
+        "decision": {
+          "enum": [
+            "BOOTSTRAP_CANDIDATE", "ADVANCE_CANDIDATE", "UNCHANGED_CANDIDATE",
+            "ROLLBACK_REJECTED", "FORK_REJECTED", "SCOPE_MISMATCH_REJECTED",
+            "STALE_ANCHOR_REJECTED"
+          ]
+        },
+        "reason_codes": {
+          "type": "array", "minItems": 1, "maxItems": 1, "uniqueItems": true,
+          "items": {
+            "enum": [
+              "BOOTSTRAP_CANDIDATE", "ADVANCE_CANDIDATE", "UNCHANGED_CANDIDATE",
+              "ROLLBACK_REJECTED", "FORK_REJECTED", "SCOPE_MISMATCH_REJECTED",
+              "STALE_ANCHOR_REJECTED"
+            ]
+          }
+        },
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "observed_anchor_revision": {"$ref": "#/$defs/revision"},
+        "observed_anchor_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "observed_ledger_revision": {"$ref": "#/$defs/nullableRevision"},
+        "observed_latest_entry_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "observed_chain_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "observed_ledger_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "proposed_ledger_revision": {"$ref": "#/$defs/positiveRevision"},
+        "proposed_latest_entry_sha256": {"$ref": "#/$defs/digest"},
+        "proposed_chain_sha256": {"$ref": "#/$defs/digest"},
+        "proposed_ledger_sha256": {"$ref": "#/$defs/digest"},
+        "expectation_sha256": {"$ref": "#/$defs/digest"},
+        "existing_anchor_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "proposed_anchor": {
+          "oneOf": [{"$ref": "#/$defs/anchor"}, {"type": "null"}]
+        },
+        "contract_state": {"const": "EXTERNAL_ANCHOR_REVALIDATION_REQUIRED"},
+        "anchor_state": {"const": "NOT_ESTABLISHED"},
+        "authority_flags": {"$ref": "#/$defs/authorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/effectFlags"},
+        "evaluation_sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

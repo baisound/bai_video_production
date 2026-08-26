@@ -402,3 +402,23 @@ execution is NOT_EXECUTED / NOT_CONFIRMED: R6B verified the base runtime only,
 while an admitted real Dataset, trained adapter, evaluation and APPROVED binding
 do not yet exist. This checkpoint grants no Dataset adoption, learning, model
 promotion, release, deploy or Product mutation authority.
+
+## R6B-A Dataset Evidence discovery checkpoint
+
+R6B-A read-only Dataset Evidence discovery is complete and commit-ready. It
+scans only caller-selected roots for the exact
+`<manifest-id>/<positive-revision>/manifest.json` layout and re-admits every
+candidate through the existing R4A rights/provenance manifest boundary. The
+body-free report retains only path/observation digests, admitted manifest
+identity/checksum and aggregate disposition/split counts. Raw paths, JSON
+bodies, media, transcripts and narration are not returned.
+
+Symlinks/junctions, crossed identities, non-canonical revisions, malformed or
+oversized manifests, duplicate identities, unreadable roots and bounded scan
+limits fail closed. The fixed state is
+`EVIDENCE_ONLY_NO_DATASET_ADOPTION_OR_TRAINING_AUTHORITY`; neither discovery
+nor report admission grants Dataset adoption, training, evaluation, promotion
+or runtime execution. R6B-A plus direct R4A focused Evidence is `19 PASS`;
+TASK-054 plus direct TASK-049 regression is `725 PASS, 1 intentional
+Windows-native skip`; compileall, schema mirror and diff checks pass. No real
+Dataset or private source material was discovered, read, created or adopted.

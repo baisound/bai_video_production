@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_R9B_HOSTED_CLOSED / R9C_LOCAL_SIGNING_CEREMONY_IMPLEMENTED_LOCAL`
+- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_R9B_R9C_R9D_HOSTED_CLOSED`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -232,3 +232,11 @@ Owner提供の11制作資料から、次を「正解」ではなく検証対象�
 ## Dependencies
 
 TASK-003 Evidence/Asset、TASK-007 Cut Plan、TASK-010 Resolve Assembly、TASK-011 QA、TASK-012 Manual Handoff、TASK-019 Profile Auto-TunerおよびTASK-021 Dashboardと接続する。初回基本編集完成を妨げない後続機能とする。
+
+## R9D hosted closure read-back — 2026-08-26
+
+- target PR #364: merged at 4e698fd47c9308a696bdf43549f322f390a9b3fd; hosted checks 9 / 9 PASS; post-main CI 32937505491 PASS (6 / 6) and Security 32937505492 PASS.
+- lock-host PR #371: merged at 563c72be100fb2b7c5bd786693a499d537314cd0.
+- closure PR #373: merged at fresh main fc9398950b07759f82b91801f76f9f3eea195462; hosted checks 9 / 9 PASS; post-main CI 32939237218 PASS (6 / 6) and Security 32939237213 PASS.
+- Registry revision 97 records HOSTED_CLOSED_RELEASED, AUTHORIZED_SCOPE_CONSUMED_CLOSED, target MERGED_POST_MERGE_GREEN, active nonclosed integration locks 0 and the approved CHANGELOG bullet exact 1.
+- Real Owner key/signing, Knowledge Pack write/promotion, automatic promotion, runtime Profile apply, rollback execution, Release, Deploy and Production remain unexecuted or denied by their existing Gates.

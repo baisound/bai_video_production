@@ -422,3 +422,24 @@ or runtime execution. R6B-A plus direct R4A focused Evidence is `19 PASS`;
 TASK-054 plus direct TASK-049 regression is `725 PASS, 1 intentional
 Windows-native skip`; compileall, schema mirror and diff checks pass. No real
 Dataset or private source material was discovered, read, created or adopted.
+
+## R6B-B Dataset Evidence selection preflight checkpoint
+
+R6B-B consumes only an exact admitted R6B-A report and lets the Operator select
+one body-free manifest identity for CONFIRMATION_ONLY or LEARNING_PREPARATION.
+Missing/invalid discovery, no selection, stale/crossed identity and zero eligible
+candidates remain explicit blocked states. Confirmation reaches Evidence review
+only. Learning preparation can reach DATASET_ADOPTION_REVIEW_REQUIRED, which is
+only a request for the separate Human Dataset adoption Gate.
+
+The preflight binds discovery/item/manifest digests and aggregate counts but
+does not reread manifest JSON, raw paths, media, transcripts or narration.
+Dataset adoption and training authority remain schema/runtime constants false.
+R7 UI is a later adapter and PR #329 remains an independent dependency. No real
+Dataset, training, evaluation, model, Provider, paid, Release, Deploy or
+Production effect occurred.
+
+R6B-B plus direct R6B-A focused Evidence is `20 PASS`; Dataset contract
+regression is `45 PASS`; TASK-054 plus direct TASK-049 regression is
+`735 PASS, 1 intentional Windows-native skip`. Compileall, JSON Schema runtime
+validation, schema mirror and diff checks pass.

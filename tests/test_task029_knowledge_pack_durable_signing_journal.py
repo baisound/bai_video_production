@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from dataclasses import replace
 import json
 from pathlib import Path
 
@@ -12,6 +13,10 @@ from ai_video_production.knowledge_pack_durable_signing_journal import (
     DurableSigningCeremonyJournal,
     DurableSigningJournalReceipt,
     DurableSigningJournalState,
+)
+from ai_video_production.knowledge_pack_local_signing_ceremony import (
+    LocalSigningCeremonyResult,
+    execute_local_signing_ceremony,
 )
 from test_task029_knowledge_pack_local_signing_ceremony import case
 
@@ -47,7 +52,12 @@ def test_exact_ceremony_is_reserved_then_committed_body_free(tmp_path: Path) -> 
     payload = receipt.to_dict()
 
     assert receipt.state is DurableSigningJournalState.SIGNED_AND_VERIFIED
-    assert payload["persistent_replay_prevention_present"] is True
+    assert payload["persistent_replay_prevention_present"] is False
+    assert payload["path_local_replay_prevention_present"] is True
+    assert payload["canonical_project_binding_present"] is False
+    assert payload["journal_deletion_detection_present"] is False
+    assert payload["reservation_directory_durability_confirmed"] is False
+    assert payload["power_loss_replay_prevention_confirmed"] is False
     assert payload["automatic_replay_authorized"] is False
     assert payload["ceremony_receipt_sha256"] == result.receipt.to_dict()["ceremony_receipt_sha256"]
     assert payload["verification_receipt_sha256"] == result.verification_receipt.to_dict()["verification_receipt_sha256"]
@@ -215,3 +225,76 @@ def test_schema_mirror_receipt_and_tamper_validation(tmp_path: Path) -> None:
     payload["unknown"] = "x"
     with pytest.raises(ValueError):
         DurableSigningJournalReceipt.from_dict(payload)
+
+
+def test_alternate_path_and_deletion_are_explicitly_outside_replay_boundary(tmp_path: Path) -> None:
+    values, arguments = kwargs(tmp_path)
+    first = DurableSigningCeremonyJournal(tmp_path / "journal-a.json")
+    second = DurableSigningCeremonyJournal(tmp_path / "journal-b.json")
+
+    first_receipt, _ = first.execute_once(**arguments)
+    after_first = values[1].decrypt_count
+    second_receipt, _ = second.execute_once(**arguments)
+    assert values[1].decrypt_count > after_first
+    assert first_receipt.to_dict()["persistent_replay_prevention_present"] is False
+    assert second_receipt.to_dict()["canonical_project_binding_present"] is False
+
+    second.path.unlink()
+    after_second = values[1].decrypt_count
+    replayed_receipt, _ = second.execute_once(**arguments)
+    assert values[1].decrypt_count > after_second
+    assert replayed_receipt.to_dict()["journal_deletion_detection_present"] is False
+
+
+def test_fake_typed_executor_result_cannot_commit_success(tmp_path: Path) -> None:
+    _, arguments = kwargs(tmp_path)
+    journal = DurableSigningCeremonyJournal(tmp_path / "journal.json")
+
+    def fake_typed_success(**call: object) -> LocalSigningCeremonyResult:
+        real = execute_local_signing_ceremony(**call)
+        return LocalSigningCeremonyResult(
+            replace(real.receipt, receipt_id="forged-receipt"),
+            real.verification_receipt,
+        )
+
+    with pytest.raises(ProductError) as error:
+        journal.execute_once(**arguments, ceremony_executor=fake_typed_success)
+    assert error.value.code == "ERR_KNOWLEDGE_PACK_SIGNING_RECOVERY_REQUIRED"
+    assert journal.read_receipt().state is DurableSigningJournalState.RECOVERY_REQUIRED
+
+
+def test_completed_time_type_is_rejected_before_journal_and_key_access(tmp_path: Path) -> None:
+    values, arguments = kwargs(tmp_path)
+    arguments["completed_at_epoch_ms"] = 301.5
+    before = values[1].decrypt_count
+    journal = DurableSigningCeremonyJournal(tmp_path / "journal.json")
+
+    with pytest.raises(ValueError, match="integer"):
+        journal.execute_once(**arguments)
+    assert values[1].decrypt_count == before
+    assert not journal.path.exists()
+
+
+def test_unknown_corrupt_and_symlink_journals_fail_closed(tmp_path: Path) -> None:
+    journal_path = tmp_path / "journal.json"
+    journal = DurableSigningCeremonyJournal(journal_path)
+    journal_path.write_text('{"unknown":true}', encoding="utf-8")
+    with pytest.raises(ProductError) as unknown:
+        journal.read_receipt()
+    assert unknown.value.code == "ERR_KNOWLEDGE_PACK_SIGNING_JOURNAL_INTEGRITY"
+
+    journal_path.write_bytes(b"not-json")
+    with pytest.raises(ProductError) as corrupt:
+        journal.read_receipt()
+    assert corrupt.value.code == "ERR_KNOWLEDGE_PACK_SIGNING_JOURNAL_INTEGRITY"
+
+    journal_path.unlink()
+    target = tmp_path / "target.json"
+    target.write_text("{}", encoding="utf-8")
+    try:
+        journal_path.symlink_to(target)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlink creation is unavailable")
+    with pytest.raises(ProductError) as symlink:
+        journal.read_receipt()
+    assert symlink.value.code == "ERR_KNOWLEDGE_PACK_SIGNING_JOURNAL_INTEGRITY"

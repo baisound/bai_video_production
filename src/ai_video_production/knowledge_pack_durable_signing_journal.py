@@ -1,9 +1,13 @@
-"""TASK-029 R9D durable no-replay journal for the R9C signing ceremony.
+"""TASK-029 R9D path-local signing journal for the R9C signing ceremony.
 
 The journal reserves one exact ceremony before signing.  A process interruption
 leaves an ambiguous reservation which is converted to RECOVERY_REQUIRED on the
 next access and is never replayed automatically.  Only body-free hashes are
 persisted; key and signature bytes remain inside the R9B/R9C boundaries.
+
+The current R9D unit deliberately does not claim canonical or power-loss-safe
+persistent replay prevention. A caller-selected path or external deletion is
+outside this cooperative, path-local boundary and is reported explicitly.
 """
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ from .atomic import AtomicJsonWriter, FailureInjector, exclusive_file_update_loc
 from .errors import ProductError, ProductErrorCategory
 from .knowledge_pack_local_signing_ceremony import (
     LocalSigningCeremonyConfirmation,
+    LocalSigningCeremonyReceipt,
     LocalSigningCeremonyResult,
     execute_local_signing_ceremony,
 )
@@ -26,6 +31,7 @@ from .knowledge_pack_signature_request import (
     verify_knowledge_pack_signature_verification_request,
 )
 from .knowledge_pack_signature_verification import (
+    KnowledgePackSignatureVerificationReceipt,
     TrustedSignerPolicy,
     TrustedSignerPolicyState,
 )
@@ -112,7 +118,12 @@ class DurableSigningJournalReceipt:
             "updated_at_epoch_ms": self.updated_at_epoch_ms,
             "ceremony_receipt_sha256": self.ceremony_receipt_sha256,
             "verification_receipt_sha256": self.verification_receipt_sha256,
-            "persistent_replay_prevention_present": True,
+            "persistent_replay_prevention_present": False,
+            "path_local_replay_prevention_present": True,
+            "canonical_project_binding_present": False,
+            "journal_deletion_detection_present": False,
+            "reservation_directory_durability_confirmed": False,
+            "power_loss_replay_prevention_confirmed": False,
             "automatic_replay_authorized": False,
             "signature_bytes_included": False,
             "public_key_material_included": False,
@@ -183,6 +194,85 @@ class DurableSigningCeremonyJournal:
             verification_receipt_sha256=verification_receipt_sha256,
         )
 
+    @staticmethod
+    def _validate_ceremony_result(
+        *,
+        result: object,
+        receipt_id: str,
+        verification_receipt_id: str,
+        custody: OwnerSigningKeyCustodyReceipt,
+        request: KnowledgePackSignatureVerificationRequest,
+        confirmation: LocalSigningCeremonyConfirmation,
+        completed_at_epoch_ms: int,
+    ) -> LocalSigningCeremonyResult:
+        """Reject any executor result that is not the exact typed R9C/R9A result."""
+        if type(result) is not LocalSigningCeremonyResult:
+            raise ValueError("ceremony executor returned an unexpected result type")
+        if type(result.receipt) is not LocalSigningCeremonyReceipt:
+            raise ValueError("ceremony executor returned an unexpected ceremony receipt type")
+        if type(result.verification_receipt) is not KnowledgePackSignatureVerificationReceipt:
+            raise ValueError("ceremony executor returned an unexpected verification receipt type")
+
+        ceremony_payload = result.receipt.to_dict()
+        verification_payload = result.verification_receipt.to_dict()
+        if LocalSigningCeremonyReceipt.from_dict(ceremony_payload) != result.receipt:
+            raise ValueError("ceremony executor receipt failed exact typed validation")
+        if (
+            KnowledgePackSignatureVerificationReceipt.from_dict(verification_payload)
+            != result.verification_receipt
+        ):
+            raise ValueError("ceremony executor verification receipt failed exact typed validation")
+
+        custody_sha = custody.to_dict()["custody_receipt_sha256"]
+        request_payload = request.to_dict()
+        request_sha = request_payload["signature_request_sha256"]
+        confirmation_sha = confirmation.to_dict()["confirmation_sha256"]
+        verification_sha = verification_payload["verification_receipt_sha256"]
+        if (
+            result.receipt.receipt_id,
+            result.receipt.ceremony_id,
+            result.receipt.custody_receipt_sha256,
+            result.receipt.signature_request_sha256,
+            result.receipt.signer_key_id_sha256,
+            result.receipt.verification_receipt_sha256,
+            result.receipt.confirmation_sha256,
+            result.receipt.completed_at_epoch_ms,
+        ) != (
+            receipt_id,
+            confirmation.ceremony_id,
+            custody_sha,
+            request_sha,
+            custody.signer_key_id_sha256,
+            verification_sha,
+            confirmation_sha,
+            completed_at_epoch_ms,
+        ):
+            raise ValueError("ceremony executor receipt is not bound to the exact ceremony")
+        if (
+            result.verification_receipt.receipt_id,
+            result.verification_receipt.signature_request_id,
+            result.verification_receipt.signature_request_sha256,
+            result.verification_receipt.signing_candidate_sha256,
+            result.verification_receipt.pack_id,
+            result.verification_receipt.pack_version,
+            result.verification_receipt.trusted_signer_policy_sha256,
+            result.verification_receipt.signer_key_id_sha256,
+            result.verification_receipt.signature_message_sha256,
+            result.verification_receipt.detached_signature_sha256,
+        ) != (
+            verification_receipt_id,
+            request.request_id,
+            request_sha,
+            request.signing_candidate_sha256,
+            request.pack_id,
+            request.pack_version,
+            request.trusted_signer_policy_sha256,
+            request.signer_key_id_sha256,
+            request_payload["signature_message_sha256"],
+            result.receipt.detached_signature_sha256,
+        ):
+            raise ValueError("verification receipt is not bound to the exact signature request")
+        return result
     def _write(self, receipt: DurableSigningJournalReceipt, failure_injector: FailureInjector | None = None) -> None:
         AtomicJsonWriter.write(
             self.path,
@@ -236,6 +326,7 @@ class DurableSigningCeremonyJournal:
         _id(verification_receipt_id, "verification_receipt_id")
         _positive(reserved_at_epoch_ms, "reserved_at_epoch_ms")
         _positive(recovery_observed_at_epoch_ms, "recovery_observed_at_epoch_ms")
+        _positive(completed_at_epoch_ms, "completed_at_epoch_ms")
         if completed_at_epoch_ms < reserved_at_epoch_ms:
             raise ValueError("completion time precedes reservation")
 
@@ -338,6 +429,15 @@ class DurableSigningCeremonyJournal:
                     signature_request_payload=signature_request_payload,
                     signature_request_compile_kwargs=signature_request_compile_kwargs,
                     trusted_signer_policy_payload=trusted_signer_policy_payload,
+                    confirmation=confirmation,
+                    completed_at_epoch_ms=completed_at_epoch_ms,
+                )
+                result = self._validate_ceremony_result(
+                    result=result,
+                    receipt_id=receipt_id,
+                    verification_receipt_id=verification_receipt_id,
+                    custody=custody,
+                    request=request,
                     confirmation=confirmation,
                     completed_at_epoch_ms=completed_at_epoch_ms,
                 )

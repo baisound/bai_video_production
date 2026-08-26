@@ -321,16 +321,17 @@ promotion, runtime apply, rollback, Release, Deploy and Production remain
 unauthorized. Project/reviewer coordinates and actual artifact custody remain
 later Gates.
 
-## R10D implementation — explicit-Human-confirmed encrypted signature artifact custody
+## R10D implementation — encrypted signature artifact staging
 
-R10D consumes the exact R10C candidate and performs one Owner-local encrypted
-custody write for a transient Ed25519 public key and detached signature. Before
+R10D consumes the exact R10C candidate and performs one non-authoritative
+encrypted staging write for a transient Ed25519 public key and detached signature. Before
 writing, it directly recompiles R10B with those exact bytes, repeats
 cryptographic verification, recompiles R10C from exact R9B/R9C/R10B Evidence,
-and requires a separate explicit Human confirmation bound to the candidate,
-Owner scope, artifact-store ID, request, signer, signature digest and time.
+and binds a caller intent attestation to the candidate, Owner scope,
+artifact-store ID, request, signer, signature digest and time. This public
+attestation does not authenticate Human origin and does not authorize custody.
 
-The default store uses Windows Current User DPAPI with an R10D-specific entropy
+The production constructor is fixed to Windows Current User DPAPI with an R10D-specific entropy
 domain distinct from private-key custody. The disk envelope contains ciphertext
 and integrity metadata only. The one-shot write rejects an existing destination
 or symlink, uses validated atomic replace, and decrypts/validates the replaced
@@ -338,17 +339,24 @@ file before returning a body-free receipt. Public-key and signature bodies stay
 inside encrypted local storage; no private key, seed, passphrase, credential,
 host path, media, or Project content is accepted or returned.
 
+Production callers cannot inject a cipher. Private test construction is always
+marked test-only and cannot claim DPAPI or encryption at rest, even when the
+test cipher round-trips. Prefix, byte-rotation, unauthenticated and DPAPI-suite
+spoof ciphers therefore cannot mint production encryption/custody claims.
+
 The path model remains `COOPERATIVE_PROTECTED_LOCAL_WRITER_ONLY`. Directory
 durability, power-loss replay prevention, hostile ancestor/path races, deletion
 recovery and alternate-path replay are not confirmed. Canonical Owner trust
 root, Owner-signer identity binding, canonical Knowledge Pack receipt,
-Knowledge Pack write/promotion, automatic promotion, runtime apply, rollback,
+verified Owner-local path, Human confirmation origin, custody write authority,
+custody completion, Knowledge Pack write/promotion, automatic promotion, runtime apply, rollback,
 Timeline/Resolve, Release, Deploy, Production and external effects remain
 unauthorized.
 
-R10D source scope is exact six paths. Focused R10D is `14 PASS / 1 Windows-only
-DPAPI SKIP`, R9B-R10D direct is `110 PASS / 2 SKIP`, and TASK-029 is `175 PASS /
-5 SKIP`. Full Product is NOT_CONFIRMED because the pre-existing WSL environment
+R10D source scope is exact six paths. Focused R10D after the independent High
+finding rework is `18 PASS / 1 Windows-only DPAPI SKIP`; R9B-R10D direct is
+`101 PASS / 2 SKIP`, and TASK-029 is `179 PASS / 5 SKIP`. Full Product is
+NOT_CONFIRMED because the pre-existing WSL environment
 has cryptography 41.0.7 and no `referencing`, while fresh-main TASK-059 requires
 Argon2 support from cryptography >=46 and that package; collection stopped on
 dependency import errors before tests ran. No dependency was installed.

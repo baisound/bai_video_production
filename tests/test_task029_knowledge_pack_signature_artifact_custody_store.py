@@ -21,11 +21,11 @@ from ai_video_production.knowledge_pack_signature_artifact_custody_candidate imp
     compile_signature_artifact_custody_candidate,
 )
 from ai_video_production.knowledge_pack_signature_artifact_custody_store import (
-    SignatureArtifactCustodyConfirmation,
+    SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE,
+    SignatureArtifactCustodyIntentAttestation,
     SignatureArtifactCustodyReceipt,
     SignatureArtifactCustodyStore,
-    WindowsDpapiSignatureArtifactCustodyCipher,
-    confirm_signature_artifact_custody,
+    attest_signature_artifact_custody_intent,
 )
 from ai_video_production.serialization import sha256_bytes
 from test_task029_knowledge_pack_signature_artifact_custody_candidate import (
@@ -62,6 +62,30 @@ class IdentityCipher:
 
     def decrypt(self, ciphertext: bytes) -> bytes:
         return ciphertext
+
+
+class PrefixCipher:
+    cipher_suite = "PREFIX_CIPHER_MUST_NEVER_BE_PRODUCTION"
+
+    def encrypt(self, plaintext: bytes) -> bytes:
+        return b"NOTCRYPT" + plaintext
+
+    def decrypt(self, ciphertext: bytes) -> bytes:
+        return ciphertext[8:]
+
+
+class RotationCipher:
+    cipher_suite = "ROTATION_CIPHER_MUST_NEVER_BE_PRODUCTION"
+
+    def encrypt(self, plaintext: bytes) -> bytes:
+        return plaintext[1:] + plaintext[:1]
+
+    def decrypt(self, ciphertext: bytes) -> bytes:
+        return ciphertext[-1:] + ciphertext[:-1]
+
+
+class SpoofedDpapiCipher(PrefixCipher):
+    cipher_suite = SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE
 
 
 class ReadbackCorruptingCipher(SyntheticCipher):
@@ -110,14 +134,14 @@ def store_case(tmp_path: Path, *, path: Path | None = None, cipher=None):
         tmp_path / "sources"
     )
     candidate = compile_signature_artifact_custody_candidate(**candidate_arguments)
-    confirmation = confirm_signature_artifact_custody(
-        confirmation_id="signature-artifact-custody-confirmation.r10d",
+    intent_attestation = attest_signature_artifact_custody_intent(
+        attestation_id="signature-artifact-custody-intent.r10d",
         candidate_payload=candidate.to_dict(),
-        confirmed_at_epoch_ms=700,
-        explicit_human_confirmation=True,
+        attested_at_epoch_ms=700,
+        caller_attests_human_intent=True,
     )
     target = path if path is not None else tmp_path / "signature-artifact.json"
-    store = SignatureArtifactCustodyStore(
+    store = SignatureArtifactCustodyStore._for_test(
         target, cipher if cipher is not None else SyntheticCipher()
     )
     arguments = {
@@ -127,10 +151,10 @@ def store_case(tmp_path: Path, *, path: Path | None = None, cipher=None):
             "key_custody_receipt_payload"
         ],
         "trusted_signature_admission_compile_kwargs": admission_arguments,
-        "confirmation": confirmation,
+        "intent_attestation": intent_attestation,
         "stored_at_epoch_ms": 800,
     }
-    return values, result, admission, candidate, confirmation, store, arguments
+    return values, result, admission, candidate, intent_attestation, store, arguments
 
 
 def provision(tmp_path: Path, *, path: Path | None = None, cipher=None):
@@ -142,7 +166,7 @@ def provision(tmp_path: Path, *, path: Path | None = None, cipher=None):
 def test_exact_r10b_r10c_recompile_encrypts_and_reads_body_free_receipt(
     tmp_path: Path,
 ) -> None:
-    values, _, admission, candidate, confirmation, store, arguments, saved = provision(
+    values, _, admission, candidate, intent_attestation, store, arguments, saved = provision(
         tmp_path
     )
     receipt = saved.receipt
@@ -156,15 +180,15 @@ def test_exact_r10b_r10c_recompile_encrypts_and_reads_body_free_receipt(
     assert payload["source_trusted_signature_admission_sha256"] == admission.to_dict()[
         "trusted_signature_admission_sha256"
     ]
-    assert payload["confirmation_sha256"] == confirmation.to_dict()[
-        "confirmation_sha256"
+    assert payload["intent_attestation_sha256"] == intent_attestation.to_dict()[
+        "intent_attestation_sha256"
     ]
     assert payload["r10b_direct_recompiled_at_write"] is True
     assert payload[
         "cryptographic_signature_verified_against_supplied_policy_at_write"
     ] is True
     assert payload["r10c_candidate_recompiled_at_write"] is True
-    assert payload["signature_artifact_custody_confirmed"] is True
+    assert payload["signature_artifact_custody_confirmed"] is False
 
     document = json.loads(store.path.read_text(encoding="utf-8"))
     assert set(document) == {
@@ -200,7 +224,7 @@ def test_public_receipt_schema_and_package_mirror_are_exact(tmp_path: Path) -> N
     assert list(Draft202012Validator(schema).iter_errors(changed))
 
 
-def test_receipt_flags_bound_confirmed_custody_without_promotion_authority(
+def test_receipt_flags_bound_non_authoritative_staging_without_custody_authority(
     tmp_path: Path,
 ) -> None:
     payload = provision(tmp_path)[-1].receipt.to_dict()
@@ -209,13 +233,11 @@ def test_receipt_flags_bound_confirmed_custody_without_promotion_authority(
         "caller_supplied_source_graph_recompiled_at_write",
         "cryptographic_signature_verified_against_supplied_policy_at_write",
         "r10c_candidate_recompiled_at_write",
-        "explicit_human_custody_confirmation_received",
-        "owner_local_encrypted_store_implemented",
-        "one_shot_write_completed",
+        "caller_attested_human_intent_recorded",
+        "encrypted_artifact_staging_write_completed",
         "post_write_readback_verified",
-        "signature_artifact_custody_confirmed",
         "symlink_rejection_present",
-        "encrypted_at_rest",
+        "test_only_cipher_used",
         "body_free_receipt",
     ):
         assert payload[field] is True
@@ -237,6 +259,15 @@ def test_receipt_flags_bound_confirmed_custody_without_promotion_authority(
         "canonical_latest_source_revalidated",
         "canonical_trusted_signer_policy_revalidated",
         "owner_scope_origin_authenticated",
+        "explicit_human_custody_confirmation_received",
+        "human_confirmation_origin_authenticated",
+        "signature_artifact_custody_write_authorized_once",
+        "owner_local_encrypted_store_implemented",
+        "signature_artifact_custody_confirmed",
+        "canonical_custody_receipt_minted",
+        "production_dpapi_cipher_verified",
+        "encrypted_at_rest",
+        "standalone_receipt_authoritative",
         "canonical_trust_root_confirmed",
         "owner_signer_binding_confirmed",
         "canonical_knowledge_pack_receipt_minted",
@@ -255,24 +286,28 @@ def test_receipt_flags_bound_confirmed_custody_without_promotion_authority(
         assert payload[field] is False
 
 
-def test_explicit_human_confirmation_is_required_and_exactly_bound(
+def test_caller_intent_attestation_is_non_authoritative_and_exactly_bound(
     tmp_path: Path,
 ) -> None:
     _, _, _, candidate, _, _, _ = store_case(tmp_path)
     with pytest.raises(ProductError) as error:
-        confirm_signature_artifact_custody(
-            confirmation_id="confirmation",
+        attest_signature_artifact_custody_intent(
+            attestation_id="attestation",
             candidate_payload=candidate.to_dict(),
-            confirmed_at_epoch_ms=700,
-            explicit_human_confirmation=False,
+            attested_at_epoch_ms=700,
+            caller_attests_human_intent=False,
         )
-    assert error.value.code == "ERR_SIGNATURE_ARTIFACT_CUSTODY_CONFIRMATION_REQUIRED"
+    assert error.value.code == "ERR_SIGNATURE_ARTIFACT_CUSTODY_INTENT_ATTESTATION_REQUIRED"
 
-    _, _, _, _, confirmation, store, arguments = store_case(tmp_path / "drift")
-    arguments["confirmation"] = replace(
-        confirmation, detached_signature_sha256="sha256:" + "9" * 64
+    _, _, _, _, intent_attestation, store, arguments = store_case(tmp_path / "drift")
+    attestation_payload = intent_attestation.to_dict()
+    assert attestation_payload["caller_attested_human_intent"] is True
+    assert attestation_payload["human_confirmation_origin_authenticated"] is False
+    assert attestation_payload["signature_artifact_custody_write_authorized_once"] is False
+    arguments["intent_attestation"] = replace(
+        intent_attestation, detached_signature_sha256="sha256:" + "9" * 64
     )
-    with pytest.raises(ValueError, match="confirmation does not match"):
+    with pytest.raises(ValueError, match="attestation does not match"):
         store.provision(**arguments)
 
 
@@ -320,14 +355,16 @@ def test_tamper_wrong_cipher_plaintext_and_symlink_fail_closed(
         tmp_path / "wrong", cipher=SyntheticCipher(0x33)
     )
     with pytest.raises(ProductError):
-        SignatureArtifactCustodyStore(
+        SignatureArtifactCustodyStore._for_test(
             other_store.path, SyntheticCipher(0x44)
         ).read_receipt()
 
     plain = tmp_path / "plain.json"
     plain.write_text('{"public_key_b64":"secret"}', encoding="utf-8")
     with pytest.raises(ProductError):
-        SignatureArtifactCustodyStore(plain, SyntheticCipher()).read_receipt()
+        SignatureArtifactCustodyStore._for_test(
+            plain, SyntheticCipher()
+        ).read_receipt()
 
     target = tmp_path / "target.json"
     target.write_text("{}", encoding="utf-8")
@@ -368,6 +405,49 @@ def test_identity_cipher_is_rejected_before_any_store_commit(tmp_path: Path) -> 
     assert not store.path.exists()
 
 
+def test_production_constructor_rejects_all_caller_supplied_ciphers(
+    tmp_path: Path,
+) -> None:
+    for cipher in (PrefixCipher(), RotationCipher(), SyntheticCipher()):
+        with pytest.raises(TypeError):
+            SignatureArtifactCustodyStore(tmp_path / "artifact.json", cipher)  # type: ignore[call-arg]
+    with pytest.raises(ValueError, match="cannot claim the production DPAPI suite"):
+        SignatureArtifactCustodyStore._for_test(
+            tmp_path / "spoof.json", SpoofedDpapiCipher()
+        )
+
+
+@pytest.mark.parametrize("cipher", [PrefixCipher(), RotationCipher()])
+def test_test_only_unauthenticated_ciphers_cannot_mint_encryption_or_custody_claims(
+    tmp_path: Path,
+    cipher: object,
+) -> None:
+    payload = provision(tmp_path, cipher=cipher)[-1].receipt.to_dict()
+    assert payload["test_only_cipher_used"] is True
+    assert payload["production_dpapi_cipher_verified"] is False
+    assert payload["encrypted_at_rest"] is False
+    assert payload["owner_local_encrypted_store_implemented"] is False
+    assert payload["signature_artifact_custody_confirmed"] is False
+    assert payload["standalone_receipt_authoritative"] is False
+
+
+def test_arbitrary_store_paths_never_mint_owner_local_or_canonical_path_claims(
+    tmp_path: Path,
+) -> None:
+    for path in (
+        tmp_path / "alternate" / "artifact.json",
+        Path("//server/share/task029-artifact.json"),
+    ):
+        if str(path).startswith("//"):
+            store = SignatureArtifactCustodyStore._for_test(path, SyntheticCipher())
+            assert store.path == path
+            continue
+        payload = provision(tmp_path / "path-case", path=path)[-1].receipt.to_dict()
+        assert payload["owner_local_path_verified"] is False
+        assert payload["canonical_store_path_binding_confirmed"] is False
+        assert payload["owner_local_encrypted_store_implemented"] is False
+
+
 def test_post_replace_readback_failure_returns_no_receipt(tmp_path: Path) -> None:
     cipher = ReadbackCorruptingCipher()
     _, _, _, _, _, store, arguments = store_case(tmp_path, cipher=cipher)
@@ -380,8 +460,8 @@ def test_post_replace_readback_failure_returns_no_receipt(tmp_path: Path) -> Non
 
 
 def test_causality_and_exact_security_scalars_fail_before_write(tmp_path: Path) -> None:
-    _, _, _, _, confirmation, store, arguments = store_case(tmp_path)
-    arguments["stored_at_epoch_ms"] = confirmation.confirmed_at_epoch_ms - 1
+    _, _, _, _, intent_attestation, store, arguments = store_case(tmp_path)
+    arguments["stored_at_epoch_ms"] = intent_attestation.attested_at_epoch_ms - 1
     with pytest.raises(ValueError, match="storage precedes"):
         store.provision(**arguments)
     assert not store.path.exists()
@@ -397,17 +477,17 @@ def test_causality_and_exact_security_scalars_fail_before_write(tmp_path: Path) 
 
 
 def test_custom_public_mappings_are_rejected_without_hook_reads(tmp_path: Path) -> None:
-    _, _, _, candidate, confirmation, store, arguments = store_case(tmp_path)
+    _, _, _, candidate, intent_attestation, store, arguments = store_case(tmp_path)
     wrapped_candidate = HookMapping(candidate.to_dict())
     arguments["candidate_payload"] = wrapped_candidate
     with pytest.raises(ValueError, match="exact built-in object"):
         store.provision(**arguments)
     assert wrapped_candidate.read_count == 0
 
-    wrapped_confirmation = HookMapping(confirmation.to_dict())
+    wrapped_attestation = HookMapping(intent_attestation.to_dict())
     with pytest.raises(ValueError, match="exact built-in object"):
-        SignatureArtifactCustodyConfirmation.from_dict(wrapped_confirmation)
-    assert wrapped_confirmation.read_count == 0
+        SignatureArtifactCustodyIntentAttestation.from_dict(wrapped_attestation)
+    assert wrapped_attestation.read_count == 0
 
     arguments["candidate_payload"] = candidate.to_dict()
     wrapped_kwargs = HookMapping(arguments["trusted_signature_admission_compile_kwargs"])
@@ -421,7 +501,7 @@ def test_receipt_tamper_unknown_field_and_hash_fail_closed(tmp_path: Path) -> No
     payload = provision(tmp_path)[-1].receipt.to_dict()
     for field, value in (
         ("production_authorized", True),
-        ("signature_artifact_custody_confirmed", False),
+        ("signature_artifact_custody_confirmed", True),
         ("custody_receipt_sha256", "sha256:" + "0" * 64),
     ):
         changed = dict(payload)
@@ -455,6 +535,13 @@ def test_module_has_no_network_process_or_private_key_capability() -> None:
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows Current User DPAPI only")
 def test_windows_dpapi_round_trip_uses_synthetic_artifacts_only(tmp_path: Path) -> None:
-    cipher = WindowsDpapiSignatureArtifactCustodyCipher()
-    *_, store, _, saved = provision(tmp_path, cipher=cipher)
+    _, _, _, _, _, _, arguments = store_case(tmp_path)
+    store = SignatureArtifactCustodyStore(tmp_path / "signature-artifact.json")
+    saved = store.provision(**arguments)
     assert store.read_receipt() == saved.receipt
+    payload = saved.receipt.to_dict()
+    assert payload["cipher_suite"] == SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE
+    assert payload["production_dpapi_cipher_verified"] is True
+    assert payload["test_only_cipher_used"] is False
+    assert payload["encrypted_at_rest"] is True
+    assert payload["signature_artifact_custody_confirmed"] is False

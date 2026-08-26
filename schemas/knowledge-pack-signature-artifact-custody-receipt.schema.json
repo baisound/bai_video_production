@@ -12,15 +12,21 @@
     "predecessor_pack_sha256", "signature_request_sha256", "signature_message_sha256",
     "trusted_signer_policy_sha256", "signer_key_id_sha256",
     "detached_signature_sha256", "verification_receipt_sha256",
-    "confirmation_sha256", "stored_at_epoch_ms", "cipher_suite",
+    "intent_attestation_sha256", "stored_at_epoch_ms", "cipher_suite",
     "custody_contract", "state", "path_security_model",
     "r10b_direct_recompiled_at_write", "caller_supplied_source_graph_recompiled_at_write",
     "cryptographic_signature_verified_against_supplied_policy_at_write",
     "r10c_candidate_recompiled_at_write",
+    "caller_attested_human_intent_recorded",
     "explicit_human_custody_confirmation_received",
-    "owner_local_encrypted_store_implemented", "one_shot_write_completed",
+    "human_confirmation_origin_authenticated",
+    "signature_artifact_custody_write_authorized_once",
+    "owner_local_encrypted_store_implemented",
+    "encrypted_artifact_staging_write_completed",
     "post_write_readback_verified", "signature_artifact_custody_confirmed",
-    "symlink_rejection_present", "encrypted_at_rest", "body_free_receipt",
+    "canonical_custody_receipt_minted", "symlink_rejection_present",
+    "production_dpapi_cipher_verified", "test_only_cipher_used",
+    "encrypted_at_rest", "standalone_receipt_authoritative", "body_free_receipt",
     "signature_artifact_body_included", "public_key_material_included",
     "private_key_material_included", "absolute_host_path_included",
     "credential_included", "directory_durability_confirmed",
@@ -61,13 +67,13 @@
     "signer_key_id_sha256": {"$ref": "#/$defs/sha256"},
     "detached_signature_sha256": {"$ref": "#/$defs/sha256"},
     "verification_receipt_sha256": {"$ref": "#/$defs/sha256"},
-    "confirmation_sha256": {"$ref": "#/$defs/sha256"},
+    "intent_attestation_sha256": {"$ref": "#/$defs/sha256"},
     "stored_at_epoch_ms": {"type": "integer", "minimum": 1},
     "cipher_suite": {"$ref": "#/$defs/logicalId"},
     "custody_contract": {
       "const": "TASK-029/SIGNATURE_ARTIFACT_CUSTODY_STORE/1.0.0"
     },
-    "state": {"const": "OWNER_LOCAL_SIGNATURE_ARTIFACT_CUSTODIED"},
+    "state": {"const": "SIGNATURE_ARTIFACT_STAGED_AWAITING_TRUSTED_HUMAN_CONFIRMATION"},
     "path_security_model": {
       "const": "COOPERATIVE_PROTECTED_LOCAL_WRITER_ONLY"
     },
@@ -75,13 +81,20 @@
     "caller_supplied_source_graph_recompiled_at_write": {"const": true},
     "cryptographic_signature_verified_against_supplied_policy_at_write": {"const": true},
     "r10c_candidate_recompiled_at_write": {"const": true},
-    "explicit_human_custody_confirmation_received": {"const": true},
-    "owner_local_encrypted_store_implemented": {"const": true},
-    "one_shot_write_completed": {"const": true},
+    "caller_attested_human_intent_recorded": {"const": true},
+    "explicit_human_custody_confirmation_received": {"const": false},
+    "human_confirmation_origin_authenticated": {"const": false},
+    "signature_artifact_custody_write_authorized_once": {"const": false},
+    "owner_local_encrypted_store_implemented": {"const": false},
+    "encrypted_artifact_staging_write_completed": {"const": true},
     "post_write_readback_verified": {"const": true},
-    "signature_artifact_custody_confirmed": {"const": true},
+    "signature_artifact_custody_confirmed": {"const": false},
+    "canonical_custody_receipt_minted": {"const": false},
     "symlink_rejection_present": {"const": true},
-    "encrypted_at_rest": {"const": true},
+    "production_dpapi_cipher_verified": {"type": "boolean"},
+    "test_only_cipher_used": {"type": "boolean"},
+    "encrypted_at_rest": {"type": "boolean"},
+    "standalone_receipt_authoritative": {"const": false},
     "body_free_receipt": {"const": true},
     "signature_artifact_body_included": {"const": false},
     "public_key_material_included": {"const": false},
@@ -116,6 +129,27 @@
     "external_effect_authorized": {"const": false},
     "custody_receipt_sha256": {"$ref": "#/$defs/sha256"}
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"production_dpapi_cipher_verified": {"const": true}},
+        "required": ["production_dpapi_cipher_verified"]
+      },
+      "then": {
+        "properties": {
+          "cipher_suite": {"const": "WINDOWS_DPAPI_CURRENT_USER_SIGNATURE_ARTIFACT_CUSTODY_V1"},
+          "test_only_cipher_used": {"const": false},
+          "encrypted_at_rest": {"const": true}
+        }
+      },
+      "else": {
+        "properties": {
+          "test_only_cipher_used": {"const": true},
+          "encrypted_at_rest": {"const": false}
+        }
+      }
+    }
+  ],
   "$defs": {
     "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "stableId": {

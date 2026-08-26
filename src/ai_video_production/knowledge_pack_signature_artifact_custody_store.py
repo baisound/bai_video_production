@@ -1,9 +1,11 @@
-"""TASK-029 R10D encrypted Owner-local signature-artifact custody.
+"""TASK-029 R10D signature-artifact encrypted staging.
 
 The store accepts only an exact R10C candidate, transient Ed25519 public-key
-and detached-signature bytes, and an explicit Human confirmation.  It
-recompiles R10B and R10C at the write boundary, encrypts the artifact bodies,
-and returns a body-free receipt.  It never accepts or stores a private key.
+and detached-signature bytes, and a non-authoritative caller intent
+attestation.  It recompiles R10B and R10C at the write boundary, encrypts the
+artifact bodies, and returns a body-free staging receipt.  Production
+construction is fixed to Windows Current User DPAPI.  It never accepts or
+stores a private key and never claims Human-confirmed canonical custody.
 """
 
 from __future__ import annotations
@@ -239,18 +241,18 @@ _FALSE_EFFECTS = (
 
 
 @dataclass(frozen=True, slots=True)
-class SignatureArtifactCustodyConfirmation:
-    confirmation_id: str
+class SignatureArtifactCustodyIntentAttestation:
+    attestation_id: str
     candidate_sha256: str
     artifact_store_id: str
     owner_scope_sha256: str
     signature_request_sha256: str
     signer_key_id_sha256: str
     detached_signature_sha256: str
-    confirmed_at_epoch_ms: int
+    attested_at_epoch_ms: int
 
     def __post_init__(self) -> None:
-        _logical_id(self.confirmation_id, "confirmation_id")
+        _logical_id(self.attestation_id, "attestation_id")
         _sha(self.candidate_sha256, "candidate_sha256")
         _logical_id(self.artifact_store_id, "artifact_store_id")
         for field in (
@@ -260,77 +262,78 @@ class SignatureArtifactCustodyConfirmation:
             "detached_signature_sha256",
         ):
             _sha(getattr(self, field), field)
-        _positive(self.confirmed_at_epoch_ms, "confirmed_at_epoch_ms")
+        _positive(self.attested_at_epoch_ms, "attested_at_epoch_ms")
 
     def to_dict(self) -> dict[str, Any]:
         body: dict[str, Any] = {
             "record_version": SIGNATURE_ARTIFACT_CUSTODY_RECORD_VERSION,
-            "record_type": "SIGNATURE_ARTIFACT_CUSTODY_CONFIRMATION",
+            "record_type": "SIGNATURE_ARTIFACT_CUSTODY_INTENT_ATTESTATION",
             "task_owner": "TASK-029",
-            "confirmation_id": self.confirmation_id,
+            "attestation_id": self.attestation_id,
             "candidate_sha256": self.candidate_sha256,
             "artifact_store_id": self.artifact_store_id,
             "owner_scope_sha256": self.owner_scope_sha256,
             "signature_request_sha256": self.signature_request_sha256,
             "signer_key_id_sha256": self.signer_key_id_sha256,
             "detached_signature_sha256": self.detached_signature_sha256,
-            "confirmed_at_epoch_ms": self.confirmed_at_epoch_ms,
-            "explicit_human_confirmation_received": True,
-            "signature_artifact_custody_write_authorized_once": True,
+            "attested_at_epoch_ms": self.attested_at_epoch_ms,
+            "caller_attested_human_intent": True,
+            "human_confirmation_origin_authenticated": False,
+            "signature_artifact_custody_write_authorized_once": False,
             **{field: False for field in _FALSE_EFFECTS},
         }
-        body["confirmation_sha256"] = sha256_bytes(canonical_json_bytes(body))
+        body["intent_attestation_sha256"] = sha256_bytes(canonical_json_bytes(body))
         return body
 
     @classmethod
     def from_dict(
         cls, value: Mapping[str, Any]
-    ) -> "SignatureArtifactCustodyConfirmation":
-        snapshot = _snapshot_json_object(value, "signature_artifact_confirmation")
+    ) -> "SignatureArtifactCustodyIntentAttestation":
+        snapshot = _snapshot_json_object(value, "signature_artifact_intent_attestation")
         result = cls(
-            snapshot["confirmation_id"],
+            snapshot["attestation_id"],
             snapshot["candidate_sha256"],
             snapshot["artifact_store_id"],
             snapshot["owner_scope_sha256"],
             snapshot["signature_request_sha256"],
             snapshot["signer_key_id_sha256"],
             snapshot["detached_signature_sha256"],
-            snapshot["confirmed_at_epoch_ms"],
+            snapshot["attested_at_epoch_ms"],
         )
         if result.to_dict() != snapshot:
-            raise ValueError("signature artifact confirmation identity or hash mismatch")
+            raise ValueError("signature artifact intent attestation identity or hash mismatch")
         return result
 
 
-def confirm_signature_artifact_custody(
+def attest_signature_artifact_custody_intent(
     *,
-    confirmation_id: str,
+    attestation_id: str,
     candidate_payload: Mapping[str, Any],
-    confirmed_at_epoch_ms: int,
-    explicit_human_confirmation: bool,
-) -> SignatureArtifactCustodyConfirmation:
-    if explicit_human_confirmation is not True:
+    attested_at_epoch_ms: int,
+    caller_attests_human_intent: bool,
+) -> SignatureArtifactCustodyIntentAttestation:
+    if caller_attests_human_intent is not True:
         raise _fail(
-            "ERR_SIGNATURE_ARTIFACT_CUSTODY_CONFIRMATION_REQUIRED",
-            "explicit Human signature-artifact custody confirmation is required",
+            "ERR_SIGNATURE_ARTIFACT_CUSTODY_INTENT_ATTESTATION_REQUIRED",
+            "caller intent attestation is required for encrypted staging",
             ProductErrorCategory.AUTHORIZATION,
         )
     candidate = SignatureArtifactCustodyCandidate.from_dict(
         _snapshot_json_object(candidate_payload, "candidate_payload")
     )
-    _positive(confirmed_at_epoch_ms, "confirmed_at_epoch_ms")
-    if confirmed_at_epoch_ms < candidate.created_at_epoch_ms:
-        raise ValueError("custody confirmation precedes the exact R10C candidate")
+    _positive(attested_at_epoch_ms, "attested_at_epoch_ms")
+    if attested_at_epoch_ms < candidate.created_at_epoch_ms:
+        raise ValueError("intent attestation precedes the exact R10C candidate")
     candidate_dict = candidate.to_dict()
-    return SignatureArtifactCustodyConfirmation(
-        confirmation_id,
+    return SignatureArtifactCustodyIntentAttestation(
+        attestation_id,
         candidate_dict["custody_candidate_sha256"],
         candidate.artifact_store_id,
         candidate.owner_scope_sha256,
         candidate.signature_request_sha256,
         candidate.signer_key_id_sha256,
         candidate.detached_signature_sha256,
-        confirmed_at_epoch_ms,
+        attested_at_epoch_ms,
     )
 
 
@@ -352,9 +355,10 @@ class SignatureArtifactCustodyReceipt:
     signer_key_id_sha256: str
     detached_signature_sha256: str
     verification_receipt_sha256: str
-    confirmation_sha256: str
+    intent_attestation_sha256: str
     stored_at_epoch_ms: int
     cipher_suite: str
+    production_dpapi_cipher_verified: bool
 
     def __post_init__(self) -> None:
         _logical_id(self.receipt_id, "receipt_id")
@@ -377,13 +381,20 @@ class SignatureArtifactCustodyReceipt:
             "signer_key_id_sha256",
             "detached_signature_sha256",
             "verification_receipt_sha256",
-            "confirmation_sha256",
+            "intent_attestation_sha256",
         ):
             _sha(getattr(self, field), field)
         if self.predecessor_pack_sha256 is not None:
             _sha(self.predecessor_pack_sha256, "predecessor_pack_sha256")
         _positive(self.stored_at_epoch_ms, "stored_at_epoch_ms")
         _logical_id(self.cipher_suite, "cipher_suite")
+        if type(self.production_dpapi_cipher_verified) is not bool:
+            raise ValueError("production_dpapi_cipher_verified must be an exact boolean")
+        if self.production_dpapi_cipher_verified:
+            if self.cipher_suite != SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE:
+                raise ValueError("production DPAPI receipt has the wrong cipher suite")
+        elif self.cipher_suite == SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE:
+            raise ValueError("test-only cipher cannot claim the production DPAPI suite")
 
     def to_dict(self) -> dict[str, Any]:
         body: dict[str, Any] = {
@@ -406,23 +417,30 @@ class SignatureArtifactCustodyReceipt:
             "signer_key_id_sha256": self.signer_key_id_sha256,
             "detached_signature_sha256": self.detached_signature_sha256,
             "verification_receipt_sha256": self.verification_receipt_sha256,
-            "confirmation_sha256": self.confirmation_sha256,
+            "intent_attestation_sha256": self.intent_attestation_sha256,
             "stored_at_epoch_ms": self.stored_at_epoch_ms,
             "cipher_suite": self.cipher_suite,
             "custody_contract": SIGNATURE_ARTIFACT_CUSTODY_CONTRACT,
-            "state": "OWNER_LOCAL_SIGNATURE_ARTIFACT_CUSTODIED",
+            "state": "SIGNATURE_ARTIFACT_STAGED_AWAITING_TRUSTED_HUMAN_CONFIRMATION",
             "path_security_model": SIGNATURE_ARTIFACT_PATH_SECURITY_MODEL,
             "r10b_direct_recompiled_at_write": True,
             "caller_supplied_source_graph_recompiled_at_write": True,
             "cryptographic_signature_verified_against_supplied_policy_at_write": True,
             "r10c_candidate_recompiled_at_write": True,
-            "explicit_human_custody_confirmation_received": True,
-            "owner_local_encrypted_store_implemented": True,
-            "one_shot_write_completed": True,
+            "caller_attested_human_intent_recorded": True,
+            "explicit_human_custody_confirmation_received": False,
+            "human_confirmation_origin_authenticated": False,
+            "signature_artifact_custody_write_authorized_once": False,
+            "owner_local_encrypted_store_implemented": False,
+            "encrypted_artifact_staging_write_completed": True,
             "post_write_readback_verified": True,
-            "signature_artifact_custody_confirmed": True,
+            "signature_artifact_custody_confirmed": False,
+            "canonical_custody_receipt_minted": False,
             "symlink_rejection_present": True,
-            "encrypted_at_rest": True,
+            "production_dpapi_cipher_verified": self.production_dpapi_cipher_verified,
+            "test_only_cipher_used": not self.production_dpapi_cipher_verified,
+            "encrypted_at_rest": self.production_dpapi_cipher_verified,
+            "standalone_receipt_authoritative": False,
             "body_free_receipt": True,
             "signature_artifact_body_included": False,
             "public_key_material_included": False,
@@ -468,9 +486,10 @@ class SignatureArtifactCustodyReceipt:
             snapshot["signer_key_id_sha256"],
             snapshot["detached_signature_sha256"],
             snapshot["verification_receipt_sha256"],
-            snapshot["confirmation_sha256"],
+            snapshot["intent_attestation_sha256"],
             snapshot["stored_at_epoch_ms"],
             snapshot["cipher_suite"],
+            snapshot["production_dpapi_cipher_verified"],
         )
         if result.to_dict() != snapshot:
             raise ValueError("signature artifact custody receipt identity mismatch")
@@ -482,7 +501,7 @@ class _SignatureArtifactCustodySecret:
     receipt_id: str
     candidate: SignatureArtifactCustodyCandidate
     admission: KnowledgePackTrustedSignatureAdmission
-    confirmation: SignatureArtifactCustodyConfirmation
+    intent_attestation: SignatureArtifactCustodyIntentAttestation
     public_key_bytes: bytes
     detached_signature_bytes: bytes
     stored_at_epoch_ms: int
@@ -531,14 +550,14 @@ class _SignatureArtifactCustodySecret:
             != candidate.detached_signature_sha256
         ):
             raise ValueError("detached signature does not match the custody candidate")
-        confirmation = self.confirmation
+        intent_attestation = self.intent_attestation
         if (
-            confirmation.candidate_sha256,
-            confirmation.artifact_store_id,
-            confirmation.owner_scope_sha256,
-            confirmation.signature_request_sha256,
-            confirmation.signer_key_id_sha256,
-            confirmation.detached_signature_sha256,
+            intent_attestation.candidate_sha256,
+            intent_attestation.artifact_store_id,
+            intent_attestation.owner_scope_sha256,
+            intent_attestation.signature_request_sha256,
+            intent_attestation.signer_key_id_sha256,
+            intent_attestation.detached_signature_sha256,
         ) != (
             candidate_payload["custody_candidate_sha256"],
             candidate.artifact_store_id,
@@ -547,13 +566,13 @@ class _SignatureArtifactCustodySecret:
             candidate.signer_key_id_sha256,
             candidate.detached_signature_sha256,
         ):
-            raise ValueError("explicit Human confirmation does not match R10C")
-        if confirmation.confirmed_at_epoch_ms < candidate.created_at_epoch_ms:
-            raise ValueError("custody confirmation precedes R10C")
+            raise ValueError("caller intent attestation does not match R10C")
+        if intent_attestation.attested_at_epoch_ms < candidate.created_at_epoch_ms:
+            raise ValueError("intent attestation precedes R10C")
         if self.stored_at_epoch_ms < max(
             candidate.created_at_epoch_ms,
             admission.verified_at_epoch_ms,
-            confirmation.confirmed_at_epoch_ms,
+            intent_attestation.attested_at_epoch_ms,
         ):
             raise ValueError("signature artifact storage precedes exact Evidence")
         try:
@@ -573,7 +592,7 @@ class _SignatureArtifactCustodySecret:
             "receipt_id": self.receipt_id,
             "candidate": self.candidate.to_dict(),
             "trusted_signature_admission": self.admission.to_dict(),
-            "confirmation": self.confirmation.to_dict(),
+            "intent_attestation": self.intent_attestation.to_dict(),
             "public_key_b64": base64.b64encode(self.public_key_bytes).decode("ascii"),
             "detached_signature_b64": base64.b64encode(
                 self.detached_signature_bytes
@@ -613,7 +632,9 @@ class _SignatureArtifactCustodySecret:
             KnowledgePackTrustedSignatureAdmission.from_dict(
                 snapshot["trusted_signature_admission"]
             ),
-            SignatureArtifactCustodyConfirmation.from_dict(snapshot["confirmation"]),
+            SignatureArtifactCustodyIntentAttestation.from_dict(
+                snapshot["intent_attestation"]
+            ),
             base64.b64decode(snapshot["public_key_b64"], validate=True),
             base64.b64decode(snapshot["detached_signature_b64"], validate=True),
             snapshot["stored_at_epoch_ms"],
@@ -631,20 +652,31 @@ class SignatureArtifactCustodySaveResult:
 
 
 class SignatureArtifactCustodyStore:
-    def __init__(
-        self,
-        path: str | Path,
-        cipher: SignatureArtifactCustodyCipher | None = None,
-    ) -> None:
+    def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
-        self.cipher = (
-            cipher
-            if cipher is not None
-            else WindowsDpapiSignatureArtifactCustodyCipher()
+        self.cipher: SignatureArtifactCustodyCipher = (
+            WindowsDpapiSignatureArtifactCustodyCipher()
         )
-        if not isinstance(self.cipher, SignatureArtifactCustodyCipher):
+        self._production_dpapi_cipher_verified = True
+
+    @classmethod
+    def _for_test(
+        cls,
+        path: str | Path,
+        cipher: SignatureArtifactCustodyCipher,
+    ) -> "SignatureArtifactCustodyStore":
+        """Build a non-production test store that cannot mint encryption claims."""
+
+        instance = cls.__new__(cls)
+        instance.path = Path(path)
+        instance.cipher = cipher
+        if not isinstance(instance.cipher, SignatureArtifactCustodyCipher):
             raise ValueError("cipher does not implement SignatureArtifactCustodyCipher")
-        _logical_id(self.cipher.cipher_suite, "cipher_suite")
+        _logical_id(instance.cipher.cipher_suite, "cipher_suite")
+        if instance.cipher.cipher_suite == SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE:
+            raise ValueError("test-only cipher cannot claim the production DPAPI suite")
+        instance._production_dpapi_cipher_verified = False
+        return instance
 
     def _receipt(
         self, secret: _SignatureArtifactCustodySecret
@@ -667,9 +699,10 @@ class SignatureArtifactCustodyStore:
             candidate.signer_key_id_sha256,
             candidate.detached_signature_sha256,
             candidate.verification_receipt_sha256,
-            secret.confirmation.to_dict()["confirmation_sha256"],
+            secret.intent_attestation.to_dict()["intent_attestation_sha256"],
             secret.stored_at_epoch_ms,
             self.cipher.cipher_suite,
+            self._production_dpapi_cipher_verified,
         )
 
     def _envelope(self, secret: _SignatureArtifactCustodySecret) -> dict[str, Any]:
@@ -773,7 +806,7 @@ class SignatureArtifactCustodyStore:
         candidate_payload: Mapping[str, Any],
         key_custody_receipt_payload: Mapping[str, Any],
         trusted_signature_admission_compile_kwargs: Mapping[str, Any],
-        confirmation: SignatureArtifactCustodyConfirmation,
+        intent_attestation: SignatureArtifactCustodyIntentAttestation,
         stored_at_epoch_ms: int,
         failure_injector: FailureInjector | None = None,
     ) -> SignatureArtifactCustodySaveResult:
@@ -781,9 +814,9 @@ class SignatureArtifactCustodyStore:
 
         _logical_id(receipt_id, "receipt_id")
         _positive(stored_at_epoch_ms, "stored_at_epoch_ms")
-        if type(confirmation) is not SignatureArtifactCustodyConfirmation:
+        if type(intent_attestation) is not SignatureArtifactCustodyIntentAttestation:
             raise ValueError(
-                "confirmation must be an exact SignatureArtifactCustodyConfirmation"
+                "intent_attestation must be an exact SignatureArtifactCustodyIntentAttestation"
             )
         candidate_snapshot = _snapshot_json_object(
             candidate_payload, "candidate_payload"
@@ -872,7 +905,7 @@ class SignatureArtifactCustodyStore:
             receipt_id,
             expected_candidate,
             admission,
-            confirmation,
+            intent_attestation,
             r10b_arguments["public_key_bytes"],
             r10b_arguments["detached_signature_bytes"],
             stored_at_epoch_ms,
@@ -915,10 +948,10 @@ __all__ = [
     "SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE",
     "SIGNATURE_ARTIFACT_PATH_SECURITY_MODEL",
     "SignatureArtifactCustodyCipher",
-    "SignatureArtifactCustodyConfirmation",
+    "SignatureArtifactCustodyIntentAttestation",
     "SignatureArtifactCustodyReceipt",
     "SignatureArtifactCustodySaveResult",
     "SignatureArtifactCustodyStore",
     "WindowsDpapiSignatureArtifactCustodyCipher",
-    "confirm_signature_artifact_custody",
+    "attest_signature_artifact_custody_intent",
 ]

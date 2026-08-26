@@ -68,6 +68,7 @@ def signed_case(tmp_path: Path):
         "admission_id": "trusted-signature-admission.r10b",
         "promotion_intent_payload": intent.to_dict(),
         "promotion_intent_compile_kwargs": intent_arguments,
+        "signing_ceremony_receipt_payload": result.receipt.to_dict(),
         "trusted_signer_policy_payload": ceremony_arguments[
             "trusted_signer_policy_payload"
         ],
@@ -98,10 +99,13 @@ def test_trusted_r9a_reverification_returns_body_free_admission(
     assert payload["signing_journal_receipt_sha256"] == journal.to_dict()[
         "journal_receipt_sha256"
     ]
-    assert payload["trusted_r9a_verifier_executed_in_current_call"] is True
+    assert payload["r9a_verifier_executed_in_current_call"] is True
     assert payload["verification_claim_reproduced_exactly"] is True
-    assert payload["signature_origin_authenticated_in_current_call"] is True
-    assert payload["signature_verified_in_current_call"] is True
+    assert (
+        payload["cryptographic_signature_verified_against_supplied_policy"] is True
+    )
+    assert payload["canonical_signer_origin_authenticated"] is False
+    assert payload["owner_signer_binding_confirmed"] is False
     assert payload["standalone_admission_payload_authoritative"] is False
     assert payload["promotion_confirmation_eligible"] is False
 
@@ -129,6 +133,10 @@ def test_all_effects_and_remaining_gates_are_machine_readable(tmp_path: Path) ->
     ).to_dict()
     for field in (
         "signature_artifact_custody_confirmed",
+        "canonical_latest_source_revalidated",
+        "canonical_trusted_signer_policy_revalidated",
+        "canonical_signer_origin_authenticated",
+        "owner_signer_binding_confirmed",
         "standalone_admission_payload_authoritative",
         "canonical_receipt_minted",
         "promotion_confirmation_eligible",
@@ -152,12 +160,11 @@ def test_all_effects_and_remaining_gates_are_machine_readable(tmp_path: Path) ->
     ):
         assert payload[field] is False
     for field in (
-        "latest_source_revalidated",
-        "trusted_r9a_verifier_executed_in_current_call",
+        "caller_supplied_source_graph_recompiled",
+        "r9a_verifier_executed_in_current_call",
         "verification_claim_reproduced_exactly",
-        "signature_origin_authenticated_in_current_call",
-        "signature_verified_in_current_call",
-        "trusted_signer_policy_revalidated",
+        "cryptographic_signature_verified_against_supplied_policy",
+        "caller_supplied_signer_policy_self_validated",
         "signature_artifact_observed_during_verification",
         "direct_recompile_required_for_downstream",
         "explicit_human_promotion_confirmation_required",
@@ -332,10 +339,45 @@ def test_projection_tamper_unknown_fields_and_bool_time_fail_closed(
         compile_knowledge_pack_trusted_signature_admission(
             **dict(arguments, verified_at_epoch_ms=True)
         )
-    with pytest.raises(ValueError, match="precedes promotion intent"):
+    with pytest.raises(ValueError, match="precedes signed Evidence"):
         compile_knowledge_pack_trusted_signature_admission(
             **dict(arguments, verified_at_epoch_ms=399)
         )
+
+
+def test_verification_time_must_follow_journal_and_ceremony(tmp_path: Path) -> None:
+    arguments = signed_case(tmp_path)[5]
+    compile_kwargs = dict(arguments["promotion_intent_compile_kwargs"])
+    compile_kwargs["created_at_epoch_ms"] = 1
+    early_intent = compile_knowledge_pack_promotion_intent(**compile_kwargs)
+    with pytest.raises(ValueError, match="precedes signed Evidence"):
+        compile_knowledge_pack_trusted_signature_admission(
+            **dict(
+                arguments,
+                promotion_intent_payload=early_intent.to_dict(),
+                promotion_intent_compile_kwargs=compile_kwargs,
+                verified_at_epoch_ms=300,
+            )
+        )
+
+
+@pytest.mark.parametrize("surface", ["from_dict", "verify"])
+def test_public_admission_surfaces_reject_stateful_mapping_without_reads(
+    tmp_path: Path, surface: str
+) -> None:
+    arguments = signed_case(tmp_path)[5]
+    payload = compile_knowledge_pack_trusted_signature_admission(
+        **arguments
+    ).to_dict()
+    chameleon = ChameleonMapping(payload, dict(payload, admission_id="mutated"))
+    with pytest.raises(ValueError, match="exact built-in dict"):
+        if surface == "from_dict":
+            KnowledgePackTrustedSignatureAdmission.from_dict(chameleon)
+        else:
+            verify_knowledge_pack_trusted_signature_admission(
+                chameleon, **arguments
+            )
+    assert chameleon.read_count == 0
 
 
 def test_replacement_state_requires_exact_predecessor_rollback() -> None:

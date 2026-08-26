@@ -266,16 +266,26 @@ apply, rollback execution, Release, Deploy and Production remain unauthorized.
 ## R10B implementation - trusted in-call signature admission
 
 R10B re-runs the R9A Ed25519 verifier in the current call with the exact frozen
-R8 request, trusted signer policy, transient public key and detached signature.
+R8 request, caller-supplied self-validating signer policy, transient public key
+and detached signature. The complete nested R6-R8 compile tree is rebuilt from
+an explicit allowlist of exact Product enums and frozen dataclasses; every public
+JSON surface requires one recursively frozen exact built-in tree before parsing.
 The verifier result must reproduce the R10A verification claim exactly, after
 which R10A is recompiled and matched to the supplied intent. This closes the
-constructible-receipt origin gap for the current call without trusting a caller
-selected success object.
+constructible verification-receipt execution gap for the current call without
+trusting a caller-selected success object. The exact R9C ceremony receipt is
+cross-bound to the terminal R9D journal, request, signer, signature and
+verification coordinates. R10B verification time must be at or after the R10A
+intent, R9C completion and R9D terminal journal update.
 
 The public key and detached signature are not returned or persisted, and
 private key material is not accepted. The body-free admission is itself public
 constructible and therefore non-authoritative when detached from direct
-recompilation. Signature-artifact custody, canonical receipt/store,
+recompilation. Because this Unit has no canonical Owner trust-root or latest
+policy reader, it claims only mathematical verification against the supplied
+policy. Canonical/latest source revalidation, canonical signer-origin
+authentication, Owner signer binding and canonical trusted-policy revalidation
+are fixed false. Signature-artifact custody, canonical receipt/store,
 runtime-compatibility validation and explicit Human promotion confirmation
 remain later Gates. Knowledge Pack write/promotion, automatic promotion,
 runtime apply, rollback execution, Release, Deploy and Production remain

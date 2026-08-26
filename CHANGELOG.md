@@ -3,6 +3,7 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-059として、Owner保有の暗号化PuTTY PPK v3 Ed25519鍵をbody-free公開座標preflight、one-shot helper、Windows Credential UI、strict trusted launch configを介して既存TASK-029 R9B Owner-local DPAPI custodyへ取り込むfail-closed bridgeを追加しました。秘密値をWebView・ログ・receiptへ返さず、実PPK・passphrase・DPAPI custody・signing、Knowledge Pack promotion、Release／Deploy／Productionは別Human Gateのままです。
 - TASK-058 P1C-Cとして、P1C-Bの検証済みdurable staging read-backをproject／timeline／source receipt／staged artifact／prior ledgerへexact cross-bindし、append-only revision chainとpredecessor hashを検証するpure／no-I/O canonical promotion ledger候補contractを追加しました。canonical receipt／store／CAS／filesystem I/O／実promotion／runtime apply／rollback／Release／Deploy／Production authorityは生成しません。
 - TASK-029 R10Cとして、R9B鍵保管・R9C署名ceremony・R10B trusted signature admissionをexact cross-bindし、source因果順序とpath-free logical store IDをfail-closedに検証するbody-free署名artifact保管候補contractを追加しました。candidateはconstructible／non-authoritativeで、artifact custody write、canonical trust root、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは生成しません。
 

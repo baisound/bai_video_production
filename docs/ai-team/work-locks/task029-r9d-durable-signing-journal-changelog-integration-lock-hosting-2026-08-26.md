@@ -8,7 +8,7 @@ Status: PENDING_HOST_PR
 ## Target identity
 
 - PR #364 / codex/task-029-r9d-durable-signing-journal / b5d59d103e2a1ce28b69ccd73ec0776d00bc3b98
-- fresh main: a190d8663e848414ade7acc08e3bea1275b60da6
+- fresh main: 2fbd4b4c1f17a794df88b2ec6c75f5ea1f7ede06
 - exact6 immutable paths; Hosted 8/9 PASS with changelog-and-version only FAIL
 - focused/direct/TASK-029/full: 20 / 59 / 121 / 3954 PASS, 6 SKIP, 0 FAIL
 - independent DEV-4 GO / ACCEPT; Critic/Tester C/H/M/L 0/0/0/0

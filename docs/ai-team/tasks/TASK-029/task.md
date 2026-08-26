@@ -320,3 +320,40 @@ trust root, Owner signer binding, Knowledge Pack write/promotion, automatic
 promotion, runtime apply, rollback, Release, Deploy and Production remain
 unauthorized. Project/reviewer coordinates and actual artifact custody remain
 later Gates.
+
+## R10D implementation — explicit-Human-confirmed encrypted signature artifact custody
+
+R10D consumes the exact R10C candidate and performs one Owner-local encrypted
+custody write for a transient Ed25519 public key and detached signature. Before
+writing, it directly recompiles R10B with those exact bytes, repeats
+cryptographic verification, recompiles R10C from exact R9B/R9C/R10B Evidence,
+and requires a separate explicit Human confirmation bound to the candidate,
+Owner scope, artifact-store ID, request, signer, signature digest and time.
+
+The default store uses Windows Current User DPAPI with an R10D-specific entropy
+domain distinct from private-key custody. The disk envelope contains ciphertext
+and integrity metadata only. The one-shot write rejects an existing destination
+or symlink, uses validated atomic replace, and decrypts/validates the replaced
+file before returning a body-free receipt. Public-key and signature bodies stay
+inside encrypted local storage; no private key, seed, passphrase, credential,
+host path, media, or Project content is accepted or returned.
+
+The path model remains `COOPERATIVE_PROTECTED_LOCAL_WRITER_ONLY`. Directory
+durability, power-loss replay prevention, hostile ancestor/path races, deletion
+recovery and alternate-path replay are not confirmed. Canonical Owner trust
+root, Owner-signer identity binding, canonical Knowledge Pack receipt,
+Knowledge Pack write/promotion, automatic promotion, runtime apply, rollback,
+Timeline/Resolve, Release, Deploy, Production and external effects remain
+unauthorized.
+
+R10D source scope is exact six paths. Focused R10D is `12 PASS / 1 Windows-only
+DPAPI SKIP`, R9B-R10D direct is `108 PASS / 2 SKIP`, and TASK-029 is `173 PASS /
+5 SKIP`. Full Product is NOT_CONFIRMED because the pre-existing WSL environment
+has cryptography 41.0.7 and no `referencing`, while fresh-main TASK-059 requires
+Argon2 support from cryptography >=46 and that package; collection stopped on
+dependency import errors before tests ran. No dependency was installed.
+
+TASK-059's target and closure are merged, Registry revision 115 records its
+shared lock as `HOSTED_CLOSED_RELEASED`, and no active pending integration lock
+remains. R10D will integrate fresh main after its exact6 commit-ready checkpoint
+and obtain a separate exact CHANGELOG lock only after independent DEV-4 GO.

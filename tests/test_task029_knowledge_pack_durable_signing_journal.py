@@ -58,20 +58,58 @@ def _multiprocess_execute(queue: object, journal_path: str, arguments: dict[str,
     except ProductError as exc:
         queue.put(("error", exc.code))
 
-def _cleanup_processes(processes: list[mp.Process], *, join_timeout: float) -> None:
+def _cleanup_processes(
+    processes: list[mp.Process], *, join_timeout: float
+) -> list[int | None]:
+    errors: list[BaseException] = []
+
+    def attempt(action: object) -> None:
+        try:
+            action()
+        except BaseException as exc:  # cleanup must continue for every resource
+            errors.append(exc)
+
     for process in processes:
-        process.join(join_timeout)
+        attempt(lambda process=process: process.join(join_timeout))
     for process in processes:
-        if process.is_alive():
-            process.terminate()
+        try:
+            alive = process.is_alive()
+        except BaseException as exc:
+            errors.append(exc)
+            alive = True
+        if alive:
+            attempt(process.terminate)
     for process in processes:
-        process.join(5)
+        attempt(lambda process=process: process.join(5))
     for process in processes:
-        if process.is_alive():
-            process.kill()
+        try:
+            alive = process.is_alive()
+        except BaseException as exc:
+            errors.append(exc)
+            alive = True
+        if alive:
+            attempt(process.kill)
     for process in processes:
-        process.join(5)
-        assert not process.is_alive()
+        attempt(lambda process=process: process.join(5))
+
+    exitcodes: list[int | None] = []
+    for process in processes:
+        try:
+            alive = process.is_alive()
+            exitcode = process.exitcode
+            if alive:
+                errors.append(AssertionError("multiprocess child remained alive after kill"))
+            exitcodes.append(exitcode)
+        except BaseException as exc:
+            errors.append(exc)
+            exitcodes.append(None)
+        finally:
+            attempt(process.close)
+    if errors:
+        raise AssertionError(
+            f"multiprocess cleanup encountered {len(errors)} error(s)"
+        ) from errors[0]
+    return exitcodes
 
 def test_exact_ceremony_is_reserved_then_committed_body_free(tmp_path: Path) -> None:
     values, arguments = kwargs(tmp_path)
@@ -412,15 +450,39 @@ def test_actual_multiprocess_same_path_serializes_one_success(tmp_path: Path) ->
             ("success", "SIGNED_AND_VERIFIED"),
         ]
     finally:
-        _cleanup_processes(started, join_timeout=0)
-        queue.close()
-        queue.join_thread()
+        try:
+            _cleanup_processes(started, join_timeout=0)
+        finally:
+            try:
+                queue.close()
+            finally:
+                queue.join_thread()
 
 
 def test_multiprocess_cleanup_helper_terminates_live_child() -> None:
     context = mp.get_context("spawn")
     process = context.Process(target=time.sleep, args=(30,))
     process.start()
-    _cleanup_processes([process], join_timeout=0.01)
-    assert not process.is_alive()
-    assert process.exitcode is not None
+    exitcodes: list[int | None] | None = None
+    try:
+        exitcodes = _cleanup_processes([process], join_timeout=0.01)
+    finally:
+        # Independent fallback: even a cleanup-helper regression must not leak
+        # the deliberately live 30-second child or its Windows process handle.
+        try:
+            try:
+                alive = process.is_alive()
+            except ValueError:  # handle was already closed by the helper
+                alive = False
+            if alive:
+                process.terminate()
+                process.join(5)
+                if process.is_alive():
+                    process.kill()
+                    process.join(5)
+        finally:
+            try:
+                process.close()
+            except ValueError:  # already closed
+                pass
+    assert exitcodes is not None and exitcodes[0] is not None

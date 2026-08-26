@@ -2,7 +2,7 @@
 
 Date: 2026-08-26
 Profile: DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY
-State: THIRD INDEPENDENT NO-GO REWORK COMPLETE / FOURTH REVIEW PENDING
+State: FOURTH INDEPENDENT NO-GO REWORK COMPLETE / FIFTH REVIEW PENDING
 
 ## Atomic Unit
 
@@ -89,6 +89,8 @@ Independent re-review on head `064f186`: `NO-GO`, C/H/M/L=`0/1/2/0`. The remaini
 
 Third independent review on `d32c019`: implementation authority C/H=`0/0` and Tester local GO, but Final Judge `NO-GO` for one test-harness Medium. The multiprocess fixture could leave live children on timeout/assertion. Rework adds a shared bounded cleanup helper that joins every started child, terminates survivors, joins again, kills any remaining survivor, performs a final bounded join and asserts all are dead. Queue close/join_thread is guaranteed in `finally`. A live-child fixture directly exercises the forced cleanup path. Fourth independent review is required.
 
+Fourth independent review on `8b68ca2`: implementation authority C/H=`0/0` and Tester local GO, but Final Judge `NO-GO` for one cleanup-resource Medium. Rework prevents helper exceptions from short-circuiting cleanup: every process action is attempted with errors accumulated until all started children have reached final join and every dead-process handle has been closed. Only then may the helper raise. Functional fixture queue close/join_thread is in a nested finally independent of helper failure. The forced-live-child fixture also owns an outer fallback terminate/kill/join/close boundary. Focused and both multiprocess fixtures pass five repeated runs. Fifth independent review is required.
+
 ## Local acceptance
 
 - focused R9D state-machine, crash, conflict, atomic-failure, downscope, typed-cross-binding, schema and privacy tests: `20 PASS`;
@@ -100,4 +102,4 @@ Third independent review on `d32c019`: implementation authority C/H=`0/0` and Te
 
 ## Judge
 
-Current decision: `DRAFT_REVIEW_REQUIRED`. Three independent decisions were NO-GO; the third bounded rework is locally green but does not become GO until fourth independent review accepts the current head. Ready, merge and shared CHANGELOG integration remain prohibited. Shared lock order is TASK-054 closure, then a separate TASK-029 R9D transaction from fresh main.
+Current decision: `DRAFT_REVIEW_REQUIRED`. Four independent decisions were NO-GO; the fourth bounded rework is locally green but does not become GO until fifth independent review accepts the current head. Ready, merge and shared CHANGELOG integration remain prohibited. Shared lock order is TASK-054 closure, then a separate TASK-029 R9D transaction from fresh main.

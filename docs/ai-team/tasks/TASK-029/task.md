@@ -176,7 +176,7 @@ journalはkey/public-key/signature bytesを保存せず、R9Cのbody-free境界�
 
 shared metadata順序はOwner指示によりTASK-058 P1B closure、TASK-054、TASK-029 R9Dの順とする。R9D source Unitは`CHANGELOG.md`と`ACTIVE-WORK-LOCKS.json`を変更せず、R9D専用lockはTASK-054 canonical closure後にfresh mainから別transactionで取得する。
 
-R9D third rework focusedは`20 PASS`、R8-R9D directは`59 PASS`、TASK-029全体は`121 PASS`。無除外full Product回帰は`3954 PASS / 6 SKIP / 0 FAIL`。multiprocess fixtureは全started childをfinallyでbounded join→terminate→join→kill→final joinし、queue close/join_threadを保証する。
+R9D third rework focusedは`20 PASS`、R8-R9D directは`59 PASS`、TASK-029全体は`121 PASS`。無除外full Product回帰は`3954 PASS / 6 SKIP / 0 FAIL`。multiprocess fixtureはcleanup例外を蓄積して全started childのbounded join→terminate→join→kill→final joinとdead handle closeを先に完了し、その後だけraise可能とする。queue close/join_threadはnested finallyでhelper失敗から独立し、forced-live-child fixture自身も外側fallback回収を持つ。
 
 ## Objective
 

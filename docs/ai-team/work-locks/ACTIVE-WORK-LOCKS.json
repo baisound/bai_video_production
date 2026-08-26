@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 95,
+  "registry_revision": 96,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
   "audit_base_main_sha": "dc8a1949b58f7a5fa298a4d9153a2d410a1388da",
@@ -4741,6 +4741,75 @@
       "target_post_merge_security_run": 32923325332,
       "active_nonclosed_integration_locks_after_closure": 0,
       "released_at": "2026-08-26T02:44:12Z"
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK029-R9D-DURABLE-SIGNING-JOURNAL-CHANGELOG-20260826",
+      "owner_agent": "開発 / TASK-029 integration owner",
+      "owner_thread_id": "01a010d5-6067-78f2-a0af-c44eb0ca9535",
+      "lock_host_authority": "OWNER_DIRECTIVE_ACTIVE_CONTINUE_AUTONOMY_NOW_20260826",
+      "integration_effect_authority_state": "AUTHORIZED_PENDING_HOST_MAIN_READBACK",
+      "target_merge_authority_state": "OWNER_AUTHORIZED_PENDING_HOST_MAIN_READBACK",
+      "implementation_authority_state": "TASK029_R9D_PR364_TECHNICAL_GO_HOSTED_8_OF_9_CHANGELOG_ONLY_FAIL",
+      "hosting_branch": "codex/task-029-r9d-changelog-lock-hosting",
+      "hosting_base_sha": "2fbd4b4c1f17a794df88b2ec6c75f5ea1f7ede06",
+      "status": "PENDING_HOST_PR",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "target_pull_request": 364,
+      "target_pull_request_state": "OPEN_DRAFT_MERGEABLE_8_OF_9_PASS_CHANGELOG_ONLY_FAIL",
+      "target_branch": "codex/task-029-r9d-durable-signing-journal",
+      "expected_pre_integration_head": "b5d59d103e2a1ce28b69ccd73ec0776d00bc3b98",
+      "purpose": "ONE_EXACT_TASK029_R9D_PATH_LOCAL_DURABLE_SIGNING_JOURNAL_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+      "approved_changelog_bullet": "- TASK-029 R9Dとして、R9C署名前にexact ceremony identityをcaller-selected local journalへ予約し、trusted R9C/R9A結果をcross-bind後にbody-free receipt hashだけを確定するpath-local no-replay state machineを追加しました。別path・削除・directory durability・power loss・hostile raceは保証せず、実Owner鍵/署名、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。",
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
+      "immutable_target_path_count": 6,
+      "controlled_shared_target_paths": [],
+      "open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_OPEN_PRS",
+      "merge_order_reservation": "TASK029_R9D_NEXT_SHARED_CHANGELOG_CONSUMER_AFTER_TASK054_REVISION95_HOSTED_CLOSED_RELEASED",
+      "denied": [
+        "TASK029_R9D_IMPLEMENTATION_SCHEMA_TEST_DESIGN_OR_TASK_MUTATION_DURING_INTEGRATION_EFFECT",
+        "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
+        ".github/**",
+        "OTHER_SHARED_INTEGRATION_FILES",
+        "REAL_OWNER_KEY_CREATION_IMPORT_DECRYPT_OR_SIGNING_EXECUTION",
+        "SIGNATURE_OR_PRIVATE_KEY_EXPORT",
+        "CANONICAL_PROJECT_BINDING_DELETION_DETECTION_DIRECTORY_DURABILITY_POWER_LOSS_OR_HOSTILE_RACE_CLAIM",
+        "KNOWLEDGE_PACK_WRITE_PROMOTION_OR_AUTOMATIC_PROMOTION",
+        "RUNTIME_PROFILE_APPLY_ROLLBACK_EXECUTION_OR_GIT_RELEASE",
+        "TIMELINE_RESOLVE_PROVIDER_CLOUD_PRIVATE_BODY_OR_PRODUCTION_EFFECT",
+        "VERSION_TAG_RELEASE_DEPLOY_DURING_CHANGELOG_EFFECT",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_UNCHANGED_HEAD_RETRY",
+      "composition_rule": "TARGET_PR_EXACT_6_IMMUTABLE_TASK029_R9D_PATHS_PLUS_1_INTEGRATION_OWNED_CHANGELOG_FILE",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "TARGET_NON_CHANGELOG_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "TASK054_REVISION95_HOSTED_CLOSED_RELEASED",
+        "TASK054_CLOSURE_POST_MAIN_CI_AND_SECURITY_SUCCESS",
+        "LOCK_HOST_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "LOCK_HOST_MERGED_MAIN_EXACT_READ_BACK",
+        "LOCK_HOST_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "FRESH_MAIN_REGISTRY_TARGET_HEAD_AND_OVERLAP_REAUDIT",
+        "NORMAL_MAIN_INTO_TARGET_MERGE_NO_REBASE_NO_FORCE",
+        "SIX_IMMUTABLE_BLOBS_PRESERVED",
+        "EXACT_APPROVED_CHANGELOG_LINE_ONLY"
+      ],
+      "expiry_conditions": [
+        "TARGET_HEAD_MISMATCH",
+        "TARGET_PR_CLOSED_OR_MERGED",
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
+        "NEW_CHANGELOG_OR_REGISTRY_OVERLAP",
+        "SIX_IMMUTABLE_IMPLEMENTATION_SCHEMA_TEST_DESIGN_OR_TASK_BLOB_DRIFT",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
+        "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+      ],
+      "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_SHARED_PATH_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_AND_APPEND_ONLY_CLOSURE_EVIDENCE",
+      "integration_effect_authority_id": "OWNER_DIRECTIVE_ACTIVE_CONTINUE_AUTONOMY_NOW_20260826",
+      "target_merge_authority_id": "OWNER_DIRECTIVE_ACTIVE_CONTINUE_AUTONOMY_NOW_20260826",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
     }
   ],
   "roadmap_dependency_gates": {

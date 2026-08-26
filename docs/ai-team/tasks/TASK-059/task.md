@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CC_AUTH_REQUEST_COORDINATES_CORRECTED_LOCAL_HELPER_RUNTIME_NEXT`
+Status: `P1CD_HELPER_RUNTIME_IMPLEMENTED_LOCAL_OPERATOR_GATE_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -129,3 +129,27 @@ regression is `92 PASS`; compile passes. Detailed Evidence is
 `ppk-helper-auth-request-custody-coordinates-p1cc-evidence.md`. The fixed
 helper runtime is next; real PPK/passphrase, DPAPI custody and signing remain
 separate Gates.
+
+## P1C-D helper runtime checkpoint
+
+P1C-D composes the fixed one-attempt helper runtime over the existing P1C wire,
+P1A authentication, P1B confirmation/import orchestration and TASK-029 R9B
+custody owner. The exact CLI accepts only `--protocol-version 1`; every
+secret-bearing input remains anonymous-pipe-only and decoded mutable buffers
+are zeroed.
+
+CANCEL and parent EOF after READY clear the authenticated secret without
+custody. After the sole custody dispatch begins, every exception, invalid
+COMPLETED payload or output loss becomes
+`ERR_PPK_CUSTODY_RESULT_LOST_REQUIRES_READBACK`; no blind retry is permitted.
+The helper also rejects a custody adapter that returns without consuming the
+secret.
+
+P1C-D focused Evidence is `15 PASS`. Direct Windows regression is `129 PASS,
+5 DESELECTED` only for the known Pytest 9 oversized-parameter-ID setup issue;
+the exact five excluded cases are `5 PASS` under WSL. Compile passes.
+Detailed Evidence is `ppk-helper-runtime-p1cd-evidence.md`.
+
+The next bounded unit is parent/Operator integration with synthetic fixtures.
+Real PPK/passphrase, DPAPI custody, signing and public integration remain
+separate Human Gates.

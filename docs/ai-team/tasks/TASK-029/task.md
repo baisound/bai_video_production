@@ -170,13 +170,13 @@ R9Cはtarget PR #359、lock-host PR #360、closure PR #362でhosted closedとな
 
 ## R9D implementation — path-local signing ceremony journal and no-replay recovery
 
-R9DはR9Cの署名処理をcaller-selected local journal lock内で実行し、R9C署名前にexact ceremony identityを`SIGNING_RESERVED`としてatomic fileへ保存する。成功時はexact typed R9C/R9A resultを全coordinateでcross-bindしてからreceipt hashだけを`SIGNED_AND_VERIFIED`へcommitする。保持された同一path内の既知失敗またはprocess interruptionは`RECOVERY_REQUIRED`へ固定する。
+R9DはR9Cの署名処理をcaller-selected local journal lock内で実行し、R9C署名前にexact ceremony identityを`SIGNING_RESERVED`としてatomic fileへ保存する。production success callbackは持たずtrusted `execute_local_signing_ceremony`を直呼びし、exact typed R9C/R9A resultを全coordinateでcross-bindしてからreceipt hashだけを`SIGNED_AND_VERIFIED`へcommitする。test seamは成功値を返せないafter-reservation fault hookだけとする。保持された同一path内の既知失敗またはprocess interruptionは`RECOVERY_REQUIRED`へ固定する。
 
-journalはkey/public-key/signature bytesを保存せず、R9Cのbody-free境界を維持する。別path・削除・directory durability・power lossを越える保証はなく、`persistent_replay_prevention_present=false`、canonical binding/deletion detection/directory durability/power-loss flagsもfalse、`path_local_replay_prevention_present=true`を固定する。signature export、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback、Release/Deploy/Production authorityは生成しない。
+journalはkey/public-key/signature bytesを保存せず、R9Cのbody-free境界を維持する。別path・削除・directory durability・power lossを越える保証はなく、`persistent_replay_prevention_present=false`、canonical binding/deletion detection/directory durability/power-loss flagsもfalse、`path_local_replay_prevention_present=true`を固定する。path security modelは`COOPERATIVE_PROTECTED_LOCAL_WRITER_ONLY`、hostile race protection=false、symlink rejection=trueとしてmachine-readableに固定する。signature export、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback、Release/Deploy/Production authorityは生成しない。
 
 shared metadata順序はOwner指示によりTASK-058 P1B closure、TASK-054、TASK-029 R9Dの順とする。R9D source Unitは`CHANGELOG.md`と`ACTIVE-WORK-LOCKS.json`を変更せず、R9D専用lockはTASK-054 canonical closure後にfresh mainから別transactionで取得する。
 
-R9D rework focusedは`13 PASS`、R8-R9D directは`52 PASS`、TASK-029全体は`114 PASS`。修正後の無除外full Product回帰は`3947 PASS / 6 SKIP / 0 FAIL`。
+R9D second rework focusedは`19 PASS`、R8-R9D directは`58 PASS`、TASK-029全体は`120 PASS`。修正後の無除外full Product回帰は`3953 PASS / 6 SKIP / 0 FAIL`。
 
 ## Objective
 

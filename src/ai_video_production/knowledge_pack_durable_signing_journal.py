@@ -124,6 +124,9 @@ class DurableSigningJournalReceipt:
             "journal_deletion_detection_present": False,
             "reservation_directory_durability_confirmed": False,
             "power_loss_replay_prevention_confirmed": False,
+            "path_security_model": "COOPERATIVE_PROTECTED_LOCAL_WRITER_ONLY",
+            "hostile_path_race_protection_verified": False,
+            "symlink_path_rejection_present": True,
             "automatic_replay_authorized": False,
             "signature_bytes_included": False,
             "public_key_material_included": False,
@@ -161,7 +164,7 @@ class DurableSigningJournalReceipt:
         return result
 
 
-CeremonyExecutor = Callable[..., LocalSigningCeremonyResult]
+AfterReservationFaultHook = Callable[[], None]
 
 
 class DurableSigningCeremonyJournal:
@@ -317,7 +320,7 @@ class DurableSigningCeremonyJournal:
         trusted_signer_policy_payload: Mapping[str, Any],
         confirmation: LocalSigningCeremonyConfirmation,
         completed_at_epoch_ms: int,
-        ceremony_executor: CeremonyExecutor = execute_local_signing_ceremony,
+        after_reservation_fault_hook: AfterReservationFaultHook | None = None,
         reserve_failure_injector: FailureInjector | None = None,
         final_failure_injector: FailureInjector | None = None,
     ) -> tuple[DurableSigningJournalReceipt, LocalSigningCeremonyResult]:
@@ -407,8 +410,6 @@ class DurableSigningCeremonyJournal:
                     journal_receipt_sha256=existing.to_dict()["journal_receipt_sha256"],
                 )
 
-            if custody_store.read_receipt() != custody:
-                raise ValueError("custody receipt does not match current encrypted custody")
             reserved = self._exact_receipt(
                 journal_id=journal_id,
                 custody=custody,
@@ -421,7 +422,11 @@ class DurableSigningCeremonyJournal:
             self._write(reserved, reserve_failure_injector)
 
             try:
-                result = ceremony_executor(
+                if custody_store.read_receipt() != custody:
+                    raise ValueError("custody receipt does not match current encrypted custody")
+                if after_reservation_fault_hook is not None:
+                    after_reservation_fault_hook()
+                result = execute_local_signing_ceremony(
                     receipt_id=receipt_id,
                     verification_receipt_id=verification_receipt_id,
                     custody_store=custody_store,

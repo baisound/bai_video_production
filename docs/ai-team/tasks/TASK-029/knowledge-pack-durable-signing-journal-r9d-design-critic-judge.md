@@ -2,7 +2,7 @@
 
 Date: 2026-08-26
 Profile: DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY
-State: INDEPENDENT NO-GO REWORK COMPLETE / RE-REVIEW PENDING
+State: SECOND INDEPENDENT NO-GO REWORK COMPLETE / THIRD REVIEW PENDING
 
 ## Atomic Unit
 
@@ -61,7 +61,7 @@ Real Owner key creation and real signing remain `NOT_EXECUTED` in this Unit. Tes
 | Failure | Required result |
 |---|---|
 | stale/tampered R8 request or inactive policy | reject before journal and custody access |
-| current custody receipt drift | reject before reservation |
+| current custody receipt drift | after successful reservation, mark `RECOVERY_REQUIRED` before signing |
 | existing journal for another exact ceremony | conflict; do not mutate existing record |
 | concurrent exact execution | serialize on journal lock |
 | known exception after reservation | atomically mark `RECOVERY_REQUIRED` |
@@ -69,7 +69,7 @@ Real Owner key creation and real signing remain `NOT_EXECUTED` in this Unit. Tes
 | final atomic replace failure | retain reservation; next call marks recovery and does not replay |
 | receipt tamper, unknown field or symlink target | integrity failure |
 | alternate path or externally deleted journal | another attempt is possible; receipt flags must not claim persistent prevention |
-| fake/unbound executor success result | mark `RECOVERY_REQUIRED`; never commit success |
+| fully forged typed success result | no public success callback exists; reject unexpected argument before reservation/key access |
 | invalid completion-time type | reject before reservation or key access |
 
 ## Critic
@@ -77,7 +77,7 @@ Real Owner key creation and real signing remain `NOT_EXECUTED` in this Unit. Tes
 Builder self-Critic findings resolved before the local gate:
 
 - High: a different request could reuse the same path and mutate an interrupted reservation. Resolved by exact five-coordinate identity comparison before recovery transition.
-- High: a known custody/policy mismatch could poison a journal before any signing possibility. Resolved by request/policy/custody identity preflight before reservation while retaining R9C revalidation before signing.
+- High: a stale request or policy mismatch is rejected before reservation. Current encrypted-custody drift is revalidated only after reservation succeeds so a reserve-write failure performs zero custody decrypt/key access; drift becomes terminal recovery before signing.
 - High: releasing the journal lock during signing would let a concurrent caller misclassify a live reservation. Resolved by holding the cross-process lock through final commit.
 - High: catching process-level interruption could falsely classify an unknown result as a known failure. Resolved by catching `Exception` only; `BaseException` leaves a durable reservation for later recovery.
 - Medium: final write failure could tempt a retry. Resolved by preserving the reservation and requiring recovery.
@@ -85,15 +85,17 @@ Builder self-Critic findings resolved before the local gate:
 
 Independent DEV-4 review on head `a22fe41`: `NO-GO`, C/H/M/L=`0/3/2/0`. H1 alternate-path/deletion bypass and H3 unconfirmed directory durability are closed by explicit path-local downscope and fixed false claims. H2 arbitrary executor success is closed by exact concrete result types plus ceremony/custody/request/confirmation/receipt/completion/signature-verification cross-binding before final commit. M1 completion time is now positive-integer preflight. M2 direct negative fixtures cover alternate path/deletion, fake typed success, invalid completion time, corrupt/unknown/symlink state; independent re-review remains required.
 
+Independent re-review on head `064f186`: `NO-GO`, C/H/M/L=`0/1/2/0`. The remaining High identified that public constructible typed receipts could still be injected through the success callback without cryptographic origin. Rework removes the success callback completely and directly calls trusted `execute_local_signing_ceremony`. The only test seam is a no-result after-reservation fault hook. A fully forged, coordinate-valid typed result fixture proves that no public injection parameter remains and fails before reservation/key access. Machine-readable path security flags and actual multiprocess, reserve-write failure, and all-five-coordinate conflict fixtures close the Medium requests. Third independent review is required.
+
 ## Local acceptance
 
-- focused R9D state-machine, crash, conflict, atomic-failure, downscope, typed-cross-binding, schema and privacy tests: `13 PASS`;
-- R8/R9A/R9B/R9C/R9D direct regression: `52 PASS`;
-- TASK-029 regression: `114 PASS`;
-- current unfiltered Product regression: `3947 PASS / 6 SKIP / 0 FAIL`;
+- focused R9D state-machine, crash, conflict, atomic-failure, downscope, typed-cross-binding, schema and privacy tests: `19 PASS`;
+- R8/R9A/R9B/R9C/R9D direct regression: `58 PASS`;
+- TASK-029 regression: `120 PASS`;
+- current unfiltered Product regression: `3953 PASS / 6 SKIP / 0 FAIL`;
 
 - compile, schema mirror and exact6 diff/scope check: `PASS`.
 
 ## Judge
 
-Current decision: `DRAFT_REVIEW_REQUIRED`. The first independent decision was NO-GO; the bounded rework is locally green but does not become GO until independent re-review accepts the current head. Ready, merge and shared CHANGELOG integration remain prohibited. Shared lock order is TASK-054 closure, then a separate TASK-029 R9D transaction from fresh main.
+Current decision: `DRAFT_REVIEW_REQUIRED`. Two independent decisions were NO-GO; the second bounded rework is locally green but does not become GO until third independent review accepts the current head. Ready, merge and shared CHANGELOG integration remain prohibited. Shared lock order is TASK-054 closure, then a separate TASK-029 R9D transaction from fresh main.

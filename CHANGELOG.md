@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 - TASK-058 P1C-Cとして、P1C-Bの検証済みdurable staging read-backをproject／timeline／source receipt／staged artifact／prior ledgerへexact cross-bindし、append-only revision chainとpredecessor hashを検証するpure／no-I/O canonical promotion ledger候補contractを追加しました。canonical receipt／store／CAS／filesystem I/O／実promotion／runtime apply／rollback／Release／Deploy／Production authorityは生成しません。
+- TASK-029 R10Cとして、R9B鍵保管・R9C署名ceremony・R10B trusted signature admissionをexact cross-bindし、source因果順序とpath-free logical store IDをfail-closedに検証するbody-free署名artifact保管候補contractを追加しました。candidateはconstructible／non-authoritativeで、artifact custody write、canonical trust root、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは生成しません。
 
 - TASK-029 R10Bとして、exact R9C/R9D署名Evidenceの時刻・座標をcross-bindし、deep-frozen R8入力と一時的な公開鍵／署名からcaller-supplied policyに対するEd25519検証を同一呼出しで再実行するbody-free admissionを追加しました。canonical trust-root／Owner signer binding／artifact custody／Pack promotionは未成立で、runtime apply、rollback、Release/Deploy/Production authorityは生成しません。
 

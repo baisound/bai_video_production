@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.video.production/schemas/knowledge-pack-durable-signing-journal-receipt.schema.json",
+  "title": "TASK-029 R9D Durable Signing Journal Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_version",
+    "record_type",
+    "task_owner",
+    "journal_id",
+    "ceremony_id",
+    "custody_receipt_sha256",
+    "signature_request_sha256",
+    "confirmation_sha256",
+    "state",
+    "reserved_at_epoch_ms",
+    "updated_at_epoch_ms",
+    "ceremony_receipt_sha256",
+    "verification_receipt_sha256",
+    "persistent_replay_prevention_present",
+    "automatic_replay_authorized",
+    "signature_bytes_included",
+    "public_key_material_included",
+    "private_key_material_included",
+    "knowledge_pack_write_authorized",
+    "knowledge_pack_promotion_authorized",
+    "automatic_promotion_authorized",
+    "runtime_profile_apply_authorized",
+    "rollback_execution_authorized",
+    "release_authorized",
+    "external_effect_authorized",
+    "journal_receipt_sha256"
+  ],
+  "properties": {
+    "receipt_version": {"const": "1.0.0"},
+    "record_type": {"const": "KNOWLEDGE_PACK_DURABLE_SIGNING_JOURNAL_RECEIPT"},
+    "task_owner": {"const": "TASK-029"},
+    "journal_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"},
+    "ceremony_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"},
+    "custody_receipt_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "signature_request_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "confirmation_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "state": {"enum": ["SIGNING_RESERVED", "SIGNED_AND_VERIFIED", "RECOVERY_REQUIRED"]},
+    "reserved_at_epoch_ms": {"type": "integer", "minimum": 1},
+    "updated_at_epoch_ms": {"type": "integer", "minimum": 1},
+    "ceremony_receipt_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "verification_receipt_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "persistent_replay_prevention_present": {"const": true},
+    "automatic_replay_authorized": {"const": false},
+    "signature_bytes_included": {"const": false},
+    "public_key_material_included": {"const": false},
+    "private_key_material_included": {"const": false},
+    "knowledge_pack_write_authorized": {"const": false},
+    "knowledge_pack_promotion_authorized": {"const": false},
+    "automatic_promotion_authorized": {"const": false},
+    "runtime_profile_apply_authorized": {"const": false},
+    "rollback_execution_authorized": {"const": false},
+    "release_authorized": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "journal_receipt_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"state": {"const": "SIGNED_AND_VERIFIED"}}},
+      "then": {
+        "properties": {
+          "ceremony_receipt_sha256": {"type": "string"},
+          "verification_receipt_sha256": {"type": "string"}
+        }
+      },
+      "else": {
+        "properties": {
+          "ceremony_receipt_sha256": {"type": "null"},
+          "verification_receipt_sha256": {"type": "null"}
+        }
+      }
+    }
+  ]
+}

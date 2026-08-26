@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CH1_NATIVE_SECRET_ADAPTER_PASS_WINDOWS_BACKEND_NEXT`
+Status: `P1CH2_WINDOWS_NATIVE_BACKEND_PASS_SHELL_API_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -280,3 +280,30 @@ P1C-H2 next owns the concrete Windows masked secret dialog and fixed PPK/public
 file filters. Real PPK/passphrase use, DPAPI custody, signing, Authenticode,
 installer, publish, promote, Release, Deploy and Production remain separate
 Gates.
+
+## P1C-H2 Windows native dialog backend checkpoint
+
+P1C-H2 adds fixed encrypted-PPK/RFC4716 WinForms file selectors and the
+concrete Windows Credential UI secret backend. `DO_NOT_PERSIST`,
+`GENERIC_CREDENTIALS`, `ALWAYS_SHOW_UI`, certificate exclusion and a locked
+non-secret username are fixed. Windows writes into caller-owned UTF-16 memory;
+numeric conversion writes directly into H1's UTF-8 `bytearray`, and
+`RtlSecureZeroMemory` clears native memory on every path.
+
+H2 core Evidence is `14 PASS`; H2/file-dialog/H1 focused Evidence is
+`42 PASS`; TASK-059 plus native-dialog direct Windows regression is
+`185 PASS` plus the two known Pytest 9 oversized parameter-ID setup errors.
+The read-only native probe confirms `credui.dll`,
+`CredUIPromptForCredentialsW`, 40-byte `CREDUI_INFOW` and exact
+`0x14008a` flags.
+
+Actual Credential UI automation was not executed because the applicable
+Computer Use safety policy prohibits automating authentication dialogs.
+Masking/focus/accessibility/Cancel/OK runtime observation remains
+`NOT_CONFIRMED` for P1C-J manual native QA. Detailed Evidence is
+`ppk-windows-native-dialog-backend-p1ch2-evidence.md`.
+
+P1C-I next owns body-free Shell API and the canonical Settings
+`Connection / Secret` card. Real PPK/passphrase use, DPAPI custody, signing,
+Authenticode, installer, publish, promote, Release, Deploy and Production
+remain separate Gates.

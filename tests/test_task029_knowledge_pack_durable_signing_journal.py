@@ -5,6 +5,7 @@ from dataclasses import replace
 import inspect
 import json
 import multiprocessing as mp
+import time
 from pathlib import Path
 
 import pytest
@@ -56,6 +57,21 @@ def _multiprocess_execute(queue: object, journal_path: str, arguments: dict[str,
         queue.put(("success", receipt.state.value))
     except ProductError as exc:
         queue.put(("error", exc.code))
+
+def _cleanup_processes(processes: list[mp.Process], *, join_timeout: float) -> None:
+    for process in processes:
+        process.join(join_timeout)
+    for process in processes:
+        if process.is_alive():
+            process.terminate()
+    for process in processes:
+        process.join(5)
+    for process in processes:
+        if process.is_alive():
+            process.kill()
+    for process in processes:
+        process.join(5)
+        assert not process.is_alive()
 
 def test_exact_ceremony_is_reserved_then_committed_body_free(tmp_path: Path) -> None:
     values, arguments = kwargs(tmp_path)
@@ -382,13 +398,29 @@ def test_actual_multiprocess_same_path_serializes_one_success(tmp_path: Path) ->
         context.Process(target=_multiprocess_execute, args=(queue, journal_path, arguments))
         for _ in range(2)
     ]
-    for process in processes:
-        process.start()
-    for process in processes:
-        process.join(30)
-        assert process.exitcode == 0
-    results = sorted(queue.get(timeout=5) for _ in processes)
-    assert results == [
-        ("error", "ERR_KNOWLEDGE_PACK_SIGNING_ALREADY_FINAL"),
-        ("success", "SIGNED_AND_VERIFIED"),
-    ]
+    started: list[mp.Process] = []
+    try:
+        for process in processes:
+            process.start()
+            started.append(process)
+        for process in started:
+            process.join(30)
+        assert all(not process.is_alive() and process.exitcode == 0 for process in started)
+        results = sorted(queue.get(timeout=5) for _ in started)
+        assert results == [
+            ("error", "ERR_KNOWLEDGE_PACK_SIGNING_ALREADY_FINAL"),
+            ("success", "SIGNED_AND_VERIFIED"),
+        ]
+    finally:
+        _cleanup_processes(started, join_timeout=0)
+        queue.close()
+        queue.join_thread()
+
+
+def test_multiprocess_cleanup_helper_terminates_live_child() -> None:
+    context = mp.get_context("spawn")
+    process = context.Process(target=time.sleep, args=(30,))
+    process.start()
+    _cleanup_processes([process], join_timeout=0.01)
+    assert not process.is_alive()
+    assert process.exitcode is not None

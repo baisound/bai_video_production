@@ -2,7 +2,7 @@
 
 Date: 2026-08-26
 Profile: DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY
-State: SECOND INDEPENDENT NO-GO REWORK COMPLETE / THIRD REVIEW PENDING
+State: THIRD INDEPENDENT NO-GO REWORK COMPLETE / FOURTH REVIEW PENDING
 
 ## Atomic Unit
 
@@ -87,15 +87,17 @@ Independent DEV-4 review on head `a22fe41`: `NO-GO`, C/H/M/L=`0/3/2/0`. H1 alter
 
 Independent re-review on head `064f186`: `NO-GO`, C/H/M/L=`0/1/2/0`. The remaining High identified that public constructible typed receipts could still be injected through the success callback without cryptographic origin. Rework removes the success callback completely and directly calls trusted `execute_local_signing_ceremony`. The only test seam is a no-result after-reservation fault hook. A fully forged, coordinate-valid typed result fixture proves that no public injection parameter remains and fails before reservation/key access. Machine-readable path security flags and actual multiprocess, reserve-write failure, and all-five-coordinate conflict fixtures close the Medium requests. Third independent review is required.
 
+Third independent review on `d32c019`: implementation authority C/H=`0/0` and Tester local GO, but Final Judge `NO-GO` for one test-harness Medium. The multiprocess fixture could leave live children on timeout/assertion. Rework adds a shared bounded cleanup helper that joins every started child, terminates survivors, joins again, kills any remaining survivor, performs a final bounded join and asserts all are dead. Queue close/join_thread is guaranteed in `finally`. A live-child fixture directly exercises the forced cleanup path. Fourth independent review is required.
+
 ## Local acceptance
 
-- focused R9D state-machine, crash, conflict, atomic-failure, downscope, typed-cross-binding, schema and privacy tests: `19 PASS`;
-- R8/R9A/R9B/R9C/R9D direct regression: `58 PASS`;
-- TASK-029 regression: `120 PASS`;
-- current unfiltered Product regression: `3953 PASS / 6 SKIP / 0 FAIL`;
+- focused R9D state-machine, crash, conflict, atomic-failure, downscope, typed-cross-binding, schema and privacy tests: `20 PASS`;
+- R8/R9A/R9B/R9C/R9D direct regression: `59 PASS`;
+- TASK-029 regression: `121 PASS`;
+- current unfiltered Product regression: `3954 PASS / 6 SKIP / 0 FAIL`;
 
 - compile, schema mirror and exact6 diff/scope check: `PASS`.
 
 ## Judge
 
-Current decision: `DRAFT_REVIEW_REQUIRED`. Two independent decisions were NO-GO; the second bounded rework is locally green but does not become GO until third independent review accepts the current head. Ready, merge and shared CHANGELOG integration remain prohibited. Shared lock order is TASK-054 closure, then a separate TASK-029 R9D transaction from fresh main.
+Current decision: `DRAFT_REVIEW_REQUIRED`. Three independent decisions were NO-GO; the third bounded rework is locally green but does not become GO until fourth independent review accepts the current head. Ready, merge and shared CHANGELOG integration remain prohibited. Shared lock order is TASK-054 closure, then a separate TASK-029 R9D transaction from fresh main.

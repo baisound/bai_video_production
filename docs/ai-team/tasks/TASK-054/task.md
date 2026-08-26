@@ -381,3 +381,24 @@ after CGEL + compatible Knowledge/RAG and before deterministic Fact/Policy
 validation. R3D and actual review/promotion are Human-Gated; all media intake, Dataset adoption, runtime,
 training, Provider, TTS, Timeline, release and deploy effects remain blocked by
 their Human Gates.
+
+## R3D local Provider execution checkpoint
+
+R3D local preview execution is complete and commit-ready. It reuses the R3A
+Registry, R3B current-route validation, the canonical Provider resolver/service
+and the R2A strict parser. A trusted Authority verifier plus a body-free checksum-bound authorization permits one
+zero-cost PREVIEW_NO_LEARNING attempt only; an injected atomic use Store must
+claim it before dispatch. The selected local/free/no-credential route and the
+runtime's actual base-model/adapter digests must match the current APPROVED
+binding. Crossed, stale, expired, reused, non-local, over-token and state-changing
+attempts fail closed. The receipt records Evidence digests and coordinates only,
+keeps Fact/Policy validation false and requires Human review for structurally
+valid output. No fallback, retry, training, promotion or activation path exists.
+
+R3D plus direct dependency focused Evidence is 219 PASS; TASK-054 plus direct
+TASK-049 package regression is 533 PASS, 1 intentional Windows-native skip;
+compileall, schema mirror and diff checks pass. Real tuned-model Provider
+execution is NOT_EXECUTED / NOT_CONFIRMED: R6B verified the base runtime only,
+while an admitted real Dataset, trained adapter, evaluation and APPROVED binding
+do not yet exist. This checkpoint grants no Dataset adoption, learning, model
+promotion, release, deploy or Product mutation authority.

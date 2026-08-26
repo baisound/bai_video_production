@@ -19,6 +19,7 @@ from .desktop_shell import ShellApplicationService, WorkspaceId
 from .desktop_shell_projection import DesktopEditingProjectionService, EditingProjection
 from .task036_view_model import Task036DesktopViewModel
 from .task036_native_dialog import Task036NativeDialogService
+from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .connection_settings_web import ConnectionSettingsWebService
@@ -212,6 +213,7 @@ class Task036ShellBridge:
         audio_placement_application: Task026AudioPlacementApplication | None = None,
         quick_generation_application: Task042QuickGenerationApplication | None = None,
         connection_settings: ConnectionSettingsWebService | None = None,
+        owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
         final_review_application: FinalReviewApprovalApplication | None = None,
         final_review_external_gate_provider: Callable[
             [], tuple[FinalReviewExternalGateReceipt, ...]
@@ -262,6 +264,7 @@ class Task036ShellBridge:
         self._audio_placement_application = audio_placement_application
         self._quick_generation_application = quick_generation_application
         self._connection_settings = connection_settings
+        self._owner_signing_key_import = owner_signing_key_import
         self._final_review_application = final_review_application
         if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
             raise ValueError("Final Review external Gate provider is invalid")
@@ -1053,6 +1056,115 @@ class Task036ShellBridge:
                 "generation_started": False,
             }
         return self._connection_settings_projection(self._connection_settings.form())
+
+    @staticmethod
+    def _owner_signing_key_unavailable_projection() -> dict[str, object]:
+        return {
+            "available": False,
+            "task_owner": "TASK-059",
+            "state": "UNAVAILABLE_CONFIGURATION",
+            "status_label_ja": "設定未接続",
+            "recommended_action": "CHECK_APPLICATION_CONFIGURATION",
+            "candidate": None,
+            "ready": None,
+            "success": None,
+            "selected_paths_exposed": False,
+            "file_bodies_exposed": False,
+            "passphrase_exposed": False,
+            "custody_destination_path_exposed": False,
+            "one_shot_no_overwrite": True,
+            "signing_authorized": False,
+            "publication_authorized": False,
+            "promotion_authorized": False,
+            "release_authorized": False,
+            "deploy_authorized": False,
+        }
+
+    def owner_signing_key_import_snapshot(
+        self, args: Any = None
+    ) -> dict[str, object]:
+        self._empty_args(args, "Owner signing key import snapshot")
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.snapshot()
+
+    def owner_signing_key_import_choose_files(
+        self, args: Any = None
+    ) -> dict[str, object]:
+        self._empty_args(args, "Owner signing key file selection")
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.choose_files()
+
+    def owner_signing_key_import_confirm_public_identity(
+        self, args: Any
+    ) -> dict[str, object]:
+        expected = {"candidate_id", "explicit_human_confirmation"}
+        if (
+            not isinstance(args, dict)
+            or set(args) != expected
+            or args.get("explicit_human_confirmation") is not True
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Owner signing key public identity request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.confirm_public_identity(
+            candidate_id=args["candidate_id"],
+            explicit_human_confirmation=True,
+        )
+
+    def owner_signing_key_import_open_native_secret_dialog(
+        self, args: Any
+    ) -> dict[str, object]:
+        if not isinstance(args, dict) or set(args) != {"candidate_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Owner signing key native secret request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.open_native_secret_dialog(
+            candidate_id=args["candidate_id"]
+        )
+
+    def owner_signing_key_import_confirm_ready(
+        self, args: Any
+    ) -> dict[str, object]:
+        expected = {"attempt_id", "explicit_human_confirmation"}
+        if (
+            not isinstance(args, dict)
+            or set(args) != expected
+            or args.get("explicit_human_confirmation") is not True
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Owner signing key READY request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.confirm_ready(
+            attempt_id=args["attempt_id"],
+            explicit_human_confirmation=True,
+        )
+
+    def owner_signing_key_import_cancel(self, args: Any) -> dict[str, object]:
+        if not isinstance(args, dict) or set(args) != {"attempt_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Owner signing key cancellation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.cancel(
+            attempt_id=args["attempt_id"]
+        )
 
     def model_selection_snapshot(self, args: Any = None) -> dict[str, object]:
         """Compose persisted Project/Scene/Quick route coordinates without effects."""

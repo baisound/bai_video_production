@@ -54,6 +54,7 @@
 | TASK-055 | Montage Proposal / Human Edit Learning Integration | R0_HOSTED_CLOSED_RELEASED | OWNER_PRIORITY_1_CREATOR_LEARNING_INTEGRATION_2026_08_24 | DEV-4 | External source main `f8afa412` was admitted without a second Timeline/learning store; target PR #280 and lock PR #281/#282 are merged at fresh main `6050c476`, registry revision 53 is closed/released, and post-main CI/Security PASS. |
 | TASK-056 | Chase Keyword Cue / Semantic Audio Cue Bridge | R0_R1_R2_HOSTED_CLOSED | OWNER_PRIORITY_CREATOR_WORKFLOW_2026_08_23 | DEV-3 | R0 target #275、R1 target #283/lock-host #284/closure #285はmerged。durable TASK-036 word timing、text-free cue、明示Human ACCEPT / REJECTを保持し、shared CHANGELOG reservationは解放済み。Real model/private media/Timeline/Resolveは別Gate。 |
 | TASK-057 | Windows Snapshot Lock Initialization Race Hardening | R0_IMPLEMENTED_LOCAL_HOSTING_PENDING | OWNER_AUTONOMY_BLOCKING_CI_RECOVERY_2026_08_24 | DEV-4 | PR #293 Windows 3.12で露出した既存empty lock初期化raceを、canonical OS lock内でのbyte初期化へ修正。retry/workflow緩和なし。 |
+| TASK-059 | Owner Signing Key PPK Import Bridge | P1B_CUSTODY_IMPORT_CONTRACT_IMPLEMENTED_LOCAL_P1C_NEXT | OWNER_CONTINUE_WITHOUT_INTERMEDIATE_CONFIRMATION_2026_08_26 | DEV-4 | P0 preflight, P1A secret authentication and P1B body-free READY/confirmation/R9B one-shot import receipt are local commit-ready. Short-lived process/UI and real PPK/passphrase/DPAPI/signing remain later gates. |
 
 ## Roadmap authority
 

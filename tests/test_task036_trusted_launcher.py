@@ -23,10 +23,14 @@ from ai_video_production.ai_connections import (
 from ai_video_production.connection_settings_store import ConnectionSettingsStore
 from ai_video_production.task036_native_dialog import Task036NativeDialogService
 from ai_video_production.task036_trusted_launcher import (
+    OwnerSigningKeyPpkLaunchConfiguration,
     Task036LaunchConfiguration,
     _handoff_subtitle_path,
     _resolve_asset_bindings,
     build_trusted_launch,
+)
+from ai_video_production.owner_signing_key_ppk_shell_service import (
+    OwnerSigningKeyPpkShellService,
 )
 from ai_video_production.production_control_application import Task037ProductionControlApplication
 from ai_video_production.audit_application import Task038AuditApplication
@@ -76,6 +80,24 @@ class AsrProvider:
 
     def transcribe(self, request):
         raise AssertionError("provider must not execute during launch")
+
+
+class OwnerSigningKeyImportStub:
+    def __init__(self, *, fail_close: bool = False):
+        self.close_count = 0
+        self.fail_close = fail_close
+
+    def snapshot(self):
+        return {
+            "available": True,
+            "state": "IDLE_NOT_CONFIGURED",
+            "passphrase_exposed": False,
+        }
+
+    def close(self):
+        self.close_count += 1
+        if self.fail_close:
+            raise RuntimeError("owner signing key import close failed")
 
 
 class ExecutingAsrProvider:
@@ -177,6 +199,21 @@ def config_document(tmp_path: Path) -> tuple[Path, dict]:
     return path, raw
 
 
+def signing_key_config_document(tmp_path: Path) -> tuple[Path, dict]:
+    path, raw = config_document(tmp_path)
+    destination = Path(raw["project"]["project_root"]) / "owner-signing-key.json"
+    raw["launch_config_version"] = "1.3.0"
+    raw["local_generation"] = None
+    raw["local_image_generation"] = None
+    raw["owner_signing_key_import"] = {
+        "expected_openssh_sha256_fingerprint": "SHA256:" + "A" * 43,
+        "owner_scope_sha256": "sha256:" + "a" * 64,
+        "custody_destination_path": str(destination),
+    }
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    return path, raw
+
+
 def test_native_cli_loads_one_stable_launch_config_identity(tmp_path: Path):
     path, _raw = config_document(tmp_path)
     config, config_sha = _load_config_scope(path)
@@ -196,6 +233,67 @@ def test_native_cli_loads_one_stable_launch_config_identity(tmp_path: Path):
     with pytest.raises(ProductError) as oversized:
         _load_config_scope(path)
     assert oversized.value.code == "ERR_TASK036_NATIVE_LAUNCH_CONFIG_INVALID"
+
+
+def test_v13_launch_config_binds_exact_non_secret_owner_signing_coordinates(
+    tmp_path: Path,
+):
+    path, raw = signing_key_config_document(tmp_path)
+
+    config = Task036LaunchConfiguration.load(path)
+
+    assert config.owner_signing_key_import == OwnerSigningKeyPpkLaunchConfiguration(
+        expected_openssh_sha256_fingerprint="SHA256:" + "A" * 43,
+        owner_scope_sha256="sha256:" + "a" * 64,
+        custody_destination_path=Path(
+            raw["owner_signing_key_import"]["custody_destination_path"]
+        ).resolve(),
+    )
+    assert config.local_generation is None
+    assert config.local_image_generation is None
+    assert raw["owner_signing_key_import"]["custody_destination_path"] not in repr(
+        config
+    )
+    assert raw["owner_signing_key_import"]["owner_scope_sha256"] not in repr(config)
+
+
+def test_v13_launch_config_rejects_invalid_owner_signing_coordinates(
+    tmp_path: Path,
+):
+    path, raw = signing_key_config_document(tmp_path)
+    invalid_values = (
+        ("expected_openssh_sha256_fingerprint", "SHA256:bad"),
+        ("owner_scope_sha256", "sha256:BAD"),
+        ("custody_destination_path", "relative-owner-signing-key.json"),
+    )
+
+    for field_name, invalid_value in invalid_values:
+        changed = json.loads(json.dumps(raw))
+        changed["owner_signing_key_import"][field_name] = invalid_value
+        path.write_text(json.dumps(changed), encoding="utf-8")
+        with pytest.raises(ProductError) as rejected:
+            Task036LaunchConfiguration.load(path)
+        assert rejected.value.code == "ERR_TASK036_LAUNCH_CONFIG_INVALID"
+
+
+def test_v13_trusted_launch_builds_canonical_owner_signing_service_without_ui(
+    tmp_path: Path,
+):
+    path, _raw = signing_key_config_document(tmp_path)
+
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+
+    assert isinstance(
+        launch._owner_signing_key_import,
+        OwnerSigningKeyPpkShellService,
+    )
+    assert launch.bridge._owner_signing_key_import is launch._owner_signing_key_import
+    launch.close()
 
 
 def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_execution(tmp_path: Path):
@@ -223,6 +321,7 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert isinstance(launch.bridge._audit_application, Task038AuditApplication)
     assert launch.bridge._audit_application.project_root == config.project_root
     assert launch.bridge._audit_application.project_id == config.project_id
+
     assert isinstance(launch.bridge._planning_application, Task027PlanningApplication)
     assert launch.bridge._planning_application.project_root == config.project_root
     assert launch.bridge._planning_application.project_id == config.project_id
@@ -274,6 +373,55 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert audio["provider_execution_started"] is False
     assert audio["task026_compile_started"] is False
     assert audio["resolve_mutation_started"] is False
+
+
+def test_trusted_launch_owns_body_free_signing_key_service_lifetime(tmp_path: Path):
+    path, _raw = config_document(tmp_path)
+    service = OwnerSigningKeyImportStub()
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        owner_signing_key_import=service,
+    )
+
+    snapshot = launch.bridge.owner_signing_key_import_snapshot({})
+    assert snapshot == {
+        "available": True,
+        "state": "IDLE_NOT_CONFIGURED",
+        "passphrase_exposed": False,
+    }
+    assert launch._owner_signing_key_import is service
+
+    launch.close()
+    launch.close()
+    assert service.close_count == 1
+    assert launch._owner_signing_key_import is None
+
+
+def test_trusted_launch_releases_other_resources_when_signing_service_close_fails(
+    tmp_path: Path,
+):
+    path, _raw = config_document(tmp_path)
+    service = OwnerSigningKeyImportStub(fail_close=True)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        owner_signing_key_import=service,
+    )
+
+    with pytest.raises(RuntimeError, match="owner signing key import close failed"):
+        launch.close()
+
+    assert service.close_count == 1
+    assert launch._owner_signing_key_import is None
+    assert launch._local_operation_lifetime is None
+    assert launch._runtime_lease is None
+    assert launch._product_store is None
+    launch.close()
 
 
 def test_trusted_composition_transcribes_managed_asset_and_promotes_fixed_outputs(

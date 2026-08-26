@@ -517,3 +517,32 @@ def test_helper_is_rechecked_before_collecting_passphrase(tmp_path: Path) -> Non
         )
     assert error.value.code == "ERR_PPK_PACKAGED_HELPER_UNAVAILABLE"
     assert backend.secret_destinations == []
+
+
+def test_public_availability_probe_never_opens_a_dialog() -> None:
+    observed: list[str] = []
+    backend = Backend(None, None)
+    adapter = _adapter(
+        backend,
+        FakeSession(),
+        helper_probe=lambda: observed.append("verified"),
+    )
+
+    adapter.probe_availability()
+
+    assert observed == ["verified"]
+    assert backend.file_choices == 0
+
+
+def test_public_availability_probe_returns_only_fixed_error() -> None:
+    backend = Backend(None, None)
+
+    def fail() -> None:
+        raise RuntimeError("absolute helper path must not escape")
+
+    adapter = _adapter(backend, FakeSession(), helper_probe=fail)
+    with pytest.raises(PpkNativeOperatorError) as error:
+        adapter.probe_availability()
+
+    assert error.value.code == "ERR_PPK_PACKAGED_HELPER_UNAVAILABLE"
+    assert backend.file_choices == 0

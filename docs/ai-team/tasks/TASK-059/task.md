@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CH2_WINDOWS_NATIVE_BACKEND_PASS_SHELL_API_NEXT`
+Status: `P1CI_SHELL_API_UI_PASS_NATIVE_QA_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -305,5 +305,36 @@ Masking/focus/accessibility/Cancel/OK runtime observation remains
 
 P1C-I next owns body-free Shell API and the canonical Settings
 `Connection / Secret` card. Real PPK/passphrase use, DPAPI custody, signing,
+Authenticode, installer, publish, promote, Release, Deploy and Production
+remain separate Gates.
+
+## P1C-I body-free Shell API and Settings card checkpoint
+
+P1C-I connects the existing H1/H2 native adapter to the unified TASK-036 Shell
+through six exact body-free methods and adds one `Owner signing key` card after
+Provider credentials in Settings `Connection / Secret`. The Operator receives
+only opaque candidate/attempt IDs, public identity facts, fixed status/error
+text and receipt digests. File paths, bodies, passphrase, Owner scope and the
+custody destination path remain Python/native-local.
+
+The card provides explicit public-identity confirmation, native masked secret
+entry, a no-default-Enter one-shot import confirmation, cancel-on-Settings-close
+and a retry-disabled `READBACK_REQUIRED_NO_RETRY` route. Success creates no
+automatic signing action and does not authorize publish, promote, Release,
+Deploy or Production.
+
+P1C-I/H1/H2 focused Evidence is `58 PASS`; existing TASK-036 Shell plus direct
+TASK-059/native-dialog regression is `235 PASS / 5 DESELECTED` for the known
+Windows Pytest oversized-parameter-ID cases. Canonical Settings JavaScript
+syntax, diff and secret/path audits pass. Critic found and fixed an arbitrary
+destination-display leak risk by making the UI label constant, and closed the
+WebView-refresh transient-cancellation gap with an opaque-ID-only unload hook. Residual
+Critical/High/Medium/Low is `0 / 0 / 0 / 0`. Detailed Evidence is
+`ppk-shell-api-settings-card-p1ci-evidence.md`.
+
+The real configuration coordinates are not inferred or hardcoded. An unbound
+Product runtime shows `UNAVAILABLE_CONFIGURATION`. P1C-J next owns manual
+native Windows focus/accessibility/Cancel/OK/timeout/result-lost QA and exact
+trusted runtime binding. Real PPK/passphrase, DPAPI custody, signing,
 Authenticode, installer, publish, promote, Release, Deploy and Production
 remain separate Gates.

@@ -281,6 +281,13 @@ class PpkNativeOperatorAdapter:
             f"candidate_state={candidate_state!r}, attempt_state={attempt_state!r})"
         )
 
+    def probe_availability(self) -> None:
+        """Fail closed before any native file or secret dialog is opened."""
+
+        if self._candidate is not None or self._active is not None:
+            return
+        self._require_helper_available()
+
     def choose_files(
         self, *, expected_openssh_sha256_fingerprint: str
     ) -> PpkNativeCandidateView | None:

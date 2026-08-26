@@ -1,6 +1,6 @@
 # TASK-059 — Owner Signing Key PPK Import Bridge
 
-Status: `P1CG1_PACKAGED_HELPER_IDENTITY_IMPLEMENTED_LOCAL_PACKAGING_COMPOSITION_NEXT`
+Status: `P1CG2_PACKAGING_NATIVE_PASS_NATIVE_OPERATOR_ADAPTER_NEXT`
 
 Authority: Owner exact instruction `続きを開発して` on `2026-08-26`, following
 the requested TASK-029 BVP signing-key import procedure.
@@ -221,3 +221,35 @@ trusted digest source, exact adjacency to the unified Product, packaging
 composition, installation ACL, Authenticode policy and synthetic native smoke
 belong to P1C-G2. Real PPK selection, passphrase entry, DPAPI custody, signing,
 publish, promote, Release, Deploy and Production remain unexecuted.
+
+## P1C-G2 packaged helper composition checkpoint
+
+P1C-G2 preserves the canonical `packaging/task036_shell.spec` Main Product
+definition and adds a two-stage internal helper build. A console-enabled
+one-file helper keeps anonymous stdin/stdout available while the parent
+controller still applies `CREATE_NO_WINDOW`.
+
+The Main build computes the staged helper SHA-256, generates a top-level
+identity module inside the Main PYZ, and collects the exact same helper bytes
+as `BAI Video Production Key Helper.exe` beside the Main EXE. The canonical
+runtime factory derives the adjacent path only from frozen `sys.executable`
+and reads the digest only from the embedded module; it accepts neither caller
+path nor caller digest.
+
+The Windows build and body-free verifier require staging helper, bundled
+helper and generated module to agree. Secret-free native smoke proves protocol
+v1 empty-input exit 0 and invalid-version exit 64. Actual Windows build uses
+Python `3.12.4` / PyInstaller `6.22.0`; helper and Main package build,
+three-way identity verification, embedded-module archive inspection and both
+native smokes pass.
+
+Focused tests are `34 PASS`; direct P1C/TASK-029 R9B/packaging regression is
+`136 PASS`. The correctly rooted Product-wide Windows run produced
+`4275 PASS / 5 skip`, one transient native Tk traversal failure and two known
+oversized parameter-ID setup errors. The Tk case passed alone; the exact five
+oversized functional cases passed under WSL. Detailed Evidence is
+`ppk-packaged-helper-composition-p1cg2-evidence.md`.
+
+The next unit is P1C-H native file selection and masked passphrase adapter.
+Real PPK/passphrase use, DPAPI custody, signing, Authenticode, installer,
+publish, promote, Release, Deploy and Production remain separate Gates.

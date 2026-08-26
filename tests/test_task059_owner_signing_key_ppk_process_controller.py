@@ -3,7 +3,9 @@ from __future__ import annotations
 import base64
 import io
 import subprocess
+import sys
 import threading
+import types
 
 import pytest
 
@@ -11,11 +13,15 @@ from ai_video_production.owner_signing_key_ppk_process_controller import (
     ATTEMPT_TIMEOUT_SECONDS,
     HELPER_MODULE,
     MAX_PACKAGED_HELPER_BYTES,
+    PACKAGED_HELPER_DIGEST_ATTRIBUTE,
+    PACKAGED_HELPER_IDENTITY_MODULE,
     PACKAGED_HELPER_FILENAME,
+    PACKAGED_PRODUCT_FILENAME,
     PpkHelperLaunchSpec,
     PpkHelperLaunchMode,
     PpkHelperProcessController,
     PpkHelperProcessError,
+    packaged_ppk_helper_launch_spec,
     ppk_helper_popen_options,
 )
 from ai_video_production.owner_signing_key_ppk_process_wire import (
@@ -291,6 +297,55 @@ def test_packaged_identity_mismatch_blocks_popen_and_consumes_controller(tmp_pat
     assert reused.value.code == "ERR_PPK_HELPER_ALREADY_STARTED"
 
 
+def test_packaged_runtime_factory_uses_frozen_product_and_embedded_digest(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    product = tmp_path / PACKAGED_PRODUCT_FILENAME
+    helper = tmp_path / PACKAGED_HELPER_FILENAME
+    product.write_bytes(b"synthetic product")
+    helper_body = b"synthetic packaged helper"
+    helper.write_bytes(helper_body)
+    digest = sha256_bytes(helper_body)
+    identity = types.SimpleNamespace()
+    setattr(identity, PACKAGED_HELPER_DIGEST_ATTRIBUTE, digest)
+    monkeypatch.setitem(sys.modules, PACKAGED_HELPER_IDENTITY_MODULE, identity)
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(product))
+
+    spec = packaged_ppk_helper_launch_spec()
+
+    assert spec.executable == str(helper)
+    assert spec.mode is PpkHelperLaunchMode.PACKAGED_HELPER
+    assert spec.expected_executable_sha256 == digest
+    spec.verify_identity()
+
+
+def test_packaged_runtime_factory_rejects_non_frozen_or_wrong_product(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    with pytest.raises(ValueError, match="unavailable"):
+        packaged_ppk_helper_launch_spec()
+
+    wrong_product = tmp_path / "python.exe"
+    wrong_product.write_bytes(b"synthetic product")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(wrong_product))
+    with pytest.raises(ValueError, match="unavailable"):
+        packaged_ppk_helper_launch_spec()
+
+    exact_product = tmp_path / PACKAGED_PRODUCT_FILENAME
+    exact_product.write_bytes(b"synthetic product")
+    monkeypatch.setattr(sys, "executable", str(exact_product))
+    monkeypatch.delitem(
+        sys.modules,
+        PACKAGED_HELPER_IDENTITY_MODULE,
+        raising=False,
+    )
+    with pytest.raises(ValueError, match="unavailable"):
+        packaged_ppk_helper_launch_spec()
 def test_packaged_mode_is_windows_only(tmp_path) -> None:
     path = tmp_path / PACKAGED_HELPER_FILENAME
     body = b"synthetic packaged helper"

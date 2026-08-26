@@ -10,6 +10,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import Enum
+import importlib
 import hashlib
 import math
 import ntpath
@@ -17,6 +18,7 @@ import os
 from pathlib import Path
 import stat
 import subprocess
+import sys
 import threading
 import time
 from typing import Any, BinaryIO, Callable, Iterator, Mapping
@@ -32,6 +34,9 @@ from .owner_signing_key_ppk_process_wire import (
 
 HELPER_MODULE = "ai_video_production.owner_signing_key_ppk_helper"
 PACKAGED_HELPER_FILENAME = "BAI Video Production Key Helper.exe"
+PACKAGED_PRODUCT_FILENAME = "BAI Video Production.exe"
+PACKAGED_HELPER_IDENTITY_MODULE = "_bvp_task059_packaged_helper_identity"
+PACKAGED_HELPER_DIGEST_ATTRIBUTE = "EXPECTED_PACKAGED_HELPER_SHA256"
 MAX_PACKAGED_HELPER_BYTES = 128 * 1024 * 1024
 HEADER_TIMEOUT_SECONDS = 5.0
 FRAME_TIMEOUT_SECONDS = 10.0
@@ -185,6 +190,35 @@ class PpkHelperLaunchSpec:
             yield
         finally:
             stream.close()
+
+
+def packaged_ppk_helper_launch_spec() -> PpkHelperLaunchSpec:
+    """Bind the adjacent helper to the digest embedded in the frozen Product."""
+
+    if not bool(getattr(sys, "frozen", False)):
+        raise _PpkHelperIdentityError(
+            "packaged helper identity is unavailable"
+        )
+    product = Path(sys.executable)
+    if (
+        not product.is_absolute()
+        or product.name.casefold() != PACKAGED_PRODUCT_FILENAME.casefold()
+    ):
+        raise _PpkHelperIdentityError(
+            "packaged helper identity is unavailable"
+        )
+    try:
+        identity = importlib.import_module(PACKAGED_HELPER_IDENTITY_MODULE)
+        expected = getattr(identity, PACKAGED_HELPER_DIGEST_ATTRIBUTE)
+        return PpkHelperLaunchSpec(
+            str(product.with_name(PACKAGED_HELPER_FILENAME)),
+            mode=PpkHelperLaunchMode.PACKAGED_HELPER,
+            expected_executable_sha256=expected,
+        )
+    except Exception:
+        raise _PpkHelperIdentityError(
+            "packaged helper identity is unavailable"
+        ) from None
 
 
 def _sanitized_helper_environment(
@@ -501,6 +535,10 @@ __all__ = [
     "PACKAGED_HELPER_FILENAME",
     "PpkHelperLaunchSpec",
     "PpkHelperLaunchMode",
+    "PACKAGED_HELPER_DIGEST_ATTRIBUTE",
+    "PACKAGED_HELPER_IDENTITY_MODULE",
+    "PACKAGED_PRODUCT_FILENAME",
+    "packaged_ppk_helper_launch_spec",
     "PpkHelperProcessController",
     "PpkHelperProcessError",
     "STOP_TIMEOUT_SECONDS",

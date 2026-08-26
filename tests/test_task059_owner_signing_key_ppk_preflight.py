@@ -196,6 +196,7 @@ def test_unsupported_or_unsafe_ppk_metadata_fails_closed(
         b"PuTTY-User-Key-File-3: ssh-ed25519\n",
         b"x" * (MAX_PPK_BYTES + 1),
     ],
+    ids=("empty", "nul-prefixed", "non-utf8", "truncated", "oversized"),
 )
 def test_malformed_truncated_or_oversized_ppk_is_value_error(ppk: bytes) -> None:
     with pytest.raises(ValueError):

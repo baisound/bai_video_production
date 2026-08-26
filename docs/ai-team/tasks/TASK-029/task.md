@@ -346,8 +346,8 @@ Knowledge Pack write/promotion, automatic promotion, runtime apply, rollback,
 Timeline/Resolve, Release, Deploy, Production and external effects remain
 unauthorized.
 
-R10D source scope is exact six paths. Focused R10D is `12 PASS / 1 Windows-only
-DPAPI SKIP`, R9B-R10D direct is `108 PASS / 2 SKIP`, and TASK-029 is `173 PASS /
+R10D source scope is exact six paths. Focused R10D is `14 PASS / 1 Windows-only
+DPAPI SKIP`, R9B-R10D direct is `110 PASS / 2 SKIP`, and TASK-029 is `175 PASS /
 5 SKIP`. Full Product is NOT_CONFIRMED because the pre-existing WSL environment
 has cryptography 41.0.7 and no `referencing`, while fresh-main TASK-059 requires
 Argon2 support from cryptography >=46 and that package; collection stopped on

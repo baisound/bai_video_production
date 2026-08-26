@@ -118,14 +118,19 @@ Initial self-review C/H/M/L: `0/0/2/0`.
 - M2: atomic replace alone would not justify post-write read-back or directory
   durability claims. Closed by an in-lock decrypt/validate comparison after
   replace and explicit false directory/power-loss flags.
+- M3: a dependency-injected identity cipher could make an encrypted-at-rest
+  receipt false. Closed by rejecting ciphertext that is byte-identical to the
+  canonical plaintext and using an authenticated AES-GCM synthetic test cipher.
+  A direct post-replace decrypt corruption fixture also proves that no receipt
+  is returned after failed read-back.
 
 Independent Critic and Tester remain required.
 
 Builder Evidence:
 
-- focused R10D: `12 PASS / 1 Windows-only DPAPI SKIP` on WSL;
-- R9B-R10D direct chain: `108 PASS / 2 Windows-only DPAPI SKIP`;
-- TASK-029 complete: `173 PASS / 5 Windows-only DPAPI SKIP`;
+- focused R10D: `14 PASS / 1 Windows-only DPAPI SKIP` on WSL;
+- R9B-R10D direct chain: `110 PASS / 2 Windows-only DPAPI SKIP`;
+- TASK-029 complete: `175 PASS / 5 Windows-only DPAPI SKIP`;
 - public/package receipt Schema byte identity and strict Draft 2020-12
   validation: PASS; final SHA-256
   `1DF17B19A0EF8941123D919F74B2B3B6085415465C49A8AFE2F789B53D6D4965`;

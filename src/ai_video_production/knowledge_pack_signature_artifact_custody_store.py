@@ -673,8 +673,14 @@ class SignatureArtifactCustodyStore:
         )
 
     def _envelope(self, secret: _SignatureArtifactCustodySecret) -> dict[str, Any]:
-        ciphertext = self.cipher.encrypt(canonical_json_bytes(secret.to_dict()))
-        if type(ciphertext) is not bytes or not ciphertext or len(ciphertext) > _MAX_CIPHERTEXT_BYTES:
+        plaintext = canonical_json_bytes(secret.to_dict())
+        ciphertext = self.cipher.encrypt(plaintext)
+        if (
+            type(ciphertext) is not bytes
+            or not ciphertext
+            or ciphertext == plaintext
+            or len(ciphertext) > _MAX_CIPHERTEXT_BYTES
+        ):
             raise ValueError("ciphertext size or type is invalid")
         body: dict[str, Any] = {
             "schema_version": SIGNATURE_ARTIFACT_CUSTODY_STORE_SCHEMA_VERSION,

@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from jsonschema import Draft202012Validator
 import pytest
 
@@ -41,13 +42,41 @@ class SyntheticCipher:
     cipher_suite = "SYNTHETIC_SIGNATURE_ARTIFACT_CUSTODY_TEST_V1"
 
     def __init__(self, key: int = 0x5A) -> None:
-        self.key = key
+        self.key = bytes([key]) * 32
 
     def encrypt(self, plaintext: bytes) -> bytes:
-        return bytes(item ^ self.key for item in plaintext)
+        nonce = bytes.fromhex(sha256_bytes(plaintext).split(":", 1)[1])[:12]
+        return nonce + AESGCM(self.key).encrypt(nonce, plaintext, b"TASK029-R10D")
 
     def decrypt(self, ciphertext: bytes) -> bytes:
-        return bytes(item ^ self.key for item in ciphertext)
+        return AESGCM(self.key).decrypt(
+            ciphertext[:12], ciphertext[12:], b"TASK029-R10D"
+        )
+
+
+class IdentityCipher:
+    cipher_suite = "IDENTITY_CIPHER_MUST_BE_REJECTED"
+
+    def encrypt(self, plaintext: bytes) -> bytes:
+        return plaintext
+
+    def decrypt(self, ciphertext: bytes) -> bytes:
+        return ciphertext
+
+
+class ReadbackCorruptingCipher(SyntheticCipher):
+    cipher_suite = "SYNTHETIC_READBACK_CORRUPTION_TEST_V1"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.decrypt_count = 0
+
+    def decrypt(self, ciphertext: bytes) -> bytes:
+        self.decrypt_count += 1
+        plaintext = super().decrypt(ciphertext)
+        if self.decrypt_count > 1:
+            return plaintext[:-1] + bytes([plaintext[-1] ^ 1])
+        return plaintext
 
 
 class HookMapping(Mapping[str, object]):
@@ -328,6 +357,26 @@ def test_atomic_failure_leaves_no_target_and_retry_can_succeed(tmp_path: Path) -
     assert not store.path.exists()
     arguments.pop("failure_injector")
     assert store.provision(**arguments).receipt == store.read_receipt()
+
+
+def test_identity_cipher_is_rejected_before_any_store_commit(tmp_path: Path) -> None:
+    _, _, _, _, _, store, arguments = store_case(
+        tmp_path, cipher=IdentityCipher()
+    )
+    with pytest.raises(ValueError, match="ciphertext size or type"):
+        store.provision(**arguments)
+    assert not store.path.exists()
+
+
+def test_post_replace_readback_failure_returns_no_receipt(tmp_path: Path) -> None:
+    cipher = ReadbackCorruptingCipher()
+    _, _, _, _, _, store, arguments = store_case(tmp_path, cipher=cipher)
+    with pytest.raises(ProductError) as error:
+        store.provision(**arguments)
+    assert error.value.code == "ERR_SIGNATURE_ARTIFACT_CUSTODY_INTEGRITY"
+    assert store.path.exists()
+    with pytest.raises(ProductError):
+        store.read_receipt()
 
 
 def test_causality_and_exact_security_scalars_fail_before_write(tmp_path: Path) -> None:

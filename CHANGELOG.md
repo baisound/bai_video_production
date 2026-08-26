@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-029 R9Dとして、R9C署名前にexact ceremony identityをcaller-selected local journalへ予約し、trusted R9C/R9A結果をcross-bind後にbody-free receipt hashだけを確定するpath-local no-replay state machineを追加しました。別path・削除・directory durability・power loss・hostile raceは保証せず、実Owner鍵/署名、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。
+
 - TASK-054として、DbD実況・解説AIのPreview/学習分離、Evidence基盤、Operator UI、固定Qwen3-8B実行環境およびlocal/free/no-credentialの一回限りR3D推論境界を追加しました。実Dataset学習・学習済みadapter・実データ評価は未開始で、Binding promotion、Timeline/Resolve、Release/Deploy/Production authorityは生成しません。
 
 - TASK-058 P1Bとして、BVP所有のbody-free admission staging ledgerへExact lane座標をCAS appendし、duplicate read-back、replay/collision拒否、atomic replace、restart recoveryを行う非正本storeを追加しました。Generic laneは拒否し、source/Human origin、canonical store、monotonic/rollback、receipt、Timeline/Resolve/runtime authorityは生成しません。path securityはcooperative local writer限定で、hostile raceとdirectory durabilityはNOT_CONFIRMED、P1C canonical promotionにはhandle-bound writerを必須とします。

@@ -10,7 +10,7 @@ Status: PENDING_HOST_PR
 
 ## Target identity
 
-- lock-host PR: pending assignment
+- lock-host PR: #363
 - target PR: #361
 - target branch: codex/task-058-montage-learning-bridge-p1b-store
 - exact target head: 135d0f220e006730daa69ee06a48cefbcd15782a
@@ -25,6 +25,19 @@ Status: PENDING_HOST_PR
 - nonclosed integration locks before proposal: 0
 - nonclosed integration locks after proposal: exactly 1
 - other open PR overlap with CHANGELOG.md or ACTIVE-WORK-LOCKS.json: 0
+
+## Successor reservation
+
+Owner exact message:
+
+> 開発、開発2へLOCK開放したらLOCKするからを通知して予約して下さい
+
+After this TASK-058 P1B lock is canonically `HOSTED_CLOSED_RELEASED`, the next
+shared CHANGELOG lock is reserved for 開発3 DBD関連 / TASK-054, owner thread
+`01a02110-6765-77f1-a202-e13d81e7aaae`. This is order-only; it grants no
+authority to interrupt, overwrite, or mutate the current lock before release.
+Development and Development2 both received the reservation notice;
+Development3/TASK-054 is the reserved successor owner.
 
 ## Reserved effect
 

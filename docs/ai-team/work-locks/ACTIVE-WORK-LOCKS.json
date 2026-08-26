@@ -4510,6 +4510,10 @@
       "controlled_shared_target_paths": [],
       "open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_OPEN_PRS",
       "merge_order_reservation": "PR361_NEXT_SHARED_CHANGELOG_CONSUMER_AFTER_TASK029_R9C_REVISION90_CLOSED_POST_MAIN_GREEN",
+      "successor_lock_reservation": "TASK054_DEVELOPMENT3_NEXT_AFTER_TASK058_P1B_HOSTED_CLOSED_RELEASED",
+      "successor_owner_thread_id": "01a02110-6765-77f1-a202-e13d81e7aaae",
+      "successor_reservation_authority": "OWNER_EXACT_DEVELOPMENT3_LOCK_AFTER_CURRENT_RELEASE_RESERVATION_20260826",
+      "successor_reservation_scope": "ORDER_ONLY_NO_INTERRUPT_NO_CURRENT_LOCK_AUTHORITY",
       "denied": [
         "TASK058_P1B_IMPLEMENTATION_SCHEMA_TEST_DESIGN_OR_TASK_MUTATION_DURING_INTEGRATION_EFFECT",
         "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
@@ -4550,7 +4554,8 @@
       "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_SHARED_PATH_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_AND_APPEND_ONLY_CLOSURE_EVIDENCE",
       "integration_effect_authority_id": "OWNER_EXPLICIT_AUTONOMY_NO_CONFIRMATION_REQUIRED_20260824",
       "target_merge_authority_id": "OWNER_EXPLICIT_AUTONOMY_NO_CONFIRMATION_REQUIRED_20260824",
-      "automatic_retry": false
+      "automatic_retry": false,
+      "hosting_pull_request": 363
     }
   ],
   "roadmap_dependency_gates": {

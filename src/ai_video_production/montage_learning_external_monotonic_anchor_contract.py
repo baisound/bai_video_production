@@ -636,9 +636,19 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
             if proposed_revision < observed_ledger_revision:
                 expected_decision = AnchorDecision.ROLLBACK_REJECTED
             elif proposed_revision == observed_ledger_revision:
+                entries_match = (
+                    proposed_entry_sha256s == observed_entry_sha256s
+                )
+                ledger_hashes_match = (
+                    body["proposed_ledger_sha256"] == observed_ledger_sha
+                )
+                if entries_match != ledger_hashes_match:
+                    raise ValueError(
+                        "same-revision ledger digest/entry proof relation mismatch"
+                    )
                 expected_decision = (
                     AnchorDecision.UNCHANGED_CANDIDATE
-                    if body["proposed_ledger_sha256"] == observed_ledger_sha
+                    if entries_match
                     else AnchorDecision.FORK_REJECTED
                 )
             elif (

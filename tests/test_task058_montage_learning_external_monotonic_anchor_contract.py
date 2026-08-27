@@ -381,9 +381,27 @@ def test_evaluation_decision_revision_semantics_fail_closed(tmp_path: Path) -> N
     ).to_dict()
     unchanged["decision"] = AnchorDecision.FORK_REJECTED.value
     unchanged["reason_codes"] = [AnchorDecision.FORK_REJECTED.value]
+    unchanged["proposed_ledger_sha256"] = "sha256:" + "f" * 64
     _resign_evaluation(unchanged)
-    with pytest.raises(ValueError, match="not canonical"):
+    with pytest.raises(ValueError, match="digest/entry proof"):
         MontageLearningExternalMonotonicAnchorEvaluation.from_dict(unchanged)
+
+    same_revision_fork = evaluate_montage_learning_external_monotonic_anchor(
+        anchor,
+        MontageLearningExternalMonotonicAnchorExpectation.for_anchor(anchor),
+        first,
+        _ledgers(tmp_path / "same-revision-fork")[3],
+    ).to_dict()
+    same_revision_fork["decision"] = AnchorDecision.UNCHANGED_CANDIDATE.value
+    same_revision_fork["reason_codes"] = [AnchorDecision.UNCHANGED_CANDIDATE.value]
+    same_revision_fork["proposed_ledger_sha256"] = (
+        same_revision_fork["observed_ledger_sha256"]
+    )
+    _resign_evaluation(same_revision_fork)
+    with pytest.raises(ValueError, match="digest/entry proof"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(
+            same_revision_fork
+        )
 
 
 def test_serialized_stale_and_scope_decisions_cannot_be_relabelled(

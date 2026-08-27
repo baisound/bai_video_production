@@ -387,7 +387,7 @@ P1C-D local implementation checkpoint:
 - TASK-055/TASK-058 direct regression: 226 / 226 PASS;
 - pre-rework full Product regression: 4442 PASS / 6 platform-condition SKIP /
   2 deprecation warnings / 0 FAIL;
-- current-head full Product regression: 4444 PASS / 6 platform-condition SKIP /
+- current-head full Product regression: 4445 PASS / 5 platform-condition SKIP /
   2 deprecation warnings / 0 FAIL;
 - Schema Draft 2020-12 and packaged byte identity: PASS, SHA-256
   `DF468870352798AE72272961293837C7A0F1FBBC7EAC4B8D90D471B3E4061509`;
@@ -399,6 +399,12 @@ P1C-D local implementation checkpoint:
   be relabelled as FORK by dropping its constructible anchor; bounded ordered
   entry-digest chain proof and canonical seven-decision parser fix implemented,
   fresh independent re-review PENDING;
+- second independent re-review on head
+  `2de41b7a7ff44ec963effba72f4d42c532390297`: Technical NO-GO /
+  C/H/M/L = 0/0/1/0; same-revision FORK/UNCHANGED still depended on
+  caller-replaceable ledger hash equality;
+- same-revision proof/digest correlation and bidirectional relabel fixtures:
+  bounded fix implemented, fresh independent re-review PENDING;
 - unresolved Critical/High/Medium/Low findings: 0/0/0/0 locally, independent
   re-review PENDING;
 - external anchor read/write/origin/durability, canonical writer/recovery,

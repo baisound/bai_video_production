@@ -180,3 +180,11 @@ requires the parser to derive one canonical decision for all seven outcomes.
 Direct fixtures reject ADVANCE-to-FORK and higher-revision FORK-to-ADVANCE
 relabels even when the attacker rebuilds a constructible anchor and outer hash.
 The resulting head requires a fresh independent review.
+
+The next independent review closed that higher-revision path but found a second
+same-revision variant: classification still selected UNCHANGED versus FORK from
+caller-replaceable ledger SHA equality instead of the ordered entry proofs. The
+bounded repair classifies identical revisions by exact proof-list equality and
+requires proof equality to correlate exactly with ledger-digest equality.
+Direct negatives cover same-revision FORK-to-UNCHANGED and
+UNCHANGED-to-FORK relabels with recomputed outer hashes.

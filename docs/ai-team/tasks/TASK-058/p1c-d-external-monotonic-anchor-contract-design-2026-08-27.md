@@ -190,4 +190,6 @@ Direct negatives cover same-revision FORK-to-UNCHANGED and
 UNCHANGED-to-FORK relabels with recomputed outer hashes.
 An additional fault fixture fixes non-absent revision zero plus an empty proof
 to a canonical ValueError rejection instead of permitting an index-boundary
-exception.
+exception. Independent Critic/Tester/Final Judge confirmed final implementation
+head `1bd479a46b3a444eebc3777c72cf4293a52fd8ef` as Technical GO with
+`C/H/M/L=0/0/0/0`.

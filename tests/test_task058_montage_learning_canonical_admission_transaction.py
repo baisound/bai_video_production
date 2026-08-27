@@ -120,6 +120,18 @@ def _concurrent_admit(project: str, anchor: str, delivery: dict[str, object],
         queue.put(("ERROR", type(exc).__name__, str(exc)))
 
 
+def _concurrent_generic(project: str, anchor: str, delivery: dict[str, object],
+                        start, queue) -> None:
+    start.wait(10)
+    try:
+        result = _writer(Path(project), Path(anchor)).record_exact_generic_observation(
+            delivery, expected_revision=0,
+        )
+        queue.put(("GENERIC", result.status, result.receipt_sha256))
+    except Exception as exc:
+        queue.put(("GENERIC_ERROR", type(exc).__name__, str(exc)))
+
+
 def test_accept_then_exact_duplicate_and_trusted_reader(tmp_path: Path) -> None:
     project = tmp_path / "project"
     anchor = tmp_path / "anchor"
@@ -171,6 +183,27 @@ def test_crash_after_project_commit_republishes_exact_prepared_receipt(tmp_path:
     result = writer.admit_exact(delivery, **_arguments(staged))
     assert result.recovered is True
     assert result.receipt.to_dict()["receipt_sha256"] == prepared["receipt_sha256"]
+
+
+def test_crash_after_anchor_write_before_participant_result_recovers(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    delivery, staged = _stage(project)
+    writer = _writer(project, anchor)
+
+    def fail(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_anchor_write_before_participant_result":
+            raise RuntimeError("participant-result-crash")
+
+    with pytest.raises(RuntimeError, match="participant-result-crash"):
+        writer.admit_exact(delivery, failure_hook=fail, **_arguments(staged))
+    assert (anchor / ANCHOR_FILE_NAME).is_file()
+    recovered = writer.admit_exact(delivery, **_arguments(staged))
+    assert recovered.status == "ACCEPTED"
+    assert recovered.recovered is True
+    assert writer.get_verified_receipt().to_public_projection()["canonical_currentness_verified"] is True
 
 
 def test_stale_cas_collision_and_forged_public_receipt_fail_closed(tmp_path: Path) -> None:
@@ -272,6 +305,23 @@ def test_generic_observation_namespace_accept_duplicate_and_collision(tmp_path: 
         writer.record_exact_generic_observation(delivery, expected_revision=2)
 
 
+def test_generic_child_commit_does_not_invalidate_exact_receipt(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    delivery, staged = _stage(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_exact(delivery, **_arguments(staged))
+    first = writer.get_verified_receipt(receipt_sha256=accepted.receipt.to_dict()["receipt_sha256"])
+    anchored_manifest = first.to_public_projection()["project_manifest_sha256"]
+    writer.record_exact_generic_observation(_generic_delivery(), expected_revision=0)
+    current = ProductProjectManifestStore.load(project)
+    assert current.project_revision == 3
+    assert current.project_manifest_sha256 != anchored_manifest
+    later = writer.get_verified_receipt(receipt_sha256=accepted.receipt.to_dict()["receipt_sha256"])
+    assert later.to_public_projection()["canonical_currentness_verified"] is True
+
+
 def test_generic_and_exact_namespaces_cannot_cross_replay(tmp_path: Path) -> None:
     project = tmp_path / "project"
     anchor = tmp_path / "anchor"
@@ -329,4 +379,42 @@ def test_multiprocess_same_cas_has_one_accepted_winner(tmp_path: Path) -> None:
                 process.kill(); process.join(5)
         queue.close(); queue.join_thread()
     assert sum(item[:2] == ("RESULT", "ACCEPTED") for item in results) == 1
+    assert all(not process.is_alive() for process in processes)
+
+
+def test_multiprocess_generic_and_exact_project_writes_serialize(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    generic = _generic_delivery()
+    ctx = multiprocessing.get_context("spawn")
+    start = ctx.Event(); queue = ctx.Queue()
+    processes = [
+        ctx.Process(target=_concurrent_admit,
+                    args=(str(project), str(anchor), exact, _arguments(staged), start, queue)),
+        ctx.Process(target=_concurrent_generic,
+                    args=(str(project), str(anchor), generic, start, queue)),
+    ]
+    try:
+        for process in processes:
+            process.start()
+        start.set()
+        results = [queue.get(timeout=30) for _ in processes]
+    finally:
+        for process in processes:
+            process.join(10)
+            if process.is_alive():
+                process.terminate(); process.join(5)
+            if process.is_alive():
+                process.kill(); process.join(5)
+        queue.close(); queue.join_thread()
+    if not any(item[0] == "RESULT" for item in results):
+        _writer(project, anchor).admit_exact(exact, **_arguments(staged))
+    if not any(item[0] == "GENERIC" for item in results):
+        _writer(project, anchor).record_exact_generic_observation(generic, expected_revision=0)
+    writer = _writer(project, anchor)
+    assert writer.get_verified_receipt().to_public_projection()["canonical_currentness_verified"] is True
+    assert (project / "state/montage-learning-generic-review-observations.json").is_file()
+    assert not (project / JOURNAL_RELATIVE_PATH).exists()
     assert all(not process.is_alive() for process in processes)

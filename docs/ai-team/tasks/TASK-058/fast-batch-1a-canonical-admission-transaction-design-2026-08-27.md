@@ -46,8 +46,11 @@ unexpected Project/anchor coordinate fails closed.
 The trusted reader rejects public JSON as origin authority. It returns a sealed
 wrapper only after ProjectSave has no pending recovery, manifest child integrity
 passes, the exact canonical bytes match the binding, the external anchor binds
-the current manifest and commit, and the selected receipt binds the current
-canonical commit.
+the historical commit-time manifest revision and canonical commit, the current
+manifest revision is not older than that historical revision, and the selected
+receipt binds the current canonical commit. Unrelated later child additions,
+including the generic observation ledger, are allowed; changing or removing the
+exact canonical child remains fail-closed.
 
 ## External coordinate claim
 
@@ -90,6 +93,10 @@ directory fsync confirmation or power-loss rollback prevention on every host.
 - public v2 `ACCEPTED` then exact `DUPLICATE` lineage;
 - sealed trusted-reader currentness verification;
 - crash-after-commit byte-identical receipt republish;
+- crash after anchor write but before participant-result journal persistence;
+- exact admission followed by unrelated generic child commit preserves trusted
+  exact-receipt currentness;
+- actual generic/exact concurrent ProjectSave serialization;
 - stale CAS, collision, tamper, forged wrapper, custom Mapping, scalar subclass,
   and exact/generic cross-lane replay fail closed;
 - generic separate-ledger `ACCEPTED`/`DUPLICATE` and collision coverage;

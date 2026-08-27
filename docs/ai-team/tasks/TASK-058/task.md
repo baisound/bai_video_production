@@ -446,3 +446,11 @@ authority, power-loss/directory durability confirmation, and hostile path-race
 protection remain false. The final connector remains `enabled:false`; bridge
 root/inbox/importer and outbound Profile E2E/readiness are later FAST-BATCH
 subunits.
+
+The external anchor stores the commit-time manifest SHA and revision as
+historical transaction evidence. Trusted currentness permits later manifest
+revisions only when the exact TASK-058 canonical child binding and bytes still
+match the current canonical commit/ledger/anchor. Unrelated child additions do
+not invalidate the exact receipt; canonical child change/removal or manifest
+revision rollback remains fail-closed without claiming general rollback
+authority.

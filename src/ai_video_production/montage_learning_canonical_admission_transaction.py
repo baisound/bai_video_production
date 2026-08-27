@@ -246,7 +246,8 @@ def _parse_anchor(value: Mapping[str, Any]) -> dict[str, Any]:
     expected = {
         "schema_version", "record_type", "task_owner", "project_id",
         "canonical_store_id", "owner_scope_hash", "ledger_key_sha256",
-        "canonical_store_commit_sha256", "target_project_manifest_sha256", "anchor",
+        "canonical_store_commit_sha256", "target_project_manifest_sha256",
+        "target_project_manifest_revision", "anchor",
         "anchor_state", "external_anchor_written", "external_snapshot_coordinate_only",
         "origin_authenticated_by_store", "rollback_detection_authority_created",
         "directory_durability_confirmed", "hostile_path_race_protection_verified",
@@ -269,6 +270,7 @@ def _parse_anchor(value: Mapping[str, Any]) -> dict[str, Any]:
     for name in ("owner_scope_hash", "ledger_key_sha256", "canonical_store_commit_sha256",
                  "target_project_manifest_sha256", "external_anchor_document_sha256"):
         _sha(body[name], name)
+    _integer(body["target_project_manifest_revision"], "target_project_manifest_revision", 1, 2**63 - 1)
     anchor = MontageLearningExternalMonotonicAnchorCandidate.from_dict(body["anchor"]).to_dict()
     for name in ("project_id", "canonical_store_id", "owner_scope_hash", "ledger_key_sha256"):
         if body[name] != anchor[name]:
@@ -380,7 +382,7 @@ def _build_canonical(source_manifest_sha256: str, ledger: Mapping[str, Any],
 
 
 def _build_anchor(canonical: Mapping[str, Any], anchor: Mapping[str, Any],
-                  target_manifest_sha256: str) -> dict[str, Any]:
+                  target_manifest_sha256: str, target_manifest_revision: int) -> dict[str, Any]:
     body: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "record_type": "MONTAGE_LEARNING_EXTERNAL_MONOTONIC_ANCHOR_STORE",
@@ -391,6 +393,7 @@ def _build_anchor(canonical: Mapping[str, Any], anchor: Mapping[str, Any],
         "ledger_key_sha256": canonical["ledger_key_sha256"],
         "canonical_store_commit_sha256": canonical["canonical_store_commit_sha256"],
         "target_project_manifest_sha256": target_manifest_sha256,
+        "target_project_manifest_revision": target_manifest_revision,
         "anchor": dict(anchor),
         "anchor_state": "ESTABLISHED",
         "external_anchor_written": True,
@@ -452,7 +455,8 @@ class _AnchorParticipant:
 
     def __init__(self, *, project_id: str, anchor_path: Path, recovery_path: Path,
                  expected_sha256: str | None, target_anchor: Mapping[str, Any],
-                 source_manifest_sha256: str, target_manifest_sha256: str) -> None:
+                 source_manifest_sha256: str, target_manifest_sha256: str,
+                 failure_hook: FailureHook | None = None) -> None:
         self.project_id = project_id
         self.anchor_path = anchor_path
         self.recovery_path = recovery_path
@@ -460,6 +464,7 @@ class _AnchorParticipant:
         self.target_anchor = _parse_anchor(target_anchor)
         self.source_manifest_sha256 = source_manifest_sha256
         self.target_manifest_sha256 = target_manifest_sha256
+        self.failure_hook = failure_hook
 
     def _current_sha(self) -> str | None:
         if not self.anchor_path.exists():
@@ -556,6 +561,8 @@ class _AnchorParticipant:
                 current = self._current_sha()
             if current != plan.target_content_sha256:
                 raise MontageLearningCanonicalAdmissionError("anchor commit/read-back failed")
+            if self.failure_hook is not None:
+                self.failure_hook("after_anchor_write_before_participant_result", self.anchor_path)
         elif current != plan.source_content_sha256:
             raise MontageLearningCanonicalAdmissionError("anchor rollback conflict")
         self.recovery_path.unlink()
@@ -622,6 +629,7 @@ def _parse_journal(value: Mapping[str, Any]) -> dict[str, Any]:
         body["owner_scope_hash"] != canonical["owner_scope_hash"] or
         anchor["canonical_store_commit_sha256"] != canonical["canonical_store_commit_sha256"] or
         anchor["target_project_manifest_sha256"] != manifest.project_manifest_sha256 or
+        anchor["target_project_manifest_revision"] != manifest.project_revision or
         registry["receipts"][-1]["receipt_sha256"] != body["receipt_sha256"] or
         registry["receipts"][-1]["status"] != body["operation"]):
         raise MontageLearningCanonicalAdmissionError("journal cross-binding mismatch")
@@ -1047,7 +1055,8 @@ class MontageLearningCanonicalAdmissionTransactionStore:
             canonical_bytes = canonical_json_bytes(proposed_canonical) + b"\n"
             target_manifest = self._target_manifest(manifest, canonical_bytes, processed_at)
             proposed_anchor = _build_anchor(
-                proposed_canonical, anchor_candidate, target_manifest.project_manifest_sha256
+                proposed_canonical, anchor_candidate, target_manifest.project_manifest_sha256,
+                target_manifest.project_revision,
             )
             status = ACCEPTED
             duplicate_of = None
@@ -1084,7 +1093,8 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         journal["journal_sha256"] = _hash(_JOURNAL_DOMAIN, journal)
         return _parse_journal(journal)
 
-    def _participant(self, journal: Mapping[str, Any]) -> _AnchorParticipant:
+    def _participant(self, journal: Mapping[str, Any],
+                     failure_hook: FailureHook | None = None) -> _AnchorParticipant:
         source_manifest_sha256 = str(journal["proposed_canonical"]["source_project_manifest_sha256"])
         return _AnchorParticipant(
             project_id=str(journal["project_id"]),
@@ -1094,6 +1104,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
             target_anchor=journal["proposed_anchor"],
             source_manifest_sha256=source_manifest_sha256,
             target_manifest_sha256=str(journal["target_manifest"]["project_manifest_sha256"]),
+            failure_hook=failure_hook,
         )
 
     @contextmanager
@@ -1196,7 +1207,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
                       staging_revision: int, staging_entry_sha256: str,
                       failure_hook: FailureHook | None, recovered: bool) -> None:
         coordinator = ProductProjectSaveCoordinator()
-        participant = self._participant(journal)
+        participant = self._participant(journal, failure_hook)
         target_manifest = parse_product_project_manifest(journal["target_manifest"])
         canonical_bytes = canonical_json_bytes(journal["proposed_canonical"]) + b"\n"
 
@@ -1325,7 +1336,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
             if (binding is None or binding.format_id != CANONICAL_FORMAT_ID or
                 binding.format_version != CANONICAL_FORMAT_VERSION or
                 binding.content_sha256 != sha256_bytes(canonical_bytes) or
-                anchor["target_project_manifest_sha256"] != manifest.project_manifest_sha256 or
+                manifest.project_revision < anchor["target_project_manifest_revision"] or
                 anchor["canonical_store_commit_sha256"] != canonical["canonical_store_commit_sha256"] or
                 anchor["anchor"]["anchor_sha256"] != canonical["external_anchor_sha256"]):
                 raise MontageLearningCanonicalAdmissionError("canonical currentness mismatch")

@@ -48,7 +48,7 @@
     "externalAnchor": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "record_type", "task_owner", "project_id", "canonical_store_id", "owner_scope_hash", "ledger_key_sha256", "canonical_store_commit_sha256", "target_project_manifest_sha256", "anchor", "anchor_state", "external_anchor_written", "external_snapshot_coordinate_only", "origin_authenticated_by_store", "rollback_detection_authority_created", "directory_durability_confirmed", "hostile_path_race_protection_verified", "external_anchor_document_sha256"],
+      "required": ["schema_version", "record_type", "task_owner", "project_id", "canonical_store_id", "owner_scope_hash", "ledger_key_sha256", "canonical_store_commit_sha256", "target_project_manifest_sha256", "target_project_manifest_revision", "anchor", "anchor_state", "external_anchor_written", "external_snapshot_coordinate_only", "origin_authenticated_by_store", "rollback_detection_authority_created", "directory_durability_confirmed", "hostile_path_race_protection_verified", "external_anchor_document_sha256"],
       "properties": {
         "schema_version": {"const": "1.0.0"},
         "record_type": {"const": "MONTAGE_LEARNING_EXTERNAL_MONOTONIC_ANCHOR_STORE"},
@@ -59,6 +59,7 @@
         "ledger_key_sha256": {"$ref": "#/$defs/sha256"},
         "canonical_store_commit_sha256": {"$ref": "#/$defs/sha256"},
         "target_project_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "target_project_manifest_revision": {"type": "integer", "minimum": 1},
         "anchor": {"type": "object"},
         "anchor_state": {"const": "ESTABLISHED"},
         "external_anchor_written": {"const": true},

@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import re
 import stat
@@ -69,8 +70,21 @@ ANCHOR_RECOVERY_FILE_NAME = ".montage-learning-external-monotonic-anchor.recover
 CANONICAL_FORMAT_ID = "bai.montage-learning-canonical-admission"
 CANONICAL_FORMAT_VERSION = "1.0.0"
 GENERIC_OBSERVATION_RELATIVE_PATH = Path("state/montage-learning-generic-review-observations.json")
+GENERIC_OBSERVATION_COMMIT_RELATIVE_PATH = Path(
+    "state/montage-learning-generic-review-observation-commit.json"
+)
+GENERIC_OBSERVATION_JOURNAL_RELATIVE_PATH = Path(
+    "state/montage-learning/review-observation-admission-journal.json"
+)
+GENERIC_OBSERVATION_OBJECT_DIRECTORY = Path(
+    "state/montage-learning/review-observations"
+)
+GENERIC_OBSERVATION_MARKER_DIRECTORY = Path(
+    "state/montage-learning/review-observation-markers"
+)
 GENERIC_OBSERVATION_FORMAT_ID = "bai.montage-learning-generic-review-observations"
 GENERIC_OBSERVATION_FORMAT_VERSION = "1.0.0"
+GENERIC_OBSERVATION_OBJECT_FORMAT_ID = "bai.montage-learning-generic-review-observation-object"
 _PARTICIPANT_ID = "TASK058/MONTAGE-ANCHOR"
 _PARTICIPANT_VERSION = "1.0.0"
 
@@ -79,8 +93,17 @@ _ANCHOR_DOMAIN = b"TASK058_EXTERNAL_MONOTONIC_ANCHOR_STORE_V1\0"
 _REGISTRY_DOMAIN = b"TASK058_ADMISSION_RECEIPT_REGISTRY_V1\0"
 _JOURNAL_DOMAIN = b"TASK058_CANONICAL_ADMISSION_TRANSACTION_JOURNAL_V1\0"
 _RECEIPT_ID_DOMAIN = b"TASK058_CANONICAL_ADMISSION_RECEIPT_ID_V1\0"
-_GENERIC_LEDGER_DOMAIN = b"TASK058_GENERIC_REVIEW_OBSERVATION_LEDGER_V1\0"
-_GENERIC_RECEIPT_DOMAIN = b"TASK058_GENERIC_REVIEW_OBSERVATION_RECEIPT_V1\0"
+_GENERIC_EMPTY_LEDGER_DOMAIN = "BVP_REVIEW_OBSERVATION_LEDGER_EMPTY_V1"
+_GENERIC_ENTRY_DOMAIN = "BVP_REVIEW_OBSERVATION_LEDGER_ENTRY_V1"
+_GENERIC_TRANSACTION_DOMAIN_V1 = "BVP_REVIEW_OBSERVATION_TRANSACTION_ID_V1"
+_GENERIC_CHILD_BINDING_DOMAIN = "BVP_REVIEW_OBSERVATION_PROJECT_CHILD_BINDING_V1"
+_GENERIC_MARKER_BODY_DOMAIN = "BVP_REVIEW_OBSERVATION_MARKER_BODY_V1"
+_GENERIC_COMMIT_DOMAIN_V1 = "BVP_REVIEW_OBSERVATION_CANONICAL_COMMIT_V1"
+_GENERIC_MARKER_SELF_DOMAIN = "BVP_REVIEW_OBSERVATION_MARKER_SELF_V1"
+_GENERIC_INTERNAL_RECEIPT_DOMAIN = "BVP_REVIEW_OBSERVATION_CANONICAL_READBACK_V1"
+_GENERIC_OPERATION_RESULT_DOMAIN = "BVP_REVIEW_OBSERVATION_ADMISSION_RESULT_V1"
+_GENERIC_PROJECT_SCOPE_DOMAIN = "BVP_REVIEW_OBSERVATION_PROJECT_SCOPE_V1"
+_GENERIC_UNBOUND_OWNER_SCOPE = "sha256:" + "0" * 64
 _MAX_BYTES = 64 * 1024 * 1024
 _MAX_RECEIPTS = 8192
 _REPARSE_POINT = 0x400
@@ -149,6 +172,22 @@ def _hash(domain: bytes, body: Mapping[str, Any]) -> str:
     return sha256_bytes(domain + canonical_json_bytes(body))
 
 
+def _bare_sha(value: object, name: str) -> str:
+    if type(value) is not str or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+        raise MontageLearningCanonicalAdmissionError(f"{name} is invalid")
+    return value
+
+
+def _domain_hash(domain: str, body: Mapping[str, Any]) -> str:
+    return sha256_bytes(canonical_json_bytes({"domain": domain, **dict(body)})).removeprefix(
+        "sha256:"
+    )
+
+
+def _as_bare_sha(value: str) -> str:
+    return value.removeprefix("sha256:")
+
+
 def _without(body: Mapping[str, Any], field: str) -> dict[str, Any]:
     return {key: value for key, value in body.items() if key != field}
 
@@ -177,12 +216,82 @@ def _target(path: Path) -> None:
         raise MontageLearningCanonicalAdmissionError("target is unsafe")
 
 
+def _file_identity(info: os.stat_result) -> tuple[int, int, int, int]:
+    return (
+        int(info.st_dev), int(info.st_ino), stat.S_IFMT(info.st_mode),
+        int(getattr(info, "st_file_attributes", 0)),
+    )
+
+
+def _ancestor_snapshot(path: Path) -> tuple[tuple[Path, tuple[int, int, int, int]], ...]:
+    chain: list[Path] = []
+    current = path.parent
+    while True:
+        chain.append(current)
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    snapshot: list[tuple[Path, tuple[int, int, int, int]]] = []
+    for ancestor in reversed(chain):
+        info = ancestor.lstat()
+        if (not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode) or
+            bool(getattr(info, "st_file_attributes", 0) & _REPARSE_POINT)):
+            raise MontageLearningCanonicalAdmissionError("document ancestor is unsafe")
+        snapshot.append((ancestor, _file_identity(info)))
+    return tuple(snapshot)
+
+
+def _require_pinned_path_unchanged(
+    path: Path,
+    handle_identity: tuple[int, int, int, int],
+    ancestors: tuple[tuple[Path, tuple[int, int, int, int]], ...],
+) -> None:
+    current = path.lstat()
+    if (not stat.S_ISREG(current.st_mode) or stat.S_ISLNK(current.st_mode) or
+        bool(getattr(current, "st_file_attributes", 0) & _REPARSE_POINT) or
+        _file_identity(current) != handle_identity):
+        raise MontageLearningCanonicalAdmissionError("document target changed during pinned read")
+    if _ancestor_snapshot(path) != ancestors:
+        raise MontageLearningCanonicalAdmissionError("document ancestor changed during pinned read")
+
+
 def _read(path: Path, parser: Callable[[Mapping[str, Any]], dict[str, Any]]) -> dict[str, Any]:
+    """Read one authoritative document through a pinned, non-inheritable handle."""
     _target(path)
     try:
-        raw = path.read_bytes()
-        if not 1 <= len(raw) <= _MAX_BYTES:
-            raise ValueError("size")
+        ancestors = _ancestor_snapshot(path)
+        before = path.lstat()
+        if (not stat.S_ISREG(before.st_mode) or stat.S_ISLNK(before.st_mode) or
+            bool(getattr(before, "st_file_attributes", 0) & _REPARSE_POINT)):
+            raise ValueError("type")
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(path, flags)
+        try:
+            os.set_inheritable(descriptor, False)
+            opened = os.fstat(descriptor)
+            identity = _file_identity(opened)
+            if (not stat.S_ISREG(opened.st_mode) or identity != _file_identity(before) or
+                not 1 <= opened.st_size <= _MAX_BYTES):
+                raise ValueError("pinned identity/size")
+            chunks: list[bytes] = []
+            remaining = opened.st_size
+            while remaining:
+                chunk = os.read(descriptor, min(remaining, 1024 * 1024))
+                if not chunk:
+                    raise ValueError("short read")
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            if os.read(descriptor, 1):
+                raise ValueError("document grew during read")
+            after = os.fstat(descriptor)
+            if (_file_identity(after) != identity or after.st_size != opened.st_size or
+                getattr(after, "st_mtime_ns", None) != getattr(opened, "st_mtime_ns", None)):
+                raise ValueError("handle changed during read")
+            raw = b"".join(chunks)
+            _require_pinned_path_unchanged(path, identity, ancestors)
+        finally:
+            os.close(descriptor)
         value = json.loads(raw.decode("utf-8"))
         if type(value) is not dict or raw != canonical_json_bytes(value) + b"\n":
             raise ValueError("canonical")
@@ -700,177 +809,438 @@ class MontageLearningVerifiedAdmissionReceipt:
         }
 
 
-class GenericReviewObservationReceipt:
-    __slots__ = ("record_id", "learning_sha256", "status", "receipt_id", "timestamp",
-                 "ledger_revision", "previous_ledger_sha256", "duplicate_of_receipt_sha256",
-                 "receipt_sha256")
+def _parse_generic_timestamp(value: object, name: str) -> str:
+    if type(value) is not str or re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value) is None:
+        raise MontageLearningCanonicalAdmissionError(f"{name} is invalid")
+    try:
+        datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise MontageLearningCanonicalAdmissionError(f"{name} is invalid") from exc
+    return value
 
-    def __init__(self, *, record_id: str, learning_sha256: str, status: str,
-                 receipt_id: str, timestamp: str, ledger_revision: int,
-                 previous_ledger_sha256: str, duplicate_of_receipt_sha256: str | None,
-                 receipt_sha256: str, _token: object | None = None) -> None:
+
+def _parse_generic_binding(value: Mapping[str, Any]) -> dict[str, Any]:
+    body = _exact(value, "generic child binding")
+    expected = {
+        "domain_owner", "relative_path", "format_id", "format_version",
+        "content_sha256", "required", "dependency_hashes",
+    }
+    if type(body) is not dict or set(body) != expected:
+        raise MontageLearningCanonicalAdmissionError("generic child binding fields mismatch")
+    if (
+        body["domain_owner"] != TASK_OWNER
+        or body["relative_path"] != GENERIC_OBSERVATION_RELATIVE_PATH.as_posix()
+        or body["format_id"] != GENERIC_OBSERVATION_FORMAT_ID
+        or body["format_version"] != GENERIC_OBSERVATION_FORMAT_VERSION
+        or body["required"] is not True
+        or body["dependency_hashes"] != []
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic child binding identity mismatch")
+    _sha(body["content_sha256"], "generic child content_sha256")
+    return body
+
+
+def _generic_child_binding_sha256(binding: Mapping[str, Any]) -> str:
+    return _domain_hash(_GENERIC_CHILD_BINDING_DOMAIN, {"binding": dict(binding)})
+
+
+def _generic_empty_head() -> str:
+    return _domain_hash(_GENERIC_EMPTY_LEDGER_DOMAIN, {"entries": []})
+
+
+def _parse_generic_ledger_v1(value: Mapping[str, Any]) -> dict[str, Any]:
+    body = _exact(value, "generic observation ledger v1")
+    expected = {
+        "schema_version", "message_type", "project_id", "project_scope_hash",
+        "owner_scope_hash", "store_kind", "store_revision", "entries",
+        "ledger_head_sha256", "learning_adopted", "profile_promoted",
+        "timeline_mutated",
+    }
+    if type(body) is not dict or set(body) != expected:
+        raise MontageLearningCanonicalAdmissionError("generic ledger fields mismatch")
+    if (
+        body["schema_version"] != SCHEMA_VERSION
+        or body["message_type"] != "ReviewObservationLedger"
+        or body["store_kind"] != "REVIEW_OBSERVATION"
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic ledger identity mismatch")
+    _identifier(body["project_id"], "project_id")
+    _bare_sha(body["project_scope_hash"], "project_scope_hash")
+    _bare_sha(body["owner_scope_hash"], "owner_scope_hash")
+    revision = _integer(body["store_revision"], "store_revision", 1, _MAX_RECEIPTS)
+    if type(body["entries"]) is not list or len(body["entries"]) != revision:
+        raise MontageLearningCanonicalAdmissionError("generic ledger revision mismatch")
+    for name in ("learning_adopted", "profile_promoted", "timeline_mutated"):
+        if body[name] is not False:
+            raise MontageLearningCanonicalAdmissionError(f"{name} must remain false")
+    previous = _generic_empty_head()
+    seen: set[str] = set()
+    for index, entry in enumerate(body["entries"], start=1):
+        fields = {
+            "store_revision", "transaction_id", "record_id", "source_digest_sha256",
+            "project_scope_hash", "owner_scope_hash", "payload_object_sha256",
+            "admission_timestamp", "previous_ledger_head_sha256", "ledger_head_sha256",
+        }
+        if type(entry) is not dict or set(entry) != fields:
+            raise MontageLearningCanonicalAdmissionError("generic ledger entry fields mismatch")
+        if entry["store_revision"] != index:
+            raise MontageLearningCanonicalAdmissionError("generic ledger entry revision gap")
+        for name in (
+            "transaction_id", "source_digest_sha256", "project_scope_hash",
+            "owner_scope_hash", "payload_object_sha256", "previous_ledger_head_sha256",
+            "ledger_head_sha256",
+        ):
+            _bare_sha(entry[name], name)
+        _identifier(entry["record_id"], "record_id")
+        _parse_generic_timestamp(entry["admission_timestamp"], "admission_timestamp")
+        if (
+            entry["project_scope_hash"] != body["project_scope_hash"]
+            or entry["owner_scope_hash"] != body["owner_scope_hash"]
+            or entry["previous_ledger_head_sha256"] != previous
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic ledger scope/chain mismatch")
+        expected_transaction = _domain_hash(
+            _GENERIC_TRANSACTION_DOMAIN_V1,
+            {
+                "project_scope_hash": entry["project_scope_hash"],
+                "owner_scope_hash": entry["owner_scope_hash"],
+                "record_id": entry["record_id"],
+                "source_digest_sha256": entry["source_digest_sha256"],
+            },
+        )
+        expected_head = _domain_hash(
+            _GENERIC_ENTRY_DOMAIN,
+            {name: entry[name] for name in fields if name != "ledger_head_sha256"},
+        )
+        if entry["transaction_id"] != expected_transaction or entry["ledger_head_sha256"] != expected_head:
+            raise MontageLearningCanonicalAdmissionError("generic ledger entry digest mismatch")
+        if entry["record_id"] in seen:
+            raise MontageLearningCanonicalAdmissionError("generic record replay in ledger")
+        seen.add(entry["record_id"])
+        previous = entry["ledger_head_sha256"]
+    if body["ledger_head_sha256"] != previous:
+        raise MontageLearningCanonicalAdmissionError("generic ledger head mismatch")
+    return body
+
+
+def _parse_generic_object_v1(value: Mapping[str, Any]) -> dict[str, Any]:
+    body = _exact(value, "generic immutable payload", max_nodes=200_000)
+    expected = {
+        "schema_version", "message_type", "record_id", "source_digest_sha256",
+        "source_delivery", "source_delivery_sha256", "store_kind",
+        "learning_adopted", "profile_promoted", "timeline_mutated",
+        "payload_object_sha256",
+    }
+    if type(body) is not dict or set(body) != expected:
+        raise MontageLearningCanonicalAdmissionError("generic payload fields mismatch")
+    if (
+        body["schema_version"] != SCHEMA_VERSION
+        or body["message_type"] != "ReviewObservationPayloadObject"
+        or body["store_kind"] != "REVIEW_OBSERVATION"
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic payload identity mismatch")
+    _identifier(body["record_id"], "record_id")
+    for name in ("source_digest_sha256", "source_delivery_sha256", "payload_object_sha256"):
+        _bare_sha(body[name], name)
+    for name in ("learning_adopted", "profile_promoted", "timeline_mutated"):
+        if body[name] is not False:
+            raise MontageLearningCanonicalAdmissionError(f"{name} must remain false")
+    candidate = validate_generic_learning_delivery(body["source_delivery"])
+    if (
+        candidate.record_id != body["record_id"]
+        or _as_bare_sha(candidate.source_sha256) != body["source_digest_sha256"]
+        or _as_bare_sha(sha256_bytes(canonical_json_bytes(body["source_delivery"])))
+        != body["source_delivery_sha256"]
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic payload source mismatch")
+    expected_hash = _domain_hash(
+        "BVP_REVIEW_OBSERVATION_PAYLOAD_OBJECT_V1",
+        _without(body, "payload_object_sha256"),
+    )
+    if body["payload_object_sha256"] != expected_hash:
+        raise MontageLearningCanonicalAdmissionError("generic payload digest mismatch")
+    return body
+
+
+def _parse_generic_marker_v1(value: Mapping[str, Any]) -> dict[str, Any]:
+    body = _exact(value, "generic commit marker")
+    marker_fields = {
+        "transaction_id", "record_id", "source_digest_sha256", "project_scope_hash",
+        "owner_scope_hash", "product_project_manifest_id",
+        "product_project_manifest_revision", "product_project_manifest_sha256",
+        "child_binding_sha256", "store_kind", "store_revision",
+        "payload_object_sha256", "previous_ledger_head_sha256", "ledger_head_sha256",
+        "admission_timestamp",
+    }
+    expected = marker_fields | {
+        "schema_version", "message_type", "marker_body_sha256",
+        "canonical_commit_sha256", "marker_self_hash",
+    }
+    if type(body) is not dict or set(body) != expected:
+        raise MontageLearningCanonicalAdmissionError("generic marker fields mismatch")
+    if (
+        body["schema_version"] != SCHEMA_VERSION
+        or body["message_type"] != "ReviewObservationCommitMarker"
+        or body["store_kind"] != "REVIEW_OBSERVATION"
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic marker identity mismatch")
+    _identifier(body["record_id"], "record_id")
+    _identifier(body["product_project_manifest_id"], "product_project_manifest_id")
+    _integer(body["product_project_manifest_revision"], "manifest revision", 1, 2**63 - 1)
+    _integer(body["store_revision"], "store revision", 1, _MAX_RECEIPTS)
+    for name in marker_fields - {
+        "record_id", "product_project_manifest_id", "product_project_manifest_revision",
+        "store_kind", "store_revision", "admission_timestamp",
+    }:
+        _bare_sha(body[name], name)
+    for name in ("marker_body_sha256", "canonical_commit_sha256", "marker_self_hash"):
+        _bare_sha(body[name], name)
+    _parse_generic_timestamp(body["admission_timestamp"], "admission_timestamp")
+    marker_body = {name: body[name] for name in marker_fields}
+    if body["marker_body_sha256"] != _domain_hash(_GENERIC_MARKER_BODY_DOMAIN, marker_body):
+        raise MontageLearningCanonicalAdmissionError("generic marker body digest mismatch")
+    commit_body = {**marker_body, "marker_body_sha256": body["marker_body_sha256"]}
+    if body["canonical_commit_sha256"] != _domain_hash(_GENERIC_COMMIT_DOMAIN_V1, commit_body):
+        raise MontageLearningCanonicalAdmissionError("generic canonical commit digest mismatch")
+    if body["marker_self_hash"] != _domain_hash(
+        _GENERIC_MARKER_SELF_DOMAIN, _without(body, "marker_self_hash")
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic marker self hash mismatch")
+    return body
+
+
+def _parse_generic_readback_v1(value: Mapping[str, Any]) -> dict[str, Any]:
+    body = _exact(value, "generic canonical readback")
+    expected = {
+        "schema_version", "message_type", "transaction_id", "record_id",
+        "source_digest_sha256", "project_scope_hash", "owner_scope_hash",
+        "product_project_manifest_id", "product_project_manifest_revision",
+        "product_project_manifest_sha256", "child_binding", "child_binding_sha256",
+        "store_kind", "store_revision", "payload_object_sha256",
+        "previous_ledger_head_sha256", "ledger_head_sha256", "marker_body_sha256",
+        "marker_self_hash", "canonical_commit_sha256", "admission_timestamp",
+        "anchor_coordinate", "learning_adopted", "profile_promoted",
+        "timeline_mutated", "internal_receipt_self_hash",
+    }
+    if type(body) is not dict or set(body) != expected:
+        raise MontageLearningCanonicalAdmissionError("generic readback fields mismatch")
+    if (
+        body["schema_version"] != SCHEMA_VERSION
+        or body["message_type"] != "ReviewObservationCanonicalReadback"
+        or body["store_kind"] != "REVIEW_OBSERVATION"
+        or body["anchor_coordinate"] is not None
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic readback identity mismatch")
+    _identifier(body["record_id"], "record_id")
+    _identifier(body["product_project_manifest_id"], "product_project_manifest_id")
+    _integer(body["product_project_manifest_revision"], "manifest revision", 1, 2**63 - 1)
+    _integer(body["store_revision"], "store revision", 1, _MAX_RECEIPTS)
+    for name in (
+        "transaction_id", "source_digest_sha256", "project_scope_hash", "owner_scope_hash",
+        "product_project_manifest_sha256", "child_binding_sha256",
+        "payload_object_sha256", "previous_ledger_head_sha256", "ledger_head_sha256",
+        "marker_body_sha256", "marker_self_hash", "canonical_commit_sha256",
+        "internal_receipt_self_hash",
+    ):
+        _bare_sha(body[name], name)
+    _parse_generic_timestamp(body["admission_timestamp"], "admission_timestamp")
+    binding = _parse_generic_binding(body["child_binding"])
+    if body["child_binding_sha256"] != _generic_child_binding_sha256(binding):
+        raise MontageLearningCanonicalAdmissionError("generic readback binding digest mismatch")
+    for name in ("learning_adopted", "profile_promoted", "timeline_mutated"):
+        if body[name] is not False:
+            raise MontageLearningCanonicalAdmissionError(f"{name} must remain false")
+    if body["internal_receipt_self_hash"] != _domain_hash(
+        _GENERIC_INTERNAL_RECEIPT_DOMAIN, _without(body, "internal_receipt_self_hash")
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic readback self hash mismatch")
+    return body
+
+
+def _parse_generic_result_v1(value: Mapping[str, Any]) -> dict[str, Any]:
+    body = _exact(value, "generic admission result")
+    expected = {
+        "schema_version", "message_type", "operation_outcome", "canonical_readback",
+        "store_kind", "learning_adopted", "profile_promoted", "timeline_mutated",
+        "current_product_project_manifest_revision", "current_product_project_manifest_sha256",
+        "current_child_binding_sha256", "current_store_revision",
+        "current_ledger_head_sha256", "durable_readback_verified",
+        "operation_result_self_hash",
+    }
+    if type(body) is not dict or set(body) != expected:
+        raise MontageLearningCanonicalAdmissionError("generic result fields mismatch")
+    if (
+        body["schema_version"] != SCHEMA_VERSION
+        or body["message_type"] != "ReviewObservationAdmissionResult"
+        or body["operation_outcome"] not in {ACCEPTED, DUPLICATE}
+        or body["store_kind"] != "REVIEW_OBSERVATION"
+        or body["durable_readback_verified"] is not True
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic result identity mismatch")
+    for name in ("learning_adopted", "profile_promoted", "timeline_mutated"):
+        if body[name] is not False:
+            raise MontageLearningCanonicalAdmissionError(f"{name} must remain false")
+    readback = _parse_generic_readback_v1(body["canonical_readback"])
+    current_revision = _integer(
+        body["current_product_project_manifest_revision"], "current manifest revision", 1, 2**63 - 1
+    )
+    current_store = _integer(body["current_store_revision"], "current store revision", 1, _MAX_RECEIPTS)
+    for name in (
+        "current_product_project_manifest_sha256", "current_child_binding_sha256",
+        "current_ledger_head_sha256", "operation_result_self_hash",
+    ):
+        _bare_sha(body[name], name)
+    if current_revision < readback["product_project_manifest_revision"] or current_store < readback["store_revision"]:
+        raise MontageLearningCanonicalAdmissionError("generic result currentness regressed")
+    if body["operation_result_self_hash"] != _domain_hash(
+        _GENERIC_OPERATION_RESULT_DOMAIN, _without(body, "operation_result_self_hash")
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic result self hash mismatch")
+    return body
+
+
+class ReviewObservationCanonicalReadback:
+    __slots__ = ("_document",)
+
+    def __init__(self, document: bytes, *, _token: object | None = None) -> None:
         if _token is not _VERIFIED_TOKEN:
-            raise TypeError("generic receipts are returned only after durable read-back")
-        for name, value in locals().copy().items():
-            if name not in {"self", "_token"}:
-                object.__setattr__(self, name, value)
+            raise TypeError("canonical readback is returned only after trusted current read-back")
+        object.__setattr__(self, "_document", document)
 
     def __setattr__(self, name: str, value: object) -> None:
         del name, value
-        raise AttributeError("generic receipt is immutable")
+        raise AttributeError("canonical readback is immutable")
 
     @classmethod
-    def _from_dict(cls, value: Mapping[str, Any]) -> "GenericReviewObservationReceipt":
-        body = _exact(value, "generic receipt")
-        expected = {"schema_version", "record_type", "task_owner", "namespace",
-                    "source_contract_profile", "record_id", "learning_sha256", "status",
-                    "receipt_id", "timestamp", "ledger_revision", "previous_ledger_sha256",
-                    "duplicate_of_receipt_sha256", "canonical_store_written",
-                    "serialized_receipt_authoritative",
-                    "learning_adoption_authorized", "automatic_learning_promotion_authorized",
-                    "profile_generation_authorized", "timeline_mutation_authorized",
-                    "resolve_write_authorized", "release_authorized", "deploy_authorized",
-                    "production_authorized", "receipt_sha256"}
-        if type(body) is not dict or set(body) != expected:
-            raise MontageLearningCanonicalAdmissionError("generic receipt fields mismatch")
-        if (body["schema_version"] != SCHEMA_VERSION or
-            body["record_type"] != "GENERIC_REVIEW_OBSERVATION_RECEIPT" or
-            body["task_owner"] != TASK_OWNER or
-            body["namespace"] != "GENERIC_REVIEW_OBSERVATION_ONLY" or
-            body["source_contract_profile"] != GENERIC_CONTRACT_PROFILE or
-            body["status"] not in {ACCEPTED, DUPLICATE} or
-            body["canonical_store_written"] is not True):
-            raise MontageLearningCanonicalAdmissionError("generic receipt identity mismatch")
-        _identifier(body["record_id"], "record_id")
-        _identifier(body["receipt_id"], "receipt_id")
-        _sha(body["learning_sha256"], "learning_sha256")
-        _sha(body["previous_ledger_sha256"], "previous_ledger_sha256")
-        _sha(body["duplicate_of_receipt_sha256"], "duplicate_of_receipt_sha256", nullable=True)
-        revision = _integer(body["ledger_revision"], "ledger_revision", 1, _MAX_RECEIPTS)
-        if type(body["timestamp"]) is not str or not body["timestamp"].endswith("Z"):
-            raise MontageLearningCanonicalAdmissionError("generic timestamp invalid")
-        for name in ("learning_adoption_authorized", "automatic_learning_promotion_authorized",
-                     "profile_generation_authorized", "timeline_mutation_authorized",
-                     "resolve_write_authorized", "release_authorized", "deploy_authorized",
-                     "production_authorized"):
-            if body[name] is not False:
-                raise MontageLearningCanonicalAdmissionError(f"{name} must remain false")
-        if body["serialized_receipt_authoritative"] is not False:
-            raise MontageLearningCanonicalAdmissionError("serialized generic receipt is non-authoritative")
-        if (body["status"] == ACCEPTED) != (body["duplicate_of_receipt_sha256"] is None):
-            raise MontageLearningCanonicalAdmissionError("generic receipt lineage mismatch")
-        if body["receipt_sha256"] != _hash(
-            _GENERIC_RECEIPT_DOMAIN, _without(body, "receipt_sha256")
-        ):
-            raise MontageLearningCanonicalAdmissionError("generic receipt digest mismatch")
-        return cls(
-            record_id=body["record_id"], learning_sha256=body["learning_sha256"],
-            status=body["status"], receipt_id=body["receipt_id"], timestamp=body["timestamp"],
-            ledger_revision=revision, previous_ledger_sha256=body["previous_ledger_sha256"],
-            duplicate_of_receipt_sha256=body["duplicate_of_receipt_sha256"],
-            receipt_sha256=body["receipt_sha256"],
-            _token=_VERIFIED_TOKEN,
-        )
+    def _from_dict(cls, value: Mapping[str, Any]) -> "ReviewObservationCanonicalReadback":
+        body = _parse_generic_readback_v1(value)
+        return cls(canonical_json_bytes(body), _token=_VERIFIED_TOKEN)
 
     def to_dict(self) -> dict[str, Any]:
-        body: dict[str, Any] = {
-            "schema_version": SCHEMA_VERSION,
-            "record_type": "GENERIC_REVIEW_OBSERVATION_RECEIPT",
-            "task_owner": TASK_OWNER,
-            "namespace": "GENERIC_REVIEW_OBSERVATION_ONLY",
-            "source_contract_profile": GENERIC_CONTRACT_PROFILE,
-            "record_id": self.record_id,
-            "learning_sha256": self.learning_sha256,
-            "status": self.status,
-            "receipt_id": self.receipt_id,
-            "timestamp": self.timestamp,
-            "ledger_revision": self.ledger_revision,
-            "previous_ledger_sha256": self.previous_ledger_sha256,
-            "duplicate_of_receipt_sha256": self.duplicate_of_receipt_sha256,
-            "canonical_store_written": True,
-            "serialized_receipt_authoritative": False,
-            "learning_adoption_authorized": False,
-            "automatic_learning_promotion_authorized": False,
-            "profile_generation_authorized": False,
-            "timeline_mutation_authorized": False,
-            "resolve_write_authorized": False,
-            "release_authorized": False,
-            "deploy_authorized": False,
-            "production_authorized": False,
-            "receipt_sha256": self.receipt_sha256,
+        return json.loads(self._document.decode("utf-8"))
+
+    def __getattr__(self, name: str) -> Any:
+        body = self.to_dict()
+        if name in body:
+            return body[name]
+        raise AttributeError(name)
+
+
+class ReviewObservationAdmissionResult:
+    __slots__ = ("_document",)
+
+    def __init__(self, document: bytes, *, _token: object | None = None) -> None:
+        if _token is not _VERIFIED_TOKEN:
+            raise TypeError("admission results are returned only after durable read-back")
+        object.__setattr__(self, "_document", document)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        del name, value
+        raise AttributeError("admission result is immutable")
+
+    @classmethod
+    def _from_dict(cls, value: Mapping[str, Any]) -> "ReviewObservationAdmissionResult":
+        body = _parse_generic_result_v1(value)
+        return cls(canonical_json_bytes(body), _token=_VERIFIED_TOKEN)
+
+    def to_dict(self) -> dict[str, Any]:
+        return json.loads(self._document.decode("utf-8"))
+
+    @property
+    def canonical_readback(self) -> ReviewObservationCanonicalReadback:
+        return ReviewObservationCanonicalReadback._from_dict(self.to_dict()["canonical_readback"])
+
+    @property
+    def status(self) -> str:
+        return self.to_dict()["operation_outcome"]
+
+    def __getattr__(self, name: str) -> Any:
+        body = self.to_dict()
+        if name in body:
+            return body[name]
+        readback = body["canonical_readback"]
+        compatibility = {
+            "project_id": "product_project_manifest_id",
+            "learning_sha256": "source_digest_sha256",
+            "ledger_revision": "store_revision",
+            "canonical_commit_sha256": "canonical_commit_sha256",
+            "owner_scope_hash": "owner_scope_hash",
+            "record_id": "record_id",
         }
-        return body
-
-    def to_skill_v1_receipt(self) -> dict[str, object]:
-        return {
-            "schema_version": "1.0.0",
-            "message_type": "BvpMontageLearningAdmissionReceipt",
-            "record_id": self.record_id,
-            "learning_sha256": self.learning_sha256,
-            "status": self.status,
-            "receipt_id": self.receipt_id,
-            "timestamp": self.timestamp,
-        }
+        if name in compatibility:
+            return readback[compatibility[name]]
+        raise AttributeError(name)
 
 
-def _parse_generic_ledger(value: Mapping[str, Any]) -> dict[str, Any]:
-    body = _exact(value, "generic observation ledger")
-    expected = {"schema_version", "record_type", "task_owner", "namespace", "project_id",
-                "store_id", "revision", "entries", "canonical_store_written",
-                "learning_adoption_authorized", "automatic_learning_promotion_authorized",
-                "profile_generation_authorized", "timeline_mutation_authorized",
-                "resolve_write_authorized", "ledger_sha256"}
+# Compatibility name for the already-hosted B+C dependency.  Its value is the
+# closed A operation result, never a public SKILL receipt.
+GenericReviewObservationReceipt = ReviewObservationAdmissionResult
+
+
+def _parse_generic_journal_v1(value: Mapping[str, Any]) -> dict[str, Any]:
+    body = _exact(value, "generic PREPARED journal", max_nodes=300_000)
+    expected = {
+        "schema_version", "message_type", "state", "journal_revision",
+        "previous_journal_sha256", "transaction_id", "project_id",
+        "project_scope_hash", "owner_scope_hash", "source_project_manifest_revision",
+        "source_project_manifest_sha256", "target_project_manifest_revision",
+        "target_project_manifest_sha256", "record_id", "source_digest_sha256",
+        "source_delivery_sha256", "payload_object_relative_path", "payload_object_sha256",
+        "payload_document_sha256", "ledger_document_sha256", "store_revision",
+        "previous_ledger_head_sha256", "ledger_head_sha256", "marker_relative_path",
+        "marker_body_sha256", "marker_self_hash", "canonical_commit_sha256",
+        "admission_timestamp", "canonical_readback", "learning_adopted",
+        "profile_promoted", "timeline_mutated", "journal_sha256",
+    }
     if type(body) is not dict or set(body) != expected:
-        raise MontageLearningCanonicalAdmissionError("generic ledger fields mismatch")
-    if (body["schema_version"] != SCHEMA_VERSION or
-        body["record_type"] != "GENERIC_REVIEW_OBSERVATION_LEDGER" or
-        body["task_owner"] != TASK_OWNER or
-        body["namespace"] != "GENERIC_REVIEW_OBSERVATION_ONLY" or
-        body["canonical_store_written"] is not True):
-        raise MontageLearningCanonicalAdmissionError("generic ledger identity mismatch")
+        raise MontageLearningCanonicalAdmissionError("generic journal fields mismatch")
+    if (
+        body["schema_version"] != SCHEMA_VERSION
+        or body["message_type"] != "ReviewObservationAdmissionJournal"
+        or body["state"] not in {
+            "PREPARED", "PAYLOAD_WRITTEN", "LEDGER_COMMITTED",
+            "MANIFEST_COMMITTED", "MARKER_COMMITTED", "READBACK_VERIFIED", "ABORTED",
+        }
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic journal identity mismatch")
     _identifier(body["project_id"], "project_id")
-    _identifier(body["store_id"], "store_id")
-    revision = _integer(body["revision"], "revision", 1, _MAX_RECEIPTS)
-    if type(body["entries"]) is not list or len(body["entries"]) != revision:
-        raise MontageLearningCanonicalAdmissionError("generic ledger count mismatch")
-    for name in ("learning_adoption_authorized", "automatic_learning_promotion_authorized",
-                 "profile_generation_authorized", "timeline_mutation_authorized",
-                 "resolve_write_authorized"):
+    _identifier(body["record_id"], "record_id")
+    revision = _integer(body["journal_revision"], "journal revision", 1, 2**63 - 1)
+    if body["previous_journal_sha256"] is not None:
+        _bare_sha(body["previous_journal_sha256"], "previous_journal_sha256")
+    if (revision == 1) != (body["previous_journal_sha256"] is None):
+        raise MontageLearningCanonicalAdmissionError("generic journal lineage mismatch")
+    for name in (
+        "transaction_id", "project_scope_hash", "owner_scope_hash",
+        "source_project_manifest_sha256", "target_project_manifest_sha256",
+        "source_digest_sha256", "source_delivery_sha256", "payload_object_sha256",
+        "payload_document_sha256", "ledger_document_sha256",
+        "previous_ledger_head_sha256", "ledger_head_sha256", "marker_body_sha256",
+        "marker_self_hash", "canonical_commit_sha256", "journal_sha256",
+    ):
+        _bare_sha(body[name], name)
+    _integer(body["source_project_manifest_revision"], "source manifest revision", 1, 2**63 - 1)
+    _integer(body["target_project_manifest_revision"], "target manifest revision", 1, 2**63 - 1)
+    _integer(body["store_revision"], "store revision", 1, _MAX_RECEIPTS)
+    _parse_generic_timestamp(body["admission_timestamp"], "admission_timestamp")
+    if type(body["payload_object_relative_path"]) is not str or type(body["marker_relative_path"]) is not str:
+        raise MontageLearningCanonicalAdmissionError("generic journal path invalid")
+    for name in ("learning_adopted", "profile_promoted", "timeline_mutated"):
         if body[name] is not False:
             raise MontageLearningCanonicalAdmissionError(f"{name} must remain false")
-    seen: dict[str, str] = {}
-    accepted_receipts: dict[str, str] = {}
-    for index, entry in enumerate(body["entries"], start=1):
-        if type(entry) is not dict or set(entry) != {
-            "revision", "record_id", "learning_sha256", "source_delivery",
-            "source_delivery_sha256", "receipt",
-        }:
-            raise MontageLearningCanonicalAdmissionError("generic entry fields mismatch")
-        if entry["revision"] != index:
-            raise MontageLearningCanonicalAdmissionError("generic revision gap")
-        _identifier(entry["record_id"], "record_id")
-        _sha(entry["learning_sha256"], "learning_sha256")
-        _sha(entry["source_delivery_sha256"], "source_delivery_sha256")
-        if entry["source_delivery_sha256"] != sha256_bytes(canonical_json_bytes(entry["source_delivery"])):
-            raise MontageLearningCanonicalAdmissionError("generic delivery digest mismatch")
-        candidate = validate_generic_learning_delivery(entry["source_delivery"])
-        if candidate.record_id != entry["record_id"] or candidate.source_sha256 != entry["learning_sha256"]:
-            raise MontageLearningCanonicalAdmissionError("generic source cross-binding mismatch")
-        receipt = GenericReviewObservationReceipt._from_dict(entry["receipt"])
-        if receipt.record_id != entry["record_id"] or receipt.learning_sha256 != entry["learning_sha256"] or receipt.ledger_revision != index:
-            raise MontageLearningCanonicalAdmissionError("generic receipt cross-binding mismatch")
-        prior = seen.get(entry["record_id"])
-        if prior is not None and prior != entry["learning_sha256"]:
-            raise MontageLearningCanonicalAdmissionError("generic record collision")
-        if receipt.status == ACCEPTED:
-            if prior is not None:
-                raise MontageLearningCanonicalAdmissionError("generic ACCEPTED replay")
-            accepted_receipts[entry["record_id"]] = receipt.receipt_sha256
-        elif receipt.duplicate_of_receipt_sha256 != accepted_receipts.get(entry["record_id"]):
-            raise MontageLearningCanonicalAdmissionError("generic DUPLICATE lineage mismatch")
-        seen[entry["record_id"]] = entry["learning_sha256"]
-    if body["ledger_sha256"] != _hash(_GENERIC_LEDGER_DOMAIN, _without(body, "ledger_sha256")):
-        raise MontageLearningCanonicalAdmissionError("generic ledger digest mismatch")
+    readback = _parse_generic_readback_v1(body["canonical_readback"])
+    for field in (
+        "transaction_id", "record_id", "source_digest_sha256", "project_scope_hash",
+        "owner_scope_hash", "payload_object_sha256", "previous_ledger_head_sha256",
+        "ledger_head_sha256", "marker_body_sha256", "marker_self_hash",
+        "canonical_commit_sha256", "admission_timestamp",
+    ):
+        if readback[field] != body[field]:
+            raise MontageLearningCanonicalAdmissionError("generic journal/readback mismatch")
+    if body["journal_sha256"] != _domain_hash(
+        "BVP_REVIEW_OBSERVATION_JOURNAL_V1", _without(body, "journal_sha256")
+    ):
+        raise MontageLearningCanonicalAdmissionError("generic journal digest mismatch")
     return body
 
 
@@ -904,13 +1274,25 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         self.receipt_path = self.project_root / RECEIPT_RELATIVE_PATH
         self.journal_path = self.project_root / JOURNAL_RELATIVE_PATH
         self.generic_observation_path = self.project_root / GENERIC_OBSERVATION_RELATIVE_PATH
+        self.generic_commit_path = self.project_root / GENERIC_OBSERVATION_COMMIT_RELATIVE_PATH
+        self.generic_journal_path = self.project_root / GENERIC_OBSERVATION_JOURNAL_RELATIVE_PATH
+        self.generic_object_root = self.project_root / GENERIC_OBSERVATION_OBJECT_DIRECTORY
+        self.generic_marker_root = self.project_root / GENERIC_OBSERVATION_MARKER_DIRECTORY
+        if not self.generic_object_root.exists():
+            self.generic_object_root.mkdir(parents=True)
+        if not self.generic_marker_root.exists():
+            self.generic_marker_root.mkdir(parents=True)
+        for directory in (self.generic_object_root, self.generic_marker_root):
+            if _is_reparse(directory) or not directory.is_dir():
+                raise MontageLearningCanonicalAdmissionError("generic authority directory is unsafe")
         self.anchor_path = self.external_anchor_root / ANCHOR_FILE_NAME
         self.anchor_recovery_path = self.external_anchor_root / ANCHOR_RECOVERY_FILE_NAME
         self._validate_paths()
 
     def _validate_paths(self) -> None:
         for path in (self.canonical_path, self.receipt_path, self.journal_path,
-                     self.generic_observation_path, self.anchor_path,
+                     self.generic_observation_path, self.generic_commit_path,
+                     self.generic_journal_path, self.anchor_path,
                      self.anchor_recovery_path):
             _target(path)
 
@@ -1387,141 +1769,851 @@ class MontageLearningCanonicalAdmissionTransactionStore:
                 _token=_VERIFIED_TOKEN,
             )
 
-    def record_exact_generic_observation(
-        self,
-        delivery: Mapping[str, Any],
-        *,
-        expected_revision: int,
-        generic_store_id: str = "task058-generic-review-observations",
-    ) -> GenericReviewObservationReceipt:
-        """Durably record one generic review observation in a separate namespace.
+    @staticmethod
+    def _generic_project_scope_hash(project_id: str) -> str:
+        return _domain_hash(_GENERIC_PROJECT_SCOPE_DOMAIN, {"project_id": project_id})
 
-        ACCEPTED/DUPLICATE here only mean immutable observation storage.  They
-        never mean exact learning admission, adoption, Profile generation or
-        Timeline mutation.
-        """
-        raw = _exact(delivery, "generic delivery", max_nodes=200_000)
-        candidate = validate_generic_learning_delivery(raw)
-        store_id = _identifier(generic_store_id, "generic_store_id")
-        expected = _integer(expected_revision, "expected_revision", 0, _MAX_RECEIPTS - 1)
-        coordinator = ProductProjectSaveCoordinator()
-        manifest = ProductProjectManifestStore.load(self.project_root)
-        current = (None if not self.generic_observation_path.exists() else
-                   _read(self.generic_observation_path, _parse_generic_ledger))
-        if current is None:
-            if expected != 0:
-                raise MontageLearningCanonicalAdmissionError("generic CAS is stale")
-            entries: list[dict[str, Any]] = []
-            previous_ledger_sha256 = _hash(_GENERIC_LEDGER_DOMAIN, {
-                "project_id": manifest.project_id, "store_id": store_id, "revision": 0,
-            })
-        else:
-            if (current["project_id"] != manifest.project_id or
-                current["store_id"] != store_id or current["revision"] != expected):
-                raise MontageLearningCanonicalAdmissionError("generic CAS/scope is stale")
-            entries = list(current["entries"])
-            previous_ledger_sha256 = current["ledger_sha256"]
-        same_record = [entry for entry in entries if entry["record_id"] == candidate.record_id]
-        if same_record and any(entry["learning_sha256"] != candidate.source_sha256
-                               for entry in same_record):
-            raise MontageLearningCanonicalAdmissionError("generic record identity collision")
-        status = DUPLICATE if same_record else ACCEPTED
-        duplicate_of = (None if not same_record else
-                        next(entry["receipt"]["receipt_sha256"] for entry in same_record
-                             if entry["receipt"]["status"] == ACCEPTED))
-        revision = len(entries) + 1
-        timestamp = _now()
-        receipt_id_hash = _hash(_GENERIC_RECEIPT_DOMAIN, {
-            "record_id": candidate.record_id,
-            "learning_sha256": candidate.source_sha256,
-            "revision": revision,
-            "status": status,
-        }).removeprefix("sha256:")
-        receipt_body: dict[str, Any] = {
-            "schema_version": SCHEMA_VERSION,
-            "record_type": "GENERIC_REVIEW_OBSERVATION_RECEIPT",
-            "task_owner": TASK_OWNER,
-            "namespace": "GENERIC_REVIEW_OBSERVATION_ONLY",
-            "source_contract_profile": GENERIC_CONTRACT_PROFILE,
-            "record_id": candidate.record_id,
-            "learning_sha256": candidate.source_sha256,
-            "status": status,
-            "receipt_id": f"generic-{receipt_id_hash[:40]}-{revision}",
-            "timestamp": timestamp,
-            "ledger_revision": revision,
-            "previous_ledger_sha256": previous_ledger_sha256,
-            "duplicate_of_receipt_sha256": duplicate_of,
-            "canonical_store_written": True,
-            "serialized_receipt_authoritative": False,
-            "learning_adoption_authorized": False,
-            "automatic_learning_promotion_authorized": False,
-            "profile_generation_authorized": False,
-            "timeline_mutation_authorized": False,
-            "resolve_write_authorized": False,
-            "release_authorized": False,
-            "deploy_authorized": False,
-            "production_authorized": False,
-        }
-        receipt_body["receipt_sha256"] = _hash(_GENERIC_RECEIPT_DOMAIN, receipt_body)
-        receipt = GenericReviewObservationReceipt._from_dict(receipt_body)
-        entry = {
-            "revision": revision,
-            "record_id": candidate.record_id,
-            "learning_sha256": candidate.source_sha256,
-            "source_delivery": raw,
-            "source_delivery_sha256": sha256_bytes(canonical_json_bytes(raw)),
-            "receipt": receipt.to_dict(),
-        }
-        ledger: dict[str, Any] = {
-            "schema_version": SCHEMA_VERSION,
-            "record_type": "GENERIC_REVIEW_OBSERVATION_LEDGER",
-            "task_owner": TASK_OWNER,
-            "namespace": "GENERIC_REVIEW_OBSERVATION_ONLY",
-            "project_id": manifest.project_id,
-            "store_id": store_id,
-            "revision": revision,
-            "entries": [*entries, entry],
-            "canonical_store_written": True,
-            "learning_adoption_authorized": False,
-            "automatic_learning_promotion_authorized": False,
-            "profile_generation_authorized": False,
-            "timeline_mutation_authorized": False,
-            "resolve_write_authorized": False,
-        }
-        ledger["ledger_sha256"] = _hash(_GENERIC_LEDGER_DOMAIN, ledger)
-        ledger = _parse_generic_ledger(ledger)
-        document = canonical_json_bytes(ledger) + b"\n"
-        binding = ProjectChildBinding(
-            TASK_OWNER,
-            GENERIC_OBSERVATION_RELATIVE_PATH.as_posix(),
-            GENERIC_OBSERVATION_FORMAT_ID,
-            GENERIC_OBSERVATION_FORMAT_VERSION,
-            sha256_bytes(document),
-            True,
+    @staticmethod
+    def _generic_marker_relative_path(transaction_id: str) -> str:
+        _bare_sha(transaction_id, "transaction_id")
+        return (GENERIC_OBSERVATION_MARKER_DIRECTORY / f"{transaction_id}.json").as_posix()
+
+    def _load_manifest_pinned(self) -> ProductProjectManifest:
+        document = _read(
+            ProductProjectManifestStore.path(self.project_root),
+            lambda value: parse_product_project_manifest(value).to_dict(),
         )
-        bindings = [item for item in manifest.child_bindings if item.identity != binding.identity]
-        bindings.append(binding)
-        target_manifest = ProductProjectManifest.create(
-            project_id=manifest.project_id,
-            project_revision=manifest.project_revision + 1,
-            product_version=manifest.product_version,
-            timebase=manifest.timebase,
+        return parse_product_project_manifest(document)
+
+    @staticmethod
+    def _generic_binding_for_ledger(ledger_document: bytes) -> ProjectChildBinding:
+        return ProjectChildBinding(
+            TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix(),
+            GENERIC_OBSERVATION_FORMAT_ID, GENERIC_OBSERVATION_FORMAT_VERSION,
+            sha256_bytes(ledger_document), True,
+        )
+
+    @staticmethod
+    def _generic_payload_binding(relative_path: str, document: bytes) -> ProjectChildBinding:
+        return ProjectChildBinding(
+            TASK_OWNER, relative_path, GENERIC_OBSERVATION_OBJECT_FORMAT_ID,
+            GENERIC_OBSERVATION_FORMAT_VERSION, sha256_bytes(document), True,
+        )
+
+    @staticmethod
+    def _generic_target_manifest_v1(
+        source: ProductProjectManifest, ledger_document: bytes,
+        payload_relative_path: str, payload_document: bytes, *, updated_at: str,
+    ) -> ProductProjectManifest:
+        replacements = {
+            (TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix()):
+                MontageLearningCanonicalAdmissionTransactionStore._generic_binding_for_ledger(
+                    ledger_document
+                ),
+            (TASK_OWNER, payload_relative_path):
+                MontageLearningCanonicalAdmissionTransactionStore._generic_payload_binding(
+                    payload_relative_path, payload_document
+                ),
+        }
+        bindings = [item for item in source.child_bindings if item.identity not in replacements]
+        bindings.extend(replacements.values())
+        return ProductProjectManifest.create(
+            project_id=source.project_id,
+            project_revision=source.project_revision + 1,
+            product_version=source.product_version,
+            timebase=source.timebase,
             child_bindings=bindings,
-            created_at=manifest.created_at,
+            created_at=source.created_at,
+            updated_at=updated_at,
+        )
+
+    @staticmethod
+    def _generic_make_readback(
+        marker: Mapping[str, Any], binding: ProjectChildBinding,
+    ) -> dict[str, Any]:
+        marker_body = _parse_generic_marker_v1(marker)
+        body: dict[str, Any] = {
+            "schema_version": SCHEMA_VERSION,
+            "message_type": "ReviewObservationCanonicalReadback",
+            "transaction_id": marker_body["transaction_id"],
+            "record_id": marker_body["record_id"],
+            "source_digest_sha256": marker_body["source_digest_sha256"],
+            "project_scope_hash": marker_body["project_scope_hash"],
+            "owner_scope_hash": marker_body["owner_scope_hash"],
+            "product_project_manifest_id": marker_body["product_project_manifest_id"],
+            "product_project_manifest_revision": marker_body["product_project_manifest_revision"],
+            "product_project_manifest_sha256": marker_body["product_project_manifest_sha256"],
+            "child_binding": binding.to_dict(),
+            "child_binding_sha256": marker_body["child_binding_sha256"],
+            "store_kind": "REVIEW_OBSERVATION",
+            "store_revision": marker_body["store_revision"],
+            "payload_object_sha256": marker_body["payload_object_sha256"],
+            "previous_ledger_head_sha256": marker_body["previous_ledger_head_sha256"],
+            "ledger_head_sha256": marker_body["ledger_head_sha256"],
+            "marker_body_sha256": marker_body["marker_body_sha256"],
+            "marker_self_hash": marker_body["marker_self_hash"],
+            "canonical_commit_sha256": marker_body["canonical_commit_sha256"],
+            "admission_timestamp": marker_body["admission_timestamp"],
+            "anchor_coordinate": None,
+            "learning_adopted": False,
+            "profile_promoted": False,
+            "timeline_mutated": False,
+        }
+        body["internal_receipt_self_hash"] = _domain_hash(
+            _GENERIC_INTERNAL_RECEIPT_DOMAIN, body
+        )
+        return _parse_generic_readback_v1(body)
+
+    @staticmethod
+    def _generic_make_result(
+        outcome: str, readback: Mapping[str, Any],
+        current_manifest: ProductProjectManifest, current_binding: ProjectChildBinding,
+        current_ledger: Mapping[str, Any],
+    ) -> ReviewObservationAdmissionResult:
+        if outcome not in {ACCEPTED, DUPLICATE}:
+            raise MontageLearningCanonicalAdmissionError("generic operation outcome invalid")
+        body: dict[str, Any] = {
+            "schema_version": SCHEMA_VERSION,
+            "message_type": "ReviewObservationAdmissionResult",
+            "operation_outcome": outcome,
+            "canonical_readback": _parse_generic_readback_v1(readback),
+            "store_kind": "REVIEW_OBSERVATION",
+            "learning_adopted": False,
+            "profile_promoted": False,
+            "timeline_mutated": False,
+            "current_product_project_manifest_revision": current_manifest.project_revision,
+            "current_product_project_manifest_sha256": _as_bare_sha(
+                current_manifest.project_manifest_sha256
+            ),
+            "current_child_binding_sha256": _generic_child_binding_sha256(
+                current_binding.to_dict()
+            ),
+            "current_store_revision": current_ledger["store_revision"],
+            "current_ledger_head_sha256": current_ledger["ledger_head_sha256"],
+            "durable_readback_verified": True,
+        }
+        body["operation_result_self_hash"] = _domain_hash(
+            _GENERIC_OPERATION_RESULT_DOMAIN, body
+        )
+        return ReviewObservationAdmissionResult._from_dict(body)
+
+    def _generic_load_current_v1(
+        self, manifest: ProductProjectManifest, *,
+        project_scope_hash: str, owner_scope_hash: str,
+    ) -> tuple[dict[str, Any], ProjectChildBinding] | None:
+        binding = next((
+            item for item in manifest.child_bindings
+            if item.identity == (TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix())
+        ), None)
+        if binding is None:
+            if self.generic_observation_path.exists():
+                raise MontageLearningCanonicalAdmissionError("unbound generic ledger exists")
+            return None
+        if (
+            binding.format_id != GENERIC_OBSERVATION_FORMAT_ID
+            or binding.format_version != GENERIC_OBSERVATION_FORMAT_VERSION
+            or binding.required is not True
+            or binding.dependency_hashes != ()
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic ledger binding mismatch")
+        ledger = _read(self.generic_observation_path, _parse_generic_ledger_v1)
+        if (
+            binding.content_sha256 != sha256_bytes(canonical_json_bytes(ledger) + b"\n")
+            or ledger["project_id"] != manifest.project_id
+            or ledger["project_scope_hash"] != project_scope_hash
+            or ledger["owner_scope_hash"] != owner_scope_hash
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic ledger currentness mismatch")
+        return ledger, binding
+
+    @staticmethod
+    def _generic_prefix_ledger(
+        current_ledger: Mapping[str, Any], revision: int,
+    ) -> dict[str, Any]:
+        return _parse_generic_ledger_v1({
+            "schema_version": SCHEMA_VERSION,
+            "message_type": "ReviewObservationLedger",
+            "project_id": current_ledger["project_id"],
+            "project_scope_hash": current_ledger["project_scope_hash"],
+            "owner_scope_hash": current_ledger["owner_scope_hash"],
+            "store_kind": "REVIEW_OBSERVATION",
+            "store_revision": revision,
+            "entries": list(current_ledger["entries"][:revision]),
+            "ledger_head_sha256": current_ledger["entries"][revision - 1]["ledger_head_sha256"],
+            "learning_adopted": False,
+            "profile_promoted": False,
+            "timeline_mutated": False,
+        })
+
+    def _generic_trusted_readback_locked(
+        self, readback: Mapping[str, Any], *,
+        current_manifest: ProductProjectManifest | None = None,
+    ) -> tuple[dict[str, Any], ProductProjectManifest, ProjectChildBinding, dict[str, Any]]:
+        anchored = _parse_generic_readback_v1(readback)
+        manifest = self._load_manifest_pinned() if current_manifest is None else current_manifest
+        if manifest.project_id != anchored["product_project_manifest_id"]:
+            raise MontageLearningCanonicalAdmissionError("generic Project identity changed")
+        if manifest.project_revision < anchored["product_project_manifest_revision"]:
+            raise MontageLearningCanonicalAdmissionError("generic manifest rollback detected")
+        if (
+            manifest.project_revision == anchored["product_project_manifest_revision"]
+            and _as_bare_sha(manifest.project_manifest_sha256)
+            != anchored["product_project_manifest_sha256"]
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic anchored manifest mismatch")
+        current = self._generic_load_current_v1(
+            manifest,
+            project_scope_hash=anchored["project_scope_hash"],
+            owner_scope_hash=anchored["owner_scope_hash"],
+        )
+        if current is None:
+            raise MontageLearningCanonicalAdmissionError("generic ledger is absent")
+        ledger, binding = current
+        revision = anchored["store_revision"]
+        if ledger["store_revision"] < revision:
+            raise MontageLearningCanonicalAdmissionError("generic store rollback detected")
+        rebuilt_readbacks: list[dict[str, Any]] = []
+        for entry_revision, current_entry in enumerate(ledger["entries"], start=1):
+            prefix = self._generic_prefix_ledger(ledger, entry_revision)
+            prefix_document = canonical_json_bytes(prefix) + b"\n"
+            prefix_binding = self._generic_binding_for_ledger(prefix_document)
+            payload_relative = (
+                GENERIC_OBSERVATION_OBJECT_DIRECTORY /
+                f"{current_entry['payload_object_sha256']}.json"
+            ).as_posix()
+            payload_path = self.project_root / payload_relative
+            payload = _read(payload_path, _parse_generic_object_v1)
+            payload_document = canonical_json_bytes(payload) + b"\n"
+            if (
+                payload["payload_object_sha256"]
+                != current_entry["payload_object_sha256"]
+                or payload["record_id"] != current_entry["record_id"]
+                or payload["source_digest_sha256"]
+                != current_entry["source_digest_sha256"]
+            ):
+                raise MontageLearningCanonicalAdmissionError(
+                    "generic payload/ledger entry mismatch"
+                )
+            payload_binding = next((
+                item for item in manifest.child_bindings
+                if item.identity == (TASK_OWNER, payload_relative)
+            ), None)
+            expected_payload_binding = self._generic_payload_binding(
+                payload_relative, payload_document
+            )
+            if (
+                payload_binding is None
+                or payload_binding.to_dict() != expected_payload_binding.to_dict()
+            ):
+                raise MontageLearningCanonicalAdmissionError(
+                    "generic payload Project binding mismatch"
+                )
+            marker = _read(
+                self.project_root /
+                self._generic_marker_relative_path(current_entry["transaction_id"]),
+                _parse_generic_marker_v1,
+            )
+            for left, right in (
+                (marker["transaction_id"], current_entry["transaction_id"]),
+                (marker["record_id"], current_entry["record_id"]),
+                (marker["source_digest_sha256"], current_entry["source_digest_sha256"]),
+                (marker["project_scope_hash"], current_entry["project_scope_hash"]),
+                (marker["owner_scope_hash"], current_entry["owner_scope_hash"]),
+                (marker["store_revision"], current_entry["store_revision"]),
+                (marker["payload_object_sha256"], current_entry["payload_object_sha256"]),
+                (
+                    marker["previous_ledger_head_sha256"],
+                    current_entry["previous_ledger_head_sha256"],
+                ),
+                (marker["ledger_head_sha256"], current_entry["ledger_head_sha256"]),
+                (marker["admission_timestamp"], current_entry["admission_timestamp"]),
+                (marker["product_project_manifest_id"], manifest.project_id),
+                (
+                    marker["child_binding_sha256"],
+                    _generic_child_binding_sha256(prefix_binding.to_dict()),
+                ),
+            ):
+                if left != right:
+                    raise MontageLearningCanonicalAdmissionError(
+                        "generic marker/ledger entry mismatch"
+                    )
+            if marker["product_project_manifest_revision"] > manifest.project_revision:
+                raise MontageLearningCanonicalAdmissionError(
+                    "generic marker manifest revision is from the future"
+                )
+            if (
+                marker["product_project_manifest_revision"] == manifest.project_revision
+                and marker["product_project_manifest_sha256"]
+                != _as_bare_sha(manifest.project_manifest_sha256)
+            ):
+                raise MontageLearningCanonicalAdmissionError(
+                    "generic marker current manifest mismatch"
+                )
+            rebuilt_readbacks.append(self._generic_make_readback(marker, prefix_binding))
+
+        entry = ledger["entries"][revision - 1]
+        for left, right in (
+            (entry["transaction_id"], anchored["transaction_id"]),
+            (entry["record_id"], anchored["record_id"]),
+            (entry["source_digest_sha256"], anchored["source_digest_sha256"]),
+            (entry["payload_object_sha256"], anchored["payload_object_sha256"]),
+            (entry["previous_ledger_head_sha256"], anchored["previous_ledger_head_sha256"]),
+            (entry["ledger_head_sha256"], anchored["ledger_head_sha256"]),
+            (entry["admission_timestamp"], anchored["admission_timestamp"]),
+        ):
+            if left != right:
+                raise MontageLearningCanonicalAdmissionError("generic anchored ledger entry changed")
+        prefix = self._generic_prefix_ledger(ledger, revision)
+        anchored_binding = self._generic_binding_for_ledger(canonical_json_bytes(prefix) + b"\n")
+        if (
+            anchored_binding.to_dict() != anchored["child_binding"]
+            or _generic_child_binding_sha256(anchored_binding.to_dict())
+            != anchored["child_binding_sha256"]
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic anchored child binding changed")
+        rebuilt = rebuilt_readbacks[revision - 1]
+        if rebuilt != anchored:
+            raise MontageLearningCanonicalAdmissionError("generic marker/readback mismatch")
+        return anchored, manifest, binding, ledger
+
+    def _generic_result_from_readback(
+        self, outcome: str, readback: Mapping[str, Any],
+    ) -> ReviewObservationAdmissionResult:
+        with _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root)):
+            anchored, manifest, binding, ledger = self._generic_trusted_readback_locked(readback)
+            return self._generic_make_result(outcome, anchored, manifest, binding, ledger)
+
+    @staticmethod
+    def _generic_payload_for(
+        raw: Mapping[str, Any], candidate: Any,
+    ) -> tuple[dict[str, Any], bytes, str]:
+        body: dict[str, Any] = {
+            "schema_version": SCHEMA_VERSION,
+            "message_type": "ReviewObservationPayloadObject",
+            "record_id": candidate.record_id,
+            "source_digest_sha256": _as_bare_sha(candidate.source_sha256),
+            "source_delivery": dict(raw),
+            "source_delivery_sha256": _as_bare_sha(
+                sha256_bytes(canonical_json_bytes(raw))
+            ),
+            "store_kind": "REVIEW_OBSERVATION",
+            "learning_adopted": False,
+            "profile_promoted": False,
+            "timeline_mutated": False,
+        }
+        body["payload_object_sha256"] = _domain_hash(
+            "BVP_REVIEW_OBSERVATION_PAYLOAD_OBJECT_V1", body
+        )
+        payload = _parse_generic_object_v1(body)
+        document = canonical_json_bytes(payload) + b"\n"
+        relative = (
+            GENERIC_OBSERVATION_OBJECT_DIRECTORY /
+            f"{payload['payload_object_sha256']}.json"
+        ).as_posix()
+        return payload, document, relative
+
+    def _generic_duplicate_v1(
+        self, raw: Mapping[str, Any], candidate: Any,
+        current: tuple[dict[str, Any], ProjectChildBinding] | None,
+    ) -> ReviewObservationAdmissionResult | None:
+        if current is None:
+            return None
+        ledger, _ = current
+        matches = [entry for entry in ledger["entries"] if entry["record_id"] == candidate.record_id]
+        if not matches:
+            return None
+        entry = matches[0]
+        payload = self._generic_payload_for(raw, candidate)[0]
+        if (
+            entry["source_digest_sha256"] != _as_bare_sha(candidate.source_sha256)
+            or entry["payload_object_sha256"] != payload["payload_object_sha256"]
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic record identity collision")
+        marker = _read(
+            self.project_root / self._generic_marker_relative_path(entry["transaction_id"]),
+            _parse_generic_marker_v1,
+        )
+        anchored_binding = self._generic_binding_for_ledger(
+            canonical_json_bytes(self._generic_prefix_ledger(ledger, entry["store_revision"]))
+            + b"\n"
+        )
+        return self._generic_result_from_readback(
+            DUPLICATE, self._generic_make_readback(marker, anchored_binding)
+        )
+
+    def _generic_prepare_v1(
+        self, raw: Mapping[str, Any], candidate: Any,
+        manifest: ProductProjectManifest,
+        current: tuple[dict[str, Any], ProjectChildBinding] | None,
+        *, owner_scope_hash: str, admission_timestamp: str | None = None,
+    ) -> tuple[dict[str, Any], ProductProjectManifest, dict[str, bytes], dict[str, Any]]:
+        project_scope = self._generic_project_scope_hash(manifest.project_id)
+        owner_scope = _as_bare_sha(owner_scope_hash)
+        source_digest = _as_bare_sha(candidate.source_sha256)
+        transaction_id = _domain_hash(
+            _GENERIC_TRANSACTION_DOMAIN_V1,
+            {
+                "project_scope_hash": project_scope,
+                "owner_scope_hash": owner_scope,
+                "record_id": candidate.record_id,
+                "source_digest_sha256": source_digest,
+            },
+        )
+        timestamp = (
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if admission_timestamp is None
+            else _parse_generic_timestamp(admission_timestamp, "admission_timestamp")
+        )
+        payload, payload_document, payload_relative = self._generic_payload_for(raw, candidate)
+        prior_entries = [] if current is None else list(current[0]["entries"])
+        previous_head = _generic_empty_head() if current is None else current[0]["ledger_head_sha256"]
+        revision = len(prior_entries) + 1
+        entry: dict[str, Any] = {
+            "store_revision": revision,
+            "transaction_id": transaction_id,
+            "record_id": candidate.record_id,
+            "source_digest_sha256": source_digest,
+            "project_scope_hash": project_scope,
+            "owner_scope_hash": owner_scope,
+            "payload_object_sha256": payload["payload_object_sha256"],
+            "admission_timestamp": timestamp,
+            "previous_ledger_head_sha256": previous_head,
+        }
+        entry["ledger_head_sha256"] = _domain_hash(_GENERIC_ENTRY_DOMAIN, entry)
+        ledger = _parse_generic_ledger_v1({
+            "schema_version": SCHEMA_VERSION,
+            "message_type": "ReviewObservationLedger",
+            "project_id": manifest.project_id,
+            "project_scope_hash": project_scope,
+            "owner_scope_hash": owner_scope,
+            "store_kind": "REVIEW_OBSERVATION",
+            "store_revision": revision,
+            "entries": [*prior_entries, entry],
+            "ledger_head_sha256": entry["ledger_head_sha256"],
+            "learning_adopted": False,
+            "profile_promoted": False,
+            "timeline_mutated": False,
+        })
+        ledger_document = canonical_json_bytes(ledger) + b"\n"
+        target = self._generic_target_manifest_v1(
+            manifest, ledger_document, payload_relative, payload_document,
             updated_at=timestamp,
         )
-        coordinator.save(
-            self.project_root,
-            target_manifest,
-            {GENERIC_OBSERVATION_RELATIVE_PATH.as_posix(): document},
-            expected_previous_manifest_sha256=manifest.project_manifest_sha256,
+        ledger_binding = next(
+            item for item in target.child_bindings
+            if item.identity == (TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix())
         )
-        coordinator.require_current_integrity(self.project_root, target_manifest)
-        readback = _read(self.generic_observation_path, _parse_generic_ledger)
-        if readback != ledger or readback["entries"][-1]["receipt"] != receipt.to_dict():
-            raise MontageLearningCanonicalAdmissionError("generic durable read-back mismatch")
-        return receipt
+        marker_body = {
+            "transaction_id": transaction_id,
+            "record_id": candidate.record_id,
+            "source_digest_sha256": source_digest,
+            "project_scope_hash": project_scope,
+            "owner_scope_hash": owner_scope,
+            "product_project_manifest_id": target.project_id,
+            "product_project_manifest_revision": target.project_revision,
+            "product_project_manifest_sha256": _as_bare_sha(target.project_manifest_sha256),
+            "child_binding_sha256": _generic_child_binding_sha256(ledger_binding.to_dict()),
+            "store_kind": "REVIEW_OBSERVATION",
+            "store_revision": revision,
+            "payload_object_sha256": payload["payload_object_sha256"],
+            "previous_ledger_head_sha256": previous_head,
+            "ledger_head_sha256": entry["ledger_head_sha256"],
+            "admission_timestamp": timestamp,
+        }
+        marker: dict[str, Any] = {
+            "schema_version": SCHEMA_VERSION,
+            "message_type": "ReviewObservationCommitMarker",
+            **marker_body,
+        }
+        marker["marker_body_sha256"] = _domain_hash(_GENERIC_MARKER_BODY_DOMAIN, marker_body)
+        marker["canonical_commit_sha256"] = _domain_hash(
+            _GENERIC_COMMIT_DOMAIN_V1,
+            {**marker_body, "marker_body_sha256": marker["marker_body_sha256"]},
+        )
+        marker["marker_self_hash"] = _domain_hash(_GENERIC_MARKER_SELF_DOMAIN, marker)
+        marker = _parse_generic_marker_v1(marker)
+        readback = self._generic_make_readback(marker, ledger_binding)
+        journal: dict[str, Any] = {
+            "schema_version": SCHEMA_VERSION,
+            "message_type": "ReviewObservationAdmissionJournal",
+            "state": "PREPARED",
+            "journal_revision": 1,
+            "previous_journal_sha256": None,
+            "transaction_id": transaction_id,
+            "project_id": manifest.project_id,
+            "project_scope_hash": project_scope,
+            "owner_scope_hash": owner_scope,
+            "source_project_manifest_revision": manifest.project_revision,
+            "source_project_manifest_sha256": _as_bare_sha(manifest.project_manifest_sha256),
+            "target_project_manifest_revision": target.project_revision,
+            "target_project_manifest_sha256": _as_bare_sha(target.project_manifest_sha256),
+            "record_id": candidate.record_id,
+            "source_digest_sha256": source_digest,
+            "source_delivery_sha256": _as_bare_sha(sha256_bytes(canonical_json_bytes(raw))),
+            "payload_object_relative_path": payload_relative,
+            "payload_object_sha256": payload["payload_object_sha256"],
+            "payload_document_sha256": _as_bare_sha(sha256_bytes(payload_document)),
+            "ledger_document_sha256": _as_bare_sha(sha256_bytes(ledger_document)),
+            "store_revision": revision,
+            "previous_ledger_head_sha256": previous_head,
+            "ledger_head_sha256": entry["ledger_head_sha256"],
+            "marker_relative_path": self._generic_marker_relative_path(transaction_id),
+            "marker_body_sha256": marker["marker_body_sha256"],
+            "marker_self_hash": marker["marker_self_hash"],
+            "canonical_commit_sha256": marker["canonical_commit_sha256"],
+            "admission_timestamp": timestamp,
+            "canonical_readback": readback,
+            "learning_adopted": False,
+            "profile_promoted": False,
+            "timeline_mutated": False,
+        }
+        journal["journal_sha256"] = _domain_hash(
+            "BVP_REVIEW_OBSERVATION_JOURNAL_V1", journal
+        )
+        journal = _parse_generic_journal_v1(journal)
+        return journal, target, {
+            GENERIC_OBSERVATION_RELATIVE_PATH.as_posix(): ledger_document,
+            payload_relative: payload_document,
+        }, marker
 
+    @staticmethod
+    def _generic_marker_from_readback(readback: Mapping[str, Any]) -> dict[str, Any]:
+        body = _parse_generic_readback_v1(readback)
+        marker = {
+            "schema_version": SCHEMA_VERSION,
+            "message_type": "ReviewObservationCommitMarker",
+            **{
+                name: body[name] for name in (
+                    "transaction_id", "record_id", "source_digest_sha256",
+                    "project_scope_hash", "owner_scope_hash",
+                    "product_project_manifest_id", "product_project_manifest_revision",
+                    "product_project_manifest_sha256", "child_binding_sha256",
+                    "store_kind", "store_revision", "payload_object_sha256",
+                    "previous_ledger_head_sha256", "ledger_head_sha256",
+                    "admission_timestamp", "marker_body_sha256", "marker_self_hash",
+                    "canonical_commit_sha256",
+                )
+            },
+        }
+        return _parse_generic_marker_v1(marker)
+
+    def _generic_transition_journal(
+        self, journal: Mapping[str, Any], target_state: str,
+    ) -> dict[str, Any]:
+        current = _read(self.generic_journal_path, _parse_generic_journal_v1)
+        if current != journal:
+            raise MontageLearningCanonicalAdmissionError("generic journal CAS mismatch")
+        order = [
+            "PREPARED", "PAYLOAD_WRITTEN", "LEDGER_COMMITTED",
+            "MANIFEST_COMMITTED", "MARKER_COMMITTED", "READBACK_VERIFIED",
+        ]
+        if target_state not in order or current["state"] not in order:
+            raise MontageLearningCanonicalAdmissionError("generic journal transition invalid")
+        if order.index(target_state) != order.index(current["state"]) + 1:
+            raise MontageLearningCanonicalAdmissionError("generic journal transition skipped")
+        updated = dict(current)
+        updated["state"] = target_state
+        updated["journal_revision"] = current["journal_revision"] + 1
+        updated["previous_journal_sha256"] = current["journal_sha256"]
+        updated.pop("journal_sha256")
+        updated["journal_sha256"] = _domain_hash(
+            "BVP_REVIEW_OBSERVATION_JOURNAL_V1", updated
+        )
+        parsed = _parse_generic_journal_v1(updated)
+        AtomicJsonWriter.write(
+            self.generic_journal_path, parsed, validator=_parse_generic_journal_v1
+        )
+        if _read(self.generic_journal_path, _parse_generic_journal_v1) != parsed:
+            raise MontageLearningCanonicalAdmissionError("generic journal transition read-back failed")
+        return parsed
+
+    def _generic_finish_v1(
+        self, journal: Mapping[str, Any], marker: Mapping[str, Any], *,
+        failure_hook: FailureHook | None,
+    ) -> ReviewObservationAdmissionResult:
+        journal = _parse_generic_journal_v1(journal)
+        marker = _parse_generic_marker_v1(marker)
+        order = [
+            "PREPARED", "PAYLOAD_WRITTEN", "LEDGER_COMMITTED",
+            "MANIFEST_COMMITTED", "MARKER_COMMITTED", "READBACK_VERIFIED",
+        ]
+        if journal["state"] not in order:
+            raise MontageLearningCanonicalAdmissionError("generic journal is terminally aborted")
+        payload = _read(
+            self.project_root / journal["payload_object_relative_path"],
+            _parse_generic_object_v1,
+        )
+        if (
+            payload["payload_object_sha256"] != journal["payload_object_sha256"]
+            or _as_bare_sha(sha256_bytes(canonical_json_bytes(payload) + b"\n"))
+            != journal["payload_document_sha256"]
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic payload commit mismatch")
+        if order.index(journal["state"]) < order.index("PAYLOAD_WRITTEN"):
+            journal = self._generic_transition_journal(journal, "PAYLOAD_WRITTEN")
+        ledger = _read(self.generic_observation_path, _parse_generic_ledger_v1)
+        if (
+            ledger["store_revision"] < journal["store_revision"]
+            or ledger["entries"][journal["store_revision"] - 1]["transaction_id"]
+            != journal["transaction_id"]
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic ledger commit mismatch")
+        if order.index(journal["state"]) < order.index("LEDGER_COMMITTED"):
+            journal = self._generic_transition_journal(journal, "LEDGER_COMMITTED")
+        manifest = self._load_manifest_pinned()
+        if (
+            manifest.project_revision < journal["target_project_manifest_revision"]
+            or (
+                manifest.project_revision == journal["target_project_manifest_revision"]
+                and _as_bare_sha(manifest.project_manifest_sha256)
+                != journal["target_project_manifest_sha256"]
+            )
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic manifest commit mismatch")
+        if order.index(journal["state"]) < order.index("MANIFEST_COMMITTED"):
+            journal = self._generic_transition_journal(journal, "MANIFEST_COMMITTED")
+        marker_path = self.project_root / journal["marker_relative_path"]
+        if marker_path.exists():
+            if _read(marker_path, _parse_generic_marker_v1) != marker:
+                raise MontageLearningCanonicalAdmissionError("generic marker collision")
+        else:
+            AtomicJsonWriter.write(marker_path, marker, validator=_parse_generic_marker_v1)
+        if _read(marker_path, _parse_generic_marker_v1) != marker:
+            raise MontageLearningCanonicalAdmissionError("generic marker durable read-back failed")
+        if failure_hook is not None:
+            failure_hook("after_generic_marker_write", marker_path)
+        if order.index(journal["state"]) < order.index("MARKER_COMMITTED"):
+            journal = self._generic_transition_journal(journal, "MARKER_COMMITTED")
+        result = self._generic_result_from_readback(ACCEPTED, journal["canonical_readback"])
+        if order.index(journal["state"]) < order.index("READBACK_VERIFIED"):
+            journal = self._generic_transition_journal(journal, "READBACK_VERIFIED")
+        if failure_hook is not None:
+            failure_hook("before_generic_journal_cleanup", self.generic_journal_path)
+        self.generic_journal_path.unlink()
+        return result
+
+    def _generic_recover_v1_locked(
+        self, raw: Mapping[str, Any], candidate: Any, *,
+        owner_scope_hash: str, failure_hook: FailureHook | None,
+    ) -> ReviewObservationAdmissionResult:
+        journal = _read(self.generic_journal_path, _parse_generic_journal_v1)
+        if (
+            journal["record_id"] != candidate.record_id
+            or journal["source_digest_sha256"] != _as_bare_sha(candidate.source_sha256)
+            or journal["owner_scope_hash"] != _as_bare_sha(owner_scope_hash)
+            or journal["source_delivery_sha256"]
+            != _as_bare_sha(sha256_bytes(canonical_json_bytes(raw)))
+        ):
+            raise MontageLearningCanonicalAdmissionError("generic recovery source mismatch")
+        coordinator = ProductProjectSaveCoordinator()
+        status = coordinator.recovery_status(self.project_root)
+        if status["required"]:
+            coordinator.recover_complete(self.project_root, transaction_id=status["transaction_id"])
+        manifest = self._load_manifest_pinned()
+        current = self._generic_load_current_v1(
+            manifest,
+            project_scope_hash=journal["project_scope_hash"],
+            owner_scope_hash=journal["owner_scope_hash"],
+        )
+        committed_entry = None if current is None else next((
+            entry for entry in current[0]["entries"]
+            if entry["transaction_id"] == journal["transaction_id"]
+        ), None)
+        if committed_entry is None:
+            if journal["state"] != "PREPARED":
+                raise MontageLearningCanonicalAdmissionError(
+                    "generic non-PREPARED journal has no committed ledger entry"
+                )
+            rebuilt, target, documents, marker = self._generic_prepare_v1(
+                raw, candidate, manifest, current,
+                owner_scope_hash="sha256:" + journal["owner_scope_hash"],
+                admission_timestamp=journal["admission_timestamp"],
+            )
+            for name in (
+                "transaction_id", "record_id", "source_digest_sha256",
+                "source_delivery_sha256", "project_scope_hash", "owner_scope_hash",
+                "payload_object_relative_path", "payload_object_sha256",
+                "payload_document_sha256", "admission_timestamp",
+            ):
+                if rebuilt[name] != journal[name]:
+                    raise MontageLearningCanonicalAdmissionError(
+                        "generic recovery operation identity changed"
+                    )
+            if (
+                rebuilt["source_project_manifest_sha256"]
+                != journal["source_project_manifest_sha256"]
+            ):
+                rebuilt["journal_revision"] = journal["journal_revision"] + 1
+                rebuilt["previous_journal_sha256"] = journal["journal_sha256"]
+                rebuilt["journal_sha256"] = _domain_hash(
+                    "BVP_REVIEW_OBSERVATION_JOURNAL_V1",
+                    _without(rebuilt, "journal_sha256"),
+                )
+                rebuilt = _parse_generic_journal_v1(rebuilt)
+                AtomicJsonWriter.write(
+                    self.generic_journal_path, rebuilt,
+                    validator=_parse_generic_journal_v1,
+                )
+                if _read(
+                    self.generic_journal_path, _parse_generic_journal_v1
+                ) != rebuilt:
+                    raise MontageLearningCanonicalAdmissionError(
+                        "generic rebased PREPARED journal read-back failed"
+                    )
+                journal = rebuilt
+            coordinator.save(
+                self.project_root, target, documents,
+                expected_previous_manifest_sha256=manifest.project_manifest_sha256,
+            )
+        else:
+            if (
+                committed_entry["store_revision"] != journal["store_revision"]
+                or committed_entry["record_id"] != journal["record_id"]
+                or committed_entry["source_digest_sha256"] != journal["source_digest_sha256"]
+                or committed_entry["payload_object_sha256"] != journal["payload_object_sha256"]
+                or committed_entry["ledger_head_sha256"] != journal["ledger_head_sha256"]
+            ):
+                raise MontageLearningCanonicalAdmissionError(
+                    "generic recovery committed entry mismatch"
+                )
+            marker = self._generic_marker_from_readback(journal["canonical_readback"])
+        return self._generic_finish_v1(journal, marker, failure_hook=failure_hook)
+
+    def admit_generic_observation(
+        self, delivery: Mapping[str, Any], *, expected_revision: int,
+        generic_store_id: str = "task058-generic-review-observations",
+        owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
+        failure_hook: FailureHook | None = None,
+    ) -> ReviewObservationAdmissionResult:
+        raw = _exact(delivery, "generic delivery", max_nodes=200_000)
+        candidate = validate_generic_learning_delivery(raw)
+        if _identifier(generic_store_id, "generic_store_id") != "task058-generic-review-observations":
+            raise MontageLearningCanonicalAdmissionError("generic store identity is fixed")
+        scope = _sha(owner_scope_hash, "owner_scope_hash")
+        expected = _integer(expected_revision, "expected_revision", 0, _MAX_RECEIPTS - 1)
+        if failure_hook is not None and not callable(failure_hook):
+            raise TypeError("failure_hook must be callable")
+        with exclusive_file_update_lock(self.generic_journal_path):
+            if self.generic_journal_path.exists():
+                return self._generic_recover_v1_locked(
+                    raw, candidate, owner_scope_hash=scope, failure_hook=failure_hook
+                )
+            manifest = self._load_manifest_pinned()
+            current = self._generic_load_current_v1(
+                manifest,
+                project_scope_hash=self._generic_project_scope_hash(manifest.project_id),
+                owner_scope_hash=_as_bare_sha(scope),
+            )
+            revision = 0 if current is None else current[0]["store_revision"]
+            if revision != expected:
+                raise MontageLearningCanonicalAdmissionError("generic CAS is stale")
+            duplicate = self._generic_duplicate_v1(raw, candidate, current)
+            if duplicate is not None:
+                return duplicate
+            journal, target, documents, marker = self._generic_prepare_v1(
+                raw, candidate, manifest, current, owner_scope_hash=scope
+            )
+            AtomicJsonWriter.write(
+                self.generic_journal_path, journal, validator=_parse_generic_journal_v1
+            )
+            if failure_hook is not None:
+                failure_hook("after_generic_journal_write", self.generic_journal_path)
+            ProductProjectSaveCoordinator().save(
+                self.project_root, target, documents,
+                expected_previous_manifest_sha256=manifest.project_manifest_sha256,
+            )
+            if failure_hook is not None:
+                failure_hook("after_generic_project_commit", self.generic_observation_path)
+            return self._generic_finish_v1(journal, marker, failure_hook=failure_hook)
+
+    def record_exact_generic_observation(
+        self, delivery: Mapping[str, Any], *, expected_revision: int,
+        generic_store_id: str = "task058-generic-review-observations",
+        owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
+        failure_hook: FailureHook | None = None,
+    ) -> ReviewObservationAdmissionResult:
+        return self.admit_generic_observation(
+            delivery, expected_revision=expected_revision,
+            generic_store_id=generic_store_id, owner_scope_hash=owner_scope_hash,
+            failure_hook=failure_hook,
+        )
+
+    def recover_generic_observation(
+        self, delivery: Mapping[str, Any], *,
+        generic_store_id: str = "task058-generic-review-observations",
+        owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
+        failure_hook: FailureHook | None = None,
+    ) -> ReviewObservationAdmissionResult:
+        raw = _exact(delivery, "generic delivery", max_nodes=200_000)
+        candidate = validate_generic_learning_delivery(raw)
+        if _identifier(generic_store_id, "generic_store_id") != "task058-generic-review-observations":
+            raise MontageLearningCanonicalAdmissionError("generic store identity is fixed")
+        scope = _sha(owner_scope_hash, "owner_scope_hash")
+        if failure_hook is not None and not callable(failure_hook):
+            raise TypeError("failure_hook must be callable")
+        with exclusive_file_update_lock(self.generic_journal_path):
+            if not self.generic_journal_path.exists():
+                raise MontageLearningCanonicalAdmissionError("generic recovery is not required")
+            return self._generic_recover_v1_locked(
+                raw, candidate, owner_scope_hash=scope, failure_hook=failure_hook
+            )
+
+    def get_verified_generic_observation(
+        self, *, record_id: str, learning_sha256: str,
+        canonical_commit_sha256: str,
+        generic_store_id: str = "task058-generic-review-observations",
+        owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
+    ) -> ReviewObservationAdmissionResult:
+        wanted_record = _identifier(record_id, "record_id")
+        wanted_digest = _as_bare_sha(_sha(learning_sha256, "learning_sha256"))
+        wanted_commit = _as_bare_sha(_sha(canonical_commit_sha256, "canonical_commit_sha256"))
+        if _identifier(generic_store_id, "generic_store_id") != "task058-generic-review-observations":
+            raise MontageLearningCanonicalAdmissionError("generic store identity is fixed")
+        scope = _as_bare_sha(_sha(owner_scope_hash, "owner_scope_hash"))
+        with exclusive_file_update_lock(self.generic_journal_path):
+            if self.generic_journal_path.exists():
+                raise MontageLearningCanonicalAdmissionError("generic recovery is required")
+            with _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root)):
+                manifest = self._load_manifest_pinned()
+                current = self._generic_load_current_v1(
+                    manifest,
+                    project_scope_hash=self._generic_project_scope_hash(manifest.project_id),
+                    owner_scope_hash=scope,
+                )
+                if current is None:
+                    raise MontageLearningCanonicalAdmissionError("generic observation is absent")
+                ledger, _ = current
+                matches = [
+                    entry for entry in ledger["entries"]
+                    if entry["record_id"] == wanted_record
+                    and entry["source_digest_sha256"] == wanted_digest
+                ]
+                if len(matches) != 1:
+                    raise MontageLearningCanonicalAdmissionError(
+                        "generic observation coordinates are not uniquely current"
+                    )
+                entry = matches[0]
+                marker = _read(
+                    self.project_root / self._generic_marker_relative_path(entry["transaction_id"]),
+                    _parse_generic_marker_v1,
+                )
+                if marker["canonical_commit_sha256"] != wanted_commit:
+                    raise MontageLearningCanonicalAdmissionError("generic commit coordinate mismatch")
+                anchored_binding = self._generic_binding_for_ledger(
+                    canonical_json_bytes(self._generic_prefix_ledger(ledger, entry["store_revision"]))
+                    + b"\n"
+                )
+                readback = self._generic_make_readback(marker, anchored_binding)
+                anchored, current_manifest, binding, current_ledger = (
+                    self._generic_trusted_readback_locked(readback, current_manifest=manifest)
+                )
+                return self._generic_make_result(
+                    ACCEPTED, anchored, current_manifest, binding, current_ledger
+                )
+
+    admit_review_observation = admit_generic_observation
+    recover_review_observation = recover_generic_observation
+    get_current_review_observation = get_verified_generic_observation
 
 __all__ = [
     "ANCHOR_FILE_NAME", "CANONICAL_RELATIVE_PATH", "JOURNAL_RELATIVE_PATH",
@@ -1530,5 +2622,11 @@ __all__ = [
     "MontageLearningCanonicalAdmissionResult",
     "MontageLearningCanonicalAdmissionTransactionStore",
     "MontageLearningVerifiedAdmissionReceipt",
-    "GENERIC_OBSERVATION_RELATIVE_PATH", "GenericReviewObservationReceipt",
+    "GENERIC_OBSERVATION_RELATIVE_PATH",
+    "GENERIC_OBSERVATION_JOURNAL_RELATIVE_PATH",
+    "GENERIC_OBSERVATION_OBJECT_DIRECTORY",
+    "GENERIC_OBSERVATION_MARKER_DIRECTORY",
+    "ReviewObservationCanonicalReadback",
+    "ReviewObservationAdmissionResult",
+    "GenericReviewObservationReceipt",
 ]

@@ -1,6 +1,6 @@
 # TASK-029 — Human Edit Learning / Federated Knowledge Evolution
 
-- Status: `R0_R1_R2_R3_R4_R5_R6_R7_R8_R9A_R9B_R9C_R9D_HOSTED_CLOSED`
+- Status: `R0_THROUGH_R10D_HOSTED_CLOSED / R10E_LOCAL_IMPLEMENTATION`
 - Governance: `DEV-4 PRIVACY, LEARNING AND RELEASE INTEGRITY`
 
 ## Owner priority routing — 2026-08-24
@@ -366,7 +366,36 @@ has cryptography 41.0.7 and no `referencing`, while fresh-main TASK-059 requires
 Argon2 support from cryptography >=46 and that package; collection stopped on
 dependency import errors before tests ran. No dependency was installed.
 
-TASK-059's target and closure are merged, Registry revision 115 records its
-shared lock as `HOSTED_CLOSED_RELEASED`, and no active pending integration lock
-remains. R10D will integrate fresh main after its exact6 commit-ready checkpoint
-and obtain a separate exact CHANGELOG lock only after independent DEV-4 GO.
+R10D target PR #402 and closure PR #409 are merged. Exact fresh main
+`42444c702c689453cf29929e0a06a6b441555ebb` passed post-main CI 6 / 6 and
+Security. Registry revision 120 records the R10D lock as
+`HOSTED_CLOSED_RELEASED`, integration/merge authority consumed and closed, and
+active nonclosed locks 0. The approved R10D CHANGELOG bullet is present exact
+one. The immutable implementation/schema/test/design/task blobs remain exact.
+
+## R10E implementation — body-free custody confirmation request
+
+R10E consumes one exact public R10D encrypted-staging receipt snapshot and
+produces a short-lived, body-free request for a later trusted Human custody
+interaction. It requires the receipt's production-DPAPI claim, completed
+encrypted staging, successful post-write read-back and absence of a custody
+confirmation. Request creation cannot predate staging, expiry must follow
+creation and the maximum TTL is fifteen minutes.
+
+The R10D receipt and R10E request are publicly constructible. The compiler
+revalidates the receipt self-hash, but the detached request fixes standalone
+revalidation to false and does not authenticate store or DPAPI origin. It does not read or decrypt
+the staging store, verify a trusted clock, decide current freshness, display a
+UI, receive Human input or authorize a custody transition. Custom Mapping
+inputs are rejected before hook reads, exact built-in scalars are required and
+fixed authority flags cannot be relabeled even with a recomputed outer hash.
+Detached stable coordinates remain publicly reconstructible and therefore do
+not authenticate the source or create standalone authority.
+
+The request contains stable identifiers, hashes and timestamps only. Public or
+private key material, signature bodies, host paths, credentials and media are
+not included. Human confirmation/origin, one-shot enforcement, custody write or
+promotion, staging deletion, canonical receipt/store/trust-root/Owner binding,
+Knowledge Pack write/promotion, automatic promotion, runtime apply, rollback,
+Timeline/Resolve, Release, Deploy, Production and external effects remain
+unauthorized.

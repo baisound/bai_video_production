@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 116,
+  "registry_revision": 117,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
   "audit_base_main_sha": "dc8a1949b58f7a5fa298a4d9153a2d410a1388da",
@@ -5691,8 +5691,12 @@
         "CHANGELOG.md"
       ],
       "immutable_target_path_count": 8,
-      "immutable_target_projection_sha256": "2a31ca002567b17827fb867d3eb0c24de35b939003c3751fa38e8efba31e48b8",
+      "immutable_target_projection_sha256": "a089f0a4fa58193a94fc9d3c63fd0ad1fe69d66ecf6b3a1deb0fdc30a1ddb724",
       "immutable_target_projection_spec": "LF_JOINED_GIT_LS_TREE_LINES_FOR_SORTED_MAIN_TRIPLE_DOT_TARGET_CHANGED_PATHS",
+      "immutable_target_projection_correction_from_revision": 116,
+      "immutable_target_projection_correction_reason": "REVISION116_DIGEST_NOT_REPRODUCIBLE_FROM_DECLARED_SPEC_PRE_EFFECT; TARGET_8_BLOBS_EXACTLY_MATCH_EXPECTED_PRE_INTEGRATION_HEAD; CORRECTED_BEFORE_ANY_CHANGELOG_EFFECT",
+      "projection_correction_hosting_branch": "codex/task-054-r6bc-lock-projection-correction",
+      "projection_correction_base_sha": "f89081843773b858c78b42016d52a6d6ecf22fe2",
       "controlled_shared_target_paths": [],
       "open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_18_OPEN_PRS",
       "merge_order_reservation": "TASK054_R6BC_NEXT_SHARED_CHANGELOG_CONSUMER_AFTER_TASK059_REVISION115_HOSTED_CLOSED_RELEASED",

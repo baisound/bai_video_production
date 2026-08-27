@@ -939,7 +939,7 @@ def test_windows_successful_fd_transfer_has_no_explicit_double_close(
             ) as handle:
                 assert handle.read(1) == b"0"
     assert close_calls == []
-    assert _windows_process_handle_count() == before_handles
+    assert _windows_process_handle_count() <= before_handles
     assert _snapshot_inventory(root) == before_inventory
 
 

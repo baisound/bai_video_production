@@ -1065,7 +1065,7 @@
       "target_currentness_rebind_from_registry_revision": 131,
       "target_currentness_rebind_reason": "PR417_HOSTED_WINDOWS_311_M1_PROCESS_WIDE_HANDLE_STRICT_EQUALITY_FALSE_FAIL; EXACT_TEST_ONLY_RESOURCE_LOCAL_CHILD_ORACLE_FIX; NO_SOURCE_SCHEMA_DESIGN_TASK_CHANGELOG_OR_AUTHORITY_CHANGE",
       "target_currentness_rebind_branch": "codex/task-058-a2-changelog-lock-currentness-rebind",
-      "target_currentness_rebind_base_sha": "ed23c7ff1e8a9525edef76432fa7c49a79b7fef6",
+      "target_currentness_rebind_base_sha": "dd0084a1d3ab03299f9611e7d5fe93860d7314b2",
       "target_currentness_rebind_evidence": "docs/ai-team/work-locks/task058-a2-changelog-lock-currentness-rebind-2026-08-28.md",
       "target_currentness_current_remote_head_sha": "6d5ea807abed184e5320ef7afa98d2d46c76972d",
       "target_currentness_pending_approved_head_sha": "ce174bc3f90c1d89ac47f8ef5dacdabe1a22f89d",

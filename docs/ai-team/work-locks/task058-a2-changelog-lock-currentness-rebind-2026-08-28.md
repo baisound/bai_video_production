@@ -7,7 +7,10 @@ Status: LOCAL_CANDIDATE_NOT_HOSTED
 
 ## Canonical base and active lock
 
-- canonical main: `ed23c7ff1e8a9525edef76432fa7c49a79b7fef6`
+- canonical main: `dd0084a1d3ab03299f9611e7d5fe93860d7314b2`
+- main advanced from `ed23c7ff1e8a9525edef76432fa7c49a79b7fef6`
+  through PR #426 with TASK-060 task-owned documentation only; Registry stayed
+  at revision 131 and the A2 rebind exact2 paths had no overlap
 - Registry revision: `131 -> 132`
 - active nonclosed integration lock: exactly one, `BVP-INTEGRATION-LOCK-TASK058-A2-CANONICAL-READBACK-LOOKUP-CHANGELOG-20260828`
 - no new lock is added

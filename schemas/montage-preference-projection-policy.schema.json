@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.local/schemas/montage-preference-projection-policy.schema.json",
+  "title": "BVP Montage Preference Projection Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_type", "policy_id", "policy_version",
+    "scope_mode", "rows", "automatic_learning_authorized",
+    "automatic_promotion_authorized", "timeline_mutation_authorized",
+    "resolve_write_authorized", "policy_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "BVP_MONTAGE_PREFERENCE_PROJECTION_POLICY"},
+    "policy_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},
+    "policy_version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+    "scope_mode": {"const": "OWNER_GLOBAL"},
+    "rows": {
+      "type": "array", "minItems": 1, "maxItems": 256,
+      "items": {"$ref": "#/$defs/row"}
+    },
+    "automatic_learning_authorized": {"const": false},
+    "automatic_promotion_authorized": {"const": false},
+    "timeline_mutation_authorized": {"const": false},
+    "resolve_write_authorized": {"const": false},
+    "policy_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "tokenArray": {
+      "type": "array", "maxItems": 16, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"}
+    },
+    "row": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "feature_key", "change_direction", "projection_action", "decision",
+        "target", "contexts", "reason_codes", "minimum_confirmation_count",
+        "maximum_absolute_ranking_bias_milli"
+      ],
+      "properties": {
+        "feature_key": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},
+        "change_direction": {"enum": ["INCREASE", "DECREASE"]},
+        "projection_action": {"enum": ["UPSERT", "RETIRE"]},
+        "decision": {"enum": ["PREFER", "AVOID", "PROTECT", "DEPRIORITIZE", null]},
+        "target": {"anyOf": [{"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"}, {"type": "null"}]},
+        "contexts": {"$ref": "#/$defs/tokenArray"},
+        "reason_codes": {"$ref": "#/$defs/tokenArray"},
+        "minimum_confirmation_count": {"type": "integer", "minimum": 1, "maximum": 32},
+        "maximum_absolute_ranking_bias_milli": {"type": "integer", "minimum": 0, "maximum": 1000}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"projection_action": {"const": "UPSERT"}}},
+          "then": {
+            "properties": {
+              "decision": {"enum": ["PREFER", "AVOID", "PROTECT", "DEPRIORITIZE"]},
+              "target": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"},
+              "contexts": {"minItems": 1}, "reason_codes": {"minItems": 1},
+              "maximum_absolute_ranking_bias_milli": {"minimum": 1}
+            }
+          },
+          "else": {
+            "properties": {
+              "decision": {"type": "null"}, "target": {"type": "null"},
+              "contexts": {"maxItems": 0}, "reason_codes": {"maxItems": 0},
+              "maximum_absolute_ranking_bias_milli": {"const": 0}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

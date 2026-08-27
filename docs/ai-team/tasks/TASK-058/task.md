@@ -454,3 +454,10 @@ match the current canonical commit/ledger/anchor. Unrelated child additions do
 not invalidate the exact receipt; canonical child change/removal or manifest
 revision rollback remains fail-closed without claiming general rollback
 authority.
+
+Exact admission attempts are serialized by a stable, non-payload operation-lock
+inode held until receipt publication and private-journal cleanup. Product
+Project then external-anchor remains the fixed inner state-lock order. A second
+same-CAS caller cannot join the first caller's pending recovery and report a
+second `ACCEPTED`; after the winner commits it observes stale CAS and fails
+closed (or a later call with current coordinates can classify `DUPLICATE`).

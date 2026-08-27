@@ -1259,7 +1259,36 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         expected_external_anchor_document_sha256: str | None,
         failure_hook: FailureHook | None = None,
     ) -> MontageLearningCanonicalAdmissionResult:
-        """Commit one exact delivery or emit an exact idempotent DUPLICATE."""
+        """Serialize one complete admission attempt on a stable lock inode."""
+        # ``exclusive_file_update_lock`` locks the sibling ``.<name>.lock``.
+        # The transaction journal itself may be atomically replaced/unlinked,
+        # but this stable lock file is never a transaction payload and remains
+        # locked through proposal, ProjectSave, receipt read-back and cleanup.
+        with exclusive_file_update_lock(self.journal_path):
+            return self._admit_exact_serialized(
+                delivery,
+                staging_store_id=staging_store_id,
+                expected_owner_scope_hash=expected_owner_scope_hash,
+                expected_staging_revision=expected_staging_revision,
+                expected_staging_entry_sha256=expected_staging_entry_sha256,
+                expected_canonical_store_commit_sha256=expected_canonical_store_commit_sha256,
+                expected_external_anchor_document_sha256=expected_external_anchor_document_sha256,
+                failure_hook=failure_hook,
+            )
+
+    def _admit_exact_serialized(
+        self,
+        delivery: Mapping[str, Any],
+        *,
+        staging_store_id: str,
+        expected_owner_scope_hash: str,
+        expected_staging_revision: int,
+        expected_staging_entry_sha256: str,
+        expected_canonical_store_commit_sha256: str | None,
+        expected_external_anchor_document_sha256: str | None,
+        failure_hook: FailureHook | None = None,
+    ) -> MontageLearningCanonicalAdmissionResult:
+        """Commit or recover one attempt while the stable operation lock is held."""
         if failure_hook is not None and not callable(failure_hook):
             raise TypeError("failure_hook must be callable")
         raw = _exact(delivery, "delivery", max_nodes=200_000)

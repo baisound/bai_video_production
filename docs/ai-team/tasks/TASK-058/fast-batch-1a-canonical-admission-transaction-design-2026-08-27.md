@@ -28,7 +28,11 @@ the durable staging ledger. P1C-C and P1C-D are executed in-process; serialized
 candidate documents are never authority inputs. The resulting canonical child
 is committed through `ProductProjectSaveCoordinator` with an anchor participant.
 
-Lock order is Product Project then external anchor. The participant keeps a
+Each exact attempt first holds a stable operation-lock inode through proposal,
+ProjectSave, receipt read-back, and journal cleanup. Inside that serialization
+boundary the fixed state lock order is Product Project then external anchor.
+The operation lock is a sibling lock file and is never replaced or removed with
+the journal payload. The participant keeps a
 private recovery record, performs exact expected-anchor CAS, writes the target
 anchor only for ProjectSave COMPLETE, and requires exact read-back. ProjectSave
 binds the canonical child in the Product manifest. A private transaction
@@ -97,6 +101,7 @@ directory fsync confirmation or power-loss rollback prevention on every host.
 - exact admission followed by unrelated generic child commit preserves trusted
   exact-receipt currentness;
 - actual generic/exact concurrent ProjectSave serialization;
+- actual same-CAS multiprocess execution has exactly one `ACCEPTED` caller;
 - stale CAS, collision, tamper, forged wrapper, custom Mapping, scalar subclass,
   and exact/generic cross-lane replay fail closed;
 - generic separate-ledger `ACCEPTED`/`DUPLICATE` and collision coverage;

@@ -379,6 +379,7 @@ def test_multiprocess_same_cas_has_one_accepted_winner(tmp_path: Path) -> None:
                 process.kill(); process.join(5)
         queue.close(); queue.join_thread()
     assert sum(item[:2] == ("RESULT", "ACCEPTED") for item in results) == 1
+    assert sum(item[0] == "ERROR" for item in results) == 1
     assert all(not process.is_alive() for process in processes)
 
 

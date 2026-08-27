@@ -34,6 +34,18 @@ Registry revision proposal: `116`
   `757 PASS, 1 intentional Windows-native skip`
 - unresolved Critical/High: `0 / 0`
 
+## Successor reservation
+
+- next shared CHANGELOG consumer after canonical R6B-C closure:
+  `TASK-029 R10D`
+- successor target PR: `#402`
+- successor target head: `532e49bb61cb2e5f4ef8186e502c57729abd5cd1`
+- admission condition: this R6B-C lock is canonically
+  `HOSTED_CLOSED_RELEASED` and active nonclosed integration locks read back as
+  `0`
+- current effect: reservation only; TASK-029 R10D has not acquired a lock and
+  no authority over either task's path, PR or lock is created
+
 ## Exact integration scope
 
 Only one exact approved TASK-054 R6B-C bullet may be added to `CHANGELOG.md`

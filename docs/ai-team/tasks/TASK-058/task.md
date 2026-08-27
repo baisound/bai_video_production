@@ -418,3 +418,31 @@ P1C-D local implementation checkpoint:
   rollback authority, public v2 receipt mint, canonical admission, automatic
   learning, Timeline, Resolve, Provider/network/native, Release, Deploy, and
   Production effects: NOT IMPLEMENTED / NOT EXECUTED.
+
+## FAST-BATCH-1A Canonical Admission Transaction Atomic Unit
+
+Owner approved FAST-BATCH-1A as the bounded continuation of P1C-D. It implements
+the Product Project canonical writer, external snapshot coordinate, CAS,
+ledger persistence/recovery, exact durable read-back, and public v2
+`ACCEPTED`/`DUPLICATE` receipt publication. The transaction reruns raw P1C-B,
+P1C-C, and P1C-D inside the fixed Product/anchor lock boundary and never trusts
+serialized candidates as authority.
+
+The same Unit also adds a separately named and hashed generic review-observation
+ledger. Its `ACCEPTED`/`DUPLICATE` states mean only immutable durable observation
+storage. They do not mean exact learning admission, learning adoption,
+automatic promotion, or Profile generation. P1A public v2 history and state
+matrix remain unchanged.
+
+Exact scope is six files: this task record, one FAST-BATCH-1A design, one public
+Schema plus byte-identical package mirror, one source module, and one focused
+test module. CHANGELOG, active locks, current state, task index, TASK-029,
+TASK-054, TASK-059, bridge/Profile transport, native/provider/network, Timeline,
+Resolve, Release, Deploy, and Production are outside the source Unit.
+
+External-coordinate claims are deliberately bounded: the anchor root is outside
+the Project root, but origin authentication, independent anti-rollback
+authority, power-loss/directory durability confirmation, and hostile path-race
+protection remain false. The final connector remains `enabled:false`; bridge
+root/inbox/importer and outbound Profile E2E/readiness are later FAST-BATCH
+subunits.

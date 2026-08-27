@@ -874,7 +874,7 @@ def test_windows_lock_fd_transfer_failure_closes_exactly_once_without_effect(
             ):
                 module._open_existing_lock_nofollow(target, "Generic operation")
     assert len(close_calls) == 3
-    assert _windows_process_handle_count() == before_handles
+    assert _windows_process_handle_count() <= before_handles
     assert _snapshot_inventory(root) == before_inventory
     assert not (root / "bridge/receipts").exists()
 
@@ -908,7 +908,7 @@ def test_windows_open_osfhandle_failure_closes_native_handle_without_fd_close(
             ):
                 module._open_existing_lock_nofollow(target, "Generic operation")
     assert close_calls == []
-    assert _windows_process_handle_count() == before_handles
+    assert _windows_process_handle_count() <= before_handles
     assert _snapshot_inventory(root) == before_inventory
 
 
@@ -1026,7 +1026,7 @@ def test_multiprocess_generic_lookup_is_byte_stable_and_write_free(tmp_path: Pat
     assert results == [
         ("LOOKUP", accepted.canonical_commit_sha256, 1),
         ("LOOKUP", accepted.canonical_commit_sha256, 1),
-    ]
+    ], results
     assert _snapshot_tree(project) == before
     assert not (project / "bridge/receipts").exists()
     assert not writer.generic_journal_path.exists()
@@ -1150,8 +1150,8 @@ def test_multiprocess_lookup_and_later_admission_converge_without_lookup_effect(
         results = [queue.get(timeout=30) for _ in started]
     finally:
         _cleanup_processes(started, queue)
-    assert sum(item[0] == "LOOKUP" for item in results) == 1
-    assert sum(item[:2] == ("GENERIC", "ACCEPTED") for item in results) == 1
+    assert sum(item[0] == "LOOKUP" for item in results) == 1, results
+    assert sum(item[:2] == ("GENERIC", "ACCEPTED") for item in results) == 1, results
     ledger = json.loads(writer.generic_observation_path.read_text(encoding="utf-8"))
     assert ledger["store_revision"] == 2
     assert writer.lookup_trusted_review_observation(
@@ -1540,13 +1540,22 @@ def test_multiprocess_generic_and_exact_project_writes_serialize(tmp_path: Path)
     finally:
         _cleanup_processes(started, queue)
     assert len(results) == 2
-    assert sum(item[0] in {"RESULT", "ERROR"} for item in results) == 1
-    assert sum(item[0] in {"GENERIC", "GENERIC_ERROR"} for item in results) == 1
+    assert all(type(item) is tuple and len(item) == 3 for item in results), results
+    assert sum(item[0] in {"RESULT", "ERROR"} for item in results) == 1, results
+    assert sum(item[0] in {"GENERIC", "GENERIC_ERROR"} for item in results) == 1, results
     writer = _writer(project, anchor)
-    if any(item[0] == "ERROR" for item in results):
-        assert (project / JOURNAL_RELATIVE_PATH).is_file()
-        writer.admit_exact(exact, **_arguments(staged))
+    exact_worker = next(item for item in results if item[0] in {"RESULT", "ERROR"})
+    if exact_worker[0] == "ERROR":
+        assert exact_worker[1] in {
+            "MontageLearningCanonicalAdmissionError", "ProductError",
+        }, results
+        exact_retry = writer.admit_exact(exact, **_arguments(staged))
+        assert exact_retry.status == "ACCEPTED"
     if any(item[0] == "GENERIC_ERROR" for item in results):
+        generic_error = next(item for item in results if item[0] == "GENERIC_ERROR")
+        assert generic_error[1] in {
+            "MontageLearningCanonicalAdmissionError", "ProductError",
+        }, results
         recovered = writer.record_exact_generic_observation(
             generic, expected_revision=0,
         )

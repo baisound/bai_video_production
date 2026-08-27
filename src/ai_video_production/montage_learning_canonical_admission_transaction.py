@@ -10,11 +10,13 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import errno
 import json
 import os
 from pathlib import Path
 import re
 import stat
+import time
 from typing import Any, Callable, Iterator, Mapping
 
 from .atomic import AtomicJsonWriter, exclusive_file_update_lock
@@ -317,6 +319,27 @@ def _open_existing_lock_nofollow(path: Path, name: str) -> Any:
     return handle
 
 
+def _acquire_windows_lock_bounded(handle: Any, name: str) -> None:
+    """Acquire one CRT byte lock with a finite contention deadline."""
+
+    import msvcrt
+
+    deadline = time.monotonic() + 10.0
+    while True:
+        handle.seek(0)
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            return
+        except OSError as exc:
+            if exc.errno not in {errno.EACCES, errno.EDEADLK}:
+                raise
+            if time.monotonic() >= deadline:
+                raise MontageLearningCanonicalAdmissionError(
+                    f"RECOVERY_REQUIRED: {name} lock contention timed out"
+                ) from exc
+            time.sleep(0.01)
+
+
 @contextmanager
 def _exclusive_existing_read_lock(path: Path, name: str) -> Iterator[None]:
     """Lock an established one-byte lock artifact without creating or writing it."""
@@ -342,7 +365,7 @@ def _exclusive_existing_read_lock(path: Path, name: str) -> Iterator[None]:
     with handle:
         os.set_inheritable(handle.fileno(), False)
 
-        def validate() -> tuple[int, int, int, int]:
+        def validate(*, check_content: bool) -> tuple[int, int, int, int]:
             info = os.fstat(handle.fileno())
             identity = _file_identity(info)
             if (
@@ -354,33 +377,34 @@ def _exclusive_existing_read_lock(path: Path, name: str) -> Iterator[None]:
                 raise MontageLearningCanonicalAdmissionError(
                     f"RECOVERY_REQUIRED: {name} lock is invalid"
                 )
-            handle.seek(0)
-            if handle.read(1) != b"0" or handle.read(1) != b"":
-                raise MontageLearningCanonicalAdmissionError(
-                    f"RECOVERY_REQUIRED: {name} lock content is invalid"
-                )
+            if check_content:
+                handle.seek(0)
+                if handle.read(1) != b"0" or handle.read(1) != b"":
+                    raise MontageLearningCanonicalAdmissionError(
+                        f"RECOVERY_REQUIRED: {name} lock content is invalid"
+                    )
             _require_pinned_path_unchanged(path, identity, ancestors)
             return identity
 
-        identity = validate()
+        # A Windows byte lock also denies reads of the locked byte. Validate
+        # pinned structure first, then validate content after lock ownership.
+        identity = validate(check_content=False)
         handle.seek(0)
         locked = False
         try:
             if os.name == "nt":
-                import msvcrt
-
-                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                _acquire_windows_lock_bounded(handle, name)
             else:
                 import fcntl
 
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             locked = True
-            if validate() != identity:
+            if validate(check_content=True) != identity:
                 raise MontageLearningCanonicalAdmissionError(
                     f"RECOVERY_REQUIRED: {name} lock identity changed"
                 )
             yield
-            if validate() != identity:
+            if validate(check_content=True) != identity:
                 raise MontageLearningCanonicalAdmissionError(
                     f"RECOVERY_REQUIRED: {name} lock identity changed"
                 )

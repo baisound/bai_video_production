@@ -24,10 +24,11 @@ Pre-execution identity:
 
 - Pre-refresh broad regression attempt: `FAIL / NOT_CONFIRMED` during collection
   because global WSL cryptography lacked Argon2id.
-- R6B-D focused Evidence after Store-head stale safety fix: `24 PASS`.
-- R6B-D plus direct R6B-C/R6B-B/R6B-A/R4A Evidence: `75 PASS`.
+- R6B-D focused Evidence after Store-head and plan split-isolation fixes:
+  `25 PASS`.
+- R6B-D plus direct R6B-C/R6B-B/R6B-A/R4A Evidence: `76 PASS`.
 - Fresh-main post-merge TASK-054 plus direct TASK-049 regression:
-  `781 PASS, 1 intentional Windows-native skip`.
+  `782 PASS, 1 intentional Windows-native skip`.
 - compileall for `src` and `tests`: `PASS`.
 - canonical schema versus packaged mirror byte comparison: `PASS`.
 - diff check: `PASS`.

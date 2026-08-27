@@ -207,6 +207,11 @@ class DatasetAdoptionCommitPlan:
         ids = tuple(item.candidate_id for item in self.memberships)
         if ids != tuple(sorted(set(ids))):
             raise ValueError("memberships must be unique and sorted")
+        groups: dict[str, str] = {}
+        for item in self.memberships:
+            prior = groups.setdefault(item.source_group_id, item.split)
+            if prior != item.split:
+                raise ValueError("source group crosses Dataset splits")
         counts = {
             "TRAIN": sum(item.split == "TRAIN" for item in self.memberships),
             "VALIDATION": sum(item.split == "VALIDATION" for item in self.memberships),

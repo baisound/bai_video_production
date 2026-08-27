@@ -428,6 +428,16 @@ def test_authority_and_plan_schema_are_exact_and_mirrored() -> None:
     assert AUTHORITY_STATE == "ALLOWED_READ_ONLY_DATASET_ADOPTION_PREFLIGHT"
 
 
+def test_plan_readmission_rejects_source_group_split_crossing() -> None:
+    plan = _build()
+    crossed_memberships = (
+        plan.memberships[0],
+        replace(plan.memberships[1], source_group_id=plan.memberships[0].source_group_id),
+    )
+    with pytest.raises(ValueError, match="source group"):
+        replace(plan, memberships=crossed_memberships)
+
+
 @pytest.mark.parametrize(
     ("name", "value"),
     [

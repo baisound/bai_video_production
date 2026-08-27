@@ -481,9 +481,9 @@ plan fixes Dataset adoption start, Store mutation, training authorization and
 training start to false, with state
 `READY_FOR_SEPARATE_DATASET_ADOPTION_COMMIT_AUTHORITY`. Actual Authority
 consumption and Dataset Store commit must occur together in a later separately
-authorized atomic executor. Focused R6B-D Evidence is `24 PASS`; R6B-D plus
-direct R6B-C/R6B-B/R6B-A/R4A Evidence is `75 PASS`; TASK-054 plus direct
-TASK-049 regression is `781 PASS, 1 intentional Windows-native skip`.
+authorized atomic executor. Focused R6B-D Evidence is `25 PASS`; R6B-D plus
+direct R6B-C/R6B-B/R6B-A/R4A Evidence is `76 PASS`; TASK-054 plus direct
+TASK-049 regression is `782 PASS, 1 intentional Windows-native skip`.
 Compileall, JSON Schema runtime validation, schema mirror and diff checks pass.
 No real manifest, Dataset body, Store, training, Provider or external operation
 was read, changed or executed.

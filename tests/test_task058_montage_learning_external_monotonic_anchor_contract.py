@@ -111,6 +111,16 @@ def _resign_evaluation(body: dict[str, object]) -> dict[str, object]:
     return body
 
 
+def test_exact_snapshot_budget_covers_two_max_revision_chain_proofs() -> None:
+    digest = "sha256:" + "0" * 64
+    snapshot = module._snapshot_exact_json(
+        {"observed": [digest] * 4096, "proposed": [digest] * 4096},
+        "max_chain_proofs",
+    )
+    assert len(snapshot["observed"]) == 4096
+    assert len(snapshot["proposed"]) == 4096
+
+
 def test_schema_mirror_meta_schema_and_all_record_shapes(tmp_path: Path) -> None:
     assert SCHEMA.read_bytes() == MIRROR.read_bytes()
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
@@ -318,7 +328,7 @@ def test_existing_expectation_and_evaluation_reject_partial_null_coordinates(
 
 
 def test_evaluation_decision_revision_semantics_fail_closed(tmp_path: Path) -> None:
-    _, first, second, _, _ = _ledgers(tmp_path)
+    _, first, second, _, fork_second = _ledgers(tmp_path)
     anchor, _ = _bootstrap(first)
     advance = evaluate_montage_learning_external_monotonic_anchor(
         anchor,
@@ -330,8 +340,38 @@ def test_evaluation_decision_revision_semantics_fail_closed(tmp_path: Path) -> N
     advance["reason_codes"] = [AnchorDecision.ROLLBACK_REJECTED.value]
     advance["proposed_anchor"] = None
     _resign_evaluation(advance)
-    with pytest.raises(ValueError, match="rollback evaluation"):
+    with pytest.raises(ValueError, match="not canonical"):
         MontageLearningExternalMonotonicAnchorEvaluation.from_dict(advance)
+
+    advance_as_fork = evaluate_montage_learning_external_monotonic_anchor(
+        anchor,
+        MontageLearningExternalMonotonicAnchorExpectation.for_anchor(anchor),
+        first,
+        second,
+    ).to_dict()
+    advance_as_fork["decision"] = AnchorDecision.FORK_REJECTED.value
+    advance_as_fork["reason_codes"] = [AnchorDecision.FORK_REJECTED.value]
+    advance_as_fork["proposed_anchor"] = None
+    _resign_evaluation(advance_as_fork)
+    with pytest.raises(ValueError, match="not canonical"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(advance_as_fork)
+
+    fork_as_advance = evaluate_montage_learning_external_monotonic_anchor(
+        anchor,
+        MontageLearningExternalMonotonicAnchorExpectation.for_anchor(anchor),
+        first,
+        fork_second,
+    ).to_dict()
+    fork_as_advance["decision"] = AnchorDecision.ADVANCE_CANDIDATE.value
+    fork_as_advance["reason_codes"] = [AnchorDecision.ADVANCE_CANDIDATE.value]
+    fork_as_advance["proposed_anchor"] = module._anchor_for_ledger(
+        fork_second.to_dict(),
+        anchor_revision=2,
+        previous_anchor_sha256=anchor.to_dict()["anchor_sha256"],
+    )
+    _resign_evaluation(fork_as_advance)
+    with pytest.raises(ValueError, match="not canonical"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(fork_as_advance)
 
     unchanged = evaluate_montage_learning_external_monotonic_anchor(
         anchor,
@@ -342,7 +382,7 @@ def test_evaluation_decision_revision_semantics_fail_closed(tmp_path: Path) -> N
     unchanged["decision"] = AnchorDecision.FORK_REJECTED.value
     unchanged["reason_codes"] = [AnchorDecision.FORK_REJECTED.value]
     _resign_evaluation(unchanged)
-    with pytest.raises(ValueError, match="fork evaluation"):
+    with pytest.raises(ValueError, match="not canonical"):
         MontageLearningExternalMonotonicAnchorEvaluation.from_dict(unchanged)
 
 
@@ -375,7 +415,7 @@ def test_serialized_stale_and_scope_decisions_cannot_be_relabelled(
     stale["decision"] = AnchorDecision.UNCHANGED_CANDIDATE.value
     stale["reason_codes"] = [AnchorDecision.UNCHANGED_CANDIDATE.value]
     _resign_evaluation(stale)
-    with pytest.raises(ValueError, match="stale expectation"):
+    with pytest.raises(ValueError, match="not canonical"):
         MontageLearningExternalMonotonicAnchorEvaluation.from_dict(stale)
 
     foreign = MontageLearningCanonicalLedgerCandidate.empty(
@@ -392,7 +432,7 @@ def test_serialized_stale_and_scope_decisions_cannot_be_relabelled(
     scope["decision"] = AnchorDecision.STALE_ANCHOR_REJECTED.value
     scope["reason_codes"] = [AnchorDecision.STALE_ANCHOR_REJECTED.value]
     _resign_evaluation(scope)
-    with pytest.raises(ValueError, match="matching expectation"):
+    with pytest.raises(ValueError, match="not canonical"):
         MontageLearningExternalMonotonicAnchorEvaluation.from_dict(scope)
 
     scope_tamper = evaluate_montage_learning_external_monotonic_anchor(

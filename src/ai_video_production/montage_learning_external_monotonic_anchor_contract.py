@@ -30,11 +30,12 @@ _ANCHOR_DOMAIN = b"TASK058_MONTAGE_LEARNING_EXTERNAL_ANCHOR_P1CD_V1\0"
 _EXPECTATION_DOMAIN = b"TASK058_MONTAGE_LEARNING_EXTERNAL_ANCHOR_CAS_P1CD_V1\0"
 _EVALUATION_DOMAIN = b"TASK058_MONTAGE_LEARNING_EXTERNAL_ANCHOR_EVAL_P1CD_V1\0"
 _SCOPE_DOMAIN = b"TASK058_MONTAGE_LEARNING_EXTERNAL_ANCHOR_SCOPE_P1CD_V1\0"
+_LEDGER_CHAIN_DOMAIN = b"TASK058_MONTAGE_LEARNING_CANONICAL_LEDGER_CHAIN_P1CC_V1\0"
 _TOKEN = object()
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$")
 _DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _MAX_REVISION = 4096
-_MAX_JSON_NODES = 1024
+_MAX_JSON_NODES = 16384
 
 
 class AnchorDecision(str, Enum):
@@ -448,8 +449,10 @@ _EVALUATION_FIELDS = {
     "observed_anchor_revision", "observed_anchor_sha256",
     "observed_ledger_revision", "observed_latest_entry_sha256",
     "observed_chain_sha256", "observed_ledger_sha256",
+    "observed_entry_sha256s",
     "proposed_ledger_revision", "proposed_latest_entry_sha256",
-    "proposed_chain_sha256", "proposed_ledger_sha256", "expectation_sha256",
+    "proposed_chain_sha256", "proposed_ledger_sha256",
+    "proposed_entry_sha256s", "expectation_sha256",
     "existing_anchor_sha256", "proposed_anchor", "contract_state",
     "anchor_state", "authority_flags", "effect_flags", "evaluation_sha256",
 }
@@ -526,6 +529,19 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
             raise ValueError("evaluation observed ledger sentinel mismatch")
         if observed_absent != (observed_scope is None):
             raise ValueError("evaluation observed scope sentinel mismatch")
+        observed_entry_sha256s = (
+            None
+            if observed_absent
+            else _validated_entry_chain(
+                body["observed_entry_sha256s"],
+                "observed_entry_sha256s",
+                revision=observed_ledger_revision,
+                latest_entry_sha256=observed_latest,
+                chain_sha256=observed_chain,
+            )
+        )
+        if observed_absent and body["observed_entry_sha256s"] is not None:
+            raise ValueError("evaluation observed entry chain sentinel mismatch")
         proposed_revision = _positive_revision(
             body["proposed_ledger_revision"], "proposed_ledger_revision"
         )
@@ -534,6 +550,13 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
             "proposed_ledger_sha256", "expectation_sha256",
         ):
             _digest(body[field], field)
+        proposed_entry_sha256s = _validated_entry_chain(
+            body["proposed_entry_sha256s"],
+            "proposed_entry_sha256s",
+            revision=proposed_revision,
+            latest_entry_sha256=body["proposed_latest_entry_sha256"],
+            chain_sha256=body["proposed_chain_sha256"],
+        )
         existing = _digest(
             body["existing_anchor_sha256"], "existing_anchor_sha256", nullable=True
         )
@@ -601,43 +624,32 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
                 and observed_scope != proposed_scope
             )
         )
-        if decision is AnchorDecision.STALE_ANCHOR_REJECTED:
-            if expectation_matches:
-                raise ValueError("stale evaluation has a matching expectation")
-        elif not expectation_matches:
-            raise ValueError("non-stale evaluation has a stale expectation")
-        if decision is AnchorDecision.SCOPE_MISMATCH_REJECTED:
-            if not scope_mismatch:
-                raise ValueError("scope evaluation has matching scope coordinates")
-        elif decision is not AnchorDecision.STALE_ANCHOR_REJECTED and scope_mismatch:
-            raise ValueError("non-scope evaluation has mismatched scope coordinates")
-        if decision is AnchorDecision.ADVANCE_CANDIDATE and (
-            observed_ledger_revision is None
-            or proposed_revision <= observed_ledger_revision
-        ):
-            raise ValueError("advance evaluation revision ordering is invalid")
-        if decision is AnchorDecision.UNCHANGED_CANDIDATE and (
-            observed_ledger_revision is None
-            or proposed_revision != observed_ledger_revision
-            or body["proposed_latest_entry_sha256"] != observed_latest
-            or body["proposed_chain_sha256"] != observed_chain
-            or body["proposed_ledger_sha256"] != observed_ledger_sha
-        ):
-            raise ValueError("unchanged evaluation coordinates are invalid")
-        if decision is AnchorDecision.ROLLBACK_REJECTED and (
-            observed_ledger_revision is None
-            or proposed_revision >= observed_ledger_revision
-        ):
-            raise ValueError("rollback evaluation revision ordering is invalid")
-        if decision is AnchorDecision.FORK_REJECTED and (
-            observed_ledger_revision is None
-            or proposed_revision < observed_ledger_revision
-            or (
-                proposed_revision == observed_ledger_revision
-                and body["proposed_ledger_sha256"] == observed_ledger_sha
-            )
-        ):
-            raise ValueError("fork evaluation coordinates are invalid")
+        if not expectation_matches:
+            expected_decision = AnchorDecision.STALE_ANCHOR_REJECTED
+        elif scope_mismatch:
+            expected_decision = AnchorDecision.SCOPE_MISMATCH_REJECTED
+        elif observed_absent:
+            expected_decision = AnchorDecision.BOOTSTRAP_CANDIDATE
+        else:
+            assert observed_ledger_revision is not None
+            assert observed_entry_sha256s is not None
+            if proposed_revision < observed_ledger_revision:
+                expected_decision = AnchorDecision.ROLLBACK_REJECTED
+            elif proposed_revision == observed_ledger_revision:
+                expected_decision = (
+                    AnchorDecision.UNCHANGED_CANDIDATE
+                    if body["proposed_ledger_sha256"] == observed_ledger_sha
+                    else AnchorDecision.FORK_REJECTED
+                )
+            elif (
+                proposed_entry_sha256s[:observed_ledger_revision]
+                == observed_entry_sha256s
+            ):
+                expected_decision = AnchorDecision.ADVANCE_CANDIDATE
+            else:
+                expected_decision = AnchorDecision.FORK_REJECTED
+        if decision is not expected_decision:
+            raise ValueError("evaluation decision is not canonical for ledger transition")
         if body["contract_state"] != CONTRACT_STATE or body["anchor_state"] != ANCHOR_STATE:
             raise ValueError("evaluation cannot claim anchor establishment")
         _false_maps(body, "anchor evaluation")
@@ -650,6 +662,8 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
         normalized["expectation"] = expectation
         normalized["observed_scope"] = observed_scope
         normalized["proposed_scope"] = proposed_scope
+        normalized["observed_entry_sha256s"] = observed_entry_sha256s
+        normalized["proposed_entry_sha256s"] = proposed_entry_sha256s
         normalized["proposed_anchor"] = proposed_anchor
         return cls(_freeze(normalized), _token=_TOKEN)
 
@@ -660,6 +674,36 @@ def _anchor(value: object) -> dict[str, Any]:
     return MontageLearningExternalMonotonicAnchorCandidate.from_dict(
         value.to_dict()
     ).to_dict()
+
+
+def _validated_entry_chain(
+    value: object,
+    name: str,
+    *,
+    revision: int | None,
+    latest_entry_sha256: str | None,
+    chain_sha256: str | None,
+) -> list[str]:
+    if revision is None or latest_entry_sha256 is None or chain_sha256 is None:
+        raise ValueError(f"{name} requires complete ledger coordinates")
+    if type(value) is not list or len(value) != revision:
+        raise ValueError(f"{name} must match the ledger revision")
+    entries = [_digest(item, f"{name}[{index}]") for index, item in enumerate(value)]
+    prior_chain = sha256_bytes(
+        _LEDGER_CHAIN_DOMAIN + canonical_json_bytes([])
+    )
+    for entry_sha256 in entries:
+        prior_chain = _domain_hash(_LEDGER_CHAIN_DOMAIN, {
+            "prior_chain_sha256": prior_chain,
+            "entry_sha256": entry_sha256,
+        })
+    if entries[-1] != latest_entry_sha256 or prior_chain != chain_sha256:
+        raise ValueError(f"{name} does not reproduce ledger latest/chain")
+    return entries
+
+
+def _entry_sha256s(ledger: Mapping[str, Any]) -> list[str]:
+    return [entry["entry_sha256"] for entry in ledger["entries"]]
 
 
 def _expectation(value: object) -> dict[str, Any]:
@@ -736,10 +780,14 @@ def _evaluation(
         "observed_ledger_sha256": (
             None if current_ledger is None else current_ledger["ledger_sha256"]
         ),
+        "observed_entry_sha256s": (
+            None if current_ledger is None else _entry_sha256s(current_ledger)
+        ),
         "proposed_ledger_revision": proposed_ledger["ledger_revision"],
         "proposed_latest_entry_sha256": proposed_ledger["latest_entry_sha256"],
         "proposed_chain_sha256": proposed_ledger["chain_sha256"],
         "proposed_ledger_sha256": proposed_ledger["ledger_sha256"],
+        "proposed_entry_sha256s": _entry_sha256s(proposed_ledger),
         "expectation_sha256": expectation["expectation_sha256"],
         "existing_anchor_sha256": (
             None if current_anchor is None else current_anchor["anchor_sha256"]

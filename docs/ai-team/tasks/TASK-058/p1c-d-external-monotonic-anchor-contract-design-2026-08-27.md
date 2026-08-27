@@ -58,6 +58,12 @@ recomputes whether the expectation matches the observed anchor and whether the
 observed/proposed scopes match. A serialized evaluation therefore cannot be
 relabelled between stale, scope-mismatch, or any non-stale/non-scope decision
 merely by changing the decision/reason and recomputing the outer digest.
+The evaluation additionally carries body-free ordered entry SHA-256 chains for
+the observed and proposed ledgers. The parser reproduces each P1C-C chain root,
+binds it to the reported latest/chain coordinates, and deterministically
+reclassifies bootstrap, advance, unchanged, rollback, and fork. An exact-prefix
+advance therefore cannot be relabelled as a higher-revision fork, or vice versa,
+by removing or constructing the proposed anchor and recomputing the outer hash.
 
 ## 3. Exact typed transition boundary
 
@@ -148,9 +154,12 @@ scope mismatch and stale expectation fixtures; exact anchor/current-ledger
 binding; absent-sentinel and non-empty-ledger rules; exact built-in scalar and
 container rejection; proposed-anchor parser cross-binding; immutable detached
 records; serialized stale/scope bidirectional relabel rejection; nested scope
-digest tamper rejection; false authority/effect matrices; pure/no-I/O source
-surface; focused and P1C-A through P1C-D direct regression; exact diff scope;
-and independent Critic/Tester/Judge with unresolved C/H/M/L zero.
+digest tamper rejection; P1C-C chain-root reproduction and exact-prefix
+ADVANCE/FORK bidirectional relabel rejection; two maximum-revision body-free
+chain proofs within the bounded exact-JSON snapshot budget; false
+authority/effect matrices; pure/no-I/O source surface; focused and P1C-A through
+P1C-D direct regression; exact diff scope; and independent
+Critic/Tester/Judge with unresolved C/H/M/L zero.
 
 ## 8. Independent review rework
 
@@ -162,3 +171,12 @@ rework adds the exact expectation and domain-separated scopes to the evaluation
 and validates stale/scope decision predicates in the parser. Direct fixtures
 cover unchanged-to-stale/scope, stale-to-unchanged, scope-to-stale, and nested
 scope digest tamper. Current-head independent re-review remains required.
+
+After that review returned GO, a further Builder adversarial pass found a second
+Medium serialized-classification gap: a valid higher-revision exact-prefix
+advance could be relabelled as fork by removing its proposed anchor. The bounded
+closure adds ordered entry-digest chain proofs tied to the P1C-C chain domain and
+requires the parser to derive one canonical decision for all seven outcomes.
+Direct fixtures reject ADVANCE-to-FORK and higher-revision FORK-to-ADVANCE
+relabels even when the attacker rebuilds a constructible anchor and outer hash.
+The resulting head requires a fresh independent review.

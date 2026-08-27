@@ -18,6 +18,10 @@
     "nullableRevision": {
       "oneOf": [{"$ref": "#/$defs/revision"}, {"type": "null"}]
     },
+    "entryDigests": {
+      "type": "array", "minItems": 1, "maxItems": 4096,
+      "items": {"$ref": "#/$defs/digest"}
+    },
     "authorityFlags": {
       "type": "object",
       "additionalProperties": false,
@@ -160,9 +164,10 @@
         "ledger_key_sha256", "expectation", "observed_scope", "proposed_scope",
         "observed_anchor_revision", "observed_anchor_sha256",
         "observed_ledger_revision", "observed_latest_entry_sha256",
-        "observed_chain_sha256", "observed_ledger_sha256",
+        "observed_chain_sha256", "observed_ledger_sha256", "observed_entry_sha256s",
         "proposed_ledger_revision", "proposed_latest_entry_sha256",
-        "proposed_chain_sha256", "proposed_ledger_sha256", "expectation_sha256",
+        "proposed_chain_sha256", "proposed_ledger_sha256", "proposed_entry_sha256s",
+        "expectation_sha256",
         "existing_anchor_sha256", "proposed_anchor", "contract_state",
         "anchor_state", "authority_flags", "effect_flags", "evaluation_sha256"
       ],
@@ -199,10 +204,14 @@
         "observed_latest_entry_sha256": {"$ref": "#/$defs/nullableDigest"},
         "observed_chain_sha256": {"$ref": "#/$defs/nullableDigest"},
         "observed_ledger_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "observed_entry_sha256s": {
+          "oneOf": [{"$ref": "#/$defs/entryDigests"}, {"type": "null"}]
+        },
         "proposed_ledger_revision": {"$ref": "#/$defs/positiveRevision"},
         "proposed_latest_entry_sha256": {"$ref": "#/$defs/digest"},
         "proposed_chain_sha256": {"$ref": "#/$defs/digest"},
         "proposed_ledger_sha256": {"$ref": "#/$defs/digest"},
+        "proposed_entry_sha256s": {"$ref": "#/$defs/entryDigests"},
         "expectation_sha256": {"$ref": "#/$defs/digest"},
         "existing_anchor_sha256": {"$ref": "#/$defs/nullableDigest"},
         "proposed_anchor": {

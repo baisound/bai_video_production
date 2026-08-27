@@ -39,25 +39,42 @@ NOW = "2026-08-26T10:00:00Z"
 
 
 class Verifier:
-    def __init__(self, trusted: bool = True) -> None:
+    def __init__(
+        self,
+        trusted: bool = True,
+        *,
+        expected_authorization_sha256: str | None = None,
+    ) -> None:
         self.trusted = trusted
-        self.calls: list[str] = []
+        self.expected_authorization_sha256 = expected_authorization_sha256
+        self.calls: list[tuple[str, str]] = []
 
-    def verify(self, authority_evidence_sha256: str) -> bool:
-        self.calls.append(authority_evidence_sha256)
-        return self.trusted
+    def verify(
+        self,
+        authority_evidence_sha256: str,
+        authorization_sha256: str,
+    ) -> bool:
+        self.calls.append((authority_evidence_sha256, authorization_sha256))
+        return self.trusted and (
+            self.expected_authorization_sha256 is None
+            or authorization_sha256 == self.expected_authorization_sha256
+        )
 
 
 class UseStore:
     def __init__(self) -> None:
         self.claimed: set[str] = set()
-        self.calls: list[str] = []
+        self.calls: list[tuple[str, str]] = []
 
-    def claim_once(self, authorization_sha256: str) -> bool:
-        self.calls.append(authorization_sha256)
-        if authorization_sha256 in self.claimed:
+    def claim_once(
+        self,
+        authority_evidence_sha256: str,
+        authorization_sha256: str,
+    ) -> bool:
+        self.calls.append((authority_evidence_sha256, authorization_sha256))
+        if authority_evidence_sha256 in self.claimed:
             return False
-        self.claimed.add(authorization_sha256)
+        self.claimed.add(authority_evidence_sha256)
         return True
 
 
@@ -149,7 +166,9 @@ def test_exact_authority_builds_body_free_no_effect_request() -> None:
     assert request.training_authorized is False
     assert request.training_started is False
     assert request.request_state == REQUEST_STATE
-    assert store.calls == [authority.to_dict()["authorization_sha256"]]
+    assert store.calls == [
+        (SHA_D, authority.to_dict()["authorization_sha256"])
+    ]
     assert admit_dataset_adoption_authority(authority.to_dict()) == authority
     assert admit_dataset_adoption_request(request.to_dict()) == request
     public = json.dumps(request.to_dict())
@@ -222,7 +241,9 @@ def test_untrusted_authority_fails_before_claim() -> None:
     with pytest.raises(ProductError) as caught:
         _build(preflight, _authority(preflight), verifier=verifier, store=store)
     assert caught.value.code == "ERR_DBD_R6BC_AUTHORITY_UNTRUSTED"
-    assert verifier.calls == [SHA_D]
+    assert verifier.calls == [
+        (SHA_D, _authority(preflight).to_dict()["authorization_sha256"])
+    ]
     assert store.calls == []
 
 
@@ -235,7 +256,37 @@ def test_authority_is_claimed_exactly_once() -> None:
         _build(preflight, authority, store=store)
     assert caught.value.code == "ERR_DBD_R6BC_AUTHORITY_REUSED"
     assert len(store.calls) == 2
-    assert first.authorization_sha256 == store.calls[0] == store.calls[1]
+    assert store.calls[0] == store.calls[1]
+    assert store.calls[0] == (SHA_D, first.authorization_sha256)
+
+
+def test_evidence_is_bound_to_exact_authority_and_one_shot_across_rewrap() -> None:
+    preflight = _preflight()
+    authority = _authority(preflight)
+    authorization_sha256 = authority.to_dict()["authorization_sha256"]
+    rewrapped = replace(authority, authorization_id="auth/r6bc/002")
+    verifier = Verifier(expected_authorization_sha256=authorization_sha256)
+    store = UseStore()
+
+    first = _build(preflight, authority, verifier=verifier, store=store)
+    with pytest.raises(ProductError) as caught:
+        _build(preflight, rewrapped, verifier=verifier, store=store)
+    assert caught.value.code == "ERR_DBD_R6BC_AUTHORITY_UNTRUSTED"
+    assert store.calls == [(SHA_D, first.authorization_sha256)]
+
+    permissive_verifier = Verifier()
+    with pytest.raises(ProductError) as caught:
+        _build(
+            preflight,
+            rewrapped,
+            verifier=permissive_verifier,
+            store=store,
+        )
+    assert caught.value.code == "ERR_DBD_R6BC_AUTHORITY_REUSED"
+    assert store.calls[-1] == (
+        SHA_D,
+        rewrapped.to_dict()["authorization_sha256"],
+    )
 
 
 @pytest.mark.parametrize(
@@ -309,10 +360,18 @@ def test_required_collaborators_fail_closed() -> None:
 
 
 class TruthyCollaborator:
-    def verify(self, authority_evidence_sha256: str) -> str:
+    def verify(
+        self,
+        authority_evidence_sha256: str,
+        authorization_sha256: str,
+    ) -> str:
         return "trusted"
 
-    def claim_once(self, authorization_sha256: str) -> str:
+    def claim_once(
+        self,
+        authority_evidence_sha256: str,
+        authorization_sha256: str,
+    ) -> str:
         return "claimed"
 
 

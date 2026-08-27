@@ -46,9 +46,12 @@ binds:
 - fixed state `ALLOWED_SINGLE_DATASET_ADOPTION_REQUEST`.
 
 The Authority is Evidence, not a credential and not a Dataset/training effect.
-An injected verifier must trust the Evidence digest. An injected atomic use
-Store must claim the exact authorization digest once. Missing collaborators,
-replay, stale time, checksum forgery or coordinate crossing fail closed.
+An injected verifier must trust the exact Evidence-digest-to-authorization-
+digest binding. An injected atomic use Store receives both digests and must use
+the Evidence digest as the one-shot key, so changing an authorization ID or
+validity window cannot rewrap one Human authorization into another usable
+request. Missing collaborators, replay, stale time, checksum forgery or
+coordinate crossing fail closed.
 
 ## Output request
 
@@ -73,9 +76,12 @@ values are outside both public records.
    Dataset-adoption Gate marker.
 4. Compare every selected identity/digest coordinate exactly.
 5. Require current UTC time within `[not_before, expires_at)`.
-6. Verify the non-secret Human Authority Evidence digest.
+6. Verify that the non-secret Human Authority Evidence digest authorizes the
+   exact canonical authorization digest.
 7. Construct the no-effect body-free request.
-8. Atomically claim the Authority digest once; repeated use fails closed.
+8. Atomically claim the Evidence digest once while retaining the exact
+   authorization digest as an audit coordinate; repeated or rewrapped use fails
+   closed.
 9. Return the request. No Dataset or training execution follows in this slice.
 
 ## Failure behavior
@@ -105,7 +111,8 @@ CHANGELOG/LOCK metadata, Release, Deploy or Production state.
 ## Acceptance
 
 - exact Human Authority is preflight/selection/time/trust/checksum bound;
-- one Authority produces at most one body-free request proposal;
+- one Human Authority Evidence produces at most one body-free request proposal,
+  including across authorization-record rewrapping;
 - replay and every identity crossing fail closed;
 - output cannot represent Dataset adoption started or training authority/effect;
 - canonical schema and packaged mirror are byte-identical;

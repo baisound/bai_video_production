@@ -189,11 +189,19 @@ class DatasetAdoptionRequest:
 
 
 class DatasetAdoptionAuthorityVerifier(Protocol):
-    def verify(self, authority_evidence_sha256: str) -> bool: ...
+    def verify(
+        self,
+        authority_evidence_sha256: str,
+        authorization_sha256: str,
+    ) -> bool: ...
 
 
 class DatasetAdoptionAuthorityUseStore(Protocol):
-    def claim_once(self, authorization_sha256: str) -> bool: ...
+    def claim_once(
+        self,
+        authority_evidence_sha256: str,
+        authorization_sha256: str,
+    ) -> bool: ...
 
 
 def admit_dataset_adoption_authority(record: Mapping[str, object]) -> DatasetAdoptionAuthority:
@@ -295,14 +303,20 @@ def build_dataset_adoption_request(
             "Dataset adoption authority is not active",
             ProductErrorCategory.AUTHORIZATION,
         )
-    if authority_verifier.verify(authority.authority_evidence_sha256) is not True:
+    authorization_sha256 = authority.to_dict()["authorization_sha256"]
+    if (
+        authority_verifier.verify(
+            authority.authority_evidence_sha256,
+            authorization_sha256,
+        )
+        is not True
+    ):
         raise ProductError(
             "ERR_DBD_R6BC_AUTHORITY_UNTRUSTED",
             "Dataset adoption authority Evidence is not trusted",
             ProductErrorCategory.AUTHORIZATION,
         )
 
-    authorization_sha256 = authority.to_dict()["authorization_sha256"]
     request = DatasetAdoptionRequest(
         request_id=request_id,
         authorization_sha256=authorization_sha256,
@@ -315,7 +329,13 @@ def build_dataset_adoption_request(
         observation_sha256=authority.observation_sha256,
         created_at=now,
     )
-    if authority_use_store.claim_once(authorization_sha256) is not True:
+    if (
+        authority_use_store.claim_once(
+            authority.authority_evidence_sha256,
+            authorization_sha256,
+        )
+        is not True
+    ):
         raise ProductError(
             "ERR_DBD_R6BC_AUTHORITY_REUSED",
             "Dataset adoption authority was already consumed",

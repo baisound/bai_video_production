@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 128,
+  "registry_revision": 129,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
   "audit_base_main_sha": "dc8a1949b58f7a5fa298a4d9153a2d410a1388da",
@@ -1051,17 +1051,17 @@
       "owner_agent": "開発 / Owner allocator integration owner",
       "owner_thread_id": "01a010d5-6067-78f2-a0af-c44eb0ca9535",
       "lock_host_authority": "OWNER_EXPLICIT_DESIGN_GO_AND_ALLOCATION_RESERVATION_20260827",
-      "integration_effect_authority_state": "RESERVATION_ONLY_PENDING_CANONICAL_TARGET_ACTIVATION_AMENDMENT",
+      "integration_effect_authority_state": "AUTHORIZED_TASK_INDEX_EXACT1_ONLY_AFTER_ACTIVATION_AMENDMENT_CANONICAL_MAIN_READ_BACK",
       "target_merge_authority_state": "NOT_GRANTED_PENDING_SEPARATE_EXACT_OWNER_GATE",
       "implementation_authority_state": "TASK060_TASK061_TASK062_IMPLEMENTATION_NOT_AUTHORIZED_PENDING_CANONICAL_AUTHORIZATION_RECORDS",
       "hosting_branch": "codex/task-060-task062-authorization-metadata-lock-hosting",
       "hosting_base_sha": "7591beb9a3f29212a938861e9ef8930e94c86ef7",
-      "status": "PENDING_HOST_PR",
-      "activation_scope": "RESERVATION_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK; NO_TASK_INDEX_EFFECT_TARGET_READY_OR_MERGE_AUTHORITY_UNTIL_CANONICAL_TARGET_ACTIVATION_AMENDMENT",
-      "target_pull_request": null,
-      "target_pull_request_state": "NOT_CREATED_IMPLEMENTATION_NOT_AUTHORIZED",
+      "status": "PENDING_ACTIVATION_AMENDMENT_HOST_PR",
+      "activation_scope": "NO_EFFECT_ON_CANDIDATE_OR_HOST_PR; AFTER_CANONICAL_MAIN_EXACT_READ_BACK_ONLY_TASK_INDEX_EXACT1_EFFECT_AUTHORIZED; TARGET_READY_MERGE_IMPLEMENTATION_STILL_NOT_GRANTED",
+      "target_pull_request": 422,
+      "target_pull_request_state": "DRAFT_HOSTED_TECHNICAL_GO_PENDING_ACTIVATION_AMENDMENT_MAIN_READ_BACK",
       "target_branch": "codex/task-060-task062-authorization-metadata",
-      "expected_pre_integration_head": null,
+      "expected_pre_integration_head": "36b51c5d3eb74ee1b8879393f09910c15c454f40",
       "purpose": "ONE_NONAUTHORITATIVE_RESERVATION_FOR_FUTURE_TASK060_TASK061_TASK062_ACCEPTED_DESIGN_AUTHORIZATION_METADATA_AND_TASK_INDEX_EFFECT",
       "approved_changelog_bullet": "NOT_APPLICABLE_NO_CHANGELOG_EFFECT",
       "allowed_files": [
@@ -1069,8 +1069,8 @@
       ],
       "immutable_target_path_count": 6,
       "controlled_shared_target_paths": [],
-      "open_pull_request_overlap": "ZERO_EXACT_TASK_INDEX_ACTIVE_WORK_LOCKS_OR_SIX_NEW_TASK_PATH_OVERLAP_ACROSS_16_OPEN_PRS",
-      "merge_order_reservation": "RESERVATION_HOST_MAIN_READBACK_THEN_TARGET_DRAFT_EXACT_HEAD_AND_SIX_BLOBS_THEN_DEV4_REVIEW_THEN_OWNER_READY_MERGE_GATE_THEN_ACTIVATION_AMENDMENT_MAIN_READBACK_THEN_TASK_INDEX_EFFECT; IMPLEMENTATION_REMAINS_SEPARATE_AND_DEPENDENCY_GATED",
+      "open_pull_request_overlap": "ZERO_EXACT_TASK_INDEX_OR_ACTIVE_WORK_LOCKS_OVERLAP; TARGET_EXACT6_OWNED_ONLY_BY_PR422",
+      "merge_order_reservation": "RESERVATION_HOST_MAIN_READBACK_THEN_TARGET_DRAFT_PRE_TASK_INDEX_HEAD_AND_SIX_BLOBS_THEN_DEV4_REVIEW_THEN_OWNER_ACTIVATION_AMENDMENT_GATE_THEN_ACTIVATION_AMENDMENT_MAIN_READBACK_THEN_EXACT1_TASK_INDEX_EFFECT_THEN_NEW_TARGET_HEAD_HOSTED_DEV4_OWNER_READY_MERGE_GATE; IMPLEMENTATION_REMAINS_SEPARATE_AND_DEPENDENCY_GATED",
       "denied": [
         "TASK060_TASK061_TASK062_SOURCE_SCHEMA_TEST_OR_RUNTIME_MUTATION_DURING_AUTHORIZATION_METADATA_UNIT",
         "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
@@ -1115,6 +1115,57 @@
       "accepted_design_identity_rebind_branch": "codex/task-060-task062-reservation-design-identity-rebind-amendment",
       "accepted_design_identity_rebind_base_sha": "9ac581d13f6adea8b81907097ed2d1333bd9ee92",
       "accepted_design_identity_rebind_evidence": "docs/ai-team/work-locks/task060-task062-reservation-design-identity-rebind-amendment-2026-08-27.md",
+      "target_activation_amendment_from_registry_revision": 128,
+      "target_activation_amendment_branch": "codex/task-060-task062-target-activation-amendment",
+      "target_activation_amendment_evidence": "docs/ai-team/work-locks/task060-task062-target-activation-amendment-2026-08-28.md",
+      "target_activation_owner_gate": "OWNER_BROAD_APPROVAL_CANONICAL_ACTIVATION_AMENDMENT_GATE_20260828",
+      "target_activation_owner_gate_thread_id": "01a040fd-48b8-7462-bb76-021c7603a599",
+      "target_metadata_base_sha": "e78699bc14f23abce995a46a9b059f826f9c2ef1",
+      "target_metadata_pre_task_index_head": "36b51c5d3eb74ee1b8879393f09910c15c454f40",
+      "target_metadata_post_task_index_head": null,
+      "target_metadata_post_task_index_head_state": "NOT_YET_CREATED_MUST_BE_BOUND_AFTER_CANONICAL_AMENDMENT_MAIN_READ_BACK_AND_EXACT1_TASK_INDEX_EFFECT",
+      "target_metadata_immutable_files": [
+        {
+          "path": "docs/ai-team/tasks/TASK-060/task.md",
+          "git_blob_sha1": "8f026cca1e90c5ed93cab4382b687fba0e254a5e",
+          "file_sha256": "sha256:87845035875f8ae31afe37b4fd835a4c65d001f2abb9bb78f9096f57b4b44710"
+        },
+        {
+          "path": "docs/ai-team/tasks/TASK-060/task060-owner-allocation-and-implementation-authorization-2026-08-27.md",
+          "git_blob_sha1": "1b5768d5d30dab0c5cdf350db37fda65b12cb7c8",
+          "file_sha256": "sha256:015bd2a3e8a137a077330c7aa27650b3895f3f4cc6209d26edcdc2504e264b12"
+        },
+        {
+          "path": "docs/ai-team/tasks/TASK-061/task.md",
+          "git_blob_sha1": "f67f9283b0bbfe5a99111d1a9c26a89f286aa604",
+          "file_sha256": "sha256:ed3b3778df4f4f757e5f6b200ab54e238b103e6c454d0059b138f548d2545d1c"
+        },
+        {
+          "path": "docs/ai-team/tasks/TASK-061/task061-owner-allocation-and-implementation-authorization-2026-08-27.md",
+          "git_blob_sha1": "e79b947bac6d44c1b2847345aee7595b7c96e79e",
+          "file_sha256": "sha256:75b7b8fb75e14ef86cb4a9a448b9283b39929d96e6ad375cfd828d572c3ff7c1"
+        },
+        {
+          "path": "docs/ai-team/tasks/TASK-062/task.md",
+          "git_blob_sha1": "baefd75fba16d48d338cd00367d6282af0b1fca5",
+          "file_sha256": "sha256:ef880e48414468fb6aa4460176b409db1d24757726a8cbb8df56c0c8f06baab4"
+        },
+        {
+          "path": "docs/ai-team/tasks/TASK-062/task062-owner-allocation-and-implementation-authorization-2026-08-27.md",
+          "git_blob_sha1": "086239bacf3c8b9cce536326bc57225a7e2a82e5",
+          "file_sha256": "sha256:37448d74f7dc143860317f125e3d6196ee3e15a40aff9af430a6d8fe4cecb252"
+        }
+      ],
+      "target_metadata_hosted_result": "9_OF_9_SUCCESS_UNCHANGED_HEAD_RETRY_ZERO",
+      "target_metadata_hosted_ci_run": 33105485580,
+      "target_metadata_hosted_security_run": 33105485680,
+      "target_metadata_hosted_release_metadata_run": 33105485582,
+      "target_metadata_dev4_result": "CRITICAL_HIGH_MEDIUM_LOW_0_0_0_0_TECHNICAL_GO",
+      "target_metadata_independent_review_thread_id": "01a02110-6765-77f1-a202-e13d81e7aaae",
+      "task_index_effect_authority_state": "AUTHORIZED_EXACT1_ONLY_AFTER_ACTIVATION_AMENDMENT_CANONICAL_MAIN_EXACT_READ_BACK",
+      "task_index_effect_allowed_path": "docs/ai-team/task-index.md",
+      "activation_amendment_main_readback_sha": null,
+      "activation_amendment_main_readback_state": "NOT_YET_HOSTED_NO_EFFECT",
       "expiry_conditions": [
         "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
         "TASK_ID_COLLISION",
@@ -1129,8 +1180,8 @@
         "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
         "ALLOCATION_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
       ],
-      "release_condition": "CANONICAL_TARGET_ACTIVATION_AMENDMENT_BINDS_EXACT_PR_HEAD_SIX_BLOB_SHA256_HOSTED_CHECKS_DEV4_ZERO_AND_OWNER_READY_MERGE_GATE_THEN_HOSTED_MAIN_READBACK_BEFORE_ANY_TASK_INDEX_EFFECT",
-      "integration_effect_authority_id": "OWNER_EXPLICIT_DESIGN_GO_AND_ALLOCATION_RESERVATION_ONLY_20260827",
+      "release_condition": "CANONICAL_TARGET_ACTIVATION_AMENDMENT_BINDS_PRE_TASK_INDEX_HEAD_SIX_BLOB_SHA256_HOSTED_CHECKS_DEV4_ZERO_AND_OWNER_AMENDMENT_GATE_THEN_MAIN_READBACK; EXACT1_TASK_INDEX_EFFECT_CREATES_NEW_HEAD_REQUIRING_HOSTED_DEV4_ZERO_OWNER_READY_MERGE_TARGET_MERGE_AND_LOCK_RELEASE",
+      "integration_effect_authority_id": "OWNER_BROAD_APPROVAL_CANONICAL_ACTIVATION_AMENDMENT_GATE_20260828",
       "target_merge_authority_id": null,
       "automatic_retry": false,
       "automatic_rollback_or_revert": false

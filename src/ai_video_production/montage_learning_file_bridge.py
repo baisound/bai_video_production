@@ -8,13 +8,16 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from hashlib import sha256
 import json
+import math
 import os
 from pathlib import Path
 import re
 import tempfile
-from typing import Any, Iterator, Mapping
+import threading
+from typing import Any, Callable, Iterator, Mapping
 
 from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .serialization import canonical_json_bytes, sha256_json
@@ -36,9 +39,26 @@ IMPORT_JOURNAL_SCHEMA_VERSION = "1.0.0"
 IMPORT_JOURNAL_MESSAGE_TYPE = "BvpMontageLearningImportJournal"
 IMPORT_PREPARED = "PREPARED"
 IMPORT_CLAIMED = "CLAIMED"
+IMPORT_CLASSIFIED = "CLASSIFIED"
+IMPORT_STORE_PREPARED = "STORE_PREPARED"
+IMPORT_STORE_COMMITTED = "STORE_COMMITTED"
 IMPORT_QUARANTINE_PREPARED = "QUARANTINE_PREPARED"
 IMPORT_QUARANTINED = "QUARANTINED"
 IMPORT_RECEIPT_PUBLISHED = "RECEIPT_PUBLISHED"
+IMPORT_COMPLETED = "COMPLETED"
+PROFILE_JOURNAL_VERSION = "1.0.0"
+PROFILE_JOURNAL_TYPE = "BvpMontagePreferenceProfilePromotionJournal"
+PROFILE_POINTER_VERSION = "1.0.0"
+PROFILE_POINTER_TYPE = "BvpMontagePreferenceProfilePointer"
+PROFILE_MARKER_TYPE = "BvpMontagePreferenceProfileCommitMarker"
+PROFILE_PHASES = (
+    "PREPARED",
+    "PAYLOAD_WRITTEN",
+    "POINTER_COMMITTED",
+    "VIEW_COMMITTED",
+    "MARKER_COMMITTED",
+    "READBACK_VERIFIED",
+)
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$")
 _DELIVERY_RE = re.compile(
@@ -46,6 +66,9 @@ _DELIVERY_RE = re.compile(
 )
 _SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _WINDOWS_REPARSE_POINT = 0x400
+_IMPORTER_LOCKS_GUARD = threading.Lock()
+_IMPORTER_PROCESS_LOCKS: dict[str, threading.RLock] = {}
+_IMPORTER_THREAD_STATE = threading.local()
 
 
 class MontageLearningFileBridgeError(ValueError):
@@ -100,7 +123,7 @@ class BridgeLayout:
 
     @property
     def import_journal(self) -> Path:
-        return self.state / "importer-journal"
+        return self.state / "importer-journal.json"
 
     @property
     def preference(self) -> Path:
@@ -109,6 +132,22 @@ class BridgeLayout:
     @property
     def current_profile(self) -> Path:
         return self.preference / "current-profile.json"
+
+    @property
+    def profiles(self) -> Path:
+        return self.preference / "profiles"
+
+    @property
+    def profile_pointer(self) -> Path:
+        return self.preference / "current-profile.pointer.json"
+
+    @property
+    def profile_journal(self) -> Path:
+        return self.state / "profile-promotion-journal.json"
+
+    @property
+    def profile_marker(self) -> Path:
+        return self.state / "profile-promotion-commit-marker.json"
 
     @property
     def owner_manifest(self) -> Path:
@@ -155,7 +194,36 @@ class ReceiptPublicationPaths:
 
     receipt_path: Path
     pending_path: Path
+    correlation_path: Path
     exact_v2: bool
+
+
+@contextmanager
+def bridge_importer_guard(layout: BridgeLayout) -> Iterator[None]:
+    """Hold one bridge-root global importer lock from scan through terminal state."""
+
+    key = os.path.normcase(os.path.abspath(layout.import_journal))
+    with _IMPORTER_LOCKS_GUARD:
+        process_lock = _IMPORTER_PROCESS_LOCKS.setdefault(key, threading.RLock())
+    depths = getattr(_IMPORTER_THREAD_STATE, "depths", None)
+    if depths is None:
+        depths = {}
+        _IMPORTER_THREAD_STATE.depths = depths
+    with process_lock:
+        depth = int(depths.get(key, 0))
+        depths[key] = depth + 1
+        try:
+            if depth:
+                yield
+            else:
+                with exclusive_file_update_lock(layout.import_journal):
+                    yield
+        finally:
+            remaining = int(depths[key]) - 1
+            if remaining:
+                depths[key] = remaining
+            else:
+                depths.pop(key, None)
 
 
 def provision_bridge(
@@ -233,44 +301,32 @@ def load_bridge_owner(layout: BridgeLayout) -> BridgeOwner:
 def list_delivery_paths(layout: BridgeLayout) -> tuple[Path, ...]:
     """Return inbox names plus restartable processing journals, once and bounded."""
 
-    load_bridge_owner(layout)
-    paths_by_name: dict[str, Path] = {}
-    with os.scandir(layout.import_journal) as entries:
-        for entry in entries:
-            if entry.name.startswith("."):
-                continue
-            if not entry.name.endswith(".import-journal.json"):
-                raise MontageLearningFileBridgeError(
-                    f"unknown import-journal entry: {entry.name}"
-                )
-            if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
-                raise MontageLearningFileBridgeError(
-                    "import-journal entry must be a regular file"
-                )
-            value = _load_import_journal(Path(entry.path), layout)
-            if value["state"] in {
-                IMPORT_PREPARED,
-                IMPORT_CLAIMED,
-                IMPORT_QUARANTINE_PREPARED,
-            }:
+    with bridge_importer_guard(layout):
+        load_bridge_owner(layout)
+        paths_by_name: dict[str, Path] = {}
+        if layout.import_journal.exists():
+            value = _load_import_journal(layout.import_journal, layout)
+            if value["state"] in {IMPORT_COMPLETED, IMPORT_QUARANTINED}:
+                _clear_terminal_import_journal(value, layout)
+            else:
                 original = layout.root / str(value["original_relative_path"])
                 paths_by_name[original.name] = original
-            if len(paths_by_name) > MAX_IMPORT_FILES:
-                raise MontageLearningFileBridgeError("import file bound exceeded")
-    with os.scandir(layout.inbox) as entries:
-        for entry in entries:
-            if entry.name.startswith("."):
-                continue
-            if _DELIVERY_RE.fullmatch(entry.name) is None:
-                raise MontageLearningFileBridgeError(
-                    f"unknown inbox entry: {entry.name}"
-                )
-            if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
-                raise MontageLearningFileBridgeError("inbox entry must be a regular file")
-            paths_by_name.setdefault(entry.name, Path(entry.path))
-            if len(paths_by_name) > MAX_IMPORT_FILES:
-                raise MontageLearningFileBridgeError("import file bound exceeded")
-    return tuple(paths_by_name[name] for name in sorted(paths_by_name))
+        with os.scandir(layout.inbox) as entries:
+            for entry in entries:
+                if entry.name.startswith("."):
+                    continue
+                if _DELIVERY_RE.fullmatch(entry.name) is None:
+                    raise MontageLearningFileBridgeError(
+                        f"unknown inbox entry: {entry.name}"
+                    )
+                if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
+                    raise MontageLearningFileBridgeError(
+                        "inbox entry must be a regular file"
+                    )
+                paths_by_name.setdefault(entry.name, Path(entry.path))
+                if len(paths_by_name) > MAX_IMPORT_FILES:
+                    raise MontageLearningFileBridgeError("import file bound exceeded")
+        return tuple(paths_by_name[name] for name in sorted(paths_by_name))
 
 
 def claim_delivery(path: str | Path, layout: BridgeLayout) -> DeliveryClaim:
@@ -284,7 +340,7 @@ def claim_delivery(path: str | Path, layout: BridgeLayout) -> DeliveryClaim:
     if match is None:
         raise MontageLearningFileBridgeError("delivery filename is invalid")
     journal_path = _import_journal_path(layout, original.name)
-    with exclusive_file_update_lock(journal_path):
+    with bridge_importer_guard(layout):
         if journal_path.exists():
             value = _load_import_journal(journal_path, layout)
             _require_journal_filename_binding(value, original.name)
@@ -324,7 +380,7 @@ def quarantine_claim(claim: DeliveryClaim, layout: BridgeLayout) -> DeliveryClai
     """Move a claimed malformed delivery to quarantine without overwriting."""
 
     _require_claim_object(claim, layout)
-    with exclusive_file_update_lock(claim.journal_path):
+    with bridge_importer_guard(layout):
         value = _load_import_journal(claim.journal_path, layout)
         _require_claim_matches_journal(claim, value, layout)
         state = value["state"]
@@ -378,7 +434,7 @@ def mark_claim_receipt_published(
     """Durably retain successful import evidence without deleting source bytes."""
 
     _require_claim_object(claim, layout)
-    with exclusive_file_update_lock(claim.journal_path):
+    with bridge_importer_guard(layout):
         value = _load_import_journal(claim.journal_path, layout)
         _require_claim_matches_journal(claim, value, layout)
         if value["state"] == IMPORT_RECEIPT_PUBLISHED:
@@ -386,9 +442,9 @@ def mark_claim_receipt_published(
                 claim.processing_path, claim.pre_claim_file_identity, "processing"
             )
             return _claim_from_journal(claim.journal_path, value, layout)
-        if value["state"] != IMPORT_CLAIMED:
+        if value["state"] != IMPORT_STORE_COMMITTED:
             raise MontageLearningFileBridgeError(
-                "only a claimed delivery can publish a receipt"
+                "only a store-committed delivery can publish a receipt"
             )
         _verify_ancestor_identities(value, layout)
         _verify_identity_path(
@@ -400,14 +456,69 @@ def mark_claim_receipt_published(
         return _claim_from_journal(claim.journal_path, value, layout)
 
 
+def advance_claim_state(
+    claim: DeliveryClaim,
+    layout: BridgeLayout,
+    state: str,
+) -> DeliveryClaim:
+    """Advance one claimed import through the closed B-to-A transaction phases."""
+
+    if state not in {IMPORT_CLASSIFIED, IMPORT_STORE_PREPARED, IMPORT_STORE_COMMITTED}:
+        raise MontageLearningFileBridgeError("requested import phase is not public")
+    _require_claim_object(claim, layout)
+    with bridge_importer_guard(layout):
+        value = _load_import_journal(claim.journal_path, layout)
+        _require_claim_matches_journal(claim, value, layout)
+        value = _advance_import_journal(claim.journal_path, value, state, layout)
+        return _claim_from_journal(claim.journal_path, value, layout)
+
+
+def complete_claim(claim: DeliveryClaim, layout: BridgeLayout) -> None:
+    """Durably close and remove only the exact successful single-active journal."""
+
+    _require_claim_object(claim, layout)
+    with bridge_importer_guard(layout):
+        value = _load_import_journal(claim.journal_path, layout)
+        _require_claim_matches_journal(claim, value, layout)
+        if value["state"] == IMPORT_RECEIPT_PUBLISHED:
+            value = _advance_import_journal(
+                claim.journal_path, value, IMPORT_COMPLETED, layout
+            )
+        if value["state"] != IMPORT_COMPLETED:
+            raise MontageLearningFileBridgeError(
+                "only a receipt-published import can complete"
+            )
+        _clear_terminal_import_journal(value, layout)
+
+
+def complete_quarantined_claim(claim: DeliveryClaim, layout: BridgeLayout) -> None:
+    """Read back and clear only the exact terminal quarantine journal."""
+
+    _require_claim_object(claim, layout)
+    with bridge_importer_guard(layout):
+        value = _load_import_journal(claim.journal_path, layout)
+        _require_claim_matches_journal(claim, value, layout)
+        if value["state"] != IMPORT_QUARANTINED:
+            raise MontageLearningFileBridgeError(
+                "only a quarantined import can clear its journal"
+            )
+        _clear_terminal_import_journal(value, layout)
+
+
 def snapshot_delivery(claim: DeliveryClaim, layout: BridgeLayout) -> DeliverySnapshot:
     """Read only a validated claim once through a non-inheritable pinned handle."""
 
     _require_claim_object(claim, layout)
-    with exclusive_file_update_lock(claim.journal_path):
+    with bridge_importer_guard(layout):
         journal = _load_import_journal(claim.journal_path, layout)
         _require_claim_matches_journal(claim, journal, layout)
-        if journal["state"] not in {IMPORT_CLAIMED, IMPORT_RECEIPT_PUBLISHED}:
+        if journal["state"] not in {
+            IMPORT_CLAIMED,
+            IMPORT_CLASSIFIED,
+            IMPORT_STORE_PREPARED,
+            IMPORT_STORE_COMMITTED,
+            IMPORT_RECEIPT_PUBLISHED,
+        }:
             raise MontageLearningFileBridgeError("delivery claim is not readable")
         _verify_ancestor_identities(journal, layout)
         candidate = claim.processing_path
@@ -529,6 +640,7 @@ def receipt_publication_paths(
     return ReceiptPublicationPaths(
         receipt_path=receipt_path,
         pending_path=layout.receipts / f".{receipt_path.name}.pending.json",
+        correlation_path=layout.receipts / f".{receipt_path.name}.correlation.json",
         exact_v2=exact_v2,
     )
 
@@ -607,6 +719,143 @@ def load_receipt_publication_pending(
         return None
     value = _read_json_regular(paths.pending_path, max_bytes=64 * 1024)
     return _validate_receipt_publication_pending(value, paths)
+
+
+def build_generic_receipt_correlation(
+    paths: ReceiptPublicationPaths,
+    *,
+    record_id: str,
+    source_sha256: str,
+    generic_store_id: str,
+    store_revision: int,
+    canonical_commit_sha256: str,
+    internal_receipt_self_hash: str,
+    product_project_manifest_revision: int,
+    product_project_manifest_sha256: str,
+    child_binding_sha256: str,
+    ledger_head_sha256: str,
+    public_receipt_sha256: str,
+) -> dict[str, object]:
+    """Build the permanent body-free authority correlation for a public v1 receipt."""
+
+    if paths.exact_v2:
+        raise MontageLearningFileBridgeError(
+            "generic correlation cannot target an exact receipt"
+        )
+    body: dict[str, object] = {
+        "schema_version": "1.0.0",
+        "message_type": "BvpMontageLearningGenericReceiptCorrelation",
+        "namespace": GENERIC_RECEIPT_NAMESPACE,
+        "store_kind": "REVIEW_OBSERVATION",
+        "record_id": record_id,
+        "source_sha256": source_sha256,
+        "generic_store_id": generic_store_id,
+        "store_revision": store_revision,
+        "canonical_commit_sha256": canonical_commit_sha256,
+        "internal_receipt_self_hash": internal_receipt_self_hash,
+        "product_project_manifest_revision": product_project_manifest_revision,
+        "product_project_manifest_sha256": product_project_manifest_sha256,
+        "child_binding_sha256": child_binding_sha256,
+        "ledger_head_sha256": ledger_head_sha256,
+        "public_receipt_sha256": public_receipt_sha256,
+        "learning_adopted": False,
+        "profile_promoted": False,
+        "timeline_mutated": False,
+    }
+    body["correlation_self_hash"] = sha256_json(body)
+    return _validate_generic_receipt_correlation(body, paths)
+
+
+def publish_generic_receipt_correlation_new_or_identical(
+    paths: ReceiptPublicationPaths,
+    correlation: Mapping[str, object],
+) -> None:
+    expected = _validate_generic_receipt_correlation(correlation, paths)
+    _write_new_or_identical(paths.correlation_path, expected)
+    actual = _read_json_regular(paths.correlation_path, max_bytes=64 * 1024)
+    if _validate_generic_receipt_correlation(actual, paths) != expected:
+        raise MontageLearningFileBridgeError(
+            "generic receipt correlation read-back mismatch"
+        )
+
+
+def load_generic_receipt_correlation(
+    paths: ReceiptPublicationPaths,
+) -> dict[str, object] | None:
+    if paths.exact_v2:
+        raise MontageLearningFileBridgeError(
+            "generic correlation cannot target an exact receipt"
+        )
+    if not paths.correlation_path.exists():
+        return None
+    value = _read_json_regular(paths.correlation_path, max_bytes=64 * 1024)
+    return _validate_generic_receipt_correlation(value, paths)
+
+
+def _validate_generic_receipt_correlation(
+    value: Mapping[str, object],
+    paths: ReceiptPublicationPaths,
+) -> dict[str, object]:
+    expected_fields = {
+        "schema_version", "message_type", "namespace", "store_kind",
+        "record_id", "source_sha256", "generic_store_id", "store_revision",
+        "canonical_commit_sha256", "internal_receipt_self_hash",
+        "product_project_manifest_revision", "product_project_manifest_sha256",
+        "child_binding_sha256", "ledger_head_sha256", "public_receipt_sha256",
+        "learning_adopted", "profile_promoted", "timeline_mutated",
+        "correlation_self_hash",
+    }
+    if type(value) is not dict or set(value) != expected_fields:
+        raise MontageLearningFileBridgeError(
+            "generic receipt correlation fields mismatch"
+        )
+    if (
+        value["schema_version"] != "1.0.0"
+        or value["message_type"] != "BvpMontageLearningGenericReceiptCorrelation"
+        or value["namespace"] != GENERIC_RECEIPT_NAMESPACE
+        or value["store_kind"] != "REVIEW_OBSERVATION"
+    ):
+        raise MontageLearningFileBridgeError(
+            "generic receipt correlation identity mismatch"
+        )
+    _require_id(value["record_id"], "correlation record_id")
+    _require_id(value["generic_store_id"], "correlation generic_store_id")
+    for field in (
+        "source_sha256", "canonical_commit_sha256",
+        "internal_receipt_self_hash", "product_project_manifest_sha256",
+        "child_binding_sha256", "ledger_head_sha256",
+        "public_receipt_sha256", "correlation_self_hash",
+    ):
+        if not isinstance(value[field], str) or _SHA_RE.fullmatch(value[field]) is None:
+            raise MontageLearningFileBridgeError(
+                f"generic receipt correlation {field} is invalid"
+            )
+    for field in ("store_revision", "product_project_manifest_revision"):
+        item = value[field]
+        if isinstance(item, bool) or not isinstance(item, int) or item < 1:
+            raise MontageLearningFileBridgeError(
+                f"generic receipt correlation {field} is invalid"
+            )
+    for field in ("learning_adopted", "profile_promoted", "timeline_mutated"):
+        if value[field] is not False:
+            raise MontageLearningFileBridgeError(
+                f"generic receipt correlation {field} must remain false"
+            )
+    expected_name = (
+        f"{value['record_id']}--{str(value['source_sha256']).removeprefix('sha256:')}"
+        ".receipt.json"
+    )
+    if paths.receipt_path.name != expected_name:
+        raise MontageLearningFileBridgeError(
+            "generic receipt correlation path mismatch"
+        )
+    body = dict(value)
+    supplied = body.pop("correlation_self_hash")
+    if sha256_json(body) != supplied:
+        raise MontageLearningFileBridgeError(
+            "generic receipt correlation hash mismatch"
+        )
+    return dict(value)
 
 
 def create_pending_receipt_publication_new_or_identical(
@@ -766,8 +1015,8 @@ def _bridge_directories(layout: BridgeLayout) -> tuple[Path, ...]:
         layout.quarantine,
         layout.receipts,
         layout.preference,
+        layout.profiles,
         layout.state,
-        layout.import_journal,
     )
 
 
@@ -824,7 +1073,9 @@ def _identity_from_document(value: object) -> tuple[int, int, int, int]:
 
 
 def _import_journal_path(layout: BridgeLayout, filename: str) -> Path:
-    return layout.import_journal / f"{filename}.import-journal.json"
+    if _DELIVERY_RE.fullmatch(filename) is None:
+        raise MontageLearningFileBridgeError("import journal filename is invalid")
+    return layout.import_journal
 
 
 def _new_import_journal(
@@ -853,9 +1104,20 @@ def _new_import_journal(
             key: dict(identity) for key, identity in ancestor_identities.items()
         },
         "pre_claim_file_identity": _file_identity_document(pre_claim_identity),
+        "operation_id": sha256_json(
+            {
+                "domain": "BVP_MONTAGE_LEARNING_IMPORT_OPERATION_V1",
+                "bridge_instance_id": owner.bridge_instance_id,
+                "record_id": match.group("record"),
+                "source_sha256": f"sha256:{match.group('digest')}",
+                "root_identity": owner.root_identity,
+                "pre_claim_file_identity": _file_identity_document(pre_claim_identity),
+            }
+        ),
         "state": IMPORT_PREPARED,
         "states": [IMPORT_PREPARED],
         "journal_revision": 1,
+        "previous_journal_sha256": None,
     }
     body["journal_sha256"] = sha256_json(body)
     return _validate_import_journal(body, layout)
@@ -870,8 +1132,8 @@ def _validate_import_journal(
         "schema_version", "message_type", "contract_profile", "bridge_instance_id",
         "record_id", "source_sha256", "original_relative_path",
         "processing_relative_path", "quarantine_relative_path", "root_identity",
-        "ancestor_identities", "pre_claim_file_identity", "state", "states",
-        "journal_revision", "journal_sha256",
+        "ancestor_identities", "pre_claim_file_identity", "operation_id", "state",
+        "states", "journal_revision", "previous_journal_sha256", "journal_sha256",
     }
     if set(value) != expected_fields:
         raise MontageLearningFileBridgeError("import journal fields mismatch")
@@ -902,7 +1164,7 @@ def _validate_import_journal(
     identities = value["ancestor_identities"]
     if type(identities) is not dict or set(identities) != {
         ".", "learning-inbox", "learning-processing", "learning-quarantine",
-        "learning-receipts", "preference", "state", "state/importer-journal",
+        "learning-receipts", "preference", "preference/profiles", "state",
     }:
         raise MontageLearningFileBridgeError("journal ancestor identity set mismatch")
     for relative, identity in identities.items():
@@ -931,11 +1193,25 @@ def _validate_import_journal(
         if sha256_json(identity_body) != supplied:
             raise MontageLearningFileBridgeError("journal ancestor hash mismatch")
     _identity_from_document(value["pre_claim_file_identity"])
+    operation_id = value["operation_id"]
+    if not isinstance(operation_id, str) or _SHA_RE.fullmatch(operation_id) is None:
+        raise MontageLearningFileBridgeError("journal operation_id is invalid")
     states = value["states"]
     state = value["state"]
     valid_sequences = {
         IMPORT_PREPARED: [IMPORT_PREPARED],
         IMPORT_CLAIMED: [IMPORT_PREPARED, IMPORT_CLAIMED],
+        IMPORT_CLASSIFIED: [
+            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_CLASSIFIED,
+        ],
+        IMPORT_STORE_PREPARED: [
+            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_CLASSIFIED,
+            IMPORT_STORE_PREPARED,
+        ],
+        IMPORT_STORE_COMMITTED: [
+            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_CLASSIFIED,
+            IMPORT_STORE_PREPARED, IMPORT_STORE_COMMITTED,
+        ],
         IMPORT_QUARANTINE_PREPARED: [
             IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_QUARANTINE_PREPARED
         ],
@@ -944,7 +1220,14 @@ def _validate_import_journal(
             IMPORT_QUARANTINED,
         ],
         IMPORT_RECEIPT_PUBLISHED: [
-            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_RECEIPT_PUBLISHED
+            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_CLASSIFIED,
+            IMPORT_STORE_PREPARED, IMPORT_STORE_COMMITTED,
+            IMPORT_RECEIPT_PUBLISHED,
+        ],
+        IMPORT_COMPLETED: [
+            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_CLASSIFIED,
+            IMPORT_STORE_PREPARED, IMPORT_STORE_COMMITTED,
+            IMPORT_RECEIPT_PUBLISHED, IMPORT_COMPLETED,
         ],
     }
     if state not in valid_sequences or states != valid_sequences[state]:
@@ -955,6 +1238,16 @@ def _validate_import_journal(
         or value["journal_revision"] != len(states)
     ):
         raise MontageLearningFileBridgeError("import journal revision mismatch")
+    previous = value["previous_journal_sha256"]
+    if len(states) == 1:
+        if previous is not None:
+            raise MontageLearningFileBridgeError(
+                "initial import journal previous hash must be null"
+            )
+    elif not isinstance(previous, str) or _SHA_RE.fullmatch(previous) is None:
+        raise MontageLearningFileBridgeError(
+            "import journal previous hash is invalid"
+        )
     supplied_hash = value["journal_sha256"]
     if not isinstance(supplied_hash, str) or _SHA_RE.fullmatch(supplied_hash) is None:
         raise MontageLearningFileBridgeError("journal_sha256 is invalid")
@@ -989,11 +1282,19 @@ def _advance_import_journal(
     value = _validate_import_journal(current, layout)
     transitions = {
         IMPORT_PREPARED: {IMPORT_CLAIMED},
-        IMPORT_CLAIMED: {IMPORT_QUARANTINE_PREPARED, IMPORT_RECEIPT_PUBLISHED},
+        IMPORT_CLAIMED: {IMPORT_CLASSIFIED, IMPORT_QUARANTINE_PREPARED},
+        IMPORT_CLASSIFIED: {IMPORT_STORE_PREPARED},
+        IMPORT_STORE_PREPARED: {IMPORT_STORE_COMMITTED},
+        IMPORT_STORE_COMMITTED: {IMPORT_RECEIPT_PUBLISHED},
+        IMPORT_RECEIPT_PUBLISHED: {IMPORT_COMPLETED},
         IMPORT_QUARANTINE_PREPARED: {IMPORT_QUARANTINED},
     }
     if state not in transitions.get(str(value["state"]), set()):
         raise MontageLearningFileBridgeError("invalid import journal transition")
+    on_disk = _load_import_journal(path, layout)
+    if on_disk["journal_sha256"] != value["journal_sha256"]:
+        raise MontageLearningFileBridgeError("import journal CAS is stale")
+    value["previous_journal_sha256"] = value["journal_sha256"]
     value["state"] = state
     value["states"] = [*list(value["states"]), state]
     value["journal_revision"] = int(value["journal_revision"]) + 1
@@ -1047,7 +1348,10 @@ def _resume_claim_locked(
         )
     if current["state"] == IMPORT_QUARANTINED:
         raise MontageLearningFileBridgeError("delivery is quarantined")
-    if current["state"] not in {IMPORT_CLAIMED, IMPORT_RECEIPT_PUBLISHED}:
+    if current["state"] not in {
+        IMPORT_CLAIMED, IMPORT_CLASSIFIED, IMPORT_STORE_PREPARED,
+        IMPORT_STORE_COMMITTED, IMPORT_RECEIPT_PUBLISHED,
+    }:
         raise MontageLearningFileBridgeError("import journal is not recoverable")
     _verify_identity_path(processing, identity, "processing")
     return current
@@ -1070,6 +1374,33 @@ def _claim_from_journal(
         ancestor_identities=dict(current["ancestor_identities"]),
         state=str(current["state"]),
     )
+
+
+def _clear_terminal_import_journal(
+    value: Mapping[str, object], layout: BridgeLayout
+) -> None:
+    current = _validate_import_journal(value, layout)
+    state = current["state"]
+    identity = _identity_from_document(current["pre_claim_file_identity"])
+    if state == IMPORT_COMPLETED:
+        _verify_identity_path(
+            layout.root / str(current["processing_relative_path"]),
+            identity,
+            "completed processing",
+        )
+    elif state == IMPORT_QUARANTINED:
+        _verify_identity_path(
+            layout.root / str(current["quarantine_relative_path"]),
+            identity,
+            "terminal quarantine",
+        )
+    else:
+        raise MontageLearningFileBridgeError("import journal is not terminal")
+    on_disk = _load_import_journal(layout.import_journal, layout)
+    if on_disk != current:
+        raise MontageLearningFileBridgeError("terminal import journal changed")
+    layout.import_journal.unlink()
+    _directory_fsync(layout.state)
 
 
 def _require_claim_object(claim: object, layout: BridgeLayout) -> DeliveryClaim:
@@ -1194,30 +1525,489 @@ def publish_current_profile(
     envelope: Mapping[str, object],
     *,
     expected_previous_profile_sha256: str | None,
+    failure_hook: Callable[[str, Path], None] | None = None,
 ) -> str:
-    """CAS-publish an already validated envelope without transforming it."""
+    """Durably promote one prevalidated envelope through immutable object + pointer."""
 
     load_bridge_owner(layout)
-    target = layout.current_profile
-    supplied = envelope.get("profile_sha256")
-    if not isinstance(supplied, str) or _SHA_RE.fullmatch(supplied) is None:
-        raise MontageLearningFileBridgeError("profile_sha256 is invalid")
-    with exclusive_file_update_lock(target):
-        if target.is_symlink():
-            raise MontageLearningFileBridgeError("symlink path is forbidden")
-        if target.exists():
-            existing = _read_json_regular(target, max_bytes=MAX_DELIVERY_BYTES)
-            current = existing.get("profile_sha256")
-            if existing == dict(envelope):
+    value = _exact_json_snapshot(envelope, path="$profile", max_depth=16)
+    coordinates = _profile_coordinates(value, layout)
+    with exclusive_file_update_lock(layout.profile_journal):
+        if layout.profile_journal.exists():
+            pending = _validate_profile_journal(
+                _read_json_regular(layout.profile_journal, max_bytes=128 * 1024),
+                layout,
+            )
+            if pending["state"] == "PREPARED":
+                if any(
+                    pending[field] != coordinates[field]
+                    for field in (
+                        "profile_id", "profile_version", "profile_sha256",
+                        "payload_relative_path", "payload_document_sha256",
+                    )
+                ):
+                    raise MontageLearningFileBridgeError(
+                        "prepared profile transaction coordinates mismatch"
+                    )
+                _write_profile_payload_and_recover(
+                    layout, pending, value, failure_hook=failure_hook
+                )
+                return "PUBLISHED"
+            _recover_profile_promotion_locked(layout, failure_hook=failure_hook)
+        current_pointer = _load_profile_pointer(layout)
+        if current_pointer is not None:
+            current_sha = str(current_pointer["profile_sha256"])
+            if all(
+                current_pointer[field] == coordinates[field]
+                for field in ("profile_id", "profile_version", "profile_sha256")
+            ):
+                _verify_profile_publication(layout, current_pointer)
+                if _read_json_regular(
+                    layout.current_profile, max_bytes=MAX_DELIVERY_BYTES
+                ) != value:
+                    raise MontageLearningFileBridgeError(
+                        "duplicate profile bytes do not match current view"
+                    )
                 return "DUPLICATE"
-            if expected_previous_profile_sha256 is None or current != expected_previous_profile_sha256:
-                raise MontageLearningFileBridgeError("profile CAS expectation mismatch")
+            if (
+                expected_previous_profile_sha256 is None
+                or current_sha != expected_previous_profile_sha256
+            ):
+                raise MontageLearningFileBridgeError(
+                    "profile CAS expectation mismatch"
+                )
+            _require_profile_version_advance(
+                current_pointer["profile_version"], coordinates["profile_version"]
+            )
         elif expected_previous_profile_sha256 is not None:
-            raise MontageLearningFileBridgeError("expected previous profile is missing")
-        AtomicJsonWriter.write(target, dict(envelope))
-        if _read_json_regular(target, max_bytes=MAX_DELIVERY_BYTES) != dict(envelope):
-            raise MontageLearningFileBridgeError("profile durable read-back mismatch")
+            raise MontageLearningFileBridgeError(
+                "expected previous profile is missing"
+            )
+
+        journal = _new_profile_journal(
+            layout,
+            coordinates,
+            previous_pointer=current_pointer,
+        )
+        AtomicJsonWriter.write(layout.profile_journal, journal)
+        _require_profile_journal_exact(layout, journal)
+        _call_profile_failure(failure_hook, "after_profile_prepared", layout.profile_journal)
+        _write_profile_payload_and_recover(
+            layout, journal, value, failure_hook=failure_hook
+        )
         return "PUBLISHED"
+
+
+def recover_current_profile(
+    layout: BridgeLayout,
+    *,
+    failure_hook: Callable[[str, Path], None] | None = None,
+) -> dict[str, object] | None:
+    """Recover one fixed Profile promotion journal and return the trusted pointer."""
+
+    load_bridge_owner(layout)
+    with exclusive_file_update_lock(layout.profile_journal):
+        if not layout.profile_journal.exists():
+            pointer = _load_profile_pointer(layout)
+            if pointer is not None:
+                _verify_profile_publication(layout, pointer)
+            return pointer
+        return _recover_profile_promotion_locked(layout, failure_hook=failure_hook)
+
+
+def _profile_coordinates(
+    envelope: Mapping[str, object], layout: BridgeLayout
+) -> dict[str, object]:
+    profile_id = _require_id(envelope.get("profile_id"), "profile_id")
+    version = envelope.get("profile_version")
+    segment = _profile_version_segment(version)
+    supplied = envelope.get("profile_sha256")
+    if type(supplied) is not str or _SHA_RE.fullmatch(supplied) is None:
+        raise MontageLearningFileBridgeError("profile_sha256 is invalid")
+    payload_bytes = canonical_json_bytes(dict(envelope)) + b"\n"
+    payload_document_sha256 = f"sha256:{sha256(payload_bytes).hexdigest()}"
+    payload_relative_path = (
+        Path("preference")
+        / "profiles"
+        / profile_id
+        / f"{segment}--{supplied.removeprefix('sha256:')}.json"
+    ).as_posix()
+    payload_path = layout.root / payload_relative_path
+    if payload_path.parent.parent != layout.profiles:
+        raise MontageLearningFileBridgeError("profile payload path escaped layout")
+    return {
+        "profile_id": profile_id,
+        "profile_version": version,
+        "profile_sha256": supplied,
+        "payload_relative_path": payload_relative_path,
+        "payload_document_sha256": payload_document_sha256,
+    }
+
+
+def _profile_version_segment(value: object) -> str:
+    if type(value) is int and value >= 0:
+        return str(value)
+    if type(value) is str and _ID_RE.fullmatch(value) is not None:
+        return value
+    raise MontageLearningFileBridgeError("profile_version is not path-safe")
+
+
+def _require_profile_version_advance(current: object, proposed: object) -> None:
+    if type(current) is int and type(proposed) is int and proposed > current:
+        return
+    raise MontageLearningFileBridgeError("profile version is stale or incomparable")
+
+
+def _new_profile_journal(
+    layout: BridgeLayout,
+    coordinates: Mapping[str, object],
+    *,
+    previous_pointer: Mapping[str, object] | None,
+) -> dict[str, object]:
+    owner = load_bridge_owner(layout)
+    promoted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    pointer_revision = (
+        1 if previous_pointer is None else int(previous_pointer["pointer_revision"]) + 1
+    )
+    previous_pointer_sha256 = (
+        None if previous_pointer is None else previous_pointer["pointer_self_hash"]
+    )
+    operation_id = sha256_json(
+        {
+            "domain": "BVP_MONTAGE_PROFILE_PROMOTION_OPERATION_V1",
+            "bridge_instance_id": owner.bridge_instance_id,
+            "root_identity": owner.root_identity,
+            **dict(coordinates),
+            "pointer_revision": pointer_revision,
+            "previous_pointer_sha256": previous_pointer_sha256,
+        }
+    )
+    body: dict[str, object] = {
+        "schema_version": PROFILE_JOURNAL_VERSION,
+        "message_type": PROFILE_JOURNAL_TYPE,
+        "operation_id": operation_id,
+        "bridge_instance_id": owner.bridge_instance_id,
+        "root_identity": owner.root_identity,
+        **dict(coordinates),
+        "pointer_revision": pointer_revision,
+        "previous_pointer_sha256": previous_pointer_sha256,
+        "promoted_at": promoted_at,
+        "state": PROFILE_PHASES[0],
+        "states": [PROFILE_PHASES[0]],
+        "journal_revision": 1,
+        "previous_journal_sha256": None,
+    }
+    body["journal_sha256"] = sha256_json(body)
+    return _validate_profile_journal(body, layout)
+
+
+def _validate_profile_journal(
+    value: Mapping[str, object], layout: BridgeLayout
+) -> dict[str, object]:
+    expected = {
+        "schema_version", "message_type", "operation_id", "bridge_instance_id",
+        "root_identity", "profile_id", "profile_version", "profile_sha256",
+        "payload_relative_path", "payload_document_sha256", "pointer_revision",
+        "previous_pointer_sha256", "promoted_at", "state", "states",
+        "journal_revision", "previous_journal_sha256", "journal_sha256",
+    }
+    if type(value) is not dict or set(value) != expected:
+        raise MontageLearningFileBridgeError("profile journal fields mismatch")
+    owner = load_bridge_owner(layout)
+    if (
+        value["schema_version"] != PROFILE_JOURNAL_VERSION
+        or value["message_type"] != PROFILE_JOURNAL_TYPE
+        or value["bridge_instance_id"] != owner.bridge_instance_id
+        or value["root_identity"] != owner.root_identity
+    ):
+        raise MontageLearningFileBridgeError("profile journal identity mismatch")
+    profile_id = _require_id(value["profile_id"], "profile journal profile_id")
+    version_segment = _profile_version_segment(value["profile_version"])
+    if type(value["profile_sha256"]) is not str or _SHA_RE.fullmatch(
+        value["profile_sha256"]
+    ) is None:
+        raise MontageLearningFileBridgeError("profile journal digest is invalid")
+    expected_relative = (
+        Path("preference") / "profiles" / profile_id
+        / f"{version_segment}--{str(value['profile_sha256']).removeprefix('sha256:')}.json"
+    ).as_posix()
+    if value["payload_relative_path"] != expected_relative:
+        raise MontageLearningFileBridgeError("profile journal payload path mismatch")
+    if type(value["payload_document_sha256"]) is not str or _SHA_RE.fullmatch(
+        value["payload_document_sha256"]
+    ) is None:
+        raise MontageLearningFileBridgeError("profile journal payload hash is invalid")
+    if value["state"] != "PREPARED":
+        coordinates = _profile_coordinates(
+            _read_json_regular(
+                layout.root / str(value["payload_relative_path"]),
+                max_bytes=MAX_DELIVERY_BYTES,
+            ),
+            layout,
+        )
+        for field in (
+            "profile_id", "profile_version", "profile_sha256",
+            "payload_relative_path", "payload_document_sha256",
+        ):
+            if coordinates[field] != value[field]:
+                raise MontageLearningFileBridgeError(
+                    "profile journal coordinates mismatch"
+                )
+    revision = value["pointer_revision"]
+    if type(revision) is not int or revision <= 0:
+        raise MontageLearningFileBridgeError("profile pointer revision is invalid")
+    for field in (
+        "operation_id", "profile_sha256", "payload_document_sha256",
+        "previous_pointer_sha256", "previous_journal_sha256", "journal_sha256",
+    ):
+        candidate = value[field]
+        if candidate is not None and (
+            type(candidate) is not str or _SHA_RE.fullmatch(candidate) is None
+        ):
+            raise MontageLearningFileBridgeError(f"profile journal {field} is invalid")
+    states = value["states"]
+    state = value["state"]
+    journal_revision = value["journal_revision"]
+    if (
+        type(states) is not list
+        or not states
+        or states != list(PROFILE_PHASES[: len(states)])
+        or state != states[-1]
+        or type(journal_revision) is not int
+        or journal_revision != len(states)
+    ):
+        raise MontageLearningFileBridgeError("profile journal phase chain mismatch")
+    static = {
+        key: item for key, item in value.items()
+        if key not in {
+            "state", "states", "journal_revision", "previous_journal_sha256",
+            "journal_sha256",
+        }
+    }
+    expected_document: dict[str, object] = {
+        **static,
+        "state": PROFILE_PHASES[0],
+        "states": [PROFILE_PHASES[0]],
+        "journal_revision": 1,
+        "previous_journal_sha256": None,
+    }
+    expected_document["journal_sha256"] = sha256_json(expected_document)
+    for phase in PROFILE_PHASES[1 : len(states)]:
+        previous_hash = expected_document["journal_sha256"]
+        expected_document["state"] = phase
+        expected_document["states"] = [*expected_document["states"], phase]
+        expected_document["journal_revision"] = int(
+            expected_document["journal_revision"]
+        ) + 1
+        expected_document["previous_journal_sha256"] = previous_hash
+        expected_document.pop("journal_sha256")
+        expected_document["journal_sha256"] = sha256_json(expected_document)
+    if expected_document != dict(value):
+        raise MontageLearningFileBridgeError("profile journal hash chain mismatch")
+    return dict(value)
+
+
+def _require_profile_journal_exact(
+    layout: BridgeLayout, expected: Mapping[str, object]
+) -> None:
+    actual = _read_json_regular(layout.profile_journal, max_bytes=128 * 1024)
+    if _validate_profile_journal(actual, layout) != dict(expected):
+        raise MontageLearningFileBridgeError("profile journal durable read-back mismatch")
+
+
+def _advance_profile_journal(
+    layout: BridgeLayout, current: Mapping[str, object], state: str
+) -> dict[str, object]:
+    value = _validate_profile_journal(current, layout)
+    current_index = PROFILE_PHASES.index(str(value["state"]))
+    if current_index + 1 >= len(PROFILE_PHASES) or PROFILE_PHASES[current_index + 1] != state:
+        raise MontageLearningFileBridgeError("invalid profile journal transition")
+    previous = value["journal_sha256"]
+    value["state"] = state
+    value["states"] = [*value["states"], state]
+    value["journal_revision"] = int(value["journal_revision"]) + 1
+    value["previous_journal_sha256"] = previous
+    value.pop("journal_sha256")
+    value["journal_sha256"] = sha256_json(value)
+    AtomicJsonWriter.write(layout.profile_journal, value)
+    _require_profile_journal_exact(layout, value)
+    return value
+
+
+def _profile_pointer_from_journal(journal: Mapping[str, object]) -> dict[str, object]:
+    body: dict[str, object] = {
+        "schema_version": PROFILE_POINTER_VERSION,
+        "message_type": PROFILE_POINTER_TYPE,
+        "operation_id": journal["operation_id"],
+        "profile_id": journal["profile_id"],
+        "profile_version": journal["profile_version"],
+        "profile_sha256": journal["profile_sha256"],
+        "payload_relative_path": journal["payload_relative_path"],
+        "payload_document_sha256": journal["payload_document_sha256"],
+        "pointer_revision": journal["pointer_revision"],
+        "previous_pointer_sha256": journal["previous_pointer_sha256"],
+        "promoted_at": journal["promoted_at"],
+    }
+    body["pointer_self_hash"] = sha256_json(body)
+    return body
+
+
+def _profile_marker_from_journal(
+    journal: Mapping[str, object], pointer: Mapping[str, object]
+) -> dict[str, object]:
+    body: dict[str, object] = {
+        "schema_version": PROFILE_POINTER_VERSION,
+        "message_type": PROFILE_MARKER_TYPE,
+        "operation_id": journal["operation_id"],
+        "profile_id": journal["profile_id"],
+        "profile_sha256": journal["profile_sha256"],
+        "payload_document_sha256": journal["payload_document_sha256"],
+        "pointer_revision": journal["pointer_revision"],
+        "pointer_self_hash": pointer["pointer_self_hash"],
+        "promoted_at": journal["promoted_at"],
+        "advisory_only": True,
+        "canonical_timeline": False,
+        "auto_apply_authorized": False,
+    }
+    body["marker_self_hash"] = sha256_json(body)
+    return body
+
+
+def _load_profile_pointer(layout: BridgeLayout) -> dict[str, object] | None:
+    if not layout.profile_pointer.exists():
+        return None
+    value = _read_json_regular(layout.profile_pointer, max_bytes=128 * 1024)
+    expected = {
+        "schema_version", "message_type", "operation_id", "profile_id", "profile_version",
+        "profile_sha256", "payload_relative_path", "payload_document_sha256",
+        "pointer_revision", "previous_pointer_sha256", "promoted_at",
+        "pointer_self_hash",
+    }
+    if type(value) is not dict or set(value) != expected:
+        raise MontageLearningFileBridgeError("profile pointer fields mismatch")
+    if (
+        value["schema_version"] != PROFILE_POINTER_VERSION
+        or value["message_type"] != PROFILE_POINTER_TYPE
+    ):
+        raise MontageLearningFileBridgeError("profile pointer identity mismatch")
+    coordinates = _profile_coordinates(
+        _read_json_regular(
+            layout.root / str(value["payload_relative_path"]),
+            max_bytes=MAX_DELIVERY_BYTES,
+        ),
+        layout,
+    )
+    for field in (
+        "profile_id", "profile_version", "profile_sha256", "payload_relative_path",
+        "payload_document_sha256",
+    ):
+        if coordinates[field] != value[field]:
+            raise MontageLearningFileBridgeError("profile pointer binding mismatch")
+    body = dict(value)
+    supplied_hash = body.pop("pointer_self_hash")
+    if sha256_json(body) != supplied_hash:
+        raise MontageLearningFileBridgeError("profile pointer hash mismatch")
+    return value
+
+
+def _recover_profile_promotion_locked(
+    layout: BridgeLayout,
+    *,
+    failure_hook: Callable[[str, Path], None] | None,
+) -> dict[str, object]:
+    journal = _validate_profile_journal(
+        _read_json_regular(layout.profile_journal, max_bytes=128 * 1024), layout
+    )
+    pointer = _profile_pointer_from_journal(journal)
+    marker = _profile_marker_from_journal(journal, pointer)
+    payload_path = layout.root / str(journal["payload_relative_path"])
+    payload_parent = payload_path.parent
+    _mkdir_safe(payload_parent)
+
+    if journal["state"] == "PREPARED":
+        # A PREPARED journal has no durable body.  The caller must still own the
+        # envelope during the initial invocation; recovery begins after payload.
+        raise MontageLearningFileBridgeError(
+            "profile PREPARED recovery requires the original envelope"
+        )
+    payload = _read_json_regular(payload_path, max_bytes=MAX_DELIVERY_BYTES)
+    payload_bytes = canonical_json_bytes(payload) + b"\n"
+    if f"sha256:{sha256(payload_bytes).hexdigest()}" != journal["payload_document_sha256"]:
+        raise MontageLearningFileBridgeError("profile payload durable hash mismatch")
+
+    if journal["state"] == "PAYLOAD_WRITTEN":
+        AtomicJsonWriter.write(layout.profile_pointer, pointer)
+        if _load_profile_pointer(layout) != pointer:
+            raise MontageLearningFileBridgeError("profile pointer read-back mismatch")
+        journal = _advance_profile_journal(layout, journal, "POINTER_COMMITTED")
+        _call_profile_failure(failure_hook, "after_profile_pointer", layout.profile_pointer)
+    if journal["state"] == "POINTER_COMMITTED":
+        AtomicJsonWriter.write(layout.current_profile, payload)
+        if _read_regular_bytes(
+            layout.current_profile, max_bytes=MAX_DELIVERY_BYTES
+        ) != payload_bytes:
+            raise MontageLearningFileBridgeError("profile v1 view byte mismatch")
+        journal = _advance_profile_journal(layout, journal, "VIEW_COMMITTED")
+        _call_profile_failure(failure_hook, "after_profile_view", layout.current_profile)
+    if journal["state"] == "VIEW_COMMITTED":
+        AtomicJsonWriter.write(layout.profile_marker, marker)
+        if _read_json_regular(layout.profile_marker, max_bytes=128 * 1024) != marker:
+            raise MontageLearningFileBridgeError("profile marker read-back mismatch")
+        journal = _advance_profile_journal(layout, journal, "MARKER_COMMITTED")
+        _call_profile_failure(failure_hook, "after_profile_marker", layout.profile_marker)
+    if journal["state"] == "MARKER_COMMITTED":
+        _verify_profile_publication(layout, pointer)
+        journal = _advance_profile_journal(layout, journal, "READBACK_VERIFIED")
+    if journal["state"] != "READBACK_VERIFIED":
+        raise MontageLearningFileBridgeError("profile recovery did not reach terminal")
+    _verify_profile_publication(layout, pointer)
+    layout.profile_journal.unlink()
+    _directory_fsync(layout.state)
+    return pointer
+
+
+def _write_profile_payload_and_recover(
+    layout: BridgeLayout,
+    journal: Mapping[str, object],
+    envelope: Mapping[str, object],
+    *,
+    failure_hook: Callable[[str, Path], None] | None,
+) -> dict[str, object]:
+    payload_path = layout.root / str(journal["payload_relative_path"])
+    _mkdir_safe(payload_path.parent)
+    _write_new_or_identical(payload_path, envelope)
+    if _read_regular_bytes(payload_path, max_bytes=MAX_DELIVERY_BYTES) != (
+        canonical_json_bytes(dict(envelope)) + b"\n"
+    ):
+        raise MontageLearningFileBridgeError("profile immutable payload mismatch")
+    current = _advance_profile_journal(layout, journal, "PAYLOAD_WRITTEN")
+    _call_profile_failure(failure_hook, "after_profile_payload", payload_path)
+    return _recover_profile_promotion_locked(layout, failure_hook=failure_hook)
+
+
+def _verify_profile_publication(
+    layout: BridgeLayout, pointer: Mapping[str, object]
+) -> None:
+    current = _load_profile_pointer(layout)
+    if current != dict(pointer):
+        raise MontageLearningFileBridgeError("profile pointer currentness mismatch")
+    payload_path = layout.root / str(pointer["payload_relative_path"])
+    payload_bytes = _read_regular_bytes(payload_path, max_bytes=MAX_DELIVERY_BYTES)
+    if f"sha256:{sha256(payload_bytes).hexdigest()}" != pointer["payload_document_sha256"]:
+        raise MontageLearningFileBridgeError("profile payload hash mismatch")
+    if _read_regular_bytes(layout.current_profile, max_bytes=MAX_DELIVERY_BYTES) != payload_bytes:
+        raise MontageLearningFileBridgeError("profile compatibility view mismatch")
+    marker = _read_json_regular(layout.profile_marker, max_bytes=128 * 1024)
+    expected_marker = _profile_marker_from_journal(pointer, pointer)
+    if marker != expected_marker:
+        raise MontageLearningFileBridgeError("profile marker binding mismatch")
+
+
+def _call_profile_failure(
+    hook: Callable[[str, Path], None] | None, phase: str, path: Path
+) -> None:
+    if hook is not None:
+        hook(phase, path)
 
 
 def _write_new_or_identical(path: Path, value: Mapping[str, object]) -> None:
@@ -1265,6 +2055,36 @@ def _decode_builtin_json(raw: bytes) -> dict[str, Any]:
     if type(value) is not dict:
         raise MontageLearningFileBridgeError("delivery root must be an object")
     return value
+
+
+def _exact_json_snapshot(value: object, *, path: str, max_depth: int) -> Any:
+    if max_depth < 0:
+        raise MontageLearningFileBridgeError("JSON nesting is too deep")
+    if value is None or type(value) in {str, bool, int}:
+        return value
+    if type(value) is float:
+        if not math.isfinite(value):
+            raise MontageLearningFileBridgeError(f"{path} is not finite")
+        return value
+    if type(value) is list:
+        return [
+            _exact_json_snapshot(
+                item, path=f"{path}[{index}]", max_depth=max_depth - 1
+            )
+            for index, item in enumerate(value)
+        ]
+    if type(value) is dict:
+        if any(type(key) is not str for key in value):
+            raise MontageLearningFileBridgeError(f"{path} has an invalid key")
+        return {
+            key: _exact_json_snapshot(
+                item, path=f"{path}.{key}", max_depth=max_depth - 1
+            )
+            for key, item in value.items()
+        }
+    raise MontageLearningFileBridgeError(
+        f"{path} must contain exact built-in JSON values"
+    )
 
 
 def _read_json_regular(path: Path, *, max_bytes: int) -> dict[str, Any]:
@@ -1357,7 +2177,7 @@ def _same_path(left: Path, right: Path) -> bool:
 
 
 def _require_id(value: object, field: str) -> str:
-    if not isinstance(value, str) or _ID_RE.fullmatch(value) is None:
+    if type(value) is not str or _ID_RE.fullmatch(value) is None:
         raise MontageLearningFileBridgeError(f"{field} is invalid")
     return value
 
@@ -1398,18 +2218,26 @@ __all__ = [
     "PRODUCTION_BRIDGE_ROOT",
     "ReceiptPublicationPaths",
     "build_receipt_publication_pending",
+    "build_generic_receipt_correlation",
+    "bridge_importer_guard",
+    "advance_claim_state",
     "claim_delivery",
     "clear_pending_receipt_publication_exact",
+    "complete_claim",
+    "complete_quarantined_claim",
     "create_pending_receipt_publication_new_or_identical",
     "list_delivery_paths",
+    "load_generic_receipt_correlation",
     "load_bridge_owner",
     "load_published_receipt",
     "load_receipt_publication_pending",
     "mark_claim_receipt_published",
     "provision_bridge",
     "publish_current_profile",
+    "publish_generic_receipt_correlation_new_or_identical",
     "publish_receipt_new_or_identical",
     "quarantine_claim",
+    "recover_current_profile",
     "receipt_identity_publisher_guard",
     "receipt_publication_paths",
     "snapshot_delivery",

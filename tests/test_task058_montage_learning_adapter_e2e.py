@@ -18,6 +18,9 @@ from ai_video_production.montage_learning_canonical_admission_transaction import
 )
 from ai_video_production.montage_learning_connector_readiness import (
     ConnectorReadinessEvidence,
+    ConnectorReadinessEvidenceV2,
+    ConnectorReadinessComponentV2,
+    ConnectorReadinessPredicateV2,
     MontageLearningConnectorReadinessError,
     ProfileSourceBinding,
     production_readiness_evidence,
@@ -26,7 +29,9 @@ from ai_video_production.montage_learning_connector_readiness import (
 )
 from ai_video_production.montage_learning_file_bridge import (
     BridgeLayout,
+    publish_current_profile,
     provision_bridge,
+    recover_current_profile,
 )
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
@@ -230,6 +235,117 @@ def test_prebuilt_profile_is_strict_immutable_transport_with_cas(tmp_path):
         )
 
 
+def test_profile_immutable_object_pointer_view_marker_and_restart_recovery(tmp_path):
+    layout = BridgeLayout.for_isolated_test(tmp_path / "bridge")
+    provision_bridge(layout, bridge_instance_id="bridge-fixture-001")
+    value = validate_prebuilt_advisory_profile(_profile())
+
+    def fail_after_payload(phase: str, path: Path) -> None:
+        if phase == "after_profile_payload":
+            assert path.is_file()
+            raise RuntimeError("profile-crash-after-payload")
+
+    with pytest.raises(RuntimeError, match="profile-crash-after-payload"):
+        publish_current_profile(
+            layout,
+            value,
+            expected_previous_profile_sha256=None,
+            failure_hook=fail_after_payload,
+        )
+    journal = json.loads(layout.profile_journal.read_text(encoding="utf-8"))
+    assert journal["state"] == "PAYLOAD_WRITTEN"
+    assert set(journal).isdisjoint({"payload", "preferences", "private_key"})
+
+    pointer = recover_current_profile(layout)
+    assert pointer is not None
+    assert not layout.profile_journal.exists()
+    payload_path = layout.root / pointer["payload_relative_path"]
+    assert payload_path.is_file()
+    assert layout.profile_pointer.is_file()
+    assert layout.profile_marker.is_file()
+    assert layout.current_profile.read_bytes() == payload_path.read_bytes()
+    assert json.loads(payload_path.read_text(encoding="utf-8")) == value
+
+
+def test_profile_prepared_retry_is_idempotent_and_downgrade_fails_closed(tmp_path):
+    layout = BridgeLayout.for_isolated_test(tmp_path / "bridge")
+    provision_bridge(layout, bridge_instance_id="bridge-fixture-001")
+    value = validate_prebuilt_advisory_profile(_profile())
+
+    def fail_prepared(phase: str, path: Path) -> None:
+        if phase == "after_profile_prepared":
+            assert path == layout.profile_journal
+            raise RuntimeError("profile-crash-prepared")
+
+    with pytest.raises(RuntimeError, match="profile-crash-prepared"):
+        publish_current_profile(
+            layout,
+            value,
+            expected_previous_profile_sha256=None,
+            failure_hook=fail_prepared,
+        )
+    assert json.loads(layout.profile_journal.read_text(encoding="utf-8"))[
+        "state"
+    ] == "PREPARED"
+    assert publish_current_profile(
+        layout, value, expected_previous_profile_sha256=None
+    ) == "PUBLISHED"
+
+    stale = _profile("PROFILE-FIXTURE-002")
+    stale["profile_version"] = 0
+    stale["payload"]["preferences"][0]["ranking_bias"] = 0.25
+    stale["profile_sha256"] = sha256_json(stale["payload"])
+    with pytest.raises(ValueError, match="stale"):
+        publish_prebuilt_advisory_profile(
+            layout,
+            stale,
+            source_binding=ProfileSourceBinding.bound_isolated_fixture(),
+            expected_previous_profile_sha256=value["profile_sha256"],
+        )
+
+
+def test_profile_journal_relabel_and_marker_operation_tamper_fail_closed(tmp_path):
+    layout = BridgeLayout.for_isolated_test(tmp_path / "journal")
+    provision_bridge(layout, bridge_instance_id="bridge-fixture-001")
+    value = validate_prebuilt_advisory_profile(_profile())
+
+    def fail_after_payload(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_profile_payload":
+            raise RuntimeError("leave-profile-journal")
+
+    with pytest.raises(RuntimeError, match="leave-profile-journal"):
+        publish_current_profile(
+            layout,
+            value,
+            expected_previous_profile_sha256=None,
+            failure_hook=fail_after_payload,
+        )
+    journal = json.loads(layout.profile_journal.read_text(encoding="utf-8"))
+    journal["state"] = "POINTER_COMMITTED"
+    journal["states"].append("POINTER_COMMITTED")
+    journal["journal_revision"] += 1
+    journal["previous_journal_sha256"] = "sha256:" + "f" * 64
+    journal.pop("journal_sha256")
+    journal["journal_sha256"] = sha256_json(journal)
+    layout.profile_journal.write_text(json.dumps(journal), encoding="utf-8")
+    with pytest.raises(ValueError, match="hash chain"):
+        recover_current_profile(layout)
+
+    marker_layout = BridgeLayout.for_isolated_test(tmp_path / "marker")
+    provision_bridge(marker_layout, bridge_instance_id="bridge-fixture-001")
+    assert publish_current_profile(
+        marker_layout, value, expected_previous_profile_sha256=None
+    ) == "PUBLISHED"
+    marker = json.loads(marker_layout.profile_marker.read_text(encoding="utf-8"))
+    marker["operation_id"] = "sha256:" + "9" * 64
+    marker.pop("marker_self_hash")
+    marker["marker_self_hash"] = sha256_json(marker)
+    marker_layout.profile_marker.write_text(json.dumps(marker), encoding="utf-8")
+    with pytest.raises(ValueError, match="marker binding"):
+        recover_current_profile(marker_layout)
+
+
 @pytest.mark.parametrize(
     "mutate",
     [
@@ -283,6 +399,143 @@ def test_readiness_evidence_rejects_forged_production_profile_binding():
             default_skill_config_unchanged=True,
             reason_codes=("SOURCE_NOT_BOUND",),
         )
+
+
+_READINESS_PREDICATES = {
+    "BRIDGE_ROOT_READY": (
+        "OWNER_IDENTITY", "WINDOWS_DACL", "NO_REPARSE", "ANCESTOR_IDENTITY",
+        "LAYOUT_COMPLETE", "MIGRATION_TERMINAL",
+    ),
+    "GENERIC_INTAKE_READY": (
+        "A_AUTHORITY_CORE", "A_GENERIC_JOURNAL_RECOVERY",
+        "DUPLICATE_REVISION_INVARIANT",
+        "MANIFEST_CURRENTNESS_ROLLBACK_REJECTED", "IMPORTER_CLAIM_RECOVERY",
+        "GENERIC_E2E",
+    ),
+    "EXACT_ADMISSION_READY": (
+        "P1CB_REVALIDATION", "LEDGER_ANCHOR_MARKER_READBACK",
+        "PUBLIC_V2_RECEIPT", "EXACT_E2E",
+    ),
+    "RECEIPT_CORRELATION_READY": (
+        "TRUSTED_A_READBACK", "GENERIC_COMMIT_DOMAIN",
+        "IMMUTABLE_OUTER_RECEIPT_IDENTITY", "OUTER_RECEIPT_EXACT_MATCH",
+        "FORGED_RECEIPT_REJECTED", "LEGACY_STATUS_NON_AUTHORITY",
+    ),
+    "PROFILE_TRANSPORT_READY": (
+        "PRODUCTION_SOURCE_BOUND", "IMMUTABLE_PAYLOAD", "POINTER_CAS_READBACK",
+        "V1_VIEW_BYTE_MATCH", "SKILL_LOAD_PROFILE_E2E",
+    ),
+    "CONNECTOR_E2E_READY": (
+        "DISABLED_DEFAULT", "LEGACY_SAFE", "NO_TIMELINE_RESOLVE_EFFECT",
+        "NO_AUTOMATIC_PROMOTION", "PACKAGE_SCHEMA_IDENTITY",
+    ),
+}
+
+
+def _readiness_component(
+    component_id: str, state: str
+) -> ConnectorReadinessComponentV2:
+    predicates = []
+    for index, predicate_id in enumerate(_READINESS_PREDICATES[component_id]):
+        predicate_state = "PASS"
+        evidence = "sha256:" + "d" * 64
+        reasons: tuple[str, ...] = ()
+        if state == "NOT_RUN":
+            predicate_state = "NOT_RUN"
+            evidence = None
+        elif state == "SOURCE_NOT_BOUND":
+            predicate_state = "FAIL" if index == 0 else "NOT_RUN"
+            evidence = "sha256:" + "e" * 64 if index == 0 else None
+            reasons = ("SOURCE_NOT_BOUND",) if index == 0 else ()
+        predicates.append(
+            ConnectorReadinessPredicateV2(
+                predicate_id=predicate_id,
+                state=predicate_state,
+                evidence_sha256=evidence,
+                reason_codes=reasons,
+            )
+        )
+    return ConnectorReadinessComponentV2.compile(
+        component_id=component_id,
+        state=state,
+        code_sha256="sha256:" + "a" * 64,
+        schema_sha256="sha256:" + "b" * 64,
+        test_vector_sha256="sha256:" + "c" * 64,
+        observed_at="2026-08-27T00:00:00Z",
+        expires_at="2026-08-27T00:10:00Z",
+        evidence_sha256=("sha256:" + "d" * 64,) if state == "PASS" else (),
+        predicates=tuple(predicates),
+        reason_codes=("SOURCE_NOT_BOUND",) if state == "SOURCE_NOT_BOUND" else (),
+    )
+
+
+def _readiness_v2(profile_state: str) -> ConnectorReadinessEvidenceV2:
+    components = tuple(
+        _readiness_component(
+            component_id,
+            profile_state if component_id == "PROFILE_TRANSPORT_READY" else "PASS",
+        )
+        for component_id in _READINESS_PREDICATES
+    )
+    return ConnectorReadinessEvidenceV2.compile(
+        bvp_main_sha256="sha256:" + "1" * 64,
+        bvp_package_sha256="sha256:" + "2" * 64,
+        skill_package_sha256="sha256:" + "3" * 64,
+        connector_config_sha256="sha256:" + "4" * 64,
+        bridge_owner_attestation_sha256="sha256:" + "5" * 64,
+        evaluation_mode="FULL_E2E",
+        activation_record_sha256=None,
+        config_enabled=False,
+        verified_at="2026-08-27T00:01:00Z",
+        expires_at="2026-08-27T00:09:00Z",
+        components=components,
+        reason_codes=("SOURCE_NOT_BOUND",) if profile_state == "SOURCE_NOT_BOUND" else (),
+    )
+
+
+def test_readiness_v2_six_components_source_not_bound_and_ready_to_enable():
+    unbound = _readiness_v2("SOURCE_NOT_BOUND")
+    unbound_dict = unbound.to_dict()
+    assert unbound_dict["overall_state"] == "SOURCE_NOT_BOUND"
+    assert tuple(unbound_dict["components"]) == tuple(_READINESS_PREDICATES)
+    assert unbound_dict["connector_enabled"] is False
+    assert unbound_dict["activation_authorized"] is False
+    assert ConnectorReadinessEvidenceV2.from_dict(
+        json.loads(json.dumps(unbound_dict, sort_keys=True))
+    ) == unbound
+
+    ready = _readiness_v2("PASS").to_dict()
+    assert ready["overall_state"] == "READY_TO_ENABLE"
+    assert ready["connector_enabled"] is False
+    assert ready["activation_authorized"] is False
+    assert ready["automatic_promotion_authorized"] is False
+    assert ready["timeline_mutation_authorized"] is False
+    assert ready["resolve_write_authorized"] is False
+
+
+def test_readiness_v2_relabel_rehash_and_security_model_alias_fail_closed():
+    value = _readiness_v2("SOURCE_NOT_BOUND").to_dict()
+    value["overall_state"] = "READY_TO_ENABLE"
+    value.pop("readiness_self_hash")
+    value.pop("readiness_id")
+    readiness_id = sha256_json(
+        {"domain": "BVP_MONTAGE_CONNECTOR_READINESS_ID_V2", **value}
+    )
+    value["readiness_id"] = readiness_id
+    value["readiness_self_hash"] = sha256_json(
+        {**value}
+    )
+    with pytest.raises(
+        MontageLearningConnectorReadinessError, match="classification"
+    ):
+        ConnectorReadinessEvidenceV2.from_dict(value)
+
+    aliased = _readiness_v2("PASS").to_dict()
+    aliased["bridge_security_model"] = "WINDOWS_DACL_VERIFIED"
+    with pytest.raises(
+        MontageLearningConnectorReadinessError, match="security model"
+    ):
+        ConnectorReadinessEvidenceV2.from_dict(aliased)
 
 
 @pytest.mark.skipif(not SKILL_SCRIPT.is_file(), reason="installed SKILL unavailable")
@@ -339,8 +592,10 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
         canonical_store.generic_observation_path.read_text(encoding="utf-8")
     )
     assert ledger["entries"][0]["record_id"] == _learning()["record_id"]
-    assert ledger["entries"][0]["learning_sha256"] == staged["learning_sha256"]
-    assert ledger["learning_adoption_authorized"] is False
+    assert ledger["entries"][0]["source_digest_sha256"] == staged[
+        "learning_sha256"
+    ].removeprefix("sha256:")
+    assert ledger["learning_adopted"] is False
 
     matched = _run_adapter(
         tmp_path,

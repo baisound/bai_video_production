@@ -18,6 +18,7 @@ from .montage_learning_canonical_admission_transaction import (
     MontageLearningCanonicalAdmissionResult,
     MontageLearningCanonicalAdmissionTransactionStore,
     MontageLearningVerifiedAdmissionReceipt,
+    ReviewObservationAdmissionResult,
 )
 from .montage_learning_file_bridge import (
     BridgeLayout,
@@ -27,17 +28,24 @@ from .montage_learning_file_bridge import (
     GENERIC_RECEIPT_NAMESPACE,
     MontageLearningFileBridgeError,
     ReceiptPublicationPaths,
+    advance_claim_state,
+    bridge_importer_guard,
+    build_generic_receipt_correlation,
     build_receipt_publication_pending,
     claim_delivery,
     clear_pending_receipt_publication_exact,
+    complete_claim,
+    complete_quarantined_claim,
     create_pending_receipt_publication_new_or_identical,
     list_delivery_paths,
     load_published_receipt,
+    load_generic_receipt_correlation,
     load_receipt_publication_pending,
     load_bridge_owner,
     mark_claim_receipt_published,
     provision_bridge,
     publish_receipt_new_or_identical,
+    publish_generic_receipt_correlation_new_or_identical,
     quarantine_claim,
     receipt_identity_publisher_guard,
     snapshot_delivery,
@@ -48,6 +56,7 @@ from .montage_learning_receipt_contracts import (
     EXACT_EVIDENCE,
     parse_montage_learning_admission_receipt,
 )
+from .serialization import sha256_json
 
 
 _SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -82,6 +91,7 @@ class ExactAdmissionCoordinates:
 class GenericObservationCoordinates:
     expected_revision: int
     generic_store_id: str = "task058-generic-review-observations"
+    owner_scope_hash: str = "sha256:" + "0" * 64
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,16 +170,17 @@ class MontageLearningBridgeApplication:
         ]
         | None = None,
     ) -> tuple[ImportResult, ...]:
-        exact_coordinates = exact_coordinates_by_record or {}
-        generic_coordinates = generic_coordinates_by_record or {}
-        return tuple(
-            self.import_path(
-                path,
-                exact_coordinates=exact_coordinates.get(_filename_record(path)),
-                generic_coordinates=generic_coordinates.get(_filename_record(path)),
+        with bridge_importer_guard(self.layout):
+            exact_coordinates = exact_coordinates_by_record or {}
+            generic_coordinates = generic_coordinates_by_record or {}
+            return tuple(
+                self.import_path(
+                    path,
+                    exact_coordinates=exact_coordinates.get(_filename_record(path)),
+                    generic_coordinates=generic_coordinates.get(_filename_record(path)),
+                )
+                for path in list_delivery_paths(self.layout)
             )
-            for path in list_delivery_paths(self.layout)
-        )
 
     def import_path(
         self,
@@ -178,70 +189,73 @@ class MontageLearningBridgeApplication:
         exact_coordinates: ExactAdmissionCoordinates | None = None,
         generic_coordinates: GenericObservationCoordinates | None = None,
     ) -> ImportResult:
-        owner = load_bridge_owner(self.layout)
-        claim = claim_delivery(path, self.layout)
-        self._call_failure_hook(
-            "after_claim_rename_before_snapshot", claim.processing_path
-        )
-        try:
-            snapshot = snapshot_delivery(claim, self.layout)
-        except Exception as exc:
-            self._quarantine_pre_admission(claim, exc)
-            raise AssertionError("unreachable")
-        message_type = snapshot.document.get("message_type")
-        if message_type == "BvpMontageLearningDelivery":
-            if generic_coordinates is None:
-                raise MontageLearningBridgeApplicationError(
-                    "generic delivery requires revision and store coordinates"
-                )
-            _validate_generic_coordinates(generic_coordinates)
-            try:
-                candidate = validate_generic_learning_delivery(snapshot.document)
-                if (
-                    candidate.record_id != snapshot.record_id
-                    or candidate.source_sha256 != snapshot.source_sha256
-                ):
-                    raise MontageLearningBridgeApplicationError(
-                        "generic independent validation binding mismatch"
-                    )
-            except Exception as exc:
-                self._quarantine_pre_admission(claim, exc)
-                raise AssertionError("unreachable")
-            return self._import_generic(snapshot, claim, generic_coordinates)
-        if message_type == "BvpMontageExactEvidenceDelivery":
-            if exact_coordinates is None:
-                raise MontageLearningBridgeApplicationError(
-                    "exact delivery requires staging and anchor coordinates"
-                )
-            _validate_exact_coordinates(exact_coordinates)
-            try:
-                candidate = validate_exact_evidence_delivery(
-                    snapshot.document,
-                    expected_owner_scope_hash=(
-                        exact_coordinates.expected_owner_scope_hash
-                    ),
-                )
-                if (
-                    candidate.record_id != snapshot.record_id
-                    or candidate.source_sha256 != snapshot.source_sha256
-                ):
-                    raise MontageLearningBridgeApplicationError(
-                        "exact independent validation binding mismatch"
-                    )
-            except Exception as exc:
-                self._quarantine_pre_admission(claim, exc)
-                raise AssertionError("unreachable")
-            return self._import_exact(
-                snapshot,
-                claim,
-                owner.bridge_instance_id,
-                exact_coordinates,
+        with bridge_importer_guard(self.layout):
+            owner = load_bridge_owner(self.layout)
+            claim = claim_delivery(path, self.layout)
+            self._call_failure_hook(
+                "after_claim_rename_before_snapshot", claim.processing_path
             )
-        error = MontageLearningBridgeApplicationError(
-            "delivery lane is unsupported"
-        )
-        self._quarantine_pre_admission(claim, error)
-        raise AssertionError("unreachable")
+            try:
+                snapshot = snapshot_delivery(claim, self.layout)
+            except Exception as exc:
+                self._quarantine_pre_admission(claim, exc)
+                raise AssertionError("unreachable")
+            message_type = snapshot.document.get("message_type")
+            if message_type == "BvpMontageLearningDelivery":
+                if generic_coordinates is None:
+                    raise MontageLearningBridgeApplicationError(
+                        "generic delivery requires revision and store coordinates"
+                    )
+                _validate_generic_coordinates(generic_coordinates)
+                try:
+                    candidate = validate_generic_learning_delivery(snapshot.document)
+                    if (
+                        candidate.record_id != snapshot.record_id
+                        or candidate.source_sha256 != snapshot.source_sha256
+                    ):
+                        raise MontageLearningBridgeApplicationError(
+                            "generic independent validation binding mismatch"
+                        )
+                except Exception as exc:
+                    self._quarantine_pre_admission(claim, exc)
+                    raise AssertionError("unreachable")
+                claim = self._ensure_phase(claim, "CLASSIFIED")
+                return self._import_generic(snapshot, claim, generic_coordinates)
+            if message_type == "BvpMontageExactEvidenceDelivery":
+                if exact_coordinates is None:
+                    raise MontageLearningBridgeApplicationError(
+                        "exact delivery requires staging and anchor coordinates"
+                    )
+                _validate_exact_coordinates(exact_coordinates)
+                try:
+                    candidate = validate_exact_evidence_delivery(
+                        snapshot.document,
+                        expected_owner_scope_hash=(
+                            exact_coordinates.expected_owner_scope_hash
+                        ),
+                    )
+                    if (
+                        candidate.record_id != snapshot.record_id
+                        or candidate.source_sha256 != snapshot.source_sha256
+                    ):
+                        raise MontageLearningBridgeApplicationError(
+                            "exact independent validation binding mismatch"
+                        )
+                except Exception as exc:
+                    self._quarantine_pre_admission(claim, exc)
+                    raise AssertionError("unreachable")
+                claim = self._ensure_phase(claim, "CLASSIFIED")
+                return self._import_exact(
+                    snapshot,
+                    claim,
+                    owner.bridge_instance_id,
+                    exact_coordinates,
+                )
+            error = MontageLearningBridgeApplicationError(
+                "delivery lane is unsupported"
+            )
+            self._quarantine_pre_admission(claim, error)
+            raise AssertionError("unreachable")
 
     def _import_generic(
         self,
@@ -268,50 +282,112 @@ class MontageLearningBridgeApplication:
                     "generic_store_id": coordinates.generic_store_id,
                 },
             )
-            restarting = self._load_matching_pending(paths, pending)
+            pending_state = self._load_matching_pending(paths, pending)
+            restarting = pending_state is not None
             existing = self._load_existing(paths)
+            correlation = self._load_generic_correlation(paths)
+            claim = self._ensure_phase(claim, "STORE_PREPARED")
             if existing is not None:
-                try:
-                    receipt = _parse_skill_v1_receipt(
-                        existing,
-                        record_id=snapshot.record_id,
-                        learning_sha256=snapshot.source_sha256,
+                if correlation is None:
+                    raise _recovery_required(
+                        "published generic receipt has no trusted A correlation"
                     )
-                except MontageLearningBridgeApplicationError as exc:
-                    raise _recovery_required("published generic receipt is invalid", exc)
-                self._mark_published(claim)
+                trusted = self._trusted_generic_from_correlation(
+                    snapshot, coordinates, correlation
+                )
+                receipt, expected_correlation = _generic_publication_documents(
+                    trusted, snapshot, coordinates, paths
+                )
+                if existing != receipt or correlation != expected_correlation:
+                    raise _recovery_required(
+                        "published generic receipt is not the trusted A projection"
+                    )
+                claim = self._ensure_phase(claim, "STORE_COMMITTED")
+                claim = self._mark_published(claim)
                 if restarting:
-                    self._clear_pending(paths, pending)
-                return _result("GENERIC_REVIEW_OBSERVATION", snapshot, receipt, paths)
+                    self._clear_pending(paths, pending_state)
+                self._complete(claim)
+                return _result(
+                    "GENERIC_REVIEW_OBSERVATION",
+                    snapshot,
+                    receipt,
+                    paths,
+                    status=DUPLICATE,
+                )
+            if correlation is not None:
+                trusted = self._trusted_generic_from_correlation(
+                    snapshot, coordinates, correlation
+                )
+                receipt, expected_correlation = _generic_publication_documents(
+                    trusted, snapshot, coordinates, paths
+                )
+                if correlation != expected_correlation:
+                    raise _recovery_required(
+                        "generic correlation is not the trusted A projection"
+                    )
+                claim = self._ensure_phase(claim, "STORE_COMMITTED")
+                try:
+                    receipt_path = publish_receipt_new_or_identical(
+                        self.layout,
+                        record_id=snapshot.record_id,
+                        source_sha256=snapshot.source_sha256,
+                        receipt=receipt,
+                        exact_v2=False,
+                    )
+                except MontageLearningFileBridgeError as exc:
+                    raise _recovery_required(
+                        "generic receipt recovery publication failed", exc
+                    ) from exc
+                claim = self._mark_published(claim)
+                self._call_failure_hook(
+                    "after_receipt_publish_before_pending_cleanup", receipt_path
+                )
+                if restarting:
+                    self._clear_pending(paths, pending_state)
+                self._complete(claim)
+                return _result(
+                    "GENERIC_REVIEW_OBSERVATION",
+                    snapshot,
+                    receipt,
+                    paths,
+                    status=DUPLICATE,
+                )
             if not restarting:
                 self._create_pending(paths, pending)
             try:
-                committed = self._canonical_port.record_exact_generic_observation(
-                    snapshot.document,
-                    expected_revision=coordinates.expected_revision,
-                    generic_store_id=coordinates.generic_store_id,
-                )
-            except MontageLearningCanonicalAdmissionError as exc:
-                if not restarting or str(exc) != "generic CAS/scope is stale":
-                    raise _recovery_required("generic canonical admission failed", exc)
-                try:
-                    committed = self._canonical_port.record_exact_generic_observation(
+                if restarting:
+                    committed = self._canonical_port.recover_generic_observation(
                         snapshot.document,
-                        expected_revision=coordinates.expected_revision + 1,
                         generic_store_id=coordinates.generic_store_id,
+                        owner_scope_hash=coordinates.owner_scope_hash,
                     )
-                except MontageLearningCanonicalAdmissionError as retry_exc:
-                    raise _recovery_required(
-                        "generic restart CAS retry failed", retry_exc
-                    ) from retry_exc
-                receipt = _validate_generic_commit(
-                    committed,
-                    snapshot,
-                    required_duplicate_revision=coordinates.expected_revision + 2,
+                else:
+                    committed = self._canonical_port.admit_generic_observation(
+                        snapshot.document,
+                        expected_revision=coordinates.expected_revision,
+                        generic_store_id=coordinates.generic_store_id,
+                        owner_scope_hash=coordinates.owner_scope_hash,
+                    )
+            except MontageLearningCanonicalAdmissionError as exc:
+                raise _recovery_required("generic canonical admission failed", exc)
+            trusted = self._trusted_generic_from_result(
+                committed, snapshot, coordinates
+            )
+            receipt, correlation = _generic_publication_documents(
+                trusted, snapshot, coordinates, paths
+            )
+            try:
+                publish_generic_receipt_correlation_new_or_identical(
+                    paths, correlation
                 )
-            else:
-                receipt = _validate_generic_commit(committed, snapshot)
-            self._call_failure_hook("after_canonical_commit_before_receipt", paths.receipt_path)
+            except MontageLearningFileBridgeError as exc:
+                raise _recovery_required(
+                    "generic trusted correlation publication failed", exc
+                ) from exc
+            claim = self._ensure_phase(claim, "STORE_COMMITTED")
+            self._call_failure_hook(
+                "after_canonical_commit_before_receipt", paths.receipt_path
+            )
             receipt_path = publish_receipt_new_or_identical(
                 self.layout,
                 record_id=snapshot.record_id,
@@ -319,10 +395,19 @@ class MontageLearningBridgeApplication:
                 receipt=receipt,
                 exact_v2=False,
             )
-            self._mark_published(claim)
-            self._call_failure_hook("after_receipt_publish_before_pending_cleanup", receipt_path)
-            self._clear_pending(paths, pending)
-            return _result("GENERIC_REVIEW_OBSERVATION", snapshot, receipt, paths)
+            claim = self._mark_published(claim)
+            self._call_failure_hook(
+                "after_receipt_publish_before_pending_cleanup", receipt_path
+            )
+            self._clear_pending(paths, pending_state or pending)
+            self._complete(claim)
+            return _result(
+                "GENERIC_REVIEW_OBSERVATION",
+                snapshot,
+                receipt,
+                paths,
+                status=committed.status,
+            )
 
     def _import_exact(
         self,
@@ -347,15 +432,29 @@ class MontageLearningBridgeApplication:
                 expected_revision=coordinates.expected_staging_revision,
                 coordinates=_exact_coordinate_mapping(coordinates),
             )
-            restarting = self._load_matching_pending(paths, pending)
+            pending_state = self._load_matching_pending(paths, pending)
+            restarting = pending_state is not None
             existing = self._load_existing(paths)
+            claim = self._ensure_phase(claim, "STORE_PREPARED")
             if existing is not None:
-                receipt = _validate_exact_receipt(
-                    existing, snapshot, bridge_instance_id, coordinates
+                try:
+                    verified = self._canonical_port.get_verified_receipt()
+                except Exception as exc:
+                    raise _recovery_required(
+                        "exact trusted current read failed", exc
+                    ) from exc
+                receipt = _trusted_exact_receipt(
+                    verified, snapshot, bridge_instance_id, coordinates
                 )
-                self._mark_published(claim)
+                if existing != receipt:
+                    raise _recovery_required(
+                        "published exact receipt is not the trusted A projection"
+                    )
+                claim = self._ensure_phase(claim, "STORE_COMMITTED")
+                claim = self._mark_published(claim)
                 if restarting:
-                    self._clear_pending(paths, pending)
+                    self._clear_pending(paths, pending_state)
+                self._complete(claim)
                 return _result("EXACT_EVIDENCE", snapshot, receipt, paths)
             if restarting:
                 try:
@@ -378,11 +477,13 @@ class MontageLearningBridgeApplication:
                         receipt=receipt,
                         exact_v2=True,
                     )
-                    self._mark_published(claim)
+                    claim = self._ensure_phase(claim, "STORE_COMMITTED")
+                    claim = self._mark_published(claim)
                     self._call_failure_hook(
                         "after_receipt_publish_before_pending_cleanup", receipt_path
                     )
-                    self._clear_pending(paths, pending)
+                    self._clear_pending(paths, pending_state)
+                    self._complete(claim)
                     return _result("EXACT_EVIDENCE", snapshot, receipt, paths)
             if not restarting:
                 self._create_pending(paths, pending)
@@ -398,6 +499,20 @@ class MontageLearningBridgeApplication:
             receipt = _validate_exact_receipt(
                 committed.receipt.to_dict(), snapshot, bridge_instance_id, coordinates
             )
+            try:
+                verified = self._canonical_port.get_verified_receipt()
+            except Exception as exc:
+                raise _recovery_required(
+                    "exact trusted current read failed", exc
+                ) from exc
+            trusted_receipt = _trusted_exact_receipt(
+                verified, snapshot, bridge_instance_id, coordinates
+            )
+            if trusted_receipt != receipt:
+                raise _recovery_required(
+                    "exact commit result differs from trusted current read"
+                )
+            claim = self._ensure_phase(claim, "STORE_COMMITTED")
             self._call_failure_hook("after_canonical_commit_before_receipt", paths.receipt_path)
             receipt_path = publish_receipt_new_or_identical(
                 self.layout,
@@ -406,22 +521,23 @@ class MontageLearningBridgeApplication:
                 receipt=receipt,
                 exact_v2=True,
             )
-            self._mark_published(claim)
+            claim = self._mark_published(claim)
             self._call_failure_hook("after_receipt_publish_before_pending_cleanup", receipt_path)
-            self._clear_pending(paths, pending)
+            self._clear_pending(paths, pending_state or pending)
+            self._complete(claim)
             return _result("EXACT_EVIDENCE", snapshot, receipt, paths)
 
     def _load_matching_pending(
         self, paths: ReceiptPublicationPaths, expected: Mapping[str, object]
-    ) -> bool:
+    ) -> dict[str, object] | None:
         try:
             current = load_receipt_publication_pending(paths)
             if current is None:
-                return False
+                return None
             if current != dict(expected):
                 raise _recovery_required("pending receipt request does not match")
             create_pending_receipt_publication_new_or_identical(paths, expected)
-            return True
+            return current
         except MontageLearningFileBridgeError as exc:
             raise _recovery_required("pending receipt is invalid", exc) from exc
 
@@ -432,6 +548,103 @@ class MontageLearningBridgeApplication:
             return load_published_receipt(paths)
         except MontageLearningFileBridgeError as exc:
             raise _recovery_required("published receipt is invalid", exc) from exc
+
+    def _load_generic_correlation(
+        self, paths: ReceiptPublicationPaths
+    ) -> dict[str, object] | None:
+        try:
+            return load_generic_receipt_correlation(paths)
+        except MontageLearningFileBridgeError as exc:
+            raise _recovery_required(
+                "generic receipt correlation is invalid", exc
+            ) from exc
+
+    def _trusted_generic_from_result(
+        self,
+        result: object,
+        snapshot: DeliverySnapshot,
+        coordinates: GenericObservationCoordinates,
+    ) -> ReviewObservationAdmissionResult:
+        if not isinstance(result, ReviewObservationAdmissionResult):
+            raise _recovery_required(
+                "canonical port returned an untyped generic result"
+            )
+        readback = result.canonical_readback.to_dict()
+        try:
+            verified = self._canonical_port.get_verified_generic_observation(
+                record_id=snapshot.record_id,
+                learning_sha256=snapshot.source_sha256,
+                canonical_commit_sha256=_prefixed_sha(
+                    readback["canonical_commit_sha256"]
+                ),
+                generic_store_id=coordinates.generic_store_id,
+                owner_scope_hash=coordinates.owner_scope_hash,
+            )
+        except Exception as exc:
+            raise _recovery_required(
+                "generic trusted current read-back failed", exc
+            ) from exc
+        if (
+            not isinstance(verified, ReviewObservationAdmissionResult)
+            or verified.canonical_readback.to_dict() != readback
+        ):
+            raise _recovery_required(
+                "generic trusted current read-back differs from commit result"
+            )
+        _validate_generic_trusted_result(verified, snapshot, coordinates)
+        return verified
+
+    def _trusted_generic_from_correlation(
+        self,
+        snapshot: DeliverySnapshot,
+        coordinates: GenericObservationCoordinates,
+        correlation: Mapping[str, object],
+    ) -> ReviewObservationAdmissionResult:
+        try:
+            verified = self._canonical_port.get_verified_generic_observation(
+                record_id=snapshot.record_id,
+                learning_sha256=snapshot.source_sha256,
+                canonical_commit_sha256=str(
+                    correlation["canonical_commit_sha256"]
+                ),
+                generic_store_id=coordinates.generic_store_id,
+                owner_scope_hash=coordinates.owner_scope_hash,
+            )
+        except Exception as exc:
+            raise _recovery_required(
+                "generic trusted current read-back failed", exc
+            ) from exc
+        if not isinstance(verified, ReviewObservationAdmissionResult):
+            raise _recovery_required(
+                "generic trusted reader returned an untyped result"
+            )
+        _validate_generic_trusted_result(verified, snapshot, coordinates)
+        return verified
+
+    def _ensure_phase(self, claim: DeliveryClaim, target: str) -> DeliveryClaim:
+        phases = [
+            "CLAIMED",
+            "CLASSIFIED",
+            "STORE_PREPARED",
+            "STORE_COMMITTED",
+            "RECEIPT_PUBLISHED",
+        ]
+        if claim.state not in phases or target not in phases:
+            raise _recovery_required("import journal phase is unsupported")
+        current_index = phases.index(claim.state)
+        target_index = phases.index(target)
+        while current_index < target_index:
+            next_state = phases[current_index + 1]
+            if next_state == "RECEIPT_PUBLISHED":
+                break
+            try:
+                claim = advance_claim_state(claim, self.layout, next_state)
+            except MontageLearningFileBridgeError as exc:
+                raise _recovery_required(
+                    "import journal phase advance failed", exc
+                ) from exc
+            current_index += 1
+        return claim
 
     def _create_pending(
         self, paths: ReceiptPublicationPaths, pending: Mapping[str, object]
@@ -449,19 +662,28 @@ class MontageLearningBridgeApplication:
         except MontageLearningFileBridgeError as exc:
             raise _recovery_required("pending receipt cleanup failed", exc) from exc
 
-    def _mark_published(self, claim: DeliveryClaim) -> None:
+    def _mark_published(self, claim: DeliveryClaim) -> DeliveryClaim:
         try:
-            mark_claim_receipt_published(claim, self.layout)
+            return mark_claim_receipt_published(claim, self.layout)
         except MontageLearningFileBridgeError as exc:
             raise _recovery_required(
                 "import journal receipt state publication failed", exc
+            ) from exc
+
+    def _complete(self, claim: DeliveryClaim) -> None:
+        try:
+            complete_claim(claim, self.layout)
+        except MontageLearningFileBridgeError as exc:
+            raise _recovery_required(
+                "import journal completion failed", exc
             ) from exc
 
     def _quarantine_pre_admission(
         self, claim: DeliveryClaim, cause: Exception
     ) -> None:
         try:
-            quarantine_claim(claim, self.layout)
+            quarantined = quarantine_claim(claim, self.layout)
+            complete_quarantined_claim(quarantined, self.layout)
         except MontageLearningFileBridgeError as quarantine_error:
             raise _recovery_required(
                 "pre-admission failure could not be quarantined",
@@ -488,51 +710,122 @@ def _result(
     snapshot: DeliverySnapshot,
     receipt: Mapping[str, object],
     paths: ReceiptPublicationPaths,
+    *,
+    status: str | None = None,
 ) -> ImportResult:
     return ImportResult(
         lane=lane,
         record_id=snapshot.record_id,
         source_sha256=snapshot.source_sha256,
-        status=str(receipt["status"]),
+        status=status or str(receipt["status"]),
         receipt_path=paths.receipt_path,
         canonical_store_written=True,
     )
 
 
-def _validate_generic_commit(
-    committed: object,
+def _prefixed_sha(value: object) -> str:
+    if type(value) is not str:
+        raise _recovery_required("generic trusted digest is not text")
+    candidate = value if value.startswith("sha256:") else f"sha256:{value}"
+    if _SHA_RE.fullmatch(candidate) is None:
+        raise _recovery_required("generic trusted digest is invalid")
+    return candidate
+
+
+def _validate_generic_trusted_result(
+    result: ReviewObservationAdmissionResult,
     snapshot: DeliverySnapshot,
-    *,
-    required_duplicate_revision: int | None = None,
+    coordinates: GenericObservationCoordinates,
 ) -> dict[str, object]:
-    if not isinstance(committed, GenericReviewObservationReceipt):
-        raise _recovery_required("canonical port returned an untyped generic result")
+    body = result.to_dict()
+    readback = result.canonical_readback.to_dict()
     if (
-        committed.record_id != snapshot.record_id
-        or committed.learning_sha256 != snapshot.source_sha256
+        body["operation_outcome"] not in {ACCEPTED, DUPLICATE}
+        or body["store_kind"] != "REVIEW_OBSERVATION"
+        or body["learning_adopted"] is not False
+        or body["profile_promoted"] is not False
+        or body["timeline_mutated"] is not False
+        or body["durable_readback_verified"] is not True
     ):
-        raise _recovery_required("generic commit binding mismatch")
-    try:
-        receipt = _parse_skill_v1_receipt(
-            committed.to_skill_v1_receipt(),
-            record_id=snapshot.record_id,
-            learning_sha256=snapshot.source_sha256,
-        )
-    except MontageLearningBridgeApplicationError as exc:
-        raise _recovery_required("generic receipt is invalid", exc) from exc
-    if committed.status != receipt["status"] or receipt["status"] not in {
-        ACCEPTED,
-        DUPLICATE,
-    }:
-        raise _recovery_required("generic result is ambiguous")
-    if required_duplicate_revision is not None and (
-        committed.status != DUPLICATE
-        or committed.ledger_revision != required_duplicate_revision
-        or not isinstance(committed.duplicate_of_receipt_sha256, str)
-        or _SHA_RE.fullmatch(committed.duplicate_of_receipt_sha256) is None
+        raise _recovery_required("generic trusted result authority fields mismatch")
+    if (
+        readback["record_id"] != snapshot.record_id
+        or _prefixed_sha(readback["source_digest_sha256"])
+        != snapshot.source_sha256
+        or readback["store_kind"] != "REVIEW_OBSERVATION"
+        or _prefixed_sha(readback["owner_scope_hash"])
+        != coordinates.owner_scope_hash
+        or readback["learning_adopted"] is not False
+        or readback["profile_promoted"] is not False
+        or readback["timeline_mutated"] is not False
+        or body["current_store_revision"] < readback["store_revision"]
+        or body["current_product_project_manifest_revision"]
+        < readback["product_project_manifest_revision"]
     ):
-        raise _recovery_required("generic restart result is not the exact duplicate")
-    return receipt
+        raise _recovery_required("generic trusted readback binding mismatch")
+    return readback
+
+
+def _generic_publication_documents(
+    trusted: ReviewObservationAdmissionResult,
+    snapshot: DeliverySnapshot,
+    coordinates: GenericObservationCoordinates,
+    paths: ReceiptPublicationPaths,
+) -> tuple[dict[str, object], dict[str, object]]:
+    readback = _validate_generic_trusted_result(
+        trusted, snapshot, coordinates
+    )
+    receipt_identity = sha256_json(
+        {
+            "domain": "BVP_MONTAGE_LEARNING_SKILL_RECEIPT_V1",
+            "record_id": snapshot.record_id,
+            "learning_sha256": snapshot.source_sha256,
+            "canonical_commit_sha256": _prefixed_sha(
+                readback["canonical_commit_sha256"]
+            ),
+            "internal_receipt_self_hash": _prefixed_sha(
+                readback["internal_receipt_self_hash"]
+            ),
+        }
+    )
+    receipt = _parse_skill_v1_receipt(
+        {
+            "schema_version": "1.0.0",
+            "message_type": "BvpMontageLearningAdmissionReceipt",
+            "record_id": snapshot.record_id,
+            "learning_sha256": snapshot.source_sha256,
+            "status": ACCEPTED,
+            "receipt_id": f"bvp-{receipt_identity.removeprefix('sha256:')}",
+            "timestamp": readback["admission_timestamp"],
+        },
+        record_id=snapshot.record_id,
+        learning_sha256=snapshot.source_sha256,
+    )
+    correlation = build_generic_receipt_correlation(
+        paths,
+        record_id=snapshot.record_id,
+        source_sha256=snapshot.source_sha256,
+        generic_store_id=coordinates.generic_store_id,
+        store_revision=readback["store_revision"],
+        canonical_commit_sha256=_prefixed_sha(
+            readback["canonical_commit_sha256"]
+        ),
+        internal_receipt_self_hash=_prefixed_sha(
+            readback["internal_receipt_self_hash"]
+        ),
+        product_project_manifest_revision=readback[
+            "product_project_manifest_revision"
+        ],
+        product_project_manifest_sha256=_prefixed_sha(
+            readback["product_project_manifest_sha256"]
+        ),
+        child_binding_sha256=_prefixed_sha(
+            readback["child_binding_sha256"]
+        ),
+        ledger_head_sha256=_prefixed_sha(readback["ledger_head_sha256"]),
+        public_receipt_sha256=sha256_json(receipt),
+    )
+    return receipt, correlation
 
 
 def _exact_coordinate_mapping(
@@ -612,7 +905,7 @@ def _parse_skill_v1_receipt(
     if value["status"] not in {ACCEPTED, DUPLICATE}:
         raise MontageLearningBridgeApplicationError("SKILL v1 receipt status invalid")
     _require_id(value["receipt_id"], "receipt_id")
-    if not isinstance(value["timestamp"], str) or not value["timestamp"].strip():
+    if type(value["timestamp"]) is not str or not value["timestamp"].strip():
         raise MontageLearningBridgeApplicationError("receipt timestamp is invalid")
     return dict(value)
 
@@ -620,8 +913,7 @@ def _parse_skill_v1_receipt(
 def _validate_exact_coordinates(value: ExactAdmissionCoordinates) -> None:
     _require_id(value.staging_store_id, "staging_store_id")
     if (
-        isinstance(value.expected_staging_revision, bool)
-        or not isinstance(value.expected_staging_revision, int)
+        type(value.expected_staging_revision) is not int
         or value.expected_staging_revision < 1
     ):
         raise MontageLearningBridgeApplicationError(
@@ -632,7 +924,7 @@ def _validate_exact_coordinates(value: ExactAdmissionCoordinates) -> None:
         "expected_staging_entry_sha256",
     ):
         digest = getattr(value, field)
-        if not isinstance(digest, str) or _SHA_RE.fullmatch(digest) is None:
+        if type(digest) is not str or _SHA_RE.fullmatch(digest) is None:
             raise MontageLearningBridgeApplicationError(f"{field} is invalid")
     for field in (
         "expected_canonical_store_commit_sha256",
@@ -640,19 +932,25 @@ def _validate_exact_coordinates(value: ExactAdmissionCoordinates) -> None:
     ):
         digest = getattr(value, field)
         if digest is not None and (
-            not isinstance(digest, str) or _SHA_RE.fullmatch(digest) is None
+            type(digest) is not str or _SHA_RE.fullmatch(digest) is None
         ):
             raise MontageLearningBridgeApplicationError(f"{field} is invalid")
 
 
 def _validate_generic_coordinates(value: GenericObservationCoordinates) -> None:
     if (
-        isinstance(value.expected_revision, bool)
-        or not isinstance(value.expected_revision, int)
+        type(value.expected_revision) is not int
         or value.expected_revision < 0
     ):
         raise MontageLearningBridgeApplicationError("expected_revision is invalid")
     _require_id(value.generic_store_id, "generic_store_id")
+    if (
+        type(value.owner_scope_hash) is not str
+        or _SHA_RE.fullmatch(value.owner_scope_hash) is None
+    ):
+        raise MontageLearningBridgeApplicationError(
+            "owner_scope_hash is invalid"
+        )
 
 
 def _filename_record(path: Path) -> str:
@@ -663,7 +961,7 @@ def _filename_record(path: Path) -> str:
 
 
 def _require_id(value: object, field: str) -> str:
-    if not isinstance(value, str) or _ID_RE.fullmatch(value) is None:
+    if type(value) is not str or _ID_RE.fullmatch(value) is None:
         raise MontageLearningBridgeApplicationError(f"{field} is invalid")
     return value
 

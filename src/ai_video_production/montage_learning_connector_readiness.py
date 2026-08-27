@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 import math
 import re
 from typing import Any, Mapping
@@ -75,6 +76,43 @@ _PREFERENCE_FIELDS = {
     "reason_codes",
     "ranking_bias",
 }
+_READINESS_COMPONENT_PREDICATES = {
+    "BRIDGE_ROOT_READY": (
+        "OWNER_IDENTITY", "WINDOWS_DACL", "NO_REPARSE", "ANCESTOR_IDENTITY",
+        "LAYOUT_COMPLETE", "MIGRATION_TERMINAL",
+    ),
+    "GENERIC_INTAKE_READY": (
+        "A_AUTHORITY_CORE", "A_GENERIC_JOURNAL_RECOVERY",
+        "DUPLICATE_REVISION_INVARIANT",
+        "MANIFEST_CURRENTNESS_ROLLBACK_REJECTED", "IMPORTER_CLAIM_RECOVERY",
+        "GENERIC_E2E",
+    ),
+    "EXACT_ADMISSION_READY": (
+        "P1CB_REVALIDATION", "LEDGER_ANCHOR_MARKER_READBACK",
+        "PUBLIC_V2_RECEIPT", "EXACT_E2E",
+    ),
+    "RECEIPT_CORRELATION_READY": (
+        "TRUSTED_A_READBACK", "GENERIC_COMMIT_DOMAIN",
+        "IMMUTABLE_OUTER_RECEIPT_IDENTITY", "OUTER_RECEIPT_EXACT_MATCH",
+        "FORGED_RECEIPT_REJECTED", "LEGACY_STATUS_NON_AUTHORITY",
+    ),
+    "PROFILE_TRANSPORT_READY": (
+        "PRODUCTION_SOURCE_BOUND", "IMMUTABLE_PAYLOAD", "POINTER_CAS_READBACK",
+        "V1_VIEW_BYTE_MATCH", "SKILL_LOAD_PROFILE_E2E",
+    ),
+    "CONNECTOR_E2E_READY": (
+        "DISABLED_DEFAULT", "LEGACY_SAFE", "NO_TIMELINE_RESOLVE_EFFECT",
+        "NO_AUTOMATIC_PROMOTION", "PACKAGE_SCHEMA_IDENTITY",
+    ),
+}
+_COMPONENT_STATES = frozenset({"PASS", "FAIL", "NOT_RUN", "SOURCE_NOT_BOUND"})
+_PREDICATE_STATES = frozenset({"PASS", "FAIL", "NOT_RUN"})
+_EVALUATION_MODES = frozenset({"STATUS_ONLY", "FULL_E2E"})
+_OVERALL_STATES = frozenset(
+    {"DISABLED", "SOURCE_NOT_BOUND", "READY_TO_ENABLE", "BLOCKED"}
+)
+_BRIDGE_SECURITY_MODEL = "COOPERATIVE_SAME_USER_WINDOWS_DACL"
+_SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
 
 
 class MontageLearningConnectorReadinessError(ValueError):
@@ -227,6 +265,487 @@ class ConnectorReadinessEvidence:
             "resolve_write_authorized": False,
             "reason_codes": list(self.reason_codes),
         }
+
+
+@dataclass(frozen=True, slots=True)
+class ConnectorReadinessPredicateV2:
+    predicate_id: str
+    state: str
+    evidence_sha256: str | None
+    reason_codes: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        _require_token(self.predicate_id, "predicate_id")
+        if type(self.state) is not str or self.state not in _PREDICATE_STATES:
+            raise MontageLearningConnectorReadinessError("predicate state is invalid")
+        if self.evidence_sha256 is not None:
+            _require_sha(self.evidence_sha256, "predicate evidence_sha256")
+        if self.state == "PASS" and self.evidence_sha256 is None:
+            raise MontageLearningConnectorReadinessError(
+                "passing predicate requires evidence"
+            )
+        _require_sorted_reason_codes(self.reason_codes, "predicate reason_codes")
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "predicate_id": self.predicate_id,
+            "state": self.state,
+            "evidence_sha256": self.evidence_sha256,
+            "reason_codes": list(self.reason_codes),
+        }
+
+    @classmethod
+    def from_dict(
+        cls, value: Mapping[str, object]
+    ) -> "ConnectorReadinessPredicateV2":
+        body = _plain_snapshot(value, path="$predicate", max_depth=4)
+        if type(body) is not dict or set(body) != {
+            "predicate_id", "state", "evidence_sha256", "reason_codes"
+        }:
+            raise MontageLearningConnectorReadinessError(
+                "predicate fields mismatch"
+            )
+        reasons = body["reason_codes"]
+        if type(reasons) is not list:
+            raise MontageLearningConnectorReadinessError(
+                "predicate reason_codes must be a list"
+            )
+        return cls(
+            predicate_id=body["predicate_id"],
+            state=body["state"],
+            evidence_sha256=body["evidence_sha256"],
+            reason_codes=tuple(reasons),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ConnectorReadinessComponentV2:
+    component_id: str
+    component_version: str
+    state: str
+    code_sha256: str
+    schema_sha256: str
+    test_vector_sha256: str
+    observed_at: str
+    expires_at: str
+    evidence_sha256: tuple[str, ...]
+    predicates: tuple[ConnectorReadinessPredicateV2, ...]
+    reason_codes: tuple[str, ...]
+    component_self_hash: str
+
+    def __post_init__(self) -> None:
+        if self.component_id not in _READINESS_COMPONENT_PREDICATES:
+            raise MontageLearningConnectorReadinessError("component_id is invalid")
+        if type(self.component_version) is not str or _SEMVER_RE.fullmatch(
+            self.component_version
+        ) is None:
+            raise MontageLearningConnectorReadinessError(
+                "component_version is invalid"
+            )
+        if type(self.state) is not str or self.state not in _COMPONENT_STATES:
+            raise MontageLearningConnectorReadinessError("component state is invalid")
+        if self.state == "SOURCE_NOT_BOUND" and self.component_id != "PROFILE_TRANSPORT_READY":
+            raise MontageLearningConnectorReadinessError(
+                "SOURCE_NOT_BOUND is profile-only"
+            )
+        for field in ("code_sha256", "schema_sha256", "test_vector_sha256"):
+            _require_sha(getattr(self, field), field)
+        observed = _parse_utc(self.observed_at, "component observed_at")
+        expires = _parse_utc(self.expires_at, "component expires_at")
+        if expires <= observed:
+            raise MontageLearningConnectorReadinessError(
+                "component freshness interval is invalid"
+            )
+        if type(self.evidence_sha256) is not tuple or tuple(sorted(set(self.evidence_sha256))) != self.evidence_sha256:
+            raise MontageLearningConnectorReadinessError(
+                "component evidence must be sorted unique"
+            )
+        for digest in self.evidence_sha256:
+            _require_sha(digest, "component evidence_sha256")
+        if type(self.predicates) is not tuple or any(
+            not isinstance(item, ConnectorReadinessPredicateV2)
+            for item in self.predicates
+        ):
+            raise MontageLearningConnectorReadinessError(
+                "component predicates are invalid"
+            )
+        predicate_ids = tuple(item.predicate_id for item in self.predicates)
+        if predicate_ids != _READINESS_COMPONENT_PREDICATES[self.component_id]:
+            raise MontageLearningConnectorReadinessError(
+                "component predicate set/order mismatch"
+            )
+        if self.state == "PASS" and any(item.state != "PASS" for item in self.predicates):
+            raise MontageLearningConnectorReadinessError(
+                "passing component has a non-passing predicate"
+            )
+        if self.state == "NOT_RUN" and any(item.state != "NOT_RUN" for item in self.predicates):
+            raise MontageLearningConnectorReadinessError(
+                "not-run component has evaluated predicates"
+            )
+        if self.state == "SOURCE_NOT_BOUND" and self.predicates[0].state == "PASS":
+            raise MontageLearningConnectorReadinessError(
+                "unbound Profile component claims a bound producer"
+            )
+        _require_sorted_reason_codes(self.reason_codes, "component reason_codes")
+        _require_sha(self.component_self_hash, "component_self_hash")
+        if sha256_json(self._body()) != self.component_self_hash:
+            raise MontageLearningConnectorReadinessError(
+                "component self-hash mismatch"
+            )
+
+    def _body(self) -> dict[str, object]:
+        return {
+            "component_id": self.component_id,
+            "component_version": self.component_version,
+            "state": self.state,
+            "code_sha256": self.code_sha256,
+            "schema_sha256": self.schema_sha256,
+            "test_vector_sha256": self.test_vector_sha256,
+            "observed_at": self.observed_at,
+            "expires_at": self.expires_at,
+            "evidence_sha256": list(self.evidence_sha256),
+            "predicates": [item.to_dict() for item in self.predicates],
+            "reason_codes": list(self.reason_codes),
+        }
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._body(), "component_self_hash": self.component_self_hash}
+
+    @classmethod
+    def compile(
+        cls,
+        *,
+        component_id: str,
+        state: str,
+        code_sha256: str,
+        schema_sha256: str,
+        test_vector_sha256: str,
+        observed_at: str,
+        expires_at: str,
+        evidence_sha256: tuple[str, ...],
+        predicates: tuple[ConnectorReadinessPredicateV2, ...],
+        reason_codes: tuple[str, ...] = (),
+        component_version: str = "1.0.0",
+    ) -> "ConnectorReadinessComponentV2":
+        provisional = {
+            "component_id": component_id,
+            "component_version": component_version,
+            "state": state,
+            "code_sha256": code_sha256,
+            "schema_sha256": schema_sha256,
+            "test_vector_sha256": test_vector_sha256,
+            "observed_at": observed_at,
+            "expires_at": expires_at,
+            "evidence_sha256": list(evidence_sha256),
+            "predicates": [item.to_dict() for item in predicates],
+            "reason_codes": list(reason_codes),
+        }
+        return cls(
+            component_id=component_id,
+            component_version=component_version,
+            state=state,
+            code_sha256=code_sha256,
+            schema_sha256=schema_sha256,
+            test_vector_sha256=test_vector_sha256,
+            observed_at=observed_at,
+            expires_at=expires_at,
+            evidence_sha256=evidence_sha256,
+            predicates=predicates,
+            reason_codes=reason_codes,
+            component_self_hash=sha256_json(provisional),
+        )
+
+    @classmethod
+    def from_dict(
+        cls, value: Mapping[str, object]
+    ) -> "ConnectorReadinessComponentV2":
+        body = _plain_snapshot(value, path="$component", max_depth=8)
+        expected = {
+            "component_id", "component_version", "state", "code_sha256",
+            "schema_sha256", "test_vector_sha256", "observed_at", "expires_at",
+            "evidence_sha256", "predicates", "reason_codes", "component_self_hash",
+        }
+        if type(body) is not dict or set(body) != expected:
+            raise MontageLearningConnectorReadinessError(
+                "component fields mismatch"
+            )
+        evidence = body["evidence_sha256"]
+        predicates = body["predicates"]
+        reasons = body["reason_codes"]
+        if type(evidence) is not list or type(predicates) is not list or type(reasons) is not list:
+            raise MontageLearningConnectorReadinessError(
+                "component collections are invalid"
+            )
+        return cls(
+            component_id=body["component_id"],
+            component_version=body["component_version"],
+            state=body["state"],
+            code_sha256=body["code_sha256"],
+            schema_sha256=body["schema_sha256"],
+            test_vector_sha256=body["test_vector_sha256"],
+            observed_at=body["observed_at"],
+            expires_at=body["expires_at"],
+            evidence_sha256=tuple(evidence),
+            predicates=tuple(
+                ConnectorReadinessPredicateV2.from_dict(item) for item in predicates
+            ),
+            reason_codes=tuple(reasons),
+            component_self_hash=body["component_self_hash"],
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ConnectorReadinessEvidenceV2:
+    readiness_id: str
+    bvp_main_sha256: str
+    bvp_package_sha256: str
+    skill_package_sha256: str
+    connector_config_sha256: str
+    bridge_owner_attestation_sha256: str
+    bridge_security_model: str
+    evaluation_mode: str
+    activation_record_sha256: str | None
+    config_enabled: bool
+    verified_at: str
+    expires_at: str
+    components: tuple[ConnectorReadinessComponentV2, ...]
+    overall_state: str
+    reason_codes: tuple[str, ...]
+    readiness_self_hash: str
+
+    def __post_init__(self) -> None:
+        for field in (
+            "readiness_id", "bvp_main_sha256", "bvp_package_sha256",
+            "skill_package_sha256", "connector_config_sha256",
+            "bridge_owner_attestation_sha256", "readiness_self_hash",
+        ):
+            _require_sha(getattr(self, field), field)
+        if self.bridge_security_model != _BRIDGE_SECURITY_MODEL:
+            raise MontageLearningConnectorReadinessError(
+                "bridge security model mismatch"
+            )
+        if self.evaluation_mode not in _EVALUATION_MODES:
+            raise MontageLearningConnectorReadinessError(
+                "evaluation mode is invalid"
+            )
+        if self.activation_record_sha256 is not None:
+            _require_sha(self.activation_record_sha256, "activation_record_sha256")
+        if type(self.config_enabled) is not bool:
+            raise MontageLearningConnectorReadinessError(
+                "config_enabled must be a built-in bool"
+            )
+        verified = _parse_utc(self.verified_at, "readiness verified_at")
+        expires = _parse_utc(self.expires_at, "readiness expires_at")
+        if expires <= verified:
+            raise MontageLearningConnectorReadinessError(
+                "readiness freshness interval is invalid"
+            )
+        if type(self.components) is not tuple or tuple(
+            item.component_id for item in self.components
+        ) != tuple(_READINESS_COMPONENT_PREDICATES):
+            raise MontageLearningConnectorReadinessError(
+                "readiness component set/order mismatch"
+            )
+        for component in self.components:
+            if _parse_utc(component.observed_at, "component observed_at") > verified:
+                raise MontageLearningConnectorReadinessError(
+                    "component observation is after readiness evaluation"
+                )
+            if _parse_utc(component.expires_at, "component expires_at") < expires:
+                raise MontageLearningConnectorReadinessError(
+                    "component expires before readiness evidence"
+                )
+        if self.overall_state not in _OVERALL_STATES:
+            raise MontageLearningConnectorReadinessError("overall_state is invalid")
+        _require_sorted_reason_codes(self.reason_codes, "readiness reason_codes")
+        expected_state = _classify_readiness(
+            self.components,
+            evaluation_mode=self.evaluation_mode,
+            config_enabled=self.config_enabled,
+            activation_record_sha256=self.activation_record_sha256,
+            reason_codes=self.reason_codes,
+        )
+        if self.overall_state != expected_state:
+            raise MontageLearningConnectorReadinessError(
+                "overall readiness classification mismatch"
+            )
+        body = self._body()
+        if sha256_json({"domain": "BVP_MONTAGE_CONNECTOR_READINESS_ID_V2", **body}) != self.readiness_id:
+            raise MontageLearningConnectorReadinessError("readiness_id mismatch")
+        if sha256_json({**body, "readiness_id": self.readiness_id}) != self.readiness_self_hash:
+            raise MontageLearningConnectorReadinessError(
+                "readiness self-hash mismatch"
+            )
+
+    def _body(self) -> dict[str, object]:
+        return {
+            "schema_version": "2.0.0",
+            "message_type": "BvpMontageLearningConnectorReadiness",
+            "task_id": "TASK-058",
+            "bvp_main_sha256": self.bvp_main_sha256,
+            "bvp_package_sha256": self.bvp_package_sha256,
+            "skill_package_sha256": self.skill_package_sha256,
+            "connector_config_sha256": self.connector_config_sha256,
+            "bridge_owner_attestation_sha256": self.bridge_owner_attestation_sha256,
+            "bridge_security_model": self.bridge_security_model,
+            "evaluation_mode": self.evaluation_mode,
+            "activation_record_sha256": self.activation_record_sha256,
+            "config_enabled": self.config_enabled,
+            "verified_at": self.verified_at,
+            "expires_at": self.expires_at,
+            "components": {item.component_id: item.to_dict() for item in self.components},
+            "overall_state": self.overall_state,
+            "reason_codes": list(self.reason_codes),
+            "connector_enabled": False,
+            "activation_authorized": False,
+            "learning_adoption_authorized": False,
+            "automatic_promotion_authorized": False,
+            "timeline_mutation_authorized": False,
+            "resolve_write_authorized": False,
+        }
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            **self._body(),
+            "readiness_id": self.readiness_id,
+            "readiness_self_hash": self.readiness_self_hash,
+        }
+
+    @classmethod
+    def compile(
+        cls,
+        *,
+        bvp_main_sha256: str,
+        bvp_package_sha256: str,
+        skill_package_sha256: str,
+        connector_config_sha256: str,
+        bridge_owner_attestation_sha256: str,
+        evaluation_mode: str,
+        activation_record_sha256: str | None,
+        config_enabled: bool,
+        verified_at: str,
+        expires_at: str,
+        components: tuple[ConnectorReadinessComponentV2, ...],
+        reason_codes: tuple[str, ...],
+    ) -> "ConnectorReadinessEvidenceV2":
+        overall = _classify_readiness(
+            components,
+            evaluation_mode=evaluation_mode,
+            config_enabled=config_enabled,
+            activation_record_sha256=activation_record_sha256,
+            reason_codes=reason_codes,
+        )
+        body = {
+            "schema_version": "2.0.0",
+            "message_type": "BvpMontageLearningConnectorReadiness",
+            "task_id": "TASK-058",
+            "bvp_main_sha256": bvp_main_sha256,
+            "bvp_package_sha256": bvp_package_sha256,
+            "skill_package_sha256": skill_package_sha256,
+            "connector_config_sha256": connector_config_sha256,
+            "bridge_owner_attestation_sha256": bridge_owner_attestation_sha256,
+            "bridge_security_model": _BRIDGE_SECURITY_MODEL,
+            "evaluation_mode": evaluation_mode,
+            "activation_record_sha256": activation_record_sha256,
+            "config_enabled": config_enabled,
+            "verified_at": verified_at,
+            "expires_at": expires_at,
+            "components": {item.component_id: item.to_dict() for item in components},
+            "overall_state": overall,
+            "reason_codes": list(reason_codes),
+            "connector_enabled": False,
+            "activation_authorized": False,
+            "learning_adoption_authorized": False,
+            "automatic_promotion_authorized": False,
+            "timeline_mutation_authorized": False,
+            "resolve_write_authorized": False,
+        }
+        readiness_id = sha256_json(
+            {"domain": "BVP_MONTAGE_CONNECTOR_READINESS_ID_V2", **body}
+        )
+        return cls(
+            readiness_id=readiness_id,
+            bvp_main_sha256=bvp_main_sha256,
+            bvp_package_sha256=bvp_package_sha256,
+            skill_package_sha256=skill_package_sha256,
+            connector_config_sha256=connector_config_sha256,
+            bridge_owner_attestation_sha256=bridge_owner_attestation_sha256,
+            bridge_security_model=_BRIDGE_SECURITY_MODEL,
+            evaluation_mode=evaluation_mode,
+            activation_record_sha256=activation_record_sha256,
+            config_enabled=config_enabled,
+            verified_at=verified_at,
+            expires_at=expires_at,
+            components=components,
+            overall_state=overall,
+            reason_codes=reason_codes,
+            readiness_self_hash=sha256_json({**body, "readiness_id": readiness_id}),
+        )
+
+    @classmethod
+    def from_dict(
+        cls, value: Mapping[str, object]
+    ) -> "ConnectorReadinessEvidenceV2":
+        body = _plain_snapshot(value, path="$readiness", max_depth=12)
+        expected = {
+            "schema_version", "message_type", "task_id", "readiness_id",
+            "bvp_main_sha256", "bvp_package_sha256", "skill_package_sha256",
+            "connector_config_sha256", "bridge_owner_attestation_sha256",
+            "bridge_security_model", "evaluation_mode", "activation_record_sha256",
+            "config_enabled", "verified_at", "expires_at", "components",
+            "overall_state", "reason_codes", "connector_enabled",
+            "activation_authorized", "learning_adoption_authorized",
+            "automatic_promotion_authorized", "timeline_mutation_authorized",
+            "resolve_write_authorized", "readiness_self_hash",
+        }
+        if type(body) is not dict or set(body) != expected:
+            raise MontageLearningConnectorReadinessError(
+                "readiness fields mismatch"
+            )
+        constants = {
+            "schema_version": "2.0.0",
+            "message_type": "BvpMontageLearningConnectorReadiness",
+            "task_id": "TASK-058",
+            "connector_enabled": False,
+            "activation_authorized": False,
+            "learning_adoption_authorized": False,
+            "automatic_promotion_authorized": False,
+            "timeline_mutation_authorized": False,
+            "resolve_write_authorized": False,
+        }
+        if any(body[field] != expected_value for field, expected_value in constants.items()):
+            raise MontageLearningConnectorReadinessError(
+                "readiness identity/authority constant mismatch"
+            )
+        component_values = body["components"]
+        reasons = body["reason_codes"]
+        if type(component_values) is not dict or set(component_values) != set(
+            _READINESS_COMPONENT_PREDICATES
+        ) or type(reasons) is not list:
+            raise MontageLearningConnectorReadinessError(
+                "readiness collections mismatch"
+            )
+        return cls(
+            readiness_id=body["readiness_id"],
+            bvp_main_sha256=body["bvp_main_sha256"],
+            bvp_package_sha256=body["bvp_package_sha256"],
+            skill_package_sha256=body["skill_package_sha256"],
+            connector_config_sha256=body["connector_config_sha256"],
+            bridge_owner_attestation_sha256=body["bridge_owner_attestation_sha256"],
+            bridge_security_model=body["bridge_security_model"],
+            evaluation_mode=body["evaluation_mode"],
+            activation_record_sha256=body["activation_record_sha256"],
+            config_enabled=body["config_enabled"],
+            verified_at=body["verified_at"],
+            expires_at=body["expires_at"],
+            components=tuple(
+                ConnectorReadinessComponentV2.from_dict(component_values[key])
+                for key in _READINESS_COMPONENT_PREDICATES
+            ),
+            overall_state=body["overall_state"],
+            reason_codes=tuple(reasons),
+            readiness_self_hash=body["readiness_self_hash"],
+        )
 
 
 def publish_prebuilt_advisory_profile(
@@ -419,21 +938,76 @@ def _plain_snapshot(value: object, *, path: str, max_depth: int) -> Any:
 
 
 def _require_id(value: object, field: str) -> str:
-    if not isinstance(value, str) or _ID_RE.fullmatch(value) is None:
+    if type(value) is not str or _ID_RE.fullmatch(value) is None:
         raise MontageLearningConnectorReadinessError(f"{field} is invalid")
     return value
 
 
 def _require_sha(value: object, field: str) -> str:
-    if not isinstance(value, str) or _SHA_RE.fullmatch(value) is None:
+    if type(value) is not str or _SHA_RE.fullmatch(value) is None:
         raise MontageLearningConnectorReadinessError(f"{field} is invalid")
     return value
 
 
 def _require_token(value: object, field: str) -> str:
-    if not isinstance(value, str) or _TOKEN_RE.fullmatch(value) is None:
+    if type(value) is not str or _TOKEN_RE.fullmatch(value) is None:
         raise MontageLearningConnectorReadinessError(f"{field} is invalid")
     return value
+
+
+def _require_sorted_reason_codes(value: object, field: str) -> tuple[str, ...]:
+    if type(value) is not tuple or tuple(sorted(set(value))) != value:
+        raise MontageLearningConnectorReadinessError(
+            f"{field} must be sorted unique"
+        )
+    for reason in value:
+        _require_token(reason, field)
+    return value
+
+
+def _parse_utc(value: object, field: str) -> datetime:
+    if type(value) is not str or len(value) != 20:
+        raise MontageLearningConnectorReadinessError(f"{field} is invalid")
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise MontageLearningConnectorReadinessError(
+            f"{field} is invalid"
+        ) from exc
+    return parsed
+
+
+def _classify_readiness(
+    components: tuple[ConnectorReadinessComponentV2, ...],
+    *,
+    evaluation_mode: str,
+    config_enabled: bool,
+    activation_record_sha256: str | None,
+    reason_codes: tuple[str, ...],
+) -> str:
+    del activation_record_sha256  # TASK-058 cannot authenticate activation currentness.
+    states = {item.component_id: item.state for item in components}
+    if config_enabled:
+        return "BLOCKED"
+    if (
+        evaluation_mode == "STATUS_ONLY"
+        and all(state == "NOT_RUN" for state in states.values())
+        and "READINESS_NOT_REQUESTED" in reason_codes
+    ):
+        return "DISABLED"
+    if evaluation_mode == "FULL_E2E":
+        non_profile = [
+            state for key, state in states.items()
+            if key != "PROFILE_TRANSPORT_READY"
+        ]
+        if (
+            all(state == "PASS" for state in non_profile)
+            and states.get("PROFILE_TRANSPORT_READY") == "SOURCE_NOT_BOUND"
+        ):
+            return "SOURCE_NOT_BOUND"
+        if all(state == "PASS" for state in states.values()):
+            return "READY_TO_ENABLE"
+    return "BLOCKED"
 
 
 def _validate_preference_context(value: object) -> str:
@@ -456,6 +1030,9 @@ def _validate_preference_context(value: object) -> str:
 
 __all__ = [
     "ConnectorReadinessEvidence",
+    "ConnectorReadinessEvidenceV2",
+    "ConnectorReadinessComponentV2",
+    "ConnectorReadinessPredicateV2",
     "MontageLearningConnectorReadinessError",
     "ProfilePublishResult",
     "ProfileSourceBinding",

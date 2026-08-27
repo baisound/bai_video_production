@@ -32,6 +32,13 @@ RECEIPT_PENDING_SCHEMA_VERSION = "1.0.0"
 RECEIPT_PENDING_MESSAGE_TYPE = "BvpMontageLearningReceiptPublicationPending"
 GENERIC_RECEIPT_NAMESPACE = "GENERIC_REVIEW_OBSERVATION_ONLY"
 EXACT_RECEIPT_NAMESPACE = "EXACT_EVIDENCE_ONLY"
+IMPORT_JOURNAL_SCHEMA_VERSION = "1.0.0"
+IMPORT_JOURNAL_MESSAGE_TYPE = "BvpMontageLearningImportJournal"
+IMPORT_PREPARED = "PREPARED"
+IMPORT_CLAIMED = "CLAIMED"
+IMPORT_QUARANTINE_PREPARED = "QUARANTINE_PREPARED"
+IMPORT_QUARANTINED = "QUARANTINED"
+IMPORT_RECEIPT_PUBLISHED = "RECEIPT_PUBLISHED"
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$")
 _DELIVERY_RE = re.compile(
@@ -80,6 +87,22 @@ class BridgeLayout:
         return self.root / "learning-receipts"
 
     @property
+    def processing(self) -> Path:
+        return self.root / "processing"
+
+    @property
+    def quarantine(self) -> Path:
+        return self.root / "quarantine"
+
+    @property
+    def state(self) -> Path:
+        return self.root / "state"
+
+    @property
+    def import_journal(self) -> Path:
+        return self.state / "import-journal"
+
+    @property
     def preference(self) -> Path:
         return self.root / "preference"
 
@@ -107,7 +130,23 @@ class DeliverySnapshot:
     source_sha256: str
     file_sha256: str
     file_identity: tuple[int, int, int, int]
+    handle_inheritable: bool
     document: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class DeliveryClaim:
+    """Strict journal-backed ownership of one delivery in processing."""
+
+    journal_path: Path
+    original_path: Path
+    processing_path: Path
+    quarantine_path: Path
+    record_id: str
+    source_sha256: str
+    pre_claim_file_identity: tuple[int, int, int, int]
+    ancestor_identities: Mapping[str, Mapping[str, object]]
+    state: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,7 +167,7 @@ def provision_bridge(
 
     _require_id(bridge_instance_id, "bridge_instance_id")
     _reject_unsafe_existing_ancestors(layout.root)
-    for directory in (layout.root, layout.inbox, layout.receipts, layout.preference):
+    for directory in _bridge_directories(layout):
         _mkdir_safe(directory)
 
     manifest_body = {
@@ -146,7 +185,7 @@ def provision_bridge(
 
 
 def load_bridge_owner(layout: BridgeLayout) -> BridgeOwner:
-    for directory in (layout.root, layout.inbox, layout.receipts, layout.preference):
+    for directory in _bridge_directories(layout):
         _require_safe_directory(directory)
     value = _read_json_regular(layout.owner_manifest, max_bytes=64 * 1024)
     expected_fields = {
@@ -192,10 +231,32 @@ def load_bridge_owner(layout: BridgeLayout) -> BridgeOwner:
 
 
 def list_delivery_paths(layout: BridgeLayout) -> tuple[Path, ...]:
-    """Return a bounded deterministic list of candidate delivery files."""
+    """Return inbox names plus restartable processing journals, once and bounded."""
 
     load_bridge_owner(layout)
-    paths: list[Path] = []
+    paths_by_name: dict[str, Path] = {}
+    with os.scandir(layout.import_journal) as entries:
+        for entry in entries:
+            if entry.name.startswith("."):
+                continue
+            if not entry.name.endswith(".import-journal.json"):
+                raise MontageLearningFileBridgeError(
+                    f"unknown import-journal entry: {entry.name}"
+                )
+            if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
+                raise MontageLearningFileBridgeError(
+                    "import-journal entry must be a regular file"
+                )
+            value = _load_import_journal(Path(entry.path), layout)
+            if value["state"] in {
+                IMPORT_PREPARED,
+                IMPORT_CLAIMED,
+                IMPORT_QUARANTINE_PREPARED,
+            }:
+                original = layout.root / str(value["original_relative_path"])
+                paths_by_name[original.name] = original
+            if len(paths_by_name) > MAX_IMPORT_FILES:
+                raise MontageLearningFileBridgeError("import file bound exceeded")
     with os.scandir(layout.inbox) as entries:
         for entry in entries:
             if entry.name.startswith("."):
@@ -206,58 +267,200 @@ def list_delivery_paths(layout: BridgeLayout) -> tuple[Path, ...]:
                 )
             if entry.is_symlink() or not entry.is_file(follow_symlinks=False):
                 raise MontageLearningFileBridgeError("inbox entry must be a regular file")
-            paths.append(Path(entry.path))
-            if len(paths) > MAX_IMPORT_FILES:
-                raise MontageLearningFileBridgeError("inbox file bound exceeded")
-    return tuple(sorted(paths, key=lambda item: item.name))
+            paths_by_name.setdefault(entry.name, Path(entry.path))
+            if len(paths_by_name) > MAX_IMPORT_FILES:
+                raise MontageLearningFileBridgeError("import file bound exceeded")
+    return tuple(paths_by_name[name] for name in sorted(paths_by_name))
 
 
-def snapshot_delivery(path: str | Path, layout: BridgeLayout) -> DeliverySnapshot:
-    """Read one filename-bound delivery exactly once through a pinned handle."""
+def claim_delivery(path: str | Path, layout: BridgeLayout) -> DeliveryClaim:
+    """Claim one exact inbox filename or resume its strict import journal."""
 
     owner = load_bridge_owner(layout)
-    del owner
-    candidate = Path(path)
-    if candidate.parent != layout.inbox:
-        raise MontageLearningFileBridgeError("delivery must be inside fixed inbox")
-    match = _DELIVERY_RE.fullmatch(candidate.name)
+    original = Path(path)
+    if original.parent != layout.inbox:
+        raise MontageLearningFileBridgeError("delivery must name the fixed inbox")
+    match = _DELIVERY_RE.fullmatch(original.name)
     if match is None:
         raise MontageLearningFileBridgeError("delivery filename is invalid")
-    _reject_unsafe_path(candidate)
+    journal_path = _import_journal_path(layout, original.name)
+    with exclusive_file_update_lock(journal_path):
+        if journal_path.exists():
+            value = _load_import_journal(journal_path, layout)
+            _require_journal_filename_binding(value, original.name)
+        else:
+            _reject_unsafe_path(original)
+            source_stat = original.stat(follow_symlinks=False)
+            if not _is_regular_stat(source_stat) or _stat_is_reparse(source_stat):
+                raise MontageLearningFileBridgeError("delivery must be a regular file")
+            processing_stat = layout.processing.stat(follow_symlinks=False)
+            if source_stat.st_dev != processing_stat.st_dev:
+                raise MontageLearningFileBridgeError(
+                    "processing claim must remain on one volume"
+                )
+            processing = layout.processing / original.name
+            quarantine = layout.quarantine / original.name
+            if processing.exists() or processing.is_symlink():
+                raise MontageLearningFileBridgeError("processing collision")
+            if quarantine.exists() or quarantine.is_symlink():
+                raise MontageLearningFileBridgeError("quarantine collision")
+            identities = _capture_bridge_ancestor_identities(layout)
+            value = _new_import_journal(
+                layout,
+                owner=owner,
+                match=match,
+                original=original,
+                processing=processing,
+                quarantine=quarantine,
+                pre_claim_identity=_stat_identity(source_stat),
+                ancestor_identities=identities,
+            )
+            _write_import_journal(journal_path, value, layout)
+        value = _resume_claim_locked(journal_path, value, layout)
+        return _claim_from_journal(journal_path, value, layout)
 
-    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
-    if hasattr(os, "O_NOFOLLOW"):
-        flags |= os.O_NOFOLLOW
-    fd = os.open(candidate, flags)
-    try:
-        before = os.fstat(fd)
-        if not _is_regular_stat(before) or _stat_is_reparse(before):
-            raise MontageLearningFileBridgeError("delivery handle is not regular")
-        if before.st_size <= 0 or before.st_size > MAX_DELIVERY_BYTES:
-            raise MontageLearningFileBridgeError("delivery size is outside bound")
-        chunks: list[bytes] = []
-        remaining = MAX_DELIVERY_BYTES + 1
-        while remaining:
-            chunk = os.read(fd, min(128 * 1024, remaining))
-            if not chunk:
-                break
-            chunks.append(chunk)
-            remaining -= len(chunk)
-        raw = b"".join(chunks)
-        after = os.fstat(fd)
-    finally:
-        os.close(fd)
-    before_identity = _stat_identity(before)
-    if before_identity != _stat_identity(after) or len(raw) != before.st_size:
-        raise MontageLearningFileBridgeError("delivery changed during pinned read")
-    _reject_unsafe_path(candidate)
-    current = candidate.stat(follow_symlinks=False)
-    if before_identity != _stat_identity(current):
-        raise MontageLearningFileBridgeError("delivery identity changed after read")
+
+def quarantine_claim(claim: DeliveryClaim, layout: BridgeLayout) -> DeliveryClaim:
+    """Move a claimed malformed delivery to quarantine without overwriting."""
+
+    _require_claim_object(claim, layout)
+    with exclusive_file_update_lock(claim.journal_path):
+        value = _load_import_journal(claim.journal_path, layout)
+        _require_claim_matches_journal(claim, value, layout)
+        state = value["state"]
+        if state == IMPORT_QUARANTINED:
+            _verify_identity_path(
+                claim.quarantine_path, claim.pre_claim_file_identity, "quarantine"
+            )
+            return _claim_from_journal(claim.journal_path, value, layout)
+        if state == IMPORT_RECEIPT_PUBLISHED:
+            raise MontageLearningFileBridgeError(
+                "published delivery cannot be quarantined"
+            )
+        if state == IMPORT_PREPARED:
+            value = _resume_claim_locked(claim.journal_path, value, layout)
+        if value["state"] == IMPORT_CLAIMED:
+            value = _advance_import_journal(
+                claim.journal_path,
+                value,
+                IMPORT_QUARANTINE_PREPARED,
+                layout,
+            )
+        if value["state"] != IMPORT_QUARANTINE_PREPARED:
+            raise MontageLearningFileBridgeError("import journal state cannot quarantine")
+        _verify_ancestor_identities(value, layout)
+        processing_exists = claim.processing_path.exists() or claim.processing_path.is_symlink()
+        quarantine_exists = claim.quarantine_path.exists() or claim.quarantine_path.is_symlink()
+        if processing_exists and not quarantine_exists:
+            _verify_identity_path(
+                claim.processing_path, claim.pre_claim_file_identity, "processing"
+            )
+            _atomic_rename_noreplace(claim.processing_path, claim.quarantine_path)
+            _directory_fsync(layout.processing)
+            _directory_fsync(layout.quarantine)
+        elif processing_exists or not quarantine_exists:
+            raise MontageLearningFileBridgeError(
+                "quarantine rename position is ambiguous"
+            )
+        _verify_ancestor_identities(value, layout)
+        _verify_identity_path(
+            claim.quarantine_path, claim.pre_claim_file_identity, "quarantine"
+        )
+        value = _advance_import_journal(
+            claim.journal_path, value, IMPORT_QUARANTINED, layout
+        )
+        return _claim_from_journal(claim.journal_path, value, layout)
+
+
+def mark_claim_receipt_published(
+    claim: DeliveryClaim, layout: BridgeLayout
+) -> DeliveryClaim:
+    """Durably retain successful import evidence without deleting source bytes."""
+
+    _require_claim_object(claim, layout)
+    with exclusive_file_update_lock(claim.journal_path):
+        value = _load_import_journal(claim.journal_path, layout)
+        _require_claim_matches_journal(claim, value, layout)
+        if value["state"] == IMPORT_RECEIPT_PUBLISHED:
+            _verify_identity_path(
+                claim.processing_path, claim.pre_claim_file_identity, "processing"
+            )
+            return _claim_from_journal(claim.journal_path, value, layout)
+        if value["state"] != IMPORT_CLAIMED:
+            raise MontageLearningFileBridgeError(
+                "only a claimed delivery can publish a receipt"
+            )
+        _verify_ancestor_identities(value, layout)
+        _verify_identity_path(
+            claim.processing_path, claim.pre_claim_file_identity, "processing"
+        )
+        value = _advance_import_journal(
+            claim.journal_path, value, IMPORT_RECEIPT_PUBLISHED, layout
+        )
+        return _claim_from_journal(claim.journal_path, value, layout)
+
+
+def snapshot_delivery(claim: DeliveryClaim, layout: BridgeLayout) -> DeliverySnapshot:
+    """Read only a validated claim once through a non-inheritable pinned handle."""
+
+    _require_claim_object(claim, layout)
+    with exclusive_file_update_lock(claim.journal_path):
+        journal = _load_import_journal(claim.journal_path, layout)
+        _require_claim_matches_journal(claim, journal, layout)
+        if journal["state"] not in {IMPORT_CLAIMED, IMPORT_RECEIPT_PUBLISHED}:
+            raise MontageLearningFileBridgeError("delivery claim is not readable")
+        _verify_ancestor_identities(journal, layout)
+        candidate = claim.processing_path
+        _verify_identity_path(candidate, claim.pre_claim_file_identity, "processing")
+
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        fd = os.open(candidate, flags)
+        try:
+            os.set_inheritable(fd, False)
+            handle_inheritable = os.get_inheritable(fd)
+            if handle_inheritable:
+                raise MontageLearningFileBridgeError(
+                    "delivery handle remained inheritable"
+                )
+            before = os.fstat(fd)
+            if not _is_regular_stat(before) or _stat_is_reparse(before):
+                raise MontageLearningFileBridgeError("delivery handle is not regular")
+            if _stat_identity(before) != claim.pre_claim_file_identity:
+                raise MontageLearningFileBridgeError(
+                    "delivery handle identity differs from claim"
+                )
+            if before.st_size <= 0 or before.st_size > MAX_DELIVERY_BYTES:
+                raise MontageLearningFileBridgeError("delivery size is outside bound")
+            digest = sha256()
+            chunks: list[bytes] = []
+            remaining = MAX_DELIVERY_BYTES + 1
+            while remaining:
+                chunk = os.read(fd, min(128 * 1024, remaining))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                digest.update(chunk)
+                remaining -= len(chunk)
+            raw = b"".join(chunks)
+            after = os.fstat(fd)
+        finally:
+            os.close(fd)
+        before_identity = _stat_identity(before)
+        if before_identity != _stat_identity(after) or len(raw) != before.st_size:
+            raise MontageLearningFileBridgeError("delivery changed during pinned read")
+        _verify_ancestor_identities(journal, layout)
+        _verify_identity_path(candidate, before_identity, "processing")
 
     document = _decode_builtin_json(raw)
+    match = _DELIVERY_RE.fullmatch(candidate.name)
+    if match is None:
+        raise MontageLearningFileBridgeError("claimed delivery filename is invalid")
     record_id = match.group("record")
     filename_digest = f"sha256:{match.group('digest')}"
+    if record_id != claim.record_id or filename_digest != claim.source_sha256:
+        raise MontageLearningFileBridgeError("claim filename binding mismatch")
     if document.get("record_id") != record_id:
         raise MontageLearningFileBridgeError("filename record_id mismatch")
     message_type = document.get("message_type")
@@ -273,8 +476,9 @@ def snapshot_delivery(path: str | Path, layout: BridgeLayout) -> DeliverySnapsho
         path=candidate,
         record_id=record_id,
         source_sha256=filename_digest,
-        file_sha256=f"sha256:{sha256(raw).hexdigest()}",
+        file_sha256=f"sha256:{digest.hexdigest()}",
         file_identity=before_identity,
+        handle_inheritable=handle_inheritable,
         document=document,
     )
 
@@ -554,6 +758,437 @@ def _validate_exact_pending_coordinates(
             raise MontageLearningFileBridgeError(f"{field} is invalid")
 
 
+def _bridge_directories(layout: BridgeLayout) -> tuple[Path, ...]:
+    return (
+        layout.root,
+        layout.inbox,
+        layout.processing,
+        layout.quarantine,
+        layout.receipts,
+        layout.preference,
+        layout.state,
+        layout.import_journal,
+    )
+
+
+def _capture_bridge_ancestor_identities(
+    layout: BridgeLayout,
+) -> dict[str, dict[str, object]]:
+    identities: dict[str, dict[str, object]] = {}
+    for directory in _bridge_directories(layout):
+        _require_safe_directory(directory)
+        relative = "." if directory == layout.root else directory.relative_to(layout.root).as_posix()
+        stat = directory.stat(follow_symlinks=False)
+        body: dict[str, object] = {
+            "relative_path": relative,
+            "resolved_path": str(directory.resolve(strict=True)),
+            "st_dev": stat.st_dev,
+            "st_ino": stat.st_ino,
+        }
+        body["identity_sha256"] = sha256_json(body)
+        identities[relative] = body
+    return identities
+
+
+def _verify_ancestor_identities(
+    value: Mapping[str, object], layout: BridgeLayout
+) -> None:
+    expected = value.get("ancestor_identities")
+    if type(expected) is not dict:
+        raise MontageLearningFileBridgeError("journal ancestor identities are invalid")
+    current = _capture_bridge_ancestor_identities(layout)
+    if current != expected:
+        raise MontageLearningFileBridgeError("bridge root/ancestor identity changed")
+    if value.get("root_identity") != _root_identity(layout.root):
+        raise MontageLearningFileBridgeError("journal root identity changed")
+
+
+def _file_identity_document(identity: tuple[int, int, int, int]) -> dict[str, int]:
+    return {
+        "st_dev": identity[0],
+        "st_ino": identity[1],
+        "st_size": identity[2],
+        "st_mtime_ns": identity[3],
+    }
+
+
+def _identity_from_document(value: object) -> tuple[int, int, int, int]:
+    if type(value) is not dict or set(value) != {
+        "st_dev", "st_ino", "st_size", "st_mtime_ns"
+    }:
+        raise MontageLearningFileBridgeError("journal file identity fields mismatch")
+    fields = tuple(value[field] for field in ("st_dev", "st_ino", "st_size", "st_mtime_ns"))
+    if any(isinstance(item, bool) or not isinstance(item, int) or item < 0 for item in fields):
+        raise MontageLearningFileBridgeError("journal file identity is invalid")
+    return fields  # type: ignore[return-value]
+
+
+def _import_journal_path(layout: BridgeLayout, filename: str) -> Path:
+    return layout.import_journal / f"{filename}.import-journal.json"
+
+
+def _new_import_journal(
+    layout: BridgeLayout,
+    *,
+    owner: BridgeOwner,
+    match: re.Match[str],
+    original: Path,
+    processing: Path,
+    quarantine: Path,
+    pre_claim_identity: tuple[int, int, int, int],
+    ancestor_identities: Mapping[str, Mapping[str, object]],
+) -> dict[str, object]:
+    body: dict[str, object] = {
+        "schema_version": IMPORT_JOURNAL_SCHEMA_VERSION,
+        "message_type": IMPORT_JOURNAL_MESSAGE_TYPE,
+        "contract_profile": BRIDGE_CONTRACT_PROFILE,
+        "bridge_instance_id": owner.bridge_instance_id,
+        "record_id": match.group("record"),
+        "source_sha256": f"sha256:{match.group('digest')}",
+        "original_relative_path": original.relative_to(layout.root).as_posix(),
+        "processing_relative_path": processing.relative_to(layout.root).as_posix(),
+        "quarantine_relative_path": quarantine.relative_to(layout.root).as_posix(),
+        "root_identity": owner.root_identity,
+        "ancestor_identities": {
+            key: dict(identity) for key, identity in ancestor_identities.items()
+        },
+        "pre_claim_file_identity": _file_identity_document(pre_claim_identity),
+        "state": IMPORT_PREPARED,
+        "states": [IMPORT_PREPARED],
+        "journal_revision": 1,
+    }
+    body["journal_sha256"] = sha256_json(body)
+    return _validate_import_journal(body, layout)
+
+
+def _validate_import_journal(
+    value: Mapping[str, object], layout: BridgeLayout
+) -> dict[str, object]:
+    if type(value) is not dict:
+        raise MontageLearningFileBridgeError("import journal must be an object")
+    expected_fields = {
+        "schema_version", "message_type", "contract_profile", "bridge_instance_id",
+        "record_id", "source_sha256", "original_relative_path",
+        "processing_relative_path", "quarantine_relative_path", "root_identity",
+        "ancestor_identities", "pre_claim_file_identity", "state", "states",
+        "journal_revision", "journal_sha256",
+    }
+    if set(value) != expected_fields:
+        raise MontageLearningFileBridgeError("import journal fields mismatch")
+    if (
+        value["schema_version"] != IMPORT_JOURNAL_SCHEMA_VERSION
+        or value["message_type"] != IMPORT_JOURNAL_MESSAGE_TYPE
+        or value["contract_profile"] != BRIDGE_CONTRACT_PROFILE
+    ):
+        raise MontageLearningFileBridgeError("import journal identity mismatch")
+    owner = load_bridge_owner(layout)
+    if value["bridge_instance_id"] != owner.bridge_instance_id:
+        raise MontageLearningFileBridgeError("import journal owner mismatch")
+    record_id = _require_id(value["record_id"], "journal record_id")
+    source_sha256 = value["source_sha256"]
+    if not isinstance(source_sha256, str) or _SHA_RE.fullmatch(source_sha256) is None:
+        raise MontageLearningFileBridgeError("journal source_sha256 is invalid")
+    filename = f"{record_id}--{source_sha256.removeprefix('sha256:')}.json"
+    expected_paths = {
+        "original_relative_path": f"learning-inbox/{filename}",
+        "processing_relative_path": f"processing/{filename}",
+        "quarantine_relative_path": f"quarantine/{filename}",
+    }
+    for field, expected in expected_paths.items():
+        if value[field] != expected:
+            raise MontageLearningFileBridgeError(f"journal {field} mismatch")
+    if value["root_identity"] != owner.root_identity:
+        raise MontageLearningFileBridgeError("import journal root mismatch")
+    identities = value["ancestor_identities"]
+    if type(identities) is not dict or set(identities) != {
+        ".", "learning-inbox", "processing", "quarantine", "learning-receipts",
+        "preference", "state", "state/import-journal",
+    }:
+        raise MontageLearningFileBridgeError("journal ancestor identity set mismatch")
+    for relative, identity in identities.items():
+        if type(identity) is not dict or set(identity) != {
+            "relative_path", "resolved_path", "st_dev", "st_ino", "identity_sha256"
+        }:
+            raise MontageLearningFileBridgeError("journal ancestor identity fields mismatch")
+        if identity["relative_path"] != relative:
+            raise MontageLearningFileBridgeError("journal ancestor path mismatch")
+        if (
+            not isinstance(identity["resolved_path"], str)
+            or not identity["resolved_path"]
+        ):
+            raise MontageLearningFileBridgeError(
+                "journal ancestor resolved path is invalid"
+            )
+        for field in ("st_dev", "st_ino"):
+            item = identity[field]
+            if isinstance(item, bool) or not isinstance(item, int) or item < 0:
+                raise MontageLearningFileBridgeError("journal ancestor identity is invalid")
+        supplied = identity["identity_sha256"]
+        if not isinstance(supplied, str) or _SHA_RE.fullmatch(supplied) is None:
+            raise MontageLearningFileBridgeError("journal ancestor hash is invalid")
+        identity_body = dict(identity)
+        identity_body.pop("identity_sha256")
+        if sha256_json(identity_body) != supplied:
+            raise MontageLearningFileBridgeError("journal ancestor hash mismatch")
+    _identity_from_document(value["pre_claim_file_identity"])
+    states = value["states"]
+    state = value["state"]
+    valid_sequences = {
+        IMPORT_PREPARED: [IMPORT_PREPARED],
+        IMPORT_CLAIMED: [IMPORT_PREPARED, IMPORT_CLAIMED],
+        IMPORT_QUARANTINE_PREPARED: [
+            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_QUARANTINE_PREPARED
+        ],
+        IMPORT_QUARANTINED: [
+            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_QUARANTINE_PREPARED,
+            IMPORT_QUARANTINED,
+        ],
+        IMPORT_RECEIPT_PUBLISHED: [
+            IMPORT_PREPARED, IMPORT_CLAIMED, IMPORT_RECEIPT_PUBLISHED
+        ],
+    }
+    if state not in valid_sequences or states != valid_sequences[state]:
+        raise MontageLearningFileBridgeError("import journal state sequence mismatch")
+    if (
+        isinstance(value["journal_revision"], bool)
+        or not isinstance(value["journal_revision"], int)
+        or value["journal_revision"] != len(states)
+    ):
+        raise MontageLearningFileBridgeError("import journal revision mismatch")
+    supplied_hash = value["journal_sha256"]
+    if not isinstance(supplied_hash, str) or _SHA_RE.fullmatch(supplied_hash) is None:
+        raise MontageLearningFileBridgeError("journal_sha256 is invalid")
+    body = dict(value)
+    body.pop("journal_sha256")
+    if sha256_json(body) != supplied_hash:
+        raise MontageLearningFileBridgeError("import journal hash mismatch")
+    return dict(value)
+
+
+def _load_import_journal(path: Path, layout: BridgeLayout) -> dict[str, object]:
+    value = _read_json_regular(path, max_bytes=128 * 1024)
+    return _validate_import_journal(value, layout)
+
+
+def _write_import_journal(
+    path: Path, value: Mapping[str, object], layout: BridgeLayout
+) -> None:
+    expected = _validate_import_journal(value, layout)
+    _require_safe_directory(path.parent)
+    AtomicJsonWriter.write(path, expected)
+    if _load_import_journal(path, layout) != expected:
+        raise MontageLearningFileBridgeError("import journal read-back mismatch")
+
+
+def _advance_import_journal(
+    path: Path,
+    current: Mapping[str, object],
+    state: str,
+    layout: BridgeLayout,
+) -> dict[str, object]:
+    value = _validate_import_journal(current, layout)
+    transitions = {
+        IMPORT_PREPARED: {IMPORT_CLAIMED},
+        IMPORT_CLAIMED: {IMPORT_QUARANTINE_PREPARED, IMPORT_RECEIPT_PUBLISHED},
+        IMPORT_QUARANTINE_PREPARED: {IMPORT_QUARANTINED},
+    }
+    if state not in transitions.get(str(value["state"]), set()):
+        raise MontageLearningFileBridgeError("invalid import journal transition")
+    value["state"] = state
+    value["states"] = [*list(value["states"]), state]
+    value["journal_revision"] = int(value["journal_revision"]) + 1
+    value.pop("journal_sha256")
+    value["journal_sha256"] = sha256_json(value)
+    _write_import_journal(path, value, layout)
+    return value
+
+
+def _resume_claim_locked(
+    journal_path: Path, value: Mapping[str, object], layout: BridgeLayout
+) -> dict[str, object]:
+    current = _validate_import_journal(value, layout)
+    _verify_ancestor_identities(current, layout)
+    identity = _identity_from_document(current["pre_claim_file_identity"])
+    original = layout.root / str(current["original_relative_path"])
+    processing = layout.root / str(current["processing_relative_path"])
+    quarantine = layout.root / str(current["quarantine_relative_path"])
+    state = current["state"]
+    if state == IMPORT_PREPARED:
+        original_exists = original.exists() or original.is_symlink()
+        processing_exists = processing.exists() or processing.is_symlink()
+        if original_exists and not processing_exists:
+            _verify_identity_path(original, identity, "pre-claim")
+            _atomic_rename_noreplace(original, processing)
+            _directory_fsync(layout.inbox)
+            _directory_fsync(layout.processing)
+        elif original_exists or not processing_exists:
+            raise MontageLearningFileBridgeError("claim rename position is ambiguous")
+        _verify_ancestor_identities(current, layout)
+        _verify_identity_path(processing, identity, "processing")
+        current = _advance_import_journal(
+            journal_path, current, IMPORT_CLAIMED, layout
+        )
+    if current["state"] == IMPORT_QUARANTINE_PREPARED:
+        processing_exists = processing.exists() or processing.is_symlink()
+        quarantine_exists = quarantine.exists() or quarantine.is_symlink()
+        if processing_exists and not quarantine_exists:
+            _verify_identity_path(processing, identity, "processing")
+            _atomic_rename_noreplace(processing, quarantine)
+            _directory_fsync(layout.processing)
+            _directory_fsync(layout.quarantine)
+        elif processing_exists or not quarantine_exists:
+            raise MontageLearningFileBridgeError(
+                "quarantine recovery position is ambiguous"
+            )
+        _verify_ancestor_identities(current, layout)
+        _verify_identity_path(quarantine, identity, "quarantine")
+        current = _advance_import_journal(
+            journal_path, current, IMPORT_QUARANTINED, layout
+        )
+    if current["state"] == IMPORT_QUARANTINED:
+        raise MontageLearningFileBridgeError("delivery is quarantined")
+    if current["state"] not in {IMPORT_CLAIMED, IMPORT_RECEIPT_PUBLISHED}:
+        raise MontageLearningFileBridgeError("import journal is not recoverable")
+    _verify_identity_path(processing, identity, "processing")
+    return current
+
+
+def _claim_from_journal(
+    journal_path: Path, value: Mapping[str, object], layout: BridgeLayout
+) -> DeliveryClaim:
+    current = _validate_import_journal(value, layout)
+    return DeliveryClaim(
+        journal_path=journal_path,
+        original_path=layout.root / str(current["original_relative_path"]),
+        processing_path=layout.root / str(current["processing_relative_path"]),
+        quarantine_path=layout.root / str(current["quarantine_relative_path"]),
+        record_id=str(current["record_id"]),
+        source_sha256=str(current["source_sha256"]),
+        pre_claim_file_identity=_identity_from_document(
+            current["pre_claim_file_identity"]
+        ),
+        ancestor_identities=dict(current["ancestor_identities"]),
+        state=str(current["state"]),
+    )
+
+
+def _require_claim_object(claim: object, layout: BridgeLayout) -> DeliveryClaim:
+    if not isinstance(claim, DeliveryClaim):
+        raise MontageLearningFileBridgeError(
+            "snapshot requires a validated delivery claim"
+        )
+    expected_journal = _import_journal_path(layout, claim.original_path.name)
+    if claim.journal_path != expected_journal:
+        raise MontageLearningFileBridgeError("claim journal path mismatch")
+    return claim
+
+
+def _require_claim_matches_journal(
+    claim: DeliveryClaim, value: Mapping[str, object], layout: BridgeLayout
+) -> None:
+    expected = _claim_from_journal(claim.journal_path, value, layout)
+    if claim != expected:
+        raise MontageLearningFileBridgeError("delivery claim no longer matches journal")
+
+
+def _require_journal_filename_binding(
+    value: Mapping[str, object], filename: str
+) -> None:
+    if Path(str(value["original_relative_path"])).name != filename:
+        raise MontageLearningFileBridgeError("journal filename binding mismatch")
+
+
+def _verify_identity_path(
+    path: Path, identity: tuple[int, int, int, int], label: str
+) -> None:
+    _reject_unsafe_path(path)
+    try:
+        current = path.stat(follow_symlinks=False)
+    except FileNotFoundError as exc:
+        raise MontageLearningFileBridgeError(f"{label} file is missing") from exc
+    if not _is_regular_stat(current) or _stat_is_reparse(current):
+        raise MontageLearningFileBridgeError(f"{label} path is not regular")
+    if _stat_identity(current) != identity:
+        raise MontageLearningFileBridgeError(f"{label} file identity mismatch")
+
+
+def _atomic_rename_noreplace(source: Path, destination: Path) -> None:
+    """Use a same-volume atomic no-replace rename or fail closed."""
+
+    _require_safe_directory(source.parent)
+    _require_safe_directory(destination.parent)
+    source_stat = source.stat(follow_symlinks=False)
+    destination_parent_stat = destination.parent.stat(follow_symlinks=False)
+    if source_stat.st_dev != destination_parent_stat.st_dev:
+        raise MontageLearningFileBridgeError("atomic rename must remain on one volume")
+    if destination.exists() or destination.is_symlink():
+        raise MontageLearningFileBridgeError("atomic rename destination collision")
+    if os.name == "nt":
+        MOVEFILE_WRITE_THROUGH = 0x00000008
+        ERROR_FILE_EXISTS = 80
+        ERROR_ALREADY_EXISTS = 183
+        try:
+            import ctypes
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            move_file_ex = kernel32.MoveFileExW
+            move_file_ex.argtypes = [
+                ctypes.c_wchar_p,
+                ctypes.c_wchar_p,
+                ctypes.c_uint,
+            ]
+            move_file_ex.restype = ctypes.c_int
+        except (AttributeError, OSError) as exc:
+            raise MontageLearningFileBridgeError(
+                "atomic no-replace write-through rename is unavailable"
+            ) from exc
+        ctypes.set_last_error(0)
+        if not move_file_ex(str(source), str(destination), MOVEFILE_WRITE_THROUGH):
+            error_number = ctypes.get_last_error()
+            if error_number in {ERROR_FILE_EXISTS, ERROR_ALREADY_EXISTS}:
+                raise MontageLearningFileBridgeError(
+                    "atomic rename destination collision"
+                )
+            raise MontageLearningFileBridgeError(
+                "atomic no-replace write-through rename failed: "
+                f"winerror {error_number}"
+            )
+        return
+    if os.name == "posix":
+        import ctypes
+        import errno
+
+        libc = ctypes.CDLL(None, use_errno=True)
+        renameat2 = getattr(libc, "renameat2", None)
+        if renameat2 is None:
+            raise MontageLearningFileBridgeError(
+                "atomic no-replace rename is unavailable"
+            )
+        renameat2.argtypes = [
+            ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p,
+            ctypes.c_uint,
+        ]
+        renameat2.restype = ctypes.c_int
+        result = renameat2(
+            -100,
+            os.fsencode(source),
+            -100,
+            os.fsencode(destination),
+            1,
+        )
+        if result != 0:
+            error_number = ctypes.get_errno()
+            if error_number == errno.EEXIST:
+                raise MontageLearningFileBridgeError(
+                    "atomic rename destination collision"
+                )
+            raise MontageLearningFileBridgeError(
+                f"atomic no-replace rename failed: errno {error_number}"
+            )
+        return
+    raise MontageLearningFileBridgeError("atomic no-replace rename is unsupported")
+
+
 def publish_current_profile(
     layout: BridgeLayout,
     envelope: Mapping[str, object],
@@ -728,20 +1363,32 @@ def _require_id(value: object, field: str) -> str:
 
 
 def _directory_fsync(path: Path) -> None:
+    if os.name == "nt":
+        # MoveFileExW WRITE_THROUGH owns rename durability on Windows. File-write
+        # durability remains the responsibility of AtomicJsonWriter.
+        return
+    if os.name != "posix":
+        raise MontageLearningFileBridgeError(
+            "directory durability is unsupported on this platform"
+        )
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     try:
-        fd = os.open(path, os.O_RDONLY)
+        fd = os.open(path, flags)
         try:
             os.fsync(fd)
         finally:
             os.close(fd)
-    except OSError:
-        pass
+    except OSError as exc:
+        raise MontageLearningFileBridgeError(
+            f"directory durability failed for {path}"
+        ) from exc
 
 
 __all__ = [
     "BRIDGE_CONTRACT_PROFILE",
     "BridgeLayout",
     "BridgeOwner",
+    "DeliveryClaim",
     "DeliverySnapshot",
     "EXACT_RECEIPT_NAMESPACE",
     "GENERIC_RECEIPT_NAMESPACE",
@@ -751,15 +1398,18 @@ __all__ = [
     "PRODUCTION_BRIDGE_ROOT",
     "ReceiptPublicationPaths",
     "build_receipt_publication_pending",
+    "claim_delivery",
     "clear_pending_receipt_publication_exact",
     "create_pending_receipt_publication_new_or_identical",
     "list_delivery_paths",
     "load_bridge_owner",
     "load_published_receipt",
     "load_receipt_publication_pending",
+    "mark_claim_receipt_published",
     "provision_bridge",
     "publish_current_profile",
     "publish_receipt_new_or_identical",
+    "quarantine_claim",
     "receipt_identity_publisher_guard",
     "receipt_publication_paths",
     "snapshot_delivery",

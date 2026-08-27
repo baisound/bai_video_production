@@ -8,6 +8,7 @@ import threading
 
 import pytest
 
+import ai_video_production.montage_learning_file_bridge as file_bridge
 from ai_video_production.montage_learning_bridge_application import (
     ExactAdmissionCoordinates,
     GenericObservationCoordinates,
@@ -24,6 +25,7 @@ from ai_video_production.montage_learning_file_bridge import (
     BridgeLayout,
     MontageLearningFileBridgeError,
     PRODUCTION_BRIDGE_ROOT,
+    claim_delivery,
     load_bridge_owner,
     provision_bridge,
     snapshot_delivery,
@@ -148,11 +150,265 @@ def test_provision_is_idempotent_and_never_claims_isolated_root_as_production(tm
     second = provision_bridge(layout, bridge_instance_id="bridge-fixture-001")
     assert first == second
     assert second.production_path is False
+    assert all(
+        path.is_dir()
+        for path in (
+            layout.processing,
+            layout.quarantine,
+            layout.state,
+            layout.import_journal,
+        )
+    )
     assert layout.root != PRODUCTION_BRIDGE_ROOT
     with pytest.raises(MontageLearningFileBridgeError):
         BridgeLayout(PRODUCTION_BRIDGE_ROOT.parent / "alternate", True)
     with pytest.raises(MontageLearningFileBridgeError):
         BridgeLayout.for_isolated_test(PRODUCTION_BRIDGE_ROOT)
+
+
+def test_claim_crash_before_snapshot_restarts_from_processing_journal(tmp_path):
+    layout = _layout(tmp_path)
+    delivery = _delivery("claim-restart-001")
+    staged = _stage(layout, delivery)
+    canonical_store = _canonical_store(tmp_path)
+
+    def fail(phase: str, path: Path) -> None:
+        if phase == "after_claim_rename_before_snapshot":
+            assert path.parent == layout.processing
+            raise RuntimeError("crash-after-claim")
+
+    coordinates = GenericObservationCoordinates(expected_revision=0)
+    with pytest.raises(RuntimeError, match="crash-after-claim"):
+        MontageLearningBridgeApplication(
+            layout=layout,
+            canonical_port=canonical_store,
+            failure_hook=fail,
+        ).import_path(staged, generic_coordinates=coordinates)
+
+    assert not staged.exists()
+    processing = layout.processing / staged.name
+    assert processing.is_file()
+    journal_path = next(layout.import_journal.glob("*.import-journal.json"))
+    journal = json.loads(journal_path.read_text(encoding="utf-8"))
+    assert journal["state"] == "CLAIMED"
+    assert "payload" not in journal
+    assert "secret" not in json.dumps(journal).lower()
+
+    results = MontageLearningBridgeApplication(
+        layout=layout,
+        canonical_port=canonical_store,
+    ).import_once(
+        generic_coordinates_by_record={delivery["record_id"]: coordinates}
+    )
+
+    assert len(results) == 1
+    assert results[0].status == "ACCEPTED"
+    journal = json.loads(journal_path.read_text(encoding="utf-8"))
+    assert journal["state"] == "RECEIPT_PUBLISHED"
+    assert processing.is_file()
+
+
+def test_snapshot_requires_claim_and_records_non_inheritable_pinned_handle(tmp_path):
+    layout = _layout(tmp_path)
+    staged = _stage(layout, _delivery("pinned-handle-001"))
+    claim = claim_delivery(staged, layout)
+
+    snapshot = snapshot_delivery(claim, layout)
+
+    assert snapshot.path == claim.processing_path
+    assert snapshot.file_identity == claim.pre_claim_file_identity
+    assert snapshot.handle_inheritable is False
+    with pytest.raises(MontageLearningFileBridgeError, match="validated delivery claim"):
+        snapshot_delivery(claim.processing_path, layout)  # type: ignore[arg-type]
+
+
+def test_malformed_claim_is_journaled_and_quarantined_before_admission(tmp_path):
+    layout = _layout(tmp_path)
+    staged = _stage(layout, _delivery("malformed-quarantine-001"))
+    staged.write_text(
+        '{"record_id":"malformed-quarantine-001",'
+        '"record_id":"malformed-quarantine-001"}',
+        encoding="utf-8",
+    )
+    canonical_store = _canonical_store(tmp_path)
+
+    with pytest.raises(MontageLearningFileBridgeError, match="duplicate"):
+        MontageLearningBridgeApplication(
+            layout=layout,
+            canonical_port=canonical_store,
+        ).import_path(
+            staged,
+            generic_coordinates=GenericObservationCoordinates(expected_revision=0),
+        )
+
+    quarantined = layout.quarantine / staged.name
+    assert quarantined.is_file()
+    assert not (layout.processing / staged.name).exists()
+    journal_path = next(layout.import_journal.glob("*.import-journal.json"))
+    journal = json.loads(journal_path.read_text(encoding="utf-8"))
+    assert journal["state"] == "QUARANTINED"
+    assert journal["states"] == [
+        "PREPARED",
+        "CLAIMED",
+        "QUARANTINE_PREPARED",
+        "QUARANTINED",
+    ]
+    assert set(journal).isdisjoint({"payload", "source_delivery", "secret"})
+    assert not canonical_store.generic_observation_path.exists()
+
+
+def test_processing_collision_never_overwrites_or_claims(tmp_path):
+    layout = _layout(tmp_path)
+    staged = _stage(layout, _delivery("processing-collision-001"))
+    collision = layout.processing / staged.name
+    collision.write_bytes(b"collision-evidence")
+
+    with pytest.raises(MontageLearningFileBridgeError, match="processing collision"):
+        claim_delivery(staged, layout)
+
+    assert staged.is_file()
+    assert collision.read_bytes() == b"collision-evidence"
+    assert list(layout.import_journal.glob("*.import-journal.json")) == []
+
+
+def test_claim_rechecks_ancestors_after_rename_durability(tmp_path, monkeypatch):
+    layout = _layout(tmp_path)
+    staged = _stage(layout, _delivery("claim-post-rename-swap-001"))
+    displaced = layout.root / "processing-post-rename-displaced"
+    durability_paths: list[Path] = []
+    real_directory_fsync = file_bridge._directory_fsync
+
+    def swap_after_durability(path: Path) -> None:
+        real_directory_fsync(path)
+        durability_paths.append(path)
+        if durability_paths == [layout.inbox, layout.processing]:
+            layout.processing.rename(displaced)
+            layout.processing.mkdir()
+
+    monkeypatch.setattr(file_bridge, "_directory_fsync", swap_after_durability)
+
+    with pytest.raises(MontageLearningFileBridgeError, match="root/ancestor"):
+        claim_delivery(staged, layout)
+
+    assert durability_paths == [layout.inbox, layout.processing]
+    assert (displaced / staged.name).is_file()
+    journal = json.loads(
+        next(layout.import_journal.glob("*.import-journal.json")).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert journal["state"] == "PREPARED"
+
+
+def test_quarantine_rechecks_ancestors_after_rename_durability(
+    tmp_path, monkeypatch
+):
+    layout = _layout(tmp_path)
+    staged = _stage(layout, _delivery("quarantine-post-rename-swap-001"))
+    claim = claim_delivery(staged, layout)
+    displaced = layout.root / "quarantine-post-rename-displaced"
+    durability_paths: list[Path] = []
+    real_directory_fsync = file_bridge._directory_fsync
+
+    def swap_after_durability(path: Path) -> None:
+        real_directory_fsync(path)
+        durability_paths.append(path)
+        if durability_paths == [layout.processing, layout.quarantine]:
+            layout.quarantine.rename(displaced)
+            layout.quarantine.mkdir()
+
+    monkeypatch.setattr(file_bridge, "_directory_fsync", swap_after_durability)
+
+    with pytest.raises(MontageLearningFileBridgeError, match="root/ancestor"):
+        file_bridge.quarantine_claim(claim, layout)
+
+    assert durability_paths == [layout.processing, layout.quarantine]
+    assert (displaced / staged.name).is_file()
+    journal = json.loads(claim.journal_path.read_text(encoding="utf-8"))
+    assert journal["state"] == "QUARANTINE_PREPARED"
+
+
+def test_quarantine_recovery_rechecks_ancestors_after_rename_durability(
+    tmp_path, monkeypatch
+):
+    layout = _layout(tmp_path)
+    staged = _stage(layout, _delivery("quarantine-recovery-swap-001"))
+    claim = claim_delivery(staged, layout)
+    real_atomic_rename = file_bridge._atomic_rename_noreplace
+
+    def interrupt_quarantine_rename(source: Path, destination: Path) -> None:
+        raise RuntimeError(f"interrupted before {source.name} -> {destination.name}")
+
+    monkeypatch.setattr(
+        file_bridge, "_atomic_rename_noreplace", interrupt_quarantine_rename
+    )
+    with pytest.raises(RuntimeError, match="interrupted before"):
+        file_bridge.quarantine_claim(claim, layout)
+    monkeypatch.setattr(file_bridge, "_atomic_rename_noreplace", real_atomic_rename)
+
+    displaced = layout.root / "quarantine-recovery-displaced"
+    durability_paths: list[Path] = []
+    real_directory_fsync = file_bridge._directory_fsync
+
+    def swap_after_durability(path: Path) -> None:
+        real_directory_fsync(path)
+        durability_paths.append(path)
+        if durability_paths == [layout.processing, layout.quarantine]:
+            layout.quarantine.rename(displaced)
+            layout.quarantine.mkdir()
+
+    monkeypatch.setattr(file_bridge, "_directory_fsync", swap_after_durability)
+
+    with pytest.raises(MontageLearningFileBridgeError, match="root/ancestor"):
+        claim_delivery(staged, layout)
+
+    assert durability_paths == [layout.processing, layout.quarantine]
+    assert (displaced / staged.name).is_file()
+    journal = json.loads(claim.journal_path.read_text(encoding="utf-8"))
+    assert journal["state"] == "QUARANTINE_PREPARED"
+
+
+def test_directory_durability_contract_is_platform_honest(tmp_path):
+    missing = tmp_path / "missing-directory"
+    if os.name == "nt":
+        file_bridge._directory_fsync(missing)
+    else:
+        with pytest.raises(
+            MontageLearningFileBridgeError, match="directory durability failed"
+        ):
+            file_bridge._directory_fsync(missing)
+
+
+def test_processing_ancestor_swap_fails_closed_before_canonical_call(tmp_path):
+    layout = _layout(tmp_path)
+    staged = _stage(layout, _delivery("ancestor-swap-001"))
+    canonical_store = _canonical_store(tmp_path)
+    displaced = layout.root / "processing-displaced"
+
+    def swap(phase: str, path: Path) -> None:
+        if phase == "after_claim_rename_before_snapshot":
+            assert path.is_file()
+            layout.processing.rename(displaced)
+            layout.processing.mkdir()
+
+    with pytest.raises(MontageLearningBridgeApplicationError, match="RECOVERY_REQUIRED"):
+        MontageLearningBridgeApplication(
+            layout=layout,
+            canonical_port=canonical_store,
+            failure_hook=swap,
+        ).import_path(
+            staged,
+            generic_coordinates=GenericObservationCoordinates(expected_revision=0),
+        )
+
+    assert (displaced / staged.name).is_file()
+    assert not canonical_store.generic_observation_path.exists()
+    journal = json.loads(
+        next(layout.import_journal.glob("*.import-journal.json")).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert journal["state"] == "QUARANTINE_PREPARED"
 
 
 def test_generic_import_revalidates_commits_and_publishes_matching_v1_receipt(tmp_path):
@@ -393,18 +649,18 @@ def test_snapshot_rejects_filename_body_digest_malformed_duplicate_and_oversize(
     wrong = layout.inbox / f"other--{str(delivery['learning_sha256'])[7:]}.json"
     staged.replace(wrong)
     with pytest.raises(MontageLearningFileBridgeError, match="record_id"):
-        snapshot_delivery(wrong, layout)
+        snapshot_delivery(claim_delivery(wrong, layout), layout)
 
     malformed = layout.inbox / ("bad--" + "a" * 64 + ".json")
     malformed.write_text('{"record_id":"bad","record_id":"bad"}', encoding="utf-8")
     with pytest.raises(MontageLearningFileBridgeError, match="duplicate"):
-        snapshot_delivery(malformed, layout)
+        snapshot_delivery(claim_delivery(malformed, layout), layout)
 
     oversized = layout.inbox / ("huge--" + "b" * 64 + ".json")
     with oversized.open("wb") as handle:
         handle.truncate(4 * 1024 * 1024 + 1)
     with pytest.raises(MontageLearningFileBridgeError, match="size"):
-        snapshot_delivery(oversized, layout)
+        snapshot_delivery(claim_delivery(oversized, layout), layout)
 
 
 def test_symlink_delivery_and_owner_manifest_collision_fail_closed(tmp_path):
@@ -418,7 +674,7 @@ def test_symlink_delivery_and_owner_manifest_collision_fail_closed(tmp_path):
         except OSError:
             pytest.skip("symlink creation not available")
         with pytest.raises(MontageLearningFileBridgeError):
-            snapshot_delivery(link, layout)
+            claim_delivery(link, layout)
 
     manifest = json.loads(layout.owner_manifest.read_text(encoding="utf-8"))
     manifest["bridge_instance_id"] = "other-owner"

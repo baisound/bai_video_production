@@ -21,20 +21,24 @@ from .montage_learning_canonical_admission_transaction import (
 )
 from .montage_learning_file_bridge import (
     BridgeLayout,
+    DeliveryClaim,
     DeliverySnapshot,
     EXACT_RECEIPT_NAMESPACE,
     GENERIC_RECEIPT_NAMESPACE,
     MontageLearningFileBridgeError,
     ReceiptPublicationPaths,
     build_receipt_publication_pending,
+    claim_delivery,
     clear_pending_receipt_publication_exact,
     create_pending_receipt_publication_new_or_identical,
     list_delivery_paths,
     load_published_receipt,
     load_receipt_publication_pending,
     load_bridge_owner,
+    mark_claim_receipt_published,
     provision_bridge,
     publish_receipt_new_or_identical,
+    quarantine_claim,
     receipt_identity_publisher_guard,
     snapshot_delivery,
 )
@@ -175,40 +179,76 @@ class MontageLearningBridgeApplication:
         generic_coordinates: GenericObservationCoordinates | None = None,
     ) -> ImportResult:
         owner = load_bridge_owner(self.layout)
-        snapshot = snapshot_delivery(path, self.layout)
+        claim = claim_delivery(path, self.layout)
+        self._call_failure_hook(
+            "after_claim_rename_before_snapshot", claim.processing_path
+        )
+        try:
+            snapshot = snapshot_delivery(claim, self.layout)
+        except Exception as exc:
+            self._quarantine_pre_admission(claim, exc)
+            raise AssertionError("unreachable")
         message_type = snapshot.document.get("message_type")
         if message_type == "BvpMontageLearningDelivery":
             if generic_coordinates is None:
                 raise MontageLearningBridgeApplicationError(
                     "generic delivery requires revision and store coordinates"
                 )
-            return self._import_generic(snapshot, generic_coordinates)
+            _validate_generic_coordinates(generic_coordinates)
+            try:
+                candidate = validate_generic_learning_delivery(snapshot.document)
+                if (
+                    candidate.record_id != snapshot.record_id
+                    or candidate.source_sha256 != snapshot.source_sha256
+                ):
+                    raise MontageLearningBridgeApplicationError(
+                        "generic independent validation binding mismatch"
+                    )
+            except Exception as exc:
+                self._quarantine_pre_admission(claim, exc)
+                raise AssertionError("unreachable")
+            return self._import_generic(snapshot, claim, generic_coordinates)
         if message_type == "BvpMontageExactEvidenceDelivery":
             if exact_coordinates is None:
                 raise MontageLearningBridgeApplicationError(
                     "exact delivery requires staging and anchor coordinates"
                 )
+            _validate_exact_coordinates(exact_coordinates)
+            try:
+                candidate = validate_exact_evidence_delivery(
+                    snapshot.document,
+                    expected_owner_scope_hash=(
+                        exact_coordinates.expected_owner_scope_hash
+                    ),
+                )
+                if (
+                    candidate.record_id != snapshot.record_id
+                    or candidate.source_sha256 != snapshot.source_sha256
+                ):
+                    raise MontageLearningBridgeApplicationError(
+                        "exact independent validation binding mismatch"
+                    )
+            except Exception as exc:
+                self._quarantine_pre_admission(claim, exc)
+                raise AssertionError("unreachable")
             return self._import_exact(
                 snapshot,
+                claim,
                 owner.bridge_instance_id,
                 exact_coordinates,
             )
-        raise MontageLearningBridgeApplicationError("delivery lane is unsupported")
+        error = MontageLearningBridgeApplicationError(
+            "delivery lane is unsupported"
+        )
+        self._quarantine_pre_admission(claim, error)
+        raise AssertionError("unreachable")
 
     def _import_generic(
         self,
         snapshot: DeliverySnapshot,
+        claim: DeliveryClaim,
         coordinates: GenericObservationCoordinates,
     ) -> ImportResult:
-        _validate_generic_coordinates(coordinates)
-        candidate = validate_generic_learning_delivery(snapshot.document)
-        if (
-            candidate.record_id != snapshot.record_id
-            or candidate.source_sha256 != snapshot.source_sha256
-        ):
-            raise MontageLearningBridgeApplicationError(
-                "generic independent validation binding mismatch"
-            )
         with receipt_identity_publisher_guard(
             self.layout,
             record_id=snapshot.record_id,
@@ -239,6 +279,7 @@ class MontageLearningBridgeApplication:
                     )
                 except MontageLearningBridgeApplicationError as exc:
                     raise _recovery_required("published generic receipt is invalid", exc)
+                self._mark_published(claim)
                 if restarting:
                     self._clear_pending(paths, pending)
                 return _result("GENERIC_REVIEW_OBSERVATION", snapshot, receipt, paths)
@@ -278,6 +319,7 @@ class MontageLearningBridgeApplication:
                 receipt=receipt,
                 exact_v2=False,
             )
+            self._mark_published(claim)
             self._call_failure_hook("after_receipt_publish_before_pending_cleanup", receipt_path)
             self._clear_pending(paths, pending)
             return _result("GENERIC_REVIEW_OBSERVATION", snapshot, receipt, paths)
@@ -285,21 +327,10 @@ class MontageLearningBridgeApplication:
     def _import_exact(
         self,
         snapshot: DeliverySnapshot,
+        claim: DeliveryClaim,
         bridge_instance_id: str,
         coordinates: ExactAdmissionCoordinates,
     ) -> ImportResult:
-        _validate_exact_coordinates(coordinates)
-        candidate = validate_exact_evidence_delivery(
-            snapshot.document,
-            expected_owner_scope_hash=coordinates.expected_owner_scope_hash,
-        )
-        if (
-            candidate.record_id != snapshot.record_id
-            or candidate.source_sha256 != snapshot.source_sha256
-        ):
-            raise MontageLearningBridgeApplicationError(
-                "exact independent validation binding mismatch"
-            )
         with receipt_identity_publisher_guard(
             self.layout,
             record_id=snapshot.record_id,
@@ -322,6 +353,7 @@ class MontageLearningBridgeApplication:
                 receipt = _validate_exact_receipt(
                     existing, snapshot, bridge_instance_id, coordinates
                 )
+                self._mark_published(claim)
                 if restarting:
                     self._clear_pending(paths, pending)
                 return _result("EXACT_EVIDENCE", snapshot, receipt, paths)
@@ -346,6 +378,7 @@ class MontageLearningBridgeApplication:
                         receipt=receipt,
                         exact_v2=True,
                     )
+                    self._mark_published(claim)
                     self._call_failure_hook(
                         "after_receipt_publish_before_pending_cleanup", receipt_path
                     )
@@ -373,6 +406,7 @@ class MontageLearningBridgeApplication:
                 receipt=receipt,
                 exact_v2=True,
             )
+            self._mark_published(claim)
             self._call_failure_hook("after_receipt_publish_before_pending_cleanup", receipt_path)
             self._clear_pending(paths, pending)
             return _result("EXACT_EVIDENCE", snapshot, receipt, paths)
@@ -414,6 +448,26 @@ class MontageLearningBridgeApplication:
             clear_pending_receipt_publication_exact(paths, pending)
         except MontageLearningFileBridgeError as exc:
             raise _recovery_required("pending receipt cleanup failed", exc) from exc
+
+    def _mark_published(self, claim: DeliveryClaim) -> None:
+        try:
+            mark_claim_receipt_published(claim, self.layout)
+        except MontageLearningFileBridgeError as exc:
+            raise _recovery_required(
+                "import journal receipt state publication failed", exc
+            ) from exc
+
+    def _quarantine_pre_admission(
+        self, claim: DeliveryClaim, cause: Exception
+    ) -> None:
+        try:
+            quarantine_claim(claim, self.layout)
+        except MontageLearningFileBridgeError as quarantine_error:
+            raise _recovery_required(
+                "pre-admission failure could not be quarantined",
+                quarantine_error,
+            ) from cause
+        raise cause
 
     def _call_failure_hook(self, phase: str, path: Path) -> None:
         if self._failure_hook is not None:

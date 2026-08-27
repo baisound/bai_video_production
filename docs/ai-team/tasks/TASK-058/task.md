@@ -461,3 +461,64 @@ Project then external-anchor remains the fixed inner state-lock order. A second
 same-CAS caller cannot join the first caller's pending recovery and report a
 second `ACCEPTED`; after the winner commits it observes stale CAS and fails
 closed (or a later call with current coordinates can classify `DUPLICATE`).
+
+## FAST-BATCH-1A Work Order bounded-rework checkpoint
+
+The accepted cross-repository Design is
+`bai-davinci-montage-skills@9f6c26ac5147b9a881ca037ae02ef020818db50a`
+with
+`accepted_design_sha256=sha256:c5c17aa92ab5f68daef315e4fc62a1fb7a46e3f80c2c8093adec1f073594db80`.
+Its Design-only Final Judge result is C/H/M/L=0/0/0/0. TASK-060, TASK-061,
+and TASK-062 remain IMPLEMENTATION_NOT_AUTHORIZED and are not part of this
+Unit.
+
+The prior A implementation review reported C/H/M/L=0/3/2/0. The same exact-six
+Atomic Unit now implements the bounded closures:
+
+- all authoritative canonical, anchor, registry, journal, Generic ledger,
+  payload, and marker reads use pinned non-inheritable handles with ancestor
+  and target identity/size/read-back checks;
+- Generic admission uses the fixed A-owned PREPARED phase journal, immutable
+  digest-addressed payload object, body-free ledger, Product manifest CAS,
+  fixed commit marker, durable read-back, and restart recovery;
+- the typed surface is `admit_generic_observation()`,
+  `recover_generic_observation()`, and
+  `get_verified_generic_observation()`, with explicit review-observation
+  aliases;
+- stable `ReviewObservationCanonicalReadback` and
+  `ReviewObservationAdmissionResult` fix
+  `store_kind=REVIEW_OBSERVATION`, while
+  `learning_adopted=false`, `profile_promoted=false`, and
+  `timeline_mutated=false`;
+- a same-identity/same-digest/same-scope duplicate returns the stable original
+  read-back without changing payload, ledger, Product manifest, marker, or
+  store revision;
+- currentness validates every historical ledger entry, payload object, Product
+  binding, marker, canonical commit, and internal read-back hash;
+- A does not mint the public SKILL v1 transport receipt; B+C must correlate its
+  outer receipt against this trusted A read-back after A API freeze.
+
+Current Builder Evidence:
+
+- focused FAST-BATCH-1A: 23/23 PASS;
+- TASK-043 ProductSave + TASK-055 + TASK-058 direct regression:
+  345/345 PASS;
+- final exact-head full Product regression:
+  4528 PASS / 6 platform-condition SKIP / 2 deprecation warnings / 0 FAIL;
+- actual Generic same-CAS multiprocess fixture repeated five times: one
+  ACCEPTED, one fail-closed caller, bounded child/queue cleanup, private
+  journal absent;
+- Generic crash boundaries after PREPARED journal, Product commit, marker
+  commit, and verified read-back before cleanup: PASS;
+- equal-size target substitution, ancestor identity drift, historical
+  payload/marker loss, schema relabel, collision, and cross-lane replay:
+  fail-closed;
+- Python compile, Draft 2020-12 public schema, byte-identical package mirror,
+  and diff-check: PASS;
+- independent implementation re-review, Hosted current-head terminal checks,
+  fresh-main integration, shared LOCK, Ready, merge,
+  and closure: PENDING;
+- B+C remains stopped until A Technical GO/API freeze;
+- CHANGELOG, ACTIVE-WORK-LOCKS, shared LOCK, enabled:true, Preference meaning
+  generation, Timeline/Resolve, Provider/native, Release, Deploy, and
+  Production effects: NOT MODIFIED / NOT EXECUTED.

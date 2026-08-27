@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.baisound.local/dbd-reasoning-dataset-adoption-authority.schema.json",
+  "title": "DbD Reasoning Dataset Adoption Authority Boundary",
+  "oneOf": [
+    {"$ref": "#/$defs/authority"},
+    {"$ref": "#/$defs/request"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "safeId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "manifestId": {"type": "string", "pattern": "^MAN-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_kind", "authorization_id",
+        "authority_evidence_sha256", "preflight_sha256", "manifest_id",
+        "revision", "rights_manifest_sha256", "logical_path_sha256",
+        "observation_sha256", "not_before", "expires_at",
+        "max_adoption_requests", "authorization_scope",
+        "authorization_state", "authorization_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "DBD_REASONING_DATASET_ADOPTION_AUTHORITY"},
+        "authorization_id": {"$ref": "#/$defs/safeId"},
+        "authority_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "preflight_sha256": {"$ref": "#/$defs/sha256"},
+        "manifest_id": {"$ref": "#/$defs/manifestId"},
+        "revision": {"type": "integer", "minimum": 1},
+        "rights_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "logical_path_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_sha256": {"$ref": "#/$defs/sha256"},
+        "not_before": {"$ref": "#/$defs/utc"},
+        "expires_at": {"$ref": "#/$defs/utc"},
+        "max_adoption_requests": {"const": 1},
+        "authorization_scope": {"const": "DATASET_ADOPTION_REQUEST_ONLY"},
+        "authorization_state": {"const": "ALLOWED_SINGLE_DATASET_ADOPTION_REQUEST"},
+        "authorization_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_kind", "request_id", "authorization_sha256",
+        "authority_evidence_sha256", "preflight_sha256", "manifest_id",
+        "revision", "rights_manifest_sha256", "logical_path_sha256",
+        "observation_sha256", "created_at", "dataset_adoption_requested",
+        "dataset_adoption_started", "training_authorized", "training_started",
+        "request_state", "request_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "DBD_REASONING_DATASET_ADOPTION_REQUEST"},
+        "request_id": {"$ref": "#/$defs/safeId"},
+        "authorization_sha256": {"$ref": "#/$defs/sha256"},
+        "authority_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "preflight_sha256": {"$ref": "#/$defs/sha256"},
+        "manifest_id": {"$ref": "#/$defs/manifestId"},
+        "revision": {"type": "integer", "minimum": 1},
+        "rights_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "logical_path_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_sha256": {"$ref": "#/$defs/sha256"},
+        "created_at": {"$ref": "#/$defs/utc"},
+        "dataset_adoption_requested": {"const": true},
+        "dataset_adoption_started": {"const": false},
+        "training_authorized": {"const": false},
+        "training_started": {"const": false},
+        "request_state": {"const": "AUTHORIZED_PROPOSAL_NO_DATASET_ADOPTION_OR_TRAINING_EFFECT"},
+        "request_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

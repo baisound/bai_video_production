@@ -3,6 +3,7 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-058 P1C-Dとして、P1C-Cのbody-free canonical promotion ledger候補に対し、external monotonic anchorのbootstrap／advance／unchanged／rollback／fork／scope／staleをordered entry digest chain proofで一意評価するpure／no-I/O契約を追加しました。external anchor／store／CAS／persistence／recovery／public v2 receipt、Timeline／Resolve／runtime、Release／Deploy／Production authorityは生成しません。
 - TASK-029 R10Dとして、R10C候補をwrite境界でexact再検証し、production cipherをWindows Current User DPAPIへ固定したbody-free署名artifact暗号化stagingを追加しました。caller intentはHuman確認・custody authorityを生成せず、Owner-local path、canonical custody receipt、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは未成立のままです。
 - TASK-054 R6B-Cとして、R6B-BのDataset Evidence選択preflightに対し、別Human Authorityをexact admissionしてbody-free Dataset採用request proposalを1件だけ生成する境界を追加しました。Human Evidence digestをcanonical authorization digestへ結合し、Evidence単位のone-shot claimでrecord rewrap/replayをfail closedにします。Dataset採用開始・Store mutation・学習・評価・Provider実行・モデル昇格・Release／Deploy／Productionは含まず、別Human Gateのままです。
 - TASK-059として、Owner保有の暗号化PuTTY PPK v3 Ed25519鍵をbody-free公開座標preflight、one-shot helper、Windows Credential UI、strict trusted launch configを介して既存TASK-029 R9B Owner-local DPAPI custodyへ取り込むfail-closed bridgeを追加しました。秘密値をWebView・ログ・receiptへ返さず、実PPK・passphrase・DPAPI custody・signing、Knowledge Pack promotion、Release／Deploy／Productionは別Human Gateのままです。

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import stat
 import subprocess
+import time
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -117,8 +118,10 @@ def _arguments(staged) -> dict[str, object]:
 
 
 def _concurrent_admit(project: str, anchor: str, delivery: dict[str, object],
-                      arguments: dict[str, object], start, queue) -> None:
+                      arguments: dict[str, object], start, queue,
+                      delay_seconds: float = 0.0) -> None:
     start.wait(10)
+    time.sleep(delay_seconds)
     try:
         result = _writer(Path(project), Path(anchor)).admit_exact(delivery, **arguments)
         queue.put(("RESULT", result.status, result.receipt.to_dict()["receipt_sha256"]))
@@ -128,8 +131,10 @@ def _concurrent_admit(project: str, anchor: str, delivery: dict[str, object],
 
 def _concurrent_generic(project: str, anchor: str, delivery: dict[str, object],
                         start, queue, expected_revision: int = 0,
-                        owner_scope_hash: str | None = None) -> None:
+                        owner_scope_hash: str | None = None,
+                        delay_seconds: float = 0.0) -> None:
     start.wait(10)
+    time.sleep(delay_seconds)
     try:
         optional = {} if owner_scope_hash is None else {
             "owner_scope_hash": owner_scope_hash,
@@ -1551,60 +1556,85 @@ def test_multiprocess_generic_same_cas_has_one_accepted_and_cleans_journal(
         assert verified.status == "ACCEPTED"
 
 
-def test_multiprocess_generic_and_exact_project_writes_serialize(tmp_path: Path) -> None:
-    project = tmp_path / "project"
-    anchor = tmp_path / "anchor"
-    project.mkdir(); anchor.mkdir(); _project(project)
-    exact, staged = _stage(project)
-    generic = _generic_delivery()
-    ctx = multiprocessing.get_context("spawn")
-    start = ctx.Event(); queue = ctx.Queue()
-    processes = [
-        ctx.Process(target=_concurrent_admit,
-                    args=(str(project), str(anchor), exact, _arguments(staged), start, queue)),
-        ctx.Process(target=_concurrent_generic,
-                    args=(str(project), str(anchor), generic, start, queue)),
-    ]
-    started = []
-    try:
-        for process in processes:
-            process.start()
-            started.append(process)
-        start.set()
-        results = [queue.get(timeout=30) for _ in started]
-    finally:
-        _cleanup_processes(started, queue)
-    assert len(results) == 2
-    assert all(type(item) is tuple and len(item) == 3 for item in results), results
-    assert sum(item[0] in {"RESULT", "ERROR"} for item in results) == 1, results
-    assert sum(item[0] in {"GENERIC", "GENERIC_ERROR"} for item in results) == 1, results
-    writer = _writer(project, anchor)
-    exact_worker = next(item for item in results if item[0] in {"RESULT", "ERROR"})
-    if exact_worker[0] == "ERROR":
-        assert exact_worker[1] in {
-            "MontageLearningCanonicalAdmissionError", "ProductError",
-        }, results
-        exact_retry = writer.admit_exact(exact, **_arguments(staged))
-        assert exact_retry.status == "ACCEPTED"
-    if any(item[0] == "GENERIC_ERROR" for item in results):
-        generic_error = next(item for item in results if item[0] == "GENERIC_ERROR")
-        assert generic_error[1] in {
-            "MontageLearningCanonicalAdmissionError", "ProductError",
-        }, results
-        recovered = writer.record_exact_generic_observation(
-            generic, expected_revision=0,
+@pytest.mark.parametrize("delayed_worker", ["exact", "generic"])
+def test_multiprocess_generic_and_exact_project_writes_serialize(
+    tmp_path: Path, delayed_worker: str,
+) -> None:
+    for iteration in range(3):
+        project = tmp_path / f"project-{delayed_worker}-{iteration}"
+        anchor = tmp_path / f"anchor-{delayed_worker}-{iteration}"
+        project.mkdir(); anchor.mkdir(); _project(project)
+        exact, staged = _stage(project)
+        generic = _generic_delivery()
+        ctx = multiprocessing.get_context("spawn")
+        start = ctx.Event(); queue = ctx.Queue()
+        exact_delay = 0.10 if delayed_worker == "exact" else 0.0
+        generic_delay = 0.10 if delayed_worker == "generic" else 0.0
+        processes = [
+            ctx.Process(
+                target=_concurrent_admit,
+                args=(str(project), str(anchor), exact, _arguments(staged), start, queue,
+                      exact_delay),
+            ),
+            ctx.Process(
+                target=_concurrent_generic,
+                args=(str(project), str(anchor), generic, start, queue, 0, None,
+                      generic_delay),
+            ),
+        ]
+        started = []
+        try:
+            for process in processes:
+                process.start()
+                started.append(process)
+            start.set()
+            results = [queue.get(timeout=30) for _ in started]
+        finally:
+            _cleanup_processes(started, queue)
+        assert len(results) == 2
+        assert all(type(item) is tuple and len(item) == 3 for item in results), results
+        assert sum(item[0] in {"RESULT", "ERROR"} for item in results) == 1, results
+        assert sum(item[0] in {"GENERIC", "GENERIC_ERROR"} for item in results) == 1, results
+        writer = _writer(project, anchor)
+        exact_worker = next(item for item in results if item[0] in {"RESULT", "ERROR"})
+        if exact_worker[0] == "ERROR":
+            assert exact_worker[1] in {
+                "MontageLearningCanonicalAdmissionError", "ProductError",
+            }, results
+            exact_retry = writer.admit_exact(exact, **_arguments(staged))
+            assert exact_retry.status == "ACCEPTED"
+        if any(item[0] == "GENERIC_ERROR" for item in results):
+            generic_error = next(item for item in results if item[0] == "GENERIC_ERROR")
+            assert generic_error[1] in {
+                "MontageLearningCanonicalAdmissionError", "ProductError",
+            }, results
+            recovered = writer.record_exact_generic_observation(
+                generic, expected_revision=0,
+            )
+            assert recovered.status == "ACCEPTED"
+            generic_commit = recovered.canonical_commit_sha256
+        else:
+            generic_commit = next(item[2] for item in results if item[0] == "GENERIC")
+        receipt = writer.get_verified_receipt()
+        assert receipt.to_public_projection()["canonical_currentness_verified"] is True
+        assert (project / "state/montage-learning-generic-review-observations.json").is_file()
+        verified_generic = writer.get_verified_generic_observation(
+            record_id=str(generic["record_id"]),
+            learning_sha256=str(generic["learning_sha256"]),
+            canonical_commit_sha256="sha256:" + generic_commit,
         )
-        assert recovered.status == "ACCEPTED"
-        generic_commit = recovered.canonical_commit_sha256
-    else:
-        generic_commit = next(item[2] for item in results if item[0] == "GENERIC")
-    assert writer.get_verified_receipt().to_public_projection()["canonical_currentness_verified"] is True
-    assert (project / "state/montage-learning-generic-review-observations.json").is_file()
-    verified_generic = writer.get_verified_generic_observation(
-        record_id=str(generic["record_id"]),
-        learning_sha256=str(generic["learning_sha256"]),
-        canonical_commit_sha256="sha256:" + generic_commit,
-    )
-    assert verified_generic.status == "ACCEPTED"
-    assert not (project / JOURNAL_RELATIVE_PATH).exists()
-    assert not writer.generic_journal_path.exists()
+        assert verified_generic.status == "ACCEPTED"
+        assert not (project / JOURNAL_RELATIVE_PATH).exists()
+        assert not writer.generic_journal_path.exists()
+        assert module.ProductProjectSaveCoordinator().recovery_status(project)[
+            "required"
+        ] is False
+
+        stable_inventory = _snapshot_inventory(project)
+        stable_manifest = ProductProjectManifestStore.load(project)
+        duplicate_generic = writer.record_exact_generic_observation(
+            generic, expected_revision=verified_generic.ledger_revision,
+        )
+        assert duplicate_generic.status == "DUPLICATE"
+        assert ProductProjectManifestStore.load(project) == stable_manifest
+        assert _snapshot_inventory(project) == stable_inventory

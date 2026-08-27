@@ -219,6 +219,38 @@ def _target(path: Path) -> None:
         raise MontageLearningCanonicalAdmissionError("target is unsafe")
 
 
+def _ensure_safe_directory_locked(path: Path, name: str) -> None:
+    """Create one authority directory while the Product Project lock is held."""
+
+    try:
+        parent_before = path.parent.lstat()
+        if (
+            not stat.S_ISDIR(parent_before.st_mode)
+            or stat.S_ISLNK(parent_before.st_mode)
+            or bool(getattr(parent_before, "st_file_attributes", 0) & _REPARSE_POINT)
+        ):
+            raise MontageLearningCanonicalAdmissionError(f"{name} parent is unsafe")
+        path.mkdir()
+    except FileExistsError:
+        pass
+    except MontageLearningCanonicalAdmissionError:
+        raise
+    except OSError as exc:
+        raise MontageLearningCanonicalAdmissionError(f"{name} could not be initialized") from exc
+    try:
+        current = path.lstat()
+        parent_after = path.parent.lstat()
+    except OSError as exc:
+        raise MontageLearningCanonicalAdmissionError(f"{name} is unavailable") from exc
+    if (
+        not stat.S_ISDIR(current.st_mode)
+        or stat.S_ISLNK(current.st_mode)
+        or bool(getattr(current, "st_file_attributes", 0) & _REPARSE_POINT)
+        or _file_identity(parent_after) != _file_identity(parent_before)
+    ):
+        raise MontageLearningCanonicalAdmissionError(f"{name} is unsafe")
+
+
 def _file_identity(info: os.stat_result) -> tuple[int, int, int, int]:
     return (
         int(info.st_dev), int(info.st_ino), stat.S_IFMT(info.st_mode),
@@ -1431,10 +1463,6 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         self.canonical_store_id = _identifier(canonical_store_id, "canonical_store_id")
         self.bridge_instance_id = _identifier(bridge_instance_id, "bridge_instance_id")
         state = self.project_root / "state"
-        if not state.exists():
-            state.mkdir()
-        if _is_reparse(state) or not state.is_dir():
-            raise MontageLearningCanonicalAdmissionError("state root is unsafe")
         self.canonical_path = self.project_root / CANONICAL_RELATIVE_PATH
         self.receipt_path = self.project_root / RECEIPT_RELATIVE_PATH
         self.journal_path = self.project_root / JOURNAL_RELATIVE_PATH
@@ -1443,13 +1471,20 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         self.generic_journal_path = self.project_root / GENERIC_OBSERVATION_JOURNAL_RELATIVE_PATH
         self.generic_object_root = self.project_root / GENERIC_OBSERVATION_OBJECT_DIRECTORY
         self.generic_marker_root = self.project_root / GENERIC_OBSERVATION_MARKER_DIRECTORY
-        if not self.generic_object_root.exists():
-            self.generic_object_root.mkdir(parents=True)
-        if not self.generic_marker_root.exists():
-            self.generic_marker_root.mkdir(parents=True)
-        for directory in (self.generic_object_root, self.generic_marker_root):
-            if _is_reparse(directory) or not directory.is_dir():
-                raise MontageLearningCanonicalAdmissionError("generic authority directory is unsafe")
+        with _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root)):
+            # Exact and Generic writers share these authority directories.  Keep
+            # first-use initialization inside the same Product lock used by both
+            # transactions so concurrent constructors cannot leak raw mkdir races.
+            ProductProjectManifestStore.load(self.project_root)
+            _ensure_safe_directory_locked(state, "state root")
+            generic_root = self.generic_journal_path.parent
+            _ensure_safe_directory_locked(generic_root, "generic authority root")
+            _ensure_safe_directory_locked(
+                self.generic_object_root, "generic observation object directory"
+            )
+            _ensure_safe_directory_locked(
+                self.generic_marker_root, "generic observation marker directory"
+            )
         self.anchor_path = self.external_anchor_root / ANCHOR_FILE_NAME
         self.anchor_recovery_path = self.external_anchor_root / ANCHOR_RECOVERY_FILE_NAME
         self._validate_paths()

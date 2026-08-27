@@ -132,7 +132,14 @@ def test_training_studio_native_tk_tab_traversal_and_safe_preflight(
     )
 
     try:
-        assert launch_training_studio(["--workspace", str(workspace.root)]) == 0
+        try:
+            result = launch_training_studio(["--workspace", str(workspace.root)])
+        except tk.TclError as exc:
+            detail = str(exc)
+            if "init.tcl" in detail or "Tcl wasn't installed properly" in detail:
+                pytest.skip(f"Tk runtime unavailable during Product root creation: {exc}")
+            raise
+        assert result == 0
         assert observed["selected_labels"] == [
             "現在の実況・解説",
             "モデルと事前チェック",

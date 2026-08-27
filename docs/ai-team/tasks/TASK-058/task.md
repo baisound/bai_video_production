@@ -1,6 +1,6 @@
 # TASK-058 — Montage Learning Bridge
 
-Status: ACTIVE — P0/P1A/P1B/P1C-A/P1C-B HOSTED CLOSED / P1C-C IMPLEMENTED LOCAL / TECHNICAL GO / HOSTING PENDING
+Status: ACTIVE — P0/P1A/P1B/P1C-A/P1C-B/P1C-C HOSTED CLOSED / P1C-D TECHNICAL GO / HOSTED PENDING
 
 ## Objective
 
@@ -345,3 +345,76 @@ P1C-C local completion checkpoint:
   authority, receipt mint, canonical admission, automatic learning, Timeline,
   Resolve, Provider/network/native, Release, Deploy, and Production effects:
   NOT IMPLEMENTED / NOT EXECUTED.
+
+## P1C-D Atomic Unit
+
+P1C-D freezes the pure, no-I/O external monotonic anchor candidate contract for
+the later canonical Product Project writer. It accepts only exact typed P1C-C
+ledger candidates and exact typed P1C-D anchor/expectation records. It binds the
+complete current anchored ledger, requires the entire current entry prefix for
+an advance, and classifies bootstrap, advance, unchanged, rollback, fork, scope
+mismatch, and stale-anchor outcomes.
+
+Every P1C-D record remains
+`EXTERNAL_ANCHOR_REVALIDATION_REQUIRED / NOT_ESTABLISHED`. Public mappings,
+self-hashes, and typed candidate instances do not prove that an external anchor
+exists, is latest, is durable, or has canonical origin. P1C-D performs no
+filesystem, Product Project, anchor, receipt, Timeline, Resolve, Provider,
+network, native, Release, Deploy, or Production effect.
+
+The P1C-D exact scope is six files: this task record, one detailed design, one
+public Schema and byte-identical packaged mirror, one pure source module, and
+one focused fault/boundary test module. P1B/P1C-A/P1C-B/P1C-C source, Product
+Project and ProjectSave code, CHANGELOG, active locks, current state, task index,
+TASK-029/TASK-059, filesystem data, and runtime effects are outside this source
+Unit.
+
+A later writer Unit remains responsible for internally rerunning raw P1C-B
+verification while holding the canonical Product Project transaction boundary,
+authenticating and committing the real external anchor, persisting and
+recovering the canonical ledger, performing durable commit read-back, and
+minting the public v2 receipt only after that read-back.
+
+P1C-D local implementation checkpoint:
+
+- initial origin/main base: `80618661d941ce15ac5fac49abfaf3f64b6ff80c`;
+- TASK-059 canonical closure fresh main integrated:
+  `8c59c18caa61debe258141c8a094f7fd964705c5`;
+- exact source/design/schema mirror/test/task scope: 6 paths;
+- bootstrap/advance/unchanged/rollback/fork/scope/stale decision contract:
+  IMPLEMENTED;
+- focused P1C-D tests: 23 / 23 PASS;
+- TASK-055/TASK-058 direct regression: 226 / 226 PASS;
+- pre-rework full Product regression: 4442 PASS / 6 platform-condition SKIP /
+  2 deprecation warnings / 0 FAIL;
+- current-head full Product regression: 4445 PASS / 5 platform-condition SKIP /
+  2 deprecation warnings / 0 FAIL;
+- Schema Draft 2020-12 and packaged byte identity: PASS, SHA-256
+  `DF468870352798AE72272961293837C7A0F1FBBC7EAC4B8D90D471B3E4061509`;
+- first independent review on head `49aaec8f3e42e2a9ecce68a58d475d9943c6fee2`:
+  Technical NO-GO / C/H/M/L = 0/0/1/0;
+- serialized STALE/SCOPE relabel finding: bounded fix implemented, current-head
+  parser closure confirmed through the later final review;
+- post-GO Builder adversarial finding: higher-revision exact-prefix ADVANCE could
+  be relabelled as FORK by dropping its constructible anchor; bounded ordered
+  entry-digest chain proof and canonical seven-decision parser fix implemented,
+  later final review confirmed closure;
+- second independent re-review on head
+  `2de41b7a7ff44ec963effba72f4d42c532390297`: Technical NO-GO /
+  C/H/M/L = 0/0/1/0; same-revision FORK/UNCHANGED still depended on
+  caller-replaceable ledger hash equality;
+- same-revision proof/digest correlation and bidirectional relabel fixtures:
+  bounded fix implemented and later final review confirmed closure;
+- third independent re-review on head
+  `a73fa046fe04886d39d70a83310f1f85d33c93bc`: Technical GO /
+  C/H/M/L = 0/0/0/0; subsequently superseded only by the Builder fault-boundary
+  guard that converts a non-absent zero-revision empty proof into an explicit
+  ValueError;
+- final independent confirmation on head
+  `1bd479a46b3a444eebc3777c72cf4293a52fd8ef`: Technical GO /
+  C/H/M/L = 0/0/0/0;
+- unresolved Critical/High/Medium/Low findings: 0/0/0/0;
+- external anchor read/write/origin/durability, canonical writer/recovery,
+  rollback authority, public v2 receipt mint, canonical admission, automatic
+  learning, Timeline, Resolve, Provider/network/native, Release, Deploy, and
+  Production effects: NOT IMPLEMENTED / NOT EXECUTED.

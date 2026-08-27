@@ -326,6 +326,18 @@ def test_existing_expectation_and_evaluation_reject_partial_null_coordinates(
     with pytest.raises(ValueError, match="ledger sentinel"):
         MontageLearningExternalMonotonicAnchorEvaluation.from_dict(evaluation_body)
 
+    zero_revision = evaluate_montage_learning_external_monotonic_anchor(
+        anchor,
+        MontageLearningExternalMonotonicAnchorExpectation.for_anchor(anchor),
+        first,
+        first,
+    ).to_dict()
+    zero_revision["observed_ledger_revision"] = 0
+    zero_revision["observed_entry_sha256s"] = []
+    _resign_evaluation(zero_revision)
+    with pytest.raises(ValueError, match="complete ledger coordinates"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(zero_revision)
+
 
 def test_evaluation_decision_revision_semantics_fail_closed(tmp_path: Path) -> None:
     _, first, second, _, fork_second = _ledgers(tmp_path)

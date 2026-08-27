@@ -694,7 +694,12 @@ def _validated_entry_chain(
     latest_entry_sha256: str | None,
     chain_sha256: str | None,
 ) -> list[str]:
-    if revision is None or latest_entry_sha256 is None or chain_sha256 is None:
+    if (
+        revision is None
+        or revision <= 0
+        or latest_entry_sha256 is None
+        or chain_sha256 is None
+    ):
         raise ValueError(f"{name} requires complete ledger coordinates")
     if type(value) is not list or len(value) != revision:
         raise ValueError(f"{name} must match the ledger revision")

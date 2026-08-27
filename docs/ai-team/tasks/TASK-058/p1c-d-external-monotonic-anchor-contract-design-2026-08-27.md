@@ -188,3 +188,6 @@ bounded repair classifies identical revisions by exact proof-list equality and
 requires proof equality to correlate exactly with ledger-digest equality.
 Direct negatives cover same-revision FORK-to-UNCHANGED and
 UNCHANGED-to-FORK relabels with recomputed outer hashes.
+An additional fault fixture fixes non-absent revision zero plus an empty proof
+to a canonical ValueError rejection instead of permitting an index-boundary
+exception.

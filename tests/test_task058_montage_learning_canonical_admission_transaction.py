@@ -768,9 +768,20 @@ def test_multiprocess_generic_and_exact_project_writes_serialize(tmp_path: Path)
         assert (project / JOURNAL_RELATIVE_PATH).is_file()
         writer.admit_exact(exact, **_arguments(staged))
     if any(item[0] == "GENERIC_ERROR" for item in results):
-        assert writer.generic_journal_path.is_file()
-        writer.recover_generic_observation(generic)
+        recovered = writer.record_exact_generic_observation(
+            generic, expected_revision=0,
+        )
+        assert recovered.status == "ACCEPTED"
+        generic_commit = recovered.canonical_commit_sha256
+    else:
+        generic_commit = next(item[2] for item in results if item[0] == "GENERIC")
     assert writer.get_verified_receipt().to_public_projection()["canonical_currentness_verified"] is True
     assert (project / "state/montage-learning-generic-review-observations.json").is_file()
+    verified_generic = writer.get_verified_generic_observation(
+        record_id=str(generic["record_id"]),
+        learning_sha256=str(generic["learning_sha256"]),
+        canonical_commit_sha256="sha256:" + generic_commit,
+    )
+    assert verified_generic.status == "ACCEPTED"
     assert not (project / JOURNAL_RELATIVE_PATH).exists()
     assert not writer.generic_journal_path.exists()

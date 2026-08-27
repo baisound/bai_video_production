@@ -383,13 +383,19 @@ P1C-D local implementation checkpoint:
 - exact source/design/schema mirror/test/task scope: 6 paths;
 - bootstrap/advance/unchanged/rollback/fork/scope/stale decision contract:
   IMPLEMENTED;
-- focused P1C-D tests: 21 / 21 PASS;
-- TASK-055/TASK-058 direct regression: 224 / 224 PASS;
-- full Product regression: 4442 PASS / 6 platform-condition SKIP /
+- focused P1C-D tests: 22 / 22 PASS;
+- TASK-055/TASK-058 direct regression: 225 / 225 PASS;
+- pre-rework full Product regression: 4442 PASS / 6 platform-condition SKIP /
+  2 deprecation warnings / 0 FAIL;
+- current-head full Product regression: 4443 PASS / 6 platform-condition SKIP /
   2 deprecation warnings / 0 FAIL;
 - Schema Draft 2020-12 and packaged byte identity: PASS;
-- independent Critic/Tester/Final Judge: PENDING;
-- unresolved Critical/High/Medium/Low findings: PENDING;
+- first independent review on head `49aaec8f3e42e2a9ecce68a58d475d9943c6fee2`:
+  Technical NO-GO / C/H/M/L = 0/0/1/0;
+- serialized STALE/SCOPE relabel finding: bounded fix implemented, current-head
+  independent re-review PENDING;
+- unresolved Critical/High/Medium/Low findings: 0/0/0/0 locally, independent
+  re-review PENDING;
 - external anchor read/write/origin/durability, canonical writer/recovery,
   rollback authority, public v2 receipt mint, canonical admission, automatic
   learning, Timeline, Resolve, Provider/network/native, Release, Deploy, and

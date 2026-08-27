@@ -45,11 +45,19 @@ expectation binds anchor revision/hash plus anchored ledger revision/chain/hash.
 
 ### Evaluation
 
-Evaluation stores only observed/proposed coordinates, one closed decision, the
-expectation digest, an optional proposed anchor candidate, false authority and
-effect maps, and its own domain-separated digest. It embeds no full ledger,
-source delivery, Human edit, media, path, actor, account, secret, or receipt
-body.
+Evaluation stores only the exact expectation record, domain-separated
+observed/proposed scope records, observed/proposed ledger coordinates, one
+closed decision, an optional proposed anchor candidate, false authority and
+effect maps, and its own domain-separated digest. Scope records contain only
+Project/store identifiers, Owner-scope and ledger-key digests, and their own
+digest. Evaluation embeds no full ledger, source delivery, Human edit, media,
+path, actor, account, secret, or receipt body.
+
+The strict parser revalidates the nested expectation and scope digests, then
+recomputes whether the expectation matches the observed anchor and whether the
+observed/proposed scopes match. A serialized evaluation therefore cannot be
+relabelled between stale, scope-mismatch, or any non-stale/non-scope decision
+merely by changing the decision/reason and recomputing the outer digest.
 
 ## 3. Exact typed transition boundary
 
@@ -139,6 +147,18 @@ bootstrap/advance; unchanged, rollback, same-revision fork, higher-prefix fork,
 scope mismatch and stale expectation fixtures; exact anchor/current-ledger
 binding; absent-sentinel and non-empty-ledger rules; exact built-in scalar and
 container rejection; proposed-anchor parser cross-binding; immutable detached
-records; false authority/effect matrices; pure/no-I/O source surface; focused
-and P1C-A through P1C-D direct regression; exact diff scope; and independent
-Critic/Tester/Judge with unresolved C/H/M/L zero.
+records; serialized stale/scope bidirectional relabel rejection; nested scope
+digest tamper rejection; false authority/effect matrices; pure/no-I/O source
+surface; focused and P1C-A through P1C-D direct regression; exact diff scope;
+and independent Critic/Tester/Judge with unresolved C/H/M/L zero.
+
+## 8. Independent review rework
+
+The first independent review of PR #403 head
+`49aaec8f3e42e2a9ecce68a58d475d9943c6fee2` returned Technical NO-GO with
+`C/H/M/L=0/0/1/0`: a valid unchanged evaluation could be relabelled as stale
+or scope-mismatch and accepted after recomputing the outer digest. The bounded
+rework adds the exact expectation and domain-separated scopes to the evaluation
+and validates stale/scope decision predicates in the parser. Direct fixtures
+cover unchanged-to-stale/scope, stale-to-unchanged, scope-to-stale, and nested
+scope digest tamper. Current-head independent re-review remains required.

@@ -346,6 +346,64 @@ def test_evaluation_decision_revision_semantics_fail_closed(tmp_path: Path) -> N
         MontageLearningExternalMonotonicAnchorEvaluation.from_dict(unchanged)
 
 
+def test_serialized_stale_and_scope_decisions_cannot_be_relabelled(
+    tmp_path: Path,
+) -> None:
+    _, first, _, _, _ = _ledgers(tmp_path)
+    anchor, _ = _bootstrap(first)
+    matching = MontageLearningExternalMonotonicAnchorExpectation.for_anchor(anchor)
+    unchanged = evaluate_montage_learning_external_monotonic_anchor(
+        anchor, matching, first, first
+    ).to_dict()
+    for replacement in (
+        AnchorDecision.STALE_ANCHOR_REJECTED,
+        AnchorDecision.SCOPE_MISMATCH_REJECTED,
+    ):
+        changed = deepcopy(unchanged)
+        changed["decision"] = replacement.value
+        changed["reason_codes"] = [replacement.value]
+        _resign_evaluation(changed)
+        with pytest.raises(ValueError):
+            MontageLearningExternalMonotonicAnchorEvaluation.from_dict(changed)
+
+    stale = evaluate_montage_learning_external_monotonic_anchor(
+        anchor,
+        MontageLearningExternalMonotonicAnchorExpectation.for_absent_anchor(first),
+        first,
+        first,
+    ).to_dict()
+    stale["decision"] = AnchorDecision.UNCHANGED_CANDIDATE.value
+    stale["reason_codes"] = [AnchorDecision.UNCHANGED_CANDIDATE.value]
+    _resign_evaluation(stale)
+    with pytest.raises(ValueError, match="stale expectation"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(stale)
+
+    foreign = MontageLearningCanonicalLedgerCandidate.empty(
+        project_id="project-foreign",
+        canonical_store_id="task058-canonical-learning",
+        owner_scope_hash=first.to_dict()["owner_scope_hash"],
+    )
+    scope = evaluate_montage_learning_external_monotonic_anchor(
+        None,
+        MontageLearningExternalMonotonicAnchorExpectation.for_absent_anchor(foreign),
+        None,
+        first,
+    ).to_dict()
+    scope["decision"] = AnchorDecision.STALE_ANCHOR_REJECTED.value
+    scope["reason_codes"] = [AnchorDecision.STALE_ANCHOR_REJECTED.value]
+    _resign_evaluation(scope)
+    with pytest.raises(ValueError, match="matching expectation"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(scope)
+
+    scope_tamper = evaluate_montage_learning_external_monotonic_anchor(
+        anchor, matching, first, first
+    ).to_dict()
+    scope_tamper["proposed_scope"]["project_id"] = "project-tampered"
+    _resign_evaluation(scope_tamper)
+    with pytest.raises(ValueError, match="scope digest"):
+        MontageLearningExternalMonotonicAnchorEvaluation.from_dict(scope_tamper)
+
+
 def test_anchor_revision_predecessor_and_bounds_fail_closed(tmp_path: Path) -> None:
     _, first, _, _, _ = _ledgers(tmp_path)
     anchor, _ = _bootstrap(first)

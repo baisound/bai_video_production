@@ -137,12 +137,28 @@
         "expectation_sha256": {"$ref": "#/$defs/digest"}
       }
     },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id", "canonical_store_id", "owner_scope_hash",
+        "ledger_key_sha256", "scope_sha256"
+      ],
+      "properties": {
+        "project_id": {"$ref": "#/$defs/identifier"},
+        "canonical_store_id": {"$ref": "#/$defs/identifier"},
+        "owner_scope_hash": {"$ref": "#/$defs/digest"},
+        "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "scope_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
     "evaluation": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "schema_version", "record_type", "task_owner", "decision", "reason_codes",
-        "ledger_key_sha256", "observed_anchor_revision", "observed_anchor_sha256",
+        "ledger_key_sha256", "expectation", "observed_scope", "proposed_scope",
+        "observed_anchor_revision", "observed_anchor_sha256",
         "observed_ledger_revision", "observed_latest_entry_sha256",
         "observed_chain_sha256", "observed_ledger_sha256",
         "proposed_ledger_revision", "proposed_latest_entry_sha256",
@@ -172,6 +188,11 @@
           }
         },
         "ledger_key_sha256": {"$ref": "#/$defs/digest"},
+        "expectation": {"$ref": "#/$defs/expectation"},
+        "observed_scope": {
+          "oneOf": [{"$ref": "#/$defs/scope"}, {"type": "null"}]
+        },
+        "proposed_scope": {"$ref": "#/$defs/scope"},
         "observed_anchor_revision": {"$ref": "#/$defs/revision"},
         "observed_anchor_sha256": {"$ref": "#/$defs/nullableDigest"},
         "observed_ledger_revision": {"$ref": "#/$defs/nullableRevision"},

@@ -29,6 +29,7 @@ ANCHOR_STATE = "NOT_ESTABLISHED"
 _ANCHOR_DOMAIN = b"TASK058_MONTAGE_LEARNING_EXTERNAL_ANCHOR_P1CD_V1\0"
 _EXPECTATION_DOMAIN = b"TASK058_MONTAGE_LEARNING_EXTERNAL_ANCHOR_CAS_P1CD_V1\0"
 _EVALUATION_DOMAIN = b"TASK058_MONTAGE_LEARNING_EXTERNAL_ANCHOR_EVAL_P1CD_V1\0"
+_SCOPE_DOMAIN = b"TASK058_MONTAGE_LEARNING_EXTERNAL_ANCHOR_SCOPE_P1CD_V1\0"
 _TOKEN = object()
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$")
 _DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -237,6 +238,35 @@ def _ledger_coordinates(ledger: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+_SCOPE_FIELDS = {
+    "project_id", "canonical_store_id", "owner_scope_hash",
+    "ledger_key_sha256", "scope_sha256",
+}
+
+
+def _scope_from_ledger(ledger: Mapping[str, Any]) -> dict[str, Any]:
+    body = {
+        "project_id": ledger["project_id"],
+        "canonical_store_id": ledger["canonical_store_id"],
+        "owner_scope_hash": ledger["owner_scope_hash"],
+        "ledger_key_sha256": ledger["ledger_key_sha256"],
+    }
+    body["scope_sha256"] = _domain_hash(_SCOPE_DOMAIN, body)
+    return body
+
+
+def _scope(value: object, name: str) -> dict[str, Any]:
+    body = _exact(value, _SCOPE_FIELDS, name)
+    _identifier(body["project_id"], f"{name}.project_id")
+    _identifier(body["canonical_store_id"], f"{name}.canonical_store_id")
+    for field in ("owner_scope_hash", "ledger_key_sha256", "scope_sha256"):
+        _digest(body[field], f"{name}.{field}")
+    expected = _domain_hash(_SCOPE_DOMAIN, _without(body, "scope_sha256"))
+    if body["scope_sha256"] != expected:
+        raise ValueError(f"{name} digest mismatch")
+    return copy.deepcopy(dict(body))
+
+
 _ANCHOR_FIELDS = {
     "schema_version", "record_type", "task_owner", "project_id",
     "canonical_store_id", "owner_scope_hash", "ledger_key_sha256",
@@ -414,7 +444,8 @@ class MontageLearningExternalMonotonicAnchorExpectation(_SealedRecord):
 
 _EVALUATION_FIELDS = {
     "schema_version", "record_type", "task_owner", "decision", "reason_codes",
-    "ledger_key_sha256", "observed_anchor_revision", "observed_anchor_sha256",
+    "ledger_key_sha256", "expectation", "observed_scope", "proposed_scope",
+    "observed_anchor_revision", "observed_anchor_sha256",
     "observed_ledger_revision", "observed_latest_entry_sha256",
     "observed_chain_sha256", "observed_ledger_sha256",
     "proposed_ledger_revision", "proposed_latest_entry_sha256",
@@ -445,6 +476,19 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
         if type(body["reason_codes"]) is not list or body["reason_codes"] != [decision.value]:
             raise ValueError("anchor evaluation reasons are not canonical")
         _digest(body["ledger_key_sha256"], "ledger_key_sha256")
+        expectation = MontageLearningExternalMonotonicAnchorExpectation.from_dict(
+            body["expectation"]
+        ).to_dict()
+        if expectation["expectation_sha256"] != body["expectation_sha256"]:
+            raise ValueError("evaluation expectation digest mismatch")
+        proposed_scope = _scope(body["proposed_scope"], "proposed_scope")
+        if body["ledger_key_sha256"] != proposed_scope["ledger_key_sha256"]:
+            raise ValueError("evaluation proposed scope ledger key mismatch")
+        observed_scope = (
+            None
+            if body["observed_scope"] is None
+            else _scope(body["observed_scope"], "observed_scope")
+        )
         observed_anchor_revision = _revision(
             body["observed_anchor_revision"], "observed_anchor_revision"
         )
@@ -480,6 +524,8 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
             item is None for item in observed_coordinates
         ):
             raise ValueError("evaluation observed ledger sentinel mismatch")
+        if observed_absent != (observed_scope is None):
+            raise ValueError("evaluation observed scope sentinel mismatch")
         proposed_revision = _positive_revision(
             body["proposed_ledger_revision"], "proposed_ledger_revision"
         )
@@ -504,7 +550,13 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
             ).to_dict()
             expected_anchor_revision = observed_anchor_revision + 1
             if (
-                parsed_anchor["ledger_key_sha256"] != body["ledger_key_sha256"]
+                any(
+                    parsed_anchor[field] != proposed_scope[field]
+                    for field in (
+                        "project_id", "canonical_store_id", "owner_scope_hash",
+                        "ledger_key_sha256",
+                    )
+                )
                 or parsed_anchor["anchor_revision"] != expected_anchor_revision
                 or parsed_anchor["anchored_ledger_revision"] != proposed_revision
                 or parsed_anchor["anchored_latest_entry_sha256"]
@@ -529,6 +581,36 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
             raise ValueError("evaluation existing anchor mismatch")
         if observed_absent and existing is not None:
             raise ValueError("absent evaluation cannot report an existing anchor")
+        expectation_matches = _serialized_expectation_matches(
+            expectation=expectation,
+            observed_scope=observed_scope,
+            observed_anchor_revision=observed_anchor_revision,
+            observed_anchor_sha256=observed_anchor_sha,
+            observed_ledger_revision=observed_ledger_revision,
+            observed_chain_sha256=observed_chain,
+            observed_ledger_sha256=observed_ledger_sha,
+        )
+        scope_mismatch = expectation_matches and (
+            (
+                observed_scope is None
+                and expectation["ledger_key_sha256"]
+                != proposed_scope["ledger_key_sha256"]
+            )
+            or (
+                observed_scope is not None
+                and observed_scope != proposed_scope
+            )
+        )
+        if decision is AnchorDecision.STALE_ANCHOR_REJECTED:
+            if expectation_matches:
+                raise ValueError("stale evaluation has a matching expectation")
+        elif not expectation_matches:
+            raise ValueError("non-stale evaluation has a stale expectation")
+        if decision is AnchorDecision.SCOPE_MISMATCH_REJECTED:
+            if not scope_mismatch:
+                raise ValueError("scope evaluation has matching scope coordinates")
+        elif decision is not AnchorDecision.STALE_ANCHOR_REJECTED and scope_mismatch:
+            raise ValueError("non-scope evaluation has mismatched scope coordinates")
         if decision is AnchorDecision.ADVANCE_CANDIDATE and (
             observed_ledger_revision is None
             or proposed_revision <= observed_ledger_revision
@@ -565,6 +647,9 @@ class MontageLearningExternalMonotonicAnchorEvaluation(_SealedRecord):
         if body["evaluation_sha256"] != expected_hash:
             raise ValueError("anchor evaluation digest mismatch")
         normalized = copy.deepcopy(dict(body))
+        normalized["expectation"] = expectation
+        normalized["observed_scope"] = observed_scope
+        normalized["proposed_scope"] = proposed_scope
         normalized["proposed_anchor"] = proposed_anchor
         return cls(_freeze(normalized), _token=_TOKEN)
 
@@ -628,6 +713,11 @@ def _evaluation(
         "decision": decision.value,
         "reason_codes": [decision.value],
         "ledger_key_sha256": proposed_ledger["ledger_key_sha256"],
+        "expectation": copy.deepcopy(dict(expectation)),
+        "observed_scope": (
+            None if current_ledger is None else _scope_from_ledger(current_ledger)
+        ),
+        "proposed_scope": _scope_from_ledger(proposed_ledger),
         "observed_anchor_revision": (
             0 if current_anchor is None else current_anchor["anchor_revision"]
         ),
@@ -687,6 +777,39 @@ def _expectation_matches(
         == current_anchor["anchored_chain_sha256"]
         and expectation["expected_anchored_ledger_sha256"]
         == current_anchor["anchored_ledger_sha256"]
+    )
+
+
+def _serialized_expectation_matches(
+    *,
+    expectation: Mapping[str, Any],
+    observed_scope: Mapping[str, Any] | None,
+    observed_anchor_revision: int,
+    observed_anchor_sha256: str | None,
+    observed_ledger_revision: int | None,
+    observed_chain_sha256: str | None,
+    observed_ledger_sha256: str | None,
+) -> bool:
+    if observed_scope is None:
+        return (
+            observed_anchor_revision == 0
+            and observed_anchor_sha256 is None
+            and expectation["expected_anchor_revision"] == 0
+            and expectation["expected_anchor_sha256"] is None
+            and expectation["expected_anchored_ledger_revision"] is None
+            and expectation["expected_anchored_chain_sha256"] is None
+            and expectation["expected_anchored_ledger_sha256"] is None
+        )
+    return (
+        expectation["ledger_key_sha256"] == observed_scope["ledger_key_sha256"]
+        and expectation["expected_anchor_revision"] == observed_anchor_revision
+        and expectation["expected_anchor_sha256"] == observed_anchor_sha256
+        and expectation["expected_anchored_ledger_revision"]
+        == observed_ledger_revision
+        and expectation["expected_anchored_chain_sha256"]
+        == observed_chain_sha256
+        and expectation["expected_anchored_ledger_sha256"]
+        == observed_ledger_sha256
     )
 
 

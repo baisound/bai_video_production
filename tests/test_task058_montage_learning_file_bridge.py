@@ -1,19 +1,24 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import threading
 
 import pytest
 
 from ai_video_production.montage_learning_bridge_application import (
+    ExactAdmissionCoordinates,
     GenericObservationCoordinates,
     MontageLearningBridgeApplication,
     MontageLearningBridgeApplicationError,
 )
 from ai_video_production.montage_learning_bridge_contracts import (
     canonical_learning_sha256,
+)
+from ai_video_production.montage_learning_canonical_admission_transaction import (
+    MontageLearningCanonicalAdmissionTransactionStore,
 )
 from ai_video_production.montage_learning_file_bridge import (
     BridgeLayout,
@@ -23,7 +28,13 @@ from ai_video_production.montage_learning_file_bridge import (
     provision_bridge,
     snapshot_delivery,
 )
+from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
+from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.serialization import canonical_json_bytes
+from test_task058_montage_learning_canonical_admission_transaction import (
+    _arguments as _exact_arguments,
+    _stage as _stage_exact,
+)
 
 
 def _payload(record_id: str = "observation-001") -> dict[str, object]:
@@ -78,58 +89,57 @@ def _delivery(record_id: str = "observation-001") -> dict[str, object]:
 
 
 def _stage(layout: BridgeLayout, delivery: dict[str, object]) -> Path:
-    digest = str(delivery["learning_sha256"]).removeprefix("sha256:")
+    source_sha256 = delivery.get("learning_sha256", delivery.get("evidence_sha256"))
+    assert isinstance(source_sha256, str)
+    digest = source_sha256.removeprefix("sha256:")
     path = layout.inbox / f"{delivery['record_id']}--{digest}.json"
     path.write_bytes(canonical_json_bytes(delivery) + b"\n")
     return path
-
-
-@dataclass
-class _GenericCommit:
-    receipt: dict[str, object]
-
-    @property
-    def record_id(self) -> str:
-        return str(self.receipt["record_id"])
-
-    @property
-    def learning_sha256(self) -> str:
-        return str(self.receipt["learning_sha256"])
-
-    @property
-    def status(self) -> str:
-        return str(self.receipt["status"])
-
-    def to_skill_v1_receipt(self) -> dict[str, object]:
-        return dict(self.receipt)
-
-
-class _Port:
-    def __init__(self) -> None:
-        self.calls = 0
-
-    def record_exact_generic_observation(self, delivery, **kwargs):
-        self.calls += 1
-        return _GenericCommit(
-            {
-                "schema_version": "1.0.0",
-                "message_type": "BvpMontageLearningAdmissionReceipt",
-                "record_id": delivery["record_id"],
-                "learning_sha256": delivery["learning_sha256"],
-                "status": "ACCEPTED",
-                "receipt_id": "generic-receipt-001",
-                "timestamp": "2026-08-27T00:00:00Z",
-            }
-        )
-
-    def admit_exact(self, delivery, **kwargs):  # pragma: no cover - wrong lane
-        raise AssertionError("generic delivery reached exact canonical API")
 
 
 def _layout(tmp_path: Path) -> BridgeLayout:
     layout = BridgeLayout.for_isolated_test(tmp_path / "bridge")
     provision_bridge(layout, bridge_instance_id="bridge-fixture-001")
     return layout
+
+
+def _canonical_store(tmp_path: Path) -> MontageLearningCanonicalAdmissionTransactionStore:
+    project = tmp_path / "canonical-project"
+    anchor = tmp_path / "canonical-anchor"
+    project.mkdir()
+    anchor.mkdir()
+    manifest = ProductProjectManifest.create(
+        project_id="proj-test",
+        project_revision=1,
+        product_version="0.1.0",
+        timebase=ProjectTimebase(30, 1),
+        child_bindings=(),
+        created_at="2026-08-27T00:00:00Z",
+        updated_at="2026-08-27T00:00:00Z",
+    )
+    ProductProjectManifestStore.save(project, manifest)
+    return MontageLearningCanonicalAdmissionTransactionStore(
+        project,
+        anchor,
+        canonical_store_id="task058-file-bridge-canonical",
+        bridge_instance_id="bridge-fixture-001",
+    )
+
+
+def _exact_fixture(
+    layout: BridgeLayout,
+    canonical_store: MontageLearningCanonicalAdmissionTransactionStore,
+) -> tuple[Path, dict[str, object], ExactAdmissionCoordinates]:
+    delivery, staged = _stage_exact(canonical_store.project_root)
+    return (
+        _stage(layout, delivery),
+        delivery,
+        ExactAdmissionCoordinates(**_exact_arguments(staged)),
+    )
+
+
+def _pending_paths(layout: BridgeLayout) -> list[Path]:
+    return list(layout.receipts.glob(".*.pending.json"))
 
 
 def test_provision_is_idempotent_and_never_claims_isolated_root_as_production(tmp_path):
@@ -149,30 +159,226 @@ def test_generic_import_revalidates_commits_and_publishes_matching_v1_receipt(tm
     layout = _layout(tmp_path)
     delivery = _delivery()
     staged = _stage(layout, delivery)
-    port = _Port()
-    app = MontageLearningBridgeApplication(layout=layout, canonical_port=port)
+    canonical_store = _canonical_store(tmp_path)
+    app = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=canonical_store
+    )
 
     coordinates = GenericObservationCoordinates(expected_revision=0)
     first = app.import_path(staged, generic_coordinates=coordinates)
-    second = app.import_path(staged, generic_coordinates=coordinates)
 
-    assert first.status == second.status == "ACCEPTED"
+    assert first.status == "ACCEPTED"
     assert first.canonical_store_written is True
     assert first.learning_adoption_authorized is False
     assert first.timeline_mutation_authorized is False
-    assert port.calls == 2
+    ledger = json.loads(
+        canonical_store.generic_observation_path.read_text(encoding="utf-8")
+    )
+    assert ledger["revision"] == 1
+    assert ledger["entries"][0]["record_id"] == delivery["record_id"]
+    assert ledger["entries"][0]["learning_sha256"] == delivery["learning_sha256"]
+    assert ledger["canonical_store_written"] is True
+    assert ledger["learning_adoption_authorized"] is False
     receipt = json.loads(first.receipt_path.read_text(encoding="utf-8"))
     assert receipt["record_id"] == delivery["record_id"]
     assert receipt["learning_sha256"] == delivery["learning_sha256"]
     assert receipt["status"] == "ACCEPTED"
 
 
+def test_generic_durable_a_commit_before_receipt_recovers_as_provable_duplicate(tmp_path):
+    layout = _layout(tmp_path)
+    delivery = _delivery()
+    staged = _stage(layout, delivery)
+    canonical_store = _canonical_store(tmp_path)
+
+    def fail(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_canonical_commit_before_receipt":
+            raise RuntimeError("generic-crash-after-a")
+
+    failed = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=canonical_store, failure_hook=fail
+    )
+    coordinates = GenericObservationCoordinates(expected_revision=0)
+    with pytest.raises(RuntimeError, match="generic-crash-after-a"):
+        failed.import_path(staged, generic_coordinates=coordinates)
+    pending_path = _pending_paths(layout)[0]
+    pending = json.loads(pending_path.read_text(encoding="utf-8"))
+    assert pending["directory_durability_confirmed"] is False
+    assert pending["output_receipt_relative_path"].startswith("learning-receipts/")
+    assert "payload" not in pending
+    assert "source_delivery" not in pending
+    assert list(layout.receipts.glob("*.receipt.json")) == []
+
+    restarted = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=canonical_store
+    )
+    result = restarted.import_path(staged, generic_coordinates=coordinates)
+    ledger = json.loads(canonical_store.generic_observation_path.read_text(encoding="utf-8"))
+
+    assert result.status == "DUPLICATE"
+    assert ledger["revision"] == 2
+    assert ledger["entries"][-1]["receipt"]["status"] == "DUPLICATE"
+    assert ledger["entries"][-1]["receipt"]["duplicate_of_receipt_sha256"]
+    assert _pending_paths(layout) == []
+
+
+def test_existing_generic_receipt_cleans_pending_without_another_ledger_revision(tmp_path):
+    layout = _layout(tmp_path)
+    delivery = _delivery()
+    staged = _stage(layout, delivery)
+    canonical_store = _canonical_store(tmp_path)
+
+    def fail(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_receipt_publish_before_pending_cleanup":
+            raise RuntimeError("generic-crash-after-receipt")
+
+    coordinates = GenericObservationCoordinates(expected_revision=0)
+    with pytest.raises(RuntimeError, match="generic-crash-after-receipt"):
+        MontageLearningBridgeApplication(
+            layout=layout, canonical_port=canonical_store, failure_hook=fail
+        ).import_path(staged, generic_coordinates=coordinates)
+    assert _pending_paths(layout)
+    assert list(layout.receipts.glob("*.receipt.json"))
+
+    recovered = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=canonical_store
+    ).import_path(staged, generic_coordinates=coordinates)
+    ledger = json.loads(canonical_store.generic_observation_path.read_text(encoding="utf-8"))
+
+    assert recovered.status == "ACCEPTED"
+    assert ledger["revision"] == 1
+    assert _pending_paths(layout) == []
+
+
+def test_tampered_pending_rejects_before_recovery_a_call(tmp_path):
+    layout = _layout(tmp_path)
+    staged = _stage(layout, _delivery())
+    canonical_store = _canonical_store(tmp_path)
+
+    def fail(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_canonical_commit_before_receipt":
+            raise RuntimeError("leave-pending")
+
+    coordinates = GenericObservationCoordinates(expected_revision=0)
+    with pytest.raises(RuntimeError, match="leave-pending"):
+        MontageLearningBridgeApplication(
+            layout=layout, canonical_port=canonical_store, failure_hook=fail
+        ).import_path(staged, generic_coordinates=coordinates)
+    pending = _pending_paths(layout)
+    assert len(pending) == 1
+    pending[0].write_text("{}", encoding="utf-8")
+
+    with pytest.raises(MontageLearningBridgeApplicationError, match="RECOVERY_REQUIRED"):
+        MontageLearningBridgeApplication(
+            layout=layout, canonical_port=canonical_store
+        ).import_path(staged, generic_coordinates=coordinates)
+    assert list(layout.receipts.glob("*.receipt.json")) == []
+
+
+def test_generic_revision_leap_requires_recovery_and_does_not_publish_target_receipt(tmp_path):
+    layout = _layout(tmp_path)
+    delivery = _delivery("recovery-target-001")
+    staged = _stage(layout, delivery)
+    canonical_store = _canonical_store(tmp_path)
+
+    def fail(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_canonical_commit_before_receipt":
+            raise RuntimeError("leave-generic-pending")
+
+    coordinates = GenericObservationCoordinates(expected_revision=0)
+    with pytest.raises(RuntimeError, match="leave-generic-pending"):
+        MontageLearningBridgeApplication(
+            layout=layout, canonical_port=canonical_store, failure_hook=fail
+        ).import_path(staged, generic_coordinates=coordinates)
+    canonical_store.record_exact_generic_observation(
+        _delivery("unrelated-revision-002"), expected_revision=1
+    )
+
+    with pytest.raises(MontageLearningBridgeApplicationError, match="RECOVERY_REQUIRED"):
+        MontageLearningBridgeApplication(
+            layout=layout, canonical_port=canonical_store
+        ).import_path(staged, generic_coordinates=coordinates)
+    assert list(layout.receipts.glob("recovery-target-001--*.receipt.json")) == []
+
+
+def test_exact_a_commit_before_receipt_uses_trusted_reader_to_publish_matching_v2(tmp_path):
+    layout = _layout(tmp_path)
+    canonical_store = _canonical_store(tmp_path)
+    staged, delivery, coordinates = _exact_fixture(layout, canonical_store)
+
+    def fail(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_canonical_commit_before_receipt":
+            raise RuntimeError("exact-crash-after-a")
+
+    with pytest.raises(RuntimeError, match="exact-crash-after-a"):
+        MontageLearningBridgeApplication(
+            layout=layout, canonical_port=canonical_store, failure_hook=fail
+        ).import_path(staged, exact_coordinates=coordinates)
+    assert _pending_paths(layout)
+    assert list(layout.receipts.glob("*.admission-v2.json")) == []
+
+    recovered = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=canonical_store
+    ).import_path(staged, exact_coordinates=coordinates)
+    receipt = json.loads(recovered.receipt_path.read_text(encoding="utf-8"))
+
+    assert recovered.status == "ACCEPTED"
+    assert receipt["source_record_id"] == delivery["record_id"]
+    assert receipt["source_sha256"] == delivery["evidence_sha256"]
+    assert canonical_store.get_verified_receipt(
+        receipt_sha256=receipt["receipt_sha256"]
+    ).to_public_projection()["canonical_currentness_verified"] is True
+    assert _pending_paths(layout) == []
+
+
+def test_tightly_concurrent_exact_and_generic_publish_both_and_keep_exact_current(tmp_path):
+    layout = _layout(tmp_path)
+    canonical_store = _canonical_store(tmp_path)
+    exact_path, _exact_delivery, exact_coordinates = _exact_fixture(layout, canonical_store)
+    generic_path = _stage(layout, _delivery("concurrent-generic-001"))
+    generic_coordinates = GenericObservationCoordinates(expected_revision=0)
+    exact_committed = threading.Event()
+    publish_barrier = threading.Barrier(2)
+
+    def synchronize(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_canonical_commit_before_receipt":
+            exact_committed.set()
+            publish_barrier.wait(timeout=10)
+
+    app = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=canonical_store, failure_hook=synchronize
+    )
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        exact_future = executor.submit(
+            app.import_path, exact_path, exact_coordinates=exact_coordinates
+        )
+        assert exact_committed.wait(timeout=10)
+        generic_future = executor.submit(
+            app.import_path, generic_path, generic_coordinates=generic_coordinates
+        )
+        exact_result = exact_future.result(timeout=20)
+        generic_result = generic_future.result(timeout=20)
+    assert exact_result.receipt_path.is_file()
+    assert generic_result.receipt_path.is_file()
+    exact_receipt = json.loads(exact_result.receipt_path.read_text(encoding="utf-8"))
+    assert canonical_store.get_verified_receipt(
+        receipt_sha256=exact_receipt["receipt_sha256"]
+    ).to_public_projection()["canonical_currentness_verified"] is True
+
+
 def test_missing_generic_coordinates_raise_without_publishing_receipt(tmp_path):
     layout = _layout(tmp_path)
     staged = _stage(layout, _delivery())
+    canonical_store = _canonical_store(tmp_path)
     app = MontageLearningBridgeApplication(
         layout=layout,
-        canonical_port=_Port(),
+        canonical_port=canonical_store,
     )
     with pytest.raises(MontageLearningBridgeApplicationError, match="generic delivery"):
         app.import_path(staged)
@@ -229,6 +435,8 @@ def test_exact_and_generic_lanes_never_silently_mix(tmp_path):
         f"{delivery['record_id']}--{str(delivery['learning_sha256'])[7:]}.json"
     )
     path.write_bytes(canonical_json_bytes(delivery) + b"\n")
-    app = MontageLearningBridgeApplication(layout=layout, canonical_port=_Port())
+    app = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=_canonical_store(tmp_path)
+    )
     with pytest.raises((MontageLearningFileBridgeError, MontageLearningBridgeApplicationError)):
         app.import_path(path)

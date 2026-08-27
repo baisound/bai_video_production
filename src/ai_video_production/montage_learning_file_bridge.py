@@ -6,6 +6,7 @@ generate a Profile, mutate a Timeline, or know the canonical store layout.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import sha256
 import json
@@ -13,7 +14,7 @@ import os
 from pathlib import Path
 import re
 import tempfile
-from typing import Any, Mapping
+from typing import Any, Iterator, Mapping
 
 from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .serialization import canonical_json_bytes, sha256_json
@@ -27,6 +28,10 @@ OWNER_MANIFEST_TYPE = "BvpMontageLearningBridgeOwnerManifest"
 OWNER_MANIFEST_VERSION = "1.0.0"
 MAX_DELIVERY_BYTES = 4 * 1024 * 1024
 MAX_IMPORT_FILES = 256
+RECEIPT_PENDING_SCHEMA_VERSION = "1.0.0"
+RECEIPT_PENDING_MESSAGE_TYPE = "BvpMontageLearningReceiptPublicationPending"
+GENERIC_RECEIPT_NAMESPACE = "GENERIC_REVIEW_OBSERVATION_ONLY"
+EXACT_RECEIPT_NAMESPACE = "EXACT_EVIDENCE_ONLY"
 
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$")
 _DELIVERY_RE = re.compile(
@@ -103,6 +108,15 @@ class DeliverySnapshot:
     file_sha256: str
     file_identity: tuple[int, int, int, int]
     document: dict[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class ReceiptPublicationPaths:
+    """One receipt identity and its private, crash-recovery marker."""
+
+    receipt_path: Path
+    pending_path: Path
+    exact_v2: bool
 
 
 def provision_bridge(
@@ -279,12 +293,265 @@ def publish_receipt_new_or_identical(
     _require_id(record_id, "record_id")
     if not isinstance(source_sha256, str) or _SHA_RE.fullmatch(source_sha256) is None:
         raise MontageLearningFileBridgeError("source_sha256 is invalid")
-    suffix = ".admission-v2.json" if exact_v2 else ".receipt.json"
-    target = layout.receipts / (
-        f"{record_id}--{source_sha256.removeprefix('sha256:')}{suffix}"
-    )
+    target = receipt_publication_paths(
+        layout,
+        record_id=record_id,
+        source_sha256=source_sha256,
+        exact_v2=exact_v2,
+    ).receipt_path
     _write_new_or_identical(target, dict(receipt))
     return target
+
+
+def receipt_publication_paths(
+    layout: BridgeLayout,
+    *,
+    record_id: str,
+    source_sha256: str,
+    exact_v2: bool,
+) -> ReceiptPublicationPaths:
+    """Return the fixed public receipt and private pending paths for one identity."""
+
+    load_bridge_owner(layout)
+    _require_id(record_id, "record_id")
+    if not isinstance(source_sha256, str) or _SHA_RE.fullmatch(source_sha256) is None:
+        raise MontageLearningFileBridgeError("source_sha256 is invalid")
+    if type(exact_v2) is not bool:
+        raise MontageLearningFileBridgeError("exact_v2 must be boolean")
+    suffix = ".admission-v2.json" if exact_v2 else ".receipt.json"
+    receipt_path = layout.receipts / (
+        f"{record_id}--{source_sha256.removeprefix('sha256:')}{suffix}"
+    )
+    return ReceiptPublicationPaths(
+        receipt_path=receipt_path,
+        pending_path=layout.receipts / f".{receipt_path.name}.pending.json",
+        exact_v2=exact_v2,
+    )
+
+
+@contextmanager
+def receipt_identity_publisher_guard(
+    layout: BridgeLayout,
+    *,
+    record_id: str,
+    source_sha256: str,
+    exact_v2: bool,
+) -> Iterator[ReceiptPublicationPaths]:
+    """Serialize recovery, A mutation, receipt publication, and marker cleanup."""
+
+    paths = receipt_publication_paths(
+        layout,
+        record_id=record_id,
+        source_sha256=source_sha256,
+        exact_v2=exact_v2,
+    )
+    _require_safe_directory(paths.receipt_path.parent)
+    with exclusive_file_update_lock(paths.receipt_path):
+        yield paths
+
+
+def build_receipt_publication_pending(
+    paths: ReceiptPublicationPaths,
+    *,
+    lane: str,
+    namespace: str,
+    record_id: str,
+    source_sha256: str,
+    delivery_file_sha256: str,
+    expected_revision: int,
+    coordinates: Mapping[str, object],
+) -> dict[str, object]:
+    """Create a strict, body-free request identity before canonical mutation."""
+
+    body: dict[str, object] = {
+        "schema_version": RECEIPT_PENDING_SCHEMA_VERSION,
+        "message_type": RECEIPT_PENDING_MESSAGE_TYPE,
+        "lane": lane,
+        "namespace": namespace,
+        "record_id": record_id,
+        "source_sha256": source_sha256,
+        "delivery_file_sha256": delivery_file_sha256,
+        "expected_revision": expected_revision,
+        "coordinates": dict(coordinates),
+        "output_receipt_relative_path": f"learning-receipts/{paths.receipt_path.name}",
+        "directory_durability_confirmed": False,
+    }
+    body["request_sha256"] = sha256_json(body)
+    pending = dict(body)
+    pending["pending_sha256"] = sha256_json(pending)
+    return _validate_receipt_publication_pending(pending, paths)
+
+
+def load_published_receipt(
+    paths: ReceiptPublicationPaths,
+) -> dict[str, Any] | None:
+    """Strictly load an already-public receipt without granting it authority."""
+
+    _require_safe_directory(paths.receipt_path.parent)
+    if not paths.receipt_path.exists():
+        return None
+    return _read_json_regular(paths.receipt_path, max_bytes=MAX_DELIVERY_BYTES)
+
+
+def load_receipt_publication_pending(
+    paths: ReceiptPublicationPaths,
+) -> dict[str, object] | None:
+    """Strictly load and self-hash-check the private publication marker."""
+
+    _require_safe_directory(paths.pending_path.parent)
+    if not paths.pending_path.exists():
+        return None
+    value = _read_json_regular(paths.pending_path, max_bytes=64 * 1024)
+    return _validate_receipt_publication_pending(value, paths)
+
+
+def create_pending_receipt_publication_new_or_identical(
+    paths: ReceiptPublicationPaths,
+    pending: Mapping[str, object],
+) -> None:
+    """Durably create the exact request marker, never replacing a conflicting one."""
+
+    expected = _validate_receipt_publication_pending(pending, paths)
+    expected_bytes = canonical_json_bytes(expected) + b"\n"
+    if paths.pending_path.exists():
+        actual = _read_regular_bytes(paths.pending_path, max_bytes=64 * 1024)
+        loaded = _validate_receipt_publication_pending(
+            _decode_builtin_json(actual), paths
+        )
+        if actual != expected_bytes or loaded != expected:
+            raise MontageLearningFileBridgeError("pending receipt request conflicts")
+        return
+    _write_new_or_identical(paths.pending_path, expected)
+    actual = _read_regular_bytes(paths.pending_path, max_bytes=64 * 1024)
+    if actual != expected_bytes:
+        raise MontageLearningFileBridgeError("pending receipt durable read-back mismatch")
+
+
+def clear_pending_receipt_publication_exact(
+    paths: ReceiptPublicationPaths,
+    pending: Mapping[str, object],
+) -> None:
+    """Clear only the exact marker after a strict final re-read and directory fsync."""
+
+    expected = _validate_receipt_publication_pending(pending, paths)
+    expected_bytes = canonical_json_bytes(expected) + b"\n"
+    actual = _read_regular_bytes(paths.pending_path, max_bytes=64 * 1024)
+    current = _validate_receipt_publication_pending(
+        _decode_builtin_json(actual), paths
+    )
+    if actual != expected_bytes or current != expected:
+        raise MontageLearningFileBridgeError("pending receipt cleanup identity mismatch")
+    paths.pending_path.unlink()
+    _directory_fsync(paths.pending_path.parent)
+
+
+def _validate_receipt_publication_pending(
+    value: Mapping[str, object],
+    paths: ReceiptPublicationPaths,
+) -> dict[str, object]:
+    if type(value) is not dict:
+        raise MontageLearningFileBridgeError("pending receipt must be an object")
+    expected_fields = {
+        "schema_version", "message_type", "lane", "namespace", "record_id",
+        "source_sha256", "delivery_file_sha256", "expected_revision", "coordinates",
+        "output_receipt_relative_path", "directory_durability_confirmed",
+        "request_sha256", "pending_sha256",
+    }
+    if set(value) != expected_fields:
+        raise MontageLearningFileBridgeError("pending receipt fields mismatch")
+    if (value["schema_version"] != RECEIPT_PENDING_SCHEMA_VERSION or
+            value["message_type"] != RECEIPT_PENDING_MESSAGE_TYPE):
+        raise MontageLearningFileBridgeError("pending receipt identity mismatch")
+    lane = value["lane"]
+    namespace = value["namespace"]
+    if paths.exact_v2:
+        if lane != "EXACT_EVIDENCE" or namespace != EXACT_RECEIPT_NAMESPACE:
+            raise MontageLearningFileBridgeError("exact pending lane mismatch")
+    elif lane != "GENERIC_REVIEW_OBSERVATION" or namespace != GENERIC_RECEIPT_NAMESPACE:
+        raise MontageLearningFileBridgeError("generic pending lane mismatch")
+    _require_id(value["record_id"], "pending record_id")
+    for field in ("source_sha256", "delivery_file_sha256", "request_sha256", "pending_sha256"):
+        digest = value[field]
+        if not isinstance(digest, str) or _SHA_RE.fullmatch(digest) is None:
+            raise MontageLearningFileBridgeError(f"pending {field} is invalid")
+    expected_filename = (
+        f"{value['record_id']}--{str(value['source_sha256']).removeprefix('sha256:')}"
+        f"{'.admission-v2.json' if paths.exact_v2 else '.receipt.json'}"
+    )
+    expected_relative_path = f"learning-receipts/{expected_filename}"
+    if (
+        value["output_receipt_relative_path"] != expected_relative_path
+        or value["output_receipt_relative_path"]
+        != f"learning-receipts/{paths.receipt_path.name}"
+    ):
+        raise MontageLearningFileBridgeError("pending output receipt path mismatch")
+    if value["directory_durability_confirmed"] is not False:
+        raise MontageLearningFileBridgeError(
+            "pending directory durability must remain false"
+        )
+    revision = value["expected_revision"]
+    minimum = 1 if paths.exact_v2 else 0
+    if isinstance(revision, bool) or not isinstance(revision, int) or revision < minimum:
+        raise MontageLearningFileBridgeError("pending expected_revision is invalid")
+    coordinates = value["coordinates"]
+    if type(coordinates) is not dict:
+        raise MontageLearningFileBridgeError("pending coordinates must be an object")
+    if paths.exact_v2:
+        _validate_exact_pending_coordinates(coordinates, revision)
+    else:
+        _validate_generic_pending_coordinates(coordinates, revision)
+    request_body = dict(value)
+    request_sha256 = request_body.pop("request_sha256")
+    request_body.pop("pending_sha256")
+    if sha256_json(request_body) != request_sha256:
+        raise MontageLearningFileBridgeError("pending request hash mismatch")
+    pending_body = dict(value)
+    pending_sha256 = pending_body.pop("pending_sha256")
+    if sha256_json(pending_body) != pending_sha256:
+        raise MontageLearningFileBridgeError("pending hash mismatch")
+    return dict(value)
+
+
+def _validate_generic_pending_coordinates(
+    value: dict[str, object], expected_revision: int,
+) -> None:
+    if set(value) != {"expected_revision", "generic_store_id"}:
+        raise MontageLearningFileBridgeError("generic pending coordinates mismatch")
+    if (isinstance(value["expected_revision"], bool) or
+            not isinstance(value["expected_revision"], int) or
+            value["expected_revision"] != expected_revision):
+        raise MontageLearningFileBridgeError("generic pending revision mismatch")
+    _require_id(value["generic_store_id"], "generic_store_id")
+
+
+def _validate_exact_pending_coordinates(
+    value: dict[str, object], expected_revision: int,
+) -> None:
+    expected = {
+        "staging_store_id", "expected_owner_scope_hash", "expected_staging_revision",
+        "expected_staging_entry_sha256", "expected_canonical_store_commit_sha256",
+        "expected_external_anchor_document_sha256",
+    }
+    if set(value) != expected:
+        raise MontageLearningFileBridgeError("exact pending coordinates mismatch")
+    _require_id(value["staging_store_id"], "staging_store_id")
+    if (isinstance(value["expected_staging_revision"], bool) or
+            not isinstance(value["expected_staging_revision"], int) or
+            value["expected_staging_revision"] != expected_revision):
+        raise MontageLearningFileBridgeError("exact pending revision mismatch")
+    for field in ("expected_owner_scope_hash", "expected_staging_entry_sha256"):
+        digest = value[field]
+        if not isinstance(digest, str) or _SHA_RE.fullmatch(digest) is None:
+            raise MontageLearningFileBridgeError(f"{field} is invalid")
+    for field in (
+        "expected_canonical_store_commit_sha256",
+        "expected_external_anchor_document_sha256",
+    ):
+        digest = value[field]
+        if digest is not None and (
+            not isinstance(digest, str) or _SHA_RE.fullmatch(digest) is None
+        ):
+            raise MontageLearningFileBridgeError(f"{field} is invalid")
 
 
 def publish_current_profile(
@@ -476,14 +743,24 @@ __all__ = [
     "BridgeLayout",
     "BridgeOwner",
     "DeliverySnapshot",
+    "EXACT_RECEIPT_NAMESPACE",
+    "GENERIC_RECEIPT_NAMESPACE",
     "MAX_DELIVERY_BYTES",
     "MAX_IMPORT_FILES",
     "MontageLearningFileBridgeError",
     "PRODUCTION_BRIDGE_ROOT",
+    "ReceiptPublicationPaths",
+    "build_receipt_publication_pending",
+    "clear_pending_receipt_publication_exact",
+    "create_pending_receipt_publication_new_or_identical",
     "list_delivery_paths",
     "load_bridge_owner",
+    "load_published_receipt",
+    "load_receipt_publication_pending",
     "provision_bridge",
     "publish_current_profile",
     "publish_receipt_new_or_identical",
+    "receipt_identity_publisher_guard",
+    "receipt_publication_paths",
     "snapshot_delivery",
 ]

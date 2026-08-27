@@ -1,6 +1,6 @@
 # TASK-060 — Montage Preference Projection and Production Source
 
-- Status: `ALLOCATION_METADATA_CANDIDATE / IMPLEMENTATION_NOT_AUTHORIZED`
+- Status: `PP_A_IMPLEMENTATION_AUTHORIZATION_CANDIDATE / IMPLEMENTATION_NOT_STARTED`
 - Capability: `BVP-MONTAGE-PREFERENCE-PROJECTION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Owner boundary: TASK-029 source semantics and TASK-019 evaluation, promotion, and rollback semantics
@@ -38,12 +38,21 @@ frozen exact file subset and completion Evidence before the next Unit starts.
 
 ## Current authorization state
 
-This record allocates TASK-060 and freezes its future implementation boundary.
-It does not authorize source, schema, test, runtime, native, Release, Deploy, or
-Production mutation. Implementation remains `NOT_AUTHORIZED` until this exact
-six-document package passes independent DEV-4 review, Hosted checks, Owner
-Ready/merge, the canonical activation amendment, merge/main read-back, and the
-reserved task-index effect.
+The allocation package is canonical and the Owner has approved a bounded PP-A
+implementation-authorization candidate. This metadata branch does not mutate
+implementation files and does not itself prove that the authorization is
+canonical.
+
+PP-A implementation becomes eligible only after the exact metadata candidate
+passes independent DEV-4 review with unresolved Critical/High `0/0`, Hosted
+checks, an exact Owner Ready/merge decision, canonical-main merge/read-back,
+and post-main CI/Security. At that point only the six paths frozen in
+`pp-a-implementation-authorization-2026-08-28.md` may change. PP-B and PP-C
+remain `IMPLEMENTATION_NOT_AUTHORIZED`.
+
+Current candidate effect is source `0`, schema `0`, test `0`, Registry `0`,
+task-index `0`, CHANGELOG `0`, runtime/native/paid/external `0`, and
+Release/Deploy/Production `0`.
 
 ## Responsibility non-overlap
 
@@ -58,3 +67,8 @@ reserved task-index effect.
 The closed Allowed Files, tests, stop conditions, expiry conditions, role
 separation, and prohibited effects are fixed in
 `task060-owner-allocation-and-implementation-authorization-2026-08-27.md`.
+
+The bounded PP-A activation conditions, exact six-path implementation scope,
+dependency read set, required tests, stop conditions, and denied effects are
+fixed in `pp-a-implementation-authorization-2026-08-28.md`. The original Owner
+allocation record remains immutable.

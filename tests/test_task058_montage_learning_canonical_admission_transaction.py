@@ -5,6 +5,7 @@ import json
 import multiprocessing
 import os
 from pathlib import Path
+import stat
 import subprocess
 
 import pytest
@@ -34,6 +35,7 @@ from ai_video_production.montage_learning_receipt_contracts import (
 )
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
+from ai_video_production.project_save import ProjectSaveJournalStore
 from ai_video_production.serialization import canonical_json_bytes
 from test_task058_montage_learning_bridge_contracts import (
     OWNER_SCOPE_HASH, _exact_delivery, _generic_delivery,
@@ -125,15 +127,37 @@ def _concurrent_admit(project: str, anchor: str, delivery: dict[str, object],
 
 
 def _concurrent_generic(project: str, anchor: str, delivery: dict[str, object],
-                        start, queue) -> None:
+                        start, queue, expected_revision: int = 0,
+                        owner_scope_hash: str | None = None) -> None:
     start.wait(10)
     try:
+        optional = {} if owner_scope_hash is None else {
+            "owner_scope_hash": owner_scope_hash,
+        }
         result = _writer(Path(project), Path(anchor)).record_exact_generic_observation(
-            delivery, expected_revision=0,
+            delivery, expected_revision=expected_revision,
+            **optional,
         )
         queue.put(("GENERIC", result.status, result.canonical_commit_sha256))
     except Exception as exc:
         queue.put(("GENERIC_ERROR", type(exc).__name__, str(exc)))
+
+
+def _concurrent_generic_lookup(project: str, anchor: str, record_id: str,
+                               learning_sha256: str, start, queue) -> None:
+    start.wait(10)
+    try:
+        readback = _writer(Path(project), Path(anchor)).lookup_trusted_review_observation(
+            record_id=record_id,
+            learning_sha256=learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+        queue.put(("LOOKUP", readback.canonical_commit_sha256, readback.store_revision))
+    except Exception as exc:
+        queue.put(("LOOKUP_ERROR", type(exc).__name__, str(exc)))
 
 
 def _cleanup_processes(processes, queue) -> None:
@@ -173,6 +197,49 @@ def _cleanup_processes(processes, queue) -> None:
             errors.append(exc)
     if errors:
         raise AssertionError(f"multiprocess cleanup failed: {errors!r}")
+
+
+def _snapshot_tree(root: Path) -> dict[str, bytes]:
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
+
+
+def _snapshot_inventory(root: Path) -> dict[str, tuple[str, bytes]]:
+    snapshot: dict[str, tuple[str, bytes]] = {}
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            snapshot[relative] = ("symlink", os.readlink(path).encode("utf-8"))
+        elif stat.S_ISREG(info.st_mode):
+            snapshot[relative] = ("file", path.read_bytes())
+        elif stat.S_ISDIR(info.st_mode):
+            snapshot[relative] = ("directory", b"")
+        else:
+            snapshot[relative] = (f"irregular:{stat.S_IFMT(info.st_mode)}", b"")
+    return snapshot
+
+
+def _windows_process_handle_count() -> int:
+    if os.name != "nt":
+        raise RuntimeError("Windows handle count is unavailable")
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    current_process = kernel32.GetCurrentProcess
+    current_process.argtypes = ()
+    current_process.restype = wintypes.HANDLE
+    get_count = kernel32.GetProcessHandleCount
+    get_count.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+    get_count.restype = wintypes.BOOL
+    count = wintypes.DWORD()
+    if not get_count(current_process(), ctypes.byref(count)):
+        raise OSError(ctypes.get_last_error(), "GetProcessHandleCount failed")
+    return int(count.value)
 
 
 def test_accept_then_exact_duplicate_and_trusted_reader(tmp_path: Path) -> None:
@@ -369,6 +436,17 @@ def test_generic_observation_namespace_accept_duplicate_and_collision(tmp_path: 
     assert verified.status == "ACCEPTED"
     assert verified.to_dict()["canonical_readback"] == readback
 
+    lookup = writer.lookup_trusted_review_observation(
+        record_id=readback["record_id"],
+        learning_sha256="sha256:" + readback["source_digest_sha256"],
+        project_id="proj-test",
+        owner_scope_hash=OWNER_SCOPE_HASH,
+        store_kind="REVIEW_OBSERVATION",
+        generic_store_id="task058-generic-review-observations",
+    )
+    assert isinstance(lookup, ReviewObservationCanonicalReadback)
+    assert lookup.to_dict() == readback
+
     collision = deepcopy(delivery)
     collision["payload"]["proposal"]["timeline_frame"] = 601
     collision["payload"]["delta_frames"] = 3
@@ -385,6 +463,707 @@ def test_generic_observation_namespace_accept_duplicate_and_collision(tmp_path: 
         writer.record_exact_generic_observation(
             delivery, expected_revision=1, owner_scope_hash=OWNER_SCOPE_HASH
         )
+
+
+def test_generic_lookup_is_read_only_and_closes_outer_correlation_restart_window(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    bridge = tmp_path / "bridge"
+    project.mkdir(); anchor.mkdir(); bridge.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    readback = accepted.canonical_readback.to_dict()
+    assert not writer.generic_journal_path.exists()
+    canonical_snapshot = _snapshot_tree(project)
+    assert not (bridge / "receipts").exists()
+
+    def lookup() -> dict[str, object]:
+        restarted = _writer(project, anchor)
+        return restarted.lookup_trusted_review_observation(
+            record_id=readback["record_id"],
+            learning_sha256="sha256:" + readback["source_digest_sha256"],
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        ).to_dict()
+
+    assert lookup() == readback
+    (bridge / "pending-correlation.json").write_text("{}", encoding="utf-8")
+    assert lookup() == readback
+    (bridge / "published-receipt.json").write_text("{}", encoding="utf-8")
+    assert lookup() == readback
+    assert _snapshot_tree(project) == canonical_snapshot
+    assert not writer.generic_journal_path.exists()
+
+
+@pytest.mark.parametrize("coordinate", ["record", "digest", "project", "owner", "kind", "store"])
+def test_generic_lookup_rejects_wrong_or_missing_coordinates(
+    tmp_path: Path, coordinate: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    readback = accepted.canonical_readback.to_dict()
+    arguments = {
+        "record_id": readback["record_id"],
+        "learning_sha256": "sha256:" + readback["source_digest_sha256"],
+        "project_id": "proj-test",
+        "owner_scope_hash": OWNER_SCOPE_HASH,
+        "store_kind": "REVIEW_OBSERVATION",
+        "generic_store_id": "task058-generic-review-observations",
+    }
+    replacements = {
+        "record": ("record_id", "missing-record"),
+        "digest": ("learning_sha256", "sha256:" + "1" * 64),
+        "project": ("project_id", "wrong-project"),
+        "owner": ("owner_scope_hash", "sha256:" + "2" * 64),
+        "kind": ("store_kind", "LEARNING_ADOPTION"),
+        "store": ("generic_store_id", "wrong-store"),
+    }
+    key, value = replacements[coordinate]
+    arguments[key] = value
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(**arguments)
+
+    if coordinate == "kind":
+        class EvilStr(str):
+            def __ne__(self, other: object) -> bool:
+                del other
+                return False
+
+        arguments["store_kind"] = EvilStr("WRONG_STORE_KIND")
+        with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+            writer.lookup_trusted_review_observation(**arguments)
+
+
+@pytest.mark.parametrize("field", ["owner_scope_hash", "store_kind", "generic_store_id"])
+def test_generic_lookup_requires_explicit_scope_and_store_identity(
+    tmp_path: Path, field: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    delivery = _generic_delivery()
+    arguments = {
+        "record_id": str(delivery["record_id"]),
+        "learning_sha256": str(delivery["learning_sha256"]),
+        "project_id": "proj-test",
+        "owner_scope_hash": OWNER_SCOPE_HASH,
+        "store_kind": "REVIEW_OBSERVATION",
+        "generic_store_id": "task058-generic-review-observations",
+    }
+    arguments.pop(field)
+    with pytest.raises(TypeError):
+        writer.lookup_trusted_review_observation(**arguments)
+    with pytest.raises(TypeError):
+        writer._lookup_trusted_review_observation(**arguments)
+
+
+def test_generic_lookup_rejects_pending_or_corrupt_journal_without_writes(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    delivery = _generic_delivery()
+
+    def fail(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_generic_journal_write":
+            raise RuntimeError("fault")
+
+    with pytest.raises(RuntimeError, match="fault"):
+        writer.admit_generic_observation(delivery, expected_revision=0, failure_hook=fail)
+    before = writer.generic_journal_path.read_bytes()
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=str(delivery["record_id"]),
+            learning_sha256=str(delivery["learning_sha256"]),
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert writer.generic_journal_path.read_bytes() == before
+    writer.generic_journal_path.write_bytes(b"{}\n")
+    corrupt = writer.generic_journal_path.read_bytes()
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=str(delivery["record_id"]),
+            learning_sha256=str(delivery["learning_sha256"]),
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert writer.generic_journal_path.read_bytes() == corrupt
+
+
+def test_generic_lookup_accepts_valid_later_append_but_rejects_incomplete_tail(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    first = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    later_delivery = deepcopy(_generic_delivery())
+    later_delivery["record_id"] = "generic-record-later"
+    later_delivery["payload"]["record_id"] = "generic-record-later"
+    later_delivery["learning_sha256"] = canonical_learning_sha256(later_delivery["payload"])
+    later = writer.admit_generic_observation(
+        later_delivery, expected_revision=1, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    found = writer.lookup_trusted_review_observation(
+        record_id=first.record_id,
+        learning_sha256="sha256:" + first.learning_sha256,
+        project_id="proj-test",
+        owner_scope_hash=OWNER_SCOPE_HASH,
+        store_kind="REVIEW_OBSERVATION",
+        generic_store_id="task058-generic-review-observations",
+    )
+    assert found.to_dict() == first.canonical_readback.to_dict()
+    tail_marker = project / writer._generic_marker_relative_path(
+        later.canonical_readback.transaction_id
+    )
+    tail_marker.unlink()
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        writer.lookup_trusted_review_observation(
+            record_id=first.record_id,
+            learning_sha256="sha256:" + first.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+
+
+def test_generic_lookup_rejects_outer_receipt_without_canonical_commit(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    outer = project / "bridge/receipts/generic-record.receipt.json"
+    outer.parent.mkdir(parents=True)
+    outer.write_text(
+        json.dumps({"status": "ACCEPTED", "canonical_store_written": True}),
+        encoding="utf-8",
+    )
+    before = _snapshot_tree(project)
+    delivery = _generic_delivery()
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        _writer(project, anchor).lookup_trusted_review_observation(
+            record_id=str(delivery["record_id"]),
+            learning_sha256=str(delivery["learning_sha256"]),
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert _snapshot_tree(project) == before
+
+
+@pytest.mark.parametrize("lock_name", ["generic", "product"])
+@pytest.mark.parametrize("lock_state", ["missing", "empty", "wrong-size", "wrong-byte"])
+def test_generic_lookup_rejects_invalid_existing_lock_without_writes(
+    tmp_path: Path, lock_name: str, lock_state: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    generic_lock = writer.generic_journal_path.with_name(
+        f".{writer.generic_journal_path.name}.lock"
+    )
+    product_lock = ProductProjectManifestStore.path(project).with_name(
+        ".project.json.lock"
+    )
+    target = generic_lock if lock_name == "generic" else product_lock
+    if lock_state == "missing":
+        target.unlink()
+    elif lock_state == "empty":
+        target.write_bytes(b"")
+    elif lock_state == "wrong-size":
+        target.write_bytes(b"00")
+    else:
+        target.write_bytes(b"X")
+    before = _snapshot_tree(project)
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=accepted.record_id,
+            learning_sha256="sha256:" + accepted.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert _snapshot_tree(project) == before
+
+
+@pytest.mark.parametrize("lock_name", ["generic", "product"])
+@pytest.mark.parametrize("lock_state", ["symlink", "irregular"])
+def test_generic_lookup_rejects_unsafe_lock_path_before_open_without_writes(
+    tmp_path: Path, lock_name: str, lock_state: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    generic_lock = writer.generic_journal_path.with_name(
+        f".{writer.generic_journal_path.name}.lock"
+    )
+    product_lock = ProductProjectManifestStore.path(project).with_name(
+        ".project.json.lock"
+    )
+    target = generic_lock if lock_name == "generic" else product_lock
+    target.unlink()
+    backing = tmp_path / f"{lock_name}-lock-backing"
+    if lock_state == "symlink":
+        backing.write_bytes(b"0")
+        try:
+            target.symlink_to(backing)
+        except OSError as exc:
+            pytest.skip(f"file symlink creation unavailable: {exc}")
+        assert target.is_symlink()
+        if os.name == "nt":
+            assert (
+                getattr(target.lstat(), "st_file_attributes", 0)
+                & module._REPARSE_POINT
+            )
+    else:
+        target.mkdir()
+        assert target.is_dir()
+    before = _snapshot_inventory(project)
+    backing_before = backing.read_bytes() if backing.exists() else None
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=accepted.record_id,
+            learning_sha256="sha256:" + accepted.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert _snapshot_inventory(project) == before
+    assert (backing.read_bytes() if backing.exists() else None) == backing_before
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFO fixture unavailable")
+@pytest.mark.parametrize("lock_name", ["generic", "product"])
+def test_generic_lookup_rejects_fifo_lock_before_open_without_hanging(
+    tmp_path: Path, lock_name: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    generic_lock = writer.generic_journal_path.with_name(
+        f".{writer.generic_journal_path.name}.lock"
+    )
+    product_lock = ProductProjectManifestStore.path(project).with_name(
+        ".project.json.lock"
+    )
+    target = generic_lock if lock_name == "generic" else product_lock
+    target.unlink()
+    os.mkfifo(target)
+    assert stat.S_ISFIFO(target.lstat().st_mode)
+    before = _snapshot_inventory(project)
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=accepted.record_id,
+            learning_sha256="sha256:" + accepted.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert _snapshot_inventory(project) == before
+
+
+@pytest.mark.parametrize("lock_name", ["generic", "product"])
+def test_generic_lookup_rejects_check_open_lock_substitution_without_effect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, lock_name: str,
+) -> None:
+    root = tmp_path / "lock-root"
+    root.mkdir()
+    target = root / f".{lock_name}.lock"
+    target.write_bytes(b"0")
+    target_name = "Generic operation" if lock_name == "generic" else "Product Project"
+    replacement = target.with_name(f"{target.name}.replacement")
+    replacement.write_bytes(b"0")
+    original_open = module._open_existing_lock_nofollow
+    post_substitution: dict[str, dict[str, tuple[str, bytes]]] = {}
+
+    def substitute_then_open(path: Path, name: str):
+        if name == target_name:
+            assert path == target
+            os.replace(replacement, target)
+            post_substitution["inventory"] = _snapshot_inventory(root)
+        return original_open(path, name)
+
+    monkeypatch.setattr(
+        module, "_open_existing_lock_nofollow", substitute_then_open
+    )
+    with pytest.raises(
+        MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"
+    ) as error:
+        with module._exclusive_existing_read_lock(target, target_name):
+            pytest.fail("substituted lock must never be yielded")
+    assert post_substitution, str(error.value)
+    assert _snapshot_inventory(root) == post_substitution["inventory"]
+    assert target.read_bytes() == b"0"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows HANDLE ownership fixture")
+@pytest.mark.parametrize("failure_point", ["set-inheritable", "fdopen"])
+def test_windows_lock_fd_transfer_failure_closes_exactly_once_without_effect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_point: str,
+) -> None:
+    root = tmp_path / "lock-root"
+    root.mkdir()
+    target = root / ".generic.lock"
+    target.write_bytes(b"0")
+    with module._open_existing_lock_nofollow(target, "Generic operation") as handle:
+        assert handle.read(1) == b"0"
+    before_inventory = _snapshot_inventory(root)
+    before_handles = _windows_process_handle_count()
+    real_close = os.close
+    close_calls: list[int] = []
+
+    def counted_close(file_descriptor: int) -> None:
+        close_calls.append(file_descriptor)
+        real_close(file_descriptor)
+
+    def fail(*args, **kwargs):
+        del args, kwargs
+        raise OSError(f"forced {failure_point} failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(module.os, "close", counted_close)
+        patch.setattr(
+            module.os,
+            "set_inheritable" if failure_point == "set-inheritable" else "fdopen",
+            fail,
+        )
+        for _ in range(3):
+            with pytest.raises(
+                MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"
+            ):
+                module._open_existing_lock_nofollow(target, "Generic operation")
+    assert len(close_calls) == 3
+    assert _windows_process_handle_count() == before_handles
+    assert _snapshot_inventory(root) == before_inventory
+    assert not (root / "bridge/receipts").exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows HANDLE ownership fixture")
+def test_windows_open_osfhandle_failure_closes_native_handle_without_fd_close(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import msvcrt
+
+    root = tmp_path / "lock-root"
+    root.mkdir()
+    target = root / ".generic.lock"
+    target.write_bytes(b"0")
+    with module._open_existing_lock_nofollow(target, "Generic operation") as handle:
+        assert handle.read(1) == b"0"
+    before_inventory = _snapshot_inventory(root)
+    before_handles = _windows_process_handle_count()
+    close_calls: list[int] = []
+
+    def fail_open_osfhandle(*args, **kwargs):
+        del args, kwargs
+        raise OSError("forced open_osfhandle failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(msvcrt, "open_osfhandle", fail_open_osfhandle)
+        patch.setattr(module.os, "close", lambda fd: close_calls.append(fd))
+        for _ in range(3):
+            with pytest.raises(
+                MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"
+            ):
+                module._open_existing_lock_nofollow(target, "Generic operation")
+    assert close_calls == []
+    assert _windows_process_handle_count() == before_handles
+    assert _snapshot_inventory(root) == before_inventory
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows HANDLE ownership fixture")
+def test_windows_successful_fd_transfer_has_no_explicit_double_close(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "lock-root"
+    root.mkdir()
+    target = root / ".generic.lock"
+    target.write_bytes(b"0")
+    with module._open_existing_lock_nofollow(target, "Generic operation") as handle:
+        assert handle.read(1) == b"0"
+    before_inventory = _snapshot_inventory(root)
+    before_handles = _windows_process_handle_count()
+    close_calls: list[int] = []
+    real_close = os.close
+
+    def counted_close(file_descriptor: int) -> None:
+        close_calls.append(file_descriptor)
+        real_close(file_descriptor)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(module.os, "close", counted_close)
+        for _ in range(3):
+            with module._open_existing_lock_nofollow(
+                target, "Generic operation"
+            ) as handle:
+                assert handle.read(1) == b"0"
+    assert close_calls == []
+    assert _windows_process_handle_count() == before_handles
+    assert _snapshot_inventory(root) == before_inventory
+
+
+def test_generic_lookup_rejects_equal_revision_manifest_tamper_and_rollback(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    first = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    first_manifest_document = ProductProjectManifestStore.path(project).read_bytes()
+    first_manifest = ProductProjectManifestStore.load(project)
+    tampered = ProductProjectManifest.create(
+        project_id=first_manifest.project_id,
+        project_revision=first_manifest.project_revision,
+        product_version=first_manifest.product_version,
+        timebase=first_manifest.timebase,
+        child_bindings=(),
+        created_at=first_manifest.created_at,
+        updated_at=first_manifest.updated_at,
+    )
+    ProductProjectManifestStore.path(project).write_bytes(
+        canonical_json_bytes(tampered.to_dict()) + b"\n"
+    )
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        writer.lookup_trusted_review_observation(
+            record_id=first.record_id,
+            learning_sha256="sha256:" + first.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    ProductProjectManifestStore.path(project).write_bytes(first_manifest_document)
+    later_delivery = deepcopy(_generic_delivery())
+    later_delivery["record_id"] = "generic-record-rollback-tail"
+    later_delivery["payload"]["record_id"] = "generic-record-rollback-tail"
+    later_delivery["learning_sha256"] = canonical_learning_sha256(later_delivery["payload"])
+    writer.admit_generic_observation(
+        later_delivery, expected_revision=1, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    ProductProjectManifestStore.path(project).write_bytes(first_manifest_document)
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        writer.lookup_trusted_review_observation(
+            record_id=first.record_id,
+            learning_sha256="sha256:" + first.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+
+
+def test_multiprocess_generic_lookup_is_byte_stable_and_write_free(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    before = _snapshot_tree(project)
+    assert not (project / "bridge/receipts").exists()
+    ctx = multiprocessing.get_context("spawn")
+    start = ctx.Event(); queue = ctx.Queue()
+    processes = [ctx.Process(
+        target=_concurrent_generic_lookup,
+        args=(
+            str(project), str(anchor), accepted.record_id,
+            "sha256:" + accepted.learning_sha256, start, queue,
+        ),
+    ) for _ in range(2)]
+    started = []
+    try:
+        for process in processes:
+            process.start(); started.append(process)
+        start.set()
+        results = [queue.get(timeout=30) for _ in started]
+    finally:
+        _cleanup_processes(started, queue)
+    assert results == [
+        ("LOOKUP", accepted.canonical_commit_sha256, 1),
+        ("LOOKUP", accepted.canonical_commit_sha256, 1),
+    ]
+    assert _snapshot_tree(project) == before
+    assert not (project / "bridge/receipts").exists()
+    assert not writer.generic_journal_path.exists()
+
+
+def test_generic_lookup_checks_product_recovery_inside_project_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    held = False
+    original_lock = module._exclusive_existing_read_lock
+
+    class ObservedLock:
+        def __init__(self, target: Path, name: str) -> None:
+            self._context = original_lock(target, name)
+            self._is_product = name == "Product Project"
+
+        def __enter__(self):
+            nonlocal held
+            value = self._context.__enter__()
+            if self._is_product:
+                held = True
+            return value
+
+        def __exit__(self, exc_type, exc, traceback):
+            nonlocal held
+            try:
+                return self._context.__exit__(exc_type, exc, traceback)
+            finally:
+                if self._is_product:
+                    held = False
+
+    def recovery_status(self, root: Path) -> dict[str, object]:
+        del self, root
+        assert held, "recovery currentness must be checked under the Product lock"
+        return {"required": True, "state": "RECOVERY_REQUIRED", "available_actions": []}
+
+    monkeypatch.setattr(module, "_exclusive_existing_read_lock", ObservedLock)
+    monkeypatch.setattr(
+        module.ProductProjectSaveCoordinator, "recovery_status", recovery_status
+    )
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=accepted.record_id,
+            learning_sha256="sha256:" + accepted.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+
+
+def test_generic_lookup_normalizes_corrupt_product_journal_without_writes(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    journal = ProjectSaveJournalStore.path(project, create_control_dir=True)
+    journal.write_bytes(b"{}\n")
+    before = _snapshot_tree(project)
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=accepted.record_id,
+            learning_sha256="sha256:" + accepted.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert _snapshot_tree(project) == before
+
+
+def test_multiprocess_lookup_and_later_admission_converge_without_lookup_effect(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    first = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    later_delivery = deepcopy(_generic_delivery())
+    later_delivery["record_id"] = "generic-concurrent-later"
+    later_delivery["payload"]["record_id"] = "generic-concurrent-later"
+    later_delivery["learning_sha256"] = canonical_learning_sha256(later_delivery["payload"])
+    ctx = multiprocessing.get_context("spawn")
+    start = ctx.Event(); queue = ctx.Queue()
+    processes = [
+        ctx.Process(
+            target=_concurrent_generic_lookup,
+            args=(
+                str(project), str(anchor), first.record_id,
+                "sha256:" + first.learning_sha256, start, queue,
+            ),
+        ),
+        ctx.Process(
+            target=_concurrent_generic,
+            args=(
+                str(project), str(anchor), later_delivery, start, queue, 1,
+                OWNER_SCOPE_HASH,
+            ),
+        ),
+    ]
+    started = []
+    try:
+        for process in processes:
+            process.start(); started.append(process)
+        start.set()
+        results = [queue.get(timeout=30) for _ in started]
+    finally:
+        _cleanup_processes(started, queue)
+    assert sum(item[0] == "LOOKUP" for item in results) == 1
+    assert sum(item[:2] == ("GENERIC", "ACCEPTED") for item in results) == 1
+    ledger = json.loads(writer.generic_observation_path.read_text(encoding="utf-8"))
+    assert ledger["store_revision"] == 2
+    assert writer.lookup_trusted_review_observation(
+        record_id=first.record_id,
+        learning_sha256="sha256:" + first.learning_sha256,
+        project_id="proj-test",
+        owner_scope_hash=OWNER_SCOPE_HASH,
+        store_kind="REVIEW_OBSERVATION",
+        generic_store_id="task058-generic-review-observations",
+    ).to_dict() == first.canonical_readback.to_dict()
+    assert not writer.generic_journal_path.exists()
+    assert not (project / "bridge/receipts").exists()
 
 
 @pytest.mark.parametrize("phase", [

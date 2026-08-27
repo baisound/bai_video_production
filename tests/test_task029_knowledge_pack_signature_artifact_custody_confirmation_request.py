@@ -36,7 +36,9 @@ def _hash(label: str) -> str:
     return sha256_bytes(label.encode("utf-8"))
 
 
-def _receipt(*, production: bool = True) -> SignatureArtifactCustodyReceipt:
+def _receipt(
+    *, production: bool = True, pack_id: str = "knowledge-pack:owner-editing"
+) -> SignatureArtifactCustodyReceipt:
     return SignatureArtifactCustodyReceipt(
         receipt_id="receipt-r10d-001",
         candidate_sha256=_hash("candidate"),
@@ -45,7 +47,7 @@ def _receipt(*, production: bool = True) -> SignatureArtifactCustodyReceipt:
         source_key_custody_receipt_sha256=_hash("key-custody"),
         source_signing_ceremony_receipt_sha256=_hash("ceremony"),
         source_trusted_signature_admission_sha256=_hash("admission"),
-        pack_id="knowledge-pack:owner-editing",
+        pack_id=pack_id,
         pack_version="1.2.3",
         predecessor_pack_sha256=_hash("predecessor"),
         signature_request_sha256=_hash("request"),
@@ -241,3 +243,26 @@ def test_reconstructed_coordinates_remain_non_authoritative_and_unknown_fields_f
     _rehash(unknown)
     with pytest.raises(ValueError, match="identity mismatch"):
         verify_signature_artifact_custody_confirmation_request(unknown)
+
+
+@pytest.mark.parametrize(
+    "path_like_pack_id",
+    ["C:/Users/user/private/signature.ppk", "file://owner/private/signature.ppk"],
+)
+def test_path_like_pack_id_cannot_contradict_path_free_projection(
+    path_like_pack_id: str,
+) -> None:
+    forged_receipt = _receipt(pack_id=path_like_pack_id).to_dict()
+    with pytest.raises(ValueError, match="absolute host path or URI"):
+        _compile(forged_receipt)
+
+    serialized = _compile().to_dict()
+    serialized["pack_id"] = path_like_pack_id
+    _rehash(serialized)
+    with pytest.raises(ValueError, match="absolute host path or URI"):
+        verify_signature_artifact_custody_confirmation_request(serialized)
+
+    schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
+    mirror_schema = json.loads(MIRROR.read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(schema).iter_errors(serialized))
+    assert list(Draft202012Validator(mirror_schema).iter_errors(serialized))

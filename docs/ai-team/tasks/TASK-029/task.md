@@ -391,6 +391,9 @@ inputs are rejected before hook reads, exact built-in scalars are required and
 fixed authority flags cannot be relabeled even with a recomputed outer hash.
 Detached stable coordinates remain publicly reconstructible and therefore do
 not authenticate the source or create standalone authority.
+Semantic Pack IDs remain supported, while Windows absolute-path and URI-like
+forms are rejected by runtime and schema so the path-free projection cannot be
+contradicted through `pack_id`.
 
 The request contains stable identifiers, hashes and timestamps only. Public or
 private key material, signature bodies, host paths, credentials and media are

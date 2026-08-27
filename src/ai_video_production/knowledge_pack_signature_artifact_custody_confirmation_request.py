@@ -32,6 +32,8 @@ MAX_CONFIRMATION_REQUEST_TTL_MS = 15 * 60 * 1000
 
 _LOGICAL_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,159}")
 _STABLE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}")
+_WINDOWS_ABSOLUTE_PATH = re.compile(r"[A-Za-z]:[/\\]")
+_URI_LIKE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://")
 _SHA256 = re.compile(r"sha256:[0-9a-f]{64}")
 _SEMVER = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 
@@ -77,6 +79,13 @@ def _stable_id(value: object, field: str) -> str:
     if type(value) is not str or _STABLE_ID.fullmatch(value) is None:
         raise ValueError(f"{field} must be an exact stable identifier")
     return value
+
+
+def _pack_id(value: object) -> str:
+    result = _stable_id(value, "pack_id")
+    if _WINDOWS_ABSOLUTE_PATH.match(result) is not None or _URI_LIKE.match(result) is not None:
+        raise ValueError("pack_id must not contain an absolute host path or URI")
+    return result
 
 
 def _sha(value: object, field: str) -> str:
@@ -162,7 +171,7 @@ class SignatureArtifactCustodyConfirmationRequest:
         _logical_id(self.request_id, "request_id")
         _logical_id(self.custody_receipt_id, "custody_receipt_id")
         _logical_id(self.artifact_store_id, "artifact_store_id")
-        _stable_id(self.pack_id, "pack_id")
+        _pack_id(self.pack_id)
         if type(self.pack_version) is not str or _SEMVER.fullmatch(self.pack_version) is None:
             raise ValueError("pack_version must be an exact semantic version")
         for field in (

@@ -42,6 +42,9 @@ later trusted interaction/store boundary.
   request.
 - Signature bytes, public/private key material, host paths, credentials and
   media are prohibited from the request.
+- `pack_id` retains semantic IDs such as `knowledge-pack:...`, but Windows
+  absolute-path and URI-like forms are rejected by runtime and schema so they
+  cannot contradict `absolute_host_path_included=false`.
 
 ## Authority and effect denial
 
@@ -66,12 +69,13 @@ external effects are fixed false.
 ## Review state
 
 - Builder: `COMMIT_READY`
-- Builder focused test: `15 PASS`
-- R10D + R10E direct test: `34 PASS / 3 platform SKIP`
-- TASK-029 regression: `195 PASS / 7 platform SKIP`
+- Builder focused test: `17 PASS`
+- R10D + R10E direct test before Medium closure: `34 PASS / 3 platform SKIP`;
+  current focused is included in the TASK-029 regression below.
+- TASK-029 regression: `197 PASS / 7 platform SKIP`
 - Schema: Draft 2020-12 valid; public/package mirror byte-exact; 72 required
   fields equal 72 declared properties; SHA-256
-  `6307D88BE43617A30502654D61B6AF3FCC4F12F50246E31D4339F7B211D3BB3E`.
+  `8726187CB2697F0EABE11835AF9C2E8E3DFBC2B3BFC5B37ED3C096D3419AD3D8`.
 - Full Product: `NOT_CONFIRMED`; the existing WSL environment stopped during
   collection because it lacks TASK-059's Argon2-capable cryptography and the
   `referencing` package. No dependency was installed.
@@ -79,6 +83,9 @@ external effects are fixed false.
   publicly constructible request no longer claims standalone source-receipt
   revalidation; it records the compiler requirement and fixes standalone
   revalidation/source origin to false.
-- Independent Critic/Tester: `PENDING`
+- Independent Critic/Tester first review: `NO-GO`, C/H/M/L `0/0/1/0`.
+  The Medium path-like `pack_id` projection contradiction was reproduced and
+  closed in the same exact6 with runtime/schema guards and direct forged-R10D,
+  serialized-rehash and dual-schema negatives. Current-head re-review pending.
 - Final Judge: `PENDING`
 - Shared CHANGELOG integration: `NOT_STARTED`

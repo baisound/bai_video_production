@@ -150,6 +150,9 @@ def test_provision_is_idempotent_and_never_claims_isolated_root_as_production(tm
     second = provision_bridge(layout, bridge_instance_id="bridge-fixture-001")
     assert first == second
     assert second.production_path is False
+    assert layout.processing == layout.root / "learning-processing"
+    assert layout.quarantine == layout.root / "learning-quarantine"
+    assert layout.import_journal == layout.root / "state" / "importer-journal"
     assert all(
         path.is_dir()
         for path in (

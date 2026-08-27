@@ -88,11 +88,11 @@ class BridgeLayout:
 
     @property
     def processing(self) -> Path:
-        return self.root / "processing"
+        return self.root / "learning-processing"
 
     @property
     def quarantine(self) -> Path:
-        return self.root / "quarantine"
+        return self.root / "learning-quarantine"
 
     @property
     def state(self) -> Path:
@@ -100,7 +100,7 @@ class BridgeLayout:
 
     @property
     def import_journal(self) -> Path:
-        return self.state / "import-journal"
+        return self.state / "importer-journal"
 
     @property
     def preference(self) -> Path:
@@ -891,8 +891,8 @@ def _validate_import_journal(
     filename = f"{record_id}--{source_sha256.removeprefix('sha256:')}.json"
     expected_paths = {
         "original_relative_path": f"learning-inbox/{filename}",
-        "processing_relative_path": f"processing/{filename}",
-        "quarantine_relative_path": f"quarantine/{filename}",
+        "processing_relative_path": f"learning-processing/{filename}",
+        "quarantine_relative_path": f"learning-quarantine/{filename}",
     }
     for field, expected in expected_paths.items():
         if value[field] != expected:
@@ -901,8 +901,8 @@ def _validate_import_journal(
         raise MontageLearningFileBridgeError("import journal root mismatch")
     identities = value["ancestor_identities"]
     if type(identities) is not dict or set(identities) != {
-        ".", "learning-inbox", "processing", "quarantine", "learning-receipts",
-        "preference", "state", "state/import-journal",
+        ".", "learning-inbox", "learning-processing", "learning-quarantine",
+        "learning-receipts", "preference", "state", "state/importer-journal",
     }:
         raise MontageLearningFileBridgeError("journal ancestor identity set mismatch")
     for relative, identity in identities.items():

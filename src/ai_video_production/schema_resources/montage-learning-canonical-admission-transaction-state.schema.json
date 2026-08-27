@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/montage-learning-canonical-admission-transaction-state.schema.json",
+  "title": "TASK-058 FAST-BATCH-1A Canonical Admission Transaction State",
+  "oneOf": [
+    {"$ref": "#/$defs/canonicalStore"},
+    {"$ref": "#/$defs/externalAnchor"},
+    {"$ref": "#/$defs/genericReceipt"},
+    {"$ref": "#/$defs/genericLedger"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$"},
+    "falseAuthority": {
+      "type": "boolean",
+      "const": false
+    },
+    "canonicalStore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "project_id", "canonical_store_id", "owner_scope_hash", "ledger_key_sha256", "source_project_manifest_sha256", "ledger", "external_anchor_sha256", "canonical_state", "canonical_store_written", "durable_readback_required", "directory_durability_confirmed", "hostile_path_race_protection_verified", "automatic_learning_promotion_authorized", "profile_generation_authorized", "timeline_mutation_authorized", "resolve_write_authorized", "release_authorized", "deploy_authorized", "production_authorized", "canonical_store_commit_sha256"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_CANONICAL_ADMISSION_STORE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "canonical_store_id": {"$ref": "#/$defs/id"},
+        "owner_scope_hash": {"$ref": "#/$defs/sha256"},
+        "ledger_key_sha256": {"$ref": "#/$defs/sha256"},
+        "source_project_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "ledger": {"type": "object"},
+        "external_anchor_sha256": {"$ref": "#/$defs/sha256"},
+        "canonical_state": {"const": "COMMITTED"},
+        "canonical_store_written": {"const": true},
+        "durable_readback_required": {"const": true},
+        "directory_durability_confirmed": {"$ref": "#/$defs/falseAuthority"},
+        "hostile_path_race_protection_verified": {"$ref": "#/$defs/falseAuthority"},
+        "automatic_learning_promotion_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "profile_generation_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutation_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "resolve_write_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "release_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "deploy_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "production_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "canonical_store_commit_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "externalAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "project_id", "canonical_store_id", "owner_scope_hash", "ledger_key_sha256", "canonical_store_commit_sha256", "target_project_manifest_sha256", "anchor", "anchor_state", "external_anchor_written", "external_snapshot_coordinate_only", "origin_authenticated_by_store", "rollback_detection_authority_created", "directory_durability_confirmed", "hostile_path_race_protection_verified", "external_anchor_document_sha256"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_EXTERNAL_MONOTONIC_ANCHOR_STORE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "canonical_store_id": {"$ref": "#/$defs/id"},
+        "owner_scope_hash": {"$ref": "#/$defs/sha256"},
+        "ledger_key_sha256": {"$ref": "#/$defs/sha256"},
+        "canonical_store_commit_sha256": {"$ref": "#/$defs/sha256"},
+        "target_project_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "anchor": {"type": "object"},
+        "anchor_state": {"const": "ESTABLISHED"},
+        "external_anchor_written": {"const": true},
+        "external_snapshot_coordinate_only": {"const": true},
+        "origin_authenticated_by_store": {"$ref": "#/$defs/falseAuthority"},
+        "rollback_detection_authority_created": {"$ref": "#/$defs/falseAuthority"},
+        "directory_durability_confirmed": {"$ref": "#/$defs/falseAuthority"},
+        "hostile_path_race_protection_verified": {"$ref": "#/$defs/falseAuthority"},
+        "external_anchor_document_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "genericReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "namespace", "source_contract_profile", "record_id", "learning_sha256", "status", "receipt_id", "timestamp", "ledger_revision", "previous_ledger_sha256", "duplicate_of_receipt_sha256", "canonical_store_written", "serialized_receipt_authoritative", "learning_adoption_authorized", "automatic_learning_promotion_authorized", "profile_generation_authorized", "timeline_mutation_authorized", "resolve_write_authorized", "release_authorized", "deploy_authorized", "production_authorized", "receipt_sha256"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "GENERIC_REVIEW_OBSERVATION_RECEIPT"},
+        "task_owner": {"const": "TASK-058"},
+        "namespace": {"const": "GENERIC_REVIEW_OBSERVATION_ONLY"},
+        "source_contract_profile": {"const": "bvp-task029-file-bridge-v1"},
+        "record_id": {"$ref": "#/$defs/id"},
+        "learning_sha256": {"$ref": "#/$defs/sha256"},
+        "status": {"enum": ["ACCEPTED", "DUPLICATE"]},
+        "receipt_id": {"$ref": "#/$defs/id"},
+        "timestamp": {"type": "string", "pattern": "Z$"},
+        "ledger_revision": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "previous_ledger_sha256": {"$ref": "#/$defs/sha256"},
+        "duplicate_of_receipt_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]},
+        "canonical_store_written": {"const": true},
+        "serialized_receipt_authoritative": {"$ref": "#/$defs/falseAuthority"},
+        "learning_adoption_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "automatic_learning_promotion_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "profile_generation_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutation_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "resolve_write_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "release_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "deploy_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "production_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "receipt_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "genericLedger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "namespace", "project_id", "store_id", "revision", "entries", "canonical_store_written", "learning_adoption_authorized", "automatic_learning_promotion_authorized", "profile_generation_authorized", "timeline_mutation_authorized", "resolve_write_authorized", "ledger_sha256"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "GENERIC_REVIEW_OBSERVATION_LEDGER"},
+        "task_owner": {"const": "TASK-058"},
+        "namespace": {"const": "GENERIC_REVIEW_OBSERVATION_ONLY"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "store_id": {"$ref": "#/$defs/id"},
+        "revision": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "entries": {"type": "array", "minItems": 1, "maxItems": 8192, "items": {"type": "object"}},
+        "canonical_store_written": {"const": true},
+        "learning_adoption_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "automatic_learning_promotion_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "profile_generation_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutation_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "resolve_write_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "ledger_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

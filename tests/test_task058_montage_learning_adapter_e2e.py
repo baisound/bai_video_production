@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -14,7 +13,11 @@ from ai_video_production.montage_learning_bridge_application import (
     GenericObservationCoordinates,
     MontageLearningBridgeApplication,
 )
+from ai_video_production.montage_learning_canonical_admission_transaction import (
+    MontageLearningCanonicalAdmissionTransactionStore,
+)
 from ai_video_production.montage_learning_connector_readiness import (
+    ConnectorReadinessEvidence,
     MontageLearningConnectorReadinessError,
     ProfileSourceBinding,
     production_readiness_evidence,
@@ -25,6 +28,8 @@ from ai_video_production.montage_learning_file_bridge import (
     BridgeLayout,
     provision_bridge,
 )
+from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
+from ai_video_production.product_project_store import ProductProjectManifestStore
 from ai_video_production.serialization import sha256_json
 
 
@@ -107,44 +112,6 @@ def _learning() -> dict[str, object]:
     }
 
 
-@dataclass
-class _Commit:
-    receipt: dict[str, object]
-
-    @property
-    def record_id(self) -> str:
-        return str(self.receipt["record_id"])
-
-    @property
-    def learning_sha256(self) -> str:
-        return str(self.receipt["learning_sha256"])
-
-    @property
-    def status(self) -> str:
-        return str(self.receipt["status"])
-
-    def to_skill_v1_receipt(self) -> dict[str, object]:
-        return dict(self.receipt)
-
-
-class _Port:
-    def record_exact_generic_observation(self, delivery, **kwargs):
-        return _Commit(
-            {
-                "schema_version": "1.0.0",
-                "message_type": "BvpMontageLearningAdmissionReceipt",
-                "record_id": delivery["record_id"],
-                "learning_sha256": delivery["learning_sha256"],
-                "status": "ACCEPTED",
-                "receipt_id": "e2e-generic-receipt-001",
-                "timestamp": "2026-08-27T00:00:00Z",
-            }
-        )
-
-    def admit_exact(self, delivery, **kwargs):  # pragma: no cover
-        raise AssertionError("generic E2E crossed into exact v2 admission")
-
-
 def _run_adapter(tmp_path: Path, *arguments: str) -> dict[str, object]:
     output = tmp_path / f"adapter-{len(list(tmp_path.glob('adapter-*.json')))}.json"
     completed = subprocess.run(
@@ -164,6 +131,29 @@ def _skill_digest() -> str:
         digest.update(path.name.encode("utf-8"))
         digest.update(path.read_bytes())
     return digest.hexdigest()
+
+
+def _canonical_store(tmp_path: Path) -> MontageLearningCanonicalAdmissionTransactionStore:
+    project = tmp_path / "e2e-canonical-project"
+    anchor = tmp_path / "e2e-canonical-anchor"
+    project.mkdir()
+    anchor.mkdir()
+    manifest = ProductProjectManifest.create(
+        project_id="task058-e2e-project",
+        project_revision=1,
+        product_version="0.1.0",
+        timebase=ProjectTimebase(30, 1),
+        child_bindings=(),
+        created_at="2026-08-27T00:00:00Z",
+        updated_at="2026-08-27T00:00:00Z",
+    )
+    ProductProjectManifestStore.save(project, manifest)
+    return MontageLearningCanonicalAdmissionTransactionStore(
+        project,
+        anchor,
+        canonical_store_id="task058-e2e-canonical",
+        bridge_instance_id="task058-e2e-bridge",
+    )
 
 
 def test_readiness_schema_mirror_and_unbound_production_are_fail_closed(tmp_path):
@@ -224,6 +214,8 @@ def test_prebuilt_profile_is_strict_immutable_transport_with_cas(tmp_path):
     )
     assert first.status == "PUBLISHED"
     assert second.status == "DUPLICATE"
+    assert first.written is True
+    assert second.written is False
     assert envelope == before
     assert json.loads(layout.current_profile.read_text(encoding="utf-8")) == envelope
     assert first.semantic_projection_generated is False
@@ -247,6 +239,15 @@ def test_prebuilt_profile_is_strict_immutable_transport_with_cas(tmp_path):
         lambda value: value.update(
             {"payload": {"projection_version": "1.0.0", "timing_preferences": []}}
         ),
+        lambda value: value["payload"]["preferences"][0].update(
+            {"contexts": [r"C:\private\source.mp4"]}
+        ),
+        lambda value: value["payload"]["preferences"][0].update(
+            {"contexts": ["verbatim transcript: keep this private"]}
+        ),
+        lambda value: value["payload"]["preferences"][0].update(
+            {"contexts": ["api_key=secret"]}
+        ),
     ],
 )
 def test_profile_unknown_authority_hash_and_task055_timing_shape_fail_closed(mutate):
@@ -266,6 +267,22 @@ def test_source_binding_is_sealed_and_immutable():
     binding = ProfileSourceBinding.unbound_production()
     with pytest.raises(AttributeError):
         binding.production_profile_source_bound = True
+
+
+def test_readiness_evidence_rejects_forged_production_profile_binding():
+    with pytest.raises(
+        MontageLearningConnectorReadinessError, match="SOURCE_NOT_BOUND"
+    ):
+        ConnectorReadinessEvidence(
+            bridge_state="AVAILABLE",
+            import_state="OBSERVATION_RECORDED",
+            profile_state="PUBLISHED",
+            adapter_state="LOAD_PROFILE_PASS",
+            production_profile_source_bound=True,
+            adapter_contract_e2e_pass=True,
+            default_skill_config_unchanged=True,
+            reason_codes=("SOURCE_NOT_BOUND",),
+        )
 
 
 @pytest.mark.skipif(not SKILL_SCRIPT.is_file(), reason="installed SKILL unavailable")
@@ -309,12 +326,21 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
     assert staged["canonical_store_written"] is False
 
     delivery_path = Path(str(staged["delivery_path"]))
-    app = MontageLearningBridgeApplication(layout=layout, canonical_port=_Port())
+    canonical_store = _canonical_store(tmp_path)
+    app = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=canonical_store
+    )
     imported = app.import_path(
         delivery_path,
         generic_coordinates=GenericObservationCoordinates(expected_revision=0),
     )
     assert imported.status == "ACCEPTED"
+    ledger = json.loads(
+        canonical_store.generic_observation_path.read_text(encoding="utf-8")
+    )
+    assert ledger["entries"][0]["record_id"] == _learning()["record_id"]
+    assert ledger["entries"][0]["learning_sha256"] == staged["learning_sha256"]
+    assert ledger["learning_adoption_authorized"] is False
 
     matched = _run_adapter(
         tmp_path,

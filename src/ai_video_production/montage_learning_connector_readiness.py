@@ -19,6 +19,37 @@ _BINDING_TOKEN = object()
 _SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$")
 _TOKEN_RE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
+_CONTEXT_MARKER_RE = re.compile(
+    r"(?<![A-Za-z0-9_])(?:transcript|password|secret|api[_ ]key|access[_ ]token)(?![A-Za-z0-9_])",
+    re.IGNORECASE,
+)
+_ALLOWED_BRIDGE_STATES = frozenset(
+    {"NOT_PROVISIONED", "OWNERSHIP_UNVERIFIED", "AVAILABLE"}
+)
+_ALLOWED_IMPORT_STATES = frozenset(
+    {
+        "NO_DELIVERY",
+        "PENDING",
+        "OBSERVATION_RECORDED",
+        "EXACT_ACCEPTED",
+        "DUPLICATE",
+        "REJECTED",
+        "RECOVERY_REQUIRED",
+    }
+)
+_ALLOWED_PROFILE_STATES = frozenset(
+    {"SOURCE_NOT_BOUND", "PUBLISHED", "LOAD_PASS", "STALE", "INVALID"}
+)
+_ALLOWED_ADAPTER_STATES = frozenset(
+    {
+        "NOT_RUN",
+        "CONNECTOR_READY",
+        "PUBLISH_STAGED",
+        "MATCHING_RECEIPT_PASS",
+        "LOAD_PROFILE_PASS",
+        "FAIL",
+    }
+)
 _DELIVERY_FIELDS = {
     "schema_version",
     "message_type",
@@ -135,18 +166,43 @@ class ConnectorReadinessEvidence:
     default_skill_config_unchanged: bool
     reason_codes: tuple[str, ...] = ()
 
-    def to_dict(self) -> dict[str, object]:
-        activation_state = (
-            "READY_FOR_ACTIVATION_HANDOFF"
-            if (
-                self.bridge_state == "AVAILABLE"
-                and self.adapter_state == "LOAD_PROFILE_PASS"
-                and self.production_profile_source_bound
-                and self.adapter_contract_e2e_pass
-                and self.default_skill_config_unchanged
+    def __post_init__(self) -> None:
+        for field, allowed in (
+            ("bridge_state", _ALLOWED_BRIDGE_STATES),
+            ("import_state", _ALLOWED_IMPORT_STATES),
+            ("profile_state", _ALLOWED_PROFILE_STATES),
+            ("adapter_state", _ALLOWED_ADAPTER_STATES),
+        ):
+            value = getattr(self, field)
+            if type(value) is not str or value not in allowed:
+                raise MontageLearningConnectorReadinessError(
+                    f"{field} is invalid"
+                )
+        for field in (
+            "production_profile_source_bound",
+            "adapter_contract_e2e_pass",
+            "default_skill_config_unchanged",
+        ):
+            if type(getattr(self, field)) is not bool:
+                raise MontageLearningConnectorReadinessError(
+                    f"{field} must be a built-in bool"
+                )
+        if self.production_profile_source_bound is not False:
+            raise MontageLearningConnectorReadinessError(
+                "production profile source must be exactly false (SOURCE_NOT_BOUND)"
             )
-            else "BLOCKED"
-        )
+        if self.profile_state != "SOURCE_NOT_BOUND":
+            raise MontageLearningConnectorReadinessError(
+                "profile_state must be SOURCE_NOT_BOUND"
+            )
+        if type(self.reason_codes) is not tuple:
+            raise MontageLearningConnectorReadinessError(
+                "reason_codes must be a tuple"
+            )
+        for reason in self.reason_codes:
+            _require_token(reason, "reason_code")
+
+    def to_dict(self) -> dict[str, object]:
         return {
             "schema_version": "1.0.0",
             "message_type": "BvpMontageLearningConnectorReadiness",
@@ -159,7 +215,7 @@ class ConnectorReadinessEvidence:
                 else "SOURCE_NOT_BOUND"
             ),
             "adapter_state": self.adapter_state,
-            "activation_state": activation_state,
+            "activation_state": "BLOCKED",
             "connector_enabled": False,
             "activation_authorized": False,
             "production_profile_source_bound": self.production_profile_source_bound,
@@ -207,7 +263,7 @@ def publish_prebuilt_advisory_profile(
         status=status,
         profile_id=value["profile_id"],
         profile_sha256=value["profile_sha256"],
-        written=True,
+        written=status == "PUBLISHED",
         # Fixture PASS is transport compatibility, never a production binding.
         production_profile_source_bound=source_binding.production_profile_source_bound,
     )
@@ -304,8 +360,8 @@ def _validate_projection(value: object) -> dict[str, Any]:
         contexts = item["contexts"]
         if type(contexts) is not list or not 1 <= len(contexts) <= 16:
             raise MontageLearningConnectorReadinessError("contexts are invalid")
-        if any(type(context) is not str or not 1 <= len(context) <= 128 for context in contexts):
-            raise MontageLearningConnectorReadinessError("context is invalid")
+        for context in contexts:
+            _validate_preference_context(context)
         for field, low, high in (
             ("confidence", 0.0, 1.0),
             ("ranking_bias", -1.0, 1.0),
@@ -377,6 +433,24 @@ def _require_sha(value: object, field: str) -> str:
 def _require_token(value: object, field: str) -> str:
     if not isinstance(value, str) or _TOKEN_RE.fullmatch(value) is None:
         raise MontageLearningConnectorReadinessError(f"{field} is invalid")
+    return value
+
+
+def _validate_preference_context(value: object) -> str:
+    """Validate private/free-form source material used as a preference context."""
+
+    if type(value) is not str or not 1 <= len(value) <= 128:
+        raise MontageLearningConnectorReadinessError("context is invalid")
+    if any(char in value for char in "/\\@") or any(
+        ord(char) < 32 or ord(char) == 127 for char in value
+    ):
+        raise MontageLearningConnectorReadinessError(
+            "context contains invalid private/free-form source material"
+        )
+    if _CONTEXT_MARKER_RE.search(value) is not None:
+        raise MontageLearningConnectorReadinessError(
+            "context contains restricted private/free-form source material"
+        )
     return value
 
 

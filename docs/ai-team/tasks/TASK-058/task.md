@@ -418,3 +418,185 @@ P1C-D local implementation checkpoint:
   rollback authority, public v2 receipt mint, canonical admission, automatic
   learning, Timeline, Resolve, Provider/network/native, Release, Deploy, and
   Production effects: NOT IMPLEMENTED / NOT EXECUTED.
+
+## FAST-BATCH-1A Canonical Admission Transaction Atomic Unit
+
+Owner approved FAST-BATCH-1A as the bounded continuation of P1C-D. It implements
+the Product Project canonical writer, external snapshot coordinate, CAS,
+ledger persistence/recovery, exact durable read-back, and public v2
+`ACCEPTED`/`DUPLICATE` receipt publication. The transaction reruns raw P1C-B,
+P1C-C, and P1C-D inside the fixed Product/anchor lock boundary and never trusts
+serialized candidates as authority.
+
+The same Unit also adds a separately named and hashed generic review-observation
+ledger. Its `ACCEPTED`/`DUPLICATE` states mean only immutable durable observation
+storage. They do not mean exact learning admission, learning adoption,
+automatic promotion, or Profile generation. P1A public v2 history and state
+matrix remain unchanged.
+
+Exact scope is six files: this task record, one FAST-BATCH-1A design, one public
+Schema plus byte-identical package mirror, one source module, and one focused
+test module. CHANGELOG, active locks, current state, task index, TASK-029,
+TASK-054, TASK-059, bridge/Profile transport, native/provider/network, Timeline,
+Resolve, Release, Deploy, and Production are outside the source Unit.
+
+External-coordinate claims are deliberately bounded: the anchor root is outside
+the Project root, but origin authentication, independent anti-rollback
+authority, power-loss/directory durability confirmation, and hostile path-race
+protection remain false. The final connector remains `enabled:false`; bridge
+root/inbox/importer and outbound Profile E2E/readiness are later FAST-BATCH
+subunits.
+
+The external anchor stores the commit-time manifest SHA and revision as
+historical transaction evidence. Trusted currentness permits later manifest
+revisions only when the exact TASK-058 canonical child binding and bytes still
+match the current canonical commit/ledger/anchor. Unrelated child additions do
+not invalidate the exact receipt; canonical child change/removal or manifest
+revision rollback remains fail-closed without claiming general rollback
+authority.
+
+Exact admission attempts are serialized by a stable, non-payload operation-lock
+inode held until receipt publication and private-journal cleanup. Product
+Project then external-anchor remains the fixed inner state-lock order. A second
+same-CAS caller cannot join the first caller's pending recovery and report a
+second `ACCEPTED`; after the winner commits it observes stale CAS and fails
+closed (or a later call with current coordinates can classify `DUPLICATE`).
+
+## FAST-BATCH-1A Work Order bounded-rework checkpoint
+
+The accepted cross-repository Design is
+`bai-davinci-montage-skills@9f6c26ac5147b9a881ca037ae02ef020818db50a`
+with
+`accepted_design_sha256=sha256:c5c17aa92ab5f68daef315e4fc62a1fb7a46e3f80c2c8093adec1f073594db80`.
+Its Design-only Final Judge result is C/H/M/L=0/0/0/0. TASK-060, TASK-061,
+and TASK-062 remain IMPLEMENTATION_NOT_AUTHORIZED and are not part of this
+Unit.
+
+The prior A implementation review reported C/H/M/L=0/3/2/0. The same exact-six
+Atomic Unit now implements the bounded closures:
+
+- all authoritative canonical, anchor, registry, journal, Generic ledger,
+  payload, and marker reads use pinned non-inheritable handles with ancestor
+  and target identity/size/read-back checks;
+- Generic admission uses the fixed A-owned PREPARED phase journal, immutable
+  digest-addressed payload object, body-free ledger, Product manifest CAS,
+  fixed commit marker, durable read-back, and restart recovery;
+- the typed surface is `admit_generic_observation()`,
+  `recover_generic_observation()`, and
+  `get_verified_generic_observation()`, with explicit review-observation
+  aliases;
+- stable `ReviewObservationCanonicalReadback` and
+  `ReviewObservationAdmissionResult` fix
+  `store_kind=REVIEW_OBSERVATION`, while
+  `learning_adopted=false`, `profile_promoted=false`, and
+  `timeline_mutated=false`;
+- a same-identity/same-digest/same-scope duplicate returns the stable original
+  read-back without changing payload, ledger, Product manifest, marker, or
+  store revision;
+- currentness validates every historical ledger entry, payload object, Product
+  binding, marker, canonical commit, and internal read-back hash;
+- A does not mint the public SKILL v1 transport receipt; B+C must correlate its
+  outer receipt against this trusted A read-back after A API freeze.
+
+Current Builder Evidence:
+
+- focused FAST-BATCH-1A: 23/23 PASS;
+- TASK-043 ProductSave + TASK-055 + TASK-058 direct regression:
+  345/345 PASS;
+- final exact-head full Product regression:
+  4528 PASS / 6 platform-condition SKIP / 2 deprecation warnings / 0 FAIL;
+- actual Generic same-CAS multiprocess fixture repeated five times: one
+  ACCEPTED, one fail-closed caller, bounded child/queue cleanup, private
+  journal absent;
+- Generic crash boundaries after PREPARED journal, Product commit, marker
+  commit, and verified read-back before cleanup: PASS;
+- equal-size target substitution, ancestor identity drift, historical
+  payload/marker loss, schema relabel, collision, and cross-lane replay:
+  fail-closed;
+- Python compile, Draft 2020-12 public schema, byte-identical package mirror,
+  and diff-check: PASS;
+- independent implementation re-review, Hosted current-head terminal checks,
+  fresh-main integration, shared LOCK, Ready, merge,
+  and closure: PENDING;
+- B+C remains stopped until A Technical GO/API freeze;
+- CHANGELOG, ACTIVE-WORK-LOCKS, shared LOCK, enabled:true, Preference meaning
+  generation, Timeline/Resolve, Provider/native, Release, Deploy, and
+  Production effects: NOT MODIFIED / NOT EXECUTED.
+
+## FAST-BATCH-1 A2 canonical readback lookup recovery closure
+
+Owner authorized the bounded A2 Unit from frozen A head
+`9f1633f2b7504d1f4710ea10b8c1922d2c1e6ffe`. Its exact Allowed Files are this
+task record, the canonical admission source, and its focused test. Public
+Schema, package mirror, B+C source/tests, CHANGELOG, Registry, and shared LOCK
+are outside A2.
+
+A2 adds `lookup_trusted_review_observation()` as a sealed, read-only typed
+lookup returning the existing `ReviewObservationCanonicalReadback`. The caller
+must supply exact record, learning digest, Product Project ID, Owner scope,
+`REVIEW_OBSERVATION` store kind, and fixed Generic store ID. The canonical
+commit SHA is deliberately not an input: A2 closes the crash window where A
+committed durably and removed its private journal before B persisted that
+correlation. The returned commit coordinate is rebuilt from the immutable
+payload, body-free ledger, fixed marker, Product binding, and complete
+historical currentness proof.
+
+The lookup holds the Generic journal lock before the Product Project lock,
+checks Product recovery status inside the Product lock, verifies the whole
+ledger and every historical payload/marker/current binding, and returns only a
+matching terminal durable readback. It never admits a record, advances the
+ledger/manifest/anchor, mints a public receipt, creates a Profile, or changes
+Timeline/Resolve. Missing, ambiguous, wrong-scope, wrong-digest, rollback,
+tamper, incomplete-tail, pending/corrupt Generic journal, and pending/corrupt
+Product journal states fail closed as `RECOVERY_REQUIRED`.
+
+Both established lock artifacts are opened through an A2-local non-creating,
+non-writing lock context. Generic and Product lock files must pass an exact
+pre-open `lstat` regular/non-symlink/non-reparse/one-byte check. POSIX uses
+`O_NOFOLLOW`; Windows uses `CreateFileW(OPEN_EXISTING |
+FILE_FLAG_OPEN_REPARSE_POINT)`. The pinned handle identity must equal the
+pre-open identity and remain stable before lock acquisition, after acquisition,
+and before return. Missing, empty, wrong-sized, wrong-content, symlink, and
+irregular lock paths fail without changing Project inventory or bytes.
+
+Builder Evidence on the final code/test bytes:
+
+- A2 + A focused: 59 PASS / 2 Windows FIFO SKIP / 0 FAIL;
+- Windows fd/HANDLE ownership fault focus: 18/18 PASS. Three forced
+  `set_inheritable` failures and three forced `fdopen` failures each close
+  the transferred CRT fd exactly once with no process HANDLE growth; three
+  forced `open_osfhandle` failures close the native HANDLE without invoking
+  `os.close`; three successful transfers invoke no explicit `os.close` and
+  return to the warm handle-count baseline;
+- invalid-lock focused matrix: 14 PASS / 2 Windows FIFO SKIP / 0 FAIL,
+  covering Generic/Product times missing, empty, wrong-size, wrong-byte,
+  symlink, irregular-directory, FIFO, and check-to-open identity substitution;
+  the Windows file-symlink/reparse cases executed without skip, while FIFO is
+  explicitly unavailable on Windows;
+- TASK-043 ProductSave + TASK-055 + TASK-058 direct regression: 381 PASS /
+  2 Windows FIFO SKIP / 0 FAIL;
+- full Product regression: 4565 PASS / 7 platform/environment SKIP /
+  2 existing deprecation warnings / 0 FAIL;
+- actual spawn concurrent lookup and lookup-versus-later-admission converge;
+  child/queue cleanup is bounded and private Generic journal is absent;
+- A terminal commit followed by a new writer lookup before B correlation,
+  after correlation staging, and after publication simulation returns the same
+  sealed readback without changing the complete canonical Project inventory;
+- explicit identity omission/wrong values, forged outer-only status,
+  equal-revision manifest tamper, manifest rollback, incomplete historical
+  tail, pending/corrupt journals, and Product-lock recovery TOCTOU fail closed;
+- schema/public message shape is unchanged; A2 mints no admission result or
+  public receipt;
+- cycle-5 closes the prior Hosted Windows convergence failure by using a
+  bounded nonblocking byte-lock acquisition and by deferring the one-byte lock
+  content read until this handle owns the Windows lock; the three affected
+  multiprocess fixtures passed ten consecutive repetitions (30/30);
+- the Generic/Exact concurrency fixture now records worker result class and
+  permits a pre-PREPARED Product CAS failure to converge through a same-input
+  retry without requiring a nonexistent journal; partial authority remains
+  absent and both final trusted readbacks are verified;
+- process-wide Windows HANDLE observations use the safe no-increase condition;
+  exact transferred-fd/native-HANDLE ownership and exactly-once cleanup remain
+  covered by the dedicated fault fixtures;
+- independent cycle-5 exact-head Critic/Tester/Judge, push, Hosted terminal,
+  Ready, merge, shared LOCK, and B+C restart remain separate gates.

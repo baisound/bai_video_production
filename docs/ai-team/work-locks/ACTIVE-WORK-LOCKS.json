@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 124,
+  "registry_revision": 125,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
   "audit_base_main_sha": "dc8a1949b58f7a5fa298a4d9153a2d410a1388da",
@@ -1045,6 +1045,74 @@
         "EXACT_MAIN_MERGE_POST_MERGE_CI_SECURITY_PASS",
         "APPEND_ONLY_LOCK_CLOSURE_HOSTED"
       ]
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK054-R6BD-DATASET-ADOPTION-PREFLIGHT-CHANGELOG-20260827",
+      "owner_agent": "開発3 DBD関連 / TASK-054 integration owner",
+      "owner_thread_id": "01a02110-6765-77f1-a202-e13d81e7aaae",
+      "lock_host_authority": "OWNER_FAST_BATCH_1_20260827",
+      "integration_effect_authority_state": "AUTHORIZED_PENDING_HOST_MAIN_READBACK",
+      "target_merge_authority_state": "OWNER_AUTHORIZED_PENDING_HOST_MAIN_READBACK",
+      "implementation_authority_state": "TASK054_R6BD_PR410_TECHNICAL_GO_HOSTED_8_OF_9_CHANGELOG_ONLY_FAIL",
+      "hosting_branch": "codex/task-054-r6bd-dataset-adoption-preflight-changelog-lock-hosting",
+      "hosting_base_sha": "8baa14e2c8acbeedb0a9b648f627ba8deb2aec8e",
+      "status": "PENDING_HOST_PR",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "target_pull_request": 410,
+      "target_pull_request_state": "OPEN_DRAFT_HOSTED_8_OF_9_PASS_CHANGELOG_ONLY_FAIL",
+      "target_branch": "codex/task-054-r6b-d-dataset-adoption-executor",
+      "expected_pre_integration_head": "afa2c398eccf7aa09589db4fccd35e9fcb361155",
+      "purpose": "ONE_EXACT_TASK054_R6BD_DATASET_ADOPTION_PREFLIGHT_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+      "approved_changelog_bullet": "- TASK-054 R6B-Dとして、R6B-Cのbody-free Dataset採用requestに対し、別Human実行Authority、現在Store head、安全能力、R4A current manifestを再検証し、現時点でeligibleなmembershipだけをbody-free commit planへ投影するread-only preflightを追加しました。Authority消費・Dataset Store mutation・採用開始・学習・評価・Provider実行・モデル昇格・Release／Deploy／Productionは行わず、実commitは別Human Gateのままです。",
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
+      "immutable_target_path_count": 8,
+      "controlled_shared_target_paths": [],
+      "open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_16_OPEN_PRS",
+      "merge_order_reservation": "TASK054_R6BD_NEXT_SHARED_CHANGELOG_CONSUMER_AFTER_TASK029_R10E_REVISION124_HOSTED_CLOSED_RELEASED",
+      "denied": [
+        "TASK054_R6BD_IMPLEMENTATION_SCHEMA_TEST_DESIGN_TASK_OR_RUNBOOK_MUTATION_DURING_INTEGRATION_EFFECT",
+        "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
+        ".github/**",
+        "OTHER_SHARED_INTEGRATION_FILES",
+        "REAL_DATASET_MANIFEST_MEDIA_TRANSCRIPT_NARRATION_PRIVATE_BODY_READ_COPY_OR_ADOPTION",
+        "DATASET_STORE_MUTATION_AUTHORITY_CONSUMPTION_OR_ADOPTION_START",
+        "TRAINING_EVALUATION_MODEL_PROMOTION_PROVIDER_PAID_OR_CREDENTIAL_EFFECT",
+        "TIMELINE_RESOLVE_RELEASE_DEPLOY_OR_PRODUCTION_EFFECT",
+        "VERSION_TAG_RELEASE_DEPLOY_DURING_CHANGELOG_EFFECT",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_UNCHANGED_HEAD_RETRY",
+      "composition_rule": "TARGET_PR_EXACT_8_IMMUTABLE_TASK054_R6BD_PATHS_PLUS_1_INTEGRATION_OWNED_CHANGELOG_FILE",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "OWNER_FAST_BATCH_1_DIRECTIVE_ACTIVE",
+        "TECHNICAL_GO_CRITICAL_HIGH_ZERO",
+        "TARGET_NON_CHANGELOG_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "TASK029_R10E_REVISION124_HOSTED_CLOSED_RELEASED",
+        "LOCK_HOST_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "LOCK_HOST_MERGED_MAIN_EXACT_READ_BACK",
+        "LOCK_HOST_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "FRESH_MAIN_REGISTRY_TARGET_HEAD_AND_OVERLAP_REAUDIT",
+        "NORMAL_MAIN_INTO_TARGET_MERGE_NO_REBASE_NO_FORCE",
+        "EIGHT_IMMUTABLE_BLOBS_PRESERVED",
+        "EXACT_APPROVED_CHANGELOG_LINE_ONLY"
+      ],
+      "expiry_conditions": [
+        "TARGET_HEAD_MISMATCH",
+        "TARGET_PR_CLOSED_OR_MERGED",
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
+        "NEW_CHANGELOG_OR_REGISTRY_OVERLAP",
+        "EIGHT_IMMUTABLE_IMPLEMENTATION_SCHEMA_TEST_DESIGN_TASK_OR_RUNBOOK_BLOB_DRIFT",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
+        "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+      ],
+      "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_SHARED_PATH_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_AND_APPEND_ONLY_CLOSURE_EVIDENCE",
+      "integration_effect_authority_id": "OWNER_FAST_BATCH_1_20260827",
+      "target_merge_authority_id": "OWNER_FAST_BATCH_1_20260827",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
     }
   ],
   "shared_integration_files": [

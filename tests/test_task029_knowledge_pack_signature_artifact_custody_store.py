@@ -482,6 +482,17 @@ def test_production_instance_post_init_cipher_spoof_is_rejected(
     assert not store.path.exists()
 
 
+@pytest.mark.skipif(os.name != "nt", reason="Windows Current User DPAPI only")
+def test_production_dpapi_cipher_instance_cannot_shadow_methods_or_suite() -> None:
+    cipher = module.WindowsDpapiSignatureArtifactCustodyCipher()
+    with pytest.raises(AttributeError):
+        _ = cipher.__dict__
+    with pytest.raises(AttributeError):
+        cipher.encrypt = PrefixCipher().encrypt  # type: ignore[method-assign]
+    with pytest.raises(AttributeError):
+        cipher.cipher_suite = "SPOOFED"  # type: ignore[misc]
+
+
 def test_post_replace_readback_failure_returns_no_receipt(tmp_path: Path) -> None:
     cipher = ReadbackCorruptingCipher()
     _, _, _, _, _, store, arguments = store_case(tmp_path, cipher=cipher)

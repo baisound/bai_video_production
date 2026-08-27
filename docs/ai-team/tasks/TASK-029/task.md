@@ -345,7 +345,9 @@ test cipher round-trips. Prefix, byte-rotation, unauthenticated and DPAPI-suite
 spoof ciphers therefore cannot mint production encryption/custody claims. Store
 configuration is slots-backed and read-only, and the encrypt/decrypt/receipt
 boundaries revalidate the exact production DPAPI type, suite, and mode so a
-forced post-initialization replacement fails before write.
+forced post-initialization replacement fails before write. The DPAPI cipher
+itself has no instance dictionary, preventing per-instance method/suite
+shadowing.
 
 The path model remains `COOPERATIVE_PROTECTED_LOCAL_WRITER_ONLY`. Directory
 durability, power-loss replay prevention, hostile ancestor/path races, deletion
@@ -357,8 +359,8 @@ Timeline/Resolve, Release, Deploy, Production and external effects remain
 unauthorized.
 
 R10D source scope is exact six paths. Focused R10D after the independent High
-finding rework is `19 PASS / 2 Windows-only DPAPI SKIP`; R9B-R10D direct is
-`102 PASS / 3 SKIP`, and TASK-029 is `180 PASS / 6 SKIP`. Full Product is
+finding rework is `19 PASS / 3 Windows-only DPAPI SKIP`; R9B-R10D direct is
+`102 PASS / 4 SKIP`, and TASK-029 is `180 PASS / 7 SKIP`. Full Product is
 NOT_CONFIRMED because the pre-existing WSL environment
 has cryptography 41.0.7 and no `referencing`, while fresh-main TASK-059 requires
 Argon2 support from cryptography >=46 and that package; collection stopped on

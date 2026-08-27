@@ -164,6 +164,7 @@ def _blob(value: bytes) -> tuple[_DataBlob, object]:
 class WindowsDpapiSignatureArtifactCustodyCipher:
     """Windows Current User DPAPI with an R10D-specific entropy domain."""
 
+    __slots__ = ()
     cipher_suite = SIGNATURE_ARTIFACT_DPAPI_CIPHER_SUITE
 
     def __init__(self) -> None:

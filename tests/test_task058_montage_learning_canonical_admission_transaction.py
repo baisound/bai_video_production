@@ -718,6 +718,137 @@ def test_generic_lookup_rejects_outer_receipt_without_canonical_commit(
     assert _snapshot_tree(project) == before
 
 
+@pytest.mark.parametrize(
+    "invalid_state",
+    ["missing-control", "missing-manifest", "missing-lock", "empty-lock",
+     "wrong-size-lock", "wrong-byte-lock", "symlink-lock", "irregular-lock"],
+)
+def test_store_initialization_requires_existing_product_authority_without_writes(
+    tmp_path: Path, invalid_state: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir()
+    control = project / ".bai-project"
+    lock_path = control / ".project.json.lock"
+    backing = tmp_path / "product-lock-backing"
+    if invalid_state == "missing-control":
+        pass
+    elif invalid_state == "missing-manifest":
+        control.mkdir()
+        lock_path.write_bytes(b"0")
+    else:
+        _project(project)
+        if invalid_state == "missing-lock":
+            lock_path.unlink()
+        elif invalid_state == "empty-lock":
+            lock_path.write_bytes(b"")
+        elif invalid_state == "wrong-size-lock":
+            lock_path.write_bytes(b"00")
+        elif invalid_state == "wrong-byte-lock":
+            lock_path.write_bytes(b"X")
+        elif invalid_state == "symlink-lock":
+            lock_path.unlink()
+            backing.write_bytes(b"0")
+            try:
+                lock_path.symlink_to(backing)
+            except OSError as exc:
+                pytest.skip(f"file symlink creation unavailable: {exc}")
+        else:
+            lock_path.unlink()
+            lock_path.mkdir()
+    before_project = _snapshot_inventory(project)
+    before_anchor = _snapshot_inventory(anchor)
+    backing_before = backing.read_bytes() if backing.exists() else None
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        _writer(project, anchor)
+    assert _snapshot_inventory(project) == before_project
+    assert _snapshot_inventory(anchor) == before_anchor
+    assert (backing.read_bytes() if backing.exists() else None) == backing_before
+
+
+def test_store_initialization_rejects_product_lock_substitution_without_writes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    lock_path = ProductProjectManifestStore.path(project).with_name(
+        ".project.json.lock"
+    )
+    replacement = lock_path.with_name(".project.json.lock.replacement")
+    replacement.write_bytes(b"0")
+    original_open = module._open_existing_lock_nofollow
+    post_substitution: dict[str, dict[str, tuple[str, bytes]]] = {}
+
+    def substitute_then_open(path: Path, name: str):
+        if name == "Product Project":
+            assert path == lock_path
+            os.replace(replacement, lock_path)
+            post_substitution["inventory"] = _snapshot_inventory(project)
+        return original_open(path, name)
+
+    monkeypatch.setattr(module, "_open_existing_lock_nofollow", substitute_then_open)
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        _writer(project, anchor)
+    assert post_substitution
+    assert _snapshot_inventory(project) == post_substitution["inventory"]
+    assert _snapshot_inventory(anchor) == {}
+
+
+@pytest.mark.parametrize("entry_type", ["file", "symlink"])
+def test_store_initialization_rejects_authority_directory_collision_without_writes(
+    tmp_path: Path, entry_type: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    authority_root = project / "state/montage-learning"
+    authority_root.mkdir(parents=True)
+    target = authority_root / "review-observations"
+    backing = tmp_path / "authority-directory-backing"
+    if entry_type == "file":
+        target.write_bytes(b"collision")
+    else:
+        backing.mkdir()
+        try:
+            target.symlink_to(backing, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"directory symlink creation unavailable: {exc}")
+    before_project = _snapshot_inventory(project)
+    before_anchor = _snapshot_inventory(anchor)
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        _writer(project, anchor)
+    assert _snapshot_inventory(project) == before_project
+    assert _snapshot_inventory(anchor) == before_anchor
+
+
+def test_safe_directory_initialization_rejects_parent_identity_swap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir(); _project(project)
+    parent = project / "state"
+    parent.mkdir()
+    target = parent / "authority"
+    moved_parent = project / "state-before-swap"
+    original_mkdir = Path.mkdir
+
+    def mkdir_then_swap(path: Path, *args, **kwargs) -> None:
+        original_mkdir(path, *args, **kwargs)
+        if path == target:
+            parent.rename(moved_parent)
+            original_mkdir(parent)
+            original_mkdir(target)
+
+    monkeypatch.setattr(Path, "mkdir", mkdir_then_swap)
+    with module._exclusive_existing_project_lock(project):
+        with pytest.raises(MontageLearningCanonicalAdmissionError, match="unsafe"):
+            module._ensure_safe_directory_locked(target, "authority directory")
+    assert (moved_parent / "authority").is_dir()
+    assert target.is_dir()
+
+
 @pytest.mark.parametrize("lock_name", ["generic", "product"])
 @pytest.mark.parametrize("lock_state", ["missing", "empty", "wrong-size", "wrong-byte"])
 def test_generic_lookup_rejects_invalid_existing_lock_without_writes(

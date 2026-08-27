@@ -453,6 +453,30 @@ def _exclusive_existing_read_lock(path: Path, name: str) -> Iterator[None]:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
 
+@contextmanager
+def _exclusive_existing_project_lock(
+    project_root: Path,
+) -> Iterator[ProductProjectManifest]:
+    """Acquire the canonical Product lock without provisioning invalid Projects."""
+
+    try:
+        lock_path = ProductProjectManifestStore.path(project_root).with_name(
+            ".project.json.lock"
+        )
+    except (ProductError, OSError) as exc:
+        raise MontageLearningCanonicalAdmissionError(
+            "RECOVERY_REQUIRED: Product Project authority is unavailable"
+        ) from exc
+    with _exclusive_existing_read_lock(lock_path, "Product Project"):
+        try:
+            manifest = ProductProjectManifestStore.load(project_root)
+        except (ProductError, OSError) as exc:
+            raise MontageLearningCanonicalAdmissionError(
+                "RECOVERY_REQUIRED: Product Project manifest is unavailable"
+            ) from exc
+        yield manifest
+
+
 def _read(path: Path, parser: Callable[[Mapping[str, Any]], dict[str, Any]]) -> dict[str, Any]:
     """Read one authoritative document through a pinned, non-inheritable handle."""
     _target(path)
@@ -1471,11 +1495,10 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         self.generic_journal_path = self.project_root / GENERIC_OBSERVATION_JOURNAL_RELATIVE_PATH
         self.generic_object_root = self.project_root / GENERIC_OBSERVATION_OBJECT_DIRECTORY
         self.generic_marker_root = self.project_root / GENERIC_OBSERVATION_MARKER_DIRECTORY
-        with _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root)):
+        with _exclusive_existing_project_lock(self.project_root):
             # Exact and Generic writers share these authority directories.  Keep
             # first-use initialization inside the same Product lock used by both
             # transactions so concurrent constructors cannot leak raw mkdir races.
-            ProductProjectManifestStore.load(self.project_root)
             _ensure_safe_directory_locked(state, "state root")
             generic_root = self.generic_journal_path.parent
             _ensure_safe_directory_locked(generic_root, "generic authority root")

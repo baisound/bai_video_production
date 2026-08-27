@@ -1,6 +1,6 @@
 # TASK-060 — Montage Preference Projection and Production Source
 
-- Status: `PP_A_IMPLEMENTATION_AUTHORIZATION_CANDIDATE / IMPLEMENTATION_NOT_STARTED`
+- Status: `PP_A_LOCAL_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
 - Capability: `BVP-MONTAGE-PREFERENCE-PROJECTION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Owner boundary: TASK-029 source semantics and TASK-019 evaluation, promotion, and rollback semantics
@@ -38,21 +38,17 @@ frozen exact file subset and completion Evidence before the next Unit starts.
 
 ## Current authorization state
 
-The allocation package is canonical and the Owner has approved a bounded PP-A
-implementation-authorization candidate. This metadata branch does not mutate
-implementation files and does not itself prove that the authorization is
-canonical.
+The PP-A authorization metadata is canonical at main
+`dd0084a1d3ab03299f9611e7d5fe93860d7314b2`.  The Owner authorized the exact
+six-path PP-A implementation Unit, and a local implementation candidate now
+exists for independent DEV-4 review.  This status does not claim Hosted or
+canonical completion.
 
-PP-A implementation becomes eligible only after the exact metadata candidate
-passes independent DEV-4 review with unresolved Critical/High `0/0`, Hosted
-checks, an exact Owner Ready/merge decision, canonical-main merge/read-back,
-and post-main CI/Security. At that point only the six paths frozen in
-`pp-a-implementation-authorization-2026-08-28.md` may change. PP-B and PP-C
-remain `IMPLEMENTATION_NOT_AUTHORIZED`.
-
-Current candidate effect is source `0`, schema `0`, test `0`, Registry `0`,
-task-index `0`, CHANGELOG `0`, runtime/native/paid/external `0`, and
-Release/Deploy/Production `0`.
+Only the six paths frozen in
+`pp-a-implementation-authorization-2026-08-28.md` changed. PP-B and PP-C remain
+`IMPLEMENTATION_NOT_AUTHORIZED`.  Registry, task-index, CHANGELOG,
+runtime/native/paid/external, Timeline/Resolve, and Release/Deploy/Production
+effects remain `0`.
 
 ## Responsibility non-overlap
 

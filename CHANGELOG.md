@@ -3,6 +3,7 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+- TASK-029 R10Eとして、R10Dのbody-free暗号化staging receiptから最大15分のHuman custody確認requestを作るpure／no-I/O契約を追加しました。request／receiptはpublic constructibleのためsource／store／DPAPI origin、Human確認・custody、canonical store／receipt、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは未成立のままです。
 - TASK-058 P1C-Dとして、P1C-Cのbody-free canonical promotion ledger候補に対し、external monotonic anchorのbootstrap／advance／unchanged／rollback／fork／scope／staleをordered entry digest chain proofで一意評価するpure／no-I/O契約を追加しました。external anchor／store／CAS／persistence／recovery／public v2 receipt、Timeline／Resolve／runtime、Release／Deploy／Production authorityは生成しません。
 - TASK-029 R10Dとして、R10C候補をwrite境界でexact再検証し、production cipherをWindows Current User DPAPIへ固定したbody-free署名artifact暗号化stagingを追加しました。caller intentはHuman確認・custody authorityを生成せず、Owner-local path、canonical custody receipt、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは未成立のままです。
 - TASK-054 R6B-Cとして、R6B-BのDataset Evidence選択preflightに対し、別Human Authorityをexact admissionしてbody-free Dataset採用request proposalを1件だけ生成する境界を追加しました。Human Evidence digestをcanonical authorization digestへ結合し、Evidence単位のone-shot claimでrecord rewrap/replayをfail closedにします。Dataset採用開始・Store mutation・学習・評価・Provider実行・モデル昇格・Release／Deploy／Productionは含まず、別Human Gateのままです。

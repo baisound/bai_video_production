@@ -242,6 +242,42 @@ def _windows_process_handle_count() -> int:
     return int(count.value)
 
 
+def _windows_successful_fd_transfer_probe(lock_path: str, queue) -> None:
+    close_calls: list[int] = []
+    opened_handles = []
+    real_close = module.os.close
+
+    def counted_close(file_descriptor: int) -> None:
+        close_calls.append(file_descriptor)
+        real_close(file_descriptor)
+
+    try:
+        with module._open_existing_lock_nofollow(
+            Path(lock_path), "Generic operation"
+        ) as warm_handle:
+            assert warm_handle.read(1) == b"0"
+        assert warm_handle.closed is True
+        module.os.close = counted_close
+        try:
+            for _ in range(3):
+                with module._open_existing_lock_nofollow(
+                    Path(lock_path), "Generic operation"
+                ) as handle:
+                    opened_handles.append(handle)
+                    assert handle.read(1) == b"0"
+                    assert handle.closed is False
+                assert handle.closed is True
+        finally:
+            module.os.close = real_close
+        queue.put((
+            "RESULT", tuple(close_calls), len(opened_handles),
+            sum(not handle.closed for handle in opened_handles),
+        ))
+    except BaseException as exc:
+        module.os.close = real_close
+        queue.put(("ERROR", type(exc).__name__, str(exc)))
+
+
 def test_accept_then_exact_duplicate_and_trusted_reader(tmp_path: Path) -> None:
     project = tmp_path / "project"
     anchor = tmp_path / "anchor"
@@ -914,7 +950,7 @@ def test_windows_open_osfhandle_failure_closes_native_handle_without_fd_close(
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows HANDLE ownership fixture")
 def test_windows_successful_fd_transfer_has_no_explicit_double_close(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     root = tmp_path / "lock-root"
     root.mkdir()
@@ -923,23 +959,22 @@ def test_windows_successful_fd_transfer_has_no_explicit_double_close(
     with module._open_existing_lock_nofollow(target, "Generic operation") as handle:
         assert handle.read(1) == b"0"
     before_inventory = _snapshot_inventory(root)
-    before_handles = _windows_process_handle_count()
-    close_calls: list[int] = []
-    real_close = os.close
-
-    def counted_close(file_descriptor: int) -> None:
-        close_calls.append(file_descriptor)
-        real_close(file_descriptor)
-
-    with monkeypatch.context() as patch:
-        patch.setattr(module.os, "close", counted_close)
-        for _ in range(3):
-            with module._open_existing_lock_nofollow(
-                target, "Generic operation"
-            ) as handle:
-                assert handle.read(1) == b"0"
-    assert close_calls == []
-    assert _windows_process_handle_count() <= before_handles
+    ctx = multiprocessing.get_context("spawn")
+    queue = ctx.Queue()
+    process = ctx.Process(
+        target=_windows_successful_fd_transfer_probe,
+        args=(str(target), queue),
+    )
+    try:
+        process.start()
+        result = queue.get(timeout=30)
+    finally:
+        _cleanup_processes([process], queue)
+    assert result[0] == "RESULT", result
+    _, close_calls, opened_handle_count, unclosed_handle_count = result
+    assert close_calls == ()
+    assert opened_handle_count == 3
+    assert unclosed_handle_count == 0
     assert _snapshot_inventory(root) == before_inventory
 
 

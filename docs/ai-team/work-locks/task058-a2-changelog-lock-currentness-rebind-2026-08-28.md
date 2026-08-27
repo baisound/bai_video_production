@@ -54,14 +54,19 @@ claimed; the next Hosted run remains required.
 ## Exact Registry delta
 
 - `registry_revision`: `131 -> 132`
-- `expected_pre_integration_head`: `cea711c... -> ce174bc...`
+- `expected_pre_integration_head`: `cea711c... -> 6d5ea80...`, the exact
+  current remote PR head at revision 132 activation
 - `target_pull_request_state`: updated to distinguish the current remote
   `6d5ea80` Hosted result from the unpushed local `ce174bc` candidate
-- exact replacement test path, Git blob and SHA-256 are bound
+- `ce174bc` and its exact replacement test path, Git blob and SHA-256 are
+  separately bound as typed pending-approved coordinates, not as the current
+  remote head
 - prior remote PR head and CI, Security and Release metadata run identities are
   bound as pre-rebind Evidence
 - audit-only rebind provenance records revision 131, canonical base, branch,
   Evidence path, exact parent chain and independent verification
+- the one-shot transition policy and the post-Hosted second-amendment
+  requirement are typed explicitly
 
 No other active-lock semantic field is changed.
 
@@ -72,7 +77,23 @@ runtime, native, Timeline, Resolve, Release, Deploy or Production effect. It
 does not push PR #417 and does not make it Ready or merge it. It does not mint
 implementation or shared-effect authority.
 
-The replacement coordinates become canonical only after this exact two-file
-amendment is independently accepted, hosted, merged to main and read back.
-Only then may the exact `ce174bc` candidate be pushed without force and receive
-a fresh Hosted run. PR #417 Ready and merge remain a separate exact Owner Gate.
+The continuation order is closed:
+
+1. Host and read back revision 132 while PR #417 still has exact remote head
+   `6d5ea80`. Before push, `TARGET_HEAD_MISMATCH` compares the remote head with
+   `expected_pre_integration_head`, so the canonical amendment does not expire
+   itself.
+2. After that read-back only, push exact pending-approved head `ce174bc` once,
+   without force or retry. During this bounded transition,
+   `TARGET_HEAD_MISMATCH` compares the remote head with
+   `target_currentness_pending_approved_head_sha`.
+3. Run Hosted checks on exact `ce174bc`. Any different head, failed required
+   check or attempted retry fails closed.
+4. After exact Hosted terminal success, host a second bounded amendment that
+   changes `expected_pre_integration_head` to `ce174bc` and binds the exact
+   Hosted check coordinates.
+
+Until step 4 is merged to main and read back, PR #417 Ready, merge and any new
+shared effect remain prohibited. The existing `TARGET_HEAD_MISMATCH` expiry
+condition and every other authority, denial, expiry and ordering field remain
+unchanged.

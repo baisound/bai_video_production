@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R6B_D_READ_ONLY_ADOPTION_PREFLIGHT / IMPLEMENTED / VERIFICATION_IN_PROGRESS`
+Status: `R6B_D_READ_ONLY_ADOPTION_PREFLIGHT / COMMIT_READY / DATASET_COMMIT_HUMAN_GATE`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -481,6 +481,9 @@ plan fixes Dataset adoption start, Store mutation, training authorization and
 training start to false, with state
 `READY_FOR_SEPARATE_DATASET_ADOPTION_COMMIT_AUTHORITY`. Actual Authority
 consumption and Dataset Store commit must occur together in a later separately
-authorized atomic executor. Focused R6B-D Evidence is `24 PASS`. No real
-manifest, Dataset body, Store, training, Provider or external operation was
-read, changed or executed.
+authorized atomic executor. Focused R6B-D Evidence is `24 PASS`; R6B-D plus
+direct R6B-C/R6B-B/R6B-A/R4A Evidence is `75 PASS`; TASK-054 plus direct
+TASK-049 regression is `781 PASS, 1 intentional Windows-native skip`.
+Compileall, JSON Schema runtime validation, schema mirror and diff checks pass.
+No real manifest, Dataset body, Store, training, Provider or external operation
+was read, changed or executed.

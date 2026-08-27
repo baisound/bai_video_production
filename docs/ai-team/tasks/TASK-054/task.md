@@ -1,6 +1,6 @@
 # TASK-054 — DbD Tuned LLM Intermediate Reasoning Layer
 
-Status: `R7_PREFLIGHT_UI_INTEGRATED / COMMIT_READY / WINDOWS_BUILD_NEXT`
+Status: `R6B_D_READ_ONLY_ADOPTION_PREFLIGHT / COMMIT_READY / DATASET_COMMIT_HUMAN_GATE`
 
 Development profile: `DEV-3 HIGH ASSURANCE`
 
@@ -466,3 +466,24 @@ R6B-C plus direct R6B-B/R6B-A/R4A focused Evidence is `51 PASS`;
 TASK-054 plus direct TASK-049 regression is `757 PASS, 1 intentional
 Windows-native skip`. Compileall, JSON Schema runtime validation, schema mirror
 and diff checks pass. No real Dataset or external operation was executed.
+
+## R6B-D Dataset adoption execution preflight checkpoint
+
+R6B-D re-admits one exact R6B-C request under a separate body-free Human
+preflight Authority, verifies the selected Store's encrypted-at-rest, atomic
+compare-and-swap, authoritative read-back, append-only and one-shot commit
+capabilities, then rereads and exact-admits the current R4A manifest. Only rows
+that remain `ELIGIBLE_CANDIDATE` are projected into a deterministic body-free
+commit plan; rejected, revoked, unknown and review-pending rows are excluded.
+
+The preflight has no mutation collaborator and does not consume Authority. The
+plan fixes Dataset adoption start, Store mutation, training authorization and
+training start to false, with state
+`READY_FOR_SEPARATE_DATASET_ADOPTION_COMMIT_AUTHORITY`. Actual Authority
+consumption and Dataset Store commit must occur together in a later separately
+authorized atomic executor. Focused R6B-D Evidence is `25 PASS`; R6B-D plus
+direct R6B-C/R6B-B/R6B-A/R4A Evidence is `76 PASS`; TASK-054 plus direct
+TASK-049 regression is `782 PASS, 1 intentional Windows-native skip`.
+Compileall, JSON Schema runtime validation, schema mirror and diff checks pass.
+No real manifest, Dataset body, Store, training, Provider or external operation
+was read, changed or executed.

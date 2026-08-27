@@ -522,3 +522,58 @@ Current Builder Evidence:
 - CHANGELOG, ACTIVE-WORK-LOCKS, shared LOCK, enabled:true, Preference meaning
   generation, Timeline/Resolve, Provider/native, Release, Deploy, and
   Production effects: NOT MODIFIED / NOT EXECUTED.
+
+## FAST-BATCH-1 A2 canonical readback lookup recovery closure
+
+Owner authorized the bounded A2 Unit from frozen A head
+`9f1633f2b7504d1f4710ea10b8c1922d2c1e6ffe`. Its exact Allowed Files are this
+task record, the canonical admission source, and its focused test. Public
+Schema, package mirror, B+C source/tests, CHANGELOG, Registry, and shared LOCK
+are outside A2.
+
+A2 adds `lookup_trusted_review_observation()` as a sealed, read-only typed
+lookup returning the existing `ReviewObservationCanonicalReadback`. The caller
+must supply exact record, learning digest, Product Project ID, Owner scope,
+`REVIEW_OBSERVATION` store kind, and fixed Generic store ID. The canonical
+commit SHA is deliberately not an input: A2 closes the crash window where A
+committed durably and removed its private journal before B persisted that
+correlation. The returned commit coordinate is rebuilt from the immutable
+payload, body-free ledger, fixed marker, Product binding, and complete
+historical currentness proof.
+
+The lookup holds the Generic journal lock before the Product Project lock,
+checks Product recovery status inside the Product lock, verifies the whole
+ledger and every historical payload/marker/current binding, and returns only a
+matching terminal durable readback. It never admits a record, advances the
+ledger/manifest/anchor, mints a public receipt, creates a Profile, or changes
+Timeline/Resolve. Missing, ambiguous, wrong-scope, wrong-digest, rollback,
+tamper, incomplete-tail, pending/corrupt Generic journal, and pending/corrupt
+Product journal states fail closed as `RECOVERY_REQUIRED`.
+
+Both established lock artifacts are opened through an A2-local non-creating,
+non-writing lock context. Generic and Product lock files must already be
+regular non-symlink one-byte `0` artifacts; missing, empty, wrong-sized, or
+wrong-content artifacts fail before lock acquisition without changing Project
+inventory or bytes.
+
+Builder Evidence on the final code/test bytes:
+
+- A2 + A focused: 49/49 PASS;
+- TASK-043 ProductSave + TASK-055 + TASK-058 direct regression: 371/371 PASS;
+- full Product regression: NOT_CONFIRMED with 4554 PASS / 5
+  platform-condition SKIP / 2 existing deprecation warnings / 1 unrelated
+  FAIL. The sole failure is TASK-054 native Tk startup because the local
+  Python installation lacks `tk8.6/icons.tcl`; A2 focused/direct tests are
+  unaffected and the unchanged-head full run was not retried;
+- actual spawn concurrent lookup and lookup-versus-later-admission converge;
+  child/queue cleanup is bounded and private Generic journal is absent;
+- A terminal commit followed by a new writer lookup before B correlation,
+  after correlation staging, and after publication simulation returns the same
+  sealed readback without changing the complete canonical Project inventory;
+- explicit identity omission/wrong values, forged outer-only status,
+  equal-revision manifest tamper, manifest rollback, incomplete historical
+  tail, pending/corrupt journals, and Product-lock recovery TOCTOU fail closed;
+- schema/public message shape is unchanged; A2 mints no admission result or
+  public receipt;
+- independent exact-head Critic/Tester/Judge, push, Ready, merge, shared LOCK,
+  and B+C restart remain separate gates.

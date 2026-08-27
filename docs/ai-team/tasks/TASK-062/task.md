@@ -1,6 +1,6 @@
 # TASK-062 — Montage Consumer Runtime Desktop UX
 
-- Status: `ALLOCATED / DEPENDENCY_BLOCKED / IMPLEMENTATION_NOT_AUTHORIZED`
+- Status: `UX_A_WHEEL_DEPENDENCY_PINNING_AUTHORIZATION_CANDIDATE / DEPENDENCY_BLOCKED / IMPLEMENTATION_NOT_STARTED`
 - Capability: `BVP-MONTAGE-DESKTOP-UX-001`
 - Roadmap: separate from TASK-058, TASK-029, and TASK-054
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
@@ -38,11 +38,32 @@ metadata record neither downloads nor executes a runtime package.
 
 ## Current authorization state
 
-Implementation, packaging, native Windows interaction, Product Project writes,
-Timeline/Resolve effects, Release, Deploy, and Production are `NOT_AUTHORIZED`.
+The Owner approved a bounded `UX-A` wheel dependency-pinning authorization
+candidate. This local metadata candidate does not authorize implementation. It
+becomes canonical implementation authority only after independent DEV-4 review
+with unresolved Critical/High `0/0`, Hosted checks, an exact Owner Ready/merge
+decision, canonical-main merge/read-back, and post-main CI/Security.
+
+The released `v0.7.0` wheel identity and offline integrity evidence are known,
+but the wheel's embedded TASK-055 contract bytes differ from current BVP on all
+six schemas. Root package license/SPDX identity, Owner dependency-set
+acceptance, BVP Python/ABI support, and real packaged Windows acceptance also
+remain unresolved. `UX-A` implementation therefore remains dependency-blocked
+until the exact start prerequisites in
+`ux-a-wheel-dependency-pinning-implementation-authorization-2026-08-28.md`
+are satisfied.
+
+Packaging, source, schema, test, native Windows interaction, Product Project
+writes, Timeline/Resolve effects, Release, Deploy, and Production remain
+`NOT_AUTHORIZED` by this local candidate.
 
 ## Governing authorization
 
 Closed Allowed Files—including the accepted trusted-launcher composition-root
 amendment—and all acceptance/stop rules are fixed in
 `task062-owner-allocation-and-implementation-authorization-2026-08-27.md`.
+
+The bounded wheel identity, exact future `UX-A` file subset, compatibility
+alternatives, dependency gates, tests, and stop conditions are fixed in
+`ux-a-wheel-dependency-pinning-implementation-authorization-2026-08-28.md`.
+The original Owner allocation record remains immutable.

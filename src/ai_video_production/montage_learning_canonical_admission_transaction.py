@@ -257,17 +257,88 @@ def _require_pinned_path_unchanged(
         raise MontageLearningCanonicalAdmissionError("document ancestor changed during pinned read")
 
 
+def _open_existing_lock_nofollow(path: Path, name: str) -> Any:
+    """Open an existing lock without following a final-component link."""
+
+    file_descriptor: int | None = None
+    try:
+        if os.name == "nt":
+            import ctypes
+            import msvcrt
+            from ctypes import wintypes
+
+            create_file = ctypes.WinDLL("kernel32", use_last_error=True).CreateFileW
+            create_file.argtypes = (
+                wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE,
+            )
+            create_file.restype = wintypes.HANDLE
+            raw_handle = create_file(
+                str(path),
+                0x80000000 | 0x40000000,  # GENERIC_READ | GENERIC_WRITE
+                0x00000001 | 0x00000002 | 0x00000004,  # shared read/write/delete
+                None,
+                3,  # OPEN_EXISTING
+                0x00000080 | 0x00200000,  # NORMAL | OPEN_REPARSE_POINT
+                None,
+            )
+            invalid_handle = ctypes.c_void_p(-1).value
+            if raw_handle == invalid_handle:
+                raise OSError(ctypes.get_last_error(), "CreateFileW failed")
+            try:
+                file_descriptor = msvcrt.open_osfhandle(
+                    int(raw_handle), os.O_RDWR | os.O_BINARY | os.O_NOINHERIT
+                )
+            except BaseException:
+                ctypes.WinDLL("kernel32", use_last_error=True).CloseHandle(raw_handle)
+                raise
+            raw_handle = None  # CRT fd owns the native HANDLE from this point.
+        else:
+            nofollow = getattr(os, "O_NOFOLLOW", None)
+            if nofollow is None:
+                raise OSError("nofollow open is unavailable")
+            file_descriptor = os.open(
+                path,
+                os.O_RDWR | nofollow | getattr(os, "O_CLOEXEC", 0),
+            )
+        try:
+            os.set_inheritable(file_descriptor, False)
+            handle = os.fdopen(file_descriptor, "r+b", closefd=True)
+        except BaseException:
+            closing_descriptor = file_descriptor
+            file_descriptor = None
+            os.close(closing_descriptor)
+            raise
+        file_descriptor = None  # The returned file object now owns the fd.
+    except (FileNotFoundError, OSError) as exc:
+        raise MontageLearningCanonicalAdmissionError(
+            f"RECOVERY_REQUIRED: {name} lock changed or cannot be pinned"
+        ) from exc
+    return handle
+
+
 @contextmanager
 def _exclusive_existing_read_lock(path: Path, name: str) -> Iterator[None]:
     """Lock an established one-byte lock artifact without creating or writing it."""
 
     try:
         ancestors = _ancestor_snapshot(path)
-        handle = path.open("r+b")
+        before = path.lstat()
     except (FileNotFoundError, OSError) as exc:
         raise MontageLearningCanonicalAdmissionError(
             f"RECOVERY_REQUIRED: {name} lock is absent or unreadable"
         ) from exc
+    if (
+        not stat.S_ISREG(before.st_mode)
+        or stat.S_ISLNK(before.st_mode)
+        or bool(getattr(before, "st_file_attributes", 0) & _REPARSE_POINT)
+        or before.st_size != 1
+    ):
+        raise MontageLearningCanonicalAdmissionError(
+            f"RECOVERY_REQUIRED: {name} lock is invalid before open"
+        )
+    before_identity = _file_identity(before)
+    handle = _open_existing_lock_nofollow(path, name)
     with handle:
         os.set_inheritable(handle.fileno(), False)
 
@@ -278,6 +349,7 @@ def _exclusive_existing_read_lock(path: Path, name: str) -> Iterator[None]:
                 not stat.S_ISREG(info.st_mode)
                 or bool(getattr(info, "st_file_attributes", 0) & _REPARSE_POINT)
                 or info.st_size != 1
+                or identity != before_identity
             ):
                 raise MontageLearningCanonicalAdmissionError(
                     f"RECOVERY_REQUIRED: {name} lock is invalid"

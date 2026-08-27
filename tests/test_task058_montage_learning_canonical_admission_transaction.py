@@ -5,6 +5,7 @@ import json
 import multiprocessing
 import os
 from pathlib import Path
+import stat
 import subprocess
 
 import pytest
@@ -204,6 +205,41 @@ def _snapshot_tree(root: Path) -> dict[str, bytes]:
         for path in sorted(root.rglob("*"))
         if path.is_file()
     }
+
+
+def _snapshot_inventory(root: Path) -> dict[str, tuple[str, bytes]]:
+    snapshot: dict[str, tuple[str, bytes]] = {}
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            snapshot[relative] = ("symlink", os.readlink(path).encode("utf-8"))
+        elif stat.S_ISREG(info.st_mode):
+            snapshot[relative] = ("file", path.read_bytes())
+        elif stat.S_ISDIR(info.st_mode):
+            snapshot[relative] = ("directory", b"")
+        else:
+            snapshot[relative] = (f"irregular:{stat.S_IFMT(info.st_mode)}", b"")
+    return snapshot
+
+
+def _windows_process_handle_count() -> int:
+    if os.name != "nt":
+        raise RuntimeError("Windows handle count is unavailable")
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    current_process = kernel32.GetCurrentProcess
+    current_process.argtypes = ()
+    current_process.restype = wintypes.HANDLE
+    get_count = kernel32.GetProcessHandleCount
+    get_count.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+    get_count.restype = wintypes.BOOL
+    count = wintypes.DWORD()
+    if not get_count(current_process(), ctypes.byref(count)):
+        raise OSError(ctypes.get_last_error(), "GetProcessHandleCount failed")
+    return int(count.value)
 
 
 def test_accept_then_exact_duplicate_and_trusted_reader(tmp_path: Path) -> None:
@@ -679,6 +715,232 @@ def test_generic_lookup_rejects_invalid_existing_lock_without_writes(
             generic_store_id="task058-generic-review-observations",
         )
     assert _snapshot_tree(project) == before
+
+
+@pytest.mark.parametrize("lock_name", ["generic", "product"])
+@pytest.mark.parametrize("lock_state", ["symlink", "irregular"])
+def test_generic_lookup_rejects_unsafe_lock_path_before_open_without_writes(
+    tmp_path: Path, lock_name: str, lock_state: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    generic_lock = writer.generic_journal_path.with_name(
+        f".{writer.generic_journal_path.name}.lock"
+    )
+    product_lock = ProductProjectManifestStore.path(project).with_name(
+        ".project.json.lock"
+    )
+    target = generic_lock if lock_name == "generic" else product_lock
+    target.unlink()
+    backing = tmp_path / f"{lock_name}-lock-backing"
+    if lock_state == "symlink":
+        backing.write_bytes(b"0")
+        try:
+            target.symlink_to(backing)
+        except OSError as exc:
+            pytest.skip(f"file symlink creation unavailable: {exc}")
+        assert target.is_symlink()
+        if os.name == "nt":
+            assert (
+                getattr(target.lstat(), "st_file_attributes", 0)
+                & module._REPARSE_POINT
+            )
+    else:
+        target.mkdir()
+        assert target.is_dir()
+    before = _snapshot_inventory(project)
+    backing_before = backing.read_bytes() if backing.exists() else None
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=accepted.record_id,
+            learning_sha256="sha256:" + accepted.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert _snapshot_inventory(project) == before
+    assert (backing.read_bytes() if backing.exists() else None) == backing_before
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFO fixture unavailable")
+@pytest.mark.parametrize("lock_name", ["generic", "product"])
+def test_generic_lookup_rejects_fifo_lock_before_open_without_hanging(
+    tmp_path: Path, lock_name: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_generic_observation(
+        _generic_delivery(), expected_revision=0, owner_scope_hash=OWNER_SCOPE_HASH
+    )
+    generic_lock = writer.generic_journal_path.with_name(
+        f".{writer.generic_journal_path.name}.lock"
+    )
+    product_lock = ProductProjectManifestStore.path(project).with_name(
+        ".project.json.lock"
+    )
+    target = generic_lock if lock_name == "generic" else product_lock
+    target.unlink()
+    os.mkfifo(target)
+    assert stat.S_ISFIFO(target.lstat().st_mode)
+    before = _snapshot_inventory(project)
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        writer.lookup_trusted_review_observation(
+            record_id=accepted.record_id,
+            learning_sha256="sha256:" + accepted.learning_sha256,
+            project_id="proj-test",
+            owner_scope_hash=OWNER_SCOPE_HASH,
+            store_kind="REVIEW_OBSERVATION",
+            generic_store_id="task058-generic-review-observations",
+        )
+    assert _snapshot_inventory(project) == before
+
+
+@pytest.mark.parametrize("lock_name", ["generic", "product"])
+def test_generic_lookup_rejects_check_open_lock_substitution_without_effect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, lock_name: str,
+) -> None:
+    root = tmp_path / "lock-root"
+    root.mkdir()
+    target = root / f".{lock_name}.lock"
+    target.write_bytes(b"0")
+    target_name = "Generic operation" if lock_name == "generic" else "Product Project"
+    replacement = target.with_name(f"{target.name}.replacement")
+    replacement.write_bytes(b"0")
+    original_open = module._open_existing_lock_nofollow
+    post_substitution: dict[str, dict[str, tuple[str, bytes]]] = {}
+
+    def substitute_then_open(path: Path, name: str):
+        if name == target_name:
+            assert path == target
+            os.replace(replacement, target)
+            post_substitution["inventory"] = _snapshot_inventory(root)
+        return original_open(path, name)
+
+    monkeypatch.setattr(
+        module, "_open_existing_lock_nofollow", substitute_then_open
+    )
+    with pytest.raises(
+        MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"
+    ) as error:
+        with module._exclusive_existing_read_lock(target, target_name):
+            pytest.fail("substituted lock must never be yielded")
+    assert post_substitution, str(error.value)
+    assert _snapshot_inventory(root) == post_substitution["inventory"]
+    assert target.read_bytes() == b"0"
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows HANDLE ownership fixture")
+@pytest.mark.parametrize("failure_point", ["set-inheritable", "fdopen"])
+def test_windows_lock_fd_transfer_failure_closes_exactly_once_without_effect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, failure_point: str,
+) -> None:
+    root = tmp_path / "lock-root"
+    root.mkdir()
+    target = root / ".generic.lock"
+    target.write_bytes(b"0")
+    with module._open_existing_lock_nofollow(target, "Generic operation") as handle:
+        assert handle.read(1) == b"0"
+    before_inventory = _snapshot_inventory(root)
+    before_handles = _windows_process_handle_count()
+    real_close = os.close
+    close_calls: list[int] = []
+
+    def counted_close(file_descriptor: int) -> None:
+        close_calls.append(file_descriptor)
+        real_close(file_descriptor)
+
+    def fail(*args, **kwargs):
+        del args, kwargs
+        raise OSError(f"forced {failure_point} failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(module.os, "close", counted_close)
+        patch.setattr(
+            module.os,
+            "set_inheritable" if failure_point == "set-inheritable" else "fdopen",
+            fail,
+        )
+        for _ in range(3):
+            with pytest.raises(
+                MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"
+            ):
+                module._open_existing_lock_nofollow(target, "Generic operation")
+    assert len(close_calls) == 3
+    assert _windows_process_handle_count() == before_handles
+    assert _snapshot_inventory(root) == before_inventory
+    assert not (root / "bridge/receipts").exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows HANDLE ownership fixture")
+def test_windows_open_osfhandle_failure_closes_native_handle_without_fd_close(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import msvcrt
+
+    root = tmp_path / "lock-root"
+    root.mkdir()
+    target = root / ".generic.lock"
+    target.write_bytes(b"0")
+    with module._open_existing_lock_nofollow(target, "Generic operation") as handle:
+        assert handle.read(1) == b"0"
+    before_inventory = _snapshot_inventory(root)
+    before_handles = _windows_process_handle_count()
+    close_calls: list[int] = []
+
+    def fail_open_osfhandle(*args, **kwargs):
+        del args, kwargs
+        raise OSError("forced open_osfhandle failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(msvcrt, "open_osfhandle", fail_open_osfhandle)
+        patch.setattr(module.os, "close", lambda fd: close_calls.append(fd))
+        for _ in range(3):
+            with pytest.raises(
+                MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"
+            ):
+                module._open_existing_lock_nofollow(target, "Generic operation")
+    assert close_calls == []
+    assert _windows_process_handle_count() == before_handles
+    assert _snapshot_inventory(root) == before_inventory
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows HANDLE ownership fixture")
+def test_windows_successful_fd_transfer_has_no_explicit_double_close(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = tmp_path / "lock-root"
+    root.mkdir()
+    target = root / ".generic.lock"
+    target.write_bytes(b"0")
+    with module._open_existing_lock_nofollow(target, "Generic operation") as handle:
+        assert handle.read(1) == b"0"
+    before_inventory = _snapshot_inventory(root)
+    before_handles = _windows_process_handle_count()
+    close_calls: list[int] = []
+    real_close = os.close
+
+    def counted_close(file_descriptor: int) -> None:
+        close_calls.append(file_descriptor)
+        real_close(file_descriptor)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(module.os, "close", counted_close)
+        for _ in range(3):
+            with module._open_existing_lock_nofollow(
+                target, "Generic operation"
+            ) as handle:
+                assert handle.read(1) == b"0"
+    assert close_calls == []
+    assert _windows_process_handle_count() == before_handles
+    assert _snapshot_inventory(root) == before_inventory
 
 
 def test_generic_lookup_rejects_equal_revision_manifest_tamper_and_rollback(

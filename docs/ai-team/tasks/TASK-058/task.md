@@ -551,20 +551,32 @@ tamper, incomplete-tail, pending/corrupt Generic journal, and pending/corrupt
 Product journal states fail closed as `RECOVERY_REQUIRED`.
 
 Both established lock artifacts are opened through an A2-local non-creating,
-non-writing lock context. Generic and Product lock files must already be
-regular non-symlink one-byte `0` artifacts; missing, empty, wrong-sized, or
-wrong-content artifacts fail before lock acquisition without changing Project
-inventory or bytes.
+non-writing lock context. Generic and Product lock files must pass an exact
+pre-open `lstat` regular/non-symlink/non-reparse/one-byte check. POSIX uses
+`O_NOFOLLOW`; Windows uses `CreateFileW(OPEN_EXISTING |
+FILE_FLAG_OPEN_REPARSE_POINT)`. The pinned handle identity must equal the
+pre-open identity and remain stable before lock acquisition, after acquisition,
+and before return. Missing, empty, wrong-sized, wrong-content, symlink, and
+irregular lock paths fail without changing Project inventory or bytes.
 
 Builder Evidence on the final code/test bytes:
 
-- A2 + A focused: 49/49 PASS;
-- TASK-043 ProductSave + TASK-055 + TASK-058 direct regression: 371/371 PASS;
-- full Product regression: NOT_CONFIRMED with 4554 PASS / 5
-  platform-condition SKIP / 2 existing deprecation warnings / 1 unrelated
-  FAIL. The sole failure is TASK-054 native Tk startup because the local
-  Python installation lacks `tk8.6/icons.tcl`; A2 focused/direct tests are
-  unaffected and the unchanged-head full run was not retried;
+- A2 + A focused: 59 PASS / 2 Windows FIFO SKIP / 0 FAIL;
+- Windows fd/HANDLE ownership fault focus: 18/18 PASS. Three forced
+  `set_inheritable` failures and three forced `fdopen` failures each close
+  the transferred CRT fd exactly once with no process HANDLE growth; three
+  forced `open_osfhandle` failures close the native HANDLE without invoking
+  `os.close`; three successful transfers invoke no explicit `os.close` and
+  return to the warm handle-count baseline;
+- invalid-lock focused matrix: 14 PASS / 2 Windows FIFO SKIP / 0 FAIL,
+  covering Generic/Product times missing, empty, wrong-size, wrong-byte,
+  symlink, irregular-directory, FIFO, and check-to-open identity substitution;
+  the Windows file-symlink/reparse cases executed without skip, while FIFO is
+  explicitly unavailable on Windows;
+- TASK-043 ProductSave + TASK-055 + TASK-058 direct regression: 381 PASS /
+  2 Windows FIFO SKIP / 0 FAIL;
+- full Product regression: 4563 PASS / 9 platform/environment SKIP /
+  2 existing deprecation warnings / 0 FAIL;
 - actual spawn concurrent lookup and lookup-versus-later-admission converge;
   child/queue cleanup is bounded and private Generic journal is absent;
 - A terminal commit followed by a new writer lookup before B correlation,
@@ -575,5 +587,5 @@ Builder Evidence on the final code/test bytes:
   tail, pending/corrupt journals, and Product-lock recovery TOCTOU fail closed;
 - schema/public message shape is unchanged; A2 mints no admission result or
   public receipt;
-- independent exact-head Critic/Tester/Judge, push, Ready, merge, shared LOCK,
+- independent cycle-3 exact-head Critic/Tester/Judge, push, Ready, merge, shared LOCK,
   and B+C restart remain separate gates.

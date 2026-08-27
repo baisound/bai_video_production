@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.baisound.local/dbd-reasoning-dataset-adoption-preflight.schema.json",
+  "title": "DbD Reasoning Dataset Adoption Read-Only Preflight",
+  "oneOf": [
+    {"$ref": "#/$defs/authority"},
+    {"$ref": "#/$defs/plan"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "safeId": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$"},
+    "manifestId": {"type": "string", "pattern": "^MAN-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "utc": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "nullableSha256": {
+      "oneOf": [
+        {"$ref": "#/$defs/sha256"},
+        {"type": "null"}
+      ]
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_kind", "authorization_id",
+        "authority_evidence_sha256", "request_sha256", "manifest_id",
+        "revision", "rights_manifest_sha256", "logical_path_sha256",
+        "observation_sha256", "dataset_store_id", "expected_store_sha256",
+        "not_before", "expires_at", "authorization_scope",
+        "authorization_state", "authorization_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "DBD_REASONING_DATASET_ADOPTION_PREFLIGHT_AUTHORITY"},
+        "authorization_id": {"$ref": "#/$defs/safeId"},
+        "authority_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "request_sha256": {"$ref": "#/$defs/sha256"},
+        "manifest_id": {"$ref": "#/$defs/manifestId"},
+        "revision": {"type": "integer", "minimum": 1},
+        "rights_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "logical_path_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_sha256": {"$ref": "#/$defs/sha256"},
+        "dataset_store_id": {"$ref": "#/$defs/safeId"},
+        "expected_store_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "not_before": {"$ref": "#/$defs/utc"},
+        "expires_at": {"$ref": "#/$defs/utc"},
+        "authorization_scope": {"const": "DATASET_ADOPTION_READ_ONLY_PREFLIGHT"},
+        "authorization_state": {"const": "ALLOWED_READ_ONLY_DATASET_ADOPTION_PREFLIGHT"},
+        "authorization_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "membership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id", "candidate_sha256", "lineage_sha256",
+        "human_review_sha256", "match_id", "source_group_id", "split"
+      ],
+      "properties": {
+        "candidate_id": {"type": "string", "pattern": "^CAND-R2D[0-9A-HJKMNP-TV-Z]{23}$"},
+        "candidate_sha256": {"$ref": "#/$defs/sha256"},
+        "lineage_sha256": {"$ref": "#/$defs/sha256"},
+        "human_review_sha256": {"$ref": "#/$defs/sha256"},
+        "match_id": {"type": "string", "pattern": "^MATCH-[0-9A-HJKMNP-TV-Z]{26}$"},
+        "source_group_id": {"$ref": "#/$defs/safeId"},
+        "split": {"enum": ["TRAIN", "VALIDATION", "TEST"]}
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_kind", "plan_id", "adoption_request_sha256",
+        "preflight_authorization_sha256", "authority_evidence_sha256",
+        "manifest_id", "source_manifest_revision", "rights_manifest_sha256",
+        "logical_path_sha256", "observation_sha256", "dataset_store_id",
+        "expected_store_sha256", "memberships", "member_count", "train_count",
+        "validation_count", "test_count", "created_at",
+        "dataset_adoption_requested", "dataset_adoption_started",
+        "dataset_store_mutated", "training_authorized", "training_started",
+        "plan_state", "plan_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "DBD_REASONING_DATASET_ADOPTION_COMMIT_PLAN"},
+        "plan_id": {"$ref": "#/$defs/safeId"},
+        "adoption_request_sha256": {"$ref": "#/$defs/sha256"},
+        "preflight_authorization_sha256": {"$ref": "#/$defs/sha256"},
+        "authority_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "manifest_id": {"$ref": "#/$defs/manifestId"},
+        "source_manifest_revision": {"type": "integer", "minimum": 1},
+        "rights_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "logical_path_sha256": {"$ref": "#/$defs/sha256"},
+        "observation_sha256": {"$ref": "#/$defs/sha256"},
+        "dataset_store_id": {"$ref": "#/$defs/safeId"},
+        "expected_store_sha256": {"$ref": "#/$defs/nullableSha256"},
+        "memberships": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2048,
+          "items": {"$ref": "#/$defs/membership"}
+        },
+        "member_count": {"type": "integer", "minimum": 1},
+        "train_count": {"type": "integer", "minimum": 0},
+        "validation_count": {"type": "integer", "minimum": 0},
+        "test_count": {"type": "integer", "minimum": 0},
+        "created_at": {"$ref": "#/$defs/utc"},
+        "dataset_adoption_requested": {"const": true},
+        "dataset_adoption_started": {"const": false},
+        "dataset_store_mutated": {"const": false},
+        "training_authorized": {"const": false},
+        "training_started": {"const": false},
+        "plan_state": {"const": "READY_FOR_SEPARATE_DATASET_ADOPTION_COMMIT_AUTHORITY"},
+        "plan_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}

@@ -55,6 +55,9 @@
 | TASK-056 | Chase Keyword Cue / Semantic Audio Cue Bridge | R0_R1_R2_HOSTED_CLOSED | OWNER_PRIORITY_CREATOR_WORKFLOW_2026_08_23 | DEV-3 | R0 target #275、R1 target #283/lock-host #284/closure #285はmerged。durable TASK-036 word timing、text-free cue、明示Human ACCEPT / REJECTを保持し、shared CHANGELOG reservationは解放済み。Real model/private media/Timeline/Resolveは別Gate。 |
 | TASK-057 | Windows Snapshot Lock Initialization Race Hardening | R0_IMPLEMENTED_LOCAL_HOSTING_PENDING | OWNER_AUTONOMY_BLOCKING_CI_RECOVERY_2026_08_24 | DEV-4 | PR #293 Windows 3.12で露出した既存empty lock初期化raceを、canonical OS lock内でのbyte初期化へ修正。retry/workflow緩和なし。 |
 | TASK-059 | Owner Signing Key PPK Import Bridge | P1B_CUSTODY_IMPORT_CONTRACT_IMPLEMENTED_LOCAL_P1C_NEXT | OWNER_CONTINUE_WITHOUT_INTERMEDIATE_CONFIRMATION_2026_08_26 | DEV-4 | P0 preflight, P1A secret authentication and P1B body-free READY/confirmation/R9B one-shot import receipt are local commit-ready. Short-lived process/UI and real PPK/passphrase/DPAPI/signing remain later gates. |
+| TASK-060 | Montage Preference Projection and Production Source | ALLOCATION_METADATA_PENDING_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | TASK-029/TASK-019の正規記録からadvisory-only Preference projectionを生成する別capability。PP-A→PP-B→PP-C。実装は未承認。 |
+| TASK-061 | Montage Learning Connector Activation and Migration | DEPENDENCY_BLOCKED_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | TASK-058 canonical releaseとTASK-060 PP-Cを待つ。bridge再検証・移行・明示Human activationを扱うが、実装とenabled変更は未承認。 |
+| TASK-062 | Montage Consumer Runtime Desktop UX | DEPENDENCY_BLOCKED_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | released ConsumerRuntimeService wheel digestとcurrent TASK-055 identityの固定を待つ。Desktop統合実装、Timeline/Resolve effectは未承認。 |
 
 ## Roadmap authority
 

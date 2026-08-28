@@ -1769,3 +1769,165 @@ def test_multiprocess_generic_and_exact_project_writes_serialize(
         assert duplicate_generic.status == "DUPLICATE"
         assert ProductProjectManifestStore.load(project) == stable_manifest
         assert _snapshot_inventory(project) == stable_inventory
+
+
+def test_exact_retry_rebases_pending_journal_after_terminal_generic_advance(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    arguments = _arguments(staged)
+    raw = module._exact(exact, "delivery", max_nodes=200_000)
+    with module.exclusive_file_update_lock(writer.journal_path):
+        with writer._locks():
+            pending = writer._make_proposal(
+                raw,
+                staging_store_id=STORE_ID,
+                owner_scope_hash=OWNER_SCOPE_HASH,
+                staging_revision=staged.ledger.revision,
+                staging_entry_sha256=staged.entry.to_dict()["entry_sha256"],
+                expected_commit=None,
+                expected_anchor=None,
+                processed_at="2026-08-28T00:00:00Z",
+            )
+            module.AtomicJsonWriter.write(
+                writer.journal_path, pending, validator=module._parse_journal
+            )
+
+    generic = _generic_delivery()
+    generic_result = writer.record_exact_generic_observation(generic, expected_revision=0)
+    advanced = ProductProjectManifestStore.load(project)
+    assert advanced.project_manifest_sha256 not in {
+        pending["proposed_canonical"]["source_project_manifest_sha256"],
+        pending["target_manifest"]["project_manifest_sha256"],
+    }
+
+    exact_result = writer.admit_exact(exact, **arguments)
+    assert exact_result.status == "ACCEPTED"
+    assert exact_result.recovered is True
+    current = ProductProjectManifestStore.load(project)
+    assert current.project_revision == advanced.project_revision + 1
+    assert writer.get_verified_receipt().to_public_projection()[
+        "canonical_currentness_verified"
+    ] is True
+    assert writer.get_verified_generic_observation(
+        record_id=str(generic["record_id"]),
+        learning_sha256=str(generic["learning_sha256"]),
+        canonical_commit_sha256="sha256:" + generic_result.canonical_commit_sha256,
+    ).status == "ACCEPTED"
+    assert not writer.journal_path.exists()
+    assert not writer.generic_journal_path.exists()
+    assert module.ProductProjectSaveCoordinator().recovery_status(project)[
+        "required"
+    ] is False
+
+
+def test_exact_retry_rejects_tampered_generic_tail_without_rebasing(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    raw = module._exact(exact, "delivery", max_nodes=200_000)
+    with module.exclusive_file_update_lock(writer.journal_path):
+        with writer._locks():
+            pending = writer._make_proposal(
+                raw,
+                staging_store_id=STORE_ID,
+                owner_scope_hash=OWNER_SCOPE_HASH,
+                staging_revision=staged.ledger.revision,
+                staging_entry_sha256=staged.entry.to_dict()["entry_sha256"],
+                expected_commit=None,
+                expected_anchor=None,
+                processed_at="2026-08-28T00:00:00Z",
+            )
+            module.AtomicJsonWriter.write(
+                writer.journal_path, pending, validator=module._parse_journal
+            )
+    generic = writer.record_exact_generic_observation(
+        _generic_delivery(), expected_revision=0
+    )
+    marker_path = project / writer._generic_marker_relative_path(
+        generic.canonical_readback.transaction_id
+    )
+    marker = json.loads(marker_path.read_text(encoding="utf-8"))
+    marker["marker_self_hash"] = "sha256:" + "f" * 64
+    marker_path.write_bytes(canonical_json_bytes(marker) + b"\n")
+    pending_bytes = writer.journal_path.read_bytes()
+    manifest_before = ProductProjectManifestStore.load(project)
+    inventory_before = _snapshot_inventory(project)
+
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        writer.admit_exact(exact, **_arguments(staged))
+    assert writer.journal_path.read_bytes() == pending_bytes
+    assert ProductProjectManifestStore.load(project) == manifest_before
+    assert _snapshot_inventory(project) == inventory_before
+
+
+@pytest.mark.parametrize("advance", ["manifest-only", "other-child", "generic-and-other"])
+def test_exact_retry_rejects_non_generic_only_project_advance_without_writes(
+    tmp_path: Path, advance: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    raw = module._exact(exact, "delivery", max_nodes=200_000)
+    with module.exclusive_file_update_lock(writer.journal_path):
+        with writer._locks():
+            pending = writer._make_proposal(
+                raw,
+                staging_store_id=STORE_ID,
+                owner_scope_hash=OWNER_SCOPE_HASH,
+                staging_revision=staged.ledger.revision,
+                staging_entry_sha256=staged.entry.to_dict()["entry_sha256"],
+                expected_commit=None,
+                expected_anchor=None,
+                processed_at="2026-08-28T00:00:00Z",
+            )
+            module.AtomicJsonWriter.write(
+                writer.journal_path, pending, validator=module._parse_journal
+            )
+    if advance == "generic-and-other":
+        writer.record_exact_generic_observation(_generic_delivery(), expected_revision=0)
+    current = ProductProjectManifestStore.load(project)
+    documents: dict[str, bytes] = {}
+    bindings = list(current.child_bindings)
+    if advance != "manifest-only":
+        relative_path = "state/unrelated-product-child.json"
+        document = canonical_json_bytes({"schema_version": "1.0.0", "value": advance}) + b"\n"
+        documents[relative_path] = document
+        bindings.append(module.ProjectChildBinding(
+            "TASK-OTHER", relative_path, "test.unrelated-child", "1.0.0",
+            module.sha256_bytes(document), True,
+        ))
+    target = ProductProjectManifest.create(
+        project_id=current.project_id,
+        project_revision=current.project_revision + 1,
+        product_version=current.product_version,
+        timebase=current.timebase,
+        child_bindings=bindings,
+        created_at=current.created_at,
+        updated_at="2026-08-28T00:00:01Z",
+    )
+    module.ProductProjectSaveCoordinator().save(
+        project,
+        target,
+        documents,
+        expected_previous_manifest_sha256=current.project_manifest_sha256,
+    )
+    pending_bytes = writer.journal_path.read_bytes()
+    manifest_before = ProductProjectManifestStore.load(project)
+    inventory_before = _snapshot_inventory(project)
+
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        writer.admit_exact(exact, **_arguments(staged))
+    assert writer.journal_path.read_bytes() == pending_bytes
+    assert ProductProjectManifestStore.load(project) == manifest_before
+    assert _snapshot_inventory(project) == inventory_before

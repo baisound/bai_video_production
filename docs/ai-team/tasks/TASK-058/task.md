@@ -575,7 +575,7 @@ Builder Evidence on the final code/test bytes:
   explicitly unavailable on Windows;
 - TASK-043 ProductSave + TASK-055 + TASK-058 direct regression: 381 PASS /
   2 Windows FIFO SKIP / 0 FAIL;
-- full Product regression: 4563 PASS / 9 platform/environment SKIP /
+- full Product regression: 4565 PASS / 7 platform/environment SKIP /
   2 existing deprecation warnings / 0 FAIL;
 - actual spawn concurrent lookup and lookup-versus-later-admission converge;
   child/queue cleanup is bounded and private Generic journal is absent;
@@ -587,5 +587,16 @@ Builder Evidence on the final code/test bytes:
   tail, pending/corrupt journals, and Product-lock recovery TOCTOU fail closed;
 - schema/public message shape is unchanged; A2 mints no admission result or
   public receipt;
-- independent cycle-3 exact-head Critic/Tester/Judge, push, Ready, merge, shared LOCK,
-  and B+C restart remain separate gates.
+- cycle-5 closes the prior Hosted Windows convergence failure by using a
+  bounded nonblocking byte-lock acquisition and by deferring the one-byte lock
+  content read until this handle owns the Windows lock; the three affected
+  multiprocess fixtures passed ten consecutive repetitions (30/30);
+- the Generic/Exact concurrency fixture now records worker result class and
+  permits a pre-PREPARED Product CAS failure to converge through a same-input
+  retry without requiring a nonexistent journal; partial authority remains
+  absent and both final trusted readbacks are verified;
+- process-wide Windows HANDLE observations use the safe no-increase condition;
+  exact transferred-fd/native-HANDLE ownership and exactly-once cleanup remain
+  covered by the dedicated fault fixtures;
+- independent cycle-5 exact-head Critic/Tester/Judge, push, Hosted terminal,
+  Ready, merge, shared LOCK, and B+C restart remain separate gates.

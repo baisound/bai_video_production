@@ -1931,3 +1931,65 @@ def test_exact_retry_rejects_non_generic_only_project_advance_without_writes(
     assert writer.journal_path.read_bytes() == pending_bytes
     assert ProductProjectManifestStore.load(project) == manifest_before
     assert _snapshot_inventory(project) == inventory_before
+
+
+@pytest.mark.parametrize("fresh_writer", [False, True])
+def test_duplicate_retry_after_generic_advance_is_body_free_and_exact_immutable(
+    tmp_path: Path, fresh_writer: bool,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_exact(exact, **_arguments(staged))
+    duplicate_arguments = {
+        **_arguments(staged),
+        "expected_canonical_store_commit_sha256": accepted.canonical_store_commit_sha256,
+        "expected_external_anchor_document_sha256": accepted.external_anchor_document_sha256,
+    }
+    exact_paths = (
+        project / CANONICAL_RELATIVE_PATH,
+        anchor / ANCHOR_FILE_NAME,
+        project / module.RECEIPT_RELATIVE_PATH,
+    )
+    exact_bytes = {path: path.read_bytes() for path in exact_paths}
+
+    def fail_after_duplicate_journal(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_journal_write":
+            raise RuntimeError("duplicate-journal-crash")
+
+    with pytest.raises(RuntimeError, match="duplicate-journal-crash"):
+        writer.admit_exact(
+            exact, failure_hook=fail_after_duplicate_journal, **duplicate_arguments
+        )
+    assert json.loads(writer.journal_path.read_text(encoding="utf-8"))[
+        "operation"
+    ] == "DUPLICATE"
+    generic = _generic_delivery()
+    generic_result = writer.record_exact_generic_observation(generic, expected_revision=0)
+    before_retry = _snapshot_inventory(project)
+
+    retry_writer = _writer(project, anchor) if fresh_writer else writer
+    duplicate = retry_writer.admit_exact(exact, **duplicate_arguments)
+    assert duplicate.status == "DUPLICATE"
+    assert duplicate.recovered is True
+    assert duplicate.receipt.to_dict()["duplicate_of_receipt_sha256"] == (
+        accepted.receipt.to_dict()["receipt_sha256"]
+    )
+    assert {path: path.read_bytes() for path in exact_paths} == exact_bytes
+    expected_inventory = dict(before_retry)
+    expected_inventory.pop(JOURNAL_RELATIVE_PATH.as_posix())
+    assert _snapshot_inventory(project) == expected_inventory
+    assert retry_writer.get_verified_receipt().receipt.to_dict() == accepted.receipt.to_dict()
+    assert retry_writer.get_verified_generic_observation(
+        record_id=str(generic["record_id"]),
+        learning_sha256=str(generic["learning_sha256"]),
+        canonical_commit_sha256="sha256:" + generic_result.canonical_commit_sha256,
+    ).status == "ACCEPTED"
+    assert not retry_writer.journal_path.exists()
+    assert not retry_writer.generic_journal_path.exists()
+    assert module.ProductProjectSaveCoordinator().recovery_status(project)[
+        "required"
+    ] is False

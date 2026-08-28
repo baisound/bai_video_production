@@ -219,6 +219,38 @@ def _target(path: Path) -> None:
         raise MontageLearningCanonicalAdmissionError("target is unsafe")
 
 
+def _ensure_safe_directory_locked(path: Path, name: str) -> None:
+    """Create one authority directory while the Product Project lock is held."""
+
+    try:
+        parent_before = path.parent.lstat()
+        if (
+            not stat.S_ISDIR(parent_before.st_mode)
+            or stat.S_ISLNK(parent_before.st_mode)
+            or bool(getattr(parent_before, "st_file_attributes", 0) & _REPARSE_POINT)
+        ):
+            raise MontageLearningCanonicalAdmissionError(f"{name} parent is unsafe")
+        path.mkdir()
+    except FileExistsError:
+        pass
+    except MontageLearningCanonicalAdmissionError:
+        raise
+    except OSError as exc:
+        raise MontageLearningCanonicalAdmissionError(f"{name} could not be initialized") from exc
+    try:
+        current = path.lstat()
+        parent_after = path.parent.lstat()
+    except OSError as exc:
+        raise MontageLearningCanonicalAdmissionError(f"{name} is unavailable") from exc
+    if (
+        not stat.S_ISDIR(current.st_mode)
+        or stat.S_ISLNK(current.st_mode)
+        or bool(getattr(current, "st_file_attributes", 0) & _REPARSE_POINT)
+        or _file_identity(parent_after) != _file_identity(parent_before)
+    ):
+        raise MontageLearningCanonicalAdmissionError(f"{name} is unsafe")
+
+
 def _file_identity(info: os.stat_result) -> tuple[int, int, int, int]:
     return (
         int(info.st_dev), int(info.st_ino), stat.S_IFMT(info.st_mode),
@@ -419,6 +451,30 @@ def _exclusive_existing_read_lock(path: Path, name: str) -> Iterator[None]:
                     import fcntl
 
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def _exclusive_existing_project_lock(
+    project_root: Path,
+) -> Iterator[ProductProjectManifest]:
+    """Acquire the canonical Product lock without provisioning invalid Projects."""
+
+    try:
+        lock_path = ProductProjectManifestStore.path(project_root).with_name(
+            ".project.json.lock"
+        )
+    except (ProductError, OSError) as exc:
+        raise MontageLearningCanonicalAdmissionError(
+            "RECOVERY_REQUIRED: Product Project authority is unavailable"
+        ) from exc
+    with _exclusive_existing_read_lock(lock_path, "Product Project"):
+        try:
+            manifest = ProductProjectManifestStore.load(project_root)
+        except (ProductError, OSError) as exc:
+            raise MontageLearningCanonicalAdmissionError(
+                "RECOVERY_REQUIRED: Product Project manifest is unavailable"
+            ) from exc
+        yield manifest
 
 
 def _read(path: Path, parser: Callable[[Mapping[str, Any]], dict[str, Any]]) -> dict[str, Any]:
@@ -898,12 +954,28 @@ def _parse_journal(value: Mapping[str, Any]) -> dict[str, Any]:
     anchor = _parse_anchor(body["proposed_anchor"])
     registry = _parse_registry(body["proposed_registry"])
     manifest = parse_product_project_manifest(body["target_manifest"])
+    if body["operation"] == ACCEPTED:
+        manifest_coordinate_valid = (
+            anchor["target_project_manifest_sha256"]
+            == manifest.project_manifest_sha256
+            and anchor["target_project_manifest_revision"]
+            == manifest.project_revision
+        )
+    else:
+        anchored_revision = int(anchor["target_project_manifest_revision"])
+        manifest_coordinate_valid = (
+            manifest.project_revision >= anchored_revision
+            and (
+                manifest.project_revision != anchored_revision
+                or anchor["target_project_manifest_sha256"]
+                == manifest.project_manifest_sha256
+            )
+        )
     if (body["project_id"] != canonical["project_id"] or
         body["canonical_store_id"] != canonical["canonical_store_id"] or
         body["owner_scope_hash"] != canonical["owner_scope_hash"] or
         anchor["canonical_store_commit_sha256"] != canonical["canonical_store_commit_sha256"] or
-        anchor["target_project_manifest_sha256"] != manifest.project_manifest_sha256 or
-        anchor["target_project_manifest_revision"] != manifest.project_revision or
+        not manifest_coordinate_valid or
         registry["receipts"][-1]["receipt_sha256"] != body["receipt_sha256"] or
         registry["receipts"][-1]["status"] != body["operation"]):
         raise MontageLearningCanonicalAdmissionError("journal cross-binding mismatch")
@@ -1431,10 +1503,6 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         self.canonical_store_id = _identifier(canonical_store_id, "canonical_store_id")
         self.bridge_instance_id = _identifier(bridge_instance_id, "bridge_instance_id")
         state = self.project_root / "state"
-        if not state.exists():
-            state.mkdir()
-        if _is_reparse(state) or not state.is_dir():
-            raise MontageLearningCanonicalAdmissionError("state root is unsafe")
         self.canonical_path = self.project_root / CANONICAL_RELATIVE_PATH
         self.receipt_path = self.project_root / RECEIPT_RELATIVE_PATH
         self.journal_path = self.project_root / JOURNAL_RELATIVE_PATH
@@ -1443,13 +1511,19 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         self.generic_journal_path = self.project_root / GENERIC_OBSERVATION_JOURNAL_RELATIVE_PATH
         self.generic_object_root = self.project_root / GENERIC_OBSERVATION_OBJECT_DIRECTORY
         self.generic_marker_root = self.project_root / GENERIC_OBSERVATION_MARKER_DIRECTORY
-        if not self.generic_object_root.exists():
-            self.generic_object_root.mkdir(parents=True)
-        if not self.generic_marker_root.exists():
-            self.generic_marker_root.mkdir(parents=True)
-        for directory in (self.generic_object_root, self.generic_marker_root):
-            if _is_reparse(directory) or not directory.is_dir():
-                raise MontageLearningCanonicalAdmissionError("generic authority directory is unsafe")
+        with _exclusive_existing_project_lock(self.project_root):
+            # Exact and Generic writers share these authority directories.  Keep
+            # first-use initialization inside the same Product lock used by both
+            # transactions so concurrent constructors cannot leak raw mkdir races.
+            _ensure_safe_directory_locked(state, "state root")
+            generic_root = self.generic_journal_path.parent
+            _ensure_safe_directory_locked(generic_root, "generic authority root")
+            _ensure_safe_directory_locked(
+                self.generic_object_root, "generic observation object directory"
+            )
+            _ensure_safe_directory_locked(
+                self.generic_marker_root, "generic observation marker directory"
+            )
         self.anchor_path = self.external_anchor_root / ANCHOR_FILE_NAME
         self.anchor_recovery_path = self.external_anchor_root / ANCHOR_RECOVERY_FILE_NAME
         self._validate_paths()
@@ -1526,6 +1600,308 @@ class MontageLearningCanonicalAdmissionTransactionStore:
             updated_at=updated_at,
         )
 
+    def _require_terminal_generic_currentness_locked(
+        self, manifest: ProductProjectManifest,
+    ) -> tuple[dict[str, Any], ProjectChildBinding]:
+        """Verify every committed Generic entry before rebasing Exact work."""
+        if self.generic_journal_path.exists():
+            raise MontageLearningCanonicalAdmissionError(
+                "generic recovery must finish before exact rebase"
+            )
+        binding = next((
+            item for item in manifest.child_bindings
+            if item.identity == (TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix())
+        ), None)
+        if binding is None:
+            if self.generic_observation_path.exists():
+                raise MontageLearningCanonicalAdmissionError(
+                    "unbound generic ledger blocks exact rebase"
+                )
+            raise MontageLearningCanonicalAdmissionError(
+                "generic advance is absent during exact rebase"
+            )
+        ledger = _read(self.generic_observation_path, _parse_generic_ledger_v1)
+        if (
+            binding.to_dict()
+            != self._generic_binding_for_ledger(canonical_json_bytes(ledger) + b"\n").to_dict()
+        ):
+            raise MontageLearningCanonicalAdmissionError(
+                "generic ledger binding blocks exact rebase"
+            )
+        last = ledger["entries"][-1]
+        marker = _read(
+            self.project_root /
+            self._generic_marker_relative_path(last["transaction_id"]),
+            _parse_generic_marker_v1,
+        )
+        anchored = self._generic_make_readback(marker, binding)
+        _, _, current_binding, current_ledger = self._generic_trusted_readback_locked(
+            anchored, current_manifest=manifest
+        )
+        return current_ledger, current_binding
+
+    @staticmethod
+    def _is_generic_payload_binding(binding: ProjectChildBinding) -> bool:
+        prefix = GENERIC_OBSERVATION_OBJECT_DIRECTORY.as_posix() + "/"
+        return (
+            binding.domain_owner == TASK_OWNER
+            and binding.relative_path.startswith(prefix)
+            and binding.relative_path.endswith(".json")
+        )
+
+    def _require_single_generic_manifest_advance_locked(
+        self,
+        journal: Mapping[str, Any],
+        live: ProductProjectManifest,
+    ) -> str:
+        """Classify one terminal Generic append around a sealed Exact operation.
+
+        An ACCEPTED journal has two valid recovery shapes.  The Generic writer
+        can win before the Exact Product save (a same-revision sibling that
+        requires recompilation), or it can append after the Exact target was
+        durably committed (target revision plus one, requiring finish only).
+        DUPLICATE never writes an Exact Product revision, so it has only the
+        latter source-plus-one shape.  The returned value is private recovery
+        control state; it is never projected into a public receipt.
+        """
+        old_target = parse_product_project_manifest(journal["target_manifest"])
+        operation = str(journal["operation"])
+        if operation == ACCEPTED and live.project_revision == old_target.project_revision:
+            relation = "ACCEPTED_GENERIC_SIBLING_REBASE"
+            excluded_identities = {
+                (TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix()),
+                (TASK_OWNER, CANONICAL_RELATIVE_PATH.as_posix()),
+            }
+        elif operation == ACCEPTED and live.project_revision == old_target.project_revision + 1:
+            relation = "ACCEPTED_TARGET_THEN_GENERIC_FINISH"
+            excluded_identities = {
+                (TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix()),
+            }
+        elif operation == DUPLICATE and live.project_revision == old_target.project_revision + 1:
+            relation = "DUPLICATE_SOURCE_THEN_GENERIC_FINISH"
+            excluded_identities = {
+                (TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix()),
+            }
+        else:
+            raise MontageLearningCanonicalAdmissionError(
+                "Project advance is not one Generic transaction "
+                f"(operation={operation}; old_target_revision="
+                f"{old_target.project_revision}; live_revision={live.project_revision})"
+            )
+        if (
+            live.project_id != old_target.project_id
+            or live.product_version != old_target.product_version
+            or live.timebase != old_target.timebase
+            or live.created_at != old_target.created_at
+        ):
+            raise MontageLearningCanonicalAdmissionError(
+                "Project scalar coordinates changed during Generic recovery "
+                f"(operation={operation}; relation={relation}; "
+                f"project_id_match={live.project_id == old_target.project_id}; "
+                f"product_version_match={live.product_version == old_target.product_version}; "
+                f"timebase_match={live.timebase == old_target.timebase}; "
+                f"created_at_match={live.created_at == old_target.created_at})"
+            )
+        exact_identity = (TASK_OWNER, CANONICAL_RELATIVE_PATH.as_posix())
+        ledger_identity = (TASK_OWNER, GENERIC_OBSERVATION_RELATIVE_PATH.as_posix())
+
+        def binding_at(
+            manifest: ProductProjectManifest, identity: tuple[str, str],
+        ) -> ProjectChildBinding | None:
+            return next(
+                (item for item in manifest.child_bindings if item.identity == identity),
+                None,
+            )
+
+        def exact_binding(document: Mapping[str, Any]) -> ProjectChildBinding:
+            canonical_bytes = canonical_json_bytes(document) + b"\n"
+            return ProjectChildBinding(
+                domain_owner=TASK_OWNER,
+                relative_path=CANONICAL_RELATIVE_PATH.as_posix(),
+                format_id=CANONICAL_FORMAT_ID,
+                format_version=CANONICAL_FORMAT_VERSION,
+                content_sha256=sha256_bytes(canonical_bytes),
+                required=True,
+            )
+
+        target_exact = binding_at(old_target, exact_identity)
+        live_exact = binding_at(live, exact_identity)
+        if operation == ACCEPTED:
+            proposed_exact = exact_binding(journal["proposed_canonical"])
+            if target_exact is None or target_exact.to_dict() != proposed_exact.to_dict():
+                raise MontageLearningCanonicalAdmissionError(
+                    "Exact target binding changed during Generic recovery"
+                )
+            if relation == "ACCEPTED_TARGET_THEN_GENERIC_FINISH":
+                if live_exact is None or live_exact.to_dict() != target_exact.to_dict():
+                    raise MontageLearningCanonicalAdmissionError(
+                        "Exact committed binding changed before Generic finish"
+                    )
+            else:
+                current_canonical = self._optional(self.canonical_path, _parse_canonical)
+                current_anchor = self._optional(self.anchor_path, _parse_anchor)
+                expected_commit = journal["expected_previous_commit_sha256"]
+                expected_anchor = journal["expected_previous_anchor_document_sha256"]
+                if expected_commit is None:
+                    if current_canonical is not None or current_anchor is not None or live_exact is not None:
+                        raise MontageLearningCanonicalAdmissionError(
+                            "Exact source binding appeared during Generic sibling recovery"
+                        )
+                elif (
+                    current_canonical is None
+                    or current_anchor is None
+                    or current_canonical["canonical_store_commit_sha256"] != expected_commit
+                    or current_anchor["external_anchor_document_sha256"] != expected_anchor
+                    or live_exact is None
+                    or live_exact.to_dict() != exact_binding(current_canonical).to_dict()
+                ):
+                    raise MontageLearningCanonicalAdmissionError(
+                        "Exact source binding changed during Generic sibling recovery"
+                    )
+
+        def other_projection(manifest: ProductProjectManifest) -> dict[
+            tuple[str, str], dict[str, Any]
+        ]:
+            return {
+                item.identity: item.to_dict()
+                for item in manifest.child_bindings
+                if item.identity not in excluded_identities
+                and not self._is_generic_payload_binding(item)
+            }
+
+        if other_projection(live) != other_projection(old_target):
+            raise MontageLearningCanonicalAdmissionError(
+                "non-Generic Project child changed during exact recovery"
+            )
+        ledger, live_ledger_binding = self._require_terminal_generic_currentness_locked(live)
+        new_revision = int(ledger["store_revision"])
+        old_revision = new_revision - 1
+        if old_revision < 0:
+            raise MontageLearningCanonicalAdmissionError(
+                "generic revision did not advance exactly once"
+            )
+        old_ledger_binding = next((
+            item for item in old_target.child_bindings if item.identity == ledger_identity
+        ), None)
+        if old_revision == 0:
+            if old_ledger_binding is not None:
+                raise MontageLearningCanonicalAdmissionError(
+                    "generic source projection is inconsistent"
+                )
+        else:
+            expected_old_ledger = self._generic_binding_for_ledger(
+                canonical_json_bytes(self._generic_prefix_ledger(ledger, old_revision)) + b"\n"
+            )
+            if (
+                old_ledger_binding is None
+                or old_ledger_binding.to_dict() != expected_old_ledger.to_dict()
+            ):
+                raise MontageLearningCanonicalAdmissionError(
+                    "generic ledger did not append from the Exact source projection"
+                )
+        live_ledger = next((
+            item for item in live.child_bindings if item.identity == ledger_identity
+        ), None)
+        if live_ledger is None or live_ledger.to_dict() != live_ledger_binding.to_dict():
+            raise MontageLearningCanonicalAdmissionError(
+                "generic live ledger projection changed"
+            )
+
+        def payload_projection(
+            manifest: ProductProjectManifest,
+        ) -> dict[tuple[str, str], dict[str, Any]]:
+            return {
+                item.identity: item.to_dict()
+                for item in manifest.child_bindings
+                if self._is_generic_payload_binding(item)
+            }
+
+        expected_old_payloads: dict[tuple[str, str], dict[str, Any]] = {}
+        expected_live_payloads: dict[tuple[str, str], dict[str, Any]] = {}
+        for index, entry in enumerate(ledger["entries"], start=1):
+            relative_path = (
+                GENERIC_OBSERVATION_OBJECT_DIRECTORY /
+                f"{entry['payload_object_sha256']}.json"
+            ).as_posix()
+            document = canonical_json_bytes(
+                _read(self.project_root / relative_path, _parse_generic_object_v1)
+            ) + b"\n"
+            binding = self._generic_payload_binding(relative_path, document)
+            expected_live_payloads[binding.identity] = binding.to_dict()
+            if index <= old_revision:
+                expected_old_payloads[binding.identity] = binding.to_dict()
+        if (
+            payload_projection(old_target) != expected_old_payloads
+            or payload_projection(live) != expected_live_payloads
+            or len(expected_live_payloads) != len(expected_old_payloads) + 1
+        ):
+            raise MontageLearningCanonicalAdmissionError(
+                "generic payload projection did not advance exactly once"
+            )
+        return relation
+
+    def _rebase_pending_exact_after_project_advance_locked(
+        self,
+        journal: Mapping[str, Any],
+        raw: Mapping[str, Any],
+        *,
+        staging_store_id: str,
+        owner_scope_hash: str,
+        staging_revision: int,
+        staging_entry_sha256: str,
+    ) -> dict[str, Any]:
+        """Recompile an uncommitted Exact journal from verified current Project truth."""
+        live = self._load_manifest_pinned()
+        source_sha = str(journal["proposed_canonical"]["source_project_manifest_sha256"])
+        target_sha = str(journal["target_manifest"]["project_manifest_sha256"])
+        if live.project_manifest_sha256 in {source_sha, target_sha}:
+            return dict(journal)
+        coordinator = ProductProjectSaveCoordinator()
+        if coordinator.recovery_status(self.project_root)["required"]:
+            raise MontageLearningCanonicalAdmissionError(
+                "Product recovery must finish before exact rebase"
+            )
+        if self.anchor_recovery_path.exists():
+            raise MontageLearningCanonicalAdmissionError(
+                "anchor recovery must finish before exact rebase"
+            )
+        coordinator.require_current_integrity(self.project_root, live)
+        relation = self._require_single_generic_manifest_advance_locked(journal, live)
+        if journal["operation"] == DUPLICATE or relation == "ACCEPTED_TARGET_THEN_GENERIC_FINISH":
+            # A DUPLICATE journal is already a sealed body-free result over the
+            # existing Exact commit.  Keep its historical manifest/anchor
+            # coordinates immutable; the finish path revalidates the one
+            # Generic advance and consumes only this pending operation journal.
+            # The ACCEPTED finish relation is similarly sealed: Exact already
+            # reached its target and Generic appended one terminal revision.
+            return dict(journal)
+        rebased = self._make_proposal(
+            raw,
+            staging_store_id=staging_store_id,
+            owner_scope_hash=owner_scope_hash,
+            staging_revision=staging_revision,
+            staging_entry_sha256=staging_entry_sha256,
+            expected_commit=journal["expected_previous_commit_sha256"],
+            expected_anchor=journal["expected_previous_anchor_document_sha256"],
+            processed_at=journal["proposed_registry"]["receipts"][-1]["processed_at"],
+        )
+        for name in (
+            "operation", "project_id", "canonical_store_id", "owner_scope_hash",
+            "staging_readback_sha256", "expected_previous_commit_sha256",
+            "expected_previous_anchor_document_sha256", "expected_previous_registry_sha256",
+        ):
+            if rebased[name] != journal[name]:
+                raise MontageLearningCanonicalAdmissionError(
+                    "exact rebase operation identity changed"
+                )
+        AtomicJsonWriter.write(self.journal_path, rebased, validator=_parse_journal)
+        durable = _read(self.journal_path, _parse_journal)
+        if durable != rebased:
+            raise MontageLearningCanonicalAdmissionError(
+                "rebased exact journal durable read-back failed"
+            )
+        return durable
+
     def _make_proposal(self, raw: Mapping[str, Any], *, staging_store_id: str,
                        owner_scope_hash: str, staging_revision: int,
                        staging_entry_sha256: str, expected_commit: str | None,
@@ -1564,6 +1940,25 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         if append["decision"] == AppendDecision.DUPLICATE_CANDIDATE.value:
             if canonical is None or anchor_doc is None:
                 raise MontageLearningCanonicalAdmissionError("duplicate lacks committed state")
+            canonical_document = canonical_json_bytes(canonical) + b"\n"
+            canonical_binding = next((
+                item for item in manifest.child_bindings
+                if item.identity == (TASK_OWNER, CANONICAL_RELATIVE_PATH.as_posix())
+            ), None)
+            anchored_revision = int(anchor_doc["target_project_manifest_revision"])
+            if (
+                canonical_binding is None
+                or canonical_binding.content_sha256 != sha256_bytes(canonical_document)
+                or manifest.project_revision < anchored_revision
+                or (
+                    manifest.project_revision == anchored_revision
+                    and manifest.project_manifest_sha256
+                    != anchor_doc["target_project_manifest_sha256"]
+                )
+            ):
+                raise MontageLearningCanonicalAdmissionError(
+                    "duplicate canonical currentness mismatch"
+                )
             roots = [item for item in registry["receipts"]
                      if item["status"] == ACCEPTED and
                      item["idempotency_key_sha256"] == readback["idempotency_key_sha256"] and
@@ -1659,55 +2054,82 @@ class MontageLearningCanonicalAdmissionTransactionStore:
                       staging_store_id: str, owner_scope_hash: str,
                       staging_revision: int, staging_entry_sha256: str) -> Iterator[None]:
         with exclusive_file_update_lock(self.anchor_path):
-            self._validate_paths()
-            readback = self._readback(
-                raw, staging_store_id=staging_store_id,
+            self._validate_commit_guard_locked(
+                journal,
+                raw,
+                staging_store_id=staging_store_id,
                 owner_scope_hash=owner_scope_hash,
                 staging_revision=staging_revision,
                 staging_entry_sha256=staging_entry_sha256,
             )
-            if readback.to_dict()["readback_sha256"] != journal["staging_readback_sha256"]:
-                raise MontageLearningCanonicalAdmissionError("staging changed before commit")
-            live = ProductProjectManifestStore.load(self.project_root)
-            source_sha = journal["proposed_canonical"]["source_project_manifest_sha256"]
-            target_sha = journal["target_manifest"]["project_manifest_sha256"]
-            if live.project_manifest_sha256 not in {source_sha, target_sha}:
-                raise MontageLearningCanonicalAdmissionError("Project moved outside transaction")
-            current_canonical = self._optional(self.canonical_path, _parse_canonical)
-            current_anchor = self._optional(self.anchor_path, _parse_anchor)
-            current_anchor_sha = None if current_anchor is None else current_anchor["external_anchor_document_sha256"]
-            if current_anchor_sha not in {
-                journal["expected_previous_anchor_document_sha256"],
-                journal["proposed_anchor"]["external_anchor_document_sha256"],
-            }:
-                raise MontageLearningCanonicalAdmissionError("anchor changed outside transaction")
-            current_commit = (None if current_canonical is None else
-                              current_canonical["canonical_store_commit_sha256"])
-            if (live.project_manifest_sha256 == source_sha and
-                current_commit == journal["expected_previous_commit_sha256"] and
-                current_anchor_sha == journal["expected_previous_anchor_document_sha256"]):
-                recompiled = self._make_proposal(
-                    raw,
-                    staging_store_id=staging_store_id,
-                    owner_scope_hash=owner_scope_hash,
-                    staging_revision=staging_revision,
-                    staging_entry_sha256=staging_entry_sha256,
-                    expected_commit=journal["expected_previous_commit_sha256"],
-                    expected_anchor=journal["expected_previous_anchor_document_sha256"],
-                    processed_at=journal["proposed_registry"]["receipts"][-1]["processed_at"],
-                )
-                if recompiled != journal:
-                    raise MontageLearningCanonicalAdmissionError("P1C-B/C/D recompile drifted")
-            elif current_commit not in {
-                journal["expected_previous_commit_sha256"],
-                journal["proposed_canonical"]["canonical_store_commit_sha256"],
-            }:
-                raise MontageLearningCanonicalAdmissionError("canonical changed outside transaction")
-            if not self.journal_path.exists():
-                AtomicJsonWriter.write(self.journal_path, journal, validator=_parse_journal)
-            elif _read(self.journal_path, _parse_journal) != journal:
-                raise MontageLearningCanonicalAdmissionError("pending transaction conflicts")
             yield
+
+    def _validate_commit_guard_locked(
+        self,
+        journal: Mapping[str, Any],
+        raw: Mapping[str, Any],
+        *,
+        staging_store_id: str,
+        owner_scope_hash: str,
+        staging_revision: int,
+        staging_entry_sha256: str,
+    ) -> None:
+        """Validate and seal Exact authority while Product and anchor locks are held."""
+        self._validate_paths()
+        readback = self._readback(
+            raw, staging_store_id=staging_store_id,
+            owner_scope_hash=owner_scope_hash,
+            staging_revision=staging_revision,
+            staging_entry_sha256=staging_entry_sha256,
+        )
+        if readback.to_dict()["readback_sha256"] != journal["staging_readback_sha256"]:
+            raise MontageLearningCanonicalAdmissionError("staging changed before commit")
+        live = ProductProjectManifestStore.load(self.project_root)
+        source_sha = journal["proposed_canonical"]["source_project_manifest_sha256"]
+        target_sha = journal["target_manifest"]["project_manifest_sha256"]
+        if live.project_manifest_sha256 not in {source_sha, target_sha}:
+            raise MontageLearningCanonicalAdmissionError("Project moved outside transaction")
+        current_canonical = self._optional(self.canonical_path, _parse_canonical)
+        current_anchor = self._optional(self.anchor_path, _parse_anchor)
+        current_anchor_sha = (
+            None if current_anchor is None
+            else current_anchor["external_anchor_document_sha256"]
+        )
+        if current_anchor_sha not in {
+            journal["expected_previous_anchor_document_sha256"],
+            journal["proposed_anchor"]["external_anchor_document_sha256"],
+        }:
+            raise MontageLearningCanonicalAdmissionError("anchor changed outside transaction")
+        current_commit = (
+            None if current_canonical is None
+            else current_canonical["canonical_store_commit_sha256"]
+        )
+        if (
+            live.project_manifest_sha256 == source_sha
+            and current_commit == journal["expected_previous_commit_sha256"]
+            and current_anchor_sha == journal["expected_previous_anchor_document_sha256"]
+        ):
+            recompiled = self._make_proposal(
+                raw,
+                staging_store_id=staging_store_id,
+                owner_scope_hash=owner_scope_hash,
+                staging_revision=staging_revision,
+                staging_entry_sha256=staging_entry_sha256,
+                expected_commit=journal["expected_previous_commit_sha256"],
+                expected_anchor=journal["expected_previous_anchor_document_sha256"],
+                processed_at=journal["proposed_registry"]["receipts"][-1]["processed_at"],
+            )
+            if recompiled != journal:
+                raise MontageLearningCanonicalAdmissionError("P1C-B/C/D recompile drifted")
+        elif current_commit not in {
+            journal["expected_previous_commit_sha256"],
+            journal["proposed_canonical"]["canonical_store_commit_sha256"],
+        }:
+            raise MontageLearningCanonicalAdmissionError("canonical changed outside transaction")
+        if not self.journal_path.exists():
+            AtomicJsonWriter.write(self.journal_path, journal, validator=_parse_journal)
+        elif _read(self.journal_path, _parse_journal) != journal:
+            raise MontageLearningCanonicalAdmissionError("pending transaction conflicts")
 
     def _finish(self, journal: Mapping[str, Any], *, recovered: bool,
                 failure_hook: FailureHook | None) -> MontageLearningCanonicalAdmissionResult:
@@ -1715,9 +2137,22 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         with self._locks():
             manifest = ProductProjectManifestStore.load(self.project_root)
             target_manifest = parse_product_project_manifest(journal["target_manifest"])
-            if manifest.project_manifest_sha256 != target_manifest.project_manifest_sha256:
-                raise MontageLearningCanonicalAdmissionError("target manifest is not committed")
-            coordinator.require_current_integrity(self.project_root, target_manifest)
+            if journal["operation"] == DUPLICATE:
+                coordinator.require_current_integrity(self.project_root, manifest)
+                if manifest.project_manifest_sha256 != target_manifest.project_manifest_sha256:
+                    self._require_single_generic_manifest_advance_locked(journal, manifest)
+            else:
+                if manifest.project_manifest_sha256 != target_manifest.project_manifest_sha256:
+                    relation = self._require_single_generic_manifest_advance_locked(
+                        journal, manifest
+                    )
+                    if relation != "ACCEPTED_TARGET_THEN_GENERIC_FINISH":
+                        raise MontageLearningCanonicalAdmissionError(
+                            "target manifest is not committed"
+                        )
+                    coordinator.require_current_integrity(self.project_root, manifest)
+                else:
+                    coordinator.require_current_integrity(self.project_root, target_manifest)
             canonical = _read(self.canonical_path, _parse_canonical)
             anchor = _read(self.anchor_path, _parse_anchor)
             if canonical != journal["proposed_canonical"] or anchor != journal["proposed_anchor"]:
@@ -1726,6 +2161,40 @@ class MontageLearningCanonicalAdmissionTransactionStore:
                         _read(self.receipt_path, _parse_registry))
             expected_registry_sha = journal["expected_previous_registry_sha256"]
             proposed = journal["proposed_registry"]
+            if journal["operation"] == DUPLICATE:
+                if (
+                    registry is None
+                    or registry["registry_sha256"] != expected_registry_sha
+                    or proposed["receipts"][:-1] != registry["receipts"]
+                ):
+                    raise MontageLearningCanonicalAdmissionError(
+                        "duplicate receipt registry currentness mismatch"
+                    )
+                receipt_body = proposed["receipts"][-1]
+                if (
+                    receipt_body["status"] != DUPLICATE
+                    or receipt_body["receipt_sha256"] != journal["receipt_sha256"]
+                    or not any(
+                        item["status"] == ACCEPTED
+                        and item["receipt_sha256"]
+                        == receipt_body["duplicate_of_receipt_sha256"]
+                        for item in registry["receipts"]
+                    )
+                ):
+                    raise MontageLearningCanonicalAdmissionError(
+                        "duplicate receipt lineage changed"
+                    )
+                self.journal_path.unlink(missing_ok=True)
+                return MontageLearningCanonicalAdmissionResult(
+                    receipt=parse_montage_learning_admission_receipt(receipt_body),
+                    canonical_store_commit_sha256=canonical[
+                        "canonical_store_commit_sha256"
+                    ],
+                    external_anchor_document_sha256=anchor[
+                        "external_anchor_document_sha256"
+                    ],
+                    recovered=recovered,
+                )
             if registry is None:
                 if expected_registry_sha is not None:
                     raise MontageLearningCanonicalAdmissionError("receipt registry disappeared")
@@ -1752,11 +2221,8 @@ class MontageLearningCanonicalAdmissionTransactionStore:
     def _run_accepted(self, journal: Mapping[str, Any], raw: Mapping[str, Any], *,
                       staging_store_id: str, owner_scope_hash: str,
                       staging_revision: int, staging_entry_sha256: str,
-                      failure_hook: FailureHook | None, recovered: bool) -> None:
+                      failure_hook: FailureHook | None, recovered: bool) -> dict[str, Any]:
         coordinator = ProductProjectSaveCoordinator()
-        participant = self._participant(journal, failure_hook)
-        target_manifest = parse_product_project_manifest(journal["target_manifest"])
-        canonical_bytes = canonical_json_bytes(journal["proposed_canonical"]) + b"\n"
 
         def guard() -> Iterator[None]:
             return self._commit_guard(
@@ -1769,6 +2235,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
 
         status = coordinator.recovery_status(self.project_root)
         if status["required"]:
+            participant = self._participant(journal, failure_hook)
             coordinator.recover_complete(
                 self.project_root,
                 transaction_id=str(status["transaction_id"]),
@@ -1776,23 +2243,74 @@ class MontageLearningCanonicalAdmissionTransactionStore:
                 commit_guard=guard,
             )
         else:
-            live = ProductProjectManifestStore.load(self.project_root)
-            if live.project_manifest_sha256 != target_manifest.project_manifest_sha256:
-                coordinator.save(
-                    self.project_root,
-                    target_manifest,
-                    {CANONICAL_RELATIVE_PATH.as_posix(): canonical_bytes},
-                    expected_previous_manifest_sha256=str(
-                        journal["proposed_canonical"]["source_project_manifest_sha256"]
-                    ),
-                    participant=participant,
-                    commit_guard=guard,
+            with self._locks():
+                locked_live = ProductProjectManifestStore.load(self.project_root)
+                target_manifest = parse_product_project_manifest(journal["target_manifest"])
+                source_sha = str(
+                    journal["proposed_canonical"]["source_project_manifest_sha256"]
                 )
+                if locked_live.project_manifest_sha256 == target_manifest.project_manifest_sha256:
+                    relation = "TARGET_ALREADY_CURRENT"
+                elif locked_live.project_manifest_sha256 == source_sha:
+                    relation = "ACCEPTED_SOURCE_CURRENT_SAVE_REQUIRED"
+                else:
+                    relation = self._require_single_generic_manifest_advance_locked(
+                        journal, locked_live
+                    )
+                    if relation == "ACCEPTED_GENERIC_SIBLING_REBASE":
+                        journal = self._rebase_pending_exact_after_project_advance_locked(
+                            journal,
+                            raw,
+                            staging_store_id=staging_store_id,
+                            owner_scope_hash=owner_scope_hash,
+                            staging_revision=staging_revision,
+                            staging_entry_sha256=staging_entry_sha256,
+                        )
+                        target_manifest = parse_product_project_manifest(
+                            journal["target_manifest"]
+                        )
+                        source_sha = str(
+                            journal["proposed_canonical"][
+                                "source_project_manifest_sha256"
+                            ]
+                        )
+                        if locked_live.project_manifest_sha256 != source_sha:
+                            raise MontageLearningCanonicalAdmissionError(
+                                "rebased Exact source is not current"
+                            )
+                        relation = "ACCEPTED_SOURCE_CURRENT_SAVE_REQUIRED"
+                if relation == "ACCEPTED_SOURCE_CURRENT_SAVE_REQUIRED":
+                    self._validate_commit_guard_locked(
+                        journal,
+                        raw,
+                        staging_store_id=staging_store_id,
+                        owner_scope_hash=owner_scope_hash,
+                        staging_revision=staging_revision,
+                        staging_entry_sha256=staging_entry_sha256,
+                    )
+                    canonical_bytes = (
+                        canonical_json_bytes(journal["proposed_canonical"]) + b"\n"
+                    )
+                    participant = self._participant(journal, failure_hook)
+                    coordinator._save_locked(
+                        self.project_root,
+                        target_manifest,
+                        {CANONICAL_RELATIVE_PATH.as_posix(): canonical_bytes},
+                        expected_previous_manifest_sha256=source_sha,
+                        participant=participant,
+                    )
+                elif relation not in {
+                    "TARGET_ALREADY_CURRENT", "ACCEPTED_TARGET_THEN_GENERIC_FINISH",
+                }:
+                    raise MontageLearningCanonicalAdmissionError(
+                        "accepted recovery relation is not committable"
+                    )
         if failure_hook is not None:
             failure_hook(
                 "after_project_save_committed" if not recovered else "after_project_save_recovered",
                 self.canonical_path,
             )
+        return dict(journal)
 
     def admit_exact(
         self,
@@ -1865,6 +2383,14 @@ class MontageLearningCanonicalAdmissionTransactionStore:
                     journal["expected_previous_commit_sha256"] != expected_commit or
                     journal["expected_previous_anchor_document_sha256"] != expected_anchor):
                     raise MontageLearningCanonicalAdmissionError("retry does not match pending transaction")
+                journal = self._rebase_pending_exact_after_project_advance_locked(
+                    journal,
+                    raw,
+                    staging_store_id=store_id,
+                    owner_scope_hash=scope,
+                    staging_revision=revision,
+                    staging_entry_sha256=entry_sha,
+                )
             else:
                 journal = self._make_proposal(
                     raw,
@@ -1881,7 +2407,7 @@ class MontageLearningCanonicalAdmissionTransactionStore:
                     if failure_hook is not None:
                         failure_hook("after_journal_write", self.journal_path)
         if journal["operation"] == ACCEPTED:
-            self._run_accepted(
+            journal = self._run_accepted(
                 journal, raw,
                 staging_store_id=store_id,
                 owner_scope_hash=scope,

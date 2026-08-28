@@ -7,6 +7,8 @@ import os
 from pathlib import Path
 import stat
 import subprocess
+import threading
+import time
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -117,8 +119,10 @@ def _arguments(staged) -> dict[str, object]:
 
 
 def _concurrent_admit(project: str, anchor: str, delivery: dict[str, object],
-                      arguments: dict[str, object], start, queue) -> None:
+                      arguments: dict[str, object], start, queue,
+                      delay_seconds: float = 0.0) -> None:
     start.wait(10)
+    time.sleep(delay_seconds)
     try:
         result = _writer(Path(project), Path(anchor)).admit_exact(delivery, **arguments)
         queue.put(("RESULT", result.status, result.receipt.to_dict()["receipt_sha256"]))
@@ -128,8 +132,10 @@ def _concurrent_admit(project: str, anchor: str, delivery: dict[str, object],
 
 def _concurrent_generic(project: str, anchor: str, delivery: dict[str, object],
                         start, queue, expected_revision: int = 0,
-                        owner_scope_hash: str | None = None) -> None:
+                        owner_scope_hash: str | None = None,
+                        delay_seconds: float = 0.0) -> None:
     start.wait(10)
+    time.sleep(delay_seconds)
     try:
         optional = {} if owner_scope_hash is None else {
             "owner_scope_hash": owner_scope_hash,
@@ -711,6 +717,137 @@ def test_generic_lookup_rejects_outer_receipt_without_canonical_commit(
             generic_store_id="task058-generic-review-observations",
         )
     assert _snapshot_tree(project) == before
+
+
+@pytest.mark.parametrize(
+    "invalid_state",
+    ["missing-control", "missing-manifest", "missing-lock", "empty-lock",
+     "wrong-size-lock", "wrong-byte-lock", "symlink-lock", "irregular-lock"],
+)
+def test_store_initialization_requires_existing_product_authority_without_writes(
+    tmp_path: Path, invalid_state: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir()
+    control = project / ".bai-project"
+    lock_path = control / ".project.json.lock"
+    backing = tmp_path / "product-lock-backing"
+    if invalid_state == "missing-control":
+        pass
+    elif invalid_state == "missing-manifest":
+        control.mkdir()
+        lock_path.write_bytes(b"0")
+    else:
+        _project(project)
+        if invalid_state == "missing-lock":
+            lock_path.unlink()
+        elif invalid_state == "empty-lock":
+            lock_path.write_bytes(b"")
+        elif invalid_state == "wrong-size-lock":
+            lock_path.write_bytes(b"00")
+        elif invalid_state == "wrong-byte-lock":
+            lock_path.write_bytes(b"X")
+        elif invalid_state == "symlink-lock":
+            lock_path.unlink()
+            backing.write_bytes(b"0")
+            try:
+                lock_path.symlink_to(backing)
+            except OSError as exc:
+                pytest.skip(f"file symlink creation unavailable: {exc}")
+        else:
+            lock_path.unlink()
+            lock_path.mkdir()
+    before_project = _snapshot_inventory(project)
+    before_anchor = _snapshot_inventory(anchor)
+    backing_before = backing.read_bytes() if backing.exists() else None
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        _writer(project, anchor)
+    assert _snapshot_inventory(project) == before_project
+    assert _snapshot_inventory(anchor) == before_anchor
+    assert (backing.read_bytes() if backing.exists() else None) == backing_before
+
+
+def test_store_initialization_rejects_product_lock_substitution_without_writes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    lock_path = ProductProjectManifestStore.path(project).with_name(
+        ".project.json.lock"
+    )
+    replacement = lock_path.with_name(".project.json.lock.replacement")
+    replacement.write_bytes(b"0")
+    original_open = module._open_existing_lock_nofollow
+    post_substitution: dict[str, dict[str, tuple[str, bytes]]] = {}
+
+    def substitute_then_open(path: Path, name: str):
+        if name == "Product Project":
+            assert path == lock_path
+            os.replace(replacement, lock_path)
+            post_substitution["inventory"] = _snapshot_inventory(project)
+        return original_open(path, name)
+
+    monkeypatch.setattr(module, "_open_existing_lock_nofollow", substitute_then_open)
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="RECOVERY_REQUIRED"):
+        _writer(project, anchor)
+    assert post_substitution
+    assert _snapshot_inventory(project) == post_substitution["inventory"]
+    assert _snapshot_inventory(anchor) == {}
+
+
+@pytest.mark.parametrize("entry_type", ["file", "symlink"])
+def test_store_initialization_rejects_authority_directory_collision_without_writes(
+    tmp_path: Path, entry_type: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    authority_root = project / "state/montage-learning"
+    authority_root.mkdir(parents=True)
+    target = authority_root / "review-observations"
+    backing = tmp_path / "authority-directory-backing"
+    if entry_type == "file":
+        target.write_bytes(b"collision")
+    else:
+        backing.mkdir()
+        try:
+            target.symlink_to(backing, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"directory symlink creation unavailable: {exc}")
+    before_project = _snapshot_inventory(project)
+    before_anchor = _snapshot_inventory(anchor)
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        _writer(project, anchor)
+    assert _snapshot_inventory(project) == before_project
+    assert _snapshot_inventory(anchor) == before_anchor
+
+
+def test_safe_directory_initialization_rejects_parent_identity_swap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    project.mkdir(); _project(project)
+    parent = project / "state"
+    parent.mkdir()
+    target = parent / "authority"
+    moved_parent = project / "state-before-swap"
+    original_mkdir = Path.mkdir
+
+    def mkdir_then_swap(path: Path, *args, **kwargs) -> None:
+        original_mkdir(path, *args, **kwargs)
+        if path == target:
+            parent.rename(moved_parent)
+            original_mkdir(parent)
+            original_mkdir(target)
+
+    monkeypatch.setattr(Path, "mkdir", mkdir_then_swap)
+    with module._exclusive_existing_project_lock(project):
+        with pytest.raises(MontageLearningCanonicalAdmissionError, match="unsafe"):
+            module._ensure_safe_directory_locked(target, "authority directory")
+    assert (moved_parent / "authority").is_dir()
+    assert target.is_dir()
 
 
 @pytest.mark.parametrize("lock_name", ["generic", "product"])
@@ -1551,60 +1688,533 @@ def test_multiprocess_generic_same_cas_has_one_accepted_and_cleans_journal(
         assert verified.status == "ACCEPTED"
 
 
-def test_multiprocess_generic_and_exact_project_writes_serialize(tmp_path: Path) -> None:
+@pytest.mark.parametrize("delayed_worker", ["exact", "generic"])
+def test_multiprocess_generic_and_exact_project_writes_serialize(
+    tmp_path: Path, delayed_worker: str,
+) -> None:
+    for iteration in range(3):
+        project = tmp_path / f"project-{delayed_worker}-{iteration}"
+        anchor = tmp_path / f"anchor-{delayed_worker}-{iteration}"
+        project.mkdir(); anchor.mkdir(); _project(project)
+        exact, staged = _stage(project)
+        generic = _generic_delivery()
+        ctx = multiprocessing.get_context("spawn")
+        start = ctx.Event(); queue = ctx.Queue()
+        exact_delay = 0.10 if delayed_worker == "exact" else 0.0
+        generic_delay = 0.10 if delayed_worker == "generic" else 0.0
+        processes = [
+            ctx.Process(
+                target=_concurrent_admit,
+                args=(str(project), str(anchor), exact, _arguments(staged), start, queue,
+                      exact_delay),
+            ),
+            ctx.Process(
+                target=_concurrent_generic,
+                args=(str(project), str(anchor), generic, start, queue, 0, None,
+                      generic_delay),
+            ),
+        ]
+        started = []
+        try:
+            for process in processes:
+                process.start()
+                started.append(process)
+            start.set()
+            results = [queue.get(timeout=30) for _ in started]
+        finally:
+            _cleanup_processes(started, queue)
+        assert len(results) == 2
+        assert all(type(item) is tuple and len(item) == 3 for item in results), results
+        assert sum(item[0] in {"RESULT", "ERROR"} for item in results) == 1, results
+        assert sum(item[0] in {"GENERIC", "GENERIC_ERROR"} for item in results) == 1, results
+        writer = _writer(project, anchor)
+        exact_worker = next(item for item in results if item[0] in {"RESULT", "ERROR"})
+        if exact_worker[0] == "ERROR":
+            assert exact_worker[1] in {
+                "MontageLearningCanonicalAdmissionError", "ProductError",
+            }, results
+            exact_retry = writer.admit_exact(exact, **_arguments(staged))
+            assert exact_retry.status == "ACCEPTED"
+        if any(item[0] == "GENERIC_ERROR" for item in results):
+            generic_error = next(item for item in results if item[0] == "GENERIC_ERROR")
+            assert generic_error[1] in {
+                "MontageLearningCanonicalAdmissionError", "ProductError",
+            }, results
+            recovered = writer.record_exact_generic_observation(
+                generic, expected_revision=0,
+            )
+            assert recovered.status == "ACCEPTED"
+            generic_commit = recovered.canonical_commit_sha256
+        else:
+            generic_commit = next(item[2] for item in results if item[0] == "GENERIC")
+        receipt = writer.get_verified_receipt()
+        assert receipt.to_public_projection()["canonical_currentness_verified"] is True
+        assert (project / "state/montage-learning-generic-review-observations.json").is_file()
+        verified_generic = writer.get_verified_generic_observation(
+            record_id=str(generic["record_id"]),
+            learning_sha256=str(generic["learning_sha256"]),
+            canonical_commit_sha256="sha256:" + generic_commit,
+        )
+        assert verified_generic.status == "ACCEPTED"
+        assert not (project / JOURNAL_RELATIVE_PATH).exists()
+        assert not writer.generic_journal_path.exists()
+        assert module.ProductProjectSaveCoordinator().recovery_status(project)[
+            "required"
+        ] is False
+
+        stable_inventory = _snapshot_inventory(project)
+        stable_manifest = ProductProjectManifestStore.load(project)
+        duplicate_generic = writer.record_exact_generic_observation(
+            generic, expected_revision=verified_generic.ledger_revision,
+        )
+        assert duplicate_generic.status == "DUPLICATE"
+        assert ProductProjectManifestStore.load(project) == stable_manifest
+        assert _snapshot_inventory(project) == stable_inventory
+
+
+def test_exact_retry_rebases_pending_journal_after_terminal_generic_advance(
+    tmp_path: Path,
+) -> None:
     project = tmp_path / "project"
     anchor = tmp_path / "anchor"
     project.mkdir(); anchor.mkdir(); _project(project)
     exact, staged = _stage(project)
-    generic = _generic_delivery()
-    ctx = multiprocessing.get_context("spawn")
-    start = ctx.Event(); queue = ctx.Queue()
-    processes = [
-        ctx.Process(target=_concurrent_admit,
-                    args=(str(project), str(anchor), exact, _arguments(staged), start, queue)),
-        ctx.Process(target=_concurrent_generic,
-                    args=(str(project), str(anchor), generic, start, queue)),
-    ]
-    started = []
-    try:
-        for process in processes:
-            process.start()
-            started.append(process)
-        start.set()
-        results = [queue.get(timeout=30) for _ in started]
-    finally:
-        _cleanup_processes(started, queue)
-    assert len(results) == 2
-    assert all(type(item) is tuple and len(item) == 3 for item in results), results
-    assert sum(item[0] in {"RESULT", "ERROR"} for item in results) == 1, results
-    assert sum(item[0] in {"GENERIC", "GENERIC_ERROR"} for item in results) == 1, results
     writer = _writer(project, anchor)
-    exact_worker = next(item for item in results if item[0] in {"RESULT", "ERROR"})
-    if exact_worker[0] == "ERROR":
-        assert exact_worker[1] in {
-            "MontageLearningCanonicalAdmissionError", "ProductError",
-        }, results
-        exact_retry = writer.admit_exact(exact, **_arguments(staged))
-        assert exact_retry.status == "ACCEPTED"
-    if any(item[0] == "GENERIC_ERROR" for item in results):
-        generic_error = next(item for item in results if item[0] == "GENERIC_ERROR")
-        assert generic_error[1] in {
-            "MontageLearningCanonicalAdmissionError", "ProductError",
-        }, results
-        recovered = writer.record_exact_generic_observation(
-            generic, expected_revision=0,
-        )
-        assert recovered.status == "ACCEPTED"
-        generic_commit = recovered.canonical_commit_sha256
-    else:
-        generic_commit = next(item[2] for item in results if item[0] == "GENERIC")
-    assert writer.get_verified_receipt().to_public_projection()["canonical_currentness_verified"] is True
-    assert (project / "state/montage-learning-generic-review-observations.json").is_file()
-    verified_generic = writer.get_verified_generic_observation(
+    arguments = _arguments(staged)
+    raw = module._exact(exact, "delivery", max_nodes=200_000)
+    with module.exclusive_file_update_lock(writer.journal_path):
+        with writer._locks():
+            pending = writer._make_proposal(
+                raw,
+                staging_store_id=STORE_ID,
+                owner_scope_hash=OWNER_SCOPE_HASH,
+                staging_revision=staged.ledger.revision,
+                staging_entry_sha256=staged.entry.to_dict()["entry_sha256"],
+                expected_commit=None,
+                expected_anchor=None,
+                processed_at="2026-08-28T00:00:00Z",
+            )
+            module.AtomicJsonWriter.write(
+                writer.journal_path, pending, validator=module._parse_journal
+            )
+
+    generic = _generic_delivery()
+    generic_result = writer.record_exact_generic_observation(generic, expected_revision=0)
+    advanced = ProductProjectManifestStore.load(project)
+    assert advanced.project_manifest_sha256 not in {
+        pending["proposed_canonical"]["source_project_manifest_sha256"],
+        pending["target_manifest"]["project_manifest_sha256"],
+    }
+
+    exact_result = writer.admit_exact(exact, **arguments)
+    assert exact_result.status == "ACCEPTED"
+    assert exact_result.recovered is True
+    current = ProductProjectManifestStore.load(project)
+    assert current.project_revision == advanced.project_revision + 1
+    assert writer.get_verified_receipt().to_public_projection()[
+        "canonical_currentness_verified"
+    ] is True
+    assert writer.get_verified_generic_observation(
         record_id=str(generic["record_id"]),
         learning_sha256=str(generic["learning_sha256"]),
-        canonical_commit_sha256="sha256:" + generic_commit,
-    )
-    assert verified_generic.status == "ACCEPTED"
-    assert not (project / JOURNAL_RELATIVE_PATH).exists()
+        canonical_commit_sha256="sha256:" + generic_result.canonical_commit_sha256,
+    ).status == "ACCEPTED"
+    assert not writer.journal_path.exists()
     assert not writer.generic_journal_path.exists()
+    assert module.ProductProjectSaveCoordinator().recovery_status(project)[
+        "required"
+    ] is False
+
+
+@pytest.mark.parametrize("retry_mode", ["same-writer", "fresh-writer", "restart"])
+def test_accepted_retry_finishes_after_exact_target_then_terminal_generic_append(
+    tmp_path: Path, retry_mode: str,
+) -> None:
+    project = tmp_path / f"project-{retry_mode}"
+    anchor = tmp_path / f"anchor-{retry_mode}"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    arguments = _arguments(staged)
+
+    def fail_after_exact_target(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_project_save_committed":
+            raise RuntimeError("accepted-target-crash")
+
+    with pytest.raises(RuntimeError, match="accepted-target-crash"):
+        writer.admit_exact(
+            exact, failure_hook=fail_after_exact_target, **arguments
+        )
+    sealed = json.loads(writer.journal_path.read_text(encoding="utf-8"))
+    assert sealed["operation"] == "ACCEPTED"
+    target_manifest = ProductProjectManifestStore.load(project)
+    assert target_manifest.project_manifest_sha256 == sealed["target_manifest"][
+        "project_manifest_sha256"
+    ]
+    exact_paths = (
+        project / CANONICAL_RELATIVE_PATH,
+        anchor / ANCHOR_FILE_NAME,
+    )
+    exact_bytes = {path: path.read_bytes() for path in exact_paths}
+
+    generic = _generic_delivery()
+    generic_result = writer.record_exact_generic_observation(
+        generic, expected_revision=0
+    )
+    generic_manifest = ProductProjectManifestStore.load(project)
+    assert generic_manifest.project_revision == target_manifest.project_revision + 1
+    before_retry = _snapshot_inventory(project)
+
+    if retry_mode == "same-writer":
+        retry_writer = writer
+    else:
+        if retry_mode == "restart":
+            del writer
+        retry_writer = _writer(project, anchor)
+    accepted = retry_writer.admit_exact(exact, **arguments)
+    assert accepted.status == "ACCEPTED"
+    assert accepted.recovered is True
+    assert ProductProjectManifestStore.load(project) == generic_manifest
+    assert {path: path.read_bytes() for path in exact_paths} == exact_bytes
+    after_retry = _snapshot_inventory(project)
+    assert set(before_retry) - set(after_retry) == {JOURNAL_RELATIVE_PATH.as_posix()}
+    assert set(after_retry) - set(before_retry) == {
+        module.RECEIPT_RELATIVE_PATH.as_posix()
+    }
+    for path in set(before_retry) & set(after_retry):
+        assert after_retry[path] == before_retry[path]
+    assert retry_writer.get_verified_generic_observation(
+        record_id=str(generic["record_id"]),
+        learning_sha256=str(generic["learning_sha256"]),
+        canonical_commit_sha256="sha256:" + generic_result.canonical_commit_sha256,
+    ).status == "ACCEPTED"
+    assert retry_writer.get_verified_receipt().receipt.to_dict() == accepted.receipt.to_dict()
+    assert not retry_writer.journal_path.exists()
+    assert not retry_writer.generic_journal_path.exists()
+    assert module.ProductProjectSaveCoordinator().recovery_status(project)[
+        "required"
+    ] is False
+
+    stable_inventory = _snapshot_inventory(project)
+    duplicate = retry_writer.admit_exact(exact, **{
+        **arguments,
+        "expected_canonical_store_commit_sha256": accepted.canonical_store_commit_sha256,
+        "expected_external_anchor_document_sha256": accepted.external_anchor_document_sha256,
+    })
+    assert duplicate.status == "DUPLICATE"
+    assert _snapshot_inventory(project) == stable_inventory
+
+
+def test_exact_source_classification_and_product_save_share_one_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+    started = threading.Event()
+    finished = threading.Event()
+    results: list[ReviewObservationAdmissionResult] = []
+    errors: list[BaseException] = []
+    threads: list[threading.Thread] = []
+    original = module.ProductProjectSaveCoordinator._save_locked
+    injected = False
+
+    def generic_worker() -> None:
+        started.set()
+        try:
+            results.append(
+                writer.record_exact_generic_observation(generic, expected_revision=0)
+            )
+        except BaseException as exc:  # pragma: no cover - asserted below
+            errors.append(exc)
+        finally:
+            finished.set()
+
+    def save_locked_with_competing_generic(self, *args, **kwargs):
+        nonlocal injected
+        if not injected:
+            injected = True
+            thread = threading.Thread(target=generic_worker, daemon=True)
+            threads.append(thread)
+            thread.start()
+            assert started.wait(timeout=5)
+            assert not finished.wait(timeout=0.2)
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(
+        module.ProductProjectSaveCoordinator,
+        "_save_locked",
+        save_locked_with_competing_generic,
+    )
+    accepted = writer.admit_exact(exact, **_arguments(staged))
+    assert accepted.status == "ACCEPTED"
+    assert threads
+    threads[0].join(timeout=30)
+    assert not threads[0].is_alive()
+    if errors:
+        assert len(errors) == 1
+        assert isinstance(errors[0], module.ProductError)
+        assert errors[0].code == "ERR_PROJECT_SAVE_REVISION_CONFLICT"
+        assert writer.generic_journal_path.exists()
+        results.append(
+            writer.recover_generic_observation(generic)
+        )
+    assert len(results) == 1 and results[0].status == "ACCEPTED"
+    manifest = ProductProjectManifestStore.load(project)
+    assert manifest.project_revision == 3
+    assert writer.get_verified_receipt().receipt.to_dict() == accepted.receipt.to_dict()
+    assert writer.get_verified_generic_observation(
+        record_id=str(generic["record_id"]),
+        learning_sha256=str(generic["learning_sha256"]),
+        canonical_commit_sha256="sha256:" + results[0].canonical_commit_sha256,
+    ).status == "ACCEPTED"
+    assert not writer.journal_path.exists()
+    assert not writer.generic_journal_path.exists()
+
+
+@pytest.mark.parametrize("fault", ["marker", "multiple-generic", "unrelated-child"])
+def test_accepted_target_then_generic_rejects_nonterminal_or_combined_advance(
+    tmp_path: Path, fault: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+
+    def fail_after_exact_target(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_project_save_committed":
+            raise RuntimeError("accepted-target-crash")
+
+    with pytest.raises(RuntimeError, match="accepted-target-crash"):
+        writer.admit_exact(
+            exact,
+            failure_hook=fail_after_exact_target,
+            **_arguments(staged),
+        )
+    first_delivery = _generic_delivery()
+    first = writer.record_exact_generic_observation(first_delivery, expected_revision=0)
+    if fault == "marker":
+        marker_path = project / writer._generic_marker_relative_path(
+            first.canonical_readback.transaction_id
+        )
+        marker = json.loads(marker_path.read_text(encoding="utf-8"))
+        marker["marker_self_hash"] = "sha256:" + "f" * 64
+        marker_path.write_bytes(canonical_json_bytes(marker) + b"\n")
+    elif fault == "multiple-generic":
+        second_delivery = _generic_delivery()
+        second_delivery["record_id"] = "generic-record-second"
+        second_delivery["payload"]["record_id"] = "generic-record-second"
+        second_delivery["learning_sha256"] = canonical_learning_sha256(
+            second_delivery["payload"]
+        )
+        writer.record_exact_generic_observation(second_delivery, expected_revision=1)
+    else:
+        current = ProductProjectManifestStore.load(project)
+        relative_path = "state/unrelated-after-generic.json"
+        document = canonical_json_bytes({"schema_version": "1.0.0", "value": fault}) + b"\n"
+        target = ProductProjectManifest.create(
+            project_id=current.project_id,
+            project_revision=current.project_revision + 1,
+            product_version=current.product_version,
+            timebase=current.timebase,
+            child_bindings=[
+                *current.child_bindings,
+                module.ProjectChildBinding(
+                    "TASK-OTHER", relative_path, "test.unrelated-child", "1.0.0",
+                    module.sha256_bytes(document), True,
+                ),
+            ],
+            created_at=current.created_at,
+            updated_at="2026-08-28T00:00:02Z",
+        )
+        module.ProductProjectSaveCoordinator().save(
+            project,
+            target,
+            {relative_path: document},
+            expected_previous_manifest_sha256=current.project_manifest_sha256,
+        )
+    pending_bytes = writer.journal_path.read_bytes()
+    manifest_before = ProductProjectManifestStore.load(project)
+    inventory_before = _snapshot_inventory(project)
+
+    with pytest.raises((MontageLearningCanonicalAdmissionError, module.ProductError)):
+        writer.admit_exact(exact, **_arguments(staged))
+    assert writer.journal_path.read_bytes() == pending_bytes
+    assert ProductProjectManifestStore.load(project) == manifest_before
+    assert _snapshot_inventory(project) == inventory_before
+
+
+def test_exact_retry_rejects_tampered_generic_tail_without_rebasing(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    raw = module._exact(exact, "delivery", max_nodes=200_000)
+    with module.exclusive_file_update_lock(writer.journal_path):
+        with writer._locks():
+            pending = writer._make_proposal(
+                raw,
+                staging_store_id=STORE_ID,
+                owner_scope_hash=OWNER_SCOPE_HASH,
+                staging_revision=staged.ledger.revision,
+                staging_entry_sha256=staged.entry.to_dict()["entry_sha256"],
+                expected_commit=None,
+                expected_anchor=None,
+                processed_at="2026-08-28T00:00:00Z",
+            )
+            module.AtomicJsonWriter.write(
+                writer.journal_path, pending, validator=module._parse_journal
+            )
+    generic = writer.record_exact_generic_observation(
+        _generic_delivery(), expected_revision=0
+    )
+    marker_path = project / writer._generic_marker_relative_path(
+        generic.canonical_readback.transaction_id
+    )
+    marker = json.loads(marker_path.read_text(encoding="utf-8"))
+    marker["marker_self_hash"] = "sha256:" + "f" * 64
+    marker_path.write_bytes(canonical_json_bytes(marker) + b"\n")
+    pending_bytes = writer.journal_path.read_bytes()
+    manifest_before = ProductProjectManifestStore.load(project)
+    inventory_before = _snapshot_inventory(project)
+
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        writer.admit_exact(exact, **_arguments(staged))
+    assert writer.journal_path.read_bytes() == pending_bytes
+    assert ProductProjectManifestStore.load(project) == manifest_before
+    assert _snapshot_inventory(project) == inventory_before
+
+
+@pytest.mark.parametrize("advance", ["manifest-only", "other-child", "generic-and-other"])
+def test_exact_retry_rejects_non_generic_only_project_advance_without_writes(
+    tmp_path: Path, advance: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    raw = module._exact(exact, "delivery", max_nodes=200_000)
+    with module.exclusive_file_update_lock(writer.journal_path):
+        with writer._locks():
+            pending = writer._make_proposal(
+                raw,
+                staging_store_id=STORE_ID,
+                owner_scope_hash=OWNER_SCOPE_HASH,
+                staging_revision=staged.ledger.revision,
+                staging_entry_sha256=staged.entry.to_dict()["entry_sha256"],
+                expected_commit=None,
+                expected_anchor=None,
+                processed_at="2026-08-28T00:00:00Z",
+            )
+            module.AtomicJsonWriter.write(
+                writer.journal_path, pending, validator=module._parse_journal
+            )
+    if advance == "generic-and-other":
+        writer.record_exact_generic_observation(_generic_delivery(), expected_revision=0)
+    current = ProductProjectManifestStore.load(project)
+    documents: dict[str, bytes] = {}
+    bindings = list(current.child_bindings)
+    if advance != "manifest-only":
+        relative_path = "state/unrelated-product-child.json"
+        document = canonical_json_bytes({"schema_version": "1.0.0", "value": advance}) + b"\n"
+        documents[relative_path] = document
+        bindings.append(module.ProjectChildBinding(
+            "TASK-OTHER", relative_path, "test.unrelated-child", "1.0.0",
+            module.sha256_bytes(document), True,
+        ))
+    target = ProductProjectManifest.create(
+        project_id=current.project_id,
+        project_revision=current.project_revision + 1,
+        product_version=current.product_version,
+        timebase=current.timebase,
+        child_bindings=bindings,
+        created_at=current.created_at,
+        updated_at="2026-08-28T00:00:01Z",
+    )
+    module.ProductProjectSaveCoordinator().save(
+        project,
+        target,
+        documents,
+        expected_previous_manifest_sha256=current.project_manifest_sha256,
+    )
+    pending_bytes = writer.journal_path.read_bytes()
+    manifest_before = ProductProjectManifestStore.load(project)
+    inventory_before = _snapshot_inventory(project)
+
+    with pytest.raises(MontageLearningCanonicalAdmissionError):
+        writer.admit_exact(exact, **_arguments(staged))
+    assert writer.journal_path.read_bytes() == pending_bytes
+    assert ProductProjectManifestStore.load(project) == manifest_before
+    assert _snapshot_inventory(project) == inventory_before
+
+
+@pytest.mark.parametrize("fresh_writer", [False, True])
+def test_duplicate_retry_after_generic_advance_is_body_free_and_exact_immutable(
+    tmp_path: Path, fresh_writer: bool,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    accepted = writer.admit_exact(exact, **_arguments(staged))
+    duplicate_arguments = {
+        **_arguments(staged),
+        "expected_canonical_store_commit_sha256": accepted.canonical_store_commit_sha256,
+        "expected_external_anchor_document_sha256": accepted.external_anchor_document_sha256,
+    }
+    exact_paths = (
+        project / CANONICAL_RELATIVE_PATH,
+        anchor / ANCHOR_FILE_NAME,
+        project / module.RECEIPT_RELATIVE_PATH,
+    )
+    exact_bytes = {path: path.read_bytes() for path in exact_paths}
+
+    def fail_after_duplicate_journal(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_journal_write":
+            raise RuntimeError("duplicate-journal-crash")
+
+    with pytest.raises(RuntimeError, match="duplicate-journal-crash"):
+        writer.admit_exact(
+            exact, failure_hook=fail_after_duplicate_journal, **duplicate_arguments
+        )
+    assert json.loads(writer.journal_path.read_text(encoding="utf-8"))[
+        "operation"
+    ] == "DUPLICATE"
+    generic = _generic_delivery()
+    generic_result = writer.record_exact_generic_observation(generic, expected_revision=0)
+    before_retry = _snapshot_inventory(project)
+
+    retry_writer = _writer(project, anchor) if fresh_writer else writer
+    duplicate = retry_writer.admit_exact(exact, **duplicate_arguments)
+    assert duplicate.status == "DUPLICATE"
+    assert duplicate.recovered is True
+    assert duplicate.receipt.to_dict()["duplicate_of_receipt_sha256"] == (
+        accepted.receipt.to_dict()["receipt_sha256"]
+    )
+    assert {path: path.read_bytes() for path in exact_paths} == exact_bytes
+    expected_inventory = dict(before_retry)
+    expected_inventory.pop(JOURNAL_RELATIVE_PATH.as_posix())
+    assert _snapshot_inventory(project) == expected_inventory
+    assert retry_writer.get_verified_receipt().receipt.to_dict() == accepted.receipt.to_dict()
+    assert retry_writer.get_verified_generic_observation(
+        record_id=str(generic["record_id"]),
+        learning_sha256=str(generic["learning_sha256"]),
+        canonical_commit_sha256="sha256:" + generic_result.canonical_commit_sha256,
+    ).status == "ACCEPTED"
+    assert not retry_writer.journal_path.exists()
+    assert not retry_writer.generic_journal_path.exists()
+    assert module.ProductProjectSaveCoordinator().recovery_status(project)[
+        "required"
+    ] is False

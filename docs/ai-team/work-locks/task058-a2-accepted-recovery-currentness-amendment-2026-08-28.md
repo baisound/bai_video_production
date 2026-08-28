@@ -1,119 +1,159 @@
-# TASK-058 A2 Accepted Recovery Currentness Amendment
+# TASK-058 A2 Atomic Recovery Carrier Evidence
 
-## Identity
+## Authority and objective
 
 - Evidence date: 2026-08-28
-- Base main: `2025c0fcbbbf492bae3cbadbd9aa47c1c048c14a`
-- Registry preimage revision: `135`
-- Registry candidate revision: `136`
-- Registry lock count before and after: `9`
-- Registry history count before and after: `64`
-- Target active lock count before and after: `1`
-- Lock ID: `BVP-INTEGRATION-LOCK-TASK058-A2-POST-MAIN-DIRECTORY-RACE-CORRECTIVE-CHANGELOG-20260828`
-- Changed paths: the Registry plus this Evidence file only.
+- Owner Gate: `REV136_ATOMIC_RECOVERY_CARRIER`
+- Carrier mode: `ATOMIC_RECOVERY_CARRIER_TWO_COMMIT_V1`
+- Canonical base main: `2025c0fcbbbf492bae3cbadbd9aa47c1c048c14a`
+- Pull request: `434`
+- Target branch: `codex/task-058-a2-accepted-recovery-currentness-amendment`
+- Pre-update remote head: `19831a43e9f548f070d8dc45ca92b17ab5956d79`
+- Registry revision: `135 -> 136`
+- Registry locks: `9 -> 9`
+- Registry integration history: `64 -> 64`
+- Matching active TASK-058 corrective lock: `1 -> 1`
 
-## Fresh currentness read-back
+PR 434 previously carried only the Registry and this Evidence. Its Hosted CI run
+`33138614278` passed five of six jobs and failed Windows 3.13 with the canonical
+TASK-058 A2 directory-initialization race. Security run `33138614238` passed two of
+two checks. Release metadata run `33138614209` passed. Retry count is zero.
 
-Canonical main and origin/main both identify
-`2025c0fcbbbf492bae3cbadbd9aa47c1c048c14a`. Registry revision 135 contains one
-matching active corrective lock. The amendment branch, Evidence path, remote branch,
-and all-state pull-request lookup had no collision. Seventeen open pull requests were
-read, and none changes either exact metadata path in this Unit.
+The Owner approved one atomic carrier so that the corrected source, its exact test,
+the already approved corrective CHANGELOG bullet, and the Registry transition reach
+main through one pull request. This Unit does not authorize a retry or merge of PR 432.
 
-Existing PR 432 remains OPEN, Draft, and MERGEABLE on branch
-`codex/task-058-p1ce-canonical-promotion-transaction-store`. Its exact current head is
-`795093cf2c7e9a35bd67b87ff6aa16a4abcd263d`, and its changed paths remain the exact
-source and test paths governed by this corrective lifecycle.
+## Failed predecessor
 
-Hosted CI run `33135366027` completed 4 of 6 jobs successfully. Ubuntu 3.11, 3.12,
-and 3.13 and Windows 3.13 passed. Windows 3.11 and 3.12 failed the same accepted
-recovery convergence case. Security run `33135366068` completed 2 of 2 successfully.
-Release metadata run `33135366019` failed as expected because the separately approved
-corrective CHANGELOG line has not been integrated. Unchanged-head retry count is zero.
+- Pull request: `432`
+- Branch: `codex/task-058-p1ce-canonical-promotion-transaction-store`
+- Head: `795093cf2c7e9a35bd67b87ff6aa16a4abcd263d`
+- Hosted CI: `33135366027`, four of six passed
+- Security: `33135366068`, two of two passed
+- Release metadata: `33135366019`, expected failure before CHANGELOG integration
+- State: `FAILED_PREDECESSOR_NO_FURTHER_PUSH_OR_MERGE`
 
-## Lifecycle audit and decision
+The previously planned PR 432 update to `aa0f63e...` is superseded and not authorized.
+PR 432 remains historical failure evidence only.
 
-The revision-135 expiry list has no unconditional hosted-check-failure condition.
-PR 432 is not closed or merged, its current head is exactly the phase-approved
-`795093cf...`, the exact source and test paths remain stable, and there is no shared
-metadata overlap. The lock is therefore still nonterminal and may carry one separately
-typed Owner-approved recovery head without ignoring an expiry guard.
+## Two-commit topology
 
-The prior one-shot update to `795093cf...` is consumed and cannot be retried. This
-amendment keeps PR 432 and head `795093cf...` as the current target until revision 136
-is merged and read back from canonical main. It records `aa0f63e...` only as the next
-approved same-PR update. It creates no pull request and grants no target merge authority.
+The carrier avoids an impossible commit self-reference by using two local commits.
 
-## Approved accepted-recovery candidate
+### Payload commit C
 
-- Authority source: `OWNER_BOUNDED_CORRECTIVE_UNIT_PR432_HOSTED_ACCEPTED_RECOVERY_H1_20260828`
-- Parent: `795093cf2c7e9a35bd67b87ff6aa16a4abcd263d`
-- Head: `aa0f63ec1bb41595c1bbc70dd863d278b9041fa5`
-- Verified ancestry: `795093cf...` is the direct parent of `aa0f63e...`.
-- Source path: `src/ai_video_production/montage_learning_canonical_admission_transaction.py`
+- Parent: `19831a43e9f548f070d8dc45ca92b17ab5956d79`
+- Head: `b9ce90c16c60cb8476c2be13f2142f72d0775556`
+- Exact changed paths: `3`
+- Intermediate push authorized: `false`
+
+The exact payload paths are:
+
+1. `CHANGELOG.md`
+2. `src/ai_video_production/montage_learning_canonical_admission_transaction.py`
+3. `tests/test_task058_montage_learning_canonical_admission_transaction.py`
+
+The source and test Git blobs are byte-identical to approved recovery head
+`aa0f63ec1bb41595c1bbc70dd863d278b9041fa5`. The CHANGELOG contains the exact
+`approved_changelog_bullet` from the active Registry record exactly once.
+
+### Metadata wrapper commit M
+
+- Parent: exact payload commit C
+- Exact changed paths: `2`
+- Paths: `docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json` and this Evidence
+- Head value stored inside M: `null`
+- Head state: `EXTERNAL_EXACT_PR_HEAD_REQUIRED`
+
+The final M SHA cannot be stored inside M without a circular dependency. Its exact
+SHA is frozen externally by independent DEV-4 review, Hosted checks, and the Owner
+Ready and merge Gate. C and M must be complete before a single force-less branch push.
+
+## Payload coordinates
+
+All SHA-256 values in this section hash raw Git blob bytes, not checkout bytes. This
+avoids CRLF or LF working-tree conversion ambiguity.
+
+The pre-existing Registry fields `accepted_recovery_source_sha256` and
+`accepted_recovery_test_sha256` remain byte-for-byte historical opaque coordinates.
+Their legacy values are not carrier authority and are not silently reinterpreted or
+corrected by this Unit. Carrier authority uses only the explicitly named
+`sha256_git_blob_bytes` fields below together with the exact Git blob object IDs.
+
+- CHANGELOG mode: `100644`
+- CHANGELOG Git blob: `874a2994ba9a020b32bd62e7fce5cc4f39b59e48`
+- CHANGELOG blob SHA-256: `1f73e323cb07063492ab22037b0c7fdd158a1699ff76b25bd361d45f441d2894`
+- Source mode: `100644`
 - Source Git blob: `165c095684a71f29a3593baed063880fb0ef35cd`
-- Source SHA-256: `6e6514f904d726c6319eb1e0736262fb606ed0a2a498ce0613fef79bcd567e8f`
-- Test path: `tests/test_task058_montage_learning_canonical_admission_transaction.py`
+- Source blob SHA-256: `0b026e525a5bd08a939dcf4cff705f74bb1ad0d1489ce2351b0bb6db7ea78642`
+- Test mode: `100644`
 - Test Git blob: `6a08ee752ba0646d7eea0eb5764cfd97f73f52f3`
-- Test SHA-256: `7e6854e442af4d175090a867472df5a3acdea9498d44e0fd15ebb8d178c44c31`
-- Exact changed path count: `2`
-- Independent DEV-4: Critical/High/Medium/Low `0/0/0/0`, Technical GO.
+- Test blob SHA-256: `f007035cb42bda04d46a211f8138488c39b1957b399ef63fb4c1a473cb7aec83`
 
-Independent WSL execution used a fresh process, disabled bytecode and pytest cache,
-and installed no dependency. The new operation, atomicity, and negative selection
-passed 7 tests. The focused file passed 83 tests with 5 Windows-only skips. The feasible
-TASK-043, TASK-055, and TASK-058 direct set passed 375 tests with the same 5 skips.
-Compilation passed. Pre-test and post-test HEAD, clean state, Git blobs, and SHA-256
-coordinates were unchanged.
+## Final exact path set
 
-Windows-only HANDLE and junction fixtures are not confirmed because a local Windows
-pytest runtime was unavailable. One TASK-043 file is also not confirmed because the
-existing WSL environment lacks `referencing`. Neither limitation is recorded as PASS.
-The next exact Hosted run must provide the Windows and full-matrix evidence.
+The pull request final diff must contain exactly these five paths:
 
-## Phase-scoped target currentness
+1. `CHANGELOG.md`
+2. `docs/ai-team/work-locks/ACTIVE-WORK-LOCKS.json`
+3. `docs/ai-team/work-locks/task058-a2-accepted-recovery-currentness-amendment-2026-08-28.md`
+4. `src/ai_video_production/montage_learning_canonical_admission_transaction.py`
+5. `tests/test_task058_montage_learning_canonical_admission_transaction.py`
 
-- Before revision-136 main read-back, PR 432 must remain OPEN and Draft at exact head
-  `795093cf2c7e9a35bd67b87ff6aa16a4abcd263d`.
-- After revision-136 main read-back and an exact Owner one-shot push Gate, the only
-  accepted transient update is the same PR 432 at exact head
-  `aa0f63ec1bb41595c1bbc70dd863d278b9041fa5`.
-- New pull-request creation is false. A different PR, branch, or head is
-  `TARGET_HEAD_MISMATCH`.
-- The one-shot update is force-less, has no retry, and requires `795093cf...` to remain
-  the direct parent of `aa0f63e...`.
-- After the update, a second currentness amendment must bind exact PR 432, head
-  `aa0f63e...`, Hosted CI and Security results, and retry count zero. That amendment
-  must make `aa0f63e...` the current expected head before CHANGELOG or Ready activity.
+The Registry binds this Evidence blob and a sorted exact-four projection containing
+this Evidence, CHANGELOG, source, and test. The Registry excludes itself from that
+projection to avoid self-reference. The projection format and digest are recorded in
+the Registry after this Evidence blob is fixed.
 
-## Protected-field equality
+## Target and authority transition
 
-The following authority and lifecycle controls are byte-for-byte unchanged from
-revision 135: activation scope, target merge authority and null authority ID, allowed
-shared file list, denied operations, controlled shared paths, merge order, successor
-reservation, prerequisites, expiry conditions, release condition, workflow policy,
-composition rule, roadmap delta, post-integration null coordinate, automatic retry,
-and automatic rollback or revert.
+- Active target becomes PR 434 and its exact branch.
+- PR 432 and head `795093c...` become a failed predecessor with no future push or merge.
+- Implementation mutation is limited to the exact source and test blobs in payload C.
+- Shared integration effect is limited to the exact approved CHANGELOG bullet.
+- Registry and Evidence mutation is limited to metadata wrapper M.
+- Target Ready and merge authority remain `NOT_GRANTED`; authority ID remains `null`.
+- B+C, PP-A, other source, schema, test, runtime, native, provider, network, paid,
+  Release, Deploy, and Production effects remain unauthorized.
 
-The approved shared scope remains exactly one later `CHANGELOG.md` effect. No CHANGELOG
-content is changed in this Unit. No admission, Product Project data, Exact or Generic
-ledger, anchor, receipt, Profile, B+C connector, Timeline, Resolve, native/provider,
-network, paid, Release, Deploy, or Production effect is authorized or performed.
+## Local carrier validation
 
-## Canonical continuation order
+- TASK-058 canonical admission transaction focused: `83 passed, 5 Windows-only skipped`
+- TASK-043, TASK-055, and TASK-058 feasible direct regression: `375 passed, 5 Windows-only skipped`
+- Python compileall for `src` and `tests`: `PASS`
+- OSS readiness: `12 passed`
+- New dependency installation: `0`
+- Source, test, and CHANGELOG payload C remained unchanged through validation.
 
-1. Review this exact revision-136 two-file candidate under independent DEV-4.
-2. Host it on a Draft pull request and require all metadata checks to pass.
-3. Obtain a separate exact Owner merge Gate, merge it normally, and read Registry
-   revision 136 from canonical main.
-4. Re-read PR 432 as OPEN and Draft at exact head `795093cf...`, recheck branch and PR
-   collisions, exact source and test coordinates, ancestry, and shared overlap.
-5. Obtain a separate exact Owner one-shot Gate and push `aa0f63e...` to the existing
-   PR 432 branch once, without force, rebase, or retry. Create no new pull request.
-6. Read back PR 432 at exact head `aa0f63e...` and require Hosted CI and Security to
-   complete on that unchanged head. Classify any failure without same-head retry.
-7. Host and merge a second currentness amendment that binds exact PR 432, head
-   `aa0f63e...`, Hosted checks, retry count zero, and current expected head.
-8. Only after that canonical read-back may the exact approved corrective CHANGELOG
-   line be composed. Ready, merge, post-main verification, and append-only closure
-   remain separate exact Gates.
+Windows-only HANDLE and junction fixtures remain for the Hosted Windows matrix. The
+next exact M must pass all six CI jobs; these local results do not replace that Gate.
+
+## Head-currentness phases
+
+1. Before carrier construction, PR 434 must be exact head `19831a43...`.
+2. Local C and M may exist without remote effect. C alone must never be pushed.
+3. After independent DEV-4 approval, one force-less push may move PR 434 from
+   `19831a43...` to the externally frozen exact M head.
+4. The pushed M must have parent C, C must have parent `19831a43...`, the final diff
+   must be exact five paths, and the non-self-referential projection must match.
+5. Any other PR, parent chain, path set, projection, or content is
+   `TARGET_HEAD_MISMATCH`.
+6. The exact M head must pass CI six of six, Security two of two, and Release metadata
+   one of one with unchanged-head retry zero.
+7. Independent DEV-4 must remain Critical and High zero. A separate Owner Gate must
+   bind the exact M head before Ready or merge.
+
+## Continuation and closure
+
+1. Complete C and M locally and verify their exact topology and five-path diff.
+2. Obtain independent Critic, Tester, and Judge approval for exact M.
+3. Re-read main, PR 434 head, collisions, overlaps, and all carrier coordinates.
+4. Push C and M together once without force, rebase, or retry.
+5. Require Hosted CI, Security, and Release metadata to pass on exact M.
+6. Obtain a separate exact Owner Ready and merge Gate.
+7. Merge normally and verify fresh main, Registry revision 136, payload bytes, and
+   post-main CI and Security.
+8. Record PR 434 head, merge SHA, Hosted and post-main runs, and PR 432 supersession
+   in an append-only Registry revision 137 closure.
+
+No new implementation starts before the revision-137 closure is canonical.

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 137,
+  "registry_revision": 138,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
   "audit_base_main_sha": "dc8a1949b58f7a5fa298a4d9153a2d410a1388da",
@@ -1045,6 +1045,77 @@
         "EXACT_MAIN_MERGE_POST_MERGE_CI_SECURITY_PASS",
         "APPEND_ONLY_LOCK_CLOSURE_HOSTED"
       ]
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK058-PR436-BPLUSC-BRIDGE-READINESS-CHANGELOG-20260829",
+      "owner_agent": "root coordination / TASK-058 integration owner",
+      "owner_thread_id": "01a040fd-48b8-7462-bb76-021c7603a599",
+      "lock_host_authority": "OWNER_EXACT_APPROVAL_TASK058_PR436_LOCK_HOST_EXACT2_20260829",
+      "integration_effect_authority_state": "AUTHORIZED_PENDING_HOST_MAIN_READBACK",
+      "target_merge_authority_state": "NOT_AUTHORIZED",
+      "implementation_authority_state": "TASK058_PR436_TECHNICAL_GO_HOSTED_8_OF_9_CHANGELOG_ONLY_FAIL",
+      "hosting_branch": "codex/task-058-pr436-changelog-lock-host",
+      "hosting_base_sha": "86b4a42a00439f934e0c57288f139ad92045b143",
+      "status": "PENDING_HOST_PR",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "target_pull_request": 436,
+      "target_pull_request_state": "OPEN_DRAFT_HOSTED_8_OF_9_PASS_CHANGELOG_ONLY_FAIL",
+      "target_branch": "codex/task-058-fast-batch-bc-bridge-readiness",
+      "expected_pre_integration_head": "f7acc80f02f448a5d21d01fcf64677e6bfaeaf0b",
+      "purpose": "ONE_EXACT_TASK058_PR436_BPLUSC_BRIDGE_READINESS_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+      "approved_changelog_bullet": "- TASK-058 B+Cとして、file bridgeとapplication routingを追加し、public readiness contractをV1に限定してV2 readinessをprivate/non-exportedにしました。caller-supplied PASS／digest／current-head／package-byte claimだけではREADYを生成せず、trusted ExpectedContext oracleがない場合は全component PASSでもBLOCKEDとし、connector_enabled=falseおよびactivation_authorized=falseを維持します。outer receiptのexact correlationを強化し、mismatch／tamper／replayを拒否します。installed-SKILL実行、external round-trip／Profile load、connector activation／runtime use、Release／Deploy／Productionは未確認・未開始です。",
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
+      "immutable_target_path_count": 8,
+      "immutable_target_projection_sha256": "cf4ea777adc97ab8cc20b374c75597a9a1fa8cd990f20d061ded272210157703",
+      "immutable_target_projection_spec": "LF_JOINED_GIT_LS_TREE_LINES_FOR_SORTED_TARGET_PATHS_NO_TRAILING_LF",
+      "controlled_shared_target_paths": [],
+      "open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_4_OPEN_PRS",
+      "merge_order_reservation": "TASK058_PR436_NEXT_SHARED_CHANGELOG_CONSUMER_AFTER_REVISION137_HOSTED_CLOSED_RELEASED",
+      "successor_reservation": "NONE",
+      "denied": [
+        "TASK058_PR436_IMPLEMENTATION_SCHEMA_TEST_DESIGN_OR_TASK_MUTATION_DURING_INTEGRATION_EFFECT",
+        "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
+        ".github/**",
+        "OTHER_SHARED_INTEGRATION_FILES",
+        "PUBLIC_V2_READINESS_OR_TRUSTED_EXPECTED_CONTEXT_ORACLE_CREATION",
+        "CONNECTOR_ACTIVATION_PROFILE_AUTO_APPLY_TIMELINE_OR_RESOLVE_MUTATION",
+        "INSTALLED_SKILL_EXTERNAL_ROUND_TRIP_OR_RUNTIME_VALIDATION_CLAIM",
+        "VERSION_TAG_RELEASE_DEPLOY_OR_PRODUCTION_EFFECT",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_UNCHANGED_HEAD_RETRY_NO_FORCE_NO_REBASE",
+      "composition_rule": "TARGET_PR_EXACT_8_IMMUTABLE_TASK058_BPLUSC_PATHS_PLUS_1_INTEGRATION_OWNED_CHANGELOG_FILE",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "OWNER_EXACT_LOCK_HOST_EXACT2_APPROVAL_ACTIVE",
+        "INDEPENDENT_TECHNICAL_GO_C_H_M_L_0_0_0_0",
+        "TARGET_NON_CHANGELOG_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS_8_OF_8",
+        "REVISION137_HOSTED_CLOSED_RELEASED",
+        "LOCK_HOST_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "LOCK_HOST_MERGED_MAIN_EXACT_READ_BACK",
+        "LOCK_HOST_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "FRESH_MAIN_REGISTRY_TARGET_HEAD_AND_OVERLAP_REAUDIT",
+        "NORMAL_MAIN_INTO_TARGET_MERGE_NO_REBASE_NO_FORCE",
+        "EIGHT_IMMUTABLE_TARGET_BLOBS_PRESERVED",
+        "EXACT_APPROVED_CHANGELOG_LINE_ONLY"
+      ],
+      "expiry_conditions": [
+        "TARGET_HEAD_MISMATCH",
+        "TARGET_PR_CLOSED_OR_MERGED",
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
+        "NEW_CHANGELOG_OR_REGISTRY_OVERLAP",
+        "EIGHT_IMMUTABLE_IMPLEMENTATION_SCHEMA_TEST_DESIGN_BLOB_DRIFT",
+        "SOLE_BUILDER_OR_OWNERSHIP_MISMATCH",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
+        "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+      ],
+      "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_SHARED_PATH_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_AND_APPEND_ONLY_CLOSURE_EVIDENCE",
+      "integration_effect_authority_id": "OWNER_EXACT_APPROVAL_TASK058_PR436_LOCK_HOST_EXACT2_20260829",
+      "target_merge_authority_id": null,
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
     }
   ],
   "shared_integration_files": [

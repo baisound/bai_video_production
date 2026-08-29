@@ -21,6 +21,20 @@ not authorize connector activation, and does not claim real Resolve GUI runtime
 QA. Windows full CI and the GitHub Release workflow must report their observed
 results independently; any unexecuted native gate remains `NOT_CONFIRMED`.
 
+### v0.23.0 hosted release closure
+
+- release PR: `#444`, hosted checks `9 / 9 PASS`;
+- exact release-code main: `382ae2aec8ecf83933973eb5c67fa6865b39194b`;
+- annotated Tag object: `31899fc40e4078f8a4d1f83b45f269a07d60f5df`,
+  dereferenced commit: `382ae2aec8ecf83933973eb5c67fa6865b39194b`;
+- Release workflow: `33280546212`, `4709 PASS / 17 SKIP / 2 warnings /
+  11 subtests PASS`;
+- stable GitHub Release: `https://github.com/baisound/bai_video_production/releases/tag/v0.23.0`;
+- published assets: `6 / 6` uploaded with SHA-256 digest read-back;
+- real Resolve GUI runtime QA: `NOT_EXECUTED / NOT_CONFIRMED`;
+- connector activation, Timeline mutation, Deploy, and Production: `NOT
+  AUTHORIZED / NOT EXECUTED`.
+
 ## Objective
 
 Provide a bounded, review-first bridge for two montage-learning inputs without

@@ -179,6 +179,24 @@ def test_self_hashed_knowledge_readiness_cannot_bypass_human_review() -> None:
         )
 
 
+def test_self_hashed_knowledge_source_digest_must_use_canonical_sha256_form() -> None:
+    knowledge = _knowledge_handoff()
+    knowledge["source_workspace_sha256"] = "not-a-canonical-digest"
+    unsigned = {
+        key: value for key, value in knowledge.items() if key != "plan_sha256"
+    }
+    knowledge["plan_sha256"] = sha256_bytes(canonical_json_bytes(unsigned))
+
+    with pytest.raises(
+        EditingSkillHandoffError,
+        match="source_workspace_sha256 is invalid",
+    ):
+        project_optional_editing_skill_handoff(
+            editing_mode=KNOWLEDGE_COMMENTARY,
+            value=knowledge,
+        )
+
+
 def test_self_hashed_montage_runtime_status_cannot_bypass_runtime_gate() -> None:
     montage = deepcopy(_montage_handoff())
     montage["runtime_qa_status"] = "PASS"

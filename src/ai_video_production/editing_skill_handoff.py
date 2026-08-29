@@ -16,7 +16,7 @@ from .resolve_subtitle_handoff import (
     ResolveSubtitlePlacement,
     ResolveSubtitlePlacementPlan,
 )
-from .serialization import canonical_json_bytes, sha256_bytes
+from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
 from .subtitle_workspace import SubtitleReviewState
 from .timebase import FrameRate
 
@@ -97,6 +97,14 @@ def _require_string(value: object, *, name: str) -> str:
     if not isinstance(value, str) or not value:
         raise EditingSkillHandoffError(f"{name} must be a non-empty string")
     return value
+
+
+def _require_sha256(value: object, *, name: str) -> str:
+    digest = _require_string(value, name=name)
+    try:
+        return validate_sha256(digest, field_name=name)
+    except ValueError as exc:
+        raise EditingSkillHandoffError(f"{name} is invalid") from exc
 
 
 def _verify_self_hash(document: dict[str, Any], *, field: str) -> str:
@@ -182,7 +190,7 @@ def project_knowledge_commentary_handoff(
                 name="workspace_revision",
                 minimum=0,
             ),
-            source_workspace_sha256=_require_string(
+            source_workspace_sha256=_require_sha256(
                 document["source_workspace_sha256"],
                 name="source_workspace_sha256",
             ),

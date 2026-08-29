@@ -19,6 +19,7 @@ from ai_video_production.montage_learning_connector_readiness import (
     validate_prebuilt_advisory_profile,
 )
 from ai_video_production.montage_learning_file_bridge import recover_current_profile
+from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.subtitles import (
     TranscriptManifest,
     TranscriptSegment,
@@ -130,6 +131,11 @@ def test_task055_task056_bridge_receipt_profile_and_resolve_handoff_fixture_e2e(
         source_binding=ProfileSourceBinding.bound_isolated_fixture(),
     )
     assert published_profile.status == "PUBLISHED"
+    assert published_profile.written is True
+    assert published_profile.production_profile_source_bound is False
+    assert published_profile.semantic_projection_generated is False
+    assert published_profile.timeline_mutation_authorized is False
+    assert published_profile.resolve_write_authorized is False
     recover_current_profile(layout)
     loaded_profile = validate_prebuilt_advisory_profile(
         json.loads(layout.current_profile.read_text(encoding="utf-8"))
@@ -137,6 +143,7 @@ def test_task055_task056_bridge_receipt_profile_and_resolve_handoff_fixture_e2e(
     assert loaded_profile["advisory_only"] is True
     assert loaded_profile["canonical_timeline"] is False
     assert loaded_profile["auto_apply_authorized"] is False
+    assert loaded_profile["profile_sha256"] == published_profile.profile_sha256
 
     proposal = exact_delivery["proposal"]
     approved_plan = exact_delivery["approved_plan"]
@@ -152,6 +159,16 @@ def test_task055_task056_bridge_receipt_profile_and_resolve_handoff_fixture_e2e(
     assert handoff_body["task_owner"] == "TASK-055"
     assert handoff_body["resolve_write_authorized"] is False
     assert handoff_body["runtime_qa_status"] == "NOT_RUN"
+    assert handoff_body["source_proposal_sha256"] == proposal["proposal_sha256"]
+    assert handoff_body["source_approved_plan_sha256"] == approved_plan["plan_sha256"]
+    handoff_unsigned = {
+        key: value
+        for key, value in handoff_body.items()
+        if key != "handoff_sha256"
+    }
+    assert handoff_body["handoff_sha256"] == sha256_bytes(
+        canonical_json_bytes(handoff_unsigned)
+    )
 
     assert exact_delivery == delivery_before
     assert cue_result["canonical_timeline"] is False

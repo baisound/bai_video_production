@@ -232,6 +232,7 @@ def _run_adapter(
     skill_script: Path,
     *arguments: str,
     skill_paths: tuple[Path, Path, Path] | None = None,
+    immutable_inputs: tuple[tuple[Path, bytes], ...] = (),
 ) -> dict[str, object]:
     before_digest = None
     if skill_paths is not None:
@@ -241,6 +242,9 @@ def _run_adapter(
         ):
             raise AssertionError("TASK058_ADAPTER_SKILL_IDENTITY_DRIFT")
         before_digest = _skill_digest(observed)
+    for path, expected_bytes in immutable_inputs:
+        if path.read_bytes() != expected_bytes:
+            raise AssertionError("TASK058_ADAPTER_INPUT_DRIFT")
     output = tmp_path / f"adapter-{len(list(tmp_path.glob('adapter-*.json')))}.json"
     child_environment = os.environ.copy()
     child_environment.pop(EXTERNAL_SKILL_ROOT_ENV, None)
@@ -260,6 +264,9 @@ def _run_adapter(
             path.resolve() for path in skill_paths
         ) or _skill_digest(observed) != before_digest:
             raise AssertionError("TASK058_ADAPTER_SKILL_IDENTITY_DRIFT")
+    for path, expected_bytes in immutable_inputs:
+        if path.read_bytes() != expected_bytes:
+            raise AssertionError("TASK058_ADAPTER_INPUT_DRIFT")
     return json.loads(output.read_text(encoding="utf-8"))
 
 
@@ -968,6 +975,32 @@ def test_run_adapter_revalidates_exact3_after_child(tmp_path, monkeypatch):
         )
 
 
+def test_run_adapter_rejects_materialized_input_drift(tmp_path, monkeypatch):
+    selected_script = tmp_path / "selected-adapter.py"
+    selected_script.write_bytes(b"selected-script")
+    materialized_config = tmp_path / "isolated-config.json"
+    materialized_config.write_bytes(b"isolated-config")
+
+    class _Completed:
+        returncode = 0
+
+    def _drifting_run(command, **_kwargs):
+        output = Path(command[command.index("--output") + 1])
+        output.write_text("{}", encoding="utf-8")
+        materialized_config.write_bytes(b"mutated-config")
+        return _Completed()
+
+    monkeypatch.setattr(subprocess, "run", _drifting_run)
+
+    with pytest.raises(AssertionError, match="INPUT_DRIFT"):
+        _run_adapter(
+            tmp_path,
+            selected_script,
+            "connector-status",
+            immutable_inputs=((materialized_config, b"isolated-config"),),
+        )
+
+
 def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_path):
     skill_paths, external_candidate = _skill_paths_for_e2e()
     skill_script, skill_config, _skill_schema = skill_paths
@@ -994,6 +1027,10 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
     config_path.write_text(json.dumps(config), encoding="utf-8")
     learning_path = tmp_path / "learning.json"
     learning_path.write_text(json.dumps(_learning()), encoding="utf-8")
+    immutable_inputs = (
+        (config_path, config_path.read_bytes()),
+        (learning_path, learning_path.read_bytes()),
+    )
 
     status = _run_adapter(
         tmp_path,
@@ -1002,6 +1039,7 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
         "--config",
         str(config_path),
         skill_paths=skill_paths,
+        immutable_inputs=immutable_inputs,
     )
     assert status["status"] == "READY"
 
@@ -1014,6 +1052,7 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
         "--config",
         str(config_path),
         skill_paths=skill_paths,
+        immutable_inputs=immutable_inputs,
     )
     assert staged["status"] == "STAGED_PENDING_REQUIRED_RECEIPT"
     assert staged["canonical_store_written"] is False
@@ -1046,6 +1085,7 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
         "--config",
         str(config_path),
         skill_paths=skill_paths,
+        immutable_inputs=immutable_inputs,
     )
     assert matched["status"] == "BVP_REPORTED_ACCEPTED"
     assert matched["canonical_store_written"] is True
@@ -1063,6 +1103,7 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
         "--config",
         str(config_path),
         skill_paths=skill_paths,
+        immutable_inputs=immutable_inputs,
     )
     assert loaded["status"] == "PASS"
     assert loaded["advisory_only"] is True

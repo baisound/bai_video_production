@@ -816,8 +816,12 @@ def test_external_skill_candidate_duplicate_file_identity_fails_closed(
         _skill_paths_for_e2e()
 
 
+@pytest.mark.parametrize(
+    "linked_directory",
+    tuple(relative_path.parts[0] for _role, relative_path in _SKILL_ROLES),
+)
 def test_external_skill_candidate_intermediate_symlink_fails_closed(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, linked_directory
 ):
     target_root = tmp_path / "target-skill"
     _write_test_skill_candidate(
@@ -828,12 +832,23 @@ def test_external_skill_candidate_intermediate_symlink_fails_closed(
     root = tmp_path / "external-skill"
     root.mkdir()
     try:
-        (root / "scripts").symlink_to(target_root / "scripts", target_is_directory=True)
+        (root / linked_directory).symlink_to(
+            target_root / linked_directory,
+            target_is_directory=True,
+        )
     except OSError:
         pytest.skip("directory symlink unavailable")
     for directory in ("config", "schemas"):
+        if directory == linked_directory:
+            continue
         source = target_root / directory
         destination = root / directory
+        destination.mkdir()
+        for child in source.iterdir():
+            (destination / child.name).write_bytes(child.read_bytes())
+    if linked_directory != "scripts":
+        source = target_root / "scripts"
+        destination = root / "scripts"
         destination.mkdir()
         for child in source.iterdir():
             (destination / child.name).write_bytes(child.read_bytes())
@@ -843,9 +858,15 @@ def test_external_skill_candidate_intermediate_symlink_fails_closed(
         _skill_paths_for_e2e()
 
 
-def test_external_skill_candidate_leaf_symlink_fails_closed(tmp_path, monkeypatch):
+@pytest.mark.parametrize(
+    "relative_path",
+    tuple(relative_path for _role, relative_path in _SKILL_ROLES),
+)
+def test_external_skill_candidate_leaf_symlink_fails_closed(
+    tmp_path, monkeypatch, relative_path
+):
     target_root = tmp_path / "target-skill"
-    target_paths = _write_test_skill_candidate(
+    _write_test_skill_candidate(
         target_root,
         {"script": b"script", "config": b"config", "schema": b"schema"},
         monkeypatch,
@@ -856,10 +877,10 @@ def test_external_skill_candidate_leaf_symlink_fails_closed(tmp_path, monkeypatc
         {"script": b"script", "config": b"config", "schema": b"schema"},
         monkeypatch,
     )
-    script = root / "scripts" / "bvp_adapter.py"
-    script.unlink()
+    selected = root / relative_path
+    selected.unlink()
     try:
-        script.symlink_to(target_paths[0])
+        selected.symlink_to(target_root / relative_path)
     except OSError:
         pytest.skip("file symlink unavailable")
     monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, str(root))

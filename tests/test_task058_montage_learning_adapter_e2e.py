@@ -234,6 +234,15 @@ def _run_adapter(
     skill_paths: tuple[Path, Path, Path] | None = None,
     immutable_inputs: tuple[tuple[Path, bytes], ...] = (),
 ) -> dict[str, object]:
+    def _assert_inputs_unchanged() -> None:
+        for path, expected_bytes in immutable_inputs:
+            try:
+                observed_bytes = path.read_bytes()
+            except OSError as exc:
+                raise AssertionError("TASK058_ADAPTER_INPUT_UNAVAILABLE") from exc
+            if observed_bytes != expected_bytes:
+                raise AssertionError("TASK058_ADAPTER_INPUT_DRIFT")
+
     before_digest = None
     if skill_paths is not None:
         observed = _external_skill_paths(skill_script.parents[1])
@@ -242,9 +251,7 @@ def _run_adapter(
         ):
             raise AssertionError("TASK058_ADAPTER_SKILL_IDENTITY_DRIFT")
         before_digest = _skill_digest(observed)
-    for path, expected_bytes in immutable_inputs:
-        if path.read_bytes() != expected_bytes:
-            raise AssertionError("TASK058_ADAPTER_INPUT_DRIFT")
+    _assert_inputs_unchanged()
     output = tmp_path / f"adapter-{len(list(tmp_path.glob('adapter-*.json')))}.json"
     child_environment = os.environ.copy()
     child_environment.pop(EXTERNAL_SKILL_ROOT_ENV, None)
@@ -264,10 +271,16 @@ def _run_adapter(
             path.resolve() for path in skill_paths
         ) or _skill_digest(observed) != before_digest:
             raise AssertionError("TASK058_ADAPTER_SKILL_IDENTITY_DRIFT")
-    for path, expected_bytes in immutable_inputs:
-        if path.read_bytes() != expected_bytes:
-            raise AssertionError("TASK058_ADAPTER_INPUT_DRIFT")
-    return json.loads(output.read_text(encoding="utf-8"))
+    _assert_inputs_unchanged()
+    try:
+        value = json.loads(output.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise AssertionError("TASK058_ADAPTER_OUTPUT_UNAVAILABLE") from exc
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise AssertionError("TASK058_ADAPTER_OUTPUT_INVALID") from exc
+    if not isinstance(value, dict):
+        raise AssertionError("TASK058_ADAPTER_OUTPUT_INVALID")
+    return value
 
 
 def _skill_digest(skill_paths: tuple[Path, Path, Path]) -> str:
@@ -944,6 +957,52 @@ def test_run_adapter_failure_does_not_echo_child_stderr(tmp_path, monkeypatch):
 
     assert str(failure.value) == "TASK058_ADAPTER_CHILD_FAILED"
     assert _Failed.stderr not in str(failure.value)
+
+
+@pytest.mark.parametrize(
+    ("raw_output", "expected_error"),
+    (
+        ("PRIVATE_MALFORMED_OUTPUT", "TASK058_ADAPTER_OUTPUT_INVALID"),
+        ("[]", "TASK058_ADAPTER_OUTPUT_INVALID"),
+    ),
+)
+def test_run_adapter_invalid_output_is_public_safe(
+    tmp_path, monkeypatch, raw_output, expected_error
+):
+    class _Completed:
+        returncode = 0
+
+    def _fake_run(command, **_kwargs):
+        output = Path(command[command.index("--output") + 1])
+        output.write_text(raw_output, encoding="utf-8")
+        return _Completed()
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    with pytest.raises(AssertionError) as failure:
+        _run_adapter(tmp_path, Path("selected-adapter.py"), "connector-status")
+
+    assert str(failure.value) == expected_error
+    assert raw_output not in str(failure.value)
+
+
+def test_run_adapter_missing_output_is_public_safe(tmp_path, monkeypatch):
+    private_output = tmp_path / "private-output-location"
+
+    class _Completed:
+        returncode = 0
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_args, **_kwargs: _Completed(),
+    )
+
+    with pytest.raises(AssertionError) as failure:
+        _run_adapter(private_output, Path("selected-adapter.py"), "connector-status")
+
+    assert str(failure.value) == "TASK058_ADAPTER_OUTPUT_UNAVAILABLE"
+    assert str(private_output) not in str(failure.value)
 
 
 def test_run_adapter_revalidates_exact3_after_child(tmp_path, monkeypatch):

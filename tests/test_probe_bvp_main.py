@@ -107,6 +107,31 @@ class ProbeBvpMainTests(unittest.TestCase):
             self.assertFalse(result["execution_ready"])
             self.assertIn("EXPECTED_MAIN_MISMATCH", result["reason_codes"])
 
+    def test_missing_expected_main_is_audit_only_and_never_execution_ready(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
+            repo = Path(raw) / "repo"
+            _create_repository(repo)
+
+            result = probe_bvp_main.probe_repository(repo)
+
+            self.assertTrue(result["audit_ready"])
+            self.assertFalse(result["execution_ready"])
+            self.assertEqual(result["status"], "BLOCKED")
+            self.assertEqual(result["currentness"], "LOCAL_MAIN_ONLY")
+            self.assertIsNone(result["expected_main_sha"])
+            self.assertIn("EXPECTED_MAIN_SHA_REQUIRED", result["reason_codes"])
+
+            output = Path(raw) / "probe.json"
+            exit_code = probe_bvp_main.main(
+                ["--repo-root", str(repo), "--output", str(output)]
+            )
+            emitted = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(exit_code, 2)
+            self.assertFalse(emitted["execution_ready"])
+            self.assertIn("EXPECTED_MAIN_SHA_REQUIRED", emitted["reason_codes"])
+
     def test_invalid_expected_main_is_not_echoed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
             repo = Path(raw) / "repo"

@@ -206,6 +206,7 @@ def _probe_repository(
 
     if normalized_expected is None:
         result["currentness"] = "LOCAL_MAIN_ONLY"
+        reasons.add("EXPECTED_MAIN_SHA_REQUIRED")
     elif COMMIT_PATTERN.fullmatch(normalized_expected):
         if result["main_sha"] == normalized_expected:
             result["currentness"] = "EXPECTED_MAIN_MATCH"

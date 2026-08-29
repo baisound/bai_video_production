@@ -155,3 +155,18 @@ def test_self_hashed_knowledge_readiness_cannot_bypass_human_review() -> None:
             editing_mode=KNOWLEDGE_COMMENTARY,
             value=knowledge,
         )
+
+
+def test_self_hashed_montage_runtime_status_cannot_bypass_runtime_gate() -> None:
+    montage = deepcopy(_montage_handoff())
+    montage["runtime_qa_status"] = "PASS"
+    unsigned = {
+        key: value for key, value in montage.items() if key != "handoff_sha256"
+    }
+    montage["handoff_sha256"] = sha256_bytes(canonical_json_bytes(unsigned))
+
+    with pytest.raises(EditingSkillHandoffError, match="montage handoff is invalid"):
+        project_optional_editing_skill_handoff(
+            editing_mode=MONTAGE,
+            value=montage,
+        )

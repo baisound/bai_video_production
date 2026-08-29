@@ -34,6 +34,7 @@ from ai_video_production.large_media_transcription import (
 )
 from ai_video_production.media_probe import MediaProbeResult
 from ai_video_production.resolve_subtitle_handoff import ResolveSubtitleHandoffService
+from ai_video_production.serialization import canonical_json_bytes, sha256_bytes, sha256_json
 from ai_video_production.subtitle_workspace import SubtitleWorkspace, SubtitleWorkspaceStore
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.timebase import TimingInspection, TimingKind
@@ -242,7 +243,17 @@ def _exercise_fixture_pipeline(root: Path) -> None:
     assert write.path == handoff_path.resolve()
     assert plan.ready_for_resolve_write is True
     assert len(plan.placements) == 2
-    assert json.loads(handoff_path.read_text(encoding="utf-8")) == plan.to_dict()
+    handoff = json.loads(handoff_path.read_text(encoding="utf-8"))
+    assert handoff == plan.to_dict()
+    assert handoff["source_workspace_sha256"] == sha256_json(
+        stored_workspace.to_dict()
+    )
+    handoff_body = {
+        key: value for key, value in handoff.items() if key != "plan_sha256"
+    }
+    assert handoff["plan_sha256"] == sha256_bytes(
+        canonical_json_bytes(handoff_body)
+    )
 
     assert _sha256(source) == source_before
     assert normalized.analysis_audio_asset.asset_id == transcription.transcript.source_asset_id

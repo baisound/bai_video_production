@@ -4,6 +4,11 @@ from copy import deepcopy
 import json
 from pathlib import Path
 
+from ai_video_production.editing_skill_handoff import (
+    MONTAGE,
+    REVIEW_REQUIRED as COMMON_REVIEW_REQUIRED,
+    project_optional_editing_skill_handoff,
+)
 from ai_video_production.montage_contracts import admit_montage_resolve_handoff
 from ai_video_production.montage_learning_bridge_application import (
     MontageLearningBridgeApplication,
@@ -181,6 +186,22 @@ def test_task055_task056_bridge_receipt_profile_and_resolve_handoff_fixture_e2e(
     }
     assert handoff_body["handoff_sha256"] == sha256_bytes(
         canonical_json_bytes(handoff_unsigned)
+    )
+    common_evidence = project_optional_editing_skill_handoff(
+        editing_mode=MONTAGE,
+        value=handoff_body,
+    )
+    assert common_evidence["source_sha256"] == handoff_body["handoff_sha256"]
+    assert common_evidence["source_readiness"] == COMMON_REVIEW_REQUIRED
+    assert common_evidence["resolve_write_authorized"] is False
+    assert common_evidence["runtime_authority_created"] is False
+    common_unsigned = {
+        key: value
+        for key, value in common_evidence.items()
+        if key != "evidence_sha256"
+    }
+    assert common_evidence["evidence_sha256"] == sha256_bytes(
+        canonical_json_bytes(common_unsigned)
     )
 
     assert exact_delivery == delivery_before

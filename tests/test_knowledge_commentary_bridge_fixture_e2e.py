@@ -26,6 +26,11 @@ from ai_video_production.cut_candidates import (
     CutCandidateKind,
     CutCandidatePublicationService,
 )
+from ai_video_production.editing_skill_handoff import (
+    KNOWLEDGE_COMMENTARY,
+    SOURCE_READY,
+    project_optional_editing_skill_handoff,
+)
 from ai_video_production.faster_whisper_asr import FasterWhisperConfig
 from ai_video_production.large_media_transcription import (
     ChunkedTranscriptionConfig,
@@ -254,6 +259,25 @@ def _exercise_fixture_pipeline(root: Path) -> None:
     assert handoff["plan_sha256"] == sha256_bytes(
         canonical_json_bytes(handoff_body)
     )
+    common_evidence = project_optional_editing_skill_handoff(
+        editing_mode=KNOWLEDGE_COMMENTARY,
+        value=handoff,
+    )
+    assert common_evidence["source_sha256"] == handoff["plan_sha256"]
+    assert common_evidence["source_readiness"] == SOURCE_READY
+    assert common_evidence["resolve_write_authorized"] is False
+    assert common_evidence["runtime_authority_created"] is False
+    common_unsigned = {
+        key: value
+        for key, value in common_evidence.items()
+        if key != "evidence_sha256"
+    }
+    assert common_evidence["evidence_sha256"] == sha256_bytes(
+        canonical_json_bytes(common_unsigned)
+    )
+    common_text = json.dumps(common_evidence, ensure_ascii=False)
+    assert "えっと" not in common_text
+    assert "本題です" not in common_text
 
     assert _sha256(source) == source_before
     assert normalized.analysis_audio_asset.asset_id == transcription.transcript.source_asset_id

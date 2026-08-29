@@ -388,16 +388,32 @@ class ProbeBvpMainTests(unittest.TestCase):
 
     def test_probe_git_commands_disable_optional_index_locks(self) -> None:
         completed = mock.Mock(returncode=0, stdout="", stderr="")
-        with mock.patch.object(
-            probe_bvp_main.subprocess,
-            "run",
-            return_value=completed,
-        ) as run:
-            probe_bvp_main._git(Path("repo"), "status")
+        overrides = {
+            name: "private-repository-override"
+            for name in probe_bvp_main._GIT_REPOSITORY_ENV_OVERRIDES
+        }
+        with mock.patch.dict(probe_bvp_main.os.environ, overrides):
+            with mock.patch.object(
+                probe_bvp_main.subprocess,
+                "run",
+                return_value=completed,
+            ) as run:
+                probe_bvp_main._git(Path("repo"), "status")
+            parent_environment = {
+                name: probe_bvp_main.os.environ[name] for name in overrides
+            }
 
         command = run.call_args.args[0]
+        child_environment = run.call_args.kwargs["env"]
         self.assertEqual(command[:2], ["git", "--no-optional-locks"])
         self.assertEqual(command[-1], "status")
+        self.assertEqual(child_environment["GIT_OPTIONAL_LOCKS"], "0")
+        self.assertTrue(
+            probe_bvp_main._GIT_REPOSITORY_ENV_OVERRIDES.isdisjoint(
+                child_environment
+            )
+        )
+        self.assertEqual(parent_environment, overrides)
 
     def test_git_failure_after_root_resolution_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:

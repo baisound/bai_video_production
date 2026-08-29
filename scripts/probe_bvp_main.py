@@ -48,6 +48,17 @@ SOURCE_ENTRYPOINTS = {
 }
 PROBE_ROLE = "main_probe"
 PROBE_PATH = "scripts/probe_bvp_main.py"
+_GIT_REPOSITORY_ENV_OVERRIDES = {
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_CEILING_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_DIR",
+    "GIT_DISCOVERY_ACROSS_FILESYSTEM",
+    "GIT_INDEX_FILE",
+    "GIT_NAMESPACE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_WORK_TREE",
+}
 
 
 class GitProbeError(RuntimeError):
@@ -57,6 +68,10 @@ class GitProbeError(RuntimeError):
 def _git(
     repo_root: Path, *arguments: str, check: bool = True
 ) -> subprocess.CompletedProcess[str]:
+    child_environment = os.environ.copy()
+    for name in _GIT_REPOSITORY_ENV_OVERRIDES:
+        child_environment.pop(name, None)
+    child_environment["GIT_OPTIONAL_LOCKS"] = "0"
     try:
         completed = subprocess.run(
             [
@@ -70,6 +85,7 @@ def _git(
             capture_output=True,
             text=True,
             timeout=10,
+            env=child_environment,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         raise GitProbeError("GIT_COMMAND_FAILED") from exc

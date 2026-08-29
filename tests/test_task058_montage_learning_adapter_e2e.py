@@ -241,7 +241,8 @@ def _run_adapter(
         text=True,
         timeout=30,
     )
-    assert completed.returncode == 0, "TASK058_ADAPTER_CHILD_FAILED"
+    if completed.returncode != 0:
+        raise AssertionError("TASK058_ADAPTER_CHILD_FAILED")
     return json.loads(output.read_text(encoding="utf-8"))
 
 

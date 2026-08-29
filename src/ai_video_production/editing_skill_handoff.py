@@ -12,7 +12,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from .montage_contracts import parse_montage_resolve_handoff
+from .resolve_subtitle_handoff import (
+    ResolveSubtitlePlacement,
+    ResolveSubtitlePlacementPlan,
+)
 from .serialization import canonical_json_bytes, sha256_bytes
+from .subtitle_workspace import SubtitleReviewState
+from .timebase import FrameRate
 
 
 KNOWLEDGE_COMMENTARY = "KNOWLEDGE_COMMENTARY"
@@ -81,6 +87,18 @@ def _require_bool(value: object, *, name: str) -> bool:
     return value
 
 
+def _require_integer(value: object, *, name: str, minimum: int) -> int:
+    if type(value) is not int or value < minimum:
+        raise EditingSkillHandoffError(f"{name} must be an integer >= {minimum}")
+    return value
+
+
+def _require_string(value: object, *, name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise EditingSkillHandoffError(f"{name} must be a non-empty string")
+    return value
+
+
 def _verify_self_hash(document: dict[str, Any], *, field: str) -> str:
     digest = document.get(field)
     if not isinstance(digest, str) or not digest.startswith("sha256:"):
@@ -115,6 +133,86 @@ def project_knowledge_commentary_handoff(
         name="ready_for_resolve_write",
     )
     digest = _verify_self_hash(document, field="plan_sha256")
+    try:
+        timeline_rate = _mapping(document["timeline_rate"], name="timeline_rate")
+        if set(timeline_rate) != {"numerator", "denominator"}:
+            raise EditingSkillHandoffError("timeline_rate fields differ")
+        frame_rate = FrameRate(
+            _require_integer(timeline_rate["numerator"], name="numerator", minimum=1),
+            _require_integer(timeline_rate["denominator"], name="denominator", minimum=1),
+        )
+        raw_placements = document["placements"]
+        if not isinstance(raw_placements, list):
+            raise EditingSkillHandoffError("placements must be an array")
+        placements: list[ResolveSubtitlePlacement] = []
+        for raw in raw_placements:
+            placement = _mapping(raw, name="placement")
+            if set(placement) != {
+                "cue_id",
+                "record_range_frames",
+                "text",
+                "review_state",
+            }:
+                raise EditingSkillHandoffError("placement fields differ")
+            frame_range = _mapping(
+                placement["record_range_frames"],
+                name="record_range_frames",
+            )
+            if set(frame_range) != {"start", "end_exclusive"}:
+                raise EditingSkillHandoffError("record_range_frames fields differ")
+            placements.append(
+                ResolveSubtitlePlacement(
+                    cue_id=_require_string(placement["cue_id"], name="cue_id"),
+                    record_start_frame=_require_integer(
+                        frame_range["start"], name="start", minimum=0
+                    ),
+                    record_end_frame=_require_integer(
+                        frame_range["end_exclusive"],
+                        name="end_exclusive",
+                        minimum=1,
+                    ),
+                    text=_require_string(placement["text"], name="text"),
+                    review_state=SubtitleReviewState(placement["review_state"]),
+                )
+            )
+        reconstructed = ResolveSubtitlePlacementPlan(
+            workspace_id=_require_string(document["workspace_id"], name="workspace_id"),
+            workspace_revision=_require_integer(
+                document["workspace_revision"],
+                name="workspace_revision",
+                minimum=0,
+            ),
+            source_workspace_sha256=_require_string(
+                document["source_workspace_sha256"],
+                name="source_workspace_sha256",
+            ),
+            timeline_rate=frame_rate,
+            timeline_origin_frame=_require_integer(
+                document["timeline_origin_frame"],
+                name="timeline_origin_frame",
+                minimum=0,
+            ),
+            track_index=_require_integer(
+                document["track_index"], name="track_index", minimum=1
+            ),
+            placements=tuple(placements),
+            ready_for_resolve_write=source_ready,
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        if isinstance(exc, EditingSkillHandoffError):
+            raise
+        raise EditingSkillHandoffError(
+            "knowledge/commentary handoff semantics are invalid"
+        ) from exc
+    expected_ready = bool(placements) and all(
+        item.review_state is SubtitleReviewState.APPROVED for item in placements
+    )
+    if source_ready is not expected_ready:
+        raise EditingSkillHandoffError(
+            "ready_for_resolve_write conflicts with placement review state"
+        )
+    if reconstructed.to_dict() != document:
+        raise EditingSkillHandoffError("knowledge/commentary handoff differs")
     return EditingSkillHandoffEvidence(
         editing_mode=KNOWLEDGE_COMMENTARY,
         source_sha256=digest,

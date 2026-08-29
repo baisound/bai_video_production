@@ -14,6 +14,7 @@ from ai_video_production.editing_skill_handoff import (
     project_optional_editing_skill_handoff,
 )
 from ai_video_production.resolve_subtitle_handoff import ResolveSubtitleHandoffService
+from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.subtitle_workspace import (
     SubtitleOrigin,
     SubtitleReviewState,
@@ -135,4 +136,22 @@ def test_tampered_source_handoffs_fail_closed() -> None:
         project_optional_editing_skill_handoff(
             editing_mode=MONTAGE,
             value=montage,
+        )
+
+
+def test_self_hashed_knowledge_readiness_cannot_bypass_human_review() -> None:
+    knowledge = _knowledge_handoff(approved=False)
+    knowledge["ready_for_resolve_write"] = True
+    unsigned = {
+        key: value for key, value in knowledge.items() if key != "plan_sha256"
+    }
+    knowledge["plan_sha256"] = sha256_bytes(canonical_json_bytes(unsigned))
+
+    with pytest.raises(
+        EditingSkillHandoffError,
+        match="ready_for_resolve_write conflicts with placement review state",
+    ):
+        project_optional_editing_skill_handoff(
+            editing_mode=KNOWLEDGE_COMMENTARY,
+            value=knowledge,
         )

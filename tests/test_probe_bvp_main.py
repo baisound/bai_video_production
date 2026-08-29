@@ -96,6 +96,51 @@ class ProbeBvpMainTests(unittest.TestCase):
             self.assertNotIn(str(repo), json.dumps(first, sort_keys=True))
             self.assertEqual(_git(repo, "status", "--porcelain"), "")
 
+    def test_public_result_schema_and_entry_digest_roles_are_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
+            repo = Path(raw) / "repo"
+            main_sha = _create_repository(repo)
+
+            result = probe_bvp_main.probe_repository(repo, main_sha)
+
+            self.assertEqual(
+                set(result),
+                {
+                    "schema_version",
+                    "project",
+                    "status",
+                    "audit_ready",
+                    "execution_ready",
+                    "branch",
+                    "head_sha",
+                    "main_sha",
+                    "expected_main_sha",
+                    "currentness",
+                    "tracked_change_count",
+                    "untracked_entry_count",
+                    "required_entry_count",
+                    "main_entry_count",
+                    "checkout_entry_count",
+                    "entry_digests",
+                    "missing_roles",
+                    "reason_codes",
+                },
+            )
+            expected_roles = {
+                *probe_bvp_main.PUBLIC_ENTRYPOINTS,
+                *probe_bvp_main.SOURCE_ENTRYPOINTS,
+                probe_bvp_main.PROBE_ROLE,
+                "project_metadata",
+            }
+            self.assertEqual(set(result["entry_digests"]), expected_roles)
+            self.assertTrue(
+                all(
+                    isinstance(value, str) and value.startswith("git-sha1:")
+                    for value in result["entry_digests"].values()
+                )
+            )
+            self.assertNotIn(str(repo), json.dumps(result, sort_keys=True))
+
     def test_expected_main_mismatch_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
             repo = Path(raw) / "repo"

@@ -149,11 +149,22 @@ def _probe_repository(
 
     try:
         requested_root = repo_root.resolve(strict=True)
-        top_level_text = _git(
-            requested_root, "rev-parse", "--show-toplevel"
-        ).stdout.strip()
+    except OSError:
+        result["reason_codes"] = ["NOT_GIT_REPOSITORY"]
+        return result
+    top_level_result = _git(
+        requested_root,
+        "rev-parse",
+        "--show-toplevel",
+        check=False,
+    )
+    if top_level_result.returncode != 0:
+        result["reason_codes"] = ["NOT_GIT_REPOSITORY"]
+        return result
+    top_level_text = top_level_result.stdout.strip()
+    try:
         top_level = Path(top_level_text).resolve(strict=True)
-    except (OSError, GitProbeError):
+    except OSError:
         result["reason_codes"] = ["NOT_GIT_REPOSITORY"]
         return result
 

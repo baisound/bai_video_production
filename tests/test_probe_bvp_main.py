@@ -248,7 +248,7 @@ class ProbeBvpMainTests(unittest.TestCase):
 
             self.assertFalse(result["audit_ready"])
             self.assertFalse(result["execution_ready"])
-            self.assertEqual(result["reason_codes"], ["NOT_GIT_REPOSITORY"])
+            self.assertEqual(result["reason_codes"], ["GIT_COMMAND_FAILED"])
 
     def test_git_failure_after_root_resolution_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:

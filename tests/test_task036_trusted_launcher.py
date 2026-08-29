@@ -795,7 +795,7 @@ def test_close_waits_for_inflight_export_mutation_before_releasing_runtime_lease
 
     def blocking_cancel(*, job_id: str, expected_state_version: int):
         entered.set()
-        assert release.wait(5)
+        release.wait()
         return original_cancel(job_id=job_id, expected_state_version=expected_state_version)
 
     export.cancel = blocking_cancel  # type: ignore[method-assign]
@@ -805,31 +805,36 @@ def test_close_waits_for_inflight_export_mutation_before_releasing_runtime_lease
             "job_id": job.job_id, "expected_state_version": job.state_version,
         })),
     )
+    close_thread: Thread | None = None
     operation_thread.start()
-    assert entered.wait(5)
-    lease = launch._runtime_lease
-    assert lease is not None
-    close_thread = Thread(target=launch.close)
-    close_thread.start()
-    deadline = monotonic() + 5
-    while not lease._closing and monotonic() < deadline:  # type: ignore[attr-defined]
-        sleep(0.01)
-    assert lease._closing  # type: ignore[attr-defined]
-    with pytest.raises(ProductError) as old_call:
-        bridge.export_queue_snapshot({})
-    assert old_call.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
-    with pytest.raises(ProductError) as successor_error:
-        build_trusted_launch(
-            config,
-            native_dialog=Task036NativeDialogService(DialogBackend()),
-            asr_provider=AsrProvider(),
-            resolve_adapter=ResolveAdapter(),
-        )
-    assert successor_error.value.code == "ERR_TASK036_RUNTIME_ALREADY_ACTIVE"
-    assert DurableProductJobStore.load(config.project_root).get(job.job_id) == job
-    release.set()
-    operation_thread.join(5)
-    close_thread.join(5)
+    try:
+        assert entered.wait(5)
+        lease = launch._runtime_lease
+        assert lease is not None
+        close_thread = Thread(target=launch.close)
+        close_thread.start()
+        deadline = monotonic() + 5
+        while not lease._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+            sleep(0.01)
+        assert lease._closing  # type: ignore[attr-defined]
+        with pytest.raises(ProductError) as old_call:
+            bridge.export_queue_snapshot({})
+        assert old_call.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+        with pytest.raises(ProductError) as successor_error:
+            build_trusted_launch(
+                config,
+                native_dialog=Task036NativeDialogService(DialogBackend()),
+                asr_provider=AsrProvider(),
+                resolve_adapter=ResolveAdapter(),
+            )
+        assert successor_error.value.code == "ERR_TASK036_RUNTIME_ALREADY_ACTIVE"
+        assert DurableProductJobStore.load(config.project_root).get(job.job_id) == job
+    finally:
+        release.set()
+        operation_thread.join(5)
+        if close_thread is not None:
+            close_thread.join(5)
+    assert close_thread is not None
     assert not operation_thread.is_alive() and not close_thread.is_alive()
     assert result == [{
         "job_id": job.job_id, "state": "CANCELLED", "state_version": job.state_version + 1,

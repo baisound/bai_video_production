@@ -4,14 +4,13 @@
 
 ## Current identity
 
-- Product package: `0.22.0`
-- Stable formal Release: `v0.22.0`
-- Release-code SHA: `50a2f06b4d5b64764a521c5863aa1632992a1418`
-- Current development main: `50a2f06b4d5b64764a521c5863aa1632992a1418` before the docs-only post-release closure
-- Current Product state: `V0_22_0_RELEASED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / P_UX_2E_PENDING / TASK_049_TASK_050_INTEGRATED`
-- Active development branch: `codex/task-051-v0-22-0-post-release-closure`
+- Product package candidate: `0.23.0`
+- Last verified stable formal Release: `v0.22.0`
+- v0.23.0 release-code SHA: `PENDING_EXACT_MAIN_MERGE_SHA`
+- Current Product state: `V0_23_0_RELEASE_CANDIDATE / EDITING_SKILL_INTEGRATION_LOCAL_PASS / WINDOWS_FULL_CI_AND_REAL_RESOLVE_GUI_PENDING`
+- Active development branch: `codex/bvp-editing-skills-local-integration`
 
-The annotated stable `v0.22.0` Tag dereferences to exact release-code commit `50a2f06b`; Release workflow `32407505931` and all six published asset digests pass. TASK-051 does not widen any native, paid-provider or Production Gate.
+The previous annotated stable `v0.22.0` Tag dereferences to exact release-code commit `50a2f06b`. The v0.23.0 candidate adds bounded editing-SKILL integration; its formal Tag, Release workflow, and published-asset read-back remain sequential release gates.
 
 ## Completed Product scope
 

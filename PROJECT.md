@@ -117,9 +117,9 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; P-OBS-0 installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may move forward separately, but P-VS-3 production training-material recording and P-VS-4 fine-tuning require P-OBS-1 hosted completion plus exact-path probe PASS, recording Consent, storage encryption and Owner GO
 - TASK-004: `COMPLETED`
 - Package: `0.22.0`
-- Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.22.0` targets exact release-code main SHA `50a2f06b4d5b64764a521c5863aa1632992a1418`
-- Development Candidate: `NONE`
-- Selected Release Identity: `0.22.0 / v0.22.0 / stable`, explicitly selected by the Owner on 2026-08-21
+- Release State: `V0_23_0_RELEASE_CANDIDATE`; the last verified stable GitHub Release remains `v0.22.0` until the v0.23.0 PR, annotated Tag, Release workflow, and published-asset read-back complete
+- Development Candidate: `0.23.0`
+- Selected Release Identity: `0.23.0 / v0.23.0 / stable`, explicitly selected by the Owner on 2026-08-30 for the editing-SKILL integration release
 - Completed Release Unit: `TASK-051`; PR #191, annotated Tag `v0.22.0`, Release workflow `32407505931` and six published asset digests PASS. Production Deploy remains separate.
 - Current release verification: PR #77 passed hosted `9 / 9`; annotated Tag object `93305adaa5b72c19d235264cd38e921c2ab81f62` dereferences to exact main `c38187ed54e3601c44411d9b8a128348b0d8a7b7`; Release workflow `31858212510` and published wheel/sdist digest plus clean-install verification pass.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`

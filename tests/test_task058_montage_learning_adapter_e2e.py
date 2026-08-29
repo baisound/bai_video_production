@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from hashlib import sha256
 import json
+import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 
@@ -46,6 +48,113 @@ SKILL_ROOT = Path(
 SKILL_SCRIPT = SKILL_ROOT / "scripts" / "bvp_adapter.py"
 SKILL_CONFIG = SKILL_ROOT / "config" / "bvp-learning-connector.json"
 SKILL_SCHEMA = SKILL_ROOT / "schemas" / "connector-file-bridge.schema.json"
+EXTERNAL_SKILL_ROOT_ENV = "BVP_TASK058_SKILL_ROOT"
+_SKILL_ROLES = (
+    ("script", Path("scripts") / "bvp_adapter.py"),
+    ("config", Path("config") / "bvp-learning-connector.json"),
+    ("schema", Path("schemas") / "connector-file-bridge.schema.json"),
+)
+_EXTERNAL_SKILL_EXPECTATIONS = {
+    "script": (
+        53_438,
+        "070d2295869cb43c9fe8cb733238ff04085fa6815ac006385072d9c18da3949e",
+    ),
+    "config": (
+        406,
+        "da41b71292fd2a9fa2070eba531e06fafc0e84f9bbc1d26c27b0af79c5e2db6c",
+    ),
+    "schema": (
+        5_812,
+        "470fb97a85bb924678e51a9fca313c21bc5eb9c6eb0f0f0da265ca9b6da43b9d",
+    ),
+}
+
+
+def _is_reparse_or_symlink(path: Path) -> bool:
+    metadata = path.lstat()
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+    return path.is_symlink() or bool(
+        getattr(metadata, "st_file_attributes", 0) & reparse_flag
+    )
+
+
+def _external_skill_paths(root: Path) -> tuple[Path, Path, Path]:
+    if not root.is_absolute():
+        raise AssertionError("TASK058_EXTERNAL_SKILL_ROOT_NOT_ABSOLUTE")
+    try:
+        root_metadata = root.lstat()
+        resolved_root = root.resolve(strict=True)
+    except OSError as exc:
+        raise AssertionError("TASK058_EXTERNAL_SKILL_ROOT_UNAVAILABLE") from exc
+    if not stat.S_ISDIR(root_metadata.st_mode):
+        raise AssertionError("TASK058_EXTERNAL_SKILL_ROOT_NOT_DIRECTORY")
+
+    for candidate in (root, *root.parents):
+        try:
+            if _is_reparse_or_symlink(candidate):
+                raise AssertionError("TASK058_EXTERNAL_SKILL_REPARSE_REJECTED")
+        except OSError as exc:
+            raise AssertionError("TASK058_EXTERNAL_SKILL_ANCESTOR_UNAVAILABLE") from exc
+    if os.path.normcase(str(root.absolute())) != os.path.normcase(str(resolved_root)):
+        raise AssertionError("TASK058_EXTERNAL_SKILL_ROOT_IDENTITY_DRIFT")
+
+    paths: list[Path] = []
+    identities: set[tuple[int, int]] = set()
+    for role, relative_path in _SKILL_ROLES:
+        path = root / relative_path
+        try:
+            component = root
+            for part in relative_path.parts:
+                component /= part
+                if _is_reparse_or_symlink(component):
+                    raise AssertionError("TASK058_EXTERNAL_SKILL_REPARSE_REJECTED")
+            before = path.lstat()
+            if _is_reparse_or_symlink(path) or not stat.S_ISREG(before.st_mode):
+                raise AssertionError("TASK058_EXTERNAL_SKILL_ROLE_NOT_REGULAR")
+            resolved_path = path.resolve(strict=True)
+            resolved_path.relative_to(resolved_root)
+            payload = path.read_bytes()
+            after = path.lstat()
+        except (OSError, ValueError) as exc:
+            raise AssertionError("TASK058_EXTERNAL_SKILL_ROLE_UNAVAILABLE") from exc
+        identity = (before.st_dev, before.st_ino)
+        if before.st_ino and identity in identities:
+            raise AssertionError("TASK058_EXTERNAL_SKILL_DUPLICATE_ROLE")
+        identities.add(identity)
+        if (
+            before.st_dev,
+            before.st_ino,
+            before.st_size,
+            before.st_mtime_ns,
+        ) != (
+            after.st_dev,
+            after.st_ino,
+            after.st_size,
+            after.st_mtime_ns,
+        ):
+            raise AssertionError("TASK058_EXTERNAL_SKILL_ROLE_DRIFT")
+        expected_size, expected_sha256 = _EXTERNAL_SKILL_EXPECTATIONS[role]
+        if len(payload) != expected_size or sha256(payload).hexdigest() != expected_sha256:
+            raise AssertionError("TASK058_EXTERNAL_SKILL_CONTENT_DRIFT")
+        paths.append(path)
+
+    for index, path in enumerate(paths):
+        for other in paths[index + 1 :]:
+            try:
+                if os.path.samefile(path, other):
+                    raise AssertionError("TASK058_EXTERNAL_SKILL_DUPLICATE_ROLE")
+            except OSError as exc:
+                raise AssertionError("TASK058_EXTERNAL_SKILL_IDENTITY_UNAVAILABLE") from exc
+    return paths[0], paths[1], paths[2]
+
+
+def _skill_paths_for_e2e() -> tuple[tuple[Path, Path, Path], bool]:
+    candidate = os.environ.get(EXTERNAL_SKILL_ROOT_ENV)
+    if candidate is None:
+        return (SKILL_SCRIPT, SKILL_CONFIG, SKILL_SCHEMA), False
+    if not candidate:
+        raise AssertionError("TASK058_EXTERNAL_SKILL_ROOT_EMPTY")
+    return _external_skill_paths(Path(candidate)), True
 
 
 def _profile(profile_id: str = "PROFILE-FIXTURE-001") -> dict[str, object]:
@@ -118,22 +227,65 @@ def _learning() -> dict[str, object]:
     }
 
 
-def _run_adapter(tmp_path: Path, *arguments: str) -> dict[str, object]:
+def _run_adapter(
+    tmp_path: Path,
+    skill_script: Path,
+    *arguments: str,
+    skill_paths: tuple[Path, Path, Path] | None = None,
+    immutable_inputs: tuple[tuple[Path, bytes], ...] = (),
+) -> dict[str, object]:
+    def _assert_inputs_unchanged() -> None:
+        for path, expected_bytes in immutable_inputs:
+            try:
+                observed_bytes = path.read_bytes()
+            except OSError as exc:
+                raise AssertionError("TASK058_ADAPTER_INPUT_UNAVAILABLE") from exc
+            if observed_bytes != expected_bytes:
+                raise AssertionError("TASK058_ADAPTER_INPUT_DRIFT")
+
+    before_digest = None
+    if skill_paths is not None:
+        observed = _external_skill_paths(skill_script.parents[1])
+        if tuple(path.resolve() for path in observed) != tuple(
+            path.resolve() for path in skill_paths
+        ):
+            raise AssertionError("TASK058_ADAPTER_SKILL_IDENTITY_DRIFT")
+        before_digest = _skill_digest(observed)
+    _assert_inputs_unchanged()
     output = tmp_path / f"adapter-{len(list(tmp_path.glob('adapter-*.json')))}.json"
+    child_environment = os.environ.copy()
+    child_environment.pop(EXTERNAL_SKILL_ROOT_ENV, None)
     completed = subprocess.run(
-        [sys.executable, str(SKILL_SCRIPT), *arguments, "--output", str(output)],
+        [sys.executable, str(skill_script), *arguments, "--output", str(output)],
         check=False,
         capture_output=True,
+        env=child_environment,
         text=True,
         timeout=30,
     )
-    assert completed.returncode == 0, completed.stderr
-    return json.loads(output.read_text(encoding="utf-8"))
+    if completed.returncode != 0:
+        raise AssertionError("TASK058_ADAPTER_CHILD_FAILED")
+    if skill_paths is not None:
+        observed = _external_skill_paths(skill_script.parents[1])
+        if tuple(path.resolve() for path in observed) != tuple(
+            path.resolve() for path in skill_paths
+        ) or _skill_digest(observed) != before_digest:
+            raise AssertionError("TASK058_ADAPTER_SKILL_IDENTITY_DRIFT")
+    _assert_inputs_unchanged()
+    try:
+        value = json.loads(output.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise AssertionError("TASK058_ADAPTER_OUTPUT_UNAVAILABLE") from exc
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise AssertionError("TASK058_ADAPTER_OUTPUT_INVALID") from exc
+    if not isinstance(value, dict):
+        raise AssertionError("TASK058_ADAPTER_OUTPUT_INVALID")
+    return value
 
 
-def _skill_digest() -> str:
+def _skill_digest(skill_paths: tuple[Path, Path, Path]) -> str:
     digest = sha256()
-    for path in (SKILL_SCRIPT, SKILL_CONFIG, SKILL_SCHEMA):
+    for path in skill_paths:
         digest.update(path.name.encode("utf-8"))
         digest.update(path.read_bytes())
     return digest.hexdigest()
@@ -578,10 +730,343 @@ def test_readiness_v2_relabel_rehash_and_security_model_alias_fail_closed():
         _ConnectorReadinessEvidenceV2.from_dict(aliased)
 
 
-@pytest.mark.skipif(not SKILL_SCRIPT.is_file(), reason="installed SKILL unavailable")
+def _write_test_skill_candidate(
+    root: Path, payloads: dict[str, bytes], monkeypatch
+) -> tuple[Path, Path, Path]:
+    paths = []
+    for role, relative_path in _SKILL_ROLES:
+        path = root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = payloads[role]
+        path.write_bytes(payload)
+        monkeypatch.setitem(
+            _EXTERNAL_SKILL_EXPECTATIONS,
+            role,
+            (len(payload), sha256(payload).hexdigest()),
+        )
+        paths.append(path)
+    return paths[0], paths[1], paths[2]
+
+
+def test_external_skill_candidate_uses_one_exact_runtime_root(tmp_path, monkeypatch):
+    root = tmp_path / "external-skill"
+    expected_paths = _write_test_skill_candidate(
+        root,
+        {"script": b"script", "config": b"config", "schema": b"schema"},
+        monkeypatch,
+    )
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, str(root))
+
+    observed_paths, external_candidate = _skill_paths_for_e2e()
+
+    assert external_candidate is True
+    assert observed_paths == expected_paths
+
+
+def test_external_skill_selector_preserves_default_paths(monkeypatch):
+    monkeypatch.delenv(EXTERNAL_SKILL_ROOT_ENV, raising=False)
+
+    observed_paths, external_candidate = _skill_paths_for_e2e()
+
+    assert external_candidate is False
+    assert observed_paths == (SKILL_SCRIPT, SKILL_CONFIG, SKILL_SCHEMA)
+
+
+@pytest.mark.parametrize(
+    ("candidate", "expected_error"),
+    (
+        ("", "ROOT_EMPTY"),
+        ("relative-skill-root", "ROOT_NOT_ABSOLUTE"),
+    ),
+)
+def test_external_skill_candidate_invalid_root_fails_closed(
+    candidate, expected_error, monkeypatch
+):
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, candidate)
+
+    with pytest.raises(AssertionError, match=expected_error):
+        _skill_paths_for_e2e()
+
+
+def test_external_skill_candidate_non_directory_root_fails_closed(
+    tmp_path, monkeypatch
+):
+    candidate = tmp_path / "external-skill-file"
+    candidate.write_bytes(b"not-a-directory")
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, str(candidate))
+
+    with pytest.raises(AssertionError, match="ROOT_NOT_DIRECTORY"):
+        _skill_paths_for_e2e()
+
+
+def test_external_skill_candidate_faults_fail_closed(tmp_path, monkeypatch):
+    root = tmp_path / "external-skill"
+    _script, config, schema = _write_test_skill_candidate(
+        root,
+        {"script": b"script", "config": b"config", "schema": b"schema"},
+        monkeypatch,
+    )
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, str(root))
+
+    config.write_bytes(b"role-swapped-or-drifted")
+    with pytest.raises(AssertionError, match="CONTENT_DRIFT"):
+        _skill_paths_for_e2e()
+
+    config.write_bytes(b"config")
+    schema.unlink()
+    with pytest.raises(AssertionError, match="ROLE_UNAVAILABLE"):
+        _skill_paths_for_e2e()
+
+
+def test_external_skill_candidate_nonregular_role_fails_closed(tmp_path, monkeypatch):
+    root = tmp_path / "external-skill"
+    _script, _config, schema = _write_test_skill_candidate(
+        root,
+        {"script": b"script", "config": b"config", "schema": b"schema"},
+        monkeypatch,
+    )
+    schema.unlink()
+    schema.mkdir()
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, str(root))
+
+    with pytest.raises(AssertionError, match="ROLE_NOT_REGULAR"):
+        _skill_paths_for_e2e()
+
+
+def test_external_skill_candidate_duplicate_file_identity_fails_closed(
+    tmp_path, monkeypatch
+):
+    root = tmp_path / "external-skill"
+    script, config, _schema = _write_test_skill_candidate(
+        root,
+        {"script": b"same", "config": b"same", "schema": b"schema"},
+        monkeypatch,
+    )
+    config.unlink()
+    try:
+        os.link(script, config)
+    except OSError:
+        pytest.skip("hardlink unavailable")
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, str(root))
+
+    with pytest.raises(AssertionError, match="DUPLICATE_ROLE"):
+        _skill_paths_for_e2e()
+
+
+@pytest.mark.parametrize(
+    "linked_directory",
+    tuple(relative_path.parts[0] for _role, relative_path in _SKILL_ROLES),
+)
+def test_external_skill_candidate_intermediate_symlink_fails_closed(
+    tmp_path, monkeypatch, linked_directory
+):
+    target_root = tmp_path / "target-skill"
+    _write_test_skill_candidate(
+        target_root,
+        {"script": b"script", "config": b"config", "schema": b"schema"},
+        monkeypatch,
+    )
+    root = tmp_path / "external-skill"
+    root.mkdir()
+    try:
+        (root / linked_directory).symlink_to(
+            target_root / linked_directory,
+            target_is_directory=True,
+        )
+    except OSError:
+        pytest.skip("directory symlink unavailable")
+    for directory in ("config", "schemas"):
+        if directory == linked_directory:
+            continue
+        source = target_root / directory
+        destination = root / directory
+        destination.mkdir()
+        for child in source.iterdir():
+            (destination / child.name).write_bytes(child.read_bytes())
+    if linked_directory != "scripts":
+        source = target_root / "scripts"
+        destination = root / "scripts"
+        destination.mkdir()
+        for child in source.iterdir():
+            (destination / child.name).write_bytes(child.read_bytes())
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, str(root))
+
+    with pytest.raises(AssertionError, match="REPARSE_REJECTED"):
+        _skill_paths_for_e2e()
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    tuple(relative_path for _role, relative_path in _SKILL_ROLES),
+)
+def test_external_skill_candidate_leaf_symlink_fails_closed(
+    tmp_path, monkeypatch, relative_path
+):
+    target_root = tmp_path / "target-skill"
+    _write_test_skill_candidate(
+        target_root,
+        {"script": b"script", "config": b"config", "schema": b"schema"},
+        monkeypatch,
+    )
+    root = tmp_path / "external-skill"
+    _write_test_skill_candidate(
+        root,
+        {"script": b"script", "config": b"config", "schema": b"schema"},
+        monkeypatch,
+    )
+    selected = root / relative_path
+    selected.unlink()
+    try:
+        selected.symlink_to(target_root / relative_path)
+    except OSError:
+        pytest.skip("file symlink unavailable")
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, str(root))
+
+    with pytest.raises(AssertionError, match="REPARSE_REJECTED"):
+        _skill_paths_for_e2e()
+
+
+def test_run_adapter_scrubs_external_skill_selector(tmp_path, monkeypatch):
+    observed_environment = {}
+
+    class _Completed:
+        returncode = 0
+
+    def _fake_run(arguments, **kwargs):
+        observed_environment.update(kwargs["env"])
+        output = Path(arguments[arguments.index("--output") + 1])
+        output.write_text("{}", encoding="utf-8")
+        return _Completed()
+
+    monkeypatch.setenv(EXTERNAL_SKILL_ROOT_ENV, "private-candidate")
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    assert _run_adapter(tmp_path, Path("selected-adapter.py"), "connector-status") == {}
+    assert EXTERNAL_SKILL_ROOT_ENV not in observed_environment
+
+
+def test_run_adapter_failure_does_not_echo_child_stderr(tmp_path, monkeypatch):
+    class _Failed:
+        returncode = 9
+        stderr = "PRIVATE_STDERR_SENTINEL"
+
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: _Failed())
+
+    with pytest.raises(AssertionError) as failure:
+        _run_adapter(tmp_path, Path("selected-adapter.py"), "connector-status")
+
+    assert str(failure.value) == "TASK058_ADAPTER_CHILD_FAILED"
+    assert _Failed.stderr not in str(failure.value)
+
+
+@pytest.mark.parametrize(
+    ("raw_output", "expected_error"),
+    (
+        ("PRIVATE_MALFORMED_OUTPUT", "TASK058_ADAPTER_OUTPUT_INVALID"),
+        ("[]", "TASK058_ADAPTER_OUTPUT_INVALID"),
+    ),
+)
+def test_run_adapter_invalid_output_is_public_safe(
+    tmp_path, monkeypatch, raw_output, expected_error
+):
+    class _Completed:
+        returncode = 0
+
+    def _fake_run(command, **_kwargs):
+        output = Path(command[command.index("--output") + 1])
+        output.write_text(raw_output, encoding="utf-8")
+        return _Completed()
+
+    monkeypatch.setattr(subprocess, "run", _fake_run)
+
+    with pytest.raises(AssertionError) as failure:
+        _run_adapter(tmp_path, Path("selected-adapter.py"), "connector-status")
+
+    assert str(failure.value) == expected_error
+    assert raw_output not in str(failure.value)
+
+
+def test_run_adapter_missing_output_is_public_safe(tmp_path, monkeypatch):
+    private_output = tmp_path / "private-output-location"
+
+    class _Completed:
+        returncode = 0
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_args, **_kwargs: _Completed(),
+    )
+
+    with pytest.raises(AssertionError) as failure:
+        _run_adapter(private_output, Path("selected-adapter.py"), "connector-status")
+
+    assert str(failure.value) == "TASK058_ADAPTER_OUTPUT_UNAVAILABLE"
+    assert str(private_output) not in str(failure.value)
+
+
+def test_run_adapter_revalidates_exact3_after_child(tmp_path, monkeypatch):
+    root = tmp_path / "external-skill"
+    skill_paths = _write_test_skill_candidate(
+        root,
+        {"script": b"script", "config": b"config", "schema": b"schema"},
+        monkeypatch,
+    )
+    script = skill_paths[0]
+
+    class _Completed:
+        returncode = 0
+
+    def _drifting_run(command, **_kwargs):
+        output = Path(command[command.index("--output") + 1])
+        output.write_text("{}", encoding="utf-8")
+        script.write_bytes(b"persistent-drift")
+        return _Completed()
+
+    monkeypatch.setattr(subprocess, "run", _drifting_run)
+
+    with pytest.raises(AssertionError, match="CONTENT_DRIFT"):
+        _run_adapter(
+            tmp_path,
+            script,
+            "connector-status",
+            skill_paths=skill_paths,
+        )
+
+
+def test_run_adapter_rejects_materialized_input_drift(tmp_path, monkeypatch):
+    selected_script = tmp_path / "selected-adapter.py"
+    selected_script.write_bytes(b"selected-script")
+    materialized_config = tmp_path / "isolated-config.json"
+    materialized_config.write_bytes(b"isolated-config")
+
+    class _Completed:
+        returncode = 0
+
+    def _drifting_run(command, **_kwargs):
+        output = Path(command[command.index("--output") + 1])
+        output.write_text("{}", encoding="utf-8")
+        materialized_config.write_bytes(b"mutated-config")
+        return _Completed()
+
+    monkeypatch.setattr(subprocess, "run", _drifting_run)
+
+    with pytest.raises(AssertionError, match="INPUT_DRIFT"):
+        _run_adapter(
+            tmp_path,
+            selected_script,
+            "connector-status",
+            immutable_inputs=((materialized_config, b"isolated-config"),),
+        )
+
+
 def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_path):
-    before_digest = _skill_digest()
-    default_config = json.loads(SKILL_CONFIG.read_text(encoding="utf-8"))
+    skill_paths, external_candidate = _skill_paths_for_e2e()
+    skill_script, skill_config, _skill_schema = skill_paths
+    if not external_candidate and not skill_script.is_file():
+        pytest.skip("installed SKILL unavailable")
+    before_digest = _skill_digest(skill_paths)
+    default_config = json.loads(skill_config.read_text(encoding="utf-8"))
     assert default_config["enabled"] is False
 
     layout = BridgeLayout.for_isolated_test(tmp_path / "bridge")
@@ -601,19 +1086,32 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
     config_path.write_text(json.dumps(config), encoding="utf-8")
     learning_path = tmp_path / "learning.json"
     learning_path.write_text(json.dumps(_learning()), encoding="utf-8")
+    immutable_inputs = (
+        (config_path, config_path.read_bytes()),
+        (learning_path, learning_path.read_bytes()),
+    )
 
     status = _run_adapter(
-        tmp_path, "connector-status", "--config", str(config_path)
+        tmp_path,
+        skill_script,
+        "connector-status",
+        "--config",
+        str(config_path),
+        skill_paths=skill_paths,
+        immutable_inputs=immutable_inputs,
     )
     assert status["status"] == "READY"
 
     staged = _run_adapter(
         tmp_path,
+        skill_script,
         "publish-learning",
         "--learning",
         str(learning_path),
         "--config",
         str(config_path),
+        skill_paths=skill_paths,
+        immutable_inputs=immutable_inputs,
     )
     assert staged["status"] == "STAGED_PENDING_REQUIRED_RECEIPT"
     assert staged["canonical_store_written"] is False
@@ -639,11 +1137,14 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
 
     matched = _run_adapter(
         tmp_path,
+        skill_script,
         "publish-learning",
         "--learning",
         str(learning_path),
         "--config",
         str(config_path),
+        skill_paths=skill_paths,
+        immutable_inputs=immutable_inputs,
     )
     assert matched["status"] == "BVP_REPORTED_ACCEPTED"
     assert matched["canonical_store_written"] is True
@@ -654,11 +1155,27 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
         source_binding=ProfileSourceBinding.bound_isolated_fixture(),
     )
     assert published.status == "PUBLISHED"
-    loaded = _run_adapter(tmp_path, "load-profile", "--config", str(config_path))
+    loaded = _run_adapter(
+        tmp_path,
+        skill_script,
+        "load-profile",
+        "--config",
+        str(config_path),
+        skill_paths=skill_paths,
+        immutable_inputs=immutable_inputs,
+    )
     assert loaded["status"] == "PASS"
     assert loaded["advisory_only"] is True
     assert loaded["canonical_timeline"] is False
     assert loaded["auto_apply_authorized"] is False
 
-    assert _skill_digest() == before_digest
-    assert json.loads(SKILL_CONFIG.read_text(encoding="utf-8"))["enabled"] is False
+    if external_candidate:
+        post_paths, post_external = _skill_paths_for_e2e()
+        assert post_external is True
+        assert tuple(path.resolve() for path in post_paths) == tuple(
+            path.resolve() for path in skill_paths
+        )
+    else:
+        post_paths = skill_paths
+    assert _skill_digest(post_paths) == before_digest
+    assert json.loads(skill_config.read_text(encoding="utf-8"))["enabled"] is False

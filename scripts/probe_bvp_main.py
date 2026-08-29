@@ -96,15 +96,27 @@ def _main_entry(repo_root: Path, relative_path: str) -> tuple[bool, str | None]:
     return True, object_id
 
 
+def _is_link_or_reparse(path: Path) -> bool:
+    metadata = path.lstat()
+    reparse_flag = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
+    file_attributes = getattr(metadata, "st_file_attributes", 0)
+    return stat.S_ISLNK(metadata.st_mode) or bool(file_attributes & reparse_flag)
+
+
 def _checkout_entry(repo_root: Path, relative_path: str) -> bool:
     candidate = repo_root.joinpath(*relative_path.split("/"))
     try:
+        current = repo_root
+        for component in relative_path.split("/"):
+            current = current / component
+            if _is_link_or_reparse(current):
+                return False
         metadata = candidate.lstat()
         resolved = candidate.resolve(strict=True)
         resolved.relative_to(repo_root)
     except (OSError, ValueError):
         return False
-    return not candidate.is_symlink() and stat.S_ISREG(metadata.st_mode)
+    return stat.S_ISREG(metadata.st_mode)
 
 
 def _base_result() -> dict[str, Any]:

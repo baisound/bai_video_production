@@ -265,6 +265,31 @@ class ProbeBvpMainTests(unittest.TestCase):
                     self.assertIn(role + ":MAIN", result["missing_roles"])
                     self.assertIn("REQUIRED_ENTRY_MISSING", result["reason_codes"])
 
+    def test_checkout_entry_rejects_every_link_or_reparse_component(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
+            repo = Path(raw) / "repo"
+            _create_repository(repo)
+            relative_path = probe_bvp_main.PUBLIC_ENTRYPOINTS["normalize"][2]
+            components: list[Path] = []
+            current = repo.resolve()
+            for component in relative_path.split("/"):
+                current = current / component
+                components.append(current)
+
+            for rejected in components:
+                with self.subTest(component=rejected.name):
+                    with mock.patch.object(
+                        probe_bvp_main,
+                        "_is_link_or_reparse",
+                        side_effect=lambda path, rejected=rejected: path == rejected,
+                    ):
+                        self.assertFalse(
+                            probe_bvp_main._checkout_entry(
+                                repo.resolve(),
+                                relative_path,
+                            )
+                        )
+
     def test_invalid_project_identity_and_script_binding_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
             repo = Path(raw) / "repo"

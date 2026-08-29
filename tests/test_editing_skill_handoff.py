@@ -102,6 +102,28 @@ def test_missing_optional_handoff_is_legacy_safe_and_non_authoritative() -> None
     assert evidence["runtime_authority_created"] is False
 
 
+def test_common_evidence_self_hash_covers_every_public_field_in_all_modes() -> None:
+    cases = (
+        (None, None),
+        (KNOWLEDGE_COMMENTARY, _knowledge_handoff()),
+        (MONTAGE, _montage_handoff()),
+    )
+
+    for editing_mode, value in cases:
+        evidence = project_optional_editing_skill_handoff(
+            editing_mode=editing_mode,
+            value=value,
+        )
+        digest = evidence["evidence_sha256"]
+        unsigned = {
+            key: item for key, item in evidence.items() if key != "evidence_sha256"
+        }
+
+        assert digest == sha256_bytes(canonical_json_bytes(unsigned))
+        unsigned["runtime_authority_created"] = True
+        assert digest != sha256_bytes(canonical_json_bytes(unsigned))
+
+
 @pytest.mark.parametrize(
     ("editing_mode", "value"),
     [

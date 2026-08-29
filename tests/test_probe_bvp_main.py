@@ -83,6 +83,7 @@ class ProbeBvpMainTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
             repo = Path(raw) / "repo"
             main_sha = _create_repository(repo)
+            index_before = (repo / ".git" / "index").read_bytes()
 
             first = probe_bvp_main.probe_repository(repo, main_sha)
             second = probe_bvp_main.probe_repository(repo, main_sha)
@@ -95,6 +96,7 @@ class ProbeBvpMainTests(unittest.TestCase):
             self.assertEqual(first["reason_codes"], [])
             self.assertNotIn(str(repo), json.dumps(first, sort_keys=True))
             self.assertEqual(_git(repo, "status", "--porcelain"), "")
+            self.assertEqual((repo / ".git" / "index").read_bytes(), index_before)
 
     def test_public_result_schema_and_entry_digest_roles_are_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
@@ -383,6 +385,19 @@ class ProbeBvpMainTests(unittest.TestCase):
             self.assertFalse(nonzero["execution_ready"])
             self.assertEqual(nonzero["reason_codes"], ["GIT_COMMAND_FAILED"])
             self.assertNotIn("private", json.dumps(nonzero, sort_keys=True))
+
+    def test_probe_git_commands_disable_optional_index_locks(self) -> None:
+        completed = mock.Mock(returncode=0, stdout="", stderr="")
+        with mock.patch.object(
+            probe_bvp_main.subprocess,
+            "run",
+            return_value=completed,
+        ) as run:
+            probe_bvp_main._git(Path("repo"), "status")
+
+        command = run.call_args.args[0]
+        self.assertEqual(command[:2], ["git", "--no-optional-locks"])
+        self.assertEqual(command[-1], "status")
 
     def test_git_failure_after_root_resolution_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:

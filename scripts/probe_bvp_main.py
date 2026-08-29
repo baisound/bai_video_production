@@ -59,7 +59,13 @@ def _git(
 ) -> subprocess.CompletedProcess[str]:
     try:
         completed = subprocess.run(
-            ["git", "-C", os.fspath(repo_root), *arguments],
+            [
+                "git",
+                "--no-optional-locks",
+                "-C",
+                os.fspath(repo_root),
+                *arguments,
+            ],
             check=False,
             capture_output=True,
             text=True,

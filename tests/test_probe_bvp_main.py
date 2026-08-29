@@ -137,6 +137,32 @@ class ProbeBvpMainTests(unittest.TestCase):
             self.assertIn("DETACHED_HEAD", detached["reason_codes"])
             self.assertEqual(detached["branch"], "DETACHED")
 
+    def test_head_main_mismatch_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
+            repo = Path(raw) / "repo"
+            main_sha = _create_repository(repo)
+            _git(repo, "checkout", "-b", "feature")
+            (repo / "feature-only.txt").write_text("feature\n", encoding="utf-8")
+            _git(repo, "add", "--", "feature-only.txt")
+            _git(
+                repo,
+                "-c",
+                "user.name=BVP Probe Test",
+                "-c",
+                "user.email=probe-test@example.invalid",
+                "commit",
+                "-m",
+                "feature fixture",
+            )
+
+            result = probe_bvp_main.probe_repository(repo, main_sha)
+
+            self.assertTrue(result["audit_ready"])
+            self.assertFalse(result["execution_ready"])
+            self.assertIn("BRANCH_NOT_MAIN", result["reason_codes"])
+            self.assertIn("HEAD_MAIN_MISMATCH", result["reason_codes"])
+            self.assertEqual(result["branch"], "OTHER")
+
     def test_tracked_and_untracked_changes_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
             repo = Path(raw) / "repo"

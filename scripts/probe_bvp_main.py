@@ -159,7 +159,12 @@ def _probe_repository(
         check=False,
     )
     if top_level_result.returncode != 0:
-        result["reason_codes"] = ["NOT_GIT_REPOSITORY"]
+        reason = (
+            "GIT_COMMAND_FAILED"
+            if (requested_root / ".git").exists()
+            else "NOT_GIT_REPOSITORY"
+        )
+        result["reason_codes"] = [reason]
         return result
     top_level_text = top_level_result.stdout.strip()
     try:

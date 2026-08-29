@@ -250,6 +250,19 @@ class ProbeBvpMainTests(unittest.TestCase):
             self.assertFalse(result["execution_ready"])
             self.assertEqual(result["reason_codes"], ["GIT_COMMAND_FAILED"])
 
+            failed_process = mock.Mock(returncode=128, stdout="", stderr="private")
+            with mock.patch.object(
+                probe_bvp_main,
+                "_git",
+                return_value=failed_process,
+            ):
+                nonzero = probe_bvp_main.probe_repository(repo)
+
+            self.assertFalse(nonzero["audit_ready"])
+            self.assertFalse(nonzero["execution_ready"])
+            self.assertEqual(nonzero["reason_codes"], ["GIT_COMMAND_FAILED"])
+            self.assertNotIn("private", json.dumps(nonzero, sort_keys=True))
+
     def test_git_failure_after_root_resolution_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
             repo = Path(raw) / "repo"

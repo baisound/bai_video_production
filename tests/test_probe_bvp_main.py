@@ -337,6 +337,37 @@ class ProbeBvpMainTests(unittest.TestCase):
             self.assertNotIn(str(repo), ready_payload)
             self.assertFalse(blocked["execution_ready"])
 
+    def test_output_parent_is_not_created_implicitly(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
+            missing_parent = Path(raw) / "missing"
+
+            with self.assertRaisesRegex(ValueError, "OUTPUT_PARENT_UNAVAILABLE"):
+                probe_bvp_main._write_result(
+                    missing_parent / "probe.json", {"execution_ready": False}
+                )
+
+            self.assertFalse(missing_parent.exists())
+
+    def test_output_replace_failure_preserves_existing_file_and_cleans_temp(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory(prefix="bvp-probe-test-") as raw:
+            root = Path(raw)
+            output = root / "probe.json"
+            original = "existing-result\n"
+            output.write_text(original, encoding="utf-8")
+
+            with mock.patch.object(
+                probe_bvp_main.os, "replace", side_effect=OSError("replace failed")
+            ):
+                with self.assertRaises(OSError):
+                    probe_bvp_main._write_result(
+                        output, {"execution_ready": False}
+                    )
+
+            self.assertEqual(output.read_text(encoding="utf-8"), original)
+            self.assertEqual(list(root.glob("probe.json.*.tmp")), [])
+
 
 if __name__ == "__main__":
     unittest.main()

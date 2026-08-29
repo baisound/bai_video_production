@@ -97,6 +97,19 @@ def test_task055_task056_bridge_receipt_profile_and_resolve_handoff_fixture_e2e(
     assert cue_projection["projection_mode"] == "CONFIRMED_ONLY"
     assert cue_projection["canonical_timeline"] is False
     assert cue_projection["auto_apply_authorized"] is False
+    assert cue_projection["manifest_sha256"] == cue_result["manifest_sha256"]
+    assert cue_projection["projection_sha256"] == cue_result["projection_sha256"]
+    cue_projection_unsigned = {
+        key: value
+        for key, value in cue_projection.items()
+        if key != "projection_sha256"
+    }
+    assert cue_projection["projection_sha256"] == sha256_bytes(
+        canonical_json_bytes(cue_projection_unsigned)
+    )
+    cue_projection_text = json.dumps(cue_projection, ensure_ascii=False)
+    assert "チェイス" not in cue_projection_text
+    assert "ダウン" not in cue_projection_text
 
     layout = _layout(tmp_path / "bridge-case")
     staged_path, exact_delivery, coordinates = _exact_fixture(layout, canonical_store)

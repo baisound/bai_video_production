@@ -889,7 +889,7 @@ def test_run_adapter_scrubs_external_skill_selector(tmp_path, monkeypatch):
 def test_run_adapter_failure_does_not_echo_child_stderr(tmp_path, monkeypatch):
     class _Failed:
         returncode = 9
-        stderr = r"private candidate C:\Users\owner\secret-skill"
+        stderr = "PRIVATE_STDERR_SENTINEL"
 
     monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: _Failed())
 

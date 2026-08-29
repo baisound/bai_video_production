@@ -241,7 +241,7 @@ def _run_adapter(
         text=True,
         timeout=30,
     )
-    assert completed.returncode == 0, completed.stderr
+    assert completed.returncode == 0, "TASK058_ADAPTER_CHILD_FAILED"
     return json.loads(output.read_text(encoding="utf-8"))
 
 
@@ -884,6 +884,20 @@ def test_run_adapter_scrubs_external_skill_selector(tmp_path, monkeypatch):
 
     assert _run_adapter(tmp_path, Path("selected-adapter.py"), "connector-status") == {}
     assert EXTERNAL_SKILL_ROOT_ENV not in observed_environment
+
+
+def test_run_adapter_failure_does_not_echo_child_stderr(tmp_path, monkeypatch):
+    class _Failed:
+        returncode = 9
+        stderr = r"private candidate C:\Users\owner\secret-skill"
+
+    monkeypatch.setattr(subprocess, "run", lambda *_args, **_kwargs: _Failed())
+
+    with pytest.raises(AssertionError) as failure:
+        _run_adapter(tmp_path, Path("selected-adapter.py"), "connector-status")
+
+    assert str(failure.value) == "TASK058_ADAPTER_CHILD_FAILED"
+    assert _Failed.stderr not in str(failure.value)
 
 
 def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_path):

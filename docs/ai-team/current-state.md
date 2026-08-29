@@ -14,7 +14,7 @@
 - Voice Studio technical foundation: `TASK-046 / P-VS-1A AND P-VS-3A/3B/4A/4B BOUNDED FOUNDATIONS HOSTED CLOSED`; PR #93/#101/#163/#165/#168/#170/#173-#175/#180-#184 passed `9 / 9` hosted checks and merged the body-free VoiceProfile, recording/Dataset/Training/vertical-slice contracts, bounded synthetic runtime and unsigned development client/installer foundation. The merged Qwen3-TTS probes remain diagnostic and the representative training recipe remains blocked. P-VS-1B/P-VS-2, real recording/private audio, Dataset adoption, Training, model approval, narration/Master WAV and production use still require fresh exact runtime/path Evidence, current Consent/rights, verified encrypted storage and explicit Owner authorization.
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.23.0`
+- Package: `0.22.0`
 - Release State: `V0_23_0_RELEASE_CANDIDATE`; the last verified stable GitHub Release remains `v0.22.0` until the v0.23.0 PR, annotated Tag, Release workflow, and published-asset read-back complete
 - Development Candidate: `0.23.0`
 - Selected Release Identity: `0.23.0 / v0.23.0 / stable`, explicitly selected by the Owner on 2026-08-30

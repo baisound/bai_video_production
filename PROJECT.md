@@ -116,7 +116,7 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Separate Voice Route: TASK-046/TASK-047 retain their own exact Locks, authorities and Human gates; P-UX-1C no longer blocks their independently authorized work
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; P-OBS-0 installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may move forward separately, but P-VS-3 production training-material recording and P-VS-4 fine-tuning require P-OBS-1 hosted completion plus exact-path probe PASS, recording Consent, storage encryption and Owner GO
 - TASK-004: `COMPLETED`
-- Package: `0.23.0`
+- Package: `0.22.0`
 - Release State: `V0_23_0_RELEASE_CANDIDATE`; the last verified stable GitHub Release remains `v0.22.0` until the v0.23.0 PR, annotated Tag, Release workflow, and published-asset read-back complete
 - Development Candidate: `0.23.0`
 - Selected Release Identity: `0.23.0 / v0.23.0 / stable`, explicitly selected by the Owner on 2026-08-30 for the editing-SKILL integration release

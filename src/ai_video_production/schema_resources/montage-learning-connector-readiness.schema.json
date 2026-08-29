@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/montage-learning-connector-readiness.schema.json",
+  "title": "TASK-058 Montage Learning Connector Readiness",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "message_type",
+    "task_id",
+    "bridge_state",
+    "import_state",
+    "profile_state",
+    "adapter_state",
+    "activation_state",
+    "connector_enabled",
+    "activation_authorized",
+    "production_profile_source_bound",
+    "adapter_contract_e2e_pass",
+    "default_skill_config_unchanged",
+    "learning_adoption_authorized",
+    "automatic_promotion_authorized",
+    "timeline_mutation_authorized",
+    "resolve_write_authorized",
+    "reason_codes"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "message_type": {"const": "BvpMontageLearningConnectorReadiness"},
+    "task_id": {"const": "TASK-058"},
+    "bridge_state": {
+      "enum": ["NOT_PROVISIONED", "OWNERSHIP_UNVERIFIED", "AVAILABLE"]
+    },
+    "import_state": {
+      "enum": [
+        "NO_DELIVERY", "PENDING", "OBSERVATION_RECORDED",
+        "EXACT_ACCEPTED", "DUPLICATE", "REJECTED", "RECOVERY_REQUIRED"
+      ]
+    },
+    "profile_state": {
+      "enum": ["SOURCE_NOT_BOUND", "PUBLISHED", "LOAD_PASS", "STALE", "INVALID"]
+    },
+    "adapter_state": {
+      "enum": [
+        "NOT_RUN", "CONNECTOR_READY", "PUBLISH_STAGED",
+        "MATCHING_RECEIPT_PASS", "LOAD_PROFILE_PASS", "FAIL"
+      ]
+    },
+    "activation_state": {"enum": ["BLOCKED", "READY_FOR_ACTIVATION_HANDOFF"]},
+    "connector_enabled": {"const": false},
+    "activation_authorized": {"const": false},
+    "production_profile_source_bound": {"type": "boolean"},
+    "adapter_contract_e2e_pass": {"type": "boolean"},
+    "default_skill_config_unchanged": {"type": "boolean"},
+    "learning_adoption_authorized": {"const": false},
+    "automatic_promotion_authorized": {"const": false},
+    "timeline_mutation_authorized": {"const": false},
+    "resolve_write_authorized": {"const": false},
+    "reason_codes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"production_profile_source_bound": {"const": false}},
+        "required": ["production_profile_source_bound"]
+      },
+      "then": {
+        "properties": {
+          "profile_state": {"const": "SOURCE_NOT_BOUND"},
+          "activation_state": {"const": "BLOCKED"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"activation_state": {"const": "READY_FOR_ACTIVATION_HANDOFF"}},
+        "required": ["activation_state"]
+      },
+      "then": {
+        "properties": {
+          "bridge_state": {"const": "AVAILABLE"},
+          "adapter_state": {"const": "LOAD_PROFILE_PASS"},
+          "production_profile_source_bound": {"const": true},
+          "adapter_contract_e2e_pass": {"const": true},
+          "default_skill_config_unchanged": {"const": true}
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

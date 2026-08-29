@@ -4,13 +4,13 @@
 
 ## Current identity
 
-- Product package candidate: `0.23.0`
-- Last verified stable formal Release: `v0.22.0`
-- v0.23.0 release-code SHA: `PENDING_EXACT_MAIN_MERGE_SHA`
-- Current Product state: `V0_23_0_RELEASE_CANDIDATE / EDITING_SKILL_INTEGRATION_LOCAL_PASS / WINDOWS_FULL_CI_AND_REAL_RESOLVE_GUI_PENDING`
-- Active development branch: `codex/bvp-editing-skills-local-integration`
+- Product package: `0.23.0`
+- Last verified stable formal Release: `v0.23.0`
+- v0.23.0 release-code SHA: `382ae2aec8ecf83933973eb5c67fa6865b39194b`
+- Current Product state: `V0_23_0_FORMAL_RELEASE_COMPLETE / EDITING_SKILL_INTEGRATION_HOSTED_PASS / REAL_RESOLVE_GUI_NOT_CONFIRMED`
+- Active development branch: `main`
 
-The previous annotated stable `v0.22.0` Tag dereferences to exact release-code commit `50a2f06b`. The v0.23.0 candidate adds bounded editing-SKILL integration; its formal Tag, Release workflow, and published-asset read-back remain sequential release gates.
+The annotated stable `v0.23.0` Tag object `31899fc4` dereferences to exact release-code commit `382ae2ae`. Release workflow `33280546212` passed the full hosted suite and published six digest-bound assets. This formal release adds bounded editing-SKILL integration; it does not claim real Resolve GUI runtime QA, connector activation, Deploy, or Production.
 
 ## Completed Product scope
 

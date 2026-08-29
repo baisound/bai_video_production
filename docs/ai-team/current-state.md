@@ -4,8 +4,8 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_22_0_RELEASED / TASK_036_P_UX_1C_VISUAL_HOSTED_CLOSED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / TASK_036_P_UX_2E_NATIVE_CLOSURE_PENDING / TASK_046_VOICE_ROUTE_SEPARATE / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE / TASK_049_GAME_INTELLIGENCE_INTEGRATED / TASK_050_TRAINING_STUDIO_FOUNDATION_INTEGRATED`
-- Last Completed Release Unit: `TASK-051 — v0.22.0`; release PR #191 merged at exact release-code main `50a2f06b4d5b64764a521c5863aa1632992a1418`, annotated Tag and stable GitHub Release verified
+- Project Status: `V0_23_0_RELEASED / TASK_036_P_UX_1C_VISUAL_HOSTED_CLOSED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / TASK_036_P_UX_2E_NATIVE_CLOSURE_PENDING / TASK_046_VOICE_ROUTE_SEPARATE / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE / TASK_049_GAME_INTELLIGENCE_INTEGRATED / TASK_050_TRAINING_STUDIO_FOUNDATION_INTEGRATED`
+- Last Completed Release Unit: `TASK-058 — v0.23.0 Editing SKILL Integration`; release PR #444 passed hosted `9 / 9` and merged at exact release-code main `382ae2aec8ecf83933973eb5c67fa6865b39194b`; annotated Tag, workflow `33280546212`, full hosted regression, and stable GitHub Release assets are verified
 - Last Completed Consumer Gate: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE`; PR #122 exact head `5d0d8140659a6bf3a30e9b19ac183c206dee8d92` passed hosted `9 / 9`, merged at exact main `ea671ee75a6c1a6ef79756b33f68ecb07466c5b4`, and passed post-merge main CI/Security
 - Completed Consumer Task: `TASK-036 / P-UX-1C`; exact packaged native Evidence closes Home, WORLD LOCK, Scene Design, Edit, Quick, Settings, Export and all six top menus under `V6.1.1_VISUAL_PARITY_PASS`
 - Functional Screen Flow: `PARTIALLY_IMPLEMENTED / P_UX_2E_PACKAGED_NATIVE_CLOSURE_PENDING`; fresh source/test revalidation on 2026-08-18 confirms P-UX-2A0, Connection Settings, 2A1, 2B1/B2/B3, 2C1 and 2D1/D2/D3 are present, including canonical Provider/model selectors in Planning/Image/Video/Quick. Focused revalidation is `102 PASS`. Historical re-audit records remain evidence of the earlier gap; they are not current implementation state. `TASK036_MOCK_ABSOLUTE_FUNCTIONAL_EXPORT_FLOW_COMPLETE` remains unclaimed until P-UX-2E packaged-native output read-back closes.
@@ -14,11 +14,11 @@
 - Voice Studio technical foundation: `TASK-046 / P-VS-1A AND P-VS-3A/3B/4A/4B BOUNDED FOUNDATIONS HOSTED CLOSED`; PR #93/#101/#163/#165/#168/#170/#173-#175/#180-#184 passed `9 / 9` hosted checks and merged the body-free VoiceProfile, recording/Dataset/Training/vertical-slice contracts, bounded synthetic runtime and unsigned development client/installer foundation. The merged Qwen3-TTS probes remain diagnostic and the representative training recipe remains blocked. P-VS-1B/P-VS-2, real recording/private audio, Dataset adoption, Training, model approval, narration/Master WAV and production use still require fresh exact runtime/path Evidence, current Consent/rights, verified encrypted storage and explicit Owner authorization.
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.22.0`
-- Release State: `V0_23_0_RELEASE_CANDIDATE`; the last verified stable GitHub Release remains `v0.22.0` until the v0.23.0 PR, annotated Tag, Release workflow, and published-asset read-back complete
-- Development Candidate: `0.23.0`
+- Package: `0.23.0`
+- Release State: `V0_23_0_FORMAL_RELEASE_COMPLETE`; real Resolve GUI runtime remains `NOT_EXECUTED / NOT_CONFIRMED` and Production Deploy remains separate
+- Development Candidate: `NONE`
 - Selected Release Identity: `0.23.0 / v0.23.0 / stable`, explicitly selected by the Owner on 2026-08-30
-- Release commit: `PENDING_EXACT_MAIN_MERGE_SHA`
+- Release commit: `382ae2aec8ecf83933973eb5c67fa6865b39194b`
 - Editing SKILL integration release Evidence: `docs/ai-team/tasks/TASK-058/v0.23.0-editing-skill-integration-release-evidence-2026-08-30.md`
 - Next Consumer Decision Gate: `TASK-049 Windows packaged evidence for the main BVP EXE, BAI DbD Trivia Editor EXE and BAI DbD Training Studio EXE, then real DbD media ROI calibration / labeled/video-derived slice references / Human Gold KPI loop. TASK-036 P-UX-2E remains the separate packaged-native functional-export closure.`
 - Owner Roadmap Markers: `🟦 DEV1 NOW = TASK-049 Windows packaged evidence -> real-media Human Gold calibration`; `🟪 DEV2 NOW = TASK-021 Integrated Dashboard R0`; TASK-036 P-UX-2A0..D3 are locally revalidated and `P-UX-2E` remains pending packaged-native closure. TASK-009 R0、TASK-018 R0 and the TASK-046 unused-Lock closure are complete.

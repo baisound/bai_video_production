@@ -228,8 +228,19 @@ def _learning() -> dict[str, object]:
 
 
 def _run_adapter(
-    tmp_path: Path, skill_script: Path, *arguments: str
+    tmp_path: Path,
+    skill_script: Path,
+    *arguments: str,
+    skill_paths: tuple[Path, Path, Path] | None = None,
 ) -> dict[str, object]:
+    before_digest = None
+    if skill_paths is not None:
+        observed = _external_skill_paths(skill_script.parents[1])
+        if tuple(path.resolve() for path in observed) != tuple(
+            path.resolve() for path in skill_paths
+        ):
+            raise AssertionError("TASK058_ADAPTER_SKILL_IDENTITY_DRIFT")
+        before_digest = _skill_digest(observed)
     output = tmp_path / f"adapter-{len(list(tmp_path.glob('adapter-*.json')))}.json"
     child_environment = os.environ.copy()
     child_environment.pop(EXTERNAL_SKILL_ROOT_ENV, None)
@@ -243,6 +254,12 @@ def _run_adapter(
     )
     if completed.returncode != 0:
         raise AssertionError("TASK058_ADAPTER_CHILD_FAILED")
+    if skill_paths is not None:
+        observed = _external_skill_paths(skill_script.parents[1])
+        if tuple(path.resolve() for path in observed) != tuple(
+            path.resolve() for path in skill_paths
+        ) or _skill_digest(observed) != before_digest:
+            raise AssertionError("TASK058_ADAPTER_SKILL_IDENTITY_DRIFT")
     return json.loads(output.read_text(encoding="utf-8"))
 
 
@@ -922,6 +939,35 @@ def test_run_adapter_failure_does_not_echo_child_stderr(tmp_path, monkeypatch):
     assert _Failed.stderr not in str(failure.value)
 
 
+def test_run_adapter_revalidates_exact3_after_child(tmp_path, monkeypatch):
+    root = tmp_path / "external-skill"
+    skill_paths = _write_test_skill_candidate(
+        root,
+        {"script": b"script", "config": b"config", "schema": b"schema"},
+        monkeypatch,
+    )
+    script = skill_paths[0]
+
+    class _Completed:
+        returncode = 0
+
+    def _drifting_run(command, **_kwargs):
+        output = Path(command[command.index("--output") + 1])
+        output.write_text("{}", encoding="utf-8")
+        script.write_bytes(b"persistent-drift")
+        return _Completed()
+
+    monkeypatch.setattr(subprocess, "run", _drifting_run)
+
+    with pytest.raises(AssertionError, match="CONTENT_DRIFT"):
+        _run_adapter(
+            tmp_path,
+            script,
+            "connector-status",
+            skill_paths=skill_paths,
+        )
+
+
 def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_path):
     skill_paths, external_candidate = _skill_paths_for_e2e()
     skill_script, skill_config, _skill_schema = skill_paths
@@ -950,7 +996,12 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
     learning_path.write_text(json.dumps(_learning()), encoding="utf-8")
 
     status = _run_adapter(
-        tmp_path, skill_script, "connector-status", "--config", str(config_path)
+        tmp_path,
+        skill_script,
+        "connector-status",
+        "--config",
+        str(config_path),
+        skill_paths=skill_paths,
     )
     assert status["status"] == "READY"
 
@@ -962,6 +1013,7 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
         str(learning_path),
         "--config",
         str(config_path),
+        skill_paths=skill_paths,
     )
     assert staged["status"] == "STAGED_PENDING_REQUIRED_RECEIPT"
     assert staged["canonical_store_written"] is False
@@ -993,6 +1045,7 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
         str(learning_path),
         "--config",
         str(config_path),
+        skill_paths=skill_paths,
     )
     assert matched["status"] == "BVP_REPORTED_ACCEPTED"
     assert matched["canonical_store_written"] is True
@@ -1004,7 +1057,12 @@ def test_unchanged_skill_isolated_connector_publish_receipt_and_profile_e2e(tmp_
     )
     assert published.status == "PUBLISHED"
     loaded = _run_adapter(
-        tmp_path, skill_script, "load-profile", "--config", str(config_path)
+        tmp_path,
+        skill_script,
+        "load-profile",
+        "--config",
+        str(config_path),
+        skill_paths=skill_paths,
     )
     assert loaded["status"] == "PASS"
     assert loaded["advisory_only"] is True

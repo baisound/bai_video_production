@@ -3,6 +3,8 @@
 ??Project?Semantic Versioning????????????????????Git Tag?Commit log??????????
 
 ## [Unreleased]
+
+## [0.23.0] - 2026-08-30
 - Editing SKILL統合checkpointとして、実在read-only exact3をbindしたTASK-058、main-only checkout probe、knowledge/commentary fixture、TASK-055／056 montage fixture、両者の共通Evidence projectionを単一focused runで70件検証しました。fixture終端handoffから共通Evidenceのsource digest／自己hash／non-authorityまでをcross-bindし、private subtitle／speech本文はprojectionへ含めません。これはisolated fixture／static integration Evidenceであり、Windows full CIと実Resolve GUI runtime QAは未確認のまま、Release／Deploy／Production authorityも生成しません。
 - knowledge/commentary向けmain-only checkout probeとfixture pipeline、montage向けinstalled exact3 test seamとTASK-055／056→receipt／advisory Profile→Resolve handoff fixtureを追加しました。probeはbranch／HEAD／dirty state／required entrypointをfail closedに検証し、trusted expected main SHA未指定時はaudit-onlyに留めます。exact3 seamはsingle root配下のscript／config／schema全componentでsymlink／reparse、identity重複、content driftを拒否し、isolated fixtureではadapter→receipt→advisory Profile互換性とexact3／default config不変を検証します。両fixtureはreview-only／non-authoritative境界を維持し、実素材runtime、canonical Timeline、Resolve write、Release／Deploy／Production authorityは生成しません。
 - knowledge/commentaryとmontageのResolve handoffを、private本文を含まない共通Evidence projectionへ統合しました。source readinessとResolve実行Authorityを分離し、optional handoff未指定はlegacy-safeなNOT_AVAILABLE、部分入力・未知mode・改ざんはfail closedとします。canonical Timeline、Resolve write、runtime、Release／Deploy／Production authorityは生成しません。

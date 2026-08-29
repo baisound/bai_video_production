@@ -153,13 +153,13 @@ python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"
 ```
 
-### 0.22.0への更新とProject移行
+### 0.23.0への更新とProject移行
 
-公開済みTagから利用する場合は、Repositoryを取得して`v0.22.0`を選び、同じ方法でインストールします。
+公開済みTagから利用する場合は、Repositoryを取得して`v0.23.0`を選び、同じ方法でインストールします。
 
 ```powershell
 git fetch --tags
-git checkout v0.22.0
+git checkout v0.23.0
 python -m pip install -e ".[dev]"
 ```
 
@@ -229,7 +229,7 @@ OBS Studio 32.2.1 x64向けの未署名開発候補です。実際の導入と�
 [BAI Voice Capture v0.1.0-dev.10 installer.1](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1)
 です。通常の利用者はRelease Assetsにある
 `bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe`を取得してください。
-これは未署名のPre-releaseであり、BAI Video Production全体の安定版`v0.22.0`とは別です。
+これは未署名のPre-releaseであり、BAI Video Production全体の安定版`v0.23.0`とは別です。
 Dev.10 ControllerはOBS 32.2.1を起動したまま保存先選択、5秒GAIN確認、録音開始、一時停止、
 再開、停止を行えます。GAINバーと`学習データ録音中` / `一時停止中`表示を常時確認してください。
 

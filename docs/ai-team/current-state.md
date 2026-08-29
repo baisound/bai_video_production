@@ -14,11 +14,12 @@
 - Voice Studio technical foundation: `TASK-046 / P-VS-1A AND P-VS-3A/3B/4A/4B BOUNDED FOUNDATIONS HOSTED CLOSED`; PR #93/#101/#163/#165/#168/#170/#173-#175/#180-#184 passed `9 / 9` hosted checks and merged the body-free VoiceProfile, recording/Dataset/Training/vertical-slice contracts, bounded synthetic runtime and unsigned development client/installer foundation. The merged Qwen3-TTS probes remain diagnostic and the representative training recipe remains blocked. P-VS-1B/P-VS-2, real recording/private audio, Dataset adoption, Training, model approval, narration/Master WAV and production use still require fresh exact runtime/path Evidence, current Consent/rights, verified encrypted storage and explicit Owner authorization.
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.22.0`
-- Release State: `FORMAL_RELEASE_COMPLETE`; stable GitHub Release `v0.22.0` targets exact release-code main SHA `50a2f06b4d5b64764a521c5863aa1632992a1418`
-- Development Candidate: `NONE`; no later Product version is selected
-- Selected Release Identity: `0.22.0 / v0.22.0 / stable`
-- Release commit: `50a2f06b4d5b64764a521c5863aa1632992a1418`
+- Package: `0.23.0`
+- Release State: `V0_23_0_RELEASE_CANDIDATE`; the last verified stable GitHub Release remains `v0.22.0` until the v0.23.0 PR, annotated Tag, Release workflow, and published-asset read-back complete
+- Development Candidate: `0.23.0`
+- Selected Release Identity: `0.23.0 / v0.23.0 / stable`, explicitly selected by the Owner on 2026-08-30
+- Release commit: `PENDING_EXACT_MAIN_MERGE_SHA`
+- Editing SKILL integration release Evidence: `docs/ai-team/tasks/TASK-058/v0.23.0-editing-skill-integration-release-evidence-2026-08-30.md`
 - Next Consumer Decision Gate: `TASK-049 Windows packaged evidence for the main BVP EXE, BAI DbD Trivia Editor EXE and BAI DbD Training Studio EXE, then real DbD media ROI calibration / labeled/video-derived slice references / Human Gold KPI loop. TASK-036 P-UX-2E remains the separate packaged-native functional-export closure.`
 - Owner Roadmap Markers: `🟦 DEV1 NOW = TASK-049 Windows packaged evidence -> real-media Human Gold calibration`; `🟪 DEV2 NOW = TASK-021 Integrated Dashboard R0`; TASK-036 P-UX-2A0..D3 are locally revalidated and `P-UX-2E` remains pending packaged-native closure. TASK-009 R0、TASK-018 R0 and the TASK-046 unused-Lock closure are complete.
 - Owner priority re-route (`2026-08-24`): this developer lane is reordered to `TASK-055 -> TASK-056 -> TASK-029 -> TASK-019`. TASK-055 source is fully committed in external `bai-davinci-montage-skills` main at `f8afa412`; its BVP admission target PR #280 and lock-host/closure PR #281/#282 are merged, fresh main is `6050c476`, registry revision 53 is `HOSTED_CLOSED_RELEASED`, and the shared CHANGELOG reservation is released. The sequence does not authorize model download, paid/cloud execution, private-media upload, automatic profile/Knowledge Pack promotion, Timeline/Resolve mutation, Release or Deploy.

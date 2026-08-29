@@ -2,6 +2,25 @@
 
 Status: ACTIVE — P0/P1A/P1B/P1C-A/P1C-B/P1C-C HOSTED CLOSED / P1C-D TECHNICAL GO / HOSTED PENDING
 
+## v0.23.0 Editing SKILL Integration Release Unit
+
+The Owner explicitly selected `0.23.0 / v0.23.0 / stable` and authorized the
+main integration, annotated Tag, GitHub Release, and post-release branch/worktree
+cleanup on 2026-08-30. This bounded release Unit composes the TASK-058 exact3
+test seam, the knowledge/commentary main-only probe and fixture pipeline, the
+TASK-055/TASK-056 montage fixture pipeline, and their common privacy-safe,
+non-authoritative Resolve handoff Evidence projection.
+
+The single canonical Evidence record is
+`docs/ai-team/tasks/TASK-058/v0.23.0-editing-skill-integration-release-evidence-2026-08-30.md`.
+It must be updated after merge and Release read-back with the exact PR, main SHA,
+annotated Tag, workflow, published assets, and cleanup result.
+
+Release does not convert endpoint digest equality into continuous custody, does
+not authorize connector activation, and does not claim real Resolve GUI runtime
+QA. Windows full CI and the GitHub Release workflow must report their observed
+results independently; any unexecuted native gate remains `NOT_CONFIRMED`.
+
 ## Objective
 
 Provide a bounded, review-first bridge for two montage-learning inputs without

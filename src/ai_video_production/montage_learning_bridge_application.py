@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 import re
 from typing import Any, Callable, Mapping
@@ -905,8 +906,16 @@ def _parse_skill_v1_receipt(
     if value["status"] not in {ACCEPTED, DUPLICATE}:
         raise MontageLearningBridgeApplicationError("SKILL v1 receipt status invalid")
     _require_id(value["receipt_id"], "receipt_id")
-    if type(value["timestamp"]) is not str or not value["timestamp"].strip():
+    if type(value["timestamp"]) is not str or re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value["timestamp"]
+    ) is None:
         raise MontageLearningBridgeApplicationError("receipt timestamp is invalid")
+    try:
+        datetime.strptime(value["timestamp"], "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise MontageLearningBridgeApplicationError(
+            "receipt timestamp is invalid"
+        ) from exc
     return dict(value)
 
 

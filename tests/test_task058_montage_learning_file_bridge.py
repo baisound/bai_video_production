@@ -16,6 +16,7 @@ from ai_video_production.montage_learning_bridge_application import (
     GenericObservationCoordinates,
     MontageLearningBridgeApplication,
     MontageLearningBridgeApplicationError,
+    _parse_skill_v1_receipt,
 )
 from ai_video_production.montage_learning_bridge_contracts import (
     canonical_learning_sha256,
@@ -28,13 +29,15 @@ from ai_video_production.montage_learning_file_bridge import (
     MontageLearningFileBridgeError,
     PRODUCTION_BRIDGE_ROOT,
     claim_delivery,
+    load_published_receipt,
     load_bridge_owner,
     provision_bridge,
+    receipt_publication_paths,
     snapshot_delivery,
 )
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
 from ai_video_production.product_project_store import ProductProjectManifestStore
-from ai_video_production.serialization import canonical_json_bytes
+from ai_video_production.serialization import canonical_json_bytes, sha256_json
 from test_task058_montage_learning_canonical_admission_transaction import (
     _arguments as _exact_arguments,
     _stage as _stage_exact,
@@ -459,9 +462,129 @@ def test_generic_import_revalidates_commits_and_publishes_matching_v1_receipt(tm
     ].removeprefix("sha256:")
     assert ledger["store_kind"] == "REVIEW_OBSERVATION"
     receipt = json.loads(first.receipt_path.read_text(encoding="utf-8"))
+    assert set(receipt) == {
+        "schema_version",
+        "message_type",
+        "record_id",
+        "learning_sha256",
+        "status",
+        "receipt_id",
+        "timestamp",
+    }
     assert receipt["record_id"] == delivery["record_id"]
     assert receipt["learning_sha256"] == delivery["learning_sha256"]
     assert receipt["status"] == "ACCEPTED"
+    correlation = json.loads(
+        receipt_publication_paths(
+            layout,
+            record_id=delivery["record_id"],
+            source_sha256=delivery["learning_sha256"],
+            exact_v2=False,
+        ).correlation_path.read_text(encoding="utf-8")
+    )
+    expected_identity = sha256_json(
+        {
+            "domain": "BVP_MONTAGE_LEARNING_SKILL_RECEIPT_V1",
+            "record_id": delivery["record_id"],
+            "learning_sha256": delivery["learning_sha256"],
+            "canonical_commit_sha256": correlation["canonical_commit_sha256"],
+            "internal_receipt_self_hash": correlation[
+                "internal_receipt_self_hash"
+            ],
+        }
+    )
+    assert receipt["receipt_id"] == (
+        f"bvp-{expected_identity.removeprefix('sha256:')}"
+    )
+    assert receipt["timestamp"] == ledger["entries"][0]["admission_timestamp"]
+    assert correlation["public_receipt_sha256"] == sha256_json(receipt)
+    assert correlation["learning_adopted"] is False
+    assert correlation["profile_promoted"] is False
+    assert correlation["timeline_mutated"] is False
+
+
+@pytest.mark.parametrize(
+    ("field", "changed"),
+    [
+        ("schema_version", "9.0.0"),
+        ("message_type", "WrongReceipt"),
+        ("record_id", "other-record"),
+        ("learning_sha256", "sha256:" + "f" * 64),
+        ("status", "REJECTED"),
+        ("receipt_id", ""),
+        ("timestamp", "not-a-timestamp"),
+    ],
+)
+def test_skill_v1_outer_receipt_exact7_rejects_missing_and_changed_fields(
+    field, changed
+):
+    receipt = {
+        "schema_version": "1.0.0",
+        "message_type": "BvpMontageLearningAdmissionReceipt",
+        "record_id": "receipt-exact7-001",
+        "learning_sha256": "sha256:" + "a" * 64,
+        "status": "ACCEPTED",
+        "receipt_id": "bvp-receipt-exact7-001",
+        "timestamp": "2026-08-27T00:00:00Z",
+    }
+    assert _parse_skill_v1_receipt(
+        receipt,
+        record_id=receipt["record_id"],
+        learning_sha256=receipt["learning_sha256"],
+    ) == receipt
+
+    missing = dict(receipt)
+    missing.pop(field)
+    with pytest.raises(MontageLearningBridgeApplicationError):
+        _parse_skill_v1_receipt(
+            missing,
+            record_id=receipt["record_id"],
+            learning_sha256=receipt["learning_sha256"],
+        )
+
+    altered = dict(receipt)
+    altered[field] = changed
+    with pytest.raises(MontageLearningBridgeApplicationError):
+        _parse_skill_v1_receipt(
+            altered,
+            record_id=receipt["record_id"],
+            learning_sha256=receipt["learning_sha256"],
+        )
+
+    extra = {**receipt, "unknown": False}
+    with pytest.raises(MontageLearningBridgeApplicationError, match="fields"):
+        _parse_skill_v1_receipt(
+            extra,
+            record_id=receipt["record_id"],
+            learning_sha256=receipt["learning_sha256"],
+        )
+
+
+def test_existing_generic_receipt_duplicate_key_rejects_before_trusted_readback(
+    tmp_path,
+):
+    layout = _layout(tmp_path)
+    delivery = _delivery("duplicate-receipt-key-001")
+    staged = _stage(layout, delivery)
+    canonical_store = _canonical_store(tmp_path)
+    coordinates = GenericObservationCoordinates(expected_revision=0)
+    result = MontageLearningBridgeApplication(
+        layout=layout, canonical_port=canonical_store
+    ).import_path(staged, generic_coordinates=coordinates)
+
+    text = result.receipt_path.read_text(encoding="utf-8")
+    duplicated = text.replace(
+        '"record_id":', '"record_id":"duplicate","record_id":', 1
+    )
+    result.receipt_path.write_text(duplicated, encoding="utf-8")
+    paths = receipt_publication_paths(
+        layout,
+        record_id=delivery["record_id"],
+        source_sha256=delivery["learning_sha256"],
+        exact_v2=False,
+    )
+    with pytest.raises(MontageLearningFileBridgeError, match="duplicate"):
+        load_published_receipt(paths)
 
 
 def test_generic_durable_a_commit_before_receipt_recovers_as_provable_duplicate(tmp_path):

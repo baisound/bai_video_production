@@ -9,6 +9,7 @@ import sys
 from jsonschema import Draft202012Validator
 import pytest
 
+import ai_video_production.montage_learning_connector_readiness as connector_readiness
 from ai_video_production.montage_learning_bridge_application import (
     GenericObservationCoordinates,
     MontageLearningBridgeApplication,
@@ -18,9 +19,9 @@ from ai_video_production.montage_learning_canonical_admission_transaction import
 )
 from ai_video_production.montage_learning_connector_readiness import (
     ConnectorReadinessEvidence,
-    ConnectorReadinessEvidenceV2,
-    ConnectorReadinessComponentV2,
-    ConnectorReadinessPredicateV2,
+    _ConnectorReadinessEvidenceV2,
+    _ConnectorReadinessComponentV2,
+    _ConnectorReadinessPredicateV2,
     MontageLearningConnectorReadinessError,
     ProfileSourceBinding,
     production_readiness_evidence,
@@ -198,6 +199,12 @@ def test_readiness_schema_mirror_and_unbound_production_are_fail_closed(tmp_path
     assert evidence["activation_state"] == "BLOCKED"
     assert evidence["connector_enabled"] is False
     assert evidence["activation_authorized"] is False
+
+    private_v2 = _readiness_v2("PASS").to_dict()
+    assert not Draft202012Validator(schema).is_valid(private_v2)
+    assert "ConnectorReadinessEvidenceV2" not in connector_readiness.__all__
+    assert "ConnectorReadinessComponentV2" not in connector_readiness.__all__
+    assert "ConnectorReadinessPredicateV2" not in connector_readiness.__all__
 
 
 def test_prebuilt_profile_is_strict_immutable_transport_with_cas(tmp_path):
@@ -434,7 +441,7 @@ _READINESS_PREDICATES = {
 
 def _readiness_component(
     component_id: str, state: str
-) -> ConnectorReadinessComponentV2:
+) -> _ConnectorReadinessComponentV2:
     predicates = []
     for index, predicate_id in enumerate(_READINESS_PREDICATES[component_id]):
         predicate_state = "PASS"
@@ -448,14 +455,24 @@ def _readiness_component(
             evidence = "sha256:" + "e" * 64 if index == 0 else None
             reasons = ("SOURCE_NOT_BOUND",) if index == 0 else ()
         predicates.append(
-            ConnectorReadinessPredicateV2(
+            _ConnectorReadinessPredicateV2(
                 predicate_id=predicate_id,
                 state=predicate_state,
                 evidence_sha256=evidence,
                 reason_codes=reasons,
             )
         )
-    return ConnectorReadinessComponentV2.compile(
+    complete_evidence = tuple(
+        sorted(
+            {
+                "sha256:" + "a" * 64,
+                "sha256:" + "b" * 64,
+                "sha256:" + "c" * 64,
+                "sha256:" + "d" * 64,
+            }
+        )
+    )
+    return _ConnectorReadinessComponentV2.compile(
         component_id=component_id,
         state=state,
         code_sha256="sha256:" + "a" * 64,
@@ -463,13 +480,13 @@ def _readiness_component(
         test_vector_sha256="sha256:" + "c" * 64,
         observed_at="2026-08-27T00:00:00Z",
         expires_at="2026-08-27T00:10:00Z",
-        evidence_sha256=("sha256:" + "d" * 64,) if state == "PASS" else (),
+        evidence_sha256=complete_evidence if state == "PASS" else (),
         predicates=tuple(predicates),
         reason_codes=("SOURCE_NOT_BOUND",) if state == "SOURCE_NOT_BOUND" else (),
     )
 
 
-def _readiness_v2(profile_state: str) -> ConnectorReadinessEvidenceV2:
+def _readiness_v2(profile_state: str) -> _ConnectorReadinessEvidenceV2:
     components = tuple(
         _readiness_component(
             component_id,
@@ -477,7 +494,7 @@ def _readiness_v2(profile_state: str) -> ConnectorReadinessEvidenceV2:
         )
         for component_id in _READINESS_PREDICATES
     )
-    return ConnectorReadinessEvidenceV2.compile(
+    return _ConnectorReadinessEvidenceV2.compile(
         bvp_main_sha256="sha256:" + "1" * 64,
         bvp_package_sha256="sha256:" + "2" * 64,
         skill_package_sha256="sha256:" + "3" * 64,
@@ -493,24 +510,47 @@ def _readiness_v2(profile_state: str) -> ConnectorReadinessEvidenceV2:
     )
 
 
-def test_readiness_v2_six_components_source_not_bound_and_ready_to_enable():
+def test_private_readiness_v2_is_source_not_bound_or_blocked_without_oracle():
     unbound = _readiness_v2("SOURCE_NOT_BOUND")
     unbound_dict = unbound.to_dict()
     assert unbound_dict["overall_state"] == "SOURCE_NOT_BOUND"
     assert tuple(unbound_dict["components"]) == tuple(_READINESS_PREDICATES)
     assert unbound_dict["connector_enabled"] is False
     assert unbound_dict["activation_authorized"] is False
-    assert ConnectorReadinessEvidenceV2.from_dict(
+    assert _ConnectorReadinessEvidenceV2.from_dict(
         json.loads(json.dumps(unbound_dict, sort_keys=True))
     ) == unbound
 
     ready = _readiness_v2("PASS").to_dict()
-    assert ready["overall_state"] == "READY_TO_ENABLE"
+    assert ready["overall_state"] == "BLOCKED"
     assert ready["connector_enabled"] is False
     assert ready["activation_authorized"] is False
     assert ready["automatic_promotion_authorized"] is False
     assert ready["timeline_mutation_authorized"] is False
     assert ready["resolve_write_authorized"] is False
+
+    incomplete = _readiness_component("BRIDGE_ROOT_READY", "PASS").to_dict()
+    incomplete["evidence_sha256"].pop()
+    incomplete["component_self_hash"] = sha256_json(
+        {key: value for key, value in incomplete.items() if key != "component_self_hash"}
+    )
+    with pytest.raises(
+        MontageLearningConnectorReadinessError, match="evidence set is incomplete"
+    ):
+        _ConnectorReadinessComponentV2.from_dict(incomplete)
+
+    expired = _readiness_v2("PASS").to_dict()
+    expired["expires_at"] = expired["verified_at"]
+    expired.pop("readiness_self_hash")
+    expired.pop("readiness_id")
+    expired["readiness_id"] = sha256_json(
+        {"domain": "BVP_MONTAGE_CONNECTOR_READINESS_ID_V2", **expired}
+    )
+    expired["readiness_self_hash"] = sha256_json(expired)
+    with pytest.raises(
+        MontageLearningConnectorReadinessError, match="freshness interval"
+    ):
+        _ConnectorReadinessEvidenceV2.from_dict(expired)
 
 
 def test_readiness_v2_relabel_rehash_and_security_model_alias_fail_closed():
@@ -526,16 +566,16 @@ def test_readiness_v2_relabel_rehash_and_security_model_alias_fail_closed():
         {**value}
     )
     with pytest.raises(
-        MontageLearningConnectorReadinessError, match="classification"
+        MontageLearningConnectorReadinessError, match="overall_state"
     ):
-        ConnectorReadinessEvidenceV2.from_dict(value)
+        _ConnectorReadinessEvidenceV2.from_dict(value)
 
     aliased = _readiness_v2("PASS").to_dict()
     aliased["bridge_security_model"] = "WINDOWS_DACL_VERIFIED"
     with pytest.raises(
         MontageLearningConnectorReadinessError, match="security model"
     ):
-        ConnectorReadinessEvidenceV2.from_dict(aliased)
+        _ConnectorReadinessEvidenceV2.from_dict(aliased)
 
 
 @pytest.mark.skipif(not SKILL_SCRIPT.is_file(), reason="installed SKILL unavailable")

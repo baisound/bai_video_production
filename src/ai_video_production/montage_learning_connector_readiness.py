@@ -109,7 +109,7 @@ _COMPONENT_STATES = frozenset({"PASS", "FAIL", "NOT_RUN", "SOURCE_NOT_BOUND"})
 _PREDICATE_STATES = frozenset({"PASS", "FAIL", "NOT_RUN"})
 _EVALUATION_MODES = frozenset({"STATUS_ONLY", "FULL_E2E"})
 _OVERALL_STATES = frozenset(
-    {"DISABLED", "SOURCE_NOT_BOUND", "READY_TO_ENABLE", "BLOCKED"}
+    {"DISABLED", "SOURCE_NOT_BOUND", "BLOCKED"}
 )
 _BRIDGE_SECURITY_MODEL = "COOPERATIVE_SAME_USER_WINDOWS_DACL"
 _SEMVER_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
@@ -268,7 +268,8 @@ class ConnectorReadinessEvidence:
 
 
 @dataclass(frozen=True, slots=True)
-class ConnectorReadinessPredicateV2:
+class _ConnectorReadinessPredicateV2:
+    """Private V2 evaluation detail; not a public/package contract."""
     predicate_id: str
     state: str
     evidence_sha256: str | None
@@ -297,7 +298,7 @@ class ConnectorReadinessPredicateV2:
     @classmethod
     def from_dict(
         cls, value: Mapping[str, object]
-    ) -> "ConnectorReadinessPredicateV2":
+    ) -> "_ConnectorReadinessPredicateV2":
         body = _plain_snapshot(value, path="$predicate", max_depth=4)
         if type(body) is not dict or set(body) != {
             "predicate_id", "state", "evidence_sha256", "reason_codes"
@@ -319,7 +320,8 @@ class ConnectorReadinessPredicateV2:
 
 
 @dataclass(frozen=True, slots=True)
-class ConnectorReadinessComponentV2:
+class _ConnectorReadinessComponentV2:
+    """Private V2 component snapshot; never an activation capability."""
     component_id: str
     component_version: str
     state: str
@@ -329,7 +331,7 @@ class ConnectorReadinessComponentV2:
     observed_at: str
     expires_at: str
     evidence_sha256: tuple[str, ...]
-    predicates: tuple[ConnectorReadinessPredicateV2, ...]
+    predicates: tuple[_ConnectorReadinessPredicateV2, ...]
     reason_codes: tuple[str, ...]
     component_self_hash: str
 
@@ -363,7 +365,7 @@ class ConnectorReadinessComponentV2:
         for digest in self.evidence_sha256:
             _require_sha(digest, "component evidence_sha256")
         if type(self.predicates) is not tuple or any(
-            not isinstance(item, ConnectorReadinessPredicateV2)
+            not isinstance(item, _ConnectorReadinessPredicateV2)
             for item in self.predicates
         ):
             raise MontageLearningConnectorReadinessError(
@@ -385,6 +387,28 @@ class ConnectorReadinessComponentV2:
         if self.state == "SOURCE_NOT_BOUND" and self.predicates[0].state == "PASS":
             raise MontageLearningConnectorReadinessError(
                 "unbound Profile component claims a bound producer"
+            )
+        expected_evidence = tuple(
+            sorted(
+                {
+                    self.code_sha256,
+                    self.schema_sha256,
+                    self.test_vector_sha256,
+                    *(
+                        item.evidence_sha256
+                        for item in self.predicates
+                        if item.evidence_sha256 is not None
+                    ),
+                }
+            )
+        )
+        if self.state == "PASS" and self.evidence_sha256 != expected_evidence:
+            raise MontageLearningConnectorReadinessError(
+                "passing component evidence set is incomplete"
+            )
+        if self.state != "PASS" and self.evidence_sha256:
+            raise MontageLearningConnectorReadinessError(
+                "non-passing component cannot claim complete evidence"
             )
         _require_sorted_reason_codes(self.reason_codes, "component reason_codes")
         _require_sha(self.component_self_hash, "component_self_hash")
@@ -423,10 +447,10 @@ class ConnectorReadinessComponentV2:
         observed_at: str,
         expires_at: str,
         evidence_sha256: tuple[str, ...],
-        predicates: tuple[ConnectorReadinessPredicateV2, ...],
+        predicates: tuple[_ConnectorReadinessPredicateV2, ...],
         reason_codes: tuple[str, ...] = (),
         component_version: str = "1.0.0",
-    ) -> "ConnectorReadinessComponentV2":
+    ) -> "_ConnectorReadinessComponentV2":
         provisional = {
             "component_id": component_id,
             "component_version": component_version,
@@ -458,7 +482,7 @@ class ConnectorReadinessComponentV2:
     @classmethod
     def from_dict(
         cls, value: Mapping[str, object]
-    ) -> "ConnectorReadinessComponentV2":
+    ) -> "_ConnectorReadinessComponentV2":
         body = _plain_snapshot(value, path="$component", max_depth=8)
         expected = {
             "component_id", "component_version", "state", "code_sha256",
@@ -487,7 +511,7 @@ class ConnectorReadinessComponentV2:
             expires_at=body["expires_at"],
             evidence_sha256=tuple(evidence),
             predicates=tuple(
-                ConnectorReadinessPredicateV2.from_dict(item) for item in predicates
+                _ConnectorReadinessPredicateV2.from_dict(item) for item in predicates
             ),
             reason_codes=tuple(reasons),
             component_self_hash=body["component_self_hash"],
@@ -495,7 +519,8 @@ class ConnectorReadinessComponentV2:
 
 
 @dataclass(frozen=True, slots=True)
-class ConnectorReadinessEvidenceV2:
+class _ConnectorReadinessEvidenceV2:
+    """Private readiness diagnostic; public serialization remains V1 only."""
     readiness_id: str
     bvp_main_sha256: str
     bvp_package_sha256: str
@@ -508,7 +533,7 @@ class ConnectorReadinessEvidenceV2:
     config_enabled: bool
     verified_at: str
     expires_at: str
-    components: tuple[ConnectorReadinessComponentV2, ...]
+    components: tuple[_ConnectorReadinessComponentV2, ...]
     overall_state: str
     reason_codes: tuple[str, ...]
     readiness_self_hash: str
@@ -625,9 +650,9 @@ class ConnectorReadinessEvidenceV2:
         config_enabled: bool,
         verified_at: str,
         expires_at: str,
-        components: tuple[ConnectorReadinessComponentV2, ...],
+        components: tuple[_ConnectorReadinessComponentV2, ...],
         reason_codes: tuple[str, ...],
-    ) -> "ConnectorReadinessEvidenceV2":
+    ) -> "_ConnectorReadinessEvidenceV2":
         overall = _classify_readiness(
             components,
             evaluation_mode=evaluation_mode,
@@ -685,7 +710,7 @@ class ConnectorReadinessEvidenceV2:
     @classmethod
     def from_dict(
         cls, value: Mapping[str, object]
-    ) -> "ConnectorReadinessEvidenceV2":
+    ) -> "_ConnectorReadinessEvidenceV2":
         body = _plain_snapshot(value, path="$readiness", max_depth=12)
         expected = {
             "schema_version", "message_type", "task_id", "readiness_id",
@@ -739,7 +764,7 @@ class ConnectorReadinessEvidenceV2:
             verified_at=body["verified_at"],
             expires_at=body["expires_at"],
             components=tuple(
-                ConnectorReadinessComponentV2.from_dict(component_values[key])
+                _ConnectorReadinessComponentV2.from_dict(component_values[key])
                 for key in _READINESS_COMPONENT_PREDICATES
             ),
             overall_state=body["overall_state"],
@@ -978,7 +1003,7 @@ def _parse_utc(value: object, field: str) -> datetime:
 
 
 def _classify_readiness(
-    components: tuple[ConnectorReadinessComponentV2, ...],
+    components: tuple[_ConnectorReadinessComponentV2, ...],
     *,
     evaluation_mode: str,
     config_enabled: bool,
@@ -1005,8 +1030,10 @@ def _classify_readiness(
             and states.get("PROFILE_TRANSPORT_READY") == "SOURCE_NOT_BOUND"
         ):
             return "SOURCE_NOT_BOUND"
+        # TASK-058 owns no trusted current-HEAD/package-byte oracle.  Even a
+        # complete caller-shaped diagnostic must therefore remain non-ready.
         if all(state == "PASS" for state in states.values()):
-            return "READY_TO_ENABLE"
+            return "BLOCKED"
     return "BLOCKED"
 
 
@@ -1030,9 +1057,6 @@ def _validate_preference_context(value: object) -> str:
 
 __all__ = [
     "ConnectorReadinessEvidence",
-    "ConnectorReadinessEvidenceV2",
-    "ConnectorReadinessComponentV2",
-    "ConnectorReadinessPredicateV2",
     "MontageLearningConnectorReadinessError",
     "ProfilePublishResult",
     "ProfileSourceBinding",

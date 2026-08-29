@@ -89,3 +89,24 @@ Critical/High risks are generic/exact receipt confusion, commit/publication
 crash, unsafe path replacement, false producer readiness, Profile semantic
 generation, and accidental `enabled:true`.  The boundaries above are mandatory
 fail-closed controls; any residual instance stops only the affected subunit.
+
+## Private readiness diagnostic and receipt hardening
+
+The packaged/public readiness contract remains schema version `1.0.0` only.
+The V2 component diagnostic is a private implementation detail: it is not
+exported, has no public/package Schema branch, creates no compatibility promise,
+and is rejected by the public V1 Schema.  TASK-058 has no trusted current-HEAD
+or package-byte oracle, so even an internally complete caller-shaped V2
+diagnostic remains `BLOCKED`; `READY_TO_ENABLE` is non-emittable in this Unit.
+A future trusted oracle requires a separately scoped and authorized Unit.
+
+Every passing private component binds the complete sorted set of its code,
+Schema, test-vector, and predicate Evidence digests.  Missing, extra, duplicate,
+expired, or mismatched Evidence remains non-ready.  The public SKILL v1 outer
+receipt remains an exact seven-field body-free projection.  Its record, source,
+canonical commit, internal receipt, Product/ledger coordinates, public receipt
+hash, timestamp, and deterministic receipt identity are rederived from the
+trusted A read-back; a missing, altered, duplicate-key, unknown-field, stale, or
+cross-request receipt/correlation fails closed.  None of these checks creates
+learning adoption, Profile promotion, Timeline/Resolve mutation, connector
+activation, Release, Deploy, Production, or Owner authority.

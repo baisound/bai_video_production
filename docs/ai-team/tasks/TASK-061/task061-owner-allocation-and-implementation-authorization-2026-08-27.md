@@ -22,13 +22,15 @@ execution `0`, and Release/Deploy/Production `0`.
 
 ## Dependency and Atomic Units
 
-Hard prerequisites: canonically released TASK-058 A/B+C, released TASK-058
-readiness v2, and TASK-060 `PP-C` production source.
+Hard prerequisites: canonically released TASK-058 v0.23.0 with its public
+readiness v1 schema/contract, and TASK-060 `PP-C` production source.  The
+TASK-058 v2 readiness type is package-private diagnostic state: it is neither a
+released public schema nor an admissible cross-process receipt.
 
 | Unit | Goal | Mandatory gate |
 |---|---|---|
 | `CA-A` | Windows bridge security attestation and migration executor | real temporary Windows DACL/migration PASS |
-| `CA-B` | production migration/source binding and released TASK-058 readiness validation | fault/expiry/drift PASS |
+| `CA-B` | production migration/source binding and released TASK-058 public v1 readiness validation; exact-package private v2 diagnostic revalidation only | fault/expiry/drift PASS |
 | `CA-C` | BVP config plus explicit Human activation/deactivation transaction | real adapter E2E and rollback PASS |
 
 Order: TASK-058 release + `PP-C -> CA-A -> CA-B -> CA-C`.
@@ -53,9 +55,12 @@ docs/ai-team/tasks/TASK-061/task.md
 docs/ai-team/tasks/TASK-061/task061-owner-allocation-and-implementation-authorization-2026-08-27.md
 ```
 
-Released TASK-058 `montage_learning_connector_readiness.py`, its v2 schema and
-focused tests are immutable dependencies and outside this list. A required
-change routes to a separately authorized TASK-058 compatibility Unit.
+Released TASK-058 `montage_learning_connector_readiness.py`, the public v1
+schema, and focused tests are immutable dependencies and outside this list.
+There is intentionally no public v2 schema.  CA-B must not import an underscore
+v2 type as a public contract, serialize it across the boundary, or describe it
+as released public evidence. A required TASK-058 contract change routes to a
+separately authorized TASK-058 compatibility Unit.
 
 ## Responsibility non-overlap
 
@@ -74,7 +79,9 @@ change routes to a separately authorized TASK-058 compatibility Unit.
 - missing privilege returns `BRIDGE_REPAIR_REQUIRED` without partial repair;
 - all migration discovery and crash phases, preserving unknown files;
 - current/stale/tampered/source-unbound Profile migration cases;
-- six readiness components remain independent and do not imply PASS;
+- six package-private v2 diagnostic components remain independent and do not
+  imply public v1 PASS;
+- no private v2 diagnostic is accepted as a public receipt or schema instance;
 - activation Evidence 24-hour expiry and every identity invalidation;
 - intake-only and full config exact bytes;
 - stale, replayed, wrong-mode Human confirmation rejection;

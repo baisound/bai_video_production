@@ -7,6 +7,7 @@ import pytest
 from ai_video_production.ai_connections import (
     AiConnectionProfile,
     AiWorkload,
+    ConnectionAvailability,
     ProviderFamily,
     SelectionMode,
 )
@@ -143,6 +144,22 @@ def test_sfx_and_music_have_separate_route_capability_and_port_identity() -> Non
         "audacity-musicgen-small-int8-stereo": "task013-audacity-musicgen-port",
     }
     assert all(route.credential_ref is None and route.endpoint_ref is None and route.settings == {} for route in profile.routes)
+
+
+def test_audio_availability_preserves_existing_routes_and_credentials() -> None:
+    inventory = compile_local_audio_model_inventory((_observation(),))
+    base = ConnectionAvailability(
+        frozenset({"local-planning-route"}),
+        frozenset({"existing-credential-ref"}),
+    )
+
+    availability = availability_from_local_audio_inventory(inventory, base)
+
+    assert availability.available_route_ids == {
+        "local-planning-route",
+        "audacity-musicgen-small-int8-stereo",
+    }
+    assert availability.available_credential_refs == {"existing-credential-ref"}
 
 
 @pytest.mark.parametrize(

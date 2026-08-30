@@ -27,12 +27,13 @@ from ai_video_production.montage_learning_canonical_admission_transaction import
 from ai_video_production.montage_learning_file_bridge import (
     BridgeLayout,
     MontageLearningFileBridgeError,
-    PRODUCTION_BRIDGE_ROOT,
+    PRODUCTION_BRIDGE_RELATIVE_PARTS,
     claim_delivery,
     load_published_receipt,
     load_bridge_owner,
     provision_bridge,
     receipt_publication_paths,
+    resolve_production_bridge_root,
     snapshot_delivery,
 )
 from ai_video_production.product_project import ProductProjectManifest, ProjectTimebase
@@ -194,11 +195,15 @@ def test_provision_is_idempotent_and_never_claims_isolated_root_as_production(tm
         )
     )
     assert not layout.import_journal.exists()
-    assert layout.root != PRODUCTION_BRIDGE_ROOT
+    install_root = tmp_path / "installed application"
+    production_root = resolve_production_bridge_root(install_root)
+    assert production_root == install_root.joinpath(*PRODUCTION_BRIDGE_RELATIVE_PARTS)
+    assert BridgeLayout.production(install_root).root == production_root
+    assert layout.root != production_root
     with pytest.raises(MontageLearningFileBridgeError):
-        BridgeLayout(PRODUCTION_BRIDGE_ROOT.parent / "alternate", True)
+        BridgeLayout(tmp_path / "alternate", True)
     with pytest.raises(MontageLearningFileBridgeError):
-        BridgeLayout.for_isolated_test(PRODUCTION_BRIDGE_ROOT)
+        BridgeLayout.for_isolated_test(production_root)
 
 
 def test_claim_crash_before_snapshot_restarts_from_processing_journal(tmp_path):

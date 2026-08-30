@@ -216,6 +216,35 @@ def test_profile_view_tamper_after_publish_fails_readback(tmp_path: Path) -> Non
         )
 
 
+def test_secure_dacl_drift_after_profile_publish_blocks_binding(tmp_path: Path) -> None:
+    target, migration, _store, _saved, source, readiness, _plan = _binding_plan(tmp_path)
+    backend = SecureBackend()
+    plan = plan_connector_source_binding(
+        target,
+        migration_readback=migration,
+        preference_source=source,
+        task058_public_readiness=readiness,
+        security_attestation_id="task061-cab-dacl-drift",
+        security_backend=backend,
+    )
+
+    def drift(phase: str, _path: Path) -> None:
+        if phase == "after_profile_publish":
+            backend.access_mask = 0x1200A9
+
+    with pytest.raises(MontageLearningConnectorActivationError, match="security identity drifted"):
+        execute_connector_source_binding(
+            plan,
+            target,
+            migration_readback=migration,
+            preference_source=source,
+            task058_public_readiness=readiness,
+            confirmation=plan.confirmation(),
+            security_backend=backend,
+            hook=drift,
+        )
+
+
 def test_non_secure_target_and_non_exact_public_v1_are_rejected(tmp_path: Path) -> None:
     target, migration, _store, _saved, source, _readiness = _fixture(tmp_path)
     good = production_readiness_evidence(

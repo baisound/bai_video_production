@@ -840,11 +840,7 @@ def _require_security_matches(
         attestation_id=plan.security_attestation_id,
         backend=backend,
     )
-    if (
-        current.owner_sid_sha256 != plan.security_owner_sid_sha256
-        or current.current_user_sid_sha256 != plan.security_current_user_sid_sha256
-        or current.ancestor_count != plan.security_ancestor_count
-    ):
+    if current.to_dict()["attestation_sha256"] != plan.security_attestation_sha256:
         raise MontageLearningBridgeMigrationError("bridge security identity drifted")
     return current
 

@@ -44,3 +44,30 @@ def test_unavailable_mutex_fails_closed():
     with pytest.raises(ProductError) as rejected:
         Task036SingleInstanceGuard(kernel32=kernel32).acquire()
     assert rejected.value.code == "ERR_TASK036_SINGLE_INSTANCE_UNAVAILABLE"
+
+def test_windows_loader_sets_handle_safe_kernel32_signatures(monkeypatch):
+    import ctypes
+    from ctypes import wintypes
+    import ai_video_production.task036_single_instance as single_instance
+
+    class NativeFunction:
+        def __call__(self, *_args):
+            return object()
+
+    class NativeKernel32:
+        def __init__(self):
+            self.CreateMutexW = NativeFunction()
+            self.GetLastError = NativeFunction()
+            self.CloseHandle = NativeFunction()
+
+    kernel32 = NativeKernel32()
+    monkeypatch.setattr(single_instance.os, "name", "nt")
+    monkeypatch.setattr(ctypes, "WinDLL", lambda *_args, **_kwargs: kernel32, raising=False)
+
+    assert single_instance._windows_kernel32() is kernel32
+    assert kernel32.CreateMutexW.argtypes == (wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR)
+    assert kernel32.CreateMutexW.restype is wintypes.HANDLE
+    assert kernel32.GetLastError.argtypes == ()
+    assert kernel32.GetLastError.restype is wintypes.DWORD
+    assert kernel32.CloseHandle.argtypes == (wintypes.HANDLE,)
+    assert kernel32.CloseHandle.restype is wintypes.BOOL

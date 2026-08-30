@@ -2,6 +2,8 @@
 
 ## Canonical project state
 
+- P0 GPU-first desktop prerequisite: `TASK-066 OWNER_AUTHORIZED / DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`. GF-E callable entry, source-backed build chain, durable receipt lifecycle and journal-first cross-volume recovery are accepted; delta-4 Critic `0/0/0/0`, Judge `ACCEPT`. TASK-063 repair source is canonical, but its post-repair native install/read-back terminal handoff is not yet confirmed, so GF-E installer mutation remains blocked; implementation/native/Release Gates remain separate.
+
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
 - Project Status: `V0_23_0_RELEASED / TASK_036_P_UX_1C_VISUAL_HOSTED_CLOSED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / TASK_036_P_UX_2E_NATIVE_CLOSURE_PENDING / TASK_046_VOICE_ROUTE_SEPARATE / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE / TASK_049_GAME_INTELLIGENCE_INTEGRATED / TASK_050_TRAINING_STUDIO_FOUNDATION_INTEGRATED`
@@ -159,7 +161,7 @@ The first full native-Windows regression returned `251 passed, 2 failed`. Packag
 
 ## Roadmap
 
-Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.92 through Addendum LXXXV plus Owner marker section 2.1. TASK-036 P-UX-1C remains hosted-closed with `V6.1.1_VISUAL_PARITY_PASS`; current-source revalidation supersedes the old A0-queued interpretation and confirms P-UX-2 A0..D3 bounded implementation with `102 PASS`, while P-UX-2E packaged-native output read-back remains open. TASK-049 R6B/R9B1 is an explicitly marked additive V6 extension and does not redefine the V6.1.1 base mock contract. TASK-046/TASK-047 remain separately governed; no voice, recording, Dataset, training or external-operation authority is inferred. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
+Canonical roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.95 through Addendum XCVI plus Owner marker section 2.1. TASK-036 P-UX-1C remains hosted-closed with `V6.1.1_VISUAL_PARITY_PASS`; current-source revalidation supersedes the old A0-queued interpretation and confirms P-UX-2 A0..D3 bounded implementation with `102 PASS`, while P-UX-2E packaged-native output read-back remains open. TASK-049 R6B/R9B1 is an explicitly marked additive V6 extension and does not redefine the V6.1.1 base mock contract. TASK-046/TASK-047 remain separately governed; no voice, recording, Dataset, training or external-operation authority is inferred. Provider/paid/Cloud/Model download/private voice processing/external mutation/Production Deploy remain blocked at their recorded gates.
 
 TASK-022 is `COMPLETED` with exact rational source/normalized-to-Timeline mapping, deterministic Plan hashing and canonical/package schemas; native-Windows full regression and compileall passed (`263 / 263`).
 

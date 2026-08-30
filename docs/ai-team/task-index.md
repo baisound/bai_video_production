@@ -60,9 +60,11 @@
 | TASK-061 | Montage Learning Connector Activation and Migration | DEPENDENCY_BLOCKED_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | TASK-058 canonical releaseとTASK-060 PP-Cを待つ。bridge再検証・移行・明示Human activationを扱うが、実装とenabled変更は未承認。 |
 | TASK-062 | Montage Consumer Runtime Desktop UX | DEPENDENCY_BLOCKED_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | released ConsumerRuntimeService wheel digestとcurrent TASK-055 identityの固定を待つ。Desktop統合実装、Timeline/Resolve effectは未承認。 |
 
+| TASK-066 | GPU-First Desktop Execution, Packaging and Diagnostics | OWNER_AUTHORIZED_P0_DESIGN_ACCEPTED_IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY_NATIVE_PROOF_PENDING | OWNER_EXPLICIT_GPU_FIRST_ALL_DESKTOP_APPS_2026_08_31 | DEV-4 | GF-E deltas 1-4 accepted; journal-first cross-volume recovery and uninstall preservation are frozen. Delta-4 Critic 0/0/0/0, Judge ACCEPT. TASK-063 post-repair native terminal handoff remains required before GF-E installer mutation. |
+
 ## Roadmap authority
 
-`docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus section 2.1 is the current Project-level roadmap. It records P-UX-1C visual parity as hosted-closed, P-UX-2 element/selection re-audit and A0/A1/B/C/D/E flow as queued, and the Owner-facing `DONE / DEV1 NOW / DEV2 NOW / NEXT / FUTURE / GATE` markers while preserving the separately governed TASK-046/TASK-047 voice route and all recording/Consent/storage/Owner gates. The roadmap is planning authority, not automatic runtime/Provider/external-operation Authorization.
+`docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.95 Addendum XCVI plus section 2.1 is the current Project-level roadmap. It records P-UX-1C visual parity as hosted-closed, P-UX-2 element/selection re-audit and A0/A1/B/C/D/E flow as queued, and the Owner-facing `DONE / DEV1 NOW / DEV2 NOW / NEXT / FUTURE / GATE` markers while preserving the separately governed TASK-046/TASK-047 voice route and all recording/Consent/storage/Owner gates. The roadmap is planning authority, not automatic runtime/Provider/external-operation Authorization.
 
 ## Route control
 

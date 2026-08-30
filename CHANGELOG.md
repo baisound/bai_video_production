@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-061 CA-C adds a repository-default-disabled activation history with exact expiring one-shot Human evidence, CAS, append-only hash chaining, atomic deactivation, and crash recovery. Synthetic E2E cannot enable the connector, external SKILL config is untouched, and activation=true, learning, Timeline/Resolve, external effects, Release, Deploy, and Production remain unauthorized.
+
 - TASK-061 CA-B adds persistent sealed migration read-back and CAS publication of the exact TASK-060 PP-C promoted source into the installer-relative advisory Profile. It revalidates plan, source, target, and full security attestation currentness and remains SOURCE_BOUND_ACTIVATION_BLOCKED; connector enablement, activation, Timeline/Resolve writes, external effects, Release, Deploy, and Production remain false.
 
 - TASK-061 CA-A adds an exact-confirmed, crash-safe, no-clobber migration from an explicit legacy source into an installer-selected private snapshot. Source/target/security currentness, reparse/hardlink/tamper rejection, atomic recovery, and sealed read-back are enforced; source deletion, learning admission, activation, Timeline/Resolve, external effects, Release, Deploy, and Production remain false.

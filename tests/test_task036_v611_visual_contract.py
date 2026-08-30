@@ -575,6 +575,16 @@ def test_audio_workspace_connects_review_and_task026_plan_boundaries() -> None:
         assert marker in SHELL_HTML
 
 
+
+def test_audio_page_consumes_audio_and_music_model_selectors_without_execution() -> None:
+    for marker in (
+        'id="audioModelSelection"',
+        "audio:'audioModelSelection'",
+        "audio:['AUDIO','MUSIC']",
+        "['planning','imageGen','videoGen','audio','quick'].includes(page)",
+    ):
+        assert marker in SHELL_HTML
+    assert "audio_workspace_execute" not in SHELL_HTML
 def test_audio_workspace_keeps_external_execution_and_ambiguous_plan_disabled() -> None:
     for marker in (
         'data-disabled-reason="各ACCEPT済みReviewのrunnable判定から個別に作成します"',

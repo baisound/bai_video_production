@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/montage-learning-admission-ledger.schema.json",
+  "title": "TASK-058 Montage Learning Admission Staging Ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_type",
+    "task_owner",
+    "store_id",
+    "owner_scope_hash",
+    "revision",
+    "entries",
+    "generic_observation_admission_authorized",
+    "automatic_learning_promotion_authorized",
+    "receipt_mint_authorized",
+    "canonical_store_write_authorized",
+    "monotonic_head_anchored",
+    "rollback_detection_authority_created",
+    "path_security_model",
+    "hostile_path_race_protection_verified",
+    "handle_bound_canonical_promotion_required",
+    "timeline_mutation_authorized",
+    "resolve_write_authorized",
+    "external_effect_authorized",
+    "ledger_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "MONTAGE_LEARNING_ADMISSION_STAGING_LEDGER"},
+    "task_owner": {"const": "TASK-058"},
+    "store_id": {"$ref": "#/$defs/id"},
+    "owner_scope_hash": {"$ref": "#/$defs/digest"},
+    "revision": {"type": "integer", "minimum": 0, "maximum": 2147483647},
+    "entries": {
+      "type": "array",
+      "maxItems": 2147483647,
+      "items": {"$ref": "#/$defs/entry"}
+    },
+    "generic_observation_admission_authorized": {"const": false},
+    "automatic_learning_promotion_authorized": {"const": false},
+    "receipt_mint_authorized": {"const": false},
+    "canonical_store_write_authorized": {"const": false},
+    "monotonic_head_anchored": {"const": false},
+    "rollback_detection_authority_created": {"const": false},
+    "path_security_model": {"const": "COOPERATIVE_LOCAL_WRITER_ONLY"},
+    "hostile_path_race_protection_verified": {"const": false},
+    "handle_bound_canonical_promotion_required": {"const": true},
+    "timeline_mutation_authorized": {"const": false},
+    "resolve_write_authorized": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "ledger_sha256": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "nullableDigest": {
+      "oneOf": [
+        {"$ref": "#/$defs/digest"},
+        {"type": "null"}
+      ]
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_version",
+        "record_type",
+        "task_owner",
+        "sequence",
+        "canonical_evidence_id",
+        "source_contract_profile",
+        "source_record_id",
+        "source_sha256",
+        "owner_scope_hash",
+        "idempotency_key_sha256",
+        "canonical_evidence_sha256",
+        "human_binding_sha256",
+        "committed_at",
+        "previous_entry_sha256",
+        "exact_evidence_coordinates_structurally_verified",
+        "human_binding_origin_verified_by_store",
+        "staging_store_written",
+        "canonical_admission_authority_created",
+        "rollback_detection_authority_created",
+        "canonical_store_written",
+        "receipt_minted",
+        "automatic_learning_promotion_authorized",
+        "timeline_mutation_authorized",
+        "external_effect_authorized",
+        "entry_sha256"
+      ],
+      "properties": {
+        "record_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_ADMISSION_ENTRY"},
+        "task_owner": {"const": "TASK-058"},
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "canonical_evidence_id": {"$ref": "#/$defs/id"},
+        "source_contract_profile": {
+          "const": "bvp-task058-montage-exact-evidence-v1"
+        },
+        "source_record_id": {"$ref": "#/$defs/id"},
+        "source_sha256": {"$ref": "#/$defs/digest"},
+        "owner_scope_hash": {"$ref": "#/$defs/digest"},
+        "idempotency_key_sha256": {"$ref": "#/$defs/digest"},
+        "canonical_evidence_sha256": {"$ref": "#/$defs/digest"},
+        "human_binding_sha256": {"$ref": "#/$defs/digest"},
+        "committed_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+        },
+        "previous_entry_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "exact_evidence_coordinates_structurally_verified": {"const": false},
+        "human_binding_origin_verified_by_store": {"const": false},
+        "staging_store_written": {"const": true},
+        "canonical_store_written": {"const": false},
+        "canonical_admission_authority_created": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "receipt_minted": {"const": false},
+        "automatic_learning_promotion_authorized": {"const": false},
+        "timeline_mutation_authorized": {"const": false},
+        "external_effect_authorized": {"const": false},
+        "entry_sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

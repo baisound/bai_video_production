@@ -23,10 +23,14 @@ from ai_video_production.ai_connections import (
 from ai_video_production.connection_settings_store import ConnectionSettingsStore
 from ai_video_production.task036_native_dialog import Task036NativeDialogService
 from ai_video_production.task036_trusted_launcher import (
+    OwnerSigningKeyPpkLaunchConfiguration,
     Task036LaunchConfiguration,
     _handoff_subtitle_path,
     _resolve_asset_bindings,
     build_trusted_launch,
+)
+from ai_video_production.owner_signing_key_ppk_shell_service import (
+    OwnerSigningKeyPpkShellService,
 )
 from ai_video_production.production_control_application import Task037ProductionControlApplication
 from ai_video_production.audit_application import Task038AuditApplication
@@ -54,6 +58,8 @@ from ai_video_production.local_comfy_generation_port import LocalComfyTextToVide
 from ai_video_production.creative_generation_execution_application import LocalGenerationRuntimeReadiness
 from ai_video_production.task036_native_image_vertical_cli import _load_config_scope
 from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
+from ai_video_production.task036_ollama_runtime import OllamaRuntimeSnapshot
+from ai_video_production.local_audio_model_inventory import compile_local_audio_model_inventory
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
 
@@ -76,6 +82,24 @@ class AsrProvider:
 
     def transcribe(self, request):
         raise AssertionError("provider must not execute during launch")
+
+
+class OwnerSigningKeyImportStub:
+    def __init__(self, *, fail_close: bool = False):
+        self.close_count = 0
+        self.fail_close = fail_close
+
+    def snapshot(self):
+        return {
+            "available": True,
+            "state": "IDLE_NOT_CONFIGURED",
+            "passphrase_exposed": False,
+        }
+
+    def close(self):
+        self.close_count += 1
+        if self.fail_close:
+            raise RuntimeError("owner signing key import close failed")
 
 
 class ExecutingAsrProvider:
@@ -177,6 +201,21 @@ def config_document(tmp_path: Path) -> tuple[Path, dict]:
     return path, raw
 
 
+def signing_key_config_document(tmp_path: Path) -> tuple[Path, dict]:
+    path, raw = config_document(tmp_path)
+    destination = Path(raw["project"]["project_root"]) / "owner-signing-key.json"
+    raw["launch_config_version"] = "1.3.0"
+    raw["local_generation"] = None
+    raw["local_image_generation"] = None
+    raw["owner_signing_key_import"] = {
+        "expected_openssh_sha256_fingerprint": "SHA256:" + "A" * 43,
+        "owner_scope_sha256": "sha256:" + "a" * 64,
+        "custody_destination_path": str(destination),
+    }
+    path.write_text(json.dumps(raw), encoding="utf-8")
+    return path, raw
+
+
 def test_native_cli_loads_one_stable_launch_config_identity(tmp_path: Path):
     path, _raw = config_document(tmp_path)
     config, config_sha = _load_config_scope(path)
@@ -196,6 +235,67 @@ def test_native_cli_loads_one_stable_launch_config_identity(tmp_path: Path):
     with pytest.raises(ProductError) as oversized:
         _load_config_scope(path)
     assert oversized.value.code == "ERR_TASK036_NATIVE_LAUNCH_CONFIG_INVALID"
+
+
+def test_v13_launch_config_binds_exact_non_secret_owner_signing_coordinates(
+    tmp_path: Path,
+):
+    path, raw = signing_key_config_document(tmp_path)
+
+    config = Task036LaunchConfiguration.load(path)
+
+    assert config.owner_signing_key_import == OwnerSigningKeyPpkLaunchConfiguration(
+        expected_openssh_sha256_fingerprint="SHA256:" + "A" * 43,
+        owner_scope_sha256="sha256:" + "a" * 64,
+        custody_destination_path=Path(
+            raw["owner_signing_key_import"]["custody_destination_path"]
+        ).resolve(),
+    )
+    assert config.local_generation is None
+    assert config.local_image_generation is None
+    assert raw["owner_signing_key_import"]["custody_destination_path"] not in repr(
+        config
+    )
+    assert raw["owner_signing_key_import"]["owner_scope_sha256"] not in repr(config)
+
+
+def test_v13_launch_config_rejects_invalid_owner_signing_coordinates(
+    tmp_path: Path,
+):
+    path, raw = signing_key_config_document(tmp_path)
+    invalid_values = (
+        ("expected_openssh_sha256_fingerprint", "SHA256:bad"),
+        ("owner_scope_sha256", "sha256:BAD"),
+        ("custody_destination_path", "relative-owner-signing-key.json"),
+    )
+
+    for field_name, invalid_value in invalid_values:
+        changed = json.loads(json.dumps(raw))
+        changed["owner_signing_key_import"][field_name] = invalid_value
+        path.write_text(json.dumps(changed), encoding="utf-8")
+        with pytest.raises(ProductError) as rejected:
+            Task036LaunchConfiguration.load(path)
+        assert rejected.value.code == "ERR_TASK036_LAUNCH_CONFIG_INVALID"
+
+
+def test_v13_trusted_launch_builds_canonical_owner_signing_service_without_ui(
+    tmp_path: Path,
+):
+    path, _raw = signing_key_config_document(tmp_path)
+
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+
+    assert isinstance(
+        launch._owner_signing_key_import,
+        OwnerSigningKeyPpkShellService,
+    )
+    assert launch.bridge._owner_signing_key_import is launch._owner_signing_key_import
+    launch.close()
 
 
 def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_execution(tmp_path: Path):
@@ -223,6 +323,7 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert isinstance(launch.bridge._audit_application, Task038AuditApplication)
     assert launch.bridge._audit_application.project_root == config.project_root
     assert launch.bridge._audit_application.project_id == config.project_id
+
     assert isinstance(launch.bridge._planning_application, Task027PlanningApplication)
     assert launch.bridge._planning_application.project_root == config.project_root
     assert launch.bridge._planning_application.project_id == config.project_id
@@ -274,6 +375,55 @@ def test_private_launch_config_builds_trusted_ports_without_provider_or_resolve_
     assert audio["provider_execution_started"] is False
     assert audio["task026_compile_started"] is False
     assert audio["resolve_mutation_started"] is False
+
+
+def test_trusted_launch_owns_body_free_signing_key_service_lifetime(tmp_path: Path):
+    path, _raw = config_document(tmp_path)
+    service = OwnerSigningKeyImportStub()
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        owner_signing_key_import=service,
+    )
+
+    snapshot = launch.bridge.owner_signing_key_import_snapshot({})
+    assert snapshot == {
+        "available": True,
+        "state": "IDLE_NOT_CONFIGURED",
+        "passphrase_exposed": False,
+    }
+    assert launch._owner_signing_key_import is service
+
+    launch.close()
+    launch.close()
+    assert service.close_count == 1
+    assert launch._owner_signing_key_import is None
+
+
+def test_trusted_launch_releases_other_resources_when_signing_service_close_fails(
+    tmp_path: Path,
+):
+    path, _raw = config_document(tmp_path)
+    service = OwnerSigningKeyImportStub(fail_close=True)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        owner_signing_key_import=service,
+    )
+
+    with pytest.raises(RuntimeError, match="owner signing key import close failed"):
+        launch.close()
+
+    assert service.close_count == 1
+    assert launch._owner_signing_key_import is None
+    assert launch._local_operation_lifetime is None
+    assert launch._runtime_lease is None
+    assert launch._product_store is None
+    launch.close()
 
 
 def test_trusted_composition_transcribes_managed_asset_and_promotes_fixed_outputs(
@@ -367,6 +517,7 @@ def test_trusted_launcher_can_refuse_missing_product_job_bootstrap(tmp_path: Pat
     with pytest.raises(ProductError) as still_missing:
         store.get_job_state(config.production_job_id)
     assert still_missing.value.code == "ERR_INPUT_JOB_NOT_FOUND"
+    assert not ProductProjectManifestStore.path(config.project_root).exists()
     assert config.database_path.read_bytes() == database_before
     assert {
         item: item.read_bytes() if item.exists() else None
@@ -647,7 +798,7 @@ def test_close_waits_for_inflight_export_mutation_before_releasing_runtime_lease
 
     def blocking_cancel(*, job_id: str, expected_state_version: int):
         entered.set()
-        assert release.wait(5)
+        release.wait()
         return original_cancel(job_id=job_id, expected_state_version=expected_state_version)
 
     export.cancel = blocking_cancel  # type: ignore[method-assign]
@@ -657,31 +808,36 @@ def test_close_waits_for_inflight_export_mutation_before_releasing_runtime_lease
             "job_id": job.job_id, "expected_state_version": job.state_version,
         })),
     )
+    close_thread: Thread | None = None
     operation_thread.start()
-    assert entered.wait(5)
-    lease = launch._runtime_lease
-    assert lease is not None
-    close_thread = Thread(target=launch.close)
-    close_thread.start()
-    deadline = monotonic() + 5
-    while not lease._closing and monotonic() < deadline:  # type: ignore[attr-defined]
-        sleep(0.01)
-    assert lease._closing  # type: ignore[attr-defined]
-    with pytest.raises(ProductError) as old_call:
-        bridge.export_queue_snapshot({})
-    assert old_call.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
-    with pytest.raises(ProductError) as successor_error:
-        build_trusted_launch(
-            config,
-            native_dialog=Task036NativeDialogService(DialogBackend()),
-            asr_provider=AsrProvider(),
-            resolve_adapter=ResolveAdapter(),
-        )
-    assert successor_error.value.code == "ERR_TASK036_RUNTIME_ALREADY_ACTIVE"
-    assert DurableProductJobStore.load(config.project_root).get(job.job_id) == job
-    release.set()
-    operation_thread.join(5)
-    close_thread.join(5)
+    try:
+        assert entered.wait(5)
+        lease = launch._runtime_lease
+        assert lease is not None
+        close_thread = Thread(target=launch.close)
+        close_thread.start()
+        deadline = monotonic() + 5
+        while not lease._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+            sleep(0.01)
+        assert lease._closing  # type: ignore[attr-defined]
+        with pytest.raises(ProductError) as old_call:
+            bridge.export_queue_snapshot({})
+        assert old_call.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+        with pytest.raises(ProductError) as successor_error:
+            build_trusted_launch(
+                config,
+                native_dialog=Task036NativeDialogService(DialogBackend()),
+                asr_provider=AsrProvider(),
+                resolve_adapter=ResolveAdapter(),
+            )
+        assert successor_error.value.code == "ERR_TASK036_RUNTIME_ALREADY_ACTIVE"
+        assert DurableProductJobStore.load(config.project_root).get(job.job_id) == job
+    finally:
+        release.set()
+        operation_thread.join(5)
+        if close_thread is not None:
+            close_thread.join(5)
+    assert close_thread is not None
     assert not operation_thread.is_alive() and not close_thread.is_alive()
     assert result == [{
         "job_id": job.job_id, "state": "CANCELLED", "state_version": job.state_version + 1,
@@ -808,6 +964,7 @@ def test_trusted_launcher_without_manifest_creates_no_runtime_lease_or_job_store
         native_dialog=Task036NativeDialogService(DialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
     assert not (config.project_root / ".bai-project" / ".task036-runtime.lock").exists()
     assert not DurableProductJobStore.path(config.project_root).exists()
@@ -834,6 +991,7 @@ def test_pre_manifest_media_ingest_holds_launch_lifetime_until_operation_finishe
         native_dialog=Task036NativeDialogService(dialog_backend),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
     ingested = []
 
@@ -909,6 +1067,7 @@ def test_pre_manifest_transcription_holds_launch_lifetime_and_old_bridge_cannot_
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:
@@ -991,6 +1150,66 @@ def test_trusted_launch_binds_existing_task028_settings_without_provider_executi
     assert launch.bridge.planning_generation_status({})["available"] is False
 
 
+def test_trusted_launch_bootstraps_missing_local_connection_settings_without_provider_execution(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    settings_path = project / "ai-connection-settings.json"
+    assert not settings_path.exists()
+    class OllamaRuntimeStub:
+        def probe(self):
+            return OllamaRuntimeSnapshot("READY", ("qwen3:8b",), False, None, "Ollamaは利用可能です。")
+
+        def ensure_started(self):
+            return self.probe()
+
+    ollama_runtime = OllamaRuntimeStub()
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: ("qwen3:8b",),
+        ollama_runtime=ollama_runtime,
+    )
+    snapshot = launch.bridge.connection_settings_snapshot({})
+    assert settings_path.is_file()
+    assert snapshot["available"] is True
+    planning = next(row for row in snapshot["workloads"] if row["workload"] == "PLANNING")
+    assert [route["model_id"] for route in planning["routes"]] == ["qwen3:8b"]
+    assert all(route["cost_class"] == "LOCAL_FREE_AI" for route in planning["routes"])
+    assert snapshot["provider_execution_started"] is False
+    assert snapshot["generation_started"] is False
+
+    manifest = ProductProjectManifestStore.load(project)
+    assert manifest.project_revision == 1
+    assert manifest.project_id == Task036LaunchConfiguration.load(path).project_id
+    assert launch.bridge.planning_generation_status({})["available"] is True
+    model_selection = launch.bridge.model_selection_snapshot({})
+    selector = next(row for row in model_selection["selectors"] if row["page_id"] == "PLANNING")
+    assert selector["available"] is True
+    assert [(row["model_id"], row["local"], row["paid"]) for row in selector["candidates"]] == [("qwen3:8b", True, False)]
+    runtime_snapshot = launch.bridge.ollama_runtime_snapshot({})
+    assert runtime_snapshot["state"] == "READY"
+    assert runtime_snapshot["model_ids"] == ["qwen3:8b"]
+    assert runtime_snapshot["provider_execution_started"] is False
+    modes = {row["workload"]: row["selection_mode"] for row in snapshot["workloads"]}
+    preferred = {row["workload"]: None for row in snapshot["workloads"]}
+    preferred["PLANNING"] = "ollama-planning-1"
+    updated = launch.bridge.connection_settings_update({"revision": snapshot["revision"], "workload_modes": modes, "preferred_route_ids": preferred})
+    assert updated["revision"] == 2
+    assert ConnectionSettingsStore.load(settings_path).record.profile.routes[0].model_id == "qwen3:8b"
+
+    launch.close()
+    reloaded = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        ollama_runtime=ollama_runtime,
+    )
+    restored = reloaded.bridge.connection_settings_snapshot({})
+    assert next(row for row in restored["workloads"] if row["workload"] == "PLANNING")["preferred_route_id"] == "ollama-planning-1"
+    reloaded.close()
 def test_trusted_launcher_binds_local_free_planning_and_invalidates_old_bridge_on_close(tmp_path: Path):
     path, raw = config_document(tmp_path)
     config = Task036LaunchConfiguration.load(path)
@@ -1599,6 +1818,7 @@ def test_subtitle_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:
@@ -1677,6 +1897,7 @@ def test_cut_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:
@@ -1889,4 +2110,30 @@ def test_trusted_export_dispatcher_uses_only_exact_promoted_workflow_runtime(
     finally:
         if promoted is not None:
             bridge._workflow_runtime = promoted
+        launch.close()
+def test_trusted_launcher_injects_empty_audio_inventory_without_promoting_routes(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
+        local_audio_inventory=compile_local_audio_model_inventory(()),
+    )
+    try:
+        snapshot = launch.bridge.connection_settings_snapshot({})
+        inventory = snapshot["local_audio_inventory"]
+        assert inventory["bound"] is True
+        assert inventory["candidate_count"] == 0
+        assert inventory["selectable_candidate_count"] == 0
+        assert inventory["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        selection = launch.bridge.model_selection_snapshot({})
+        for workload in ("AUDIO", "MUSIC"):
+            selector = next(item for item in selection["selectors"] if item["workload"] == workload)
+            assert selector["available"] is False
+            assert selector["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        assert snapshot["provider_execution_started"] is False
+        assert snapshot["generation_started"] is False
+    finally:
         launch.close()

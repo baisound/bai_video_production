@@ -1,0 +1,493 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/montage-learning-canonical-admission-transaction-state.schema.json",
+  "title": "TASK-058 FAST-BATCH-1A Canonical Admission Transaction State",
+  "oneOf": [
+    {"$ref": "#/$defs/canonicalStore"},
+    {"$ref": "#/$defs/externalAnchor"},
+    {"$ref": "#/$defs/reviewObservationResult"},
+    {"$ref": "#/$defs/reviewObservationLedger"},
+    {"$ref": "#/$defs/reviewObservationPayload"},
+    {"$ref": "#/$defs/reviewObservationMarker"},
+    {"$ref": "#/$defs/reviewObservationJournal"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "bareSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,191}$"},
+    "falseAuthority": {
+      "type": "boolean",
+      "const": false
+    },
+    "reviewObservationChildBinding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["domain_owner", "relative_path", "format_id", "format_version", "content_sha256", "required", "dependency_hashes"],
+      "properties": {
+        "domain_owner": {"const": "TASK-058"},
+        "relative_path": {"const": "state/montage-learning-generic-review-observations.json"},
+        "format_id": {"const": "bai.montage-learning-generic-review-observations"},
+        "format_version": {"const": "1.0.0"},
+        "content_sha256": {"$ref": "#/$defs/sha256"},
+        "required": {"const": true},
+        "dependency_hashes": {"type": "array", "maxItems": 0}
+      }
+    },
+    "reviewObservationReadback": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "message_type", "transaction_id", "record_id", "source_digest_sha256", "project_scope_hash", "owner_scope_hash", "product_project_manifest_id", "product_project_manifest_revision", "product_project_manifest_sha256", "child_binding", "child_binding_sha256", "store_kind", "store_revision", "payload_object_sha256", "previous_ledger_head_sha256", "ledger_head_sha256", "marker_body_sha256", "marker_self_hash", "canonical_commit_sha256", "admission_timestamp", "anchor_coordinate", "learning_adopted", "profile_promoted", "timeline_mutated", "internal_receipt_self_hash"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "message_type": {"const": "ReviewObservationCanonicalReadback"},
+        "transaction_id": {"$ref": "#/$defs/bareSha256"},
+        "record_id": {"$ref": "#/$defs/id"},
+        "source_digest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "project_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "owner_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "product_project_manifest_id": {"$ref": "#/$defs/id"},
+        "product_project_manifest_revision": {"type": "integer", "minimum": 1},
+        "product_project_manifest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "child_binding": {"$ref": "#/$defs/reviewObservationChildBinding"},
+        "child_binding_sha256": {"$ref": "#/$defs/bareSha256"},
+        "store_kind": {"const": "REVIEW_OBSERVATION"},
+        "store_revision": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "payload_object_sha256": {"$ref": "#/$defs/bareSha256"},
+        "previous_ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "marker_body_sha256": {"$ref": "#/$defs/bareSha256"},
+        "marker_self_hash": {"$ref": "#/$defs/bareSha256"},
+        "canonical_commit_sha256": {"$ref": "#/$defs/bareSha256"},
+        "admission_timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "anchor_coordinate": {"type": "null"},
+        "learning_adopted": {"$ref": "#/$defs/falseAuthority"},
+        "profile_promoted": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutated": {"$ref": "#/$defs/falseAuthority"},
+        "internal_receipt_self_hash": {"$ref": "#/$defs/bareSha256"}
+      }
+    },
+    "reviewObservationResult": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "message_type", "operation_outcome", "canonical_readback", "store_kind", "learning_adopted", "profile_promoted", "timeline_mutated", "current_product_project_manifest_revision", "current_product_project_manifest_sha256", "current_child_binding_sha256", "current_store_revision", "current_ledger_head_sha256", "durable_readback_verified", "operation_result_self_hash"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "message_type": {"const": "ReviewObservationAdmissionResult"},
+        "operation_outcome": {"enum": ["ACCEPTED", "DUPLICATE"]},
+        "canonical_readback": {"$ref": "#/$defs/reviewObservationReadback"},
+        "store_kind": {"const": "REVIEW_OBSERVATION"},
+        "learning_adopted": {"$ref": "#/$defs/falseAuthority"},
+        "profile_promoted": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutated": {"$ref": "#/$defs/falseAuthority"},
+        "current_product_project_manifest_revision": {"type": "integer", "minimum": 1},
+        "current_product_project_manifest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "current_child_binding_sha256": {"$ref": "#/$defs/bareSha256"},
+        "current_store_revision": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "current_ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "durable_readback_verified": {"const": true},
+        "operation_result_self_hash": {"$ref": "#/$defs/bareSha256"}
+      }
+    },
+    "reviewObservationEntry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["store_revision", "transaction_id", "record_id", "source_digest_sha256", "project_scope_hash", "owner_scope_hash", "payload_object_sha256", "admission_timestamp", "previous_ledger_head_sha256", "ledger_head_sha256"],
+      "properties": {
+        "store_revision": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "transaction_id": {"$ref": "#/$defs/bareSha256"},
+        "record_id": {"$ref": "#/$defs/id"},
+        "source_digest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "project_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "owner_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "payload_object_sha256": {"$ref": "#/$defs/bareSha256"},
+        "admission_timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "previous_ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "ledger_head_sha256": {"$ref": "#/$defs/bareSha256"}
+      }
+    },
+    "reviewObservationLedger": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "message_type", "project_id", "project_scope_hash", "owner_scope_hash", "store_kind", "store_revision", "entries", "ledger_head_sha256", "learning_adopted", "profile_promoted", "timeline_mutated"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "message_type": {"const": "ReviewObservationLedger"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "project_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "owner_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "store_kind": {"const": "REVIEW_OBSERVATION"},
+        "store_revision": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "entries": {"type": "array", "minItems": 1, "maxItems": 8192, "items": {"$ref": "#/$defs/reviewObservationEntry"}},
+        "ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "learning_adopted": {"$ref": "#/$defs/falseAuthority"},
+        "profile_promoted": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutated": {"$ref": "#/$defs/falseAuthority"}
+      }
+    },
+    "reviewObservationPayload": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "message_type", "record_id", "source_digest_sha256", "source_delivery", "source_delivery_sha256", "store_kind", "learning_adopted", "profile_promoted", "timeline_mutated", "payload_object_sha256"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "message_type": {"const": "ReviewObservationPayloadObject"},
+        "record_id": {"$ref": "#/$defs/id"},
+        "source_digest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "source_delivery": {"$ref": "#/$defs/genericDelivery"},
+        "source_delivery_sha256": {"$ref": "#/$defs/bareSha256"},
+        "store_kind": {"const": "REVIEW_OBSERVATION"},
+        "learning_adopted": {"$ref": "#/$defs/falseAuthority"},
+        "profile_promoted": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutated": {"$ref": "#/$defs/falseAuthority"},
+        "payload_object_sha256": {"$ref": "#/$defs/bareSha256"}
+      }
+    },
+    "reviewObservationMarker": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "message_type", "transaction_id", "record_id", "source_digest_sha256", "project_scope_hash", "owner_scope_hash", "product_project_manifest_id", "product_project_manifest_revision", "product_project_manifest_sha256", "child_binding_sha256", "store_kind", "store_revision", "payload_object_sha256", "previous_ledger_head_sha256", "ledger_head_sha256", "admission_timestamp", "marker_body_sha256", "canonical_commit_sha256", "marker_self_hash"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "message_type": {"const": "ReviewObservationCommitMarker"},
+        "transaction_id": {"$ref": "#/$defs/bareSha256"},
+        "record_id": {"$ref": "#/$defs/id"},
+        "source_digest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "project_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "owner_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "product_project_manifest_id": {"$ref": "#/$defs/id"},
+        "product_project_manifest_revision": {"type": "integer", "minimum": 1},
+        "product_project_manifest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "child_binding_sha256": {"$ref": "#/$defs/bareSha256"},
+        "store_kind": {"const": "REVIEW_OBSERVATION"},
+        "store_revision": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "payload_object_sha256": {"$ref": "#/$defs/bareSha256"},
+        "previous_ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "admission_timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "marker_body_sha256": {"$ref": "#/$defs/bareSha256"},
+        "canonical_commit_sha256": {"$ref": "#/$defs/bareSha256"},
+        "marker_self_hash": {"$ref": "#/$defs/bareSha256"}
+      }
+    },
+    "reviewObservationJournal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "message_type", "state", "journal_revision", "previous_journal_sha256", "transaction_id", "project_id", "project_scope_hash", "owner_scope_hash", "source_project_manifest_revision", "source_project_manifest_sha256", "target_project_manifest_revision", "target_project_manifest_sha256", "record_id", "source_digest_sha256", "source_delivery_sha256", "payload_object_relative_path", "payload_object_sha256", "payload_document_sha256", "ledger_document_sha256", "store_revision", "previous_ledger_head_sha256", "ledger_head_sha256", "marker_relative_path", "marker_body_sha256", "marker_self_hash", "canonical_commit_sha256", "admission_timestamp", "canonical_readback", "learning_adopted", "profile_promoted", "timeline_mutated", "journal_sha256"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "message_type": {"const": "ReviewObservationAdmissionJournal"},
+        "state": {"enum": ["PREPARED", "PAYLOAD_WRITTEN", "LEDGER_COMMITTED", "MANIFEST_COMMITTED", "MARKER_COMMITTED", "READBACK_VERIFIED", "ABORTED"]},
+        "journal_revision": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "previous_journal_sha256": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/bareSha256"}]},
+        "transaction_id": {"$ref": "#/$defs/bareSha256"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "project_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "owner_scope_hash": {"$ref": "#/$defs/bareSha256"},
+        "source_project_manifest_revision": {"type": "integer", "minimum": 1},
+        "source_project_manifest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "target_project_manifest_revision": {"type": "integer", "minimum": 1},
+        "target_project_manifest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "record_id": {"$ref": "#/$defs/id"},
+        "source_digest_sha256": {"$ref": "#/$defs/bareSha256"},
+        "source_delivery_sha256": {"$ref": "#/$defs/bareSha256"},
+        "payload_object_relative_path": {"type": "string", "pattern": "^state/montage-learning/review-observations/[0-9a-f]{64}\\.json$"},
+        "payload_object_sha256": {"$ref": "#/$defs/bareSha256"},
+        "payload_document_sha256": {"$ref": "#/$defs/bareSha256"},
+        "ledger_document_sha256": {"$ref": "#/$defs/bareSha256"},
+        "store_revision": {"type": "integer", "minimum": 1, "maximum": 8192},
+        "previous_ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "ledger_head_sha256": {"$ref": "#/$defs/bareSha256"},
+        "marker_relative_path": {"type": "string", "pattern": "^state/montage-learning/review-observation-markers/[0-9a-f]{64}\\.json$"},
+        "marker_body_sha256": {"$ref": "#/$defs/bareSha256"},
+        "marker_self_hash": {"$ref": "#/$defs/bareSha256"},
+        "canonical_commit_sha256": {"$ref": "#/$defs/bareSha256"},
+        "admission_timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+        "canonical_readback": {"$ref": "#/$defs/reviewObservationReadback"},
+        "learning_adopted": {"$ref": "#/$defs/falseAuthority"},
+        "profile_promoted": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutated": {"$ref": "#/$defs/falseAuthority"},
+        "journal_sha256": {"$ref": "#/$defs/bareSha256"}
+      }
+    },
+    "canonicalStore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "project_id", "canonical_store_id", "owner_scope_hash", "ledger_key_sha256", "source_project_manifest_sha256", "ledger", "external_anchor_sha256", "canonical_state", "canonical_store_written", "durable_readback_required", "directory_durability_confirmed", "hostile_path_race_protection_verified", "automatic_learning_promotion_authorized", "profile_generation_authorized", "timeline_mutation_authorized", "resolve_write_authorized", "release_authorized", "deploy_authorized", "production_authorized", "canonical_store_commit_sha256"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_CANONICAL_ADMISSION_STORE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "canonical_store_id": {"$ref": "#/$defs/id"},
+        "owner_scope_hash": {"$ref": "#/$defs/sha256"},
+        "ledger_key_sha256": {"$ref": "#/$defs/sha256"},
+        "source_project_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "ledger": {"$ref": "#/$defs/canonicalLedger"},
+        "external_anchor_sha256": {"$ref": "#/$defs/sha256"},
+        "canonical_state": {"const": "COMMITTED"},
+        "canonical_store_written": {"const": true},
+        "durable_readback_required": {"const": true},
+        "directory_durability_confirmed": {"$ref": "#/$defs/falseAuthority"},
+        "hostile_path_race_protection_verified": {"$ref": "#/$defs/falseAuthority"},
+        "automatic_learning_promotion_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "profile_generation_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "timeline_mutation_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "resolve_write_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "release_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "deploy_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "production_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "canonical_store_commit_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "externalAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_type", "task_owner", "project_id", "canonical_store_id", "owner_scope_hash", "ledger_key_sha256", "canonical_store_commit_sha256", "target_project_manifest_sha256", "target_project_manifest_revision", "anchor", "anchor_state", "external_anchor_written", "external_snapshot_coordinate_only", "origin_authenticated_by_store", "rollback_detection_authority_created", "directory_durability_confirmed", "hostile_path_race_protection_verified", "external_anchor_document_sha256"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_EXTERNAL_MONOTONIC_ANCHOR_STORE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "canonical_store_id": {"$ref": "#/$defs/id"},
+        "owner_scope_hash": {"$ref": "#/$defs/sha256"},
+        "ledger_key_sha256": {"$ref": "#/$defs/sha256"},
+        "canonical_store_commit_sha256": {"$ref": "#/$defs/sha256"},
+        "target_project_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "target_project_manifest_revision": {"type": "integer", "minimum": 1},
+        "anchor": {"$ref": "#/$defs/anchorCandidate"},
+        "anchor_state": {"const": "ESTABLISHED"},
+        "external_anchor_written": {"const": true},
+        "external_snapshot_coordinate_only": {"const": true},
+        "origin_authenticated_by_store": {"$ref": "#/$defs/falseAuthority"},
+        "rollback_detection_authority_created": {"$ref": "#/$defs/falseAuthority"},
+        "directory_durability_confirmed": {"$ref": "#/$defs/falseAuthority"},
+        "hostile_path_race_protection_verified": {"$ref": "#/$defs/falseAuthority"},
+        "external_anchor_document_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "canonicalAuthorityFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_source_revalidated_under_canonical_transaction",
+        "canonical_project_root_verified",
+        "canonical_store_origin_verified",
+        "canonical_store_commit_verified",
+        "monotonic_anchor_verified",
+        "rollback_detection_authority_created",
+        "receipt_mint_authorized",
+        "canonical_admission_authority_created",
+        "automatic_learning_promotion_authorized"
+      ],
+      "properties": {
+        "raw_source_revalidated_under_canonical_transaction": {"const": false},
+        "canonical_project_root_verified": {"const": false},
+        "canonical_store_origin_verified": {"const": false},
+        "canonical_store_commit_verified": {"const": false},
+        "monotonic_anchor_verified": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "receipt_mint_authorized": {"const": false},
+        "canonical_admission_authority_created": {"const": false},
+        "automatic_learning_promotion_authorized": {"const": false}
+      }
+    },
+    "canonicalEffectFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesystem_read", "filesystem_written", "project_manifest_written",
+        "receipt_minted", "timeline_mutated", "resolve_written",
+        "network_accessed", "provider_called", "process_started",
+        "release_started", "deployment_started", "production_activated"
+      ],
+      "properties": {
+        "filesystem_read": {"const": false},
+        "filesystem_written": {"const": false},
+        "project_manifest_written": {"const": false},
+        "receipt_minted": {"const": false},
+        "timeline_mutated": {"const": false},
+        "resolve_written": {"const": false},
+        "network_accessed": {"const": false},
+        "provider_called": {"const": false},
+        "process_started": {"const": false},
+        "release_started": {"const": false},
+        "deployment_started": {"const": false},
+        "production_activated": {"const": false}
+      }
+    },
+    "canonicalLedger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority_flags", "canonical_state", "canonical_store_id", "chain_sha256", "consumer_revalidation_required", "contract_state", "effect_flags", "entries", "entry_count", "latest_entry_sha256", "ledger_key_sha256", "ledger_revision", "ledger_sha256", "monotonic_anchor_present", "owner_scope_hash", "persistence_observed", "project_id", "project_manifest_binding_verified", "record_type", "rollback_detection_authority_created", "schema_version", "store_origin_authenticated", "task_owner"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_CANONICAL_PROMOTION_LEDGER_CANDIDATE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "canonical_store_id": {"$ref": "#/$defs/id"},
+        "owner_scope_hash": {"$ref": "#/$defs/sha256"},
+        "ledger_key_sha256": {"$ref": "#/$defs/sha256"},
+        "ledger_revision": {"type": "integer", "minimum": 0, "maximum": 4096},
+        "entry_count": {"type": "integer", "minimum": 0, "maximum": 4096},
+        "latest_entry_sha256": {
+          "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
+        "chain_sha256": {"$ref": "#/$defs/sha256"},
+        "entries": {
+          "type": "array", "maxItems": 4096,
+          "items": {"$ref": "#/$defs/canonicalEntry"}
+        },
+        "contract_state": {"const": "SOURCE_REVALIDATION_REQUIRED"},
+        "canonical_state": {"const": "NOT_MINTED"},
+        "persistence_observed": {"const": false},
+        "store_origin_authenticated": {"const": false},
+        "project_manifest_binding_verified": {"const": false},
+        "monotonic_anchor_present": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "consumer_revalidation_required": {"const": true},
+        "authority_flags": {"$ref": "#/$defs/canonicalAuthorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/canonicalEffectFlags"},
+        "ledger_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "canonicalEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approved_plan_sha256", "authority_flags", "candidate_state", "canonical_evidence_id", "canonical_evidence_sha256", "canonical_state", "canonical_store_id", "chain_sha256", "effect_flags", "entry_revision", "entry_sha256", "human_binding_sha256", "idempotency_key_sha256", "ledger_key_sha256", "negative_feedback_preserved", "owner_scope_hash", "parent_entry_sha256", "prior_chain_sha256", "project_id", "proposal_sha256", "record_type", "schema_version", "source_record_id", "source_sha256", "staging_entry_sha256", "staging_file_identity_sha256", "staging_ledger_sha256", "staging_platform_security_model", "staging_readback_sha256", "staging_store_id", "staging_store_revision", "task_owner"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_CANONICAL_PROMOTION_LEDGER_ENTRY_CANDIDATE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "canonical_store_id": {"$ref": "#/$defs/id"},
+        "owner_scope_hash": {"$ref": "#/$defs/sha256"},
+        "ledger_key_sha256": {"$ref": "#/$defs/sha256"},
+        "entry_revision": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "parent_entry_sha256": {
+          "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
+        "prior_chain_sha256": {"$ref": "#/$defs/sha256"},
+        "source_record_id": {"$ref": "#/$defs/id"},
+        "source_sha256": {"$ref": "#/$defs/sha256"},
+        "proposal_sha256": {"$ref": "#/$defs/sha256"},
+        "approved_plan_sha256": {"$ref": "#/$defs/sha256"},
+        "idempotency_key_sha256": {"$ref": "#/$defs/sha256"},
+        "staging_store_id": {"$ref": "#/$defs/id"},
+        "staging_store_revision": {
+          "type": "integer", "minimum": 1, "maximum": 2147483647
+        },
+        "staging_entry_sha256": {"$ref": "#/$defs/sha256"},
+        "staging_ledger_sha256": {"$ref": "#/$defs/sha256"},
+        "staging_file_identity_sha256": {"$ref": "#/$defs/sha256"},
+        "staging_readback_sha256": {"$ref": "#/$defs/sha256"},
+        "staging_platform_security_model": {
+          "enum": ["WINDOWS_PINNED_HANDLE_READ_V1", "POSIX_OPENAT_NOFOLLOW_READ_V1"]
+        },
+        "canonical_evidence_id": {"$ref": "#/$defs/id"},
+        "canonical_evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "human_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "negative_feedback_preserved": {"type": "boolean"},
+        "candidate_state": {"const": "SOURCE_REVALIDATION_REQUIRED"},
+        "canonical_state": {"const": "NOT_MINTED"},
+        "authority_flags": {"$ref": "#/$defs/canonicalAuthorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/canonicalEffectFlags"},
+        "entry_sha256": {"$ref": "#/$defs/sha256"},
+        "chain_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "anchorAuthorityFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_source_revalidated_under_canonical_transaction",
+        "canonical_project_transaction_held",
+        "canonical_store_commit_verified",
+        "external_monotonic_anchor_verified",
+        "external_anchor_origin_authenticated",
+        "rollback_detection_authority_created",
+        "public_v2_receipt_mint_authorized",
+        "canonical_admission_authority_created",
+        "automatic_learning_promotion_authorized"
+      ],
+      "properties": {
+        "raw_source_revalidated_under_canonical_transaction": {"const": false},
+        "canonical_project_transaction_held": {"const": false},
+        "canonical_store_commit_verified": {"const": false},
+        "external_monotonic_anchor_verified": {"const": false},
+        "external_anchor_origin_authenticated": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "public_v2_receipt_mint_authorized": {"const": false},
+        "canonical_admission_authority_created": {"const": false},
+        "automatic_learning_promotion_authorized": {"const": false}
+      }
+    },
+    "anchorEffectFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "filesystem_read", "filesystem_written", "canonical_ledger_written",
+        "external_anchor_read", "external_anchor_written",
+        "project_manifest_written", "receipt_minted", "timeline_mutated",
+        "resolve_written", "network_accessed", "provider_called",
+        "process_started", "release_started", "deployment_started",
+        "production_activated"
+      ],
+      "properties": {
+        "filesystem_read": {"const": false},
+        "filesystem_written": {"const": false},
+        "canonical_ledger_written": {"const": false},
+        "external_anchor_read": {"const": false},
+        "external_anchor_written": {"const": false},
+        "project_manifest_written": {"const": false},
+        "receipt_minted": {"const": false},
+        "timeline_mutated": {"const": false},
+        "resolve_written": {"const": false},
+        "network_accessed": {"const": false},
+        "provider_called": {"const": false},
+        "process_started": {"const": false},
+        "release_started": {"const": false},
+        "deployment_started": {"const": false},
+        "production_activated": {"const": false}
+      }
+    },
+    "anchorCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anchor_revision", "anchor_sha256", "anchor_state", "anchored_chain_sha256", "anchored_latest_entry_sha256", "anchored_ledger_revision", "anchored_ledger_sha256", "authority_flags", "canonical_store_commit_verified", "canonical_store_id", "consumer_revalidation_required", "contract_state", "effect_flags", "external_anchor_observed", "external_anchor_origin_authenticated", "ledger_key_sha256", "owner_scope_hash", "previous_anchor_sha256", "project_id", "record_type", "rollback_detection_authority_created", "schema_version", "task_owner"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_type": {"const": "MONTAGE_LEARNING_EXTERNAL_MONOTONIC_ANCHOR_CANDIDATE"},
+        "task_owner": {"const": "TASK-058"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "canonical_store_id": {"$ref": "#/$defs/id"},
+        "owner_scope_hash": {"$ref": "#/$defs/sha256"},
+        "ledger_key_sha256": {"$ref": "#/$defs/sha256"},
+        "anchor_revision": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "anchored_ledger_revision": {"type": "integer", "minimum": 1, "maximum": 4096},
+        "anchored_latest_entry_sha256": {"$ref": "#/$defs/sha256"},
+        "anchored_chain_sha256": {"$ref": "#/$defs/sha256"},
+        "anchored_ledger_sha256": {"$ref": "#/$defs/sha256"},
+        "previous_anchor_sha256": {
+          "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
+        "contract_state": {"const": "EXTERNAL_ANCHOR_REVALIDATION_REQUIRED"},
+        "anchor_state": {"const": "NOT_ESTABLISHED"},
+        "external_anchor_observed": {"const": false},
+        "external_anchor_origin_authenticated": {"const": false},
+        "canonical_store_commit_verified": {"const": false},
+        "rollback_detection_authority_created": {"const": false},
+        "consumer_revalidation_required": {"const": true},
+        "authority_flags": {"$ref": "#/$defs/anchorAuthorityFlags"},
+        "effect_flags": {"$ref": "#/$defs/anchorEffectFlags"},
+        "anchor_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "genericDelivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "message_type", "contract_profile", "record_id", "learning_sha256", "canonical_timeline", "auto_admit_authorized", "payload"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "message_type": {"const": "BvpMontageLearningDelivery"},
+        "contract_profile": {"const": "bvp-task029-file-bridge-v1"},
+        "record_id": {"$ref": "#/$defs/id"},
+        "learning_sha256": {"$ref": "#/$defs/sha256"},
+        "canonical_timeline": {"$ref": "#/$defs/falseAuthority"},
+        "auto_admit_authorized": {"$ref": "#/$defs/falseAuthority"},
+        "payload": {"type": "object"}
+      }
+    }
+  }
+}

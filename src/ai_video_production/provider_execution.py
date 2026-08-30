@@ -240,7 +240,29 @@ class AiProviderExecutionService:
         self.credentials = credentials
 
     def generate_planning_text(self, profile: AiConnectionProfile, availability: ConnectionAvailability, request: TextGenerationRequest) -> TextGenerationResult:
-        route = AiConnectionResolver.resolve(profile, AiWorkload.PLANNING, availability, required_capabilities=("TEXT_GENERATION",))
+        return self.generate_planning_text_for_capabilities(
+            profile, availability, request, required_capabilities=("TEXT_GENERATION",),
+        )
+
+    def generate_planning_text_for_capabilities(
+        self,
+        profile: AiConnectionProfile,
+        availability: ConnectionAvailability,
+        request: TextGenerationRequest,
+        *,
+        required_capabilities: tuple[str, ...],
+    ) -> TextGenerationResult:
+        if (
+            not isinstance(required_capabilities, tuple)
+            or not required_capabilities
+            or len(required_capabilities) != len(set(required_capabilities))
+            or any(not isinstance(value, str) or not value for value in required_capabilities)
+        ):
+            raise ValueError("required_capabilities must be a non-empty unique tuple")
+        route = AiConnectionResolver.resolve(
+            profile, AiWorkload.PLANNING, availability,
+            required_capabilities=required_capabilities,
+        )
         adapter = self.adapters.get(route.provider_family)
         if adapter is None:
             raise ProductError("ERR_PROVIDER_ADAPTER_MISSING", "selected provider adapter is not installed", ProductErrorCategory.NOT_SUPPORTED, details={"route_id": route.route_id, "provider_family": route.provider_family.value})

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/dbd-reasoning-commentary-preview.schema.json",
+  "title": "DbD Reasoning Commentary Preview",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "preview_id", "source_analysis_export_sha256", "match_id", "source_asset_id", "analysis_revision", "video_duration_ms", "session_mode", "training_eligible", "media_binding_status", "status", "blocks", "dataset_mutated", "binding_mutated", "training_started", "provider_execution_performed", "production_timeline_mutated", "resolve_write_performed", "state", "preview_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "preview_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "source_analysis_export_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "match_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "source_asset_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "analysis_revision": {"type": "integer", "minimum": 1},
+    "video_duration_ms": {"type": "integer", "minimum": 1},
+    "session_mode": {"const": "PREVIEW_NO_LEARNING"},
+    "training_eligible": {"const": false},
+    "media_binding_status": {"enum": ["CANONICAL_ASSET_BOUND", "OPERATOR_SELECTED_UNVERIFIED"]},
+    "status": {"enum": ["READY", "NO_VALIDATED_COMMENTARY", "NOT_CONFIRMED_MEDIA_IDENTITY"]},
+    "blocks": {
+      "type": "array", "maxItems": 10000,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["event_id", "event_revision", "event_sha256", "candidate_id", "commentary_candidate_sha256", "start_ms", "end_ms", "kind", "text", "confidence_milli", "validation_status"],
+        "properties": {
+          "event_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "event_revision": {"type": "integer", "minimum": 1},
+          "event_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "candidate_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "commentary_candidate_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "start_ms": {"type": "integer", "minimum": 0},
+          "end_ms": {"type": "integer", "minimum": 1},
+          "kind": {"enum": ["PLAY_BY_PLAY", "EXPLANATION", "TACTICAL", "REACTION"]},
+          "text": {"type": "string", "minLength": 1, "maxLength": 8000},
+          "confidence_milli": {"type": "integer", "minimum": 0, "maximum": 1000},
+          "validation_status": {"const": "VALIDATED"}
+        }
+      }
+    },
+    "dataset_mutated": {"const": false},
+    "binding_mutated": {"const": false},
+    "training_started": {"const": false},
+    "provider_execution_performed": {"const": false},
+    "production_timeline_mutated": {"const": false},
+    "resolve_write_performed": {"const": false},
+    "state": {"const": "PRESENTATION_ONLY_NO_EXECUTION"},
+    "preview_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

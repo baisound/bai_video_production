@@ -12,6 +12,8 @@ from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import re
+import secrets
 import threading
 from typing import Any, Callable
 
@@ -33,6 +35,10 @@ from .paths import LogicalPathResolver, PathMapping, SourcePathPolicy
 from .resolve_assembly import ResolveAssetBindings, ResolveScriptingAssemblyAdapter
 from .store import SQLiteProductStore
 from .task036_native_dialog import Task036NativeDialogService
+from .owner_signing_key_custody import OwnerSigningKeyCustodyStore
+from .owner_signing_key_ppk_native_adapter import PpkNativeOperatorAdapter
+from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
+from .owner_signing_key_ppk_windows_dialog import WindowsPpkNativeDialogBackend
 from .task036_native_render_port import Task036Task011NativeRenderPort
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_product_ports import (
@@ -54,6 +60,7 @@ from .final_review import FinalReviewApprovalReceipt
 from .final_review_application import FinalReviewApprovalApplication
 from .final_review_gate import FinalReviewExternalGateReceipt
 from .product_project_store import ProductProjectManifestStore
+from .product_project import ProductProjectManifest, ProjectTimebase
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import _exclusive_snapshot_lock
 from .audit_application import Task038AuditApplication
@@ -63,6 +70,9 @@ from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .connection_settings_web import ConnectionSettingsWebService
 from .credential_vault import WindowsCredentialManagerStore
+from .task036_local_model_bootstrap import bootstrap_missing_connection_settings
+from .local_audio_model_inventory import LocalAudioModelInventory
+from .task036_ollama_runtime import OllamaRuntimeLifecycle
 from .provider_execution import (AiProviderExecutionService, AnthropicMessagesAdapter, GoogleInteractionsAdapter, OpenAiResponsesAdapter, UrllibJsonTransport)
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
@@ -85,6 +95,8 @@ from .timebase import FrameRate
 
 
 TASK036_LAUNCH_CONFIG_MAX_BYTES = 256 * 1024
+_OWNER_SIGNING_KEY_FINGERPRINT = re.compile(r"^SHA256:[A-Za-z0-9+/]{43}$")
+_OWNER_SIGNING_KEY_SHA256 = re.compile(r"^sha256:[0-9a-f]{64}$")
 
 
 def _path(value: Any, *, field: str) -> Path:
@@ -120,6 +132,32 @@ def _contained(root: Path, candidate: Path, *, field: str) -> Path:
     return candidate
 
 
+@dataclass(frozen=True, slots=True, repr=False)
+class OwnerSigningKeyPpkLaunchConfiguration:
+    expected_openssh_sha256_fingerprint: str
+    owner_scope_sha256: str
+    custody_destination_path: Path
+
+    def __post_init__(self) -> None:
+        if (
+            _OWNER_SIGNING_KEY_FINGERPRINT.fullmatch(
+                self.expected_openssh_sha256_fingerprint
+            )
+            is None
+        ):
+            raise ValueError("owner signing key fingerprint is invalid")
+        if _OWNER_SIGNING_KEY_SHA256.fullmatch(self.owner_scope_sha256) is None:
+            raise ValueError("owner signing key scope digest is invalid")
+        destination = self.custody_destination_path
+        if (
+            not isinstance(destination, Path)
+            or not destination.is_absolute()
+            or destination.is_symlink()
+            or (destination.exists() and not destination.is_file())
+        ):
+            raise ValueError("owner signing key custody destination is invalid")
+
+
 @dataclass(frozen=True, slots=True)
 class Task036LaunchConfiguration:
     project_id: str
@@ -146,6 +184,7 @@ class Task036LaunchConfiguration:
     asr_language: str | None
     local_generation: LocalComfyGenerationConfig | None
     local_image_generation: LocalComfyImageGenerationConfig | None
+    owner_signing_key_import: OwnerSigningKeyPpkLaunchConfiguration | None
 
     @classmethod
     def load(cls, path: str | Path) -> "Task036LaunchConfiguration":
@@ -177,16 +216,23 @@ class Task036LaunchConfiguration:
 
     @classmethod
     def from_dict(cls, raw: Any) -> "Task036LaunchConfiguration":
-        if not isinstance(raw, dict) or raw.get("launch_config_version") not in {"1.0.0", "1.1.0", "1.2.0"}:
+        if not isinstance(raw, dict) or raw.get("launch_config_version") not in {
+            "1.0.0",
+            "1.1.0",
+            "1.2.0",
+            "1.3.0",
+        }:
             raise ValueError("unsupported launch_config_version")
         version = raw["launch_config_version"]
         allowed = {
             "launch_config_version", "project", "paths", "ingest", "asr", "resolve",
         }
-        if version in {"1.1.0", "1.2.0"}:
+        if version in {"1.1.0", "1.2.0", "1.3.0"}:
             allowed.add("local_generation")
-        if version == "1.2.0":
+        if version in {"1.2.0", "1.3.0"}:
             allowed.add("local_image_generation")
+        if version == "1.3.0":
+            allowed.add("owner_signing_key_import")
         if set(raw) != allowed:
             raise ValueError("launch configuration contains unknown or missing sections")
         project = raw["project"]
@@ -250,6 +296,45 @@ class Task036LaunchConfiguration:
         if project_root.is_symlink() or not project_root.is_dir():
             raise ValueError("project_root must be an existing regular directory")
 
+        owner_signing_key_import_config: (
+            OwnerSigningKeyPpkLaunchConfiguration | None
+        ) = None
+        if version == "1.3.0":
+            owner_signing_key_import = raw["owner_signing_key_import"]
+            if not isinstance(owner_signing_key_import, dict):
+                raise ValueError("owner_signing_key_import must be an object")
+            _require_exact_keys(
+                owner_signing_key_import,
+                {
+                    "expected_openssh_sha256_fingerprint",
+                    "owner_scope_sha256",
+                    "custody_destination_path",
+                },
+                name="owner_signing_key_import",
+            )
+            destination = _path(
+                owner_signing_key_import["custody_destination_path"],
+                field="owner_signing_key_import.custody_destination_path",
+            )
+            owner_signing_key_import_config = (
+                OwnerSigningKeyPpkLaunchConfiguration(
+                    expected_openssh_sha256_fingerprint=_required_text(
+                        owner_signing_key_import[
+                            "expected_openssh_sha256_fingerprint"
+                        ],
+                        field=(
+                            "owner_signing_key_import."
+                            "expected_openssh_sha256_fingerprint"
+                        ),
+                    ),
+                    owner_scope_sha256=_required_text(
+                        owner_signing_key_import["owner_scope_sha256"],
+                        field="owner_signing_key_import.owner_scope_sha256",
+                    ),
+                    custody_destination_path=destination,
+                )
+            )
+
         roots_raw = paths["source_roots"]
         if not isinstance(roots_raw, list) or not roots_raw:
             raise ValueError("source_roots must be a non-empty list")
@@ -263,7 +348,10 @@ class Task036LaunchConfiguration:
         local_generation_config: LocalComfyGenerationConfig | None = None
         if version == "1.1.0" and raw["local_generation"] is None:
             raise ValueError("launch config 1.1.0 requires local_generation")
-        if version in {"1.1.0", "1.2.0"} and raw["local_generation"] is not None:
+        if (
+            version in {"1.1.0", "1.2.0", "1.3.0"}
+            and raw["local_generation"] is not None
+        ):
             local_generation = raw["local_generation"]
             if not isinstance(local_generation, dict):
                 raise ValueError("local_generation must be an object")
@@ -325,7 +413,10 @@ class Task036LaunchConfiguration:
             )
 
         local_image_generation_config: LocalComfyImageGenerationConfig | None = None
-        if version == "1.2.0" and raw["local_image_generation"] is not None:
+        if (
+            version in {"1.2.0", "1.3.0"}
+            and raw["local_image_generation"] is not None
+        ):
             local_image_generation = raw["local_image_generation"]
             if not isinstance(local_image_generation, dict):
                 raise ValueError("local_image_generation must be an object or null")
@@ -463,6 +554,7 @@ class Task036LaunchConfiguration:
             asr_language=None if language is None else language.strip(),
             local_generation=local_generation_config,
             local_image_generation=local_image_generation_config,
+            owner_signing_key_import=owner_signing_key_import_config,
         )
 
 
@@ -474,19 +566,56 @@ def _is_within(root: Path, candidate: Path) -> bool:
         return False
 
 
+def _new_owner_signing_key_import_identity(kind: str) -> str:
+    return f"task059-{kind}-{secrets.token_hex(16)}"
+
+
+def _build_owner_signing_key_import_service(
+    configuration: OwnerSigningKeyPpkLaunchConfiguration,
+) -> OwnerSigningKeyPpkShellService:
+    destination_path = os.fspath(configuration.custody_destination_path)
+    adapter = PpkNativeOperatorAdapter(
+        dialog_backend=WindowsPpkNativeDialogBackend(),
+        identity=_new_owner_signing_key_import_identity,
+    )
+    return OwnerSigningKeyPpkShellService(
+        adapter=adapter,
+        expected_openssh_sha256_fingerprint=(
+            configuration.expected_openssh_sha256_fingerprint
+        ),
+        owner_scope_sha256=configuration.owner_scope_sha256,
+        destination_path=destination_path,
+        custody_readback=lambda: OwnerSigningKeyCustodyStore(
+            destination_path
+        ).read_receipt(),
+    )
+
+
 @dataclass(slots=True)
 class Task036TrustedLaunch:
     configuration: Task036LaunchConfiguration
     coordinator: DesktopEditingCoordinator
     pre_edit_runtime: Task036PreEditRuntime
     bridge: Task036ShellBridge
+    _owner_signing_key_import: OwnerSigningKeyPpkShellService | None = field(
+        default=None, repr=False
+    )
     _runtime_lease: "_Task036ProjectRuntimeLease | None" = field(default=None, repr=False)
     _local_operation_lifetime: "_Task036LocalOperationLifetime | None" = field(default=None, repr=False)
     _product_store: SQLiteProductStore | None = field(default=None, repr=False)
+    _ollama_runtime: OllamaRuntimeLifecycle | None = field(default=None, repr=False)
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
 
+        owner_signing_key_import = self._owner_signing_key_import
+        self._owner_signing_key_import = None
+        owner_signing_key_close_error: Exception | None = None
+        if owner_signing_key_import is not None:
+            try:
+                owner_signing_key_import.close()
+            except Exception as exc:
+                owner_signing_key_close_error = exc
         local_lifetime = self._local_operation_lifetime
         if local_lifetime is not None:
             local_lifetime.close()
@@ -499,6 +628,8 @@ class Task036TrustedLaunch:
         if store is not None:
             store.close()
             self._product_store = None
+        if owner_signing_key_close_error is not None:
+            raise owner_signing_key_close_error
 
     def __enter__(self) -> "Task036TrustedLaunch":
         return self
@@ -752,6 +883,40 @@ def _handoff_subtitle_path(path: Path) -> Path | None:
         return None
     return path
 
+def _bootstrap_missing_product_manifest(configuration: Task036LaunchConfiguration) -> bool:
+    """Create only the canonical empty Project manifest needed for local composition."""
+    target = ProductProjectManifestStore.path(configuration.project_root)
+    if target.exists():
+        return False
+    manifest = ProductProjectManifest.create(
+        project_id=configuration.project_id,
+        project_revision=1,
+        product_version="0.23.0",
+        timebase=ProjectTimebase(
+            configuration.timeline_rate.numerator,
+            configuration.timeline_rate.denominator,
+        ),
+        child_bindings=(),
+    )
+    try:
+        ProductProjectManifestStore.save(configuration.project_root, manifest)
+    except ProductError as exc:
+        if exc.code != "ERR_PROJECT_SAVE_CAS_REQUIRED":
+            raise
+        current = ProductProjectManifestStore.load(configuration.project_root)
+        if (
+            current.project_id != configuration.project_id
+            or current.timebase != manifest.timebase
+        ):
+            raise ProductError(
+                "ERR_TASK036_PROJECT_BOOTSTRAP_CONFLICT",
+                "Project manifest appeared with a different identity during bootstrap",
+                ProductErrorCategory.STATE,
+            ) from exc
+        return False
+    return True
+
+
 
 def build_trusted_launch(
     configuration: Task036LaunchConfiguration,
@@ -766,8 +931,13 @@ def build_trusted_launch(
     final_review_export_preparation_provider: Callable[
         [FinalReviewApprovalReceipt], ExportPreparation
     ] | None = None,
+    owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
     allow_product_job_bootstrap: bool = True,
+    local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
+    ollama_runtime: OllamaRuntimeLifecycle | None = None,
+    local_audio_inventory: LocalAudioModelInventory | None = None,
 ) -> Task036TrustedLaunch:
+    managed_ollama_runtime = ollama_runtime or OllamaRuntimeLifecycle()
     if not allow_product_job_bootstrap:
         for directory in (
             configuration.asset_root,
@@ -868,7 +1038,7 @@ def build_trusted_launch(
         configuration.cut_output,
     )
     coordinator = DesktopEditingCoordinator.create(
-        product_version="0.22.0",
+        product_version="0.23.0",
         project_id=configuration.project_id,
         display_name=configuration.display_name,
     )
@@ -974,6 +1144,7 @@ def build_trusted_launch(
         )
     connection_settings = None
     game_intelligence_provider_service = None
+    connection_settings_bootstrapped = False
     connection_settings_path = configuration.project_root / "ai-connection-settings.json"
     if connection_settings_path.is_symlink():
         raise ProductError(
@@ -981,6 +1152,23 @@ def build_trusted_launch(
             "AI Connection Settings must not be a symlink",
             ProductErrorCategory.SECURITY,
         )
+    if not connection_settings_path.exists():
+        try:
+            connection_settings_bootstrapped = bootstrap_missing_connection_settings(
+                connection_settings_path,
+                inventory_provider=(
+                    local_planning_inventory_provider
+                    if local_planning_inventory_provider is not None
+                    else lambda: managed_ollama_runtime.ensure_started().model_ids
+                ),
+            )
+        except (OSError, UnicodeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_TASK028_CONNECTION_SETTINGS_BOOTSTRAP_FAILED",
+                "AI Connection Settings could not be initialized safely",
+                ProductErrorCategory.DATA_INTEGRITY,
+                details={"exception_type": type(exc).__name__},
+            ) from exc
     if connection_settings_path.exists():
         if not connection_settings_path.is_file():
             raise ProductError(
@@ -994,6 +1182,7 @@ def build_trusted_launch(
                 connection_settings_path,
                 None,
                 credential_vault=credential_vault,
+                local_audio_inventory=local_audio_inventory,
             )
             if credential_vault is not None:
                 transport = UrllibJsonTransport()
@@ -1009,6 +1198,26 @@ def build_trusted_launch(
                 details={"exception_type": type(exc).__name__},
             ) from exc
 
+    if connection_settings is not None and local_planning_inventory_provider is None:
+        profile, _availability = connection_settings.current_connection()
+        if any(
+            route.workload is AiWorkload.PLANNING
+            and route.provider_family is ProviderFamily.LOCAL_OPEN_SOURCE
+            and route.provider_id.casefold() == "ollama"
+            and route.cost_class is CostClass.LOCAL_FREE_AI
+            for route in profile.routes
+        ):
+            managed_ollama_runtime.ensure_started()
+    if allow_product_job_bootstrap and connection_settings_bootstrapped and connection_settings is not None:
+        profile, _availability = connection_settings.current_connection()
+        if any(
+            route.workload is AiWorkload.PLANNING
+            and route.provider_family is ProviderFamily.LOCAL_OPEN_SOURCE
+            and route.provider_id.casefold() == "ollama"
+            and route.cost_class is CostClass.LOCAL_FREE_AI
+            for route in profile.routes
+        ):
+            _bootstrap_missing_product_manifest(configuration)
     has_mutation_composition = ProductProjectManifestStore.path(
         configuration.project_root
     ).exists()
@@ -1229,6 +1438,14 @@ def build_trusted_launch(
         local_operation_lifetime = _Task036LocalOperationLifetime()
     planning_generation_application = None
     try:
+        if (
+            owner_signing_key_import is None
+            and configuration.owner_signing_key_import is not None
+        ):
+            owner_signing_key_import = _build_owner_signing_key_import_service(
+                configuration.owner_signing_key_import
+            )
+
         def edit_persistence_provider():
             if runtime_lease is None:
                 return None
@@ -1260,6 +1477,8 @@ def build_trusted_launch(
             audio_placement_application=audio_placement_application,
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
+            ollama_runtime_snapshot_provider=lambda: managed_ollama_runtime.probe().as_dict(),
+            owner_signing_key_import=owner_signing_key_import,
             final_review_application=final_review_application,
             final_review_external_gate_provider=final_review_external_gate_provider,
             final_review_edit_persistence_provider=edit_persistence_provider,
@@ -1277,11 +1496,18 @@ def build_trusted_launch(
             coordinator=coordinator,
             pre_edit_runtime=pre_edit,
             bridge=bridge,
+            _owner_signing_key_import=owner_signing_key_import,
             _runtime_lease=runtime_lease,
             _local_operation_lifetime=local_operation_lifetime,
             _product_store=store,
+            _ollama_runtime=managed_ollama_runtime,
         )
     except BaseException:
+        if owner_signing_key_import is not None:
+            try:
+                owner_signing_key_import.close()
+            except Exception:
+                pass
         if local_operation_lifetime is not None:
             local_operation_lifetime.close()
         if runtime_lease is not None:

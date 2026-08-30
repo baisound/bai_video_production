@@ -47,10 +47,15 @@ $env:BVP_BUILD_PYTHON = "C:\Python312\python.exe"
 builds\
   BAI Video Production\
     BAI Video Production.exe
+    BAI Video Production Key Helper.exe
     _internal\
 ```
 
-`BAI Video Production` フォルダー全体が1つのアプリです。EXEだけを別の場所へ移動しないでください。`builds/` 内はローカル生成物で、Gitには登録されません。
+`BAI Video Production Key Helper.exe` は署名鍵取込の1回だけ動く内部
+helperです。利用者が直接起動する第2アプリではありません。
+`BAI Video Production` フォルダー全体が1つのアプリです。どちらかの
+EXEだけを別の場所へ移動しないでください。`builds/` 内はローカル生成物
+で、Gitには登録されません。
 
 ## 簡単な確認
 
@@ -58,6 +63,18 @@ builds\
 Test-Path ".\builds\BAI Video Production\BAI Video Production.exe"
 .\build-windows-exe.bat --help
 ```
+
+`build-windows-exe.bat` は内部helperを先に作り、そのSHA-256をMain EXE
+内の生成moduleへ固定してから、同じhelper bytesをMain EXEの隣へ収集します。
+終了前にstaging/helper/moduleの3者一致を検証し、秘密値を使わない次の
+native smokeを自動実行します。
+
+- protocol v1 + 空stdinが正常終了すること
+- 不正protocol versionがexit 64で拒否されること
+
+このsmokeはPPK、公開鍵、passphrase、DPAPI custody、署名を扱いません。
+helper欠落、digest不一致、異常なexit codeはbuild失敗です。未署名local
+buildであり、AuthenticodeやRelease readinessは証明しません。
 
 実際にEXEを起動するとローカルのWindows UIが開きます。ユーザープロジェクトへ接続する操作やResolve/Cubase連携は、それぞれのHuman Gateと対象確認を終えてから行ってください。
 

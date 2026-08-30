@@ -8,8 +8,9 @@ import pytest
 
 from ai_video_production.task036_shell_v611 import HTML
 
-# Node startup can exceed 10 seconds under a contended Windows xdist worker.
-NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS = 30
+# Node startup exceeded 90 seconds under a contended Windows xdist worker.
+# Keep this below the outer 120-second pytest timeout while preserving all assertions and bounded failure.
+NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS = 110
 
 
 def test_top_menu_uses_explicit_command_registry_and_focus_contract() -> None:
@@ -52,6 +53,29 @@ def test_settings_nine_category_tabs_are_read_only_but_interactive() -> None:
     assert "credential_values_redisplayed:false" in HTML
     assert "provider_execution_authorized:false" in HTML
     assert "paid_execution_authorized:false" in HTML
+
+
+def test_audio_model_selection_keeps_unavailable_reason_visible() -> None:
+    for marker in (
+        "const renderModelSelectionBase=renderModelSelection",
+        "NO_SELECTABLE_LOCAL_AUDIO_MODEL",
+        "利用可能な無料ローカル音声Modelがありません",
+        "modelSelectionUnavailableMessage(selector.unavailable_reason)",
+    ):
+        assert marker in HTML
+
+    assert r"replace(/Status: [^\n]*/,status)" in HTML
+
+
+def test_connection_settings_keeps_unavailable_audio_routes_disabled_and_explained() -> None:
+    for marker in (
+        "const unavailable=item.selectable===false",
+        "option.disabled=unavailable",
+        "item.disabled_reasons||[]",
+        "Installed/runtime/current:",
+        "Availability: ${availability}",
+    ):
+        assert marker in HTML
 
 
 def test_timeline_scrub_uses_python_owned_seek_without_frontend_truth() -> None:

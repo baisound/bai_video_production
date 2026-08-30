@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/knowledge-pack-signature-artifact-custody-receipt.schema.json",
+  "title": "TASK-029 R10D Knowledge Pack Signature Artifact Custody Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_version", "record_type", "task_owner", "receipt_id",
+    "candidate_sha256", "artifact_store_id", "owner_scope_sha256",
+    "source_key_custody_receipt_sha256", "source_signing_ceremony_receipt_sha256",
+    "source_trusted_signature_admission_sha256", "pack_id", "pack_version",
+    "predecessor_pack_sha256", "signature_request_sha256", "signature_message_sha256",
+    "trusted_signer_policy_sha256", "signer_key_id_sha256",
+    "detached_signature_sha256", "verification_receipt_sha256",
+    "intent_attestation_sha256", "stored_at_epoch_ms", "cipher_suite",
+    "custody_contract", "state", "path_security_model",
+    "r10b_direct_recompiled_at_write", "caller_supplied_source_graph_recompiled_at_write",
+    "cryptographic_signature_verified_against_supplied_policy_at_write",
+    "r10c_candidate_recompiled_at_write",
+    "caller_attested_human_intent_recorded",
+    "explicit_human_custody_confirmation_received",
+    "human_confirmation_origin_authenticated",
+    "signature_artifact_custody_write_authorized_once",
+    "owner_local_encrypted_store_implemented",
+    "encrypted_artifact_staging_write_completed",
+    "post_write_readback_verified", "signature_artifact_custody_confirmed",
+    "canonical_custody_receipt_minted", "symlink_rejection_present",
+    "production_dpapi_cipher_verified", "test_only_cipher_used",
+    "encrypted_at_rest", "standalone_receipt_authoritative", "body_free_receipt",
+    "signature_artifact_body_included", "public_key_material_included",
+    "private_key_material_included", "absolute_host_path_included",
+    "credential_included", "directory_durability_confirmed",
+    "power_loss_replay_prevention_confirmed",
+    "hostile_path_race_protection_confirmed", "deletion_replay_prevention_confirmed",
+    "alternate_path_replay_prevention_confirmed", "owner_local_path_verified",
+    "canonical_store_path_binding_confirmed", "project_scope_coordinates_included",
+    "canonical_project_binding_confirmed", "canonical_latest_source_revalidated",
+    "canonical_trusted_signer_policy_revalidated", "owner_scope_origin_authenticated",
+    "canonical_trust_root_confirmed",
+    "owner_signer_binding_confirmed", "canonical_knowledge_pack_receipt_minted",
+    "knowledge_pack_write_authorized", "knowledge_pack_promotion_authorized",
+    "automatic_promotion_authorized", "runtime_profile_apply_authorized",
+    "rollback_execution_authorized", "timeline_mutation_authorized",
+    "resolve_mutation_authorized", "release_authorized", "deploy_authorized",
+    "production_authorized", "external_effect_authorized",
+    "custody_receipt_sha256"
+  ],
+  "properties": {
+    "receipt_version": {"const": "1.0.0"},
+    "record_type": {"const": "SIGNATURE_ARTIFACT_CUSTODY_RECEIPT"},
+    "task_owner": {"const": "TASK-029"},
+    "receipt_id": {"$ref": "#/$defs/logicalId"},
+    "candidate_sha256": {"$ref": "#/$defs/sha256"},
+    "artifact_store_id": {"$ref": "#/$defs/logicalId"},
+    "owner_scope_sha256": {"$ref": "#/$defs/sha256"},
+    "source_key_custody_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "source_signing_ceremony_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "source_trusted_signature_admission_sha256": {"$ref": "#/$defs/sha256"},
+    "pack_id": {"$ref": "#/$defs/stableId"},
+    "pack_version": {"$ref": "#/$defs/semver"},
+    "predecessor_pack_sha256": {
+      "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+    },
+    "signature_request_sha256": {"$ref": "#/$defs/sha256"},
+    "signature_message_sha256": {"$ref": "#/$defs/sha256"},
+    "trusted_signer_policy_sha256": {"$ref": "#/$defs/sha256"},
+    "signer_key_id_sha256": {"$ref": "#/$defs/sha256"},
+    "detached_signature_sha256": {"$ref": "#/$defs/sha256"},
+    "verification_receipt_sha256": {"$ref": "#/$defs/sha256"},
+    "intent_attestation_sha256": {"$ref": "#/$defs/sha256"},
+    "stored_at_epoch_ms": {"type": "integer", "minimum": 1},
+    "cipher_suite": {"$ref": "#/$defs/logicalId"},
+    "custody_contract": {
+      "const": "TASK-029/SIGNATURE_ARTIFACT_CUSTODY_STORE/1.0.0"
+    },
+    "state": {"const": "SIGNATURE_ARTIFACT_STAGED_AWAITING_TRUSTED_HUMAN_CONFIRMATION"},
+    "path_security_model": {
+      "const": "COOPERATIVE_PROTECTED_LOCAL_WRITER_ONLY"
+    },
+    "r10b_direct_recompiled_at_write": {"const": true},
+    "caller_supplied_source_graph_recompiled_at_write": {"const": true},
+    "cryptographic_signature_verified_against_supplied_policy_at_write": {"const": true},
+    "r10c_candidate_recompiled_at_write": {"const": true},
+    "caller_attested_human_intent_recorded": {"const": true},
+    "explicit_human_custody_confirmation_received": {"const": false},
+    "human_confirmation_origin_authenticated": {"const": false},
+    "signature_artifact_custody_write_authorized_once": {"const": false},
+    "owner_local_encrypted_store_implemented": {"const": false},
+    "encrypted_artifact_staging_write_completed": {"const": true},
+    "post_write_readback_verified": {"const": true},
+    "signature_artifact_custody_confirmed": {"const": false},
+    "canonical_custody_receipt_minted": {"const": false},
+    "symlink_rejection_present": {"const": true},
+    "production_dpapi_cipher_verified": {"type": "boolean"},
+    "test_only_cipher_used": {"type": "boolean"},
+    "encrypted_at_rest": {"type": "boolean"},
+    "standalone_receipt_authoritative": {"const": false},
+    "body_free_receipt": {"const": true},
+    "signature_artifact_body_included": {"const": false},
+    "public_key_material_included": {"const": false},
+    "private_key_material_included": {"const": false},
+    "absolute_host_path_included": {"const": false},
+    "credential_included": {"const": false},
+    "directory_durability_confirmed": {"const": false},
+    "power_loss_replay_prevention_confirmed": {"const": false},
+    "hostile_path_race_protection_confirmed": {"const": false},
+    "deletion_replay_prevention_confirmed": {"const": false},
+    "alternate_path_replay_prevention_confirmed": {"const": false},
+    "owner_local_path_verified": {"const": false},
+    "canonical_store_path_binding_confirmed": {"const": false},
+    "project_scope_coordinates_included": {"const": false},
+    "canonical_project_binding_confirmed": {"const": false},
+    "canonical_latest_source_revalidated": {"const": false},
+    "canonical_trusted_signer_policy_revalidated": {"const": false},
+    "owner_scope_origin_authenticated": {"const": false},
+    "canonical_trust_root_confirmed": {"const": false},
+    "owner_signer_binding_confirmed": {"const": false},
+    "canonical_knowledge_pack_receipt_minted": {"const": false},
+    "knowledge_pack_write_authorized": {"const": false},
+    "knowledge_pack_promotion_authorized": {"const": false},
+    "automatic_promotion_authorized": {"const": false},
+    "runtime_profile_apply_authorized": {"const": false},
+    "rollback_execution_authorized": {"const": false},
+    "timeline_mutation_authorized": {"const": false},
+    "resolve_mutation_authorized": {"const": false},
+    "release_authorized": {"const": false},
+    "deploy_authorized": {"const": false},
+    "production_authorized": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "custody_receipt_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"production_dpapi_cipher_verified": {"const": true}},
+        "required": ["production_dpapi_cipher_verified"]
+      },
+      "then": {
+        "properties": {
+          "cipher_suite": {"const": "WINDOWS_DPAPI_CURRENT_USER_SIGNATURE_ARTIFACT_CUSTODY_V1"},
+          "test_only_cipher_used": {"const": false},
+          "encrypted_at_rest": {"const": true}
+        }
+      },
+      "else": {
+        "properties": {
+          "test_only_cipher_used": {"const": true},
+          "encrypted_at_rest": {"const": false}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "stableId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$"
+    },
+    "logicalId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$"
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    }
+  }
+}

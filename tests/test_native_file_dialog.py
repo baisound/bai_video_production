@@ -129,3 +129,38 @@ def test_native_handoff_folder_cancel_is_not_error() -> None:
         return subprocess.CompletedProcess(args=args, returncode=0, stdout=protocol("cancel"), stderr=b"")
 
     assert native.WindowsNativeFileDialog(runner=runner, platform_name="nt").choose_handoff_folder() is None
+
+@pytest.mark.parametrize(
+    ("method_name", "expected_filter", "selected"),
+    [
+        ("choose_encrypted_ppk", "PuTTY private key (*.ppk)|*.ppk", r"C:\keys\owner.ppk"),
+        (
+            "choose_rfc4716_public_key",
+            "RFC4716 public key (*.pub)|*.pub",
+            r"C:\keys\owner.pub",
+        ),
+    ],
+)
+def test_task059_key_dialogs_use_fixed_single_file_filters(
+    method_name: str,
+    expected_filter: str,
+    selected: str,
+) -> None:
+    captured = {}
+
+    def runner(args, **kwargs):
+        captured["args"] = args
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout=protocol("ok", selected),
+            stderr=b"",
+        )
+
+    dialog = native.WindowsNativeFileDialog(runner=runner, platform_name="nt")
+    assert getattr(dialog, method_name)() == selected
+    script = base64.b64decode(captured["args"][7]).decode("utf-16le")
+    assert expected_filter in script
+    assert "Multiselect = $false" in script
+    assert "CheckFileExists = $true" in script
+    assert selected not in script

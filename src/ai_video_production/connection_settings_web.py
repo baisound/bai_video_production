@@ -13,7 +13,7 @@ from typing import Any, Sequence
 from urllib.parse import urlsplit
 import webbrowser
 
-from .ai_connections import AiConnectionProfile, ConnectionAvailability
+from .ai_connections import AiConnectionProfile, AiWorkload, ConnectionAvailability, CostClass
 from .connection_settings import AiConnectionSettingsService
 from .connection_settings_store import (
     ConnectionCatalogEditor, ConnectionSettingsEditor, ConnectionSettingsFormBuilder,
@@ -21,10 +21,15 @@ from .connection_settings_store import (
 )
 from .errors import ProductError, ProductErrorCategory
 from .credential_vault import CredentialVault, WindowsCredentialManagerStore
+from .local_audio_model_inventory import (
+    LocalAudioModelInventory,
+    availability_from_local_audio_inventory,
+    verify_local_audio_inventory_public_snapshot,
+)
 
 
 MAX_REQUEST_BYTES = 64 * 1024
-PRODUCT_VERSION = "0.22.0"
+PRODUCT_VERSION = "0.23.0"
 
 
 _HTML = r"""<!doctype html>
@@ -93,6 +98,9 @@ async function load(){const res=await fetch('/api/form',{cache:'no-store'});if(!
 save.addEventListener('click',async()=>{save.disabled=true;message.className='';message.textContent='保存しています…';const modes={},preferred={};cards.querySelectorAll('.card').forEach(c=>{modes[c.dataset.workload]=c.querySelector('[data-kind=mode]').value;preferred[c.dataset.workload]=c.querySelector('[data-kind=route]').value||null});try{const res=await fetch('/api/settings',{method:'PUT',headers:{'Content-Type':'application/json','X-BAI-CSRF':CSRF},body:JSON.stringify({revision:form.revision,workload_modes:modes,preferred_route_ids:preferred})});const data=await res.json();if(!res.ok)throw new Error(data.message||data.error_code||'保存できませんでした');render(data);message.className='success';message.textContent='保存しました。生成は開始されていません。 / Saved; generation has not started.'}catch(e){message.className='error';message.textContent=e.message}finally{save.disabled=false}});
 document.getElementById('catalog-new').addEventListener('click',resetCatalog);
 document.getElementById('catalog-save').addEventListener('click',async()=>{const button=document.getElementById('catalog-save');button.disabled=true;catMessage.className='';catMessage.textContent='保存しています…';const capabilities=document.getElementById('cat-capabilities').value.split(',').map(x=>x.trim()).filter(Boolean);const entry={route_id:document.getElementById('cat-route').value.trim(),workload:document.getElementById('cat-workload').value,provider_family:document.getElementById('cat-family').value,provider_id:document.getElementById('cat-provider').value.trim(),model_id:document.getElementById('cat-model').value.trim(),cost_class:document.getElementById('cat-cost').value,reasoning_effort:document.getElementById('cat-reasoning').value,capabilities,credential_required:document.getElementById('cat-credential').checked,enabled:document.getElementById('cat-enabled').checked};try{const res=await fetch('/api/catalog',{method:'PUT',headers:{'Content-Type':'application/json','X-BAI-CSRF':CSRF},body:JSON.stringify({revision:form.revision,entry})});const data=await res.json();if(!res.ok)throw new Error(data.message||data.error_code||'候補を保存できませんでした');render(data);resetCatalog();catMessage.className='success';catMessage.textContent='候補を保存しました。実行・課金は開始されていません。 / Candidate saved; nothing executed.'}catch(e){catMessage.className='error';catMessage.textContent=e.message}finally{button.disabled=false}});
+function renderLocalAudioInventory(){const inventory=form.local_audio_inventory;if(!inventory)return;const card=el('section',undefined,'notice');card.id='local-audio-inventory';const reason=inventory.unavailable_reason?`利用不可: ${inventory.unavailable_reason}`:'利用可能な候補を選択できます。';card.append(el('strong','無料ローカル音声・音楽Model'),el('p',reason,'route-meta'));if(!inventory.bound){card.append(el('p','runtime inventoryが未接続のため、候補は保存・実行可能として扱われません。','help'))}else if(!inventory.candidates.length){card.append(el('p','導入済みで実行可能な無料ローカル音声・音楽Modelはありません。runtimeとModelの導入状態を確認してください。','help'))}else{inventory.candidates.forEach(item=>{const detail=item.selectable?'選択できます。':`利用不可: ${(item.disabled_reasons||[]).join(', ')}`;card.append(el('p',`${item.purpose} / ${item.model_id} — ${detail}`,'help'))})}cards.append(card)}
+const renderConnectionForm=render;
+render=function(data){renderConnectionForm(data);data.workloads.forEach(w=>{const select=document.getElementById(`route-${w.workload}`);if(!select)return;const unavailable=w.routes.filter(r=>r.selectable===false);unavailable.forEach(r=>{const option=Array.from(select.options).find(o=>o.value===r.route_id);if(option)option.disabled=true});if(unavailable.some(r=>select.value===r.route_id))select.value=''});renderLocalAudioInventory()}
 load().catch(e=>{message.className='error';message.textContent=e.message});</script>
 </body></html>"""
 
@@ -105,15 +113,18 @@ class ConnectionSettingsWebService:
         revision: int,
         availability: ConnectionAvailability,
         credential_vault: CredentialVault | None = None,
+        local_audio_inventory: LocalAudioModelInventory | None = None,
     ) -> None:
         self.settings_path = settings_path
         self.profile = profile
         self.revision = revision
         self.availability = availability
         self.credential_vault = credential_vault
+        self.local_audio_inventory = local_audio_inventory
+        if local_audio_inventory is not None:
+            verify_local_audio_inventory_public_snapshot(local_audio_inventory.to_public_dict())
         self._lock = threading.Lock()
-        if credential_vault is not None:
-            self._refresh_availability_unlocked()
+        self._refresh_availability_unlocked()
 
     @classmethod
     def from_paths(
@@ -123,6 +134,7 @@ class ConnectionSettingsWebService:
         *,
         available_credential_refs: frozenset[str] = frozenset(),
         credential_vault: CredentialVault | None = None,
+        local_audio_inventory: LocalAudioModelInventory | None = None,
     ) -> "ConnectionSettingsWebService":
         if any(not ref.startswith("credential://") for ref in available_credential_refs):
             raise ValueError("--credential-ready accepts credential:// references, never secret values")
@@ -136,7 +148,12 @@ class ConnectionSettingsWebService:
             raw = json.loads(Path(profile_path).read_text(encoding="utf-8"))
             profile, revision = AiConnectionProfile.from_dict(raw), 0
         route_ids = frozenset(route.route_id for route in profile.routes if route.enabled)
-        return cls(settings, profile, revision, ConnectionAvailability(route_ids, available_credential_refs), credential_vault)
+        return cls(
+            settings, profile, revision,
+            ConnectionAvailability(route_ids, available_credential_refs),
+            credential_vault,
+            local_audio_inventory,
+        )
 
     def form(self) -> dict[str, object]:
         with self._lock:
@@ -158,8 +175,13 @@ class ConnectionSettingsWebService:
 
     def _form_unlocked(self) -> dict[str, object]:
         preflight = AiConnectionSettingsService.preflight(self.profile, self.availability)
-        form = ConnectionSettingsFormBuilder.build(self.profile, preflight, revision=self.revision)
+        form = ConnectionSettingsFormBuilder.build(
+            self.profile, preflight,
+            revision=self.revision,
+            route_runtime_status=self._local_audio_route_statuses_unlocked(),
+        )
         form["credential_onboarding_supported"] = self.credential_vault is not None
+        form["local_audio_inventory"] = self._local_audio_inventory_projection_unlocked()
         ready = self.availability.available_credential_refs
         for workload in form["workloads"]:
             for route in workload["routes"]:
@@ -174,10 +196,79 @@ class ConnectionSettingsWebService:
                 route.credential_ref for route in self.profile.routes
                 if route.credential_ref is not None and self.credential_vault.contains(route.credential_ref)
             }
-        self.availability = ConnectionAvailability(
-            frozenset(route.route_id for route in self.profile.routes if route.enabled),
-            frozenset(ready),
+        route_ids = {route.route_id for route in self.profile.routes if route.enabled}
+        local_audio_route_ids = {
+            route.route_id for route in self.profile.routes
+            if route.enabled
+            and route.workload in {AiWorkload.AUDIO, AiWorkload.MUSIC}
+            and route.cost_class == CostClass.LOCAL_FREE_AI
+        }
+        route_ids.difference_update(local_audio_route_ids)
+        base = ConnectionAvailability(frozenset(route_ids), frozenset(ready))
+        self.availability = (
+            availability_from_local_audio_inventory(self.local_audio_inventory, base)
+            if self.local_audio_inventory is not None else base
         )
+
+    def _local_audio_inventory_projection_unlocked(self) -> dict[str, object]:
+        if self.local_audio_inventory is None:
+            return {
+                "bound": False,
+                "candidate_count": 0,
+                "selectable_candidate_count": 0,
+                "unavailable_reason": "LOCAL_AUDIO_INVENTORY_NOT_BOUND",
+                "candidates": [],
+            }
+        snapshot = self.local_audio_inventory.to_public_dict()
+        fields = (
+            "candidate_id", "purpose", "workload", "capability", "provider_family",
+            "provider_id", "model_id", "route_id", "cost_class", "installed_state",
+            "runtime_readiness", "currentness", "license_state", "automation_readiness",
+            "inventory_source", "selectable", "disabled_reasons", "candidate_sha256",
+        )
+        candidates = [{key: item[key] for key in fields} for item in snapshot["candidates"]]
+        selectable_count = sum(item["selectable"] is True for item in candidates)
+        return {
+            "bound": True,
+            "candidate_count": len(candidates),
+            "selectable_candidate_count": selectable_count,
+            "unavailable_reason": None if selectable_count else "NO_SELECTABLE_LOCAL_AUDIO_MODEL",
+            "inventory_sha256": snapshot["inventory_sha256"],
+            "candidates": candidates,
+        }
+    def _local_audio_route_statuses_unlocked(self) -> dict[str, dict[str, object]]:
+        candidates = (
+            {item.observation.route_id: item for item in self.local_audio_inventory.candidates
+             if item.observation.route_id is not None}
+            if self.local_audio_inventory is not None else {}
+        )
+        statuses: dict[str, dict[str, object]] = {}
+        for route in self.profile.routes:
+            if (route.workload not in {AiWorkload.AUDIO, AiWorkload.MUSIC}
+                    or route.cost_class != CostClass.LOCAL_FREE_AI):
+                continue
+            candidate = candidates.get(route.route_id)
+            if candidate is None:
+                statuses[route.route_id] = {
+                    "installed_state": "UNKNOWN",
+                    "runtime_readiness": "UNKNOWN",
+                    "currentness": "UNKNOWN",
+                    "selectable": False,
+                    "disabled_reasons": [
+                        "LOCAL_AUDIO_INVENTORY_NOT_BOUND" if self.local_audio_inventory is None
+                        else "MODEL_NOT_IN_CURRENT_INVENTORY"
+                    ],
+                }
+                continue
+            observation = candidate.observation
+            statuses[route.route_id] = {
+                "installed_state": observation.installed_state.value,
+                "runtime_readiness": observation.runtime_readiness.value,
+                "currentness": observation.currentness.value,
+                "selectable": candidate.selectable,
+                "disabled_reasons": list(candidate.disabled_reasons),
+            }
+        return statuses
 
     def _credential_route_unlocked(self, route_id: Any):
         if not isinstance(route_id, str):
@@ -226,6 +317,20 @@ class ConnectionSettingsWebService:
                     "Settings changed in another screen. Reload before saving.",
                     ProductErrorCategory.STATE,
                     details={"expected_revision": payload["revision"], "current_revision": self.revision},
+                )
+            unavailable_audio_routes = {
+                route_id for route_id, status in self._local_audio_route_statuses_unlocked().items()
+                if status["selectable"] is False
+            }
+            selected_route_ids = {
+                route_id for route_id in payload["preferred_route_ids"].values()
+                if isinstance(route_id, str)
+            }
+            if selected_route_ids & unavailable_audio_routes:
+                raise ProductError(
+                    "ERR_LOCAL_AUDIO_MODEL_UNAVAILABLE",
+                    "The selected local audio or music model is not currently available.",
+                    ProductErrorCategory.STATE,
                 )
             edited = ConnectionSettingsEditor.apply(
                 self.profile,

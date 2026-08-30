@@ -4,14 +4,13 @@
 
 ## Current identity
 
-- Product package: `0.22.0`
-- Stable formal Release: `v0.22.0`
-- Release-code SHA: `50a2f06b4d5b64764a521c5863aa1632992a1418`
-- Current development main: `50a2f06b4d5b64764a521c5863aa1632992a1418` before the docs-only post-release closure
-- Current Product state: `V0_22_0_RELEASED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / P_UX_2E_PENDING / TASK_049_TASK_050_INTEGRATED`
-- Active development branch: `codex/task-051-v0-22-0-post-release-closure`
+- Product package: `0.23.0`
+- Last verified stable formal Release: `v0.23.0`
+- v0.23.0 release-code SHA: `382ae2aec8ecf83933973eb5c67fa6865b39194b`
+- Current Product state: `V0_23_0_FORMAL_RELEASE_COMPLETE / EDITING_SKILL_INTEGRATION_HOSTED_PASS / REAL_RESOLVE_GUI_NOT_CONFIRMED`
+- Active development branch: `main`
 
-The annotated stable `v0.22.0` Tag dereferences to exact release-code commit `50a2f06b`; Release workflow `32407505931` and all six published asset digests pass. TASK-051 does not widen any native, paid-provider or Production Gate.
+The annotated stable `v0.23.0` Tag object `31899fc4` dereferences to exact release-code commit `382ae2ae`. Release workflow `33280546212` passed the full hosted suite and published six digest-bound assets. This formal release adds bounded editing-SKILL integration; it does not claim real Resolve GUI runtime QA, connector activation, Deploy, or Production.
 
 ## Completed Product scope
 

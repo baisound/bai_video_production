@@ -1,6 +1,6 @@
 # BAISOUND Codex Development Workspace Policy
 
-Version: `2.0`
+Version: `2.1`
 Status: `CURRENT`
 Primary use: `BAI VIDEO PRODUCTION development under BAI Development OS governance`
 
@@ -522,6 +522,23 @@ Enter Recovery/Handoff when there is:
 - native failure requiring Owner/environment intervention.
 
 Preserve the work and evidence needed to resume. Do not fabricate completion.
+
+### 16.1 Lane continuity and false-stop prevention
+
+Recovery, Handoff, a task-local checkpoint, an Evidence record, a status report, or a completed Atomic Unit is not by itself completion of the active Task.
+
+When one effect, dependency, reader, test route, shared path, native action, or Human Gate is blocked:
+
+- park only the affected work;
+- continue work already present in the Active Task's canonical roadmap or authorized Atomic Units when it is independent and safe;
+- do not invent a new Task, Atomic Unit, priority, allowed-file scope, or authority merely to remain busy;
+- do not turn routine reporting, acknowledgement, or Orchestrator/Designer response into an approval gate;
+- use a different available current-source route when the local reader alone is unavailable, without repeating an identical failed route;
+- do not treat `SOURCE.N.C.`, `NOT_CONFIRMED`, "no new Evidence", or "resume conditions recorded" as proof that the whole lane is finished.
+
+Before yielding because no safe work remains, evaluate the existing authorized roadmap rather than only the currently blocked item. If no eligible work genuinely exists, record the exact blocked candidates and resume conditions, yield without fabricating progress, and preserve any Owner-established recurring monitor or wake mechanism. A task may be idle between scheduled wakes, but it must not self-disable or delete that mechanism unless the Owner stops it, its authorization expires, or canonical Task completion makes it unnecessary.
+
+Session rotation under Section 15 is still allowed at a safe boundary. Rotation changes the execution session, not Task completion or ownership.
 
 ---
 

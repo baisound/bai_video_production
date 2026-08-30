@@ -194,6 +194,35 @@ def test_pux2_settings_ui_uses_existing_task028_contract_and_never_collects_secr
     assert "保存はProvider実行・課金・生成を許可しません" in HTML
 
 
+def test_ollama_runtime_bridge_exposes_only_public_safe_readiness_and_rejects_broad_requests():
+    bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        ollama_runtime_snapshot_provider=lambda: {
+            "state": "READY",
+            "model_ids": ["qwen3:8b"],
+            "started_by_product": False,
+            "reason_code": None,
+            "message_ja": "Ollamaは利用可能です。",
+            "endpoint": "loopback-only",
+        },
+    )
+    snapshot = bridge.ollama_runtime_snapshot({})
+    assert snapshot["available"] is True
+    assert snapshot["state"] == "READY"
+    assert snapshot["model_ids"] == ["qwen3:8b"]
+    assert snapshot["endpoint"] == "loopback-only"
+    assert snapshot["provider_execution_started"] is False
+    assert snapshot["paid_execution_authorized"] is False
+    assert snapshot["generation_started"] is False
+    assert "path" not in str(snapshot).lower()
+    with pytest.raises(ProductError) as exc:
+        bridge.ollama_runtime_snapshot({"start": True})
+    assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
+
+    unavailable = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"))
+    assert unavailable.ollama_runtime_snapshot({})["reason_code"] == "OLLAMA_RUNTIME_NOT_BOUND"
+
+
 def test_pux2a1_model_selection_bridge_reuses_existing_receipts_without_audio_overlap(tmp_path):
     class PromptApplicationStub:
         def snapshot(self):

@@ -1,9 +1,13 @@
 # TASK-019 Profile Auto-Tuner
 
-- Status: `R0 FOUNDATION IMPLEMENTED / HOSTING PENDING`
+- Status: `R0_R1_HOSTED_CLOSED / TASK029_R2_R5_DOWNSTREAM_MATERIALIZATION_AND_REGISTRY_HOSTED_CLOSED`
 - Owner: 開発担当
 - Dependency: TASK-008 Multimodal Scoring、TASK-015 YouTube Feedback
 - Downstream: Human-reviewed scoring profile promotion and later rollback execution Gates
+
+## Owner priority routing — 2026-08-24
+
+The existing R0 no-effect foundation is retained. R0はPR #155で既にmainへmerge済みであり、再ホストしない。R1 Product integrationはTASK-029 R1 encrypted Owner Decision Storeのtyped historyをconsumeし、競合するProfile/Decision Storeを作らない。The priority sequence is `TASK-055 -> TASK-056 -> TASK-029 -> TASK-019`. No automatic Profile promotion or rollback authority is added.
 
 ## R0 scope
 
@@ -18,6 +22,19 @@ Weight変更は同一feature集合・同一rule metadataを保ち、policyの変
 - YouTube API、Credential、filesystem、network、media、provider、subprocessを使わない。
 - 実holdout producer、Human decision、profile adoption、Release/Deploy/Productionは別Gate。
 
+## R1 scope — TASK-029 Owner Decision bridge
+
+R1はR0 `ProfileTuningProposal`の全adjustmentを、TASK-029 R1 `OwnerDecisionHistory`内の相異なる明示Human decisionへexact bindするpure no-I/O contractである。
+
+- 全adjustment featureをexact 1 support rowで覆い、同じOwner decisionの複数feature再利用を拒否する。
+- decision ID、entry/candidate SHA、hypothesis、action、ADOPTED/REJECTED、history revision/SHA、Owner scopeを保持する。
+- R0 proposal非READYとTASK-029 REJECTED decisionを別stateでfail closedにする。
+- source proposal/history driftはexact recomputation verifierで拒否する。
+- latest encrypted historyの再検証を必須にし、binding単体をcurrent authorityとして扱わない。
+- Profile materialization/write、Knowledge Pack promotion、automatic promotion、rollback execution、Edit Plan、external effect authorityをすべてfalseに固定する。
+
+R1はOwner Decision Storeをload/writeせず、DPAPI plaintextをexportせず、Profile Registryを作らない。実Profile materialization、Human adoption、Knowledge Pack昇格/rollbackは後続のbounded Atomic Unitである。
+
 ## Verification
 
 - exact TASK-008/015 constituent binding
@@ -26,3 +43,10 @@ Weight変更は同一feature集合・同一rule metadataを保ち、policyの変
 - incomplete/insufficient/no-gain/regression/UNKNOWN/stale/revoked negative matrix
 - schema mirror and no-effect API/import surface
 - Critic/Judge residual C/H/M=`0/0/0`
+
+## Hosted completion read-back — 2026-08-26
+
+- R0 no-effect foundation: PR #155 / hosted on main.
+- R1 exact TASK-029 Owner Decision bridge: target PR #292 and closure PR #299 / hosted closed.
+- The downstream Human materialization, encrypted Owner Profile Store and Model/Profile Registry responsibilities are implemented canonically by TASK-029 R2 through R5. TASK-019 does not create a second Profile or Decision Store.
+- Automatic Profile promotion, rollback execution, Knowledge Pack promotion, Release, Deploy and Production remain separate Human Gates.

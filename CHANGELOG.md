@@ -4,6 +4,109 @@
 
 ## [Unreleased]
 
+- TASK-036 Settingsで`selectable: false`の音声・音楽Routeを選択不可にし、導入状態・runtime readiness・currentness・利用不可理由をprivate pathや秘密値なしで表示します。利用不可の既定Routeは保存対象から外し、backendのfail-closed拒否とUIを整合させます。runtime起動、model download、Provider実行、課金、実機GUI、Release／Deploy／Productionは未実行です。
+
+- TASK-036 packaged entryにWindows OS管理のnamed mutexによるsingle-instance guardを追加し、二重起動を既存ウィンドウ確認の案内付きで安全に拒否します。stale file lockは作らず、正常終了時とShell例外時にhandleを解放します。実機GUI／packaged build、Release／Deploy／Productionは未確認・未開始です。
+
+- TASK-063のWindowsインストーラー読戻し先を、選択したインストールルート内の固定Bridge配下へ限定しました。範囲外、symlink／reparse／junction、hardlink、危険なancestor、名前が似ただけのsibling-prefix、partial writeを拒否し、安全なatomic writeと書込み後のexact read-backで既存ファイルを保護します。
+
+- TASK-061 CA-C adds a repository-default-disabled activation history with exact expiring one-shot Human evidence, CAS, append-only hash chaining, atomic deactivation, and crash recovery. Synthetic E2E cannot enable the connector, external SKILL config is untouched, and activation=true, learning, Timeline/Resolve, external effects, Release, Deploy, and Production remain unauthorized.
+
+- TASK-061 CA-B adds persistent sealed migration read-back and CAS publication of the exact TASK-060 PP-C promoted source into the installer-relative advisory Profile. It revalidates plan, source, target, and full security attestation currentness and remains SOURCE_BOUND_ACTIVATION_BLOCKED; connector enablement, activation, Timeline/Resolve writes, external effects, Release, Deploy, and Production remain false.
+
+- TASK-061 CA-A adds an exact-confirmed, crash-safe, no-clobber migration from an explicit legacy source into an installer-selected private snapshot. Source/target/security currentness, reparse/hardlink/tamper rejection, atomic recovery, and sealed read-back are enforced; source deletion, learning admission, activation, Timeline/Resolve, external effects, Release, Deploy, and Production remain false.
+
+- TASK-061 CA-A adds read-only Windows bridge security attestation over the exact root and ancestor identities, owner, and DACL, failing closed on reparse points, drift, unknown ACEs/SIDs, or shared writers. It performs no ACL repair and grants no config-write, activation, Timeline/Resolve, external-effect, Release, Deploy, or Production authority.
+
+- TASK-060 PP-C adds a pinned, read-only production source for the exact promoted Preference envelope, with path/identity/hash currentness and reparse/hardlink/substitution rejection. It creates no transferable capability and grants no automatic promotion, connector activation, Timeline/Resolve write, external effect, Release, Deploy, or Production authority.
+
+- TASK-060 PP-B adds an encrypted, append-only promotion and rollback store with exact Human confirmation, CAS, cross-process locking, tamper detection, and durable read-back. Automatic promotion/rollback, connector activation, Timeline/Resolve writes, external configuration, Release, Deploy, and Production remain unauthorized.
+
+- TASK-060 PP-A adds a typed, self-hashed, advisory-only pure compiler that deterministically projects current TASK-019/TASK-029 Human decision history into montage Preference candidates. It grants no automatic learning/promotion, Timeline/Resolve, Provider, native, Release, Deploy, or Production authority.
+
+- TASK-036として、空Projectで既存のOllama loopback inventoryから無料ローカル企画ModelだけをConnection Settingsへ初期化し、選択保存・再読込・初期Product Manifest/企画Application bindを接続しました。Ollamaは既起動runtimeを再利用し、停止時は導入済み実行ファイルだけをboundedに起動して公開安全なREADY/NO_MODEL/未導入/失敗理由を設定・企画画面へ表示します。モデルdownload、paid/cloud fallback、credential表示、Provider生成、外部所有runtime停止、Release/Deploy/Productionは開始しません。Windows packaged EXE実機確認は別TASK-036統合QAで未確認です。
+
+- TASK-063として、モンタージュ学習Bridgeのactive固定ProgramData座標を廃止し、インストーラーで選択したBAI Video Productionルート配下の`data/montage-learning-bridge`へ限定して導出するinstance descriptor／read-only discovery receiptを追加しました。統合Desktop EXE用の選択可能なWindows installerを新設し、custom D-drive install、installed EXEによるprovision/read-back、TASK-058/SKILL E2Eを実行済みです。connector default／activation authorityはfalseのままで、legacy移行・削除、Preference promotion、Timeline/Resolve、Release／Deploy／Production authorityは生成しません。
+
+## [0.23.0] - 2026-08-30
+- Editing SKILL統合checkpointとして、実在read-only exact3をbindしたTASK-058、main-only checkout probe、knowledge/commentary fixture、TASK-055／056 montage fixture、両者の共通Evidence projectionを単一focused runで70件検証しました。fixture終端handoffから共通Evidenceのsource digest／自己hash／non-authorityまでをcross-bindし、private subtitle／speech本文はprojectionへ含めません。これはisolated fixture／static integration Evidenceであり、Windows full CIと実Resolve GUI runtime QAは未確認のまま、Release／Deploy／Production authorityも生成しません。
+- knowledge/commentary向けmain-only checkout probeとfixture pipeline、montage向けinstalled exact3 test seamとTASK-055／056→receipt／advisory Profile→Resolve handoff fixtureを追加しました。probeはbranch／HEAD／dirty state／required entrypointをfail closedに検証し、trusted expected main SHA未指定時はaudit-onlyに留めます。exact3 seamはsingle root配下のscript／config／schema全componentでsymlink／reparse、identity重複、content driftを拒否し、isolated fixtureではadapter→receipt→advisory Profile互換性とexact3／default config不変を検証します。両fixtureはreview-only／non-authoritative境界を維持し、実素材runtime、canonical Timeline、Resolve write、Release／Deploy／Production authorityは生成しません。
+- knowledge/commentaryとmontageのResolve handoffを、private本文を含まない共通Evidence projectionへ統合しました。source readinessとResolve実行Authorityを分離し、optional handoff未指定はlegacy-safeなNOT_AVAILABLE、部分入力・未知mode・改ざんはfail closedとします。canonical Timeline、Resolve write、runtime、Release／Deploy／Production authorityは生成しません。
+- TASK-058 B+Cとして、file bridgeとapplication routingを追加し、public readiness contractをV1に限定してV2 readinessをprivate/non-exportedにしました。caller-supplied PASS／digest／current-head／package-byte claimだけではREADYを生成せず、trusted ExpectedContext oracleがない場合は全component PASSでもBLOCKEDとし、connector_enabled=falseおよびactivation_authorized=falseを維持します。outer receiptのexact correlationを強化し、mismatch／tamper／replayを拒否します。production installed-SKILL実行、production external round-trip／Profile load、connector activation／runtime use、Release／Deploy／Productionは未確認・未開始です。
+- TASK-058 FAST-BATCH-1 A2のpost-main補正として、既存Product Project lockを非作成で検証・取得してauthority directoryの同時first-use競合を収束させ、さらにpending Exact DUPLICATEをterminalなGeneric append後もcurrent manifestから再検証してbody-free結果へ回復する契約を追加しました。Exact canonical／anchor／receipt／ledgerのbytes・revision、新規admission、Profile生成、Timeline／Resolve、Release／Deploy／Production authorityは増加させません。
+- TASK-058 FAST-BATCH-1 A2として、durableなGeneric review observationのcanonical commitを、journal削除後も既存Product Project lock下でrecover／全履歴currentness再検証し、body-free trusted readbackとして副作用なく再取得するlookupを追加しました。新規admission、ledger／manifest／anchor revision増加、public receipt／Profile生成、Timeline／Resolve、Release／Deploy／Production authorityは生成しません。
+- TASK-054 R6B-Dとして、R6B-Cのbody-free Dataset採用requestに対し、別Human実行Authority、現在Store head、安全能力、R4A current manifestを再検証し、現時点でeligibleなmembershipだけをbody-free commit planへ投影するread-only preflightを追加しました。Authority消費・Dataset Store mutation・採用開始・学習・評価・Provider実行・モデル昇格・Release／Deploy／Productionは行わず、実commitは別Human Gateのままです。
+- TASK-029 R10Eとして、R10Dのbody-free暗号化staging receiptから最大15分のHuman custody確認requestを作るpure／no-I/O契約を追加しました。request／receiptはpublic constructibleのためsource／store／DPAPI origin、Human確認・custody、canonical store／receipt、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは未成立のままです。
+- TASK-058 P1C-Dとして、P1C-Cのbody-free canonical promotion ledger候補に対し、external monotonic anchorのbootstrap／advance／unchanged／rollback／fork／scope／staleをordered entry digest chain proofで一意評価するpure／no-I/O契約を追加しました。external anchor／store／CAS／persistence／recovery／public v2 receipt、Timeline／Resolve／runtime、Release／Deploy／Production authorityは生成しません。
+- TASK-029 R10Dとして、R10C候補をwrite境界でexact再検証し、production cipherをWindows Current User DPAPIへ固定したbody-free署名artifact暗号化stagingを追加しました。caller intentはHuman確認・custody authorityを生成せず、Owner-local path、canonical custody receipt、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは未成立のままです。
+- TASK-054 R6B-Cとして、R6B-BのDataset Evidence選択preflightに対し、別Human Authorityをexact admissionしてbody-free Dataset採用request proposalを1件だけ生成する境界を追加しました。Human Evidence digestをcanonical authorization digestへ結合し、Evidence単位のone-shot claimでrecord rewrap/replayをfail closedにします。Dataset採用開始・Store mutation・学習・評価・Provider実行・モデル昇格・Release／Deploy／Productionは含まず、別Human Gateのままです。
+- TASK-059として、Owner保有の暗号化PuTTY PPK v3 Ed25519鍵をbody-free公開座標preflight、one-shot helper、Windows Credential UI、strict trusted launch configを介して既存TASK-029 R9B Owner-local DPAPI custodyへ取り込むfail-closed bridgeを追加しました。秘密値をWebView・ログ・receiptへ返さず、実PPK・passphrase・DPAPI custody・signing、Knowledge Pack promotion、Release／Deploy／Productionは別Human Gateのままです。
+- TASK-058 P1C-Cとして、P1C-Bの検証済みdurable staging read-backをproject／timeline／source receipt／staged artifact／prior ledgerへexact cross-bindし、append-only revision chainとpredecessor hashを検証するpure／no-I/O canonical promotion ledger候補contractを追加しました。canonical receipt／store／CAS／filesystem I/O／実promotion／runtime apply／rollback／Release／Deploy／Production authorityは生成しません。
+- TASK-029 R10Cとして、R9B鍵保管・R9C署名ceremony・R10B trusted signature admissionをexact cross-bindし、source因果順序とpath-free logical store IDをfail-closedに検証するbody-free署名artifact保管候補contractを追加しました。candidateはconstructible／non-authoritativeで、artifact custody write、canonical trust root、Knowledge Pack promotion、runtime apply、Release／Deploy／Production authorityは生成しません。
+
+- TASK-029 R10Bとして、exact R9C/R9D署名Evidenceの時刻・座標をcross-bindし、deep-frozen R8入力と一時的な公開鍵／署名からcaller-supplied policyに対するEd25519検証を同一呼出しで再実行するbody-free admissionを追加しました。canonical trust-root／Owner signer binding／artifact custody／Pack promotionは未成立で、runtime apply、rollback、Release/Deploy/Production authorityは生成しません。
+
+- TASK-029 R10Aとして、R8署名要求をhook-free単一snapshotで再検証し、body-free R9A/R9D receiptをPack・predecessor・signer・message・journal座標へcross-bindするKnowledge Pack昇格preflightを追加しました。公開constructible receiptから暗号学的生成元は認証せず、signature verified/昇格確認可能性はfalseのままです。Pack write/promotion、runtime apply、rollback実行、Release/Deploy/Production authorityは生成しません。
+
+- TASK-058 P1C-Bとして、raw Exact BVP/TASK-055 deliveryをP1C-Aで再検証し、固定P1B staging ledgerをWindows pinned handle / POSIX openat+O_NOFOLLOWで一点時点read-backして、exact entry membershipとpath identityをcross-bindするbody-free診断projectionを追加しました。live/serialized projectionは非authoritativeで、writer/store origin、Project root正本性、hostile ancestor、post-return安定性、monotonic anchor、canonical promotion/receipt、Timeline/Resolve/runtime authorityは生成しません。
+
+- TASK-054 R6B-Bとして、R6B-Aのbody-free discovery reportをexact再Admissionし、Operatorが単一manifest revisionを明示選択する確認専用・学習準備preflightを追加しました。観測時刻、report・item・manifest digest、aggregate countをcross-bindし、raw path・media・transcript・narration本文を保持せず、Dataset採用・学習Authorityは常にfalseで別Human Gate前に停止します。
+
+- TASK-058 P1C-Aとして、Exact BVP/TASK-055 deliveryとP1B entry-shaped candidateをhook-free strict snapshot上で再検証し、Project・Owner scope・proposal・approved plan・Human Edit Evidence・idempotency・staging座標をcross-bindするbody-free preflightを追加しました。public projectionは非authoritativeで、compiler/source/Human/staging origin、ledger membership/store origin、monotonic anchor、canonical store、receipt、Timeline/Resolve/runtime authorityは生成しません。
+
+- TASK-054 R6B-Aとして、固定Dataset Evidence配置をread-only探索し、既存R4A rights/provenance manifestで再Admissionするbody-free発見境界を追加しました。raw path・JSON本文・media・transcript・narrationを保持せず、symlink/junction、identity crossing、非正規revision、oversize、read error、探索上限はfail closedです。実Dataset採用・学習・評価・昇格・runtime実行Authorityは生成しません。
+
+- TASK-029 R9Dとして、R9C署名前にexact ceremony identityをcaller-selected local journalへ予約し、trusted R9C/R9A結果をcross-bind後にbody-free receipt hashだけを確定するpath-local no-replay state machineを追加しました。別path・削除・directory durability・power loss・hostile raceは保証せず、実Owner鍵/署名、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。
+
+- TASK-054として、DbD実況・解説AIのPreview/学習分離、Evidence基盤、Operator UI、固定Qwen3-8B実行環境およびlocal/free/no-credentialの一回限りR3D推論境界を追加しました。実Dataset学習・学習済みadapter・実データ評価は未開始で、Binding promotion、Timeline/Resolve、Release/Deploy/Production authorityは生成しません。
+
+- TASK-058 P1Bとして、BVP所有のbody-free admission staging ledgerへExact lane座標をCAS appendし、duplicate read-back、replay/collision拒否、atomic replace、restart recoveryを行う非正本storeを追加しました。Generic laneは拒否し、source/Human origin、canonical store、monotonic/rollback、receipt、Timeline/Resolve/runtime authorityは生成しません。path securityはcooperative local writer限定で、hostile raceとdirectory durabilityはNOT_CONFIRMED、P1C canonical promotionにはhandle-bound writerを必須とします。
+
+- TASK-029 R9Cとして、exact R8再検証、ACTIVE signer policy、fresh R9B custody receipt、明示Human確認を束縛し、custody内部で署名してR9A即時検証するbody-free local signing ceremonyを追加しました。永続replay prevention、signature export、Knowledge Pack write/promotion、runtime apply、Release/Deploy/Production authorityは生成しません。
+
+- TASK-029 R9Bとして、明示Human確認をexact custody/Owner scope/public-key IDへ束縛し、raw Ed25519 seedをWindows Current User DPAPIで一回限り暗号化保管するOwner signing-key custodyとbody-free receiptを追加しました。sign/export/replace/rotate、PuTTY PPK変換、real signing、Knowledge Pack write/promotion、Release/Deploy/Production authorityは生成しません。
+
+- TASK-058 P1Aとして、Exact EvidenceとGeneric Observationを分離するBvpMontageLearningAdmissionReceipt/v2のstrict read契約、domain-separated idempotency/self-hash、lane/status/store claim matrix、body-free public projectionを追加しました。caller-supplied構造の検証に限定し、origin/store commit/duplicate lineageは未検証、Generic automatic promotion、receipt mint/write、filesystem/importer/UI/native/Release/Deploy/Production authorityは生成しません。
+
+- TASK-029 R9Aとして、exact再検証済みR8 request、canonical trusted signer policy、raw Ed25519 public key identity、detached signatureをfail-closedに束縛し、signature/key本文を保持しないverification receiptを追加しました。Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback、Release/Deploy/external effectは許可しません。
+
+- TASK-058 P0として、TASK-055のproposal→approved plan→Human edit evidence本文を既存lineage admissionで再検証するExact laneと、bvp-montage-learning-adapter v1 exportをOwner scope未bindingのreview-only候補として再検証するGeneric laneを分離し、hash/FPS/delta/privacy/runtime claim/authority flagsをfail-closedに検証するbody-free contractを追加しました。canonical Timeline/learning store、receipt mint、automatic promotion、connector/UI/native/Resolve/runtime authorityは生成しません。
+
+- TASK-029 R8として、R7 unsigned signing candidateをexact current sourceから再生成し、Pack lineage、trusted signer policy、signer key identity、ED25519とversioned署名input bytesをcanonical hashへ束縛するbody-freeな外部署名検証requestを実装しました。signature/key本文は保持せず、署名生成・暗号検証、key store access、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+- TASK-029 R7として、R6 Knowledge Pack promotion candidateをexact current sourceから再生成し、同一候補hashへbindされた別々のHuman reviewと後続Independent Critic reviewを結合するbody-freeなunsigned signing candidateを実装しました。Owner/Project/reviewer座標と署名鍵は保持せず、signature create/verify、Knowledge Pack write/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+
+- TASK-029 R6として、R5 Owner Profile Registryとexact R1 Human Decision/R0 Human Action Evidenceを再検証し、複数Owner・複数Projectで同一仮説・条件・FeatureRuleが再現したかを6軸で評価するbody-freeなKnowledge Pack promotion candidateを実装しました。Owner/Project座標は候補へ保存せず、Knowledge Pack write/sign/promotion、automatic promotion、runtime Profile apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+- TASK-029 R5として、R3 encrypted Owner Profile StoreとR5 Registry Storeを決定的path順で同時lockし、latest R4 candidateをsourceから再生成して別の明示Human registry confirmationとexact照合した場合だけ、別DPAPI entropy domainのOwner-local Model/Profile RegistryへCAS appendするstoreを実装しました。runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、physical delete、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+- TASK-029 R4として、R3 encrypted Owner Profile Historyのlatest revisionをexpected revisionとexact照合し、history/revision/materialization/confirmation/proposal/binding/decision lineageを保持したまま、TASK-008 ScoringProfileへsemantic再構築してModel/Profile Registry登録前のimmutable in-memory候補を生成するpure contractを実装しました。Model/Profile Registry write、runtime scoring apply、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+- TASK-054 R3B-R4Cとして、canonical接続解決に基づく純粋Route Capability、Provider非実行の決定的fake adapter、権利・同意・由来・splitを固定するbody-free Dataset manifest、映像/Event/Human reviewへ結合した解説・実況ナレーション候補、監査対象候補集合digest付きのsplit crossing・重複・phrase overlap監査を追加しました。Provider実行、実媒体取込、Dataset採用、学習、model/runtime download、TTS、Timeline採用、Product Activation、Release/Deploy権限は付与しません。
+
+- TASK-036 P-UX-2Lとして、検証済みTranscriptから任意Subtitle生成と初回Cut候補生成をV6.1.1操作面へ接続し、Source/Transcript/Project/Shell/session CAS、single-flight、Human承認後の再生成拒否、fallible callbackを排除したatomic runtime promotion、exact promoted runtimeのExport identity fail-closedを実装しました。Provider、model download、paid service、Resolve、render、native GUI、Owner media、外部Export dispatch、Release/Deploy権限は付与しません。
+
+- TASK-029 R3として、R2 Owner Profile materialization candidateを保存直前にexact再検証し、別recordの明示Human確認がcandidate/Owner scope/Profile hashへ一致した場合だけ、Windows Current User DPAPI既定のencrypted append-only Owner Profile Storeへmaterializeする機能を実装しました。cross-process CAS、hash chain、atomic replace、scope/baseline continuity/replay/tamper/wrong-key/symlink/partial-write fail-closedを備えます。Model/Profile Registry、Knowledge Pack promotion、automatic promotion、runtime scoring apply、rollback execution、Timeline/Resolve、Provider/Cloud、Release/Deploy権限は付与しません。
+
+- TASK-029 R2として、hosted closed済みTASK-019 Profile Tuning Proposal/Owner Decision Bindingと最新TASK-029 Owner Decision Historyをexact再検証し、Owner-wide Profile materialization candidateをpure in-memoryで決定的に生成しました。全adjustmentが相異なる明示ADOPTED decisionへbindされたREADY状態のみexact ScoringProfile snapshotを公開し、proposal非READY、REJECTED、history/proposal/binding driftをfail-closedにしました。Owner Profile Store/Model Profile Registry write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。
+
+- TASK-019 R1として、既存R0 Profile Tuning Proposalの全adjustmentをTASK-029 encrypted Owner Decision History内の相異なる明示Human decisionへexact bindし、proposal/history drift、support欠落・重複、REJECTED decision、非READY proposalをfail-closedにしました。latest history再検証を必須とし、Owner Decision Store/DPAPI I/O、Profile materialization/write、Knowledge Pack promotion、automatic promotion、rollback execution、Timeline/Resolve、Provider、Release/Deploy権限は付与しません。
+
+- TASK-057として、Windowsでfresh empty snapshot lockへ複数callerが同時進入するとexclusive lock取得前のbyte初期化write/flushが競合しPermissionErrorになるraceを、canonical OS lock取得後のexclusive region内でのみ初期化するよう修正しました。retry、sleep、別lock、workflow緩和を追加せず、CAS、atomic replace、symlink拒否、lock path/release、Provider、media、Timeline/Resolve、Release/Deploy権限は変更しません。
+
+- TASK-029 R1として、R0のREADY_FOR_HUMAN_REVIEW Candidateに対する明示Human ADOPT/REJECTを、Windows Current User DPAPI既定の暗号化append-only Owner Decision Storeへ接続しました。disk envelopeへOwner scope・Candidate・理由コードを平文保存せず、CAS、chain/replay/scope、restart read-back、wrong-key/tamper/symlink/power-lossをfail-closedにしました。Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、plaintext export、physical delete、Timeline/Resolve、Release/Deploy権限は付与しません。
+
+- TASK-029 R0として、TASK-055のadmitted Human Edit Evidenceをbody-freeなcanonical Human Action Evidenceへ接続し、do-not-learn、Undo、後工程再修正、Safety/Rights、UNKNOWN/STALE/REVOKEDをfail-closedに分離し、複数記録とquality/rework/time/QA/Human acceptance/sample confidenceの6軸からOwner Decision Candidateを決定的に生成しました。filesystem/database/network/media/provider I/O、Profile write、Knowledge Pack promotion、Cloud telemetry、rollback、Edit Plan/Timeline/Resolve、Release/Deploy権限は付与しません。
+
+- TASK-056 R1として、既存P-UX-2Kローカル文字起こしのword timingからProject固定のtext-free音声キューを生成・表示し、1件ごとのHuman ACCEPT/REJECTをprepare/confirm/apply/cancel、immutable原子的保存、再起動read-backへ接続しました。confirmation token・Transcript本文・host pathは保存せず、元の検出EvidenceとCONFIRMED_ONLY sidecarを変更せず、Timeline/Resolve/auto-apply、model download、paid/cloud、Release/Deploy権限は付与しません。
+
+- TASK-055 R0として、外部bai-davinci-montage-skills mainの6つのMontage契約をbyte-exactでBVPへ収容し、canonical hash、rational FPS、source range、preset allowlist、Proposal・承認Plan・Human Evidence・Resolve handoff lineageをfail-closedで検証するProduct側admissionを追加しました。ProposalはHuman review必須で、Timeline/Resolve/自動学習、Provider/paid/cloud/private media、Release/Deploy権限は付与しません。
+
+- TASK-056 Chase Keyword Cue / Montage Speech Event Bridge: added deterministic speech-cue extraction from FasterWhisper word timestamps, a text-free semantic audio cue sidecar for BAI DaVinci Montage SKILL integration, resumable long-video processing, exact rational FPS mapping, audio-plus-video Evidence double gating, and Human Review / fail-closed boundaries.
+
+- TASK-036 P-UX-2Kとして、V6.1.1のローカル文字起こしをHuman prepare/apply/cancelへ接続し、TASK-003管理Assetのstable bytes、Product Operations CAS、Project固定出力slot、immutable publication setと明示recoveryによりcross-process exact-oneと固定Transcript/SRT/reportの耐障害promotionを実装しました。実FasterWhisper/model download、paid/cloud、Audio authority、Resolve/Export、公開、Release/Deployは引き続き別Gateです。
+
 - TASK-036 P-UX-2Jとして、HomeとFileの動画読込操作を既存TASK-003 Asset ingestへ接続し、Asset ID/SHAだけのWebView返却、並行picker/ingestのsingle-flight、stage drift拒否、launch close中のin-flight完了待ちとold bridge拒否を追加しました。Provider/Audio/Resolve/Export/公開/Release/Deployは引き続き別Gateです。
 
 - TASK-036 P-UX-2Iとして、既存TASK-044のMOVE/TRIM/UNDO/REDOをV6.1.1 Edit画面へ接続し、Project履歴SHAのprepare/apply CAS、Timeline edit履歴とのcross-store exact binding、重複command ID拒否、Human確認拒否時cancel、runtime leaseを追加しました。Provider/Audio/Resolve/Export/公開/Release/Deployは引き続き別Gateです。
@@ -13,6 +116,8 @@
 - TASK-036 P-UX-2Eとして、TASK-044のappend-only Timeline編集履歴とProject Manifest/ProjectSave整合性からcurrent EDIT_PERSISTENCE receiptをread-only投影し、空履歴、recovery、改ざん、stale Timeline、caller差替え、旧runtime leaseをfail-closedにしました。Audio/Privacy/Resource/Rightsのowner receipt、実Windows packaged render/output QA、公開、Release/Deployは引き続き別Gateです。
 
 - TASK-041 Audio Completion Contract R0として、6音声roleとTimeline item単位のclosed typed refsを持つpure候補契約を追加し、SOURCE_REVALIDATION_REQUIRED / NOT_MINTED固定によってproject-local JSONや自己SHAからFinal Review PASSを生成しない境界を定義しました。canonical store/latest、upstream再検証、TASK-036 wrapper、audio/network/model/provider/native、Release/Deployは引き続き別Gateです。
+
+- TASK-054 R3Aとして、既存TunedModelBindingを正本として再利用するpureなBinding Registryを追加し、gap-free lifecycle、artifact drift/fork/replay拒否、SUSPENDED/REVOKEDのlatest-only解決、曖昧選択拒否を実装しました。解決結果はNOT_AUTHORIZED_R3B_REQUIREDに固定し、Binding承認、Provider実行、モデル/runtime取得、学習、TTS、Timeline、Product Activation、Release/Deployは引き続き別Human Gateです。
 
 - TASK-054 R2として、LLM出力の構造隔離、Fact/Policy Admission、Human承認・修正系譜を既存Commentary Candidate Storeへ追加しました。未承認・REJECT・REVISE・staleなCandidateはexportせず、Provider実行、学習、TTS、Release/Deployは引き続き別Human Gateです。
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ai-video-production"
-version = "0.22.0"
+version = "0.23.0"
 description = "Open, provider-neutral orchestration for safe and reproducible AI video production"
 readme = "README.md"
 license = { file = "LICENSE.md" }
@@ -21,6 +21,7 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+  "cryptography>=46,<51",
   "jsonschema>=4.20,<5",
 ]
 
@@ -47,6 +48,7 @@ ai-video-dbd-trivia-editor = "ai_video_production.dbd_trivia_editor:main"
 ai-video-dbd-training-studio = "ai_video_production.dbd_training_studio:main"
 ai-video-dbd-kamigame-collect = "ai_video_production.dbd_kamigame_cli:main"
 ai-video-faster-whisper-evidence = "ai_video_production.faster_whisper_reconciliation_cli:main"
+ai-video-speech-cues = "ai_video_production.speech_cue_cli:main"
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
 asr = ["faster-whisper>=1.2.1,<2"]
@@ -69,4 +71,4 @@ testpaths = ["tests"]
 addopts = "-ra"
 
 [tool.setuptools.package-data]
-ai_video_production = ["schema_resources/*.json", "workflow_resources/*.json"]
+ai_video_production = ["schema_resources/*.json", "workflow_resources/*.json", "profile_resources/*.json"]

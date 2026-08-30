@@ -187,6 +187,7 @@ class ConnectionSettingsFormBuilder:
         preflight: SettingsPreflightReport,
         *,
         revision: int = 0,
+        route_runtime_status: Mapping[str, Mapping[str, object]] | None = None,
     ) -> dict[str, object]:
         if profile.profile_id != preflight.profile_id or profile.profile_version != preflight.profile_version:
             raise ValueError("profile and preflight do not match")
@@ -202,7 +203,7 @@ class ConnectionSettingsFormBuilder:
                 key=lambda item: (item.priority, item.route_id),
             )
             for route in configured_routes:
-                routes.append({
+                route_form: dict[str, object] = {
                     "route_id": route.route_id,
                     "provider_family": route.provider_family.value,
                     "provider_id": route.provider_id,
@@ -215,7 +216,11 @@ class ConnectionSettingsFormBuilder:
                     "implementation_status": cls._IMPLEMENTATION_STATUS.get(
                         route.provider_family, "PLANNED_ADAPTER"
                     ),
-                })
+                }
+                runtime = (route_runtime_status or {}).get(route.route_id)
+                if runtime is not None:
+                    route_form.update(runtime)
+                routes.append(route_form)
             workloads.append({
                 "workload": workload.value,
                 "label": {"ja": ja, "en": en},

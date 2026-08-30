@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/speech-cue-manifest.schema.json",
+  "title": "BAI Speech Cue Manifest",
+  "type": "object",
+  "required": [
+    "manifest_version", "manifest_id", "source_asset_id", "source_frame_rate",
+    "transcript_manifest_sha256", "keyword_profile_id", "keyword_profile_sha256",
+    "counts", "cues", "manifest_sha256"
+  ],
+  "properties": {
+    "manifest_version": {"const": "1.0.0"},
+    "manifest_id": {"type": "string", "pattern": "^SCM-[0-9a-f]{32}$"},
+    "source_asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "source_frame_rate": {"$ref": "#/$defs/rationalFps"},
+    "transcript_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "keyword_profile_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "keyword_profile_sha256": {"$ref": "#/$defs/sha256"},
+    "counts": {
+      "type": "object",
+      "required": ["confirmed", "review", "rejected"],
+      "properties": {
+        "confirmed": {"type": "integer", "minimum": 0},
+        "review": {"type": "integer", "minimum": 0},
+        "rejected": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "cues": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {"$ref": "#/$defs/cue"}
+    },
+    "manifest_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "rationalFps": {
+      "type": "object",
+      "required": ["numerator", "denominator"],
+      "properties": {
+        "numerator": {"type": "integer", "minimum": 1},
+        "denominator": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "rangeUs": {
+      "type": "object",
+      "required": ["start", "end_exclusive"],
+      "properties": {
+        "start": {"type": "integer", "minimum": 0},
+        "end_exclusive": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "rangeFrames": {
+      "type": "object",
+      "required": ["start", "end_exclusive"],
+      "properties": {
+        "start": {"type": "integer", "minimum": 0},
+        "end_exclusive": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    },
+    "cue": {
+      "type": "object",
+      "required": [
+        "cue_id", "keyword_id", "source_range_us", "source_range_frames", "confidence",
+        "timing_granularity", "review_state", "source_segment_ids"
+      ],
+      "properties": {
+        "cue_id": {"type": "string", "pattern": "^CUE-[0-9a-f]{24}$"},
+        "keyword_id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"},
+        "source_range_us": {"$ref": "#/$defs/rangeUs"},
+        "source_range_frames": {"$ref": "#/$defs/rangeFrames"},
+        "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "timing_granularity": {"enum": ["WORD", "SEGMENT_FALLBACK"]},
+        "review_state": {"enum": ["CONFIRMED", "REVIEW", "REJECTED"]},
+        "source_segment_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 128}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"review_state": {"const": "CONFIRMED"}}, "required": ["review_state"]},
+          "then": {"properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}}}
+        }
+      ],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -19,6 +19,7 @@ from .desktop_shell import ShellApplicationService, WorkspaceId
 from .desktop_shell_projection import DesktopEditingProjectionService, EditingProjection
 from .task036_view_model import Task036DesktopViewModel
 from .task036_native_dialog import Task036NativeDialogService
+from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .connection_settings_web import ConnectionSettingsWebService
@@ -212,6 +213,8 @@ class Task036ShellBridge:
         audio_placement_application: Task026AudioPlacementApplication | None = None,
         quick_generation_application: Task042QuickGenerationApplication | None = None,
         connection_settings: ConnectionSettingsWebService | None = None,
+        ollama_runtime_snapshot_provider: Callable[[], dict[str, object]] | None = None,
+        owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
         final_review_application: FinalReviewApprovalApplication | None = None,
         final_review_external_gate_provider: Callable[
             [], tuple[FinalReviewExternalGateReceipt, ...]
@@ -262,6 +265,10 @@ class Task036ShellBridge:
         self._audio_placement_application = audio_placement_application
         self._quick_generation_application = quick_generation_application
         self._connection_settings = connection_settings
+        if ollama_runtime_snapshot_provider is not None and not callable(ollama_runtime_snapshot_provider):
+            raise ValueError("Ollama runtime snapshot provider is invalid")
+        self._ollama_runtime_snapshot_provider = ollama_runtime_snapshot_provider
+        self._owner_signing_key_import = owner_signing_key_import
         self._final_review_application = final_review_application
         if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
             raise ValueError("Final Review external Gate provider is invalid")
@@ -477,21 +484,22 @@ class Task036ShellBridge:
 
     def workflow_status(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "workflow status")
-        if self._workflow_runtime is not None:
-            return self._workflow_runtime.status()
-        if self._pre_edit_runtime is not None:
-            status = self._pre_edit_runtime.status()
-            if status["next_recommended_action"] not in {
-                "media.choose_and_ingest",
-                "transcription.start",
-                "subtitle.save",
-                "cut_candidates.generate",
-                "edit_plan.approve",
-            }:
-                status["available"] = False
-                status["post_review_runtime_bound"] = False
-            return status
-        return {"available": False}
+        with self._nle_operation():
+            if self._workflow_runtime is not None:
+                return self._workflow_runtime.status()
+            if self._pre_edit_runtime is not None:
+                status = self._pre_edit_runtime.status()
+                if status["next_recommended_action"] not in {
+                    "media.choose_and_ingest",
+                    "transcription.start",
+                    "subtitle.save",
+                    "cut_candidates.generate",
+                    "edit_plan.approve",
+                }:
+                    status["available"] = False
+                    status["post_review_runtime_bound"] = False
+                return status
+            return {"available": False}
 
     def choose_and_ingest_media(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "media choose and ingest")
@@ -543,30 +551,294 @@ class Task036ShellBridge:
                 "host_path_persisted": False,
             }
 
+    def prepare_local_transcription(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "local transcription prepare")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            return self._pre_edit_runtime.prepare_local_transcription()
+
+    def prepare_local_transcription_recovery(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "local transcription recovery prepare")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            return self._pre_edit_runtime.prepare_local_transcription(recovery=True)
+
+    @staticmethod
+    def _transcription_confirmation(args: Any, operation: str) -> str:
+        if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID", f"{operation} request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        confirmation_id = args.get("confirmation_id")
+        if not isinstance(confirmation_id, str) or not confirmation_id.strip() or len(confirmation_id) > 256:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID", f"{operation} confirmation is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return confirmation_id
+
+    def cancel_local_transcription(self, args: Any = None) -> dict[str, Any]:
+        confirmation_id = self._transcription_confirmation(args, "local transcription cancel")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            return self._pre_edit_runtime.cancel_local_transcription(confirmation_id)
+
     def run_local_transcription(self, args: Any = None) -> dict[str, Any]:
-        self._empty_args(args, "local transcription")
-        if self._pre_edit_runtime is None:
-            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self._pre_edit_runtime.run_local_transcription()
+        confirmation_id = self._transcription_confirmation(args, "local transcription apply")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.run_local_transcription(confirmation_id)
+            digest = result.get("transcript_manifest_sha256") if isinstance(result, dict) else None
+            next_action = result.get("next_recommended_action") if isinstance(result, dict) else None
+            if (
+                not isinstance(result, dict)
+                or result.get("task_owner") != "TASK-036"
+                or result.get("operation") != "TRANSCRIPT_RESULT_BIND"
+                or not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or next_action != "subtitle.save"
+                or result.get("provider_execution_started") is not True
+                or result.get("provider_execution_completed") is not True
+                or result.get("provider_execution_mode") != "LOCAL"
+                or result.get("provider_configuration_from_javascript") is not False
+                or not isinstance(result.get("recovered_from_durable_result"), bool)
+            ):
+                raise ProductError(
+                    "ERR_TASK036_TRANSCRIPTION_RESULT_INVALID",
+                    "Local transcription returned an invalid private result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            return {
+                "task_owner": "TASK-036",
+                "operation": "TRANSCRIPT_RESULT_BIND",
+                "status": "TRANSCRIBED",
+                "transcript_manifest_sha256": digest,
+                "next_recommended_action": "subtitle.save",
+                "provider_execution_started": True,
+                "provider_execution_completed": True,
+                "provider_execution_mode": "LOCAL",
+                "provider_configuration_from_javascript": False,
+                "transcript_text_exposed": False,
+                "host_path_exposed": False,
+                "recovered_from_durable_result": result["recovered_from_durable_result"],
+            }
+
+    def recover_local_transcription(self, args: Any = None) -> dict[str, Any]:
+        confirmation_id = self._transcription_confirmation(args, "local transcription recovery apply")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.recover_local_transcription(confirmation_id)
+            digest = result.get("transcript_manifest_sha256") if isinstance(result, dict) else None
+            if (
+                not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or result.get("provider_execution_started") is not False
+                or result.get("provider_execution_completed") is not True
+                or result.get("recovered_from_durable_result") is not True
+            ):
+                raise ProductError("ERR_TASK036_TRANSCRIPTION_RESULT_INVALID", "Local transcription recovery returned an invalid private result", ProductErrorCategory.DATA_INTEGRITY)
+            return {
+                "task_owner": "TASK-036",
+                "operation": "TRANSCRIPT_RESULT_BIND",
+                "status": "TRANSCRIBED",
+                "transcript_manifest_sha256": digest,
+                "next_recommended_action": "subtitle.save",
+                "provider_execution_started": False,
+                "provider_execution_completed": True,
+                "provider_execution_mode": "LOCAL",
+                "provider_configuration_from_javascript": False,
+                "transcript_text_exposed": False,
+                "host_path_exposed": False,
+                "recovered_from_durable_result": True,
+            }
+
+    def speech_cue_snapshot(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "speech cue snapshot")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                return {"available": False, "task_owner": "TASK-056"}
+            return self._pre_edit_runtime.speech_cue_snapshot()
+
+    def generate_speech_cues(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "speech cue generation")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError(
+                    "ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND",
+                    "Trusted pre-edit runtime is not bound",
+                    ProductErrorCategory.STATE,
+                )
+            return self._pre_edit_runtime.generate_speech_cues()
+
+    def prepare_speech_cue_decision(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"cue_id", "decision"}
+            or not all(isinstance(args[key], str) for key in args)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Speech cue Human decision preparation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError(
+                    "ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND",
+                    "Trusted pre-edit runtime is not bound",
+                    ProductErrorCategory.STATE,
+                )
+            return self._pre_edit_runtime.prepare_speech_cue_decision(
+                cue_id=args["cue_id"],
+                decision=args["decision"],
+            )
+
+    def cancel_speech_cue_decision(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"].strip()
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Speech cue Human decision cancellation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError(
+                    "ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND",
+                    "Trusted pre-edit runtime is not bound",
+                    ProductErrorCategory.STATE,
+                )
+            return self._pre_edit_runtime.cancel_speech_cue_decision(
+                confirmation_id=args["confirmation_id"],
+            )
+
+    def apply_speech_cue_decision(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"].strip()
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Speech cue Human decision application request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError(
+                    "ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND",
+                    "Trusted pre-edit runtime is not bound",
+                    ProductErrorCategory.STATE,
+                )
+            return self._pre_edit_runtime.apply_speech_cue_decision(
+                confirmation_id=args["confirmation_id"],
+            )
 
     def create_runtime_subtitle_workspace(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Subtitle Workspace creation")
-        if self._pre_edit_runtime is None:
-            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        return self._pre_edit_runtime.create_subtitle_workspace()
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.create_subtitle_workspace()
+            digest = result.get("subtitle_workspace_sha256") if isinstance(result, dict) else None
+            cue_count = result.get("cue_count") if isinstance(result, dict) else None
+            if (
+                not isinstance(result, dict)
+                or result.get("task_owner") != "TASK-036"
+                or result.get("operation") != "SUBTITLE_WORKSPACE_CREATE"
+                or not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or not isinstance(cue_count, int)
+                or isinstance(cue_count, bool)
+                or cue_count < 0
+                or result.get("next_recommended_action") != "cut_candidates.generate"
+                or result.get("provider_execution_started") is not False
+            ):
+                raise ProductError(
+                    "ERR_TASK036_SUBTITLE_RESULT_INVALID",
+                    "Subtitle Workspace creation returned an invalid private result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            return {
+                "task_owner": "TASK-036",
+                "operation": "SUBTITLE_WORKSPACE_CREATE",
+                "status": "SUBTITLE_READY",
+                "subtitle_workspace_sha256": digest,
+                "cue_count": cue_count,
+                "next_recommended_action": "cut_candidates.generate",
+                "provider_execution_started": False,
+                "transcript_text_exposed": False,
+                "host_path_exposed": False,
+            }
 
     def generate_runtime_cut_candidates(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Cut Candidate generation")
-        if self._pre_edit_runtime is None:
-            raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
-        result = self._pre_edit_runtime.generate_cut_candidates()
-        application = self._pre_edit_runtime.application
-        if application is not None and self._workflow_runtime_factory is not None:
-            runtime = self._workflow_runtime_factory(application)
-            if runtime.application is not application:
-                raise ValueError("trusted runtime factory returned a different editing application")
-            self._workflow_runtime = runtime
-        return result
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            if self._workflow_runtime_factory is None:
+                result = self._pre_edit_runtime.generate_cut_candidates()
+            else:
+                result = self._pre_edit_runtime.generate_cut_candidates(
+                    workflow_runtime_factory=self._workflow_runtime_factory,
+                )
+            digest = result.get("manifest_sha256") if isinstance(result, dict) else None
+            candidate_count = result.get("candidate_count") if isinstance(result, dict) else None
+            application = self._pre_edit_runtime.application
+            if (
+                not isinstance(result, dict)
+                or result.get("task_owner") != "TASK-036"
+                or result.get("operation") != "CUT_CANDIDATE_GENERATE_AND_BIND"
+                or not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or not isinstance(candidate_count, int)
+                or isinstance(candidate_count, bool)
+                or candidate_count < 0
+                or result.get("next_recommended_action") != "edit_plan.approve"
+                or result.get("provider_execution_started") is not False
+                or application is None
+            ):
+                raise ProductError(
+                    "ERR_TASK036_CUT_RESULT_INVALID",
+                    "Cut Candidate generation returned an invalid private result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            if self._workflow_runtime_factory is not None:
+                runtime = self._pre_edit_runtime.promoted_workflow_runtime
+                if runtime is None or runtime.application is not application:
+                    raise ValueError("trusted runtime factory result was not committed")
+                self._workflow_runtime = runtime
+            return {
+                "task_owner": "TASK-036",
+                "operation": "CUT_CANDIDATE_GENERATE_AND_BIND",
+                "status": "CUT_CANDIDATES_READY",
+                "manifest_sha256": digest,
+                "candidate_count": candidate_count,
+                "next_recommended_action": "edit_plan.approve",
+                "provider_execution_started": False,
+                "provider_configuration_from_javascript": False,
+                "candidate_details_exposed": False,
+                "host_path_exposed": False,
+            }
 
     def compile_resolve_assembly(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Resolve assembly compile")
@@ -777,6 +1049,71 @@ class Task036ShellBridge:
             "generation_started": False,
         }
 
+    @staticmethod
+    def _ollama_runtime_unavailable_projection() -> dict[str, object]:
+        return {
+            "available": False,
+            "state": "UNAVAILABLE_CONFIGURATION",
+            "model_ids": [],
+            "started_by_product": False,
+            "reason_code": "OLLAMA_RUNTIME_NOT_BOUND",
+            "message_ja": "Ollamaの状態を確認する接続が未設定です。Project設定を再確認してください。",
+            "endpoint": "loopback-only",
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "generation_started": False,
+        }
+
+    def ollama_runtime_snapshot(self, args: Any = None) -> dict[str, object]:
+        """Expose a read-only, public-safe local runtime state to the Shell."""
+        self._empty_args(args, "Ollama runtime snapshot")
+        if self._ollama_runtime_snapshot_provider is None:
+            return self._ollama_runtime_unavailable_projection()
+        try:
+            raw = self._ollama_runtime_snapshot_provider()
+        except (OSError, ValueError):
+            raw = None
+        expected = {"state", "model_ids", "started_by_product", "reason_code", "message_ja", "endpoint"}
+        if not isinstance(raw, dict) or set(raw) != expected:
+            return {
+                **self._ollama_runtime_unavailable_projection(),
+                "state": "FAILED",
+                "reason_code": "OLLAMA_RUNTIME_SNAPSHOT_INVALID",
+                "message_ja": "Ollamaの状態を安全に表示できません。ローカルruntimeを確認してください。",
+            }
+        state = raw["state"]
+        model_ids = raw["model_ids"]
+        reason_code = raw["reason_code"]
+        message_ja = raw["message_ja"]
+        if (
+            state not in {"READY", "NO_MODEL", "STARTING", "NOT_INSTALLED", "FAILED"}
+            or not isinstance(model_ids, list)
+            or len(model_ids) > 64
+            or any(not isinstance(model_id, str) for model_id in model_ids)
+            or not isinstance(raw["started_by_product"], bool)
+            or reason_code is not None and not isinstance(reason_code, str)
+            or not isinstance(message_ja, str)
+            or raw["endpoint"] != "loopback-only"
+        ):
+            return {
+                **self._ollama_runtime_unavailable_projection(),
+                "state": "FAILED",
+                "reason_code": "OLLAMA_RUNTIME_SNAPSHOT_INVALID",
+                "message_ja": "Ollamaの状態を安全に表示できません。ローカルruntimeを確認してください。",
+            }
+        return {
+            "available": True,
+            "state": state,
+            "model_ids": list(model_ids),
+            "started_by_product": raw["started_by_product"],
+            "reason_code": reason_code,
+            "message_ja": message_ja,
+            "endpoint": "loopback-only",
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "generation_started": False,
+        }
+
     def connection_settings_snapshot(self, args: Any = None) -> dict[str, object]:
         self._empty_args(args, "Connection Settings snapshot")
         if self._connection_settings is None:
@@ -788,6 +1125,115 @@ class Task036ShellBridge:
                 "generation_started": False,
             }
         return self._connection_settings_projection(self._connection_settings.form())
+
+    @staticmethod
+    def _owner_signing_key_unavailable_projection() -> dict[str, object]:
+        return {
+            "available": False,
+            "task_owner": "TASK-059",
+            "state": "UNAVAILABLE_CONFIGURATION",
+            "status_label_ja": "設定未接続",
+            "recommended_action": "CHECK_APPLICATION_CONFIGURATION",
+            "candidate": None,
+            "ready": None,
+            "success": None,
+            "selected_paths_exposed": False,
+            "file_bodies_exposed": False,
+            "passphrase_exposed": False,
+            "custody_destination_path_exposed": False,
+            "one_shot_no_overwrite": True,
+            "signing_authorized": False,
+            "publication_authorized": False,
+            "promotion_authorized": False,
+            "release_authorized": False,
+            "deploy_authorized": False,
+        }
+
+    def owner_signing_key_import_snapshot(
+        self, args: Any = None
+    ) -> dict[str, object]:
+        self._empty_args(args, "Owner signing key import snapshot")
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.snapshot()
+
+    def owner_signing_key_import_choose_files(
+        self, args: Any = None
+    ) -> dict[str, object]:
+        self._empty_args(args, "Owner signing key file selection")
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.choose_files()
+
+    def owner_signing_key_import_confirm_public_identity(
+        self, args: Any
+    ) -> dict[str, object]:
+        expected = {"candidate_id", "explicit_human_confirmation"}
+        if (
+            not isinstance(args, dict)
+            or set(args) != expected
+            or args.get("explicit_human_confirmation") is not True
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Owner signing key public identity request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.confirm_public_identity(
+            candidate_id=args["candidate_id"],
+            explicit_human_confirmation=True,
+        )
+
+    def owner_signing_key_import_open_native_secret_dialog(
+        self, args: Any
+    ) -> dict[str, object]:
+        if not isinstance(args, dict) or set(args) != {"candidate_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Owner signing key native secret request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.open_native_secret_dialog(
+            candidate_id=args["candidate_id"]
+        )
+
+    def owner_signing_key_import_confirm_ready(
+        self, args: Any
+    ) -> dict[str, object]:
+        expected = {"attempt_id", "explicit_human_confirmation"}
+        if (
+            not isinstance(args, dict)
+            or set(args) != expected
+            or args.get("explicit_human_confirmation") is not True
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Owner signing key READY request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.confirm_ready(
+            attempt_id=args["attempt_id"],
+            explicit_human_confirmation=True,
+        )
+
+    def owner_signing_key_import_cancel(self, args: Any) -> dict[str, object]:
+        if not isinstance(args, dict) or set(args) != {"attempt_id"}:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Owner signing key cancellation request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._owner_signing_key_import is None:
+            return self._owner_signing_key_unavailable_projection()
+        return self._owner_signing_key_import.cancel(
+            attempt_id=args["attempt_id"]
+        )
 
     def model_selection_snapshot(self, args: Any = None) -> dict[str, object]:
         """Compose persisted Project/Scene/Quick route coordinates without effects."""
@@ -1893,7 +2339,7 @@ class Task036ShellBridge:
         )
 
 
-def run_native_layout_spike(*, product_version: str = "0.22.0") -> None:
+def run_native_layout_spike(*, product_version: str = "0.23.0") -> None:
     """Launch the native layout spike when optional pywebview is installed.
 
     This function does not install dependencies and does not mutate Product data.

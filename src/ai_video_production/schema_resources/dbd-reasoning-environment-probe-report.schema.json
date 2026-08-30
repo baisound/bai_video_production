@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/dbd-reasoning-environment-probe-report.schema.json",
+  "title": "DbD Reasoning Environment Probe Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "record_kind", "authority_ref", "authority_evidence_sha256",
+    "observed_at", "command_set_sha256", "checks", "status", "state", "report_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "DBD_REASONING_ENVIRONMENT_PROBE_REPORT"},
+    "authority_ref": {"type": "string", "pattern": "^authorization://task054/[0-9A-HJKMNP-TV-Z]{26}$"},
+    "authority_evidence_sha256": {"$ref": "#/$defs/sha"},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "command_set_sha256": {"$ref": "#/$defs/sha"},
+    "checks": {
+      "type": "array", "minItems": 4, "maxItems": 4,
+      "prefixItems": [
+        {"$ref": "#/$defs/wslCheck"}, {"$ref": "#/$defs/pythonCheck"},
+        {"$ref": "#/$defs/gpuCheck"}, {"$ref": "#/$defs/storageCheck"}
+      ],
+      "items": false
+    },
+    "status": {"enum": ["AVAILABLE", "BLOCKED_RUNTIME", "NOT_CONFIRMED"]},
+    "state": {"const": "EVIDENCE_ONLY_NO_INSTALL_DOWNLOAD_TRAINING_OR_EXECUTION_AUTHORITY"},
+    "report_sha256": {"$ref": "#/$defs/sha"}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "baseCheck": {
+      "type": "object", "additionalProperties": false,
+      "required": ["check_id", "status", "version_summary", "detail_code", "observation_sha256"],
+      "properties": {
+        "check_id": {"enum": ["WSL", "PYTHON", "GPU", "STORAGE"]},
+        "status": {"enum": ["AVAILABLE", "BLOCKED_RUNTIME", "NOT_CONFIRMED"]},
+        "version_summary": {"oneOf": [{"type": "null"}, {"type": "string", "minLength": 1, "maxLength": 160}]},
+        "detail_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$"},
+        "observation_sha256": {"$ref": "#/$defs/sha"}
+      }
+    },
+    "wslCheck": {"allOf": [{"$ref": "#/$defs/baseCheck"}, {"properties": {"check_id": {"const": "WSL"}}}]},
+    "pythonCheck": {"allOf": [{"$ref": "#/$defs/baseCheck"}, {"properties": {"check_id": {"const": "PYTHON"}}}]},
+    "gpuCheck": {"allOf": [{"$ref": "#/$defs/baseCheck"}, {"properties": {"check_id": {"const": "GPU"}}}]},
+    "storageCheck": {"allOf": [{"$ref": "#/$defs/baseCheck"}, {"properties": {"check_id": {"const": "STORAGE"}}}]}
+  }
+}

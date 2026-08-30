@@ -20,11 +20,34 @@ class FailingProbe:
         )
 
 
+class AvailableLease:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_unused):
+        return None
+
+
+class AvailableGuard:
+    def acquire(self):
+        return AvailableLease()
+
+
+class BusyGuard:
+    def acquire(self):
+        raise ProductError(
+            "ERR_TASK036_ALREADY_RUNNING",
+            "BAI Video Productionは既に起動しています。既存のウィンドウを確認してください。",
+            ProductErrorCategory.STATE,
+        )
+
+
 def test_packaged_entry_preflights_then_starts_shell():
     calls = []
     result = packaged_main(
         ["--layout-spike"],
         probe=ReadyProbe(),
+        instance_guard=AvailableGuard(),
         presenter=lambda *_args: calls.append("error"),
         app_main=lambda args: calls.append(args) or 0,
     )
@@ -34,9 +57,57 @@ def test_packaged_entry_preflights_then_starts_shell():
 
 def test_packaged_entry_presents_actionable_error_without_console():
     shown = []
-    result = packaged_main([], probe=FailingProbe(), presenter=lambda title, body: shown.append((title, body)))
+    result = packaged_main([], probe=FailingProbe(), instance_guard=AvailableGuard(), presenter=lambda title, body: shown.append((title, body)))
     assert result == 2
     assert len(shown) == 1
     assert "ERR_TASK036_WEBVIEW2_RUNTIME_REQUIRED" in shown[0][1]
     assert "Install WebView2 and retry." in shown[0][1]
     assert "https://example.test/" in shown[0][1]
+
+
+def test_packaged_entry_rejects_a_second_product_instance():
+    shown = []
+    calls = []
+    result = packaged_main(
+        [],
+        probe=ReadyProbe(),
+        instance_guard=BusyGuard(),
+        presenter=lambda title, body: shown.append((title, body)),
+        app_main=lambda args: calls.append(args) or 0,
+    )
+    assert result == 2
+    assert calls == []
+    assert "ERR_TASK036_ALREADY_RUNNING" in shown[0][1]
+
+class TrackingLease:
+    def __init__(self) -> None:
+        self.closed = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_unused):
+        self.closed = True
+
+
+class TrackingGuard:
+    def __init__(self) -> None:
+        self.lease = TrackingLease()
+
+    def acquire(self):
+        return self.lease
+
+
+def test_packaged_entry_releases_the_instance_guard_when_shell_fails():
+    guard = TrackingGuard()
+    shown = []
+    result = packaged_main(
+        [],
+        probe=ReadyProbe(),
+        instance_guard=guard,
+        presenter=lambda title, body: shown.append((title, body)),
+        app_main=lambda _args: (_ for _ in ()).throw(RuntimeError("fixture failure")),
+    )
+    assert result == 2
+    assert guard.lease.closed is True
+    assert "ERR_TASK036_PACKAGED_STARTUP" in shown[0][1]

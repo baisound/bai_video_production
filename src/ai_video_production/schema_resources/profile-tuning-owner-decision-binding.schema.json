@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/profile-tuning-owner-decision-binding.schema.json",
+  "title": "TASK-019 Profile Tuning Owner Decision Binding",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "stableId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+    "decisionReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "decision_id": { "$ref": "#/$defs/stableId" },
+        "entry_sha256": { "$ref": "#/$defs/sha256" },
+        "candidate_sha256": { "$ref": "#/$defs/sha256" },
+        "hypothesis_id": { "$ref": "#/$defs/stableId" },
+        "action_type": { "$ref": "#/$defs/stableId" },
+        "decision": { "enum": ["ADOPTED", "REJECTED"] },
+        "decided_at_epoch_ms": { "type": "integer", "minimum": 1, "maximum": 9999999999999 }
+      },
+      "required": [
+        "decision_id", "entry_sha256", "candidate_sha256", "hypothesis_id",
+        "action_type", "decision", "decided_at_epoch_ms"
+      ]
+    },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "feature_key": { "$ref": "#/$defs/stableId" },
+        "owner_decisions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "items": { "$ref": "#/$defs/decisionReference" }
+        }
+      },
+      "required": ["feature_key", "owner_decisions"]
+    }
+  },
+  "properties": {
+    "binding_version": { "const": "1.0.0" },
+    "record_type": { "const": "PROFILE_TUNING_OWNER_DECISION_BINDING" },
+    "task_owner": { "const": "TASK-019" },
+    "source_task": { "const": "TASK-029" },
+    "proposal_sha256": { "$ref": "#/$defs/sha256" },
+    "proposal_state": {
+      "enum": [
+        "READY_FOR_HUMAN_REVIEW", "FEEDBACK_INCOMPLETE", "INSUFFICIENT_HOLDOUT",
+        "NO_MEASURED_IMPROVEMENT", "HOLDOUT_REGRESSION", "UNKNOWN_EVIDENCE",
+        "STALE_OR_REVOKED_EVIDENCE"
+      ]
+    },
+    "owner_scope_sha256": { "$ref": "#/$defs/sha256" },
+    "decision_store_id": { "$ref": "#/$defs/stableId" },
+    "decision_history_revision": { "type": "integer", "minimum": 1, "maximum": 1000000000 },
+    "decision_history_sha256": { "$ref": "#/$defs/sha256" },
+    "baseline_profile_sha256": { "$ref": "#/$defs/sha256" },
+    "proposed_profile_sha256": { "$ref": "#/$defs/sha256" },
+    "rollback_profile_sha256": { "$ref": "#/$defs/sha256" },
+    "adjustment_supports": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/support" }
+    },
+    "state": {
+      "enum": [
+        "READY_FOR_HUMAN_REVIEW", "PROFILE_PROPOSAL_NOT_READY",
+        "REJECTED_OWNER_DECISION_PRESENT"
+      ]
+    },
+    "latest_history_revalidation_required": { "const": true },
+    "human_review_required": { "const": true },
+    "profile_materialization_authorized": { "const": false },
+    "automatic_profile_write_authorized": { "const": false },
+    "knowledge_pack_promotion_authorized": { "const": false },
+    "automatic_promotion_authorized": { "const": false },
+    "rollback_execution_authorized": { "const": false },
+    "edit_plan_mutation_authorized": { "const": false },
+    "external_effect_authorized": { "const": false },
+    "binding_sha256": { "$ref": "#/$defs/sha256" }
+  },
+  "required": [
+    "binding_version", "record_type", "task_owner", "source_task",
+    "proposal_sha256", "proposal_state", "owner_scope_sha256",
+    "decision_store_id", "decision_history_revision", "decision_history_sha256",
+    "baseline_profile_sha256", "proposed_profile_sha256",
+    "rollback_profile_sha256", "adjustment_supports", "state",
+    "latest_history_revalidation_required", "human_review_required",
+    "profile_materialization_authorized", "automatic_profile_write_authorized",
+    "knowledge_pack_promotion_authorized", "automatic_promotion_authorized",
+    "rollback_execution_authorized", "edit_plan_mutation_authorized",
+    "external_effect_authorized", "binding_sha256"
+  ]
+}

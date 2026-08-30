@@ -1,0 +1,39 @@
+schema_version: 1
+task_id: TASK-054
+selection_state: verified_pilot_candidate_no_promotion
+candidates:
+  - candidate_id: qwen3-8b-b968826d
+    repository_id: Qwen/Qwen3-8B
+    immutable_revision: b968826d9c46dd6066d109eabc6255188de91218
+    model_ref: model-cache://task054/qwen3-8b-b968826d
+    family: qwen3
+    parameter_class: 8B
+    instruction_tuned: true
+    context_length_tokens: 131072
+    languages:
+      - ja
+      - en
+    license:
+      spdx: Apache-2.0
+      commercial_use_compatible: true
+      redistribution_review_required: true
+    acquisition:
+      public: true
+      gated: false
+      credential_required: false
+      trust_remote_code: false
+      file_count: 15
+      total_bytes: 16397461266
+      inventory_sha256: 5e063d7779d5affb32b480e70534d667aef407cd5258a507ec8cd83afff116f6
+      verification_report_ref: reports/task054/r6b-qwen3-8b-b968826d/base-model-verification.json
+      verification_report_sha256: 38e8e0d0398bd6661b519cf70188ffa7527893d3db086a1e153e477863046e0c
+      verification_status: PASS
+    runtime:
+      local_files_only: true
+      preferred_quantization: nf4
+      preferred_compute_dtype: bf16
+      peft_supported: true
+    admission:
+      baseline_evaluation_required: true
+      dataset_manifest_required: true
+      promotion_allowed: false

@@ -1,0 +1,635 @@
+# TASK-058 — Montage Learning Bridge
+
+Status: ACTIVE — P0/P1A/P1B/P1C-A/P1C-B/P1C-C HOSTED CLOSED / P1C-D TECHNICAL GO / HOSTED PENDING
+
+## v0.23.0 Editing SKILL Integration Release Unit
+
+The Owner explicitly selected `0.23.0 / v0.23.0 / stable` and authorized the
+main integration, annotated Tag, GitHub Release, and post-release branch/worktree
+cleanup on 2026-08-30. This bounded release Unit composes the TASK-058 exact3
+test seam, the knowledge/commentary main-only probe and fixture pipeline, the
+TASK-055/TASK-056 montage fixture pipeline, and their common privacy-safe,
+non-authoritative Resolve handoff Evidence projection.
+
+The single canonical Evidence record is
+`docs/ai-team/tasks/TASK-058/v0.23.0-editing-skill-integration-release-evidence-2026-08-30.md`.
+It must be updated after merge and Release read-back with the exact PR, main SHA,
+annotated Tag, workflow, published assets, and cleanup result.
+
+Release does not convert endpoint digest equality into continuous custody, does
+not authorize connector activation, and does not claim real Resolve GUI runtime
+QA. Windows full CI and the GitHub Release workflow must report their observed
+results independently; any unexecuted native gate remains `NOT_CONFIRMED`.
+
+### v0.23.0 hosted release closure
+
+- release PR: `#444`, hosted checks `9 / 9 PASS`;
+- exact release-code main: `382ae2aec8ecf83933973eb5c67fa6865b39194b`;
+- annotated Tag object: `31899fc40e4078f8a4d1f83b45f269a07d60f5df`,
+  dereferenced commit: `382ae2aec8ecf83933973eb5c67fa6865b39194b`;
+- Release workflow: `33280546212`, `4709 PASS / 17 SKIP / 2 warnings /
+  11 subtests PASS`;
+- stable GitHub Release: `https://github.com/baisound/bai_video_production/releases/tag/v0.23.0`;
+- published assets: `6 / 6` uploaded with SHA-256 digest read-back;
+- real Resolve GUI runtime QA: `NOT_EXECUTED / NOT_CONFIRMED`;
+- connector activation, Timeline mutation, Deploy, and Production: `NOT
+  AUTHORIZED / NOT EXECUTED`.
+
+## Objective
+
+Provide a bounded, review-first bridge for two montage-learning inputs without
+creating a second canonical timeline or automatic learning authority:
+
+1. an exact BAI VIDEO PRODUCTION proposal → approved plan → human edit evidence
+   lineage; and
+2. a generic `bvp-montage-learning-adapter` learning export.
+
+## P0 Atomic Unit
+
+P0 freezes JSON contracts and deterministic validation only. The unit is
+classified `DEV-4` because it is a cross-project contract and authority
+boundary.
+
+P0 uses the execution classification `NO_EXTERNAL_OR_MUTABLE_I/O`. It may
+perform deterministic, read-only loading of packaged immutable JSON Schemas
+through the existing TASK-055 parser. It does not read external mutable files,
+write a filesystem or store, access network/database/media, start Resolve or
+another native application, or call a paid provider.
+
+The P0 completion scope contains exactly eight files: seven Builder-owned
+contract/design/schema/source files and one independent Tester-owned focused
+test file. The Builder does not author or modify that test file.
+
+## P0 outputs
+
+- Exact delivery validation can reach only `EXACT_LINEAGE_VERIFIED`.
+- Generic delivery validation remains `OWNER_SCOPE_UNBOUND` and
+  `REVIEW_REQUIRED`.
+- A source runtime `PASS` is accepted only with executed evidence plus a
+  reference, and is down-scoped to a non-authoritative observation.
+- No result means `ACCEPTED`, canonical admission, timeline mutation, store
+  write, learning promotion, runtime proof, or receipt issuance.
+
+## Dependencies
+
+- TASK-055 owns the canonical montage proposal, approved-plan, and human-edit
+  evidence schemas and lineage admission.
+- TASK-029 owns the Product montage timeline and remains unchanged.
+- `bvp-montage-learning-adapter` owns the generic export shape; BVP independently
+  revalidates its semantics before exposing a review candidate.
+
+## Prohibited in P0
+
+- canonical learning store or automatic promotion;
+- canonical timeline ownership or mutation;
+- Resolve/native/provider/paid execution;
+- external connector or folder watcher;
+- v1 terminal or v2 review receipt minting;
+- changes to CHANGELOG, current state, task index, TASK-029, or active locks.
+
+## Completion gate
+
+P0 is complete only after schema mirrors are byte-identical, focused static and
+contract tests pass, independent Tester/Critic/Judge responsibilities report no
+unresolved Critical/High finding, and the exact eight-file scope is clean.
+
+P1/P2 connector, queue, UI review, store, or receipt work requires a separate
+authorized Atomic Unit. P0 does not imply that authority.
+
+## P0 hosted closure
+
+- target PR: `#341`
+- target merge: `1af0a342730a45168d615fdbc689a251dbe52a25`
+- CHANGELOG lock closure PR: `#346`
+- closure merge: `d4257b11ee071cc562107e4b71dacb8bb45cd11f`
+- registry revision: `82`
+- hosted and post-main checks: `PASS`
+- immutable P0 blobs: `8 / 8 preserved`
+
+## P1A Atomic Unit
+
+P1A freezes the pure `BvpMontageLearningAdmissionReceipt/v2` read contract and
+the deterministic idempotency binding required by the later importer. It is a
+DEV-4 `NO_EXTERNAL_OR_MUTABLE_I/O` unit.
+
+P1A validates caller-supplied receipt structures, canonical self-hashes,
+source identity, Owner scope, state combinations, duplicate reference shape,
+and canonical-store commit claim shape. Duplicate lineage and store commit
+remain unverified in P1A and are projected as such. P1A does not mint, persist,
+publish, or recover a receipt and does not verify that a caller is the BVP
+receipt authority.
+
+The P1A completion scope contains exactly six files: this task record, one
+detailed design, one public schema and its byte-identical packaged mirror, one
+pure source module, and one focused test module.
+
+### P1A prohibited effects
+
+- filesystem bridge creation, scan, claim, move, write, replace, or recovery;
+- canonical learning store read/write or TASK-029 admission;
+- queue, importer, connector, watcher, UI, installer, or capability handshake;
+- receipt minting or origin-authority verification;
+- Timeline, Resolve, native, provider, network, database, Release, Deploy, or
+  Production effects;
+- CHANGELOG, active-lock Registry, current-state, task-index, or TASK-029
+  mutation.
+
+P1B/P1C filesystem store, CAS/recovery, importer classification, Human binding,
+and actual receipt issuance require separate bounded designs after P1A is
+hosted and fresh-main green.
+
+## P1A local completion checkpoint
+
+- fresh-main composition HEAD: `5d94f06825062afd6fa73403fb04c94e3956691e`
+- exact scope: `6 / 6`
+- focused tests: `32 / 32 PASS`
+- P0/TASK-055 related regression: `57 / 57 PASS`
+- custom JSON-like TOCTOU matrix: `11 / 11 PASS`, hook invocation `0`
+- schema Draft 2020-12, packaged mirror, fixed vectors, compile, and diff:
+  `PASS`
+- independent Tester, Critic, and final Judge: `GO`
+- unresolved Critical/High findings: `0 / 0`
+- filesystem/store/importer/native/provider/paid/Release/Deploy/Production
+  effects: `NOT EXECUTED`
+
+P1A remains hosting-pending until its dedicated CHANGELOG lock transaction,
+hosted checks, merge, post-main checks, and closure read-back are complete.
+
+## P1A hosted closure
+
+- target PR: #351
+- target merge: f524781b88fafb469b55f7853976ebd73ec3c1bd
+- CHANGELOG lock closure PR: #356
+- closure merge: 85ddb70601898046826f869a9a9a1f2856ebdfb3
+- registry revision: 86
+- hosted and post-main checks: PASS
+- immutable P1A blobs: 6 / 6 preserved
+
+## P1B Atomic Unit
+
+P1B adds a BVP-owned, body-free admission staging ledger. The ledger provides
+an in-file hash chain, optimistic CAS, exact duplicate read-back, collision
+rejection, atomic replacement, and restart read-back. It accepts only claimed
+P0 exact-profile coordinates and never accepts the generic SKILL profile.
+
+P1B is a DEV-4 filesystem/state-machine unit. It stores identifiers, digests,
+timestamps, and explicit false authority flags only. It does not store proposal,
+plan, evidence, actor, account, transcript, media, path, or secret bodies.
+P1B does not verify P0 source origin, Human-binding origin, monotonic head, or
+rollback resistance and does not create a canonical store commit. P1C must
+revalidate the source, verify the exact Human binding, establish an external
+monotonic anchor, and atomically promote before any public receipt can claim a
+canonical store commit.
+P1B's exact path security model is COOPERATIVE_LOCAL_WRITER_ONLY. Its path
+checks reject pre-existing and observed unsafe paths, but hostile concurrent
+junction/reparse replacement protection is NOT_CONFIRMED. P1C must use a
+handle-bound writer for canonical promotion; the P1B staging writer and
+external_effect_authorized=false flag are not filesystem-race security proof.
+
+
+The P1B completion scope contains exactly six files: this task record, one
+detailed design, one public schema and its byte-identical packaged mirror, one
+store module, and one focused fault/recovery test module.
+
+### P1B prohibited effects
+
+- importer scan/claim/move/quarantine, connector, watcher, queue, UI, installer,
+  or capability handshake;
+- Generic observation canonical admission or automatic promotion;
+- Human binding creation/verification and public receipt mint/publication;
+- Timeline, Resolve, native, provider, network, database, Release, Deploy, or
+  Production effects;
+- real Product Project/store mutation outside isolated tests;
+- CHANGELOG, active-lock Registry, current-state, task-index, or TASK-029
+  mutation before a separate hosted integration lock.
+
+P1C remains responsible for importer classification, exact Human binding
+verification, durable staging membership/store-origin verification, monotonic
+Project binding, canonical promotion, and public v2 receipt issuance/recovery.
+A P1B staging digest cannot be used as canonical_store_commit_sha256.
+
+## P1B local completion checkpoint
+
+- fresh-main composition HEAD: e22945635abc398d102283b11598bd1452eb196c
+- exact scope: 6 / 6
+- schema Draft 2020-12 and packaged byte-identical mirror: PASS
+- compile and diff check: PASS
+- focused fault/recovery tests: 28 / 28 PASS
+- related TASK-058/TASK-055/atomic regression: 119 / 119 PASS
+- independent path-security delta observations: 9 / 9 PASS
+- full repository regression: 3927 PASS / 6 SKIPPED / 2 WARNINGS
+- final Judge: GO
+- independent Tester and Critic: GO
+- unresolved Critical/High/Medium/Low findings: 0 / 0 / 0 / 0
+- hostile path-race protection, directory durability, P1C handle-bound
+  canonical promotion implementation/execution: NOT_CONFIRMED
+- Product Project, canonical store, receipt, Timeline, Resolve, native,
+  provider, network, paid, Release, Deploy, and Production effects:
+  NOT EXECUTED
+
+## P1B hosted closure
+
+- target PR: #361
+- target merge: 423fc827a62510c39b702e47814ba23178a395c5
+- CHANGELOG lock closure PR: #365
+- closure merge: 38c9364f00750db7f33c7ee779f2f3ab05a7e344
+- registry revision: 92
+- hosted and post-main checks: PASS
+- immutable P1B blobs: 6 / 6 preserved
+
+## P1C-A Atomic Unit
+
+P1C-A is the validation-only source/Human-binding preflight slice of P1C. It snapshots
+one untrusted exact delivery and one caller-supplied P1B staging entry as JSON,
+reruns the P0/TASK-055 exact lineage admission, rejects `do_not_learn`, derives
+a stable canonical Evidence ID, recomputes a domain-separated Human binding,
+and requires every entry coordinate to match before returning a body-free
+`NONAUTHORITATIVE_SOURCE_HUMAN_PREFLIGHT_PROJECTION`. Its public constructor and
+parser prove self-consistency only; compiler execution, source/Human origin, entry
+origin, durable ledger membership, and store origin remain false.
+
+Deleted Human edits remain eligible as explicit negative feedback when their
+exact TASK-055 lineage is valid and `do_not_learn=false`; P1C-A does not
+rewrite or erase the source Evidence. Generic SKILL observations cannot enter
+this preflight.
+
+P1C-A is DEV-4 `NO_MUTABLE_OR_EXTERNAL_I/O`; the existing TASK-055 validator
+may lazily read only packaged immutable Schemas. Its result fixes staging
+membership/store origin, monotonic Project anchor, rollback detection, canonical
+store write/commit, receipt mint, canonical admission, automatic promotion,
+Timeline, Resolve, and external effect flags to false. P1C-B or later remains
+responsible for recompile from raw delivery plus handle-bound durable staging
+readback, staging membership/store-origin verification, the handle-bound writer,
+monotonic Project anchor, canonical promotion transaction, recovery, and public
+v2 receipt issuance. A serialized P1C-A projection or `from_dict()` result alone
+must never be admitted.
+
+The P1C-A exact scope is six files: this task record, one detailed design, one
+public Schema and byte-identical packaged mirror, one bounded source module, and
+one focused test module. `CHANGELOG.md`, active locks, current state, task
+index, TASK-029, P0/P1A/P1B source/schema/test, and Product Project data are
+outside this source Unit.
+
+## P1C-A local completion checkpoint
+
+- source implementation commit: `4aab2a4697d072841af58ecf19f7e2a12c0849db`;
+- fresh origin/main integrated: `fc9398950b07759f82b91801f76f9f3eea195462`;
+- composition HEAD before this Evidence-only commit: `50e1114b9a969f507df82bb72eef64c85f16634e`;
+- exact Product delta: 6 / 6 files;
+- focused P1C-A tests: 21 / 21 PASS;
+- related P0/P1A/P1B/TASK-055 regression: 138 / 138 PASS;
+- fresh-main full Product regression: 4093 PASS / 6 SKIPPED / 2 WARNINGS;
+- Schema Draft 2020-12 and packaged byte identity: PASS;
+- Schema SHA-256: `759DDAD24A53D46B8DA3286229D6EF26572587806BE6F3FC08E3FCD43EFF8011`;
+- independent Critic and Tester: GO;
+- final Judge: GO;
+- unresolved Critical/High/Medium/Low findings: 0 / 0 / 0 / 0;
+- durable staging membership/store origin, monotonic Project anchor, canonical
+  promotion/recovery, receipt issuance, Timeline/Resolve/native/provider effects:
+  NOT IMPLEMENTED / NOT EXECUTED.
+## P1C-B Atomic Unit
+
+P1C-B is the durable staging read-back slice of P1C. It snapshots one raw
+exact TASK-055 delivery, opens the fixed P1B staging ledger through pinned,
+non-inheritable handles, validates exact canonical ledger bytes and the full
+P1B hash chain, locates one expected entry digest, and reruns the P1C-A
+compiler against that handle-read entry. The body-free output is
+`NONAUTHORITATIVE_DURABLE_STAGING_READBACK_PROJECTION`. The live object and
+serialized mapping are diagnostic only and are never accepted as a reusable
+verification capability; later effects must rerun the raw verifier internally.
+
+P1C-B proves point-in-time raw recompilation, pinned-file read, fixed staging
+path identity, and exact ledger membership only. It does not prove the writer
+or staging-store origin, Product Project root canonical ownership, hostile
+ancestor namespace race protection, or post-return state. Source/Human actor
+origin, monotonic Project anchor, rollback detection, canonical promotion,
+receipt mint, canonical admission, automatic promotion, Timeline, Resolve, and
+external effects remain false.
+
+The P1C-B exact scope is six files: this task record, one detailed design, one
+public Schema and byte-identical packaged mirror, one bounded reader module,
+and one focused fault/boundary test module. P1B/P1C-A source, CHANGELOG, active
+locks, current state, task index, TASK-029, and Product Project data are outside
+this source Unit. P1C-C or later remains responsible for handle-bound writing,
+external monotonic anchoring, canonical promotion/recovery, and public v2
+receipt issuance.
+## P1C-B local completion checkpoint
+
+- source/review composition HEAD before this Evidence-only commit:
+  `9847ad292bb6f109b0c8bedf79053116d4013886`;
+- fresh origin/main integrated: `cc85d88`;
+- exact Product delta: 6 / 6 files;
+- focused P1C-B fault/boundary tests: 19 / 19 PASS;
+- direct P0/P1A/P1B/P1C-A/P1C-B/TASK-055 regression: 157 / 157 PASS;
+- full Product regression: 4122 PASS / 6 SKIPPED / 2 WARNINGS;
+- Schema Draft 2020-12 and packaged byte identity: PASS;
+- Schema bytes / SHA-256: 4775 /
+  `60FC3325F92B33128C2A8711C95D8A507745FEF0643074D02716FCCA0EC253AD`;
+- independent Tester and Critic: GO;
+- final Judge: GO;
+- unresolved Critical/High/Medium/Low findings: 0 / 0 / 0 / 0;
+- Windows host-native pinned-handle read/cleanup: EXECUTED / PASS;
+- POSIX host-native execution: NOT EXECUTED (static contract covered);
+- staging writer/store origin, Project-root canonical ownership, hostile ancestor
+  protection, post-return stability, monotonic anchor, rollback detection,
+  canonical promotion/recovery, receipt issuance, Timeline, Resolve, native,
+  provider, network, paid, Release, Deploy, and Production effects:
+  NOT IMPLEMENTED / NOT EXECUTED.
+
+## P1C-C Atomic Unit
+
+P1C-C freezes the pure, no-I/O canonical promotion ledger candidate contract.
+It can copy exact body-free coordinates only from an in-process exact P1C-B
+read-back object into an append-only candidate chain, evaluate structural CAS,
+detect exact duplicate and identity collision, and return a proposed next
+candidate. Every serialized entry, ledger, expectation, and evaluation remains
+`SOURCE_REVALIDATION_REQUIRED / NOT_MINTED` and explicitly denies persistence,
+store origin, Product Project binding, monotonic anchor, rollback, receipt, and
+runtime authority.
+
+P1C-C does not accept a serialized P1C-B projection as an input capability and
+does not write a file, Project manifest, receipt, Timeline, or Resolve state. A
+later writer Unit must rerun the raw P1C-B verifier internally while holding the
+canonical Product Project transaction boundary, establish the external
+monotonic anchor, persist and recover the canonical ledger, and mint the public
+v2 receipt only after durable commit read-back.
+
+The P1C-C exact scope is six files: this task record, one detailed design, one
+public Schema and byte-identical packaged mirror, one pure source module, and
+one focused contract test module. P1B/P1C-A/P1C-B source, Product Project and
+ProjectSave code, CHANGELOG, active locks, current state, task index, TASK-029,
+filesystem data, Provider/network/native, Release, Deploy, and Production are
+outside this source Unit.
+
+P1C-C local completion checkpoint:
+
+- exact source/design/schema mirror/test/task scope: 6 paths;
+- pure/no-I/O append-only entry/ledger/CAS/evaluation contract: IMPLEMENTED;
+- recursive exact-JSON snapshot, malicious container/scalar subclass rejection,
+  chain/fork/tamper/collision/stale-CAS rejection: PASS;
+- P1C-B identifier boundary: 192-character accept / 193-character reject;
+- complete ledger boundary: 4096-entry accept / 4097-entry reject;
+- public/package Schema Draft 2020-12 and byte identity: PASS;
+- focused P1C-C: 46 / 46 PASS;
+- TASK-055/TASK-058 direct regression: 203 / 203 PASS;
+- pre-integration Product regression: 4178 PASS / 6 platform-condition skips;
+- independent Critic/Tester/Final Judge: C/H/M/L=0/0/0/0 / GO;
+- filesystem persistence, Project manifest binding, monotonic anchor, rollback
+  authority, receipt mint, canonical admission, automatic learning, Timeline,
+  Resolve, Provider/network/native, Release, Deploy, and Production effects:
+  NOT IMPLEMENTED / NOT EXECUTED.
+
+## P1C-D Atomic Unit
+
+P1C-D freezes the pure, no-I/O external monotonic anchor candidate contract for
+the later canonical Product Project writer. It accepts only exact typed P1C-C
+ledger candidates and exact typed P1C-D anchor/expectation records. It binds the
+complete current anchored ledger, requires the entire current entry prefix for
+an advance, and classifies bootstrap, advance, unchanged, rollback, fork, scope
+mismatch, and stale-anchor outcomes.
+
+Every P1C-D record remains
+`EXTERNAL_ANCHOR_REVALIDATION_REQUIRED / NOT_ESTABLISHED`. Public mappings,
+self-hashes, and typed candidate instances do not prove that an external anchor
+exists, is latest, is durable, or has canonical origin. P1C-D performs no
+filesystem, Product Project, anchor, receipt, Timeline, Resolve, Provider,
+network, native, Release, Deploy, or Production effect.
+
+The P1C-D exact scope is six files: this task record, one detailed design, one
+public Schema and byte-identical packaged mirror, one pure source module, and
+one focused fault/boundary test module. P1B/P1C-A/P1C-B/P1C-C source, Product
+Project and ProjectSave code, CHANGELOG, active locks, current state, task index,
+TASK-029/TASK-059, filesystem data, and runtime effects are outside this source
+Unit.
+
+A later writer Unit remains responsible for internally rerunning raw P1C-B
+verification while holding the canonical Product Project transaction boundary,
+authenticating and committing the real external anchor, persisting and
+recovering the canonical ledger, performing durable commit read-back, and
+minting the public v2 receipt only after that read-back.
+
+P1C-D local implementation checkpoint:
+
+- initial origin/main base: `80618661d941ce15ac5fac49abfaf3f64b6ff80c`;
+- TASK-059 canonical closure fresh main integrated:
+  `8c59c18caa61debe258141c8a094f7fd964705c5`;
+- exact source/design/schema mirror/test/task scope: 6 paths;
+- bootstrap/advance/unchanged/rollback/fork/scope/stale decision contract:
+  IMPLEMENTED;
+- focused P1C-D tests: 23 / 23 PASS;
+- TASK-055/TASK-058 direct regression: 226 / 226 PASS;
+- pre-rework full Product regression: 4442 PASS / 6 platform-condition SKIP /
+  2 deprecation warnings / 0 FAIL;
+- current-head full Product regression: 4445 PASS / 5 platform-condition SKIP /
+  2 deprecation warnings / 0 FAIL;
+- Schema Draft 2020-12 and packaged byte identity: PASS, SHA-256
+  `DF468870352798AE72272961293837C7A0F1FBBC7EAC4B8D90D471B3E4061509`;
+- first independent review on head `49aaec8f3e42e2a9ecce68a58d475d9943c6fee2`:
+  Technical NO-GO / C/H/M/L = 0/0/1/0;
+- serialized STALE/SCOPE relabel finding: bounded fix implemented, current-head
+  parser closure confirmed through the later final review;
+- post-GO Builder adversarial finding: higher-revision exact-prefix ADVANCE could
+  be relabelled as FORK by dropping its constructible anchor; bounded ordered
+  entry-digest chain proof and canonical seven-decision parser fix implemented,
+  later final review confirmed closure;
+- second independent re-review on head
+  `2de41b7a7ff44ec963effba72f4d42c532390297`: Technical NO-GO /
+  C/H/M/L = 0/0/1/0; same-revision FORK/UNCHANGED still depended on
+  caller-replaceable ledger hash equality;
+- same-revision proof/digest correlation and bidirectional relabel fixtures:
+  bounded fix implemented and later final review confirmed closure;
+- third independent re-review on head
+  `a73fa046fe04886d39d70a83310f1f85d33c93bc`: Technical GO /
+  C/H/M/L = 0/0/0/0; subsequently superseded only by the Builder fault-boundary
+  guard that converts a non-absent zero-revision empty proof into an explicit
+  ValueError;
+- final independent confirmation on head
+  `1bd479a46b3a444eebc3777c72cf4293a52fd8ef`: Technical GO /
+  C/H/M/L = 0/0/0/0;
+- unresolved Critical/High/Medium/Low findings: 0/0/0/0;
+- external anchor read/write/origin/durability, canonical writer/recovery,
+  rollback authority, public v2 receipt mint, canonical admission, automatic
+  learning, Timeline, Resolve, Provider/network/native, Release, Deploy, and
+  Production effects: NOT IMPLEMENTED / NOT EXECUTED.
+
+## FAST-BATCH-1A Canonical Admission Transaction Atomic Unit
+
+Owner approved FAST-BATCH-1A as the bounded continuation of P1C-D. It implements
+the Product Project canonical writer, external snapshot coordinate, CAS,
+ledger persistence/recovery, exact durable read-back, and public v2
+`ACCEPTED`/`DUPLICATE` receipt publication. The transaction reruns raw P1C-B,
+P1C-C, and P1C-D inside the fixed Product/anchor lock boundary and never trusts
+serialized candidates as authority.
+
+The same Unit also adds a separately named and hashed generic review-observation
+ledger. Its `ACCEPTED`/`DUPLICATE` states mean only immutable durable observation
+storage. They do not mean exact learning admission, learning adoption,
+automatic promotion, or Profile generation. P1A public v2 history and state
+matrix remain unchanged.
+
+Exact scope is six files: this task record, one FAST-BATCH-1A design, one public
+Schema plus byte-identical package mirror, one source module, and one focused
+test module. CHANGELOG, active locks, current state, task index, TASK-029,
+TASK-054, TASK-059, bridge/Profile transport, native/provider/network, Timeline,
+Resolve, Release, Deploy, and Production are outside the source Unit.
+
+External-coordinate claims are deliberately bounded: the anchor root is outside
+the Project root, but origin authentication, independent anti-rollback
+authority, power-loss/directory durability confirmation, and hostile path-race
+protection remain false. The final connector remains `enabled:false`; bridge
+root/inbox/importer and outbound Profile E2E/readiness are later FAST-BATCH
+subunits.
+
+The external anchor stores the commit-time manifest SHA and revision as
+historical transaction evidence. Trusted currentness permits later manifest
+revisions only when the exact TASK-058 canonical child binding and bytes still
+match the current canonical commit/ledger/anchor. Unrelated child additions do
+not invalidate the exact receipt; canonical child change/removal or manifest
+revision rollback remains fail-closed without claiming general rollback
+authority.
+
+Exact admission attempts are serialized by a stable, non-payload operation-lock
+inode held until receipt publication and private-journal cleanup. Product
+Project then external-anchor remains the fixed inner state-lock order. A second
+same-CAS caller cannot join the first caller's pending recovery and report a
+second `ACCEPTED`; after the winner commits it observes stale CAS and fails
+closed (or a later call with current coordinates can classify `DUPLICATE`).
+
+## FAST-BATCH-1A Work Order bounded-rework checkpoint
+
+The accepted cross-repository Design is
+`bai-davinci-montage-skills@9f6c26ac5147b9a881ca037ae02ef020818db50a`
+with
+`accepted_design_sha256=sha256:c5c17aa92ab5f68daef315e4fc62a1fb7a46e3f80c2c8093adec1f073594db80`.
+Its Design-only Final Judge result is C/H/M/L=0/0/0/0. TASK-060, TASK-061,
+and TASK-062 remain IMPLEMENTATION_NOT_AUTHORIZED and are not part of this
+Unit.
+
+The prior A implementation review reported C/H/M/L=0/3/2/0. The same exact-six
+Atomic Unit now implements the bounded closures:
+
+- all authoritative canonical, anchor, registry, journal, Generic ledger,
+  payload, and marker reads use pinned non-inheritable handles with ancestor
+  and target identity/size/read-back checks;
+- Generic admission uses the fixed A-owned PREPARED phase journal, immutable
+  digest-addressed payload object, body-free ledger, Product manifest CAS,
+  fixed commit marker, durable read-back, and restart recovery;
+- the typed surface is `admit_generic_observation()`,
+  `recover_generic_observation()`, and
+  `get_verified_generic_observation()`, with explicit review-observation
+  aliases;
+- stable `ReviewObservationCanonicalReadback` and
+  `ReviewObservationAdmissionResult` fix
+  `store_kind=REVIEW_OBSERVATION`, while
+  `learning_adopted=false`, `profile_promoted=false`, and
+  `timeline_mutated=false`;
+- a same-identity/same-digest/same-scope duplicate returns the stable original
+  read-back without changing payload, ledger, Product manifest, marker, or
+  store revision;
+- currentness validates every historical ledger entry, payload object, Product
+  binding, marker, canonical commit, and internal read-back hash;
+- A does not mint the public SKILL v1 transport receipt; B+C must correlate its
+  outer receipt against this trusted A read-back after A API freeze.
+
+Current Builder Evidence:
+
+- focused FAST-BATCH-1A: 23/23 PASS;
+- TASK-043 ProductSave + TASK-055 + TASK-058 direct regression:
+  345/345 PASS;
+- final exact-head full Product regression:
+  4528 PASS / 6 platform-condition SKIP / 2 deprecation warnings / 0 FAIL;
+- actual Generic same-CAS multiprocess fixture repeated five times: one
+  ACCEPTED, one fail-closed caller, bounded child/queue cleanup, private
+  journal absent;
+- Generic crash boundaries after PREPARED journal, Product commit, marker
+  commit, and verified read-back before cleanup: PASS;
+- equal-size target substitution, ancestor identity drift, historical
+  payload/marker loss, schema relabel, collision, and cross-lane replay:
+  fail-closed;
+- Python compile, Draft 2020-12 public schema, byte-identical package mirror,
+  and diff-check: PASS;
+- independent implementation re-review, Hosted current-head terminal checks,
+  fresh-main integration, shared LOCK, Ready, merge,
+  and closure: PENDING;
+- B+C remains stopped until A Technical GO/API freeze;
+- CHANGELOG, ACTIVE-WORK-LOCKS, shared LOCK, enabled:true, Preference meaning
+  generation, Timeline/Resolve, Provider/native, Release, Deploy, and
+  Production effects: NOT MODIFIED / NOT EXECUTED.
+
+## FAST-BATCH-1 A2 canonical readback lookup recovery closure
+
+Owner authorized the bounded A2 Unit from frozen A head
+`9f1633f2b7504d1f4710ea10b8c1922d2c1e6ffe`. Its exact Allowed Files are this
+task record, the canonical admission source, and its focused test. Public
+Schema, package mirror, B+C source/tests, CHANGELOG, Registry, and shared LOCK
+are outside A2.
+
+A2 adds `lookup_trusted_review_observation()` as a sealed, read-only typed
+lookup returning the existing `ReviewObservationCanonicalReadback`. The caller
+must supply exact record, learning digest, Product Project ID, Owner scope,
+`REVIEW_OBSERVATION` store kind, and fixed Generic store ID. The canonical
+commit SHA is deliberately not an input: A2 closes the crash window where A
+committed durably and removed its private journal before B persisted that
+correlation. The returned commit coordinate is rebuilt from the immutable
+payload, body-free ledger, fixed marker, Product binding, and complete
+historical currentness proof.
+
+The lookup holds the Generic journal lock before the Product Project lock,
+checks Product recovery status inside the Product lock, verifies the whole
+ledger and every historical payload/marker/current binding, and returns only a
+matching terminal durable readback. It never admits a record, advances the
+ledger/manifest/anchor, mints a public receipt, creates a Profile, or changes
+Timeline/Resolve. Missing, ambiguous, wrong-scope, wrong-digest, rollback,
+tamper, incomplete-tail, pending/corrupt Generic journal, and pending/corrupt
+Product journal states fail closed as `RECOVERY_REQUIRED`.
+
+Both established lock artifacts are opened through an A2-local non-creating,
+non-writing lock context. Generic and Product lock files must pass an exact
+pre-open `lstat` regular/non-symlink/non-reparse/one-byte check. POSIX uses
+`O_NOFOLLOW`; Windows uses `CreateFileW(OPEN_EXISTING |
+FILE_FLAG_OPEN_REPARSE_POINT)`. The pinned handle identity must equal the
+pre-open identity and remain stable before lock acquisition, after acquisition,
+and before return. Missing, empty, wrong-sized, wrong-content, symlink, and
+irregular lock paths fail without changing Project inventory or bytes.
+
+Builder Evidence on the final code/test bytes:
+
+- A2 + A focused: 59 PASS / 2 Windows FIFO SKIP / 0 FAIL;
+- Windows fd/HANDLE ownership fault focus: 18/18 PASS. Three forced
+  `set_inheritable` failures and three forced `fdopen` failures each close
+  the transferred CRT fd exactly once with no process HANDLE growth; three
+  forced `open_osfhandle` failures close the native HANDLE without invoking
+  `os.close`; three successful transfers invoke no explicit `os.close` and
+  return to the warm handle-count baseline;
+- invalid-lock focused matrix: 14 PASS / 2 Windows FIFO SKIP / 0 FAIL,
+  covering Generic/Product times missing, empty, wrong-size, wrong-byte,
+  symlink, irregular-directory, FIFO, and check-to-open identity substitution;
+  the Windows file-symlink/reparse cases executed without skip, while FIFO is
+  explicitly unavailable on Windows;
+- TASK-043 ProductSave + TASK-055 + TASK-058 direct regression: 381 PASS /
+  2 Windows FIFO SKIP / 0 FAIL;
+- full Product regression: 4565 PASS / 7 platform/environment SKIP /
+  2 existing deprecation warnings / 0 FAIL;
+- actual spawn concurrent lookup and lookup-versus-later-admission converge;
+  child/queue cleanup is bounded and private Generic journal is absent;
+- A terminal commit followed by a new writer lookup before B correlation,
+  after correlation staging, and after publication simulation returns the same
+  sealed readback without changing the complete canonical Project inventory;
+- explicit identity omission/wrong values, forged outer-only status,
+  equal-revision manifest tamper, manifest rollback, incomplete historical
+  tail, pending/corrupt journals, and Product-lock recovery TOCTOU fail closed;
+- schema/public message shape is unchanged; A2 mints no admission result or
+  public receipt;
+- cycle-5 closes the prior Hosted Windows convergence failure by using a
+  bounded nonblocking byte-lock acquisition and by deferring the one-byte lock
+  content read until this handle owns the Windows lock; the three affected
+  multiprocess fixtures passed ten consecutive repetitions (30/30);
+- the Generic/Exact concurrency fixture now records worker result class and
+  permits a pre-PREPARED Product CAS failure to converge through a same-input
+  retry without requiring a nonexistent journal; partial authority remains
+  absent and both final trusted readbacks are verified;
+- process-wide Windows HANDLE observations use the safe no-increase condition;
+  exact transferred-fd/native-HANDLE ownership and exactly-once cleanup remain
+  covered by the dedicated fault fixtures;
+- independent cycle-5 exact-head Critic/Tester/Judge, push, Hosted terminal,
+  Ready, merge, shared LOCK, and B+C restart remain separate gates.

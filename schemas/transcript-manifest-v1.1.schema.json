@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/baisound/bai_video_production/schemas/transcript-manifest-v1.1.schema.json",
+  "title": "BAI Canonical Transcript Manifest with word timestamps",
+  "type": "object",
+  "required": ["manifest_version", "source_asset_id", "language", "provider_id", "model_id", "segments", "manifest_sha256"],
+  "properties": {
+    "manifest_version": {"const": "1.1.0"},
+    "source_asset_id": {"type": "string", "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"},
+    "language": {"type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"},
+    "provider_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "model_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["segment_id", "range_us", "text", "confidence", "speaker", "words"],
+        "properties": {
+          "segment_id": {"type": "string", "minLength": 1, "maxLength": 128},
+          "range_us": {"$ref": "#/$defs/rangeUs"},
+          "text": {"type": "string", "minLength": 1, "maxLength": 10000},
+          "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+          "speaker": {"type": ["string", "null"], "maxLength": 64},
+          "words": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["range_us", "text", "confidence"],
+              "properties": {
+                "range_us": {"$ref": "#/$defs/rangeUs"},
+                "text": {"type": "string", "minLength": 1, "maxLength": 512},
+                "confidence": {"type": ["number", "null"], "minimum": 0, "maximum": 1}
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "manifest_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  },
+  "$defs": {
+    "rangeUs": {
+      "type": "object",
+      "required": ["start", "end_exclusive"],
+      "properties": {
+        "start": {"type": "integer", "minimum": 0},
+        "end_exclusive": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

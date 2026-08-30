@@ -1,0 +1,40 @@
+schema_version: 1
+task_id: TASK-054
+policy_id: dbd-commentary-offline-evaluation-v1
+state: evaluation_only_no_automatic_promotion
+seed_set:
+  - 104729
+  - 130363
+  - 155921
+required_split: test
+hard_gates:
+  unsupported_fact_count:
+    operator: equals
+    value: 0
+  patch_incompatible_claim_count:
+    operator: equals
+    value: 0
+  citation_coverage_ratio:
+    operator: equals
+    value: 1.0
+  secret_or_pii_leak_count:
+    operator: equals
+    value: 0
+  split_leakage_count:
+    operator: equals
+    value: 0
+soft_metrics:
+  - abstention_quality
+  - stability_across_seeds
+  - human_preference
+  - latency
+  - peak_gpu_memory
+  - commentary_timing
+  - naturalness
+  - information_density
+rules:
+  hard_gate_failure_cannot_be_averaged: true
+  test_split_must_not_tune_model: true
+  blind_review_required_before_evaluated_binding: true
+  automatic_approval: false
+  automatic_activation: false

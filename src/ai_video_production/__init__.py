@@ -63,7 +63,24 @@ from .timebase import FFprobeTimingProbe, FrameRate, FrameRounding, TimingInspec
 from .timeline_mapping import AffineTimeMap, EditSegment, TimelineMappingPlan, TimelineMappingService, TimelinePlacement
 from .subtitles import (
     AsrProvider, AsrRequest, SrtRenderer, SubtitleCue, SubtitlePlan,
-    SubtitlePlanningService, TranscriptManifest, TranscriptSegment,
+    SubtitlePlanningService, TranscriptManifest, TranscriptSegment, TranscriptWord,
+)
+from .semantic_audio_cues import (
+    CueReviewState, KeywordMatchMode, KeywordProfile, KeywordRule,
+    SpeechCueDetectionService, SpeechCueHit, SpeechCueManifest,
+    SpeechCuePublication, SpeechCuePublicationService, TimingGranularity,
+    build_montage_semantic_audio_cues_projection, load_keyword_profile,
+    parse_montage_semantic_audio_cues_projection,
+)
+from .speech_cue_application import SpeechCueApplicationResult, SpeechCueApplicationService
+from .montage_contracts import (
+    MontageContractDocument, MontageContractError,
+    admit_montage_approved_plan, admit_montage_human_edit_evidence,
+    admit_montage_resolve_handoff,
+    admit_montage_proposal_bundle, parse_bvp_montage_skill_input,
+    parse_montage_approved_plan, parse_montage_human_edit_evidence,
+    parse_montage_preference_profile, parse_montage_proposal_bundle,
+    parse_montage_resolve_handoff,
 )
 from .faster_whisper_asr import (
     FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService,
@@ -179,7 +196,7 @@ from .export_queue import ExportAuthorityClass, ExportDispatchResult, ExportOutp
 from .export_queue_application import ExportQueueApplication
 from .task044_nle_shell import Task044NleShellController
 
-__version__ = "0.22.0"
+__version__ = "0.23.0"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",
@@ -207,7 +224,20 @@ __all__ = [
     "AssetPage", "RightsStatus", "SQLiteProductStore", "SourcePathPolicy", "TimelineOwner", "TimelineRef",
     "TimelineWriteGuard", "assert_resume_compatible", "authorize_mutation_probe", "generate_id",
     "AsrProvider", "AsrRequest", "SrtRenderer", "SubtitleCue", "SubtitlePlan",
-    "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment",
+    "SubtitlePlanningService", "TranscriptManifest", "TranscriptSegment", "TranscriptWord",
+    "CueReviewState", "KeywordMatchMode", "KeywordProfile", "KeywordRule",
+    "SpeechCueDetectionService", "SpeechCueHit", "SpeechCueManifest",
+    "SpeechCuePublication", "SpeechCuePublicationService", "TimingGranularity",
+    "build_montage_semantic_audio_cues_projection", "load_keyword_profile",
+    "parse_montage_semantic_audio_cues_projection",
+    "SpeechCueApplicationResult", "SpeechCueApplicationService",
+    "MontageContractDocument", "MontageContractError",
+    "admit_montage_approved_plan", "admit_montage_human_edit_evidence",
+    "admit_montage_resolve_handoff",
+    "admit_montage_proposal_bundle", "parse_bvp_montage_skill_input",
+    "parse_montage_approved_plan", "parse_montage_human_edit_evidence",
+    "parse_montage_preference_profile", "parse_montage_proposal_bundle",
+    "parse_montage_resolve_handoff",
     "FasterWhisperConfig", "FasterWhisperProvider", "LocalTranscriptionService",
     "TranscriptionPublication",
     "ChunkedTranscriptionConfig", "FfmpegAudioChunkExtractor", "ResumableTranscriptionService",

@@ -155,19 +155,13 @@ class ReasoningModelPanel:
             self.save_button.configure(state="disabled")
             self.preflight_button.configure(state="disabled")
             return
-        self._candidate_by_label = {
-            entry.candidate.display_label: entry.candidate.candidate_id
-            for entry in catalog.entries
-        }
-        self._selectable_candidate_ids = frozenset(
-            entry.candidate.candidate_id for entry in catalog.entries if entry.selectable
-        )
+        catalog = self._refresh_catalog_projection(None if selected is None else selected.candidate_id)
         if not self._candidate_by_label:
             self.selected_model_var.set("")
             self.model_selector.configure(values=(), state="disabled")
             self.save_button.configure(state="disabled")
             self.preflight_button.configure(state="disabled")
-            self._populate_catalog(None)
+            self._refresh_catalog_projection(None)
             self.status_var.set(f"{catalog.status_message_ja} {catalog.next_action_ja}")
             return
         self.model_selector.configure(values=tuple(self._candidate_by_label), state="readonly")
@@ -178,13 +172,26 @@ class ReasoningModelPanel:
         )
         self.selected_model_var.set(selected_label)
         self.preflight_button.configure(state="normal")
-        self._populate_catalog(selected_id)
+        self._refresh_catalog_projection(selected_id)
         self._refresh_save_button()
         self.status_var.set(f"{catalog.status_message_ja} {catalog.next_action_ja}")
 
-    def _populate_catalog(self, selected_candidate_id: str | None) -> None:
+    def _refresh_catalog_projection(
+        self, selected_candidate_id: str | None
+    ):
         assert self.runtime_service is not None
         catalog = self.runtime_service.catalog_snapshot()
+        self._candidate_by_label = {
+            entry.candidate.display_label: entry.candidate.candidate_id
+            for entry in catalog.entries
+        }
+        self._selectable_candidate_ids = frozenset(
+            entry.candidate.candidate_id for entry in catalog.entries if entry.selectable
+        )
+        self._populate_catalog(catalog, selected_candidate_id)
+        return catalog
+
+    def _populate_catalog(self, catalog, selected_candidate_id: str | None) -> None:
         self.tree.delete(*self.tree.get_children())
         for index, entry in enumerate(catalog.entries):
             candidate = entry.candidate
@@ -233,7 +240,7 @@ class ReasoningModelPanel:
                 "Model選択を安全に保存できませんでした。既存選択は変更していません。"
             )
             return
-        self._populate_catalog(candidate_id)
+        self._refresh_catalog_projection(candidate_id)
         self.status_var.set(
             f"Model選択を保存しました。選択証跡: {receipt.receipt_id[-8:]}"
         )
@@ -346,7 +353,7 @@ class ReasoningModelPanel:
         # R3D execution remains a separate one-shot Human/authority boundary.
         self.execute_button.configure(state="disabled")
         self.review_button.configure(state="disabled")
-        self._populate_catalog(snapshot.candidate_id)
+        self._refresh_catalog_projection(snapshot.candidate_id)
         self._refresh_save_button()
 
     def _details(self) -> None:

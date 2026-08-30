@@ -46,6 +46,7 @@ class ReasoningModelPanel:
         self._preflight_running = False
         self._preflight_results: SimpleQueue[tuple[LocalRuntimePreflightSnapshot | None, object | None]] = SimpleQueue()
         self._candidate_by_label: dict[str, str] = {}
+        self._selectable_candidate_ids: frozenset[str] = frozenset()
 
         self.frame = ttk.Frame(parent)
         self.frame.columnconfigure(0, weight=1)
@@ -68,14 +69,17 @@ class ReasoningModelPanel:
             selector, text="選択を保存", command=self._save_selection,
         )
         self.save_button.grid(row=0, column=2, sticky="e", padx=(8, 0))
+        self.model_selector.bind("<<ComboboxSelected>>", lambda _event: self._refresh_save_button())
 
-        columns = ("name", "role", "state", "ja", "json", "gpu", "rights", "evaluation")
+        columns = ("name", "revision", "cost", "selectable", "state", "ja", "json", "gpu", "rights", "evaluation")
         self.tree = ttk.Treeview(self.frame, columns=columns, show="headings", height=5)
         self.tree.grid(row=2, column=0, sticky="nsew", pady=(2, 6))
         for key, title, width in (
-            ("name", "表示名", 230), ("role", "役割", 110), ("state", "状態", 125),
-            ("ja", "日本語", 70), ("json", "形式", 100), ("gpu", "必要GPU", 120),
-            ("rights", "権利", 90), ("evaluation", "検証Evidence", 110),
+            ("name", "表示名", 230), ("revision", "固定revision", 300),
+            ("cost", "費用区分", 125), ("selectable", "保存可否", 110),
+            ("state", "状態", 180), ("ja", "日本語", 70), ("json", "形式", 100),
+            ("gpu", "必要GPU", 120), ("rights", "権利", 90),
+            ("evaluation", "検証Evidence", 110),
         ):
             self.tree.heading(key, text=title)
             self.tree.column(key, width=width, stretch=key == "name")
@@ -142,7 +146,7 @@ class ReasoningModelPanel:
         assert self.runtime_service is not None
         try:
             selected = self.runtime_service.selected_candidate()
-            candidates = self.runtime_service.candidates
+            catalog = self.runtime_service.catalog_snapshot()
         except Exception:
             self.status_var.set(
                 "Model Catalogまたは保存済み選択の整合性を確認できません。選択と実行を停止しました。"
@@ -152,27 +156,46 @@ class ReasoningModelPanel:
             self.preflight_button.configure(state="disabled")
             return
         self._candidate_by_label = {
-            item.display_label: item.candidate_id for item in candidates
+            entry.candidate.display_label: entry.candidate.candidate_id
+            for entry in catalog.entries
         }
-        self.model_selector.configure(values=tuple(self._candidate_by_label))
+        self._selectable_candidate_ids = frozenset(
+            entry.candidate.candidate_id for entry in catalog.entries if entry.selectable
+        )
+        if not self._candidate_by_label:
+            self.selected_model_var.set("")
+            self.model_selector.configure(values=(), state="disabled")
+            self.save_button.configure(state="disabled")
+            self.preflight_button.configure(state="disabled")
+            self._populate_catalog(None)
+            self.status_var.set(f"{catalog.status_message_ja} {catalog.next_action_ja}")
+            return
+        self.model_selector.configure(values=tuple(self._candidate_by_label), state="readonly")
+        selected_id = None if selected is None else selected.candidate_id
         selected_label = next(
-            label for label, candidate_id in self._candidate_by_label.items()
-            if candidate_id == selected.candidate_id
+            (label for label, candidate_id in self._candidate_by_label.items() if candidate_id == selected_id),
+            next(iter(self._candidate_by_label)),
         )
         self.selected_model_var.set(selected_label)
-        self._populate_catalog(selected.candidate_id)
-        self.status_var.set(
-            "検証済みbase Model候補を表示しました。Dataset・学習Gateとは分離されています。"
-        )
+        self.preflight_button.configure(state="normal")
+        self._populate_catalog(selected_id)
+        self._refresh_save_button()
+        self.status_var.set(f"{catalog.status_message_ja} {catalog.next_action_ja}")
 
-    def _populate_catalog(self, selected_candidate_id: str) -> None:
+    def _populate_catalog(self, selected_candidate_id: str | None) -> None:
         assert self.runtime_service is not None
+        catalog = self.runtime_service.catalog_snapshot()
         self.tree.delete(*self.tree.get_children())
-        for index, candidate in enumerate(self.runtime_service.candidates):
-            state = "選択済み・実機検証待ち" if candidate.candidate_id == selected_candidate_id else "選択候補"
+        for index, entry in enumerate(catalog.entries):
+            candidate = entry.candidate
+            state = entry.status_message_ja
+            if candidate.candidate_id == selected_candidate_id:
+                state = f"選択中: {state}"
             self.tree.insert("", "end", iid=str(index), values=(
-                candidate.display_label,
-                "DbD実況・解説",
+                candidate.display_name,
+                candidate.immutable_revision,
+                entry.cost_class,
+                "保存可能" if entry.selectable else "保存不可",
                 state,
                 "対応",
                 "固定revision",
@@ -180,6 +203,12 @@ class ReasoningModelPanel:
                 candidate.license_spdx,
                 "R6B取得・smoke PASS",
             ))
+
+    def _refresh_save_button(self) -> None:
+        candidate_id = self._candidate_by_label.get(self.selected_model_var.get())
+        self.save_button.configure(
+            state="normal" if candidate_id in self._selectable_candidate_ids else "disabled"
+        )
 
     def _selected_candidate_id(self) -> str:
         candidate_id = self._candidate_by_label.get(self.selected_model_var.get())
@@ -193,6 +222,12 @@ class ReasoningModelPanel:
         try:
             candidate_id = self._selected_candidate_id()
             receipt = self.runtime_service.save_selection(candidate_id)
+        except ValueError:
+            self.status_var.set(
+                "このModelは現在保存できません。事前チェックでruntime readinessを確認してください。既存選択は変更していません。"
+            )
+            self._refresh_save_button()
+            return
         except Exception:
             self.status_var.set(
                 "Model選択を安全に保存できませんでした。既存選択は変更していません。"
@@ -312,11 +347,7 @@ class ReasoningModelPanel:
         self.execute_button.configure(state="disabled")
         self.review_button.configure(state="disabled")
         self._populate_catalog(snapshot.candidate_id)
-        if snapshot.ready:
-            first = self.tree.get_children()[0]
-            values = list(self.tree.item(first, "values"))
-            values[2] = "選択済み・runtime PASS"
-            self.tree.item(first, values=values)
+        self._refresh_save_button()
 
     def _details(self) -> None:
         if self.runtime_snapshot is not None:

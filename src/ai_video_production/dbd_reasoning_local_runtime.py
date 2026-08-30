@@ -185,6 +185,35 @@ class LocalModelCandidate:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class LocalModelCatalogEntry:
+    """Public, fail-closed admission state for one locally inventoried Model."""
+
+    candidate: LocalModelCandidate
+    cost_class: str
+    selectable: bool
+    status_code: str
+    status_message_ja: str
+    next_action_ja: str
+
+    def __post_init__(self) -> None:
+        if self.cost_class != "LOCAL_FREE_AI":
+            raise ValueError("TASK-054 public catalog accepts only local-free Models")
+        if not self.status_code or not self.status_message_ja or not self.next_action_ja:
+            raise ValueError("TASK-054 public catalog status is incomplete")
+
+
+@dataclass(frozen=True, slots=True)
+class LocalModelCatalogSnapshot:
+    entries: tuple[LocalModelCatalogEntry, ...]
+    status_code: str
+    status_message_ja: str
+    next_action_ja: str
+
+    def __post_init__(self) -> None:
+        if not self.status_code or not self.status_message_ja or not self.next_action_ja:
+            raise ValueError("TASK-054 public catalog snapshot is incomplete")
+
 def load_local_model_catalog() -> tuple[LocalModelCandidate, ...]:
     config_path = _resource_path("config/task054/base-model-candidates.yaml")
     report_path = _resource_path("reports/task054/r6b-qwen3-8b-b968826d/base-model-verification.json")
@@ -647,8 +676,15 @@ class LocalReasoningRuntimeService:
         distro: str = "Ubuntu",
         popen_factory: Callable[..., subprocess.Popen[bytes]] = subprocess.Popen,
         timeout_seconds: int = 300,
+        catalog_provider: Callable[[], tuple[LocalModelCandidate, ...]] = load_local_model_catalog,
     ) -> None:
-        self.candidates = load_local_model_catalog()
+        candidates = tuple(catalog_provider())
+        if not all(isinstance(item, LocalModelCandidate) for item in candidates):
+            raise ValueError("TASK-054 catalog provider returned an invalid candidate")
+        if len({item.candidate_id for item in candidates}) != len(candidates):
+            raise ValueError("TASK-054 catalog provider returned duplicate candidates")
+        self.candidates = candidates
+        self._preflight_by_candidate: dict[str, LocalRuntimePreflightSnapshot] = {}
         self.store = LocalModelSelectionStore(workspace_root, workspace_id=workspace_id)
         if distro != "Ubuntu":
             raise ValueError("TASK-054 runtime distro is fixed to Ubuntu")
@@ -660,19 +696,65 @@ class LocalReasoningRuntimeService:
         self._lock = threading.RLock()
         self._process: subprocess.Popen[bytes] | None = None
 
-    def selected_candidate(self) -> LocalModelCandidate:
+    def selected_candidate(self) -> LocalModelCandidate | None:
         latest = self.store.latest()
         if latest is None:
-            return self.candidates[0]
+            return self.candidates[0] if self.candidates else None
         candidate = next((item for item in self.candidates if item.candidate_id == latest.candidate_id), None)
         if candidate is None or latest.catalog_sha256 != candidate.catalog_sha256:
             raise ValueError("saved model selection is stale or unknown")
         return candidate
 
+    def catalog_snapshot(self) -> LocalModelCatalogSnapshot:
+        if not self.candidates:
+            return LocalModelCatalogSnapshot(
+                entries=(),
+                status_code="LOCAL_MODEL_CATALOG_EMPTY",
+                status_message_ja="利用可能なローカル実況・解説Modelは見つかりません。",
+                next_action_ja="TASK-054の既存offline inventoryを確認してください。自動downloadやinstallは行いません。",
+            )
+        entries: list[LocalModelCatalogEntry] = []
+        for candidate in self.candidates:
+            preflight = self._preflight_by_candidate.get(candidate.candidate_id)
+            if preflight is None:
+                entries.append(LocalModelCatalogEntry(
+                    candidate=candidate, cost_class="LOCAL_FREE_AI", selectable=False,
+                    status_code="RUNTIME_PREFLIGHT_REQUIRED",
+                    status_message_ja="事前チェック前のため、保存対象にはできません。",
+                    next_action_ja="このModelを選んで事前チェックを実行してください。",
+                ))
+            elif preflight.ready:
+                entries.append(LocalModelCatalogEntry(
+                    candidate=candidate, cost_class="LOCAL_FREE_AI", selectable=True,
+                    status_code="LOCAL_RUNTIME_READY",
+                    status_message_ja="固定revisionのoffline runtime確認済みです。",
+                    next_action_ja="必要なら選択を保存してください。Provider実行・学習は別Gateです。",
+                ))
+            else:
+                entries.append(LocalModelCatalogEntry(
+                    candidate=candidate, cost_class="LOCAL_FREE_AI", selectable=False,
+                    status_code="LOCAL_RUNTIME_NOT_READY",
+                    status_message_ja="runtime事前チェックが未完了です。",
+                    next_action_ja="未完了の個別項目を解消してから事前チェックを再実行してください。",
+                ))
+        selectable_count = sum(entry.selectable for entry in entries)
+        return LocalModelCatalogSnapshot(
+            entries=tuple(entries),
+            status_code="LOCAL_FREE_MODEL_SELECTABLE" if selectable_count else "LOCAL_FREE_MODEL_NOT_SELECTABLE",
+            status_message_ja=("利用可能な無料ローカルModelだけを保存対象にしています。"
+                               if selectable_count else "候補は表示中ですが、runtime確認前のため保存できません。"),
+            next_action_ja="選択を保存してください。" if selectable_count else "Modelごとに事前チェックを実行してください。",
+        )
+
     def save_selection(self, candidate_id: str) -> LocalModelSelectionReceipt:
         candidate = next((item for item in self.candidates if item.candidate_id == candidate_id), None)
         if candidate is None:
             raise ValueError("selected model candidate is unknown")
+        preflight = self._preflight_by_candidate.get(candidate_id)
+        if preflight is None:
+            raise ValueError("selected model candidate requires a current runtime preflight")
+        if not preflight.ready:
+            raise ValueError("selected model candidate is not selectable until runtime preflight passes")
         return self.store.select(candidate)
 
     def _run_probe(self, candidate: LocalModelCandidate) -> Mapping[str, Any]:
@@ -880,7 +962,9 @@ class LocalReasoningRuntimeService:
             for item in checks
             if item.status is not RuntimeCheckStatus.NOT_REQUIRED
         )
-        return LocalRuntimePreflightSnapshot(candidate.candidate_id, checks, ready)
+        snapshot = LocalRuntimePreflightSnapshot(candidate.candidate_id, checks, ready)
+        self._preflight_by_candidate[candidate.candidate_id] = snapshot
+        return snapshot
 
     def close(self) -> None:
         with self._lock:
@@ -897,7 +981,8 @@ class LocalReasoningRuntimeService:
 
 
 __all__ = [
-    "LocalModelCandidate", "LocalModelSelectionReceipt", "LocalModelSelectionStore",
+    "LocalModelCandidate", "LocalModelCatalogEntry", "LocalModelCatalogSnapshot",
+    "LocalModelSelectionReceipt", "LocalModelSelectionStore",
     "LocalReasoningRuntimeService", "LocalRuntimePreflightSnapshot",
     "RuntimeCheckId", "RuntimeCheckStatus", "RuntimePreflightCheck",
     "load_local_model_catalog",

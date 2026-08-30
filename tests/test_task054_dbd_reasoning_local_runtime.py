@@ -80,6 +80,45 @@ def test_packaged_catalog_projects_verified_base_model_without_dataset_gate() ->
     assert sum(item.logical_path.endswith(".safetensors") for item in candidate.files) == 5
 
 
+def test_public_catalog_requires_current_ready_preflight_before_selection(tmp_path) -> None:
+    candidate = load_local_model_catalog()[0]
+    service = LocalReasoningRuntimeService(
+        workspace_id="workspace-1",
+        workspace_root=tmp_path,
+        popen_factory=lambda *_args, **_kwargs: _CompletedProcess(_pass_result(candidate)),
+    )
+
+    initial = service.catalog_snapshot()
+
+    assert initial.status_code == "LOCAL_FREE_MODEL_NOT_SELECTABLE"
+    assert initial.entries[0].cost_class == "LOCAL_FREE_AI"
+    assert initial.entries[0].selectable is False
+    assert initial.entries[0].status_code == "RUNTIME_PREFLIGHT_REQUIRED"
+    with pytest.raises(ValueError, match="current runtime preflight"):
+        service.save_selection(candidate.candidate_id)
+
+    assert service.preflight(candidate.candidate_id).ready is True
+    ready = service.catalog_snapshot()
+    assert ready.status_code == "LOCAL_FREE_MODEL_SELECTABLE"
+    assert ready.entries[0].selectable is True
+    assert service.save_selection(candidate.candidate_id).candidate_id == candidate.candidate_id
+
+
+def test_public_catalog_keeps_zero_candidates_actionable_and_unselectable(tmp_path) -> None:
+    service = LocalReasoningRuntimeService(
+        workspace_id="workspace-1",
+        workspace_root=tmp_path,
+        catalog_provider=lambda: (),
+    )
+
+    snapshot = service.catalog_snapshot()
+
+    assert service.selected_candidate() is None
+    assert snapshot.entries == ()
+    assert snapshot.status_code == "LOCAL_MODEL_CATALOG_EMPTY"
+    assert "自動downloadやinstallは行いません" in snapshot.next_action_ja
+    with pytest.raises(ValueError, match="unknown"):
+        service.save_selection("missing-candidate")
 def test_selection_is_persisted_and_restored_without_granting_execution(tmp_path) -> None:
     candidate = load_local_model_catalog()[0]
     store = LocalModelSelectionStore(tmp_path, workspace_id="workspace-1")

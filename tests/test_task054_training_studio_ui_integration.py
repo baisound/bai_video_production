@@ -51,3 +51,7 @@ def test_operator_copy_keeps_model_and_worker_effects_blocked() -> None:
     assert "動画Evidence読込後にseekします" in source
     assert "Provider実行・学習・Dataset採用を許可しません" in panel
     assert 'self.execute_button.configure(state="disabled")' in panel
+    assert "candidate.immutable_revision" in panel
+    assert '"保存可能" if entry.selectable else "保存不可"' in panel
+    assert "self._refresh_save_button()" in panel
+    assert "LOCAL_MODEL_CATALOG_EMPTY" not in panel

@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 - TASK-063として、モンタージュ学習Bridgeのactive固定ProgramData座標を廃止し、インストーラーで選択したBAI Video Productionルート配下の`data/montage-learning-bridge`へ限定して導出するinstance descriptor／read-only discovery receiptを追加しました。統合Desktop EXE用の選択可能なWindows installerを新設し、custom D-drive install、installed EXEによるprovision/read-back、TASK-058/SKILL E2Eを実行済みです。connector default／activation authorityはfalseのままで、legacy移行・削除、Preference promotion、Timeline/Resolve、Release／Deploy／Production authorityは生成しません。
+- TASK-013として、実在read-only観測だけから無料ローカルSFX／MUSIC／NARRATION候補を分離するprovider-neutral inventory、既存Connection availabilityを保持するroute合成、public-safe receipt hash／replay検証を追加しました。Audacity OpenVINO MusicGenはHelp command可視性のみをinstalled modelや実行routeへ昇格せず、model列挙不可・automation API非scriptableを明示します。paid/cloud fallback、credential要求、model download、runtime起動、private path／media本文、Release／Deploy／Production authorityは生成しません。
 
 ## [0.23.0] - 2026-08-30
 - Editing SKILL統合checkpointとして、実在read-only exact3をbindしたTASK-058、main-only checkout probe、knowledge/commentary fixture、TASK-055／056 montage fixture、両者の共通Evidence projectionを単一focused runで70件検証しました。fixture終端handoffから共通Evidenceのsource digest／自己hash／non-authorityまでをcross-bindし、private subtitle／speech本文はprojectionへ含めません。これはisolated fixture／static integration Evidenceであり、Windows full CIと実Resolve GUI runtime QAは未確認のまま、Release／Deploy／Production authorityも生成しません。

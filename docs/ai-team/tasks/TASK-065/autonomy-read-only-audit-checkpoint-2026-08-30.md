@@ -265,6 +265,34 @@ defaults. A current body that already equals the target is a physical no-op;
 any other protected-field drift, missing successor binding, same revision with
 different body, or final CA-C status/history mismatch is `STOP / EFFECT0`.
 
+### 4.7 PL-B secretary pre-execution Gate route
+
+The current Codex task inventory contains the exact recipient task titled
+`秘書`, thread `01a004a9-a34d-7f20-b5d1-4805690d6804`, on the BAI Development
+OS project. Existing completed receipts establish this storage protocol:
+
+1. send the committed runbook original without rewriting or summarizing it;
+2. store the original and receipt metadata as separate artifacts;
+3. compute and read back UTF-8 byte count and SHA-256;
+4. return `read-back=MATCH`, saved path, document identity, and receipt identity
+   to the source task; and
+5. add or bind a central-index/addendum entry without treating storage as
+   execution authority.
+
+The currently readable central base index is
+`BVP-PROCEDURE-ORIGINAL-CENTRAL-RECEIPT-INDEX`, file SHA-256
+`1b929491848d5fc11bb36e3246334ab33ebbd4603abacb507eea83fbf58f7fb4`.
+Later addenda are separate identities, so that base hash is historical routing
+evidence, not the future PL-B receipt.
+
+No TASK-065 runbook is sent now: D0-D2 and the executable transaction are not
+closed, so an exact command or screen operation would be invented. Before the
+first future config/native effect, PL-B requires a committed task-local runbook
+containing target, purpose, source/version/hash, prerequisites, exact operation,
+changed coordinate, verification, rollback/cleanup, and secret exclusion, plus
+a completed secretary response with independent `MATCH`. A queued, sent-only,
+unread, stale, or mismatched secretary record remains `NO_GO / EFFECT0`.
+
 ## 5. Fresh installed-instance read-back
 
 The bounded TASK-063 test installation was reopened read-only. Its public-safe
@@ -327,6 +355,9 @@ In addition to the checklist in the PL-A design freeze:
 - [ ] PL-B's only semantic delta is `bridge_root`; `enabled`, receipt policy,
   transport feature flags, contract identity, and legacy-safe behavior remain
   exact.
+- [ ] committed PL-B runbook original is stored by secretary task
+  `01a004a9-a34d-7f20-b5d1-4805690d6804` and an independently read-back
+  UTF-8 byte count/SHA-256/receipt identity returns `MATCH` before any effect.
 
 ## 7. Public-safe PL-C fixture identity chain
 

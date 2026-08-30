@@ -1,6 +1,6 @@
 # TASK-060 — Montage Preference Projection and Production Source
 
-- Status: `PP_B_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
+- Status: `PP_C_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
 - Capability: `BVP-MONTAGE-PREFERENCE-PROJECTION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Owner boundary: TASK-029 source semantics and TASK-019 evaluation, promotion, and rollback semantics
@@ -61,6 +61,13 @@ Windows focused `24 passed`, WSL2 focused `23 passed / 1 Windows-only skipped`,
 Windows TASK-019/029 direct regression `75 passed`, and WSL2 direct regression
 `72 passed / 3 Windows-only skipped`. Its five implementation/schema/test paths
 plus this existing task checkpoint are the exact candidate scope.
+PP-C now has a bounded implementation candidate for a pinned, read-only current
+promotion source and the single sealed TASK-058 production-source binding seam.
+The source requires exact store/scope/revision/history/payload coordinates,
+rejects reparse, hardlink, stale, corrupt, and path-substitution cases, and
+binds the capability to the exact envelope hash. Windows focused/integration is
+`73 passed`; WSL2 is `71 passed / 2 environment-only skipped`. This remains a
+stacked Draft candidate and does not claim connector runtime or Production E2E.
 
 ## Responsibility non-overlap
 

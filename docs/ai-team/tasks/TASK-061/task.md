@@ -1,6 +1,6 @@
 # TASK-061 — Montage Learning Connector Activation and Migration
 
-- Status: `CA_A_SECURITY_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
+- Status: `CA_A_SECURITY_AND_MIGRATION_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
 - Capability: `BVP-MONTAGE-CONNECTOR-ACTIVATION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Canonical activation bit: BVP-owned production connector config `enabled`
@@ -43,14 +43,21 @@ public readiness v2 schema.
 
 ## Current authorization state
 
-The Owner continuity/dependency-takeover instruction allowed a bounded CA-A
-security implementation candidate instead of remaining idle. It is read-only:
-real Windows owner/DACL/ACE parsing plus root/ancestor identity revalidation,
-with every repair, migration, config, activation, Timeline, Resolve, and
-external effect fixed to `0`. Windows focused validation is `15 passed / 1
-non-Windows skip`; WSL2 boundary validation is `12 passed / 4 Windows-only
-skipped`. Migration, DACL repair, adapter execution, activation, Release,
-Deploy, and Production remain unauthorized and unexecuted.
+The Owner continuity/dependency-takeover instruction allowed bounded CA-A
+security and synthetic migration implementation candidates instead of remaining
+idle. Security remains read-only: real Windows owner/DACL/ACE parsing plus
+root/ancestor object-identity revalidation, without treating unrelated
+directory metadata churn as path substitution. Migration requires an exact
+sealed-plan confirmation and copies an explicit legacy source into a private,
+installer-relative archival snapshot. It preserves unknown files and the source,
+is crash-recoverable, and never writes the active inbox/Profile view or admits
+learning. Combined CA-A focused validation is `34 passed / 1 non-Windows skip`
+on Windows and `30 passed / 5 Windows-only skips` on WSL2. Production migration,
+DACL repair, adapter execution, config, activation, Release, Deploy, and
+Production remain unexecuted. Relevant TASK-058/TASK-063 boundary regression is
+`234 passed / 1 skip` on Windows and `226 passed / 5 skips` on WSL2. The WSL2
+TASK-063 packaged-entry test remains collection-N.C. because that environment's
+pre-existing `cryptography` build lacks `Argon2id`; it is not reported as PASS.
 
 ## Governing authorization
 

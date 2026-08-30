@@ -356,6 +356,58 @@ current revision/body/instance coordinate at use time. Without exclusive or
 cooperative writer authority plus that consumer revalidation contract, the
 result is `CONFIG_NAMESPACE_CAS_UNPROVEN / STOP / EFFECT0`.
 
+### 4.9 Installer lifecycle currentness is not descriptor discoverability
+
+The current TASK-063 source gives a precise lifecycle boundary:
+
+- the Inno Setup package has one fixed `AppId` and `UsePreviousAppDir=yes`.
+  This supports normal same-application repair/upgrade at the remembered root;
+  it does not define a side-by-side active-instance registry or selector;
+- `provision_installed_bridge(root, ...)` preserves the instance ID and
+  `created_at` when a valid descriptor exists, updates the manifest digest and
+  `updated_at`, and then discovers the same caller-selected root;
+- `discover_installed_bridge(root)` validates only that root's descriptor and
+  owner binding. It does not prove the installed Product EXE/payload, installer
+  registration, uninstall state, or uniqueness across other roots;
+- the public discovery receipt omits the installer manifest digest and absolute
+  root. It is public-safe, but its descriptor hash must be cross-bound to the
+  private descriptor and an independent current Product-installation receipt;
+- Bridge data is intentionally outside installer-owned recursive deletion, and
+  no `[UninstallDelete]` section exists. The real uninstall was not executed in
+  TASK-063 acceptance, so preservation is source intent until PL-D runtime
+  read-back; and
+- the installed SKILL/config is outside the BVP installer root. Product
+  upgrade/uninstall cannot by itself update or disable that external config.
+
+Focused read-only/source-fixture confirmation produced:
+
+- `tests/test_task063_main_installer_contract.py`: `3 passed`;
+- a temporary two-root lifecycle probe: `PASS` — distinct roots minted distinct
+  instance IDs, same-root repair preserved ID/created time while advancing the
+  manifest, and discovery still returned `READY_DISABLED_BY_DEFAULT` when no
+  Product EXE existed; and
+- the combined TASK-063 Python test module was `NOT RUN` after collection was
+  blocked by the available WSL `cryptography` lacking `Argon2id` through an
+  unrelated TASK-036 import chain. No dependency was installed and this is not
+  reported as PASS or as a TASK-063 behavior failure.
+
+Consequently, an uninstalled or superseded root can retain a valid descriptor,
+owner manifest, receipts, Profiles, and discovery result while no longer being
+the current executable installation. Reinstalling the same preserved root may
+also legitimately reuse the instance ID, but only a predecessor/current
+installer receipt chain can distinguish continuity from stale resurrection.
+TASK-065 must classify descriptor-only discovery as
+`INSTALL_CURRENTNESS_UNPROVEN`, never select it implicitly, and never delete its
+preserved learning data.
+
+The PL-D current-instance coordinate therefore needs an exact tuple of
+installer-selected opaque instance ID, descriptor self-hash and physical
+identity, installer payload/tree digest, Product EXE/payload identity,
+installation registration/currentness receipt, Bridge owner identity, and the
+CA-C config/history revision that names the same relative Bridge. Absolute root
+text stays local/private; the public result exposes only opaque instance and
+relative coordinate. Zero or more than one current tuple is fail-closed.
+
 ## 5. Fresh installed-instance read-back
 
 The bounded TASK-063 test installation was reopened read-only. Its public-safe
@@ -431,6 +483,26 @@ In addition to the checklist in the PL-A design freeze:
 - [ ] committed PL-B runbook original is stored by secretary task
   `01a004a9-a34d-7f20-b5d1-4805690d6804` and an independently read-back
   UTF-8 byte count/SHA-256/receipt identity returns `MATCH` before any effect.
+
+### PL-D lifecycle delta
+
+- [ ] custom Unicode/space root binds one opaque instance, relative Bridge,
+  descriptor/owner identities, current Product payload and installer receipt;
+- [ ] same-root upgrade preserves instance/created time, advances payload and
+  descriptor identities, and supplies a predecessor/current receipt chain;
+- [ ] two independently provisioned roots produce two distinct candidates and
+  admission returns `MULTI_INSTALL_AMBIGUOUS`, with no implicit winner;
+- [ ] uninstall runtime read-back proves Product payload removal and Bridge
+  learning/receipt/Profile preservation without treating the preserved
+  descriptor as current;
+- [ ] reinstall/repair after preserved data proves explicit continuity before
+  reusing the instance; otherwise the instance remains stale/effect0;
+- [ ] upgrade/uninstall/config drift triggers CA-C-owned disable/history
+  read-back before any connector use; TASK-065 does not synthesize activation
+  or deactivation authority;
+- [ ] stale descriptor, stale installer manifest, missing Product payload,
+  unknown registration, config naming another instance, or zero/multiple
+  current candidates returns disabled/effect0 and preserves all learning data.
 
 ## 7. Public-safe PL-C fixture identity chain
 

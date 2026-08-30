@@ -13,6 +13,34 @@ from .dbd_reasoning_routing import (
 )
 from .dbd_tuned_model_registry import DbDTunedModelRegistry, admit_tuned_model_registry_record
 from .errors import ProductError
+from .task036_ollama_runtime import OllamaRuntimeSnapshot
+
+
+def unavailable_ollama_runtime_snapshot() -> OllamaRuntimeSnapshot:
+    """Return a public-safe unavailable state when the shared probe is not bound."""
+    return OllamaRuntimeSnapshot(
+        "FAILED", (), False, "OLLAMA_RUNTIME_SNAPSHOT_UNAVAILABLE",
+        "Ollamaの状態を確認できません。ローカルruntimeを確認してから再評価してください。",
+    )
+
+
+def format_ollama_runtime_status(snapshot: OllamaRuntimeSnapshot) -> str:
+    """Display the shared lifecycle state without starting a runtime or hiding failures."""
+    if not isinstance(snapshot, OllamaRuntimeSnapshot):
+        raise ValueError("runtime snapshot must be public-safe")
+    labels = {
+        "READY": "利用可能",
+        "NO_MODEL": "起動済み・Model未導入",
+        "STARTING": "起動準備中",
+        "NOT_INSTALLED": "未導入",
+        "FAILED": "利用不可",
+    }
+    models = "、".join(snapshot.model_ids) if snapshot.model_ids else "なし"
+    reason = snapshot.reason_code or "NONE"
+    return (
+        f"共有Ollama状態: {labels[snapshot.state]} ({snapshot.state})\n"
+        f"理由: {reason}\n導入済みModel: {models}\n{snapshot.message_ja}"
+    )
 
 
 class ModelPanelPreflightStatus(str, Enum):
@@ -65,6 +93,7 @@ class ModelPanelSnapshot:
     execution_block_reason: str
     review_enabled: bool
     pending_review_count: int
+    runtime_snapshot: OllamaRuntimeSnapshot
 
     def __post_init__(self) -> None:
         if not isinstance(self.rows, tuple) or any(not isinstance(item, ModelPanelRow) for item in self.rows):
@@ -72,6 +101,8 @@ class ModelPanelSnapshot:
         keys = tuple((item.binding_id, item.revision) for item in self.rows)
         if keys != tuple(sorted(set(keys))):
             raise ValueError("rows must be unique and canonically ordered")
+        if not isinstance(self.runtime_snapshot, OllamaRuntimeSnapshot):
+            raise ValueError("runtime_snapshot must be public-safe")
         if not isinstance(self.status, ModelPanelPreflightStatus):
             raise ValueError("status must be ModelPanelPreflightStatus")
         if not isinstance(self.status_code, str) or not self.status_code or len(self.status_code) > 128:
@@ -127,7 +158,9 @@ def build_model_panel_snapshot(
     locale: str = "ja-JP",
     binding_id: str | None = None,
     pending_review_count: int = 0,
+    runtime_snapshot: OllamaRuntimeSnapshot | None = None,
 ) -> ModelPanelSnapshot:
+    runtime_snapshot = runtime_snapshot or unavailable_ollama_runtime_snapshot()
     rows = _rows(registry)
     decision = None
     try:
@@ -160,10 +193,12 @@ def build_model_panel_snapshot(
         execution_block_reason="R3D_EXECUTION_AUTHORITY_REQUIRED",
         review_enabled=pending_review_count > 0,
         pending_review_count=pending_review_count,
+        runtime_snapshot=runtime_snapshot,
     )
 
 
 __all__ = [
     "ModelPanelPreflightStatus", "ModelPanelRow", "ModelPanelSnapshot",
+    "format_ollama_runtime_status", "unavailable_ollama_runtime_snapshot",
     "build_model_panel_snapshot",
 ]

@@ -58,6 +58,8 @@ from ai_video_production.local_comfy_generation_port import LocalComfyTextToVide
 from ai_video_production.creative_generation_execution_application import LocalGenerationRuntimeReadiness
 from ai_video_production.task036_native_image_vertical_cli import _load_config_scope
 from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
+from ai_video_production.task036_ollama_runtime import OllamaRuntimeSnapshot
+from ai_video_production.local_audio_model_inventory import compile_local_audio_model_inventory
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
 
@@ -515,6 +517,7 @@ def test_trusted_launcher_can_refuse_missing_product_job_bootstrap(tmp_path: Pat
     with pytest.raises(ProductError) as still_missing:
         store.get_job_state(config.production_job_id)
     assert still_missing.value.code == "ERR_INPUT_JOB_NOT_FOUND"
+    assert not ProductProjectManifestStore.path(config.project_root).exists()
     assert config.database_path.read_bytes() == database_before
     assert {
         item: item.read_bytes() if item.exists() else None
@@ -961,6 +964,7 @@ def test_trusted_launcher_without_manifest_creates_no_runtime_lease_or_job_store
         native_dialog=Task036NativeDialogService(DialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
     assert not (config.project_root / ".bai-project" / ".task036-runtime.lock").exists()
     assert not DurableProductJobStore.path(config.project_root).exists()
@@ -987,6 +991,7 @@ def test_pre_manifest_media_ingest_holds_launch_lifetime_until_operation_finishe
         native_dialog=Task036NativeDialogService(dialog_backend),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
     ingested = []
 
@@ -1062,6 +1067,7 @@ def test_pre_manifest_transcription_holds_launch_lifetime_and_old_bridge_cannot_
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:
@@ -1144,6 +1150,66 @@ def test_trusted_launch_binds_existing_task028_settings_without_provider_executi
     assert launch.bridge.planning_generation_status({})["available"] is False
 
 
+def test_trusted_launch_bootstraps_missing_local_connection_settings_without_provider_execution(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    settings_path = project / "ai-connection-settings.json"
+    assert not settings_path.exists()
+    class OllamaRuntimeStub:
+        def probe(self):
+            return OllamaRuntimeSnapshot("READY", ("qwen3:8b",), False, None, "Ollamaは利用可能です。")
+
+        def ensure_started(self):
+            return self.probe()
+
+    ollama_runtime = OllamaRuntimeStub()
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: ("qwen3:8b",),
+        ollama_runtime=ollama_runtime,
+    )
+    snapshot = launch.bridge.connection_settings_snapshot({})
+    assert settings_path.is_file()
+    assert snapshot["available"] is True
+    planning = next(row for row in snapshot["workloads"] if row["workload"] == "PLANNING")
+    assert [route["model_id"] for route in planning["routes"]] == ["qwen3:8b"]
+    assert all(route["cost_class"] == "LOCAL_FREE_AI" for route in planning["routes"])
+    assert snapshot["provider_execution_started"] is False
+    assert snapshot["generation_started"] is False
+
+    manifest = ProductProjectManifestStore.load(project)
+    assert manifest.project_revision == 1
+    assert manifest.project_id == Task036LaunchConfiguration.load(path).project_id
+    assert launch.bridge.planning_generation_status({})["available"] is True
+    model_selection = launch.bridge.model_selection_snapshot({})
+    selector = next(row for row in model_selection["selectors"] if row["page_id"] == "PLANNING")
+    assert selector["available"] is True
+    assert [(row["model_id"], row["local"], row["paid"]) for row in selector["candidates"]] == [("qwen3:8b", True, False)]
+    runtime_snapshot = launch.bridge.ollama_runtime_snapshot({})
+    assert runtime_snapshot["state"] == "READY"
+    assert runtime_snapshot["model_ids"] == ["qwen3:8b"]
+    assert runtime_snapshot["provider_execution_started"] is False
+    modes = {row["workload"]: row["selection_mode"] for row in snapshot["workloads"]}
+    preferred = {row["workload"]: None for row in snapshot["workloads"]}
+    preferred["PLANNING"] = "ollama-planning-1"
+    updated = launch.bridge.connection_settings_update({"revision": snapshot["revision"], "workload_modes": modes, "preferred_route_ids": preferred})
+    assert updated["revision"] == 2
+    assert ConnectionSettingsStore.load(settings_path).record.profile.routes[0].model_id == "qwen3:8b"
+
+    launch.close()
+    reloaded = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        ollama_runtime=ollama_runtime,
+    )
+    restored = reloaded.bridge.connection_settings_snapshot({})
+    assert next(row for row in restored["workloads"] if row["workload"] == "PLANNING")["preferred_route_id"] == "ollama-planning-1"
+    reloaded.close()
 def test_trusted_launcher_binds_local_free_planning_and_invalidates_old_bridge_on_close(tmp_path: Path):
     path, raw = config_document(tmp_path)
     config = Task036LaunchConfiguration.load(path)
@@ -1752,6 +1818,7 @@ def test_subtitle_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:
@@ -1830,6 +1897,7 @@ def test_cut_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:
@@ -2042,4 +2110,30 @@ def test_trusted_export_dispatcher_uses_only_exact_promoted_workflow_runtime(
     finally:
         if promoted is not None:
             bridge._workflow_runtime = promoted
+        launch.close()
+def test_trusted_launcher_injects_empty_audio_inventory_without_promoting_routes(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
+        local_audio_inventory=compile_local_audio_model_inventory(()),
+    )
+    try:
+        snapshot = launch.bridge.connection_settings_snapshot({})
+        inventory = snapshot["local_audio_inventory"]
+        assert inventory["bound"] is True
+        assert inventory["candidate_count"] == 0
+        assert inventory["selectable_candidate_count"] == 0
+        assert inventory["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        selection = launch.bridge.model_selection_snapshot({})
+        for workload in ("AUDIO", "MUSIC"):
+            selector = next(item for item in selection["selectors"] if item["workload"] == workload)
+            assert selector["available"] is False
+            assert selector["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        assert snapshot["provider_execution_started"] is False
+        assert snapshot["generation_started"] is False
+    finally:
         launch.close()

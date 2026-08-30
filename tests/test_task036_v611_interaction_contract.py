@@ -55,6 +55,15 @@ def test_settings_nine_category_tabs_are_read_only_but_interactive() -> None:
     assert "paid_execution_authorized:false" in HTML
 
 
+def test_audio_model_selection_keeps_unavailable_reason_visible() -> None:
+    for marker in (
+        "const renderModelSelectionBase=renderModelSelection",
+        "NO_SELECTABLE_LOCAL_AUDIO_MODEL",
+        "利用可能な無料ローカル音声Modelがありません",
+        "modelSelectionUnavailableMessage(selector.unavailable_reason)",
+    ):
+        assert marker in HTML
+
 def test_timeline_scrub_uses_python_owned_seek_without_frontend_truth() -> None:
     for marker in (
         "function startTimelineScrub(event,target)",

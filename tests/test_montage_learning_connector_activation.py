@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -461,4 +462,20 @@ def test_history_tamper_and_nonlatest_evidence_reuse_fail_closed(tmp_path: Path)
     value["events"][0]["enabled"] = True
     path.write_text(json.dumps(value), encoding="utf-8")
     with pytest.raises(MontageLearningConnectorActivationError):
+        read_connector_activation_config(target)
+
+
+def test_activation_config_hardlink_alias_is_rejected(tmp_path: Path) -> None:
+    target, _store, _saved, _source, binding = _bound(tmp_path)
+    evidence = _human(binding, action="DEACTIVATE", evidence_id="human-action-hardlink")
+    _apply(
+        target,
+        binding,
+        evidence,
+        expected_revision=0,
+        now="2026-08-30T00:01:00Z",
+    )
+    path = target.layout.state / "connector-activation-history.json"
+    os.link(path, target.layout.state / "connector-activation-history.alias")
+    with pytest.raises(MontageLearningConnectorActivationError, match="identity is unsafe"):
         read_connector_activation_config(target)

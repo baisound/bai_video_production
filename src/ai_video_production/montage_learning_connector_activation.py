@@ -984,8 +984,26 @@ def _read_pinned_json(path: Path, *, max_bytes: int) -> dict[str, object]:
         current = os.lstat(path)
     except OSError as exc:
         raise MontageLearningConnectorActivationError("JSON read failed") from exc
-    identity = lambda info: (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
-    if len(data) > max_bytes or identity(before) != identity(after) or identity(after) != identity(current):
+    identity = lambda info: (
+        info.st_dev,
+        info.st_ino,
+        info.st_mode,
+        info.st_size,
+        info.st_mtime_ns,
+        getattr(info, "st_file_attributes", 0),
+        getattr(info, "st_nlink", 1),
+    )
+    current_is_safe = (
+        stat.S_ISREG(current.st_mode)
+        and not getattr(current, "st_file_attributes", 0) & _WINDOWS_REPARSE_POINT
+        and getattr(current, "st_nlink", 1) == 1
+    )
+    if (
+        len(data) > max_bytes
+        or not current_is_safe
+        or identity(before) != identity(after)
+        or identity(after) != identity(current)
+    ):
         raise MontageLearningConnectorActivationError("JSON path changed during read")
     try:
         value = json.loads(data)

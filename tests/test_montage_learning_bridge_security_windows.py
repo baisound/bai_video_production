@@ -191,6 +191,25 @@ def test_reparse_and_ancestor_identity_replacement_fail_closed(tmp_path: Path) -
     assert result.reason_codes == ("ANCESTOR_IDENTITY_CHANGED",)
 
 
+def test_ancestor_directory_metadata_churn_is_not_path_substitution(tmp_path: Path) -> None:
+    parent = tmp_path / "parent"
+    root = parent / "bridge"
+    root.mkdir(parents=True)
+
+    def add_unrelated_sibling(stage: str, _path: Path) -> None:
+        if stage == "after_descriptor":
+            (parent / "unrelated-sibling").mkdir()
+
+    result = attest_bridge_security(
+        root,
+        attestation_id="bridge-security.attestation.metadata-churn",
+        backend=SyntheticBackend(),
+        hook=add_unrelated_sibling,
+    )
+    assert result.state is BridgeSecurityState.SECURE
+    assert result.reason_codes == ()
+
+
 def test_corrupt_unknown_and_hash_tamper_are_rejected(tmp_path: Path) -> None:
     root = tmp_path / "bridge"
     root.mkdir()

@@ -78,8 +78,6 @@ def _file_identity(path: Path, info: os.stat_result) -> str:
                 "device": info.st_dev,
                 "inode": info.st_ino,
                 "mode": info.st_mode,
-                "size": info.st_size,
-                "mtime_ns": info.st_mtime_ns,
             }
         )
     )

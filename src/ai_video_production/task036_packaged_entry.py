@@ -9,6 +9,7 @@ from typing import Callable, Sequence
 from .errors import ProductError
 from .task036_native_probe import Task036NativeProbe
 from .task036_shell_cli import main as shell_main
+from .task036_single_instance import Task036SingleInstanceGuard
 
 
 ErrorPresenter = Callable[[str, str], None]
@@ -35,6 +36,7 @@ def packaged_main(
     argv: Sequence[str] | None = None,
     *,
     probe: Task036NativeProbe | None = None,
+    instance_guard: Task036SingleInstanceGuard | None = None,
     presenter: ErrorPresenter = show_native_error,
     app_main: Callable[[list[str] | None], int] = shell_main,
 ) -> int:
@@ -50,7 +52,8 @@ def packaged_main(
             return 3
     try:
         (probe or Task036NativeProbe()).require_ready()
-        return app_main(None if argv is None else list(argv))
+        with (instance_guard or Task036SingleInstanceGuard()).acquire():
+            return app_main(None if argv is None else list(argv))
     except ProductError as exc:
         presenter("BAI Video Production could not start", _error_message(exc))
         return 2

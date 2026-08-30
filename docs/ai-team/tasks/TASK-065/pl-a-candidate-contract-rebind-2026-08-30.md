@@ -27,7 +27,7 @@ authorized or performed by this rebind.
 | D2 | CA-A security PR #458 | `087c3fed692868f89b69e17e08e60fa6249b22ca` | Draft/open/mergeable; rerun in progress after fail-closed hosted-owner fixture correction |
 | D2 | CA-A migration PR #459 | `507e76a40b59ceff3a91ef5eb424f1e8e0d6378c` | Draft/open; rerun after full-attestation pinning |
 | D2 | CA-B PR #460 | `74e732067057574990725eb4058bd3712382341e` | Draft/open; rerun after full-attestation pinning |
-| D2 | CA-C PR #461 | `675bab5a94538e1966678bf004ba6bb13e42601a` | Draft/open; rerun after full-attestation pinning |
+| D2 | CA-C PR #461 | `7fc03fbb64e111a29a3e028a9105a8d2076f3c29` | Draft/open; rerun after full-attestation and physical-identity pinning |
 
 The shared `changelog-and-version` failure is not waived or reported as pass.
 TASK-065 does not own the shared changelog. A hosted temporary directory whose
@@ -41,6 +41,8 @@ plan and write read-back. CA-A migration now pins the complete initial
 attestation hash, CA-B carries the same hash in its sealed plan, and CA-C
 compares complete before/after attestation hashes. Focused negative tests change
 only the secure DACL and prove rejection; owner policy was not relaxed.
+CA-C pinned JSON read-back also compares mode, reparse attributes, and link
+count before/after/path and rejects a second hardlink name.
 
 ## D0 TASK-063 discovery mapping
 
@@ -204,8 +206,8 @@ Timeline, Resolve, Release, Deploy, and Production authorization are all false.
 ## Focused integration evidence
 
 - Windows Python 3.12, TASK-063 installation/main-installer contract plus PP-C
-  and CA-A through CA-C: `98 passed / 1 non-Windows skip`.
-- WSL2 Ubuntu, PP-C and CA-A through CA-C: `62 passed / 5 Windows-only skips`.
+  and CA-A through CA-C: `99 passed / 1 non-Windows skip`.
+- WSL2 Ubuntu, PP-C and CA-A through CA-C: `63 passed / 5 Windows-only skips`.
 - WSL2 discovery of `powershell.exe` made the TASK-063 Windows-only acceptance
   harness attempt to pass a Linux-form `.ps1` path to Windows PowerShell. Its
   seven parameter cases ended in CP932/UTF-8 decode errors. This hybrid harness

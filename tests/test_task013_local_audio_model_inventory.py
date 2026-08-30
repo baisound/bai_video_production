@@ -21,6 +21,7 @@ from ai_video_production.local_audio_model_inventory import (
     LocalFreeLicenseState,
     RuntimeReadiness,
     apply_selectable_local_audio_routes,
+    audit_audacity_music_generation_capability,
     availability_from_local_audio_inventory,
     compile_local_audio_model_inventory,
     execution_ports_from_local_audio_inventory,
@@ -112,6 +113,101 @@ def test_musicgen_help_visibility_is_not_execution_readiness() -> None:
     assert apply_selectable_local_audio_routes(_profile(), inventory).routes == ()
     assert availability_from_local_audio_inventory(inventory).available_route_ids == frozenset()
     assert execution_ports_from_local_audio_inventory(inventory) == {}
+
+
+def test_audacity_musicgen_capability_audit_exposes_no_invented_model_or_private_body() -> None:
+    report = {
+        "connected": True,
+        "features": {
+            "MUSIC_GENERATION": {
+                "available": True,
+                "command_id": "OpenvinoMusicGeneration",
+                "descriptor": {"private_path": r"C:\\Users\\owner\\MusicGen", "body": "private prompt"},
+            }
+        },
+    }
+
+    audit = audit_audacity_music_generation_capability(report, evidence_sha256=SHA)
+    public = audit.to_public_dict()
+    encoded = json.dumps(public, ensure_ascii=False)
+
+    assert audit.disabled_reasons == (
+        "MODEL_INVENTORY_UNAVAILABLE",
+        "AUTOMATION_API_NOT_SCRIPTABLE",
+    )
+    assert public["candidate_count"] == 0
+    assert public["installed_model_count"] is None
+    assert public["model_id"] is None
+    assert public["route_id"] is None
+    assert public["selectable"] is False
+    assert "C:\\\\Users" not in encoded
+    assert "private prompt" not in encoded
+
+
+def test_audacity_musicgen_capability_audit_reports_stopped_and_missing_command() -> None:
+    audit = audit_audacity_music_generation_capability(
+        {
+            "connected": False,
+            "features": {"MUSIC_GENERATION": {"available": False, "command_id": None}},
+        },
+        evidence_sha256=SHA,
+        currentness=InventoryCurrentness.STALE,
+    )
+
+    assert audit.disabled_reasons == (
+        "STALE_INVENTORY",
+        "RUNTIME_STOPPED",
+        "MUSIC_GENERATION_COMMAND_UNAVAILABLE",
+        "MODEL_INVENTORY_UNAVAILABLE",
+        "AUTOMATION_API_NOT_SCRIPTABLE",
+    )
+
+
+def test_audacity_musicgen_capability_audit_rejects_wrong_command_identity() -> None:
+    with pytest.raises(ValueError, match="command identity"):
+        audit_audacity_music_generation_capability(
+            {
+                "connected": True,
+                "features": {
+                    "MUSIC_GENERATION": {
+                        "available": True,
+                        "command_id": "OpenvinoMusicSeparation",
+                    }
+                },
+            },
+            evidence_sha256=SHA,
+        )
+
+
+def test_audacity_musicgen_capability_audit_rejects_inconsistent_runtime_report() -> None:
+    with pytest.raises(ValueError, match="disconnected Audacity runtime"):
+        audit_audacity_music_generation_capability(
+            {
+                "connected": False,
+                "features": {
+                    "MUSIC_GENERATION": {
+                        "available": True,
+                        "command_id": "OpenvinoMusicGeneration",
+                        "descriptor": {},
+                    }
+                },
+            },
+            evidence_sha256=SHA,
+        )
+
+    with pytest.raises(ValueError, match="descriptor mapping"):
+        audit_audacity_music_generation_capability(
+            {
+                "connected": True,
+                "features": {
+                    "MUSIC_GENERATION": {
+                        "available": True,
+                        "command_id": "OpenvinoMusicGeneration",
+                    }
+                },
+            },
+            evidence_sha256=SHA,
+        )
 
 
 def test_sfx_and_music_have_separate_route_capability_and_port_identity() -> None:

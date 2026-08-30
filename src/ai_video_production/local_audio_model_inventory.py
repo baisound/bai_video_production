@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 import re
-from typing import Iterable
+from typing import Iterable, Mapping
 
 from .ai_connections import (
     AiConnectionProfile,
@@ -91,6 +91,114 @@ def _public_identifier(value: str, name: str, pattern: re.Pattern[str] = _SAFE_I
     if not isinstance(value, str) or not pattern.fullmatch(value):
         raise ValueError(f"{name} is invalid")
     return value
+
+
+@dataclass(frozen=True, slots=True)
+class AudacityMusicGenerationCapabilityAudit:
+    runtime_readiness: RuntimeReadiness
+    currentness: InventoryCurrentness
+    command_available: bool
+    command_id: str | None
+    disabled_reasons: tuple[str, ...]
+    evidence_sha256: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.runtime_readiness, RuntimeReadiness):
+            raise ValueError("runtime_readiness is invalid")
+        if not isinstance(self.currentness, InventoryCurrentness):
+            raise ValueError("currentness is invalid")
+        if type(self.command_available) is not bool:
+            raise ValueError("command_available must be a boolean")
+        if self.command_available and self.command_id != "OpenvinoMusicGeneration":
+            raise ValueError("available MusicGen command identity is invalid")
+        if not self.command_available and self.command_id is not None:
+            raise ValueError("unavailable MusicGen command must not expose an identity")
+        if not self.disabled_reasons or len(self.disabled_reasons) != len(set(self.disabled_reasons)):
+            raise ValueError("disabled_reasons must be non-empty and unique")
+        validate_sha256(self.evidence_sha256, field_name="evidence_sha256")
+
+    def to_public_dict(self) -> dict[str, object]:
+        body: dict[str, object] = {
+            "purpose": AudioModelPurpose.MUSIC.value,
+            "workload": AiWorkload.MUSIC.value,
+            "capability": "MUSIC_GENERATION",
+            "provider_family": ProviderFamily.AUDACITY_OPENVINO.value,
+            "provider_id": "audacity-openvino",
+            "runtime_readiness": self.runtime_readiness.value,
+            "currentness": self.currentness.value,
+            "command_available": self.command_available,
+            "command_id": self.command_id,
+            "model_inventory_available": False,
+            "installed_model_count": None,
+            "candidate_count": 0,
+            "route_id": None,
+            "model_id": None,
+            "execution_port_id": None,
+            "selectable": False,
+            "disabled_reasons": list(self.disabled_reasons),
+            "evidence_sha256": self.evidence_sha256,
+            "credential_required": False,
+            "cloud_fallback_allowed": False,
+            "automatic_download_allowed": False,
+            "runtime_start_requested": False,
+            "private_path_persisted": False,
+            "media_body_persisted": False,
+        }
+        body["audit_sha256"] = sha256_bytes(canonical_json_bytes(body))
+        return body
+
+
+def audit_audacity_music_generation_capability(
+    report: Mapping[str, object],
+    *,
+    evidence_sha256: str,
+    currentness: InventoryCurrentness = InventoryCurrentness.CURRENT,
+) -> AudacityMusicGenerationCapabilityAudit:
+    """Translate bounded Help evidence without inventing an installed model."""
+    if not isinstance(report, Mapping):
+        raise ValueError("Audacity capability report must be a mapping")
+    connected = report.get("connected")
+    if type(connected) is not bool:
+        raise ValueError("Audacity capability connected state must be a boolean")
+    features = report.get("features")
+    if not isinstance(features, Mapping):
+        raise ValueError("Audacity capability features must be a mapping")
+    music = features.get("MUSIC_GENERATION")
+    if not isinstance(music, Mapping):
+        raise ValueError("Audacity MusicGen capability row is missing")
+    available = music.get("available")
+    if type(available) is not bool:
+        raise ValueError("Audacity MusicGen availability must be a boolean")
+    command_id = music.get("command_id")
+    if command_id is not None and not isinstance(command_id, str):
+        raise ValueError("Audacity MusicGen command_id must be text or null")
+    if available and command_id != "OpenvinoMusicGeneration":
+        raise ValueError("available MusicGen command identity is invalid")
+    if not available and command_id is not None:
+        raise ValueError("unavailable MusicGen command must not expose an identity")
+    if available and not connected:
+        raise ValueError("disconnected Audacity runtime cannot expose an available MusicGen command")
+    if available and not isinstance(music.get("descriptor"), Mapping):
+        raise ValueError("available MusicGen command requires a descriptor mapping")
+
+    reasons: list[str] = []
+    if currentness is InventoryCurrentness.STALE:
+        reasons.append("STALE_INVENTORY")
+    elif currentness is InventoryCurrentness.UNKNOWN:
+        reasons.append("INVENTORY_CURRENTNESS_UNKNOWN")
+    if not connected:
+        reasons.append("RUNTIME_STOPPED")
+    if not available:
+        reasons.append("MUSIC_GENERATION_COMMAND_UNAVAILABLE")
+    reasons.extend(("MODEL_INVENTORY_UNAVAILABLE", "AUTOMATION_API_NOT_SCRIPTABLE"))
+    return AudacityMusicGenerationCapabilityAudit(
+        runtime_readiness=RuntimeReadiness.READY if connected else RuntimeReadiness.STOPPED,
+        currentness=currentness,
+        command_available=available,
+        command_id=command_id,
+        disabled_reasons=tuple(reasons),
+        evidence_sha256=evidence_sha256,
+    )
 
 
 @dataclass(frozen=True, slots=True)

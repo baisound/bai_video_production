@@ -45,7 +45,7 @@ def test_canonical_mock_and_runtime_source_counts_remain_explicit() -> None:
     }
     assert count_source_controls(RUNTIME_HTML) == {
         "pages": 14,
-        "stable_ids": 123,
+        "stable_ids": 124,
         "buttons": 127,
         "selects": 1,
         "inputs_and_textareas": 6,

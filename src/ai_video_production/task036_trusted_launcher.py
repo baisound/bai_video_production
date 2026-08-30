@@ -71,6 +71,7 @@ from .continuity_application import Task039ContinuityApplication
 from .connection_settings_web import ConnectionSettingsWebService
 from .credential_vault import WindowsCredentialManagerStore
 from .task036_local_model_bootstrap import bootstrap_missing_connection_settings
+from .task036_ollama_runtime import OllamaRuntimeLifecycle
 from .provider_execution import (AiProviderExecutionService, AnthropicMessagesAdapter, GoogleInteractionsAdapter, OpenAiResponsesAdapter, UrllibJsonTransport)
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
@@ -601,6 +602,7 @@ class Task036TrustedLaunch:
     _runtime_lease: "_Task036ProjectRuntimeLease | None" = field(default=None, repr=False)
     _local_operation_lifetime: "_Task036LocalOperationLifetime | None" = field(default=None, repr=False)
     _product_store: SQLiteProductStore | None = field(default=None, repr=False)
+    _ollama_runtime: OllamaRuntimeLifecycle | None = field(default=None, repr=False)
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
@@ -931,7 +933,9 @@ def build_trusted_launch(
     owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
     allow_product_job_bootstrap: bool = True,
     local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
+    ollama_runtime: OllamaRuntimeLifecycle | None = None,
 ) -> Task036TrustedLaunch:
+    managed_ollama_runtime = ollama_runtime or OllamaRuntimeLifecycle()
     if not allow_product_job_bootstrap:
         for directory in (
             configuration.asset_root,
@@ -1150,10 +1154,10 @@ def build_trusted_launch(
         try:
             connection_settings_bootstrapped = bootstrap_missing_connection_settings(
                 connection_settings_path,
-                **(
-                    {}
-                    if local_planning_inventory_provider is None
-                    else {"inventory_provider": local_planning_inventory_provider}
+                inventory_provider=(
+                    local_planning_inventory_provider
+                    if local_planning_inventory_provider is not None
+                    else lambda: managed_ollama_runtime.ensure_started().model_ids
                 ),
             )
         except (OSError, UnicodeError, ValueError) as exc:
@@ -1191,6 +1195,16 @@ def build_trusted_launch(
                 details={"exception_type": type(exc).__name__},
             ) from exc
 
+    if connection_settings is not None and local_planning_inventory_provider is None:
+        profile, _availability = connection_settings.current_connection()
+        if any(
+            route.workload is AiWorkload.PLANNING
+            and route.provider_family is ProviderFamily.LOCAL_OPEN_SOURCE
+            and route.provider_id.casefold() == "ollama"
+            and route.cost_class is CostClass.LOCAL_FREE_AI
+            for route in profile.routes
+        ):
+            managed_ollama_runtime.ensure_started()
     if allow_product_job_bootstrap and connection_settings_bootstrapped and connection_settings is not None:
         profile, _availability = connection_settings.current_connection()
         if any(
@@ -1482,6 +1496,7 @@ def build_trusted_launch(
             _runtime_lease=runtime_lease,
             _local_operation_lifetime=local_operation_lifetime,
             _product_store=store,
+            _ollama_runtime=managed_ollama_runtime,
         )
     except BaseException:
         if owner_signing_key_import is not None:

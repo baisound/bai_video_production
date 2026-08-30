@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-036 Settingsで`selectable: false`の音声・音楽Routeを選択不可にし、導入状態・runtime readiness・currentness・利用不可理由をprivate pathや秘密値なしで表示します。利用不可の既定Routeは保存対象から外し、backendのfail-closed拒否とUIを整合させます。runtime起動、model download、Provider実行、課金、実機GUI、Release／Deploy／Productionは未実行です。
+
 - TASK-036 packaged entryにWindows OS管理のnamed mutexによるsingle-instance guardを追加し、二重起動を既存ウィンドウ確認の案内付きで安全に拒否します。stale file lockは作らず、正常終了時とShell例外時にhandleを解放します。実機GUI／packaged build、Release／Deploy／Productionは未確認・未開始です。
 
 - TASK-063のWindowsインストーラー読戻し先を、選択したインストールルート内の固定Bridge配下へ限定しました。範囲外、symlink／reparse／junction、hardlink、危険なancestor、名前が似ただけのsibling-prefix、partial writeを拒否し、安全なatomic writeと書込み後のexact read-backで既存ファイルを保護します。

@@ -69,6 +69,7 @@ from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .connection_settings_web import ConnectionSettingsWebService
 from .credential_vault import WindowsCredentialManagerStore
+from .task036_local_model_bootstrap import bootstrap_missing_connection_settings
 from .provider_execution import (AiProviderExecutionService, AnthropicMessagesAdapter, GoogleInteractionsAdapter, OpenAiResponsesAdapter, UrllibJsonTransport)
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
@@ -894,6 +895,7 @@ def build_trusted_launch(
     ] | None = None,
     owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
     allow_product_job_bootstrap: bool = True,
+    local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
 ) -> Task036TrustedLaunch:
     if not allow_product_job_bootstrap:
         for directory in (
@@ -1108,6 +1110,23 @@ def build_trusted_launch(
             "AI Connection Settings must not be a symlink",
             ProductErrorCategory.SECURITY,
         )
+    if not connection_settings_path.exists():
+        try:
+            bootstrap_missing_connection_settings(
+                connection_settings_path,
+                **(
+                    {}
+                    if local_planning_inventory_provider is None
+                    else {"inventory_provider": local_planning_inventory_provider}
+                ),
+            )
+        except (OSError, UnicodeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_TASK028_CONNECTION_SETTINGS_BOOTSTRAP_FAILED",
+                "AI Connection Settings could not be initialized safely",
+                ProductErrorCategory.DATA_INTEGRITY,
+                details={"exception_type": type(exc).__name__},
+            ) from exc
     if connection_settings_path.exists():
         if not connection_settings_path.is_file():
             raise ProductError(

@@ -1144,6 +1144,48 @@ def test_trusted_launch_binds_existing_task028_settings_without_provider_executi
     assert launch.bridge.planning_generation_status({})["available"] is False
 
 
+def test_trusted_launch_bootstraps_missing_local_connection_settings_without_provider_execution(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    project = Path(raw["project"]["project_root"])
+    settings_path = project / "ai-connection-settings.json"
+    assert not settings_path.exists()
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: ("qwen3:8b",),
+    )
+    snapshot = launch.bridge.connection_settings_snapshot({})
+    assert settings_path.is_file()
+    assert snapshot["available"] is True
+    planning = next(row for row in snapshot["workloads"] if row["workload"] == "PLANNING")
+    assert [route["model_id"] for route in planning["routes"]] == ["qwen3:8b"]
+    assert all(route["cost_class"] == "LOCAL_FREE_AI" for route in planning["routes"])
+    assert snapshot["provider_execution_started"] is False
+    assert snapshot["generation_started"] is False
+
+    model_selection = launch.bridge.model_selection_snapshot({})
+    selector = next(row for row in model_selection["selectors"] if row["page_id"] == "PLANNING")
+    assert selector["available"] is True
+    assert [(row["model_id"], row["local"], row["paid"]) for row in selector["candidates"]] == [("qwen3:8b", True, False)]
+    modes = {row["workload"]: row["selection_mode"] for row in snapshot["workloads"]}
+    preferred = {row["workload"]: None for row in snapshot["workloads"]}
+    preferred["PLANNING"] = "ollama-planning-1"
+    updated = launch.bridge.connection_settings_update({"revision": snapshot["revision"], "workload_modes": modes, "preferred_route_ids": preferred})
+    assert updated["revision"] == 2
+    assert ConnectionSettingsStore.load(settings_path).record.profile.routes[0].model_id == "qwen3:8b"
+
+    launch.close()
+    reloaded = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+    restored = reloaded.bridge.connection_settings_snapshot({})
+    assert next(row for row in restored["workloads"] if row["workload"] == "PLANNING")["preferred_route_id"] == "ollama-planning-1"
+    reloaded.close()
 def test_trusted_launcher_binds_local_free_planning_and_invalidates_old_bridge_on_close(tmp_path: Path):
     path, raw = config_document(tmp_path)
     config = Task036LaunchConfiguration.load(path)

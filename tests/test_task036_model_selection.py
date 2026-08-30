@@ -48,7 +48,7 @@ def test_projects_project_scene_and_quick_coordinates_without_effects():
             {"intent_id": "quick-audio", "intent_version": 1, "mode": "AUDIO", "scene_id": "scene-1", "selected_route_id": "audio-route", "selected_capability": "AUDIO_GENERATION"},
         ]},
     )
-    assert [row["page_id"] for row in projected["selectors"]] == ["PLANNING", "IMAGE", "VIDEO", "QUICK_IMAGE", "QUICK_VIDEO"]
+    assert [row["page_id"] for row in projected["selectors"]] == ["PLANNING", "IMAGE", "VIDEO", "QUICK_IMAGE", "QUICK_VIDEO", "AUDIO", "MUSIC"]
     assert projected["scene_bindings"][0]["coordinate_state"] == "CURRENT_CONFIGURED"
     assert projected["quick_bindings"][0]["selected_route_id"] == "video-route"
     assert projected["delegated_audio_owner"] == "DEVELOPER2"

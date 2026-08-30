@@ -19,6 +19,8 @@ _PAGE_WORKLOADS = (
     ("VIDEO", "VIDEO"),
     ("QUICK_IMAGE", "IMAGE"),
     ("QUICK_VIDEO", "VIDEO"),
+    ("AUDIO", "AUDIO"),
+    ("MUSIC", "MUSIC"),
 )
 _QUICK_WORKLOAD = {"IMAGE": "IMAGE", "START_END": "IMAGE", "VIDEO": "VIDEO"}
 _FORBIDDEN_KEYS = {

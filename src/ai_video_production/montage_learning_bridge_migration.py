@@ -43,6 +43,7 @@ _WINDOWS_REPARSE_POINT = 0x400
 _SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _ID_RE = re.compile(r"^migration-[0-9a-f]{32}$")
 _PLAN_SEAL = object()
+_READBACK_SEAL = object()
 
 
 class MontageLearningBridgeMigrationError(ValueError):
@@ -122,6 +123,44 @@ class BridgeMigrationPlan:
 
     def confirmation(self) -> str:
         return f"MIGRATE_LEGACY_BRIDGE:{self.migration_id}"
+
+
+@dataclass(frozen=True, slots=True)
+class BridgeMigrationReadback:
+    migration_id: str
+    receipt: dict[str, object]
+    manifest_sha256: str
+    snapshot_readback_sha256: str
+    _seal: object = field(repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        if self._seal is not _READBACK_SEAL or _ID_RE.fullmatch(self.migration_id) is None:
+            raise MontageLearningBridgeMigrationError("migration read-back is not sealed")
+        _required_sha(self.manifest_sha256)
+        _required_sha(self.snapshot_readback_sha256)
+        if type(self.receipt) is not dict or self.receipt.get("migration_id") != self.migration_id:
+            raise MontageLearningBridgeMigrationError("migration read-back receipt mismatch")
+        body = self._body()
+        if self.snapshot_readback_sha256 != sha256_json(body):
+            raise MontageLearningBridgeMigrationError("migration read-back hash mismatch")
+
+    def _body(self) -> dict[str, object]:
+        return {
+            "record_version": MIGRATION_SCHEMA_VERSION,
+            "record_type": "BvpMontageLearningBridgeMigrationReadback",
+            "migration_id": self.migration_id,
+            "receipt": json.loads(json.dumps(self.receipt)),
+            "manifest_sha256": self.manifest_sha256,
+            "exact_snapshot_verified": True,
+            "active_bridge_view_modified": False,
+            "profile_admitted": False,
+            "activation_authorized": False,
+            "timeline_mutated": False,
+            "resolve_written": False,
+        }
+
+    def to_dict(self) -> dict[str, object]:
+        return {**self._body(), "snapshot_readback_sha256": self.snapshot_readback_sha256}
 
 
 MigrationHook = Callable[[str, Path], None]
@@ -258,6 +297,48 @@ def execute_legacy_bridge_migration(
         if readback["phase"] != "READBACK_VERIFIED" or readback["receipt"] != receipt:
             raise MontageLearningBridgeMigrationError("terminal receipt read-back mismatch")
         return receipt
+
+
+def read_legacy_bridge_migration(
+    target: InstalledBridgeDiscovery,
+    *,
+    migration_id: str,
+) -> BridgeMigrationReadback:
+    """Read back a terminal private snapshot without trusting caller paths."""
+
+    if type(migration_id) is not str or _ID_RE.fullmatch(migration_id) is None:
+        raise MontageLearningBridgeMigrationError("migration id is invalid")
+    current_target = _rediscover_exact(target)
+    private_root = current_target.layout.migration / "task061"
+    journal_path = private_root / "journals" / f"{migration_id}.json"
+    snapshot_root = private_root / "snapshots" / migration_id
+    journal = _read_json(journal_path)
+    receipt = _validate_terminal_journal_readback(
+        journal,
+        target=current_target,
+        migration_id=migration_id,
+    )
+    manifest_sha = _verify_persisted_snapshot(snapshot_root, receipt)
+    body: dict[str, object] = {
+        "record_version": MIGRATION_SCHEMA_VERSION,
+        "record_type": "BvpMontageLearningBridgeMigrationReadback",
+        "migration_id": migration_id,
+        "receipt": receipt,
+        "manifest_sha256": manifest_sha,
+        "exact_snapshot_verified": True,
+        "active_bridge_view_modified": False,
+        "profile_admitted": False,
+        "activation_authorized": False,
+        "timeline_mutated": False,
+        "resolve_written": False,
+    }
+    return BridgeMigrationReadback(
+        migration_id,
+        receipt,
+        manifest_sha,
+        sha256_json(body),
+        _READBACK_SEAL,
+    )
 
 
 def _plan_body(
@@ -476,6 +557,192 @@ def _build_receipt(
 def _validate_receipt(value: object, plan: BridgeMigrationPlan) -> None:
     if type(value) is not dict:
         raise MontageLearningBridgeMigrationError("migration receipt mismatch")
+
+
+def _validate_terminal_journal_readback(
+    value: object,
+    *,
+    target: InstalledBridgeDiscovery,
+    migration_id: str,
+) -> dict[str, object]:
+    fields = {
+        "schema_version", "message_type", "migration_id", "plan_sha256",
+        "phase", "receipt", "journal_sha256",
+    }
+    if type(value) is not dict or set(value) != fields:
+        raise MontageLearningBridgeMigrationError("terminal migration journal fields mismatch")
+    body = dict(value)
+    supplied = body.pop("journal_sha256")
+    if (
+        value["schema_version"] != MIGRATION_SCHEMA_VERSION
+        or value["message_type"] != MIGRATION_JOURNAL_TYPE
+        or value["migration_id"] != migration_id
+        or value["phase"] != "READBACK_VERIFIED"
+        or supplied != sha256_json(body)
+    ):
+        raise MontageLearningBridgeMigrationError("terminal migration journal mismatch")
+    receipt = value["receipt"]
+    _validate_persisted_receipt(receipt, target=target, migration_id=migration_id)
+    if receipt["plan_sha256"] != value["plan_sha256"]:
+        raise MontageLearningBridgeMigrationError("journal/receipt plan mismatch")
+    return json.loads(json.dumps(receipt))
+
+
+def _validate_persisted_receipt(
+    value: object,
+    *,
+    target: InstalledBridgeDiscovery,
+    migration_id: str,
+) -> None:
+    fields = {
+        "schema_version", "message_type", "task_owner", "migration_id",
+        "plan_sha256", "source_root_identity_sha256", "source_tree_sha256",
+        "target_install_instance_id", "target_descriptor_sha256",
+        "target_owner_manifest_sha256", "security_attestation_sha256",
+        "final_security_attestation_sha256", "file_count", "directory_count",
+        "total_bytes", "state", "unknown_files_preserved", "source_deleted",
+        "source_modified", "active_bridge_view_modified", "profile_admitted",
+        "learning_adopted", "connector_config_modified", "activation_authorized",
+        "timeline_mutated", "resolve_written", "external_effect_authorized",
+        "receipt_sha256",
+    }
+    if type(value) is not dict or set(value) != fields:
+        raise MontageLearningBridgeMigrationError("migration receipt fields mismatch")
+    body = dict(value)
+    supplied = body.pop("receipt_sha256")
+    if (
+        value["schema_version"] != MIGRATION_SCHEMA_VERSION
+        or value["message_type"] != MIGRATION_RECEIPT_TYPE
+        or value["task_owner"] != "TASK-061"
+        or value["migration_id"] != migration_id
+        or value["state"] != "READBACK_VERIFIED"
+        or supplied != sha256_json(body)
+        or value["target_install_instance_id"] != target.descriptor.install_instance_id
+        or value["target_descriptor_sha256"] != target.descriptor.descriptor_sha256
+        or value["target_owner_manifest_sha256"] != target.owner_manifest_sha256
+    ):
+        raise MontageLearningBridgeMigrationError("migration receipt identity mismatch")
+    for field_name in (
+        "plan_sha256", "source_root_identity_sha256", "source_tree_sha256",
+        "target_descriptor_sha256", "target_owner_manifest_sha256",
+        "security_attestation_sha256", "final_security_attestation_sha256",
+        "receipt_sha256",
+    ):
+        _required_sha(value[field_name])
+    for field_name in (
+        "unknown_files_preserved",
+    ):
+        if value[field_name] is not True:
+            raise MontageLearningBridgeMigrationError("migration preservation claim mismatch")
+    for field_name in (
+        "source_deleted", "source_modified", "active_bridge_view_modified",
+        "profile_admitted", "learning_adopted", "connector_config_modified",
+        "activation_authorized", "timeline_mutated", "resolve_written",
+        "external_effect_authorized",
+    ):
+        if value[field_name] is not False:
+            raise MontageLearningBridgeMigrationError("migration authority boundary mismatch")
+    for field_name, maximum in (
+        ("file_count", _MAX_FILES),
+        ("directory_count", _MAX_DIRECTORIES),
+        ("total_bytes", _MAX_BYTES),
+    ):
+        field_value = value[field_name]
+        if type(field_value) is not int or not 0 <= field_value <= maximum:
+            raise MontageLearningBridgeMigrationError("migration receipt count mismatch")
+
+
+def _verify_persisted_snapshot(root: Path, receipt: dict[str, object]) -> str:
+    _require_safe_directory(root)
+    manifest = _read_json(root / "manifest.json")
+    fields = {
+        "schema_version", "message_type", "migration_id", "plan_sha256",
+        "source_root_identity_sha256", "source_tree_sha256", "entries",
+        "manifest_sha256",
+    }
+    if set(manifest) != fields:
+        raise MontageLearningBridgeMigrationError("persisted manifest fields mismatch")
+    body = dict(manifest)
+    supplied = body.pop("manifest_sha256")
+    if (
+        manifest["schema_version"] != MIGRATION_SCHEMA_VERSION
+        or manifest["message_type"] != MIGRATION_MANIFEST_TYPE
+        or manifest["migration_id"] != receipt["migration_id"]
+        or manifest["plan_sha256"] != receipt["plan_sha256"]
+        or manifest["source_root_identity_sha256"] != receipt["source_root_identity_sha256"]
+        or manifest["source_tree_sha256"] != receipt["source_tree_sha256"]
+        or supplied != sha256_json(body)
+    ):
+        raise MontageLearningBridgeMigrationError("persisted manifest identity mismatch")
+    entries = _validate_persisted_entries(manifest["entries"])
+    if sha256_json(entries) != receipt["source_tree_sha256"]:
+        raise MontageLearningBridgeMigrationError("persisted manifest tree hash mismatch")
+    if (
+        sum(item["kind"] == "FILE" for item in entries) != receipt["file_count"]
+        or sum(item["kind"] == "DIRECTORY" for item in entries) != receipt["directory_count"]
+        or sum(int(item["bytes"]) for item in entries) != receipt["total_bytes"]
+    ):
+        raise MontageLearningBridgeMigrationError("persisted manifest counts mismatch")
+    actual = _enumerate_snapshot_payload(root / "payload")
+    if actual != entries:
+        raise MontageLearningBridgeMigrationError("persisted snapshot read-back mismatch")
+    return str(supplied)
+
+
+def _validate_persisted_entries(value: object) -> list[dict[str, object]]:
+    if type(value) is not list or len(value) > _MAX_FILES + _MAX_DIRECTORIES:
+        raise MontageLearningBridgeMigrationError("persisted manifest entries invalid")
+    result: list[dict[str, object]] = []
+    seen: set[str] = set()
+    total = 0
+    for raw in value:
+        if type(raw) is not dict or set(raw) != {"relative_path", "kind", "bytes", "content_sha256"}:
+            raise MontageLearningBridgeMigrationError("persisted manifest entry fields mismatch")
+        relative = raw["relative_path"]
+        if type(relative) is not str:
+            raise MontageLearningBridgeMigrationError("persisted relative path invalid")
+        pure = PurePosixPath(relative)
+        if not relative or relative.startswith("/") or any(part in {"", ".", ".."} for part in pure.parts):
+            raise MontageLearningBridgeMigrationError("persisted relative path invalid")
+        _claim_casefold(relative, seen)
+        kind = raw["kind"]
+        size = raw["bytes"]
+        digest = raw["content_sha256"]
+        if kind == "DIRECTORY":
+            if size != 0 or digest is not None:
+                raise MontageLearningBridgeMigrationError("persisted directory entry invalid")
+        elif kind == "FILE":
+            if type(size) is not int or not 0 <= size <= _MAX_FILE_BYTES:
+                raise MontageLearningBridgeMigrationError("persisted file size invalid")
+            _required_sha(digest)
+            total += size
+        else:
+            raise MontageLearningBridgeMigrationError("persisted entry kind invalid")
+        result.append({"relative_path": relative, "kind": kind, "bytes": size, "content_sha256": digest})
+    result.sort(key=lambda item: (str(item["relative_path"]).casefold(), str(item["relative_path"])))
+    if total > _MAX_BYTES:
+        raise MontageLearningBridgeMigrationError("persisted snapshot exceeds byte limit")
+    return result
+
+
+def _enumerate_snapshot_payload(payload_root: Path) -> list[dict[str, object]]:
+    _require_safe_directory(payload_root)
+    actual: list[dict[str, object]] = []
+    for current, directory_names, file_names in os.walk(payload_root, topdown=True, followlinks=False):
+        directory_names.sort(key=str.casefold)
+        file_names.sort(key=str.casefold)
+        current_path = Path(current)
+        _require_safe_directory(current_path)
+        for name in directory_names:
+            path = current_path / name
+            _require_safe_directory(path)
+            actual.append({"relative_path": _relative(payload_root, path), "kind": "DIRECTORY", "bytes": 0, "content_sha256": None})
+        for name in file_names:
+            path = current_path / name
+            body, _ = _read_pinned_file(path)
+            actual.append({"relative_path": _relative(payload_root, path), "kind": "FILE", "bytes": len(body), "content_sha256": sha256_bytes(body)})
+    actual.sort(key=lambda item: (str(item["relative_path"]).casefold(), str(item["relative_path"])))
+    return actual
     final_security = value.get("final_security_attestation_sha256")
     if type(final_security) is not str:
         raise MontageLearningBridgeMigrationError("migration receipt mismatch")
@@ -741,10 +1008,12 @@ def _call_hook(hook: MigrationHook | None, phase: str, path: Path) -> None:
 
 
 __all__ = [
+    "BridgeMigrationReadback",
     "BridgeMigrationPlan",
     "MIGRATION_SCHEMA_VERSION",
     "MigrationEntry",
     "MontageLearningBridgeMigrationError",
     "execute_legacy_bridge_migration",
     "plan_legacy_bridge_migration",
+    "read_legacy_bridge_migration",
 ]

@@ -11,6 +11,7 @@ from ai_video_production.montage_learning_bridge_migration import (
     MontageLearningBridgeMigrationError,
     execute_legacy_bridge_migration,
     plan_legacy_bridge_migration,
+    read_legacy_bridge_migration,
 )
 from ai_video_production.montage_learning_bridge_security import (
     BridgeAce,
@@ -119,6 +120,18 @@ def test_duplicate_exact_migration_is_a_readback_noop(tmp_path: Path) -> None:
     first = execute_legacy_bridge_migration(plan, confirmation=plan.confirmation(), security_backend=SecureBackend())
     second = execute_legacy_bridge_migration(plan, confirmation=plan.confirmation(), security_backend=SecureBackend())
     assert second == first
+
+
+def test_terminal_migration_can_be_reopened_as_sealed_exact_readback(tmp_path: Path) -> None:
+    _source, target, plan = _plan(tmp_path)
+    receipt = execute_legacy_bridge_migration(plan, confirmation=plan.confirmation(), security_backend=SecureBackend())
+    readback = read_legacy_bridge_migration(target, migration_id=plan.migration_id)
+    value = readback.to_dict()
+    assert value["receipt"] == receipt
+    assert value["exact_snapshot_verified"] is True
+    assert value["active_bridge_view_modified"] is False
+    assert value["profile_admitted"] is False
+    assert value["activation_authorized"] is False
 
 
 def test_secure_dacl_drift_after_plan_fails_before_snapshot_write(tmp_path: Path) -> None:

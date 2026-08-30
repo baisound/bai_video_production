@@ -58,6 +58,7 @@ from ai_video_production.local_comfy_generation_port import LocalComfyTextToVide
 from ai_video_production.creative_generation_execution_application import LocalGenerationRuntimeReadiness
 from ai_video_production.task036_native_image_vertical_cli import _load_config_scope
 from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
+from ai_video_production.task036_ollama_runtime import OllamaRuntimeSnapshot
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
 
@@ -1153,12 +1154,21 @@ def test_trusted_launch_bootstraps_missing_local_connection_settings_without_pro
     project = Path(raw["project"]["project_root"])
     settings_path = project / "ai-connection-settings.json"
     assert not settings_path.exists()
+    class OllamaRuntimeStub:
+        def probe(self):
+            return OllamaRuntimeSnapshot("READY", ("qwen3:8b",), False, None, "Ollamaは利用可能です。")
+
+        def ensure_started(self):
+            return self.probe()
+
+    ollama_runtime = OllamaRuntimeStub()
     launch = build_trusted_launch(
         Task036LaunchConfiguration.load(path),
         native_dialog=Task036NativeDialogService(DialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
         local_planning_inventory_provider=lambda: ("qwen3:8b",),
+        ollama_runtime=ollama_runtime,
     )
     snapshot = launch.bridge.connection_settings_snapshot({})
     assert settings_path.is_file()
@@ -1177,6 +1187,10 @@ def test_trusted_launch_bootstraps_missing_local_connection_settings_without_pro
     selector = next(row for row in model_selection["selectors"] if row["page_id"] == "PLANNING")
     assert selector["available"] is True
     assert [(row["model_id"], row["local"], row["paid"]) for row in selector["candidates"]] == [("qwen3:8b", True, False)]
+    runtime_snapshot = launch.bridge.ollama_runtime_snapshot({})
+    assert runtime_snapshot["state"] == "READY"
+    assert runtime_snapshot["model_ids"] == ["qwen3:8b"]
+    assert runtime_snapshot["provider_execution_started"] is False
     modes = {row["workload"]: row["selection_mode"] for row in snapshot["workloads"]}
     preferred = {row["workload"]: None for row in snapshot["workloads"]}
     preferred["PLANNING"] = "ollama-planning-1"
@@ -1190,6 +1204,7 @@ def test_trusted_launch_bootstraps_missing_local_connection_settings_without_pro
         native_dialog=Task036NativeDialogService(DialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        ollama_runtime=ollama_runtime,
     )
     restored = reloaded.bridge.connection_settings_snapshot({})
     assert next(row for row in restored["workloads"] if row["workload"] == "PLANNING")["preferred_route_id"] == "ollama-planning-1"

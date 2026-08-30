@@ -1474,6 +1474,7 @@ def build_trusted_launch(
             audio_placement_application=audio_placement_application,
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
+            ollama_runtime_snapshot_provider=lambda: managed_ollama_runtime.probe().as_dict(),
             owner_signing_key_import=owner_signing_key_import,
             final_review_application=final_review_application,
             final_review_external_gate_provider=final_review_external_gate_provider,

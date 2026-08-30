@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/desktop-install-layout.schema.json",
+  "title": "BAI Video Production Desktop Install Layout",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "product_id",
+    "install_instance_id",
+    "install_scope",
+    "binary_root",
+    "binary_root_identity_sha256",
+    "data_root",
+    "task063_bridge_relative_path",
+    "task063_descriptor_sha256",
+    "writable_leaves",
+    "acl_policy",
+    "acl_principal_sids",
+    "layout_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "message_type": {"const": "BvpDesktopInstallLayout"},
+    "product_id": {"const": "BAI_VIDEO_PRODUCTION"},
+    "install_instance_id": {"type": "string", "pattern": "^bvp-install-[0-9a-f]{32}$"},
+    "install_scope": {"enum": ["PER_USER", "SYSTEM_WIDE"]},
+    "binary_root": {"type": "string", "minLength": 3, "maxLength": 32767},
+    "binary_root_identity_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "data_root": {"type": "string", "minLength": 3, "maxLength": 32767},
+    "task063_bridge_relative_path": {"const": "data/montage-learning-bridge"},
+    "task063_descriptor_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "writable_leaves": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["settings", "logs", "runtime_cache"],
+      "properties": {
+        "settings": {"const": "settings"},
+        "logs": {"const": "logs"},
+        "runtime_cache": {"const": "runtime-cache"}
+      }
+    },
+    "acl_policy": {"const": "INSTALLER_PROTECTED"},
+    "acl_principal_sids": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^S-1-(?:[0-9]+-)+[0-9]+$"}
+    },
+    "layout_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

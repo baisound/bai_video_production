@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- TASK-063のWindowsインストーラー読戻し先を、選択したインストールルート内の固定Bridge配下へ限定しました。範囲外、symlink／reparse／junction、hardlink、危険なancestor、名前が似ただけのsibling-prefix、partial writeを拒否し、安全なatomic writeと書込み後のexact read-backで既存ファイルを保護します。
 - TASK-063として、モンタージュ学習Bridgeのactive固定ProgramData座標を廃止し、インストーラーで選択したBAI Video Productionルート配下の`data/montage-learning-bridge`へ限定して導出するinstance descriptor／read-only discovery receiptを追加しました。統合Desktop EXE用の選択可能なWindows installerを新設し、custom D-drive install、installed EXEによるprovision/read-back、TASK-058/SKILL E2Eを実行済みです。connector default／activation authorityはfalseのままで、legacy移行・削除、Preference promotion、Timeline/Resolve、Release／Deploy／Production authorityは生成しません。
 
 ## [0.23.0] - 2026-08-30

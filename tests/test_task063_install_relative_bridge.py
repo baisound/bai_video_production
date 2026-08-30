@@ -8,18 +8,52 @@ from pathlib import Path
 import pytest
 
 import ai_video_production.montage_learning_installation as installation
+from ai_video_production.montage_learning_installer_cli import main as installer_main
 from ai_video_production.montage_learning_installation import (
     BRIDGE_RELATIVE_PATH,
     INSTALLER_READBACK_FILENAME,
     MontageLearningInstallationError,
     discover_installed_bridge,
+    provision_and_write_installer_readback,
     provision_installed_bridge,
     write_installer_readback,
 )
-from ai_video_production.task036_packaged_entry import packaged_main
 
 
 MANIFEST_SHA = "sha256:" + "a" * 64
+
+
+def test_installer_cli_provision_readback_is_one_bounded_operation(
+    tmp_path: Path,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+
+    assert installer_main(
+        [
+            "provision-readback",
+            "--install-root",
+            str(install_root),
+            "--installer-manifest-sha256",
+            MANIFEST_SHA,
+        ]
+    ) == 0
+    first = discover_installed_bridge(install_root)
+    target = first.layout.migration / INSTALLER_READBACK_FILENAME
+    assert json.loads(target.read_text(encoding="utf-8")) == first.public_receipt()
+
+    assert installer_main(
+        [
+            "provision-readback",
+            "--install-root",
+            str(install_root),
+            "--installer-manifest-sha256",
+            "sha256:" + "b" * 64,
+        ]
+    ) == 0
+    second = discover_installed_bridge(install_root)
+    assert second.descriptor.descriptor_sha256 != first.descriptor.descriptor_sha256
+    assert json.loads(target.read_text(encoding="utf-8")) == second.public_receipt()
 
 
 def test_custom_unicode_install_root_provisions_exact_relative_tree(tmp_path: Path) -> None:
@@ -77,6 +111,8 @@ def test_repair_preserves_instance_and_readback_detects_descriptor_tamper(
 
 
 def test_packaged_private_installer_command_bypasses_desktop_probe(tmp_path: Path) -> None:
+    from ai_video_production.task036_packaged_entry import packaged_main
+
     install_root = tmp_path / "installed"
     install_root.mkdir()
 
@@ -102,6 +138,8 @@ def test_packaged_private_installer_command_bypasses_desktop_probe(tmp_path: Pat
 def test_discover_command_writes_only_the_fixed_installer_readback(
     tmp_path: Path,
 ) -> None:
+    from ai_video_production.task036_packaged_entry import packaged_main
+
     install_root = tmp_path / "installed"
     install_root.mkdir()
     discovery = provision_installed_bridge(
@@ -217,19 +255,24 @@ def test_installer_readback_replace_failure_preserves_existing_bytes(
     )
     target = write_installer_readback(first)
     original = target.read_bytes()
-    second = provision_installed_bridge(
-        install_root,
-        installer_manifest_sha256="sha256:" + "b" * 64,
-        now="2026-08-30T01:00:00Z",
-    )
+    descriptor = first.layout.root / "bridge-instance.json"
+    original_descriptor = descriptor.read_bytes()
+    real_replace = installation.os.replace
 
     def fail_replace(source: object, destination: object) -> None:
-        raise OSError("injected replace failure")
+        if Path(destination) == target:
+            raise OSError("injected replace failure")
+        real_replace(source, destination)
 
     monkeypatch.setattr(installation.os, "replace", fail_replace)
     with pytest.raises(OSError, match="injected replace failure"):
-        write_installer_readback(second)
+        provision_and_write_installer_readback(
+            install_root,
+            installer_manifest_sha256="sha256:" + "b" * 64,
+            now="2026-08-30T01:00:00Z",
+    )
     assert target.read_bytes() == original
+    assert descriptor.read_bytes() == original_descriptor
     assert not list(target.parent.glob(f".{target.name}.*.tmp"))
 
 
@@ -311,16 +354,170 @@ def test_installer_readback_safe_update_is_exact_and_single_link(
         now="2026-08-30T00:00:00Z",
     )
     target = write_installer_readback(first)
-    second = provision_installed_bridge(
+    second, updated_target = provision_and_write_installer_readback(
         install_root,
         installer_manifest_sha256="sha256:" + "b" * 64,
         now="2026-08-30T01:00:00Z",
     )
 
-    assert write_installer_readback(second) == target
+    assert updated_target == target
     assert json.loads(target.read_text(encoding="utf-8")) == second.public_receipt()
     assert target.stat(follow_symlinks=False).st_nlink == 1
     assert not list(target.parent.glob(f".{target.name}.*.tmp"))
+
+
+def test_installer_readback_rejects_upper_ancestor_identity_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    discovery = provision_installed_bridge(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+    )
+    target = discovery.layout.migration / INSTALLER_READBACK_FILENAME
+    real_identity = installation._safe_directory_identity
+    drift = False
+
+    def identity(path: Path) -> tuple[int, int, str]:
+        result = real_identity(path)
+        if drift and path == tmp_path.parent:
+            return result[0], result[1] + 1, result[2]
+        return result
+
+    def inject(phase: str, path: Path) -> None:
+        nonlocal drift
+        if phase == "after_temp_fsync":
+            drift = True
+
+    monkeypatch.setattr(installation, "_safe_directory_identity", identity)
+    with pytest.raises(MontageLearningInstallationError, match="ancestor identity"):
+        write_installer_readback(discovery, failure_injector=inject)
+    assert not target.exists()
+
+
+def test_installer_readback_rejects_forged_predecessor_descriptor(
+    tmp_path: Path,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    discovery = provision_installed_bridge(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+    )
+    target = write_installer_readback(discovery)
+    descriptor = discovery.layout.root / "bridge-instance.json"
+    original_descriptor = descriptor.read_bytes()
+    forged = json.loads(target.read_text(encoding="utf-8"))
+    forged["descriptor_sha256"] = "sha256:" + "c" * 64
+    target.write_text(json.dumps(forged), encoding="utf-8")
+    original = target.read_bytes()
+
+    with pytest.raises(MontageLearningInstallationError, match="transition mismatch"):
+        provision_and_write_installer_readback(
+            install_root,
+            installer_manifest_sha256="sha256:" + "b" * 64,
+        )
+    assert target.read_bytes() == original
+    assert descriptor.read_bytes() == original_descriptor
+
+
+def test_installer_readback_rejects_update_without_predecessor_receipt(
+    tmp_path: Path,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    discovery = provision_installed_bridge(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+    )
+    descriptor = discovery.layout.root / "bridge-instance.json"
+    original = descriptor.read_bytes()
+
+    with pytest.raises(MontageLearningInstallationError):
+        provision_and_write_installer_readback(
+            install_root,
+            installer_manifest_sha256="sha256:" + "b" * 64,
+        )
+    assert descriptor.read_bytes() == original
+
+
+def test_installer_readback_new_target_unlink_failure_rolls_back(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    discovery = provision_installed_bridge(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+    )
+    target = discovery.layout.migration / INSTALLER_READBACK_FILENAME
+    real_unlink = Path.unlink
+    injected = False
+
+    def fail_once(path: Path, *args: object, **kwargs: object) -> None:
+        nonlocal injected
+        if path.suffix == ".tmp" and not injected:
+            injected = True
+            raise OSError("injected temporary unlink failure")
+        real_unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "unlink", fail_once)
+    with pytest.raises(MontageLearningInstallationError, match="cleanup failed"):
+        write_installer_readback(discovery)
+    assert not target.exists()
+    assert not list(target.parent.glob(f".{target.name}.*.tmp"))
+
+
+def test_unified_update_rolls_back_descriptor_and_receipt_on_readback_failure(
+    tmp_path: Path,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    first, target = provision_and_write_installer_readback(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+        now="2026-08-30T00:00:00Z",
+    )
+    descriptor_path = first.layout.root / "bridge-instance.json"
+    original_descriptor = descriptor_path.read_bytes()
+    original_receipt = target.read_bytes()
+
+    def corrupt(phase: str, path: Path) -> None:
+        if phase == "before_readback":
+            path.write_bytes(b"corrupt\n")
+
+    with pytest.raises(MontageLearningInstallationError):
+        provision_and_write_installer_readback(
+            install_root,
+            installer_manifest_sha256="sha256:" + "b" * 64,
+            now="2026-08-30T01:00:00Z",
+            failure_injector=corrupt,
+        )
+    assert descriptor_path.read_bytes() == original_descriptor
+    assert target.read_bytes() == original_receipt
+    assert discover_installed_bridge(install_root) == first
+
+
+def test_unified_fresh_failure_removes_unpublished_descriptor_and_receipt(
+    tmp_path: Path,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+
+    def fail(phase: str, path: Path) -> None:
+        if phase == "after_temp_fsync":
+            raise OSError("injected publication failure")
+
+    with pytest.raises(OSError, match="injected publication failure"):
+        provision_and_write_installer_readback(
+            install_root,
+            installer_manifest_sha256=MANIFEST_SHA,
+            failure_injector=fail,
+        )
+    layout = installation.BridgeLayout.production(install_root)
+    assert not (layout.root / "bridge-instance.json").exists()
+    assert not (layout.migration / INSTALLER_READBACK_FILENAME).exists()
 
 
 def test_active_source_has_no_programdata_bridge_literal() -> None:

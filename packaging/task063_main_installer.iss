@@ -92,6 +92,7 @@ type
 
 var
   PreparedInstallRoot: String;
+  PreparedExistingAncestor: String;
   PreparedAncestorSnapshot: String;
 
 function GetFileAttributesW(FileName: String): LongWord;
@@ -172,6 +173,40 @@ begin
   Result := True;
 end;
 
+function FindDeepestExistingAncestor(const Path: String;
+  var ExistingAncestor: String): Boolean;
+var
+  Current: String;
+  Parent: String;
+begin
+  Result := False;
+  Current := RemoveBackslashUnlessRoot(ExpandFileName(Path));
+  while Current <> '' do
+  begin
+    if FileExists(Current) and not DirExists(Current) then
+      exit;
+    if DirExists(Current) then
+    begin
+      ExistingAncestor := Current;
+      Result := True;
+      exit;
+    end;
+    Parent := RemoveBackslashUnlessRoot(ExtractFileDir(Current));
+    if (Parent = '') or (CompareText(Parent, Current) = 0) then
+      exit;
+    Current := Parent;
+  end;
+end;
+
+function PreparedAncestorsStillMatch(): Boolean;
+var
+  CurrentSnapshot: String;
+begin
+  Result := BuildExistingAncestorSnapshot(
+    PreparedExistingAncestor, CurrentSnapshot) and
+    (CurrentSnapshot = PreparedAncestorSnapshot);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   CurrentSnapshot: String;
@@ -179,7 +214,10 @@ begin
   Result := '';
   PreparedInstallRoot := RemoveBackslashUnlessRoot(
     ExpandFileName(ExpandConstant('{app}')));
-  if not BuildExistingAncestorSnapshot(PreparedInstallRoot, CurrentSnapshot) then
+  if (not FindDeepestExistingAncestor(
+      PreparedInstallRoot, PreparedExistingAncestor)) or
+    (not BuildExistingAncestorSnapshot(
+      PreparedExistingAncestor, CurrentSnapshot)) then
     Result := CustomMessage('ReparseUnsupported');
   if Result = '' then
     PreparedAncestorSnapshot := CurrentSnapshot;
@@ -191,20 +229,21 @@ var
   Params: String;
   ReceiptPath: String;
   CurrentRoot: String;
-  CurrentSnapshot: String;
 begin
   if CurStep = ssInstall then
   begin
     CurrentRoot := RemoveBackslashUnlessRoot(
       ExpandFileName(ExpandConstant('{app}')));
     if (CompareText(CurrentRoot, PreparedInstallRoot) <> 0) or
-      (not BuildExistingAncestorSnapshot(CurrentRoot, CurrentSnapshot)) or
-      (CurrentSnapshot <> PreparedAncestorSnapshot) then
+      (not PreparedAncestorsStillMatch()) then
       RaiseException(CustomMessage('ReparseUnsupported'));
   end
   else if CurStep = ssPostInstall then
   begin
-    Params := '--bvp-installer-bridge provision --install-root "' +
+    if not PreparedAncestorsStillMatch() then
+      RaiseException(CustomMessage('ReparseUnsupported'));
+
+    Params := '--bvp-installer-bridge provision-readback --install-root "' +
       ExpandConstant('{app}') + '" --installer-manifest-sha256 "sha256:{#PayloadTreeSha}"';
     if (not Exec(ExpandConstant('{app}\BAI Video Production.exe'), Params,
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode)) or
@@ -213,11 +252,8 @@ begin
 
     ReceiptPath := ExpandConstant(
       '{app}\data\montage-learning-bridge\migration\installer-readback.json');
-    Params := '--bvp-installer-bridge discover --install-root "' +
-      ExpandConstant('{app}') + '"';
-    if (not Exec(ExpandConstant('{app}\BAI Video Production.exe'), Params,
-      ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode)) or
-      (ResultCode <> 0) or (not FileExists(ReceiptPath)) then
+    if (not FileExists(ReceiptPath)) or
+      (not PreparedAncestorsStillMatch()) then
       RaiseException(CustomMessage('BridgeProvisionFailed'));
     Log('TASK-063 installer-relative bridge provision/read-back: PASS');
   end;

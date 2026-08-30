@@ -24,8 +24,8 @@ def test_main_installer_allows_selected_destination_and_uses_relative_bridge() -
     assert "DefaultDirName={localappdata}\\Programs\\BAI Video Production" in text
     assert "{app}\\data\\montage-learning-bridge" in text
     assert "--install-root \"" in text
-    assert "--bvp-installer-bridge provision" in text
-    assert "--bvp-installer-bridge discover" in text
+    assert "--bvp-installer-bridge provision-readback" in text
+    assert "--bvp-installer-bridge discover" not in text
     assert "--receipt-output" not in text
     assert r"C:\ProgramData\BAI Video Production\montage-learning-bridge" not in text
 
@@ -37,6 +37,9 @@ def test_main_installer_is_per_user_reparse_checked_and_preserves_data() -> None
     assert "BuildExistingAncestorSnapshot" in text
     assert "GetFileInformationByHandle" in text
     assert "CurStep = ssInstall" in text
+    assert "CurStep = ssPostInstall" in text
+    assert "FindDeepestExistingAncestor" in text
+    assert text.count("PreparedAncestorsStillMatch()") >= 3
     assert "PreparedAncestorSnapshot" in text
     assert "BridgeProvisionFailed" in text
     assert "[UninstallDelete]" not in text

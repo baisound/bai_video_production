@@ -18,7 +18,7 @@ import tempfile
 from typing import Callable
 import uuid
 
-from .atomic import AtomicJsonWriter
+from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .montage_learning_file_bridge import (
     BridgeLayout,
     MontageLearningFileBridgeError,
@@ -162,6 +162,133 @@ def discover_installed_bridge(install_root: str | Path) -> InstalledBridgeDiscov
     )
 
 
+def provision_and_write_installer_readback(
+    install_root: str | Path,
+    *,
+    installer_manifest_sha256: str,
+    now: str | None = None,
+    failure_injector: ReceiptFailureInjector | None = None,
+) -> tuple[InstalledBridgeDiscovery, Path]:
+    """Provision and publish while binding an update to its exact predecessor."""
+
+    root = Path(install_root)
+    layout = BridgeLayout.production(root)
+    descriptor_path = layout.root / DESCRIPTOR_FILENAME
+    if not (descriptor_path.exists() or descriptor_path.is_symlink()):
+        discovery = provision_installed_bridge(
+            root,
+            installer_manifest_sha256=installer_manifest_sha256,
+            now=now,
+        )
+        try:
+            return discovery, write_installer_readback(
+                discovery,
+                failure_injector=failure_injector,
+            )
+        except Exception:
+            _rollback_fresh_installer_publication(discovery)
+            raise
+
+    previous = discover_installed_bridge(root)
+    target, _ = _installer_readback_coordinates(previous)
+    try:
+        with exclusive_file_update_lock(target):
+            previous = _capture_discovery_source_binding(previous)
+            previous_descriptor_bytes = _read_stable_regular_bytes(descriptor_path)
+            existing_bytes = _read_stable_regular_bytes(target)
+            _validate_existing_installer_readback(
+                existing_bytes,
+                previous,
+                allowed_descriptor_sha256={previous.descriptor.descriptor_sha256},
+            )
+            discovery = provision_installed_bridge(
+                root,
+                installer_manifest_sha256=installer_manifest_sha256,
+                now=now,
+            )
+            try:
+                return discovery, _write_installer_readback_locked(
+                    discovery,
+                    allowed_existing_descriptor_sha256={
+                        previous.descriptor.descriptor_sha256,
+                        discovery.descriptor.descriptor_sha256,
+                    },
+                    failure_injector=failure_injector,
+                )
+            except Exception:
+                _rollback_installer_update(
+                    previous,
+                    descriptor_bytes=previous_descriptor_bytes,
+                    receipt_bytes=existing_bytes,
+                )
+                raise
+    except ValueError as exc:
+        if isinstance(exc, MontageLearningInstallationError):
+            raise
+        raise MontageLearningInstallationError(
+            "installer readback update lock failed"
+        ) from exc
+
+
+def _rollback_fresh_installer_publication(
+    discovery: InstalledBridgeDiscovery,
+) -> None:
+    target, _ = _installer_readback_coordinates(discovery)
+    descriptor_path = discovery.layout.root / DESCRIPTOR_FILENAME
+    try:
+        if _safe_receipt_identity(target) is not None:
+            target.unlink()
+        current = _capture_discovery_source_binding(discovery)
+        if current != discovery:
+            raise MontageLearningInstallationError(
+                "fresh installer discovery changed before rollback"
+            )
+        descriptor_path.unlink()
+        _directory_fsync(target.parent)
+        _directory_fsync(descriptor_path.parent)
+    except Exception as rollback_exc:
+        raise MontageLearningInstallationError(
+            "fresh installer publication rollback requires recovery"
+        ) from rollback_exc
+
+
+def _rollback_installer_update(
+    previous: InstalledBridgeDiscovery,
+    *,
+    descriptor_bytes: bytes,
+    receipt_bytes: bytes,
+) -> None:
+    target, _ = _installer_readback_coordinates(previous)
+    descriptor_path = previous.layout.root / DESCRIPTOR_FILENAME
+    try:
+        current_receipt = (
+            None
+            if _safe_receipt_identity(target) is None
+            else _read_stable_regular_bytes(target)
+        )
+        if current_receipt != receipt_bytes:
+            receipt_document = json.loads(receipt_bytes.decode("utf-8"))
+            AtomicJsonWriter.write(target, receipt_document)
+        descriptor_document = json.loads(descriptor_bytes.decode("utf-8"))
+        _validate_descriptor_document(descriptor_document)
+        AtomicJsonWriter.write(
+            descriptor_path,
+            descriptor_document,
+            validator=_validate_descriptor_document,
+        )
+        _capture_discovery_source_binding(previous)
+        restored_receipt = _read_stable_regular_bytes(target)
+        _validate_existing_installer_readback(
+            restored_receipt,
+            previous,
+            allowed_descriptor_sha256={previous.descriptor.descriptor_sha256},
+        )
+    except Exception as rollback_exc:
+        raise MontageLearningInstallationError(
+            "installer update rollback requires recovery"
+        ) from rollback_exc
+
+
 def write_installer_readback(
     discovery: InstalledBridgeDiscovery,
     *,
@@ -169,13 +296,42 @@ def write_installer_readback(
 ) -> Path:
     """Atomically publish the discovery receipt at its sole installer-owned path."""
 
+    target, _ = _installer_readback_coordinates(discovery)
+    try:
+        with exclusive_file_update_lock(target):
+            return _write_installer_readback_locked(
+                discovery,
+                allowed_existing_descriptor_sha256={
+                    discovery.descriptor.descriptor_sha256
+                },
+                failure_injector=failure_injector,
+            )
+    except ValueError as exc:
+        if isinstance(exc, MontageLearningInstallationError):
+            raise
+        raise MontageLearningInstallationError(
+            "installer readback update lock failed"
+        ) from exc
+
+
+def _write_installer_readback_locked(
+    discovery: InstalledBridgeDiscovery,
+    *,
+    allowed_existing_descriptor_sha256: set[str],
+    failure_injector: ReceiptFailureInjector | None,
+) -> Path:
+    discovery = _capture_discovery_source_binding(discovery)
     target, directories = _installer_readback_coordinates(discovery)
     ancestor_identities = tuple(_safe_directory_identity(path) for path in directories)
     existing_identity = _safe_receipt_identity(target)
     existing_digest: bytes | None = None
     if existing_identity is not None:
         existing_bytes = _read_stable_regular_bytes(target)
-        _validate_existing_installer_readback(existing_bytes, discovery)
+        _validate_existing_installer_readback(
+            existing_bytes,
+            discovery,
+            allowed_descriptor_sha256=allowed_existing_descriptor_sha256,
+        )
         existing_digest = sha256(existing_bytes).digest()
     data = canonical_json_bytes(discovery.public_receipt()) + b"\n"
     if len(data) > _MAX_INSTALLER_READBACK_BYTES:
@@ -202,6 +358,7 @@ def write_installer_readback(
         _call_receipt_failure(failure_injector, "after_temp_fsync", temporary)
 
         _call_receipt_failure(failure_injector, "before_replace", target)
+        discovery = _capture_discovery_source_binding(discovery)
         _verify_directory_identities(directories, ancestor_identities)
         if _safe_receipt_identity(target) != existing_identity:
             raise MontageLearningInstallationError(
@@ -209,7 +366,11 @@ def write_installer_readback(
             )
         if existing_identity is not None:
             current_bytes = _read_stable_regular_bytes(target)
-            _validate_existing_installer_readback(current_bytes, discovery)
+            _validate_existing_installer_readback(
+                current_bytes,
+                discovery,
+                allowed_descriptor_sha256=allowed_existing_descriptor_sha256,
+            )
             if sha256(current_bytes).digest() != existing_digest:
                 raise MontageLearningInstallationError(
                     "installer readback target bytes changed"
@@ -221,7 +382,18 @@ def write_installer_readback(
                 raise MontageLearningInstallationError(
                     "installer readback target appeared concurrently"
                 ) from exc
-            temporary.unlink()
+            try:
+                temporary.unlink()
+            except OSError as exc:
+                try:
+                    target.unlink()
+                except OSError as rollback_exc:
+                    raise MontageLearningInstallationError(
+                        "installer readback new-target cleanup requires recovery"
+                    ) from rollback_exc
+                raise MontageLearningInstallationError(
+                    "installer readback new-target cleanup failed"
+                ) from exc
         else:
             os.replace(temporary, target)
         replaced = True
@@ -235,6 +407,7 @@ def write_installer_readback(
             raise MontageLearningInstallationError(
                 "installer readback byte verification failed"
             )
+        _capture_discovery_source_binding(discovery)
         return target
     finally:
         if not replaced:
@@ -246,7 +419,7 @@ def write_installer_readback(
 
 def _installer_readback_coordinates(
     discovery: InstalledBridgeDiscovery,
-) -> tuple[Path, tuple[Path, Path, Path, Path]]:
+) -> tuple[Path, tuple[Path, ...]]:
     install_root = discovery.install_root
     if not install_root.is_absolute():
         raise MontageLearningInstallationError("install root must be absolute")
@@ -266,7 +439,40 @@ def _installer_readback_coordinates(
     target = migration_root / INSTALLER_READBACK_FILENAME
     if target.parent != discovery.layout.migration:
         raise MontageLearningInstallationError("installer readback target escaped")
-    return target, (install_root, data_root, bridge_root, migration_root)
+    return target, _complete_directory_chain(migration_root)
+
+
+def _complete_directory_chain(path: Path) -> tuple[Path, ...]:
+    if not path.is_absolute():
+        raise MontageLearningInstallationError(
+            "installer readback ancestor chain must be absolute"
+        )
+    return tuple(reversed(path.parents)) + (path,)
+
+
+def _capture_discovery_source_binding(
+    expected: InstalledBridgeDiscovery,
+) -> InstalledBridgeDiscovery:
+    descriptor_path = expected.layout.root / DESCRIPTOR_FILENAME
+    owner_path = expected.layout.owner_manifest
+    before = (
+        _safe_receipt_identity(descriptor_path),
+        _safe_receipt_identity(owner_path),
+    )
+    if None in before:
+        raise MontageLearningInstallationError(
+            "installer discovery source is unavailable"
+        )
+    current = discover_installed_bridge(expected.install_root)
+    after = (
+        _safe_receipt_identity(descriptor_path),
+        _safe_receipt_identity(owner_path),
+    )
+    if before != after or current != expected:
+        raise MontageLearningInstallationError(
+            "installer discovery source identity changed"
+        )
+    return current
 
 
 def _safe_directory_identity(path: Path) -> tuple[int, int, str]:
@@ -302,7 +508,7 @@ def _safe_directory_identity(path: Path) -> tuple[int, int, str]:
 
 
 def _verify_directory_identities(
-    paths: tuple[Path, Path, Path, Path],
+    paths: tuple[Path, ...],
     expected: tuple[tuple[int, int, str], ...],
 ) -> None:
     current = tuple(_safe_directory_identity(path) for path in paths)
@@ -429,6 +635,8 @@ def _regular_identity(metadata: os.stat_result) -> tuple[int, int, int, int, int
 def _validate_existing_installer_readback(
     data: bytes,
     discovery: InstalledBridgeDiscovery,
+    *,
+    allowed_descriptor_sha256: set[str],
 ) -> None:
     try:
         value = json.loads(
@@ -460,7 +668,13 @@ def _validate_existing_installer_readback(
             raise MontageLearningInstallationError(
                 "existing installer readback ownership mismatch"
             )
-    _require_sha(value["descriptor_sha256"], "descriptor_sha256")
+    descriptor_sha256 = _require_sha(
+        value["descriptor_sha256"], "descriptor_sha256"
+    )
+    if descriptor_sha256 not in allowed_descriptor_sha256:
+        raise MontageLearningInstallationError(
+            "existing installer readback descriptor transition mismatch"
+        )
 
 
 def _reject_duplicate_receipt_keys(
@@ -624,6 +838,7 @@ __all__ = [
     "InstalledBridgeDiscovery",
     "MontageLearningInstallationError",
     "discover_installed_bridge",
+    "provision_and_write_installer_readback",
     "provision_installed_bridge",
     "write_installer_readback",
 ]

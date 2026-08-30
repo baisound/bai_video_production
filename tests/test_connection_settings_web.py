@@ -16,6 +16,7 @@ from ai_video_production.connection_settings_store import ConnectionSettingsEdit
 from ai_video_production.connection_settings_web import (
     ConnectionSettingsWebService, launch_server,
 )
+from ai_video_production.local_audio_model_inventory import compile_local_audio_model_inventory
 
 
 def profile() -> AiConnectionProfile:
@@ -146,6 +147,8 @@ def test_screen_is_local_bilingual_and_never_exposes_credential_reference(live_s
     assert "AI Connection 設定" in html
     assert f"BAI Video Production v{ai_video_production.__version__} —" in html
     assert "Saving here never starts paid APIs" in html
+    assert "local-audio-inventory" in html
+    assert "無料ローカル音声・音楽Model" in html
     form = _get_json(url + "api/form")
     serialized = json.dumps(form)
     assert "credential://" not in serialized
@@ -229,3 +232,40 @@ def test_server_rejects_untrusted_host_header(live_screen) -> None:
     response = connection.getresponse()
     assert response.status == 421
     connection.close()
+def test_empty_audio_inventory_keeps_local_audio_route_unavailable(tmp_path: Path) -> None:
+    source = profile()
+    configured = AiConnectionProfile(
+        source.profile_id,
+        source.profile_version,
+        source.default_mode,
+        (*source.routes, ModelRoute(
+            "local-sfx", AiWorkload.AUDIO, ProviderFamily.LOCAL_OPEN_SOURCE,
+            "local-audio", "local-sfx-model", CostClass.LOCAL_FREE_AI,
+            capabilities=("SFX",),
+        )),
+        source.workload_modes,
+    )
+    raw = tmp_path / "profile.json"
+    raw.write_text(json.dumps(configured.to_dict()), encoding="utf-8")
+    inventory = compile_local_audio_model_inventory(())
+    service = ConnectionSettingsWebService.from_paths(
+        tmp_path / "settings.json", raw, local_audio_inventory=inventory
+    )
+    form = service.form()
+    audio = next(item for item in form["workloads"] if item["workload"] == "AUDIO")
+    route = next(item for item in audio["routes"] if item["route_id"] == "local-sfx")
+    assert route["selectable"] is False
+    assert route["disabled_reasons"] == ["MODEL_NOT_IN_CURRENT_INVENTORY"]
+    assert service.availability.available_route_ids == frozenset({"openai", "local"})
+    assert form["local_audio_inventory"]["candidate_count"] == 0
+    assert form["local_audio_inventory"]["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+    assert "runtime_instance_id" not in json.dumps(form)
+    assert form["save_does_not_authorize_generation"] is True
+    modes = {item["workload"]: item["selection_mode"] for item in form["workloads"]}
+    with pytest.raises(ai_video_production.ProductError) as unavailable:
+        service.update({
+            "revision": form["revision"],
+            "workload_modes": modes,
+            "preferred_route_ids": {"AUDIO": "local-sfx"},
+        })
+    assert unavailable.value.code == "ERR_LOCAL_AUDIO_MODEL_UNAVAILABLE"

@@ -10,8 +10,10 @@
 
 Re-attest the production Windows bridge security boundary, migrate compatible
 legacy bridge evidence without automatic admission or deletion, consume the
-released TASK-058 readiness v2 contract, and support one explicit Human-bound
-activation/deactivation switch with crash-safe history.
+released TASK-058 public readiness v1 contract, and support one explicit
+Human-bound activation/deactivation switch with crash-safe history.  TASK-058's
+v2 readiness object is a package-private diagnostic, not a public schema or
+cross-process receipt.
 
 This Task does not create a second readiness composer, admit learning, generate
 or modify a Preference, change TASK-055, or set the repository default to true.
@@ -27,15 +29,18 @@ or modify a Preference, change TASK-055, or set the repository default to true.
 ## Atomic Units and dependency block
 
 1. `CA-A` — Windows bridge security attestation and migration plan/executor.
-2. `CA-B` — migration/source binding followed by exact TASK-058 readiness v2 validation.
+2. `CA-B` — migration/source binding followed by exact TASK-058 public v1
+   readiness validation; same-process v2 diagnostics may only be revalidated as
+   an implementation detail of the exact pinned TASK-058 package.
 3. `CA-C` — BVP-owned config plus explicit Human one-switch activation/deactivation.
 
 Order: TASK-058 canonical release plus TASK-060 `PP-C`, then
 `CA-A -> CA-B -> CA-C`.
 
-`TASK-061` is `DEPENDENCY_BLOCKED`: TASK-058 A and B+C are not yet canonically
-released and TASK-060 `PP-C` does not yet exist. Metadata allocation does not
-waive either dependency.
+TASK-058 v0.23.0 is released. `TASK-061` remains `DEPENDENCY_BLOCKED` because
+TASK-060 `PP-C` does not yet exist.  No dependency requires or assumes a public
+readiness v2 schema; metadata allocation does not waive the remaining PP-C
+dependency.
 
 ## Current authorization state
 

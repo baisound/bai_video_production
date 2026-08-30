@@ -27,12 +27,15 @@ SHA = "sha256:" + "a" * 64
 
 
 class SecureBackend:
+    def __init__(self, *, access_mask: int = 0x1F01FF) -> None:
+        self.access_mask = access_mask
+
     def inspect(self, _path: Path) -> BridgeSecurityDescriptor:
         return BridgeSecurityDescriptor(
             owner_sid="S-1-5-21-1",
             current_user_sid="S-1-5-21-1",
             dacl_present=True,
-            aces=(BridgeAce(0, 0, 0x1F01FF, "S-1-5-21-1"),),
+            aces=(BridgeAce(0, 0, self.access_mask, "S-1-5-21-1"),),
         )
 
 
@@ -129,6 +132,23 @@ def test_terminal_migration_can_be_reopened_as_sealed_exact_readback(tmp_path: P
     assert value["active_bridge_view_modified"] is False
     assert value["profile_admitted"] is False
     assert value["activation_authorized"] is False
+
+
+def test_secure_dacl_drift_after_plan_fails_before_snapshot_write(tmp_path: Path) -> None:
+    source, target = _fixture(tmp_path)
+    plan = plan_legacy_bridge_migration(
+        source,
+        target,
+        attestation_id="task061-dacl-drift",
+        security_backend=SecureBackend(),
+    )
+    with pytest.raises(MontageLearningBridgeMigrationError, match="security identity drifted"):
+        execute_legacy_bridge_migration(
+            plan,
+            confirmation=plan.confirmation(),
+            security_backend=SecureBackend(access_mask=0x1200A9),
+        )
+    assert not _snapshot(target, plan.migration_id).exists()
 
 
 def test_exact_confirmation_is_required_before_any_migration_write(tmp_path: Path) -> None:

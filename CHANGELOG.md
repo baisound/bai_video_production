@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-036 packaged entryにWindows OS管理のnamed mutexによるsingle-instance guardを追加し、二重起動を既存ウィンドウ確認の案内付きで安全に拒否します。stale file lockは作らず、正常終了時とShell例外時にhandleを解放します。実機GUI／packaged build、Release／Deploy／Productionは未確認・未開始です。
+
 - TASK-063のWindowsインストーラー読戻し先を、選択したインストールルート内の固定Bridge配下へ限定しました。範囲外、symlink／reparse／junction、hardlink、危険なancestor、名前が似ただけのsibling-prefix、partial writeを拒否し、安全なatomic writeと書込み後のexact read-backで既存ファイルを保護します。
 
 - TASK-061 CA-C adds a repository-default-disabled activation history with exact expiring one-shot Human evidence, CAS, append-only hash chaining, atomic deactivation, and crash recovery. Synthetic E2E cannot enable the connector, external SKILL config is untouched, and activation=true, learning, Timeline/Resolve, external effects, Release, Deploy, and Production remain unauthorized.

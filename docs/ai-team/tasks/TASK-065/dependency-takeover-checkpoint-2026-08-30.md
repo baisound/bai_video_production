@@ -60,3 +60,21 @@ PL-A must re-open each lane independently:
    insufficient.
 4. Any head drift, failed/pending check, stale instance, unknown issuer/version,
    multi-install ambiguity, missing receipt, or tamper remains disabled/effect0.
+
+## Installed SKILL config identity read-back
+
+The installed distribution copy was inspected read-only at
+`C:\Users\user\.codex\skills\bvp-montage-learning-adapter\config\bvp-learning-connector.json`.
+
+- SHA-256: `da41b71292fd2a9fa2070eba531e06fafc0e84f9bbc1d26c27b0af79c5e2db6c`
+- bytes: `406`; schema: `1.0.0`; regular non-link file
+- `enabled:false` (preserved; no activation authority)
+- `bridge_root` is the forbidden fixed
+  `C:\ProgramData\BAI Video Production\montage-learning-bridge`
+- `require_admission_receipt:false`
+- `legacy_behavior_when_unavailable:true`
+
+PL-A classification is `STALE_FIXED_ROOT_CONFIG / RECEIPT_NOT_REQUIRED /
+LEGACY_FALLBACK_PRESENT / DISABLED_EFFECT0`.  This config is not an admissible
+PL-B CAS predecessor until D0-D2 are canonical and installer discovery yields
+one exact opaque instance/relative coordinate.  No installed file was changed.

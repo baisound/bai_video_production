@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-060 PP-C adds a pinned, read-only production source for the exact promoted Preference envelope, with path/identity/hash currentness and reparse/hardlink/substitution rejection. It creates no transferable capability and grants no automatic promotion, connector activation, Timeline/Resolve write, external effect, Release, Deploy, or Production authority.
+
 - TASK-060 PP-B adds an encrypted, append-only promotion and rollback store with exact Human confirmation, CAS, cross-process locking, tamper detection, and durable read-back. Automatic promotion/rollback, connector activation, Timeline/Resolve writes, external configuration, Release, Deploy, and Production remain unauthorized.
 
 - TASK-060 PP-A adds a typed, self-hashed, advisory-only pure compiler that deterministically projects current TASK-019/TASK-029 Human decision history into montage Preference candidates. It grants no automatic learning/promotion, Timeline/Resolve, Provider, native, Release, Deploy, or Production authority.

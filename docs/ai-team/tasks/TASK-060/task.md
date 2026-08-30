@@ -56,8 +56,11 @@ The stale PR #430 implementation commit was replayed without its historical
 merge commit onto canonical remote main
 `160c9569673fbf65a28b0f95eeb44c5b0111584f`.  The fresh-main candidate retains
 the exact six-path scope and remains a Draft/noncanonical result; it does not
-create canonical PP-B or PP-C completion. PP-B Builder Evidence and exact scope
-are recorded in `pp-b-implementation-evidence-2026-08-30.md`.
+create canonical PP-B or PP-C completion. PP-B exact Builder validation is
+Windows focused `24 passed`, WSL2 focused `23 passed / 1 Windows-only skipped`,
+Windows TASK-019/029 direct regression `75 passed`, and WSL2 direct regression
+`72 passed / 3 Windows-only skipped`. Its five implementation/schema/test paths
+plus this existing task checkpoint are the exact candidate scope.
 
 ## Responsibility non-overlap
 

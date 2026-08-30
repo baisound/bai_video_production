@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/desktop-renderer-evidence.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "message_type", "product_id", "registry_revision", "renderers", "registry_sha256"],
+  "$defs": {
+    "digestOrNull": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}]},
+    "versionOrNull": {"oneOf": [{"type": "null"}, {"type": "string", "minLength": 1, "maxLength": 128}]},
+    "capabilityInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "runtime_version", "adapter_identity_sha256"],
+      "properties": {
+        "status": {"enum": ["PASS", "NOT_CONFIRMED", "NOT_APPLICABLE"]},
+        "runtime_version": {"$ref": "#/$defs/versionOrNull"},
+        "adapter_identity_sha256": {"$ref": "#/$defs/digestOrNull"}
+      },
+      "allOf": [{
+        "if": {"properties": {"status": {"const": "PASS"}}, "required": ["status"]},
+        "then": {"properties": {"runtime_version": {"type": "string", "minLength": 1}, "adapter_identity_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}}
+      }]
+    },
+    "rendererObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "process_identity_sha256", "window_identity_sha256", "adapter_identity_sha256", "core_webview2_version", "renderer_kind", "software_renderer", "observation_sha256"],
+      "properties": {
+        "status": {"enum": ["PASS", "NOT_CONFIRMED", "NOT_APPLICABLE"]},
+        "process_identity_sha256": {"$ref": "#/$defs/digestOrNull"},
+        "window_identity_sha256": {"$ref": "#/$defs/digestOrNull"},
+        "adapter_identity_sha256": {"$ref": "#/$defs/digestOrNull"},
+        "core_webview2_version": {"$ref": "#/$defs/versionOrNull"},
+        "renderer_kind": {"oneOf": [{"type": "null"}, {"enum": ["HARDWARE", "WARP", "SOFTWARE"]}]},
+        "software_renderer": {"type": ["boolean", "null"]},
+        "observation_sha256": {"$ref": "#/$defs/digestOrNull"}
+      },
+      "allOf": [{
+        "if": {"properties": {"status": {"const": "PASS"}}, "required": ["status"]},
+        "then": {
+          "properties": {
+            "process_identity_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "window_identity_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "adapter_identity_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+            "renderer_kind": {"const": "HARDWARE"},
+            "software_renderer": {"const": false},
+            "observation_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+          }
+        }
+      }]
+    }
+  },
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "message_type": {"const": "BvpDesktopRendererEvidenceRegistry"},
+    "product_id": {"const": "BAI_VIDEO_PRODUCTION"},
+    "registry_revision": {"const": 1},
+    "renderers": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["renderer_id", "frontend", "preference_applies", "hardware_acceleration_policy", "capability_inventory", "packaged_renderer_observation"],
+        "properties": {
+          "renderer_id": {"type": "string", "minLength": 3, "maxLength": 96},
+          "frontend": {"enum": ["WEBVIEW2", "TK", "WINFORMS"]},
+          "preference_applies": {"const": false},
+          "hardware_acceleration_policy": {"enum": ["ENABLED_WHEN_SUPPORTED", "NO_GPU_RENDERING_CLAIM", "INDEPENDENT_EVIDENCE_REQUIRED"]},
+          "capability_inventory": {"$ref": "#/$defs/capabilityInventory"},
+          "packaged_renderer_observation": {"$ref": "#/$defs/rendererObservation"}
+        },
+        "allOf": [{
+          "if": {"properties": {"frontend": {"const": "WEBVIEW2"}, "packaged_renderer_observation": {"properties": {"status": {"const": "PASS"}}}}},
+          "then": {"properties": {"packaged_renderer_observation": {"properties": {"core_webview2_version": {"type": "string", "minLength": 1}}}}}
+        }]
+      }
+    },
+    "registry_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

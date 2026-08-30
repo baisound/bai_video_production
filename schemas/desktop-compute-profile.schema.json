@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/desktop-compute-profile.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "message_type", "product_id", "install_instance_id", "revision", "selected_preference", "workload_routes", "updated_at", "document_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "message_type": {"const": "BvpDesktopComputeProfile"},
+    "product_id": {"const": "BAI_VIDEO_PRODUCTION"},
+    "install_instance_id": {"type": "string", "pattern": "^bvp-install-[0-9a-f]{32}$"},
+    "revision": {"type": "integer", "minimum": 1},
+    "selected_preference": {"enum": ["AUTO_GPU_FIRST", "GPU_REQUIRED", "CPU_EXPLICIT"]},
+    "workload_routes": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workload_id", "workload_class", "effective_backend", "adapter_identity", "reason_code", "compatibility_status", "loaded_runtime_versions", "restart_required", "cpu_fallback_visible_before_execution", "capability_admission_receipt"],
+        "properties": {
+          "workload_id": {"type": "string", "minLength": 3, "maxLength": 96},
+          "workload_class": {"enum": ["GPU_REQUIRED", "GPU_PREFERRED_CPU_ALLOWED", "CPU_ONLY"]},
+          "effective_backend": {"type": "string", "minLength": 2, "maxLength": 128},
+          "adapter_identity": {
+            "oneOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["luid", "vendor_id", "device_id", "subsystem_id", "driver_instance_digest"],
+                "properties": {
+                  "luid": {"type": "string", "minLength": 1, "maxLength": 128},
+                  "vendor_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                  "device_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                  "subsystem_id": {"type": "string", "minLength": 1, "maxLength": 128},
+                  "driver_instance_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+                }
+              }
+            ]
+          },
+          "reason_code": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"},
+          "compatibility_status": {"enum": ["PASS", "BLOCKED", "NOT_APPLICABLE"]},
+          "loaded_runtime_versions": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 160}},
+          "restart_required": {"type": "boolean"},
+          "cpu_fallback_visible_before_execution": {"type": "boolean"},
+          "capability_admission_receipt": {
+            "oneOf": [
+              {"type": "null"},
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["registry_revision", "registry_sha256", "probe_id", "workload_id", "backend", "adapter_identity_sha256", "runtime_inventory_sha256", "runtime_versions_sha256", "helper_sha256", "command_sha256", "consumer_process_pid", "probe_process_pid", "receipt_sha256"],
+                "properties": {
+                  "registry_revision": {"type": "integer", "minimum": 1},
+                  "registry_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                  "probe_id": {"type": "string", "minLength": 3, "maxLength": 96},
+                  "workload_id": {"type": "string", "minLength": 3, "maxLength": 96},
+                  "backend": {"type": "string", "minLength": 2, "maxLength": 128},
+                  "adapter_identity_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                  "runtime_inventory_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                  "runtime_versions_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                  "helper_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                  "command_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                  "consumer_process_pid": {"type": "integer", "minimum": 1},
+                  "probe_process_pid": {"type": "integer", "minimum": 1},
+                  "receipt_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "updated_at": {"type": "string", "minLength": 10, "maxLength": 64},
+    "document_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.github.io/bai-video-production/schemas/montage-learning-bridge-security-attestation.schema.json",
+  "title": "TASK-061 Montage Learning Bridge security attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_type", "task_owner", "attestation_id", "state", "root_identity_sha256", "owner_sid_sha256", "current_user_sid_sha256", "dacl_sha256", "ancestor_count", "reason_codes", "all_ancestors_revalidated", "unknown_ace_rejected", "shared_writer_ace_rejected", "repair_performed", "migration_started", "connector_config_write_authorized", "activation_authorized", "timeline_mutation_authorized", "resolve_write_authorized", "external_effect_authorized", "attestation_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_type": {"const": "MONTAGE_LEARNING_BRIDGE_SECURITY_ATTESTATION"},
+    "task_owner": {"const": "TASK-061"},
+    "attestation_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$"},
+    "state": {"enum": ["SECURE", "BRIDGE_REPAIR_REQUIRED", "INSPECTION_FAILED", "NOT_SUPPORTED"]},
+    "root_identity_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "owner_sid_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "current_user_sid_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "dacl_sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "ancestor_count": {"type": "integer", "minimum": 0},
+    "reason_codes": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "all_ancestors_revalidated": {"type": "boolean"},
+    "unknown_ace_rejected": {"const": true},
+    "shared_writer_ace_rejected": {"const": true},
+    "repair_performed": {"const": false},
+    "migration_started": {"const": false},
+    "connector_config_write_authorized": {"const": false},
+    "activation_authorized": {"const": false},
+    "timeline_mutation_authorized": {"const": false},
+    "resolve_write_authorized": {"const": false},
+    "external_effect_authorized": {"const": false},
+    "attestation_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

@@ -26,6 +26,7 @@ from ai_video_production.local_audio_model_inventory import (
     compile_local_audio_model_inventory,
     execution_ports_from_local_audio_inventory,
     project_public_voice_profile_models,
+    verify_local_audio_inventory_public_snapshot,
 )
 from ai_video_production.voice_profile_revision import (
     ArtifactAdmissionState,
@@ -313,6 +314,26 @@ def test_candidate_hash_binds_result_identity() -> None:
     left = compile_local_audio_model_inventory((_observation(),)).to_public_dict()["candidates"][0]
     right = compile_local_audio_model_inventory((_observation(model_id="musicgen-small-fp16-stereo"),)).to_public_dict()["candidates"][0]
     assert left["candidate_sha256"] != right["candidate_sha256"]
+
+
+def test_public_inventory_verifier_rejects_candidate_and_inventory_hash_mismatch() -> None:
+    snapshot = compile_local_audio_model_inventory((_observation(),)).to_public_dict()
+    verify_local_audio_inventory_public_snapshot(snapshot)
+
+    candidate_tamper = json.loads(json.dumps(snapshot))
+    candidate_tamper["candidates"][0]["model_id"] = "wrong-model"
+    with pytest.raises(ValueError, match="candidate hash mismatch"):
+        verify_local_audio_inventory_public_snapshot(candidate_tamper)
+
+    inventory_tamper = json.loads(json.dumps(snapshot))
+    inventory_tamper["provider_neutral"] = False
+    with pytest.raises(ValueError, match="inventory hash mismatch"):
+        verify_local_audio_inventory_public_snapshot(inventory_tamper)
+
+    replay = json.loads(json.dumps(snapshot))
+    replay["candidates"].append(dict(replay["candidates"][0]))
+    with pytest.raises(ValueError, match="duplicate audio candidate_id"):
+        verify_local_audio_inventory_public_snapshot(replay)
 
 
 def test_narration_profile_is_public_safe_and_never_added_as_sfx_music_route() -> None:

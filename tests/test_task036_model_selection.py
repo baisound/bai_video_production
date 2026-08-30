@@ -48,7 +48,7 @@ def test_projects_project_scene_and_quick_coordinates_without_effects():
             {"intent_id": "quick-audio", "intent_version": 1, "mode": "AUDIO", "scene_id": "scene-1", "selected_route_id": "audio-route", "selected_capability": "AUDIO_GENERATION"},
         ]},
     )
-    assert [row["page_id"] for row in projected["selectors"]] == ["PLANNING", "IMAGE", "VIDEO", "QUICK_IMAGE", "QUICK_VIDEO"]
+    assert [row["page_id"] for row in projected["selectors"]] == ["PLANNING", "IMAGE", "VIDEO", "QUICK_IMAGE", "QUICK_VIDEO", "AUDIO", "MUSIC"]
     assert projected["scene_bindings"][0]["coordinate_state"] == "CURRENT_CONFIGURED"
     assert projected["quick_bindings"][0]["selected_route_id"] == "video-route"
     assert projected["delegated_audio_owner"] == "DEVELOPER2"
@@ -73,7 +73,30 @@ def test_projection_is_deterministic_and_reports_license_resource_unknown():
     assert candidate["runtime_admission_state"] == "NOT_AUTHORIZED"
 
 
+def test_local_audio_routes_are_visible_but_not_selectable_without_public_inventory():
+    form = _form()
+    for workload in form["workloads"]:
+        if workload["workload"] not in {"AUDIO", "MUSIC"}:
+            continue
+        route = workload["routes"][0]
+        route["provider_family"] = "LOCAL_OPEN_SOURCE"
+        route["provider_id"] = "local-audio"
+        route["cost_class"] = "LOCAL_FREE_AI"
+        route["credential_required"] = False
+        route["credential_configured"] = False
+        route["implementation_status"] = "LOCAL_RUNTIME"
+
+    projected = Task036ModelSelectionProjection.project(form)
+    for workload in ("AUDIO", "MUSIC"):
+        selector = next(item for item in projected["selectors"] if item["workload"] == workload)
+        candidate = selector["candidates"][0]
+        assert selector["available"] is False
+        assert selector["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        assert candidate["configuration_selectable"] is False
+        assert "LOCAL_AUDIO_INVENTORY_NOT_BOUND" in candidate["configuration_blockers"]
 @pytest.mark.parametrize("field", ["api_key", "secret", "credential_ref", "path", "runner", "callback", "raw_bytes"])
+
+
 def test_forbidden_secret_or_effect_surfaces_fail_closed(field):
     form = _form()
     form[field] = "forbidden"
@@ -105,3 +128,41 @@ def test_quick_cross_workload_binding_is_visible_but_not_repaired():
         }]},
     )
     assert projected["quick_bindings"][0]["coordinate_state"] == "WORKLOAD_MISMATCH"
+@pytest.mark.parametrize("cost", [
+    "CLOUD_FREE_TIER_AI", "CLOUD_PAID_AI", "LOCAL_LICENSED_AI", "NON_AI_FREE",
+])
+def test_audio_and_music_reject_non_local_free_cost_classes(cost: str) -> None:
+    form = _form()
+    for workload in form["workloads"]:
+        if workload["workload"] not in {"AUDIO", "MUSIC"}:
+            continue
+        route = workload["routes"][0]
+        route["cost_class"] = cost
+        route["credential_required"] = False
+        route["credential_configured"] = False
+        route["implementation_status"] = "IMPLEMENTED"
+    projected = Task036ModelSelectionProjection.project(form)
+    for workload in ("AUDIO", "MUSIC"):
+        selector = next(item for item in projected["selectors"] if item["workload"] == workload)
+        candidate = selector["candidates"][0]
+        assert selector["available"] is False
+        assert candidate["configuration_selectable"] is False
+        assert "LOCAL_FREE_AUDIO_ONLY" in candidate["configuration_blockers"]
+def test_audio_inventory_selectable_flag_is_required_for_local_free_candidates() -> None:
+    form = _form()
+    for workload in form["workloads"]:
+        if workload["workload"] not in {"AUDIO", "MUSIC"}:
+            continue
+        route = workload["routes"][0]
+        route["provider_family"] = "LOCAL_OPEN_SOURCE"
+        route["provider_id"] = "local-audio"
+        route["cost_class"] = "LOCAL_FREE_AI"
+        route["credential_required"] = False
+        route["credential_configured"] = False
+        route["implementation_status"] = "LOCAL_RUNTIME"
+        route["selectable"] = True
+    projected = Task036ModelSelectionProjection.project(form)
+    for workload in ("AUDIO", "MUSIC"):
+        selector = next(item for item in projected["selectors"] if item["workload"] == workload)
+        assert selector["available"] is True
+        assert selector["candidates"][0]["configuration_selectable"] is True

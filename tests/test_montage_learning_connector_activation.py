@@ -418,6 +418,34 @@ def test_secure_dacl_drift_during_config_write_blocks_receipt(tmp_path: Path) ->
     assert config["enabled"] is False
 
 
+def test_config_parent_substitution_before_replace_blocks_write(tmp_path: Path) -> None:
+    target, _store, _saved, _source, binding = _bound(tmp_path)
+    evidence = _human(
+        binding,
+        action="DEACTIVATE",
+        evidence_id="human-action-parent-substitution",
+    )
+    original_state = target.layout.state
+    moved_state = original_state.with_name("state-before-substitution")
+
+    def substitute(phase: str, _path: Path) -> None:
+        if phase == "before_config_lock":
+            original_state.rename(moved_state)
+            original_state.mkdir()
+
+    with pytest.raises(MontageLearningConnectorActivationError, match="ancestor identity changed"):
+        _apply(
+            target,
+            binding,
+            evidence,
+            expected_revision=0,
+            now="2026-08-30T00:01:00Z",
+            hook=substitute,
+        )
+    assert not (original_state / "connector-activation-history.json").exists()
+    assert not (moved_state / "connector-activation-history.json").exists()
+
+
 @pytest.mark.parametrize("phase", ["before_config_replace", "after_config_replace"])
 def test_deactivation_crash_recovery_is_atomic_and_idempotent(tmp_path: Path, phase: str) -> None:
     target, _store, _saved, _source, binding = _bound(tmp_path)

@@ -36,6 +36,13 @@ def test_training_studio_native_tk_tab_traversal_and_safe_preflight(
     from tkinter import messagebox, ttk
 
     from ai_video_production.dbd_training_studio import launch_training_studio
+    from ai_video_production.dbd_reasoning_local_runtime import (
+        LocalReasoningRuntimeService,
+        LocalRuntimePreflightSnapshot,
+        RuntimeCheckId,
+        RuntimeCheckStatus,
+        RuntimePreflightCheck,
+    )
     from ai_video_production.dbd_training_studio_foundation import (
         WorkspaceRegistry,
         WorkspaceService,
@@ -52,6 +59,31 @@ def test_training_studio_native_tk_tab_traversal_and_safe_preflight(
     workspace = WorkspaceService(WorkspaceRegistry()).create(
         display_name="TASK-054 R7 native acceptance",
         parent_directory=tmp_path / "workspaces",
+    )
+    checks = tuple(
+        RuntimePreflightCheck(
+            check_id=check_id,
+            status=(
+                RuntimeCheckStatus.NOT_REQUIRED
+                if check_id is RuntimeCheckId.DATASET_TRAINING
+                else RuntimeCheckStatus.PASS
+            ),
+            detail_code=(
+                "DATASET_TRAINING_SEPARATE_GATE"
+                if check_id is RuntimeCheckId.DATASET_TRAINING
+                else "TEST_PASS"
+            ),
+            message_ja="native UI testの安全なfixture結果です。",
+            next_action_ja="操作は不要です。",
+        )
+        for check_id in RuntimeCheckId
+    )
+    monkeypatch.setattr(
+        LocalReasoningRuntimeService,
+        "preflight",
+        lambda self, candidate_id: LocalRuntimePreflightSnapshot(
+            candidate_id=candidate_id, checks=checks, ready=True,
+        ),
     )
 
     real_tk = tk.Tk
@@ -114,9 +146,7 @@ def test_training_studio_native_tk_tab_traversal_and_safe_preflight(
 
             preflight = _button_by_text(reasoning_page, "事前チェック")
             preflight.invoke()
-            assert dialogs
-            assert dialogs[-1][0] == "解説AIの事前チェック"
-            assert "実行可能な承認済みBinding/routeはまだありません" in dialogs[-1][1]
+            assert dialogs == []
             assert execute.instate(["disabled"])
             assert review.instate(["disabled"])
 
@@ -133,7 +163,11 @@ def test_training_studio_native_tk_tab_traversal_and_safe_preflight(
 
     try:
         try:
-            result = launch_training_studio(["--workspace", str(workspace.root)])
+            result = launch_training_studio(
+                ["--workspace", str(workspace.root)],
+                reasoning_preflight_background=False,
+                reasoning_auto_preflight=False,
+            )
         except tk.TclError as exc:
             detail = str(exc)
             if "init.tcl" in detail or "Tcl wasn't installed properly" in detail:

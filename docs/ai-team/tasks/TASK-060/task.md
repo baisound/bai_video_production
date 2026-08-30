@@ -1,6 +1,6 @@
 # TASK-060 — Montage Preference Projection and Production Source
 
-- Status: `PP_A_FRESH_MAIN_RECONCILED_CANDIDATE / INDEPENDENT_DEV4_PENDING`
+- Status: `PP_B_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
 - Capability: `BVP-MONTAGE-PREFERENCE-PROJECTION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Owner boundary: TASK-029 source semantics and TASK-019 evaluation, promotion, and rollback semantics
@@ -44,17 +44,20 @@ six-path PP-A implementation Unit, and a local implementation candidate now
 exists for independent DEV-4 review.  This status does not claim Hosted or
 canonical completion.
 
-Only the six paths frozen in
-`pp-a-implementation-authorization-2026-08-28.md` changed. PP-B and PP-C remain
-`IMPLEMENTATION_NOT_AUTHORIZED`.  Registry, task-index, CHANGELOG,
-runtime/native/paid/external, Timeline/Resolve, and Release/Deploy/Production
-effects remain `0`.
+The fresh-main PP-A candidate remains the exact stacked input to a bounded PP-B
+implementation candidate. The Owner continuity/takeover instruction authorized
+the unfinished dependency to proceed instead of remaining idle. PP-B adds only
+explicit Human confirmation plus the encrypted append-only promotion/rollback
+store and its closed schema/tests. PP-C remains unimplemented. Registry,
+task-index, CHANGELOG, runtime/native/paid/external, Timeline/Resolve, and
+Release/Deploy/Production effects remain `0`.
 
 The stale PR #430 implementation commit was replayed without its historical
 merge commit onto canonical remote main
 `160c9569673fbf65a28b0f95eeb44c5b0111584f`.  The fresh-main candidate retains
 the exact six-path scope and remains a Draft/noncanonical result; it does not
-create PP-B or PP-C authority.
+create canonical PP-B or PP-C completion. PP-B Builder Evidence and exact scope
+are recorded in `pp-b-implementation-evidence-2026-08-30.md`.
 
 ## Responsibility non-overlap
 

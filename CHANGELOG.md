@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-061 CA-A adds an exact-confirmed, crash-safe, no-clobber migration from an explicit legacy source into an installer-selected private snapshot. Source/target/security currentness, reparse/hardlink/tamper rejection, atomic recovery, and sealed read-back are enforced; source deletion, learning admission, activation, Timeline/Resolve, external effects, Release, Deploy, and Production remain false.
+
 - TASK-061 CA-A adds read-only Windows bridge security attestation over the exact root and ancestor identities, owner, and DACL, failing closed on reparse points, drift, unknown ACEs/SIDs, or shared writers. It performs no ACL repair and grants no config-write, activation, Timeline/Resolve, external-effect, Release, Deploy, or Production authority.
 
 - TASK-060 PP-C adds a pinned, read-only production source for the exact promoted Preference envelope, with path/identity/hash currentness and reparse/hardlink/substitution rejection. It creates no transferable capability and grants no automatic promotion, connector activation, Timeline/Resolve write, external effect, Release, Deploy, or Production authority.

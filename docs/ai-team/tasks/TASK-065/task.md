@@ -28,9 +28,12 @@ an active production fallback.
 
 ## Dependency order
 
-1. `D0`: TASK-063 receipt-output overwrite, sibling-prefix containment, and
-   ancestor-reparse corrections merge to canonical `main`, followed by
-   post-main tests and installed read-back PASS.
+1. `D0`: TASK-063 installer-relative source (`20f5360`), read-back boundary fix
+   (`0b95e40`) and publication race/path-safety closure (`8fd17ed`) are
+   canonical. D0 still requires fresh post-main hosted/Windows completion plus
+   an exact re-provisioned installed read-back covering DACL, reparse, hardlink,
+   descriptor, owner and discovery currentness. Older fixture/hash Evidence is
+   not reusable as current PASS.
 2. `D1`: TASK-060 PP-A is integrated from fresh `main`, then PP-B and PP-C are
    canonically completed and expose exactly one promoted envelope plus source
    receipt.
@@ -38,19 +41,43 @@ an active production fallback.
    supplies CA-A/CA-B plus a sealed CA-C prepare/Human one-shot candidate with
    apply effect zero. The current candidate cannot mint the real-installed E2E
    receipt required by ACTIVATE, so a separately authorized TASK-061 amendment
-   or successor is required before the cycle below can execute.
-4. `D2C`: a separately authorized TASK-058 owner supplies a public sealed
-   read-only current-coordinate receipt for the Generic review store. It binds
+   or successor is required before the cycle below can execute. Completion also
+   requires a secure activation-specific lock and identity-bound no-overwrite/
+   expected-target config writer; the current generic create-capable lock plus
+   `os.replace` writer cannot establish physical race safety. CA-A migration
+   separately requires secure migration lock, identity-CAS journal phases,
+   no-replace Manifest/snapshot publication and operation-owned-only temp
+   cleanup before D2 may complete.
+4. `D2S`: the released SKILL adapter remains valid historical TASK-058 release
+   Evidence, but its current transport writer/config/receipt/Profile readers do
+   not meet Production race, physical-identity and privacy requirements.
+   Production linkage therefore requires a separately owned canonical SKILL
+   correction, PR/main/release and installed-copy exact sync/read-back, followed
+   by a PL-A baseline hash rebind. The same correction must replace obsolete
+   fixed-ProgramData/default-config activation instructions with the Option B
+   explicit runtime-config route while keeping the distribution default an
+   immutable disabled sentinel. TASK-061/065/067 cannot modify SKILL source.
+5. `D2C`: the unapproved TASK-067 follow-up candidate would supply a public
+   sealed read-only current-coordinate receipt for the Generic review store
+   only after a canonical metadata allocation and implementation Gate. It binds
    the current ledger revision to the Project manifest/binding, ledger head,
    recovery/journal currentness with no-create/read-only semantics. It exposes
-   only the fixed Generic admission surface; exact APIs remain sealed. Until
-   that owner allocation and completion receipt exist, this dependency is
-   `N.C.`.
-5. `D2P`: TASK-036/Development 2 supplies a bounded private Product-operation
+   only the fixed Generic three-method admission surface; exact APIs remain
+   sealed. TASK-065 grants no TASK-067 implementation authority. Until that
+   allocation and completion receipt exist, this dependency is `N.C.`.
+6. `D2P`: TASK-036/Development 2 supplies a bounded private Product-operation
    entrypoint in the unified packaged EXE plus its focused-verification
    completion receipt. It consumes D2C and does not inspect TASK-058 private
-   storage helpers or raw ledger JSON.
-6. `D3`: TASK-065 proceeds through `PL-A`, then the cycle-safe sequence
+   storage helpers or raw ledger JSON. The entrypoint is a closed headless
+   dispatch before Desktop WebView2/single-instance/Shell setup, accepts only
+   opaque plan plus exact record/delivery identity, uses a Montage-specific
+   minimal composition rather than `build_trusted_launch`, resolves Project and
+   mode from fresh sealed authority, derives only the fixed original inbox Path
+   and invokes one exact `import_path`. It never pre-reads/scans/claims the
+   delivery; TASK-067 late-binds the actual Bridge-validated mapping at method
+   entry so claimed-delivery restart remains possible.
+   `Task036LaunchConfiguration` remains coordinate data, not authority.
+7. `D3`: TASK-065 proceeds through `PL-A`, then the cycle-safe sequence
    `CA-C prepare (apply0) -> PL-B0 -> PL-C0 -> CA-C apply -> PL-B steady-state
    -> PL-C steady-state -> PL-D`.
 
@@ -93,8 +120,9 @@ scoped minimum authority and are never assumed both true.
 
 PL-C0 runs the bounded pre-activation public-safe synthetic transport flow only
 after PL-B0 and after the TASK-061 operation-plan/admission receipt plus the
-TASK-058 current-coordinate receipt and TASK-036 packaged-entrypoint completion
-receipt are current. It returns the exact E2E receipt to TASK-061 and claims no
+TASK-067 Generic current-coordinate/facade receipt and TASK-036 packaged-
+entrypoint completion receipt are current. It returns the exact E2E receipt to
+TASK-061 and claims no
 Production activation. After CA-C
 apply and steady-state PL-B projection, PL-C runs
 `connector-status`, `publish-learning`, and `load-profile` against the exact
@@ -103,7 +131,36 @@ request, BVP receipt, TASK-061 activation/config identity and independent
 Profile read-back evidence; exit zero, endpoint or file presence is
 insufficient. The bounded Product operation uses only the generic review-
 observation lane; raw Project/anchor paths, revisions, store IDs or Owner scope
-from caller text are prohibited.
+from caller text are prohibited. It selects exactly one plan-bound Generic
+delivery and calls `import_path`; inbox-wide `import_once` is ineligible.
+
+The D2C facade must structurally provide only
+`admit_generic_observation`, `recover_generic_observation` and
+`get_verified_generic_observation`. Its sealed modes follow the unmodified
+Bridge call sequence: FRESH is `admit -> get_verified`, RECOVERY is
+`recover -> get_verified`, and restart read-back is `get_verified` only.
+Published receipt plus matching hidden correlation selects VERIFIED_READBACK;
+published receipt without correlation is STOP/effect zero. Matching correlation
+without receipt also selects VERIFIED_READBACK and takes precedence over a
+coexisting pending record; then pending-only selects RECOVERY, and only total
+receipt/correlation/pending absence plus an exact fresh plan selects FRESH.
+Tampered, ambiguous or mismatched state remains effect zero. A method-mode race
+burns the old facade FAILED_CLOSED; it never triggers automatic mode refresh or
+retry.
+
+PL-C records canonical typed-result status, Bridge `ImportResult.status`,
+public receipt status and ledger/manifest revisions as separate Evidence
+layers. Journal-absent terminal recovery must produce canonical and Bridge
+`DUPLICATE` while preserving the public-v1 receipt contract; it must not fall
+back to fresh admission or create a second Product commit.
+
+TASK-061's sealed pre-activation real-E2E receipt is a distinct activation
+prerequisite. TASK-065's later PL-C post-activation E2E receipt has a different
+phase, issuer and binding; neither may substitute for the other. The current
+TASK-061 synthetic factory and any unapproved TASK-067 diff are ineligible.
+Public receipt alone, missing hidden/canonical proof, mismatched DUPLICATE,
+FAILED_CLOSED facade, or stale instance/config/Profile currentness remains
+effect zero.
 
 ### PL-D — lifecycle, rollback, and closure
 
@@ -178,6 +235,20 @@ While D0 through D2 remain incomplete, only TASK-065-local design and test-plan
 documents may change. Source, schema, tests, installed config, native state, and
 production state remain mutation zero.
 
+TASK-067 is not currently implementation-authorized. Any local source/test
+candidate is non-authoritative, must remain uncommitted/unpushed and cannot be
+used as a dependency receipt. Only its TASK-065-local candidate allocation,
+Allowed Files, design, Critic/Judge plan and implementation-start Gate may be
+prepared.
+
 The frozen PL-A mapping, negative matrix, exact-path overlap audit, dependency
 checklist, and focused fixture plan are in
 `pl-a-admission-design-freeze-2026-08-30.md`.
+
+Its historical missing-source classifications are superseded, but not promoted
+to PASS, by `dependency-currentness-reconciliation-2026-08-31.md`: D0 source
+corrections are canonical but installed completion is N.C.; D1/D2 candidate
+sources are present but their completion receipts are missing; D2.5 TASK-067
+and TASK-036 completion receipts are missing. TASK-067 freeze and future
+allocation criteria are in
+`task067-candidate-allocation-and-freeze-packet-2026-08-31.md`.

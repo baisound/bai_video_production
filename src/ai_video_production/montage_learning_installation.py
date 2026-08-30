@@ -8,10 +8,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from hashlib import sha256
 import json
+import os
 from pathlib import Path
 import re
 import stat
+import tempfile
+from typing import Callable
 import uuid
 
 from .atomic import AtomicJsonWriter
@@ -21,7 +25,7 @@ from .montage_learning_file_bridge import (
     load_bridge_owner,
     provision_bridge,
 )
-from .serialization import sha256_json
+from .serialization import canonical_json_bytes, sha256_json
 
 
 DESCRIPTOR_FILENAME = "bridge-instance.json"
@@ -32,6 +36,11 @@ BRIDGE_RELATIVE_PATH = "data/montage-learning-bridge"
 _SHA_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _INSTANCE_RE = re.compile(r"^bvp-install-[0-9a-f]{32}$")
 _MAX_DESCRIPTOR_BYTES = 64 * 1024
+INSTALLER_READBACK_FILENAME = "installer-readback.json"
+_MAX_INSTALLER_READBACK_BYTES = 64 * 1024
+_WINDOWS_REPARSE_POINT = 0x400
+
+ReceiptFailureInjector = Callable[[str, Path], None]
 
 
 class MontageLearningInstallationError(ValueError):
@@ -153,6 +162,346 @@ def discover_installed_bridge(install_root: str | Path) -> InstalledBridgeDiscov
     )
 
 
+def write_installer_readback(
+    discovery: InstalledBridgeDiscovery,
+    *,
+    failure_injector: ReceiptFailureInjector | None = None,
+) -> Path:
+    """Atomically publish the discovery receipt at its sole installer-owned path."""
+
+    target, directories = _installer_readback_coordinates(discovery)
+    ancestor_identities = tuple(_safe_directory_identity(path) for path in directories)
+    existing_identity = _safe_receipt_identity(target)
+    existing_digest: bytes | None = None
+    if existing_identity is not None:
+        existing_bytes = _read_stable_regular_bytes(target)
+        _validate_existing_installer_readback(existing_bytes, discovery)
+        existing_digest = sha256(existing_bytes).digest()
+    data = canonical_json_bytes(discovery.public_receipt()) + b"\n"
+    if len(data) > _MAX_INSTALLER_READBACK_BYTES:
+        raise MontageLearningInstallationError("installer readback is too large")
+
+    fd, temporary_name = tempfile.mkstemp(
+        dir=target.parent,
+        prefix=f".{target.name}.",
+        suffix=".tmp",
+    )
+    temporary = Path(temporary_name)
+    replaced = False
+    try:
+        _verify_directory_identities(directories, ancestor_identities)
+        with os.fdopen(fd, "wb", closefd=True) as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        _require_safe_regular_file(temporary, expected_size=len(data))
+        if _read_stable_regular_bytes(temporary) != data:
+            raise MontageLearningInstallationError(
+                "installer readback temporary verification failed"
+            )
+        _call_receipt_failure(failure_injector, "after_temp_fsync", temporary)
+
+        _call_receipt_failure(failure_injector, "before_replace", target)
+        _verify_directory_identities(directories, ancestor_identities)
+        if _safe_receipt_identity(target) != existing_identity:
+            raise MontageLearningInstallationError(
+                "installer readback target identity changed"
+            )
+        if existing_identity is not None:
+            current_bytes = _read_stable_regular_bytes(target)
+            _validate_existing_installer_readback(current_bytes, discovery)
+            if sha256(current_bytes).digest() != existing_digest:
+                raise MontageLearningInstallationError(
+                    "installer readback target bytes changed"
+                )
+        if existing_identity is None:
+            try:
+                os.link(temporary, target, follow_symlinks=False)
+            except FileExistsError as exc:
+                raise MontageLearningInstallationError(
+                    "installer readback target appeared concurrently"
+                ) from exc
+            temporary.unlink()
+        else:
+            os.replace(temporary, target)
+        replaced = True
+        _directory_fsync(target.parent)
+
+        _verify_directory_identities(directories, ancestor_identities)
+        _call_receipt_failure(failure_injector, "before_readback", target)
+        _require_safe_regular_file(target, expected_size=len(data))
+        readback = _read_stable_regular_bytes(target)
+        if readback != data or sha256(readback).digest() != sha256(data).digest():
+            raise MontageLearningInstallationError(
+                "installer readback byte verification failed"
+            )
+        return target
+    finally:
+        if not replaced:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+
+def _installer_readback_coordinates(
+    discovery: InstalledBridgeDiscovery,
+) -> tuple[Path, tuple[Path, Path, Path, Path]]:
+    install_root = discovery.install_root
+    if not install_root.is_absolute():
+        raise MontageLearningInstallationError("install root must be absolute")
+    expected_layout = BridgeLayout.production(install_root)
+    if expected_layout.root != discovery.layout.root:
+        raise MontageLearningInstallationError("discovery layout mismatch")
+    data_root = install_root / "data"
+    bridge_root = data_root / "montage-learning-bridge"
+    migration_root = bridge_root / "migration"
+    if (
+        data_root.parent != install_root
+        or bridge_root.parent != data_root
+        or migration_root.parent != bridge_root
+        or discovery.layout.migration != migration_root
+    ):
+        raise MontageLearningInstallationError("installer readback path mismatch")
+    target = migration_root / INSTALLER_READBACK_FILENAME
+    if target.parent != discovery.layout.migration:
+        raise MontageLearningInstallationError("installer readback target escaped")
+    return target, (install_root, data_root, bridge_root, migration_root)
+
+
+def _safe_directory_identity(path: Path) -> tuple[int, int, str]:
+    if path.is_symlink():
+        raise MontageLearningInstallationError(
+            "installer readback ancestor must not be a symlink"
+        )
+    try:
+        metadata = path.stat(follow_symlinks=False)
+    except OSError as exc:
+        raise MontageLearningInstallationError(
+            "installer readback ancestor is unavailable"
+        ) from exc
+    if not stat.S_ISDIR(metadata.st_mode) or _stat_is_reparse(metadata):
+        raise MontageLearningInstallationError(
+            "installer readback ancestor must be a safe directory"
+        )
+    if os.name == "nt" and not hasattr(metadata, "st_file_attributes"):
+        raise MontageLearningInstallationError(
+            "installer readback ancestor safety is not observable"
+        )
+    if metadata.st_dev < 0 or metadata.st_ino <= 0:
+        raise MontageLearningInstallationError(
+            "installer readback ancestor identity is unavailable"
+        )
+    try:
+        resolved = str(path.resolve(strict=True))
+    except OSError as exc:
+        raise MontageLearningInstallationError(
+            "installer readback ancestor cannot be resolved"
+        ) from exc
+    return metadata.st_dev, metadata.st_ino, resolved
+
+
+def _verify_directory_identities(
+    paths: tuple[Path, Path, Path, Path],
+    expected: tuple[tuple[int, int, str], ...],
+) -> None:
+    current = tuple(_safe_directory_identity(path) for path in paths)
+    if current != expected:
+        raise MontageLearningInstallationError(
+            "installer readback ancestor identity changed"
+        )
+
+
+def _safe_receipt_identity(path: Path) -> tuple[int, int, int, int, int] | None:
+    try:
+        metadata = path.stat(follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise MontageLearningInstallationError(
+            "installer readback target is unavailable"
+        ) from exc
+    _require_safe_regular_metadata(path, metadata)
+    return (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_size,
+        metadata.st_mtime_ns,
+        metadata.st_nlink,
+    )
+
+
+def _require_safe_regular_file(path: Path, *, expected_size: int) -> None:
+    try:
+        metadata = path.stat(follow_symlinks=False)
+    except OSError as exc:
+        raise MontageLearningInstallationError(
+            "installer readback file is unavailable"
+        ) from exc
+    _require_safe_regular_metadata(path, metadata)
+    if metadata.st_size != expected_size:
+        raise MontageLearningInstallationError(
+            "installer readback file size mismatch"
+        )
+
+
+def _require_safe_regular_metadata(path: Path, metadata: os.stat_result) -> None:
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(metadata.st_mode)
+        or _stat_is_reparse(metadata)
+    ):
+        raise MontageLearningInstallationError(
+            "installer readback target must be a safe regular file"
+        )
+    if metadata.st_nlink != 1:
+        raise MontageLearningInstallationError(
+            "installer readback target must not be hard linked"
+        )
+    if os.name == "nt" and not hasattr(metadata, "st_file_attributes"):
+        raise MontageLearningInstallationError(
+            "installer readback target safety is not observable"
+        )
+
+
+def _read_stable_regular_bytes(path: Path) -> bytes:
+    try:
+        before = path.stat(follow_symlinks=False)
+    except OSError as exc:
+        raise MontageLearningInstallationError(
+            "installer readback cannot be inspected"
+        ) from exc
+    _require_safe_regular_metadata(path, before)
+    if not 1 <= before.st_size <= _MAX_INSTALLER_READBACK_BYTES:
+        raise MontageLearningInstallationError("installer readback size is invalid")
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise MontageLearningInstallationError(
+            "installer readback cannot be read"
+        ) from exc
+    try:
+        opened = os.fstat(descriptor)
+        _require_safe_regular_metadata(path, opened)
+        if _regular_identity(opened) != _regular_identity(before):
+            raise MontageLearningInstallationError(
+                "installer readback changed before open"
+            )
+        chunks: list[bytes] = []
+        remaining = _MAX_INSTALLER_READBACK_BYTES + 1
+        while remaining > 0:
+            chunk = os.read(descriptor, remaining)
+            if not chunk:
+                break
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        data = b"".join(chunks)
+        after_open = os.fstat(descriptor)
+    finally:
+        os.close(descriptor)
+    try:
+        after = path.stat(follow_symlinks=False)
+    except OSError as exc:
+        raise MontageLearningInstallationError(
+            "installer readback cannot be re-inspected"
+        ) from exc
+    _require_safe_regular_metadata(path, after)
+    if (
+        _regular_identity(before) != _regular_identity(after_open)
+        or _regular_identity(after_open) != _regular_identity(after)
+        or len(data) != after.st_size
+    ):
+        raise MontageLearningInstallationError("installer readback is unstable")
+    return data
+
+
+def _regular_identity(metadata: os.stat_result) -> tuple[int, int, int, int, int]:
+    return (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_size,
+        metadata.st_mtime_ns,
+        metadata.st_nlink,
+    )
+
+
+def _validate_existing_installer_readback(
+    data: bytes,
+    discovery: InstalledBridgeDiscovery,
+) -> None:
+    try:
+        value = json.loads(
+            data.decode("utf-8"),
+            object_pairs_hook=_reject_duplicate_receipt_keys,
+        )
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise MontageLearningInstallationError(
+            "existing installer readback JSON is invalid"
+        ) from exc
+    expected = discovery.public_receipt()
+    if type(value) is not dict or set(value) != set(expected):
+        raise MontageLearningInstallationError(
+            "existing installer readback fields mismatch"
+        )
+    for field in (
+        "schema_version",
+        "message_type",
+        "product_id",
+        "install_instance_id",
+        "bridge_relative_path",
+        "owner_manifest_sha256",
+        "capability",
+        "status",
+        "connector_enabled",
+        "activation_authorized",
+    ):
+        if value[field] != expected[field]:
+            raise MontageLearningInstallationError(
+                "existing installer readback ownership mismatch"
+            )
+    _require_sha(value["descriptor_sha256"], "descriptor_sha256")
+
+
+def _reject_duplicate_receipt_keys(
+    pairs: list[tuple[str, object]],
+) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if type(key) is not str or key in result:
+            raise MontageLearningInstallationError(
+                "existing installer readback has duplicate fields"
+            )
+        result[key] = value
+    return result
+
+
+def _stat_is_reparse(metadata: os.stat_result) -> bool:
+    return bool(getattr(metadata, "st_file_attributes", 0) & _WINDOWS_REPARSE_POINT)
+
+
+def _directory_fsync(path: Path) -> None:
+    try:
+        descriptor = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(descriptor)
+    except OSError:
+        pass
+    finally:
+        os.close(descriptor)
+
+
+def _call_receipt_failure(
+    failure_injector: ReceiptFailureInjector | None,
+    phase: str,
+    path: Path,
+) -> None:
+    if failure_injector is not None:
+        failure_injector(phase, path)
+
+
 def _read_descriptor(path: Path) -> BridgeInstanceDescriptor:
     if path.is_symlink():
         raise MontageLearningInstallationError("descriptor must not be a symlink")
@@ -271,8 +620,10 @@ def _require_sha(value: object, field: str) -> str:
 __all__ = [
     "BRIDGE_RELATIVE_PATH",
     "BridgeInstanceDescriptor",
+    "INSTALLER_READBACK_FILENAME",
     "InstalledBridgeDiscovery",
     "MontageLearningInstallationError",
     "discover_installed_bridge",
     "provision_installed_bridge",
+    "write_installer_readback",
 ]

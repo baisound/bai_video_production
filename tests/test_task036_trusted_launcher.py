@@ -515,6 +515,7 @@ def test_trusted_launcher_can_refuse_missing_product_job_bootstrap(tmp_path: Pat
     with pytest.raises(ProductError) as still_missing:
         store.get_job_state(config.production_job_id)
     assert still_missing.value.code == "ERR_INPUT_JOB_NOT_FOUND"
+    assert not ProductProjectManifestStore.path(config.project_root).exists()
     assert config.database_path.read_bytes() == database_before
     assert {
         item: item.read_bytes() if item.exists() else None
@@ -961,6 +962,7 @@ def test_trusted_launcher_without_manifest_creates_no_runtime_lease_or_job_store
         native_dialog=Task036NativeDialogService(DialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
     assert not (config.project_root / ".bai-project" / ".task036-runtime.lock").exists()
     assert not DurableProductJobStore.path(config.project_root).exists()
@@ -987,6 +989,7 @@ def test_pre_manifest_media_ingest_holds_launch_lifetime_until_operation_finishe
         native_dialog=Task036NativeDialogService(dialog_backend),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
     ingested = []
 
@@ -1062,6 +1065,7 @@ def test_pre_manifest_transcription_holds_launch_lifetime_and_old_bridge_cannot_
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:
@@ -1165,6 +1169,10 @@ def test_trusted_launch_bootstraps_missing_local_connection_settings_without_pro
     assert snapshot["provider_execution_started"] is False
     assert snapshot["generation_started"] is False
 
+    manifest = ProductProjectManifestStore.load(project)
+    assert manifest.project_revision == 1
+    assert manifest.project_id == Task036LaunchConfiguration.load(path).project_id
+    assert launch.bridge.planning_generation_status({})["available"] is True
     model_selection = launch.bridge.model_selection_snapshot({})
     selector = next(row for row in model_selection["selectors"] if row["page_id"] == "PLANNING")
     assert selector["available"] is True
@@ -1794,6 +1802,7 @@ def test_subtitle_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:
@@ -1872,6 +1881,7 @@ def test_cut_stage_holds_launch_lifetime_and_old_bridge_cannot_reexecute(
         native_dialog=Task036NativeDialogService(SourceDialogBackend()),
         asr_provider=AsrProvider(),
         resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
     )
 
     class IngestStub:

@@ -60,6 +60,7 @@ from .final_review import FinalReviewApprovalReceipt
 from .final_review_application import FinalReviewApprovalApplication
 from .final_review_gate import FinalReviewExternalGateReceipt
 from .product_project_store import ProductProjectManifestStore
+from .product_project import ProductProjectManifest, ProjectTimebase
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import _exclusive_snapshot_lock
 from .audit_application import Task038AuditApplication
@@ -879,6 +880,40 @@ def _handoff_subtitle_path(path: Path) -> Path | None:
         return None
     return path
 
+def _bootstrap_missing_product_manifest(configuration: Task036LaunchConfiguration) -> bool:
+    """Create only the canonical empty Project manifest needed for local composition."""
+    target = ProductProjectManifestStore.path(configuration.project_root)
+    if target.exists():
+        return False
+    manifest = ProductProjectManifest.create(
+        project_id=configuration.project_id,
+        project_revision=1,
+        product_version="0.23.0",
+        timebase=ProjectTimebase(
+            configuration.timeline_rate.numerator,
+            configuration.timeline_rate.denominator,
+        ),
+        child_bindings=(),
+    )
+    try:
+        ProductProjectManifestStore.save(configuration.project_root, manifest)
+    except ProductError as exc:
+        if exc.code != "ERR_PROJECT_SAVE_CAS_REQUIRED":
+            raise
+        current = ProductProjectManifestStore.load(configuration.project_root)
+        if (
+            current.project_id != configuration.project_id
+            or current.timebase != manifest.timebase
+        ):
+            raise ProductError(
+                "ERR_TASK036_PROJECT_BOOTSTRAP_CONFLICT",
+                "Project manifest appeared with a different identity during bootstrap",
+                ProductErrorCategory.STATE,
+            ) from exc
+        return False
+    return True
+
+
 
 def build_trusted_launch(
     configuration: Task036LaunchConfiguration,
@@ -1103,6 +1138,7 @@ def build_trusted_launch(
         )
     connection_settings = None
     game_intelligence_provider_service = None
+    connection_settings_bootstrapped = False
     connection_settings_path = configuration.project_root / "ai-connection-settings.json"
     if connection_settings_path.is_symlink():
         raise ProductError(
@@ -1112,7 +1148,7 @@ def build_trusted_launch(
         )
     if not connection_settings_path.exists():
         try:
-            bootstrap_missing_connection_settings(
+            connection_settings_bootstrapped = bootstrap_missing_connection_settings(
                 connection_settings_path,
                 **(
                     {}
@@ -1155,6 +1191,16 @@ def build_trusted_launch(
                 details={"exception_type": type(exc).__name__},
             ) from exc
 
+    if allow_product_job_bootstrap and connection_settings_bootstrapped and connection_settings is not None:
+        profile, _availability = connection_settings.current_connection()
+        if any(
+            route.workload is AiWorkload.PLANNING
+            and route.provider_family is ProviderFamily.LOCAL_OPEN_SOURCE
+            and route.provider_id.casefold() == "ollama"
+            and route.cost_class is CostClass.LOCAL_FREE_AI
+            for route in profile.routes
+        ):
+            _bootstrap_missing_product_manifest(configuration)
     has_mutation_composition = ProductProjectManifestStore.path(
         configuration.project_root
     ).exists()

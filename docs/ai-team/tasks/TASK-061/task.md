@@ -1,6 +1,6 @@
 # TASK-061 — Montage Learning Connector Activation and Migration
 
-- Status: `CA_A_SECURITY_AND_MIGRATION_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
+- Status: `CA_B_SOURCE_BINDING_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
 - Capability: `BVP-MONTAGE-CONNECTOR-ACTIVATION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Canonical activation bit: BVP-owned production connector config `enabled`
@@ -38,8 +38,9 @@ Order: TASK-058 canonical release plus TASK-060 `PP-C`, then
 `CA-A -> CA-B -> CA-C`.
 
 TASK-058 v0.23.0 is released. TASK-060 PP-C now exists only as a stacked Draft
-candidate and is not canonical completion. No dependency requires or assumes a
-public readiness v2 schema.
+candidate and is merged into this CA-B integration branch for validation, but is
+not canonical completion. No dependency requires or assumes a public readiness
+v2 schema.
 
 ## Current authorization state
 
@@ -58,6 +59,17 @@ Production remain unexecuted. Relevant TASK-058/TASK-063 boundary regression is
 `234 passed / 1 skip` on Windows and `226 passed / 5 skips` on WSL2. The WSL2
 TASK-063 packaged-entry test remains collection-N.C. because that environment's
 pre-existing `cryptography` build lacks `Argon2id`; it is not reported as PASS.
+
+CA-B now has a synthetic-temp implementation candidate that reopens the exact
+CA-A migration snapshot, pins one PP-C promoted source, validates TASK-058 public
+readiness v1 only as its honest `SOURCE_NOT_BOUND` baseline, and publishes/read
+backs the exact advisory Profile. Its public result is deliberately
+`SOURCE_BOUND_ACTIVATION_BLOCKED`: private v2 is not accepted as a persistent
+receipt, real adapter E2E is false, and config/connector activation remains
+false. Duplicate exact execution yields the same read-back identity. Combined
+CA-A/CA-B/PP-C/TASK-058 Profile transport validation is `92 passed / 1 skip` on
+Windows and `87 passed / 6 environment-only skips` on WSL2. No installed bridge,
+installed SKILL config, Owner data, or real adapter was touched.
 
 ## Governing authorization
 

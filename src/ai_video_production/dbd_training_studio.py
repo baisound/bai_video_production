@@ -107,6 +107,7 @@ from .dbd_reasoning_mode_selector_ui import build_reasoning_mode_selector_panel
 from .dbd_reasoning_commentary_preview_ui import CommentaryPreviewPanel
 from .dbd_reasoning_dataset_evaluation_view_ui import DatasetEvaluationPanel
 from .dbd_reasoning_model_panel_ui import ReasoningModelPanel
+from .dbd_reasoning_local_runtime import LocalReasoningRuntimeService
 from .task036_ollama_runtime import OllamaRuntimeLifecycle
 from .dbd_reasoning_operation_view_ui import TrainingStudioOperationPanel
 from .dbd_runtime_options import (
@@ -168,7 +169,13 @@ def ensure_csv_templates(root: str | Path) -> tuple[Path, Path, Path, Path]:
     return visual, ocr, trivia, video
 
 
-def launch_training_studio(argv: Sequence[str] | None = None) -> int:
+def launch_training_studio(
+    argv: Sequence[str] | None = None,
+    *,
+    reasoning_runtime_service: LocalReasoningRuntimeService | None = None,
+    reasoning_preflight_background: bool = True,
+    reasoning_auto_preflight: bool | None = None,
+) -> int:
     import argparse
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
@@ -191,6 +198,10 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         return 0
 
     workspace = DbDTrainingWorkspace(workspace_descriptor.root_path)
+    runtime_service = reasoning_runtime_service or LocalReasoningRuntimeService(
+        workspace_id=workspace_descriptor.workspace_id,
+        workspace_root=workspace.root,
+    )
     active_runtime = resolve_workspace_runtime_profile(workspace_descriptor)
     runtime_ffmpeg = active_runtime.ffmpeg.effective_path or "ffmpeg"
     runtime_ffprobe = active_runtime.ffprobe.effective_path or "ffprobe"
@@ -270,9 +281,10 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
 
     status = tk.StringVar(value="準備完了")
     ttk.Label(root, textvariable=status, anchor="w").grid(row=3, column=0, sticky="ew", padx=12, pady=(0, 8))
-    # TASK-054 Operator surface.  These panels remain safely empty until exact
-    # canonical Evidence is loaded; opening the tab never starts inference,
-    # training, a Provider call or a worker process.
+    # TASK-054 Operator surface. The verified base-model catalog is visible
+    # independently of Dataset/training gates. A frozen Product starts one
+    # bounded offline preflight worker; it never starts training or a Provider
+    # execution and never stops a shared WSL distribution.
     reasoning_tab = ttk.Frame(notebook, padding=8)
     reasoning_tab.columnconfigure(0, weight=1)
     reasoning_tab.rowconfigure(1, weight=1)
@@ -305,18 +317,17 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     )
     commentary_panel.grid(row=0, column=0, sticky="nsew")
 
-    def reasoning_preflight_unavailable():
-        raise ProductError(
-            "ERR_TASK054_R3D_REQUIRED",
-            "実行可能な承認済みBinding/routeはまだありません",
-            ProductErrorCategory.STATE,
-        )
-
     model_panel = ReasoningModelPanel(
         model_page,
-        run_preflight=reasoning_preflight_unavailable,
         open_review=lambda: status.set("レビュー対象はまだありません。"),
+        runtime_service=runtime_service,
         runtime_snapshot_provider=lambda: OllamaRuntimeLifecycle().probe(),
+        background_preflight=reasoning_preflight_background,
+        auto_preflight=(
+            bool(getattr(sys, "frozen", False))
+            if reasoning_auto_preflight is None
+            else bool(reasoning_auto_preflight)
+        ),
     )
     model_panel.grid(row=0, column=0, sticky="nsew")
     dataset_panel = DatasetEvaluationPanel(dataset_page)
@@ -4789,6 +4800,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
     try:
         root.mainloop()
     finally:
+        runtime_service.close()
         diagnostics.emit("APP_EXIT")
         diagnostics.close()
     return 0

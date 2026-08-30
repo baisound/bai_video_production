@@ -16,17 +16,19 @@ def test_training_studio_exposes_one_reasoning_operator_tab() -> None:
     assert "reasoning_tab," in source[source.index("ordered_tabs = ("):]
 
 
-def test_all_r5_panels_are_connected_without_an_execution_callback() -> None:
+def test_all_r5_panels_are_connected_with_local_runtime_preflight_only() -> None:
     source = SOURCE.read_text(encoding="utf-8")
     for panel in (
         "CommentaryPreviewPanel", "ReasoningModelPanel", "DatasetEvaluationPanel",
         "TrainingStudioOperationPanel",
     ):
         assert panel in source
-    assert "ERR_TASK054_R3D_REQUIRED" in source
+    assert "LocalReasoningRuntimeService" in source
+    assert "reasoning_auto_preflight" in source
+    assert "runtime_service.close()" in source
     assert "取消要求は未送信です" in source
     assert "再開計画要求は未送信です" in source
-    assert "opening the tab never starts inference" in source
+    assert "never starts training or a Provider" in source
 
 
 def test_packaged_training_studio_entry_remains_the_existing_entrypoint() -> None:
@@ -34,10 +36,18 @@ def test_packaged_training_studio_entry_remains_the_existing_entrypoint() -> Non
     spec = Path("packaging/task049_training_studio.spec").read_text(encoding="utf-8")
     assert "from ai_video_production.dbd_training_studio import main" in entry
     assert "task049_training_studio_windows_entry.py" in spec
+    assert "base-model-candidates.yaml" in spec
+    assert "base-model-verification.json" in spec
+    assert "local-nf4-smoke.json" in spec
+    assert "task054-training.lock" in spec
 
 
 def test_operator_copy_keeps_model_and_worker_effects_blocked() -> None:
     source = SOURCE.read_text(encoding="utf-8")
-    assert "実行可能な承認済みBinding/routeはまだありません" in source
+    panel = Path("src/ai_video_production/dbd_reasoning_model_panel_ui.py").read_text(
+        encoding="utf-8"
+    )
     assert "レビュー対象はまだありません" in source
     assert "動画Evidence読込後にseekします" in source
+    assert "Provider実行・学習・Dataset採用を許可しません" in panel
+    assert 'self.execute_button.configure(state="disabled")' in panel

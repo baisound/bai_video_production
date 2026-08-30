@@ -71,6 +71,7 @@ from .continuity_application import Task039ContinuityApplication
 from .connection_settings_web import ConnectionSettingsWebService
 from .credential_vault import WindowsCredentialManagerStore
 from .task036_local_model_bootstrap import bootstrap_missing_connection_settings
+from .local_audio_model_inventory import LocalAudioModelInventory
 from .task036_ollama_runtime import OllamaRuntimeLifecycle
 from .provider_execution import (AiProviderExecutionService, AnthropicMessagesAdapter, GoogleInteractionsAdapter, OpenAiResponsesAdapter, UrllibJsonTransport)
 from .prompt_evidence_application import Task040PromptEvidenceApplication
@@ -934,6 +935,7 @@ def build_trusted_launch(
     allow_product_job_bootstrap: bool = True,
     local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
     ollama_runtime: OllamaRuntimeLifecycle | None = None,
+    local_audio_inventory: LocalAudioModelInventory | None = None,
 ) -> Task036TrustedLaunch:
     managed_ollama_runtime = ollama_runtime or OllamaRuntimeLifecycle()
     if not allow_product_job_bootstrap:
@@ -1180,6 +1182,7 @@ def build_trusted_launch(
                 connection_settings_path,
                 None,
                 credential_vault=credential_vault,
+                local_audio_inventory=local_audio_inventory,
             )
             if credential_vault is not None:
                 transport = UrllibJsonTransport()

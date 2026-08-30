@@ -59,6 +59,7 @@ from ai_video_production.creative_generation_execution_application import LocalG
 from ai_video_production.task036_native_image_vertical_cli import _load_config_scope
 from ai_video_production.cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
 from ai_video_production.task036_ollama_runtime import OllamaRuntimeSnapshot
+from ai_video_production.local_audio_model_inventory import compile_local_audio_model_inventory
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
 
@@ -2109,4 +2110,30 @@ def test_trusted_export_dispatcher_uses_only_exact_promoted_workflow_runtime(
     finally:
         if promoted is not None:
             bridge._workflow_runtime = promoted
+        launch.close()
+def test_trusted_launcher_injects_empty_audio_inventory_without_promoting_routes(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
+        local_audio_inventory=compile_local_audio_model_inventory(()),
+    )
+    try:
+        snapshot = launch.bridge.connection_settings_snapshot({})
+        inventory = snapshot["local_audio_inventory"]
+        assert inventory["bound"] is True
+        assert inventory["candidate_count"] == 0
+        assert inventory["selectable_candidate_count"] == 0
+        assert inventory["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        selection = launch.bridge.model_selection_snapshot({})
+        for workload in ("AUDIO", "MUSIC"):
+            selector = next(item for item in selection["selectors"] if item["workload"] == workload)
+            assert selector["available"] is False
+            assert selector["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        assert snapshot["provider_execution_started"] is False
+        assert snapshot["generation_started"] is False
+    finally:
         launch.close()

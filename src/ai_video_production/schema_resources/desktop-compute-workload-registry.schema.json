@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/desktop-compute-workload-registry.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "message_type", "product_id", "registry_revision", "workloads", "registry_sha256"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "message_type": {"const": "BvpDesktopComputeWorkloadRegistry"},
+    "product_id": {"const": "BAI_VIDEO_PRODUCTION"},
+    "registry_revision": {"const": 1},
+    "workloads": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["workload_id", "owner", "workload_class", "cpu_fallback_eligible", "adapter_admission_state", "admitted_local_backends"],
+        "properties": {
+          "workload_id": {"type": "string", "minLength": 3, "maxLength": 96},
+          "owner": {"type": "string", "minLength": 3, "maxLength": 64},
+          "workload_class": {"enum": ["GPU_REQUIRED", "GPU_PREFERRED_CPU_ALLOWED", "CPU_ONLY"]},
+          "cpu_fallback_eligible": {"type": "boolean"},
+          "adapter_admission_state": {"enum": ["CURRENT_BIND_REQUIRED", "DISABLED_UNTIL_IMPLEMENTED", "DISABLED_UNTIL_MAPPED", "HUMAN_GATE_REQUIRED", "CPU_CONTROL_PLANE", "NOT_APPLICABLE_PROVEN"]},
+          "admitted_local_backends": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"enum": ["CUDA", "ROCM", "DIRECTML", "CPU"]}}
+        }
+      }
+    },
+    "registry_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

@@ -94,8 +94,15 @@ def _candidate(route: Mapping[str, object], *, workload: str) -> dict[str, objec
     # A configured route alone does not prove installed weights, runtime
     # readiness, or an execution adapter. TASK-013's public inventory is the
     # only source that may promote a local audio/music model to selectable.
-    if workload in {"AUDIO", "MUSIC"} and cost == "LOCAL_FREE_AI":
-        blockers.append("LOCAL_AUDIO_INVENTORY_NOT_BOUND")
+    if workload in {"AUDIO", "MUSIC"}:
+        if cost != "LOCAL_FREE_AI":
+            blockers.append("LOCAL_FREE_AUDIO_ONLY")
+        elif route.get("selectable") is True:
+            pass
+        elif route.get("selectable") is False:
+            blockers.append("LOCAL_AUDIO_MODEL_UNAVAILABLE")
+        else:
+            blockers.append("LOCAL_AUDIO_INVENTORY_NOT_BOUND")
     return {
         "route_id": route_id,
         "provider_family": provider,

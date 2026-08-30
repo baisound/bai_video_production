@@ -86,6 +86,17 @@ def test_uninstalled_runtime_is_actionable_and_never_starts():
     assert started == []
 
 
+def test_uninstalled_runtime_state_survives_public_readback() -> None:
+    runtime = OllamaRuntimeLifecycle(
+        transport=Transport([unavailable(), unavailable()]),
+        executable_resolver=lambda: None,
+    )
+
+    assert runtime.ensure_started().reason_code == "OLLAMA_EXECUTABLE_NOT_FOUND"
+    readback = runtime.probe()
+
+    assert readback.state == "NOT_INSTALLED"
+    assert readback.reason_code == "OLLAMA_EXECUTABLE_NOT_FOUND"
 def test_model_zero_is_distinct_from_runtime_failure():
     runtime = OllamaRuntimeLifecycle(
         transport=Transport([b'{"models":[]}']),

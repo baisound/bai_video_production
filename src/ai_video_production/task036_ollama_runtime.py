@@ -138,12 +138,24 @@ class OllamaRuntimeLifecycle:
         self._start_timeout_seconds = start_timeout_seconds
         self._lock = threading.RLock()
         self._product_process: subprocess.Popen | None = None
+        self._last_unreachable_snapshot: OllamaRuntimeSnapshot | None = None
+
+    def _remember_unreachable_state(
+        self, snapshot: OllamaRuntimeSnapshot
+    ) -> OllamaRuntimeSnapshot:
+        self._last_unreachable_snapshot = (
+            snapshot if snapshot.state in {"NOT_INSTALLED", "FAILED"} else None
+        )
+        return snapshot
 
     def probe(self) -> OllamaRuntimeSnapshot:
         try:
             models = _models_from_tags(self._transport)
         except ProductError as exc:
             if exc.code == "ERR_LOCAL_OLLAMA_UNREACHABLE":
+                remembered = self._last_unreachable_snapshot
+                if remembered is not None:
+                    return remembered
                 return OllamaRuntimeSnapshot(
                     "FAILED", (), False, "OLLAMA_NOT_RUNNING",
                     "Ollamaは起動していません。BAI Video Productionが既存導入を確認して起動します。",
@@ -154,26 +166,28 @@ class OllamaRuntimeLifecycle:
             )
         product_owned = self._product_process is not None and self._product_process.poll() is None
         if models:
-            return OllamaRuntimeSnapshot("READY", models, product_owned, None, "Ollamaは利用可能です。")
-        return OllamaRuntimeSnapshot(
+            return self._remember_unreachable_state(
+                OllamaRuntimeSnapshot("READY", models, product_owned, None, "Ollamaは利用可能です。")
+            )
+        return self._remember_unreachable_state(OllamaRuntimeSnapshot(
             "NO_MODEL", (), product_owned, "OLLAMA_MODEL_NOT_INSTALLED",
             "Ollamaは起動済みですが、利用可能な企画Modelがありません。Modelを導入してから再確認してください。",
-        )
+        ))
 
     def ensure_started(self) -> OllamaRuntimeSnapshot:
         """Reuse ready runtime, or start a verified local executable at most once."""
         with self._lock:
             initial = self.probe()
             if initial.state in {"READY", "NO_MODEL"}:
-                return initial
+                return self._remember_unreachable_state(initial)
             if self._product_process is not None and self._product_process.poll() is None:
-                return self._wait_for_ready(started_by_product=True)
+                return self._remember_unreachable_state(self._wait_for_ready(started_by_product=True))
             executable = self._executable_resolver()
             if executable is None:
-                return OllamaRuntimeSnapshot(
+                return self._remember_unreachable_state(OllamaRuntimeSnapshot(
                     "NOT_INSTALLED", (), False, "OLLAMA_EXECUTABLE_NOT_FOUND",
                     "Ollamaが導入されていません。無料ローカル企画Modelを使うにはOllamaを導入してください。",
-                )
+                ))
             try:
                 self._product_process = self._popen_factory(
                     [str(executable), "serve"],
@@ -184,11 +198,11 @@ class OllamaRuntimeLifecycle:
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000),
                 )
             except OSError:
-                return OllamaRuntimeSnapshot(
+                return self._remember_unreachable_state(OllamaRuntimeSnapshot(
                     "FAILED", (), False, "OLLAMA_START_FAILED",
                     "Ollamaを起動できませんでした。ローカルruntimeの状態を確認してください。",
-                )
-            return self._wait_for_ready(started_by_product=True)
+                ))
+            return self._remember_unreachable_state(self._wait_for_ready(started_by_product=True))
 
     def _wait_for_ready(self, *, started_by_product: bool) -> OllamaRuntimeSnapshot:
         deadline = self._clock() + self._start_timeout_seconds

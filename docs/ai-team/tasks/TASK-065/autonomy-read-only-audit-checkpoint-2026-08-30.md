@@ -440,31 +440,106 @@ proposal/timeline/style/event data, declares `privacy.safe_export:true`, carries
 no raw actor, absolute host path, transcript, credential, or media body, and
 keeps `adapter_metadata.canonical_timeline:false`.
 
+### 7.1 Exact current SKILL lineage
+
+The canonical SKILL remote `main` is currently
+`45069b05b222b4be33b144f297cac67db0627df9`. The authoring worktree is on a
+different dirty branch and was not switched, fetched, or modified; the exact
+remote-main object was read from the clean local mirror. All six PL-C-relevant
+installed files are byte-identical Git blobs to that exact remote commit:
+
+| Role | Installed bytes | Installed/remote SHA-256 |
+|---|---:|---|
+| `SKILL.md` | 10257 | `1a7ba2d4967cfc7bf30b5d9f64cadf77bd9b19e558a7bd11c92d9161cb9c6308` |
+| connector config | 406 | `da41b71292fd2a9fa2070eba531e06fafc0e84f9bbc1d26c27b0af79c5e2db6c` |
+| connector bridge reference | 4758 | `669d34b4788493bb851149522d0beac1bc4a46c5f9e0b5b7b96bcab6c9faeee2` |
+| connector schema | 5812 | `470fb97a85bb924678e51a9fca313c21bc5eb9c6eb0f0f0da265ca9b6da43b9d` |
+| adapter script | 53438 | `070d2295869cb43c9fe8cb733238ff04085fa6815ac006385072d9c18da3949e` |
+| adapter focused tests | 19323 | `b91f3e0d6d638d263e48812144462338238c70543899612fc82e12da4f8a8b36` |
+
+The unchanged source still documents and defaults to fixed ProgramData. That is
+legacy distribution evidence, not an admissible TASK-065 production fallback.
+PL-C must select the PL-B-synchronized installed config explicitly and prove its
+current physical identity; omission of `--config`, reinstall/upgrade reset, or
+default-config reversion is `STALE_CONFIG_COORDINATE / STOP / EFFECT0`.
+
+### 7.2 Required independent identities
+
 The future PL-C test may reuse the semantic shape but must generate its own
-task-scoped record identity. It must record three distinct evidence identities:
+task-scoped record identity. It must record five distinct evidence identities:
 
 1. **Request/delivery identity** — canonical SHA-256 of the exact
    `MontageLearningExport`, plus a byte hash of the closed
    `BvpMontageLearningDelivery` whose `record_id` and `learning_sha256` match,
    and whose `canonical_timeline` and `auto_admit_authorized` are false.
-2. **BVP receipt identity** — exact public receipt bytes hash, deterministic
+2. **Public SKILL receipt identity** — exact seven-field v1 public receipt bytes
+   hash, deterministic
    `receipt_id`, matching `record_id` and `learning_sha256`, and status
    `ACCEPTED` or `DUPLICATE`. `publish-learning` must first report
    `STAGED_PENDING_REQUIRED_RECEIPT`, then only after BVP processing report
    `BVP_REPORTED_ACCEPTED` or `BVP_REPORTED_DUPLICATE` with
-   `canonical_store_written:true`.
-3. **Profile publication/load identity** — exact closed
-   `BvpMontagePreferenceProfileDelivery` bytes hash and `profile_sha256`, then
-   an independently invoked `load-profile` result with equal profile ID,
-   version, contract, hash, source count, and payload. The read-back must keep
-   `advisory_only:true`, `canonical_timeline:false`, and
-   `auto_apply_authorized:false`.
+   `canonical_store_written:true`. This is transport compatibility evidence,
+   not learning adoption or a sufficient BVP authority receipt by itself.
+3. **BVP review-observation correlation identity** — exact hidden
+   `BvpMontageLearningGenericReceiptCorrelation` self-hash and public-receipt
+   hash, bound to the source digest, generic store/revision, canonical commit,
+   internal receipt, Project Manifest, child binding, and ledger head. Its
+   authority fields must independently remain `learning_adopted:false`,
+   `profile_promoted:false`, and `timeline_mutated:false`.
+4. **PP-C profile publication identity** — the exact PP-C promoted envelope and
+   source receipt must bind the immutable profile payload document hash, current
+   pointer revision/self-hash/predecessor, marker, compatibility-view bytes,
+   profile ID/version/hash, Owner scope, and source count. BVP's current
+   `ProfileSourceBinding` exposes only unbound-production and bound-isolated-
+   fixture constructors; the missing PP-C production source capability is D1,
+   not something TASK-065 may manufacture.
+5. **SKILL profile read-back identity** — a separately invoked `load-profile`
+   result whose profile ID, version, contract, hash, source count, and payload
+   equal identity 4. The read-back must keep `advisory_only:true`,
+   `canonical_timeline:false`, and `auto_apply_authorized:false`.
 
 The BVP store read-back must independently show the synthetic source digest,
 append-only entry membership, dedup behavior, `learning_adopted:false`,
 `profile_promoted:false`, and `timeline_mutated:false`. A READY connector
 status, file existence, process exit zero, or adapter-reported path is only a
 precondition and never the runtime verdict.
+
+### 7.3 Current adapter gaps that PL-C must close externally
+
+The exact current script and tests show these deliberate distinctions:
+
+- `connector-status` returns `READY` from directory existence alone. The CLI
+  also exits zero for disabled or unavailable safe-fallback states, so PL-C must
+  validate the JSON status and exact instance/config identities rather than the
+  process exit code.
+- the SKILL v1 receipt reader checks record/hash/status/id/time but permits
+  additional fields and does not validate the BVP correlation. TASK-065 must
+  apply the exact v1 field set and then verify identity 3 independently before
+  treating the receipt as BVP runtime evidence;
+- `load-profile` validates the closed delivery and projection payload hash, but
+  it does not verify the PP-C source receipt, immutable payload, pointer,
+  predecessor, marker, or current compatibility-view publication. Identity 4
+  must be established first and compared to the separate SKILL result;
+- `atomic_write_new_or_identical` checks pathname existence and then publishes
+  with `os.replace`. Two writers can both observe absence, and the operation has
+  no no-replace or expected-target identity predicate. The existing focused test
+  covers sequential identical dedup only, not collision, multiprocess, DACL,
+  reparse, hardlink, ancestor, or hostile namespace races.
+
+The existing isolated synthetic happy-path E2E was rerun through WSL with
+`BVP_TASK058_SKILL_ROOT` bound to the exact installed SKILL: `1 passed` in
+7.27 seconds. It proves the already-documented fixture flow and installed input
+immutability only; it is not production PL-C runtime, dependency completion, or
+negative-race coverage.
+
+Therefore append-only/dedup acceptance requires the PL-B allowed-writer and
+namespace-exclusion/cooperative-lock conditions from section 4.8, plus exact
+delivery reopen-by-name read-back and BVP idempotent store/correlation proof.
+Any conflicting body at the same derived pathname, disappearance or identity
+drift during publication/read-back, extra public-receipt field, missing or
+invalid correlation, or PP-C pointer/source mismatch is fail-closed. TASK-065
+must not repair or reimplement the TASK-058 adapter contract to hide these
+conditions.
 
 This fixture is not runnable against the current installed production
 coordinate: the released installed config is disabled, points to the absent
@@ -474,8 +549,8 @@ CA-C activation history.
 
 ## 8. Current result and next safe work
 
-Fresh dependency re-evaluation after commit
-`c99f9c1d79b92cbd07c9f27484b2ace8748d8b34` found no arrival or identity
+Fresh dependency re-evaluation at parent checkpoint
+`81e65a8c46c080f4b25f78b7f0e146a7540bab67` found no arrival or identity
 change: canonical `main`, PR #448, PR #430, and TASK-061 remain at the states
 recorded above.
 

@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-063のWindowsインストーラー読戻し先を、選択したインストールルート内の固定Bridge配下へ限定しました。範囲外、symlink／reparse／junction、hardlink、危険なancestor、名前が似ただけのsibling-prefix、partial writeを拒否し、安全なatomic writeと書込み後のexact read-backで既存ファイルを保護します。
+
 - TASK-061 CA-C adds a repository-default-disabled activation history with exact expiring one-shot Human evidence, CAS, append-only hash chaining, atomic deactivation, and crash recovery. Synthetic E2E cannot enable the connector, external SKILL config is untouched, and activation=true, learning, Timeline/Resolve, external effects, Release, Deploy, and Production remain unauthorized.
 
 - TASK-061 CA-B adds persistent sealed migration read-back and CAS publication of the exact TASK-060 PP-C promoted source into the installer-relative advisory Profile. It revalidates plan, source, target, and full security attestation currentness and remains SOURCE_BOUND_ACTIVATION_BLOCKED; connector enablement, activation, Timeline/Resolve writes, external effects, Release, Deploy, and Production remain false.

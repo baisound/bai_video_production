@@ -7,6 +7,7 @@ import json
 import os
 
 from .errors import ProductError
+from .task036_first_run_bootstrap import ensure_first_run_launch_configuration
 from .task036_shell_ui import run_native_layout_spike
 from .task036_trusted_launcher import run_trusted_native_shell
 
@@ -24,10 +25,12 @@ def main(argv: list[str] | None = None) -> int:
         configured = args.launch_config or os.environ.get("BAI_TASK036_LAUNCH_CONFIG")
         if configured and args.layout_spike:
             raise ValueError("--launch-config and --layout-spike cannot be combined")
-        if configured:
-            run_trusted_native_shell(configured)
-        else:
+        if args.layout_spike:
             run_native_layout_spike()
+        else:
+            run_trusted_native_shell(
+                configured if configured else ensure_first_run_launch_configuration()
+            )
     except ProductError as exc:
         print(json.dumps({"status": "ERROR", **exc.to_envelope()["error"]}, ensure_ascii=False))
         return 2

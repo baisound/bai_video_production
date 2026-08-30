@@ -19,6 +19,8 @@ _PAGE_WORKLOADS = (
     ("VIDEO", "VIDEO"),
     ("QUICK_IMAGE", "IMAGE"),
     ("QUICK_VIDEO", "VIDEO"),
+    ("AUDIO", "AUDIO"),
+    ("MUSIC", "MUSIC"),
 )
 _QUICK_WORKLOAD = {"IMAGE": "IMAGE", "START_END": "IMAGE", "VIDEO": "VIDEO"}
 _FORBIDDEN_KEYS = {
@@ -66,7 +68,7 @@ def _reject_secret_surface(value: object) -> None:
             _reject_secret_surface(child)
 
 
-def _candidate(route: Mapping[str, object]) -> dict[str, object]:
+def _candidate(route: Mapping[str, object], *, workload: str) -> dict[str, object]:
     route_id = _text(route.get("route_id"), "route_id")
     provider = _text(route.get("provider_family"), "provider_family")
     model = _text(route.get("model_id"), "model_id")
@@ -89,6 +91,18 @@ def _candidate(route: Mapping[str, object]) -> dict[str, object]:
     implementation = _text(route.get("implementation_status"), "implementation_status")
     if implementation not in {"IMPLEMENTED", "LOCAL_RUNTIME"}:
         blockers.append("ADAPTER_NOT_CURRENTLY_IMPLEMENTED")
+    # A configured route alone does not prove installed weights, runtime
+    # readiness, or an execution adapter. TASK-013's public inventory is the
+    # only source that may promote a local audio/music model to selectable.
+    if workload in {"AUDIO", "MUSIC"}:
+        if cost != "LOCAL_FREE_AI":
+            blockers.append("LOCAL_FREE_AUDIO_ONLY")
+        elif route.get("selectable") is True:
+            pass
+        elif route.get("selectable") is False:
+            blockers.append("LOCAL_AUDIO_MODEL_UNAVAILABLE")
+        else:
+            blockers.append("LOCAL_AUDIO_INVENTORY_NOT_BOUND")
     return {
         "route_id": route_id,
         "provider_family": provider,
@@ -101,7 +115,7 @@ def _candidate(route: Mapping[str, object]) -> dict[str, object]:
         "implementation_status": implementation,
         "credential_required": credential_required,
         "credential_configured": credential_configured,
-        "configuration_selectable": enabled,
+        "configuration_selectable": enabled and not blockers,
         "configuration_blockers": blockers,
         "rights_license_state": "UNKNOWN_NOT_EVIDENCED",
         "resource_state": "UNKNOWN_NOT_EVIDENCED",
@@ -131,7 +145,10 @@ class Task036ModelSelectionProjection:
             workload = _text(row.get("workload"), "workload")
             if workload in by_workload:
                 raise ValueError("duplicate workload")
-            routes = [_candidate(_mapping(item, "route")) for item in _sequence(row.get("routes"), "routes", _MAX_ROUTES)]
+            routes = [
+                _candidate(_mapping(item, "route"), workload=workload)
+                for item in _sequence(row.get("routes"), "routes", _MAX_ROUTES)
+            ]
             route_ids = [str(item["route_id"]) for item in routes]
             if len(route_ids) != len(set(route_ids)):
                 raise ValueError("duplicate route")
@@ -160,13 +177,19 @@ class Task036ModelSelectionProjection:
                     "unavailable_reason": "WORKLOAD_NOT_CONFIGURED", "candidates": [],
                 })
                 continue
-            selectors.append({
+            selector = {
                 "page_id": page_id,
                 "workload": workload,
                 "scope": "PROJECT_DEFAULT",
                 "available": True,
                 **source,
-            })
+            }
+            if workload in {"AUDIO", "MUSIC"} and not any(
+                candidate["configuration_selectable"] for candidate in source["candidates"]
+            ):
+                selector["available"] = False
+                selector["unavailable_reason"] = "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+            selectors.append(selector)
 
         scene_bindings: list[dict[str, object]] = []
         if prompt_snapshot is not None:

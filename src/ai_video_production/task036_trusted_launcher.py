@@ -60,6 +60,7 @@ from .final_review import FinalReviewApprovalReceipt
 from .final_review_application import FinalReviewApprovalApplication
 from .final_review_gate import FinalReviewExternalGateReceipt
 from .product_project_store import ProductProjectManifestStore
+from .product_project import ProductProjectManifest, ProjectTimebase
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import _exclusive_snapshot_lock
 from .audit_application import Task038AuditApplication
@@ -69,6 +70,9 @@ from .generation_safety_application import Task013GenerationSafetyApplication
 from .continuity_application import Task039ContinuityApplication
 from .connection_settings_web import ConnectionSettingsWebService
 from .credential_vault import WindowsCredentialManagerStore
+from .task036_local_model_bootstrap import bootstrap_missing_connection_settings
+from .local_audio_model_inventory import LocalAudioModelInventory
+from .task036_ollama_runtime import OllamaRuntimeLifecycle
 from .provider_execution import (AiProviderExecutionService, AnthropicMessagesAdapter, GoogleInteractionsAdapter, OpenAiResponsesAdapter, UrllibJsonTransport)
 from .prompt_evidence_application import Task040PromptEvidenceApplication
 from .generation_queue_application import Task027GenerationQueueApplication
@@ -599,6 +603,7 @@ class Task036TrustedLaunch:
     _runtime_lease: "_Task036ProjectRuntimeLease | None" = field(default=None, repr=False)
     _local_operation_lifetime: "_Task036LocalOperationLifetime | None" = field(default=None, repr=False)
     _product_store: SQLiteProductStore | None = field(default=None, repr=False)
+    _ollama_runtime: OllamaRuntimeLifecycle | None = field(default=None, repr=False)
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
@@ -878,6 +883,40 @@ def _handoff_subtitle_path(path: Path) -> Path | None:
         return None
     return path
 
+def _bootstrap_missing_product_manifest(configuration: Task036LaunchConfiguration) -> bool:
+    """Create only the canonical empty Project manifest needed for local composition."""
+    target = ProductProjectManifestStore.path(configuration.project_root)
+    if target.exists():
+        return False
+    manifest = ProductProjectManifest.create(
+        project_id=configuration.project_id,
+        project_revision=1,
+        product_version="0.23.0",
+        timebase=ProjectTimebase(
+            configuration.timeline_rate.numerator,
+            configuration.timeline_rate.denominator,
+        ),
+        child_bindings=(),
+    )
+    try:
+        ProductProjectManifestStore.save(configuration.project_root, manifest)
+    except ProductError as exc:
+        if exc.code != "ERR_PROJECT_SAVE_CAS_REQUIRED":
+            raise
+        current = ProductProjectManifestStore.load(configuration.project_root)
+        if (
+            current.project_id != configuration.project_id
+            or current.timebase != manifest.timebase
+        ):
+            raise ProductError(
+                "ERR_TASK036_PROJECT_BOOTSTRAP_CONFLICT",
+                "Project manifest appeared with a different identity during bootstrap",
+                ProductErrorCategory.STATE,
+            ) from exc
+        return False
+    return True
+
+
 
 def build_trusted_launch(
     configuration: Task036LaunchConfiguration,
@@ -894,7 +933,11 @@ def build_trusted_launch(
     ] | None = None,
     owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
     allow_product_job_bootstrap: bool = True,
+    local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
+    ollama_runtime: OllamaRuntimeLifecycle | None = None,
+    local_audio_inventory: LocalAudioModelInventory | None = None,
 ) -> Task036TrustedLaunch:
+    managed_ollama_runtime = ollama_runtime or OllamaRuntimeLifecycle()
     if not allow_product_job_bootstrap:
         for directory in (
             configuration.asset_root,
@@ -1101,6 +1144,7 @@ def build_trusted_launch(
         )
     connection_settings = None
     game_intelligence_provider_service = None
+    connection_settings_bootstrapped = False
     connection_settings_path = configuration.project_root / "ai-connection-settings.json"
     if connection_settings_path.is_symlink():
         raise ProductError(
@@ -1108,6 +1152,23 @@ def build_trusted_launch(
             "AI Connection Settings must not be a symlink",
             ProductErrorCategory.SECURITY,
         )
+    if not connection_settings_path.exists():
+        try:
+            connection_settings_bootstrapped = bootstrap_missing_connection_settings(
+                connection_settings_path,
+                inventory_provider=(
+                    local_planning_inventory_provider
+                    if local_planning_inventory_provider is not None
+                    else lambda: managed_ollama_runtime.ensure_started().model_ids
+                ),
+            )
+        except (OSError, UnicodeError, ValueError) as exc:
+            raise ProductError(
+                "ERR_TASK028_CONNECTION_SETTINGS_BOOTSTRAP_FAILED",
+                "AI Connection Settings could not be initialized safely",
+                ProductErrorCategory.DATA_INTEGRITY,
+                details={"exception_type": type(exc).__name__},
+            ) from exc
     if connection_settings_path.exists():
         if not connection_settings_path.is_file():
             raise ProductError(
@@ -1121,6 +1182,7 @@ def build_trusted_launch(
                 connection_settings_path,
                 None,
                 credential_vault=credential_vault,
+                local_audio_inventory=local_audio_inventory,
             )
             if credential_vault is not None:
                 transport = UrllibJsonTransport()
@@ -1136,6 +1198,26 @@ def build_trusted_launch(
                 details={"exception_type": type(exc).__name__},
             ) from exc
 
+    if connection_settings is not None and local_planning_inventory_provider is None:
+        profile, _availability = connection_settings.current_connection()
+        if any(
+            route.workload is AiWorkload.PLANNING
+            and route.provider_family is ProviderFamily.LOCAL_OPEN_SOURCE
+            and route.provider_id.casefold() == "ollama"
+            and route.cost_class is CostClass.LOCAL_FREE_AI
+            for route in profile.routes
+        ):
+            managed_ollama_runtime.ensure_started()
+    if allow_product_job_bootstrap and connection_settings_bootstrapped and connection_settings is not None:
+        profile, _availability = connection_settings.current_connection()
+        if any(
+            route.workload is AiWorkload.PLANNING
+            and route.provider_family is ProviderFamily.LOCAL_OPEN_SOURCE
+            and route.provider_id.casefold() == "ollama"
+            and route.cost_class is CostClass.LOCAL_FREE_AI
+            for route in profile.routes
+        ):
+            _bootstrap_missing_product_manifest(configuration)
     has_mutation_composition = ProductProjectManifestStore.path(
         configuration.project_root
     ).exists()
@@ -1395,6 +1477,7 @@ def build_trusted_launch(
             audio_placement_application=audio_placement_application,
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
+            ollama_runtime_snapshot_provider=lambda: managed_ollama_runtime.probe().as_dict(),
             owner_signing_key_import=owner_signing_key_import,
             final_review_application=final_review_application,
             final_review_external_gate_provider=final_review_external_gate_provider,
@@ -1417,6 +1500,7 @@ def build_trusted_launch(
             _runtime_lease=runtime_lease,
             _local_operation_lifetime=local_operation_lifetime,
             _product_store=store,
+            _ollama_runtime=managed_ollama_runtime,
         )
     except BaseException:
         if owner_signing_key_import is not None:

@@ -670,7 +670,12 @@ def apply_connector_activation_transaction(
         raise MontageLearningConnectorActivationError("expected revision is invalid")
 
     config_path = current_target.layout.state / "connector-activation-history.json"
+    config_ancestor_identities = _json_ancestor_chain(config_path)
+    if hook is not None:
+        hook("before_config_lock", config_path)
+    _require_json_ancestors_unchanged(config_path, config_ancestor_identities)
     with exclusive_file_update_lock(config_path):
+        _require_json_ancestors_unchanged(config_path, config_ancestor_identities)
         config = read_connector_activation_config(current_target)
         events = list(config["events"])
         if events and events[-1]["human_evidence_sha256"] == human_evidence.evidence_sha256:
@@ -714,9 +719,11 @@ def apply_connector_activation_transaction(
         document = {**config_body, "config_sha256": sha256_json(config_body)}
         if hook is not None:
             hook("before_config_replace", config_path)
+        _require_json_ancestors_unchanged(config_path, config_ancestor_identities)
         AtomicJsonWriter.write(config_path, document, validator=lambda value: _validate_config(value, current_target))
         if hook is not None:
             hook("after_config_replace", config_path)
+        _require_json_ancestors_unchanged(config_path, config_ancestor_identities)
         readback = _read_config(config_path, current_target)
         if readback != document:
             raise MontageLearningConnectorActivationError("activation config read-back mismatch")
@@ -967,6 +974,7 @@ def _read_pinned_profile(path: Path) -> dict[str, object]:
 
 
 def _read_pinned_json(path: Path, *, max_bytes: int) -> dict[str, object]:
+    ancestors = _json_ancestor_chain(path)
     if path.is_symlink():
         raise MontageLearningConnectorActivationError("JSON path must not be a symlink")
     try:
@@ -1005,6 +1013,7 @@ def _read_pinned_json(path: Path, *, max_bytes: int) -> dict[str, object]:
         or identity(after) != identity(current)
     ):
         raise MontageLearningConnectorActivationError("JSON path changed during read")
+    _require_json_ancestors_unchanged(path, ancestors)
     try:
         value = json.loads(data)
     except (UnicodeError, json.JSONDecodeError) as exc:
@@ -1012,6 +1021,43 @@ def _read_pinned_json(path: Path, *, max_bytes: int) -> dict[str, object]:
     if type(value) is not dict:
         raise MontageLearningConnectorActivationError("JSON must be an object")
     return value
+
+
+def _json_ancestor_chain(path: Path) -> tuple[tuple[str, int, int, int], ...]:
+    identities: list[tuple[str, int, int, int]] = []
+    current = path.parent
+    try:
+        while True:
+            info = os.lstat(current)
+            if (
+                not stat.S_ISDIR(info.st_mode)
+                or stat.S_ISLNK(info.st_mode)
+                or getattr(info, "st_file_attributes", 0) & _WINDOWS_REPARSE_POINT
+            ):
+                raise MontageLearningConnectorActivationError(
+                    "JSON ancestor identity is unsafe"
+                )
+            identities.append(
+                (str(current), int(info.st_dev), int(info.st_ino), int(info.st_mode))
+            )
+            if current.parent == current:
+                break
+            current = current.parent
+    except OSError as exc:
+        raise MontageLearningConnectorActivationError(
+            "JSON ancestor identity cannot be inspected"
+        ) from exc
+    return tuple(identities)
+
+
+def _require_json_ancestors_unchanged(
+    path: Path,
+    expected: tuple[tuple[str, int, int, int], ...],
+) -> None:
+    if _json_ancestor_chain(path) != expected:
+        raise MontageLearningConnectorActivationError(
+            "JSON ancestor identity changed"
+        )
 
 
 def _utc(value: object) -> datetime:

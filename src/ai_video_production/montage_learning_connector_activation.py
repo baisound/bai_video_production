@@ -73,6 +73,7 @@ class ConnectorSourceBindingPlan:
     preference_profile_version: int
     task058_public_readiness_sha256: str
     security_attestation_id: str
+    security_attestation_sha256: str
     security_owner_sid_sha256: str
     security_current_user_sid_sha256: str
     security_ancestor_count: int
@@ -91,6 +92,7 @@ class ConnectorSourceBindingPlan:
             self.preference_envelope_sha256,
             self.preference_profile_sha256,
             self.task058_public_readiness_sha256,
+            self.security_attestation_sha256,
             self.security_owner_sid_sha256,
             self.security_current_user_sid_sha256,
             self.plan_sha256,
@@ -357,6 +359,7 @@ def plan_connector_source_binding(
         "preference_profile_version": source_read.profile_version,
         "task058_public_readiness_sha256": sha256_json(public_readiness),
         "security_attestation_id": security_attestation_id,
+        "security_attestation_sha256": security.to_dict()["attestation_sha256"],
         "security_owner_sid_sha256": _require_sha(security.owner_sid_sha256),
         "security_current_user_sid_sha256": _require_sha(security.current_user_sid_sha256),
         "security_ancestor_count": security.ancestor_count,
@@ -376,6 +379,7 @@ def plan_connector_source_binding(
         preference_profile_version=int(body["preference_profile_version"]),
         task058_public_readiness_sha256=str(body["task058_public_readiness_sha256"]),
         security_attestation_id=security_attestation_id,
+        security_attestation_sha256=str(body["security_attestation_sha256"]),
         security_owner_sid_sha256=str(body["security_owner_sid_sha256"]),
         security_current_user_sid_sha256=str(body["security_current_user_sid_sha256"]),
         security_ancestor_count=int(body["security_ancestor_count"]),
@@ -452,11 +456,7 @@ def execute_connector_source_binding(
         attestation_id=plan.security_attestation_id,
         backend=security_backend,
     )
-    if (
-        final_security.owner_sid_sha256 != plan.security_owner_sid_sha256
-        or final_security.current_user_sid_sha256 != plan.security_current_user_sid_sha256
-        or final_security.ancestor_count != plan.security_ancestor_count
-    ):
+    if final_security.to_dict()["attestation_sha256"] != plan.security_attestation_sha256:
         raise MontageLearningConnectorActivationError("bridge security identity drifted")
     result_body: dict[str, object] = {
         "schema_version": SOURCE_BINDING_SCHEMA_VERSION,
@@ -729,9 +729,8 @@ def apply_connector_activation_transaction(
             backend=security_backend,
         )
         if (
-            final_security.owner_sid_sha256 != initial_security.owner_sid_sha256
-            or final_security.current_user_sid_sha256 != initial_security.current_user_sid_sha256
-            or final_security.ancestor_count != initial_security.ancestor_count
+            final_security.to_dict()["attestation_sha256"]
+            != initial_security.to_dict()["attestation_sha256"]
         ):
             raise MontageLearningConnectorActivationError("bridge security identity drifted during config write")
         return _transaction_receipt(readback, event)

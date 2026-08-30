@@ -216,6 +216,35 @@ def test_profile_view_tamper_after_publish_fails_readback(tmp_path: Path) -> Non
         )
 
 
+def test_secure_dacl_drift_after_profile_publish_blocks_binding(tmp_path: Path) -> None:
+    target, migration, _store, _saved, source, readiness, _plan = _binding_plan(tmp_path)
+    backend = SecureBackend()
+    plan = plan_connector_source_binding(
+        target,
+        migration_readback=migration,
+        preference_source=source,
+        task058_public_readiness=readiness,
+        security_attestation_id="task061-cab-dacl-drift",
+        security_backend=backend,
+    )
+
+    def drift(phase: str, _path: Path) -> None:
+        if phase == "after_profile_publish":
+            backend.access_mask = 0x1200A9
+
+    with pytest.raises(MontageLearningConnectorActivationError, match="security identity drifted"):
+        execute_connector_source_binding(
+            plan,
+            target,
+            migration_readback=migration,
+            preference_source=source,
+            task058_public_readiness=readiness,
+            confirmation=plan.confirmation(),
+            security_backend=backend,
+            hook=drift,
+        )
+
+
 def test_non_secure_target_and_non_exact_public_v1_are_rejected(tmp_path: Path) -> None:
     target, migration, _store, _saved, source, _readiness = _fixture(tmp_path)
     good = production_readiness_evidence(
@@ -361,6 +390,31 @@ def test_config_write_requires_fresh_secure_bridge(tmp_path: Path) -> None:
             security_backend=SharedWriterBackend(),
         )
     assert read_connector_activation_config(target)["revision"] == 0
+
+
+def test_secure_dacl_drift_during_config_write_blocks_receipt(tmp_path: Path) -> None:
+    target, _store, _saved, _source, binding = _bound(tmp_path)
+    evidence = _human(binding, action="DEACTIVATE", evidence_id="human-action-dacl-drift")
+    backend = SecureBackend()
+
+    def drift(phase: str, _path: Path) -> None:
+        if phase == "after_config_replace":
+            backend.access_mask = 0x1200A9
+
+    with pytest.raises(MontageLearningConnectorActivationError, match="security identity drifted"):
+        apply_connector_activation_transaction(
+            target,
+            binding,
+            evidence,
+            expected_revision=0,
+            now="2026-08-30T00:01:00Z",
+            security_attestation_id="task061-cac-dacl-drift",
+            security_backend=backend,
+            hook=drift,
+        )
+    config = read_connector_activation_config(target)
+    assert config["revision"] == 1
+    assert config["enabled"] is False
 
 
 @pytest.mark.parametrize("phase", ["before_config_replace", "after_config_replace"])

@@ -31,7 +31,7 @@ def test_build_outputs_are_ignored_but_placeholder_is_kept() -> None:
 def test_windows_build_dependencies_and_user_docs_are_explicit() -> None:
     config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     dependencies = config["project"]["optional-dependencies"]["windows-build"]
-    assert "pyinstaller==6.22.0" in dependencies
+    assert "pyinstaller==6.22.2" in dependencies
     assert "pywebview==6.2.1" in dependencies
     assert any(item.startswith("faster-whisper>=1.2.1") for item in dependencies)
 

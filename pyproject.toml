@@ -53,7 +53,7 @@ ai-video-speech-cues = "ai_video_production.speech_cue_cli:main"
 dev = ["pytest>=8,<10"]
 asr = ["faster-whisper>=1.2.1,<2"]
 windows-build = [
-  "pyinstaller==6.22.0",
+  "pyinstaller==6.22.2",
   "pywebview==6.2.1",
   "faster-whisper>=1.2.1,<2",
   "pillow>=10,<13",

@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Windows EXE build用の開発依存PyInstallerを6.22.0から6.22.2へ更新し、canonical build contractのexact pinも同期しました。これは依存関係の更新のみで、EXE build、Release、Deploy、Production Activationは実行しません。
+
 - TASK-041 R1Bとして、R0/R1Aの音声完了候補をconsume-onlyで扱うWindows point-in-time不変台帳ストアを追加しました。held-handle相対open、非待機global lock、no-replace rename、CAS・FileId continuity・recovery照合をfail-closedに実装し、receiptはauthorityを生成しません。実Windows native/temp検証、Production root provision、ACL変更、Provider・audio・Release／Deploy／Productionは別Gateのまま未実行です。
 
 - TASK-036 Settingsで`selectable: false`の音声・音楽Routeを選択不可にし、導入状態・runtime readiness・currentness・利用不可理由をprivate pathや秘密値なしで表示します。利用不可の既定Routeは保存対象から外し、backendのfail-closed拒否とUIを整合させます。runtime起動、model download、Provider実行、課金、実機GUI、Release／Deploy／Productionは未実行です。

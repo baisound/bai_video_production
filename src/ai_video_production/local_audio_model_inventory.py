@@ -379,6 +379,52 @@ def compile_local_audio_model_inventory(
     return LocalAudioModelInventory(candidates)
 
 
+def verify_local_audio_inventory_public_snapshot(document: Mapping[str, object]) -> None:
+    """Fail closed when a public candidate or inventory digest no longer matches."""
+    if not isinstance(document, Mapping):
+        raise ValueError("audio inventory snapshot must be a mapping")
+    if document.get("schema_version") != "1.0.0":
+        raise ValueError("audio inventory schema_version is unsupported")
+    candidates = document.get("candidates")
+    if not isinstance(candidates, list):
+        raise ValueError("audio inventory candidates must be a list")
+    candidate_ids: set[str] = set()
+    route_ids: set[str] = set()
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            raise ValueError("audio inventory candidate must be a mapping")
+        candidate_id = candidate.get("candidate_id")
+        if not isinstance(candidate_id, str):
+            raise ValueError("audio inventory candidate_id is missing")
+        if candidate_id in candidate_ids:
+            raise ValueError("duplicate audio candidate_id in public snapshot")
+        candidate_ids.add(candidate_id)
+        route_id = candidate.get("route_id")
+        if route_id is not None:
+            if not isinstance(route_id, str):
+                raise ValueError("audio inventory route_id must be text or null")
+            if route_id in route_ids:
+                raise ValueError("duplicate audio route_id in public snapshot")
+            route_ids.add(route_id)
+        candidate_sha256 = candidate.get("candidate_sha256")
+        if not isinstance(candidate_sha256, str):
+            raise ValueError("audio inventory candidate_sha256 is missing")
+        validate_sha256(candidate_sha256, field_name="candidate_sha256")
+        candidate_body = dict(candidate)
+        candidate_body.pop("candidate_sha256", None)
+        if sha256_bytes(canonical_json_bytes(candidate_body)) != candidate_sha256:
+            raise ValueError("audio inventory candidate hash mismatch")
+
+    inventory_sha256 = document.get("inventory_sha256")
+    if not isinstance(inventory_sha256, str):
+        raise ValueError("audio inventory inventory_sha256 is missing")
+    validate_sha256(inventory_sha256, field_name="inventory_sha256")
+    inventory_body = dict(document)
+    inventory_body.pop("inventory_sha256", None)
+    if sha256_bytes(canonical_json_bytes(inventory_body)) != inventory_sha256:
+        raise ValueError("audio inventory hash mismatch")
+
+
 def apply_selectable_local_audio_routes(
     profile: AiConnectionProfile,
     inventory: LocalAudioModelInventory,

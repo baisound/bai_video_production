@@ -221,6 +221,81 @@ Every consumer reopens receipt and config and revalidates the TASK-063/TASK-061
 identities and operation immediately before launching the adapter. A prior
 successful read-back or config existence is not permanent authority.
 
+### 6.1 TASK-063 installed-coordinate Production-safety prerequisite
+
+The canonical installer-relative corrections remain valid source progress, but
+TASK-063 is not a Production-current coordinate provider until its descriptor,
+owner, installer-readback publication and rollback physical races are closed.
+Current descriptor/read paths do not bind no-follow opened bytes to identity;
+descriptor and owner are read separately; provision/update and readback use
+generic create/replace primitives without one secure operation snapshot;
+directory-fsync failure may be suppressed; and rollback/temp cleanup may unlink
+or overwrite a path not proven to retain the operation-created/replaced inode.
+
+The TASK-063 owner correction must:
+
+- pin install-root through data, Bridge, descriptor, owner and migration
+  ancestors and bind descriptor plus owner bytes/identities/currentness into one
+  sealed discovery snapshot;
+- use a secure existing/initial installer-operation lock, descriptor initial
+  no-replace publication and update expected-bytes-plus-inode CAS with pinned
+  post-readback;
+- retain installer-readback temp handle identity, re-prove its owned inode at
+  publish, use initial no-replace or existing expected-target inode+bytes CAS,
+  and perform post-publish pinned readback under the same lock/current ancestor;
+- treat directory fsync failure as FAIL with receipt zero;
+- drive rollback from a bound predecessor/journal and restore/delete only an
+  exact current identity matching the operation-created/replaced object;
+  unknown/collision state is preserved and stops; and
+- clean up only an exact operation-owned temp inode. Discovery receipts are
+  built from the same opened descriptor/owner snapshots, never equal fields
+  from separate reads.
+
+Focused negatives cover concurrent first provision, descriptor stat/open and
+post-read swaps, same bytes on a different inode, mixed descriptor/owner
+generations, install/data ancestor swap, lock hardlink/reparse, temp-to-publish
+swap, existing target pre/post-publish swap, directory-fsync failure, foreign
+replacement during fresh/update rollback, and failure at each descriptor/
+receipt commit seam. Assertions require unrelated overwrite/delete zero, one
+exact install instance, coherent descriptor/owner generation, receipt delta
+zero-or-one, exact-instance-only repair and fixed-ProgramData fallback zero.
+
+TASK-065 consumes only a new TASK-063 corrective completion receipt and freshly
+provisioned installed Evidence. TASK-061/065/067 do not modify installer source.
+
+### 6.2 TASK-060/TASK-058 Profile publication authority prerequisite
+
+Current public `PromotedPreferenceSourceRead` and `ProfileSourceBinding` objects
+use module-visible tokens plus computable hashes. Object-level
+`verify_current()` repeats shape/hash validation but does not pin and reopen the
+actual encrypted promotion source. A caller can therefore construct advisory-
+looking source/binding data and reach the public prebuilt Profile publisher
+without authoritative TASK-060 history/current-file readback. Although the
+Profile remains advisory and cannot mutate Timeline automatically, corrupting
+the Production current Profile changes downstream SKILL guidance and is an
+independent P0.
+
+Public source reads, bindings and receipts are evidence only with
+`authority_created:false`. A trusted TASK-060/TASK-058 Product operation must
+verify the encrypted source through one pinned opened snapshot, binding file
+identity, current revision, history and exact envelope, then mint a private
+single-use Production publish capability. Fixture/unbound public publication is
+restricted to a non-Production layout. Production entry late-binds the actual
+envelope against expected hash/source revision/Profile coordinates, burns the
+capability IN_FLIGHT at entry and on every success/exception, and retains the
+operation binding through exact Profile pointer/current/marker readback. The
+File Bridge physical-race correction remains a prerequisite.
+
+Module-token access, direct/copy/replace/deserialized source objects, valid-hash
+forgery, same coordinates from a different source inode, close-then-swap,
+arbitrary envelope matching a forged hash, fixture binding against Production,
+and double/concurrent/exception reuse all produce zero Profile payload/pointer/
+current/marker mutation. If same-process Python introspection is inside the
+threat boundary, authority moves to a trusted process/OS-backed broker rather
+than another module sentinel. This correction crosses released TASK-058 and
+TASK-060 ownership and needs an exact owner/amendment allocation; TASK-061/065/
+067 do not implement it.
+
 ## 7. D2 to PL-C cycle closure
 
 The current TASK-061 candidate cannot close the cycle:
@@ -371,6 +446,93 @@ snapshot commit is exact-once, receipt phases are monotonic and automatic old-
 data deletion remains zero. TASK-065 consumes the TASK-061 completion receipt
 only and does not change migration source.
 
+CA-C Human authority has a further independent P0. The current exported
+`issue_human_activation_evidence` can mint sealed-looking evidence from a
+predictable confirmation string while letting automation choose evidence ID and
+times. Its module seal and self-hash prove object consistency, not a Human
+event; changing ID/time can evade history-only replay checks. Opening the real
+E2E gate without correcting this would let an automated caller activate.
+
+The TASK-061 owner must replace Production minting with an operation-specific
+cryptographically random challenge durably bound to install instance, source
+binding, plan, requested action, expiry, current config revision and issuer/
+build identity. A Human-visible trusted Product UI/installer boundary confirms
+it and returns a one-shot receipt binding challenge, trusted process/user/
+session event coordinate/currentness and exact body. Automation cannot select
+action, time or evidence ID; raw strings, copied/deserialized objects, public
+dataclass construction and module-private sentinels cannot create authority.
+
+Apply revalidates challenge/receipt, config revision, source/discovery/security
+and exact E2E in one transaction and atomically consumes the capability. Call
+entry burns it; exception or mismatch is FAILED_CLOSED. Replay may return
+DUPLICATE only for the exact already committed Human event; a changed body is a
+collision. DEACTIVATE uses the same Human boundary when required; any separate
+emergency fail-closed disable must be an explicitly allocated safety path and
+cannot confer ACTIVATE authority. Public APIs expose request/prepare/status,
+not an activation capability, private factory or caller-selected mode.
+
+Negatives cover the predictable string, copied dataclass or sentinel access,
+new-ID/timestamp replay, wrong OS user/session/process, challenge swap/hardlink/
+reparse, expiry and stale config/source/instance/E2E, double/concurrent call,
+exception then reuse, and serialized receipt forgery. Activation history/config
+remain unchanged without the exact Human event, challenge consumption is
+exactly once, unrelated files remain unchanged and public failure is body-free.
+
+Real-installed E2E authority has its own independent P0. The current exported
+`InstalledAdapterE2EReadback` dataclass can be constructed with the module-
+visible `_ADAPTER_E2E_SEAL`; an external caller can set
+`synthetic_fixture:false` and recompute the public body hash. Python underscore
+names are not access control. The current apply checks exact type, body
+consistency, instance/source binding and the derived real flag, not the actual
+connector command, file identities, correlation or Profile evidence. Combined
+with self-mintable Human evidence, the current candidate may admit ACTIVATE and
+must not be classified as safe merely because its public factory rejects real
+input.
+
+The public E2E object is therefore data-only/test observation and cannot be an
+ACTIVATE capability. A trusted TASK-036/TASK-061 Product-operation boundary must
+execute the real installed command and verify pinned config/discovery/plan/
+delivery, strict public receipt, Generic correlation and independent Profile
+readback in the same operation, then mint a private one-use capability that
+cannot be caller-constructed, copied, deserialized or recreated by module
+attribute introspection. If an in-process Python caller is inside the adversary
+boundary, use an explicit trusted process/OS-backed broker receipt rather than a
+module sentinel. Apply consumes only exact capability identity plus current
+operation bindings, never public hashes, booleans or dataclass type checks.
+Entry transitions to IN_FLIGHT and both success and exception burn authority;
+only a fresh trusted execution may mint another capability. Synthetic fixture
+admission remains test-only and is a different Production input type.
+
+Negatives cover direct construction, sentinel access, copy/replace/pickle/
+deserialization, subclass/duck type, recreating synthetic as false, valid-hash
+forgery, wrong operation/instance/source/Profile/correlation and double/
+concurrent/exception reuse. Without the real command and exact readback,
+capability count and activation config/history mutation are zero.
+
+`ConnectorSourceBindingReadiness` has the same authority flaw: it is a public
+dataclass whose module `_RESULT_SEAL` and computable body hash can be reproduced.
+Shape/self-hash validation cannot prove actual CA-B plan execution, migration
+receipt, promoted Preference source or Profile publication/readback. Therefore
+the effect-bearing apply inputs—readiness, Human evidence and E2E readback—are
+all audit evidence with `authority_created:false`; none is accepted directly as
+authorization.
+
+A trusted TASK-061/TASK-036 operation must pinned-read the durable CA-B/Profile
+currentness, consume the exact Human challenge receipt, verify the real E2E
+correlation/Profile evidence and bind them in one current operation before
+minting the private one-use apply capability. Public readiness constructors,
+module sentinels, copies and serialized objects cannot substitute. Without this
+trusted composition, apply changes neither config nor history.
+
+Production composition also fixes the native security backend internally.
+Caller-selected `security_backend`, hooks or failure injectors remain test seams
+only and cannot be selected through packaged argv, config, plan or serialized
+receipt. The Production capability binds backend identity, build digest and
+attestation implementation version. Fake/monkeypatched backends, hook-induced
+file swaps and backend changes between prepare, apply and final readback all
+fail effect zero. Public test APIs and the private Production operation type are
+separate surfaces.
+
 ### 7.1a SKILL adapter Production-safety prerequisite
 
 The released SKILL adapter remains valid historical TASK-058 release Evidence,
@@ -437,6 +599,55 @@ valid.
 The currently available SKILL checkout is non-main and dirty; it is not an
 authoring start point. Future implementation requires an exact owner/Task/
 Allowed Files allocation and a fresh dedicated worktree from verified main.
+
+### 7.1b TASK-058 File Bridge Production-safety prerequisite
+
+Released TASK-058 Evidence remains historically valid, but its File Bridge is
+not yet eligible for Production linkage. Its new-or-identical helper closes an
+exclusive temp handle and later links by path without proving the temp path is
+still the operation-owned inode; raced-target identical reads and general
+security reads are not one pinned lstat/no-follow-open/fstat/post-identity
+snapshot. Unconditional temp cleanup can unlink a foreign replacement. The same
+read helper serves owner Manifest, public receipt, Generic correlation, pending
+and immutable Profile payload. Import/Profile journals and ordered Profile
+pointer/current/marker state use the generic replace writer without an expected
+target-identity CAS. Pending cleanup rereads then unlinks by path without
+proving the same inode.
+
+This needs a separate TASK-058-owner corrective Unit with exact paths/symbols
+and any required cross-owner amendment. It is not part of the limited TASK-067
+Generic-facade amendment, and TASK-061/065/067 must not change it. Required
+correction includes:
+
+- all security reads bound to one full-ancestor, lstat, no-follow-open, fstat,
+  bounded-read, post-identity snapshot with regular/single-link/non-reparse and
+  non-inheritable handle requirements; parse/hash/identity share that snapshot;
+- immutable publish through an operation-owned exclusive open temp handle,
+  fsync and retained identity, no-replace publication, pinned-identical-only
+  raced duplicate handling, directory durability and post-publish pinned
+  readback;
+- mutable journal phases under secure existing/initial lock with expected
+  previous bytes plus inode identity CAS, prepublish currentness and post-read;
+- Profile pointer/current/marker ordered targets bound to their phase journal,
+  without using generic `AtomicJsonWriter` as authority proof;
+- pending unlink only for the same pinned exact identity; any swap, hardlink or
+  reparse stops and leaves pending intact;
+- temp cleanup only after re-proving the exact operation-created inode, with
+  foreign replacement cleanup zero; and
+- stable body-free public errors/receipts with absolute path and OS detail
+  leakage zero.
+
+Focused negatives cover temp-close-to-link swap, identical/different target
+appearance, hardlink/ancestor/reparse/stat-open/read-post swaps, journal phase
+swap, ordered Profile publication swap, pending reread-to-unlink swap, foreign
+temp replacement and fsync faults. Assertions require unrelated overwrite/
+delete zero, exact zero-or-one revision transition, pending retained or exact
+cleanup, and same-identity-only restart.
+
+The completion order is TASK-058 corrective canonical main/release/install
+exact read-back, TASK-063/TASK-065 baseline rebind where affected, TASK-061
+pre-activation real E2E, then TASK-065 PL-C. Release/install remain separate
+Gates and no existing TASK-058 release claim is retroactively invalidated.
 
 ### 7.2 TASK-058 Generic current-coordinate prerequisite
 

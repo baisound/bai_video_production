@@ -33,10 +33,16 @@ an active production fallback.
    canonical. D0 still requires fresh post-main hosted/Windows completion plus
    an exact re-provisioned installed read-back covering DACL, reparse, hardlink,
    descriptor, owner and discovery currentness. Older fixture/hash Evidence is
-   not reusable as current PASS.
+   not reusable as current PASS. Completion additionally requires pinned
+   descriptor/owner discovery snapshots, secure provision/readback locking and
+   identity-CAS/no-replace publication/rollback; current path-based replace and
+   unlink behavior cannot prove race-safe installed currentness.
 2. `D1`: TASK-060 PP-A is integrated from fresh `main`, then PP-B and PP-C are
    canonically completed and expose exactly one promoted envelope plus source
-   receipt.
+   receipt. Production Profile publication additionally requires a trusted
+   pinned TASK-060 source-read operation and private one-use publish capability;
+   public `PromotedPreferenceSourceRead`/`ProfileSourceBinding` tokens and hashes
+   are advisory data, not write authority.
 3. `D2`: TASK-061 corrects its public-v1/private-v2 readiness dependency and
    supplies CA-A/CA-B plus a sealed CA-C prepare/Human one-shot candidate with
    apply effect zero. The current candidate cannot mint the real-installed E2E
@@ -47,7 +53,15 @@ an active production fallback.
    `os.replace` writer cannot establish physical race safety. CA-A migration
    separately requires secure migration lock, identity-CAS journal phases,
    no-replace Manifest/snapshot publication and operation-owned-only temp
-   cleanup before D2 may complete.
+   cleanup before D2 may complete. Human activation must be issued from a
+   Product-owned trusted UI/process one-shot challenge; the current public
+   predictable-string factory is self-mintable and cannot authorize ACTIVATE.
+   Independently, public `InstalledAdapterE2EReadback` plus a module-visible
+   sentinel is forgeable; ACTIVATE must consume a non-caller-constructible,
+   one-use trusted Product-operation capability instead of public hashes/flags.
+   The same applies to public CA-B readiness: readiness, Human and E2E objects
+   are audit data only, while a trusted native-backend-fixed operation binds all
+   three into the private apply capability.
 4. `D2S`: the released SKILL adapter remains valid historical TASK-058 release
    Evidence, but its current transport writer/config/receipt/Profile readers do
    not meet Production race, physical-identity and privacy requirements.
@@ -57,7 +71,13 @@ an active production fallback.
    fixed-ProgramData/default-config activation instructions with the Option B
    explicit runtime-config route while keeping the distribution default an
    immutable disabled sentinel. TASK-061/065/067 cannot modify SKILL source.
-5. `D2C`: the unapproved TASK-067 follow-up candidate would supply a public
+5. `D2F`: released TASK-058 File Bridge Evidence also remains historically
+   valid, but Production linkage requires a separately owned TASK-058 corrective
+   Unit for pinned reads, immutable/mutable publication identity, ordered
+   Profile publication and identity-safe pending/temp cleanup. The limited
+   TASK-067 amendment does not include this work; TASK-061/065/067 cannot make
+   the correction directly.
+6. `D2C`: the unapproved TASK-067 follow-up candidate would supply a public
    sealed read-only current-coordinate receipt for the Generic review store
    only after a canonical metadata allocation and implementation Gate. It binds
    the current ledger revision to the Project manifest/binding, ledger head,
@@ -65,7 +85,7 @@ an active production fallback.
    only the fixed Generic three-method admission surface; exact APIs remain
    sealed. TASK-065 grants no TASK-067 implementation authority. Until that
    allocation and completion receipt exist, this dependency is `N.C.`.
-6. `D2P`: TASK-036/Development 2 supplies a bounded private Product-operation
+7. `D2P`: TASK-036/Development 2 supplies a bounded private Product-operation
    entrypoint in the unified packaged EXE plus its focused-verification
    completion receipt. It consumes D2C and does not inspect TASK-058 private
    storage helpers or raw ledger JSON. The entrypoint is a closed headless
@@ -77,7 +97,7 @@ an active production fallback.
    delivery; TASK-067 late-binds the actual Bridge-validated mapping at method
    entry so claimed-delivery restart remains possible.
    `Task036LaunchConfiguration` remains coordinate data, not authority.
-7. `D3`: TASK-065 proceeds through `PL-A`, then the cycle-safe sequence
+8. `D3`: TASK-065 proceeds through `PL-A`, then the cycle-safe sequence
    `CA-C prepare (apply0) -> PL-B0 -> PL-C0 -> CA-C apply -> PL-B steady-state
    -> PL-C steady-state -> PL-D`.
 

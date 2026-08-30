@@ -1,6 +1,6 @@
 # TASK-061 — Montage Learning Connector Activation and Migration
 
-- Status: `CA_B_SOURCE_BINDING_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
+- Status: `CA_C_DISABLED_HISTORY_IMPLEMENTATION_CANDIDATE / REAL_E2E_GATE_PENDING`
 - Capability: `BVP-MONTAGE-CONNECTOR-ACTIVATION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Canonical activation bit: BVP-owned production connector config `enabled`
@@ -70,6 +70,19 @@ false. Duplicate exact execution yields the same read-back identity. Combined
 CA-A/CA-B/PP-C/TASK-058 Profile transport validation is `92 passed / 1 skip` on
 Windows and `87 passed / 6 environment-only skips` on WSL2. No installed bridge,
 installed SKILL config, Owner data, or real adapter was touched.
+
+CA-C now has a BVP-owned synthetic-temp config/history candidate. Absent state is
+revision `0`, `enabled:false`, and no file is created by read. A deactivation
+requires exact Human confirmation, expires within 24 hours, is one-shot,
+append-only/hash-chained, CAS-protected, atomically replaced, and independently
+read back as disabled. Before/after-replace crash tests recover idempotently.
+Synthetic adapter observations are explicitly ineligible to enable the
+connector, and the real-installed E2E admission path is deliberately unavailable
+until its separate native/config gate is satisfied. CA-C focused validation is
+`18 passed` on Windows and `18 passed` on WSL2. No activation to true, installed
+SKILL config write, real adapter invocation, or Production effect occurred.
+The combined CA-A through CA-C/PP-C/TASK-058 transport boundary is `101 passed /
+1 skip` on Windows and `96 passed / 6 environment-only skips` on WSL2.
 
 ## Governing authorization
 

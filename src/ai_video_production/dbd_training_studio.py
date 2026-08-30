@@ -107,6 +107,7 @@ from .dbd_reasoning_mode_selector_ui import build_reasoning_mode_selector_panel
 from .dbd_reasoning_commentary_preview_ui import CommentaryPreviewPanel
 from .dbd_reasoning_dataset_evaluation_view_ui import DatasetEvaluationPanel
 from .dbd_reasoning_model_panel_ui import ReasoningModelPanel
+from .task036_ollama_runtime import OllamaRuntimeLifecycle
 from .dbd_reasoning_operation_view_ui import TrainingStudioOperationPanel
 from .dbd_runtime_options import (
     WHISPER_MODEL_OPTIONS_JA, DEVICE_OPTIONS_JA, COMPUTE_OPTIONS_JA,
@@ -315,6 +316,7 @@ def launch_training_studio(argv: Sequence[str] | None = None) -> int:
         model_page,
         run_preflight=reasoning_preflight_unavailable,
         open_review=lambda: status.set("レビュー対象はまだありません。"),
+        runtime_snapshot_provider=lambda: OllamaRuntimeLifecycle().probe(),
     )
     model_panel.grid(row=0, column=0, sticky="nsew")
     dataset_panel = DatasetEvaluationPanel(dataset_page)

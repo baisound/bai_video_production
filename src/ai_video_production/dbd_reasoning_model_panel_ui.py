@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from typing import Callable
 
-from .dbd_reasoning_model_panel import ModelPanelSnapshot
+from .dbd_reasoning_model_panel import (
+    ModelPanelSnapshot, format_ollama_runtime_status, unavailable_ollama_runtime_snapshot,
+)
+from .task036_ollama_runtime import OllamaRuntimeSnapshot
 
 
 class ReasoningModelPanel:
@@ -14,17 +17,20 @@ class ReasoningModelPanel:
         *,
         run_preflight: Callable[[], ModelPanelSnapshot],
         open_review: Callable[[], None],
+        runtime_snapshot_provider: Callable[[], OllamaRuntimeSnapshot] | None = None,
     ) -> None:
         import tkinter as tk
         from tkinter import messagebox, ttk
 
         self.run_preflight = run_preflight
         self.open_review = open_review
+        self.runtime_snapshot_provider = runtime_snapshot_provider or unavailable_ollama_runtime_snapshot
         self.snapshot: ModelPanelSnapshot | None = None
         self.frame = ttk.Frame(parent)
         self.frame.columnconfigure(0, weight=1)
         self.frame.rowconfigure(1, weight=1)
         self.status_var = tk.StringVar(value="事前チェックを実行してください。モデル実行は既定で無効です。")
+        self.runtime_status_var = tk.StringVar(value="共有Ollama状態を確認中です。")
         ttk.Label(self.frame, text="解説AIモデル", font=("TkDefaultFont", 12, "bold")).grid(row=0, column=0, sticky="w")
         columns = ("name", "role", "state", "ja", "json", "gpu", "rights", "evaluation")
         self.tree = ttk.Treeview(self.frame, columns=columns, show="headings", height=9)
@@ -37,8 +43,9 @@ class ReasoningModelPanel:
             self.tree.heading(key, text=title)
             self.tree.column(key, width=width, stretch=key == "name")
         ttk.Label(self.frame, textvariable=self.status_var, wraplength=1000).grid(row=2, column=0, sticky="w")
+        ttk.Label(self.frame, textvariable=self.runtime_status_var, wraplength=1000).grid(row=3, column=0, sticky="w", pady=(4, 0))
         actions = ttk.Frame(self.frame)
-        actions.grid(row=3, column=0, sticky="w", pady=(8, 0))
+        actions.grid(row=4, column=0, sticky="w", pady=(8, 0))
         ttk.Button(actions, text="事前チェック", command=self._preflight).pack(side="left", padx=(0, 6))
         self.execute_button = ttk.Button(actions, text="現在の実況・解説を確認", state="disabled", command=lambda: None)
         self.execute_button.pack(side="left", padx=6)
@@ -46,12 +53,14 @@ class ReasoningModelPanel:
         self.review_button.pack(side="left", padx=6)
         ttk.Button(actions, text="詳細を見る", command=self._details).pack(side="left", padx=6)
         self._messagebox = messagebox
+        self._refresh_runtime_status()
 
     def grid(self, **kwargs) -> None:
         self.frame.grid(**kwargs)
 
     def show(self, snapshot: ModelPanelSnapshot) -> None:
         self.snapshot = snapshot
+        self.runtime_status_var.set(format_ollama_runtime_status(snapshot.runtime_snapshot))
         self.tree.delete(*self.tree.get_children())
         for index, row in enumerate(snapshot.rows):
             self.tree.insert("", "end", iid=str(index), values=(
@@ -65,7 +74,16 @@ class ReasoningModelPanel:
         self.execute_button.configure(state="normal" if snapshot.execution_enabled else "disabled")
         self.review_button.configure(state="normal" if snapshot.review_enabled else "disabled")
 
+    def _refresh_runtime_status(self) -> None:
+        try:
+            snapshot = self.runtime_snapshot_provider()
+            if not isinstance(snapshot, OllamaRuntimeSnapshot):
+                raise ValueError("runtime snapshot provider returned an invalid value")
+        except Exception:
+            snapshot = unavailable_ollama_runtime_snapshot()
+        self.runtime_status_var.set(format_ollama_runtime_status(snapshot))
     def _preflight(self) -> None:
+        self._refresh_runtime_status()
         try:
             self.show(self.run_preflight())
         except Exception as exc:

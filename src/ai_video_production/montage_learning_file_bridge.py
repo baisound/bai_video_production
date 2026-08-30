@@ -23,9 +23,7 @@ from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .serialization import canonical_json_bytes, sha256_json
 
 
-PRODUCTION_BRIDGE_ROOT = Path(
-    r"C:\ProgramData\BAI Video Production\montage-learning-bridge"
-)
+PRODUCTION_BRIDGE_RELATIVE_PARTS = ("data", "montage-learning-bridge")
 BRIDGE_CONTRACT_PROFILE = "bvp-task029-file-bridge-v1"
 OWNER_MANIFEST_TYPE = "BvpMontageLearningBridgeOwnerManifest"
 OWNER_MANIFEST_VERSION = "1.0.0"
@@ -81,25 +79,31 @@ class BridgeLayout:
     production_path: bool
 
     @classmethod
-    def production(cls) -> "BridgeLayout":
-        return cls(PRODUCTION_BRIDGE_ROOT, True)
+    def production(cls, install_root: str | Path) -> "BridgeLayout":
+        return cls(resolve_production_bridge_root(install_root), True)
 
     @classmethod
     def for_isolated_test(cls, root: str | Path) -> "BridgeLayout":
         candidate = Path(root)
         if not candidate.is_absolute():
             raise MontageLearningFileBridgeError("isolated root must be absolute")
-        if _same_path(candidate, PRODUCTION_BRIDGE_ROOT):
+        if tuple(part.casefold() for part in candidate.parts[-2:]) == tuple(
+            part.casefold() for part in PRODUCTION_BRIDGE_RELATIVE_PARTS
+        ):
             raise MontageLearningFileBridgeError(
-                "isolated layout cannot target the production bridge root"
+                "isolated layout cannot impersonate an installer-relative bridge"
             )
         return cls(candidate, False)
 
     def __post_init__(self) -> None:
-        if self.production_path and not _same_path(self.root, PRODUCTION_BRIDGE_ROOT):
-            raise MontageLearningFileBridgeError(
-                "production layout root is fixed and cannot be overridden"
-            )
+        if not self.root.is_absolute():
+            raise MontageLearningFileBridgeError("bridge root must be absolute")
+        if self.production_path:
+            install_root = self.root.parent.parent
+            if not _same_path(self.root, resolve_production_bridge_root(install_root)):
+                raise MontageLearningFileBridgeError(
+                    "production layout must use the installer-relative bridge path"
+                )
 
     @property
     def inbox(self) -> Path:
@@ -120,6 +124,10 @@ class BridgeLayout:
     @property
     def state(self) -> Path:
         return self.root / "state"
+
+    @property
+    def migration(self) -> Path:
+        return self.root / "migration"
 
     @property
     def import_journal(self) -> Path:
@@ -1017,7 +1025,24 @@ def _bridge_directories(layout: BridgeLayout) -> tuple[Path, ...]:
         layout.preference,
         layout.profiles,
         layout.state,
+        layout.migration,
     )
+
+
+def resolve_production_bridge_root(install_root: str | Path) -> Path:
+    """Resolve the active bridge below one explicit installer-selected root."""
+
+    root = Path(install_root)
+    if not root.is_absolute():
+        raise MontageLearningFileBridgeError("install root must be absolute")
+    candidate = root.joinpath(*PRODUCTION_BRIDGE_RELATIVE_PARTS)
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise MontageLearningFileBridgeError(
+            "bridge root must remain inside the install root"
+        ) from exc
+    return candidate
 
 
 def _capture_bridge_ancestor_identities(
@@ -1165,6 +1190,7 @@ def _validate_import_journal(
     if type(identities) is not dict or set(identities) != {
         ".", "learning-inbox", "learning-processing", "learning-quarantine",
         "learning-receipts", "preference", "preference/profiles", "state",
+        "migration",
     }:
         raise MontageLearningFileBridgeError("journal ancestor identity set mismatch")
     for relative, identity in identities.items():
@@ -2215,7 +2241,7 @@ __all__ = [
     "MAX_DELIVERY_BYTES",
     "MAX_IMPORT_FILES",
     "MontageLearningFileBridgeError",
-    "PRODUCTION_BRIDGE_ROOT",
+    "PRODUCTION_BRIDGE_RELATIVE_PARTS",
     "ReceiptPublicationPaths",
     "build_receipt_publication_pending",
     "build_generic_receipt_correlation",
@@ -2240,5 +2266,6 @@ __all__ = [
     "recover_current_profile",
     "receipt_identity_publisher_guard",
     "receipt_publication_paths",
+    "resolve_production_bridge_root",
     "snapshot_delivery",
 ]

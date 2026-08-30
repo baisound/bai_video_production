@@ -2,7 +2,7 @@
 
 ## Canonical project state
 
-- P0 GPU-first desktop prerequisite: `TASK-066 OWNER_AUTHORIZED / DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`. Renderer/compute separation, roots, workload registry, DLL two-stage admission and bounded diagnostics remain accepted. A post-acceptance source audit found the GF-E callable-entry gap; the accepted correction adds a dedicated private TASK-066 installer helper after the unchanged TASK-063 dispatch. Delta Critic `0/0/0/0` and delta Judge `ACCEPT`; downloads, native proof, final DLL package seal and Release remain separate Gates.
+- P0 GPU-first desktop prerequisite: `TASK-066 OWNER_AUTHORIZED / DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`. GF-E callable entry, source-backed build chain, durable receipt lifecycle and journal-first cross-volume recovery are accepted; delta-4 Critic `0/0/0/0`, Judge `ACCEPT`. TASK-063 repair source is canonical, but its post-repair native install/read-back terminal handoff is not yet confirmed, so GF-E installer mutation remains blocked; implementation/native/Release Gates remain separate.
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`

@@ -1,6 +1,6 @@
 # TASK-061 — Montage Learning Connector Activation and Migration
 
-- Status: `ALLOCATED / DEPENDENCY_BLOCKED / IMPLEMENTATION_NOT_AUTHORIZED`
+- Status: `CA_A_SECURITY_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
 - Capability: `BVP-MONTAGE-CONNECTOR-ACTIVATION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Canonical activation bit: BVP-owned production connector config `enabled`
@@ -37,16 +37,20 @@ or modify a Preference, change TASK-055, or set the repository default to true.
 Order: TASK-058 canonical release plus TASK-060 `PP-C`, then
 `CA-A -> CA-B -> CA-C`.
 
-TASK-058 v0.23.0 is released. `TASK-061` remains `DEPENDENCY_BLOCKED` because
-TASK-060 `PP-C` does not yet exist.  No dependency requires or assumes a public
-readiness v2 schema; metadata allocation does not waive the remaining PP-C
-dependency.
+TASK-058 v0.23.0 is released. TASK-060 PP-C now exists only as a stacked Draft
+candidate and is not canonical completion. No dependency requires or assumes a
+public readiness v2 schema.
 
 ## Current authorization state
 
-Implementation, config writes, migration, DACL repair, adapter execution,
-activation, Release, Deploy, and Production effects are `NOT_AUTHORIZED` until
-the full authorization lifecycle is canonically closed.
+The Owner continuity/dependency-takeover instruction allowed a bounded CA-A
+security implementation candidate instead of remaining idle. It is read-only:
+real Windows owner/DACL/ACE parsing plus root/ancestor identity revalidation,
+with every repair, migration, config, activation, Timeline, Resolve, and
+external effect fixed to `0`. Windows focused validation is `15 passed / 1
+non-Windows skip`; WSL2 boundary validation is `12 passed / 4 Windows-only
+skipped`. Migration, DACL repair, adapter execution, activation, Release,
+Deploy, and Production remain unauthorized and unexecuted.
 
 ## Governing authorization
 

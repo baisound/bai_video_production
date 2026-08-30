@@ -60,7 +60,7 @@
 | TASK-061 | Montage Learning Connector Activation and Migration | DEPENDENCY_BLOCKED_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | TASK-058 canonical releaseとTASK-060 PP-Cを待つ。bridge再検証・移行・明示Human activationを扱うが、実装とenabled変更は未承認。 |
 | TASK-062 | Montage Consumer Runtime Desktop UX | DEPENDENCY_BLOCKED_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | released ConsumerRuntimeService wheel digestとcurrent TASK-055 identityの固定を待つ。Desktop統合実装、Timeline/Resolve effectは未承認。 |
 
-| TASK-066 | GPU-First Desktop Execution, Packaging and Diagnostics | OWNER_AUTHORIZED_P0_DESIGN_ACCEPTED_IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY_NATIVE_PROOF_PENDING | OWNER_EXPLICIT_GPU_FIRST_ALL_DESKTOP_APPS_2026_08_31 | DEV-4 | Critic 0/0/0/0 and Judge ACCEPT freeze renderer/compute separation, Auto/GPU/CPU local workload admission, InstallLayout, DLL two-stage admission and bounded diagnostics. Exact GF-A..GF-F assignments are dependency-scoped; TASK-063 handoff, download, native proof, final package seal and Release remain separate Gates. |
+| TASK-066 | GPU-First Desktop Execution, Packaging and Diagnostics | OWNER_AUTHORIZED_P0_DESIGN_ACCEPTED_IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY_NATIVE_PROOF_PENDING | OWNER_EXPLICIT_GPU_FIRST_ALL_DESKTOP_APPS_2026_08_31 | DEV-4 | Initial design and post-acceptance GF-E callable-entry correction are accepted. The dedicated private TASK-066 helper follows the unchanged TASK-063 dispatch; delta Critic 0/0/0/0 and delta Judge ACCEPT. Downloads, native proof, final package seal and Release remain separate Gates. |
 
 ## Roadmap authority
 

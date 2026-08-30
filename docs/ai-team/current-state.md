@@ -2,7 +2,7 @@
 
 ## Canonical project state
 
-- P0 GPU-first desktop prerequisite: `TASK-066 OWNER_AUTHORIZED / DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`. All user-facing BVP EXEs bind to the common startup-resolved local-compute policy, while renderer Evidence stays separate from Auto/GPU/CPU. Critic `0/0/0/0` and Judge `ACCEPT` freeze binary/data roots, workload registry, DLL two-stage admission and bounded privacy-safe diagnostics. TASK-063 handoffs, downloads, native proof, final DLL package seal and Release remain separate Gates.
+- P0 GPU-first desktop prerequisite: `TASK-066 OWNER_AUTHORIZED / DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`. Renderer/compute separation, roots, workload registry, DLL two-stage admission and bounded diagnostics remain accepted. A post-acceptance source audit found the GF-E callable-entry gap; the accepted correction adds a dedicated private TASK-066 installer helper after the unchanged TASK-063 dispatch. Delta Critic `0/0/0/0` and delta Judge `ACCEPT`; downloads, native proof, final DLL package seal and Release remain separate Gates.
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`

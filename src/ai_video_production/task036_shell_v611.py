@@ -161,7 +161,7 @@ renderModelSelection=function(model,page){
     const status=`Status: ${modelSelectionUnavailableMessage(selector.unavailable_reason)}`;
     for(const textNode of Array.from(cards[index]?.childNodes||[])){
       if(textNode.nodeType===Node.TEXT_NODE&&textNode.textContent?.includes('Status:')){
-        textNode.textContent=textNode.textContent.replace(/Status: [^\\n]*/,status);
+        textNode.textContent=textNode.textContent.replace(/Status: [^\n]*/,status);
       }
     }
   }

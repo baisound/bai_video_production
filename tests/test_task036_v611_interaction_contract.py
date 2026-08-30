@@ -64,6 +64,7 @@ def test_audio_model_selection_keeps_unavailable_reason_visible() -> None:
     ):
         assert marker in HTML
 
+    assert r"replace(/Status: [^\n]*/,status)" in HTML
 def test_timeline_scrub_uses_python_owned_seek_without_frontend_truth() -> None:
     for marker in (
         "function startTimelineScrub(event,target)",

@@ -61,7 +61,6 @@ Windows focused `24 passed`, WSL2 focused `23 passed / 1 Windows-only skipped`,
 Windows TASK-019/029 direct regression `75 passed`, and WSL2 direct regression
 `72 passed / 3 Windows-only skipped`. Its five implementation/schema/test paths
 plus this existing task checkpoint are the exact candidate scope.
-
 PP-C now has a bounded implementation candidate for a pinned, read-only current
 promotion source and the single sealed TASK-058 production-source binding seam.
 The source requires exact store/scope/revision/history/payload coordinates,

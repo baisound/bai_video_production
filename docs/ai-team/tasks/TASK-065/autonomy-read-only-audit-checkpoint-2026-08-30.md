@@ -201,6 +201,70 @@ This point-in-time file ID and byte hash are useful PL-B CAS inputs, but are not
 a CA-C revision or ownership attestation. The unresolved writable principals
 keep the current classification `CONFIG_DACL_UNATTESTED / EFFECT0`.
 
+### 4.4 Installed-config ACL provenance
+
+The writable ACEs are not inherited from the user profile, `.codex`, or
+`skills` directory. They are explicit inheritable ACEs introduced at the
+`bvp-montage-learning-adapter` installed SKILL root and inherited by `config`
+and the config file:
+
+- `PC-BAIS\CodexSandboxUsers`: `Modify, Synchronize`;
+- `S-1-5-21-3254314496-1160912775-205898531-2731828939`:
+  `Modify, Synchronize`.
+
+The second SID does not translate to an NT account, produces no
+`Win32_Account` result, and is not present in the current process token groups.
+It is therefore an unresolved/orphan candidate, not an implicitly trusted
+writer. PL-B must bind an explicit allowed-writer policy and reject every
+unlisted writable ACE. It must not assume that either all non-owner writers are
+forbidden or that installation-time ACL presence makes a principal trusted.
+
+### 4.5 Existing persistence primitives are not PL-B authority
+
+The repository contains useful but insufficient precedent:
+
+- `ConnectionSettingsStore` supplies a logical integer revision and
+  document self-hash, but reads by path and publishes through the generic
+  `AtomicJsonWriter`. Its record schema is unrelated to the closed installed
+  ConnectorConfig v1 schema.
+- `AtomicJsonWriter` creates parent directories and performs unconditional
+  path-based `os.replace`; it does not pin the existing target, DACL, hardlink,
+  or complete ancestor identity and cannot be used alone for PL-B.
+- TASK-058's `_WindowsPinnedReadPort` demonstrates non-inheritable Win32
+  handle reads and file IDs, but it is private, read-only, limited to its
+  Project-root chain, and its public projection explicitly leaves hostile
+  ancestor namespace-race protection false.
+
+TASK-065 must not import these private helpers as authority or reuse the generic
+writer unchanged. After D0-D2 and the separate config Gate, PL-B needs a
+task-owned closed transaction that combines the CA-C logical revision/body
+identity with a complete physical-path snapshot and exact post-write read-back,
+while preserving every non-coordinate config field including `enabled`.
+
+### 4.6 CA-C history and PL-B coordinate-successor contract
+
+The current ConnectorConfig is a single closed JSON body. Changing only
+`bridge_root` still changes its whole-file byte hash. If CA-C later binds its
+Human activation/history receipt to exact config bytes, a PL-B coordinate
+update would otherwise make the CA-C authority stale even though PL-B did not
+touch `enabled`.
+
+D2 is therefore not admissible unless the canonical CA-C contract defines one
+of these equivalent closed outcomes:
+
+- an exact pre-authorized coordinate-only successor body/revision that PL-B may
+  publish by CAS while leaving Human activation entries immutable; or
+- separate activation-field and linkage-coordinate identities plus an exact
+  composition/read-back rule that still authenticates the final whole config.
+
+PL-B may not invent that split. Its deterministic candidate delta must be
+exactly `{bridge_root}`, with all eight other ConnectorConfig v1 fields byte-
+semantically equal to the admitted CA-C state. In particular, `enabled` and
+`require_admission_receipt` are protected CA-C/policy values, not linkage
+defaults. A current body that already equals the target is a physical no-op;
+any other protected-field drift, missing successor binding, same revision with
+different body, or final CA-C status/history mismatch is `STOP / EFFECT0`.
+
 ## 5. Fresh installed-instance read-back
 
 The bounded TASK-063 test installation was reopened read-only. Its public-safe
@@ -257,6 +321,12 @@ In addition to the checklist in the PL-A design freeze:
 - [ ] the admitted TASK-063 instance is unique and current;
 - [ ] DACL/reparse/hardlink/ancestor policy is current before and after the
   separately gated config transaction.
+- [ ] CA-C defines and authenticates the coordinate-only successor/composition
+  rule so PL-B does not invalidate Human activation authority by changing the
+  whole-file hash;
+- [ ] PL-B's only semantic delta is `bridge_root`; `enabled`, receipt policy,
+  transport feature flags, contract identity, and legacy-safe behavior remain
+  exact.
 
 ## 7. Public-safe PL-C fixture identity chain
 
@@ -299,6 +369,11 @@ gated on D0-D2, PL-A PASS, PL-B coordinate synchronization, and the inherited
 CA-C activation history.
 
 ## 8. Current result and next safe work
+
+Fresh dependency re-evaluation after commit
+`c99f9c1d79b92cbd07c9f27484b2ace8748d8b34` found no arrival or identity
+change: canonical `main`, PR #448, PR #430, and TASK-061 remain at the states
+recorded above.
 
 - D0: `BLOCKED_PR448_NOT_CANONICAL_AND_RESIDUAL_BOUNDARIES_OPEN`.
 - D1: `BLOCKED_PP_A_DRAFT_PP_B_PP_C_ABSENT_DESIGN_BODY_UNREACHABLE`.

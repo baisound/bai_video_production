@@ -213,6 +213,7 @@ class Task036ShellBridge:
         audio_placement_application: Task026AudioPlacementApplication | None = None,
         quick_generation_application: Task042QuickGenerationApplication | None = None,
         connection_settings: ConnectionSettingsWebService | None = None,
+        ollama_runtime_snapshot_provider: Callable[[], dict[str, object]] | None = None,
         owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
         final_review_application: FinalReviewApprovalApplication | None = None,
         final_review_external_gate_provider: Callable[
@@ -264,6 +265,9 @@ class Task036ShellBridge:
         self._audio_placement_application = audio_placement_application
         self._quick_generation_application = quick_generation_application
         self._connection_settings = connection_settings
+        if ollama_runtime_snapshot_provider is not None and not callable(ollama_runtime_snapshot_provider):
+            raise ValueError("Ollama runtime snapshot provider is invalid")
+        self._ollama_runtime_snapshot_provider = ollama_runtime_snapshot_provider
         self._owner_signing_key_import = owner_signing_key_import
         self._final_review_application = final_review_application
         if final_review_external_gate_provider is not None and not callable(final_review_external_gate_provider):
@@ -1040,6 +1044,71 @@ class Task036ShellBridge:
             "available": True,
             **form,
             "credential_values_redisplayed": False,
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "generation_started": False,
+        }
+
+    @staticmethod
+    def _ollama_runtime_unavailable_projection() -> dict[str, object]:
+        return {
+            "available": False,
+            "state": "UNAVAILABLE_CONFIGURATION",
+            "model_ids": [],
+            "started_by_product": False,
+            "reason_code": "OLLAMA_RUNTIME_NOT_BOUND",
+            "message_ja": "Ollamaの状態を確認する接続が未設定です。Project設定を再確認してください。",
+            "endpoint": "loopback-only",
+            "provider_execution_started": False,
+            "paid_execution_authorized": False,
+            "generation_started": False,
+        }
+
+    def ollama_runtime_snapshot(self, args: Any = None) -> dict[str, object]:
+        """Expose a read-only, public-safe local runtime state to the Shell."""
+        self._empty_args(args, "Ollama runtime snapshot")
+        if self._ollama_runtime_snapshot_provider is None:
+            return self._ollama_runtime_unavailable_projection()
+        try:
+            raw = self._ollama_runtime_snapshot_provider()
+        except (OSError, ValueError):
+            raw = None
+        expected = {"state", "model_ids", "started_by_product", "reason_code", "message_ja", "endpoint"}
+        if not isinstance(raw, dict) or set(raw) != expected:
+            return {
+                **self._ollama_runtime_unavailable_projection(),
+                "state": "FAILED",
+                "reason_code": "OLLAMA_RUNTIME_SNAPSHOT_INVALID",
+                "message_ja": "Ollamaの状態を安全に表示できません。ローカルruntimeを確認してください。",
+            }
+        state = raw["state"]
+        model_ids = raw["model_ids"]
+        reason_code = raw["reason_code"]
+        message_ja = raw["message_ja"]
+        if (
+            state not in {"READY", "NO_MODEL", "STARTING", "NOT_INSTALLED", "FAILED"}
+            or not isinstance(model_ids, list)
+            or len(model_ids) > 64
+            or any(not isinstance(model_id, str) for model_id in model_ids)
+            or not isinstance(raw["started_by_product"], bool)
+            or reason_code is not None and not isinstance(reason_code, str)
+            or not isinstance(message_ja, str)
+            or raw["endpoint"] != "loopback-only"
+        ):
+            return {
+                **self._ollama_runtime_unavailable_projection(),
+                "state": "FAILED",
+                "reason_code": "OLLAMA_RUNTIME_SNAPSHOT_INVALID",
+                "message_ja": "Ollamaの状態を安全に表示できません。ローカルruntimeを確認してください。",
+            }
+        return {
+            "available": True,
+            "state": state,
+            "model_ids": list(model_ids),
+            "started_by_product": raw["started_by_product"],
+            "reason_code": reason_code,
+            "message_ja": message_ja,
+            "endpoint": "loopback-only",
             "provider_execution_started": False,
             "paid_execution_authorized": False,
             "generation_started": False,

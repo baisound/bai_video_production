@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ctypes
+import sys
 from typing import Callable, Sequence
 
 from .errors import ProductError
@@ -37,6 +38,16 @@ def packaged_main(
     presenter: ErrorPresenter = show_native_error,
     app_main: Callable[[list[str] | None], int] = shell_main,
 ) -> int:
+    effective_argv = list(sys.argv[1:] if argv is None else argv)
+    if effective_argv[:1] == ["--bvp-installer-bridge"]:
+        try:
+            from .montage_learning_installer_cli import main as bridge_installer_main
+
+            return bridge_installer_main(effective_argv[1:])
+        except SystemExit as exc:
+            return int(exc.code) if isinstance(exc.code, int) else 2
+        except Exception:
+            return 3
     try:
         (probe or Task036NativeProbe()).require_ready()
         return app_main(None if argv is None else list(argv))

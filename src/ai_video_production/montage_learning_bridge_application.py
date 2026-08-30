@@ -144,9 +144,13 @@ class MontageLearningBridgeApplication:
     def production(
         cls,
         *,
+        install_root: str | Path,
         canonical_port: MontageLearningCanonicalAdmissionTransactionStore,
     ) -> "MontageLearningBridgeApplication":
-        return cls(layout=BridgeLayout.production(), canonical_port=canonical_port)
+        return cls(
+            layout=BridgeLayout.production(install_root),
+            canonical_port=canonical_port,
+        )
 
     def provision(self, *, bridge_instance_id: str) -> dict[str, object]:
         owner = provision_bridge(

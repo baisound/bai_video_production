@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-060 PP-B adds an encrypted, append-only promotion and rollback store with exact Human confirmation, CAS, cross-process locking, tamper detection, and durable read-back. Automatic promotion/rollback, connector activation, Timeline/Resolve writes, external configuration, Release, Deploy, and Production remain unauthorized.
+
 - TASK-060 PP-A adds a typed, self-hashed, advisory-only pure compiler that deterministically projects current TASK-019/TASK-029 Human decision history into montage Preference candidates. It grants no automatic learning/promotion, Timeline/Resolve, Provider, native, Release, Deploy, or Production authority.
 
 - TASK-036として、空Projectで既存のOllama loopback inventoryから無料ローカル企画ModelだけをConnection Settingsへ初期化し、選択保存・再読込・初期Product Manifest/企画Application bindを接続しました。Ollamaは既起動runtimeを再利用し、停止時は導入済み実行ファイルだけをboundedに起動して公開安全なREADY/NO_MODEL/未導入/失敗理由を設定・企画画面へ表示します。モデルdownload、paid/cloud fallback、credential表示、Provider生成、外部所有runtime停止、Release/Deploy/Productionは開始しません。Windows packaged EXE実機確認は別TASK-036統合QAで未確認です。

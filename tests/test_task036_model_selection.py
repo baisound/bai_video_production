@@ -73,7 +73,30 @@ def test_projection_is_deterministic_and_reports_license_resource_unknown():
     assert candidate["runtime_admission_state"] == "NOT_AUTHORIZED"
 
 
+def test_local_audio_routes_are_visible_but_not_selectable_without_public_inventory():
+    form = _form()
+    for workload in form["workloads"]:
+        if workload["workload"] not in {"AUDIO", "MUSIC"}:
+            continue
+        route = workload["routes"][0]
+        route["provider_family"] = "LOCAL_OPEN_SOURCE"
+        route["provider_id"] = "local-audio"
+        route["cost_class"] = "LOCAL_FREE_AI"
+        route["credential_required"] = False
+        route["credential_configured"] = False
+        route["implementation_status"] = "LOCAL_RUNTIME"
+
+    projected = Task036ModelSelectionProjection.project(form)
+    for workload in ("AUDIO", "MUSIC"):
+        selector = next(item for item in projected["selectors"] if item["workload"] == workload)
+        candidate = selector["candidates"][0]
+        assert selector["available"] is False
+        assert selector["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        assert candidate["configuration_selectable"] is False
+        assert "LOCAL_AUDIO_INVENTORY_NOT_BOUND" in candidate["configuration_blockers"]
 @pytest.mark.parametrize("field", ["api_key", "secret", "credential_ref", "path", "runner", "callback", "raw_bytes"])
+
+
 def test_forbidden_secret_or_effect_surfaces_fail_closed(field):
     form = _form()
     form[field] = "forbidden"

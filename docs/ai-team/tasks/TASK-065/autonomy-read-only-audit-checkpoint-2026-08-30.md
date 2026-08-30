@@ -181,6 +181,26 @@ identity drift is `STOP / EFFECT0`.
 | hardlink/reparse | existing receipt aliases/reparse are rejected and current fixture has one observed name | require complete ancestor and post-action identity proof |
 | config DACL | current installed config inherits Modify for non-owner principals recorded in the PL-A freeze | ownership policy must resolve every writable or unknown principal before PL-B |
 
+### 4.3 Fresh installed-config physical identity
+
+The exact installed config was reopened after the dependency audit. It remains
+406 bytes with SHA-256
+`da41b71292fd2a9fa2070eba531e06fafc0e84f9bbc1d26c27b0af79c5e2db6c`,
+owner `PC-BAIS\user`, ordinary `Archive` attributes, no link target, and one
+reported hardlink name. The observed NTFS file ID is
+`0x00000000000000000027000000167513`.
+
+The complete inspected chain from `C:\` through the adapter `config` directory
+reports no link target or reparse-point attribute. The file DACL is inherited
+and still grants `Modify, Synchronize` to `PC-BAIS\CodexSandboxUsers` and the
+unresolved principal
+`S-1-5-21-3254314496-1160912775-205898531-2731828939`; SYSTEM,
+Administrators, and the owner retain FullControl.
+
+This point-in-time file ID and byte hash are useful PL-B CAS inputs, but are not
+a CA-C revision or ownership attestation. The unresolved writable principals
+keep the current classification `CONFIG_DACL_UNATTESTED / EFFECT0`.
+
 ## 5. Fresh installed-instance read-back
 
 The bounded TASK-063 test installation was reopened read-only. Its public-safe

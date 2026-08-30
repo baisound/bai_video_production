@@ -15,6 +15,8 @@ from ai_video_production.montage_learning_bridge_migration import (
 from ai_video_production.montage_learning_bridge_security import (
     BridgeAce,
     BridgeSecurityDescriptor,
+    BridgeSecurityState,
+    attest_bridge_security,
 )
 from ai_video_production.montage_learning_installation import provision_installed_bridge
 from ai_video_production.serialization import sha256_json
@@ -269,6 +271,15 @@ def test_real_windows_temporary_directory_migration(tmp_path: Path) -> None:
     if os.name != "nt":
         pytest.skip("real Windows security descriptor test")
     source, target = _fixture(tmp_path)
+    security = attest_bridge_security(
+        target.layout.root,
+        attestation_id="real-windows-temp-preflight",
+    )
+    if security.reason_codes == ("WRONG_OWNER",):
+        assert security.state is BridgeSecurityState.BRIDGE_REPAIR_REQUIRED
+        pytest.skip(
+            "host temporary directory is not owned by the current Windows user"
+        )
     plan = plan_legacy_bridge_migration(source, target, attestation_id="real-windows-temp")
     receipt = execute_legacy_bridge_migration(plan, confirmation=plan.confirmation())
     assert receipt["state"] == "READBACK_VERIFIED"

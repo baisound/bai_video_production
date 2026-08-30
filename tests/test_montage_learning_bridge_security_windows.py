@@ -239,6 +239,11 @@ def test_real_windows_temporary_directory_owner_dacl_and_ace_parsing(tmp_path: P
         root,
         attestation_id="bridge-security.attestation.windows.001",
     )
+    if result.reason_codes == ("WRONG_OWNER",):
+        assert result.state is BridgeSecurityState.BRIDGE_REPAIR_REQUIRED
+        pytest.skip(
+            "host temporary directory is not owned by the current Windows user"
+        )
     assert result.state is BridgeSecurityState.SECURE
     assert result.owner_sid_sha256 == result.current_user_sid_sha256
     assert result.dacl_sha256 is not None

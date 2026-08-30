@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.94
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.95
 - Project: `ai-video-production`
 - Date: 2026-08-23
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -2752,3 +2752,24 @@ The Owner assigns the creator-learning integration lane to the current developer
 ```
 
 This addendum supersedes earlier ordering for this developer lane. Existing completed Task history and other owners' active work remain unchanged. Each Task still proceeds as bounded Atomic Units with fresh-main, overlap, Lock, test and review checks. Private production data, Cloud telemetry, model/runtime download, paid execution, automatic Profile or Knowledge Pack promotion, Timeline/Resolve mutation, Release and Deploy retain their separate Human Gates.
+
+## Addendum XCVI - TASK-066 GPU-First Desktop Execution
+
+Date: `2026-08-31`
+
+The Owner elevates GPU-first packaged desktop execution to P0. Every user-facing BVP Windows executable must bind to one startup-resolved compute profile. Default mode is automatic GPU-first; top-right Settings exposes Auto/GPU/CPU and truthful effective backend read-back. Unsupported GPU workloads fail closed without silent CPU fallback while the Shell remains usable.
+
+Accepted dependency-scoped execution order after Design Critic `0/0/0/0` and Judge `ACCEPT`:
+
+1. GF-A common policy/schema/probe and bounded diagnostic contract;
+2. GF-B main EXE, WebView2, Settings and Planning/Image/Video composition;
+3. GF-C audio/voice/FasterWhisper/TTS backend mapping;
+4. GF-D DbD utility compute and frontend convergence;
+5. GF-E installer/build, install-relative runtime payload, license manifest and log provisioning;
+6. GF-F clean build/install/startup and real Windows verification.
+
+TASK-066 is a prerequisite for TASK-036 P-UX-2E, packaged DbD acceptance, TASK-062 packaged Desktop UX and the next unified Windows installer candidate. It does not block independent non-native backend implementation.
+
+The installer assumes no pre-existing `E:\BAI_AI`. Immutable Product-private runtimes live beneath `binary_root`; writable settings, logs and runtime-cache live beneath the TASK-066 InstallLayout-bound `data_root`, including the ProgramData instance root for system-wide installs. GPU DLLs may be bundled only from immutable official artifacts with hashes, dependency closure, notices and proven redistribution rights; display drivers and global system-runtime mutations are prohibited.
+
+Logging must be useful and bounded. Judge-frozen limits are 16 KiB/record, one 4 MiB active file per application/process family, active plus four generations per family, 32 MiB shared cap, 14 days, bounded event rates, 512 records/4 MiB queue, 2 second lock, 15 minute cleanup and a max(512 MiB, 5% free) disk guard. Rotation, deterministic eviction, active-only-cap suspension, duplicate aggregation, redaction, concurrency/crash recovery and recursive-failure suppression are mandatory. Current state is `DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`; this addendum creates no download, native execution, final DLL package seal, Release, Deploy or Production authority.

@@ -1,6 +1,6 @@
 # TASK-060 — Montage Preference Projection and Production Source
 
-- Status: `PP_A_LOCAL_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`
+- Status: `PP_A_FRESH_MAIN_RECONCILED_CANDIDATE / INDEPENDENT_DEV4_PENDING`
 - Capability: `BVP-MONTAGE-PREFERENCE-PROJECTION-001`
 - Development profile: `DEV_4_FOUNDATION_CRITICAL`
 - Owner boundary: TASK-029 source semantics and TASK-019 evaluation, promotion, and rollback semantics
@@ -49,6 +49,12 @@ Only the six paths frozen in
 `IMPLEMENTATION_NOT_AUTHORIZED`.  Registry, task-index, CHANGELOG,
 runtime/native/paid/external, Timeline/Resolve, and Release/Deploy/Production
 effects remain `0`.
+
+The stale PR #430 implementation commit was replayed without its historical
+merge commit onto canonical remote main
+`160c9569673fbf65a28b0f95eeb44c5b0111584f`.  The fresh-main candidate retains
+the exact six-path scope and remains a Draft/noncanonical result; it does not
+create PP-B or PP-C authority.
 
 ## Responsibility non-overlap
 

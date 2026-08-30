@@ -4,10 +4,12 @@
 
 - Atomic Unit: `PP-A`
 - Capability: `BVP-MONTAGE-PREFERENCE-PROJECTION-001`
-- Implementation base: `dd0084a1d3ab03299f9611e7d5fe93860d7314b2`
+- Original implementation base: `dd0084a1d3ab03299f9611e7d5fe93860d7314b2`
+- Fresh reconciliation base: `160c9569673fbf65a28b0f95eeb44c5b0111584f`
+- Replayed feature commit: `f55b46b2b29c6d23b67dcecf5bbc774b6d0e83cb`
 - Accepted design: `0ac8971174ab227a6f62b8b797307bbc31b70145`
 - Accepted design SHA-256: `sha256:c54623039fc8197c6bf8d02d5363ae53b601e4feef400243fa8be1f4b2280353`
-- Branch: `codex/task-060-ppa-preference-projection`
+- Branch: `codex/task-060-ppa-fresh-main-reconciliation`
 - Builder result: `LOCAL_CANDIDATE / INDEPENDENT_DEV4_PENDING`
 
 The diff is limited to the exact six paths authorized by
@@ -61,6 +63,16 @@ full BVP regression:
 Exact-scope, diff-check, and final Git identity results are appended to the
 handoff after execution against the exact committed candidate. Full regression
 must be rerun in the canonical Hosted environment and is not claimed as PASS.
+
+## Fresh-main reconciliation read-back
+
+The original feature commit was cherry-picked onto the fresh remote-main base
+without the obsolete merge commit from PR #430.  The replay was conflict-free
+and preserved the exact six authorized paths.  On the reconciled tree, focused
+PP-A remains `11 passed`; direct TASK-019/TASK-029 regression remains
+`72 passed, 3 skipped`; compileall and schema mirror identity pass.  No
+CHANGELOG/shared-registry effect was taken, so the hosted release-metadata gate
+is expected to remain separate from this immutable product diff.
 
 ## Authority denial and continuation
 

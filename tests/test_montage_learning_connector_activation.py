@@ -392,6 +392,31 @@ def test_config_write_requires_fresh_secure_bridge(tmp_path: Path) -> None:
     assert read_connector_activation_config(target)["revision"] == 0
 
 
+def test_secure_dacl_drift_during_config_write_blocks_receipt(tmp_path: Path) -> None:
+    target, _store, _saved, _source, binding = _bound(tmp_path)
+    evidence = _human(binding, action="DEACTIVATE", evidence_id="human-action-dacl-drift")
+    backend = SecureBackend()
+
+    def drift(phase: str, _path: Path) -> None:
+        if phase == "after_config_replace":
+            backend.access_mask = 0x1200A9
+
+    with pytest.raises(MontageLearningConnectorActivationError, match="security identity drifted"):
+        apply_connector_activation_transaction(
+            target,
+            binding,
+            evidence,
+            expected_revision=0,
+            now="2026-08-30T00:01:00Z",
+            security_attestation_id="task061-cac-dacl-drift",
+            security_backend=backend,
+            hook=drift,
+        )
+    config = read_connector_activation_config(target)
+    assert config["revision"] == 1
+    assert config["enabled"] is False
+
+
 @pytest.mark.parametrize("phase", ["before_config_replace", "after_config_replace"])
 def test_deactivation_crash_recovery_is_atomic_and_idempotent(tmp_path: Path, phase: str) -> None:
     target, _store, _saved, _source, binding = _bound(tmp_path)

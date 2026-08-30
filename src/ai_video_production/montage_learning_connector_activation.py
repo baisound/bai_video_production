@@ -729,9 +729,8 @@ def apply_connector_activation_transaction(
             backend=security_backend,
         )
         if (
-            final_security.owner_sid_sha256 != initial_security.owner_sid_sha256
-            or final_security.current_user_sid_sha256 != initial_security.current_user_sid_sha256
-            or final_security.ancestor_count != initial_security.ancestor_count
+            final_security.to_dict()["attestation_sha256"]
+            != initial_security.to_dict()["attestation_sha256"]
         ):
             raise MontageLearningConnectorActivationError("bridge security identity drifted during config write")
         return _transaction_receipt(readback, event)

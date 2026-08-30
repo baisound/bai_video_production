@@ -122,7 +122,10 @@ class MontageLearningConnectorReadinessError(ValueError):
 class ProfileSourceBinding:
     """Sealed capability separating fixture compatibility from production source."""
 
-    __slots__ = ("source_id", "production_profile_source_bound", "isolated_fixture")
+    __slots__ = (
+        "source_id", "production_profile_source_bound", "isolated_fixture",
+        "envelope_sha256",
+    )
 
     def __init__(
         self,
@@ -130,6 +133,7 @@ class ProfileSourceBinding:
         source_id: str | None,
         production_profile_source_bound: bool,
         isolated_fixture: bool,
+        envelope_sha256: str | None,
         _token: object | None = None,
     ) -> None:
         if _token is not _BINDING_TOKEN:
@@ -141,6 +145,7 @@ class ProfileSourceBinding:
             production_profile_source_bound,
         )
         object.__setattr__(self, "isolated_fixture", isolated_fixture)
+        object.__setattr__(self, "envelope_sha256", envelope_sha256)
 
     def __setattr__(self, name: str, value: object) -> None:
         raise AttributeError("ProfileSourceBinding is immutable")
@@ -151,6 +156,7 @@ class ProfileSourceBinding:
             source_id=None,
             production_profile_source_bound=False,
             isolated_fixture=False,
+            envelope_sha256=None,
             _token=_BINDING_TOKEN,
         )
 
@@ -165,6 +171,30 @@ class ProfileSourceBinding:
             source_id=source_id,
             production_profile_source_bound=False,
             isolated_fixture=True,
+            envelope_sha256=None,
+            _token=_BINDING_TOKEN,
+        )
+
+    @classmethod
+    def bound_verified_production(cls, source_read: object) -> "ProfileSourceBinding":
+        """Mint the production capability only from an exact TASK-060 read-back."""
+
+        from .montage_preference_source import PromotedPreferenceSourceRead
+
+        if (
+            type(source_read) is not PromotedPreferenceSourceRead
+            or source_read.production_source_bound is not True
+        ):
+            raise TypeError("exact verified TASK-060 production source read-back is required")
+        source_read.verify_current()
+        if source_read.to_dict()["exact_current_source_verified"] is not True:
+            raise TypeError("exact verified TASK-060 production source read-back is required")
+        _require_id(source_read.source_id, "source_id")
+        return cls(
+            source_id=source_read.source_id,
+            production_profile_source_bound=True,
+            isolated_fixture=False,
+            envelope_sha256=source_read.envelope_sha256,
             _token=_BINDING_TOKEN,
         )
 
@@ -798,6 +828,13 @@ def publish_prebuilt_advisory_profile(
             "isolated fixture binding cannot publish to production layout"
         )
     value = validate_prebuilt_advisory_profile(envelope)
+    if (
+        source_binding.production_profile_source_bound
+        and source_binding.envelope_sha256 != sha256_json(value)
+    ):
+        raise MontageLearningConnectorReadinessError(
+            "production source binding does not match the exact envelope"
+        )
     status = publish_current_profile(
         layout,
         value,

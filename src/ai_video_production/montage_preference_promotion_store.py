@@ -780,15 +780,32 @@ class PreferencePromotionStore:
             if self.path.is_symlink() or not self.path.is_file():
                 raise ValueError("promotion store must be a regular non-symlink file")
             document = json.loads(self.path.read_text(encoding="utf-8"))
-            if type(document) is not dict:
-                raise ValueError("encrypted promotion store must be an object")
-            return self._parse_envelope(document)
+            return self.parse_encrypted_document(document)
         except ProductError:
             raise
         except (OSError, UnicodeError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             raise _fail(
                 "ERR_MONTAGE_PREFERENCE_PROMOTION_STORE_INTEGRITY",
                 "Montage Preference promotion store could not be decrypted and verified safely",
+                ProductErrorCategory.DATA_INTEGRITY,
+                reason=type(exc).__name__,
+            ) from exc
+
+    def parse_encrypted_document(
+        self, value: Mapping[str, Any],
+    ) -> PreferencePromotionHistory:
+        """Admit caller-pinned bytes without reopening the source path."""
+
+        try:
+            if type(value) is not dict:
+                raise ValueError("encrypted promotion store must be an object")
+            return self._parse_envelope(value)
+        except ProductError:
+            raise
+        except (OSError, UnicodeError, KeyError, TypeError, ValueError) as exc:
+            raise _fail(
+                "ERR_MONTAGE_PREFERENCE_PROMOTION_STORE_INTEGRITY",
+                "Montage Preference promotion document could not be decrypted and verified safely",
                 ProductErrorCategory.DATA_INTEGRITY,
                 reason=type(exc).__name__,
             ) from exc

@@ -293,6 +293,69 @@ changed coordinate, verification, rollback/cleanup, and secret exclusion, plus
 a completed secretary response with independent `MATCH`. A queued, sent-only,
 unread, stale, or mismatched secretary record remains `NO_GO / EFFECT0`.
 
+### 4.8 Windows namespace publication is not target-identity CAS
+
+Microsoft's current Win32 and file-system protocol documentation closes the
+remaining publication-semantics question:
+
+- [`CreateFileW`](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew)
+  keeps each handle's sharing options in force until close. Omitting
+  `FILE_SHARE_WRITE` or `FILE_SHARE_DELETE` prevents a later conflicting write
+  or delete/rename open rather than conditionally allowing it against an
+  expected file identity.
+- [`FILE_RENAME_INFO`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)
+  can replace an existing target and can resolve a relative target name from a
+  directory handle, but its target condition is only existence. It has no
+  expected target file ID, expected byte hash, or expected logical revision.
+- [`FileRenameInformation`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/1d2673a8-8fb9-4868-920a-775ccaa30cf8)
+  reports access denied when the source handle lacks delete access or an open
+  target conflicts with replacement. Holding the admitted old target without
+  delete sharing therefore blocks replacement; it does not turn replacement
+  into a compare-and-swap.
+- With
+  [`FILE_RENAME_POSIX_SEMANTICS`](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/4217551b-d2c0-42cb-9dc1-69a716cf6d0c),
+  existing handles to the replaced file remain valid while subsequent opens of
+  the same target name resolve to the renamed file. A pre-opened handle can
+  consequently attest the old object while the namespace already names a new
+  object.
+- [`ReplaceFileW`](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-replacefilew)
+  opens the replaced pathname with read/delete/synchronize access and all three
+  share modes. It accepts no expected target identity or content parameter.
+  Its documented failure outcomes can also leave the replaced or replacement
+  file deleted, renamed, or carrying inherited streams/attributes rather than
+  guaranteeing rollback to the original two-name state.
+
+The resulting TASK-065 inference is deliberately narrower than claiming a
+general Windows limitation: the documented rename/replace operations available
+to this design provide atomic-style namespace publication, but do not by
+themselves provide a CAS predicate bound to the previously read target File ID,
+body hash, and CA-C revision. A handle that denies the conflicting access makes
+publication fail; a handle that permits replacement can remain bound to the old
+object after the name changes.
+
+Accordingly, current PL-B cannot claim hostile-writer-safe CAS while the
+installed SKILL root grants Modify to multiple principals and one writable SID
+remains unresolved. Before mutation authority can open, the canonical contract
+must supply all of the following:
+
+1. an exact allowed-writer set and disposition for every writable ACE,
+   including the unresolved SID;
+2. either exclusive namespace write ownership for the bounded transaction or a
+   cooperative lock/revision protocol honored by every allowed writer;
+3. a closed transaction that validates CA-C logical predecessor, admitted
+   instance, complete ancestor chain, target bytes/File ID/DACL/link count,
+   same-directory `CREATE_NEW` temporary identity and bytes before publication;
+4. an explicit fail-closed/recovery result for every documented partial
+   `ReplaceFileW` outcome and process interruption point; and
+5. post-publication reopen-by-name verification of exact bytes, new File ID,
+   DACL/link/ancestor state, CA-C status/history, and config revision.
+
+Post-publication read-back is bounded evidence, not permanent exclusion of a
+later authorized write. Every future connector consumer must revalidate the
+current revision/body/instance coordinate at use time. Without exclusive or
+cooperative writer authority plus that consumer revalidation contract, the
+result is `CONFIG_NAMESPACE_CAS_UNPROVEN / STOP / EFFECT0`.
+
 ## 5. Fresh installed-instance read-back
 
 The bounded TASK-063 test installation was reopened read-only. Its public-safe
@@ -349,6 +412,16 @@ In addition to the checklist in the PL-A design freeze:
 - [ ] the admitted TASK-063 instance is unique and current;
 - [ ] DACL/reparse/hardlink/ancestor policy is current before and after the
   separately gated config transaction.
+- [ ] every writable ACE resolves to a canonically allowed writer; the current
+  unresolved Modify SID is removed or explicitly bound by the owning security
+  authority rather than trusted by presence;
+- [ ] exclusive namespace write ownership or an all-writers cooperative
+  lock/revision protocol closes the read-to-publication race;
+- [ ] failure/recovery behavior covers every documented non-original
+  `ReplaceFileW` outcome and process interruption point;
+- [ ] post-publication reopen-by-name proves exact config bytes, File ID,
+  DACL/link/ancestor state, CA-C status/history, and revision, and the connector
+  revalidates that bounded evidence before use;
 - [ ] CA-C defines and authenticates the coordinate-only successor/composition
   rule so PL-B does not invalidate Human activation authority by changing the
   whole-file hash;

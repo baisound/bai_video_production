@@ -332,12 +332,18 @@ def apply_selectable_local_audio_routes(
 
 def availability_from_local_audio_inventory(
     inventory: LocalAudioModelInventory,
+    base: ConnectionAvailability | None = None,
 ) -> ConnectionAvailability:
-    return ConnectionAvailability(frozenset(
+    available_route_ids = set(base.available_route_ids if base is not None else ())
+    available_route_ids.update(
         item.observation.route_id
         for item in inventory.candidates
         if item.selectable and item.observation.route_id is not None
-    ))
+    )
+    return ConnectionAvailability(
+        frozenset(available_route_ids),
+        base.available_credential_refs if base is not None else frozenset(),
+    )
 
 
 def execution_ports_from_local_audio_inventory(

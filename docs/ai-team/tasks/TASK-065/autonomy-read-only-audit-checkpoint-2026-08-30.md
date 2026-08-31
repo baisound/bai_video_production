@@ -508,6 +508,17 @@ In addition to the checklist in the PL-A design freeze:
 
 ## 7. Public-safe PL-C fixture identity chain
 
+**SUPERSEDED CURRENTNESS/OWNERSHIP NOTICE:** this section preserves the
+2026-08-30 fixture and installed-byte audit only. Its SKILL commit/config
+currentness and its assignment of preactivation real-installed E2E to TASK-065
+PL-C are no longer operative. Current authority and ordering are defined by
+`dependency-currentness-reconciliation-2026-08-31.md` and
+`task067-task065-negative-matrix-v1-2026-08-31.md`: TASK-061-A prepares at
+`enabled:false`, TASK-067 completes, TASK-036 alone performs the public-safe-
+content real-installed operation, TASK-061-B consumes that E2E receipt, and
+only then may TASK-065 PL-A/B/C/D admit all completion receipts. “Public-safe”
+describes fixture privacy, not a synthetic execution mode.
+
 The released TASK-058 adapter E2E supplied the historical synthetic body
 `MontageLearningExport` record `e2e-observation-001`. It contains synthetic
 proposal/timeline/style/event data and declares `privacy.safe_export:true`.
@@ -585,7 +596,8 @@ task-scoped record identity. It must record five distinct evidence identities:
    equal identity 4. The read-back must keep `advisory_only:true`,
    `canonical_timeline:false`, and `auto_apply_authorized:false`.
 
-The BVP store read-back must independently show the synthetic source digest,
+The BVP store read-back for a future authorized real-installed operation must
+independently show the public-safe fixture source digest,
 append-only entry membership, dedup behavior, `learning_adopted:false`,
 `profile_promoted:false`, and `timeline_mutated:false`. A READY connector
 status, file existence, process exit zero, or adapter-reported path is only a
@@ -628,13 +640,25 @@ invalid correlation, or PP-C pointer/source mismatch is fail-closed. TASK-065
 must not repair or reimplement the TASK-058 adapter contract to hide these
 conditions.
 
-This fixture is not runnable against the current installed production
+This fixture is not runnable against the historical installed production
 coordinate: the released installed config is disabled, points to the absent
 fixed ProgramData root, and does not require a receipt. PL-C execution remains
-gated on D0-D2, PL-A PASS, PL-B coordinate synchronization, and the inherited
-CA-C activation history.
+gated in this historical checkpoint.
+
+**SUPERSEDED ORDERING:** current TASK-036 preactivation E2E does not inherit or
+wait for TASK-061-B/CA-C activation history. It consumes TASK-061-A PREACTIVATION
+PREPARE plus the current TASK-063, SKILL-D2S-001 and TASK-067 receipts, performs
+the exact disabled one-shot operation, and supplies its receipt to TASK-061-B.
+Production Activation remains a later separate Human Gate.
 
 ## 8. Current result and next safe work
+
+**SUPERSEDED CURRENTNESS NOTICE:** the commit, PR and D0-D2 states below are the
+historical 2026-08-30 checkpoint, not current admission data. Use
+`dependency-currentness-reconciliation-2026-08-31.md` for fresh states and the
+canonical TASK-068 -> TASK-069/TASK-063 -> TASK-060 -> TASK-061-A -> TASK-067 ->
+TASK-036 -> TASK-061-B -> TASK-065 graph. No historical PASS or blocker below
+may mint a completion receipt.
 
 Fresh dependency re-evaluation at parent checkpoint
 `81e65a8c46c080f4b25f78b7f0e146a7540bab67` found no arrival or identity
@@ -648,7 +672,9 @@ recorded above.
 - Installed config/native/adapter execution eligibility: `FALSE`.
 - Overall effect: `0`.
 
-The next safe re-entry action is read-only currentness evaluation of exact D0,
-D1, and D2 receipts. If no dependency identity changes, only the synthetic
-fixture assertions and failure classifications already frozen are runnable;
-creating those test files remains prohibited until D0-D2 are complete.
+The historical next action was read-only currentness evaluation of exact D0,
+D1, and D2 receipts. Current runnable work is the TASK-065-local admission,
+field and negative-matrix audit only. Synthetic fixture execution cannot satisfy
+TASK-036 real-installed E2E or any CA-C/TASK-065 prerequisite, and source/schema/
+test/native mutation remains prohibited until the current graph's exact
+dependencies and ownership Gates are satisfied.

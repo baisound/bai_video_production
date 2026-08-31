@@ -357,6 +357,13 @@ The normalized mandatory row set and per-case Evidence columns are frozen in
 coverage or a result assertion without explicit Project, Bridge, Profile,
 config/history and public-leakage deltas is insufficient.
 
+The read-only comparison against origin/main TASK-058 and the preserved
+candidate is fixed in
+`task067-historical-coverage-gap-mapping-2026-08-31.md`. Its named tests are
+historical regression inputs or candidate diagnostics only. Every row remains
+N.C. until the mapped missing fixture is executed under the formal TASK-067
+authority; the mapping is not a source-start or completion receipt.
+
 ## 6. Critic, Tester and Judge candidate plan
 
 - Security Critic: lock establishment, lstat/no-follow identities, DACL/reparse/

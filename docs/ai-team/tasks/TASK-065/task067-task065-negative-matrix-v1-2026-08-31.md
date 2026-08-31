@@ -10,6 +10,12 @@ does not authorize either implementation. Public mappings, hashes, seals,
 status strings and self-derived receipts are Evidence only and create no
 effect authority.
 
+The source/test-level historical coverage and unfilled fixture cells for all
+G67 rows are enumerated in
+`task067-historical-coverage-gap-mapping-2026-08-31.md`. Named origin/main
+tests remain historical regression inputs, and preserved candidate tests remain
+diagnostics; neither class of test may mark a row PASS.
+
 The canonical dependency order is:
 
 ```text

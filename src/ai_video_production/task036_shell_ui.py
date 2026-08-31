@@ -23,6 +23,15 @@ from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .connection_settings_web import ConnectionSettingsWebService
+from .desktop_compute_policy import (
+    CompatibilityStatus,
+    ComputePreference,
+    DesktopComputePolicyError,
+    DesktopComputeProfileStore,
+    EffectiveWorkloadRoute,
+    frozen_renderer_evidence_registry,
+    frozen_workload_registry,
+)
 from .task036_model_selection import Task036ModelSelectionProjection
 from .visual_generation_handoff import Task036VisualGenerationHandoffProjection
 from .final_review_readiness import Task036FinalReviewReadinessProjection
@@ -213,6 +222,7 @@ class Task036ShellBridge:
         audio_placement_application: Task026AudioPlacementApplication | None = None,
         quick_generation_application: Task042QuickGenerationApplication | None = None,
         connection_settings: ConnectionSettingsWebService | None = None,
+        desktop_compute_profile_store: DesktopComputeProfileStore | None = None,
         ollama_runtime_snapshot_provider: Callable[[], dict[str, object]] | None = None,
         owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
         final_review_application: FinalReviewApprovalApplication | None = None,
@@ -265,6 +275,7 @@ class Task036ShellBridge:
         self._audio_placement_application = audio_placement_application
         self._quick_generation_application = quick_generation_application
         self._connection_settings = connection_settings
+        self._desktop_compute_profile_store = desktop_compute_profile_store
         if ollama_runtime_snapshot_provider is not None and not callable(ollama_runtime_snapshot_provider):
             raise ValueError("Ollama runtime snapshot provider is invalid")
         self._ollama_runtime_snapshot_provider = ollama_runtime_snapshot_provider
@@ -1048,6 +1059,194 @@ class Task036ShellBridge:
             "paid_execution_authorized": False,
             "generation_started": False,
         }
+
+    @staticmethod
+    def _desktop_compute_unavailable_projection() -> dict[str, object]:
+        return {
+            "available": False,
+            "reason_code": "DESKTOP_COMPUTE_SETTINGS_NOT_BOUND",
+            "message_ja": "インストール済み実行環境の情報を確認できないため、実行方法を変更できません。",
+            "preference_options": [
+                {"value": "AUTO_GPU_FIRST", "label_ja": "自動（GPU優先）"},
+                {"value": "GPU_REQUIRED", "label_ja": "GPUのみ"},
+                {"value": "CPU_EXPLICIT", "label_ja": "CPUのみ"},
+            ],
+            "workloads": [],
+            "renderer": None,
+            "restart_required": False,
+            "provider_execution_started": False,
+            "workload_execution_started": False,
+            "webview_gpu_disable_flag_applied": False,
+        }
+
+    def desktop_compute_settings_snapshot(self, args: Any = None) -> dict[str, object]:
+        """Project a public-safe startup compute preference and truthful read-back."""
+        self._empty_args(args, "Desktop compute Settings snapshot")
+        if self._desktop_compute_profile_store is None:
+            return self._desktop_compute_unavailable_projection()
+        loaded = self._desktop_compute_profile_store.load()
+        profile = loaded.profile
+        routes = {item.workload_id: item for item in profile.workload_routes}
+        labels = {
+            "planning.local.ollama": "企画（Ollama）",
+            "image.local.comfyui": "画像生成（ComfyUI）",
+            "video.local.generation": "動画生成",
+        }
+        workloads: list[dict[str, object]] = []
+        registry = frozen_workload_registry()
+        for definition in registry["workloads"]:
+            workload_id = definition["workload_id"]
+            if workload_id not in labels:
+                continue
+            route = routes.get(workload_id)
+            if route is None:
+                reason_code = str(definition["adapter_admission_state"])
+                workloads.append(
+                    {
+                        "workload_id": workload_id,
+                        "label_ja": labels[workload_id],
+                        "workload_class": definition["workload_class"],
+                        "enabled": False,
+                        "effective_backend": "DISABLED",
+                        "compatibility_status": "BLOCKED",
+                        "reason_code": reason_code,
+                        "loaded_runtime_versions": [],
+                        "adapter_identity": None,
+                        "cpu_fallback_visible_before_execution": False,
+                    }
+                )
+                continue
+            workloads.append(
+                {
+                    "workload_id": workload_id,
+                    "label_ja": labels[workload_id],
+                    "workload_class": route.workload_class.value,
+                    "enabled": (
+                        route.compatibility_status.value == "PASS"
+                        and route.effective_backend != "DISABLED"
+                    ),
+                    "effective_backend": route.effective_backend,
+                    "compatibility_status": route.compatibility_status.value,
+                    "reason_code": route.reason_code,
+                    "loaded_runtime_versions": list(route.loaded_runtime_versions),
+                    "adapter_identity": (
+                        None if route.adapter_identity is None else route.adapter_identity.to_dict()
+                    ),
+                    "cpu_fallback_visible_before_execution": route.cpu_fallback_visible_before_execution,
+                }
+            )
+        renderer_registry = frozen_renderer_evidence_registry()
+        renderer = next(
+            item
+            for item in renderer_registry["renderers"]
+            if item["renderer_id"] == "shell.webview2.renderer"
+        )
+        status_messages = {
+            "LOADED": "保存済みの実行方法を読み込みました。",
+            "DEFAULT_MISSING": "未設定のため、自動（GPU優先）を使用します。",
+            "DEFAULT_REJECTED": "保存済み設定を安全に読み込めないため、自動（GPU優先）を表示しています。元の設定は保持しました。",
+        }
+        return {
+            "available": True,
+            "revision": profile.revision,
+            "selected_preference": profile.selected_preference.value,
+            "preference_options": [
+                {"value": "AUTO_GPU_FIRST", "label_ja": "自動（GPU優先）"},
+                {"value": "GPU_REQUIRED", "label_ja": "GPUのみ"},
+                {"value": "CPU_EXPLICIT", "label_ja": "CPUのみ"},
+            ],
+            "profile_status": loaded.status.value,
+            "reason_code": loaded.reason_code,
+            "message_ja": status_messages[loaded.status.value],
+            "rejected_source_preserved": loaded.rejected_source_preserved,
+            "workloads": workloads,
+            "renderer": renderer,
+            "restart_required": False,
+            "provider_execution_started": False,
+            "workload_execution_started": False,
+            "webview_gpu_disable_flag_applied": False,
+        }
+
+    def desktop_compute_settings_update(self, args: Any) -> dict[str, object]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"revision", "selected_preference"}
+            or type(args["revision"]) is not int
+            or args["revision"] < 0
+            or type(args["selected_preference"]) is not str
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Desktop compute Settings request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._desktop_compute_profile_store is None:
+            raise ProductError(
+                "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_NOT_BOUND",
+                "Desktop compute Settings are not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        try:
+            preference = ComputePreference(args["selected_preference"])
+        except ValueError as exc:
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Desktop compute preference is invalid",
+                ProductErrorCategory.VALIDATION,
+            ) from exc
+        loaded = self._desktop_compute_profile_store.load()
+        current_profile = loaded.profile
+        if current_profile.revision != args["revision"]:
+            raise ProductError(
+                "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_STALE",
+                "設定が別の操作で更新されました。最新の状態を確認してください。",
+                ProductErrorCategory.STATE,
+            )
+        workload_routes = current_profile.workload_routes
+        if preference is not current_profile.selected_preference:
+            workload_routes = tuple(
+                EffectiveWorkloadRoute(
+                    workload_id=route.workload_id,
+                    workload_class=route.workload_class,
+                    effective_backend="DISABLED",
+                    adapter_identity=None,
+                    reason_code="PREFERENCE_CHANGED_REBIND_REQUIRED",
+                    compatibility_status=CompatibilityStatus.BLOCKED,
+                    restart_required=True,
+                )
+                for route in current_profile.workload_routes
+            )
+        try:
+            self._desktop_compute_profile_store.save(
+                selected_preference=preference,
+                workload_routes=workload_routes,
+                expected_revision=args["revision"],
+            )
+        except DesktopComputePolicyError as exc:
+            error_text = str(exc)
+            if "revision conflict" in error_text:
+                code = "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_STALE"
+                message = "設定が別の操作で更新されました。最新の状態を確認してください。"
+            elif "rejected profile is preserved" in error_text:
+                code = "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_PROFILE_PRESERVED"
+                message = "保存済み設定を安全に読み込めないため、元の設定を保持しました。"
+            elif "mutex timeout" in error_text:
+                code = "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_BUSY"
+                message = "別の設定操作を処理中です。状態を再確認してください。"
+            elif "exact read-back failed" in error_text:
+                code = "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_READBACK_FAILED"
+                message = "保存結果を確認できません。状態を再確認してください。"
+            else:
+                code = "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_UPDATE_FAILED"
+                message = "実行方法を安全に保存できませんでした。現在の設定を確認してください。"
+            raise ProductError(
+                code,
+                message,
+                ProductErrorCategory.STATE,
+            ) from exc
+        result = self.desktop_compute_settings_snapshot({})
+        result["restart_required"] = True
+        return result
 
     @staticmethod
     def _ollama_runtime_unavailable_projection() -> dict[str, object]:

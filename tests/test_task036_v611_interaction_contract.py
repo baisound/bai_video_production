@@ -33,7 +33,7 @@ def test_top_menu_uses_explicit_command_registry_and_focus_contract() -> None:
     assert "if(command==='" not in HTML
 
 
-def test_settings_nine_category_tabs_are_read_only_but_interactive() -> None:
+def test_settings_nine_category_tabs_are_interactive_and_general_compute_save_is_bounded() -> None:
     categories = re.findall(r'data-settings-view="([^"]+)"', HTML)
     assert categories == [
         "general",
@@ -53,6 +53,8 @@ def test_settings_nine_category_tabs_are_read_only_but_interactive() -> None:
     assert "credential_values_redisplayed:false" in HTML
     assert "provider_execution_authorized:false" in HTML
     assert "paid_execution_authorized:false" in HTML
+    assert "実行方法だけを保存できます。変更は次回起動から適用され" in HTML
+    assert "desktop_compute_settings_update" in HTML
 
 
 def test_feature_pages_keep_model_readiness_read_only_and_route_unavailable_states_to_settings() -> None:

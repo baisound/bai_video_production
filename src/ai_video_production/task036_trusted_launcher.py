@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import secrets
+import sys
 import threading
 from typing import Any, Callable
 
@@ -25,6 +26,12 @@ from .generation_output_adoption_application import (
     Task027GenerationOutputAdoptionApplication,
 )
 from .desktop_editing_coordinator import DesktopEditingCoordinator
+from .desktop_compute_policy import DesktopComputeProfileStore
+from .desktop_install_layout import (
+    DesktopInstallLayoutError,
+    derive_binary_root,
+    resolve_desktop_install_layout,
+)
 from .desktop_post_resolve_workflow import Task036PostResolveWorkflowFacade
 from .desktop_resolve_workflow import Task036ResolveWorkflowFacade
 from .errors import ProductError, ProductErrorCategory
@@ -918,7 +925,7 @@ def _bootstrap_missing_product_manifest(configuration: Task036LaunchConfiguratio
 
 
 
-def build_trusted_launch(
+def _build_trusted_launch_impl(
     configuration: Task036LaunchConfiguration,
     *,
     native_dialog: Task036NativeDialogService | None = None,
@@ -936,6 +943,7 @@ def build_trusted_launch(
     local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
     ollama_runtime: OllamaRuntimeLifecycle | None = None,
     local_audio_inventory: LocalAudioModelInventory | None = None,
+    desktop_compute_profile_store: DesktopComputeProfileStore | None = None,
 ) -> Task036TrustedLaunch:
     managed_ollama_runtime = ollama_runtime or OllamaRuntimeLifecycle()
     if not allow_product_job_bootstrap:
@@ -1477,6 +1485,7 @@ def build_trusted_launch(
             audio_placement_application=audio_placement_application,
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
+            desktop_compute_profile_store=desktop_compute_profile_store,
             ollama_runtime_snapshot_provider=lambda: managed_ollama_runtime.probe().as_dict(),
             owner_signing_key_import=owner_signing_key_import,
             final_review_application=final_review_application,
@@ -1516,6 +1525,54 @@ def build_trusted_launch(
         raise
 
 
+def build_trusted_launch(
+    configuration: Task036LaunchConfiguration,
+    *,
+    native_dialog: Task036NativeDialogService | None = None,
+    asr_provider: FasterWhisperProvider | None = None,
+    resolve_adapter: ResolveScriptingAssemblyAdapter | None = None,
+    comfy_client: ComfyUIClient | None = None,
+    final_review_external_gate_provider: Callable[
+        [], tuple[FinalReviewExternalGateReceipt, ...]
+    ] | None = None,
+    final_review_export_preparation_provider: Callable[
+        [FinalReviewApprovalReceipt], ExportPreparation
+    ] | None = None,
+    owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
+    allow_product_job_bootstrap: bool = True,
+    local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
+    ollama_runtime: OllamaRuntimeLifecycle | None = None,
+    local_audio_inventory: LocalAudioModelInventory | None = None,
+) -> Task036TrustedLaunch:
+    """Build a trusted Product launch without installed Settings write authority."""
+    return _build_trusted_launch_impl(
+        configuration,
+        native_dialog=native_dialog,
+        asr_provider=asr_provider,
+        resolve_adapter=resolve_adapter,
+        comfy_client=comfy_client,
+        final_review_external_gate_provider=final_review_external_gate_provider,
+        final_review_export_preparation_provider=final_review_export_preparation_provider,
+        owner_signing_key_import=owner_signing_key_import,
+        allow_product_job_bootstrap=allow_product_job_bootstrap,
+        local_planning_inventory_provider=local_planning_inventory_provider,
+        ollama_runtime=ollama_runtime,
+        local_audio_inventory=local_audio_inventory,
+        desktop_compute_profile_store=None,
+    )
+
+
+def _installed_desktop_compute_profile_store() -> DesktopComputeProfileStore | None:
+    """Resolve the installer-owned profile only for a frozen installed payload."""
+    if not getattr(sys, "frozen", False):
+        return None
+    try:
+        binary_root = derive_binary_root(Path(sys.executable))
+        return DesktopComputeProfileStore(resolve_desktop_install_layout(binary_root))
+    except (DesktopInstallLayoutError, OSError, ValueError):
+        return None
+
+
 def run_trusted_native_shell(config_path: str | Path) -> None:
     try:
         import webview  # type: ignore
@@ -1525,7 +1582,10 @@ def run_trusted_native_shell(config_path: str | Path) -> None:
             "TASK-036 trusted native Shell requires pywebview",
             ProductErrorCategory.EXTERNAL_DEPENDENCY,
         ) from exc
-    launch = build_trusted_launch(Task036LaunchConfiguration.load(config_path))
+    launch = _build_trusted_launch_impl(
+        Task036LaunchConfiguration.load(config_path),
+        desktop_compute_profile_store=_installed_desktop_compute_profile_store(),
+    )
     try:
         webview.create_window(
             f"BAI Video Production — {launch.configuration.display_name}",

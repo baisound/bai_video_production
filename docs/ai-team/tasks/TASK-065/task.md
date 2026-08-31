@@ -110,11 +110,19 @@ completion is SUPERSEDED.
    amendment or successor is required before the cycle below can execute.
    Completion also requires a secure activation-specific lock and
    identity-bound no-overwrite/expected-target config writer; the current
-   generic create-capable lock plus
-   `os.replace` writer cannot establish physical race safety. CA-A migration
-   separately requires secure migration lock, identity-CAS journal phases,
-   no-replace Manifest/snapshot publication and operation-owned-only temp
-   cleanup before D2 may complete. Independently, public
+    generic create-capable lock plus
+    `os.replace` writer cannot establish physical race safety. CA-A migration
+    separately requires secure migration lock, immutable phase-journal
+    generations with predecessor hashes and a trusted exact phase selector.
+    Its directory snapshot commit also requires an operation-bound pinned
+    staging tree plus either a Windows native directory no-replace commit or an
+    immutable container manifest binding every payload object coordinate.
+    TASK-068 `IMMUTABLE_ONLY_V1` supplies only strict/pinned single-file
+    primitives; it explicitly creates neither directory-tree commit authority
+    nor mutable phase advance. A published snapshot or journal generation that
+    loses the trusted transition remains a preserved operation-bound orphan;
+    only the same operation may resume it, and foreign staging/snapshot/phase
+    state is never overwritten or deleted. Independently, public
    `BridgeMigrationReadback` plus module `_READBACK_SEAL` and recomputable hash
    is not CA-A execution authority; TASK-061 must pinned-read the exact terminal
    migration journal and snapshot manifest/tree into a private one-use
@@ -156,7 +164,8 @@ completion is SUPERSEDED.
    operation receipts; public v1/V2 readiness remains display-only Evidence.
    The bounded origin/main migration audit adds independent producer COMMIT
    STOPs for deterministic ticket authority, self-mintable public readback,
-   strict JSON, secure lock/journal CAS, noreplace snapshot commit, temp and
+    strict JSON, secure lock, immutable phase journal, separate directory
+    no-replace/container snapshot commit, temp and
    staging ownership, sealed native security, descendant DACL, terminal
    receipt validation/currentness/global snapshot, trusted source selection,
    Production hook/path privacy and early source/payload resource ceilings.
@@ -167,7 +176,9 @@ completion is SUPERSEDED.
    config publication currently precedes final rediscovery/security
    confirmation, so an ACTIVATE failure can expose enabled state without a
    terminal receipt. These findings
-   are normalized as `A61-*` rows in the task-local negative matrix. Until
+    are normalized as `A61-*` rows, including
+    `A61A-DIRECTORY-NOREPLACE-COMMIT` and
+    `A61A-IMMUTABLE-PHASE-JOURNAL`, in the task-local negative matrix. Until
    their canonical corrective completion receipts are current, existing CA-A
    plan/snapshot/readback/terminal receipts and CA-B transaction failure state
    are producer Evidence only and cannot enter PL-A, D2, TASK-067 or PL-C

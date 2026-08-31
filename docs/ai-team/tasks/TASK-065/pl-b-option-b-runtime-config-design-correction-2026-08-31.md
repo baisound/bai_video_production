@@ -558,7 +558,46 @@ status-only, stale/cross-build/cross-instance receipt and canonical/installed
 byte drift all leave Profile mutation zero. TASK-065 consumes only the future
 durable completion receipt and does not implement either owner correction.
 
-### 6.4 CA-A migration terminal-readback authority prerequisite
+### 6.4 CA-A directory commit and immutable phase-journal prerequisite
+
+Current CA-A stores PREPARED, COPIED, SNAPSHOT_COMMITTED and READBACK_VERIFIED
+successively in one fixed `<migration_id>.json` using the same-path writer. It
+also builds a staging directory with a fixed `manifest.json` and commits the
+whole directory through `os.replace(staging_root, snapshot_root)` after an
+absence check. Existing recovery tests validate the legacy phase sequence and
+tree exactness, but do not prove a directory rename-noreplace race closure or an
+immutable phase-generation selector.
+
+TASK-068 `IMMUTABLE_ONLY_V1` is a strict/pinned single-file primitive receipt.
+It establishes neither `DIRECTORY_TREE_COMMIT_AUTHORITY` nor mutable phase
+advance. Substituting only its writer makes COPIED and later fixed-journal writes
+collide and cannot make the directory commit authoritative. TASK-061-A owns two
+independent High corrective Gates:
+
+- `A61A-IMMUTABLE-PHASE-JOURNAL`: publish PREPARED and each successor as an
+  operation-bound immutable generation with predecessor hash and pinned durable
+  readback. The exact phase coordinate comes only from the trusted operation
+  plan/recovery receipt; caller selection, mutable pointer, timestamp/newest and
+  scan-highest are zero.
+- `A61A-DIRECTORY-NOREPLACE-COMMIT`: pin and verify the exact operation staging
+  tree, then use a Windows native directory no-replace commit or publish an
+  immutable container manifest binding every payload object coordinate. A
+  single-file manifest without bound payload identities is insufficient.
+
+A snapshot or phase generation published before its trusted selector transition
+is preserved as an operation-bound orphan. Only that exact operation may resume
+or revoke it. Identical/different/empty/nonempty target appearance, junction or
+reparse, manifest/payload swap, phase-generation collision, crash at every
+generation/transition/durability seam and concurrent publish all fail closed.
+Foreign staging, snapshot and phase generations are preserved; overwrite and
+delete are zero. Required assertions are legacy-source delta zero, snapshot
+exact zero-or-one, monotonic phases, and unrelated overwrite/delete zero.
+
+Until both canonical TASK-061-A receipts exist, D2, TASK-067, TASK-036 and
+TASK-065 PL-C admission remain PASS0. A TASK-068 completion receipt alone is
+explicitly ineligible.
+
+### 6.5 CA-A migration terminal-readback authority prerequisite
 
 `BridgeMigrationReadback` is a public dataclass guarded only by module-global
 `_READBACK_SEAL`, caller-provided receipt/manifest hashes and a recomputable
@@ -587,7 +626,7 @@ concurrent/exception reuse all leave Profile/config/history mutation zero.
 TASK-065 consumes only the future canonical durable completion receipt and does
 not modify CA-A or TASK-061 source.
 
-### 6.5 CA-A/CA-B effect-entry authority prerequisite
+### 6.6 CA-A/CA-B effect-entry authority prerequisite
 
 `BridgeMigrationPlan.confirmation()` and
 `ConnectorSourceBindingPlan.confirmation()` are deterministic values derivable
@@ -610,7 +649,7 @@ expiry/replay/concurrent/double invocation and exception reuse all leave
 migration/Profile/config/history mutation zero. CA-C Human activation remains a
 separate Gate; neither ticket authorizes enablement.
 
-### 6.6 Post-061B Production Activation trusted clock and strict authority JSON prerequisite
+### 6.7 Post-061B Production Activation trusted clock and strict authority JSON prerequisite
 
 This apply path is not TASK-061-B final CA-C; it remains behind the later
 separate Production Activation Human Gate. Production CA-C apply accepts no

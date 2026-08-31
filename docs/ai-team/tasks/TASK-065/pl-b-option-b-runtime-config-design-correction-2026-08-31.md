@@ -1225,9 +1225,10 @@ with the Project root, and keep exact methods inaccessible to the caller.
 TASK-065 and TASK-036 must not call private `_generic_load_current_v1`, parse raw
 ledger JSON, derive a revision from ambient files or accept revision/store/scope
 coordinates from the CLI. The TASK-061 operation plan and TASK-036 packaged
-entrypoint may consume only the exact current TASK-058 receipt. A stale CAS
-fails effect zero and requires a fresh plan; it is never recalculated and
-automatically retried.
+entrypoint may consume only the exact current TASK-058 receipt. The legacy
+same-path CAS wording is superseded: a currentness mismatch fails effect zero
+and requires a fresh trusted plan selecting exact immutable generations; it is
+never recalculated, scan-selected, downgraded or automatically retried.
 
 Until TASK-067 allocation, implementation, independent DEV-4 acceptance and a
 canonical focused-verification completion receipt are all current, the
@@ -1370,6 +1371,22 @@ ineligible. FRESH/RECOVERY immediate get returns the already bound typed result
 with no additional filesystem effect. Restart VERIFIED_READBACK uses a
 noncreating existing-lock A2 lookup; it must not call the create-capable writer
 constructor or `exclusive_file_update_lock`.
+
+TASK-068 applicability is mode-specific. `VERIFIED_READBACK` and the sealed A2
+terminal lookup may use its strict pinned immutable-read/existing-lock
+inspection only as candidate primitives, with TASK-067 retaining the exact
+current coordinate (`T67-READBACK-PRIMITIVE-USE`). `FRESH`,
+`PRECOMMIT_RESUME` and `JOURNAL_RECOVERY` need Project manifest commit,
+mutable Generic phase/currentness transitions and exact terminal cleanup that
+TASK-068 `IMMUTABLE_ONLY_V1` does not authorize
+(`T67-WRITE-MODES-VIA-T68`, High N.C.). The private factory declares required
+effects per mode before issuing an ARMED capability. If a write mode observes
+`MUTABLE_CAS_UNAVAILABLE` or `EXACT_DELETE_UNAVAILABLE`, it burns the
+capability before any effect; fallback or downgrade to readback is prohibited.
+TASK-067 and the ProjectSave owner must separately define immutable Project
+manifest generations, immutable Generic journal phases, marker/anchor
+transitions and a terminal tombstone. A TASK-068 receipt cannot serve as the
+whole TASK-067 completion receipt.
 
 RECOVERY has three sealed internal subtypes while preserving the single public
 Bridge-compatible `recover_generic_observation` method:
@@ -1533,6 +1550,13 @@ least:
   ancestor drift and the equivalent journal races fail effect zero in every
   facade mode; exact symbol scope must be named by the future TASK-058 cross-
   owner amendment or remain N.C.
+- **High mode-by-mode TASK-068 boundary** —
+  `T67-READBACK-PRIMITIVE-USE` remains candidate-only for noncreating readback,
+  while `T67-WRITE-MODES-VIA-T68` remains N.C. until ProjectSave and TASK-067
+  owners define immutable manifest/phase generations, marker/anchor
+  transitions and terminal tombstone. Immutable-only backend use in FRESH,
+  PRECOMMIT_RESUME or JOURNAL_RECOVERY burns before effect and cannot downgrade
+  to a read mode.
 - **P0 claimed-delivery restart late binding** — TASK-036 creates an ARMED
   capability from expected plan/record/digest identity without pre-reading the
   raw delivery. The unmodified Bridge may resume an already-renamed processing

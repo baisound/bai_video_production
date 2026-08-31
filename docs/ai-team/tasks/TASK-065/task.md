@@ -259,6 +259,22 @@ completion is SUPERSEDED.
    canonical journal. The limited amendment must internally route
    VERIFIED_READBACK to the noncreating pinned A2 lookup and provide a sealed
    absent-journal A2 recovery mode without changing the existing layering.
+   TASK-068 applies mode by mode, not to the facade as a whole:
+   `VERIFIED_READBACK` and sealed A2 terminal lookup may consume its strict
+   pinned immutable-read/existing-lock primitives only as candidates, while
+   TASK-067 still owns the exact current coordinate
+   (`T67-READBACK-PRIMITIVE-USE`). `FRESH`, `PRECOMMIT_RESUME` and
+   `JOURNAL_RECOVERY` require mutable Generic phase/currentness transitions,
+   Project manifest commit and exact terminal cleanup that
+   `IMMUTABLE_ONLY_V1` explicitly does not authorize
+   (`T67-WRITE-MODES-VIA-T68`, High N.C.). The private factory must declare
+   required effects per mode. Seeing `MUTABLE_CAS_UNAVAILABLE` or
+   `EXACT_DELETE_UNAVAILABLE` in a write mode burns the capability before any
+   effect; it never falls back or downgrades to readback. TASK-067 and the
+   ProjectSave owner must separately define immutable Project manifest
+   generations, immutable Generic journal phases, marker/anchor transitions
+   and a terminal tombstone. A TASK-068 receipt is never a TASK-067 completion
+   receipt.
    TASK-065 grants
    no implementation authority and consumes only the eventual canonical
    completion receipt; until then this dependency is `N.C. / EFFECT0`.

@@ -19,20 +19,25 @@ authorized or performed by this rebind.
 
 ## Exact candidate heads and hosted state
 
-| Gate | Candidate | Exact head | State at rebind |
+| Gate | Candidate | Exact current PR head | Fresh state at 2026-08-31 read-back |
 |---|---|---|---|
-| D0 | TASK-063 safety closure PR #451 | `8fd17ed23242d34102908a0ce19fe8ce68b7cc9f` | Draft/open/mergeable; six OS/Python tests, dependency audit and secret scan pass; shared changelog gate fails |
-| D1 | PP-A PR #452 | `6e16c3ea040c503137030d51ef965cc11545290b` | Draft/open/mergeable; same hosted result as D0 |
-| D1 | PP-B PR #456 | `0e94fca36c90035bd1f090eef420443bf4f2763a` | Draft/open/mergeable; same hosted result as D0 |
-| D1 | PP-C PR #457 | `ea5d4954782708e72086d542d318d71fd66598f8` | Draft/open/mergeable; same hosted result as D0 |
-| D2 | readiness wording PR #454 | `0549feaa162e75d26264e38cd91fa234dfb96c31` | stacked candidate, not canonical |
-| D2 | CA-A security PR #458 | `087c3fed692868f89b69e17e08e60fa6249b22ca` | Draft/open/mergeable; rerun in progress after fail-closed hosted-owner fixture correction |
-| D2 | CA-A migration PR #459 | `507e76a40b59ceff3a91ef5eb424f1e8e0d6378c` | Draft/open; rerun after full-attestation pinning |
-| D2 | CA-B PR #460 | `74e732067057574990725eb4058bd3712382341e` | Draft/open; rerun after full-attestation pinning |
-| D2 | CA-C PR #461 | `7fc03fbb64e111a29a3e028a9105a8d2076f3c29` | Draft/open; rerun after full-attestation and physical-identity pinning |
+| D0 | TASK-063 safety closure PR #451 | `8fd17ed23242d34102908a0ce19fe8ce68b7cc9f` | PR closed/unmerged; exact commit is nevertheless an ancestor of current `main` |
+| D1 | PP-A PR #452 | `0c00676e2da055b3b4b0ee00ea67ef1246ea49dc` | merged; exact head is an ancestor of current `main` |
+| D1 | PP-B PR #456 | `d75851c12faee8c9abe263a21a36ad1aaf33f302` | merged; exact head is an ancestor of current `main` |
+| D1 | PP-C PR #457 | `78b462b4d52f0728a20cfd4951ac15f97033c8a1` | merged; exact head is an ancestor of current `main` |
+| D2 | readiness wording PR #454 | `0549feaa162e75d26264e38cd91fa234dfb96c31` | merged; exact head is an ancestor of current `main` |
+| D2 | CA-A security PR #458 | `fa2f056bae6927889b5710c6eb63e26b792a92af` | merged; exact head is an ancestor of current `main` |
+| D2 | CA-A migration PR #459 | `75ef138cd5b9361f9016d926a4db51f585b6fd29` | merged; exact head is an ancestor of current `main` |
+| D2 | CA-B PR #460 | `fdacaf90fddc47c2675716223bb023f66c5313af` | merged; exact head is an ancestor of current `main` |
+| D2 | CA-C PR #461 | `64b780cc567e98252bb9d3ba526153158a757e3a` | merged; exact head is an ancestor of current `main` |
 
-The shared `changelog-and-version` failure is not waived or reported as pass.
-TASK-065 does not own the shared changelog. A hosted temporary directory whose
+**SUPERSEDED historical CI note:** the original shared `changelog-and-version`
+failure was not waived or reported as pass, but it no longer describes these
+PR states. Fresh remote `main` is
+`35cdf1ad475633dcf035e0616e979b5a8fde0c88`, and every exact head above is its
+ancestor. This proves source integration only; it does not satisfy the new
+authority/currentness corrective Gates or completion receipts. TASK-065 does
+not own the shared changelog. A hosted temporary directory whose
 owner differs from the current Windows user remains fail-closed as
 `WRONG_OWNER`; the real fixture now records that host as environment-N.C.
 rather than weakening the production ownership rule.

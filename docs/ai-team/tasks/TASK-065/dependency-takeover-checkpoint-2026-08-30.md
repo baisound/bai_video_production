@@ -7,6 +7,15 @@ does not satisfy D0, D1, or D2 canonical completion and creates no PL-B config,
 native, connector activation, learning admission, Timeline, Resolve, Release,
 Deploy, or Production effect.
 
+**SUPERSEDED CURRENTNESS:** all PR/open/missing statements below are retained as
+the 2026-08-30 historical checkpoint only. Fresh 2026-08-31 source/PR state is
+recorded in `pl-a-candidate-contract-rebind-2026-08-30.md` and
+`dependency-currentness-reconciliation-2026-08-31.md`: remote `main` is
+`35cdf1ad475633dcf035e0616e979b5a8fde0c88`, D1 and D2 candidate PR heads are
+integrated, but the later authority/physical-race/privacy/strict-parser durable
+completion Gates remain N.C. Readers must not use the historical states below
+as present currentness or effect authority.
+
 ## D0 — TASK-063 installer safety
 
 - Existing parent: Draft PR #448 at

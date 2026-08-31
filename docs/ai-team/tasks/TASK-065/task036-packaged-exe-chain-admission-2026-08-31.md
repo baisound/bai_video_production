@@ -109,6 +109,7 @@ correlation body, OS detail, account, SID or private learning content and has
 | `T36-P11` | crash occurs before/after dispatch, stage, import or read-back | same ticket/EXE operation is replayed | first effect exact0/1; replay `FAILED_CLOSED / EFFECT0` |
 | `T36-P12` | public receipt/result is emitted | path, body, correlation, OS/account/SID or private value appears | body-free receipt 0; raw bytes absent from logs/temp/public output |
 | `T36-P13` | installed private command returns exit0 and creates a receipt path | caller copies TASK-063 installer precedent and checks `FileExists`/ancestor only, without strict same-open content+identity and receipt/correlation/canonical/Profile verification | `EXISTENCE_ONLY_EVIDENCE / PACKAGED_RUNTIME.N.C. / EFFECT0`; the file is preserved and PASS/receipt authority remain zero |
+| `T36-P14` | descriptor carries `installer_manifest_sha256` and acceptance script reports PASS | build-input payload-tree hash or permissively parsed absolute-root acceptance JSON is substituted for installed EXE/payload bytes and current registration proof | `BUILD_INPUT_CLAIM_ONLY / INSTALLED_PAYLOAD.N.C. / EFFECT0`; internally rehash exact installed payload under trusted same-open/bounded operation |
 
 Focused TASK-036 tests must add the Montage entry/module frozen-inclusion
 contract in addition to the existing packaging assertions. Those tests remain
@@ -121,7 +122,7 @@ the other.
 
 TASK-065 PL-C never runs this producer operation. PL65-C01a pinned-reads the
 already completed TASK-036 and TASK-061-B receipts and admits them only if the
-TASK-036 receipt covers T36-A/B/S/M/R/P/E and T36-P01-P13. The historical
+TASK-036 receipt covers T36-A/B/S/M/R/P/E and T36-P01-P14. The historical
 stage/import deltas belong to TASK-036; TASK-065 local Product/Project/Bridge/
 Profile/config/history deltas and adapter/TASK-036/installer calls are all
 zero. A later PL65-C01b operation requires a distinct Production Activation

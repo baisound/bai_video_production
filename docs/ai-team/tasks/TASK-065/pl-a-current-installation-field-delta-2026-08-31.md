@@ -19,11 +19,24 @@ payload bytes, a uniquely current trusted registration, valid lifecycle
 continuity, or matching TASK-061 config/history.
 
 The descriptor's `installer_manifest_sha256` is a claimed coordinate, not
-proof of present installed bytes. `AppId`/`UsePreviousAppDir=yes` are static
+proof of present installed bytes. Source confirms
+`build-task063-main-installer.ps1` computes it from build-input payload files
+sorted by `FullName`, with relative path plus per-file SHA-256 lines. Inno
+passes that build-input tree digest to the private EXE for descriptor storage,
+but neither Inno nor `test-task063-main-installer.ps1` regenerates the manifest
+from installed files or compares installed bytes, descriptor digest and build
+output in one current snapshot. `AppId`/`UsePreviousAppDir=yes` are static
 installer behavior, not a current-instance registry; absent
 `[UninstallDelete]` is preservation intent, not proof that preserved data is
 still installed/current. Packaged `discover` is ineligible because it calls
 `write_installer_readback()`; PL-A admission call count must remain zero.
+
+The current acceptance script reads descriptor and receipt using `Get-Content`
+plus `ConvertFrom-Json`, checks relative Bridge, instance equality and disabled
+flags, then emits absolute `install_root` and `bridge_root`. It has no strict
+duplicate/non-finite/BOM/trailing bounds or opened physical-identity proof.
+Its PASS/console JSON is historical acceptance output only and is ineligible
+for PL-A, PL-B or PL-C authority and for a public path-free projection.
 
 ## Private trusted snapshot
 
@@ -71,7 +84,7 @@ bodies are prohibited.
 `CANDIDATE_CURRENT_INSTANCE` is not `READY_FOR_CONFIG_SYNC` and creates no
 effect authority.
 
-## PLA-I01-I15
+## PLA-I01-I16
 
 | ID | Fault | Required assertion |
 | --- | --- | --- |
@@ -90,6 +103,7 @@ effect authority.
 | `PLA-I13` | move/portable copy reuses old coordinate | reject; trusted rebind; preserve old data |
 | `PLA-I14` | public result leaks root/account/SID/OS/command/body | privacy failure; public receipt 0 |
 | `PLA-I15` | reader/backend/build/time drifts during operation | burn capability; blocked/effect0 |
+| `PLA-I16` | build-input `installer_manifest_sha256` or current acceptance PASS/console JSON is substituted for installed payload proof | `BUILD_INPUT_CLAIM_ONLY / INSTALLED_PAYLOAD.N.C. / EFFECT0`; reject absolute-root projection; no PL-B/C promotion |
 
 Every case separately asserts Project inventory unchanged, unrelated Bridge
 data unchanged, installer-readback write zero, config/history/Profile mutation

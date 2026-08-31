@@ -22,6 +22,11 @@ fields to that closed schema would not make the adapter consume them. The
 future operation-ticket config v2 or trusted broker and BVP-private receipts
 must bind the missing authority.
 
+The build-input `installer_manifest_sha256` and current TASK-063 acceptance
+PASS/console JSON are audit-only. Neither proves a same-open rehash of the
+installed payload, and the acceptance JSON exposes absolute roots. PL-B must
+bind the future path-free TASK-063 installed-payload completion receipt instead.
+
 ## Required propagation
 
 | PL-A proof | PL-B private binding | Public ceiling | Launch requirement |

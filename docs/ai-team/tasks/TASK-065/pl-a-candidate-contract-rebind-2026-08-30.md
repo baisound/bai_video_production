@@ -57,7 +57,7 @@ count before/after/path and rejects a second hardlink name.
 audit coordinates only. They do not prove the current installed Product,
 unique current registration, lifecycle continuity or matching config/history.
 Packaged installer CLI `discover` is effectful and prohibited from PL-A
-admission. Current private fields, results and PLA-I01-I15 are in
+admission. Current private fields, results and PLA-I01-I16 are in
 [`pl-a-current-installation-field-delta-2026-08-31.md`](pl-a-current-installation-field-delta-2026-08-31.md).
 
 `InstalledBridgeDiscovery.public_receipt()` currently exposes exactly:

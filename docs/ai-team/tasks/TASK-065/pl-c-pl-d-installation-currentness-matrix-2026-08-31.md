@@ -51,7 +51,7 @@ every TASK-065 read-only admission/closure stage.
 Static packaging tests, `console=False`, stdout silence, exit0 and EXE presence
 do not establish the packaged-EXE row. TASK-063's installed private-command
 launch/wait followed by exit0+`FileExists` is also existence-only. The row
-requires the T36-P01-P13 frozen
+requires the T36-P01-P14 frozen
 inclusion and real-installed execution receipt defined in
 `task036-packaged-exe-chain-admission-2026-08-31.md`.
 

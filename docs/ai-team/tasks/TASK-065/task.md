@@ -201,7 +201,7 @@ completion is SUPERSEDED.
    spec is one-dir with `console=False`. Existing tests prove that static chain,
    spec reuse and output name only. They do not prove Montage route/module
    inclusion in the frozen payload or real installed execution. The future
-   completion therefore also binds T36-P01-P13: internally resolved exact
+   completion therefore also binds T36-P01-P14: internally resolved exact
    installed `BAI Video Production.exe`, frozen build/payload-tree identity,
    private dispatch exact1 before probe/guard/shell/presenter (each call0),
    installer/discover call0 and a durable body-free receipt. stdout and exit0
@@ -211,6 +211,11 @@ completion is SUPERSEDED.
    is not D0/PL-A/TASK-036 Evidence; neither TASK-063 nor TASK-036 may claim
    PASS without strict same-open receipt content plus physical/current identity
    and the operation-specific downstream read-backs.
+   Its `installer_manifest_sha256` is likewise a build-input payload claim, not
+   installed-byte proof: the current acceptance script does not rehash installed
+   Product files or compare build/descriptor/current payload, parses JSON
+   permissively and emits absolute roots. That PASS/console JSON is authority0
+   and cannot feed PL-A/B/C.
 8. `D3`: the older inline cycle shown as CA-C prepare -> PL-B0/PL-C0 -> CA-C
    apply is SUPERSEDED. The canonical graph above completes TASK-061-A,
    TASK-067, TASK-036 real E2E and TASK-061-B before TASK-065 begins PL-A/B/C/D.
@@ -247,7 +252,7 @@ descriptor/owner snapshot, verified Product EXE/payload, a trusted
 zero/one/multiple registration set, lifecycle continuity and matching
 TASK-061 config/history. Packaged `discover` is effectful and its PL-A call
 count is zero; root scanning and implicit winners are prohibited. The current
-field/result/PLA-I01-I15 contract is in
+field/result/PLA-I01-I16 contract is in
 [`pl-a-current-installation-field-delta-2026-08-31.md`](pl-a-current-installation-field-delta-2026-08-31.md).
 `CANDIDATE_CURRENT_INSTANCE` is not `READY_FOR_CONFIG_SYNC`; PL-A remains
 `START0 / EFFECT0` until every independent receipt is current.
@@ -315,7 +320,7 @@ which TASK-061-B's trusted Product operation freshly pinned and recomposed the
 same TASK-036 operation and dependencies; no private capability is serialized
 or transferred to TASK-065.
 
-The single-EXE static/runtime split, T36-P01-P13 negatives and body-free
+The single-EXE static/runtime split, T36-P01-P14 negatives and body-free
 receipt boundary are in
 [`task036-packaged-exe-chain-admission-2026-08-31.md`](task036-packaged-exe-chain-admission-2026-08-31.md).
 Static import/spec/package-name PASS, `console=False`, stdout silence, exit0 or

@@ -37,6 +37,7 @@ bind the future path-free TASK-063 installed-payload completion receipt instead.
 | registration set | set and selected receipt hashes plus cardinality | cardinality/opaque hashes | cardinality exactly 1 |
 | descriptor/owner generation | same-open snapshot receipt | opaque hashes | reject mixed/new inode |
 | lifecycle | action and predecessor/successor receipt hashes | opaque action/revision/hash | exact successor required |
+| lifecycle causality | trusted journal revision, predecessor/successor registration+payload and Product clock/session receipt | opaque revision/currentness hash; descriptor timestamps audit-only | timestamp order never authorizes config/launch |
 | config/history | TASK-061 revision and current-installation hash | bounded revision/hash | names same successor |
 | reader/backend/time | currentness/expiry receipt hash | opaque evidence/expiry state | drift burns ticket |
 | effect proof | discover CLI 0, installer-readback write 0, root scan 0 | stable reason codes | prohibited call blocks commit/launch |
@@ -51,10 +52,12 @@ The future BVP projection receipt and PREPARED journal bind:
 - `installer_registration_set_sha256`;
 - `selected_registration_receipt_sha256`;
 - `installation_lifecycle_receipt_sha256`;
+- `installation_lifecycle_revision`;
+- `installation_clock_currentness_sha256`;
 - `installation_selection_cardinality:1`; and
 - `installation_reader_currentness_sha256`.
 
-Every phase and recovery retains the same eight fields. No recovery scans roots
+Every phase and recovery retains the same ten fields. No recovery scans roots
 or recomputes a winner. The publication CAS tuple is:
 
 ```text
@@ -67,6 +70,8 @@ or recomputes a winner. The publication CAS tuple is:
  installer_registration_set_sha256,
  selected_registration_receipt_sha256,
  installation_lifecycle_receipt_sha256,
+ installation_lifecycle_revision,
+ installation_clock_currentness_sha256,
  installation_selection_cardinality,
  installation_reader_currentness_sha256,
  task061_revision,
@@ -81,7 +86,7 @@ holds its lease across final Product-currentness read, pinned adapter config
 read and result capture. A lifecycle change after start never authorizes a
 second command; fresh snapshot/ticket is required.
 
-## PLB-I01-I16
+## PLB-I01-I17
 
 | ID | Fault | Required result |
 | --- | --- | --- |
@@ -101,6 +106,7 @@ second command; fresh snapshot/ticket is required.
 | `PLB-I14` | installation receipt stale/expired/replayed/wrong reader | config/launch 0; fresh operation |
 | `PLB-I15` | public output leaks path/account/SID/body/OS detail | public receipt 0 |
 | `PLB-I16` | SKILL v1 config treated as installation authority | reject; transport-only/replayable |
+| `PLB-I17` | descriptor time rolls back/equal/future/cross-session or newest timestamp is used for successor/selection/expiry | CAS/config/launch 0; require trusted journal revision, registration+payload chain and Product clock receipt |
 
 Each case asserts Project/unrelated Bridge/distribution config/activation/
 history delta zero, installer-readback write zero, exact phase-owned projection

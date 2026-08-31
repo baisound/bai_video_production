@@ -44,6 +44,7 @@ side effect.
 | `PL65-D07` | lifecycle/config/activation coordination | disabled config/history candidate and Option B unchanged distribution config | TASK-061-B-owned trusted disable/history semantics and successor binding for upgrade/uninstall/instance drift | config/history must bind the current successor before use; mismatch is disabled/effect0; TASK-065 activation/history delta zero |
 | `PL65-D08` | lifecycle rollback/unknown-state preservation | logical update/fresh rollback cases | crash seams across registration, payload, descriptor, owner, readback and config; exact-object rollback only; foreign replacement preserve | exact operation rollback may emit a bounded receipt; unknown state returns `STOP_PRESERVE`; unrelated overwrite/delete zero |
 | `PL65-D09` | public-safe lifecycle closure receipt | disabled public discovery projection exposes only opaque instance/relative Bridge | bind lifecycle action, predecessor/successor Product registration/payload, descriptor/owner, config/history, preserved inventory, no-dual-write and executed status | future `TASK065_LIFECYCLE_CLOSURE_RECEIPT` is audit Evidence only, `authority_created:false`, body/path-free, and cannot activate or delete |
+| `PL65-D10` | descriptor timestamp is audit-only | repair preserves `created_at` and accepts parseable caller/internal `now` as `updated_at`; one normal increasing fixture exists | rollback/equal/future/cross-boot/session timestamps; multi-install newest-time attempt; trusted clock plus journal-bound predecessor/successor registration, payload and revision | timestamps never select current/newest/successor or extend expiry; ambiguity is `STOP_PRESERVE / EFFECT0`; no winner |
 
 ## Coverage separation
 
@@ -64,6 +65,8 @@ Missing closure fixtures include:
 - portable/move/rebind, removable/read-only filesystem, ACL/reparse and
   multi-host concurrency faults;
 - stale or cross-instance config, Profile, pointer and ticket rejection;
+- descriptor timestamp rollback/equal/future/cross-session and multi-install
+  newest-time attempts, with trusted journal/registration/payload causality;
 - every registration/payload/descriptor/owner/readback/config crash seam;
 - foreign replacement preservation with delete/restore zero;
 - body-free reason codes and absolute-root/account/OS-detail leakage zero; and
@@ -82,6 +85,8 @@ The future lifecycle receipt binds action/operation identity, trusted
 Product/installer build and payload tree, predecessor/successor registration,
 install instance and descriptor/owner physical identities, public relative
 Bridge coordinate only, config/history predecessor/successor revisions,
+trusted journal revision and Product clock/boot/session currentness (descriptor
+timestamps remain display-only),
 body-free preserved inventory hashes/counts, exact mutation summary, and
 executed/not-executed evidence identity. It always records
 `authority_created:false`; `connector_enabled:false` remains required unless a

@@ -252,7 +252,7 @@ descriptor/owner snapshot, verified Product EXE/payload, a trusted
 zero/one/multiple registration set, lifecycle continuity and matching
 TASK-061 config/history. Packaged `discover` is effectful and its PL-A call
 count is zero; root scanning and implicit winners are prohibited. The current
-field/result/PLA-I01-I16 contract is in
+field/result/PLA-I01-I17 contract is in
 [`pl-a-current-installation-field-delta-2026-08-31.md`](pl-a-current-installation-field-delta-2026-08-31.md).
 `CANDIDATE_CURRENT_INSTANCE` is not `READY_FOR_CONFIG_SYNC`; PL-A remains
 `START0 / EFFECT0` until every independent receipt is current.
@@ -291,7 +291,7 @@ receipt, journal, publication CAS, operation ticket and launch-time reread.
 Product build/payload, trusted registration set/selection, lifecycle and
 reader-currentness fields remain outside SKILL v1 config and are bound only by
 the future trusted broker/config-v2 route. The exact field/CAS tuple and
-PLB-I01-I16 cases are in
+PLB-I01-I17 cases are in
 [`pl-a-pl-b-installation-binding-matrix-2026-08-31.md`](pl-a-pl-b-installation-binding-matrix-2026-08-31.md).
 
 ### PL-C — post-completion connector E2E/read-back
@@ -393,7 +393,7 @@ roots or choose an implicit winner. Until a trusted installer/Product
 current-registration receipt and corrected noncreating TASK-063 reader are
 current, PL-D remains `START0 / EFFECT0`.
 
-The source-backed D01-D09 lifecycle boundary, historical-versus-real fixture
+The source-backed D01-D10 lifecycle boundary, historical-versus-real fixture
 separation, lifecycle receipt fields and producer/consumer ownership are in
 [`pl-d-lifecycle-source-matrix-2026-08-31.md`](pl-d-lifecycle-source-matrix-2026-08-31.md).
 TASK-063 owns current-registration/lifecycle production, TASK-061-B owns

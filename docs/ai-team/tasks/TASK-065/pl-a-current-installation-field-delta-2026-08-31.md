@@ -38,6 +38,16 @@ duplicate/non-finite/BOM/trailing bounds or opened physical-identity proof.
 Its PASS/console JSON is historical acceptance output only and is ineligible
 for PL-A, PL-B or PL-C authority and for a public path-free projection.
 
+Descriptor `created_at`/`updated_at` are also audit/display data only. Repair
+preserves the previous `created_at` and writes caller/internal `now` directly
+to `updated_at`; validation proves only string, trailing `Z` and datetime
+parseability. It does not prove `created_at <= updated_at`, monotonic repair,
+trusted clock/boot/session or predecessor causality. PL-A must never use these
+fields for current/newest selection, lifecycle successor, expiry/currentness
+or multi-install tie-breaking. Only the trusted registration set and a
+journal-bound predecessor/successor revision plus Product payload identities
+can establish current lifecycle state.
+
 ## Private trusted snapshot
 
 The public receipt is audit-only (`authority_created:false`). A future
@@ -84,7 +94,7 @@ bodies are prohibited.
 `CANDIDATE_CURRENT_INSTANCE` is not `READY_FOR_CONFIG_SYNC` and creates no
 effect authority.
 
-## PLA-I01-I16
+## PLA-I01-I17
 
 | ID | Fault | Required assertion |
 | --- | --- | --- |
@@ -104,6 +114,7 @@ effect authority.
 | `PLA-I14` | public result leaks root/account/SID/OS/command/body | privacy failure; public receipt 0 |
 | `PLA-I15` | reader/backend/build/time drifts during operation | burn capability; blocked/effect0 |
 | `PLA-I16` | build-input `installer_manifest_sha256` or current acceptance PASS/console JSON is substituted for installed payload proof | `BUILD_INPUT_CLAIM_ONLY / INSTALLED_PAYLOAD.N.C. / EFFECT0`; reject absolute-root projection; no PL-B/C promotion |
+| `PLA-I17` | descriptor timestamp rolls back, equals predecessor, is future-dated, crosses boot/session, or chooses the newest of multiple installs | timestamp authority0; require trusted registration-set and exact journal predecessor/successor revision; no winner/effect |
 
 Every case separately asserts Project inventory unchanged, unrelated Bridge
 data unchanged, installer-readback write zero, config/history/Profile mutation

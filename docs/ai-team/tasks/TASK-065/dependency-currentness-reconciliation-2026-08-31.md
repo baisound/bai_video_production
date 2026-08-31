@@ -58,11 +58,15 @@ rollback preservation with delete/restore zero; and multi-install, portable
 rebind, upgrade predecessor/current Product payload and real uninstall
 preservation read-backs.
 
-The existing fresh rollback fixture starts from a wholly empty Bridge state.
-It does not cover descriptor-absent owner-only or owner-plus-old-receipt state,
-automatic owner instance reuse, receipt swap, or rollback after receipt inode
-replacement. Those states require STOP+preserve unless an exact predecessor/
-journal proves recovery and the cleanup target is operation-owned.
+The existing fresh rollback fixture starts from a wholly empty Bridge state,
+but `provision_bridge` creates directories/owner before descriptor/receipt and
+rollback leaves them in place. The fixture asserts only descriptor/receipt
+absence, so `PARTIAL_OWNER_PRESERVED` is already reachable and its full Bridge
+inventory plus owner inode/body are unverified. It does not cover owner-only or
+owner-plus-old-receipt retry, automatic owner instance reuse, receipt swap, or
+rollback after receipt inode replacement. Those states require STOP+preserve
+unless an exact predecessor/journal proves recovery and the cleanup target is
+operation-owned.
 
 Therefore existing tests create no TASK-063 corrective completion receipt.
 TASK-068 and GF-D PR #469 remain independently parked.

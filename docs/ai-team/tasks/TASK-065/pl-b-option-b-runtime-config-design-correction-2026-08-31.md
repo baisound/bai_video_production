@@ -313,17 +313,22 @@ TASK-060 ownership and needs an exact owner/amendment allocation; TASK-061/065/
 
 ## 7. D2 to PL-C cycle closure
 
-The current TASK-061 candidate cannot close the cycle:
+The current TASK-061 candidate cannot close the cycle through a trusted
+authority boundary:
 
 - its public `admit_adapter_e2e_observation` accepts only
   `synthetic_fixture:true` and explicitly rejects a real-installed observation;
-- ACTIVATE requires `real_installed_verified:true`; and
+- ACTIVATE requires `real_installed_verified:true`, but the public E2E dataclass
+  and module-visible sentinel allow caller reconstruction, so a
+  non-synthetic-looking object is forgery rather than real E2E Evidence; and
 - the released SKILL performs no transport write or Profile load while its
   config is disabled.
 
 TASK-065 must not patch TASK-061 or weaken those checks. A separately authorized
-TASK-061 amendment or successor must define and seal a one-shot pre-activation
-E2E ticket/Human candidate without applying activation. After that authority is
+TASK-061 amendment or successor must replace public-object authorization with a
+non-caller-constructible one-shot pre-activation E2E/Human capability without
+applying activation. Setting `synthetic_fixture:false`, recomputing hashes or
+accessing module sentinels is explicitly ineligible. After that authority is
 canonical, the only admissible sequence is:
 
 1. CA-C prepares the exact Human one-shot candidate and E2E ticket with apply0.

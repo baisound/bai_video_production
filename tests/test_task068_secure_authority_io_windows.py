@@ -108,6 +108,75 @@ def test_windows_read_handle_is_noninheritable_and_reparse_safe(tmp_path: Path) 
     assert result.identity.inode != 0
 
 
+def test_windows_pinned_read_handle_blocks_target_replacement(tmp_path: Path) -> None:
+    target = tmp_path / "receipt.json"
+    target.write_text('{"version":1}', encoding="utf-8")
+    attempted: list[bool] = []
+
+    def hook(stage: str) -> None:
+        if stage != "read_complete":
+            return
+        foreign = tmp_path / "foreign.json"
+        foreign.write_text('{"version":2}', encoding="utf-8")
+        with pytest.raises(PermissionError):
+            os.replace(foreign, target)
+        attempted.append(True)
+
+    result = SecureAuthorityIO(tmp_path, _stage_hook=hook).read_json("receipt.json")
+
+    assert attempted == [True]
+    assert result.document["version"] == 1
+    assert target.read_text(encoding="utf-8") == '{"version":1}'
+    assert (tmp_path / "foreign.json").read_text(encoding="utf-8") == '{"version":2}'
+
+
+def test_windows_pinned_read_ancestor_blocks_namespace_replacement(tmp_path: Path) -> None:
+    parent = tmp_path / "authority"
+    parent.mkdir()
+    (parent / "receipt.json").write_text("{}", encoding="utf-8")
+    attempted: list[bool] = []
+
+    def hook(stage: str) -> None:
+        if stage != "read_complete":
+            return
+        with pytest.raises(PermissionError):
+            os.replace(parent, tmp_path / "moved-authority")
+        attempted.append(True)
+
+    result = SecureAuthorityIO(tmp_path, _stage_hook=hook).read_json(
+        "authority/receipt.json"
+    )
+
+    assert attempted == [True]
+    assert dict(result.document) == {}
+    assert parent.is_dir()
+    assert not (tmp_path / "moved-authority").exists()
+
+
+def test_windows_live_existing_lock_handle_blocks_inode_replacement(tmp_path: Path) -> None:
+    target = tmp_path / "authority.lock"
+    target.write_bytes(b"\0")
+    attempted: list[bool] = []
+
+    def hook(stage: str) -> None:
+        if stage != "lock_acquired":
+            return
+        foreign = tmp_path / "foreign.lock"
+        foreign.write_bytes(b"\0")
+        with pytest.raises(PermissionError):
+            os.replace(foreign, target)
+        attempted.append(True)
+
+    with SecureAuthorityIO(tmp_path, _stage_hook=hook).lock(
+        "authority.lock", mode="existing"
+    ) as lease:
+        assert lease.identity is not None
+
+    assert attempted == [True]
+    assert target.read_bytes() == b"\0"
+    assert (tmp_path / "foreign.lock").read_bytes() == b"\0"
+
+
 def test_windows_read_rejects_security_descriptor_drift(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

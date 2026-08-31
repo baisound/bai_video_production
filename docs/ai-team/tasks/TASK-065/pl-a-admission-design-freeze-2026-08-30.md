@@ -353,7 +353,19 @@ write, activation, publication, or rollback.
 - [ ] canonical main and post-main checks pass;
 - [ ] PL-A PP-C field mapping is re-frozen from actual source/schema.
 
-### D2 — TASK-061 CA-C canonical completion
+### D2 — SUPERSEDED whole-task TASK-061 completion wording
+
+The former single D2 completion Gate is split to prevent a 067/036/061 cycle:
+
+- `D2A`: TASK-061-A PREACTIVATION PREPARE (`enabled:false`) closes CA-A/B
+  corrections and the CA-C sealed plan/config candidate/challenge contract;
+- TASK-067 consumes D2A, then TASK-036 consumes TASK-067 and executes the real
+  installed E2E;
+- `D2B`: TASK-061-B consumes the TASK-036 E2E receipt and closes final CA-C;
+- Production Activation execution remains a separate Human Gate.
+
+The checklist below spans D2A then D2B; it is not a prerequisite requiring
+TASK-067 to wait for D2B.
 
 - [ ] dependency wording is corrected to public readiness v1 plus separately
   bounded private diagnostic semantics, or another explicitly authorized
@@ -369,10 +381,11 @@ write, activation, publication, or rollback.
   BOM/trailing/control rejecting same-snapshot parser;
 - [ ] failed switch recovery reads back exact disabled config and history;
 - [ ] exact CA-C schema/source/receipt/currentness coordinates are canonical;
-- [ ] **SUPERSEDED:** real adapter E2E required by CA-C is the corrected TASK-065
-  PL-C0 public-safe-content, operation-ticket-bound real-installed completion
-  receipt; a separate synthetic fixture/probe is ineligible and neither route
-  grants Timeline/learning authority;
+- [ ] TASK-061-A emits only its durable PREACTIVATION PREPARE receipt and makes
+  no E2E/final-CA-C claim;
+- [ ] TASK-036 later emits the public-safe-content, operation-ticket-bound
+  real-installed E2E receipt; synthetic fixture/probe is ineligible;
+- [ ] TASK-061-B consumes that exact TASK-036 receipt to close final CA-C;
 - [ ] canonical main and post-main checks pass;
 - [ ] PL-A CA-C field mapping is re-frozen from actual source/schema.
 
@@ -426,11 +439,13 @@ Target:
 
 ### Later gated E2E plan
 
-Corrected PL-C0 may use the released public-safe `MontageLearningExport` fixture
-as payload, but execution is operation-ticket-bound against the exact real
-installed adapter. `public-safe` describes content privacy; current config-v1
-synthetic/BVP-internal probe execution is audit-only and CA-C-ineligible. The
-corrected route records separate identities for:
+The TASK-036 preactivation E2E may use the released public-safe
+`MontageLearningExport` fixture as payload, but execution is operation-ticket-
+bound against the exact real installed adapter. `public-safe` describes content
+privacy; current config-v1 synthetic/BVP-internal probe execution is audit-only
+and CA-C-ineligible. TASK-061-B consumes the resulting TASK-036 receipt; the
+later TASK-065 PL-C is a separate post-completion phase. The corrected route
+records separate identities for:
 
 1. exact public-safe fixture request, real-installed operation identity and
    immutable inbox delivery;

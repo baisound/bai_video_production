@@ -76,7 +76,7 @@ already admitted private absolute Bridge root.
 - `<bridge_root>` is derived only from the exact current TASK-063 discovery and
   is never read from the SKILL distribution default.
 - `<operation_id>` is a bounded opaque coordinate bound inside the separately
-  authorized TASK-061 pre-activation ticket; neither identifier, path nor hash
+  authorized TASK-061-A PREACTIVATION PREPARE receipt; neither identifier, path nor hash
   creates authority by itself.
 - There is no shared mutable adapter-facing steady-state config. Each launch
   receives one immutable operation-specific config path. An optional current
@@ -92,7 +92,9 @@ already admitted private absolute Bridge root.
   current file or case-folded name collision
   before implementation invalidates this freeze and yields effect zero pending
   a fresh owner review.
-- PL-B0 never creates or replaces shared steady-state projection state.
+- The historical `PL-B0` label below denotes only the TASK-036 preactivation
+  config candidate; it is SUPERSEDED as a TASK-065 phase name. That candidate
+  never creates or replaces shared steady-state projection state.
 - The adapter receives only the absolute, reopened operation-specific config
   path via `--config`. It never receives the distribution config or an inferred
   default.
@@ -122,7 +124,8 @@ bind audit data for BVP, but the current adapter never verifies or consumes that
 receipt. The absolute `bridge_root` is private local state and must never appear
 in public Evidence, logs or exception text.
 
-This v1 shape cannot enforce PL-B0 or per-invocation steady-state authority. It
+This v1 shape cannot enforce the TASK-036 preactivation operation or per-
+invocation steady-state authority. It
 contains no operation/operation ID, TASK-063 instance/descriptor/owner binding,
 projection-receipt digest, TASK-061 one-shot ticket, expiry, invocation nonce or
 budget, or expected input record/Profile identity. The adapter gates publish and
@@ -135,8 +138,8 @@ config v2 or trusted broker/handle route. It must bind those coordinates and
 atomically redeem a BVP-owned one-shot authority before exactly one command.
 Direct CLI replay/copy/deserialization, wrong command, second/concurrent call,
 expiry and crash restart fail closed. The disabled distribution config remains
-v1. If the adapter is not corrected, PL-B0 is only a BVP-internal synthetic
-Bridge probe and cannot mint real SKILL E2E for CA-C.
+v1. If the adapter is not corrected, the TASK-036 attempt is only a
+BVP-internal synthetic Bridge probe and cannot mint real SKILL E2E for CA-C.
 
 For steady state, `enabled` must equal the exact current TASK-061 activation
 transaction/config-history projection. Missing, stale, future, replayed,
@@ -200,21 +203,23 @@ an immutable operation is committed or the optional BVP-only current projection
 pointer advances. No missing, foreign, stale or mismatched journal authorizes
 recovery.
 
-### 5.4 Pre-activation receipt
+### 5.4 Pre-activation prepare receipt
 
 `preactivation-receipt.json` is a self-hashed
 `BvpMontageLearningPreactivationConfigReceipt` v1 closed object. It binds the
-exact TASK-061 one-shot E2E ticket/Human candidate, apply-effect-zero state,
+exact TASK-061-A PREACTIVATION PREPARE receipt/Human challenge candidate,
+`enabled:false` and apply-effect-zero state,
 instance and source identities, operation, operation-scoped feature flags,
-config hash, allowed synthetic record identity, expiry, single invocation
+config hash, expected public-safe record identity, expiry, single invocation
 budget, cleanup receipt identity, and authority fields fixed false. It is not a
-TASK-061 activation receipt and cannot advance BVP steady-state projection.
+TASK-061-B final or Production Activation receipt and cannot advance BVP
+steady-state projection.
 
 Under current SKILL v1 this receipt is audit data only: the adapter does not
 read, validate or consume it, so expiry and single-invocation budget are not
-enforced. PL-B0 remains N.C. until the D2S operation-authority correction binds
-and atomically redeems this exact receipt/ticket or replaces it with an
-equivalent trusted broker capability.
+enforced. The TASK-036 preactivation operation remains N.C. until the D2S
+operation-authority correction binds and atomically redeems this exact receipt/
+ticket or replaces it with an equivalent trusted broker capability.
 
 ## 6. Writer, CAS and publication
 
@@ -524,9 +529,11 @@ expiry/replay/concurrent/double invocation and exception reuse all leave
 migration/Profile/config/history mutation zero. CA-C Human activation remains a
 separate Gate; neither ticket authorizes enablement.
 
-### 6.6 TASK-061 trusted clock and strict authority JSON prerequisite
+### 6.6 Post-061B Production Activation trusted clock and strict authority JSON prerequisite
 
-Production CA-C apply accepts no caller `now`, timestamp or clock
+This apply path is not TASK-061-B final CA-C; it remains behind the later
+separate Production Activation Human Gate. Production CA-C apply accepts no
+caller `now`, timestamp or clock
 implementation. Challenge issue, Human receipt, apply entry, durable consume
 and final read-back share a trusted Product/OS time domain whose implementation,
 build and session are bound to the one-use capability. Persisted monotonic/boot/
@@ -562,52 +569,57 @@ authority boundary:
 - the released SKILL performs no transport write or Profile load while its
   config is disabled.
 
-TASK-065 must not patch TASK-061 or weaken those checks. A separately authorized
-TASK-061 amendment or successor must replace public-object authorization with a
-non-caller-constructible one-shot pre-activation E2E/Human capability without
-applying activation. Setting `synthetic_fixture:false`, recomputing hashes or
-accessing module sentinels is explicitly ineligible. After that authority is
-canonical, the only admissible sequence is:
+TASK-065 must not patch TASK-061 or weaken those checks. TASK-061-A replaces
+public-object authorization only for CA-A/B correction plus the sealed CA-C
+plan/config candidate/challenge contract at `enabled:false`; it does not mint
+real-E2E authority. Setting `synthetic_fixture:false`, recomputing hashes or
+accessing module sentinels is explicitly ineligible. The only admissible
+sequence is:
 
-1. CA-C prepares the exact Human one-shot candidate and E2E ticket with apply0.
-2. PL-B0 creates three immutable non-steady-state operation candidates beneath
-   `connector-operations/<operation_id>/<exact-command>/`, each explicit
-   `--config` only and each carrying only the single operation's minimum feature
-   flag plus its adapter-consumable ticket authority.
-3. PL-C0 invokes adapter `publish-learning` exactly once to stage the delivery;
-   PENDING is a valid intermediate result. It does not call publish again for
-   confirmation.
-4. TASK-036 invokes exact plan-bound `import_path` once. The trusted BVP runner
-   separately pinned-reads and binds the strict public receipt, hidden Generic
-   correlation, canonical current state and Profile read-back. Adapter
-   `canonical_store_written` is audit data with `authority_created:false`.
-5. PL-C0 binds adapter stage result, BVP import result, public receipt,
-   correlation and Profile read-back as separate identities before returning a
-   sealed receipt. It claims no Production activation.
-6. CA-C consumes that exact receipt and applies activation/history under its own
-   Gate.
-7. PL-B publishes the steady-state projection revision whose enabled value
-   is derived from that current TASK-061 receipt.
-8. PL-C opens a fresh immutable steady-state operation config and performs the
-   exact runtime read-back. PL-D then owns lifecycle closure.
+1. TASK-061-A emits the exact PREACTIVATION PREPARE receipt with apply/effect0.
+2. TASK-067 completes its Generic facade using only that prepare receipt.
+3. TASK-036 consumes TASK-061-A, TASK-063, SKILL-D2S-001 and TASK-067, opens
+   immutable non-steady-state operation coordinates by explicit `--config`, and
+   invokes adapter `publish-learning` exactly once. PENDING is valid and publish
+   is never called again for confirmation.
+4. TASK-036 invokes exact plan-bound `import_path` once, then pinned-reads and
+   binds the strict public receipt, hidden Generic correlation, canonical state
+   and Profile read-back. Adapter `canonical_store_written` remains audit data
+   with `authority_created:false`.
+5. TASK-036 binds adapter stage, BVP import, receipt, correlation and Profile as
+   separate identities into the real-installed E2E receipt.
+6. TASK-061-B consumes that exact receipt and closes final CA-C while retaining
+   `enabled:false`; it does not execute Production Activation.
+7. All completion receipts flow to TASK-065 PL-A/B/C/D. PL-B may derive an
+   `enabled:true` steady-state projection only from a later, separate Production
+   Activation Human-Gate receipt. PL-C then uses a fresh immutable operation
+   config and PL-D owns lifecycle closure.
 
-The PL-B0 candidates never replace shared projection state and are never
+The historical TASK-036 preactivation config candidates never replace shared projection state and are never
 discoverable through the SKILL default. The future authorized runner must
 expire them after one matching command and remove only their exact current-
 operation files after cleanup read-back is sealed; crash recovery requires the
 same ticket and identities. A missing, replayed, expired or mismatched ticket
 leaves effect zero.
 
-### 7.1 TASK-061 operation-plan/admission prerequisite
+### 7.1 TASK-061-A prepare, TASK-036 E2E and TASK-061-B final prerequisites
 
-TASK-065 consumes only the public-safe receipt produced by a separately
-authorized trusted TASK-061/TASK-036 Product operation. It never receives or
+TASK-067 consumes only TASK-061-A PREACTIVATION PREPARE. That receipt closes
+CA-A/B corrections and binds the CA-C sealed operation plan, immutable config
+candidate and Human challenge contract at `enabled:false`; it contains no real
+E2E or final-CA-C claim. TASK-036 then consumes TASK-061-A, TASK-063,
+SKILL-D2S-001 and TASK-067 to produce the public-safe real-installed E2E
+receipt. TASK-061-B alone consumes that exact TASK-036 receipt to close final
+CA-C. Production Activation remains a separate Human Gate.
+
+TASK-065 never receives or
 calls its private capability factory, calls a private constructor, obtains a
 private seal, monkey-patches validation or converts its own hash record into
 `InstalledAdapterE2EReadback`.
 
-The TASK-061 completion receipt and focused acceptance tests must prove that the
-trusted Product operation:
+TASK-061-A focused acceptance proves item 1 below. TASK-036 real-installed E2E
+and TASK-061-B final acceptance prove items 2-6 without feeding back into
+TASK-067's start Gate. Together the trusted Product operations:
 
 1. accepts one current, unexpired, one-shot operation plan bound to the exact
    install instance, descriptor/owner hashes, PP-C source, Human candidate and
@@ -650,15 +662,19 @@ dataclass constructor, serialized JSON or raw hashes cannot mint it. Missing
 TASK-067/TASK-036 completion, FAILED_CLOSED facade, DUPLICATE binding drift,
 public receipt without hidden/canonical proof, stale/replayed/expired/multiple
 identity or apply-time instance/config/Profile drift remains effect zero.
-Immediately before ACTIVATE, TASK-061 reopens the exact instance, config
-candidate, E2E and Profile currentness. The pre-activation receipt and later
-TASK-065 steady-state/post-activation receipt are distinct phases and cannot
-substitute for one another.
+At TASK-061-B final closure, TASK-061 reopens the exact instance, config
+candidate, E2E and Profile currentness while retaining `enabled:false`.
+Production Activation later requires its own Human Gate and fresh currentness.
+The TASK-061-A prepare, TASK-036 E2E, TASK-061-B final and any later TASK-065
+steady-state/post-activation receipts are distinct phases and cannot substitute
+for one another.
 
-No current TASK-061 operation-plan/admission completion receipt means PL-B/PL-C
-config, adapter and native effect zero.
+Missing TASK-061-A PREACTIVATION PREPARE blocks TASK-067 and every later phase.
+Missing TASK-067 blocks TASK-036; missing TASK-036 real-installed E2E blocks
+TASK-061-B; missing TASK-061-B final CA-C blocks TASK-065 PL-C/PL-D. No phase
+may substitute a later receipt to satisfy an earlier Gate.
 
-TASK-061 activation completion also requires a separately authorized P0
+TASK-061-B final CA-C also requires a separately authorized P0
 correction for its config lock and writer. The current create-capable generic
 lock does not bind no-follow lstat/open/fstat/post identities, single-link and
 reparse-safe ancestors; the generic atomic JSON writer uses `os.replace`
@@ -692,7 +708,7 @@ target; and deterministic-temp cleanup can unlink an artifact not proven to be
 created by the current operation. Final DACL/hash attestation cannot undo an
 unrelated overwrite or deletion.
 
-TASK-061 migration completion therefore requires a secure existing/initial
+TASK-061-A migration prepare therefore requires a secure existing/initial
 migration lock; each journal phase bound by expected previous phase, bytes and
 physical identity CAS with PREPARED no-replace and post-publish pinned readback;
 Manifest exclusive durable no-replace publication with pinned-identical-only
@@ -709,8 +725,8 @@ tampered snapshot target appearance, foreign temp, ancestor reparse, DACL drift
 and a crash after each fsync, file publish and directory commit. The legacy
 source remains preserved, unrelated migration overwrite/delete is zero,
 snapshot commit is exact-once, receipt phases are monotonic and automatic old-
-data deletion remains zero. TASK-065 consumes the TASK-061 completion receipt
-only and does not change migration source.
+data deletion remains zero. TASK-067 consumes only the resulting TASK-061-A
+PREACTIVATION PREPARE receipt and does not change migration source.
 
 CA-C Human authority has a further independent P0. The current exported
 `issue_human_activation_evidence` can mint sealed-looking evidence from a
@@ -935,8 +951,8 @@ private local Evidence remains preserved. Every case is no-overwrite,
 no-partial-effect and fail closed.
 
 The required order is canonical SKILL Task/PR/main/release, installed-copy exact
-sync/read-back, TASK-065 PL-A baseline hash rebind, TASK-061 pre-activation E2E,
-then TASK-065 PL-C. Version, release and installation are separate Human/
+sync/read-back, TASK-061-A prepare, TASK-067, TASK-036 real-installed E2E,
+TASK-061-B final CA-C, then TASK-065 PL-A/B/C/D. Version, release and installation are separate Human/
 Release Gates; BVP Task authority cannot create them. Until that chain completes,
 Production linkage is `N.C.` even if the existing release remains historically
 valid.
@@ -1324,12 +1340,25 @@ zero. Fresh admission and journal-bound recovery instead assert their exact
 authorized Project path/revision delta separately from Bridge publication, with
 unrelated delta zero and immediate-verify additional delta zero.
 
-### 7.6 TASK-067 candidate security blockers and implementation-start Gate
+### 7.6 TASK-067 formal scope, security blockers and implementation-start Gate
 
-TASK-067 remains design-only and unallocated. Its preserved uncommitted
-candidate is not reviewed as completion and must not be committed, pushed,
-tested further or consumed. Before any future implementation may become
-commit-ready, independent DEV-4 review must close at least:
+TASK-067 now has an Owner-approved task-local formal scope for the Generic
+Review Operation Facade. This supersedes the older `unallocated` wording, but
+does not approve the preserved uncommitted candidate or authorize source/test
+start, commit, push, PR or consumption. Allowed implementation paths are only
+the Generic operation module, its focused TASK-067 test and TASK-067-local
+docs. The released TASK-058 canonical-admission path is conditional on an exact
+owner-preserving amendment limited to the private Generic factory, the three
+Generic methods and directly required Generic manifest/journal snapshot
+helpers. Exact lane, public receipt/Profile/Timeline/Release semantics, File
+Bridge, activation, installation, TASK-036, SKILL, `atomic`, shared docs and
+caller-selected mode/Project/root/revision authority remain prohibited.
+
+Before any future implementation may become commit-ready, TASK-068, TASK-069,
+the required TASK-060/063 receipts and TASK-061-A PREACTIVATION PREPARE,
+canonical amendment and fresh overlap/work-lock PASS must all be current;
+TASK-061-B is not a TASK-067 prerequisite. Independent DEV-4 review must close at
+least:
 
 - **P0 secure first Generic-lock establishment** — Product-lock-held absence
   checks must lead to no-follow exclusive creation, regular one-byte content,
@@ -1379,10 +1408,10 @@ commit-ready, independent DEV-4 review must close at least:
   deltas, Windows reparse/hardlink, stale capability/races, mode misuse and the
   unmodified Bridge application sequences must pass.
 
-Canonical metadata allocation, exact Allowed Files, clean worktree/current
+Canonical metadata materialization, exact Allowed Files, clean worktree/current
 main, dirty/overlap/work-lock/sole-writer PASS, accepted design, independent
-Critic/Judge plan and explicit implementation authority are all required before
-source or test mutation may resume.
+Critic/Judge plan and explicit post-dependency implementation-start authority
+are all required before source or test mutation may resume.
 
 ## 8. Lifecycle, privacy and multi-install rules
 
@@ -1429,7 +1458,8 @@ Focused tests must reject at least:
   rerun that recreates the original inbox delivery, receipt-only canonical
   claim, missing/wrong correlation, retained processing claim or concurrent
   second publish;
-- missing TASK-061 operation-plan/admission completion receipt, any private
+- missing TASK-061-A PREACTIVATION PREPARE, TASK-036 real-installed E2E or
+  TASK-061-B final CA-C receipt at its respective phase, any private
   `InstalledAdapterE2EReadback` constructor/seal attempt, or any public factory
   output used as Production authority (with or without cleanup read-back);
 - caller-asserted TASK-058 readiness good-state strings/true booleans, direct
@@ -1480,7 +1510,7 @@ Focused tests must reject at least:
   recovery appearing between phases, orphan/unknown object or marker, ancestor
   swap, caller-created seal/token/capability, subclass/mapping/duck-typed launch
   config, forged or rehashed serialized receipt and stale sealed object;
-- PL-B0 candidate replacing shared projection state or reusing another
+- TASK-036 preactivation candidate replacing shared projection state or reusing another
   operation's immutable config/receipt;
 - zero or multiple current TASK-063 instances;
 - descriptor/owner/PP-C/TASK-061/config receipt revision or digest drift;
@@ -1519,10 +1549,10 @@ Implementation remains START0 until all of the following are true:
   timestamps and strict bounded same-snapshot authority JSON across CA-A/B/C;
 - TASK-063 descriptor/owner/readback/rollback and TASK-060 encrypted/decrypted
   promotion source have canonical strict-parser completion receipts;
-- the TASK-061 amendment/successor for the pre-activation E2E ticket is accepted
-  and canonical, with a trusted private Product operation that alone may mint a
-  one-use capability and publish public-safe exact request/BVP receipt/
-  correlation/Profile read-back Evidence as real installed E2E;
+- TASK-061-A PREACTIVATION PREPARE is canonical at `enabled:false`, TASK-067 is
+  completed from that receipt, TASK-036 alone publishes the public-safe exact
+  request/BVP receipt/correlation/Profile real-installed E2E Evidence, and
+  TASK-061-B consumes it to close final CA-C without Production Activation;
 - the canonical SKILL operation-authority and publish-confirmation corrections
   plus strict JSON/closed Product I/O and the independent closed privacy-
   projection completion receipt are released, installed exactly, freshly read
@@ -1531,9 +1561,13 @@ Implementation remains START0 until all of the following are true:
 - the separate TASK-058 BVP admission correction validates bounded closed
   privacy before canonical hashing or pending/canonical/Profile effect, with no
   raw sensitive bytes in artifacts or public output;
-- TASK-067 has a canonical allocation and explicit implementation authority,
-  and its public sealed Generic current-coordinate/facade focused-verification
-  completion receipt is canonical and current;
+- TASK-067's Owner-approved formal scope is materialized canonically without
+  widening, TASK-068/TASK-069 and required TASK-060/063 plus TASK-061-A
+  PREACTIVATION PREPARE receipts plus the
+  exact TASK-058 amendment and fresh overlap/work-lock PASS have admitted its
+  explicit implementation start, and its public sealed Generic current-
+  coordinate/facade focused-verification completion receipt is canonical and
+  current;
 - the TASK-036/Development 2 bounded private packaged entrypoint and its focused-
   verification completion receipt are canonical and current;
 - this correction receives required independent DEV-4 Critic/Judge acceptance;

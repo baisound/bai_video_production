@@ -1,11 +1,13 @@
-# TASK-067 candidate allocation and uncommitted freeze packet
+# TASK-067 formal scope and uncommitted freeze packet
 
-State: `DESIGN_CANDIDATE_ONLY / IMPLEMENTATION_AUTHORITY_NOT_ESTABLISHED / EFFECT0`
+State: `OWNER_APPROVED_TASK_LOCAL_FORMALIZATION / SOURCE_START_DEPENDENCY_GATED / EFFECT0`
 
-This TASK-065-local packet records a proposed dependency and preserves the
-read-only identity of an already-existing uncommitted candidate. It does not
-allocate TASK-067, authorize implementation, accept its design, approve its
-diff, or create a completion receipt.
+This TASK-065-local packet records the Owner-approved formal scope for
+`TASK-067 — Generic Review Operation Facade` and preserves the read-only
+identity of an already-existing uncommitted candidate. The formal scope is not
+implementation-start authority: it does not accept or approve the preserved
+diff, satisfy any start dependency, authorize a source/test commit, push or PR,
+or create a completion receipt.
 
 ## 1. Authority and freeze
 
@@ -13,8 +15,8 @@ diff, or create a completion receipt.
 - Dedicated candidate branch: `codex/task-067-generic-review-operation`.
 - The three candidate paths below are uncommitted and unpushed.
 - They must not be deleted, moved, overwritten, further edited, tested,
-  committed, pushed, opened as a PR or consumed by TASK-036/061/065 before a
-  canonical allocation and explicit implementation authority exist.
+  committed, pushed, opened as a PR or consumed by TASK-036/061/065 before all
+  exact implementation-start dependencies in section 7 are current.
 - Their earlier local syntax/import, focused `7 PASS`, and TASK-058 regression
   `83 PASS / 5 SKIP` observations predate the authority correction. They are
   historical diagnostics only, not accepted Evidence or completion.
@@ -40,19 +42,39 @@ path/revision/store/scope coordinate.
 
 The receipt remains Project-owned. It does not contain install instance,
 descriptor, Bridge root or transport authority. TASK-036/065 would separately
-compose it with TASK-063 discovery and the TASK-061 operation plan.
+compose it with TASK-063 discovery and the TASK-061-A PREACTIVATION PREPARE
+operation plan.
 
-## 3. Candidate Allowed Files
+The dependency is deliberately one-way: TASK-067 consumes TASK-061-A only and
+does not wait for TASK-061-B final CA-C. TASK-036 later composes TASK-061-A,
+TASK-063, SKILL-D2S-001 and the completed TASK-067 facade to execute real
+installed E2E; TASK-061-B alone consumes that E2E receipt. Any requirement that
+TASK-067 wait for whole-task TASK-061 completion is SUPERSEDED because it would
+create a TASK-067/TASK-036/TASK-061 cycle.
 
-The minimal candidate implementation set, subject to canonical allocation and
-fresh collision/ownership checks, is:
+## 3. Formal Allowed Files and prohibited surface
+
+The Owner-approved minimal implementation scope, still subject to every start
+dependency and fresh collision/ownership check, is:
 
 ```text
-src/ai_video_production/montage_learning_canonical_admission_transaction.py
 src/ai_video_production/montage_learning_generic_operation.py
 tests/test_task067_generic_review_operation.py
 docs/ai-team/tasks/TASK-067/task.md
 ```
+
+The released TASK-058 path below is conditionally allowed only through the
+separate canonical owner-preserving amendment in section 3.1:
+
+```text
+src/ai_video_production/montage_learning_canonical_admission_transaction.py
+```
+
+That amendment is limited to a private Generic-only factory,
+`admit_generic_observation`, `recover_generic_observation`,
+`get_verified_generic_observation`, and the directly required Generic
+manifest/journal same-snapshot helpers. It grants no broader file or symbol
+ownership.
 
 Shared metadata candidates are excluded until a sole-Builder/LOCK checkpoint:
 
@@ -63,9 +85,12 @@ docs/roadmap/PROJECT-ROADMAP-CANONICAL.md
 CHANGELOG.md
 ```
 
-TASK-036, TASK-058 historical Evidence, TASK-061, TASK-065 implementation
-source, SKILL source/distribution config, Bridge runtime state and native
-installation are must-not-modify.
+Exact lane, public receipt, Profile, Timeline, Release, File Bridge,
+activation, installation, TASK-036, SKILL, generic `atomic` helpers, shared
+docs and public config/hash/seal authority-minting semantics are prohibited.
+Caller-selectable mode, Project/root/revision/store coordinates are also
+prohibited. TASK-058 historical Evidence, TASK-061, TASK-065 implementation
+source, Bridge runtime state and native installation remain must-not-modify.
 
 ### 3.1 Required TASK-058 cross-owner amendment
 
@@ -333,16 +358,26 @@ ledger advance.
 
 Source/test mutation may resume only after all are fresh and exact:
 
-1. canonical TASK-067 metadata allocation and accepted design identity;
-2. explicit implementation authority naming executor and Allowed Files;
-3. explicit TASK-058-owner-preserving cross-owner amendment for the existing
+1. canonical TASK-067 metadata materializes this formal scope and accepted
+   design identity without widening it;
+2. TASK-068 and TASK-069 prerequisite completion receipts are canonical and
+   current;
+3. the required TASK-060 and TASK-063 completion receipts plus the TASK-061-A
+   PREACTIVATION PREPARE receipt are canonical, current and bound to the same
+   `enabled:false` planned operation; TASK-061-B is expressly not a start
+   dependency;
+4. explicit implementation-start authority names the executor and exact
+   Allowed Files after the dependency receipts above are admitted;
+5. explicit TASK-058-owner-preserving cross-owner amendment for the existing
    canonical admission source, including exact symbols and regression floor;
-4. fresh canonical main and task/design read-back;
-5. dedicated branch/worktree, clean authority baseline, dirty ownership,
+6. fresh canonical main and task/design read-back;
+7. dedicated branch/worktree, clean authority baseline, dirty ownership,
    open-PR overlap, work-lock and shared sole-writer PASS;
-6. the P0/P1 findings above are carried into acceptance and test plan; and
-7. Human, version/CHANGELOG, native, config, Release, Deploy and Production
+8. the P0/P1 findings above are carried into acceptance and test plan; and
+9. Human, version/CHANGELOG, native, config, Release, Deploy and Production
    Gates remain separate.
 
-Until then TASK-067 is `N.C. / EFFECT0`; TASK-061/036/065 production and adapter
-effects remain zero, while TASK-065 design and dependency audit continue.
+Until then TASK-067 is `SOURCE_START0 / EFFECT0`: the preserved candidate has
+source mutation, test execution, commit, push and PR count zero. TASK-061/036/
+065 production and adapter effects remain zero, while TASK-065 integration
+design and dependency audit continue.

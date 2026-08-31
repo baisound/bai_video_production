@@ -1198,6 +1198,20 @@ def test_trusted_launch_bootstraps_missing_local_connection_settings_without_pro
     updated = launch.bridge.connection_settings_update({"revision": snapshot["revision"], "workload_modes": modes, "preferred_route_ids": preferred})
     assert updated["revision"] == 2
     assert ConnectionSettingsStore.load(settings_path).record.profile.routes[0].model_id == "qwen3:8b"
+    model_selection = launch.bridge.model_selection_snapshot({})
+    selected = next(
+        row
+        for row in model_selection["selectors"]
+        if row["page_id"] == "PLANNING"
+    )
+    assert selected["preferred_route_id"] == "ollama-planning-1"
+    selected_candidate = next(
+        row
+        for row in selected["candidates"]
+        if row["route_id"] == selected["preferred_route_id"]
+    )
+    assert selected_candidate["configuration_selectable"] is True
+    assert model_selection["provider_execution_started"] is False
 
     launch.close()
     reloaded = build_trusted_launch(
@@ -1209,6 +1223,20 @@ def test_trusted_launch_bootstraps_missing_local_connection_settings_without_pro
     )
     restored = reloaded.bridge.connection_settings_snapshot({})
     assert next(row for row in restored["workloads"] if row["workload"] == "PLANNING")["preferred_route_id"] == "ollama-planning-1"
+    restored_model_selection = reloaded.bridge.model_selection_snapshot({})
+    restored_selection = next(
+        row
+        for row in restored_model_selection["selectors"]
+        if row["page_id"] == "PLANNING"
+    )
+    assert restored_selection["preferred_route_id"] == "ollama-planning-1"
+    restored_candidate = next(
+        row
+        for row in restored_selection["candidates"]
+        if row["route_id"] == restored_selection["preferred_route_id"]
+    )
+    assert restored_candidate["configuration_selectable"] is True
+    assert restored_model_selection["provider_execution_started"] is False
     reloaded.close()
 def test_trusted_launcher_binds_local_free_planning_and_invalidates_old_bridge_on_close(tmp_path: Path):
     path, raw = config_document(tmp_path)

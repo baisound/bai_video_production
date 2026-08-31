@@ -196,6 +196,16 @@ completion is SUPERSEDED.
    delivery; TASK-067 late-binds the actual Bridge-validated mapping at method
    entry so claimed-delivery restart remains possible.
    `Task036LaunchConfiguration` remains coordinate data, not authority.
+   The current distribution chain is
+   `task036_shell.spec -> task036_windows_entry.py -> packaged_main()` and the
+   spec is one-dir with `console=False`. Existing tests prove that static chain,
+   spec reuse and output name only. They do not prove Montage route/module
+   inclusion in the frozen payload or real installed execution. The future
+   completion therefore also binds T36-P01-P12: internally resolved exact
+   installed `BAI Video Production.exe`, frozen build/payload-tree identity,
+   private dispatch exact1 before probe/guard/shell/presenter (each call0),
+   installer/discover call0 and a durable body-free receipt. stdout and exit0
+   remain authority zero.
 8. `D3`: the older inline cycle shown as CA-C prepare -> PL-B0/PL-C0 -> CA-C
    apply is SUPERSEDED. The canonical graph above completes TASK-061-A,
    TASK-067, TASK-036 real E2E and TASK-061-B before TASK-065 begins PL-A/B/C/D.
@@ -284,7 +294,7 @@ for confirmation and never treats adapter `canonical_store_written` as
 authority. TASK-065 PL-C does not recreate or substitute that receipt.
 
 For this preactivation chain, TASK-065 performs admission only: it pinned-reads
-and joins both the canonical TASK-036 T36-A/B/S/M/R/E producer completion and
+and joins both the canonical TASK-036 T36-A/B/S/M/R/P/E producer completion and
 the canonical TASK-061-B A61-E/R/D/Z consumer completion with observed historical
 stage-count 1, import-count 1, strict public receipt, hidden correlation and
 Profile read-back. Those counts describe the already-completed TASK-036
@@ -299,6 +309,12 @@ authority zero. TASK-065 accepts only the dual canonical completion chain in
 which TASK-061-B's trusted Product operation freshly pinned and recomposed the
 same TASK-036 operation and dependencies; no private capability is serialized
 or transferred to TASK-065.
+
+The single-EXE static/runtime split, T36-P01-P12 negatives and body-free
+receipt boundary are in
+[`task036-packaged-exe-chain-admission-2026-08-31.md`](task036-packaged-exe-chain-admission-2026-08-31.md).
+Static import/spec/package-name PASS, `console=False`, stdout silence, exit0 or
+EXE presence never substitute for the real-installed Product-operation receipt.
 
 After every completion receipt is current, PL-A rebinds the baseline and PL-B
 publishes the immutable operation config. If the separate Production Activation

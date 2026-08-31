@@ -34,6 +34,7 @@ equality without physical/current registration proof is insufficient.
 | Stage | Minimum private binding | Public ceiling |
 | --- | --- | --- |
 | TASK-036 operation | installation/set/selected-registration, Product build/payload, lifecycle, config projection, ticket/consume and start/end currentness | opaque operation/build/config/install hashes, true execution and counts; no path/body |
+| TASK-036 packaged EXE | frozen `spec -> windows_entry -> packaged_main` chain, Montage entry/module payload-tree, internally resolved installed EXE, private dispatch exact1 before probe/guard/shell/presenter call0 and installer/discover call0 | opaque build/payload/EXE/dispatch hashes and counts; `authority_created:false`; no path/body/correlation |
 | TASK-036 E2E | operation bindings plus request/delivery, strict public receipt, hidden correlation, canonical and Profile readbacks | bounded status/reasons/opaque hashes; hidden body private |
 | PL65-C01a | freshly pinned current installation/lifecycle plus exact E2E chain; historical stage/import each 1; local calls 0 | `PREACTIVATION_E2E_ADMITTED`; authority false |
 | TASK-061-B | same installation/config/source/E2E/Profile currentness; enabled remains false | body-free CA-C completion; Activation false |
@@ -46,6 +47,11 @@ old timestamp. C01b takes a new snapshot and authority. PL-D observes trusted
 successors only and performs no repair, deletion, discovery or activation.
 Packaged `discover`, installer-readback writes and root scans remain zero at
 every TASK-065 read-only admission/closure stage.
+
+Static packaging tests, `console=False`, stdout silence, exit0 and EXE presence
+do not establish the packaged-EXE row. It requires the T36-P01-P12 frozen
+inclusion and real-installed execution receipt defined in
+`task036-packaged-exe-chain-admission-2026-08-31.md`.
 
 ## PLC-I01-I16
 

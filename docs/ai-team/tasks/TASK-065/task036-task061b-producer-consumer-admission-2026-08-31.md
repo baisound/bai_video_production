@@ -17,7 +17,7 @@ or turn the external checkpoint into canonical Evidence.
 TASK-065 may admit the preactivation chain only when both are canonical and
 current:
 
-1. a TASK-036 producer completion receipt covering T36-A/B/S/M/R/E; and
+1. a TASK-036 producer completion receipt covering T36-A/B/S/M/R/P/E; and
 2. a TASK-061-B consumer completion receipt covering A61-E/R/D/Z.
 
 The TASK-036 serialized receipt is public-safe audit Evidence with
@@ -53,11 +53,15 @@ with TASK-065 Project/Bridge/Profile/config/history delta zero.
 | T36-S | Non-creating resolver with fixed precedence: receipt+correlation, correlation, pending, then fresh; receipt without correlation and all ambiguous/multiple/tampered states STOP; caller mode 0 | no packaged non-creating resolver or full precedence/race inventory matrix | selected private mode reason plus pre/post artifact inventories; authority_created=false |
 | T36-M | FRESH/RECOVERY subtype/VERIFIED_READBACK invoke only the matching TASK-067 method; capability `ARMED -> IN_FLIGHT -> CONSUMED|FAILED_CLOSED`; no retry/copy/concurrent/caller mode | TASK-067 not completed and no unmodified Bridge integration across every mode/crash seam | typed ImportResult and bound operation state transition; `canonical_store_written` excluded |
 | T36-R | Independent pinned public receipt, hidden correlation, canonical Generic/Project and Profile read-back after import; same operation/instance/config/build/expiry; no second publish; body-free output | no post-import same-snapshot read-back or cross-generation/leakage negatives | receipt/correlation/canonical/Profile physical+canonical identities and second-publish count 0 |
+| T36-P | The single frozen chain `task036_shell.spec -> task036_windows_entry.py -> packaged_main()` includes the private Montage entry/composition and invokes the internally resolved installed `BAI Video Production.exe`; private dispatch exact1 occurs before probe/guard/shell/presenter (each call0); frozen payload/build/EXE identities and durable body-free receipt are pinned | existing tests prove only entry import, one-dir `COLLECT`, `console=False`, spec reuse and output name; no Montage frozen inclusion or installed runtime receipt exists | T36-P01-P12 package/runtime matrix, payload-tree and installed EXE identities, exact dispatch/call-zero counts; stdout/exit0 and installer/discover are authority0 |
 | T36-E | Real installed packaged invocation, exact installed bytes/build, immutable config/ticket, trusted start/end/expiry and invocation budget; command exact1; no watcher/provider/UI/network/Timeline/Release/Activation | no installed Montage command or real packaged E2E chain | canonical `TASK036_MONTAGE_PRODUCT_OPERATION_RECEIPT`, `executed:true`, exact command count and installed identity |
 
-T36-A/B/S/M/R/E must all be present in one canonical producer completion
+T36-A/B/S/M/R/P/E must all be present in one canonical producer completion
 receipt. A subset, a passing exit code or the public receipt body alone is
 ineligible.
+
+The exact packaged-chain source facts and T36-P01-P12 boundary are in
+`task036-packaged-exe-chain-admission-2026-08-31.md`.
 
 ## 3. TASK-061-B consumer cells
 
@@ -76,7 +80,7 @@ or audit data even when their fields match.
 
 PL-C preactivation admission performs no producer or consumer operation. It
 pinned-reads both canonical completion receipts, verifies that A61-E/R/D/Z
-bind the exact T36-A/B/S/M/R/E operation and its current dependencies, and
+bind the exact T36-A/B/S/M/R/P/E operation and its current dependencies, and
 joins them with the independently observed historical stage-count 1,
 `import_path` count 1, public receipt, hidden correlation, canonical state and
 Profile read-back.
@@ -85,7 +89,7 @@ Acceptance requires:
 
 - exact issuer, schema/version, operation/plan/record/source digest, installed
   instance/config/build and trusted time/expiry equality across both receipts;
-- T36-A/B/S/M/R/E and A61-E/R/D/Z coverage all present, with no N.C./NOT_RUN/
+- T36-A/B/S/M/R/P/E and A61-E/R/D/Z coverage all present, with no N.C./NOT_RUN/
   synthetic substitution;
 - TASK-061-B's trusted recomposition and Human/config transaction currentness,
   not merely its serialized public result;
@@ -109,7 +113,7 @@ TASK-061-A -> TASK-067 -> TASK-036 -> TASK-061-B -> TASK-065
 ```
 
 TASK-036 waits for all earlier canonical dependencies. TASK-061-B starts only
-after the canonical T36-A/B/S/M/R/E producer completion. TASK-065 starts PL-C
+after the canonical T36-A/B/S/M/R/P/E producer completion. TASK-065 starts PL-C
 admission only after canonical A61-E/R/D/Z consumer completion and all other
 PL-A dependencies. Until then both receipts are missing, PL-C PASS is zero,
 and source/shared/config/native/Release/install/Deploy/Production effects are

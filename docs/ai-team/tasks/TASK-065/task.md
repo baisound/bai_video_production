@@ -392,6 +392,14 @@ The frozen PL-A mapping, negative matrix, exact-path overlap audit, dependency
 checklist, and focused fixture plan are in
 `pl-a-admission-design-freeze-2026-08-30.md`.
 
+The mandatory task-local fault coverage for the formal TASK-067 facade and
+future TASK-065 linkage is normalized in
+`task067-task065-negative-matrix-v1-2026-08-31.md`. Every future case records
+ID, source symbol, precondition, fault seam, expected typed result, separate
+Project/Bridge/Profile/config-history deltas, public leakage and Evidence
+receipt. Older whole-task TASK-061 completion language is SUPERSEDED there by
+the canonical TASK-061-A -> TASK-067 -> TASK-036 -> TASK-061-B ordering.
+
 Its historical missing-source classifications are superseded, but not promoted
 to PASS, by `dependency-currentness-reconciliation-2026-08-31.md`: D0 source
 corrections are canonical but installed completion is N.C.; D1/D2 candidate

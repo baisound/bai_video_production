@@ -29,6 +29,13 @@ Read-only freeze inventory:
 | `src/ai_video_production/montage_learning_generic_operation.py` | untracked | 40797 | `b225142bc12bac651a3c36ff62adebf4c388070b5efbfd9426ffe0766fded26f` |
 | `tests/test_task067_generic_review_operation.py` | untracked | 7532 | `c956236749d597558e88ba7661495e61c3da19d7919d233f1d4cd750f4d515a4` |
 
+Fresh read-only overlap check at the TASK-065 checkpoint reproduced exactly
+this three-path dirty set and every byte count/hash above. The candidate branch
+is still based on `origin/main`, with related PR count zero. The result confirms
+preservation only: canonical TASK-067 allocation, the bounded cross-owner
+amendment, dependency receipts and fresh owner/work-lock PASS are still absent,
+so additional source mutation, commit, push and PR remain zero.
+
 Any later byte change requires a fresh freeze identity after authority is
 established. The current files are not a source of truth.
 
@@ -339,6 +346,12 @@ calls to every facade method proving same-object effect zero. It must also cover
 commit-then-throw retry, concurrent double-call, immutable slot/state attacks,
 copy/deepcopy/pickle/serialization attempts and an old capability after external
 ledger advance.
+
+The normalized mandatory row set and per-case Evidence columns are frozen in
+`task067-task065-negative-matrix-v1-2026-08-31.md` (`G67-A01` through
+`G67-X01`). That matrix is part of this implementation-start Gate; prose-only
+coverage or a result assertion without explicit Project, Bridge, Profile,
+config/history and public-leakage deltas is insufficient.
 
 ## 6. Critic, Tester and Judge candidate plan
 

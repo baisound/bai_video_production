@@ -46,6 +46,7 @@ side effect.
 | `PL65-D09` | public-safe lifecycle closure receipt | disabled public discovery projection exposes only opaque instance/relative Bridge | bind lifecycle action, predecessor/successor Product registration/payload, descriptor/owner, config/history, preserved inventory, no-dual-write and executed status | future `TASK065_LIFECYCLE_CLOSURE_RECEIPT` is audit Evidence only, `authority_created:false`, body/path-free, and cannot activate or delete |
 | `PL65-D10` | descriptor timestamp is audit-only | repair preserves `created_at` and accepts parseable caller/internal `now` as `updated_at`; one normal increasing fixture exists | rollback/equal/future/cross-boot/session timestamps; multi-install newest-time attempt; trusted clock plus journal-bound predecessor/successor registration, payload and revision | timestamps never select current/newest/successor or extend expiry; ambiguity is `STOP_PRESERVE / EFFECT0`; no winner |
 | `PL65-D11` | descriptor-absent owner/receipt orphan and fresh rollback ownership | `provision_bridge` creates directories/owner first; fresh rollback removes only receipt/descriptor. The fixture asserts only those two paths absent, so `PARTIAL_OWNER_PRESERVED` is a normal reachable outcome and retry reuses its instance ID | full Bridge inventory plus owner inode/body before/after; descriptor absent + owner only; owner + old receipt; identical/different/foreign receipt swaps; receipt inode replacement before rollback; exact journal/predecessor and operation-created identity binding | owner-only state is never fresh/current and cannot implicitly resurrect an instance; without exact recovery proof return `PARTIAL_OWNER_PRESERVED / INSTALLATION_ORPHAN_AMBIGUOUS / STOP_PRESERVE / EFFECT0`; preexisting owner/receipt/data delete0 |
+| `PL65-D12` | Windows directory durability is observable and fail-closed | TASK-058 returns success unconditionally on Windows and tests that behavior; TASK-063 returns/suppresses directory open/fsync failure and has no directory-fsync fault fixture | mkdir and owner/descriptor/readback/pending/receipt/Profile parent commit failures; unsupported native port; failure before/after publication; prove `WRITE_THROUGH` rename is not mkdir/parent proof | every unsupported/failure seam is `DURABILITY_UNOBSERVABLE / FAIL / RECEIPT0 / EFFECT0`; unknown state preserved and unrelated delete0; current platform-honest no-op test is not Production PASS |
 
 ## Coverage separation
 
@@ -71,6 +72,8 @@ Missing closure fixtures include:
 - descriptor-absent owner-only and owner-plus-old-receipt recovery, including
   fresh-failure reachability, full Bridge inventory and owner inode/body,
   identical/different/foreign receipt swaps and rollback-time inode replacement;
+- Windows native directory durability for mkdir, owner/descriptor/readback,
+  pending/receipt/Profile and rollback commits, including unsupported/failure;
 - every registration/payload/descriptor/owner/readback/config crash seam;
 - foreign replacement preservation with delete/restore zero;
 - body-free reason codes and absolute-root/account/OS-detail leakage zero; and
@@ -93,6 +96,7 @@ trusted journal revision and Product clock/boot/session currentness (descriptor
 timestamps remain display-only),
 exact recovery classification for descriptor-absent orphan state and identities
 of every operation-created object eligible for cleanup,
+native directory-durability backend/build and per-commit success Evidence,
 body-free preserved inventory hashes/counts, exact mutation summary, and
 executed/not-executed evidence identity. It always records
 `authority_created:false`; `connector_enabled:false` remains required unless a

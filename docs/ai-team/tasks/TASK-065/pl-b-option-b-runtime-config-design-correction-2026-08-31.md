@@ -262,6 +262,18 @@ Lock and operation namespace establishment are transaction steps:
   explicit native durability port/Evidence when directory fsync is unsupported;
   failure is never suppressed.
 
+**Current-source P0:** this acceptance is not implemented by the present BVP
+helpers. TASK-058 `_directory_fsync()` returns unconditionally on Windows, and
+its platform-honesty fixture expressly accepts a missing directory without an
+error. TASK-063 `_directory_fsync()` returns on directory-open failure and
+suppresses `fsync` failure; its tests inject only `after_temp_fsync`, not a
+directory durability failure. `MoveFileExW(...WRITE_THROUGH)` is rename-seam
+precedent only and does not prove parent-directory creation or mkdir durability.
+Until owner Tasks provide a Windows native durability port and durable receipt,
+mkdir, owner/descriptor/readback, pending/receipt/Profile and PL-B config/journal/
+pointer commits remain `DURABILITY_UNOBSERVABLE / START0 / EFFECT0`. The current
+Windows no-op test is historical regression input, never Production PASS.
+
 Steady-state publication requires the current corrected expected tuple below.
 The former instance/descriptor/owner/TASK-061-only tuple is SUPERSEDED because
 it did not preserve installed Product, registration, lifecycle or reader
@@ -339,6 +351,8 @@ The TASK-063 owner correction must:
   publish, use initial no-replace or existing expected-target inode+bytes CAS,
   and perform post-publish pinned readback under the same lock/current ancestor;
 - treat directory fsync failure as FAIL with receipt zero;
+- replace the Windows no-op/suppressed helper with an explicit native durability
+  port whose unsupported and failure states fail closed and are receipt-bound;
 - drive rollback from a bound predecessor/journal and restore/delete only an
   exact current identity matching the operation-created/replaced object;
   unknown/collision state is preserved and stops; and
@@ -363,6 +377,9 @@ replacement during fresh/update rollback, and failure at each descriptor/
 receipt commit seam. Assertions require unrelated overwrite/delete zero, one
 exact install instance, coherent descriptor/owner generation, receipt delta
 zero-or-one, exact-instance-only repair and fixed-ProgramData fallback zero.
+Add mkdir, owner, descriptor, installer-readback and rollback directory-
+durability failures; each must yield receipt zero, preserve unknown state and
+leave unrelated objects unchanged.
 
 TASK-065 consumes only a new TASK-063 corrective completion receipt and freshly
 provisioned installed Evidence. TASK-061/065/067 do not modify installer source.

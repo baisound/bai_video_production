@@ -276,6 +276,13 @@ race, Windows ancestor share-delete, lock durability and mutable/unpinned
 snapshot P0s. A partial TASK-068 implementation or public hash/status cannot be
 promoted into this Gate.
 
+Current TASK-058 Windows directory durability is an unconditional no-op and its
+test accepts missing-directory success; TASK-063 suppresses directory-open/
+`fsync` failure. These are historical platform behavior, not Production proof.
+PL-B/D require an owner-provided Windows native durability port and receipts for
+mkdir, owner/descriptor/readback, pending/receipt/Profile and config/journal/
+pointer commits. Unsupported/failure is `RECEIPT0 / EFFECT0`.
+
 Steady-state `enabled` is derived only from a separate current Production
 Activation receipt/history created after its Human Gate; TASK-061-B final CA-C
 alone retains `enabled:false`. PL-B cannot edit that history, mint Human
@@ -397,7 +404,7 @@ roots or choose an implicit winner. Until a trusted installer/Product
 current-registration receipt and corrected noncreating TASK-063 reader are
 current, PL-D remains `START0 / EFFECT0`.
 
-The source-backed D01-D11 lifecycle boundary, historical-versus-real fixture
+The source-backed D01-D12 lifecycle boundary, historical-versus-real fixture
 separation, lifecycle receipt fields and producer/consumer ownership are in
 [`pl-d-lifecycle-source-matrix-2026-08-31.md`](pl-d-lifecycle-source-matrix-2026-08-31.md).
 TASK-063 owns current-registration/lifecycle production, TASK-061-B owns

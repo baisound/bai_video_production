@@ -567,6 +567,14 @@ fields and binding/status but never requires the exact field set. An
 extra-field receipt can therefore pass the current SKILL even though it is
 ineligible for PL-C/activation Evidence.
 
+BVP `main=35cdf1ad475633dcf035e0616e979b5a8fde0c88` already publishes exactly
+the same seven v1 fields (`schema_version`, `message_type`, `record_id`,
+`learning_sha256`, `status`, `receipt_id`, `timestamp`) and its
+`_parse_skill_v1_receipt()` requires exact set equality. Closing the SKILL
+schema/runtime validator therefore does not require a BVP public-receipt shape
+change. The separate TASK-058 physical publication/readback correction remains
+required and is not absorbed into this schema fix.
+
 This is a separate SKILL-owner dependency. TASK-061/065/067 must not edit the
 canonical or installed adapter. A future authorized canonical SKILL change must
 provide:
@@ -951,7 +959,8 @@ Project delta. S2 through S4 require sealed A2 terminal recovery: no fresh
 admission fallback, no raw ledger exposure, one
 typed canonical result with `operation_outcome:DUPLICATE`, and the immediate
 Bridge verify returns that same bound result. Restart must yield
-`ImportResult.status:DUPLICATE`, one compatible public-v1 receipt, unchanged
+`ImportResult.status:DUPLICATE`, one public-v1 receipt whose current contract
+status remains `ACCEPTED`, unchanged
 Project ledger/manifest revision, zero second Product commit and closed exact
 pending state. S5 and receipt-to-cleanup restart must select VERIFIED_READBACK
 when the matching correlation already exists.
@@ -962,7 +971,7 @@ Evidence keeps these layers separate instead of coercing them into one status:
 | --- | --- |
 | canonical typed result | exact class plus `ACCEPTED` or terminal `DUPLICATE` |
 | Bridge import | exact `ImportResult.status`, including `DUPLICATE` at seams 2-4 |
-| public SKILL v1 receipt | current contract-compatible public status and exact fields |
+| public SKILL v1 receipt | exact seven fields and current v1 `status:ACCEPTED`; never coerce canonical/Bridge `DUPLICATE` into this layer |
 | Product currentness | ledger/manifest revision and hashes before/after |
 
 Inventory assertions are root-scoped. For direct facade readback/A2 duplicate,

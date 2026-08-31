@@ -271,14 +271,22 @@ def test_pux2a1_model_selection_bridge_fails_closed_when_unbound_or_request_is_b
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 
-def test_pux2a1_main_pages_expose_project_selection_and_persisted_coordinate_projection():
+def test_gf_b_s1_feature_pages_consume_read_only_model_readiness_from_central_settings():
     assert "model_selection_snapshot" in HTML
-    assert "planningModelSelection" in HTML
-    assert "imageModelSelection" in HTML
-    assert "videoModelSelection" in HTML
-    assert "quickModelSelection" in HTML
-    assert "Audioは開発担当2の専用レーン" in HTML
-    assert "Provider実行・課金・生成は開始しません" in HTML
+    for page in ("planning", "imageGen", "videoGen", "audio", "quick"):
+        assert f'data-model-readiness="{page}"' in HTML
+    for legacy_id in (
+        "planningModelSelection",
+        "imageModelSelection",
+        "videoModelSelection",
+        "audioModelSelection",
+        "quickModelSelection",
+    ):
+        assert legacy_id not in HTML
+    assert "AIモデル設定を開く" in HTML
+    assert "右上の［設定］→［AIモデル］" in HTML
+    assert "Project既定Routeを保存" not in HTML
+    assert "data-model-selection-page" not in HTML
 
 
 def test_quick_generation_bridge_projects_snapshot_read_only():

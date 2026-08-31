@@ -588,14 +588,32 @@ def test_audio_workspace_connects_review_and_task026_plan_boundaries() -> None:
 
 
 
-def test_audio_page_consumes_audio_and_music_model_selectors_without_execution() -> None:
+def test_feature_pages_consume_read_only_model_readiness_without_local_save_controls() -> None:
     for marker in (
-        'id="audioModelSelection"',
-        "audio:'audioModelSelection'",
+        'data-model-readiness="planning"',
+        'data-model-readiness="imageGen"',
+        'data-model-readiness="videoGen"',
+        'data-model-readiness="audio"',
+        'data-model-readiness="quick"',
         "audio:['AUDIO','MUSIC']",
-        "['planning','imageGen','videoGen','audio','quick'].includes(page)",
+        "function renderModelReadiness(model,page)",
+        "async function refreshModelReadiness(page)",
+        "await refreshModelReadiness(page)",
+        "AIモデル: ${selected.model_id}",
+        "AIモデル設定を開く",
     ):
         assert marker in SHELL_HTML
+    for obsolete_marker in (
+        "planningModelSelection",
+        "imageModelSelection",
+        "videoModelSelection",
+        "audioModelSelection",
+        "quickModelSelection",
+        "data-model-selection-page",
+        "Project既定Routeを保存",
+    ):
+        assert obsolete_marker not in SHELL_HTML
+    assert SHELL_HTML.count("call('connection_settings_update',{") == 1
     assert "audio_workspace_execute" not in SHELL_HTML
 def test_audio_workspace_keeps_external_execution_and_ambiguous_plan_disabled() -> None:
     for marker in (

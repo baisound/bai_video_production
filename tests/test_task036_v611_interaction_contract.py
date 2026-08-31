@@ -55,16 +55,115 @@ def test_settings_nine_category_tabs_are_read_only_but_interactive() -> None:
     assert "paid_execution_authorized:false" in HTML
 
 
-def test_audio_model_selection_keeps_unavailable_reason_visible() -> None:
+def test_feature_pages_keep_model_readiness_read_only_and_route_unavailable_states_to_settings() -> None:
     for marker in (
-        "const renderModelSelectionBase=renderModelSelection",
+        "function renderModelReadiness(model,page)",
+        "function openModelSettings()",
         "NO_SELECTABLE_LOCAL_AUDIO_MODEL",
-        "利用可能な無料ローカル音声Modelがありません",
-        "modelSelectionUnavailableMessage(selector.unavailable_reason)",
+        "利用可能な無料ローカル音声AIモデルがありません",
+        "selected?.configuration_selectable===true",
+        "selected?.configuration_blockers",
+        "AIモデル設定を開く",
+        "右上の［設定］→［AIモデル］で確認してください。",
+        "button.addEventListener('click',openModelSettings)",
+        'role="status" aria-live="polite">AIモデル設定を読み込んでいます。',
     ):
         assert marker in HTML
 
-    assert r"replace(/Status: [^\n]*/,status)" in HTML
+    for obsolete_host in (
+        "planningModelSelection",
+        "imageModelSelection",
+        "videoModelSelection",
+        "audioModelSelection",
+        "quickModelSelection",
+        "data-model-selection-page",
+        "Project既定Routeを保存",
+    ):
+        assert obsolete_host not in HTML
+
+    assert HTML.count("call('connection_settings_update',{") == 1
+
+
+def test_model_readiness_state_transitions_and_settings_cta_execute_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the V6.1.1 behavioral contract")
+
+    def javascript_function(name: str) -> str:
+        match = re.search(
+            rf"(?:async )?function {re.escape(name)}\([^\r\n]+",
+            HTML,
+        )
+        assert match is not None
+        return match.group(0)
+
+    unavailable_message = javascript_function("modelSelectionUnavailableMessage")
+    open_settings = javascript_function("openModelSettings")
+    readiness_host = javascript_function("modelReadinessHost")
+    readiness_workloads = javascript_function("modelReadinessWorkloads")
+    readiness_summary = javascript_function("modelReadinessSummary")
+    render_readiness = javascript_function("renderModelReadiness")
+    script = f"""
+const assert=require('node:assert/strict');
+const host={{children:[],append(...items){{this.children.push(...items)}}}};
+const queriedSelectors=[];
+function q(selector){{queriedSelectors.push(selector);return host}}
+function clear(target){{target.children=[]}}
+function card(title,text){{return {{kind:'card',title,text}}}}
+function element(tag,className,text){{return {{kind:tag,className,text,type:null,listener:null,addEventListener(name,handler){{assert.equal(name,'click');this.listener=handler}}}}}}
+const MODEL_WORKLOAD_LABELS={{PLANNING:'企画'}};
+let currentSettingsView='general';
+let openSettingsCount=0;
+function openSettings(){{openSettingsCount+=1}}
+{unavailable_message}
+{open_settings}
+{readiness_host}
+{readiness_workloads}
+{readiness_summary}
+{render_readiness}
+function snapshot(selectable,preferredRouteId='route-a'){{
+  return {{available:true,selectors:[{{
+    workload:'PLANNING',available:true,preferred_route_id:preferredRouteId,status:'READY',
+    candidates:[{{route_id:'route-a',model_id:'qwen-local',provider_family:'Ollama',configuration_selectable:selectable,configuration_blockers:selectable?[]:['ROUTE_DISABLED']}}]
+  }}]}};
+}}
+for(const [page,workloads] of Object.entries({{
+  planning:['PLANNING'],
+  imageGen:['IMAGE'],
+  videoGen:['VIDEO'],
+  audio:['AUDIO','MUSIC'],
+  quick:['QUICK_IMAGE','QUICK_VIDEO'],
+}})){{
+  assert.deepEqual(modelReadinessWorkloads(page),workloads);
+  assert.equal(modelReadinessHost(page),host);
+  assert.equal(queriedSelectors.at(-1),`[data-model-readiness="${{page}}"]`);
+}}
+renderModelReadiness(snapshot(false),'planning');
+assert.match(host.children.find(item=>item.kind==='card').text,/未設定または利用できません/);
+let cta=host.children.find(item=>item.kind==='button');
+assert.ok(cta);
+cta.listener();
+assert.equal(currentSettingsView,'models');
+assert.equal(openSettingsCount,1);
+
+renderModelReadiness(snapshot(true),'planning');
+assert.match(host.children.find(item=>item.kind==='card').text,/設定状態: 設定済み/);
+assert.equal(host.children.some(item=>item.kind==='button'),false);
+
+renderModelReadiness(snapshot(true,null),'planning');
+assert.match(host.children.find(item=>item.kind==='card').text,/未設定または利用できません/);
+assert.equal(host.children.filter(item=>item.kind==='button').length,1);
+console.log('OK');
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
 
 
 def test_connection_settings_keeps_unavailable_audio_routes_disabled_and_explained() -> None:
@@ -74,6 +173,10 @@ def test_connection_settings_keeps_unavailable_audio_routes_disabled_and_explain
         "item.disabled_reasons||[]",
         "Installed/runtime/current:",
         "Availability: ${availability}",
+        "modeLabel.htmlFor=mode.id",
+        "routeLabel.htmlFor=route.id",
+        "mode.setAttribute('aria-label',`${workloadLabel}の選択モード`)",
+        "route.setAttribute('aria-label',`${workloadLabel}の優先AIモデル`)",
     ):
         assert marker in HTML
 

@@ -60,8 +60,12 @@ the opaque instance, relative coordinate, descriptor hash, and owner hash to
 the exact corrected installation read-back. It never accepts an absolute path
 from this public receipt or supplies a fixed ProgramData fallback.
 
-D0 remains `DEPENDENCY_NOT_CANONICAL` until PR #451 is canonically merged and
-the same test/read-back obligations pass at the post-main identity.
+The TASK-063 source corrections are now canonical on `main`, including the
+publication race/path-safety closure. D0 nevertheless remains N.C. until a new
+post-correction installed provision/repair/upgrade read-back proves one pinned
+descriptor/owner generation, secure operation locking, identity-safe
+publication/rollback, focused Windows negatives, and a canonical completion
+receipt. Pre-correction fixture hashes are not reusable as current PASS.
 
 ## D1 PP-C promoted-source mapping
 
@@ -90,9 +94,12 @@ PL-A must require:
   revocation, missing receipt, or multiple current sources rejected.
 
 The PP-C candidate supplies exactly one advisory envelope; it does not grant
-activation or learning-admission authority. D1 remains
-`DEPENDENCY_NOT_CANONICAL` until PP-A, PP-B, and PP-C are each canonically
-completed and an exact post-main promoted source read-back is supplied.
+activation, learning-admission, or Production Profile-write authority. The
+candidate source is present on `main`, but D1 remains N.C. pending independent
+DEV-4 completion and a trusted same-open-snapshot source operation. Public
+`PromotedPreferenceSourceRead`/`ProfileSourceBinding` tokens and self-hashes are
+audit data only and cannot mint the private one-use Production publish
+capability required by the current acceptance contract.
 
 ## D2 CA-A security and migration mapping
 
@@ -140,12 +147,16 @@ non-admitting archival evidence; it never treats migration as learning.
 `timeline_mutation_authorized`, `resolve_write_authorized`,
 `external_effect_authorized`, and `binding_sha256`.
 
-The candidate's only admissible state is
-`SOURCE_BOUND_ACTIVATION_BLOCKED`. Public TASK-058 readiness v1 is used as an
-honest source-not-bound baseline; private v2 is never a persistent receipt.
-Profile source/view read-back is true, while real adapter E2E, config change,
+The serialized candidate state is `SOURCE_BOUND_ACTIVATION_BLOCKED`. Public
+TASK-058 readiness v1 is used as a source-not-bound baseline; private v2 is
+never a persistent receipt. These fields describe candidate data, not
+Production authority: `ConnectorSourceBindingReadiness` is publicly
+constructible with a module-visible sentinel and computable hash. A trusted
+native-backend-fixed Product operation must pinned-read the actual CA-B/Profile
+receipts and bind them with Human and real-E2E currentness into a private
+single-use apply capability. Until that correction is complete, every config,
 enablement, activation, learning, promotion, Timeline, Resolve, and external
-effects remain false.
+effect remains false.
 
 ## D2 CA-C Human/config-history mapping
 
@@ -160,32 +171,42 @@ effects remain false.
 `automatic_promotion_authorized`, `timeline_mutation_authorized`,
 `resolve_write_authorized`, and `transaction_sha256`.
 
-The candidate proves only synthetic-temp disabled history. A deactivation uses
-an exact <=24-hour Human evidence identity, one-shot consumption, CAS revision,
-append-only hash chain, atomic BVP config replace, and exact disabled read-back.
+The candidate exercises synthetic-temp disabled-history semantics only.
 Repository default remains false and the installed SKILL config is not changed.
+Its intended one-shot Human/CAS/hash-chain checks do not close Production
+authority: Human evidence, CA-B readiness, and E2E readback are public
+dataclasses backed by module-visible sentinels and computable hashes, and the
+activation lock/config publication still has physical-identity races. The
+public synthetic admission function rejects real observations, but direct
+construction can recreate a non-synthetic-looking object; that closed function
+therefore is not an authority boundary.
 
-An activation receipt with `enabled:true` is not currently mintable: synthetic
-adapter observations are ineligible and the real installed E2E admission path
-is deliberately unavailable. Therefore PL-A must classify the current CA-C
-candidate as `CA_C_REAL_E2E_MISSING` plus `DEPENDENCY_NOT_CANONICAL`; it must
-not promote a disabled synthetic receipt into activation authority.
+PL-A must classify this candidate as
+`CA_B_READINESS_HUMAN_E2E_AUTHORITY_FORGEABLE`,
+`CA_C_REAL_E2E_GATE_PENDING`,
+`CA_C_SECURE_ACTIVATION_WRITER_PENDING`, and
+`DEPENDENCY_COMPLETION_N.C.`. It accepts none of the three public objects as
+apply authority and cannot promote any disabled/synthetic receipt into
+activation evidence.
 
 ## Independent gate checklist
 
 Each gate is re-evaluated independently from an exact immutable identity:
 
-1. **D0** — corrected TASK-063 commit is reachable from current canonical
-   `main`; six hosted OS/Python tests and security checks pass at that main;
-   descriptor/owner/discovery/receipt and ancestor/hardlink/DACL read-back are
-   current for exactly one installed instance.
+1. **D0** — corrected TASK-063 source is reachable from current canonical
+   `main`; a new post-correction hosted/Windows completion receipt proves secure
+   provision/readback locking, one pinned descriptor/owner generation,
+   identity-safe rollback/publication, and current ancestor/hardlink/DACL
+   evidence for exactly one installed instance.
 2. **D1** — PP-A, PP-B, and PP-C are reachable from canonical `main`; exactly
    one current promoted source read-back validates byte-for-byte against the
    closed schema and no second source/revision is current.
 3. **D2** — corrected readiness wording and CA-A/B/C are reachable from
-   canonical `main`; security, migration, source binding, Human one-shot
-   history, disabled rollback, and real installed public-safe adapter E2E have
-   exact receipts for the same instance and source binding.
+   canonical `main`; CA-A migration and CA-C config writers satisfy the secure
+   physical-identity fault matrix; a trusted native-backend-fixed operation
+   consumes non-forgeable CA-B, Human-challenge, and real-installed E2E
+   capabilities; all exact receipts remain current for the same instance,
+   source binding, config revision, Profile and operation plan.
 4. **PL-A admission** — only after all three gates pass, re-read TASK-058
    exact3 and the installed config identity, reject fixed ProgramData and
    multi-install ambiguity, and compile a public-safe readiness result.

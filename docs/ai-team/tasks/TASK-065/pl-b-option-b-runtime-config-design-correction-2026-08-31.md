@@ -86,6 +86,13 @@ already admitted private absolute Bridge root.
   filename. It is reprojected from fresh TASK-063 discovery after a portable
   move, repair or upgrade; its embedded absolute root is never reused as
   currentness evidence.
+- Fresh BVP `main=35cdf1ad475633dcf035e0616e979b5a8fde0c88` collision audit found
+  the existing `state/` authorities named `importer-journal.json`,
+  `profile-promotion-journal.json`, `profile-promotion-commit-marker.json`, and
+  `connector-activation-history.json`; none collides with this four-file
+  runtime-config namespace. Any newly current file or case-folded name collision
+  before implementation invalidates this freeze and yields effect zero pending
+  a fresh owner review.
 - PL-B0 never creates or replaces the steady-state config/receipt/transaction.
 - The adapter receives only the absolute, reopened operation-specific config
   path via `--config`. It never receives the distribution config or an inferred
@@ -129,6 +136,14 @@ authority table is:
 | `CONNECTOR_STATUS` | `false` | `false` |
 | `PUBLISH_LEARNING` | `true` | `false` |
 | `LOAD_PROFILE` | `false` | `true` |
+
+Canonical adapter `origin/main=c86ec8c11724a3170d37e0fdc5a516979fcca703`
+confirms the semantic split: `publish_learning_export()` checks only
+`enabled && learning_publish_enabled`, `load_preference_profile()` checks only
+`enabled && preference_read_enabled`, and `connector_status()` reports the two
+effective flags independently. This supports the least-privilege table as a
+design mapping only; it does not satisfy the separate reader/writer safety or
+release/install gates.
 
 The PL-C runner must reject a config/receipt operation mismatch. Steady-state
 does not imply that both feature flags are true; a new config projection and

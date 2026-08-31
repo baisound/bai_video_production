@@ -177,13 +177,18 @@ def test_existing_product_authority_is_projected_into_mock_surfaces() -> None:
 def test_settings_and_planning_project_public_safe_ollama_readiness() -> None:
     for marker in (
         "ollama_runtime_snapshot",
+        "function ollamaRuntimePresentation(state,reason)",
         "function renderOllamaRuntimeStatus(host,runtime)",
-        "Ollama local runtime",
-        "導入済み企画Model",
-        "Provider実行・課金・生成は開始していません。",
+        "無料企画AIの実行環境",
+        "導入済み企画AIモデル",
+        "AIサービス実行・課金・生成は開始していません。",
+        "技術情報",
+        "状態を再確認",
         "renderOllamaRuntimeStatus($('settingsContent'),runtime)",
     ):
         assert marker in SHELL_HTML
+    assert "Ollama local runtime" not in SHELL_HTML
+    assert "状態理由: ${reason}" not in SHELL_HTML
 
 
 def test_edit_screen_binds_move_trim_undo_redo_and_decline_cancel() -> None:

@@ -181,6 +181,184 @@ def test_connection_settings_keeps_unavailable_audio_routes_disabled_and_explain
         assert marker in HTML
 
 
+def test_ollama_runtime_uses_japanese_primary_status_and_keeps_codes_in_technical_details() -> None:
+    for marker in (
+        "function ollamaRuntimePresentation(state,reason)",
+        "READY:'利用できます'",
+        "NO_MODEL:'AIモデルが未導入です'",
+        "STARTING:'準備しています'",
+        "NOT_INSTALLED:'実行環境が未導入です'",
+        "FAILED:'起動に失敗しました'",
+        "OLLAMA_START_TIMEOUT",
+        "起動待ちが時間切れになりました。",
+        "technical.append(summary,codes)",
+        "feedback.setAttribute('role','status')",
+        "feedback.setAttribute('aria-live','polite')",
+        "if(ollamaRuntimeRefreshInFlight)return",
+        "refresh.setAttribute('aria-busy','true')",
+        "const refreshed=await renderSettingsView('models')",
+        "refreshed===true?'状態を更新しました。':'状態を確認できませんでした。時間をおいて再確認してください。'",
+        "return form!==null&&(currentSettingsView!=='models'||runtime!==null)",
+        "if(currentSettingsView==='models'&&!ollamaRuntimeRefreshInFlight)ollamaRuntimeRefreshMessage=''",
+    ):
+        assert marker in HTML
+    assert "Ollama local runtime" not in HTML
+    assert "状態理由: ${reason}" not in HTML
+
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the V6.1.1 behavioral contract")
+    presentation = re.search(r"function ollamaRuntimePresentation\([^\r\n]+", HTML)
+    renderer = re.search(r"function renderOllamaRuntimeStatus\([^\r\n]+", HTML)
+    assert presentation is not None
+    assert renderer is not None
+    completed = subprocess.run(
+        [
+            node,
+            "-e",
+            f"""
+const assert=require('node:assert/strict');
+let ollamaRuntimeRefreshInFlight=false,ollamaRuntimeRefreshMessage='';
+const currentById=new Map();
+function $(id){{return currentById.get(id)||null}}
+function element(tag,className,text){{return {{tag,className,textContent:String(text??''),children:[],attributes:{{}},disabled:false,type:null,listener:null,append(...items){{this.children.push(...items)}},setAttribute(name,value){{this.attributes[name]=String(value)}},removeAttribute(name){{delete this.attributes[name]}},addEventListener(name,handler){{assert.equal(name,'click');this.listener=handler}}}}}}
+function card(title,text){{const value=element('div','card','');value.title=title;value.text=text;return value}}
+let refreshCalls=0,releaseRefresh=null,refreshOutcome='success',refreshTargetState=null;
+async function renderSettingsView(view){{
+  assert.equal(view,'models');
+  refreshCalls+=1;
+  await new Promise(resolve=>{{releaseRefresh=resolve}});
+  if(refreshOutcome==='throw')throw new Error('snapshot failed');
+  if(refreshTargetState)installRuntime(refreshTargetState);
+  return refreshOutcome!=='failure';
+}}
+{presentation.group(0)}
+{renderer.group(0)}
+function installRuntime(state){{
+  currentById.clear();
+  const host={{children:[],append(...items){{this.children.push(...items)}}}};
+  renderOllamaRuntimeStatus(host,{{state,model_ids:state==='READY'?['qwen3:8b']:[],reason_code:state==='FAILED'?'OLLAMA_START_TIMEOUT':'INTERNAL_CODE',message_ja:'runtime port internal message'}});
+  const runtimeCard=host.children[0],feedback=runtimeCard.children.find(item=>item.attributes.role==='status'),button=runtimeCard.children.find(item=>item.tag==='button');
+  currentById.set('ollamaRuntimeRefreshStatus',feedback);
+  if(button)currentById.set('ollamaRuntimeRefreshButton',button);
+  return {{runtimeCard,feedback,button}};
+}}
+assert.equal(ollamaRuntimePresentation('READY',null).label,'利用できます');
+assert.equal(ollamaRuntimePresentation('NO_MODEL','OLLAMA_MODEL_NOT_INSTALLED').label,'AIモデルが未導入です');
+assert.equal(ollamaRuntimePresentation('STARTING',null).label,'準備しています');
+assert.equal(ollamaRuntimePresentation('NOT_INSTALLED','OLLAMA_EXECUTABLE_NOT_FOUND').label,'実行環境が未導入です');
+assert.equal(ollamaRuntimePresentation('FAILED','OLLAMA_START_EXITED').label,'起動に失敗しました');
+assert.match(ollamaRuntimePresentation('FAILED','OLLAMA_START_TIMEOUT').message,/時間切れ/);
+assert.equal(ollamaRuntimePresentation('UNKNOWN','UNKNOWN').label,'状態を確認できません');
+const ready=installRuntime('READY');
+assert.equal(ready.button,undefined);
+assert.equal(ready.feedback.attributes['aria-live'],'polite');
+for(const state of ['NO_MODEL','STARTING','NOT_INSTALLED','FAILED','UNAVAILABLE_CONFIGURATION']){{
+  ollamaRuntimeRefreshInFlight=false;
+  assert.ok(installRuntime(state).button);
+}}
+ollamaRuntimeRefreshInFlight=false;
+let rendered=installRuntime('FAILED'),runtimeCard=rendered.runtimeCard,details=runtimeCard.children.find(item=>item.tag==='details'),feedback=rendered.feedback,button=rendered.button;
+assert.doesNotMatch(runtimeCard.title,/FAILED|OLLAMA_START_TIMEOUT/);
+assert.doesNotMatch(runtimeCard.text,/FAILED|OLLAMA_START_TIMEOUT|runtime port/);
+assert.match(details.children.find(item=>item.tag==='div').textContent,/FAILED[^]*OLLAMA_START_TIMEOUT[^]*runtime port/);
+assert.equal(feedback.attributes['aria-live'],'polite');
+(async()=>{{
+  const first=button.listener(),second=button.listener();
+  assert.equal(refreshCalls,1);
+  assert.equal(button.disabled,true);
+  assert.equal(button.attributes['aria-busy'],'true');
+  assert.equal(feedback.textContent,'状態を確認しています…');
+  releaseRefresh();
+  await Promise.all([first,second]);
+  assert.equal(feedback.textContent,'状態を更新しました。');
+  assert.equal(button.disabled,false);
+  assert.equal(button.attributes['aria-busy'],undefined);
+
+  rendered=installRuntime('FAILED');
+  refreshOutcome='failure';refreshTargetState=null;
+  const failed=rendered.button.listener();releaseRefresh();await failed;
+  assert.equal(rendered.feedback.textContent,'状態を確認できませんでした。時間をおいて再確認してください。');
+  assert.equal(rendered.button.disabled,false);
+
+  rendered=installRuntime('FAILED');
+  refreshOutcome='throw';
+  const rejected=rendered.button.listener();releaseRefresh();await rejected;
+  assert.equal(rendered.feedback.textContent,'状態を確認できませんでした。時間をおいて再確認してください。');
+
+  rendered=installRuntime('STARTING');
+  refreshOutcome='success';refreshTargetState='READY';
+  const transitioned=rendered.button.listener();releaseRefresh();await transitioned;
+  assert.equal(currentById.get('ollamaRuntimeRefreshStatus').textContent,'状態を更新しました。');
+  assert.equal(currentById.has('ollamaRuntimeRefreshButton'),false);
+  console.log('OK');
+}})().catch(error=>{{console.error(error);process.exitCode=1}});
+""",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_model_settings_readback_reports_actual_call_null_as_failure() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the V6.1.1 behavioral contract")
+    call_function = re.search(r"async function call\([^\r\n]+", HTML)
+    settings_renderer = re.search(r"async function renderSettingsView\([^\r\n]+", HTML)
+    assert call_function is not None
+    assert settings_renderer is not None
+    completed = subprocess.run(
+        [
+            node,
+            "-e",
+            f"""
+const assert=require('node:assert/strict');
+let currentSettingsView='general',ollamaRuntimeRefreshInFlight=false,ollamaRuntimeRefreshMessage='old result';
+const SETTINGS_VIEWS={{general:{{title:'一般',summary:'',boundary:''}},models:{{title:'AIモデル',summary:'',boundary:''}}}};
+const nodes=new Map([
+  ['settingsPaneTitle',{{textContent:''}}],
+  ['settingsPaneSummary',{{textContent:''}}],
+  ['settingsPaneBoundary',{{textContent:''}}],
+  ['settingsContent',{{}}],
+]);
+const $=id=>nodes.get(id)||null,qa=()=>[];
+let notified=0,connectionRender=null,runtimeRender=null;
+function notify(){{notified+=1}}
+function renderConnectionSettings(value){{connectionRender=value}}
+function renderOllamaRuntimeStatus(_host,value){{runtimeRender=value}}
+function renderModel(){{throw new Error('unexpected generic renderer')}}
+async function refreshOwnerSigningKeyImport(){{throw new Error('unexpected secret renderer')}}
+const window={{pywebview:{{api:{{
+  connection_settings_snapshot:async()=>{{throw new Error('connection failed')}},
+  ollama_runtime_snapshot:async()=>{{throw new Error('runtime failed')}},
+}}}}}};
+{call_function.group(0)}
+{settings_renderer.group(0)}
+(async()=>{{
+  const result=await renderSettingsView('models');
+  assert.equal(result,false);
+  assert.equal(connectionRender,null);
+  assert.equal(runtimeRender,null);
+  assert.equal(notified,2);
+  assert.equal(ollamaRuntimeRefreshMessage,'');
+  console.log('OK');
+}})().catch(error=>{{console.error(error);process.exitCode=1}});
+""",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
 def test_timeline_scrub_uses_python_owned_seek_without_frontend_truth() -> None:
     for marker in (
         "function startTimelineScrub(event,target)",

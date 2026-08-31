@@ -67,7 +67,11 @@ publication race/path-safety closure. D0 nevertheless remains N.C. until a new
 post-correction installed provision/repair/upgrade read-back proves one pinned
 descriptor/owner generation, secure operation locking, identity-safe
 publication/rollback, focused Windows negatives, and a canonical completion
-receipt. Pre-correction fixture hashes are not reusable as current PASS.
+receipt. The future receipt must also come from strict bounded parsing of the
+same pinned descriptor/owner/readback/journal/rollback-preimage bytes, with raw
+hash, canonical parsed hash and physical identity bound together. Duplicate or
+ambiguous JSON is preserved with provision/repair/rollback effect zero.
+Pre-correction fixture hashes are not reusable as current PASS.
 
 ## D1 PP-C promoted-source mapping
 
@@ -101,7 +105,11 @@ candidate source is present on `main`, but D1 remains N.C. pending independent
 DEV-4 completion and a trusted same-open-snapshot source operation. Public
 `PromotedPreferenceSourceRead`/`ProfileSourceBinding` tokens and self-hashes are
 audit data only and cannot mint the private one-use Production publish
-capability required by the current acceptance contract.
+capability required by the current acceptance contract. D1 also requires a
+strict bounded parser for both encrypted outer document and decrypted history,
+binding outer/ciphertext/decrypted hashes, physical identity, native DPAPI
+backend/user/session and parsed revision/head in one private snapshot. Caller
+pre-parsed mappings and ambiguous JSON create no source/Profile authority.
 
 ## D2 CA-A security and migration mapping
 
@@ -120,14 +128,26 @@ PL-A accepts only `SECURE`, exact owner/current-user equality, a present DACL,
 stable root and full ancestor identities, no shared writer/unknown ACE/reparse,
 and every effect/repair flag false.
 
-The persistent migration read-back carries `record_version`, `record_type`,
+The public persistent migration read-back carries `record_version`, `record_type`,
 `migration_id`, the closed migration `receipt`, `manifest_sha256`,
 `exact_snapshot_verified`, the fixed false active-view/Profile/activation/
 Timeline/Resolve fields, and `snapshot_readback_sha256`. Its nested receipt
 also binds the initial and final security attestation hashes, exact install
 instance/descriptor/owner coordinates, counts, manifest, source identity,
-preservation flags, and terminal receipt hash. PL-A accepts it only as
-non-admitting archival evidence; it never treats migration as learning.
+preservation flags, and terminal receipt hash. It is audit projection only:
+`BridgeMigrationReadback` is publicly constructible using the module-global
+`_READBACK_SEAL` and recomputable hash, while TASK-061 currently checks only
+those fields and target values. PL-A accepts it only as non-admitting archival
+display evidence. Currentness requires the trusted TASK-061 Product operation
+to resolve the plan-bound migration ID and pinned-read the exact terminal CA-A
+journal plus snapshot manifest/tree/physical identities into a private one-use
+capability. It never treats the public object or migration itself as learning
+or Profile/config authority. `BridgeMigrationPlan.confirmation()` is likewise
+deterministic display text, not migration authority. CA-A execution requires a
+trusted durable single-use `MIGRATE` ticket bound to exact plan, instance,
+source/expected target state, user/session/build, expiry and budget; entry burns
+it IN_FLIGHT. Terminal journal/manifest/receipt reads use the strict same-
+snapshot authority JSON parser rather than permissive `json.loads`.
 
 ## D2 CA-B source-binding mapping
 
@@ -149,16 +169,27 @@ non-admitting archival evidence; it never treats migration as learning.
 `timeline_mutation_authorized`, `resolve_write_authorized`,
 `external_effect_authorized`, and `binding_sha256`.
 
-The serialized candidate state is `SOURCE_BOUND_ACTIVATION_BLOCKED`. Public
-TASK-058 readiness v1 is used as a source-not-bound baseline; private v2 is
-never a persistent receipt. These fields describe candidate data, not
-Production authority: `ConnectorSourceBindingReadiness` is publicly
-constructible with a module-visible sentinel and computable hash. A trusted
-native-backend-fixed Product operation must pinned-read the actual CA-B/Profile
-receipts and bind them with Human and real-E2E currentness into a private
-single-use apply capability. Until that correction is complete, every config,
-enablement, activation, learning, promotion, Timeline, Resolve, and external
-effect remains false.
+The serialized candidate state is `SOURCE_BOUND_ACTIVATION_BLOCKED`.
+**SUPERSEDED:** public TASK-058 readiness v1 must not be used as an admitting
+source-not-bound baseline, and private V2/hash-shaped readiness is not a
+persistent Product receipt. The public factory accepts caller state strings and
+E2E/default-config booleans, while TASK-061 validates only their serialized
+values. Both versions are audit/display projection with
+`authority_created:false`. PL-A instead requires a durable
+`TASK058_BASELINE_READBACK` minted by a trusted Product reader from exact
+canonical release/package and installed bytes plus executed operation receipts,
+freshly bound to TASK-063 instance, TASK-060 source and the operation plan.
+`ConnectorSourceBindingReadiness` remains publicly constructible with a
+module-visible sentinel and computable hash. A trusted native-backend-fixed
+Product operation must pinned-read the actual baseline/CA-B/Profile receipts and
+bind them with Human and real-E2E currentness into a private single-use apply
+capability. Until those corrections complete, every config, enablement,
+activation, learning, promotion, Timeline, Resolve and external effect remains
+false. `ConnectorSourceBindingPlan.confirmation()` is deterministic display
+text only. CA-B publication separately consumes a trusted one-shot `BIND`
+ticket with the same exact instance/plan/source/target/user/session/build/
+expiry/budget binding; CA-A tickets cannot be reused for CA-B. Trusted baseline
+and Profile durable reads must pass the same strict authority JSON boundary.
 
 ## D2 CA-C Human/config-history mapping
 
@@ -182,6 +213,15 @@ activation lock/config publication still has physical-identity races. The
 public synthetic admission function rejects real observations, but direct
 construction can recreate a non-synthetic-looking object; that closed function
 therefore is not an authority boundary.
+
+Production apply also cannot accept caller `now`, timestamp or selectable clock.
+Challenge issuance, Human receipt, apply entry, atomic consume and final read-
+back share a Product/OS-owned time domain bound into the one-use capability.
+Persisted monotonic/boot/session currentness plus bounded UTC must prevent
+rollback, forward jump, suspend/resume, timezone change or restart from extending
+expiry, and `occurred_at` is Product-authored. CA-C config/history/challenge/
+consume records use strict bounded same-snapshot JSON; ambiguity causes no
+rewrite, repair, deletion, config or history effect.
 
 PL-A must classify this candidate as
 `CA_B_READINESS_HUMAN_E2E_AUTHORITY_FORGEABLE`,

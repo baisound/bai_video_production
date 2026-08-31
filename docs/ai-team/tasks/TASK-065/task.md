@@ -36,7 +36,13 @@ an active production fallback.
    not reusable as current PASS. Completion additionally requires pinned
    descriptor/owner discovery snapshots, secure provision/readback locking and
    identity-CAS/no-replace publication/rollback; current path-based replace and
-   unlink behavior cannot prove race-safe installed currentness.
+   unlink behavior cannot prove race-safe installed currentness. Descriptor,
+   owner manifest, installer/migration read-back and rollback preimages also
+   require one strict bounded UTF-8 parser over the same pinned nofollow handle
+   bytes, binding raw hash, canonical parsed hash and physical identity.
+   Duplicate/nested keys, non-finite numbers, BOM/trailing/control/invalid UTF-8
+   or exceeded bounds STOP and preserve the ambiguous current/preimage; repair,
+   republish, delete and rollback mutation remain zero.
 2. `D1`: TASK-060 PP-A is integrated from fresh `main`, then PP-B and PP-C are
    canonically completed and expose exactly one promoted envelope plus source
    receipt. Production Profile publication additionally requires a trusted
@@ -48,7 +54,12 @@ an active production fallback.
    secure pinned PP-B store transaction with initial no-replace, existing
    bytes+inode+revision/head CAS and exact read-back. Production composition
    fixes Windows DPAPI and registry/manifest coordinates internally; custom
-   cipher/coordinates are test-only and cannot mint source authority.
+   cipher/coordinates are test-only and cannot mint source authority. Both the
+   encrypted outer store/source and decrypted history require strict bounded
+   parsing from the same native operation snapshot, binding raw/canonical/
+   ciphertext/decrypted hashes, physical identity, DPAPI backend/user/session
+   and revision/head. Caller mappings or ambiguous JSON preserve state and
+   produce zero promotion/Profile effect.
 3. `D2`: TASK-061 corrects its public-v1/private-v2 readiness dependency and
    supplies CA-A/CA-B plus a sealed CA-C prepare/Human one-shot candidate with
    apply effect zero. Its public factory output is audit projection only and
@@ -62,15 +73,41 @@ an active production fallback.
    `os.replace` writer cannot establish physical race safety. CA-A migration
    separately requires secure migration lock, identity-CAS journal phases,
    no-replace Manifest/snapshot publication and operation-owned-only temp
-   cleanup before D2 may complete. Human activation must be issued from a
-   Product-owned trusted UI/process one-shot challenge; the current public
-   predictable-string factory is self-mintable and cannot authorize ACTIVATE.
+   cleanup before D2 may complete. Independently, public
+   `BridgeMigrationReadback` plus module `_READBACK_SEAL` and recomputable hash
+   is not CA-A execution authority; TASK-061 must pinned-read the exact terminal
+   migration journal and snapshot manifest/tree into a private one-use
+   currentness capability before CA-B/Profile effects. The public CA-A and CA-B
+   `plan.confirmation()` strings are deterministic UI/challenge text only and
+   create no authority. Each Production executor requires its own durable
+   Product-issued one-shot operation ticket bound to action, exact TASK-063
+   instance, plan/source/expected target revision, user/session/build, expiry
+   and invocation budget; CA-A and CA-B tickets are never cross-usable and are
+   burned IN_FLIGHT on success or exception. All CA-A journal/manifest/receipt,
+   trusted CA-B durable reads, and CA-C config/history/challenge/consume reads
+   also require strict bounded UTF-8 JSON with duplicate-key, non-finite-number,
+   BOM/trailing/control rejection and a same-open-snapshot raw/canonical hash
+   plus physical identity. Ambiguous authority files remain unchanged and
+   produce effect zero. Human activation must be issued from a Product-owned
+   trusted UI/process one-shot challenge; the
+   current public predictable-string factory is self-mintable and cannot
+   authorize ACTIVATE. Production apply accepts no caller `now`, timestamp or
+   clock implementation: issue, Human receipt, apply, durable consume and final
+   read-back share one trusted Product/OS time domain, with restart/suspend/
+   rollback/skew unable to extend expiry, and history timestamps are Product-
+   authored.
    Independently, public `InstalledAdapterE2EReadback` plus a module-visible
    sentinel is forgeable; ACTIVATE must consume a non-caller-constructible,
    one-use trusted Product-operation capability instead of public hashes/flags.
    The same applies to public CA-B readiness: readiness, Human and E2E objects
    are audit data only, while a trusted native-backend-fixed operation binds all
-   three into the private apply capability.
+   three into the private apply capability. TASK-058 public readiness is also
+   caller-asserted: its factory accepts state strings plus E2E/default-config
+   booleans and TASK-061 currently validates only the resulting field values.
+   It cannot be a CA-B/Profile-write prerequisite. A cross-owner correction
+   must replace it with a durable `TASK058_BASELINE_READBACK` pinned by a trusted
+   Product reader to exact release/package/installed bytes and executed
+   operation receipts; public v1/V2 readiness remains display-only Evidence.
 4. `D2S`: the released SKILL adapter remains valid historical TASK-058 release
    Evidence, but its current transport writer/config/receipt/Profile readers do
    not meet Production race, physical-identity and privacy requirements, and
@@ -98,7 +135,12 @@ an active production fallback.
 5. `D2F`: released TASK-058 File Bridge Evidence also remains historically
    valid, but Production linkage requires a separately owned TASK-058 corrective
    Unit for pinned reads, immutable/mutable publication identity, ordered
-   Profile publication and identity-safe pending/temp cleanup. The limited
+   Profile publication and identity-safe pending/temp cleanup. Independently,
+   BVP admission must replace key-name-only filtering and caller
+   `safe_export:true` with its own closed per-contract privacy validator over
+   every bounded string/value before pending/canonical/Profile mutation. Raw
+   sensitive content is never written to temp/journal/receipt/log output, and
+   only the BVP validator may create privacy PASS. The limited
    TASK-067 amendment does not include this work; TASK-061/065/067 cannot make
    the correction directly.
 6. `D2C`: the unapproved TASK-067 follow-up candidate would supply a public
@@ -127,11 +169,13 @@ an active production fallback.
    -> PL-C steady-state -> PL-D`.
 
 Under the corrected route, `PL-B0` is a sealed, explicit-path, one-use
-pre-activation E2E operation and `PL-C0` is public-safe synthetic transport E2E
-against the exact real installed instance. Current SKILL config v1 cannot
-enforce that boundary. Without a canonical SKILL v2/trusted-broker correction,
-PL-B0 is only a BVP-internal synthetic Bridge probe and PL-C0 is not real SKILL
-E2E or an activation prerequisite. Neither route is Production activation.
+pre-activation E2E operation and corrected `PL-C0` is a public-safe (no private
+Owner data), operation-ticket-bound real-installed transport execution and
+read-back against the exact installed instance. `public-safe` describes payload
+privacy, not a synthetic execution mode. Current SKILL config v1 cannot enforce
+that boundary. Without a canonical SKILL v2/trusted-broker correction, PL-B0 is
+only a BVP-internal synthetic Bridge probe and PL-C0 is not real SKILL E2E or an
+activation prerequisite. Neither route is Production activation.
 CA-C alone consumes an eligible corrected PL-C0 receipt and owns activation/
 history mutation. TASK-065 never changes TASK-061 or SKILL source or mints Human
 authority.
@@ -171,9 +215,11 @@ never prove operation authority.
 
 ### PL-C — real connector E2E/read-back
 
-PL-C0 runs the bounded pre-activation public-safe synthetic transport flow only
-after the corrected adapter has atomically redeemed the exact PL-B0 one-shot
-operation and after the TASK-061 operation-plan/admission receipt plus the
+Corrected PL-C0 runs the bounded pre-activation public-safe real-installed
+transport flow only after the adapter has atomically redeemed the exact PL-B0
+one-shot operation. Here `public-safe` constrains content/privacy; execution is
+real installed and ticket-bound, never synthetic mode. It also requires the
+TASK-061 operation-plan/admission receipt plus the
 TASK-067 Generic current-coordinate/facade receipt and TASK-036 packaged-
 entrypoint completion receipt are current. Adapter `publish-learning` stages
 the exact delivery once and may return PENDING. TASK-036 then invokes exact

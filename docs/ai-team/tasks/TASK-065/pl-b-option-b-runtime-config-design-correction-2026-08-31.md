@@ -323,6 +323,15 @@ The TASK-063 owner correction must:
   built from the same opened descriptor/owner snapshots, never equal fields
   from separate reads.
 
+Descriptor, owner manifest, installer/migration read-back and rollback preimage
+also use one strict bounded UTF-8 parser over bytes obtained from the same
+pinned nofollow handle. The snapshot binds raw bytes hash, canonical parsed
+hash and physical identity. Nested duplicate keys, NaN/Infinity, BOM/trailing
+data, invalid UTF-8/control or exceeded byte/depth/member/item/string ceilings
+STOP and preserve the ambiguous document. Rollback never plain-parses or
+republishes an ambiguous preimage; its predecessor canonical bytes and identity
+are journal-bound.
+
 Focused negatives cover concurrent first provision, descriptor stat/open and
 post-read swaps, same bytes on a different inode, mixed descriptor/owner
 generations, install/data ancestor swap, lock hardlink/reparse, temp-to-publish
@@ -379,6 +388,16 @@ current-user attestation, and backend/build/entropy-domain/version remains fixed
 through ordered Profile readback. Synthetic/custom cipher or same-suite fake is
 non-Production only.
 
+This is current positive test behavior, not a theoretical substitute path:
+`test_montage_preference_source_integration.py` constructs
+`PromotedPreferenceSource` with `SyntheticCipher`, calls
+`ProfileSourceBinding.bound_verified_production()` and successfully publishes
+through `publish_prebuilt_advisory_profile()`. The same suite proves some pinned
+read path/link defenses, but its caller-mint rejection uses a fresh wrong token;
+it does not turn the module-visible token, public factory or synthetic cipher
+path into Production authority. CI PASS therefore preserves historical source
+progress while leaving this D1 correction N.C.
+
 Public source reads, bindings and receipts are evidence only with
 `authority_created:false`. A trusted TASK-060/TASK-058 Product operation must
 verify the encrypted source through one pinned opened snapshot, binding file
@@ -409,6 +428,126 @@ coordinates, ciphertext inode substitution, DPAPI scope drift, phase backend
 switch and plaintext fixture at a Production path. Without exact Human, native
 DPAPI and current-store proof, promotion/Profile revision delta is zero and
 unrelated overwrite/delete is zero.
+
+Both the encrypted outer promotion document and decrypted plaintext history
+must cross a strict bounded UTF-8 authority parser. One private snapshot binds
+outer raw/canonical bytes and physical identity, ciphertext bytes/hash,
+decrypted canonical bytes/hash, fixed native DPAPI backend/user/session and the
+parsed revision/head/history. Production decrypt output flows directly to that
+parser; a caller Mapping or separately parsed plaintext cannot create
+authority. Duplicate cipher/revision/head/envelope/hash fields, non-finite
+numbers, BOM/trailing/control/invalid UTF-8 and exceeded bounds preserve the
+source/store and leave PP-B revision and Profile publication unchanged.
+
+### 6.3 TASK-058 readiness baseline and TASK-061 consumer prerequisite
+
+The current public readiness baseline is caller-asserted rather than executed
+Evidence. `production_readiness_evidence()` constructs public
+`ConnectorReadinessEvidence` directly from caller state strings and
+`adapter_contract_e2e_pass`/`default_skill_config_unchanged` booleans. The
+dataclass has no trusted issuance seal. TASK-061 `_validate_public_readiness()`
+accepts exact type plus field equality, and its positive activation fixture
+passes the good states and both booleans directly. No executed session, report
+ID, adapter/package bytes, installed instance/config or Profile receipt is
+required. Private V2 predicate hashes do not repair that authority boundary.
+
+The TASK-058/TASK-061 cross-owner correction marks public v1/factory/V2/
+self-hash documents as historical audit/display projections with
+`authority_created:false`; none is a CA-B or Profile-write prerequisite. A
+trusted Product reader instead publishes durable `TASK058_BASELINE_READBACK`
+from pinned canonical release manifest, code, schema, tests and package hashes,
+installed exact bytes and executed operation receipts. Runtime/E2E PASS binds
+`executed:true`, operation ID, exact adapter build and config projection,
+request/result digests, BVP receipt/correlation/Profile read-back, timestamp and
+expiry. Disabled default is a separate predicate over canonical/installed exact
+bytes and sentinel semantics, never a caller boolean.
+
+TASK-061's trusted operation freshly reads that durable receipt and binds it to
+the exact TASK-063 instance, TASK-060 source and operation plan. Synthetic
+fixture, status-only, code presence or a public readiness document cannot be
+promoted to real E2E. Direct dataclass/factory construction, caller passing good
+states/true booleans, rehashed mapping, copy/deserialization/subclass, fixture
+replay, missing executed/report identity, wrong build/config/instance,
+status-only, stale/cross-build/cross-instance receipt and canonical/installed
+byte drift all leave Profile mutation zero. TASK-065 consumes only the future
+durable completion receipt and does not implement either owner correction.
+
+### 6.4 CA-A migration terminal-readback authority prerequisite
+
+`BridgeMigrationReadback` is a public dataclass guarded only by module-global
+`_READBACK_SEAL`, caller-provided receipt/manifest hashes and a recomputable
+self-hash. TASK-061 `_validate_migration_readback()` re-runs those object checks
+and compares public target instance/descriptor/owner fields plus
+`exact_snapshot_verified:true`; it does not independently pinned-read the CA-A
+terminal journal or snapshot tree. The public object/receipt/hash/seal is
+therefore audit Evidence with `authority_created:false`, independently of the
+separate CA-A publication-race P0.
+
+The TASK-061 trusted Product operation resolves migration ID from its exact
+plan, then reads the terminal CA-A journal and snapshot manifest/tree beneath
+the selected TASK-063 instance through pinned current handles. One private
+single-use capability binds terminal phase/receipt, manifest/tree digests,
+opened physical identities, source/target instance currentness, security
+backend identity and operation plan. Entry is IN_FLIGHT; success and exception
+burn it, and failure requires a fresh authoritative reread. CA-B/apply consumes
+only that capability identity/currentness and may compare the public document
+for display, never use it as effect authority.
+
+Direct dataclass construction, module-sentinel access, copy/replace/pickle/
+deserialization, recomputed hash, public discovery replay, absent or
+PREPARED/COPIED/nonterminal journal, wrong/tampered snapshot, same bytes on a
+different inode, cross-instance/revision, stale terminal receipt and double/
+concurrent/exception reuse all leave Profile/config/history mutation zero.
+TASK-065 consumes only the future canonical durable completion receipt and does
+not modify CA-A or TASK-061 source.
+
+### 6.5 CA-A/CA-B effect-entry authority prerequisite
+
+`BridgeMigrationPlan.confirmation()` and
+`ConnectorSourceBindingPlan.confirmation()` are deterministic values derivable
+from public plans, and both public executors compare only the caller string to
+that value. They are UI/display challenge text with `authority_created:false`,
+not proof of an independent operation event.
+
+Production CA-A and CA-B enter only through a trusted Product operation that
+atomically consumes a durable action-specific one-shot ticket bound to the
+selected TASK-063 instance, exact plan and source identity, expected target
+state/revision, user/session/build, expiry and invocation budget. Migration and
+Profile-binding tickets are different actions and cannot cross-use. Entry is
+IN_FLIGHT; success and exception burn authority. Recovery requires a fresh
+authoritative resolver and exact durable phase state. Public plan/executor APIs
+remain test/audit-only or are unreachable from Product composition.
+
+Direct `plan.confirmation()` use, copied/rehashed plan or module seal, serialized
+ticket/direct public executor, cross-action or wrong instance/source/revision,
+expiry/replay/concurrent/double invocation and exception reuse all leave
+migration/Profile/config/history mutation zero. CA-C Human activation remains a
+separate Gate; neither ticket authorizes enablement.
+
+### 6.6 TASK-061 trusted clock and strict authority JSON prerequisite
+
+Production CA-C apply accepts no caller `now`, timestamp or clock
+implementation. Challenge issue, Human receipt, apply entry, durable consume
+and final read-back share a trusted Product/OS time domain whose implementation,
+build and session are bound to the one-use capability. Persisted monotonic/boot/
+session coordinates plus bounded UTC prevent wall-clock rollback, large forward
+jump, suspend/resume, timezone changes or restart from extending expiry.
+`occurred_at` is generated by the trusted apply event, never copied from a
+caller. Test clocks remain isolated from Production composition.
+
+CA-A journal/manifest/receipt, trusted CA-B durable reads and CA-C config/
+history/challenge/consume use one strict bounded UTF-8 parser rejecting duplicate
+keys at every nesting level, non-finite numbers, BOM/trailing/control/invalid
+UTF-8, non-built-in values and exceeded bounds. Raw opened hash, canonical
+parsed bytes/hash and physical identity form one snapshot; no reopen proves
+equivalence. Parser failure is body-free effect zero and never repairs,
+rewrites or deletes the ambiguous document.
+
+Backdated/future time, issue/apply clock swap, rollback/restart/suspend expiry,
+Production test clock, concurrent expiry-boundary consume, duplicate/equal or
+different phase/revision/enabled/receipt/hash fields, NaN/Infinity, BOM/trailing,
+deep/wide/huge/control input all leave migration/Profile/config/history mutation
+zero and preserve unrelated files.
 
 ## 7. D2 to PL-C cycle closure
 
@@ -473,8 +612,9 @@ trusted Product operation:
 1. accepts one current, unexpired, one-shot operation plan bound to the exact
    install instance, descriptor/owner hashes, PP-C source, Human candidate and
    all three operation-specific config receipt hashes;
-2. admits only the exact public-safe synthetic request identity permitted by
-   that plan;
+2. admits only the exact public-safe request/payload identity permitted by that
+   plan; public-safe constrains privacy content while the corrected execution
+   mode remains real-installed and operation-ticket-bound, not synthetic;
 3. validates the SKILL public receipt as the exact closed seven-field v1 object
    with `ACCEPTED` or `DUPLICATE`, then validates the BVP generic correlation as
    a separate identity;
@@ -819,6 +959,25 @@ pointer/current/marker state use the generic replace writer without an expected
 target-identity CAS. Pending cleanup rereads then unlinks by path without
 proving the same inode.
 
+The BVP generic admission boundary has a separate privacy/resource P0. Its
+current sensitive-value rejection is keyed mainly by field names and treats
+caller `safe_export:true` as sufficient; benign `note`/reason/context/tag/
+style/ID/provenance values can retain private data. It also computes canonical
+learning hash before bounded schema/privacy validation, allowing a deep or wide
+attacker tree to reach recursive canonicalization first.
+
+The TASK-058 correction therefore performs, in order: (1) bounded strict JSON
+decode/tree snapshot; (2) exact schema, type, collection and string ceilings;
+(3) closed per-contract privacy projection and every-string value scan; (4)
+canonical bytes/hash only for the accepted bounded projection; (5) semantic/
+lineage validation; and (6) pending/canonical effect. Controlled reason codes
+replace free-form public rationale; style/context/tags/roles/IDs use typed
+bounded grammars. Path/email/account/secret/token/control/transcript and
+normalization/homoglyph evasions are rejected. Unknown provenance is rejected
+or replaced without raw bytes. `safe_export` is advisory only; BVP alone emits
+privacy PASS. Stable body-free rejection precedes all pending/canonical/Profile
+mutation and leaves no raw payload in temp/journal/receipt/stdout/log.
+
 This needs a separate TASK-058-owner corrective Unit with exact paths/symbols
 and any required cross-owner amendment. It is not part of the limited TASK-067
 Generic-facade amendment, and TASK-061/065/067 must not change it. Required
@@ -848,6 +1007,13 @@ swap, ordered Profile publication swap, pending reread-to-unlink swap, foreign
 temp replacement and fsync faults. Assertions require unrelated overwrite/
 delete zero, exact zero-or-one revision transition, pending retained or exact
 cleanup, and same-identity-only restart.
+
+Privacy/resource negatives cover benign-key path/email/account/token/transcript,
+style/ID/provenance leaks, homoglyph/normalization and sibling leakage, deep or
+wide trees below the file-size cap, huge strings, recursion boundary, controls
+and raw parser exceptions. Assertions require the process remains available,
+stable body-free rejection, raw sensitive bytes zero across every artifact and
+pending/canonical/Profile delta zero.
 
 The completion order is TASK-058 corrective canonical main/release/install
 exact read-back, TASK-063/TASK-065 baseline rebind where affected, TASK-061
@@ -1266,6 +1432,28 @@ Focused tests must reject at least:
 - missing TASK-061 operation-plan/admission completion receipt, any private
   `InstalledAdapterE2EReadback` constructor/seal attempt, or any public factory
   output used as Production authority (with or without cleanup read-back);
+- caller-asserted TASK-058 readiness good-state strings/true booleans, direct
+  readiness dataclass/factory/rehashed mapping/copy/deserialization/subclass,
+  fixture/status-only replay, missing executed/report identity, wrong adapter
+  build/config/instance, stale/cross-build/cross-instance baseline or canonical-
+  installed byte drift;
+- public CA-A `BridgeMigrationReadback` direct construction, module sentinel,
+  copy/replace/pickle/deserialization/recomputed hash, public discovery replay,
+  missing/nonterminal journal, tampered/same-bytes-new-inode snapshot, cross-
+  instance/revision/stale receipt or capability double/concurrent/exception
+  reuse;
+- direct CA-A/CA-B `plan.confirmation()` execution, copied/rehashed plan,
+  serialized/cross-action/wrong-instance/source/revision/expired ticket, direct
+  public executor, concurrent/double/exception reuse;
+- caller backdated/future `now`, clock rollback/swap, restart/suspend expiry
+  extension, Production test clock, expiry-boundary concurrent consume, or any
+  caller-authored history timestamp;
+- duplicate equal/different nested authority keys, NaN/Infinity, BOM/trailing,
+  deep/wide/huge/control/invalid UTF-8 in TASK-063 descriptor/rollback,
+  TASK-060 encrypted/decrypted history, or TASK-061 CA-A/B/C durable state;
+- BVP benign-key path/email/account/token/transcript/style/ID/provenance leak,
+  homoglyph/sibling evasion, deep/wide/recursion/huge-string input, canonical
+  hash before bounds/privacy, or raw error/artifact echo;
 - missing TASK-067 Generic current-coordinate/facade completion receipt,
   private Generic-store loader use, raw-ledger parsing, missing
   recovery/journal/manifest/binding/head
@@ -1317,6 +1505,20 @@ Gates open. Unexecuted adapter/native behavior is `NOT_CONFIRMED`, never PASS.
 Implementation remains START0 until all of the following are true:
 
 - D0, D1 and D2 canonical completion receipts exist and are freshly read back;
+- the cross-owner TASK-058/TASK-061 durable `TASK058_BASELINE_READBACK`
+  correction is canonical and current, including exact release/package/
+  installed bytes, executed receipts and the separate disabled-default
+  predicate; no public v1/V2 readiness object is an admitting input;
+- the CA-A/TASK-061 terminal-readback correction is canonical and current, and
+  the private one-use capability binds the pinned terminal journal plus exact
+  snapshot manifest/tree identities; public `BridgeMigrationReadback` is never
+  an admitting input;
+- CA-A and CA-B consume separate durable Product one-shot action tickets;
+  deterministic confirmations and public executors remain audit/test-only;
+- TASK-061 uses a trusted Product/OS time domain with Product-authored event
+  timestamps and strict bounded same-snapshot authority JSON across CA-A/B/C;
+- TASK-063 descriptor/owner/readback/rollback and TASK-060 encrypted/decrypted
+  promotion source have canonical strict-parser completion receipts;
 - the TASK-061 amendment/successor for the pre-activation E2E ticket is accepted
   and canonical, with a trusted private Product operation that alone may mint a
   one-use capability and publish public-safe exact request/BVP receipt/
@@ -1326,6 +1528,9 @@ Implementation remains START0 until all of the following are true:
   projection completion receipt are released, installed exactly, freshly read
   back and rebound by PL-A. A fixed `safe_export:true` flag is never a PASS
   input;
+- the separate TASK-058 BVP admission correction validates bounded closed
+  privacy before canonical hashing or pending/canonical/Profile effect, with no
+  raw sensitive bytes in artifacts or public output;
 - TASK-067 has a canonical allocation and explicit implementation authority,
   and its public sealed Generic current-coordinate/facade focused-verification
   completion receipt is canonical and current;

@@ -149,9 +149,10 @@ completion provides the actual closed schema and exact receipt.
 
 ### 2.5 D2 state — TASK-061
 
-TASK-061 remains `DEPENDENCY_BLOCKED / IMPLEMENTATION_NOT_AUTHORIZED`; no CA-A,
-CA-B, or CA-C source/schema/receipt exists. Its current allocation text also
-requires a released/public TASK-058 readiness v2. Current TASK-058 reality is:
+Historical checkpoint only — **SUPERSEDED in this same section below**:
+TASK-061 was `DEPENDENCY_BLOCKED / IMPLEMENTATION_NOT_AUTHORIZED`; no CA-A,
+CA-B, or CA-C source/schema/receipt existed. Its allocation text also required
+a released/public TASK-058 readiness v2. The then-current TASK-058 reality was:
 
 - packaged/public readiness schema: version `1.0.0` only;
 - component diagnostic v2: private implementation detail with no public/package
@@ -160,6 +161,18 @@ requires a released/public TASK-058 readiness v2. Current TASK-058 reality is:
 The wording/contract must be canonically corrected before CA implementation.
 PL-A must not accept a private v2 diagnostic as the public readiness dependency
 and must not synthesize a Human activation receipt.
+
+**SUPERSEDED:** current main now contains CA-A/B/C candidate source, but neither
+public readiness v1 nor private V2/hash-shaped diagnostics is an admitting
+dependency. `production_readiness_evidence()` accepts caller state strings and
+passing booleans, and TASK-061 currently checks their serialized equality.
+Current PL-A authority input is therefore the future durable
+`TASK058_BASELINE_READBACK` from a trusted Product reader over exact canonical
+release/package and installed bytes plus executed operation receipts, freshly
+bound by TASK-061 to the exact TASK-063 instance, TASK-060 source and operation
+plan. Public readiness remains display-only audit Evidence with
+`authority_created:false`; see
+`dependency-currentness-reconciliation-2026-08-31.md`.
 
 ## 3. PL-A field mapping
 
@@ -170,6 +183,11 @@ native, or external write. Every mapping is closed and unknown fields fail.
 ### 3.1 TASK-058 package/config/schema admission
 
 Required coordinates:
+
+The table below describes baseline projection payload only. **SUPERSEDED:** no
+caller mapping, static hash tuple or config boolean directly creates admission;
+the trusted durable `TASK058_BASELINE_READBACK` must bind these exact bytes and
+disabled-sentinel semantics to executed/current operation Evidence.
 
 | PL-A field | Exact source | Rule |
 |---|---|---|
@@ -333,10 +351,18 @@ write, activation, publication, or rollback.
 - [ ] CA-A Windows DACL/security and migration Evidence passes;
 - [ ] CA-B source binding and released readiness validation passes;
 - [ ] CA-C one-shot Human activation/deactivation and config history passes;
+- [ ] CA-A and CA-B separately consume durable Product one-shot action tickets;
+  deterministic public confirmation strings/raw executors are ineligible;
+- [ ] CA-C issue/apply/consume/read-back uses one trusted Product/OS clock,
+  Product-authored history time and no caller `now` or Production test clock;
+- [ ] CA-A/B/C durable authority JSON uses one bounded duplicate/non-finite/
+  BOM/trailing/control rejecting same-snapshot parser;
 - [ ] failed switch recovery reads back exact disabled config and history;
 - [ ] exact CA-C schema/source/receipt/currentness coordinates are canonical;
-- [ ] real adapter E2E evidence required by CA-C is distinguished from TASK-065
-  PL-C and does not grant Timeline/learning authority;
+- [ ] **SUPERSEDED:** real adapter E2E required by CA-C is the corrected TASK-065
+  PL-C0 public-safe-content, operation-ticket-bound real-installed completion
+  receipt; a separate synthetic fixture/probe is ineligible and neither route
+  grants Timeline/learning authority;
 - [ ] canonical main and post-main checks pass;
 - [ ] PL-A CA-C field mapping is re-frozen from actual source/schema.
 
@@ -346,8 +372,9 @@ again zero.
 
 ## 6. Focused fixture and test plan
 
-No test file is created while D0-D2 are incomplete. The eventual tests use only
-public-safe synthetic values and temporary directories.
+No test file is created while D0-D2 are incomplete. Pure/unit tests use only
+public-safe fixture values and temporary directories. This constrains test data
+privacy and has no real-installed execution claim.
 
 ### Pure PL-A suite
 
@@ -361,6 +388,12 @@ Target:
 - descriptor/owner/discovery cross-binding and multi-instance ambiguity;
 - zero/multiple/revoked PP-C promoted envelopes;
 - missing/replayed/wrong-mode CA-C Human receipt;
+- direct CA-A/CA-B plan confirmation, cross-action/replayed/expired ticket,
+  caller clock/backdated time or exception reuse;
+- ambiguous TASK-063 descriptor/rollback, TASK-060 encrypted/decrypted history,
+  or TASK-061 CA-A/B/C authority JSON;
+- BVP benign-key private value, unbounded tree before privacy validation/hash,
+  or raw sensitive bytes in temp/journal/receipt/output;
 - config revision collision and duplicate-same-body no-op classification;
 - sorted unique reason codes, closed fields, immutable input snapshots;
 - public projection path/transcript/account/credential/media leakage zero;
@@ -383,10 +416,14 @@ Target:
 
 ### Later gated E2E plan
 
-PL-C first uses the released public-safe `MontageLearningExport` fixture. It
-records separate identities for:
+Corrected PL-C0 may use the released public-safe `MontageLearningExport` fixture
+as payload, but execution is operation-ticket-bound against the exact real
+installed adapter. `public-safe` describes content privacy; current config-v1
+synthetic/BVP-internal probe execution is audit-only and CA-C-ineligible. The
+corrected route records separate identities for:
 
-1. exact synthetic request and immutable inbox delivery;
+1. exact public-safe fixture request, real-installed operation identity and
+   immutable inbox delivery;
 2. BVP admission receipt with matching record/digest and ACCEPTED or DUPLICATE;
 3. advisory Profile envelope and independent hash-verified load read-back.
 

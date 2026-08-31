@@ -1,7 +1,7 @@
 # TASK-054 R6B top-level runtime requirements.
 # The complete transitive, hash-pinned lock is generated from the reviewed
 # Python 3.12 / Linux x86_64 wheelhouse before installation.
-torch==2.11.0+cu128
+torch==2.13.0
 transformers==5.15.1
 accelerate==1.14.0
 peft==0.20.0

@@ -13,6 +13,9 @@ def test_trivia_editor_windows_packaging_contract_is_present_and_readme_linked()
     assert 'packaging\\task049_trivia_editor.spec' in batch
     assert 'BAI DbD Trivia Editor.exe' in batch
     assert 'task049_trivia_editor_windows_entry.py' in spec
+    entry = (ROOT / 'packaging' / 'task049_trivia_editor_windows_entry.py').read_text(encoding='utf-8')
+    assert 'prepare_packaged_dbd_compute_profile' in entry
+    assert 'compute_profile_readback=readback' in entry
     assert build_doc.is_file()
     assert usage_doc.is_file()
     assert 'docs/windows/BUILDING-DBD-TRIVIA-EDITOR-EXE.md' in readme

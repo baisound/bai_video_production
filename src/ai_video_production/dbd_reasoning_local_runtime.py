@@ -1,30 +1,38 @@
-"""TASK-054 local base-model catalog, selection, and packaged runtime preflight.
+"""TASK-054 local base-model catalog and fail-closed runtime preflight.
 
-The catalog is visible even when Dataset/training gates are open.  Runtime
-preflight is an offline, one-shot Windows -> WSL process: it may start the
-configured WSL distribution, but it never downloads, installs, trains, starts
-a persistent service, or stops a WSL distribution owned by another process.
+The catalog remains visible while Dataset/training gates are open. Product
+process launch and selection writes stay disabled until TASK-066 supplies a
+trusted, one-use compute-admission boundary. Fixture observations are data-only.
 """
 
 from __future__ import annotations
 
-import base64
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 import hashlib
 import json
-import os
 from pathlib import Path
 import re
-import subprocess
 import sys
-import threading
 from typing import Any, Callable, Mapping
 from uuid import uuid4
 
-from .atomic import exclusive_file_update_lock
-from .dbd_reasoning_worker_lifecycle import no_console_popen_options
+from .desktop_compute_policy import (
+    ComputePreference,
+    DesktopComputeProfileStore,
+    ProfileLoadStatus,
+)
+from .desktop_compute_diagnostics import (
+    BoundedDesktopDiagnostics,
+    DiagnosticEvent,
+    DiagnosticSeverity,
+)
+from .desktop_install_layout import (
+    DesktopInstallLayout,
+    derive_binary_root,
+    resolve_desktop_install_layout,
+)
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
 
 
@@ -47,13 +55,6 @@ _LOCKED_PACKAGES = _RUNTIME_PACKAGES + _TRAINING_PACKAGES
 _SELECTION_ID_RE = re.compile(r"task054-model-selection-[0-9a-f]{32}")
 _WORKSPACE_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,127}")
 _UTC_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z")
-_MAX_OUTPUT_BYTES = 64 * 1024
-
-
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-
-
 def _resource_path(relative: str) -> Path:
     if bool(getattr(sys, "frozen", False)):
         root = Path(getattr(sys, "_MEIPASS")) / "task054_runtime"
@@ -435,38 +436,7 @@ class LocalModelSelectionStore:
     def select(self, candidate: LocalModelCandidate) -> LocalModelSelectionReceipt:
         if not isinstance(candidate, LocalModelCandidate):
             raise ValueError("candidate is invalid")
-        with exclusive_file_update_lock(self.directory / "selection-head"):
-            previous = self.latest()
-            if previous is not None and (
-                previous.candidate_id == candidate.candidate_id
-                and previous.catalog_sha256 == candidate.catalog_sha256
-            ):
-                return previous
-            selected_at = _utc_now()
-            if previous is not None and selected_at <= previous.selected_at:
-                raise ValueError("model-selection time did not advance")
-            receipt = LocalModelSelectionReceipt(
-                receipt_id=f"task054-model-selection-{uuid4().hex}",
-                workspace_id=self.workspace_id,
-                candidate_id=candidate.candidate_id,
-                catalog_sha256=candidate.catalog_sha256,
-                selected_at=selected_at,
-                previous_receipt_sha256=(
-                    None if previous is None else previous.to_dict()["receipt_sha256"]
-                ),
-            )
-            if self.directory.is_symlink() or not self.directory.is_dir():
-                raise ValueError("model-selection receipt directory is unsafe")
-            path = self.directory / f"{receipt.receipt_id}.json"
-            data = canonical_json_bytes(receipt.to_dict())
-            try:
-                with path.open("xb") as stream:
-                    stream.write(data)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-            except FileExistsError as exc:
-                raise ValueError("model-selection receipt already exists") from exc
-            return receipt
+        raise ValueError("feature-local model selection writes are disabled")
 
 
 class RuntimeCheckId(str, Enum):
@@ -528,6 +498,7 @@ class LocalRuntimePreflightSnapshot:
     process_ownership: str = "APPLICATION_OWNED_ONE_SHOT_CHILD_SHARED_WSL_NOT_STOPPED"
     provider_execution_authorized: bool = False
     training_authorized: bool = False
+    authority_created: bool = False
 
     def __post_init__(self) -> None:
         if self.candidate_id != _CANDIDATE_ID:
@@ -539,132 +510,232 @@ class LocalRuntimePreflightSnapshot:
             raise ValueError("runtime preflight readiness does not match checks")
         if self.process_ownership != "APPLICATION_OWNED_ONE_SHOT_CHILD_SHARED_WSL_NOT_STOPPED":
             raise ValueError("runtime preflight process ownership is invalid")
-        if self.provider_execution_authorized or self.training_authorized:
+        if (
+            self.provider_execution_authorized
+            or self.training_authorized
+            or self.authority_created
+        ):
             raise ValueError("runtime preflight cannot grant execution or training authority")
 
 
-_BOOTSTRAP_SCRIPT = r"""
-import fcntl, json, os, pathlib, stat, sys
-lock_path = pathlib.Path('/tmp') / f'bvp-task054-runtime-preflight-{os.getuid()}.lock'
-flags = os.O_CREAT | os.O_RDWR | getattr(os, 'O_NOFOLLOW', 0)
-try:
-    lock_fd = os.open(lock_path, flags, 0o600)
-    lock_stat = os.fstat(lock_fd)
-    if not stat.S_ISREG(lock_stat.st_mode) or lock_stat.st_nlink != 1 or lock_stat.st_uid != os.getuid():
-        raise OSError('unsafe lock identity')
-    fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-except BlockingIOError:
-    print(json.dumps({'bootstrap':'PREFLIGHT_BUSY'}, sort_keys=True))
-    raise SystemExit(43)
-except Exception:
-    print(json.dumps({'bootstrap':'PREFLIGHT_LOCK_UNSAFE'}, sort_keys=True))
-    raise SystemExit(44)
-os.set_inheritable(lock_fd, True)
-relative = pathlib.PurePosixPath('.venvs/bvp-task054-training/bin/python')
-target = pathlib.Path.home().joinpath(*relative.parts)
-if not target.is_file():
-    print(json.dumps({'bootstrap':'VENV_MISSING'}, sort_keys=True))
-    raise SystemExit(42)
-os.execv(str(target), [str(target), '-I', '-c', sys.argv[1], sys.argv[2]])
-""".strip()
+@dataclass(frozen=True, slots=True)
+class DbDComputeProfileReadback:
+    profile_status: ProfileLoadStatus
+    install_instance_id: str | None
+    profile_revision: int
+    selected_preference: ComputePreference
+    profile_reason_code: str
+    reasoning_reason_code: str
+    training_reason_code: str
+    trivia_reason_code: str
+    reasoning_execution_authorized: bool = False
+    training_authorized: bool = False
+    training_human_gate_required: bool = True
+    trivia_control_plane_available: bool = True
+    frontend_kind: str = "TKINTER"
+    ui_gpu_rendering_confirmed: bool = False
+    ui_renderer_reason_code: str = "TKINTER_GPU_RENDERING_NOT_CONFIRMED"
+    authority_created: bool = False
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.profile_status, ProfileLoadStatus):
+            raise ValueError("compute profile status is invalid")
+        if not isinstance(self.selected_preference, ComputePreference):
+            raise ValueError("compute preference is invalid")
+        if not isinstance(self.profile_revision, int) or self.profile_revision < 0:
+            raise ValueError("compute profile revision is invalid")
+        if self.profile_status is not ProfileLoadStatus.LOADED and self.profile_revision != 0:
+            raise ValueError("default compute profile cannot claim a durable revision")
+        for value in (
+            self.profile_reason_code,
+            self.reasoning_reason_code,
+            self.training_reason_code,
+            self.trivia_reason_code,
+        ):
+            if re.fullmatch(r"[A-Z][A-Z0-9_]{1,95}", value) is None:
+                raise ValueError("compute profile reason code is invalid")
+        if (
+            self.reasoning_execution_authorized
+            or self.training_authorized
+            or self.authority_created
+        ):
+            raise ValueError("profile readback cannot grant execution or training authority")
+        if not self.training_human_gate_required:
+            raise ValueError("profile readback cannot remove the training Human Gate")
+        if not self.trivia_control_plane_available:
+            raise ValueError("CPU-only Trivia control plane must remain available")
+        if self.frontend_kind != "TKINTER":
+            raise ValueError("DbD standalone frontend kind is invalid")
+        if self.ui_gpu_rendering_confirmed:
+            raise ValueError("compute profile cannot confirm Tk GPU rendering")
+        if self.ui_renderer_reason_code != "TKINTER_GPU_RENDERING_NOT_CONFIRMED":
+            raise ValueError("DbD standalone renderer reason is invalid")
 
 
-_PROBE_SCRIPT = r"""
-import base64, hashlib, json, os, pathlib, stat, sys
-from importlib.metadata import PackageNotFoundError, version
+def read_dbd_compute_profile(
+    layout: DesktopInstallLayout,
+) -> DbDComputeProfileReadback:
+    """Project GF-A profile state without minting live GPU authority."""
+    result = DesktopComputeProfileStore(layout).load()
+    if (
+        result.status is ProfileLoadStatus.LOADED
+        and result.profile.selected_preference is ComputePreference.CPU_EXPLICIT
+    ):
+        reasoning_reason = "CPU_NOT_ADMITTED_FOR_GPU_REQUIRED"
+    elif result.status is ProfileLoadStatus.LOADED:
+        reasoning_reason = "TRUSTED_GPU_ADMISSION_REQUIRED"
+    elif result.status is ProfileLoadStatus.DEFAULT_MISSING:
+        reasoning_reason = "COMPUTE_PROFILE_NOT_CONFIGURED"
+    else:
+        reasoning_reason = "COMPUTE_PROFILE_REJECTED"
+    return DbDComputeProfileReadback(
+        profile_status=result.status,
+        install_instance_id=layout.install_instance_id,
+        profile_revision=(
+            result.profile.revision
+            if result.status is ProfileLoadStatus.LOADED
+            else 0
+        ),
+        selected_preference=result.profile.selected_preference,
+        profile_reason_code=result.reason_code,
+        reasoning_reason_code=reasoning_reason,
+        training_reason_code=(
+            "CPU_NOT_ADMITTED_FOR_GPU_REQUIRED"
+            if result.status is ProfileLoadStatus.LOADED
+            and result.profile.selected_preference is ComputePreference.CPU_EXPLICIT
+            else "TRUSTED_GPU_ADMISSION_REQUIRED"
+        ),
+        trivia_reason_code="CPU_ONLY_NOT_GPU_APPLICABLE",
+    )
 
-os.environ['HF_HUB_OFFLINE'] = '1'
-os.environ['TRANSFORMERS_OFFLINE'] = '1'
-os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
-payload = json.loads(base64.urlsafe_b64decode(sys.argv[1].encode('ascii')))
-result = {'bootstrap':'PASS','python':sys.version.split()[0]}
-expected_prefix = pathlib.Path.home() / pathlib.PurePosixPath(payload['venv_python_relative']).parent.parent
-result['venv_match'] = pathlib.Path(sys.prefix).resolve() == expected_prefix.resolve()
 
-versions = {}
-for name, expected in payload['package_versions'].items():
+def read_packaged_dbd_compute_profile(
+    executable_path: str | Path,
+) -> DbDComputeProfileReadback:
+    """Resolve the packaged InstallLayout internally and fail closed body-free."""
     try:
-        actual = version(name)
-    except PackageNotFoundError:
-        actual = None
-    versions[name] = {'expected': expected, 'actual': actual, 'match': actual == expected}
-result['packages'] = versions
+        binary_root = derive_binary_root(executable_path)
+        layout = resolve_desktop_install_layout(binary_root)
+        return read_dbd_compute_profile(layout)
+    except Exception:
+        return _unbound_dbd_compute_profile_readback()
 
-home = pathlib.Path.home().resolve()
-root = home / pathlib.PurePosixPath(payload['model_root_relative'])
-model = {'found':False,'safe_root':False,'file_count':0,'total_bytes':0,'mismatch_count':0}
-try:
-    resolved = root.resolve(strict=True)
-    resolved.relative_to(home)
-    cursor = root
-    unsafe = False
-    while cursor != home:
-        info = cursor.lstat()
-        if stat.S_ISLNK(info.st_mode): unsafe = True
-        cursor = cursor.parent
-    model['safe_root'] = not unsafe and resolved.is_dir()
-    mismatches = 0
-    total = 0
-    seen = set()
-    for item in payload['files']:
-        path = resolved / pathlib.PurePosixPath(item['logical_path'])
-        info = path.lstat()
-        safe = stat.S_ISREG(info.st_mode) and not stat.S_ISLNK(info.st_mode) and info.st_nlink == 1
-        digest = hashlib.sha256()
-        if safe:
-            with path.open('rb') as stream:
-                for block in iter(lambda: stream.read(8 * 1024 * 1024), b''):
-                    digest.update(block)
-        if not safe or info.st_size != item['size_bytes'] or digest.hexdigest() != item['sha256']:
-            mismatches += 1
-        total += info.st_size if stat.S_ISREG(info.st_mode) else 0
-        seen.add(item['logical_path'])
-    actual = {p.relative_to(resolved).as_posix() for p in resolved.iterdir() if p.is_file()}
-    model.update(found=True,file_count=len(actual),total_bytes=total,mismatch_count=mismatches + len(actual - seen))
-except Exception as exc:
-    model['error'] = type(exc).__name__
-result['model'] = model
 
-gpu = {'available':False}
-try:
-    import torch
-    gpu['available'] = bool(torch.cuda.is_available())
-    gpu['cuda_version'] = torch.version.cuda
-    gpu['count'] = torch.cuda.device_count()
-    if gpu['available']:
-        free_bytes, total_bytes = torch.cuda.mem_get_info()
-        gpu.update(name=torch.cuda.get_device_name(0),free_bytes=int(free_bytes),total_bytes=int(total_bytes))
-except Exception as exc:
-    gpu['error'] = type(exc).__name__
-result['gpu'] = gpu
+_PACKAGED_DBD_APPLICATIONS = {
+    "dbd.training": (
+        "DBD_TRAINING_STUDIO",
+        "dbd.training",
+        "DISABLED",
+        "BLOCKED",
+        "OPEN_COMPUTE_SETTINGS",
+    ),
+    "dbd.trivia": (
+        "DBD_TRIVIA_EDITOR",
+        "dbd.trivia.editor",
+        "CPU",
+        "NOT_APPLICABLE",
+        "NO_ACTION_REQUIRED",
+    ),
+}
 
-can_infer = (
-    result['venv_match'] and sys.version_info[:2] == (3, 12)
-    and all(versions[name]['match'] for name in payload['runtime_package_names'])
-    and model['found'] and model['safe_root'] and model['file_count'] == payload['file_count']
-    and model['total_bytes'] == payload['total_bytes'] and model['mismatch_count'] == 0
-    and gpu.get('available') and gpu.get('free_bytes', 0) >= payload['minimum_free_gpu_bytes']
-)
-inference = {'attempted':False,'passed':False}
-if can_infer:
+
+def prepare_packaged_dbd_compute_profile(
+    *,
+    application_family: str,
+) -> DbDComputeProfileReadback:
+    """Bind packaged profile readback and one body-free common diagnostic."""
+    if application_family not in _PACKAGED_DBD_APPLICATIONS:
+        raise ValueError("packaged DbD application family is invalid")
     try:
-        import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-        inference['attempted'] = True
-        quant = BitsAndBytesConfig(load_in_4bit=True,bnb_4bit_quant_type='nf4',bnb_4bit_use_double_quant=True,bnb_4bit_compute_dtype=torch.bfloat16)
-        tokenizer = AutoTokenizer.from_pretrained(str(root),local_files_only=True,trust_remote_code=False)
-        model_obj = AutoModelForCausalLM.from_pretrained(str(root),local_files_only=True,trust_remote_code=False,quantization_config=quant,device_map='auto',dtype=torch.bfloat16)
-        encoded = tokenizer('日本語で一語だけ応答してください。',return_tensors='pt').to(model_obj.device)
-        with torch.inference_mode():
-            generated = model_obj.generate(**encoded,max_new_tokens=1,do_sample=False)
-        inference['passed'] = int(generated.shape[-1]) > int(encoded['input_ids'].shape[-1])
-        del generated, encoded, model_obj
-        torch.cuda.empty_cache()
-    except Exception as exc:
-        inference['error'] = type(exc).__name__
-result['inference'] = inference
-print(json.dumps(result, sort_keys=True, separators=(',',':')))
-""".strip()
+        binary_root = derive_binary_root(sys.executable)
+        layout = resolve_desktop_install_layout(binary_root)
+        readback = read_dbd_compute_profile(layout)
+    except Exception:
+        return _unbound_dbd_compute_profile_readback()
+    try:
+        diagnostics = BoundedDesktopDiagnostics(
+            layout, application_family=application_family
+        )
+        diagnostics.emit(
+            _dbd_profile_diagnostic_event(
+                readback, application_family=application_family
+            )
+        )
+    except Exception:
+        # Diagnostics are bounded Evidence, never launch authority.
+        pass
+    return readback
+
+
+def _dbd_profile_diagnostic_event(
+    readback: DbDComputeProfileReadback,
+    *,
+    application_family: str,
+) -> DiagnosticEvent:
+    from . import __version__ as application_version
+
+    application, workload_id, backend, compatibility, next_action = (
+        _PACKAGED_DBD_APPLICATIONS[application_family]
+    )
+    workload_reason = (
+        readback.training_reason_code
+        if workload_id == "dbd.training"
+        else readback.trivia_reason_code
+    )
+    reason_code = (
+        workload_reason
+        if readback.profile_status is ProfileLoadStatus.LOADED
+        else readback.profile_reason_code
+    )
+    nonce = str(uuid4())
+    session_id = sha256_bytes(nonce.encode("ascii"))
+    correlation_id = sha256_bytes(
+        canonical_json_bytes(
+            {
+                "application": application,
+                "install_instance_id": readback.install_instance_id,
+                "profile_revision": readback.profile_revision,
+                "session_id": session_id,
+            }
+        )
+    )
+    return DiagnosticEvent(
+        application=application,
+        application_version=application_version,
+        session_id=session_id,
+        event_category="COMPUTE_PROFILE_READBACK",
+        severity=(
+            DiagnosticSeverity.INFO
+            if readback.profile_status is ProfileLoadStatus.LOADED
+            else DiagnosticSeverity.WARN
+        ),
+        selected_preference=readback.selected_preference.value,
+        detected_adapter="NOT_ATTESTED",
+        effective_backend=backend,
+        compatibility_result=compatibility,
+        failure_stage=(
+            "NONE"
+            if readback.profile_status is ProfileLoadStatus.LOADED
+            else "PROFILE_READBACK"
+        ),
+        reason_code=reason_code,
+        next_action=next_action,
+        exception_category="NONE",
+        correlation_id=correlation_id,
+    )
+
+
+def _unbound_dbd_compute_profile_readback() -> DbDComputeProfileReadback:
+    return DbDComputeProfileReadback(
+        profile_status=ProfileLoadStatus.DEFAULT_REJECTED,
+        install_instance_id=None,
+        profile_revision=0,
+        selected_preference=ComputePreference.AUTO_GPU_FIRST,
+        profile_reason_code="INSTALL_LAYOUT_UNAVAILABLE",
+        reasoning_reason_code="TRUSTED_GPU_ADMISSION_REQUIRED",
+        training_reason_code="TRUSTED_GPU_ADMISSION_REQUIRED",
+        trivia_reason_code="CPU_ONLY_NOT_GPU_APPLICABLE",
+    )
 
 
 class LocalReasoningRuntimeService:
@@ -673,10 +744,8 @@ class LocalReasoningRuntimeService:
         *,
         workspace_id: str,
         workspace_root: str | Path,
-        distro: str = "Ubuntu",
-        popen_factory: Callable[..., subprocess.Popen[bytes]] = subprocess.Popen,
-        timeout_seconds: int = 300,
         catalog_provider: Callable[[], tuple[LocalModelCandidate, ...]] = load_local_model_catalog,
+        compute_profile_readback: DbDComputeProfileReadback | None = None,
     ) -> None:
         candidates = tuple(catalog_provider())
         if not all(isinstance(item, LocalModelCandidate) for item in candidates):
@@ -686,24 +755,14 @@ class LocalReasoningRuntimeService:
         self.candidates = candidates
         self._preflight_by_candidate: dict[str, LocalRuntimePreflightSnapshot] = {}
         self.store = LocalModelSelectionStore(workspace_root, workspace_id=workspace_id)
-        if distro != "Ubuntu":
-            raise ValueError("TASK-054 runtime distro is fixed to Ubuntu")
-        if not 30 <= timeout_seconds <= 600:
-            raise ValueError("runtime preflight timeout is outside bounds")
-        self.distro = distro
-        self._popen_factory = popen_factory
-        self._timeout_seconds = timeout_seconds
-        self._lock = threading.RLock()
-        self._process: subprocess.Popen[bytes] | None = None
+        self.compute_profile_readback = (
+            compute_profile_readback or _unbound_dbd_compute_profile_readback()
+        )
 
     def selected_candidate(self) -> LocalModelCandidate | None:
-        latest = self.store.latest()
-        if latest is None:
-            return self.candidates[0] if self.candidates else None
-        candidate = next((item for item in self.candidates if item.candidate_id == latest.candidate_id), None)
-        if candidate is None or latest.catalog_sha256 != candidate.catalog_sha256:
-            raise ValueError("saved model selection is stale or unknown")
-        return candidate
+        # Legacy feature-local receipts remain immutable Evidence, not current
+        # Settings authority. The central Settings consumer is not yet bound.
+        return None
 
     def catalog_snapshot(self) -> LocalModelCatalogSnapshot:
         if not self.candidates:
@@ -717,95 +776,73 @@ class LocalReasoningRuntimeService:
         for candidate in self.candidates:
             preflight = self._preflight_by_candidate.get(candidate.candidate_id)
             if preflight is None:
+                if self.compute_profile_readback.profile_status is ProfileLoadStatus.DEFAULT_MISSING:
+                    status_code = "COMPUTE_PROFILE_NOT_CONFIGURED"
+                    status_message = "中央設定の計算プロファイルが未設定です。"
+                    next_action = "右上の［設定］で計算方法を確認してください。"
+                elif self.compute_profile_readback.profile_status is ProfileLoadStatus.DEFAULT_REJECTED:
+                    status_code = "COMPUTE_PROFILE_REJECTED"
+                    status_message = "中央設定の計算プロファイルを安全に読み取れません。"
+                    next_action = "［設定］で計算方法を再確認してください。既存ファイルは自動変更しません。"
+                else:
+                    if (
+                        self.compute_profile_readback.reasoning_reason_code
+                        == "CPU_NOT_ADMITTED_FOR_GPU_REQUIRED"
+                    ):
+                        status_code = "CPU_NOT_ADMITTED_FOR_GPU_REQUIRED"
+                        status_message = "この機能はGPU必須のため、CPU指定では実行できません。"
+                        next_action = "右上の［設定］で計算方法を［自動］または［GPU］に変更してください。"
+                    else:
+                        status_code = "TRUSTED_GPU_ADMISSION_REQUIRED"
+                        status_message = "計算設定は読み取り済みですが、GPU実行確認は未完了です。"
+                        next_action = "信頼済みの製品事前チェックが利用可能になるまで実行・保存しません。"
                 entries.append(LocalModelCatalogEntry(
                     candidate=candidate, cost_class="LOCAL_FREE_AI", selectable=False,
-                    status_code="RUNTIME_PREFLIGHT_REQUIRED",
-                    status_message_ja="事前チェック前のため、保存対象にはできません。",
-                    next_action_ja="このModelを選んで事前チェックを実行してください。",
-                ))
-            elif preflight.ready:
-                entries.append(LocalModelCatalogEntry(
-                    candidate=candidate, cost_class="LOCAL_FREE_AI", selectable=True,
-                    status_code="LOCAL_RUNTIME_READY",
-                    status_message_ja="固定revisionのoffline runtime確認済みです。",
-                    next_action_ja="必要なら選択を保存してください。Provider実行・学習は別Gateです。",
+                    status_code=status_code,
+                    status_message_ja=status_message,
+                    next_action_ja=next_action,
                 ))
             else:
+                cpu_blocked = (
+                    self.compute_profile_readback.reasoning_reason_code
+                    == "CPU_NOT_ADMITTED_FOR_GPU_REQUIRED"
+                )
                 entries.append(LocalModelCatalogEntry(
                     candidate=candidate, cost_class="LOCAL_FREE_AI", selectable=False,
-                    status_code="LOCAL_RUNTIME_NOT_READY",
-                    status_message_ja="runtime事前チェックが未完了です。",
-                    next_action_ja="未完了の個別項目を解消してから事前チェックを再実行してください。",
+                    status_code=(
+                        "CPU_NOT_ADMITTED_FOR_GPU_REQUIRED"
+                        if cpu_blocked else "TRUSTED_GPU_ADMISSION_REQUIRED"
+                    ),
+                    status_message_ja=(
+                        "この機能はGPU必須のため、CPU指定では実行できません。"
+                        if cpu_blocked else "信頼済みのGPU実行確認が未完了です。"
+                    ),
+                    next_action_ja=(
+                        "右上の［設定］で計算方法を［自動］または［GPU］に変更してください。"
+                        if cpu_blocked
+                        else "中央設定とGPU状態を確認してください。自動実行・保存は行いません。"
+                    ),
                 ))
         selectable_count = sum(entry.selectable for entry in entries)
         return LocalModelCatalogSnapshot(
             entries=tuple(entries),
             status_code="LOCAL_FREE_MODEL_SELECTABLE" if selectable_count else "LOCAL_FREE_MODEL_NOT_SELECTABLE",
             status_message_ja=("利用可能な無料ローカルModelだけを保存対象にしています。"
-                               if selectable_count else "候補は表示中ですが、runtime確認前のため保存できません。"),
-            next_action_ja="選択を保存してください。" if selectable_count else "Modelごとに事前チェックを実行してください。",
+                               if selectable_count else "候補は参照専用です。機能画面ではモデルを変更・保存しません。"),
+            next_action_ja=(
+                "選択を保存してください。"
+                if selectable_count
+                else "右上の［設定］→［AIモデル］で実況・解説用モデルを確認してください。信頼済み事前チェック前は実行しません。"
+            ),
         )
 
     def save_selection(self, candidate_id: str) -> LocalModelSelectionReceipt:
         candidate = next((item for item in self.candidates if item.candidate_id == candidate_id), None)
         if candidate is None:
             raise ValueError("selected model candidate is unknown")
-        preflight = self._preflight_by_candidate.get(candidate_id)
-        if preflight is None:
-            raise ValueError("selected model candidate requires a current runtime preflight")
-        if not preflight.ready:
-            raise ValueError("selected model candidate is not selectable until runtime preflight passes")
-        return self.store.select(candidate)
-
-    def _run_probe(self, candidate: LocalModelCandidate) -> Mapping[str, Any]:
-        payload = base64.urlsafe_b64encode(
-            canonical_json_bytes(candidate.probe_payload())
-        ).decode("ascii")
-        system_root = os.environ.get("SystemRoot", r"C:\Windows")
-        executable = str(Path(system_root) / "System32" / "wsl.exe")
-        command = [
-            executable, "-d", self.distro, "--", "/usr/bin/python3", "-c",
-            _BOOTSTRAP_SCRIPT, _PROBE_SCRIPT, payload,
-        ]
-        options = no_console_popen_options()
-        options.update(stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        with self._lock:
-            if self._process is not None and self._process.poll() is None:
-                raise RuntimeError("runtime preflight is already running")
-            try:
-                self._process = self._popen_factory(command, **options)
-            except Exception as exc:
-                raise RuntimeError("WSL runtime process could not start") from exc
-            process = self._process
-        try:
-            stdout, stderr = process.communicate(timeout=self._timeout_seconds)
-        except subprocess.TimeoutExpired as exc:
-            process.terminate()
-            try:
-                stdout, stderr = process.communicate(timeout=3)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                stdout, stderr = process.communicate(timeout=3)
-            raise RuntimeError("runtime preflight timed out") from exc
-        finally:
-            with self._lock:
-                if self._process is process:
-                    self._process = None
-        stdout = bytes(stdout or b"")
-        stderr = bytes(stderr or b"")
-        if len(stdout) > _MAX_OUTPUT_BYTES or len(stderr) > _MAX_OUTPUT_BYTES:
-            raise RuntimeError("runtime preflight output exceeded the safety bound")
-        try:
-            value = json.loads(stdout.decode("utf-8", errors="strict"))
-        except (UnicodeError, json.JSONDecodeError) as exc:
-            raise RuntimeError("runtime preflight returned an invalid public result") from exc
-        if not isinstance(value, dict):
-            raise RuntimeError("runtime preflight returned an invalid public result")
-        if process.returncode != 0 and value.get("bootstrap") not in {
-            "VENV_MISSING", "PREFLIGHT_BUSY", "PREFLIGHT_LOCK_UNSAFE",
-        }:
-            raise RuntimeError("WSL runtime preflight process failed")
-        return value
+        raise ValueError(
+            "selected model candidate requires trusted Product compute admission"
+        )
 
     @staticmethod
     def _check(
@@ -829,12 +866,34 @@ class LocalReasoningRuntimeService:
         candidate = next((item for item in self.candidates if item.candidate_id == candidate_id), None)
         if candidate is None:
             raise ValueError("selected model candidate is unknown")
-        try:
-            value = self._run_probe(candidate)
-            process_error: Exception | None = None
-        except Exception as exc:
-            value = {}
-            process_error = exc
+        return self._evaluate_probe_observation(
+            candidate_id,
+            {},
+            process_error=RuntimeError(
+                "trusted TASK-066 Product probe is not sealed"
+            ),
+            cache_result=True,
+        )
+
+    def _evaluate_probe_observation_for_test(
+        self, candidate_id: str, value: Mapping[str, Any]
+    ) -> LocalRuntimePreflightSnapshot:
+        """Evaluate data-only fixture output without creating Product authority."""
+        return self._evaluate_probe_observation(
+            candidate_id, value, process_error=None, cache_result=False
+        )
+
+    def _evaluate_probe_observation(
+        self,
+        candidate_id: str,
+        value: Mapping[str, Any],
+        *,
+        process_error: Exception | None,
+        cache_result: bool,
+    ) -> LocalRuntimePreflightSnapshot:
+        candidate = next((item for item in self.candidates if item.candidate_id == candidate_id), None)
+        if candidate is None:
+            raise ValueError("selected model candidate is unknown")
 
         bootstrap = value.get("bootstrap")
         wsl_ok = bootstrap in {
@@ -963,27 +1022,21 @@ class LocalReasoningRuntimeService:
             if item.status is not RuntimeCheckStatus.NOT_REQUIRED
         )
         snapshot = LocalRuntimePreflightSnapshot(candidate.candidate_id, checks, ready)
-        self._preflight_by_candidate[candidate.candidate_id] = snapshot
+        if cache_result:
+            self._preflight_by_candidate[candidate.candidate_id] = snapshot
         return snapshot
 
     def close(self) -> None:
-        with self._lock:
-            process = self._process
-            self._process = None
-        if process is None or process.poll() is not None:
-            return
-        process.terminate()
-        try:
-            process.wait(timeout=3)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=3)
+        return None
 
 
 __all__ = [
+    "DbDComputeProfileReadback",
     "LocalModelCandidate", "LocalModelCatalogEntry", "LocalModelCatalogSnapshot",
     "LocalModelSelectionReceipt", "LocalModelSelectionStore",
     "LocalReasoningRuntimeService", "LocalRuntimePreflightSnapshot",
     "RuntimeCheckId", "RuntimeCheckStatus", "RuntimePreflightCheck",
-    "load_local_model_catalog",
+    "load_local_model_catalog", "read_dbd_compute_profile",
+    "prepare_packaged_dbd_compute_profile",
+    "read_packaged_dbd_compute_profile",
 ]

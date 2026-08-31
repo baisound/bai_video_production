@@ -107,7 +107,10 @@ from .dbd_reasoning_mode_selector_ui import build_reasoning_mode_selector_panel
 from .dbd_reasoning_commentary_preview_ui import CommentaryPreviewPanel
 from .dbd_reasoning_dataset_evaluation_view_ui import DatasetEvaluationPanel
 from .dbd_reasoning_model_panel_ui import ReasoningModelPanel
-from .dbd_reasoning_local_runtime import LocalReasoningRuntimeService
+from .dbd_reasoning_local_runtime import (
+    DbDComputeProfileReadback,
+    LocalReasoningRuntimeService,
+)
 from .task036_ollama_runtime import OllamaRuntimeLifecycle
 from .dbd_reasoning_operation_view_ui import TrainingStudioOperationPanel
 from .dbd_runtime_options import (
@@ -175,6 +178,7 @@ def launch_training_studio(
     reasoning_runtime_service: LocalReasoningRuntimeService | None = None,
     reasoning_preflight_background: bool = True,
     reasoning_auto_preflight: bool | None = None,
+    compute_profile_readback: DbDComputeProfileReadback | None = None,
 ) -> int:
     import argparse
     import tkinter as tk
@@ -187,7 +191,11 @@ def launch_training_studio(
     diagnostics = get_diagnostic_logger()
     diagnostics.emit(
         "APP_START",
-        executable=sys.executable,
+        executable_kind=(
+            "PACKAGED_EXECUTABLE"
+            if bool(getattr(sys, "frozen", False))
+            else "PYTHON_MODULE"
+        ),
         frozen=bool(getattr(sys, "frozen", False)),
         diagnostics_enabled=diagnostics.enabled,
     )
@@ -195,12 +203,15 @@ def launch_training_studio(
     try:
         workspace_descriptor = choose_workspace_before_launch(args.workspace)
     except WorkspaceSelectionCancelled:
+        diagnostics.emit("APP_EXIT", reason="WORKSPACE_SELECTION_CANCELLED")
+        diagnostics.close()
         return 0
 
     workspace = DbDTrainingWorkspace(workspace_descriptor.root_path)
     runtime_service = reasoning_runtime_service or LocalReasoningRuntimeService(
         workspace_id=workspace_descriptor.workspace_id,
         workspace_root=workspace.root,
+        compute_profile_readback=compute_profile_readback,
     )
     active_runtime = resolve_workspace_runtime_profile(workspace_descriptor)
     runtime_ffmpeg = active_runtime.ffmpeg.effective_path or "ffmpeg"
@@ -4806,8 +4817,10 @@ def launch_training_studio(
     return 0
 
 
-def main() -> int:
-    return launch_training_studio()
+def main(
+    *, compute_profile_readback: DbDComputeProfileReadback | None = None
+) -> int:
+    return launch_training_studio(compute_profile_readback=compute_profile_readback)
 
 
 if __name__ == "__main__":

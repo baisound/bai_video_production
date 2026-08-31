@@ -21,7 +21,10 @@ def test_training_studio_build_contract_and_entrypoint_exist():
     assert "collect_data_files" in spec_text
     assert 'collect_data_files("jsonschema_specifications")' in spec_text
     assert '"av"' in spec_text
-    assert "dbd_training_studio" in entry.read_text(encoding="utf-8")
+    entry_text = entry.read_text(encoding="utf-8")
+    assert "dbd_training_studio" in entry_text
+    assert "prepare_packaged_dbd_compute_profile" in entry_text
+    assert "compute_profile_readback=readback" in entry_text
 
 
 def test_training_studio_templates_cover_single_bulk_and_video_learning(tmp_path):

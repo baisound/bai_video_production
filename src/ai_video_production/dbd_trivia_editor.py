@@ -8,6 +8,7 @@ from typing import Sequence
 from .canonical_game_event import GameEventType
 from .dbd_commentary_knowledge import DbDTriviaStore, TriviaCandidateMiner, TriviaSourceKind, TriviaStatus
 from .dbd_perk_knowledge import PerkEnvironment
+from .dbd_reasoning_local_runtime import DbDComputeProfileReadback
 
 
 def default_trivia_database_path() -> Path:
@@ -19,7 +20,11 @@ def default_trivia_database_path() -> Path:
     return root / "BAI Video Production" / "knowledge" / "dbd-commentary-knowledge.sqlite3"
 
 
-def launch_editor(argv: Sequence[str] | None = None) -> int:
+def launch_editor(
+    argv: Sequence[str] | None = None,
+    *,
+    compute_profile_readback: DbDComputeProfileReadback | None = None,
+) -> int:
     import argparse
     import tkinter as tk
     from tkinter import filedialog, messagebox, ttk
@@ -53,7 +58,13 @@ def launch_editor(argv: Sequence[str] | None = None) -> int:
     text = tk.Text(form, height=6, wrap="word"); text.grid(row=10,column=1,sticky="ew")
 
     lower = ttk.Frame(root, padding=(12,0,12,12)); lower.grid(row=1,column=0,sticky="nsew"); lower.rowconfigure(1,weight=1); lower.columnconfigure(0,weight=1)
-    status_label = ttk.Label(lower, text=f"DB: {args.database}"); status_label.grid(row=0,column=0,sticky="w")
+    compute_note = (
+        "計算: CPU制御（GPU対象外）"
+        if compute_profile_readback is not None
+        and compute_profile_readback.trivia_control_plane_available
+        else "計算: CPU制御"
+    )
+    status_label = ttk.Label(lower, text=f"{compute_note} | DB: {args.database}"); status_label.grid(row=0,column=0,sticky="w")
     tree = ttk.Treeview(lower, columns=("status","title","category"), show="headings")
     for col, title, width in (("status","Status",110),("title","Title",520),("category","Category",160)):
         tree.heading(col,text=title); tree.column(col,width=width,anchor="w")
@@ -63,7 +74,7 @@ def launch_editor(argv: Sequence[str] | None = None) -> int:
         for item in tree.get_children(): tree.delete(item)
         for entry in store.list_latest():
             tree.insert("", "end", iid=entry.trivia_id, values=(entry.status.value, entry.title, entry.category))
-        status_label.configure(text=f"DB: {args.database} | {len(store.list_latest())} entries")
+        status_label.configure(text=f"{compute_note} | DB: {args.database} | {len(store.list_latest())} entries")
 
     def parse_csv(value: str) -> tuple[str, ...]: return tuple(x.strip() for x in value.split(",") if x.strip())
     def register() -> None:
@@ -106,8 +117,10 @@ def launch_editor(argv: Sequence[str] | None = None) -> int:
     refresh(); root.mainloop(); return 0
 
 
-def main() -> int:
-    return launch_editor()
+def main(
+    *, compute_profile_readback: DbDComputeProfileReadback | None = None
+) -> int:
+    return launch_editor(compute_profile_readback=compute_profile_readback)
 
 
 if __name__ == "__main__":

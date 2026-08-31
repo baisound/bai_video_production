@@ -265,11 +265,21 @@ for confirmation and never treats adapter `canonical_store_written` as
 authority. TASK-065 PL-C does not recreate or substitute that receipt.
 
 For this preactivation chain, TASK-065 performs admission only: it pinned-reads
-and joins the existing TASK-036 durable receipt with observed historical
+and joins both the canonical TASK-036 T36-A/B/S/M/R/E producer completion and
+the canonical TASK-061-B A61-E/R/D/Z consumer completion with observed historical
 stage-count 1, import-count 1, strict public receipt, hidden correlation and
 Profile read-back. Those counts describe the already-completed TASK-036
 operation, not a TASK-065 local delta; TASK-065 calls neither the adapter nor
 TASK-036 and its Project/Bridge/Profile/config/history delta is zero.
+
+The exact producer/consumer admission cells and non-substitution rules are in
+`task036-task061b-producer-consumer-admission-2026-08-31.md`. TASK-036 durable
+receipt alone, public readiness/Human/E2E/transaction objects, self-hash/module
+seal, exit zero, status, `canonical_store_written` or synthetic fixtures are
+authority zero. TASK-065 accepts only the dual canonical completion chain in
+which TASK-061-B's trusted Product operation freshly pinned and recomposed the
+same TASK-036 operation and dependencies; no private capability is serialized
+or transferred to TASK-065.
 
 After every completion receipt is current, PL-A rebinds the baseline and PL-B
 publishes the immutable operation config. If the separate Production Activation

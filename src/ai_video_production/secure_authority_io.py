@@ -573,6 +573,7 @@ def _relative_parts(value: str | os.PathLike[str]) -> tuple[str, ...]:
     parts = tuple(path.parts)
     if (
         path.is_absolute()
+        or bool(path.anchor)
         or not parts
         or len(parts) > _MAX_COMPONENTS
         or any(part in {"", ".", ".."} for part in parts)
@@ -682,6 +683,8 @@ def _windows_open(
             raise FileNotFoundError from None
         if error in {80, 183}:
             raise FileExistsError from None
+        if error in {32, 33}:
+            raise _fail("WINDOWS_SHARING_VIOLATION")
         raise _fail("OPEN_FAILED")
     kernel.SetHandleInformation.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD]
     kernel.SetHandleInformation.restype = wintypes.BOOL
@@ -981,6 +984,10 @@ class _SecureFileLock:
                     )
                 except FileNotFoundError:
                     raise _fail("LOCK_NOT_FOUND") from None
+                except SecureAuthorityIOError as open_error:
+                    if open_error.code == "WINDOWS_SHARING_VIOLATION":
+                        raise _fail("LOCK_BUSY") from None
+                    raise
                 current = self.__owner._bind_regular(parent, fd)
                 if current.size != 1 or self.__owner._read_fd(fd, current) != b"\0":
                     raise _fail("LOCK_MARKER_REJECTED")

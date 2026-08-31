@@ -8,7 +8,7 @@ Status: `COMMIT_READY / CANONICALIZATION_PENDING`
 - Base: `origin/main@35cdf1ad475633dcf035e0616e979b5a8fde0c88`
 - Branch: `codex/task-068-secure-authority-io`
 - Source: `src/ai_video_production/secure_authority_io.py`
-- Source SHA-256: `839342F33050703EB21321A019EB5579501ED0611268DE65F0CF274B0732973A`
+- Source SHA-256: `C777B75D9E3DE9B0DEEBF3A884FBEDAE856F0264677D8EEE95F80D3DDF11A4A4`
 - Profile: `DEV-4 / IMMUTABLE_ONLY_V1`
 
 This receipt becomes canonical only after the TASK-068 commit is merged into canonical `main`. Until then, TASK-069 source mutation remains `START0`.
@@ -16,8 +16,9 @@ This receipt becomes canonical only after the TASK-068 commit is merged into can
 ## Verified result
 
 - Python compilation: PASS
-- WSL focused pytest: `124 PASS / 48 Windows-native SKIP / 0 FAIL`
-- Independent Windows focused runner: `48 PASS / 0 SKIP / 0 FAIL`
+- WSL focused pytest: `124 PASS / 51 Windows-native SKIP / 0 FAIL`
+- Independent Windows focused runner: `51 PASS / 0 SKIP / 0 FAIL` across 37 functions / 51 expanded cases
+- GitHub Windows CI corrective coverage: rooted path rejection, post-open target/ancestor namespace replacement denial, and live-lock inode replacement denial are bound to platform-specific tests; the initial Windows 3.12 failure was corrected without weakening the live-handle exclusion contract.
 - TASK-058/TASK-068 targeted regression: `240 PASS / 1 SKIP / 0 FAIL`; the unavailable installed-SKILL fixture remains an explicit skip
 - Independent Tester: Critical/High `0/0`
 - Independent implementation Critic/Judge: Critical/High `0/0`

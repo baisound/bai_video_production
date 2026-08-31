@@ -306,6 +306,7 @@ def test_read_rejects_ancestor_symlink(tmp_path: Path) -> None:
     assert exc.value.code in {"ANCESTOR_NOT_DIRECTORY", "REPARSE_POINT_REJECTED"}
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows pinned read handle denies replacement")
 def test_read_detects_file_substitution_after_payload_read(tmp_path: Path) -> None:
     target = tmp_path / "receipt.json"
     target.write_text('{"version":1}', encoding="utf-8")
@@ -333,6 +334,8 @@ def test_read_detects_file_substitution_after_payload_read(tmp_path: Path) -> No
 def test_pinned_read_rejects_same_bytes_different_inode_at_each_seam(
     seam: str, expected: str, tmp_path: Path
 ) -> None:
+    if os.name == "nt" and seam != "target_lstat_complete":
+        pytest.skip("Windows pinned read handle denies replacement after open")
     target = tmp_path / "receipt.json"
     target.write_text('{"same":true}', encoding="utf-8")
 
@@ -349,6 +352,7 @@ def test_pinned_read_rejects_same_bytes_different_inode_at_each_seam(
     assert target.read_text(encoding="utf-8") == '{"same":true}'
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows pinned ancestor handle denies rename")
 def test_read_detects_ancestor_substitution(tmp_path: Path) -> None:
     parent = tmp_path / "authority"
     parent.mkdir()
@@ -439,12 +443,12 @@ def test_existing_and_initial_lock_are_exclusive_and_durable(tmp_path: Path) -> 
     with authority.lock("authority.lock", mode="initial") as first:
         assert first.identity is not None
         assert first.identity.nlink == 1
-        assert (tmp_path / "authority.lock").read_bytes() == b"\0"
         with pytest.raises(SecureAuthorityIOError) as busy:
             with authority.lock("authority.lock", mode="existing"):
                 pass
         _assert_code(busy, "LOCK_BUSY")
 
+    assert (tmp_path / "authority.lock").read_bytes() == b"\0"
     with authority.lock("authority.lock", mode="existing") as reopened:
         assert reopened.identity is not None
 
@@ -800,6 +804,7 @@ def test_existing_lock_rejects_unknown_marker_without_mutation(tmp_path: Path) -
     assert target.read_bytes() == b"foreign"
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows live lock handle denies replacement")
 def test_existing_lock_rejects_same_bytes_different_inode_swap(tmp_path: Path) -> None:
     target = tmp_path / "authority.lock"
     target.write_bytes(b"\0")

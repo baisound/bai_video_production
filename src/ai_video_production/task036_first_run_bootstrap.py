@@ -3,16 +3,25 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import json
 import os
 from pathlib import Path
+import stat
 
 from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .errors import ProductError, ProductErrorCategory
-from .task036_trusted_launcher import Task036LaunchConfiguration
+from .task036_trusted_launcher import (
+    TASK036_LAUNCH_CONFIG_MAX_BYTES,
+    Task036LaunchConfiguration,
+)
 
 
 _FIRST_RUN_PROJECT_ID = "bvp-first-run-project"
 _FIRST_RUN_CONFIGURATION_NAME = "task036-first-run-launch.json"
+_FIRST_RUN_DISPLAY_NAME = "新しいBAI Video Production Project"
+_KNOWN_LEGACY_FIRST_RUN_DISPLAY_NAMES = frozenset(
+    {"�V����BAI Video Production Project"}
+)
 
 
 def _bootstrap_error(code: str, message: str, *, category: ProductErrorCategory) -> ProductError:
@@ -71,7 +80,7 @@ def _configuration_document(project_root: Path, source_root: Path) -> dict[str, 
         "launch_config_version": "1.0.0",
         "project": {
             "project_id": _FIRST_RUN_PROJECT_ID,
-            "display_name": "新しいBAI Video Production Project",
+            "display_name": _FIRST_RUN_DISPLAY_NAME,
             "project_root": str(project_root),
         },
         "paths": {
@@ -108,6 +117,176 @@ def _configuration_document(project_root: Path, source_root: Path) -> dict[str, 
             "source_frame_rate": "30",
         },
     }
+
+
+def _load_configuration_document(
+    config_path: Path,
+) -> tuple[
+    dict[str, object],
+    Task036LaunchConfiguration,
+    tuple[int, int, int, int],
+]:
+    """Read and validate one existing configuration snapshot."""
+
+    try:
+        before_path = config_path.lstat()
+        _require_regular_configuration_stat(before_path)
+        flags = (
+            os.O_RDONLY
+            | getattr(os, "O_BINARY", 0)
+            | getattr(os, "O_NOFOLLOW", 0)
+        )
+        descriptor = os.open(config_path, flags)
+        try:
+            os.set_inheritable(descriptor, False)
+            before_handle = os.fstat(descriptor)
+            _require_regular_configuration_stat(before_handle)
+            if _configuration_identity(before_path) != _configuration_identity(before_handle):
+                raise ValueError("first-run configuration identity changed before read")
+            chunks: list[bytes] = []
+            remaining = TASK036_LAUNCH_CONFIG_MAX_BYTES + 1
+            while remaining > 0:
+                chunk = os.read(descriptor, min(64 * 1024, remaining))
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            encoded = b"".join(chunks)
+            after_handle = os.fstat(descriptor)
+        finally:
+            os.close(descriptor)
+        after_path = config_path.lstat()
+        _require_regular_configuration_stat(after_handle)
+        _require_regular_configuration_stat(after_path)
+        identity = _configuration_identity(before_handle)
+        if (
+            identity != _configuration_identity(after_handle)
+            or identity != _configuration_identity(after_path)
+            or (
+                before_handle.st_size <= TASK036_LAUNCH_CONFIG_MAX_BYTES
+                and len(encoded) != before_handle.st_size
+            )
+        ):
+            raise ValueError("first-run configuration identity changed during read")
+    except (OSError, ValueError) as exc:
+        raise _bootstrap_error(
+            "ERR_TASK036_FIRST_RUN_CONFIG_UNSAFE",
+            "初回Project設定を安全に確認できません。保存先を確認してください。",
+            category=ProductErrorCategory.SECURITY,
+        ) from exc
+    try:
+        if not 0 < len(encoded) <= TASK036_LAUNCH_CONFIG_MAX_BYTES:
+            raise ValueError("first-run configuration is outside the size bound")
+        raw = json.loads(encoded.decode("utf-8"))
+        if not isinstance(raw, dict):
+            raise ValueError("first-run configuration must be an object")
+        configuration = Task036LaunchConfiguration.from_dict(raw)
+    except (
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        KeyError,
+        TypeError,
+        ValueError,
+        ProductError,
+    ) as exc:
+        raise _bootstrap_error(
+            "ERR_TASK036_FIRST_RUN_CONFIG_INVALID",
+            "初回Project設定を読み込めません。保存先を確認してください。",
+            category=ProductErrorCategory.DATA_INTEGRITY,
+        ) from exc
+    return raw, configuration, identity
+
+
+def _configuration_identity(value: os.stat_result) -> tuple[int, int, int, int]:
+    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns)
+
+
+def _require_regular_configuration_stat(value: os.stat_result) -> None:
+    if not stat.S_ISREG(value.st_mode) or value.st_nlink != 1:
+        raise ValueError("first-run configuration must be one regular private file")
+
+
+def _require_current_configuration_identity(
+    config_path: Path,
+    expected: tuple[int, int, int, int],
+) -> None:
+    try:
+        current = config_path.lstat()
+        _require_regular_configuration_stat(current)
+    except (OSError, ValueError) as exc:
+        raise _bootstrap_error(
+            "ERR_TASK036_FIRST_RUN_CONFIG_UNSAFE",
+            "初回Project設定を安全に確認できません。保存先を確認してください。",
+            category=ProductErrorCategory.SECURITY,
+        ) from exc
+    if _configuration_identity(current) != expected:
+        raise _bootstrap_error(
+            "ERR_TASK036_FIRST_RUN_CONFIG_UNSAFE",
+            "初回Project設定を安全に確認できません。保存先を確認してください。",
+            category=ProductErrorCategory.SECURITY,
+        )
+
+
+def _repair_known_legacy_display_name(
+    config_path: Path,
+    document: dict[str, object],
+    configuration: Task036LaunchConfiguration,
+    expected_identity: tuple[int, int, int, int],
+) -> Task036LaunchConfiguration:
+    project = document.get("project")
+    if not isinstance(project, dict):
+        raise _bootstrap_error(
+            "ERR_TASK036_FIRST_RUN_CONFIG_INVALID",
+            "初回Project設定を読み込めません。保存先を確認してください。",
+            category=ProductErrorCategory.DATA_INTEGRITY,
+        )
+    raw_display_name = project.get("display_name")
+    if raw_display_name == _FIRST_RUN_DISPLAY_NAME:
+        return configuration
+    if raw_display_name not in _KNOWN_LEGACY_FIRST_RUN_DISPLAY_NAMES:
+        raise _bootstrap_error(
+            "ERR_TASK036_FIRST_RUN_DISPLAY_NAME_UNKNOWN",
+            "初回Project名を安全に更新できません。既存設定を確認してください。",
+            category=ProductErrorCategory.DATA_INTEGRITY,
+        )
+    updated = dict(document)
+    updated_project = dict(project)
+    updated_project["display_name"] = _FIRST_RUN_DISPLAY_NAME
+    updated["project"] = updated_project
+
+    def require_current_before_replace(stage: str, _temporary: Path) -> None:
+        if stage == "before_replace":
+            _require_current_configuration_identity(config_path, expected_identity)
+
+    try:
+        AtomicJsonWriter.write(
+            config_path,
+            updated,
+            validator=lambda raw: Task036LaunchConfiguration.from_dict(raw),
+            failure_injector=require_current_before_replace,
+        )
+    except ProductError:
+        raise
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise _bootstrap_error(
+            "ERR_TASK036_FIRST_RUN_CONFIG_WRITE_FAILED",
+            "初回Project設定を保存できません。保存先を確認してください。",
+            category=ProductErrorCategory.DATA_INTEGRITY,
+        ) from exc
+    repaired_document, repaired, _ = _load_configuration_document(config_path)
+    repaired_project = repaired_document.get("project")
+    if (
+        repaired.display_name != _FIRST_RUN_DISPLAY_NAME
+        or not isinstance(repaired_project, dict)
+        or repaired_project.get("display_name") != _FIRST_RUN_DISPLAY_NAME
+    ):
+        raise _bootstrap_error(
+            "ERR_TASK036_FIRST_RUN_CONFIG_INVALID",
+            "初回Project設定を読み込めません。保存先を確認してください。",
+            category=ProductErrorCategory.DATA_INTEGRITY,
+        )
+    return repaired
 
 
 def _default_application_root(environment: Mapping[str, str]) -> Path:
@@ -179,20 +358,21 @@ def ensure_first_run_launch_configuration(
                     "初回Project設定を保存できません。保存先を確認してください。",
                     category=ProductErrorCategory.DATA_INTEGRITY,
                 ) from exc
-        try:
-            configuration = Task036LaunchConfiguration.load(config_path)
-        except ProductError as exc:
-            raise _bootstrap_error(
-                "ERR_TASK036_FIRST_RUN_CONFIG_INVALID",
-                "初回Project設定を読み込めません。保存先を確認してください。",
-                category=ProductErrorCategory.DATA_INTEGRITY,
-            ) from exc
+        document, configuration, configuration_identity = _load_configuration_document(
+            config_path
+        )
         if configuration.project_id != _FIRST_RUN_PROJECT_ID or configuration.project_root != project_root:
             raise _bootstrap_error(
                 "ERR_TASK036_FIRST_RUN_CONFIG_IDENTITY",
                 "初回Project設定の識別情報が一致しません。保存先を確認してください。",
                 category=ProductErrorCategory.SECURITY,
             )
+        configuration = _repair_known_legacy_display_name(
+            config_path,
+            document,
+            configuration,
+            configuration_identity,
+        )
     return config_path
 
 

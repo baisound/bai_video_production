@@ -545,13 +545,22 @@ state or post-read/publish currentness, and raw errors/results may expose
 absolute paths. A BVP-owned safe Bridge/config cannot close a race inside the
 SKILL consumer.
 
+The canonical AdmissionReceipt contract is also open where TASK-065 requires a
+closed public receipt: `connector-file-bridge.schema.json` declares
+`additionalProperties:true`, and `validate_admission_receipt()` checks required
+fields and binding/status but never requires the exact field set. An
+extra-field receipt can therefore pass the current SKILL even though it is
+ineligible for PL-C/activation Evidence.
+
 This is a separate SKILL-owner dependency. TASK-061/065/067 must not edit the
 canonical or installed adapter. A future authorized canonical SKILL change must
 provide:
 
 - full-ancestor plus lstat/no-follow-open/fstat/bounded-read/post-identity reads
   for config, existing delivery, receipt and Profile, requiring regular,
-  single-link, non-reparse files and closed JSON;
+  single-link, non-reparse files and closed JSON; AdmissionReceipt must set
+  `additionalProperties:false` and runtime validation must enforce the exact
+  v1 field set before status/binding can count;
 - pinned identical existing delivery as ALREADY and different content as a
   collision;
 - same-directory exclusive private temporary creation, write/file fsync,
@@ -586,8 +595,8 @@ contract references and tests, inventory and release Evidence with Option B:
 Negative coverage includes existing symlink/reparse/hardlink, parent/ancestor
 swap, identical and different target-appearance races, temp collision,
 post-publish swap, config swap between BVP read-back and adapter read, receipt/
-Profile link or race, and absolute-path leakage. Every case is no-overwrite,
-no-partial-effect and fail closed.
+Profile link or race, AdmissionReceipt extra/unknown fields, and absolute-path
+leakage. Every case is no-overwrite, no-partial-effect and fail closed.
 
 The required order is canonical SKILL Task/PR/main/release, installed-copy exact
 sync/read-back, TASK-065 PL-A baseline hash rebind, TASK-061 pre-activation E2E,

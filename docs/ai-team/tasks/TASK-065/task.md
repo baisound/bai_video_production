@@ -66,7 +66,9 @@ an active production fallback.
    three into the private apply capability.
 4. `D2S`: the released SKILL adapter remains valid historical TASK-058 release
    Evidence, but its current transport writer/config/receipt/Profile readers do
-   not meet Production race, physical-identity and privacy requirements.
+   not meet Production race, physical-identity and privacy requirements, and
+   its AdmissionReceipt schema/runtime validator still accepts extra fields
+   that PL-C must reject.
    Production linkage therefore requires a separately owned canonical SKILL
    correction, PR/main/release and installed-copy exact sync/read-back, followed
    by a PL-A baseline hash rebind. The same correction must replace obsolete

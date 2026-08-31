@@ -508,11 +508,16 @@ In addition to the checklist in the PL-A design freeze:
 
 ## 7. Public-safe PL-C fixture identity chain
 
-The released TASK-058 adapter E2E already supplies a suitable synthetic body:
-`MontageLearningExport` record `e2e-observation-001`. It contains only synthetic
-proposal/timeline/style/event data, declares `privacy.safe_export:true`, carries
-no raw actor, absolute host path, transcript, credential, or media body, and
-keeps `adapter_metadata.canonical_timeline:false`.
+The released TASK-058 adapter E2E supplied the historical synthetic body
+`MontageLearningExport` record `e2e-observation-001`. It contains synthetic
+proposal/timeline/style/event data and declares `privacy.safe_export:true`.
+**SUPERSEDED:** that fixed flag and a fixture review are audit Evidence only,
+not Production privacy authority. Current admission additionally requires the
+independent closed privacy-projection completion receipt defined in
+`pl-b-option-b-runtime-config-design-correction-2026-08-31.md`; no raw actor,
+absolute host path, transcript, credential or media body may cross that
+validated boundary, and `adapter_metadata.canonical_timeline:false` remains
+mandatory.
 
 ### 7.1 Exact current SKILL lineage
 
@@ -547,13 +552,16 @@ task-scoped record identity. It must record five distinct evidence identities:
    `BvpMontageLearningDelivery` whose `record_id` and `learning_sha256` match,
    and whose `canonical_timeline` and `auto_admit_authorized` are false.
 2. **Public SKILL receipt identity** — exact seven-field v1 public receipt bytes
-   hash, deterministic
-   `receipt_id`, matching `record_id` and `learning_sha256`, and status
-   `ACCEPTED` or `DUPLICATE`. `publish-learning` must first report
-   `STAGED_PENDING_REQUIRED_RECEIPT`, then only after BVP processing report
-   `BVP_REPORTED_ACCEPTED` or `BVP_REPORTED_DUPLICATE` with
-   `canonical_store_written:true`. This is transport compatibility evidence,
-   not learning adoption or a sufficient BVP authority receipt by itself.
+   hash, deterministic `receipt_id`, matching `record_id` and
+   `learning_sha256`, and status `ACCEPTED` or `DUPLICATE`.
+   **SUPERSEDED:** the former two-call interpretation (PENDING stage followed by
+   a second `publish-learning` confirmation returning
+   `canonical_store_written:true`) is prohibited because it can recreate the
+   claimed inbox delivery. The current sequence is adapter stage exactly once
+   (PENDING allowed), TASK-036 exact `import_path`, then a separate trusted BVP
+   pinned receipt/correlation/canonical/Profile read-back. The public receipt
+   and `canonical_store_written` remain transport audit Evidence with
+   `authority_created:false`.
 3. **BVP review-observation correlation identity** — exact hidden
    `BvpMontageLearningGenericReceiptCorrelation` self-hash and public-receipt
    hash, bound to the source digest, generic store/revision, canonical commit,

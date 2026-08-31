@@ -6,10 +6,12 @@ State: `DEPENDENCY_CANDIDATES_INTEGRATED / CANONICAL_GATES_OPEN / EFFECT0`
 
 ## Purpose and effect ceiling
 
-This checkpoint replaces only the PP-C and CA-C placeholders in the earlier
-PL-A design freeze with source-backed candidate field mappings. It does not
-declare D0, D1, or D2 complete. The candidates remain stacked Draft PRs and
-remote `main` remains `160c9569673fbf65a28b0f95eeb44c5b0111584f`.
+This checkpoint replaced only the PP-C and CA-C placeholders in the earlier
+PL-A design freeze with source-backed candidate field mappings. It did not
+declare D0, D1, or D2 complete. At this rebind checkpoint, the candidates
+remained stacked Draft PRs and remote `main` was
+`160c9569673fbf65a28b0f95eeb44c5b0111584f`. Current dependency state is
+recorded separately in `dependency-currentness-reconciliation-2026-08-31.md`.
 
 No TASK-065 source, schema, test, installed SKILL config, native config,
 adapter, learning, Timeline, Resolve, Release, Deploy, or Production effect is

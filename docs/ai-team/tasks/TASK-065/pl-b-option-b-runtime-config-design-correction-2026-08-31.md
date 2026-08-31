@@ -63,44 +63,43 @@ already admitted private absolute Bridge root.
 <bridge_root>/state/
 |-- connector-runtime-config.lock
 |-- connector-runtime-config.transaction.json
-|-- connector-runtime-config.json
-|-- connector-runtime-config.receipt.json
-`-- preactivation/
-    `-- <e2e_ticket_id>/
-        |-- connector-status/
-        |   |-- connector-runtime-config.json
-        |   `-- connector-runtime-config.receipt.json
-        |-- publish-learning/
-        |   |-- connector-runtime-config.json
-        |   `-- connector-runtime-config.receipt.json
-        `-- load-profile/
-            |-- connector-runtime-config.json
-            `-- connector-runtime-config.receipt.json
+|-- connector-runtime-config.current.json             # optional BVP-only pointer
+|-- connector-runtime-config.current.receipt.json     # BVP-only projection state
+`-- connector-operations/
+    `-- <operation_id>/
+        `-- <exact-command>/
+            |-- connector-runtime-config.json         # immutable invocation input
+            |-- connector-runtime-config.receipt.json # immutable binding
+            `-- connector-runtime-config.consume.json # one-shot terminal state
 ```
 
 - `<bridge_root>` is derived only from the exact current TASK-063 discovery and
   is never read from the SKILL distribution default.
-- `e2e_ticket_id` is supplied and sealed only by the separately authorized
-  TASK-061 pre-activation E2E contract.
-- `connector-runtime-config.json` is the exact steady-state adapter-facing
-  filename. It is reprojected from fresh TASK-063 discovery after a portable
-  move, repair or upgrade; its embedded absolute root is never reused as
+- `<operation_id>` is a bounded opaque coordinate bound inside the separately
+  authorized TASK-061 pre-activation ticket; neither identifier, path nor hash
+  creates authority by itself.
+- There is no shared mutable adapter-facing steady-state config. Each launch
+  receives one immutable operation-specific config path. An optional current
+  pointer is BVP-only, is never passed to the adapter and is never authority.
+  A portable move, repair or upgrade requires a new operation coordinate from
+  fresh TASK-063 discovery; an embedded absolute root is never reused as
   currentness evidence.
 - Fresh BVP `main=35cdf1ad475633dcf035e0616e979b5a8fde0c88` collision audit found
   the existing `state/` authorities named `importer-journal.json`,
   `profile-promotion-journal.json`, `profile-promotion-commit-marker.json`, and
-  `connector-activation-history.json`; none collides with this four-file
-  runtime-config namespace. Any newly current file or case-folded name collision
+  `connector-activation-history.json`; none collides with the frozen lock,
+  journal, optional pointer or operation-directory namespaces above. Any newly
+  current file or case-folded name collision
   before implementation invalidates this freeze and yields effect zero pending
   a fresh owner review.
-- PL-B0 never creates or replaces the steady-state config/receipt/transaction.
+- PL-B0 never creates or replaces shared steady-state projection state.
 - The adapter receives only the absolute, reopened operation-specific config
   path via `--config`. It never receives the distribution config or an inferred
   default.
 
 ## 5. Adapter-facing config and BVP receipts
 
-### 5.1 Adapter-facing config
+### 5.1 Adapter-facing config and required operation authority
 
 `connector-runtime-config.json` is a closed SKILL v1 config body with
 exactly these fields:
@@ -118,10 +117,26 @@ legacy_behavior_when_unavailable = true
 ```
 
 The config has no extra BVP authority fields because the current SKILL parser
-accepts only its closed transport shape. BVP therefore binds the config through
-a separate closed projection receipt. The absolute `bridge_root` is
-private local state and must never appear in public Evidence, logs or exception
-text.
+accepts only its closed transport shape. A separate BVP projection receipt can
+bind audit data for BVP, but the current adapter never verifies or consumes that
+receipt. The absolute `bridge_root` is private local state and must never appear
+in public Evidence, logs or exception text.
+
+This v1 shape cannot enforce PL-B0 or per-invocation steady-state authority. It
+contains no operation/operation ID, TASK-063 instance/descriptor/owner binding,
+projection-receipt digest, TASK-061 one-shot ticket, expiry, invocation nonce or
+budget, or expected input record/Profile identity. The adapter gates publish and
+load only on `enabled` plus their feature flags. Consequently an enabled config
+can be replayed directly, copied, cross-used with another command or raced after
+a BVP precheck; the adapter cannot distinguish preactivation from steady state.
+
+Production linkage therefore requires a separately owned canonical SKILL
+config v2 or trusted broker/handle route. It must bind those coordinates and
+atomically redeem a BVP-owned one-shot authority before exactly one command.
+Direct CLI replay/copy/deserialization, wrong command, second/concurrent call,
+expiry and crash restart fail closed. The disabled distribution config remains
+v1. If the adapter is not corrected, PL-B0 is only a BVP-internal synthetic
+Bridge probe and cannot mint real SKILL E2E for CA-C.
 
 For steady state, `enabled` must equal the exact current TASK-061 activation
 transaction/config-history projection. Missing, stale, future, replayed,
@@ -181,8 +196,9 @@ credential, token or free-form Human rationale.
 operation ID/phase, exact predecessor receipt/config identities, intended
 config/receipt hashes, TASK-063/TASK-060/TASK-061 coordinates, expiry and
 currentness. It is atomically published, flushed and exactly read back before
-the steady-state config is changed. No missing, foreign, stale or mismatched
-journal authorizes recovery.
+an immutable operation is committed or the optional BVP-only current projection
+pointer advances. No missing, foreign, stale or mismatched journal authorizes
+recovery.
 
 ### 5.4 Pre-activation receipt
 
@@ -192,7 +208,13 @@ exact TASK-061 one-shot E2E ticket/Human candidate, apply-effect-zero state,
 instance and source identities, operation, operation-scoped feature flags,
 config hash, allowed synthetic record identity, expiry, single invocation
 budget, cleanup receipt identity, and authority fields fixed false. It is not a
-TASK-061 activation receipt and cannot update the steady-state config.
+TASK-061 activation receipt and cannot advance BVP steady-state projection.
+
+Under current SKILL v1 this receipt is audit data only: the adapter does not
+read, validate or consume it, so expiry and single-invocation budget are not
+enforced. PL-B0 remains N.C. until the D2S operation-authority correction binds
+and atomically redeems this exact receipt/ticket or replaces it with an
+equivalent trusted broker capability.
 
 ## 6. Writer, CAS and publication
 
@@ -202,6 +224,31 @@ the admitted Bridge DACL. It is held across read, validation, publication and
 read-back. Every allowed
 writer must participate in this lock; unresolved or broad writable principals
 fail closed.
+
+Lock and operation namespace establishment are transaction steps:
+
+- existing and initial lock paths use separate protocols beneath the pinned
+  Bridge-state ancestor/DACL. Initial creation is `CREATE_NEW`/no-follow,
+  one-byte, regular, single-link and non-reparse; locking is on that same
+  physical handle. A race loser performs one fresh existing-object
+  classification and never auto-retries;
+- bounded ticket/operation/command IDs are contained joins. Each operation
+  directory is created with new-object semantics and receives post-create
+  handle/lstat identity plus DACL read-back. Only an exact prior-operation
+  safe-empty namespace may resume; unknown/nonempty/reparse/case-colliding state
+  stops without repair;
+- journal `PREPARED` publication is no-replace. Every later phase requires the
+  expected previous opened bytes, inode and self-hash under the same lock, then
+  an operation-owned fsynced temp, prepublish currentness and pinned post-readback;
+- immutable invocation config and receipt artifacts are no-replace. Existing
+  state is DUPLICATE only for the same operation/receipt chain with exact bytes
+  and identity; any difference is collision/STOP;
+- an optional BVP-only current pointer advances in its own journal phase with
+  expected-identity CAS. The adapter never discovers that pointer and receives
+  only the explicit immutable operation config path; and
+- directory durability failure is FAIL with receipt zero. Windows uses an
+  explicit native durability port/Evidence when directory fsync is unsupported;
+  failure is never suppressed.
 
 Steady-state publication requires an exact expected tuple:
 
@@ -219,14 +266,19 @@ Steady-state publication requires an exact expected tuple:
 The writer reopens and revalidates the complete ancestor chain, DACL, file type,
 link count, target identities and source receipts before and after each publish.
 It first publishes/flushes/reads back the exact transaction journal. It then
-writes the fixed config and receipt through same-directory `CREATE_NEW`
-temporaries, flushes file data and the containing directory, atomically renames,
-and reopens by name for exact bytes/identity read-back.
+writes immutable operation config and receipt through same-directory
+operation-owned `CREATE_NEW` temporaries, flushes file data and the containing
+directory, publishes no-replace, and reopens by name for exact bytes/identity
+read-back. Expected-target replace is allowed only for the separately journaled
+BVP current pointer after exact predecessor identity/bytes CAS.
 
 Atomic receipt publication plus exact read-back is the sole commit point after
 config read-back. A committed consumer accepts only a config whose bytes and
 physical identity match that receipt. Failure before commit may remove only
-exact current-operation temporary/pending artifacts. Exact journal recovery may
+exact current-operation temporary/pending artifacts whose current inode/
+directory identity is bound by the journal. Foreign replacement, unknown child
+or cleanup-time swap is preserved and stops; committed immutable Evidence is
+retained until lifecycle policy authorizes removal. Exact journal recovery may
 roll forward only the bound intended operation; it never fabricates from
 ambient files, changes TASK-061 history, edits SKILL distribution data, or
 deletes learning inbox/receipts/Profile state. An unjournaled one-sided config,
@@ -235,6 +287,11 @@ receipt/config mismatch or unrecoverable journal remains effect zero.
 Every consumer reopens receipt and config and revalidates the TASK-063/TASK-061
 identities and operation immediately before launching the adapter. A prior
 successful read-back or config existence is not permanent authority.
+The trusted lock/journal/config/receipt/pointer capability is the operation-bound
+handle/snapshot, never a public path or self-hash. Its lease/state transition
+continues through child launch, adapter pinned config read and result capture.
+Each crash seam defines exact resume or revoke from that journal; a second
+effect remains zero.
 
 ### 6.1 TASK-063 installed-coordinate Production-safety prerequisite
 
@@ -278,7 +335,7 @@ zero-or-one, exact-instance-only repair and fixed-ProgramData fallback zero.
 TASK-065 consumes only a new TASK-063 corrective completion receipt and freshly
 provisioned installed Evidence. TASK-061/065/067 do not modify installer source.
 
-### 6.2 TASK-060/TASK-058 Profile publication authority prerequisite
+### 6.2 TASK-060 promotion, cipher and TASK-058 Profile authority prerequisite
 
 Current public `PromotedPreferenceSourceRead` and `ProfileSourceBinding` objects
 use module-visible tokens plus computable hashes. Object-level
@@ -289,6 +346,38 @@ without authoritative TASK-060 history/current-file readback. Although the
 Profile remains advisory and cannot mutate Timeline automatically, corrupting
 the Production current Profile changes downstream SKILL guidance and is an
 independent P0.
+
+TASK-060 promotion and rollback authority is independently open. The public
+confirmation functions accept caller `human_confirmed:true`, caller-selected
+ID/time and reconstructible self-hashed confirmation data without a trusted UI,
+OS user/session event or durable one-shot issuance record. PP-B store load uses
+path checks followed by an unpinned read; promotion/rollback uses the generic
+create-capable lock and replace writer without expected physical-identity CAS.
+Automation can therefore self-confirm, race or overwrite the store unless a
+separate TASK-060 owner correction closes both Human authority and physical
+publication.
+
+That correction issues a Product-owned random one-shot challenge bound to exact
+candidate/history/action/owner scope, expected revision/head, rollback target,
+expiry, install/Project/user/session and build identity. A trusted Human-visible
+boundary alone returns the receipt. Apply revalidates the challenge, current
+candidate/history and pinned store identity in one secure transaction, atomically
+consumes it and burns the capability on entry/success/exception. Initial store
+publication is no-replace; existing append/rollback uses expected opened bytes,
+inode, revision and head CAS, an operation-owned fsynced temp, prepublish
+currentness, directory durability and pinned post-readback. Unknown targets are
+never restored/deleted and only an exact owned temp inode may be cleaned.
+
+Production source composition must also fix
+`WindowsDpapiPreferencePromotionCipher` internally. Caller cipher Protocol,
+`cipher_suite`, path, coordinates or `coordinates_from_verified_history` output
+is test data, not authority. Product registry/manifest/current-promotion receipt
+selects the encrypted source; pinned ciphertext identity, document cipher suite,
+promotion history, Owner scope and registry coordinate are verified in one
+operation. DPAPI Current User is bound to the selected TASK-061/TASK-063 owner/
+current-user attestation, and backend/build/entropy-domain/version remains fixed
+through ordered Profile readback. Synthetic/custom cipher or same-suite fake is
+non-Production only.
 
 Public source reads, bindings and receipts are evidence only with
 `authority_created:false`. A trusted TASK-060/TASK-058 Product operation must
@@ -311,6 +400,16 @@ than another module sentinel. This correction crosses released TASK-058 and
 TASK-060 ownership and needs an exact owner/amendment allocation; TASK-061/065/
 067 do not implement it.
 
+Additional negatives cover direct boolean confirmation, new-ID/timestamp replay,
+confirmation deserialization, wrong user/session, challenge copy/swap/link,
+concurrent promote/rollback, lock link, store stat-open/post-read or pre/post
+replace swap, same bytes on another inode, fsync/readback failure, exception
+reuse, synthetic/custom/same-suite cipher, monkeypatched decrypt, caller
+coordinates, ciphertext inode substitution, DPAPI scope drift, phase backend
+switch and plaintext fixture at a Production path. Without exact Human, native
+DPAPI and current-store proof, promotion/Profile revision delta is zero and
+unrelated overwrite/delete is zero.
+
 ## 7. D2 to PL-C cycle closure
 
 The current TASK-061 candidate cannot close the cycle through a trusted
@@ -332,22 +431,28 @@ accessing module sentinels is explicitly ineligible. After that authority is
 canonical, the only admissible sequence is:
 
 1. CA-C prepares the exact Human one-shot candidate and E2E ticket with apply0.
-2. PL-B0 creates three non-steady-state operation candidates beneath
-   `preactivation/<ticket>/`, each explicit `--config` only and each carrying
-   only the single operation's minimum feature flag.
-3. PL-C0 executes `connector-status`, `publish-learning` and `load-profile`
-   with their separately sealed configs against the exact real installed
-   Bridge. It verifies request, strict BVP admission receipt and correlation,
-   and Profile read-back as separate identities before returning a sealed
-   receipt. It claims no Production activation.
-4. CA-C consumes that exact receipt and applies activation/history under its own
+2. PL-B0 creates three immutable non-steady-state operation candidates beneath
+   `connector-operations/<operation_id>/<exact-command>/`, each explicit
+   `--config` only and each carrying only the single operation's minimum feature
+   flag plus its adapter-consumable ticket authority.
+3. PL-C0 invokes adapter `publish-learning` exactly once to stage the delivery;
+   PENDING is a valid intermediate result. It does not call publish again for
+   confirmation.
+4. TASK-036 invokes exact plan-bound `import_path` once. The trusted BVP runner
+   separately pinned-reads and binds the strict public receipt, hidden Generic
+   correlation, canonical current state and Profile read-back. Adapter
+   `canonical_store_written` is audit data with `authority_created:false`.
+5. PL-C0 binds adapter stage result, BVP import result, public receipt,
+   correlation and Profile read-back as separate identities before returning a
+   sealed receipt. It claims no Production activation.
+6. CA-C consumes that exact receipt and applies activation/history under its own
    Gate.
-5. PL-B publishes the steady-state config/receipt revision whose enabled value
+7. PL-B publishes the steady-state projection revision whose enabled value
    is derived from that current TASK-061 receipt.
-6. PL-C reopens the steady-state pointer/config and performs the exact runtime
-   read-back. PL-D then owns lifecycle closure.
+8. PL-C opens a fresh immutable steady-state operation config and performs the
+   exact runtime read-back. PL-D then owns lifecycle closure.
 
-The PL-B0 candidates never replace the steady-state config and are never
+The PL-B0 candidates never replace shared projection state and are never
 discoverable through the SKILL default. The future authorized runner must
 expire them after one matching command and remove only their exact current-
 operation files after cleanup read-back is sealed; crash recovery requires the
@@ -356,13 +461,14 @@ leaves effect zero.
 
 ### 7.1 TASK-061 operation-plan/admission prerequisite
 
-TASK-065 consumes only a public TASK-061 factory added by a separately
-authorized source correction. It never calls a private constructor, obtains a
+TASK-065 consumes only the public-safe receipt produced by a separately
+authorized trusted TASK-061/TASK-036 Product operation. It never receives or
+calls its private capability factory, calls a private constructor, obtains a
 private seal, monkey-patches validation or converts its own hash record into
 `InstalledAdapterE2EReadback`.
 
 The TASK-061 completion receipt and focused acceptance tests must prove that the
-public factory:
+trusted Product operation:
 
 1. accepts one current, unexpired, one-shot operation plan bound to the exact
    install instance, descriptor/owner hashes, PP-C source, Human candidate and
@@ -572,6 +678,34 @@ fields and binding/status but never requires the exact field set. An
 extra-field receipt can therefore pass the current SKILL even though it is
 ineligible for PL-C/activation Evidence.
 
+The same canonical adapter always calls `atomic_write_new_or_identical()` for
+the original inbox delivery before reading a public receipt. Once Bridge claim
+has moved that original into processing, a confirmation retry sees the inbox
+path absent, recreates the delivery, and only then reports the terminal receipt.
+Therefore adapter publish is an exact-one staging operation and PENDING is an
+eligible intermediate result; PL-C must never call publish again to confirm
+admission. `canonical_store_written` derives only from public receipt status and
+has `authority_created:false` because it proves neither hidden correlation nor
+current canonical state. Current publish output also exposes absolute delivery
+and receipt paths and is ineligible as public Product Evidence.
+
+Learning-export privacy is also not yet a Production proof. Current
+`redact_sensitive()` keys off sensitive key-name substrings, while free-form
+feedback reason, style Profile, actor role, context event/section/phrase/tags,
+reason codes and broad IDs can carry a path, account/player name, email, token or
+transcript-like body under a benign key. Provenance is recursively redacted
+rather than built from a typed allowlist, and `safe_export:true` is fixed during
+construction instead of earned by an independent validator.
+
+The shared JSON and CLI I/O boundary is independently open. Plain `json.load`
+does not reject duplicate keys or non-finite constants, and security-relevant
+documents are not bound as one parsed-tree/canonical-bytes/physical-identity
+snapshot. Caller-selected output paths may create parents and overwrite. A
+Production runner therefore accepts only opaque plan/record identities, resolves
+contained config/input/output coordinates internally and uses a body-free safe
+stdout result or operation-owned private handle/pipe/temp. Direct legacy
+`--output`, if retained, is isolated from Product composition.
+
 BVP `main=35cdf1ad475633dcf035e0616e979b5a8fde0c88` already publishes exactly
 the same seven v1 fields (`schema_version`, `message_type`, `record_id`,
 `learning_sha256`, `status`, `receipt_id`, `timestamp`) and its
@@ -597,7 +731,29 @@ provide:
   target races into existence, only a pinned identical reread may return
   ALREADY;
 - private raw exceptions/absolute coordinates and Product-facing bounded reason
-  codes plus opaque hashes only; and
+  codes plus opaque hashes only;
+- either an exact record/digest/ticket-bound read-only terminal-status command
+  that creates no delivery and validates a trusted BVP broker projection, or a
+  publish duplicate preflight that returns no-delta only after the Product
+  broker has proven terminal receipt plus correlation. Receipt-only state never
+  creates canonical authority, and SKILL never parses or repairs BVP private
+  claim/journal/pending state;
+- a closed privacy schema per TASK-055, TASK-056 and generic contract profile:
+  free-form Human rationale stays local and only controlled reason codes cross
+  the boundary; style/actor/context/tags/reasons/IDs use bounded token/enum
+  grammar and source identities are opaque projections; provenance is a typed
+  allowlist; every string has byte/codepoint/control/path/URI/email/account/
+  secret/transcript-like validation; depth/items/document bytes, NaN/Infinity
+  and non-built-in JSON are bounded/rejected; `safe_export:true` is set only
+  after an independent post-build validator whose report contains redacted
+  field paths/reason codes/counts and no raw sample;
+- strict UTF-8 JSON rejects duplicate keys, NaN/Infinity, BOM/trailing bytes,
+  invalid controls and excessive bytes/depth/items. Config/delivery/receipt/
+  Profile parsing returns one sealed result binding parsed tree, canonical bytes
+  and pinned physical identity; the trusted operation verifies that exact digest
+  against the projection receipt. Output never performs caller-directed parent
+  creation/overwrite and any file publish uses no-replace or expected-identity
+  CAS; public errors contain stable codes only; and
 - an unchanged disabled distribution default while the Product runner requires
   the explicit exact `--config` path.
 
@@ -624,7 +780,19 @@ Negative coverage includes existing symlink/reparse/hardlink, parent/ancestor
 swap, identical and different target-appearance races, temp collision,
 post-publish swap, config swap between BVP read-back and adapter read, receipt/
 Profile link or race, AdmissionReceipt extra/unknown fields, and absolute-path
-leakage. Every case is no-overwrite, no-partial-effect and fail closed.
+leakage. It also covers accepted-record rerun after claim, receipt-only forgery,
+missing/wrong correlation, pending/processing rerun, concurrent second publish,
+and confirms terminal rerun delivery delta zero with unrelated inbox unchanged.
+Privacy/strict-I/O negatives include a path under `note`, transcript in reason,
+email in phrase, player/token in tags, path in style object, UNC/URI in an ID,
+benign-key secret, homoglyph path, unknown nesting, oversized/control text,
+sibling-value leak, error echo, duplicate enabled/Bridge-root keys, non-finite
+numbers, BOM/trailing/deep/huge JSON, config swap after BVP check and output
+ancestor/foreign-target/hardlink/raw-absolute-path attacks. Sensitive raw bytes
+remain absent from export/stdout/error/receipt/temp, rejected export never
+reports privacy PASS, adapter parsed digest equals the projection digest, and
+private local Evidence remains preserved. Every case is no-overwrite,
+no-partial-effect and fail closed.
 
 The required order is canonical SKILL Task/PR/main/release, installed-copy exact
 sync/read-back, TASK-065 PL-A baseline hash rebind, TASK-061 pre-activation E2E,
@@ -1081,9 +1249,23 @@ Focused tests must reject at least:
 - config extra/missing field, wrong version/type/profile or receipt policy;
 - enabled value not equal to the bound TASK-061 steady-state receipt;
 - missing/replayed/expired/cross-instance pre-activation ticket;
-- missing TASK-061 operation-plan/admission completion receipt, private
-  `InstalledAdapterE2EReadback` constructor/seal use, or factory output not
-  bound to cleanup read-back;
+- preactivation enabled-config direct replay/copy, wrong or cross-command use,
+  runner-precheck-to-adapter-open swap, receipt swap, cleanup-before/after retry,
+  crash before consume/after consume/after adapter start, same-user direct CLI,
+  and operation A/B startup race;
+- initial lock race/link/reparse/hardlink, ticket-directory race/case collision,
+  safe-empty versus unknown child, journal/config/receipt/pointer target
+  appearance or inode swap, foreign temp, cleanup swap, directory durability
+  failure and concurrent operation A/B. Assertions require unrelated overwrite/
+  delete zero, operation effect exact zero-or-one, one ticket to one command,
+  coherent config/receipt and activation-history delta zero;
+- second `publish-learning` used as admission confirmation, accepted terminal
+  rerun that recreates the original inbox delivery, receipt-only canonical
+  claim, missing/wrong correlation, retained processing claim or concurrent
+  second publish;
+- missing TASK-061 operation-plan/admission completion receipt, any private
+  `InstalledAdapterE2EReadback` constructor/seal attempt, or any public factory
+  output used as Production authority (with or without cleanup read-back);
 - missing TASK-067 Generic current-coordinate/facade completion receipt,
   private Generic-store loader use, raw-ledger parsing, missing
   recovery/journal/manifest/binding/head
@@ -1110,7 +1292,8 @@ Focused tests must reject at least:
   recovery appearing between phases, orphan/unknown object or marker, ancestor
   swap, caller-created seal/token/capability, subclass/mapping/duck-typed launch
   config, forged or rehashed serialized receipt and stale sealed object;
-- PL-B0 candidate replacing the steady-state config/receipt;
+- PL-B0 candidate replacing shared projection state or reusing another
+  operation's immutable config/receipt;
 - zero or multiple current TASK-063 instances;
 - descriptor/owner/PP-C/TASK-061/config receipt revision or digest drift;
 - target/ancestor reparse, nonregular file, hardlink, broad/unresolved DACL or
@@ -1135,8 +1318,14 @@ Implementation remains START0 until all of the following are true:
 
 - D0, D1 and D2 canonical completion receipts exist and are freshly read back;
 - the TASK-061 amendment/successor for the pre-activation E2E ticket is accepted
-  and canonical, including a public factory that alone may admit exact
-  request/BVP receipt/Profile read-back evidence as real installed E2E;
+  and canonical, with a trusted private Product operation that alone may mint a
+  one-use capability and publish public-safe exact request/BVP receipt/
+  correlation/Profile read-back Evidence as real installed E2E;
+- the canonical SKILL operation-authority and publish-confirmation corrections
+  plus strict JSON/closed Product I/O and the independent closed privacy-
+  projection completion receipt are released, installed exactly, freshly read
+  back and rebound by PL-A. A fixed `safe_export:true` flag is never a PASS
+  input;
 - TASK-067 has a canonical allocation and explicit implementation authority,
   and its public sealed Generic current-coordinate/facade focused-verification
   completion receipt is canonical and current;

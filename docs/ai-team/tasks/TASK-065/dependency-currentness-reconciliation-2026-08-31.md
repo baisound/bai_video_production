@@ -14,11 +14,15 @@ write shared task/index/roadmap/current-state metadata.
 | Gate | Current main fact | Missing completion/currentness | Admission |
 | --- | --- | --- | --- |
 | D0 / TASK-063 | initial installer-relative `20f5360`, read-back boundary `0b95e40` and publication race/path-safety `8fd17ed` are canonical; task status remains `OWNER_AUTHORIZED / IMPLEMENTATION_ACTIVE` | secure provision/readback operation lock; pinned descriptor+owner one-snapshot discovery; identity-CAS/no-replace descriptor/readback/snapshot publication and identity-bound rollback/temp cleanup; focused Windows fault tests; post-correction real provision/repair/upgrade installed read-back and canonical completion receipt | `SOURCE_CORRECTIONS_CANONICAL / PRODUCTION_PHYSICAL_RACE_CORRECTION_AND_INSTALLED_COMPLETION_N.C. / EFFECT0` |
-| D1 / TASK-060 | PP-C candidate head `ea5d495` is an ancestor; PP-A/B/C candidate source exists; task status `PP_C_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING` | independent DEV-4 acceptance; trusted pinned encrypted source readback and private single-use Production Profile publish capability replacing public token/self-hash authority; TASK-058/TASK-060 cross-owner boundary completion and canonical receipt | `CANDIDATE_PRESENT / PRODUCTION_PROFILE_AUTHORITY_N.C. / EFFECT0` |
+| D1 / TASK-060 | PP-C candidate head `ea5d495` is an ancestor; PP-A/B/C candidate source exists; task status `PP_C_IMPLEMENTATION_CANDIDATE / INDEPENDENT_DEV4_PENDING`; current promotion/rollback confirmation trusts caller boolean/ID/time/self-hash, PP-B store uses unpinned load/generic lock/replace write, and Production source accepts caller cipher/coordinates | independent DEV-4 acceptance; Product-owned random one-shot Human promotion/rollback challenge; secure pinned PP-B initial/existing lock and bytes+inode+revision/head CAS publication/readback; internally fixed Windows DPAPI plus Product registry coordinates; trusted pinned encrypted source and private single-use Profile publish capability; TASK-058/TASK-060 cross-owner completion and canonical receipt | `CANDIDATE_PRESENT / HUMAN_STORE_CIPHER_PROFILE_AUTHORITY.N.C. / EFFECT0` |
 | D2 / TASK-061 | CA-C candidate head `32c4dde` is an ancestor; CA-A/B/C disabled candidate source exists; task status `CA_C_DISABLED_HISTORY_IMPLEMENTATION_CANDIDATE / REAL_E2E_GATE_PENDING` | trusted native-backend-fixed one-use apply capability replacing forgeable public CA-B readiness/Human/E2E dataclasses and module sentinels; secure activation-lock establishment and identity-bound no-overwrite/expected-target config writer; CA-A secure migration lock, identity-CAS journal phases, no-replace Manifest/snapshot commit and owned-temp cleanup; random-challenge trusted Human one-shot receipt/atomic consume; focused Windows/authority tests and canonical completion receipt | `DISABLED_CANDIDATE_PRESENT / EFFECT0` |
 | D2.5 / SKILL adapter Production transport | canonical SKILL `origin/main=c86ec8c11724a3170d37e0fdc5a516979fcca703` confirms the released adapter/default-disabled historical TASK-058 Evidence while retaining replace-capable publication, unpinned config/delivery/receipt/Profile reads, an AdmissionReceipt schema/runtime validator that accepts extra fields, and obsolete fixed-ProgramData/default-config activation instructions | separate SKILL-owner Task/Allowed Files/fresh clean main worktree; code safety plus closed exact-v1 receipt schema/runtime validation and connector-ready/SKILL workflow/interface/contract/tests/inventory alignment; canonical PR/main/release; installed exact sync/read-back and PL-A baseline hash rebind | `PRODUCTION_LINKAGE_N.C. / EFFECT0` |
+| D2.5 / SKILL Product-operation authority | config v1 binds only enabled/root/feature flags and receipt policy; the adapter consumes no operation ID, TASK-061 ticket, projection receipt, expiry, nonce, invocation budget or TASK-063 instance authority, so an enabled preactivation config is replayable/copyable and indistinguishable from steady-state authority | canonical SKILL-owner config v2 or trusted broker/handle route with atomic one-shot redemption, immutable invocation-specific config/receipt coordinates, exact command/instance/input binding, replay/crash closure, release/install exact read-back and PL-A hash rebind; otherwise PL-B0 is internal synthetic-only and cannot satisfy CA-C | `PREACTIVATION_AUTHORITY_N.C. / EFFECT0` |
+| D2.5 / SKILL publish confirmation | `publish-learning` stages before reading a public receipt; after Bridge claim moves the original inbox file, a confirmation retry can recreate that delivery. `canonical_store_written` trusts receipt status without hidden correlation/current canonical proof, and public output exposes absolute paths | exact-one stage followed by TASK-036 import and separate trusted BVP receipt/correlation/canonical/Profile read-back; no second publish; optional terminal status must be read-only and broker-bound; strict receipt fields and opaque public output; canonical SKILL correction/release/install/read-back before PL-A rebind | `DELIVERY_RECREATION_AND_AUTHORITY_OVERCLAIM.N.C. / EFFECT0` |
+| D2.5 / SKILL learning-export privacy | redaction is driven mainly by sensitive key-name substrings; free-form reason/style/context/tags/IDs and benign-key values are not closed by value grammar or privacy detectors, while export fixes `safe_export:true` | closed per-contract privacy projection; controlled reason codes and typed allowlists; bounded token/string/depth/item/document grammar; path/email/account/secret/transcript detectors; independent post-build validator with redacted report only; body-free public errors; canonical release/install/read-back and PL-A hash rebind | `SELF_ASSERTED_PRIVACY.N.C. / EFFECT0` |
+| D2.5 / SKILL strict JSON and Product I/O | shared reader uses permissive JSON parsing and separate path reopen; output accepts caller path, creates parents and overwrites without containment/identity proof; paths/OS detail may leak | strict bounded UTF-8 JSON rejecting duplicate keys, non-finite numbers, BOM/trailing/control data; parsed tree+canonical bytes+physical identity in one pinned snapshot matching projection digest; Product caller supplies opaque plan/record only; private handle/pipe or safe stdout output and no arbitrary mkdir/overwrite; stable body-free errors | `AMBIGUOUS_JSON_AND_RAW_PATH_IO.N.C. / EFFECT0` |
 | D2.5 / TASK-058 File Bridge Production safety | released File Bridge remains canonical historical Evidence; current immutable publication, security-relevant reads, mutable import/Profile journals, ordered Profile pointer/current/marker publication and pending/temp cleanup do not bind opened physical identity against races | separate TASK-058-owner corrective Unit with exact paths/symbols and amendment authority, focused fault/Windows regression, canonical main/release/install exact read-back and downstream baseline rebind | `PRODUCTION_LINKAGE_N.C. / EFFECT0` |
-| D2.5 / TASK-058/TASK-060 Profile publish authority | public `PromotedPreferenceSourceRead` and `ProfileSourceBinding` token/self-hash objects can be caller-constructed and can reach the public prebuilt Profile publisher without a pinned actual promotion-source reread | explicit cross-owner corrective authority; trusted same-open-snapshot encrypted source read; private single-use late-bound Production publish capability; File Bridge ordered publication/readback correction and focused forgery/stale-source tests | `AUTHORITY_LAUNDERING_N.C. / EFFECT0` |
+| D2.5 / TASK-058/TASK-060 Profile publish authority | public `PromotedPreferenceSourceRead` and `ProfileSourceBinding` token/self-hash objects can be caller-constructed and can reach the public prebuilt Profile publisher without a pinned actual promotion-source reread; `PromotedPreferenceSource` also accepts caller-provided cipher and coordinates, so synthetic/custom decryptors can launder a forged history unless Production composition fixes the backend | explicit cross-owner corrective authority; trusted same-open-snapshot encrypted source read; internally fixed Windows DPAPI backend and Product registry/manifest coordinates bound to selected-install owner/current-user attestation; private single-use late-bound Production publish capability; File Bridge ordered publication/readback correction and focused forgery/stale-source/backend tests | `AUTHORITY_AND_CIPHER_LAUNDERING.N.C. / EFFECT0` |
 | D2.5 / TASK-067 | no canonical task allocation, authority or completion receipt; preserved uncommitted diff is COMMIT STOP | canonical allocation, explicit source authority, DEV-4 implementation/review and completion receipt | `N.C. / EFFECT0` |
 | D2.5 / TASK-036 | packaged single-record Product-operation entrypoint completion receipt absent | TASK-061 operation plan, TASK-063 corrected installed read-back, TASK-067 cross-owner amendment/completion, exact Allowed Files/overlap/lock and installed-payload implementation plus real read-back verification | `PREREQUISITE_MISSING / EFFECT0` |
 | D3 / TASK-065 | task-local Option B design candidate exists | D0-D2.5 current receipts, accepted design, implementation Gate | `SOURCE_START0` |
@@ -69,11 +73,14 @@ for later PL-A mapping:
 - fixed advisory-only, no automatic promotion, no Timeline/Resolve/external
   effect flags.
 
-PL-A may later bind this exact sealed/pinned type and hashes only after D1
-completion. It must reject mutable/subclass/mapping substitutes, zero/multiple
-active envelopes, stale file identity/revision/history/payload, Owner-scope
-drift or any non-advisory authority. Reading current source now does not admit a
-Profile or satisfy D1.
+`PromotedPreferenceSourceRead` and its hashes are public audit Evidence only;
+their exact type, token or self-hash never creates authority. After D1
+completion, PL-A may bind only the durable pinned source-read completion receipt
+from the trusted Product operation plus that operation's private currentness.
+It rejects mutable/subclass/mapping substitutes, zero/multiple active envelopes,
+stale file identity/revision/history/payload, Owner-scope drift or any
+non-advisory authority. Reading current source now does not admit a Profile or
+satisfy D1.
 
 ## 3. Read-only CA-B/CA-C field map candidate
 
@@ -94,11 +101,13 @@ Current TASK-061 candidate types expose the following potential PL-A inputs:
   `history_sha256`, `config_readback_sha256` and `transaction_sha256`, with
   repository default false and external SKILL config unchanged.
 
-Later PL-A must require all fields from the exact factory-minted current types
-and separately bind the Option B runtime-config projection receipt. It must not
-construct private seals, treat the disabled history candidate as activation,
-or accept a transaction without the future real-installed E2E contract and
-Human authority completion.
+These public readiness/Human/E2E/transaction types, factories and self-hashes
+are audit projections only, including factory-produced exact objects. Later
+PL-A/CA-C effect authority requires a private one-use trusted Product-operation
+capability plus durable pinned completion read-back and separately binds the
+Option B runtime-config projection receipt. It must not treat the disabled
+history candidate as activation or accept a transaction without the future
+real-installed E2E and Human authority completions.
 
 ## 4. D2.5 explicit PL-C/CA-C prerequisite
 
@@ -124,10 +133,14 @@ Each heartbeat or future implementation preflight evaluates these independently:
 | Receipt | Identity/read-back requirement | Current |
 | --- | --- | --- |
 | D0 completion | canonical TASK-063 physical-race correction plus real provision/repair/upgrade installed read-back | missing |
-| D1 completion | independent DEV-4 PP-A/B/C acceptance plus exact PP-C read-back | missing |
-| D1 Profile authority | trusted pinned source plus private one-use Production publish completion | missing/N.C. |
+| D1 completion | independent DEV-4 PP-A/B/C acceptance including trusted Human promotion/rollback, secure PP-B store, internally fixed Windows DPAPI source and exact PP-C read-back | missing/N.C. |
+| D1 Profile authority | trusted pinned native source plus private one-use Production publish completion and ordered exact read-back | missing/N.C. |
 | D2 completion | operation-plan/real-E2E/Human activation completion | missing |
 | D2.5 SKILL safety | canonical SKILL correction/release plus installed exact sync and PL-A hash rebind | missing/N.C. |
+| D2.5 SKILL operation authority | config v2 or trusted broker exact-one command redemption plus immutable operation artifact/read-back | missing/N.C. |
+| D2.5 SKILL publish confirmation | exact-one stage, TASK-036 import and separate pinned receipt/correlation/canonical/Profile completion | missing/N.C. |
+| D2.5 SKILL privacy | independent closed privacy-projection validator completion receipt; fixed `safe_export:true` is ineligible | missing/N.C. |
+| D2.5 SKILL strict I/O | strict pinned JSON snapshot/digest equality plus closed Product path/output boundary | missing/N.C. |
 | D2.5 TASK-058 File Bridge | canonical corrective completion/release/install read-back plus downstream baseline rebind | missing/N.C. |
 | D2.5 TASK-067 | canonical allocation, implementation and focused completion | missing/N.C. |
 | D2.5 TASK-036 | packaged entrypoint implementation and focused completion | missing |

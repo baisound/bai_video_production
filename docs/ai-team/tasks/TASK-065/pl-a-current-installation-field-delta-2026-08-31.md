@@ -103,7 +103,7 @@ snapshot:
 | cardinality | trusted set identity, zero/one/multiple count and selected member | root scan and implicit winner are prohibited |
 | connector | TASK-061 config/history revision, instance and Product/lifecycle binding | config presence cannot establish authority |
 | reader | Product reader/build/backend, one-use capability and trusted time | caller paths/hashes/objects/booleans are ineligible |
-| effect | packaged `discover` 0, installer-readback writes 0, root scans 0, Project/Bridge/config/Profile delta 0 | current packaged command writes |
+| effect | `T63-INTERNAL-DISCOVERY-READONLY`; packaged `discover` 0, installer-readback writes 0, root scans 0, Project/Bridge/config/Profile delta 0; capability binds `DISCOVERY_READONLY=true / INSTALLER_READBACK_PUBLISH=false` | current packaged command writes; operation name/exit0 cannot imply effect0 |
 
 TASK-063 retains strict bounded JSON, nofollow, same-open, pre/post identity,
 nlink-one, no-reparse, DACL and rollback ownership. TASK-065 consumes its
@@ -137,7 +137,7 @@ effect authority.
 
 | ID | Fault | Required assertion |
 | --- | --- | --- |
-| `PLA-I01` | PL-A invokes packaged `discover` | call 0; installer-readback/inventory delta 0 |
+| `PLA-I01` | PL-A invokes packaged `discover`, or accepts its fixed readback write as a read-only result | `T63-PACKAGED-DISCOVER-EFFECT0 HIGH.FAIL`; call 0; installer-readback/inventory delta 0; use prior durable receipt plus fresh pinned internal snapshot only |
 | `PLA-I02` | preserved root lacks Product payload | `UNINSTALLED_DATA_PRESERVED`; no delete/repair |
 | `PLA-I03` | EXE/payload-tree mismatch | incomplete/generation mismatch; effect0 |
 | `PLA-I04` | descriptor installer hash differs from installed bytes | reject claimed digest as proof |
@@ -169,6 +169,13 @@ TASK-061-B owns config/history semantics. TASK-065 PL-A only consumes exact
 receipts and emits a blocked/candidate audit projection. It does not scan,
 discover effectfully, repair/register, mutate config/history, run the adapter,
 activate, or delete preserved data.
+
+The future TASK-063 read-only completion must compare the exact pinned
+descriptor+owner snapshot with a durable previously published installer
+receipt. It returns no file and no path-bearing stdout; missing, tampered or
+mixed-generation input returns receipt0 and preserves the complete Bridge
+inventory. The internal source candidate is not a PASS until its Product
+capability proves both read-only predicates independently.
 
 PL-A remains `START0 / EFFECT0` under
 `TASK-068 -> {TASK-069,TASK-063} -> TASK-060 -> TASK-061-A -> TASK-067 -> TASK-036 -> TASK-061-B -> TASK-065`

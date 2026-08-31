@@ -81,8 +81,13 @@ TASK-036 completion must bind all of the following in one durable body-free
   build and payload tree;
 - trusted start/end/expiry, atomic consume and exact zero-or-one designed
   effect across every launch/crash seam; and
-- installer/discover call count zero. Packaged `discover` is effectful and
-  cannot refresh or manufacture the registration read used by the operation.
+- installer/discover call count zero. `T63-PACKAGED-DISCOVER-EFFECT0` is a
+  current High FAIL because packaged `discover` publishes fixed installer
+  readback. It cannot refresh or manufacture the registration read used by the
+  operation. Any necessary preflight consumes only the future
+  `T63-INTERNAL-DISCOVERY-READONLY` completion with
+  `DISCOVERY_READONLY=true / INSTALLER_READBACK_PUBLISH=false`, exact pinned
+  descriptor+owner identity and prior durable installer receipt agreement.
 
 Because the EXE is `console=False`, stdout presence/absence and process exit
 zero are not runtime authority or receipt substitutes. Runtime PASS comes only

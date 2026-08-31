@@ -365,8 +365,15 @@ Public discovery/descriptor hashes are necessary audit coordinates, not
 current installed Product proof. PL-A also requires a private same-open
 descriptor/owner snapshot, verified Product EXE/payload, a trusted
 zero/one/multiple registration set, lifecycle continuity and matching
-TASK-061 config/history. Packaged `discover` is effectful and its PL-A call
-count is zero; root scanning and implicit winners are prohibited. Descriptor-
+TASK-061 config/history. `T63-INTERNAL-DISCOVERY-READONLY` is only a source
+candidate; `T63-PACKAGED-DISCOVER-EFFECT0` is a current High FAIL because the
+packaged command always publishes installer readback. Its PL-A call count is
+zero. PL-A may compare a durable previously published installer receipt only
+to a fresh pinned effect-zero descriptor+owner snapshot from the future trusted
+internal route. That route's private capability binds
+`DISCOVERY_READONLY=true / INSTALLER_READBACK_PUBLISH=false`; operation names
+or exit zero cannot imply those predicates. Root scanning and implicit winners
+are prohibited. Descriptor-
 absent owner-only or owner-plus-receipt state is orphan/ambiguous, not fresh or
 current, and may not authorize automatic instance reuse or path-only cleanup.
 Fresh rollback can durably leave precisely this `PARTIAL_OWNER_PRESERVED` state
@@ -517,7 +524,13 @@ regression, exact scope, canonical merge, and post-main read-back.
 
 The packaged installer CLI `discover` is effectful: it calls
 `write_installer_readback()` after logical discovery. PL-A/PL-D read-only
-admission must not invoke it. Current source also has no authoritative
+admission and TASK-036 preflight must not invoke it. The released effectful
+behavior remains valid installer functionality but is ineligible for read-only
+currentness proof. TASK-063 must provide a Product-internal trusted effect-zero
+reader over one pinned descriptor+owner snapshot, returning only in-memory/
+public-safe Evidence and no output file or path-bearing stdout. Missing,
+tampered or mixed generations return receipt0, preserve state and change no
+Bridge inventory. Current source also has no authoritative
 active-install registry or side-by-side selector, so TASK-065 must not scan
 roots or choose an implicit winner. Until a trusted installer/Product
 current-registration receipt and corrected noncreating TASK-063 reader are

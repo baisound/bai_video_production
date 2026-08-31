@@ -406,6 +406,21 @@ Automation can therefore self-confirm, race or overwrite the store unless a
 separate TASK-060 owner correction closes both Human authority and physical
 publication.
 
+Promotion/rollback `DUPLICATE` is also audit-only. Current source calls
+`_duplicate()` immediately after loading the store and returns the current
+history before `_check_cas()` and before candidate source/policy/confirmation
+currentness verification. The positive fixture intentionally resubmits
+`expected_revision=0` after revision 1 and accepts duplicate no-op; crash
+recovery relies on the same path. This safely acknowledges only that the exact
+historical event is already committed. It proves neither current store revision
+nor current source, policy, native DPAPI backend/user or physical file identity,
+and it cannot issue PP-C/Profile capability. Before any PP-C/Profile step, the
+trusted Product operation must freshly pinned-read those current coordinates.
+Exact duplicate with revoked/drifted source, policy drift, later promotion or
+rollback, same bytes on a new inode, backend/user drift or stale expected
+revision remains no-write audit Evidence but returns
+`DUPLICATE_CURRENTNESS_UNPROVEN / PROFILE_CAPABILITY0`.
+
 That correction issues a Product-owned random one-shot challenge bound to exact
 candidate/history/action/owner scope, expected revision/head, rollback target,
 expiry, install/Project/user/session and build identity. A trusted Human-visible
@@ -465,8 +480,11 @@ concurrent promote/rollback, lock link, store stat-open/post-read or pre/post
 replace swap, same bytes on another inode, fsync/readback failure, exception
 reuse, synthetic/custom/same-suite cipher, monkeypatched decrypt, caller
 coordinates, ciphertext inode substitution, DPAPI scope drift, phase backend
-switch and plaintext fixture at a Production path. Without exact Human, native
-DPAPI and current-store proof, promotion/Profile revision delta is zero and
+switch and plaintext fixture at a Production path. Duplicate-specific cases add
+revoked/drifted source, policy drift, advanced/rolled-back store, same bytes on
+a new inode and DPAPI backend/user drift. Duplicate may remain a no-write audit
+ack, but without a fresh exact Human/native-DPAPI/current-source/current-store
+read-back, promotion/Profile capability and revision delta are zero and
 unrelated overwrite/delete is zero.
 
 Both the encrypted outer promotion document and decrypted plaintext history

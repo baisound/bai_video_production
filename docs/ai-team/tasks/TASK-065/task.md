@@ -83,7 +83,12 @@ completion is SUPERSEDED.
    parsing from the same native operation snapshot, binding raw/canonical/
    ciphertext/decrypted hashes, physical identity, DPAPI backend/user/session
    and revision/head. Caller mappings or ambiguous JSON preserve state and
-   produce zero promotion/Profile effect.
+   produce zero promotion/Profile effect. Promotion/rollback `DUPLICATE` is
+   only a no-write acknowledgement of one already-committed historical event:
+   because current source returns it before CAS and source/policy currentness,
+   it creates no PP-C/Profile capability. A separate trusted pinned read of the
+   current store/source/policy/DPAPI backend/user and physical identities is
+   mandatory before Profile publication.
 3. `D2A/D2B`: TASK-061-A first corrects its public-v1/private-v2 readiness dependency and
    supplies CA-A/CA-B plus a sealed CA-C prepare/Human one-shot candidate with
    apply effect zero. Its public factory output is audit projection only and

@@ -17,7 +17,7 @@ write shared task/index/roadmap/current-state metadata.
 | Gate | Current read-only cell | Missing completion/currentness | Admission |
 | --- | --- | --- | --- |
 | D-068 / TASK-068 | `IMPLEMENTATION_IN_PROGRESS / P0_COMMIT_STOP`: a transition-state working diff introduces TempLease/native-handle publication, but path replace, path cleanup/rollback, mutable `SecureJsonRead` and pre-bound writer validation remain; completion receipt, commit, push and PR are all zero | close temp handle loss, non-atomic CAS, path unlink race, Windows ancestor share-delete, lock durability and mutable snapshot P0s; focused review/tests and durable completion receipt required by TASK-069, TASK-063 and TASK-065 PL-B | `TASK068_P0_OPEN / P0_COMMIT_STOP / PL_B_SOURCE_START0 / EFFECT0` |
-| D-069 / TASK-069 | negative/currentness matrix is prepared; source has not started and waits for TASK-068 completion | TASK-068 durable completion receipt, canonical start authority, exact Allowed Files, implementation/review and completion receipt required by TASK-061-A | `START0 / EFFECT0` |
+| D-069 / TASK-069 | negative/currentness matrix is prepared; source has not started and waits for TASK-068 completion. Current `origin/main=35cdf1a` logical tests are historical regression inputs, not Production readiness | after TASK-068, implement and bind FB-R same-open snapshot/ancestor/nlink1, FB-C journal inode CAS/recovery identity, FB-P owned-temp+noreplace+post pinned read-back, FB-X exact-inode cleanup, FB-PR ordered Profile physical identity, PRIV strict bounded closed projection before hash/effect, and READY durable executed `TASK058_BASELINE_READBACK`; canonical review/completion receipt required by TASK-061-A and TASK-065 | `START0 / TASK058_PRODUCTION_BASELINE.N.C. / EFFECT0` |
 | D0 / TASK-063 | `READ_ONLY_MATRIX_REFINEMENT`: reusable historical tests cover Unicode/custom roots, repair identity preservation, tamper/link/ancestor/concurrency/read-back/rollback cases, fixed-ProgramData literal zero and installer-selected lifecycle contracts. GF-D PR #469 has focused PASS; full and hosted-common share one failure parked as a cross-owner old-hash Gate. Montage mutation is zero and TASK-068 is not complete | independently park TASK-068 and GF-D #469; add I63-R01 descriptor+owner same-open snapshot/mixed-generation rejection, stat-open/read-post different-inode seams, strict nested JSON faults, I63-L01 secure initial/existing lock, temp/target swap seams, directory-fsync failure, foreign-replacement rollback preservation, multi-install/portable/upgrade/uninstall real read-backs and canonical completion receipt | `HISTORICAL_REGRESSION_INPUTS_ONLY / SOURCE_START0 / EFFECT0` |
 | D1 / TASK-060 | `START0`: waits for TASK-068 and TASK-063 receipts; older worktrees are clean/merged but are neither reused nor deleted | trusted Human challenge; secure PP-B store; fixed Windows DPAPI/Product coordinates; strict outer/decrypted JSON; private Profile publish/read-back correction and canonical completion receipt | `START0 / EFFECT0` |
 | D2A / TASK-061-A PREACTIVATION PREPARE | `START0`: waits for TASK-068, TASK-069, TASK-063, TASK-060 and SKILL-D2S-001; this phase closes only the `enabled:false` prepare contract | corrected CA-A/B authority, sealed CA-C candidate/challenge, strict durable snapshots and the PREACTIVATION PREPARE receipt with real-E2E/activation claims zero | `START0 / PREPARE_AUTHORITY.N.C. / EFFECT0` |
@@ -59,6 +59,30 @@ preservation read-backs.
 
 Therefore existing tests create no TASK-063 corrective completion receipt.
 TASK-068 and GF-D PR #469 remain independently parked.
+
+### TASK-069 completion receipt floor
+
+TASK-069 cannot promote the historical TASK-058 logical suite into Production
+readiness. Its durable completion receipt must bind all of these in one current
+Product-owned chain:
+
+1. `FB-R`: same-open File Bridge snapshot, pinned ancestors and `nlink=1`;
+2. `FB-C`: journal physical identity, inode CAS and exact recovery identity;
+3. `FB-P`: operation-owned temp, no-replace publication and post-publish pinned
+   read-back;
+4. `FB-X`: cleanup of only the exact operation-owned inode;
+5. `FB-PR`: ordered Profile publication/read-back with physical identity;
+6. `PRIV`: strict bounded closed privacy projection before canonical hash or
+   any pending/canonical/Profile effect; and
+7. `READY`: executed durable `TASK058_BASELINE_READBACK` binding canonical and
+   installed exact bytes, operation/config identity, public receipt, hidden
+   correlation, Profile read-back and expiry/currentness.
+
+Public readiness documents/self-hashes, caller `safe_export:true`, isolated
+fixtures, status strings and code presence remain audit Evidence with
+`authority_created:false`. Until TASK-068 completes, TASK-069 remains
+`SOURCE_START0`; until all seven bindings complete, TASK-065 PL-A and PL-C
+remain N.C./PASS0 with Project/Bridge/Profile/config/history effect zero.
 
 The canonical one-way dependency graph is:
 

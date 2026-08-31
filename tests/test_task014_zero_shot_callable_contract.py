@@ -35,17 +35,22 @@ from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
 from ai_video_production.task014_zero_shot_callable_contract import (
     PLAN_RECEIPT_SCHEMA_ID,
     SUBJECT_RECEIPT_SCHEMA_ID,
+    TRANSCRIPT_RECEIPT_SCHEMA_ID,
     CallableEnvelopeDecision,
     CanonicalNarrationPlanRevisionReceipt,
     PlanDerivationAuthorityKind,
     PlanDerivationDecision,
+    ReferenceTranscriptAuthorityKind,
+    ReferenceTranscriptDecision,
     SubjectBindingAuthorityKind,
     SubjectMatchDecision,
     ZeroShotReferenceSubjectBindingReceipt,
+    ZeroShotReferenceTranscriptBindingReceipt,
     compile_zero_shot_callable_envelope,
     parse_canonical_narration_plan_revision_receipt,
     parse_zero_shot_callable_envelope,
     parse_zero_shot_reference_subject_binding_receipt,
+    parse_zero_shot_reference_transcript_binding_receipt,
 )
 from ai_video_production.voice_profile_revision import (
     ArtifactAdmissionState,
@@ -87,6 +92,9 @@ def _ordered_chunk_manifest_sha256(plan: object) -> str:
 def assembled(
     *,
     route: LocalNarrationRouteMode = LocalNarrationRouteMode.ZERO_SHOT_LOCAL,
+    intended_usage: NarrationIntendedUsage = NarrationIntendedUsage.PREVIEW,
+    script_text: str = "一つ目の段落。\n二つ目の段落。",
+    max_chars_per_chunk: int = 1_000,
     preflight_id: str = "preflight.zero.1",
     consent_state: ConsentState = ConsentState.ACTIVE,
     profile_exact_model_id: str = "qwen3",
@@ -146,14 +154,14 @@ def assembled(
             h("capability probe"),
         ),
     )
-    script = NarrationScript("script.revision.1", "一つ目の段落。\n二つ目の段落。", "owner.subject")
+    script = NarrationScript("script.revision.1", script_text, "owner.subject")
     plan = NarrationPlanningService.compile(
         script,
         voice,
-        mode=NarrationGenerationMode.PREVIEW,
+        mode=NarrationGenerationMode.PREVIEW if intended_usage is NarrationIntendedUsage.PREVIEW else NarrationGenerationMode.FULL_RENDER,
         model_id="qwen3",
         language_code="ja-JP",
-        max_chars_per_chunk=100,
+        max_chars_per_chunk=max_chars_per_chunk,
     )
     engine: dict[str, object] = {
         "contract_state": "BOUND_VERIFIED",
@@ -207,7 +215,7 @@ def assembled(
         preflight_id=preflight_id,
         created_at="2026-08-20T00:00:00Z",
         route_mode=route,
-        intended_usage=NarrationIntendedUsage.PREVIEW,
+        intended_usage=intended_usage,
         script_text_binding={
             "text_owner": "TASK-006",
             "approved_text_revision_ref": script.script_id,
@@ -241,7 +249,7 @@ def assembled(
         },
         rights_evaluation_binding={
             "contract_state": "BOUND_VERIFIED",
-            "usage_class": "LOCAL_NARRATION_PREVIEW",
+            "usage_class": "LOCAL_NARRATION_PREVIEW" if intended_usage is NarrationIntendedUsage.PREVIEW else "LOCAL_NARRATION_FULL_RENDER",
             "state": "PASS",
             "evidence_ref": "rights.evidence.1",
             "evidence_sha256": h("current rights"),
@@ -256,7 +264,7 @@ def assembled(
         admission_id="admission.render.1",
         admission_revision=1,
         route_mode=route,
-        intended_usage=NarrationIntendedUsage.PREVIEW,
+        intended_usage=intended_usage,
         script_text_revision_sha256=script.script_sha256,
         voice_profile_revision_sha256=profile.voice_profile_revision_sha256,
         preflight_sha256=preflight.preflight_sha256,
@@ -288,14 +296,14 @@ def assembled(
             "admission.render.1",
             1,
             route,
-            NarrationIntendedUsage.PREVIEW,
+            intended_usage,
             script.script_sha256,
             profile.voice_profile_revision_sha256,
             preflight.preflight_sha256,
             resource.resource_gate_sha256,
             h("job revision"),
             destination_policy_sha256,
-            RenderAuthorizationScope.PREVIEW_RENDER,
+            RenderAuthorizationScope.PREVIEW_RENDER if intended_usage is NarrationIntendedUsage.PREVIEW else RenderAuthorizationScope.FULL_RENDER,
             EVALUATED_AT,
             authorization_expires_at,
             True,
@@ -311,7 +319,7 @@ def assembled(
         parent_revision_sha256=None,
         created_at=ADMISSION_AT,
         route_mode=route,
-        intended_usage=NarrationIntendedUsage.PREVIEW,
+        intended_usage=intended_usage,
         script_text_revision_id=script.script_id,
         script_text_revision_sha256=script.script_sha256,
         voice_profile_revision_id=profile.voice_profile_id,
@@ -321,7 +329,7 @@ def assembled(
             preflight.preflight_id,
             preflight.preflight_sha256,
             route,
-            NarrationIntendedUsage.PREVIEW,
+            intended_usage,
             script.script_sha256,
             profile.voice_profile_revision_sha256,
             preflight.decision,
@@ -423,6 +431,7 @@ def plan_receipt(parts: dict[str, object], **overrides: object) -> CanonicalNarr
         "approved_text_revision_ref": preflight.script_text_binding["approved_text_revision_ref"],
         "approved_text_revision_sha256": preflight.script_text_binding["approved_text_revision_sha256"],
         "approved_script_body_sha256": plan.script_sha256,
+        "approved_text_code_point_count": len(parts["script"].text),
         "source_text_binding_sha256": preflight.script_text_binding["source_text_binding_sha256"],
         "voice_profile_id": profile.voice_profile_id,
         "voice_profile_revision_sha256": profile.voice_profile_revision_sha256,
@@ -463,6 +472,54 @@ def plan_receipt(parts: dict[str, object], **overrides: object) -> CanonicalNarr
     )
 
 
+def transcript_receipt(
+    parts: dict[str, object], **overrides: object
+) -> ZeroShotReferenceTranscriptBindingReceipt:
+    profile = parts["profile"]
+    preflight = parts["preflight"]
+    zero = preflight.zero_shot_reference_binding
+    assert zero is not None
+    body: dict[str, object] = {
+        "schema": TRANSCRIPT_RECEIPT_SCHEMA_ID,
+        "record_type": "ZeroShotReferenceTranscriptBindingReceipt",
+        "task_owner": "TASK-014",
+        "project_id": preflight.project_id,
+        "voice_profile_id": profile.voice_profile_id,
+        "voice_profile_revision_sha256": profile.voice_profile_revision_sha256,
+        "reference_asset_id": zero["asset_id"],
+        "reference_asset_checksum_sha256": zero["asset_checksum_sha256"],
+        "asset_revision_binding_ref": zero["asset_revision_binding_ref"],
+        "asset_revision_binding_sha256": zero["asset_revision_binding_sha256"],
+        "reference_profile_ref": zero["reference_profile_ref"],
+        "reference_profile_sha256": zero["reference_profile_sha256"],
+        "transcript_revision_ref": "reference.transcript.revision.1",
+        "transcript_revision_sha256": h("reference transcript revision"),
+        "transcript_body_sha256": h("exact reference transcript body"),
+        "transcript_language_code": parts["plan"].language_code,
+        "consent_current_evaluation_sha256": zero["consent_current_evaluation_sha256"],
+        "rights_current_evaluation_sha256": zero["rights_current_evaluation_sha256"],
+        "authority_kind": ReferenceTranscriptAuthorityKind.CANONICAL_REFERENCE_TRANSCRIPT_STORE.value,
+        "transcript_decision": ReferenceTranscriptDecision.VERIFIED_EXACT_TRANSCRIPT.value,
+        "transcript_evidence_ref": "reference.transcript.evidence.1",
+        "transcript_evidence_sha256": h("reference transcript evidence"),
+        "evaluated_at": EVALUATED_AT,
+        "expires_at": EXPIRES_AT,
+        "usage_scope": "ZERO_SHOT_OWNER_NARRATION",
+        "transcript_body_persisted": False,
+        "audio_body_persisted": False,
+        "private_handle_persisted": False,
+        "host_path_persisted": False,
+    }
+    body.update(overrides)
+    content_sha = sha256_bytes(canonical_json_bytes(body))
+    values = {key: value for key, value in body.items() if key not in {"schema", "record_type", "task_owner"}}
+    return ZeroShotReferenceTranscriptBindingReceipt(
+        receipt_id="zero-shot-transcript-receipt-" + content_sha.removeprefix("sha256:"),
+        receipt_sha256=content_sha,
+        **values,
+    )
+
+
 def compile_ready(parts: dict[str, object], **overrides: object):
     if "subject_binding_receipt" in overrides:
         subject = overrides.pop("subject_binding_receipt")
@@ -474,6 +531,11 @@ def compile_ready(parts: dict[str, object], **overrides: object):
         if "plan_derivation_receipt" in overrides
         else plan_receipt(parts)
     )
+    transcript = (
+        overrides.pop("reference_transcript_receipt")
+        if "reference_transcript_receipt" in overrides
+        else transcript_receipt(parts) if parts["preflight"].zero_shot_reference_binding is not None else None
+    )
     values = {
         "admission": parts["admission"],
         "preflight": parts["preflight"],
@@ -481,6 +543,7 @@ def compile_ready(parts: dict[str, object], **overrides: object):
         "plan": parts["plan"],
         "subject_binding_receipt": subject,
         "plan_derivation_receipt": derivation,
+        "reference_transcript_receipt": transcript,
         "compiled_at": COMPILED_AT,
     }
     values.update(overrides)
@@ -494,6 +557,7 @@ def test_consistent_zero_shot_callable_envelope_is_body_free_and_deterministic()
     assert first.decision is CallableEnvelopeDecision.UNKNOWN
     assert first.reason_codes == (
         "CANONICAL_AUTHORITY_NOT_CONFIRMED",
+        "CANONICAL_TRANSCRIPT_AUTHORITY_NOT_CONFIRMED",
         "TRUSTED_EVALUATION_TIME_NOT_CONFIRMED",
     )
     assert first.to_private_dict() == second.to_private_dict()
@@ -503,6 +567,29 @@ def test_consistent_zero_shot_callable_envelope_is_body_free_and_deterministic()
     assert private["model_artifact_sha256"] == parts["preflight"].engine_admission_binding["model_artifact_sha256"]
     assert private["runtime_sha256"] == parts["preflight"].engine_admission_binding["runtime_sha256"]
     assert private["code_revision_sha256"] == parts["preflight"].engine_admission_binding["code_revision_sha256"]
+    assert private["preview_text_code_point_count"] == len(parts["script"].text)
+    assert private["model_loader_operation"] == "Qwen3TTSModel.from_pretrained"
+    assert private["loader_model_root_argument"] == "POSITIONAL_0_EXACT_LOCAL_MODEL_ROOT"
+    assert private["loader_attention_argument"] == "attn_implementation"
+    assert private["generation_operation"] == "generate_voice_clone"
+    assert private["generation_text_argument"] == "text"
+    assert private["generation_language_argument"] == "language"
+    assert private["generation_reference_audio_argument"] == "ref_audio"
+    assert private["generation_reference_text_argument"] == "ref_text"
+    assert private["reference_audio_reader_operation"] == "soundfile.read"
+    assert private["audio_reader_dtype_argument"] == "dtype"
+    assert private["audio_reader_always_2d_argument"] == "always_2d"
+    assert private["local_files_only"] is True
+    assert private["reference_audio_transport"] == "IN_MEMORY_WAVEFORM_SAMPLE_RATE_TUPLE"
+    assert private["automatic_retry_allowed"] is False
+    assert private["timeout_seconds"] == 180
+    assert private["max_output_duration_seconds"] == 60
+    assert private["max_output_bytes"] == 104_857_600
+    assert private["runner_visibility"] == "HIDDEN"
+    assert private["timeout_termination_scope"] == "EXACT_CHILD_ONLY"
+    assert private["dispatch_ambiguity_decision"] == "UNKNOWN"
+    assert private["ambiguous_dispatch_retry_allowed"] is False
+    assert private["ambiguous_dispatch_replay_allowed"] is False
     for flag in (
         "script_body_persisted",
         "audio_body_persisted",
@@ -515,6 +602,14 @@ def test_consistent_zero_shot_callable_envelope_is_body_free_and_deterministic()
         "gpu_reserved",
         "audio_rendered",
         "asset_published",
+        "transcript_body_persisted",
+        "reference_audio_persisted",
+        "runtime_object_persisted",
+        "generation_started",
+        "retry_started",
+        "waveform_observed",
+        "result_adopted",
+        "qa_started",
     ):
         assert private[flag] is False
     encoded = json.dumps(private, ensure_ascii=False, sort_keys=True)
@@ -533,17 +628,20 @@ def test_self_minted_receipts_and_envelope_cannot_claim_dispatch_authority() -> 
         parse_zero_shot_callable_envelope(document)
 
 
-def test_h1_h2_and_envelope_round_trip_are_typed_and_tamper_evident() -> None:
+def test_h1_h2_h3_and_envelope_round_trip_are_typed_and_tamper_evident() -> None:
     parts = assembled()
     h1 = subject_receipt(parts)
     h2 = plan_receipt(parts)
-    envelope = compile_ready(parts, subject_binding_receipt=h1, plan_derivation_receipt=h2)
+    h3 = transcript_receipt(parts)
+    envelope = compile_ready(parts, subject_binding_receipt=h1, plan_derivation_receipt=h2, reference_transcript_receipt=h3)
     assert parse_zero_shot_reference_subject_binding_receipt(h1.to_private_dict()) == h1
     assert parse_canonical_narration_plan_revision_receipt(h2.to_private_dict()) == h2
+    assert parse_zero_shot_reference_transcript_binding_receipt(h3.to_private_dict()) == h3
     assert parse_zero_shot_callable_envelope(envelope.to_private_dict()) == envelope
     for value, parser, field in (
         (h1.to_private_dict(), parse_zero_shot_reference_subject_binding_receipt, "reference_profile_sha256"),
         (h2.to_private_dict(), parse_canonical_narration_plan_revision_receipt, "plan_sha256"),
+        (h3.to_private_dict(), parse_zero_shot_reference_transcript_binding_receipt, "transcript_body_sha256"),
         (envelope.to_private_dict(), parse_zero_shot_callable_envelope, "engine_revision_sha256"),
     ):
         value[field] = h("tampered")
@@ -556,11 +654,17 @@ def test_h1_h2_and_envelope_round_trip_are_typed_and_tamper_evident() -> None:
     [
         ("subject", "SUBJECT_BINDING_NOT_PROVIDED"),
         ("plan", "PLAN_DERIVATION_NOT_PROVIDED"),
+        ("transcript", "REFERENCE_TRANSCRIPT_NOT_PROVIDED"),
     ],
 )
 def test_missing_typed_receipt_is_unknown(receipt_name: str, expected_reason: str) -> None:
     parts = assembled()
-    overrides = {"subject_binding_receipt" if receipt_name == "subject" else "plan_derivation_receipt": None}
+    field = {
+        "subject": "subject_binding_receipt",
+        "plan": "plan_derivation_receipt",
+        "transcript": "reference_transcript_receipt",
+    }[receipt_name]
+    overrides = {field: None}
     result = compile_ready(parts, **overrides)
     assert result.decision is CallableEnvelopeDecision.UNKNOWN
     assert result.reason_codes == (expected_reason,)
@@ -571,14 +675,17 @@ def test_missing_typed_receipt_is_unknown(receipt_name: str, expected_reason: st
     [
         ("subject", "SUBJECT_BINDING_UNKNOWN"),
         ("plan", "PLAN_DERIVATION_UNKNOWN"),
+        ("transcript", "REFERENCE_TRANSCRIPT_UNKNOWN"),
     ],
 )
 def test_unknown_typed_receipt_is_fail_closed(receipt_name: str, expected_reason: str) -> None:
     parts = assembled()
     if receipt_name == "subject":
         overrides = {"subject_binding_receipt": subject_receipt(parts, subject_match_decision="UNKNOWN")}
-    else:
+    elif receipt_name == "plan":
         overrides = {"plan_derivation_receipt": plan_receipt(parts, derivation_decision="UNKNOWN")}
+    else:
+        overrides = {"reference_transcript_receipt": transcript_receipt(parts, transcript_decision="UNKNOWN")}
     result = compile_ready(parts, **overrides)
     assert result.decision is CallableEnvelopeDecision.UNKNOWN
     assert result.reason_codes == (expected_reason,)
@@ -589,14 +696,17 @@ def test_unknown_typed_receipt_is_fail_closed(receipt_name: str, expected_reason
     [
         ("subject", "SUBJECT_BINDING_MISMATCH"),
         ("plan", "PLAN_DERIVATION_MISMATCH"),
+        ("transcript", "REFERENCE_TRANSCRIPT_MISMATCH"),
     ],
 )
 def test_mismatched_typed_receipt_is_blocked(receipt_name: str, expected_reason: str) -> None:
     parts = assembled()
     if receipt_name == "subject":
         overrides = {"subject_binding_receipt": subject_receipt(parts, subject_match_decision="MISMATCH")}
-    else:
+    elif receipt_name == "plan":
         overrides = {"plan_derivation_receipt": plan_receipt(parts, derivation_decision="MISMATCH")}
+    else:
+        overrides = {"reference_transcript_receipt": transcript_receipt(parts, transcript_decision="MISMATCH")}
     result = compile_ready(parts, **overrides)
     assert result.decision is CallableEnvelopeDecision.BLOCKED
     assert result.reason_codes == (expected_reason,)
@@ -607,14 +717,17 @@ def test_mismatched_typed_receipt_is_blocked(receipt_name: str, expected_reason:
     [
         ("subject", "SUBJECT_BINDING_EXPIRED"),
         ("plan", "PLAN_DERIVATION_EXPIRED"),
+        ("transcript", "REFERENCE_TRANSCRIPT_EXPIRED"),
     ],
 )
 def test_expired_typed_receipt_is_blocked(receipt_name: str, expected_reason: str) -> None:
     parts = assembled()
     if receipt_name == "subject":
         overrides = {"subject_binding_receipt": subject_receipt(parts, expires_at="2026-08-20T00:01:00Z")}
-    else:
+    elif receipt_name == "plan":
         overrides = {"plan_derivation_receipt": plan_receipt(parts, expires_at="2026-08-20T00:01:00Z")}
+    else:
+        overrides = {"reference_transcript_receipt": transcript_receipt(parts, expires_at="2026-08-20T00:01:00Z")}
     result = compile_ready(parts, **overrides)
     assert result.decision is CallableEnvelopeDecision.BLOCKED
     assert result.reason_codes == (expected_reason,)
@@ -639,6 +752,7 @@ def test_callable_time_order_and_exact_expiry_are_fail_closed() -> None:
     assert exact_expiry.decision is CallableEnvelopeDecision.BLOCKED
     assert "SUBJECT_BINDING_EXPIRED" in exact_expiry.reason_codes
     assert "PLAN_DERIVATION_EXPIRED" in exact_expiry.reason_codes
+    assert "REFERENCE_TRANSCRIPT_EXPIRED" in exact_expiry.reason_codes
     assert "AUTHORIZATION_EXPIRED" in exact_expiry.reason_codes
 
 
@@ -677,6 +791,63 @@ def test_h1_subject_and_voice_profile_coordinates_must_match(field: str) -> None
     )
     assert result.decision is CallableEnvelopeDecision.BLOCKED
     assert "SUBJECT_BINDING_MISMATCH" in result.reason_codes
+
+
+@pytest.mark.parametrize(
+    "field,replacement",
+    [
+        ("voice_profile_id", "voice.profile.other"),
+        ("voice_profile_revision_sha256", h("other voice profile")),
+        ("reference_asset_id", "asset.reference.other"),
+        ("reference_asset_checksum_sha256", h("other reference asset")),
+        ("asset_revision_binding_sha256", h("other asset revision")),
+        ("reference_profile_sha256", h("other reference profile")),
+        ("transcript_language_code", "en-US"),
+        ("consent_current_evaluation_sha256", h("other consent evaluation")),
+        ("rights_current_evaluation_sha256", h("other rights evaluation")),
+    ],
+)
+def test_h3_reference_transcript_is_cross_bound_to_asset_profile_and_current_gates(
+    field: str, replacement: object
+) -> None:
+    parts = assembled()
+    result = compile_ready(
+        parts,
+        reference_transcript_receipt=transcript_receipt(parts, **{field: replacement}),
+    )
+    assert result.decision is CallableEnvelopeDecision.BLOCKED
+    assert result.reason_codes == ("REFERENCE_TRANSCRIPT_BINDING_MISMATCH",)
+
+
+def test_preview_text_code_point_limit_is_exact_and_body_free() -> None:
+    at_limit_parts = assembled(script_text="あ" * 200)
+    at_limit = compile_ready(at_limit_parts)
+    assert at_limit.decision is CallableEnvelopeDecision.UNKNOWN
+    assert "PREVIEW_TEXT_TOO_LONG" not in at_limit.reason_codes
+    assert at_limit.preview_text_code_point_count == 200
+    assert at_limit.preview_call_text_body_sha256 == at_limit_parts["script"].script_sha256
+
+    over_limit_parts = assembled(script_text="あ" * 201)
+    over_limit = compile_ready(over_limit_parts)
+    assert over_limit.decision is CallableEnvelopeDecision.BLOCKED
+    assert over_limit.reason_codes == ("PREVIEW_TEXT_TOO_LONG",)
+
+
+def test_preview_call_text_count_and_single_chunk_derivation_are_fail_closed() -> None:
+    parts = assembled()
+    false_count = compile_ready(
+        parts,
+        plan_derivation_receipt=plan_receipt(parts, approved_text_code_point_count=200),
+    )
+    assert false_count.decision is CallableEnvelopeDecision.BLOCKED
+    assert false_count.reason_codes == ("PLAN_DERIVATION_MISMATCH",)
+
+    multi_chunk = assembled(script_text="あ" * 201, max_chars_per_chunk=100)
+    multi_result = compile_ready(multi_chunk)
+    assert multi_result.decision is CallableEnvelopeDecision.BLOCKED
+    assert "PREVIEW_CALL_TEXT_DERIVATION_MISMATCH" in multi_result.reason_codes
+    assert "PREVIEW_TEXT_TOO_LONG" in multi_result.reason_codes
+    assert multi_result.preview_call_text_body_sha256 is None
 
 
 def test_actual_voice_profile_revision_must_match_admission() -> None:
@@ -724,6 +895,18 @@ def test_callable_requires_zero_shot_route() -> None:
     )
     assert result.decision is CallableEnvelopeDecision.BLOCKED
     assert "ZERO_SHOT_ROUTE_REQUIRED" in result.reason_codes
+
+
+def test_one_shot_callable_surface_requires_preview_usage() -> None:
+    parts = assembled(intended_usage=NarrationIntendedUsage.FULL_RENDER)
+    result = compile_ready(parts)
+    assert result.decision is CallableEnvelopeDecision.BLOCKED
+    assert result.reason_codes == ("PREVIEW_USAGE_REQUIRED",)
+    long_result = compile_ready(
+        parts,
+        plan_derivation_receipt=plan_receipt(parts, approved_text_code_point_count=201),
+    )
+    assert long_result.reason_codes == ("PREVIEW_USAGE_REQUIRED",)
 
 
 def test_callable_requires_exact_preflight_and_ready_sources() -> None:
@@ -812,6 +995,69 @@ def test_intended_output_constraints_cannot_be_substituted(field: str, replaceme
         parse_zero_shot_callable_envelope(document)
 
 
+@pytest.mark.parametrize(
+    "field,replacement",
+    [
+        ("model_loader_operation", "other_loader"),
+        ("loader_model_root_argument", "PATH_KEYWORD"),
+        ("loader_device_map_argument", "device"),
+        ("loader_dtype_argument", "precision"),
+        ("loader_attention_argument", "attention_implementation"),
+        ("loader_offline_argument", "offline"),
+        ("generation_operation", "other_generation"),
+        ("generation_text_argument", "prompt"),
+        ("generation_language_argument", "language_code"),
+        ("generation_reference_audio_argument", "audio"),
+        ("generation_reference_text_argument", "reference_text"),
+        ("generation_x_vector_argument", "x_vector_mode"),
+        ("generation_token_limit_argument", "token_limit"),
+        ("reference_audio_reader_operation", "other_reader"),
+        ("audio_reader_source_argument", "PATH_OR_URL"),
+        ("audio_reader_dtype_argument", "sample_dtype"),
+        ("audio_reader_always_2d_argument", "two_dimensional"),
+        ("device_map", "cpu"),
+        ("dtype", "torch.float32"),
+        ("attn_implementation", "flash_attention_2"),
+        ("local_files_only", False),
+        ("required_tts_model_type", "custom_voice"),
+        ("product_language_code", "en-US"),
+        ("engine_language", "English"),
+        ("required_supported_language", "english"),
+        ("reference_audio_transport", "PATH_OR_URL"),
+        ("reference_audio_dtype", "int16"),
+        ("reference_audio_always_2d", True),
+        ("reference_audio_required_ndim", 2),
+        ("x_vector_only_mode", True),
+        ("max_new_tokens", 4096),
+        ("expected_waveform_count", 2),
+        ("automatic_retry_allowed", True),
+        ("max_attempts", 2),
+        ("timeout_seconds", 181),
+        ("max_output_duration_seconds", 61),
+        ("max_output_bytes", 104_857_601),
+        ("checkpoint_sampling_overrides_allowed", True),
+        ("runner_platform", "LINUX"),
+        ("runner_visibility", "VISIBLE"),
+        ("timeout_termination_scope", "PROCESS_TREE"),
+        ("dispatch_ambiguity_decision", "RETRY"),
+        ("ambiguous_dispatch_retry_allowed", True),
+        ("ambiguous_dispatch_replay_allowed", True),
+    ],
+)
+def test_qwen_callable_surface_cannot_be_substituted(field: str, replacement: object) -> None:
+    document = compile_ready(assembled()).to_private_dict()
+    document[field] = replacement
+    with pytest.raises(ValueError, match="Qwen callable surface"):
+        parse_zero_shot_callable_envelope(document)
+
+
+def test_qwen_callable_surface_policy_is_process_immutable() -> None:
+    import ai_video_production.task014_zero_shot_callable_contract as module
+
+    with pytest.raises(TypeError):
+        module._CALL_SURFACE["timeout_seconds"] = 181
+
+
 def test_known_blocker_has_precedence_over_unknown_receipt() -> None:
     parts = assembled(profile_exact_model_id="other-model")
     result = compile_ready(parts, subject_binding_receipt=None)
@@ -836,6 +1082,34 @@ def test_h1_h2_reject_host_paths_and_private_identifiers(private_value: str) -> 
         subject_receipt(parts, capture_lineage_ref=private_value)
     with pytest.raises(ValueError, match="invalid|body-free"):
         plan_receipt(parts, plan_store_ref=private_value)
+    with pytest.raises(ValueError, match="invalid|body-free"):
+        transcript_receipt(parts, transcript_revision_ref=private_value)
+
+
+@pytest.mark.parametrize("field", ["transcript_revision_ref", "transcript_evidence_ref"])
+@pytest.mark.parametrize("body_like_value", ["hello", "owner-spoken-line", "opaque-handle-123"])
+def test_h3_rejects_body_like_or_opaque_values_in_logical_ref_fields(
+    field: str, body_like_value: str
+) -> None:
+    with pytest.raises(ValueError, match="canonical logical record ref"):
+        transcript_receipt(assembled(), **{field: body_like_value})
+
+
+@pytest.mark.parametrize("field", ["transcript_revision_ref", "transcript_evidence_ref"])
+@pytest.mark.parametrize(
+    "path_like_tail",
+    ["/private/voice.wav", "../voice.wav", r"C:\private\voice.wav", "file://voice.wav"],
+)
+def test_h3_rejects_path_like_payload_after_canonical_ref_prefix(
+    field: str, path_like_tail: str
+) -> None:
+    prefix = (
+        "reference.transcript.revision."
+        if field == "transcript_revision_ref"
+        else "reference.transcript.evidence."
+    )
+    with pytest.raises(ValueError, match="canonical logical record ref|invalid|body-free"):
+        transcript_receipt(assembled(), **{field: prefix + path_like_tail})
 
 
 def test_parsers_reject_unknown_private_body_fields_and_no_effect_tamper() -> None:
@@ -844,6 +1118,8 @@ def test_parsers_reject_unknown_private_body_fields_and_no_effect_tamper() -> No
     cases = [
         (subject_receipt(parts).to_private_dict(), parse_zero_shot_reference_subject_binding_receipt, "audio_bytes"),
         (plan_receipt(parts).to_private_dict(), parse_canonical_narration_plan_revision_receipt, "script_text"),
+        (transcript_receipt(parts).to_private_dict(), parse_zero_shot_reference_transcript_binding_receipt, "ref_text"),
+        (transcript_receipt(parts).to_private_dict(), parse_zero_shot_reference_transcript_binding_receipt, "audio_path"),
         (envelope.to_private_dict(), parse_zero_shot_callable_envelope, "result_ref"),
         (envelope.to_private_dict(), parse_zero_shot_callable_envelope, "replay"),
         (envelope.to_private_dict(), parse_zero_shot_callable_envelope, "qa_decision"),

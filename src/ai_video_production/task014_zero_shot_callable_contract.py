@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
+from types import MappingProxyType
 from typing import Any, Mapping
 import re
 
@@ -44,16 +45,65 @@ from .voice_profile_revision import (
 SCHEMA_ID = "bai.task014.zero-shot-callable-envelope.v1"
 SUBJECT_RECEIPT_SCHEMA_ID = "bai.task014.zero-shot-subject-binding-receipt.v1"
 PLAN_RECEIPT_SCHEMA_ID = "bai.task014.canonical-narration-plan-derivation-receipt.v1"
+TRANSCRIPT_RECEIPT_SCHEMA_ID = "bai.task014.zero-shot-reference-transcript-binding-receipt.v1"
 
 _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$")
 _REASON_RE = re.compile(r"[A-Z][A-Z0-9_]{1,95}$")
 _RFC3339_UTC_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$")
+_CANONICAL_REF_TAIL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _PRIVATE_TERMS = ("credential", "password", "secret", "token", "private-key")
 
 _REQUIRED_ARTIFACT_CLASS = "STAGED_NARRATION_PCM_WAV_48000_MONO"
 _REQUIRED_SAMPLE_RATE_HZ = 48_000
 _REQUIRED_CHANNELS = 1
 _REQUIRED_SAMPLE_FORMAT = "PCM_S24LE"
+_MAX_PREVIEW_TEXT_CODE_POINTS = 200
+_CALL_SURFACE = MappingProxyType({
+    "model_loader_operation": "Qwen3TTSModel.from_pretrained",
+    "loader_model_root_argument": "POSITIONAL_0_EXACT_LOCAL_MODEL_ROOT",
+    "loader_device_map_argument": "device_map",
+    "loader_dtype_argument": "dtype",
+    "loader_attention_argument": "attn_implementation",
+    "loader_offline_argument": "local_files_only",
+    "generation_operation": "generate_voice_clone",
+    "generation_text_argument": "text",
+    "generation_language_argument": "language",
+    "generation_reference_audio_argument": "ref_audio",
+    "generation_reference_text_argument": "ref_text",
+    "generation_x_vector_argument": "x_vector_only_mode",
+    "generation_token_limit_argument": "max_new_tokens",
+    "reference_audio_reader_operation": "soundfile.read",
+    "audio_reader_source_argument": "POSITIONAL_0_CANONICAL_REFERENCE_AUDIO_BODY_EPHEMERAL",
+    "audio_reader_dtype_argument": "dtype",
+    "audio_reader_always_2d_argument": "always_2d",
+    "device_map": "cuda:0",
+    "dtype": "torch.bfloat16",
+    "attn_implementation": "sdpa",
+    "local_files_only": True,
+    "required_tts_model_type": "base",
+    "product_language_code": "ja-JP",
+    "engine_language": "Japanese",
+    "required_supported_language": "japanese",
+    "reference_audio_transport": "IN_MEMORY_WAVEFORM_SAMPLE_RATE_TUPLE",
+    "reference_audio_dtype": "float32",
+    "reference_audio_always_2d": False,
+    "reference_audio_required_ndim": 1,
+    "x_vector_only_mode": False,
+    "max_new_tokens": 2048,
+    "expected_waveform_count": 1,
+    "automatic_retry_allowed": False,
+    "max_attempts": 1,
+    "timeout_seconds": 180,
+    "max_output_duration_seconds": 60,
+    "max_output_bytes": 104_857_600,
+    "checkpoint_sampling_overrides_allowed": False,
+    "runner_platform": "WINDOWS",
+    "runner_visibility": "HIDDEN",
+    "timeout_termination_scope": "EXACT_CHILD_ONLY",
+    "dispatch_ambiguity_decision": "UNKNOWN",
+    "ambiguous_dispatch_retry_allowed": False,
+    "ambiguous_dispatch_replay_allowed": False,
+})
 
 
 class SubjectBindingAuthorityKind(str, Enum):
@@ -77,6 +127,17 @@ class PlanDerivationDecision(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+class ReferenceTranscriptAuthorityKind(str, Enum):
+    CANONICAL_REFERENCE_TRANSCRIPT_STORE = "CANONICAL_REFERENCE_TRANSCRIPT_STORE"
+    OWNER_HUMAN_GATE = "OWNER_HUMAN_GATE"
+
+
+class ReferenceTranscriptDecision(str, Enum):
+    VERIFIED_EXACT_TRANSCRIPT = "VERIFIED_EXACT_TRANSCRIPT"
+    MISMATCH = "MISMATCH"
+    UNKNOWN = "UNKNOWN"
+
+
 class CallableEnvelopeDecision(str, Enum):
     BLOCKED = "BLOCKED"
     UNKNOWN = "UNKNOWN"
@@ -86,7 +147,10 @@ _ENVELOPE_BODY_FIELDS = (
     "compiled_at", "project_id", "admission_id", "admission_revision",
     "admission_sha256", "preflight_id", "preflight_sha256", "plan_id",
     "plan_sha256", "subject_binding_receipt_sha256",
-    "plan_derivation_receipt_sha256", "script_text_revision_sha256",
+    "plan_derivation_receipt_sha256", "reference_transcript_receipt_sha256",
+    "reference_transcript_revision_sha256", "reference_transcript_body_sha256",
+    "script_text_revision_sha256", "preview_call_text_body_sha256",
+    "preview_text_code_point_count",
     "voice_profile_id", "voice_profile_revision_sha256", "route_mode",
     "intended_usage", "registered_job_id", "registered_job_revision_sha256",
     "render_operation_identity_sha256", "authorization_id",
@@ -98,6 +162,22 @@ _ENVELOPE_BODY_FIELDS = (
     "reference_profile_ref", "reference_profile_sha256", "destination_id",
     "destination_policy_sha256", "required_artifact_class",
     "required_sample_rate_hz", "required_channels", "required_sample_format",
+    "model_loader_operation", "loader_model_root_argument", "loader_device_map_argument",
+    "loader_dtype_argument", "loader_attention_argument", "loader_offline_argument",
+    "generation_operation", "generation_text_argument", "generation_language_argument",
+    "generation_reference_audio_argument", "generation_reference_text_argument",
+    "generation_x_vector_argument", "generation_token_limit_argument", "device_map", "dtype",
+    "reference_audio_reader_operation", "audio_reader_source_argument",
+    "audio_reader_dtype_argument", "audio_reader_always_2d_argument",
+    "attn_implementation", "local_files_only", "required_tts_model_type",
+    "product_language_code", "engine_language", "required_supported_language",
+    "reference_audio_transport", "reference_audio_dtype", "reference_audio_always_2d",
+    "reference_audio_required_ndim", "x_vector_only_mode", "max_new_tokens",
+    "expected_waveform_count", "automatic_retry_allowed", "max_attempts",
+    "timeout_seconds", "max_output_duration_seconds", "max_output_bytes",
+    "checkpoint_sampling_overrides_allowed", "runner_platform", "runner_visibility",
+    "timeout_termination_scope", "dispatch_ambiguity_decision",
+    "ambiguous_dispatch_retry_allowed", "ambiguous_dispatch_replay_allowed",
     "decision", "reason_codes",
 )
 
@@ -106,6 +186,9 @@ _ENVELOPE_FALSE_FLAGS = (
     "private_voice_id_persisted", "credential_value_persisted",
     "host_path_persisted", "execution_started", "dispatch_started",
     "model_loaded", "gpu_reserved", "audio_rendered", "asset_published",
+    "transcript_body_persisted", "reference_audio_persisted",
+    "runtime_object_persisted", "generation_started", "retry_started",
+    "waveform_observed", "result_adopted", "qa_started",
 )
 
 
@@ -132,6 +215,7 @@ _BLOCKER_REASONS = frozenset(
         "PREFLIGHT_BINDING_MISMATCH",
         "PREFLIGHT_NOT_READY",
         "ZERO_SHOT_ROUTE_REQUIRED",
+        "PREVIEW_USAGE_REQUIRED",
         "VOICE_PROFILE_REVISION_MISMATCH",
         "VOICE_PROFILE_NOT_ADMITTED",
         "SUBJECT_BINDING_MISMATCH",
@@ -139,6 +223,11 @@ _BLOCKER_REASONS = frozenset(
         "ZERO_SHOT_REFERENCE_MISMATCH",
         "PLAN_DERIVATION_MISMATCH",
         "PLAN_DERIVATION_EXPIRED",
+        "REFERENCE_TRANSCRIPT_MISMATCH",
+        "REFERENCE_TRANSCRIPT_BINDING_MISMATCH",
+        "REFERENCE_TRANSCRIPT_EXPIRED",
+        "PREVIEW_TEXT_TOO_LONG",
+        "PREVIEW_CALL_TEXT_DERIVATION_MISMATCH",
         "PLAN_COORDINATE_MISMATCH",
         "PLAN_CHUNK_INTEGRITY_MISMATCH",
         "ENGINE_BINDING_MISMATCH",
@@ -156,6 +245,9 @@ _UNKNOWN_REASONS = frozenset(
         "SUBJECT_BINDING_UNKNOWN",
         "PLAN_DERIVATION_NOT_PROVIDED",
         "PLAN_DERIVATION_UNKNOWN",
+        "REFERENCE_TRANSCRIPT_NOT_PROVIDED",
+        "REFERENCE_TRANSCRIPT_UNKNOWN",
+        "CANONICAL_TRANSCRIPT_AUTHORITY_NOT_CONFIRMED",
         "CANONICAL_BINDING_UNRESOLVED",
         "CANONICAL_AUTHORITY_NOT_CONFIRMED",
         "TRUSTED_EVALUATION_TIME_NOT_CONFIRMED",
@@ -243,6 +335,14 @@ def _subject_ref_sha256(value: str) -> str:
 def _false(value: Any, name: str) -> None:
     if value is not False:
         raise ValueError(f"{name} must remain false")
+
+
+def _canonical_ref(value: Any, name: str, prefix: str) -> str:
+    value = _id(value, name)
+    tail = value.removeprefix(prefix)
+    if not value.startswith(prefix) or not _CANONICAL_REF_TAIL_RE.fullmatch(tail):
+        raise ValueError(f"{name} is not a canonical logical record ref")
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -375,6 +475,123 @@ class ZeroShotReferenceSubjectBindingReceipt:
 
 
 @dataclass(frozen=True, slots=True)
+class ZeroShotReferenceTranscriptBindingReceipt:
+    receipt_id: str
+    receipt_sha256: str
+    project_id: str
+    voice_profile_id: str
+    voice_profile_revision_sha256: str
+    reference_asset_id: str
+    reference_asset_checksum_sha256: str
+    asset_revision_binding_ref: str
+    asset_revision_binding_sha256: str
+    reference_profile_ref: str
+    reference_profile_sha256: str
+    transcript_revision_ref: str
+    transcript_revision_sha256: str
+    transcript_body_sha256: str
+    transcript_language_code: str
+    consent_current_evaluation_sha256: str
+    rights_current_evaluation_sha256: str
+    authority_kind: ReferenceTranscriptAuthorityKind
+    transcript_decision: ReferenceTranscriptDecision
+    transcript_evidence_ref: str
+    transcript_evidence_sha256: str
+    evaluated_at: str
+    expires_at: str
+    usage_scope: str
+    transcript_body_persisted: bool
+    audio_body_persisted: bool
+    private_handle_persisted: bool
+    host_path_persisted: bool
+
+    def __post_init__(self) -> None:
+        for name in (
+            "receipt_id", "project_id", "voice_profile_id", "reference_asset_id",
+            "asset_revision_binding_ref", "reference_profile_ref", "transcript_language_code",
+        ):
+            _id(getattr(self, name), name)
+        _canonical_ref(self.transcript_revision_ref, "transcript_revision_ref", "reference.transcript.revision.")
+        _canonical_ref(self.transcript_evidence_ref, "transcript_evidence_ref", "reference.transcript.evidence.")
+        for name in (
+            "receipt_sha256", "voice_profile_revision_sha256",
+            "reference_asset_checksum_sha256", "asset_revision_binding_sha256",
+            "reference_profile_sha256", "transcript_revision_sha256",
+            "transcript_body_sha256", "consent_current_evaluation_sha256",
+            "rights_current_evaluation_sha256", "transcript_evidence_sha256",
+        ):
+            _digest(getattr(self, name), name)
+        object.__setattr__(self, "authority_kind", _enum(ReferenceTranscriptAuthorityKind, self.authority_kind, "authority_kind"))
+        object.__setattr__(self, "transcript_decision", _enum(ReferenceTranscriptDecision, self.transcript_decision, "transcript_decision"))
+        evaluated = _timestamp(self.evaluated_at, "evaluated_at")
+        if _timestamp(self.expires_at, "expires_at") <= evaluated:
+            raise ValueError("transcript receipt must expire after evaluation")
+        if self.usage_scope != "ZERO_SHOT_OWNER_NARRATION":
+            raise ValueError("transcript receipt usage_scope is invalid")
+        for name in (
+            "transcript_body_persisted", "audio_body_persisted",
+            "private_handle_persisted", "host_path_persisted",
+        ):
+            _false(getattr(self, name), name)
+        expected_id, expected_sha = _content_address("zero-shot-transcript-receipt-", self._content_body())
+        if self.receipt_id != expected_id or self.receipt_sha256 != expected_sha:
+            raise ValueError("transcript receipt content address mismatch")
+
+    def _content_body(self) -> dict[str, Any]:
+        return {
+            "schema": TRANSCRIPT_RECEIPT_SCHEMA_ID,
+            "record_type": "ZeroShotReferenceTranscriptBindingReceipt",
+            "task_owner": "TASK-014",
+            "project_id": self.project_id,
+            "voice_profile_id": self.voice_profile_id,
+            "voice_profile_revision_sha256": self.voice_profile_revision_sha256,
+            "reference_asset_id": self.reference_asset_id,
+            "reference_asset_checksum_sha256": self.reference_asset_checksum_sha256,
+            "asset_revision_binding_ref": self.asset_revision_binding_ref,
+            "asset_revision_binding_sha256": self.asset_revision_binding_sha256,
+            "reference_profile_ref": self.reference_profile_ref,
+            "reference_profile_sha256": self.reference_profile_sha256,
+            "transcript_revision_ref": self.transcript_revision_ref,
+            "transcript_revision_sha256": self.transcript_revision_sha256,
+            "transcript_body_sha256": self.transcript_body_sha256,
+            "transcript_language_code": self.transcript_language_code,
+            "consent_current_evaluation_sha256": self.consent_current_evaluation_sha256,
+            "rights_current_evaluation_sha256": self.rights_current_evaluation_sha256,
+            "authority_kind": self.authority_kind.value,
+            "transcript_decision": self.transcript_decision.value,
+            "transcript_evidence_ref": self.transcript_evidence_ref,
+            "transcript_evidence_sha256": self.transcript_evidence_sha256,
+            "evaluated_at": self.evaluated_at,
+            "expires_at": self.expires_at,
+            "usage_scope": self.usage_scope,
+            "transcript_body_persisted": False,
+            "audio_body_persisted": False,
+            "private_handle_persisted": False,
+            "host_path_persisted": False,
+        }
+
+    def to_private_dict(self) -> dict[str, Any]:
+        return {**self._content_body(), "receipt_id": self.receipt_id, "receipt_sha256": self.receipt_sha256}
+
+    def to_public_dict(self) -> dict[str, Any]:
+        body = {
+            "schema": TRANSCRIPT_RECEIPT_SCHEMA_ID,
+            "record_type": "ZeroShotReferenceTranscriptBindingReceiptPublicProjection",
+            "task_owner": "TASK-014",
+            "authority_kind": self.authority_kind.value,
+            "transcript_decision": self.transcript_decision.value,
+            "usage_scope": self.usage_scope,
+            "private_binding_persisted": False,
+            "transcript_body_persisted": False,
+            "audio_body_persisted": False,
+            "private_handle_persisted": False,
+            "host_path_persisted": False,
+        }
+        body["public_projection_sha256"] = _hash(body)
+        return body
+
+
+@dataclass(frozen=True, slots=True)
 class CanonicalNarrationPlanRevisionReceipt:
     receipt_id: str
     receipt_sha256: str
@@ -386,6 +603,7 @@ class CanonicalNarrationPlanRevisionReceipt:
     approved_text_revision_ref: str
     approved_text_revision_sha256: str
     approved_script_body_sha256: str
+    approved_text_code_point_count: int
     source_text_binding_sha256: str
     voice_profile_id: str
     voice_profile_revision_sha256: str
@@ -447,6 +665,7 @@ class CanonicalNarrationPlanRevisionReceipt:
         ):
             _digest(getattr(self, name), name)
         _positive_int(self.plan_revision, "plan_revision")
+        _positive_int(self.approved_text_code_point_count, "approved_text_code_point_count")
         if self.plan_revision == 1 and self.parent_plan_revision_sha256 is not None:
             raise ValueError("first plan revision must not have a parent")
         if self.plan_revision > 1 and self.parent_plan_revision_sha256 is None:
@@ -490,6 +709,7 @@ class CanonicalNarrationPlanRevisionReceipt:
             "approved_text_revision_ref": self.approved_text_revision_ref,
             "approved_text_revision_sha256": self.approved_text_revision_sha256,
             "approved_script_body_sha256": self.approved_script_body_sha256,
+            "approved_text_code_point_count": self.approved_text_code_point_count,
             "source_text_binding_sha256": self.source_text_binding_sha256,
             "voice_profile_id": self.voice_profile_id,
             "voice_profile_revision_sha256": self.voice_profile_revision_sha256,
@@ -534,6 +754,7 @@ class CanonicalNarrationPlanRevisionReceipt:
             "route_mode": self.route_mode.value,
             "mode": self.mode.value,
             "chunk_count": self.chunk_count,
+            "approved_text_code_point_count": self.approved_text_code_point_count,
             "private_binding_persisted": False,
             "script_body_persisted": False,
             "chunk_body_persisted": False,
@@ -559,7 +780,12 @@ class ZeroShotCallableEnvelope:
     plan_sha256: str
     subject_binding_receipt_sha256: str | None
     plan_derivation_receipt_sha256: str | None
+    reference_transcript_receipt_sha256: str | None
+    reference_transcript_revision_sha256: str | None
+    reference_transcript_body_sha256: str | None
     script_text_revision_sha256: str
+    preview_call_text_body_sha256: str | None
+    preview_text_code_point_count: int | None
     voice_profile_id: str
     voice_profile_revision_sha256: str
     route_mode: LocalNarrationRouteMode
@@ -589,6 +815,50 @@ class ZeroShotCallableEnvelope:
     required_sample_rate_hz: int
     required_channels: int
     required_sample_format: str
+    model_loader_operation: str
+    loader_model_root_argument: str
+    loader_device_map_argument: str
+    loader_dtype_argument: str
+    loader_attention_argument: str
+    loader_offline_argument: str
+    generation_operation: str
+    generation_text_argument: str
+    generation_language_argument: str
+    generation_reference_audio_argument: str
+    generation_reference_text_argument: str
+    generation_x_vector_argument: str
+    generation_token_limit_argument: str
+    reference_audio_reader_operation: str
+    audio_reader_source_argument: str
+    audio_reader_dtype_argument: str
+    audio_reader_always_2d_argument: str
+    device_map: str
+    dtype: str
+    attn_implementation: str
+    local_files_only: bool
+    required_tts_model_type: str
+    product_language_code: str
+    engine_language: str
+    required_supported_language: str
+    reference_audio_transport: str
+    reference_audio_dtype: str
+    reference_audio_always_2d: bool
+    reference_audio_required_ndim: int
+    x_vector_only_mode: bool
+    max_new_tokens: int
+    expected_waveform_count: int
+    automatic_retry_allowed: bool
+    max_attempts: int
+    timeout_seconds: int
+    max_output_duration_seconds: int
+    max_output_bytes: int
+    checkpoint_sampling_overrides_allowed: bool
+    runner_platform: str
+    runner_visibility: str
+    timeout_termination_scope: str
+    dispatch_ambiguity_decision: str
+    ambiguous_dispatch_retry_allowed: bool
+    ambiguous_dispatch_replay_allowed: bool
     decision: CallableEnvelopeDecision
     reason_codes: tuple[str, ...]
 
@@ -620,6 +890,10 @@ class ZeroShotCallableEnvelope:
             "preflight_sha256",
             "subject_binding_receipt_sha256",
             "plan_derivation_receipt_sha256",
+            "reference_transcript_receipt_sha256",
+            "reference_transcript_revision_sha256",
+            "reference_transcript_body_sha256",
+            "preview_call_text_body_sha256",
             "registered_job_revision_sha256",
             "render_operation_identity_sha256",
             "authorization_sha256",
@@ -634,6 +908,8 @@ class ZeroShotCallableEnvelope:
         ):
             _nullable_digest(getattr(self, name), name)
         _positive_int(self.admission_revision, "admission_revision")
+        if self.preview_text_code_point_count is not None:
+            _positive_int(self.preview_text_code_point_count, "preview_text_code_point_count")
         if self.authorization_revision is not None:
             _positive_int(self.authorization_revision, "authorization_revision")
         object.__setattr__(self, "route_mode", _enum(LocalNarrationRouteMode, self.route_mode, "route_mode"))
@@ -647,6 +923,8 @@ class ZeroShotCallableEnvelope:
             or self.required_sample_format != _REQUIRED_SAMPLE_FORMAT
         ):
             raise ValueError("callable media constraints are invalid")
+        if any(getattr(self, name) != value for name, value in _CALL_SURFACE.items()):
+            raise ValueError("Qwen callable surface constraints are invalid")
         if (
             len(self.reason_codes) > 64
             or tuple(sorted(set(self.reason_codes))) != self.reason_codes
@@ -685,6 +963,7 @@ class ZeroShotCallableEnvelope:
             "required_sample_rate_hz": self.required_sample_rate_hz,
             "required_channels": self.required_channels,
             "required_sample_format": self.required_sample_format,
+            **_CALL_SURFACE,
             "private_binding_persisted": False,
             "script_body_persisted": False,
             "audio_body_persisted": False,
@@ -697,6 +976,14 @@ class ZeroShotCallableEnvelope:
             "gpu_reserved": False,
             "audio_rendered": False,
             "asset_published": False,
+            "transcript_body_persisted": False,
+            "reference_audio_persisted": False,
+            "runtime_object_persisted": False,
+            "generation_started": False,
+            "retry_started": False,
+            "waveform_observed": False,
+            "result_adopted": False,
+            "qa_started": False,
         }
         body["public_projection_sha256"] = _hash(body)
         return body
@@ -763,6 +1050,19 @@ def _plan_structure_reasons(plan: NarrationGenerationPlan) -> list[str]:
     return reasons
 
 
+def _preview_call_text_facts(
+    plan: NarrationGenerationPlan,
+) -> tuple[str | None, int | None, list[str]]:
+    if not plan.chunks:
+        return None, None, ["PREVIEW_CALL_TEXT_DERIVATION_MISMATCH"]
+    code_point_count = sum(len(chunk.text) for chunk in plan.chunks)
+    if len(plan.chunks) != 1:
+        return None, code_point_count, ["PREVIEW_CALL_TEXT_DERIVATION_MISMATCH"]
+    body_sha256 = sha256_bytes(plan.chunks[0].text.encode("utf-8"))
+    reasons = [] if body_sha256 == plan.script_sha256 else ["PREVIEW_CALL_TEXT_DERIVATION_MISMATCH"]
+    return body_sha256, code_point_count, reasons
+
+
 def _copy_optional_fields(source: Mapping[str, Any] | None, fields: tuple[str, ...]) -> dict[str, Any]:
     if source is None:
         return {field: None for field in fields}
@@ -777,6 +1077,7 @@ def compile_zero_shot_callable_envelope(
     plan: NarrationGenerationPlan,
     subject_binding_receipt: ZeroShotReferenceSubjectBindingReceipt | None,
     plan_derivation_receipt: CanonicalNarrationPlanRevisionReceipt | None,
+    reference_transcript_receipt: ZeroShotReferenceTranscriptBindingReceipt | None,
     compiled_at: str,
 ) -> ZeroShotCallableEnvelope:
     """Compile a no-effect zero-shot binding that cannot authorize dispatch."""
@@ -788,8 +1089,12 @@ def compile_zero_shot_callable_envelope(
         subject_binding_receipt = parse_zero_shot_reference_subject_binding_receipt(subject_binding_receipt.to_private_dict())
     if plan_derivation_receipt is not None:
         plan_derivation_receipt = parse_canonical_narration_plan_revision_receipt(plan_derivation_receipt.to_private_dict())
+    if reference_transcript_receipt is not None:
+        reference_transcript_receipt = parse_zero_shot_reference_transcript_binding_receipt(reference_transcript_receipt.to_private_dict())
     compiled_instant = _timestamp(compiled_at, "compiled_at")
     plan_sha256 = _plan_sha256(plan)
+    preview_call_text_body_sha256: str | None = None
+    preview_text_code_point_count: int | None = None
 
     blocked: list[str] = []
     unknown: list[str] = []
@@ -797,6 +1102,8 @@ def compile_zero_shot_callable_envelope(
         blocked.append("ADMISSION_NOT_READY")
     if admission.route_mode is not LocalNarrationRouteMode.ZERO_SHOT_LOCAL or preflight.route_mode is not LocalNarrationRouteMode.ZERO_SHOT_LOCAL:
         blocked.append("ZERO_SHOT_ROUTE_REQUIRED")
+    if admission.intended_usage is not NarrationIntendedUsage.PREVIEW or preflight.intended_usage is not NarrationIntendedUsage.PREVIEW:
+        blocked.append("PREVIEW_USAGE_REQUIRED")
     preflight_binding = admission.preflight_binding
     if (
         preflight.project_id != admission.project_id
@@ -877,6 +1184,13 @@ def compile_zero_shot_callable_envelope(
             blocked.append("SUBJECT_BINDING_EXPIRED")
 
     blocked.extend(_plan_structure_reasons(plan))
+    if admission.intended_usage is NarrationIntendedUsage.PREVIEW:
+        (
+            preview_call_text_body_sha256,
+            preview_text_code_point_count,
+            preview_call_text_reasons,
+        ) = _preview_call_text_facts(plan)
+        blocked.extend(preview_call_text_reasons)
     expected_mode = NarrationGenerationMode.PREVIEW if admission.intended_usage is NarrationIntendedUsage.PREVIEW else NarrationGenerationMode.FULL_RENDER
     if (
         plan.script_id != admission.script_text_revision_id
@@ -895,6 +1209,7 @@ def compile_zero_shot_callable_envelope(
         or engine.get("model_artifact_id") != profile_revision.license.model_artifact_id
         or engine.get("model_artifact_sha256") != profile_revision.license.checkpoint_sha256
         or engine.get("runtime_id") != profile_revision.license.runtime_id
+        or plan.language_code != _CALL_SURFACE["product_language_code"]
     ):
         blocked.append("ENGINE_BINDING_MISMATCH")
 
@@ -919,6 +1234,8 @@ def compile_zero_shot_callable_envelope(
             "ordered_chunk_manifest_sha256": _ordered_chunk_manifest_sha256(plan),
             "chunk_count": len(plan.chunks),
         }
+        if admission.intended_usage is NarrationIntendedUsage.PREVIEW:
+            expected_plan["approved_text_code_point_count"] = preview_text_code_point_count
         if any(getattr(plan_derivation_receipt, field) != value for field, value in expected_plan.items()):
             blocked.append("PLAN_DERIVATION_MISMATCH")
         if plan_derivation_receipt.derivation_decision is PlanDerivationDecision.UNKNOWN:
@@ -927,6 +1244,44 @@ def compile_zero_shot_callable_envelope(
             blocked.append("PLAN_DERIVATION_MISMATCH")
         if plan_derivation_receipt.expires_at is not None and compiled_instant >= _timestamp(plan_derivation_receipt.expires_at, "plan expires_at"):
             blocked.append("PLAN_DERIVATION_EXPIRED")
+
+    if reference_transcript_receipt is None:
+        unknown.append("REFERENCE_TRANSCRIPT_NOT_PROVIDED")
+    else:
+        expected_transcript = {
+            "project_id": admission.project_id,
+            "voice_profile_id": profile_revision.voice_profile_id,
+            "voice_profile_revision_sha256": profile_revision.voice_profile_revision_sha256,
+            "transcript_language_code": plan.language_code,
+            "consent_current_evaluation_sha256": preflight.voice_profile_revision_binding["current_consent_evaluation_sha256"],
+            "rights_current_evaluation_sha256": preflight.rights_evaluation_binding["evidence_sha256"],
+        }
+        if any(getattr(reference_transcript_receipt, field) != value for field, value in expected_transcript.items()):
+            blocked.append("REFERENCE_TRANSCRIPT_BINDING_MISMATCH")
+        if zero is not None:
+            expected_transcript_reference = {
+                "reference_asset_id": zero["asset_id"],
+                "reference_asset_checksum_sha256": zero["asset_checksum_sha256"],
+                "asset_revision_binding_ref": zero["asset_revision_binding_ref"],
+                "asset_revision_binding_sha256": zero["asset_revision_binding_sha256"],
+                "reference_profile_ref": zero["reference_profile_ref"],
+                "reference_profile_sha256": zero["reference_profile_sha256"],
+            }
+            if any(getattr(reference_transcript_receipt, field) != value for field, value in expected_transcript_reference.items()):
+                blocked.append("REFERENCE_TRANSCRIPT_BINDING_MISMATCH")
+        if reference_transcript_receipt.transcript_decision is ReferenceTranscriptDecision.UNKNOWN:
+            unknown.append("REFERENCE_TRANSCRIPT_UNKNOWN")
+        elif reference_transcript_receipt.transcript_decision is not ReferenceTranscriptDecision.VERIFIED_EXACT_TRANSCRIPT:
+            blocked.append("REFERENCE_TRANSCRIPT_MISMATCH")
+        if compiled_instant >= _timestamp(reference_transcript_receipt.expires_at, "transcript expires_at"):
+            blocked.append("REFERENCE_TRANSCRIPT_EXPIRED")
+
+    if (
+        admission.intended_usage is NarrationIntendedUsage.PREVIEW
+        and preview_text_code_point_count is not None
+        and preview_text_code_point_count > _MAX_PREVIEW_TEXT_CODE_POINTS
+    ):
+        blocked.append("PREVIEW_TEXT_TOO_LONG")
 
     operation_identity: str | None = None
     try:
@@ -969,6 +1324,7 @@ def compile_zero_shot_callable_envelope(
         authorization.issued_at,
         None if subject_binding_receipt is None else subject_binding_receipt.evaluated_at,
         None if plan_derivation_receipt is None else plan_derivation_receipt.evaluated_at,
+        None if reference_transcript_receipt is None else reference_transcript_receipt.evaluated_at,
     )
     if any(
         evidence_time is not None
@@ -989,6 +1345,7 @@ def compile_zero_shot_callable_envelope(
         unknown.extend(
             (
                 "CANONICAL_AUTHORITY_NOT_CONFIRMED",
+                "CANONICAL_TRANSCRIPT_AUTHORITY_NOT_CONFIRMED",
                 "TRUSTED_EVALUATION_TIME_NOT_CONFIRMED",
             )
         )
@@ -1035,7 +1392,12 @@ def compile_zero_shot_callable_envelope(
         plan_sha256=plan_sha256,
         subject_binding_receipt_sha256=None if subject_binding_receipt is None else subject_binding_receipt.receipt_sha256,
         plan_derivation_receipt_sha256=None if plan_derivation_receipt is None else plan_derivation_receipt.receipt_sha256,
+        reference_transcript_receipt_sha256=None if reference_transcript_receipt is None else reference_transcript_receipt.receipt_sha256,
+        reference_transcript_revision_sha256=None if reference_transcript_receipt is None else reference_transcript_receipt.transcript_revision_sha256,
+        reference_transcript_body_sha256=None if reference_transcript_receipt is None else reference_transcript_receipt.transcript_body_sha256,
         script_text_revision_sha256=admission.script_text_revision_sha256,
+        preview_call_text_body_sha256=preview_call_text_body_sha256,
+        preview_text_code_point_count=preview_text_code_point_count,
         voice_profile_id=profile_revision.voice_profile_id,
         voice_profile_revision_sha256=profile_revision.voice_profile_revision_sha256,
         route_mode=admission.route_mode,
@@ -1065,6 +1427,7 @@ def compile_zero_shot_callable_envelope(
         required_sample_rate_hz=_REQUIRED_SAMPLE_RATE_HZ,
         required_channels=_REQUIRED_CHANNELS,
         required_sample_format=_REQUIRED_SAMPLE_FORMAT,
+        **_CALL_SURFACE,
         decision=decision,
         reason_codes=reasons,
     )
@@ -1120,6 +1483,37 @@ def parse_zero_shot_reference_subject_binding_receipt(
     )
 
 
+def parse_zero_shot_reference_transcript_binding_receipt(
+    value: Mapping[str, Any],
+) -> ZeroShotReferenceTranscriptBindingReceipt:
+    body_fields = {
+        "schema", "record_type", "task_owner", "project_id", "voice_profile_id",
+        "voice_profile_revision_sha256", "reference_asset_id",
+        "reference_asset_checksum_sha256", "asset_revision_binding_ref",
+        "asset_revision_binding_sha256", "reference_profile_ref",
+        "reference_profile_sha256", "transcript_revision_ref",
+        "transcript_revision_sha256", "transcript_body_sha256",
+        "transcript_language_code", "consent_current_evaluation_sha256",
+        "rights_current_evaluation_sha256", "authority_kind", "transcript_decision",
+        "transcript_evidence_ref", "transcript_evidence_sha256", "evaluated_at",
+        "expires_at", "usage_scope", "transcript_body_persisted",
+        "audio_body_persisted", "private_handle_persisted", "host_path_persisted",
+    }
+    _expect_keys(value, body_fields | {"receipt_id", "receipt_sha256"}, "ZeroShotReferenceTranscriptBindingReceipt")
+    if (
+        value["schema"] != TRANSCRIPT_RECEIPT_SCHEMA_ID
+        or value["record_type"] != "ZeroShotReferenceTranscriptBindingReceipt"
+        or value["task_owner"] != "TASK-014"
+    ):
+        raise ValueError("transcript receipt identity is invalid")
+    kwargs = {key: value[key] for key in body_fields - {"schema", "record_type", "task_owner"}}
+    return ZeroShotReferenceTranscriptBindingReceipt(
+        receipt_id=value["receipt_id"],
+        receipt_sha256=value["receipt_sha256"],
+        **kwargs,
+    )
+
+
 def parse_canonical_narration_plan_revision_receipt(
     value: Mapping[str, Any],
 ) -> CanonicalNarrationPlanRevisionReceipt:
@@ -1135,6 +1529,7 @@ def parse_canonical_narration_plan_revision_receipt(
         "approved_text_revision_ref",
         "approved_text_revision_sha256",
         "approved_script_body_sha256",
+        "approved_text_code_point_count",
         "source_text_binding_sha256",
         "voice_profile_id",
         "voice_profile_revision_sha256",
@@ -1203,15 +1598,20 @@ __all__ = [
     "SCHEMA_ID",
     "SUBJECT_RECEIPT_SCHEMA_ID",
     "PLAN_RECEIPT_SCHEMA_ID",
+    "TRANSCRIPT_RECEIPT_SCHEMA_ID",
     "SubjectBindingAuthorityKind",
     "SubjectMatchDecision",
     "PlanDerivationAuthorityKind",
     "PlanDerivationDecision",
+    "ReferenceTranscriptAuthorityKind",
+    "ReferenceTranscriptDecision",
     "CallableEnvelopeDecision",
     "ZeroShotReferenceSubjectBindingReceipt",
+    "ZeroShotReferenceTranscriptBindingReceipt",
     "CanonicalNarrationPlanRevisionReceipt",
     "ZeroShotCallableEnvelope",
     "parse_zero_shot_reference_subject_binding_receipt",
+    "parse_zero_shot_reference_transcript_binding_receipt",
     "parse_canonical_narration_plan_revision_receipt",
     "compile_zero_shot_callable_envelope",
     "parse_zero_shot_callable_envelope",

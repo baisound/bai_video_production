@@ -5,6 +5,16 @@ Task: TASK-065
 Atomic Unit: PL-A preparation only
 Technical state: `DESIGN_FROZEN / IMPLEMENTATION_NOT_STARTED / EFFECT0`
 
+**SUPERSEDED CURRENTNESS:** repository/PR/head/missing-source statements in the
+historical audit sections below describe only the 2026-08-30 freeze. Fresh
+2026-08-31 state is authoritative in
+`dependency-currentness-reconciliation-2026-08-31.md` and
+`pl-a-candidate-contract-rebind-2026-08-30.md`: remote `main` is
+`35cdf1ad475633dcf035e0616e979b5a8fde0c88` and the D1/D2 candidate heads are
+integrated, while the later authority/physical-race/privacy/strict-parser Gates
+and durable completion receipts remain N.C. Historical entries below create no
+currentness or effect authority.
+
 ## 1. Authority and audit coordinates
 
 - Canonical repository: `https://github.com/baisound/bai_video_production.git`.

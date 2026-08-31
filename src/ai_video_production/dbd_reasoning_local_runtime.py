@@ -823,16 +823,13 @@ class LocalReasoningRuntimeService:
                         else "中央設定とGPU状態を確認してください。自動実行・保存は行いません。"
                     ),
                 ))
-        selectable_count = sum(entry.selectable for entry in entries)
         return LocalModelCatalogSnapshot(
             entries=tuple(entries),
-            status_code="LOCAL_FREE_MODEL_SELECTABLE" if selectable_count else "LOCAL_FREE_MODEL_NOT_SELECTABLE",
-            status_message_ja=("利用可能な無料ローカルModelだけを保存対象にしています。"
-                               if selectable_count else "候補は参照専用です。機能画面ではモデルを変更・保存しません。"),
+            status_code="LOCAL_FREE_MODEL_NOT_SELECTABLE",
+            status_message_ja="候補は参照専用です。機能画面ではモデルを変更・保存しません。",
             next_action_ja=(
-                "選択を保存してください。"
-                if selectable_count
-                else "右上の［設定］→［AIモデル］で実況・解説用モデルを確認してください。信頼済み事前チェック前は実行しません。"
+                "右上の［設定］→［AIモデル］で実況・解説用モデルを確認してください。"
+                "信頼済み事前チェック前は実行しません。"
             ),
         )
 

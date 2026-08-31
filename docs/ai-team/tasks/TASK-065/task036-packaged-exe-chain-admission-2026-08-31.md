@@ -37,6 +37,24 @@ Product-operation route. Adding the future private Montage dispatch at this
 single packaged boundary is the correct ownership shape, but no such route or
 completion receipt exists on the baseline.
 
+### Installed-EXE invocation precedent is not receipt precedent
+
+`packaging/task063_main_installer.iss` already invokes the installed
+`{app}\BAI Video Production.exe --bvp-installer-bridge provision-readback ...`
+with `SW_HIDE` and `ewWaitUntilTerminated`. This proves an installed private
+command can be launched and awaited from the packaged Product flow. It does not
+prove trusted completion: the installer accepts process exit zero, then checks
+only that `installer-readback.json` exists and that its prepared ancestor
+snapshot still matches before logging PASS. It does not pinned-read or strictly
+parse the receipt body and does not bind receipt, descriptor, owner, Product
+payload or opened physical identity in one current snapshot.
+
+That historical pattern is therefore `EXISTENCE_ONLY_PRECEDENT`, not D0,
+PL-A, TASK-036 runtime or PL-C Evidence. TASK-063 requires its separately owned
+corrective same-open strict receipt-content/identity read-back. TASK-036 may
+reuse only the hidden installed-EXE launch/wait shape; it must not copy the
+exit0-plus-`FileExists` success predicate.
+
 ## Producer completion boundary
 
 TASK-036 completion must bind all of the following in one durable body-free
@@ -90,6 +108,7 @@ correlation body, OS detail, account, SID or private learning content and has
 | `T36-P10` | stage/import completed exact1 | public receipt lacks hidden correlation, canonical or Profile currentness | terminal E2E receipt 0; no second publish/import |
 | `T36-P11` | crash occurs before/after dispatch, stage, import or read-back | same ticket/EXE operation is replayed | first effect exact0/1; replay `FAILED_CLOSED / EFFECT0` |
 | `T36-P12` | public receipt/result is emitted | path, body, correlation, OS/account/SID or private value appears | body-free receipt 0; raw bytes absent from logs/temp/public output |
+| `T36-P13` | installed private command returns exit0 and creates a receipt path | caller copies TASK-063 installer precedent and checks `FileExists`/ancestor only, without strict same-open content+identity and receipt/correlation/canonical/Profile verification | `EXISTENCE_ONLY_EVIDENCE / PACKAGED_RUNTIME.N.C. / EFFECT0`; the file is preserved and PASS/receipt authority remain zero |
 
 Focused TASK-036 tests must add the Montage entry/module frozen-inclusion
 contract in addition to the existing packaging assertions. Those tests remain
@@ -102,7 +121,7 @@ the other.
 
 TASK-065 PL-C never runs this producer operation. PL65-C01a pinned-reads the
 already completed TASK-036 and TASK-061-B receipts and admits them only if the
-TASK-036 receipt covers T36-A/B/S/M/R/P/E and T36-P01-P12. The historical
+TASK-036 receipt covers T36-A/B/S/M/R/P/E and T36-P01-P13. The historical
 stage/import deltas belong to TASK-036; TASK-065 local Product/Project/Bridge/
 Profile/config/history deltas and adapter/TASK-036/installer calls are all
 zero. A later PL65-C01b operation requires a distinct Production Activation

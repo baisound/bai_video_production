@@ -201,11 +201,16 @@ completion is SUPERSEDED.
    spec is one-dir with `console=False`. Existing tests prove that static chain,
    spec reuse and output name only. They do not prove Montage route/module
    inclusion in the frozen payload or real installed execution. The future
-   completion therefore also binds T36-P01-P12: internally resolved exact
+   completion therefore also binds T36-P01-P13: internally resolved exact
    installed `BAI Video Production.exe`, frozen build/payload-tree identity,
    private dispatch exact1 before probe/guard/shell/presenter (each call0),
    installer/discover call0 and a durable body-free receipt. stdout and exit0
-   remain authority zero.
+   remain authority zero. TASK-063's installer already launches and waits for
+   an installed private EXE command, but its post-call check is only exit0,
+   receipt `FileExists` and ancestor equality. That existence-only precedent
+   is not D0/PL-A/TASK-036 Evidence; neither TASK-063 nor TASK-036 may claim
+   PASS without strict same-open receipt content plus physical/current identity
+   and the operation-specific downstream read-backs.
 8. `D3`: the older inline cycle shown as CA-C prepare -> PL-B0/PL-C0 -> CA-C
    apply is SUPERSEDED. The canonical graph above completes TASK-061-A,
    TASK-067, TASK-036 real E2E and TASK-061-B before TASK-065 begins PL-A/B/C/D.
@@ -310,7 +315,7 @@ which TASK-061-B's trusted Product operation freshly pinned and recomposed the
 same TASK-036 operation and dependencies; no private capability is serialized
 or transferred to TASK-065.
 
-The single-EXE static/runtime split, T36-P01-P12 negatives and body-free
+The single-EXE static/runtime split, T36-P01-P13 negatives and body-free
 receipt boundary are in
 [`task036-packaged-exe-chain-admission-2026-08-31.md`](task036-packaged-exe-chain-admission-2026-08-31.md).
 Static import/spec/package-name PASS, `console=False`, stdout silence, exit0 or

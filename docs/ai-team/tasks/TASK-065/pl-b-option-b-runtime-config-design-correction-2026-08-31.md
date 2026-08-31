@@ -592,8 +592,26 @@ sequence is:
    `enabled:false`; it does not execute Production Activation.
 7. All completion receipts flow to TASK-065 PL-A/B/C/D. PL-B may derive an
    `enabled:true` steady-state projection only from a later, separate Production
-   Activation Human-Gate receipt. PL-C then uses a fresh immutable operation
-   config and PL-D owns lifecycle closure.
+   Activation Human-Gate receipt. Only PL65-C01b then uses a fresh immutable
+   operation config; PL-D owns lifecycle closure.
+
+The TASK-065 phase split is mandatory:
+
+- `PL65-C01a PREACTIVATION CHAIN ADMISSION` performs pinned read/join of the
+  already completed TASK-036 durable receipt, observed stage count 1, import
+  count 1, strict public receipt, hidden correlation and Profile read-back.
+  TASK-065 calls the adapter and TASK-036 zero times. The observed stage/import
+  deltas belong to historical TASK-036 execution; TASK-065 local Project,
+  Bridge, Profile, config and history deltas are all zero.
+- `PL65-C01b STEADY-STATE/POST-ACTIVATION` remains `START0` under current
+  authority. It becomes eligible only after a separate Production Activation
+  Human receipt and with a new operation ID, new one-shot ticket and fresh
+  immutable operation config. It never reuses a preactivation delivery,
+  receipt, ticket or operation ID and never performs a confirmation second
+  publish.
+- `PL65-C02` rejects either phase's receipt as a substitute for the other and
+  rejects receipt-only, status-only or adapter `canonical_store_written`
+  evidence as authority.
 
 The historical TASK-036 preactivation config candidates never replace shared projection state and are never
 discoverable through the SKILL default. The future authorized runner must

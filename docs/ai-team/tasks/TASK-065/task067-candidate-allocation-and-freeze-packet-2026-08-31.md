@@ -48,9 +48,13 @@ operation, external-anchor authority, private loader/parser or caller-selectable
 path/revision/store/scope coordinate.
 
 The receipt remains Project-owned. It does not contain install instance,
-descriptor, Bridge root or transport authority. TASK-036/065 would separately
-compose it with TASK-063 discovery and the TASK-061-A PREACTIVATION PREPARE
-operation plan.
+descriptor, Bridge root or transport authority. TASK-036 alone composes it
+with TASK-063 discovery and the TASK-061-A PREACTIVATION PREPARE operation plan
+to execute the exact preactivation operation. After TASK-061-B consumes that
+durable E2E receipt, TASK-065 may only pinned-read and admit the completed
+chain with Project/Bridge/Profile/config/history delta zero. TASK-065 does not
+call the TASK-067 facade, obtain its private factory/capability or repeat the
+adapter stage/TASK-036 import.
 
 The dependency is deliberately one-way: TASK-067 consumes TASK-061-A only and
 does not wait for TASK-061-B final CA-C. TASK-036 later composes TASK-061-A,

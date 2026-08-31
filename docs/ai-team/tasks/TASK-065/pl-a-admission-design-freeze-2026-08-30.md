@@ -444,8 +444,10 @@ The TASK-036 preactivation E2E may use the released public-safe
 bound against the exact real installed adapter. `public-safe` describes content
 privacy; current config-v1 synthetic/BVP-internal probe execution is audit-only
 and CA-C-ineligible. TASK-061-B consumes the resulting TASK-036 receipt; the
-later TASK-065 PL-C is a separate post-completion phase. The corrected route
-records separate identities for:
+later TASK-065 `PL65-C01a` is a separate effect-zero admission phase. It
+pinned-reads and joins the existing TASK-036 chain, observes historical stage
+count 1/import count 1 and calls neither the adapter nor TASK-036. The corrected
+route records separate identities for:
 
 1. exact public-safe fixture request, real-installed operation identity and
    immutable inbox delivery;
@@ -458,6 +460,11 @@ process exit zero, or `connector-status READY` alone cannot produce runtime
 PASS. Real Owner private media, raw transcript, account/player names, secrets,
 credentials, Provider calls, Resolve writes, Release, Deploy, and Production
 remain excluded.
+
+`PL65-C01b` is not part of this preactivation fixture. It remains `START0`
+until a separate Production Activation Human receipt exists and must use a new
+operation ID, ticket, delivery and immutable config. `PL65-C02` rejects
+preactivation/post-activation receipt substitution in both directions.
 
 ## 7. Current PL-A preparation result
 

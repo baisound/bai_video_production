@@ -2,8 +2,53 @@
 
 Date: 2026-08-31
 
-Reason: Owner-directed PC restart boundary. Do not resume autonomously until a
-new Owner resume instruction is received.
+Historical reason: Owner-directed PC restart boundary.
+
+Operational status: **SUPERSEDED BY OWNER RESUME**. The Owner explicitly
+resumed TASK-065 task-local AUTONOMY after restart. The historical stop below
+remains Evidence only and is no longer an active Gate. Source/config/native,
+TASK-067 preserved-diff commit/push, Release/install/Deploy/Activation and
+shared-file prohibitions remain active.
+
+## Post-resume current checkpoint
+
+- repository/worktree:
+  `D:\BAI\BAI VIDEO PRODUCTION FOR DRFX\bai_video_production\.worktrees\task065-option-b-design-correction`
+- branch: `codex/task-065-option-b-design-correction`
+- pre-unit HEAD and remote branch before this docs-only commit:
+  `7cabed393879b61ff02261f988efe34b662b0a75`
+- current `origin/main` after fetch:
+  `35cdf1ad475633dcf035e0616e979b5a8fde0c88`
+- Draft PR: `#467`; no second open TASK-065/TASK-067 PR was found.
+- pre-commit TASK-065 dirty ownership is limited to task-local documentation:
+  `task.md`, `dependency-currentness-reconciliation-2026-08-31.md`,
+  `task067-candidate-allocation-and-freeze-packet-2026-08-31.md`,
+  `task067-task065-negative-matrix-v1-2026-08-31.md`, and this checkpoint.
+- preserved TASK-067 worktree remains at origin/main with the same three dirty
+  paths and exact SHA-256 identities recorded below. No source/test mutation,
+  staging, commit, push or execution occurred there.
+- resumed unit: normalize the latest TASK-061-A/TASK-061-B, TASK-067,
+  TASK-036 and SKILL-D2S producer/consumer Gates in task-local design; validate
+  matrix shape, scope and diff; then commit/push the TASK-065 docs-only update
+  to Draft PR #467 if validation passes.
+
+Post-resume validation completed so far:
+
+- reread repository `AGENTS.md`/`PROJECT.md` and the installed adapter skill
+  contract; the skill's obsolete fixed-ProgramData/one-switch guidance is not
+  used as current Product authority;
+- fetched origin: `origin/main` was `35cdf1a`, and TASK-065 local/upstream were
+  both `7cabed3` at that read-back, ahead 38 and behind 0;
+- open-PR audit found Draft PR #467 for this branch and no second TASK-065 or
+  TASK-067 PR;
+- preserved TASK-067 HEAD, dirty paths and all three SHA-256 identities match
+  the frozen values below;
+- mandatory negative-matrix rows have exactly eleven columns and every newly
+  required producer/consumer ID is present once in that matrix;
+- `git diff --check` PASS apart from line-ending conversion warnings; changed
+  paths are limited to five TASK-065-local Markdown files;
+- source, schema, tests, config and native execution remain zero. No code test
+  result is claimed by this docs-only validation.
 
 ## Exact repository state
 
@@ -36,9 +81,11 @@ TASK-065 task-local dirty paths created by the current TASK-065 owner:
 - this untracked checkpoint:
   `docs/ai-team/tasks/TASK-065/safe-restart-checkpoint-2026-08-31.md`
 
-Preserve all four paths exactly. Do not reset, discard, clean, stage or commit
-them before the restart rebind and explicit Owner resume. No shared document or
-source path is part of this TASK-065 dirty set.
+**Historical pre-resume condition:** preserve all four paths exactly and do not
+reset, discard, clean, stage or commit them before restart rebind and explicit
+Owner resume. That resume has now arrived; the post-resume task-local dirty set
+supersedes this four-path list. No shared document or source path is part of
+either TASK-065 dirty set.
 
 TASK-067 preserved dirty paths remain owned by the pending formal TASK-067
 allocation/cross-owner process, not by TASK-065:
@@ -102,8 +149,9 @@ Still unexecuted:
   Activation. No such effect is authorized or started.
 - Shared docs, Release, install, Deploy, Production Activation, force push,
   reset/cleanup and unknown dirty disposition remain prohibited.
-- PC restart stop is now the controlling operational Gate. Do not autonomously
-  resume until the Owner explicitly instructs resume.
+- **SUPERSEDED:** the PC restart stop controlled this historical checkpoint;
+  the Owner resume recorded in the post-resume addendum now permits task-local
+  design/validation/commit/PR continuation only.
 
 ## First read list and next action after restart
 
@@ -123,8 +171,9 @@ Before any mutation or external effect:
 6. fresh-check task/Allowed Files/ownership/dirty overlap/work-lock and Owner
    resume authority.
 
-First next action only after explicit Owner resume: finish the bounded
-task-local mapping completeness and diff/scope validation. Do not begin
+The explicit Owner resume has arrived. The first next action is now in
+progress: finish bounded task-local mapping completeness and diff/scope
+validation. Do not begin
 TASK-067 source mutation or test execution unless its separate formal start
 Gate has also become current. If the Gate remains closed, keep the preserved
 diff untouched and continue only within newly authorized task-local work.

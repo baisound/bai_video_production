@@ -193,6 +193,40 @@ inventories. The sealed capability body and cached typed result bind that same
 snapshot. A Product journal appearing between phases, orphan/unknown authority,
 access failure or ancestor substitution must fail closed.
 
+### P0 — Bridge-required verified readback must not create state
+
+`T67-READBACK-NOCREATE` is independent of terminal-content correctness. The
+current TASK-058 module has a safe existing-lock lookup, but the unmodified
+Bridge calls `get_verified_generic_observation`, and constructing the current
+Store plus that required method may create Generic directories or a missing
+lock. VERIFIED_READBACK therefore cannot be considered read-only merely because
+the separate safe lookup exists.
+
+The limited TASK-058 amendment must keep the exact unmodified Bridge three-
+method surface while internally routing VERIFIED_READBACK get to the pinned
+existing-lock A2 lookup. Facade construction, resolution and readback create
+nothing. Missing/invalid/symlink/hardlink locks and missing directories return
+typed effect zero; only separately selected FRESH/RECOVERY mutation regions may
+establish state. Required tests compare the full Project canonical-root
+inventory across constructor-only, correlation-only restart and actual Bridge
+call sequences.
+
+### P0 — journal-absent A2 typed duplicate, without outcome-layer changes
+
+`T67-OUTCOME-LAYERING-CORRELATION` is a narrow current PASS: where trusted
+correlation evidence exists, the public SKILL v1 receipt remains `ACCEPTED`
+while the Bridge retry result is `DUPLICATE`, with no second Project revision.
+This PASS must remain unchanged.
+
+`T67-A2-JOURNAL-ABSENT-TYPED-DUPLICATE` remains N.C. When canonical commit is
+terminal, correlation is absent and the canonical journal has already been
+cleaned, the unmodified Bridge calls recovery but origin/main rejects journal
+absence. The sealed RECOVERY mode must prove the exact A2 terminal snapshot and
+return typed canonical `DUPLICATE`; the unmodified Bridge then adds the exact
+correlation/public receipt, cleans the matching pending record and returns
+`ImportResult.status:DUPLICATE`. Project revision/commit delta is zero and
+unrelated Bridge state is unchanged.
+
 ### P0 — Manifest/journal bytes and physical identity same-snapshot binding
 
 The candidate reads the Product Manifest through

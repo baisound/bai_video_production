@@ -142,6 +142,24 @@ completion is SUPERSEDED.
    must replace it with a durable `TASK058_BASELINE_READBACK` pinned by a trusted
    Product reader to exact release/package/installed bytes and executed
    operation receipts; public v1/V2 readiness remains display-only Evidence.
+   The bounded origin/main migration audit adds independent producer COMMIT
+   STOPs for deterministic ticket authority, self-mintable public readback,
+   strict JSON, secure lock/journal CAS, noreplace snapshot commit, temp and
+   staging ownership, sealed native security, descendant DACL, terminal
+   receipt validation/currentness/global snapshot, trusted source selection,
+   Production hook/path privacy and early source/payload resource ceilings.
+   It also records `A61-B-INITIAL-CONFIG-NOREPLACE`,
+   `A61-B-EXISTING-CONFIG-IDENTITY-CAS` and `A61-B-POSTCOMMIT-FAILURE`:
+   initial publication can overwrite a target that appears after the absence
+   check, existing publication has no opened-bytes/inode CAS, and activation
+   config publication currently precedes final rediscovery/security
+   confirmation, so an ACTIVATE failure can expose enabled state without a
+   terminal receipt. These findings
+   are normalized as `A61-*` rows in the task-local negative matrix. Until
+   their canonical corrective completion receipts are current, existing CA-A
+   plan/snapshot/readback/terminal receipts and CA-B transaction failure state
+   are producer Evidence only and cannot enter PL-A, D2, TASK-067 or PL-C
+   authority.
 4. `D2S`: the released SKILL adapter remains valid historical TASK-058 release
    Evidence, but its current transport writer/config/receipt/Profile readers do
    not meet Production race, physical-identity and privacy requirements, and
@@ -166,6 +184,11 @@ completion is SUPERSEDED.
    fixed-ProgramData/default-config activation instructions with the Option B
    explicit runtime-config route while keeping the distribution default an
    immutable disabled sentinel. TASK-061/065/067 cannot modify SKILL source.
+   Current source also probes the fixed default Bridge filesystem before its
+   disabled decision. `D2S-DISABLED-WRITE0` remains historical PASS only for
+   no create/write/delete, while `D2S-DISABLED-DISCOVERY0` is P1 N.C. The
+   Product runner must require an explicit operation-specific config and close
+   config omission without filesystem discovery or availability projection.
 5. `D2F`: released TASK-058 File Bridge Evidence also remains historically
    valid, but Production linkage requires a separately owned TASK-058 corrective
    Unit for pinned reads, immutable/mutable publication identity, ordered
@@ -186,6 +209,17 @@ completion is SUPERSEDED.
    TASK-069, required TASK-060/063 plus TASK-061-A PREACTIVATION PREPARE
    receipts, the exact TASK-058 cross-owner amendment and fresh overlap/work-
    lock PASS are all current. TASK-061-B is not a TASK-067 prerequisite.
+   Current source/tests prove only the narrow correlation outcome layering:
+   public receipt `ACCEPTED` remains separate from Bridge retry
+   `DUPLICATE`, with Project revision delta zero. That PASS does not close
+   journal-absent recovery. `T67-READBACK-NOCREATE` remains P0 because the
+   Bridge-required Store constructor and `get_verified_generic_observation`
+   path are create-capable despite a separate safe existing-lock lookup.
+   `T67-A2-JOURNAL-ABSENT-TYPED-DUPLICATE` also remains P0 N.C. because the
+   unmodified Bridge invokes recovery while origin/main rejects an absent
+   canonical journal. The limited amendment must internally route
+   VERIFIED_READBACK to the noncreating pinned A2 lookup and provide a sealed
+   absent-journal A2 recovery mode without changing the existing layering.
    TASK-065 grants
    no implementation authority and consumes only the eventual canonical
    completion receipt; until then this dependency is `N.C. / EFFECT0`.
@@ -221,6 +255,14 @@ completion is SUPERSEDED.
    Product files or compare build/descriptor/current payload, parses JSON
    permissively and emits absolute roots. That PASS/console JSON is authority0
    and cannot feed PL-A/B/C.
+   The packaged entry currently has a pre-desktop private branch only for
+   `--bvp-installer-bridge`; all other argv proceeds through native probe,
+   single-instance and Shell/Desktop setup. Consequently
+   `T36-PRODUCT-MONTAGE-DISPATCH` and `T36-CLOSED-ARGV-NEGATIVES` remain P0
+   N.C. Installer-only dispatch ordering is PASS for that branch alone and
+   cannot satisfy Montage. TASK-061-B and PL-C require a distinct opaque-
+   identity Montage dispatch before desktop preflight, with mixed, duplicate,
+   unknown and raw-path argv closed-rejected without Shell fallback.
 8. `D3`: the older inline cycle shown as CA-C prepare -> PL-B0/PL-C0 -> CA-C
    apply is SUPERSEDED. The canonical graph above completes TASK-061-A,
    TASK-067, TASK-036 real E2E and TASK-061-B before TASK-065 begins PL-A/B/C/D.

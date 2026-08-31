@@ -477,9 +477,11 @@ In addition to the checklist in the PL-A design freeze:
 - [ ] CA-C defines and authenticates the coordinate-only successor/composition
   rule so PL-B does not invalidate Human activation authority by changing the
   whole-file hash;
-- [ ] PL-B's only semantic delta is `bridge_root`; `enabled`, receipt policy,
-  transport feature flags, contract identity, and legacy-safe behavior remain
-  exact.
+- [ ] PL-B leaves the canonical/installed distribution config unchanged and
+  projects a separate BVP-owned runtime config at the admitted instance-relative
+  coordinate; that projection requires `require_admission_receipt:true`, while
+  `enabled` and the two transport feature flags are operation-scoped and
+  least-privilege rather than copied as an always-on pair.
 - [ ] committed PL-B runbook original is stored by secretary task
   `01a004a9-a34d-7f20-b5d1-4805690d6804` and an independently read-back
   UTF-8 byte count/SHA-256/receipt identity returns `MATCH` before any effect.

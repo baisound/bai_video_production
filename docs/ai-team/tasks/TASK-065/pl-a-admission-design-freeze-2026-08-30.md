@@ -70,8 +70,10 @@ The current installed config identity is:
 The bytes are the released exact3 bytes, but the production coordinate is not
 admissible for TASK-065. PL-A must classify this current config as
 `FIXED_PROGRAMDATA_COORDINATE_REJECTED`, keep `enabled:false`, and authorize no
-sync or adapter execution. PL-B may later replace only the coordinate under its
-separate Gate; PL-A never edits it.
+sync or adapter execution. PL-B does not edit or use this distribution config as
+a CAS predecessor; under its separate Gate it projects a BVP-owned runtime
+config at the admitted installer-relative coordinate, with required admission
+receipt policy and operation-scoped least-privilege flags.
 
 ### 2.2 TASK-063 installed instance and discovery receipt
 

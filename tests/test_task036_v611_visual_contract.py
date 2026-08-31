@@ -590,11 +590,11 @@ def test_audio_workspace_connects_review_and_task026_plan_boundaries() -> None:
 
 def test_feature_pages_consume_read_only_model_readiness_without_local_save_controls() -> None:
     for marker in (
-        'data-model-readiness="planning"',
-        'data-model-readiness="imageGen"',
-        'data-model-readiness="videoGen"',
-        'data-model-readiness="audio"',
-        'data-model-readiness="quick"',
+        'id="planningModelReadiness"',
+        'id="imageModelReadiness"',
+        'id="videoModelReadiness"',
+        'id="audioModelReadiness"',
+        'id="quickModelReadiness"',
         "audio:['AUDIO','MUSIC']",
         "function renderModelReadiness(model,page)",
         "async function refreshModelReadiness(page)",

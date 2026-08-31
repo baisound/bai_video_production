@@ -66,7 +66,7 @@ def test_feature_pages_keep_model_readiness_read_only_and_route_unavailable_stat
         "AIモデル設定を開く",
         "右上の［設定］→［AIモデル］で確認してください。",
         "button.addEventListener('click',openModelSettings)",
-        'role="status" aria-live="polite">AIモデル設定を読み込んでいます。',
+        'role="status">AIモデル設定を読み込んでいます。',
     ):
         assert marker in HTML
 
@@ -106,8 +106,8 @@ def test_model_readiness_state_transitions_and_settings_cta_execute_in_node() ->
     script = f"""
 const assert=require('node:assert/strict');
 const host={{children:[],append(...items){{this.children.push(...items)}}}};
-const queriedSelectors=[];
-function q(selector){{queriedSelectors.push(selector);return host}}
+const queriedIds=[];
+function $(id){{queriedIds.push(id);return host}}
 function clear(target){{target.children=[]}}
 function card(title,text){{return {{kind:'card',title,text}}}}
 function element(tag,className,text){{return {{kind:tag,className,text,type:null,listener:null,addEventListener(name,handler){{assert.equal(name,'click');this.listener=handler}}}}}}
@@ -127,16 +127,16 @@ function snapshot(selectable,preferredRouteId='route-a'){{
     candidates:[{{route_id:'route-a',model_id:'qwen-local',provider_family:'Ollama',configuration_selectable:selectable,configuration_blockers:selectable?[]:['ROUTE_DISABLED']}}]
   }}]}};
 }}
-for(const [page,workloads] of Object.entries({{
-  planning:['PLANNING'],
-  imageGen:['IMAGE'],
-  videoGen:['VIDEO'],
-  audio:['AUDIO','MUSIC'],
-  quick:['QUICK_IMAGE','QUICK_VIDEO'],
+for(const [page,contract] of Object.entries({{
+  planning:{{hostId:'planningModelReadiness',workloads:['PLANNING']}},
+  imageGen:{{hostId:'imageModelReadiness',workloads:['IMAGE']}},
+  videoGen:{{hostId:'videoModelReadiness',workloads:['VIDEO']}},
+  audio:{{hostId:'audioModelReadiness',workloads:['AUDIO','MUSIC']}},
+  quick:{{hostId:'quickModelReadiness',workloads:['QUICK_IMAGE','QUICK_VIDEO']}},
 }})){{
-  assert.deepEqual(modelReadinessWorkloads(page),workloads);
+  assert.deepEqual(modelReadinessWorkloads(page),contract.workloads);
   assert.equal(modelReadinessHost(page),host);
-  assert.equal(queriedSelectors.at(-1),`[data-model-readiness="${{page}}"]`);
+  assert.equal(queriedIds.at(-1),contract.hostId);
 }}
 renderModelReadiness(snapshot(false),'planning');
 assert.match(host.children.find(item=>item.kind==='card').text,/未設定または利用できません/);

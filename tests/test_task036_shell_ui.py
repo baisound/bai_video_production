@@ -273,8 +273,14 @@ def test_pux2a1_model_selection_bridge_fails_closed_when_unbound_or_request_is_b
 
 def test_gf_b_s1_feature_pages_consume_read_only_model_readiness_from_central_settings():
     assert "model_selection_snapshot" in HTML
-    for page in ("planning", "imageGen", "videoGen", "audio", "quick"):
-        assert f'data-model-readiness="{page}"' in HTML
+    for host_id in (
+        "planningModelReadiness",
+        "imageModelReadiness",
+        "videoModelReadiness",
+        "audioModelReadiness",
+        "quickModelReadiness",
+    ):
+        assert f'id="{host_id}"' in HTML
     for legacy_id in (
         "planningModelSelection",
         "imageModelSelection",

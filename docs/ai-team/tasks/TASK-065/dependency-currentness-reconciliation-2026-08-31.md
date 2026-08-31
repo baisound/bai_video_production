@@ -270,6 +270,31 @@ checkpoint. Until every required receipt is current, TASK-065 source/config/
 adapter/native/Production effects remain zero while task-local design and
 fixture planning continue.
 
+### Post-restart remote-ref read-back
+
+The Owner-authorized restart rebind fetched origin before resuming task-local
+work. At that read-back:
+
+- `origin/main` remained
+  `35cdf1ad475633dcf035e0616e979b5a8fde0c88`;
+- TASK-065 head/upstream were both
+  `03eedffb70a9d80793e25afe4953ab380d0219ff`, with the branch 26 commits ahead
+  of and zero commits behind origin/main;
+- the only open PR whose head/title matched TASK-060/061/063/065/067/068/069
+  was TASK-065 Draft PR #467, at the exact TASK-065 head above;
+- no TASK-067, TASK-068 or TASK-069 remote implementation branch or open PR
+  supplied a completion receipt;
+- existing TASK-060/061/063 remote branch names remained historical/candidate
+  refs without a current open completion PR and therefore created no PASS; and
+- the preserved TASK-067 worktree stayed at origin/main with its three frozen
+  dirty file hashes unchanged and no active TASK-065/067 entry in
+  `ACTIVE-WORK-LOCKS.json`.
+
+Consequently no dependency cell advances. This read-back confirms only remote
+ref/currentness availability; it does not replace the formal owner, overlap,
+work-lock, test, Critic/Judge, hosted or installed completion Evidence required
+by each row.
+
 ## 6. Shared Current State drift and sole-Builder candidate
 
 At this audit base, shared metadata is not aligned with Git/task-local facts:

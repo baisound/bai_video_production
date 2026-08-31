@@ -413,6 +413,14 @@ Project/Bridge/Profile/config-history deltas, public leakage and Evidence
 receipt. Older whole-task TASK-061 completion language is SUPERSEDED there by
 the canonical TASK-061-A -> TASK-067 -> TASK-036 -> TASK-061-B ordering.
 
+The source/test-level comparison for those G67 rows is in
+`task067-historical-coverage-gap-mapping-2026-08-31.md`. Named origin/main
+TASK-058 tests are reusable historical regressions only, while the preserved
+TASK-067 tests are candidate diagnostics only. Neither set supplies a
+corrective PASS, implementation authority or completion receipt; each row
+remains N.C. until its mapped missing fixture executes under the formal
+TASK-067 start Gate.
+
 Its historical missing-source classifications are superseded, but not promoted
 to PASS, by `dependency-currentness-reconciliation-2026-08-31.md`: D0 source
 corrections are canonical but installed completion is N.C.; D1/D2 candidate

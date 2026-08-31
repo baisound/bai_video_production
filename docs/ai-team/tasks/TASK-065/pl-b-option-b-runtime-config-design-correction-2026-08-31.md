@@ -176,6 +176,13 @@ receipt are required when the operation changes.
   `operation` and `previous_receipt_sha256`;
 - TASK-063 `install_instance_id`, descriptor hash, owner-manifest hash, Bridge
   relative coordinate and private-root identity hash;
+- **CURRENT FIELD-SET CORRECTION:** the BVP-private receipt/journal also binds
+  `task063_current_installation_receipt_sha256`, Product build and payload-tree
+  digests, registration-set and selected-registration receipt digests,
+  lifecycle receipt digest, exact cardinality one and installation-reader
+  currentness digest. These fields are not added to SKILL v1 config and only
+  opaque hashes/cardinality may enter public Evidence. See
+  `pl-a-pl-b-installation-binding-matrix-2026-08-31.md`;
 - TASK-060 PP-C source read-back hash and promoted envelope hash;
 - TASK-061 transaction hash, config-readback hash, history hash, revision,
   action and derived enabled value;
@@ -255,12 +262,23 @@ Lock and operation namespace establishment are transaction steps:
   explicit native durability port/Evidence when directory fsync is unsupported;
   failure is never suppressed.
 
-Steady-state publication requires an exact expected tuple:
+Steady-state publication requires the current corrected expected tuple below.
+The former instance/descriptor/owner/TASK-061-only tuple is SUPERSEDED because
+it did not preserve installed Product, registration, lifecycle or reader
+currentness:
 
 ```text
-(install_instance_id,
+(task063_current_installation_receipt_sha256,
+ install_instance_id,
  descriptor_sha256,
  owner_manifest_sha256,
+ installed_product_build_sha256,
+ installed_payload_tree_sha256,
+ installer_registration_set_sha256,
+ selected_registration_receipt_sha256,
+ installation_lifecycle_receipt_sha256,
+ installation_selection_cardinality,
+ installation_reader_currentness_sha256,
  task061_revision,
  task061_history_sha256,
  task061_config_readback_sha256,

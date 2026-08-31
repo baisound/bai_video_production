@@ -226,6 +226,17 @@ TASK-061, and TASK-063 inputs. Missing, stale, tampered, ambiguous,
 multi-instance, unknown-version, unknown-authority, or fixed-ProgramData
 coordinates remain disabled and authorize no later effect.
 
+Public discovery/descriptor hashes are necessary audit coordinates, not
+current installed Product proof. PL-A also requires a private same-open
+descriptor/owner snapshot, verified Product EXE/payload, a trusted
+zero/one/multiple registration set, lifecycle continuity and matching
+TASK-061 config/history. Packaged `discover` is effectful and its PL-A call
+count is zero; root scanning and implicit winners are prohibited. The current
+field/result/PLA-I01-I15 contract is in
+[`pl-a-current-installation-field-delta-2026-08-31.md`](pl-a-current-installation-field-delta-2026-08-31.md).
+`CANDIDATE_CURRENT_INSTANCE` is not `READY_FOR_CONFIG_SYNC`; PL-A remains
+`START0 / EFFECT0` until every independent receipt is current.
+
 ### PL-B — BVP-owned instance-bound runtime config projection
 
 Eligible only after current PL-A PASS and a separate Human/config Gate. It may
@@ -254,6 +265,14 @@ pre-activation and steady-state runtime config fixes
 `require_admission_receipt:true`; publish/read feature flags are operation-
 scoped minimum authority and are never assumed both true. Feature flags alone
 never prove operation authority.
+
+PL-B propagates the same PL-A installation generation through its private
+receipt, journal, publication CAS, operation ticket and launch-time reread.
+Product build/payload, trusted registration set/selection, lifecycle and
+reader-currentness fields remain outside SKILL v1 config and are bound only by
+the future trusted broker/config-v2 route. The exact field/CAS tuple and
+PLB-I01-I16 cases are in
+[`pl-a-pl-b-installation-binding-matrix-2026-08-31.md`](pl-a-pl-b-installation-binding-matrix-2026-08-31.md).
 
 ### PL-C — post-completion connector E2E/read-back
 
@@ -323,6 +342,15 @@ factory and any unapproved TASK-067 diff are ineligible.
 Public receipt alone, missing hidden/canonical proof, mismatched DUPLICATE,
 FAILED_CLOSED facade, or stale instance/config/Profile currentness remains
 effect zero.
+
+The same current-installation/lifecycle identity must survive TASK-036 E2E,
+PL65-C01a, TASK-061-B, any separately authorized PL65-C01b operation and PL-D.
+`executed:true` plus an adapter build is insufficient after upgrade, uninstall,
+move, replacement or a second current install. C01a freshly joins receipts
+with adapter/TASK-036 calls zero; C01b uses a new Human Gate and operation; PL-D
+accepts only trusted lifecycle successors. The field/currentness and
+PLC-I01-I16 matrix is in
+[`pl-c-pl-d-installation-currentness-matrix-2026-08-31.md`](pl-c-pl-d-installation-currentness-matrix-2026-08-31.md).
 
 ### PL-D — lifecycle, rollback, and closure
 

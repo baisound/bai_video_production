@@ -53,6 +53,13 @@ count before/after/path and rejects a second hardlink name.
 
 ## D0 TASK-063 discovery mapping
 
+**SUPERSEDED CURRENT RULE:** the public discovery fields below are necessary
+audit coordinates only. They do not prove the current installed Product,
+unique current registration, lifecycle continuity or matching config/history.
+Packaged installer CLI `discover` is effectful and prohibited from PL-A
+admission. Current private fields, results and PLA-I01-I15 are in
+[`pl-a-current-installation-field-delta-2026-08-31.md`](pl-a-current-installation-field-delta-2026-08-31.md).
+
 `InstalledBridgeDiscovery.public_receipt()` currently exposes exactly:
 
 `schema_version`, `message_type`, `product_id`, `install_instance_id`,
@@ -262,7 +269,9 @@ Any missing, stale, tampered, unknown-version/issuer, duplicate-current,
 cross-instance, cross-revision, reparse/hardlink, unsafe-DACL, or body/hash
 mismatch yields `BLOCKED`, sorted reason codes, and all effect authorities
 false. No dependency candidate or CI pass alone can yield
-`READY_FOR_CONFIG_SYNC`.
+`READY_FOR_CONFIG_SYNC`. **SUPERSEDED CURRENT RESULT:** a coherent installation
+read returns only audit-state `CANDIDATE_CURRENT_INSTANCE`; it is not config
+authority. See the current field-delta document above.
 
 ## Current conclusion
 

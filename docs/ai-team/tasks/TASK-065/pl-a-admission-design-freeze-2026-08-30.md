@@ -269,7 +269,14 @@ Until then the only valid state is `CA_C_CONTRACT_MISSING` and body-free effect0
 
 ### 3.5 PL-A public-safe result
 
-The future closed schema should expose one
+**SUPERSEDED CURRENT RULE:** the historical `READY_FOR_CONFIG_SYNC` projection
+below does not establish current installed Product authority. Current PL-A can
+emit at most `CANDIDATE_CURRENT_INSTANCE` after private same-open Product,
+registration, lifecycle and config currentness succeeds. Packaged `discover`,
+public hashes and the projection itself create no authority. See
+[`pl-a-current-installation-field-delta-2026-08-31.md`](pl-a-current-installation-field-delta-2026-08-31.md).
+
+The historical future closed schema proposed one
 `BvpMontageLearningProductionLinkageReadiness` document containing:
 
 - `schema_version`, `message_type`, `task_id`, `capability`;

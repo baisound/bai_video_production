@@ -23,6 +23,28 @@ write shared task/index/roadmap/current-state metadata.
 | D2.5 / TASK-036 | packaged single-record Product-operation entrypoint completion receipt absent | TASK-061 operation plan, TASK-063 corrected installed read-back, TASK-067 cross-owner amendment/completion, exact Allowed Files/overlap/lock and installed-payload implementation plus real read-back verification | `PREREQUISITE_MISSING / EFFECT0` |
 | D3 / TASK-065 | task-local Option B design candidate exists | D0-D2.5 current receipts, accepted design, implementation Gate | `SOURCE_START0` |
 
+### Current canonical-to-installed SKILL baseline
+
+Read-only comparison against canonical SKILL
+`origin/main=c86ec8c11724a3170d37e0fdc5a516979fcca703` found zero scoped
+worktree differences under `skills/bvp-montage-learning-adapter/`. The current
+installed distribution copy matches these exact canonical bytes:
+
+| File | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `scripts/bvp_adapter.py` | 53438 | `070d2295869cb43c9fe8cb733238ff04085fa6815ac006385072d9c18da3949e` |
+| `config/bvp-learning-connector.json` | 406 | `da41b71292fd2a9fa2070eba531e06fafc0e84f9bbc1d26c27b0af79c5e2db6c` |
+| `schemas/connector-file-bridge.schema.json` | 5812 | `470fb97a85bb924678e51a9fca313c21bc5eb9c6eb0f0f0da265ca9b6da43b9d` |
+| `references/connector-ready-bridge.md` | 4758 | `669d34b4788493bb851149522d0beac1bc4a46c5f9e0b5b7b96bcab6c9faeee2` |
+| `SKILL.md` | 10257 | `1a7ba2d4967cfc7bf30b5d9f64cadf77bd9b19e558a7bd11c92d9161cb9c6308` |
+
+Classification is `EXACT_UNSAFE_BASELINE_MATCH / PRODUCTION_LINKAGE_N.C.`:
+the equality proves distribution currentness for the known baseline, not the
+missing transport/reader/receipt-schema/Option-B documentation corrections.
+None of these hashes may be reused as the future corrected release/install PASS;
+that chain requires new canonical release identities and a fresh installed-copy
+read-back.
+
 The TASK-065 PL-A docs head `66537ed` is also an ancestor of main, but its
 historical audit base and missing-source statements are not current facts. This
 document replaces those reason codes with candidate-present/completion-missing;

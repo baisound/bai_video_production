@@ -75,8 +75,14 @@ completion is SUPERSEDED.
    are advisory data, not write authority. D1 also requires a Product-owned
    random one-shot Human challenge for promotion/rollback instead of caller
    `human_confirmed`, IDs, timestamps or deserialized confirmations; and a
-   secure pinned PP-B store transaction with initial no-replace, existing
-   bytes+inode+revision/head CAS and exact read-back. Production composition
+   secure pinned PP-B store transaction using operation-bound immutable
+   encrypted generations with revision/hash/predecessor binding, no-replace
+   publication and exact read-back. The exact current generation comes from a
+   trusted Product operation/monotonic anchor; scan-highest, caller-selected
+   paths and mutable pointers are prohibited. Rollback appends a new generation
+   bound to its target revision/hash rather than rewriting an old file. Current
+   fixed-path same-store tests remain legacy regression only and cannot satisfy
+   `T60-IMMUTABLE-GENERATION-MIGRATION`. Production composition
    fixes Windows DPAPI and registry/manifest coordinates internally; custom
    cipher/coordinates are test-only and cannot mint source authority. Both the
    encrypted outer store/source and decrypted history require strict bounded
@@ -191,8 +197,12 @@ completion is SUPERSEDED.
    config omission without filesystem discovery or availability projection.
 5. `D2F`: released TASK-058 File Bridge Evidence also remains historically
    valid, but Production linkage requires a separately owned TASK-058 corrective
-   Unit for pinned reads, immutable/mutable publication identity, ordered
-   Profile publication and identity-safe pending/temp cleanup. Independently,
+   Unit for pinned reads, immutable generation publication, consumer-owned
+   exact current-head selection and ordered Profile publication. Physical
+   pending retention is an allowed terminal state: an immutable exact plan-
+   bound tombstone/correlation must outrank pending then fresh, restart N must
+   perform recovery0/canonical revision exactly1/delete0, and scan-highest or
+   automatic cleanup is prohibited. Independently,
    BVP admission must replace key-name-only filtering and caller
    `safe_export:true` with its own closed per-contract privacy validator over
    every bounded string/value before pending/canonical/Profile mutation. Raw
@@ -317,18 +327,20 @@ descriptor/owner identities and current TASK-061 config/history receipt. The
 adapter is always invoked with the exact read-back operation config path through
 `--config`; default discovery and fixed-ProgramData fallback are forbidden.
 
-PL-B source/start also remains zero until the canonical TASK-068 completion
-receipt closes temp-handle loss, non-atomic expected-state CAS, path-only unlink
-race, Windows ancestor share-delete, lock durability and mutable/unpinned
-snapshot P0s. A partial TASK-068 implementation or public hash/status cannot be
-promoted into this Gate.
+PL-B source/start also remains zero until the canonical TASK-068
+`IMMUTABLE_ONLY_V1` completion receipt closes pinned read, secure lock,
+immutable no-replace publication and native durability. TASK-068 deliberately
+does not supply same-path mutable CAS, exact delete or current-head selection;
+its receipt must state `MUTABLE_CAS_UNAVAILABLE`, `EXACT_DELETE_UNAVAILABLE`,
+`authority_created:false` and `currentness_selected:false`. A partial
+implementation or public hash/status cannot be promoted into this Gate.
 
 Current TASK-058 Windows directory durability is an unconditional no-op and its
 test accepts missing-directory success; TASK-063 suppresses directory-open/
 `fsync` failure. These are historical platform behavior, not Production proof.
 PL-B/D require an owner-provided Windows native durability port and receipts for
-mkdir, owner/descriptor/readback, pending/receipt/Profile and config/journal/
-pointer commits. Unsupported/failure is `RECEIPT0 / EFFECT0`.
+mkdir, owner/descriptor/readback, pending/receipt/Profile and config/transition/
+tombstone commits. Unsupported/failure is `RECEIPT0 / EFFECT0`.
 
 Steady-state `enabled` is derived only from a separate current Production
 Activation receipt/history created after its Human Gate; TASK-061-B final CA-C
@@ -336,20 +348,22 @@ alone retains `enabled:false`. PL-B cannot edit that history, mint Human
 evidence, or infer enabled state. The preceding TASK-036 pre-activation
 operation consumes TASK-061-A PREACTIVATION PREPARE plus the D2S adapter-side
 one-shot redemption contract and never publishes a steady-state runtime config.
-Each invocation uses an immutable,
-noreplace operation-specific config/receipt coordinate; a mutable current
-pointer, if needed, is BVP-only and never adapter authority. Every
+Each invocation uses an immutable, no-replace operation-specific plan,
+config/receipt and append-only transition/tombstone chain. There is no mutable
+current pointer and no scan-highest/newest fallback. Current selection comes
+only from an exact consumer-owned trusted plan/durable receipt binding the
+operation generation, expected predecessor and terminal digest. Every
 pre-activation and steady-state runtime config fixes
 `require_admission_receipt:true`; publish/read feature flags are operation-
 scoped minimum authority and are never assumed both true. Feature flags alone
 never prove operation authority.
 
 PL-B propagates the same PL-A installation generation through its private
-receipt, journal, publication CAS, operation ticket and launch-time reread.
+receipt, immutable transition chain, operation ticket and launch-time reread.
 Product build/payload, trusted registration set/selection, lifecycle and
 reader-currentness fields remain outside SKILL v1 config and are bound only by
-the future trusted broker/config-v2 route. The exact field/CAS tuple and
-PLB-I01-I17 cases are in
+the future trusted broker/config-v2 route. The exact field/predecessor tuple and
+PLB-I01-I19 cases are in
 [`pl-a-pl-b-installation-binding-matrix-2026-08-31.md`](pl-a-pl-b-installation-binding-matrix-2026-08-31.md).
 
 ### PL-C — post-completion connector E2E/read-back

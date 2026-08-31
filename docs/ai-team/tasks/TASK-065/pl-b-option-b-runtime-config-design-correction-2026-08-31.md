@@ -62,15 +62,19 @@ already admitted private absolute Bridge root.
 ```text
 <bridge_root>/state/
 |-- connector-runtime-config.lock
-|-- connector-runtime-config.transaction.json
-|-- connector-runtime-config.current.json             # optional BVP-only pointer
-|-- connector-runtime-config.current.receipt.json     # BVP-only projection state
 `-- connector-operations/
     `-- <operation_id>/
         `-- <exact-command>/
+            |-- connector-runtime-config.plan.json    # exact trusted selector input
             |-- connector-runtime-config.json         # immutable invocation input
             |-- connector-runtime-config.receipt.json # immutable binding
-            `-- connector-runtime-config.consume.json # one-shot terminal state
+            |-- connector-runtime-config.consume.json # one-shot terminal state
+            |-- connector-runtime-config.tombstone.json # immutable retirement
+            `-- transitions/
+                |-- 0000-prepared.json
+                |-- 0001-config-published.json
+                |-- 0002-receipt-published.json
+                `-- 0003-terminal.json
 ```
 
 - `<bridge_root>` is derived only from the exact current TASK-063 discovery and
@@ -78,9 +82,12 @@ already admitted private absolute Bridge root.
 - `<operation_id>` is a bounded opaque coordinate bound inside the separately
   authorized TASK-061-A PREACTIVATION PREPARE receipt; neither identifier, path nor hash
   creates authority by itself.
-- There is no shared mutable adapter-facing steady-state config. Each launch
-  receives one immutable operation-specific config path. An optional current
-  pointer is BVP-only, is never passed to the adapter and is never authority.
+- There is no shared mutable adapter-facing steady-state config or BVP current
+  pointer. Each launch receives one immutable operation-specific config path.
+  The exact current generation is selected only by a consumer-owned trusted
+  plan/durable receipt that binds the operation coordinate, predecessor and
+  terminal-transition digest. Directory enumeration, scan-highest/newest and
+  a caller-selected unbound coordinate never select authority.
   A portable move, repair or upgrade requires a new operation coordinate from
   fresh TASK-063 discovery; an embedded absolute root is never reused as
   currentness evidence.
@@ -88,7 +95,7 @@ already admitted private absolute Bridge root.
   the existing `state/` authorities named `importer-journal.json`,
   `profile-promotion-journal.json`, `profile-promotion-commit-marker.json`, and
   `connector-activation-history.json`; none collides with the frozen lock,
-  journal, optional pointer or operation-directory namespaces above. Any newly
+  transition or operation-directory namespaces above. Any newly
   current file or case-folded name collision
   before implementation invalidates this freeze and yields effect zero pending
   a fresh owner review.
@@ -199,16 +206,23 @@ receipt are required when the operation changes.
 It contains no private absolute root, username, SID text, media, transcript,
 credential, token or free-form Human rationale.
 
-### 5.3 Transaction journal
+### 5.3 Immutable transition chain
 
-`connector-runtime-config.transaction.json` is a durable self-hashed
-`BvpMontageLearningRuntimeConfigProjectionTransaction` v1 journal. It binds the
-operation ID/phase, exact predecessor receipt/config identities, intended
-config/receipt hashes, TASK-063/TASK-060/TASK-061 coordinates, expiry and
-currentness. It is atomically published, flushed and exactly read back before
-an immutable operation is committed or the optional BVP-only current projection
-pointer advances. No missing, foreign, stale or mismatched journal authorizes
-recovery.
+Each file below `transitions/` is a durable self-hashed
+`BvpMontageLearningRuntimeConfigProjectionTransition` v1 immutable generation.
+Every transition binds the operation ID, unique phase coordinate, exact
+predecessor transition/config/receipt identities, intended artifact hashes,
+TASK-063/TASK-060/TASK-061 coordinates, expiry and currentness. PREPARED and
+every successor are published no-replace, flushed and exactly read back. No
+same-path phase update, mutable current pointer or replacement is permitted.
+
+TASK-068 supplies only strict/pinned read, secure lock, immutable no-replace
+publish and durability primitives. Its receipt fixes `authority_created:false`
+and `currentness_selected:false`. It does not choose the terminal generation.
+Recovery receives the exact generation and expected predecessor from a trusted
+consumer plan/durable receipt; missing, multiple, stale, caller-selected,
+foreign or mismatched coordinates stop with effect zero. Scanning transition
+files for the highest/newest phase is prohibited.
 
 ### 5.4 Pre-activation prepare receipt
 
@@ -218,7 +232,8 @@ exact TASK-061-A PREACTIVATION PREPARE receipt/Human challenge candidate,
 `enabled:false` and apply-effect-zero state,
 instance and source identities, operation, operation-scoped feature flags,
 config hash, expected public-safe record identity, expiry, single invocation
-budget, cleanup receipt identity, and authority fields fixed false. It is not a
+budget, immutable retirement/tombstone identity, and authority fields fixed
+false. It is not a
 TASK-061-B final or Production Activation receipt and cannot advance BVP
 steady-state projection.
 
@@ -228,7 +243,7 @@ enforced. The TASK-036 preactivation operation remains N.C. until the D2S
 operation-authority correction binds and atomically redeems this exact receipt/
 ticket or replaces it with an equivalent trusted broker capability.
 
-## 6. Writer, CAS and publication
+## 6. Writer, immutable transitions and publication
 
 PL-B is the sole writer under `connector-runtime-config.lock`. The lock is
 instance-scoped, regular-file-only, non-reparse, non-hardlinked and protected by
@@ -249,15 +264,16 @@ Lock and operation namespace establishment are transaction steps:
   handle/lstat identity plus DACL read-back. Only an exact prior-operation
   safe-empty namespace may resume; unknown/nonempty/reparse/case-colliding state
   stops without repair;
-- journal `PREPARED` publication is no-replace. Every later phase requires the
-  expected previous opened bytes, inode and self-hash under the same lock, then
-  an operation-owned fsynced temp, prepublish currentness and pinned post-readback;
+- transition `PREPARED` publication is no-replace. Every later phase uses a
+  unique operation-bound immutable path and binds the expected predecessor
+  opened bytes, identity and self-hash under the same lock, then requires
+  prepublish currentness and pinned post-readback; no phase overwrites another;
 - immutable invocation config and receipt artifacts are no-replace. Existing
   state is DUPLICATE only for the same operation/receipt chain with exact bytes
   and identity; any difference is collision/STOP;
-- an optional BVP-only current pointer advances in its own journal phase with
-  expected-identity CAS. The adapter never discovers that pointer and receives
-  only the explicit immutable operation config path; and
+- current selection is the exact plan-bound terminal transition/config/receipt
+  tuple. Neither adapter nor BVP scans the directory, follows a mutable pointer,
+  accepts a caller-selected generation or infers a winner from timestamps; and
 - directory durability failure is FAIL with receipt zero. Windows uses an
   explicit native durability port/Evidence when directory fsync is unsupported;
   failure is never suppressed.
@@ -270,11 +286,12 @@ suppresses `fsync` failure; its tests inject only `after_temp_fsync`, not a
 directory durability failure. `MoveFileExW(...WRITE_THROUGH)` is rename-seam
 precedent only and does not prove parent-directory creation or mkdir durability.
 Until owner Tasks provide a Windows native durability port and durable receipt,
-mkdir, owner/descriptor/readback, pending/receipt/Profile and PL-B config/journal/
-pointer commits remain `DURABILITY_UNOBSERVABLE / START0 / EFFECT0`. The current
+mkdir, owner/descriptor/readback, pending/receipt/Profile and PL-B config/
+transition/tombstone commits remain `DURABILITY_UNOBSERVABLE / START0 / EFFECT0`. The current
 Windows no-op test is historical regression input, never Production PASS.
 
-Steady-state publication requires the current corrected expected tuple below.
+Steady-state publication requires the current corrected immutable predecessor
+tuple below.
 The former instance/descriptor/owner/TASK-061-only tuple is SUPERSEDED because
 it did not preserve installed Product, registration, lifecycle or reader
 currentness:
@@ -300,21 +317,23 @@ currentness:
 
 The writer reopens and revalidates the complete ancestor chain, DACL, file type,
 link count, target identities and source receipts before and after each publish.
-It first publishes/flushes/reads back the exact transaction journal. It then
-writes immutable operation config and receipt through same-directory
-operation-owned `CREATE_NEW` temporaries, flushes file data and the containing
-directory, publishes no-replace, and reopens by name for exact bytes/identity
-read-back. Expected-target replace is allowed only for the separately journaled
-BVP current pointer after exact predecessor identity/bytes CAS.
+It first publishes/flushes/reads back the exact immutable PREPARED transition.
+It then writes immutable operation config and receipt with operation-owned
+exclusive handles, flushes file data and the containing directory, publishes
+no-replace, and reopens by name for exact bytes/identity read-back. Every later
+transition and terminal/tombstone artifact is another unique no-replace
+generation. Expected-target replace and same-path mutable CAS are unavailable
+and prohibited.
 
-Atomic receipt publication plus exact read-back is the sole commit point after
-config read-back. A committed consumer accepts only a config whose bytes and
-physical identity match that receipt. Failure before commit may remove only
-exact current-operation temporary/pending artifacts whose current inode/
-directory identity is bound by the journal. Foreign replacement, unknown child
-or cleanup-time swap is preserved and stops; committed immutable Evidence is
-retained until lifecycle policy authorizes removal. Exact journal recovery may
-roll forward only the bound intended operation; it never fabricates from
+Atomic terminal-transition publication plus exact receipt/config read-back is
+the sole commit point. A committed consumer accepts only the exact plan-bound
+terminal generation whose config bytes and physical identity match its receipt.
+Failure before commit preserves unfinished artifacts; it neither deletes nor
+replaces them automatically. A later unique immutable tombstone may mark the
+exact operation generation ineligible, but physical presence is non-authority
+and retention/cleanup is a separate lifecycle Gate. Foreign replacement,
+unknown child or cleanup-time swap is preserved and stops. Exact transition
+recovery may roll forward only the plan-bound intended next generation; it never fabricates from
 ambient files, changes TASK-061 history, edits SKILL distribution data, or
 deletes learning inbox/receipts/Profile state. An unjournaled one-sided config,
 receipt/config mismatch or unrecoverable journal remains effect zero.
@@ -322,7 +341,7 @@ receipt/config mismatch or unrecoverable journal remains effect zero.
 Every consumer reopens receipt and config and revalidates the TASK-063/TASK-061
 identities and operation immediately before launching the adapter. A prior
 successful read-back or config existence is not permanent authority.
-The trusted lock/journal/config/receipt/pointer capability is the operation-bound
+The trusted lock/plan/transition/config/receipt capability is the operation-bound
 handle/snapshot, never a public path or self-hash. Its lease/state transition
 continues through child launch, adapter pinned config read and result capture.
 Each crash seam defines exact resume or revoke from that journal; a second
@@ -668,9 +687,11 @@ The TASK-065 phase split is mandatory:
 
 The historical TASK-036 preactivation config candidates never replace shared projection state and are never
 discoverable through the SKILL default. The future authorized runner must
-expire them after one matching command and remove only their exact current-
-operation files after cleanup read-back is sealed; crash recovery requires the
-same ticket and identities. A missing, replayed, expired or mismatched ticket
+expire them after one matching command by publishing an immutable operation-
+bound terminal consume/tombstone. It does not auto-delete operation files;
+physical remnants are non-authority and lifecycle retention is separate. Crash
+recovery requires the exact plan-bound transition, ticket and identities rather
+than scan-highest discovery. A missing, replayed, expired or mismatched ticket
 leaves effect zero.
 
 ### 7.1 TASK-061-A prepare, TASK-036 E2E and TASK-061-B final prerequisites
@@ -704,11 +725,11 @@ TASK-067's start Gate. Together the trusted Product operations:
 4. independently binds the Profile read-back to the exact PP-C source and
    requires `learning_adopted:false`, `profile_promoted:false` and
    `timeline_mutated:false`;
-5. requires exact pre-activation config expiry/cleanup read-back before minting
+5. requires exact pre-activation config expiry/terminal-tombstone read-back before minting
    `real_installed_verified:true`; and
 6. rejects missing/REJECTED/extra-field receipts, missing or mismatched
    correlation, request/instance/source/config/Profile drift, replay, expiry,
-   cleanup failure and every private-constructor attempt.
+   terminal/tombstone failure and every private-constructor attempt.
 
 The real-installed route cannot be a relaxation from
 `synthetic_fixture:true` to false over caller-supplied connector/publish/Profile
@@ -1501,7 +1522,8 @@ are all required before source or test mutation may resume.
   same-instance continuity and TASK-061 history/receipt remains current; else it
   is stale and disabled.
 - Cross-instance, stale descriptor, stale Product payload, zero/multiple current
-  instances, config/history drift or missing pointer produces no adapter launch
+  instances, config/history drift or missing exact plan-bound terminal
+  generation produces no adapter launch
   and preserves all data.
 - Public Evidence records only opaque IDs, hashes, revisions, relative paths and
   reason codes. Absolute roots, SID text, account names, private media and
@@ -1520,8 +1542,9 @@ Focused tests must reject at least:
   crash before consume/after consume/after adapter start, same-user direct CLI,
   and operation A/B startup race;
 - initial lock race/link/reparse/hardlink, ticket-directory race/case collision,
-  safe-empty versus unknown child, journal/config/receipt/pointer target
-  appearance or inode swap, foreign temp, cleanup swap, directory durability
+  safe-empty versus unknown child, transition/config/receipt/tombstone target
+  appearance or inode swap, same-path replace/CAS attempt, scan-highest/newest,
+  unbound caller generation, foreign temp, auto-cleanup attempt, directory durability
   failure and concurrent operation A/B. Assertions require unrelated overwrite/
   delete zero, operation effect exact zero-or-one, one ticket to one command,
   coherent config/receipt and activation-history delta zero;

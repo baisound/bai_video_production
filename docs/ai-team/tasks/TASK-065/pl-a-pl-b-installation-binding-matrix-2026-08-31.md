@@ -57,8 +57,11 @@ The future BVP projection receipt and PREPARED journal bind:
 - `installation_selection_cardinality:1`; and
 - `installation_reader_currentness_sha256`.
 
-Every phase and recovery retains the same ten fields. No recovery scans roots
-or recomputes a winner. The publication CAS tuple is:
+Every immutable transition and recovery retains the same ten fields. No
+recovery scans roots, generations or recomputes a winner. TASK-068 creates no
+current-head authority; the consumer-owned trusted plan/durable receipt binds
+the exact generation, predecessor and terminal digest. The immutable
+publication predecessor tuple is:
 
 ```text
 (task063_current_installation_receipt_sha256,
@@ -81,12 +84,13 @@ or recomputes a winner. The publication CAS tuple is:
  previous_receipt_sha256)
 ```
 
-Any drift is a CAS failure with config/receipt/adapter effect zero. The runner
+Any drift is a predecessor/currentness failure with config/receipt/adapter
+effect zero. Same-path mutable CAS and exact delete are unavailable. The runner
 holds its lease across final Product-currentness read, pinned adapter config
 read and result capture. A lifecycle change after start never authorizes a
 second command; fresh snapshot/ticket is required.
 
-## PLB-I01-I17
+## PLB-I01-I19
 
 | ID | Fault | Required result |
 | --- | --- | --- |
@@ -96,7 +100,7 @@ second command; fresh snapshot/ticket is required.
 | `PLB-I04` | registration one to zero | launch 0; preserve Bridge |
 | `PLB-I05` | registration one to two | `MULTI_INSTALL_AMBIGUOUS`; no winner |
 | `PLB-I06` | selected registration belongs elsewhere | config/receipt commit 0 |
-| `PLB-I07` | successor payload with predecessor lifecycle receipt | pointer/projection delta 0 |
+| `PLB-I07` | successor payload with predecessor lifecycle receipt | transition/projection delta 0 |
 | `PLB-I08` | config/history names predecessor | launch 0; no history rewrite |
 | `PLB-I09` | recovery sees different installation snapshot | `STOP_PRESERVE`; no advance/foreign cleanup |
 | `PLB-I10` | old immutable config replayed after repair/reinstall | ticket redemption fails; command 0 |
@@ -107,6 +111,8 @@ second command; fresh snapshot/ticket is required.
 | `PLB-I15` | public output leaks path/account/SID/body/OS detail | public receipt 0 |
 | `PLB-I16` | SKILL v1 config treated as installation authority | reject; transport-only/replayable |
 | `PLB-I17` | descriptor time rolls back/equal/future/cross-session or newest timestamp is used for successor/selection/expiry | CAS/config/launch 0; require trusted journal revision, registration+payload chain and Product clock receipt |
+| `PLB-I18` | mutable pointer, same-path replace/CAS or automatic deletion is requested from TASK-068 | stable `UNAVAILABLE`; filesystem/config/launch delta 0 |
+| `PLB-I19` | exact generation absent/multiple/stale, caller-selected, scan-highest/newest or valid old tombstone replay | `CURRENT_HEAD_AUTHORITY_NOT_CREATED / STOP_PRESERVE`; command 0 |
 
 Each case asserts Project/unrelated Bridge/distribution config/activation/
 history delta zero, installer-readback write zero, exact phase-owned projection
@@ -116,4 +122,5 @@ crash seam, and public leakage zero.
 TASK-063 produces installation/lifecycle receipts, TASK-061-B binds config/
 history, SKILL-D2S supplies operation authority, and TASK-065 PL-B only composes
 current receipts. PL-B remains `START0 / EFFECT0` until the receipt, journal,
-CAS, ticket and launch-time readback carry the same installation identity.
+immutable transition, trusted head coordinate, ticket and launch-time readback
+carry the same installation identity.

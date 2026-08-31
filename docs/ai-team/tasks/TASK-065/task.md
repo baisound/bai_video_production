@@ -235,6 +235,12 @@ descriptor/owner identities and current TASK-061 config/history receipt. The
 adapter is always invoked with the exact read-back operation config path through
 `--config`; default discovery and fixed-ProgramData fallback are forbidden.
 
+PL-B source/start also remains zero until the canonical TASK-068 completion
+receipt closes temp-handle loss, non-atomic expected-state CAS, path-only unlink
+race, Windows ancestor share-delete, lock durability and mutable/unpinned
+snapshot P0s. A partial TASK-068 implementation or public hash/status cannot be
+promoted into this Gate.
+
 Steady-state `enabled` is derived only from a separate current Production
 Activation receipt/history created after its Human Gate; TASK-061-B final CA-C
 alone retains `enabled:false`. PL-B cannot edit that history, mint Human
@@ -257,6 +263,13 @@ strict public receipt, hidden Generic correlation, canonical state and Profile
 read-back before TASK-061-B final CA-C. It never calls `publish-learning` again
 for confirmation and never treats adapter `canonical_store_written` as
 authority. TASK-065 PL-C does not recreate or substitute that receipt.
+
+For this preactivation chain, TASK-065 performs admission only: it pinned-reads
+and joins the existing TASK-036 durable receipt with observed historical
+stage-count 1, import-count 1, strict public receipt, hidden correlation and
+Profile read-back. Those counts describe the already-completed TASK-036
+operation, not a TASK-065 local delta; TASK-065 calls neither the adapter nor
+TASK-036 and its Project/Bridge/Profile/config/history delta is zero.
 
 After every completion receipt is current, PL-A rebinds the baseline and PL-B
 publishes the immutable operation config. If the separate Production Activation

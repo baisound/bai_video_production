@@ -331,6 +331,22 @@ preservation, stale descriptor/config rejection, and disabled rollback. Final
 closure requires independent DEV-4 Critic/Tester/Judge, focused/fault/relevant
 regression, exact scope, canonical merge, and post-main read-back.
 
+The packaged installer CLI `discover` is effectful: it calls
+`write_installer_readback()` after logical discovery. PL-A/PL-D read-only
+admission must not invoke it. Current source also has no authoritative
+active-install registry or side-by-side selector, so TASK-065 must not scan
+roots or choose an implicit winner. Until a trusted installer/Product
+current-registration receipt and corrected noncreating TASK-063 reader are
+current, PL-D remains `START0 / EFFECT0`.
+
+The source-backed D01-D09 lifecycle boundary, historical-versus-real fixture
+separation, lifecycle receipt fields and producer/consumer ownership are in
+[`pl-d-lifecycle-source-matrix-2026-08-31.md`](pl-d-lifecycle-source-matrix-2026-08-31.md).
+TASK-063 owns current-registration/lifecycle production, TASK-061-B owns
+disable/history semantics, and TASK-065 consumes their receipts without
+installer repair, activation/deactivation, preserved-data deletion, config
+mutation or authority creation.
+
 ## Candidate Allowed Files
 
 Repository-local candidate paths:

@@ -1,8 +1,11 @@
 # TASK-065 dependency currentness reconciliation
 
-State: `CANDIDATE_SOURCE_PRESENT / COMPLETION_RECEIPTS_MISSING / EFFECT0`
+State: `DEPENDENCY_DELTA_V2 / TASK_LOCAL_DESIGN_ACTIVE / SOURCE_START0 / EFFECT0`
 
 Audit base: `origin/main = 35cdf1ad475633dcf035e0616e979b5a8fde0c88`
+
+Current checkpoint: `2026-08-31 / v2`. Worktree and PR observations below are
+read-only currentness cells, not canonical completion receipts or authority.
 
 This task-local read-only reconciliation supersedes only stale missing-source
 classifications in earlier TASK-065 design freezes. It does not rewrite their
@@ -11,15 +14,15 @@ write shared task/index/roadmap/current-state metadata.
 
 ## 1. Fresh dependency classification
 
-| Gate | Current main fact | Missing completion/currentness | Admission |
+| Gate | Current read-only cell | Missing completion/currentness | Admission |
 | --- | --- | --- | --- |
-| D-068 / TASK-068 | no canonical task-local record, task-index/current-state/roadmap row, active lock or completion receipt exists at the audit base; temp-handle retention, atomic expected-state CAS, identity-safe unlink, Windows ancestor share-delete, lock durability and immutable same-snapshot guarantees therefore remain unproven | canonical allocation and scope, exact Allowed Files, implementation/review closing temp handle loss, non-atomic CAS, path unlink race, Windows ancestor share-delete, lock durability and mutable snapshot P0s, plus the completion receipt required by TASK-069, TASK-063 and TASK-065 PL-B | `SOURCE.N.C. / TASK068_P0_OPEN / PL_B_SOURCE_START0 / EFFECT0` |
-| D-069 / TASK-069 | no canonical task-local record, task-index/current-state/roadmap row, active lock or completion receipt exists at the audit base | canonical allocation and scope after TASK-068, exact Allowed Files, implementation/review and completion receipt required by TASK-061-A | `SOURCE.N.C. / EFFECT0` |
-| D0 / TASK-063 | initial installer-relative `20f5360`, read-back boundary `0b95e40` and publication race/path-safety `8fd17ed` are canonical; descriptor and rollback paths still accept permissive JSON despite receipt-only duplicate-key guarding | secure operation lock and pinned discovery; identity-safe publication/rollback; one strict bounded UTF-8 parser for descriptor/owner/readback/journal/rollback preimage binding raw bytes, canonical parsed hash and physical identity; focused Windows/parser faults; real installed read-back and canonical completion receipt | `SOURCE_CORRECTIONS_CANONICAL / PHYSICAL_RACE_AND_DESCRIPTOR_JSON_AUTHORITY.N.C. / EFFECT0` |
-| D1 / TASK-060 | PP-C candidate exists but confirmation/store/cipher authority remains open; encrypted store, decrypted history and promoted-source paths use permissive JSON without duplicate/non-finite rejection | trusted Human challenge; secure pinned PP-B CAS store; internally fixed Windows DPAPI/Product coordinates; strict bounded outer-encrypted and decrypted-history parser binding raw/canonical/ciphertext/native backend/user/session/source identity in one snapshot; private Profile publish capability and canonical receipt | `CANDIDATE_PRESENT / HUMAN_STORE_CIPHER_JSON_PROFILE_AUTHORITY.N.C. / EFFECT0` |
-| D2A / TASK-061-A PREACTIVATION PREPARE | disabled CA-A/B/C candidate exists; public migration readback is reconstructible, CA-A/CA-B confirmations are deterministic, and authority readers use permissive JSON | close CA-A/B corrections plus CA-C sealed operation plan/config candidate/challenge contract at `enabled:false`; separate trusted CA-A/CA-B tickets, private pinned CA-A terminal capability, strict bounded authority snapshots, identity-safe writers and focused Windows/authority/parser evidence; emit a durable PREACTIVATION PREPARE receipt with no real-E2E or activation claim | `DISABLED_CANDIDATE_PRESENT / PREPARE_AUTHORITY.N.C. / EFFECT0` |
-| D2B / TASK-061-B FINAL CA-C | TASK-061 currently lacks an eligible real-installed E2E input; CA-C apply also accepts caller `now` | after TASK-036 real-installed E2E, consume that exact receipt and close the final CA-C contract/currentness using the trusted Product/OS time domain while retaining `enabled:false`; no Production Activation/config/history effect is executed until its separate Human Gate | `WAITS_TASK036_E2E / FINAL_CA_C.N.C. / EFFECT0` |
-| D2.5 / SKILL adapter Production transport | canonical SKILL `origin/main=c86ec8c11724a3170d37e0fdc5a516979fcca703` confirms the released adapter/default-disabled historical TASK-058 Evidence while retaining replace-capable publication, unpinned config/delivery/receipt/Profile reads, an AdmissionReceipt schema/runtime validator that accepts extra fields, and obsolete fixed-ProgramData/default-config activation instructions | separate SKILL-owner Task/Allowed Files/fresh clean main worktree; code safety plus closed exact-v1 receipt schema/runtime validation and connector-ready/SKILL workflow/interface/contract/tests/inventory alignment; canonical PR/main/release; installed exact sync/read-back and PL-A baseline hash rebind | `PRODUCTION_LINKAGE_N.C. / EFFECT0` |
+| D-068 / TASK-068 | `IMPLEMENTATION_IN_PROGRESS / P0_COMMIT_STOP`: a transition-state working diff introduces TempLease/native-handle publication, but path replace, path cleanup/rollback, mutable `SecureJsonRead` and pre-bound writer validation remain; completion receipt, commit, push and PR are all zero | close temp handle loss, non-atomic CAS, path unlink race, Windows ancestor share-delete, lock durability and mutable snapshot P0s; focused review/tests and durable completion receipt required by TASK-069, TASK-063 and TASK-065 PL-B | `TASK068_P0_OPEN / P0_COMMIT_STOP / PL_B_SOURCE_START0 / EFFECT0` |
+| D-069 / TASK-069 | negative/currentness matrix is prepared; source has not started and waits for TASK-068 completion | TASK-068 durable completion receipt, canonical start authority, exact Allowed Files, implementation/review and completion receipt required by TASK-061-A | `START0 / EFFECT0` |
+| D0 / TASK-063 | `READ_ONLY_MATRIX_REFINEMENT`: reusable historical tests cover Unicode/custom roots, repair identity preservation, tamper/link/ancestor/concurrency/read-back/rollback cases, fixed-ProgramData literal zero and installer-selected lifecycle contracts. GF-D PR #469 has focused PASS; full and hosted-common share one failure parked as a cross-owner old-hash Gate. Montage mutation is zero and TASK-068 is not complete | independently park TASK-068 and GF-D #469; add I63-R01 descriptor+owner same-open snapshot/mixed-generation rejection, stat-open/read-post different-inode seams, strict nested JSON faults, I63-L01 secure initial/existing lock, temp/target swap seams, directory-fsync failure, foreign-replacement rollback preservation, multi-install/portable/upgrade/uninstall real read-backs and canonical completion receipt | `HISTORICAL_REGRESSION_INPUTS_ONLY / SOURCE_START0 / EFFECT0` |
+| D1 / TASK-060 | `START0`: waits for TASK-068 and TASK-063 receipts; older worktrees are clean/merged but are neither reused nor deleted | trusted Human challenge; secure PP-B store; fixed Windows DPAPI/Product coordinates; strict outer/decrypted JSON; private Profile publish/read-back correction and canonical completion receipt | `START0 / EFFECT0` |
+| D2A / TASK-061-A PREACTIVATION PREPARE | `START0`: waits for TASK-068, TASK-069, TASK-063, TASK-060 and SKILL-D2S-001; this phase closes only the `enabled:false` prepare contract | corrected CA-A/B authority, sealed CA-C candidate/challenge, strict durable snapshots and the PREACTIVATION PREPARE receipt with real-E2E/activation claims zero | `START0 / PREPARE_AUTHORITY.N.C. / EFFECT0` |
+| D2B / TASK-061-B FINAL CA-C | `START0`: waits for the TASK-036 real-installed E2E receipt | consume the exact TASK-036 receipt, revalidate trusted time/currentness and close final CA-C while retaining `enabled:false`; Production Activation remains a separate Human Gate | `START0 / WAITS_TASK036_E2E / EFFECT0` |
+| D2.5 / SKILL-D2S-001 Production transport | `DIRTY_OVERLAP / SOURCE_START0`: `installer-relative-learning-bridge@c86ec8c`, PR0, eight target files dirty. Some default-disabled/null-root concepts are preserve candidates, but the branch is an intermediate whole and owner/disposition is N.C.; two dirty BVP proposal/work-order docs are outside D2S Allowed Files | fresh owner disposition; dedicated clean-main D2S worktree; selected concepts reimplemented with strict pinned JSON, operation-v2 ticket/consume, exact-one stage, closed privacy and strict receipt/correlation/Profile; full tests; final inventory regeneration; canonical PR/main/release/install/read-back and PL-A rebind | `PARTIAL_HUNKS_ARE_NOT_RECEIPT / SOURCE_START0 / EFFECT0` |
 | D2.5 / SKILL Product-operation authority | config v1 binds only enabled/root/feature flags and receipt policy; the adapter consumes no operation ID, TASK-061-A receipt, projection receipt, expiry, nonce, invocation budget or TASK-063 instance authority, so an enabled preactivation config is replayable/copyable and indistinguishable from steady-state authority | canonical SKILL-owner config v2 or trusted broker/handle route with atomic one-shot redemption, immutable invocation-specific config/receipt coordinates, exact command/instance/input binding, replay/crash closure, release/install exact read-back and PL-A hash rebind; otherwise the TASK-036 preactivation attempt is internal synthetic-only and cannot produce real-installed E2E | `PREACTIVATION_AUTHORITY.N.C. / EFFECT0` |
 | D2.5 / SKILL publish confirmation | `publish-learning` stages before reading a public receipt; after Bridge claim moves the original inbox file, a confirmation retry can recreate that delivery. `canonical_store_written` trusts receipt status without hidden correlation/current canonical proof, and public output exposes absolute paths | exact-one stage followed by TASK-036 import and separate trusted BVP receipt/correlation/canonical/Profile read-back; no second publish; optional terminal status must be read-only and broker-bound; strict receipt fields and opaque public output; canonical SKILL correction/release/install/read-back before PL-A rebind | `DELIVERY_RECREATION_AND_AUTHORITY_OVERCLAIM.N.C. / EFFECT0` |
 | D2.5 / SKILL learning-export privacy | redaction is driven mainly by sensitive key-name substrings; free-form reason/style/context/tags/IDs and benign-key values are not closed by value grammar or privacy detectors, while export fixes `safe_export:true` | closed per-contract privacy projection; controlled reason codes and typed allowlists; bounded token/string/depth/item/document grammar; path/email/account/secret/transcript detectors; independent post-build validator with redacted report only; body-free public errors; canonical release/install/read-back and PL-A hash rebind | `SELF_ASSERTED_PRIVACY.N.C. / EFFECT0` |
@@ -28,9 +31,34 @@ write shared task/index/roadmap/current-state metadata.
 | D2.5 / TASK-058 BVP privacy admission | generic delivery admission trusts key-name filtering and caller `safe_export:true`; benign-key values can carry paths, accounts, secrets or transcript-like content across the process boundary | independent closed per-contract BVP validator over every bounded string/value before pending/canonical/Profile mutation; controlled grammars, normalization-aware detectors, body-free errors and zero raw payload in temp/journal/receipt/log; canonical correction/install/read-back | `BVP_PRIVACY_ADMISSION.N.C. / EFFECT0` |
 | D2.5 / TASK-058/TASK-060 Profile publish authority | public `PromotedPreferenceSourceRead` and `ProfileSourceBinding` token/self-hash objects can be caller-constructed and can reach the public prebuilt Profile publisher without a pinned actual promotion-source reread; `PromotedPreferenceSource` also accepts caller-provided cipher and coordinates, so synthetic/custom decryptors can launder a forged history unless Production composition fixes the backend | explicit cross-owner corrective authority; trusted same-open-snapshot encrypted source read; internally fixed Windows DPAPI backend and Product registry/manifest coordinates bound to selected-install owner/current-user attestation; private single-use late-bound Production publish capability; File Bridge ordered publication/readback correction and focused forgery/stale-source/backend tests | `AUTHORITY_AND_CIPHER_LAUNDERING.N.C. / EFFECT0` |
 | D2.5 / TASK-058/TASK-061 readiness baseline | `production_readiness_evidence()` and public `ConnectorReadinessEvidence` accept caller state strings and E2E/default-config booleans; TASK-061 `_validate_public_readiness()` checks only exact type plus serialized field equality, and its positive fixture hand-enters the passing booleans without an executed adapter/package/installed-instance report | cross-owner durable `TASK058_BASELINE_READBACK` from a trusted Product reader pinning canonical release manifest/code/schema/test/package hashes, installed exact bytes, executed operation ID/build/config/request/result/BVP receipt/correlation/Profile read-back and current expiry; separate exact disabled-default predicate; TASK-061 fresh bind to TASK-063 instance, TASK-060 source and operation plan | `CALLER_ASSERTED_BASELINE.N.C. / EFFECT0` |
-| D2.5 / TASK-067 | Owner-approved task-local formal scope now exists for the Generic Review Operation Facade, but the preserved uncommitted diff is not approved implementation and has source/test/commit/push/PR count zero | canonical metadata materialization; TASK-068/TASK-069, TASK-060/063 and TASK-061-A PREACTIVATION PREPARE receipts; exact TASK-058 owner-preserving amendment; fresh overlap/work-lock PASS; explicit post-dependency implementation start; DEV-4 implementation/review and completion receipt; TASK-061-B is not a prerequisite | `FORMAL_SCOPE_PRESENT / SOURCE_START0 / EFFECT0` |
-| D2.5 / TASK-036 | packaged single-record Product-operation entrypoint completion receipt absent | TASK-061-A plan, TASK-063 corrected installed read-back, SKILL-D2S-001 and TASK-067 completion; exact Allowed Files/overlap/lock and installed-payload implementation plus real installed E2E read-back verification | `PREREQUISITE_MISSING / EFFECT0` |
-| D3 / TASK-065 | task-local Option B design candidate exists | D0-D2.5 current receipts, accepted design, implementation Gate | `SOURCE_START0` |
+| D2.5 / TASK-067 | `PRESERVED_DIRTY / COMMIT_STOP`: the exact three-file candidate remains byte-identical and uncommitted; canonical amendment and dependencies are absent | TASK-068/TASK-069, TASK-060/063 and TASK-061-A PREACTIVATION PREPARE receipts; exact TASK-058 owner-preserving amendment; fresh overlap/work-lock PASS; explicit implementation start, DEV-4 review and completion receipt | `COMMIT_STOP / EFFECT0` |
+| D2.5 / TASK-036 | `START0`: waits for TASK-061-A, TASK-063, SKILL-D2S-001 and TASK-067 receipts | packaged exact single-record entrypoint, installed-payload implementation, real-installed E2E and focused completion receipt | `START0 / EFFECT0` |
+| D3 / TASK-065 | `TASK_LOCAL_DESIGN_ACTIVE / SOURCE_START0`: PL65-B00 and PL65-C01a/C01b are split; preactivation is pinned read/join with local effect zero, post-activation is behind a separate Human Gate | every upstream completion receipt, accepted design/implementation Gate and later independent Production Activation authority | `SOURCE_START0 / EFFECT0` |
+
+### TASK-063 historical regression versus corrective delta
+
+Reusable historical coverage is limited to regression input: Unicode/custom
+install roots and exact relative layout; repair preservation of
+`install_instance_id`/`created_at`; descriptor tamper, unsafe directory,
+symlink/hardlink, forged-root and ancestor drift; concurrent no-clobber,
+post-write mismatch and exact safe single-link update; forged/missing
+predecessor and fresh/update rollback fixtures; fixed-ProgramData active literal
+zero; and installer-selected destination/reparse/uninstall-preservation source
+contracts.
+
+Corrective PASS still requires I63-R01 descriptor+owner same-open snapshot and
+mixed-generation rejection; same bytes on a different inode at stat-open and
+read-post seams; nested duplicate equal/different, NaN/Infinity, BOM/trailing/
+control/depth/size rejection for descriptor, owner, readback and rollback
+preimage; I63-L01 secure existing/initial operation lock with first-provision,
+hardlink/reparse/DACL races; temp-close foreign swap; target swap immediately
+before/after publish; directory-fsync failure with receipt zero; foreign-current
+rollback preservation with delete/restore zero; and multi-install, portable
+rebind, upgrade predecessor/current Product payload and real uninstall
+preservation read-backs.
+
+Therefore existing tests create no TASK-063 corrective completion receipt.
+TASK-068 and GF-D PR #469 remain independently parked.
 
 The canonical one-way dependency graph is:
 
@@ -49,7 +77,41 @@ only the CA-A/B corrections and CA-C sealed plan/config candidate/challenge
 contract. TASK-061-B alone consumes TASK-036 real-installed E2E. Production
 Activation execution remains a separate Human Gate.
 
-### Current canonical-to-installed SKILL baseline
+### SKILL-D2S dirty-overlap hunk admission
+
+The dirty eight-file `installer-relative-learning-bridge@c86ec8c` worktree is
+read-only audit input, not a branch-level adoption candidate. After fresh owner
+disposition, a dedicated clean-main D2S task may manually reimplement these
+concepts:
+
+- preserve distribution `enabled:false`;
+- represent no fixed bridge root as `null`, allowed only while disabled;
+- reject `enabled:true` plus null root;
+- return `DISABLED_LEGACY_SAFE` with directory-creation delta zero for disabled
+  null-root status; and
+- remove fixed-ProgramData positive tests and explain installer-selected
+  relative root with no automatic legacy adoption.
+
+It must not carry instructions to write an absolute root into installed
+distribution config, enable both feature flags as normal operation, reuse
+config v1 as steady/preactivation authority, omit explicit Product `--config`,
+or promote directory-existence READY to synchronization/E2E. Strict pinned
+JSON, operation-v2 ticket/consume, exact-one stage, closed privacy and strict
+receipt/correlation/Profile work remain missing (`D2S-J/R/O/P/T/C/D/A/V`;
+only F01/I01 are partial). The two dirty files
+`BVP_IMPLEMENTATION_WORK_ORDERS.md` and
+`BVP_SIDE_REQUIRED_FEATURES_DETAILED_PROPOSAL.md` are outside D2S Allowed Files
+and require separate owner disposition. The managed-skill inventory is
+intermediate and may be regenerated only after the final accepted diff.
+
+Result: `PARTIAL_PRESERVE_CONCEPTS / COMPLETION_RECEIPT0 / SOURCE_START0`.
+
+### SUPERSEDED historical canonical-to-installed SKILL baseline
+
+**SUPERSEDED CURRENTNESS:** the clean comparison and exact hashes below record
+the earlier installed baseline only. They do not describe the current dirty
+D2S worktree, authorize adoption of its hunks or satisfy any completion/read-
+back receipt. Current admission is the dirty-overlap cell and hunk rules above.
 
 Read-only comparison against canonical SKILL
 `origin/main=c86ec8c11724a3170d37e0fdc5a516979fcca703` found zero scoped
@@ -154,25 +216,29 @@ Each heartbeat or future implementation preflight evaluates these independently:
 
 | Receipt | Identity/read-back requirement | Current |
 | --- | --- | --- |
-| D0 completion | canonical TASK-063 physical-race correction plus strict descriptor/owner/readback/rollback JSON snapshot and real provision/repair/upgrade installed read-back | missing/N.C. |
+| TASK-068 foundation | TempLease/native-handle transition must close every P0 and emit durable completion | implementation in progress / P0 COMMIT STOP / receipt0 |
+| TASK-069 | may start only from TASK-068 completion | matrix prepared / START0 |
+| D0 completion | TASK-063 historical coverage is regression input only; add I63-R01/I63-L01, strict JSON, physical-race/durability and lifecycle read-backs after TASK-068 and GF-D #469 Gates | read-only matrix refinement / source START0 / missing |
 | D1 completion | independent DEV-4 PP-A/B/C acceptance including trusted Human promotion/rollback, secure PP-B store, internally fixed Windows DPAPI source, strict outer/decrypted authority JSON and exact PP-C read-back | missing/N.C. |
 | D1 Profile authority | trusted pinned native source plus private one-use Production publish completion and ordered exact read-back | missing/N.C. |
-| D2 completion | operation-plan/real-E2E/Human activation completion | missing |
+| D2 whole-task completion | **SUPERSEDED:** one receipt cannot stand for prepare, real E2E and final CA-C | ineligible |
+| D2 TASK-061-A | `enabled:false` CA-A/B corrections plus sealed CA-C plan/config/challenge PREACTIVATION PREPARE | START0 / waits TASK-068/069/063/060/D2S |
+| D2 TASK-061-B | consumes TASK-036 real-installed E2E and closes final CA-C without Production Activation | START0 / waits TASK-036 |
 | D2 TASK-058 baseline | trusted durable `TASK058_BASELINE_READBACK` freshly bound by TASK-061; public v1/V2 readiness is display-only | missing/N.C. |
 | D2 CA-A terminal authority | private one-use currentness capability from pinned terminal migration journal plus exact snapshot manifest/tree/physical identities | missing/N.C. |
 | D2 CA-A/CA-B execute authority | separate trusted durable one-shot action tickets; deterministic public confirmations and raw public executors are ineligible | missing/N.C. |
 | D2 trusted time | Product/OS-owned clock domain spans issue/receipt/apply/consume/read-back and Product-authors history timestamp; caller `now` is ineligible | missing/N.C. |
 | D2 strict authority JSON | bounded duplicate/non-finite/BOM/trailing/control rejecting same-snapshot parser for CA-A/CA-B/CA-C durable state | missing/N.C. |
-| D2.5 SKILL safety | canonical SKILL correction/release plus installed exact sync and PL-A hash rebind | missing/N.C. |
+| D2.5 SKILL safety | fresh clean-main reimplementation after dirty-hunk owner disposition; canonical correction/release plus installed exact sync and PL-A hash rebind | dirty overlap / partial hunks only / START0 |
 | D2.5 SKILL operation authority | config v2 or trusted broker exact-one command redemption plus immutable operation artifact/read-back | missing/N.C. |
 | D2.5 SKILL publish confirmation | exact-one stage, TASK-036 import and separate pinned receipt/correlation/canonical/Profile completion | missing/N.C. |
 | D2.5 SKILL privacy | independent closed privacy-projection validator completion receipt; fixed `safe_export:true` is ineligible | missing/N.C. |
 | D2.5 SKILL strict I/O | strict pinned JSON snapshot/digest equality plus closed Product path/output boundary | missing/N.C. |
 | D2.5 TASK-058 File Bridge | canonical corrective completion/release/install read-back plus downstream baseline rebind | missing/N.C. |
 | D2.5 TASK-058 BVP privacy | independent closed BVP admission validator completion receipt; SKILL flag/key-name redaction is ineligible | missing/N.C. |
-| D2.5 TASK-067 | canonical allocation, implementation and focused completion | missing/N.C. |
-| D2.5 TASK-036 | packaged entrypoint implementation and focused completion | missing |
-| TASK-065 design | Option B Critic/Judge acceptance at exact current head | pending |
+| D2.5 TASK-067 | canonical amendment/dependencies, implementation and focused completion | preserved dirty / COMMIT STOP / missing |
+| D2.5 TASK-036 | packaged entrypoint implementation and focused completion after TASK-061-A/063/D2S/067 | START0 / missing |
+| TASK-065 design | Option B, PL65-B00 and C01a/C01b acceptance at exact current head | task-local design active / source START0 |
 
 No row inherits PASS from another. Shared `task.md`, roadmap, task-index,
 current-state or CHANGELOG synchronization waits for its sole-Builder/LOCK

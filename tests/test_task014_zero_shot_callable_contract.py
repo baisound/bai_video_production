@@ -662,6 +662,35 @@ def test_h1_zero_shot_reference_coordinates_must_match_preflight(field: str) -> 
 @pytest.mark.parametrize(
     "field",
     [
+        "voice_profile_id",
+        "voice_profile_revision_sha256",
+        "consent_sha256",
+        "consent_subject_ref_sha256",
+    ],
+)
+def test_h1_subject_and_voice_profile_coordinates_must_match(field: str) -> None:
+    parts = assembled()
+    replacement = "voice.profile.other" if field == "voice_profile_id" else h("other " + field)
+    result = compile_ready(
+        parts,
+        subject_binding_receipt=subject_receipt(parts, **{field: replacement}),
+    )
+    assert result.decision is CallableEnvelopeDecision.BLOCKED
+    assert "SUBJECT_BINDING_MISMATCH" in result.reason_codes
+
+
+def test_actual_voice_profile_revision_must_match_admission() -> None:
+    parts = assembled()
+    wrong_profile = replace(parts["profile"], voice_profile_id="voice.profile.other")
+    result = compile_ready(parts, profile_revision=wrong_profile)
+    assert result.decision is CallableEnvelopeDecision.BLOCKED
+    assert "VOICE_PROFILE_REVISION_MISMATCH" in result.reason_codes
+    assert "SUBJECT_BINDING_MISMATCH" in result.reason_codes
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
         "plan_sha256",
         "approved_text_revision_sha256",
         "approved_script_body_sha256",
@@ -765,6 +794,22 @@ def test_operation_job_destination_and_authorization_are_fail_closed() -> None:
     expired = assembled(authorization_expires_at="2026-08-20T00:01:30Z")
     authorization_result = compile_ready(expired)
     assert "AUTHORIZATION_EXPIRED" in authorization_result.reason_codes
+
+
+@pytest.mark.parametrize(
+    "field, replacement",
+    [
+        ("required_artifact_class", "STAGED_NARRATION_OTHER"),
+        ("required_sample_rate_hz", 44_100),
+        ("required_channels", 2),
+        ("required_sample_format", "PCM_S16LE"),
+    ],
+)
+def test_intended_output_constraints_cannot_be_substituted(field: str, replacement: object) -> None:
+    document = compile_ready(assembled()).to_private_dict()
+    document[field] = replacement
+    with pytest.raises(ValueError, match="media constraints"):
+        parse_zero_shot_callable_envelope(document)
 
 
 def test_known_blocker_has_precedence_over_unknown_receipt() -> None:

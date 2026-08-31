@@ -45,11 +45,13 @@ an active production fallback.
    are advisory data, not write authority.
 3. `D2`: TASK-061 corrects its public-v1/private-v2 readiness dependency and
    supplies CA-A/CA-B plus a sealed CA-C prepare/Human one-shot candidate with
-   apply effect zero. The current candidate cannot mint the real-installed E2E
-   receipt required by ACTIVATE, so a separately authorized TASK-061 amendment
-   or successor is required before the cycle below can execute. Completion also
-   requires a secure activation-specific lock and identity-bound no-overwrite/
-   expected-target config writer; the current generic create-capable lock plus
+   apply effect zero. Its public factory has no real-installed E2E route, while
+   its public E2E object is caller-forgeable and therefore cannot serve as the
+   trusted receipt required by ACTIVATE. A separately authorized TASK-061
+   amendment or successor is required before the cycle below can execute.
+   Completion also requires a secure activation-specific lock and
+   identity-bound no-overwrite/expected-target config writer; the current
+   generic create-capable lock plus
    `os.replace` writer cannot establish physical race safety. CA-A migration
    separately requires secure migration lock, identity-CAS journal phases,
    no-replace Manifest/snapshot publication and operation-owned-only temp

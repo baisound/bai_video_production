@@ -571,10 +571,15 @@ task-scoped record identity. It must record five distinct evidence identities:
 4. **PP-C profile publication identity** — the exact PP-C promoted envelope and
    source receipt must bind the immutable profile payload document hash, current
    pointer revision/self-hash/predecessor, marker, compatibility-view bytes,
-   profile ID/version/hash, Owner scope, and source count. BVP's current
-   `ProfileSourceBinding` exposes only unbound-production and bound-isolated-
-   fixture constructors; the missing PP-C production source capability is D1,
-   not something TASK-065 may manufacture.
+   profile ID/version/hash, Owner scope, and source count.
+   **SUPERSEDED:** the historical statement that `ProfileSourceBinding` exposed
+   only unbound-production and bound-isolated-fixture constructors is no longer
+   current; main now also exposes `bound_verified_production()` from a public
+   `PromotedPreferenceSourceRead`. Both public objects/tokens/self-hashes are
+   audit Evidence only and cannot create Production authority. D1 instead
+   requires the trusted Product operation's durable pinned native-source
+   completion plus private one-use publish capability, not something TASK-065
+   may manufacture.
 5. **SKILL profile read-back identity** — a separately invoked `load-profile`
    result whose profile ID, version, contract, hash, source count, and payload
    equal identity 4. The read-back must keep `advisory_only:true`,

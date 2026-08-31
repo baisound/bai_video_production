@@ -353,31 +353,38 @@ The canonical installer-relative corrections remain valid source progress, but
 TASK-063 is not a Production-current coordinate provider until its descriptor,
 owner, installer-readback publication and rollback physical races are closed.
 Current descriptor/read paths do not bind no-follow opened bytes to identity;
-descriptor and owner are read separately; provision/update and readback use
-generic create/replace primitives without one secure operation snapshot;
-directory-fsync failure may be suppressed; and rollback/temp cleanup may unlink
-or overwrite a path not proven to retain the operation-created/replaced inode.
+descriptor and owner are read separately; provision/update and readback rewrite
+fixed targets with generic create/replace primitives; fixed-path rollback may
+restore predecessor bytes or unlink targets; directory-fsync failure may be
+suppressed. These overwrite/restore/delete semantics are incompatible with the
+TASK-068 `IMMUTABLE_ONLY_V1` primitive boundary and remain legacy-only.
 
 The TASK-063 owner correction must:
 
 - pin install-root through data, Bridge, descriptor, owner and migration
   ancestors and bind descriptor plus owner bytes/identities/currentness into one
   sealed discovery snapshot;
-- use a secure existing/initial installer-operation lock, descriptor initial
-  no-replace publication and update expected-bytes-plus-inode CAS with pinned
-  post-readback;
-- retain installer-readback temp handle identity, re-prove its owned inode at
-  publish, use initial no-replace or existing expected-target inode+bytes CAS,
-  and perform post-publish pinned readback under the same lock/current ancestor;
+- use a secure existing/initial installer-operation lock and publish each
+  operation/install-instance-bound descriptor and installer-readback generation
+  no-replace, binding filename/body to instance, manifest digest and predecessor
+  generation/hash, followed by pinned post-readback;
+- make repair, upgrade, revoke and rollback append immutable generations while
+  retaining predecessors; fixed-target overwrite/CAS, preimage restore and
+  physical delete are zero;
+- accept the exact current generation only from a trusted installer/launcher
+  receipt. Mutable pointers, caller coordinates, timestamps, lexical/newest and
+  scan-highest selection are prohibited;
 - treat directory fsync failure as FAIL with receipt zero;
 - replace the Windows no-op/suppressed helper with an explicit native durability
   port whose unsupported and failure states fail closed and are receipt-bound;
-- drive rollback from a bound predecessor/journal and restore/delete only an
-  exact current identity matching the operation-created/replaced object;
-  unknown/collision state is preserved and stops; and
-- clean up only an exact operation-owned temp inode. Discovery receipts are
-  built from the same opened descriptor/owner snapshots, never equal fields
-  from separate reads.
+- preserve a published-but-unselected generation as a journal-bound orphan/
+  tombstone; only the same operation may resume/revoke it, while unknown,
+  collision and foreign state STOP and remain preserved; and
+- retain temp/unselected artifacts as non-authoritative operation-bound state;
+  automatic cleanup is zero under `EXACT_DELETE_UNAVAILABLE`, and any later
+  lifecycle reclamation needs separate authority. Discovery receipts are built
+  from the same opened exact selected descriptor/owner snapshots, never equal
+  fields from separate reads.
 
 Descriptor, owner manifest, installer/migration read-back and rollback preimage
 also use one strict bounded UTF-8 parser over bytes obtained from the same
@@ -391,10 +398,12 @@ are journal-bound.
 Focused negatives cover concurrent first provision, descriptor stat/open and
 post-read swaps, same bytes on a different inode, mixed descriptor/owner
 generations, install/data ancestor swap, lock hardlink/reparse, temp-to-publish
-swap, existing target pre/post-publish swap, directory-fsync failure, foreign
-replacement during fresh/update rollback, and failure at each descriptor/
-receipt commit seam. Assertions require unrelated overwrite/delete zero, one
-exact install instance, coherent descriptor/owner generation, receipt delta
+swap, immutable-generation collision, publish-before-selector crash, stale/
+forged/multiple/wrong-instance selector, directory-fsync failure, forbidden
+fixed-target restore/delete, and failure at each descriptor/receipt generation
+and selector seam. Assertions require predecessor A unchanged, successor B
+exactly one or a preserved orphan, unrelated overwrite/delete zero, one exact
+install instance, coherent selected descriptor/owner generation, receipt delta
 zero-or-one, exact-instance-only repair and fixed-ProgramData fallback zero.
 Add mkdir, owner, descriptor, installer-readback and rollback directory-
 durability failures; each must yield receipt zero, preserve unknown state and

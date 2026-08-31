@@ -65,6 +65,27 @@ or fresh. Exact recovery needs a journal-bound predecessor and operation-owned
 descriptor/receipt identities; otherwise the result is `STOP_PRESERVE / EFFECT0`
 and every preexisting object is retained.
 
+TASK-063's existing update/rollback contract is also not compatible with the
+TASK-068 `IMMUTABLE_ONLY_V1` primitive boundary. Current fixtures deliberately
+rewrite the fixed `bridge-instance.json` and `installer-readback.json`, expect a
+repair to update `updated_at` at the same target, restore predecessor bytes after
+an update failure and remove both fixed files after a fresh failure. These are
+legacy regression inputs, not a corrective completion receipt. The replacement
+contract publishes operation/install-instance-bound immutable descriptor and
+readback generations by no-replace, binds each body and filename to the exact
+instance, manifest digest and predecessor generation/hash, and retains every
+predecessor. Repair, upgrade, revoke and rollback append a new generation rather
+than replacing or deleting an old one. An unpublished generation remains a
+journal-bound orphan/tombstone which only the same operation may resume or
+revoke; foreign or ambiguous objects are preserved.
+
+The exact current generation comes only from a trusted installer/launcher
+receipt. Caller coordinates, fixed mutable pointers, timestamps, lexical/newest
+or scan-highest selection are ineligible. Discovery opens that exact selected
+descriptor and its owner manifest in one pinned snapshot. A separate legacy
+fixed-path ABI migration may read the old files as evidence but must not reuse
+either old path as a mutable authority pointer.
+
 ## Private trusted snapshot
 
 The public receipt is audit-only (`authority_created:false`). A future
@@ -74,11 +95,11 @@ snapshot:
 | Group | Required proof | Current gap |
 | --- | --- | --- |
 | instance | Product, opaque instance, relative Bridge, operation/plan | one caller root does not prove selection/currentness |
-| descriptor | schema, raw/canonical digest, opened identity, link/reparse, ancestors, creation/update | public hash is replayable from preserved data |
+| descriptor | exact selected immutable generation, schema, raw/canonical digest, opened identity, link/reparse, ancestors, predecessor and operation/install-instance binding | public hash or fixed path is replayable from preserved data |
 | owner | raw/canonical digest, same-open identity, instance/owner/DACL/current-user/ancestors | public hash does not bind one generation |
 | Product | EXE/build identity, full payload-tree digest, installer/package build and ancestors | recorded manifest hash is not installed-byte proof |
 | registration | receipt identity, exact instance/state/Product/build/payload, issuer/backend, expiry/currentness | no authoritative active-install set exists |
-| lifecycle | action/operation and predecessor/successor registration/payload/descriptor/owner receipts | UUID/timestamp continuity is insufficient |
+| lifecycle | action/operation, trusted installer/launcher selector and predecessor/successor registration/payload/descriptor/readback/owner receipts | UUID/timestamp continuity or directory winner is insufficient |
 | cardinality | trusted set identity, zero/one/multiple count and selected member | root scan and implicit winner are prohibited |
 | connector | TASK-061 config/history revision, instance and Product/lifecycle binding | config presence cannot establish authority |
 | reader | Product reader/build/backend, one-use capability and trusted time | caller paths/hashes/objects/booleans are ineligible |
@@ -112,7 +133,7 @@ bodies are prohibited.
 `CANDIDATE_CURRENT_INSTANCE` is not `READY_FOR_CONFIG_SYNC` and creates no
 effect authority.
 
-## PLA-I01-I18
+## PLA-I01-I20
 
 | ID | Fault | Required assertion |
 | --- | --- | --- |
@@ -134,6 +155,8 @@ effect authority.
 | `PLA-I16` | build-input `installer_manifest_sha256` or current acceptance PASS/console JSON is substituted for installed payload proof | `BUILD_INPUT_CLAIM_ONLY / INSTALLED_PAYLOAD.N.C. / EFFECT0`; reject absolute-root projection; no PL-B/C promotion |
 | `PLA-I17` | descriptor timestamp rolls back, equals predecessor, is future-dated, crosses boot/session, or chooses the newest of multiple installs | timestamp authority0; require trusted registration-set and exact journal predecessor/successor revision; no winner/effect |
 | `PLA-I18` | fresh failure leaves directories/owner but no descriptor/receipt, or descriptor is absent while owner manifest and/or old receipt remains; receipt is identical/different/foreign-swapped or its inode changes before rollback | full Bridge before/after inventory and owner inode/body are explicit; owner-only is `PARTIAL_OWNER_PRESERVED`, not fresh/current; automatic instance reuse0; require exact journal/predecessor recovery proof and operation-owned cleanup identity; preserve owner/receipt/data, delete0, `INSTALLATION_ORPHAN_AMBIGUOUS / STOP_PRESERVE / EFFECT0` |
+| `PLA-I19` | repair/upgrade rewrites fixed descriptor/readback, update failure restores predecessor bytes, or fresh failure deletes fixed targets | legacy regression only; require new immutable descriptor/readback generation exact1 and predecessor unchanged; overwrite/restore/delete0; `T63-IMMUTABLE-INSTALL-GENERATION.N.C. / EFFECT0` until canonical receipt |
+| `PLA-I20` | immutable generation exists but exact trusted selector is absent, stale, forged, multiple, wrong-instance, caller-selected, timestamp/newest or scan-highest derived | `CURRENT_HEAD_AUTHORITY_NOT_CREATED / STOP_PRESERVE / EFFECT0`; no discovery/config/launch; preserve all generations and require trusted installer/launcher receipt plus same-snapshot selected descriptor+owner read |
 
 Every case separately asserts Project inventory unchanged, unrelated Bridge
 data unchanged, installer-readback write zero, config/history/Profile mutation

@@ -58,9 +58,15 @@ completion is SUPERSEDED.
    an exact re-provisioned installed read-back covering DACL, reparse, hardlink,
    descriptor, owner and discovery currentness. Older fixture/hash Evidence is
    not reusable as current PASS. Completion additionally requires pinned
-   descriptor/owner discovery snapshots, secure provision/readback locking and
-   identity-CAS/no-replace publication/rollback; current path-based replace and
-   unlink behavior cannot prove race-safe installed currentness. Descriptor,
+   descriptor/owner discovery snapshots and secure provision/readback locking.
+   Because TASK-068 is `IMMUTABLE_ONLY_V1`, descriptor and installer-readback
+   repair/upgrade must publish operation/instance-bound immutable generations
+   by no-replace and retain predecessors; fixed-path overwrite/CAS and rollback
+   restore/delete are legacy-only and cannot prove race-safe installed
+   currentness. The exact generation is selected only by a trusted installer/
+   launcher receipt, never a path, timestamp, directory scan or mutable pointer.
+   Unpublished generations are preserved as plan-bound orphan/tombstone state.
+   Descriptor,
    owner manifest, installer/migration read-back and rollback preimages also
    require one strict bounded UTF-8 parser over the same pinned nofollow handle
    bytes, binding raw hash, canonical parsed hash and physical identity.
@@ -313,7 +319,7 @@ absent owner-only or owner-plus-receipt state is orphan/ambiguous, not fresh or
 current, and may not authorize automatic instance reuse or path-only cleanup.
 Fresh rollback can durably leave precisely this `PARTIAL_OWNER_PRESERVED` state
 because Bridge directories/owner precede descriptor/receipt publication.
-The current field/result/PLA-I01-I18 contract is in
+The current field/result/PLA-I01-I20 contract is in
 [`pl-a-current-installation-field-delta-2026-08-31.md`](pl-a-current-installation-field-delta-2026-08-31.md).
 `CANDIDATE_CURRENT_INSTANCE` is not `READY_FOR_CONFIG_SYNC`; PL-A remains
 `START0 / EFFECT0` until every independent receipt is current.

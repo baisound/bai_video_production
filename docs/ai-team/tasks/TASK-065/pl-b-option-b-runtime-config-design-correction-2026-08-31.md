@@ -489,14 +489,16 @@ single-use Production publish capability. Fixture/unbound public publication is
 restricted to a non-Production layout. Production entry late-binds the actual
 envelope against expected hash/source revision/Profile coordinates, burns the
 capability IN_FLIGHT at entry and on every success/exception, and retains the
-operation binding through exact Profile pointer/current/marker readback. The
-File Bridge physical-race correction remains a prerequisite.
+    operation binding through exact trusted Profile control-generation and
+    payload readback. Fixed pointer/current/marker files are compatibility
+    Evidence only. The File Bridge physical-race correction remains a
+    prerequisite.
 
 Module-token access, direct/copy/replace/deserialized source objects, valid-hash
 forgery, same coordinates from a different source inode, close-then-swap,
 arbitrary envelope matching a forged hash, fixture binding against Production,
-and double/concurrent/exception reuse all produce zero Profile payload/pointer/
-current/marker mutation. If same-process Python introspection is inside the
+    and double/concurrent/exception reuse all produce zero Profile payload/control-
+    generation/current-view mutation. If same-process Python introspection is inside the
 threat boundary, authority moves to a trusted process/OS-backed broker rather
 than another module sentinel. This correction crosses released TASK-058 and
 TASK-060 ownership and needs an exact owner/amendment allocation; TASK-061/065/
@@ -1107,13 +1109,16 @@ Released TASK-058 Evidence remains historically valid, but its File Bridge is
 not yet eligible for Production linkage. Its new-or-identical helper closes an
 exclusive temp handle and later links by path without proving the temp path is
 still the operation-owned inode; raced-target identical reads and general
-security reads are not one pinned lstat/no-follow-open/fstat/post-identity
-snapshot. Unconditional temp cleanup can unlink a foreign replacement. The same
-read helper serves owner Manifest, public receipt, Generic correlation, pending
-and immutable Profile payload. Import/Profile journals and ordered Profile
-pointer/current/marker state use the generic replace writer without an expected
-target-identity CAS. Pending cleanup rereads then unlinks by path without
-proving the same inode.
+    security reads are not one pinned lstat/no-follow-open/fstat/post-identity
+    snapshot. Unconditional temp cleanup can unlink a foreign replacement. The same
+    read helper serves owner Manifest, public receipt, Generic correlation, pending
+    and Profile state. The content-addressed Profile payload path plus
+    new-or-identical publication is a candidate immutable-payload PASS. It does
+    not close transaction control: PREPARED through READBACK_VERIFIED rewrite one
+    fixed Profile journal; pointer/current-view/marker are fixed mutable targets;
+    terminal unlinks the journal; recovery treats journal absence and the fixed
+    pointer as currentness. Import control has analogous mutable state. Pending
+    cleanup rereads then unlinks by path without proving the same inode.
 
 The BVP generic admission boundary has a separate privacy/resource P0. Its
 current sensitive-value rejection is keyed mainly by field names and treats
@@ -1146,23 +1151,31 @@ correction includes:
   fsync and retained identity, no-replace publication, pinned-identical-only
   raced duplicate handling, directory durability and post-publish pinned
   readback;
-- mutable journal phases under secure existing/initial lock with expected
-  previous bytes plus inode identity CAS, prepublish currentness and post-read;
-- Profile pointer/current/marker ordered targets bound to their phase journal,
-  without using generic `AtomicJsonWriter` as authority proof;
-- pending unlink only for the same pinned exact identity; any swap, hardlink or
-  reparse stops and leaves pending intact;
-- temp cleanup only after re-proving the exact operation-created inode, with
-  foreign replacement cleanup zero; and
+- immutable operation-bound journal generation per phase with predecessor hash,
+  pinned readback and a trusted exact BVP plan/recovery coordinate; same-path
+  phase CAS, timestamp/newest and scan-highest are zero;
+- immutable Profile pointer-transition and marker generations bound to the
+  exact payload and phase. The fixed current-profile v1 view, if retained, is a
+  derived compatibility projection with `authority_created:false` and is never
+  currentness authority;
+- immutable terminal/tombstone generation instead of journal unlink. Resolver
+  precedence is exact trusted terminal > exact trusted phase > fresh; physical
+  old phases and payload-before-head orphan remain, while recovery after
+  terminal is zero;
+- pending/temp physical retention with operation-bound tombstones; automatic
+  unlink/cleanup is zero under TASK-068 `EXACT_DELETE_UNAVAILABLE`, and foreign
+  replacement cleanup is always zero; and
 - stable body-free public errors/receipts with absolute path and OS detail
   leakage zero.
 
 Focused negatives cover temp-close-to-link swap, identical/different target
-appearance, hardlink/ancestor/reparse/stat-open/read-post swaps, journal phase
-swap, ordered Profile publication swap, pending reread-to-unlink swap, foreign
-temp replacement and fsync faults. Assertions require unrelated overwrite/
-delete zero, exact zero-or-one revision transition, pending retained or exact
-cleanup, and same-identity-only restart.
+appearance, hardlink/ancestor/reparse/stat-open/read-post swaps, every immutable
+Profile phase-generation seam, pointer/marker generation collision, old pointer/
+current-view replay, journal/tombstone mismatch, payload-before-head orphan,
+terminal with physical journal retained, pending/temp retention and fsync faults.
+Assertions require unrelated overwrite/delete zero, exact zero-or-one revision
+transition, exact terminal recovery zero, all foreign state retained and trusted-
+coordinate-only restart.
 
 Privacy/resource negatives cover benign-key path/email/account/token/transcript,
 style/ID/provenance leaks, homoglyph/normalization and sibling leakage, deep or

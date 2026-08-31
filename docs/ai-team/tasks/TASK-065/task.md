@@ -214,8 +214,20 @@ completion is SUPERSEDED.
    config omission without filesystem discovery or availability projection.
 5. `D2F`: released TASK-058 File Bridge Evidence also remains historically
    valid, but Production linkage requires a separately owned TASK-058 corrective
-   Unit for pinned reads, immutable generation publication, consumer-owned
-   exact current-head selection and ordered Profile publication. Physical
+    Unit for pinned reads, immutable generation publication, consumer-owned
+    exact current-head selection and ordered Profile publication. The Profile
+    payload's content-addressed immutable path is only a candidate primitive
+    PASS. Current Profile transaction control still rewrites one fixed journal,
+    pointer, compatibility view and marker, then unlinks the journal; recovery
+    treats fixed-journal absence and the mutable pointer as currentness. TASK-069
+    must instead publish operation-bound immutable phase, pointer-transition and
+    marker generations with predecessor hashes plus an immutable terminal
+    tombstone. A trusted BVP operation/plan supplies the exact coordinate;
+    mutable pointer, scan-highest and directory winner are zero. The legacy
+    `current-profile` view, if retained, is a derived compatibility projection
+    with `authority_created:false`. Payload-before-head state is preserved as an
+    orphan, terminal physical journal retention causes recovery0, and unrelated
+    overwrite/delete are zero. Physical
    pending retention is an allowed terminal state: an immutable exact plan-
    bound tombstone/correlation must outrank pending then fresh, restart N must
    perform recovery0/canonical revision exactly1/delete0, and scan-highest or

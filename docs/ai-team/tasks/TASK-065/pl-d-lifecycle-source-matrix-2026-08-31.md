@@ -45,6 +45,7 @@ side effect.
 | `PL65-D08` | lifecycle rollback/unknown-state preservation | logical update/fresh rollback cases | crash seams across registration, payload, descriptor, owner, readback and config; exact-object rollback only; foreign replacement preserve | exact operation rollback may emit a bounded receipt; unknown state returns `STOP_PRESERVE`; unrelated overwrite/delete zero |
 | `PL65-D09` | public-safe lifecycle closure receipt | disabled public discovery projection exposes only opaque instance/relative Bridge | bind lifecycle action, predecessor/successor Product registration/payload, descriptor/owner, config/history, preserved inventory, no-dual-write and executed status | future `TASK065_LIFECYCLE_CLOSURE_RECEIPT` is audit Evidence only, `authority_created:false`, body/path-free, and cannot activate or delete |
 | `PL65-D10` | descriptor timestamp is audit-only | repair preserves `created_at` and accepts parseable caller/internal `now` as `updated_at`; one normal increasing fixture exists | rollback/equal/future/cross-boot/session timestamps; multi-install newest-time attempt; trusted clock plus journal-bound predecessor/successor registration, payload and revision | timestamps never select current/newest/successor or extend expiry; ambiguity is `STOP_PRESERVE / EFFECT0`; no winner |
+| `PL65-D11` | descriptor-absent owner/receipt orphan and fresh rollback ownership | source reuses owner `bridge_instance_id` when descriptor is absent; the only fresh-failure fixture starts with no owner/receipt and proves removal of operation-created files | descriptor absent + owner only; owner + old receipt; identical/different/foreign receipt swaps; receipt inode replacement before rollback; exact journal/predecessor and operation-created identity binding | owner-only state is never fresh/current and cannot implicitly resurrect an instance; without exact recovery proof return `INSTALLATION_ORPHAN_AMBIGUOUS / STOP_PRESERVE / EFFECT0`; preexisting owner/receipt/data delete0 |
 
 ## Coverage separation
 
@@ -67,6 +68,8 @@ Missing closure fixtures include:
 - stale or cross-instance config, Profile, pointer and ticket rejection;
 - descriptor timestamp rollback/equal/future/cross-session and multi-install
   newest-time attempts, with trusted journal/registration/payload causality;
+- descriptor-absent owner-only and owner-plus-old-receipt recovery, including
+  identical/different/foreign receipt swaps and rollback-time inode replacement;
 - every registration/payload/descriptor/owner/readback/config crash seam;
 - foreign replacement preservation with delete/restore zero;
 - body-free reason codes and absolute-root/account/OS-detail leakage zero; and
@@ -87,6 +90,8 @@ install instance and descriptor/owner physical identities, public relative
 Bridge coordinate only, config/history predecessor/successor revisions,
 trusted journal revision and Product clock/boot/session currentness (descriptor
 timestamps remain display-only),
+exact recovery classification for descriptor-absent orphan state and identities
+of every operation-created object eligible for cleanup,
 body-free preserved inventory hashes/counts, exact mutation summary, and
 executed/not-executed evidence identity. It always records
 `authority_created:false`; `connector_enabled:false` remains required unless a

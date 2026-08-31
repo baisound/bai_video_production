@@ -48,6 +48,18 @@ or multi-install tie-breaking. Only the trusted registration set and a
 journal-bound predecessor/successor revision plus Product payload identities
 can establish current lifecycle state.
 
+Descriptor absence is not a fresh-install proof. Current TASK-063 source enters
+the fresh publication branch whenever the descriptor path is absent, reuses an
+existing owner manifest's `bridge_instance_id`, and may recreate the descriptor
+without a journal or predecessor receipt. If a prior installer readback remains
+and publication then fails, fresh rollback unlinks that receipt based only on
+its path/type before proving that the current operation created its exact
+identity. PL-A therefore classifies descriptor-absent owner-only or owner-plus-
+receipt state as orphan/ambiguous, never current or fresh. Exact recovery needs
+a journal-bound predecessor and operation-owned descriptor/receipt identities;
+otherwise the result is `STOP_PRESERVE / EFFECT0` and every preexisting object
+is retained.
+
 ## Private trusted snapshot
 
 The public receipt is audit-only (`authority_created:false`). A future
@@ -87,6 +99,7 @@ bodies are prohibited.
 | multiple registrations | `MULTI_INSTALL_AMBIGUOUS` | `EFFECT0`; no winner |
 | uninstall-preserved Bridge | `UNINSTALLED_DATA_PRESERVED` | `EFFECT0`; disabled/not current |
 | descriptor/owner without current payload/registration | `PRODUCT_INSTALLATION_INCOMPLETE` | `EFFECT0`; no repair |
+| descriptor absent with owner and/or prior receipt | `INSTALLATION_ORPHAN_AMBIGUOUS` | `STOP_PRESERVE / EFFECT0`; no reuse/delete |
 | Product generation differs from descriptor/readback | `INSTALLATION_GENERATION_MISMATCH` | `EFFECT0`; upstream repair |
 | lifecycle or config/history mismatch | `INSTALLATION_LIFECYCLE_STALE` | `EFFECT0`; no history rewrite |
 | identity/security/parser/currentness failure | stable `*_INVALID`/`*_STALE` | `EFFECT0`; preserve ambiguity |
@@ -94,7 +107,7 @@ bodies are prohibited.
 `CANDIDATE_CURRENT_INSTANCE` is not `READY_FOR_CONFIG_SYNC` and creates no
 effect authority.
 
-## PLA-I01-I17
+## PLA-I01-I18
 
 | ID | Fault | Required assertion |
 | --- | --- | --- |
@@ -115,6 +128,7 @@ effect authority.
 | `PLA-I15` | reader/backend/build/time drifts during operation | burn capability; blocked/effect0 |
 | `PLA-I16` | build-input `installer_manifest_sha256` or current acceptance PASS/console JSON is substituted for installed payload proof | `BUILD_INPUT_CLAIM_ONLY / INSTALLED_PAYLOAD.N.C. / EFFECT0`; reject absolute-root projection; no PL-B/C promotion |
 | `PLA-I17` | descriptor timestamp rolls back, equals predecessor, is future-dated, crosses boot/session, or chooses the newest of multiple installs | timestamp authority0; require trusted registration-set and exact journal predecessor/successor revision; no winner/effect |
+| `PLA-I18` | descriptor absent while owner manifest and/or old installer receipt remains; receipt is identical/different/foreign-swapped or its inode changes before fresh rollback | owner-only is not fresh/current; automatic instance reuse0; require exact journal/predecessor recovery proof and operation-owned cleanup identity; preserve owner/receipt/data, delete0, `INSTALLATION_ORPHAN_AMBIGUOUS / STOP_PRESERVE / EFFECT0` |
 
 Every case separately asserts Project inventory unchanged, unrelated Bridge
 data unchanged, installer-readback write zero, config/history/Profile mutation

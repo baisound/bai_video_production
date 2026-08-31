@@ -41,7 +41,7 @@ side effect.
 | `PL65-D04` | side-by-side/multiple installations | separate caller roots can mint separate UUIDs, but this is not active-install proof | canonical two-root fixture; trusted current-registration set; no root scan or implicit winner; no cross-instance config/Profile/receipt reuse | multiple current candidates return `MULTI_INSTALL_AMBIGUOUS / EFFECT0`; explicit installer/Human selection is separate |
 | `PL65-D05` | uninstall preservation/stale root | installer source has no `[UninstallDelete]`; static tests preserve data intent | real install, bounded seed, uninstall and reopen; prove Product payload/registration removed, Bridge data preserved and descriptor no longer current; body-free receipt | `UNINSTALLED_DATA_PRESERVED / CONNECTOR_DISABLED / EFFECT0`; preserved Bridge is not current |
 | `PL65-D06` | reinstall/moved/portable semantics | same-root valid descriptor can be reused logically | prove same-root predecessor continuity; different-root trusted rebind; removable/read-only/ACL/reparse/multi-host faults | valid same-root continuity may create a bounded successor; move/portable ambiguity requires rebind/effect0 and preserves old data |
-| `PL65-D07` | lifecycle/config/activation coordination | disabled config/history candidate and Option B unchanged distribution config | TASK-061-B-owned trusted disable/history semantics and successor binding for upgrade/uninstall/instance drift | config/history must bind the current successor before use; mismatch is disabled/effect0; TASK-065 activation/history delta zero |
+| `PL65-D07` | lifecycle/config/activation coordination | disabled config/history candidate and Option B unchanged distribution config | TASK-061-B-owned trusted disable/history semantics, operation-specific immutable duplicate terminal receipt and successor binding for upgrade/uninstall/instance drift | config/history and exact terminal coordinate must bind the current successor before use; fixed tail/caller time/revision/reconstructed receipt is ineligible; mismatch is disabled/effect0; TASK-065 activation/history delta zero |
 | `PL65-D08` | lifecycle rollback/unknown-state preservation | logical update/fresh rollback cases | crash seams across registration, payload, descriptor, owner, readback and config; exact-object rollback only; foreign replacement preserve | exact operation rollback may emit a bounded receipt; unknown state returns `STOP_PRESERVE`; unrelated overwrite/delete zero |
 | `PL65-D09` | public-safe lifecycle closure receipt | disabled public discovery projection exposes only opaque instance/relative Bridge | bind lifecycle action, predecessor/successor Product registration/payload, descriptor/owner, config/history, preserved inventory, no-dual-write and executed status | future `TASK065_LIFECYCLE_CLOSURE_RECEIPT` is audit Evidence only, `authority_created:false`, body/path-free, and cannot activate or delete |
 | `PL65-D10` | descriptor timestamp is audit-only | repair preserves `created_at` and accepts parseable caller/internal `now` as `updated_at`; one normal increasing fixture exists | rollback/equal/future/cross-boot/session timestamps; multi-install newest-time attempt; trusted clock plus journal-bound predecessor/successor registration, payload and revision | timestamps never select current/newest/successor or extend expiry; ambiguity is `STOP_PRESERVE / EFFECT0`; no winner |
@@ -82,7 +82,8 @@ Missing closure fixtures include:
 ## Producer/consumer boundary
 
 TASK-063 owns corrected installer-instance/current-registration and lifecycle
-receipts. TASK-061-B owns trusted connector disable/history semantics.
+receipts. TASK-061-B owns trusted connector disable/history semantics and the
+operation-specific immutable terminal receipt/currentness authority.
 TASK-065 PL-D consumes their durable receipts and verifies closure only. It
 does not repair the installer, invoke effectful `discover`, scan roots, mutate
 the distribution config, activate/deactivate, delete preserved data, or mint
@@ -106,6 +107,6 @@ separate current Human Production Activation receipt exists.
 
 PL-D remains `START0 / EFFECT0` until
 `TASK-068 -> {TASK-069,TASK-063} -> TASK-060 -> TASK-061-A -> TASK-067 -> TASK-036 -> TASK-061-B -> TASK-065`,
-SKILL-D2S, TASK-065 source authority and separately authorized real Windows
+`A61B-IMMUTABLE-DUPLICATE-TERMINAL`, SKILL-D2S, TASK-065 source authority and separately authorized real Windows
 lifecycle execution are all current. Static installer intent, file presence,
 status, task-local probes and historical tests are not runtime PASS.

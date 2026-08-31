@@ -37,7 +37,7 @@ equality without physical/current registration proof is insufficient.
 | TASK-036 packaged EXE | frozen `spec -> windows_entry -> packaged_main` chain, Montage entry/module payload-tree, internally resolved installed EXE, private dispatch exact1 before probe/guard/shell/presenter call0 and installer/discover call0 | opaque build/payload/EXE/dispatch hashes and counts; `authority_created:false`; no path/body/correlation |
 | TASK-036 E2E | operation bindings plus request/delivery, strict public receipt, hidden correlation, canonical and Profile readbacks | bounded status/reasons/opaque hashes; hidden body private |
 | PL65-C01a | freshly pinned current installation/lifecycle plus exact E2E chain; historical stage/import each 1; local calls 0 | `PREACTIVATION_E2E_ADMITTED`; authority false |
-| TASK-061-B | same installation/config/source/E2E/Profile currentness; enabled remains false | body-free CA-C completion; Activation false |
+| TASK-061-B | same installation/config/source/E2E/Profile currentness; operation-specific immutable terminal receipt and trusted exact coordinate; enabled remains false | body-free CA-C completion; Activation false; fixed history tail/caller time/revision/reconstructed receipt authority0 |
 | PL65-C01b | fresh installation/lifecycle, separate Human receipt, new operation/ticket/config/delivery/E2E | explicitly post-activation; no C01a substitution |
 | PL-D | predecessor/successor registration/payload/descriptor/owner/config/history plus preserved inventory/no-dual-write | audit-only closure, `authority_created:false`, no delete/activation |
 
@@ -75,10 +75,14 @@ inclusion and real-installed execution receipt defined in
 | `PLC-I14` | second publish confirms terminal admission | reject; delivery recreation 0; trusted readback only |
 | `PLC-I15` | packaged `discover` refreshes C/D stage | prohibited call assertion fails; no receipt |
 | `PLC-I16` | public output leaks root/EXE/SID/account/OS/body/correlation | public receipt 0; body-free failure |
+| `PLC-I17` | TASK-061-B duplicate is inferred from fixed history tail or reconstructed receipt | C01a/PL-D reject; `DUPLICATE_CURRENTNESS_AUTHORITY_NOT_CREATED`; all local deltas 0 |
+| `PLC-I18` | exact duplicate after later unrelated event, stale/wrong terminal coordinate, or same evidence with different action/body | collision/currentness reject; no implicit newest/tail winner; config/history delta0 |
+| `PLC-I19` | terminal receipt swap/hardlink/reparse, concurrent same ticket, or crash across terminal publish/head transition | only exact pinned operation terminal may recover; one Product event exact0/1, second effect0, unrelated overwrite/delete0 |
 
 Each case records Product/Project inventory, exact Bridge correlation/receipt/
 pending delta, config/history/Profile delta, adapter/TASK-036/installer counts,
 registration cardinality, predecessor/successor hashes and leakage count.
 
-PL-C and PL-D remain `START0 / EFFECT0`. A once-valid or executed receipt is
+PL-C and PL-D remain `START0 / EFFECT0` until
+`A61B-IMMUTABLE-DUPLICATE-TERMINAL` and the rest of TASK-061-B are complete. A once-valid or executed receipt is
 not current by itself; current installed generation remains bound end to end.

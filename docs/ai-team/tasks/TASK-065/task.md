@@ -175,13 +175,26 @@ completion is SUPERSEDED.
    check, existing publication has no opened-bytes/inode CAS, and activation
    config publication currently precedes final rediscovery/security
    confirmation, so an ACTIVATE failure can expose enabled state without a
-   terminal receipt. These findings
+   terminal receipt. Independently,
+   `A61B-IMMUTABLE-DUPLICATE-TERMINAL` is High N.C.: current duplicate handling
+   treats the last event in fixed `connector-activation-history.json` as the
+   implicit winner, returns before expected-revision/current-time/final
+   security checks, and reconstructs a receipt from mutable history. TASK-061-B
+   must instead no-replace publish one operation-specific immutable terminal
+   receipt binding operation/challenge/action/instance/source/E2E/config
+   generation/predecessor/trusted time/head transition. A trusted exact plan
+   pinned-reads that same receipt and physical identity for `DUPLICATE`; it
+   never scans the event tail, trusts caller `now`/revision, or rebuilds the
+   receipt. Missing terminal state recovers only from the exact operation
+   journal/tombstone, with no automatic head search. TASK-068 may provide
+   immutable terminal publication/read candidates only; it creates no duplicate
+   currentness authority. These findings
     are normalized as `A61-*` rows, including
     `A61A-DIRECTORY-NOREPLACE-COMMIT` and
     `A61A-IMMUTABLE-PHASE-JOURNAL`, in the task-local negative matrix. Until
    their canonical corrective completion receipts are current, existing CA-A
    plan/snapshot/readback/terminal receipts and CA-B transaction failure state
-   are producer Evidence only and cannot enter PL-A, D2, TASK-067 or PL-C
+   are producer Evidence only and cannot enter PL-A, D2, TASK-067, PL-C or PL-D
    authority.
 4. `D2S`: the released SKILL adapter remains valid historical TASK-058 release
    Evidence, but its current transport writer/config/receipt/Profile readers do

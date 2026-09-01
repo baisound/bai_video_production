@@ -64,6 +64,7 @@ from ai_video_production.task036_shell_ui import Task036ShellBridge
 
 
 PROJECT_ID = "project-p0e-fixture"
+FIXTURE_CONTRACT_VERSION = "task036-p0e-fixture/v1"
 
 
 def _local_profile() -> AiConnectionProfile:

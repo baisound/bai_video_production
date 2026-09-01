@@ -66,6 +66,47 @@ config coordinate. The distribution config is a byte-stable `enabled:false`,
 `bridge_root:null` sentinel and is never an active-root fallback or an
 operation config.
 
+### Broker redemption, crash and replay closure
+
+The trusted broker owns an operation ledger that is private to the selected
+Product installation. A ledger entry binds the one-use ticket digest and nonce,
+action, operation ID, exact plan/config snapshots, expected command digest,
+selected instance/owner, Product/adapter/broker build identities, trusted
+time-domain/session, expiry and invocation budget. It contains no reusable
+ticket, raw bridge/config path, delivery/Profile body or caller clock. The
+entry is created or advanced only by an identity-CAS transaction over the same
+opened ledger snapshot; public self-hashes, serialized maps and copied config
+bytes cannot create or advance it.
+
+| Durable broker phase | Required precondition and permitted next work | Crash/replay result |
+| --- | --- | --- |
+| `ARMED` | a current exact plan resolves one immutable config snapshot; no operation entry exists | a failed validation creates no entry and no D2S effect; replay requires the still-current trusted resolver, never a caller retry parameter |
+| `IN_FLIGHT` | broker has atomically consumed the exact ticket and durably recorded the bound snapshot before child launch | second/concurrent/replayed ticket is `TICKET_CONSUMED / EFFECT0`; a crash before launch burns this entry and requires a fresh plan/ticket, with no implicit retry |
+| `LAUNCH_ATTEMPTED` | broker has a durable child-launch intent while retaining the broker lease and pinned config identity | crash/child-channel loss is `FAILED_CLOSED / EFFECT_UNKNOWN`; no second child, stage or import may be attempted from this entry |
+| `STAGE_REPORTED` | exactly one adapter stage result is captured against the same operation and command digest | broker may only identity-CAS this exact entry to `IMPORT_ATTEMPTED`; later publish reuse, copied receipt or self-reported status is `EXACT_ONE_VIOLATION / EFFECT0` |
+| `IMPORT_ATTEMPTED` | before dispatch, the broker has durably bound the exact TASK-036 operation/ticket/import coordinate and expected result to the same opened entry snapshot | crash/channel loss or concurrent resolver is `IMPORT_EFFECT_UNKNOWN / FAILED_CLOSED`; second import dispatch is zero and only pinned read-only resolution of that exact committed event is allowed |
+| `IMPORT_REPORTED` | exactly one TASK-036 import result is captured by advancing the same opened `IMPORT_ATTEMPTED` snapshot; the original publish ticket remains burned | a new broker-only terminal-query operation may read state; it must not inherit publish or load authority and cannot stage/import |
+| `TERMINAL_READBACK` | TASK-069 has pinned matching receipt, correlation, canonical and Profile producer state | this is evidence only; it cannot reopen any prior effect entry or enable connector activation |
+| `FAILED_CLOSED` | any reject, expiry, cancellation, exception, crash or currentness ambiguity | preserve all producer state, emit body-free code and require a fresh authoritative resolver; cleanup/retry by path or stale ticket is forbidden |
+
+Action transitions are closed and mutually exclusive. `D2S_PUBLISH_LEARNING`
+alone follows `IN_FLIGHT -> LAUNCH_ATTEMPTED -> STAGE_REPORTED ->
+IMPORT_ATTEMPTED -> IMPORT_REPORTED`. `D2S_LOAD_PROFILE` instead follows
+`IN_FLIGHT -> LOAD_ATTEMPTED -> LOAD_REPORTED` using its own ticket and
+expected Profile result; it can never stage, import, read an admission receipt
+or enter the correlation/terminal chain. `D2S_TERMINAL_QUERY_V1` consumes a
+separate terminal-only ticket, follows `IN_FLIGHT -> TERMINAL_READBACK` or
+`FAILED_CLOSED`, and is read-only: it cannot stage, load, import or enable.
+Every action burns on success, exception, expiry, channel loss and restart.
+
+The broker holds its lease from `IN_FLIGHT` through pinned child result capture.
+It never downgrades an entry to `ARMED`, even after a known no-effect failure.
+Where a crash leaves effect presence unknown, recovery may perform a separate
+read-only terminal query using a new terminal-only authorization, but may not
+launch, stage, import, delete or repair. This preserves `ticket 1 -> exact
+command effect 0/1`; it does not turn an uncertain first effect into permission
+for a second effect.
+
 ## Strict input and physical-I/O contract
 
 Every security-relevant config, receipt, delivery or Profile read starts from
@@ -246,14 +287,21 @@ state; this public handoff is not an effect capability.
 | --- | --- | --- | --- | --- | ---: | ---: | ---: | ---: | --- | --- |
 | D2S-A01 | broker entry | v2 config offered | direct v1/v2 CLI, copied/deserialized config, caller raw path, wrong/cross command | `BROKER_AUTHORITY_INVALID / EFFECT0` | 0 | 0 | 0 | 0 | path/ticket/body 0 | no consume receipt |
 | D2S-A02 | broker redemption | exact ticket is current | second/concurrent/replay/expired ticket, crash before/after redeem/stage, restart | first command 0/1; later `FAILED_CLOSED / EFFECT0` | 0 | 0/1 | 0 | 0 | ticket/config 0 | atomic consume + burn state |
+| D2S-A03 | broker action gate | action-specific ticket is current | publish ticket enters load/terminal, load ticket stages/imports, terminal ticket has an effect | `ACTION_TRANSITION_INVALID / FAILED_CLOSED / EFFECT0` | 0 | 0 | 0 | 0 | ticket/body 0 | action-bound burn state |
 | D2S-I01 | strict pinned reader | authority document offered | duplicate/nonfinite/BOM/trailing/control/deep/oversize; config/receipt/Profile ancestor ABA/reparse swap | `AMBIGUOUS_INPUT / STOP_PRESERVE / EFFECT0` | 0 | 0 | 0 | 0 | body/path/OS 0 | no completion receipt |
 | D2S-I02 | owned publisher | stage target absent/current | parent swap, foreign temp, target appears or prepublish file-fsync failure | `PUBLISH_CURRENTNESS_FAILED / STOP_PRESERVE / EFFECT0` | 0 | 0 | 0 | 0 | path/OS 0 | no stage receipt |
 | D2S-I03 | owned publisher durability | target may already be no-replace published | postpublish directory durability failure or unsupported native port | `STOP_PRESERVE / RECEIPT0 / EFFECT_UNKNOWN`; fresh exact resolver required before retry | 0 | 0/1 | 0 | 0 | path/OS 0 | no completion receipt |
 | D2S-P01 | privacy projection | generic learning input offered | benign-key path/email/token/transcript, free reason, unknown nested field, oversize/homoglyph | `PRIVACY_REJECTED / EFFECT0` | 0 | 0 | 0 | 0 | raw bytes 0 | body-free reject |
 | D2S-S01 | stage dispatcher | valid broker operation | stage count not one, `import_once`/scan, receipt arrives after preflight, second publish/import | `EXACT_ONE_VIOLATION / FAILED_CLOSED / EFFECT0` | 0 | 0/1 | 0 | 0 | delivery/receipt body 0 | one stage + one import only |
+| D2S-S02 | import attempt ledger | exact stage is reported and `IMPORT_ATTEMPTED` is durable | TASK-036 import effect then crash/channel loss before `IMPORT_REPORTED`; restart/concurrent resolver | `IMPORT_EFFECT_UNKNOWN / FAILED_CLOSED`; import count 0/1 and second dispatch 0 | 0 | 0/1 | 0 | 0 | import/body 0 | exact attempt snapshot; no terminal handoff |
 | D2S-T01 | terminal query | stage/import historical facts exist | receipt-only, missing/wrong correlation/canonical/Profile, status-only or `canonical_store_written` | `TERMINAL_READBACK_N.C. / EFFECT0` | 0 | 0 | 0 | 0 | correlation/body 0 | no completion handoff |
 | D2S-C01 | v2 action validator | action document offered | publish Profile bind, load record bind, null/mixed result or cross-action identity | `ACTION_BINDING_INVALID / EFFECT0` | 0 | 0 | 0 | 0 | body 0 | no read receipt |
 | D2S-O01 | public projector | any outcome emitted | READY/status/handoff leaks path/body/secret/account/SID or implies authority | `PUBLIC_PROJECTION_REJECTED / EFFECT0` | 0 | 0 | 0 | 0 | raw value 0 | body-free only |
+
+`D2S-A03` is limited to invalid pre-effect cross-action transitions. No row may
+map a post-dispatch publish, TASK-036 import or durability crash to `EFFECT0`:
+their effect certainty and 0/1 delta remain solely under D2S-A02, D2S-S02 and
+D2S-I03.
 
 ## Design completion and implementation start Gate
 

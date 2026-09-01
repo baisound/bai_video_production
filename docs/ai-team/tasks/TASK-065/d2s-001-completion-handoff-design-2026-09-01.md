@@ -128,6 +128,27 @@ stage/import/receipt/correlation/Profile fields, and `authority_created:false`.
 It proves neither a real command nor an E2E outcome; it is the only D2S receipt
 eligible before TASK-061-A/TASK-036 and therefore cannot create a cycle.
 
+### Read-only implementation entry map
+
+At the clean D2S design baseline, the following symbols delimit the later
+one-PR source change. This table is a source map, not a claim that the current
+implementation is operation-authorized or completion-ready.
+
+| Current symbol | Existing bounded behavior | Required Product boundary | Fault rows |
+| --- | --- | --- | --- |
+| `_load_json_document` / `_parse_json_bytes` | parses one pinned file with strict duplicate/non-finite/UTF-8/tree checks | preserve the same opened snapshot through broker-owned identity binding; do not use a later path reopen as equivalence proof | D2S-I01 |
+| `load_operation_config_v2` / `validate_operation_config_v2` | validates a v2 document and returns an audit-only pinned-read receipt | broker must resolve an immutable v2 snapshot internally and bind it to a live one-use operation; v2 bytes alone remain authority zero | D2S-A01, D2S-C01 |
+| `build_parser` / `main` | legacy connector commands route through `load_connector_config` and invoke direct publish/load functions | packaged Product entry accepts only an opaque operation coordinate; raw CLI config/learning/output stays legacy-local and cannot enter broker dispatch | D2S-A01, D2S-S01 |
+| `publish_learning_export` | performs the current direct staging behavior after v1 flag checks | only a redeemed publish action may call it once under a held broker lease; it cannot confirm terminal state by a second publish | D2S-A02, D2S-S01, D2S-T01 |
+| `load_preference_profile` | performs the current advisory profile read after v1 flag checks | only a redeemed load action may call it, with no record/delivery input and no activation authority | D2S-A01, D2S-C01 |
+| `atomic_write_new_or_identical` | owns current immutable-output publication mechanics | operation publisher must add pinned-ancestor/operation-root/lease/durability semantics and retain postpublish ambiguity as `EFFECT_UNKNOWN` | D2S-I02, D2S-I03 |
+| `validate_admission_receipt` | validates a public receipt shape | terminal broker query must additionally bind trusted correlation plus canonical and Profile readbacks; receipt shape/status alone is non-authoritative | D2S-T01 |
+| `feedback_to_learning` / `validate_learning_export` / `_validate_post_build_privacy_projection` / `redact_sensitive` | supplies current adapter privacy projection and validation handling | closed per-contract projection must precede canonical bytes/hash/staging, with value grammar and body-free rejection | D2S-P01, D2S-O01 |
+
+No symbol in this map is a substitute for the Product broker. In particular,
+calling a function directly, importing it in-process, passing its v2 config or
+copying its read receipt cannot enter `BROKER_REDEEMED_IN_FLIGHT`.
+
 ## Privacy-before-hash and public projection
 
 Before canonical hash or stage, the adapter performs a closed per-contract

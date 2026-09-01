@@ -66,7 +66,7 @@ def readiness(*, production: str = "2", project_manifest: str | None = None) -> 
     return value
 
 
-def setup(root: Path):
+def _setup(root: Path):
     root.mkdir(parents=True, exist_ok=True)
     manifest = ProductProjectManifest.create(
         project_id="project-1", project_revision=1, product_version="0.21.0",
@@ -117,7 +117,7 @@ def preparation(manifest, receipt, *, target: str = "export:master") -> ExportPr
 
 
 def application(root: Path, *, token: str = "queue-confirmation"):
-    manifest, approvals, receipt, queue, current = setup(root)
+    manifest, approvals, receipt, queue, current = _setup(root)
     selected = [preparation(manifest, receipt)]
     app = Task036FinalReviewExportApplication(
         project_id="project-1",
@@ -217,7 +217,7 @@ def test_readiness_or_private_preparation_change_invalidates_confirmation(tmp_pa
 
 
 def test_stale_or_cross_approval_preparation_fails_closed(tmp_path: Path) -> None:
-    manifest, approvals, receipt, queue, current = setup(tmp_path)
+    manifest, approvals, receipt, queue, current = _setup(tmp_path)
     wrong = FinalReviewApprovalReceipt(
         receipt_id="wrong-approval", project_id=receipt.project_id,
         project_manifest_sha256=receipt.project_manifest_sha256,
@@ -238,7 +238,7 @@ def test_stale_or_cross_approval_preparation_fails_closed(tmp_path: Path) -> Non
 
 
 def test_unbound_queue_is_read_only_unavailable(tmp_path: Path) -> None:
-    manifest, approvals, receipt, _, current = setup(tmp_path)
+    manifest, approvals, receipt, _, current = _setup(tmp_path)
     app = Task036FinalReviewExportApplication(
         project_id="project-1", final_review_application=approvals,
         export_application_provider=lambda: None,
@@ -484,7 +484,7 @@ def test_concurrent_apply_consumes_one_confirmation_exactly_once(tmp_path: Path)
 
 
 def test_distinct_confirmations_and_preparations_admit_exactly_one_job_per_approval(tmp_path: Path) -> None:
-    manifest, approvals, receipt, first_queue, current = setup(tmp_path)
+    manifest, approvals, receipt, first_queue, current = _setup(tmp_path)
     second_queue = ExportQueueApplication(project_root=tmp_path, project_id="project-1")
     first = Task036FinalReviewExportApplication(
         project_id="project-1", final_review_application=approvals,

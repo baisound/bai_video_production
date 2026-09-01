@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-074-Bのfixture-only統合として、route selection契約のfirst-writer-winsなin-memory CAS store seamを追加し、duplicate／replay／fault後reconcile・read-back境界を検証可能にしました。このstoreは`NOT_BOUND`／`fixture_only`／`canonical=false`／`execution=false`であり、Product wiring、永続化、model／provider／native／WAV、Release／Deploy／Productionのauthorityやeffectは生成しません。
+
 - TASK-074-Bとして、Owner Voiceの権限、private reference、zero-shot／fine-tuned route選択をbody-freeな純粋契約として追加し、currentness、CAS/readback、replay fence、公開projectionのprivacy境界をfail closedにしました。実Owner音声、model load/inference、WAV生成、Windows native custody、Release／Deploy／Production Activationは引き続き未実行または別Gateです。
 
 - TASK-066 GF-Bとして、中央Settingsで企画／画像／動画／音声／音楽のAIモデルを選択・保存し、画像・動画設定を再利用するクイック生成aliasと企画画面の選択・runtime・計算準備状態を連携しました。利用不可理由と次操作はpublic-safeに表示し、raw route／model IDやruntime provider messageは露出しません。Provider実行、課金、生成、model download、Release／Deploy／Productionは開始しません。

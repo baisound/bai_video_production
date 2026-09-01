@@ -184,6 +184,49 @@ config/build. It must never rerun `publish-learning` merely to check a receipt;
 `canonical_store_written` is false/non-authoritative. Terminal query produces
 no delivery, import, Profile, config or activation delta.
 
+### TASK-069 terminal-readback consumer ABI
+
+`TASK069_D2S_TERMINAL_READBACK_V1` is a closed, durable, body-free readback
+record, not an operation ticket or a substitute for producer state. TASK-069
+obtains every input from the same broker-held, strict, handle-pinned snapshots;
+it does not accept a caller mapping, path, status string, config object,
+receipt body, correlation body or Profile body. A public projection contains
+only opaque IDs, digests, typed outcome codes and `authority_created:false`.
+The private snapshot is retained under the producer lifecycle policy for later
+fresh reads by TASK-061-B/TASK-065.
+
+TASK-069 implementation completion remains upstream of TASK-036 in the
+canonical dependency graph. This section specifies a runtime invocation of
+that already-completed read-only component after TASK-036, not a new dependency
+on TASK-069 task completion and not an edge back into the implementation graph.
+
+The record has exactly the following closed field groups. Each digest is an
+algorithm-tagged digest of one already-opened canonical bytes/identity
+snapshot, never a value recomputed after reopening a path.
+
+| Closed group | Required bindings | Reject if absent, mixed or stale |
+| --- | --- | --- |
+| identity/version | message type, schema version, operation ID, terminal action, Product/broker/adapter build identities | unknown fields/version, non-terminal action, caller-selected mode |
+| operation/install | consumed-operation digest, selected TASK-063 instance/descriptor/owner identities, v2 config raw/canonical/physical digests, source/release/install currentness | operation/action/instance/config/build mismatch, copied config or cross-install record |
+| exact-one history | stage result digest, TASK-036 import result digest, stage count `1`, import count `1`, no TASK-069 adapter/import invocation counters `0` | count other than one, missing result, local republish/import, `import_once` or scan evidence |
+| terminal receipt/correlation | public receipt canonical digest plus exact allowed terminal status, hidden BVP correlation digest, correlation operation/record/delivery binding | receipt-only, extra receipt fields, wrong/missing correlation, `REJECTED`, receipt/correlation from another operation |
+| canonical/Profile readback | pinned canonical Generic/Project readback digest, pinned advisory Profile readback digest, respective physical/currentness identities | missing Profile, receipt-only/status-only, stale or same-bytes/different-identity readback |
+| trusted time/result | broker trusted-time domain/build, terminal query time, expiry/currentness decision and typed strict/privacy/durability results | caller clock, expired/unknown time, non-PASS prerequisite, body-bearing error |
+| public projection | `authority_created:false`, stable terminal code, opaque IDs/digests only | raw path/body/secret/account/SID/OS detail, READY/activation implication |
+
+`ACCEPTED` and `DUPLICATE` are terminal observations only when every group
+above refers to the same exact operation and current producer state. A
+`DUPLICATE` never repairs, republishes, imports, advances a Profile or creates
+a new capability. On an ambiguous/missing/stale group, TASK-069 returns the
+typed `TERMINAL_READBACK_N.C. / EFFECT0`, preserves producer state and requires
+a fresh full resolver; it does not retry adapter staging or TASK-036 import.
+
+TASK-065 PL-C01a consumes this record by pinned-reading and joining it with the
+already-completed TASK-036/TASK-061-B producer records. It invokes neither the
+adapter nor TASK-036 and therefore has Project, Bridge, Profile, config/history
+and activation delta `0`. The stage/import values above are historical producer
+facts only, not TASK-065 commands or completion authority by themselves.
+
 After the bounded TASK-036 operation, the body-free, versioned
 `D2S_001_OPERATION_TERMINAL_HANDOFF_V1` issued to Design B / Platform Trust
 binds contract/version, the exact

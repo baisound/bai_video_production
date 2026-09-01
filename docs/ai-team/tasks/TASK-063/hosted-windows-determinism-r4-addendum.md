@@ -884,8 +884,12 @@ PROCESS_OUTCOME_FINAL
 - A fresh CI run is a fresh observation, not recovery of the failed run.
 
 No recovery path edits, deletes or repairs an install root. Test-owned temporary
-native fixtures follow their own exact identity cleanup; unknown/foreign state
-is preserved and cleanup count is zero.
+native fixtures follow their own exact identity cleanup. Unknown/foreign state
+found by complete preflight before the first disposition is preserved and the
+cleanup count is zero. Once disposition has begun, later unknown/foreign state
+is preserved while `PARTIAL` retains the exact journal/readback-proven deleted
+set/count and every exact remaining set/count; only fields whose readback is not
+confirmable are explicitly `UNKNOWN`/N.C.
 
 ## 10. Negative and fault matrix
 

@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-066 GF-Bとして、中央Settingsで企画／画像／動画／音声／音楽のAIモデルを選択・保存し、画像・動画設定を再利用するクイック生成aliasと企画画面の選択・runtime・計算準備状態を連携しました。利用不可理由と次操作はpublic-safeに表示し、raw route／model IDやruntime provider messageは露出しません。Provider実行、課金、生成、model download、Release／Deploy／Productionは開始しません。
+
 - TASK-066 GF-Aとして、Windowsデスクトップ共通のInstallLayout、Auto／GPU／CPU compute policy、workload／renderer registry、bounded probe、privacy-safe diagnostics基盤を追加しました。production probeはhelper sealまで無効であり、実GPU process、native実行、download、final DLL seal、Release／Deploy／Productionは未実行・別Gateです。
 
 - Windows EXE build用の開発依存PyInstallerを6.22.0から6.22.2へ更新し、canonical build contractのexact pinも同期しました。これは依存関係の更新のみで、EXE build、Release、Deploy、Production Activationは実行しません。

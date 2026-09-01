@@ -271,14 +271,40 @@ def test_pux2a1_model_selection_bridge_fails_closed_when_unbound_or_request_is_b
     assert exc.value.code == "ERR_SHELL_BRIDGE_REQUEST_INVALID"
 
 
-def test_pux2a1_main_pages_expose_project_selection_and_persisted_coordinate_projection():
+def test_pux2a1_main_pages_use_central_model_settings_and_read_only_readiness():
     assert "model_selection_snapshot" in HTML
-    assert "planningModelSelection" in HTML
-    assert "imageModelSelection" in HTML
-    assert "videoModelSelection" in HTML
-    assert "quickModelSelection" in HTML
-    assert "Audioは開発担当2の専用レーン" in HTML
-    assert "Provider実行・課金・生成は開始しません" in HTML
+    for selector in (
+        "planningModelSelection",
+        "imageModelSelection",
+        "videoModelSelection",
+    ):
+        assert selector not in HTML
+    for readiness in (
+        "planningModelReadiness",
+        "imageModelReadiness",
+        "videoModelReadiness",
+        "audioModelReadiness",
+        "quickModelReadiness",
+    ):
+        assert readiness in HTML
+    assert "audioModelSelection" not in HTML
+    assert "quickModelSelection" not in HTML
+    assert "CENTRAL_MODEL_WORKLOADS=new Set(['PLANNING','IMAGE','VIDEO','AUDIO','MUSIC'])" in HTML
+    assert "クイック生成は画像・動画の設定を使います。" in HTML
+    assert "AIモデル設定を開く" in HTML
+    assert "function renderFeatureModelReadiness" in HTML
+    assert "Project既定Routeを保存" not in HTML
+    assert "data.modelSelectionPage" not in HTML
+
+
+def test_gfb_central_settings_binds_compute_preferences_without_workload_execution():
+    assert "desktop_compute_settings_snapshot" in HTML
+    assert "desktop_compute_settings_update" in HTML
+    assert "実行方法を保存" in HTML
+    assert "CPUを選んでも画面表示のハードウェア利用を強制的に無効にはしません。" in HTML
+    assert "AIモデル設定を保存" in HTML
+    assert "AIの実行・課金・ダウンロードは開始していません。" in HTML
+    assert "Provider実行・課金・生成は開始していません。" in HTML
 
 
 def test_quick_generation_bridge_projects_snapshot_read_only():

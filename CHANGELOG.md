@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-074-Bとして、Owner Voiceの権限、private reference、zero-shot／fine-tuned route選択をbody-freeな純粋契約として追加し、currentness、CAS/readback、replay fence、公開projectionのprivacy境界をfail closedにしました。実Owner音声、model load/inference、WAV生成、Windows native custody、Release／Deploy／Production Activationは引き続き未実行または別Gateです。
+
 - TASK-066 GF-Bとして、中央Settingsで企画／画像／動画／音声／音楽のAIモデルを選択・保存し、画像・動画設定を再利用するクイック生成aliasと企画画面の選択・runtime・計算準備状態を連携しました。利用不可理由と次操作はpublic-safeに表示し、raw route／model IDやruntime provider messageは露出しません。Provider実行、課金、生成、model download、Release／Deploy／Productionは開始しません。
 
 - TASK-066 GF-Aとして、Windowsデスクトップ共通のInstallLayout、Auto／GPU／CPU compute policy、workload／renderer registry、bounded probe、privacy-safe diagnostics基盤を追加しました。production probeはhelper sealまで無効であり、実GPU process、native実行、download、final DLL seal、Release／Deploy／Productionは未実行・別Gateです。

@@ -4,7 +4,9 @@ Status: `DESIGN_COMPLETE / DEV-4 / SOURCE_START0`
 
 Design identity: `TASK071-PTD-WINDOWS-HUMAN-AUTHORIZATION-V1`
 
-Canonical design base: `origin/main@35cdf1ad475633dcf035e0616e979b5a8fde0c88`
+Historical design base: `origin/main@35cdf1ad475633dcf035e0616e979b5a8fde0c88`
+
+Current review parent: `origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578`
 
 Owner allocation: `2026-09-01 / Platform Trust & Delivery / Design B`
 
@@ -178,8 +180,12 @@ implementation Task may change exactly:
 - `tests/test_task071_human_authorization.py`
 - `tests/test_task071_human_authorization_windows.py`
 - `tests/test_task071_human_authorization_packaging.py`
-- `tests/fixtures/task071/**`
-- `docs/ai-team/tasks/TASK-071/**`
+- `tests/fixtures/task071/valid-reservation.json`
+- `tests/fixtures/task071/valid-decision-event.json`
+- `tests/fixtures/task071/invalid-duplicate-key.json`
+- `tests/fixtures/task071/invalid-replay.json`
+- `docs/ai-team/tasks/TASK-071/task.md`
+- `docs/ai-team/tasks/TASK-071/implementation-completion-receipt.md`
 
 Changes to TASK-036, TASK-060, TASK-061, TASK-063, TASK-065, TASK-067, TASK-068,
 TASK-069, TASK-070, TASK-072, Canonical SKILL, main installer/spec,
@@ -292,6 +298,50 @@ Unknown actions, cross-action reuse, extra/missing producer receipts or a
 producer/version not in this table fail before reservation/challenge/UI effect.
 Promotion and rollback are separate actions; activation and deactivation are
 separate actions. No action receipt is substitutable for another.
+
+#### 7.2.1 Future owner-voice V2 amendment and TASK-074 G06
+
+The four V1 actions above do not satisfy TASK-074 gate `G06` and cannot be
+relabelled, wrapped or replayed as an owner-voice authorization. TASK-074-C/D
+remain `DEPENDENCY_NC / GATED_MUTATION_ZERO` until TASK-071 V1 is canonical and
+an overlap-free amendment separately freezes and implements
+`HUMAN_ACTION_REGISTRY_V2`.
+
+That V2 registry contains exactly these six additional actions:
+
+- `OWNER_VOICE_REFERENCE_PREPARE_V1`;
+- `OWNER_VOICE_LOCAL_INFERENCE_V1`;
+- `OWNER_VOICE_LISTENING_DECISION_V1`;
+- `OWNER_VOICE_REGENERATE_V1`;
+- `OWNER_VOICE_REFERENCE_REVOKE_V1`;
+- `OWNER_VOICE_REFERENCE_PURGE_V1`.
+
+Each action has a separate producer ABI, fixed Japanese display projection,
+stable semantic operation key, one-use live broker capability and exact
+TASK-072 consumer profile. A V1 capability, a serialized/public V2 receipt or
+any other V2 action is not a substitute. TASK-074 `G06` passes only when the
+broker holds the live, nonserializable `TASK071_V2_LIVE_BROKER_RECEIPT` for the
+exact requested action and the owning TASK-074/TASK-075 domain currentness is
+freshly verified at the consume seam. The public projection remains audit data
+with `authority_created=false`.
+
+`OWNER_VOICE_REFERENCE_REVOKE_V1` closes new lease/body-read entry and drives
+the exact active lease to a burned or closed terminal; it does not delete a
+key, ciphertext or directory. `OWNER_VOICE_REFERENCE_PURGE_V1` is a separate
+Human action and may be issued only after TASK-074 `G09` proves an exact
+revoked prepared-reference head or retained-failure recovery head, exact-owned
+physical identities, no nonterminal lease and the dedicated purge consumer
+profile. A revoke decision never implies purge, and purge cannot reuse prepare,
+inference, listening, regenerate or revoke authority.
+
+The V2 amendment must bind Project, installed instance, Windows user/logon
+session, VoiceProfile and consent revision, TASK-074 lifecycle head, TASK-046
+reference/transcript binding where applicable, TASK-072 ticket/profile,
+trusted deadline and one invocation. Wrong/cross action, copied receipt,
+second/concurrent use, expiry, restart, exception, stale lifecycle head or
+missing G06/G09 predecessor is effect zero. Real Owner audio, custody,
+inference, listening, revoke and purge remain separate native Human Gates; this
+V1 design packet performs none of them.
 
 `CONNECTOR_ACTIVATE` challenge issuance occurs only after the real installed
 E2E/current-coordinate prerequisite set exists. TASK-061-A can freeze its ABI
@@ -946,19 +996,23 @@ fixture-derived PASS. Tests do not capture PIN or biometric data.
 
 ## 21. Independent completion receipt
 
-The independent Critic/Judge reviewed technical-content SHA-256
-`a53c904b8b394db749dfe5eeac816c6062fba20b5aaf20e314fc85923b7bd5a5`
-(970 lines before this metadata-only status/receipt finalization) in full and
-returned `Critical=0 / High=0` and `PASS / TECHNICAL DESIGN FROZEN`.
+The R2 independent Critic/Judge reviewed the current-main rebind and
+owner-voice V2 amendment as technical-content SHA-256
+`113C366945C9A1DD838BF36311D8863E085E7878523EF512E933CBE666C02F8E`
+and returned `Critical=0 / High=0 / Medium=0 / Low=0` and
+`PASS / TECHNICAL DESIGN FROZEN (R2)`. The external review receipt SHA-256 is
+`8F35DE7F2F8AEC7A32EAA332940FA388ED73E2E5F3E6DAF38672A137AAE06DF4`.
 
 ```text
 task: TASK-071
 design_identity: TASK071-PTD-WINDOWS-HUMAN-AUTHORIZATION-V1
-base: origin/main@35cdf1ad475633dcf035e0616e979b5a8fde0c88
+historical_design_base: origin/main@35cdf1ad475633dcf035e0616e979b5a8fde0c88
+review_parent_main: origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578
 allowed_files: docs/ai-team/tasks/TASK-071/complete-design-packet.md
-reviewed_content_sha256: a53c904b8b394db749dfe5eeac816c6062fba20b5aaf20e314fc85923b7bd5a5
-critic: C0/H0
-judge: PASS
+reviewed_content_sha256: 113C366945C9A1DD838BF36311D8863E085E7878523EF512E933CBE666C02F8E
+review_receipt_sha256: 8F35DE7F2F8AEC7A32EAA332940FA388ED73E2E5F3E6DAF38672A137AAE06DF4
+critic: C0/H0/M0/L0
+judge: PASS_R2
 source_effect: 0
 schema_effect: 0
 test_effect: 0

@@ -77,6 +77,18 @@ def _d2s_handoff_fixture() -> dict[str, object]:
     return value
 
 
+def _l3_crosswalk() -> str:
+    path = (
+        Path(__file__).parents[1]
+        / "docs"
+        / "ai-team"
+        / "tasks"
+        / "TASK-065"
+        / "l3-one-way-receipt-crosswalk-2026-09-02.md"
+    )
+    return path.read_text(encoding="utf-8")
+
+
 def _common_plan(
     fixture: dict[str, object] | None = None,
 ) -> CommonInstalledDiscoveryFixturePlan:
@@ -418,6 +430,34 @@ def test_d2s_handoff_placeholder_requires_separate_v2_receipt_and_has_no_effect(
     assert join["task065_invokes_task036"] is False
     assert join["fixture_participates_in_runtime_join"] is False
     assert join["acceptance_status_before_rebind"] == "PREACTIVATION_CHAIN.N.C."
+
+
+def test_l3_crosswalk_preserves_one_way_receipt_consumption_and_effect_zero() -> None:
+    crosswalk = _l3_crosswalk()
+    for required in (
+        "TASK-068 -> {TASK-069 U1a-c, TASK-063} -> TASK-060",
+        "TASK-061-A prepare (enabled:false) -> TASK-067",
+        "TASK-036 private exact-one operation",
+        "D2S operation terminal handoff -> TASK-061-B final CA-C (enabled:false)",
+        "TASK-065 PL-A validation reader",
+        "TASK069_U1A_C.N.C. / EFFECT0",
+        "TASK067_CANONICAL_ALLOCATION.N.C. / EFFECT0",
+        "TASK036_HANDOFF.N.C. / EFFECT0",
+        "PREACTIVATION_CHAIN.N.C. / EFFECT0",
+        "TASK065_M1_IMPORT_CONSUMER_VALIDATION_V1",
+    ):
+        assert required in crosswalk
+    assert "`TASK036_D2S_EXECUTION_HANDOFF_V1` never crosses" in crosswalk
+    assert "do not read, compare, copy or deserialize the private dispatch handoff" in crosswalk
+    assert "no additional design pr may be created" in crosswalk.lower()
+    assert "PR #467 is the only carrier, and it is not merge authority" in crosswalk
+    assert "`authority_created:false`" in crosswalk
+    assert "Read/join only: adapter, TASK-036, install, config, Profile, history and Activation deltas are all zero." in crosswalk
+    assert (
+        "src/ai_video_production/montage_learning_canonical_admission_transaction.py"
+        in crosswalk
+    )
+    assert "no other TASK-058 path is allowed" in crosswalk
 
 
 def test_fixture_and_public_validation_use_closed_mirrored_schema() -> None:

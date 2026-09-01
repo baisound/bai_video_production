@@ -304,7 +304,7 @@ def test_gfb_central_settings_binds_compute_preferences_without_workload_executi
     assert "CPUを選んでも画面表示のハードウェア利用を強制的に無効にはしません。" in HTML
     assert "AIモデル設定を保存" in HTML
     assert "AIの実行・課金・ダウンロードは開始していません。" in HTML
-    assert "Provider実行・課金・生成は開始しません" in HTML
+    assert "Provider実行・課金・生成は開始していません。" in HTML
 
 
 def test_quick_generation_bridge_projects_snapshot_read_only():

@@ -37,6 +37,7 @@
   },
   "expected_broker_recovery": {
     "publish_states": [
+      "RESERVED",
       "IN_FLIGHT",
       "LAUNCH_ATTEMPTED",
       "STAGE_REPORTED",
@@ -54,6 +55,10 @@
     ],
     "post_import_crash_result": "IMPORT_EFFECT_UNKNOWN",
     "post_import_second_dispatch_count": "0",
+    "same_record_reservation_result": "RECORD_RESERVED",
+    "different_record_binding_result": "RECORD_ID_COLLISION",
+    "terminal_same_record_result": "DUPLICATE",
+    "conflicting_publish_dispatch_count": "0",
     "invalid_cross_action_result": "ACTION_TRANSITION_INVALID",
     "fixture_broker_ledger_created": false,
     "fixture_ticket_consumed": false,

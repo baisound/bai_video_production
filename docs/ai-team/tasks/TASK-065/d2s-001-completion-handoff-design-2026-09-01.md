@@ -42,11 +42,12 @@ owner's short lock and final-diff disposition. BVP source, TASK-036 source,
 installed copies, shared BVP docs, Timeline, product config and all private
 paths are outside this scope.
 
-## Non-negotiable transport state machine
+## D2S_PUBLISH_LEARNING transport state machine
 
 ```text
 DISABLED_SENTINEL
   -> PRODUCT_PLAN_BOUND
+  -> RECORD_RESERVED
   -> BROKER_REDEEMED_IN_FLIGHT
   -> STAGE_EXACT1
   -> TASK036_IMPORT_EXACT1
@@ -56,6 +57,10 @@ DISABLED_SENTINEL
 
 any reject/crash/expiry/cancel/restart -> FAILED_CLOSED
 ```
+
+This is the publish-only state machine. `D2S_LOAD_PROFILE` and the broker-only
+`D2S_TERMINAL_QUERY_V1` have the separate, mutually exclusive action branches
+defined in the broker closure below; neither may enter stage/import states.
 
 Only the trusted Product broker may enter `BROKER_REDEEMED_IN_FLIGHT`. The
 adapter cannot mint, deserialize, reconstruct or extend that state. A ticket
@@ -78,19 +83,31 @@ entry is created or advanced only by an identity-CAS transaction over the same
 opened ledger snapshot; public self-hashes, serialized maps and copied config
 bytes cannot create or advance it.
 
+Before consuming a publish ticket, the broker identity-CAS creates one durable
+active record reservation at the selected-instance key
+`(instance physical identity, D2S_PUBLISH_LEARNING, record_id)`. The
+reservation binds the record digest, delivery digest, immutable config identity,
+expected command and prospective operation/ticket identities. It is not a
+caller object and has no path/name discovery surface. A second valid publish
+operation with exactly the same binding observes `RECORD_RESERVED / EFFECT0`;
+a record ID with any different digest, delivery or config identity is
+`RECORD_ID_COLLISION / STOP_PRESERVE / EFFECT0`. Only the reservation owner can
+atomically consume its bound ticket and advance to `IN_FLIGHT`.
+
 | Durable broker phase | Required precondition and permitted next work | Crash/replay result |
 | --- | --- | --- |
 | `ARMED` | a current exact plan resolves one immutable config snapshot; no operation entry exists | a failed validation creates no entry and no D2S effect; replay requires the still-current trusted resolver, never a caller retry parameter |
+| `RESERVED` | one exact publish record reservation is durable before ticket consumption and binds the prospective operation snapshot | non-owner or different operation cannot consume/stage/import; crash before consume burns the pending ticket and remains `FAILED_CLOSED / EFFECT0` until a trusted no-effect resolver closes it |
 | `IN_FLIGHT` | broker has atomically consumed the exact ticket and durably recorded the bound snapshot before child launch | second/concurrent/replayed ticket is `TICKET_CONSUMED / EFFECT0`; a crash before launch burns this entry and requires a fresh plan/ticket, with no implicit retry |
 | `LAUNCH_ATTEMPTED` | broker has a durable child-launch intent while retaining the broker lease and pinned config identity | crash/child-channel loss is `FAILED_CLOSED / EFFECT_UNKNOWN`; no second child, stage or import may be attempted from this entry |
 | `STAGE_REPORTED` | exactly one adapter stage result is captured against the same operation and command digest | broker may only identity-CAS this exact entry to `IMPORT_ATTEMPTED`; later publish reuse, copied receipt or self-reported status is `EXACT_ONE_VIOLATION / EFFECT0` |
 | `IMPORT_ATTEMPTED` | before dispatch, the broker has durably bound the exact TASK-036 operation/ticket/import coordinate and expected result to the same opened entry snapshot | crash/channel loss or concurrent resolver is `IMPORT_EFFECT_UNKNOWN / FAILED_CLOSED`; second import dispatch is zero and only pinned read-only resolution of that exact committed event is allowed |
 | `IMPORT_REPORTED` | exactly one TASK-036 import result is captured by advancing the same opened `IMPORT_ATTEMPTED` snapshot; the original publish ticket remains burned | a new broker-only terminal-query operation may read state; it must not inherit publish or load authority and cannot stage/import |
-| `TERMINAL_READBACK` | TASK-069 has pinned matching receipt, correlation, canonical and Profile producer state | this is evidence only; it cannot reopen any prior effect entry or enable connector activation |
+| `TERMINAL_READBACK` | TASK-069 has pinned matching receipt, correlation, canonical and Profile producer state; the active record reservation is converted to an immutable exact terminal binding | a fresh same-record/same-binding request returns typed `DUPLICATE / EFFECT0`; different binding remains collision STOP; this evidence cannot reopen any prior effect entry or enable connector activation |
 | `FAILED_CLOSED` | any reject, expiry, cancellation, exception, crash or currentness ambiguity | preserve all producer state, emit body-free code and require a fresh authoritative resolver; cleanup/retry by path or stale ticket is forbidden |
 
 Action transitions are closed and mutually exclusive. `D2S_PUBLISH_LEARNING`
-alone follows `IN_FLIGHT -> LAUNCH_ATTEMPTED -> STAGE_REPORTED ->
+alone follows `RESERVED -> IN_FLIGHT -> LAUNCH_ATTEMPTED -> STAGE_REPORTED ->
 IMPORT_ATTEMPTED -> IMPORT_REPORTED`. `D2S_LOAD_PROFILE` instead follows
 `IN_FLIGHT -> LOAD_ATTEMPTED -> LOAD_REPORTED` using its own ticket and
 expected Profile result; it can never stage, import, read an admission receipt
@@ -316,6 +333,7 @@ state; this public handoff is not an effect capability.
 | D2S-A01 | broker entry | v2 config offered | direct v1/v2 CLI, copied/deserialized config, caller raw path, wrong/cross command | `BROKER_AUTHORITY_INVALID / EFFECT0` | 0 | 0 | 0 | 0 | path/ticket/body 0 | no consume receipt |
 | D2S-A02 | broker redemption | exact ticket is current | second/concurrent/replay/expired ticket, crash before/after redeem/stage, restart | first command 0/1; later `FAILED_CLOSED / EFFECT0` | 0 | 0/1 | 0 | 0 | ticket/config 0 | atomic consume + burn state |
 | D2S-A03 | broker action gate | action-specific ticket is current | publish ticket enters load/terminal, load ticket stages/imports, terminal ticket has an effect | `ACTION_TRANSITION_INVALID / FAILED_CLOSED / EFFECT0` | 0 | 0 | 0 | 0 | ticket/body 0 | action-bound burn state |
+| D2S-A04 | publish record reservation | two valid publish plans target one selected instance and record ID | concurrent A/B same binding; B different delivery/config/record digest; restart while A reserved/staged/import-unknown; fresh request after exact terminal | same active -> `RECORD_RESERVED / EFFECT0`; different -> `RECORD_ID_COLLISION / STOP_PRESERVE / EFFECT0`; terminal same -> `DUPLICATE / EFFECT0`; A bridge delta 0/1, B dispatch 0 | 0 | A 0/1; B 0 | 0 | 0 | record/delivery/config/ticket body 0 | durable reservation or exact immutable terminal binding |
 | D2S-I01 | strict pinned reader | authority document offered | duplicate/nonfinite/BOM/trailing/control/deep/oversize; config/receipt/Profile ancestor ABA/reparse swap | `AMBIGUOUS_INPUT / STOP_PRESERVE / EFFECT0` | 0 | 0 | 0 | 0 | body/path/OS 0 | no completion receipt |
 | D2S-I02 | owned publisher | stage target absent/current | parent swap, foreign temp, target appears or prepublish file-fsync failure | `PUBLISH_CURRENTNESS_FAILED / STOP_PRESERVE / EFFECT0` | 0 | 0 | 0 | 0 | path/OS 0 | no stage receipt |
 | D2S-I03 | owned publisher durability | target may already be no-replace published | postpublish directory durability failure or unsupported native port | `STOP_PRESERVE / RECEIPT0 / EFFECT_UNKNOWN`; fresh exact resolver required before retry | 0 | 0/1 | 0 | 0 | path/OS 0 | no completion receipt |
@@ -371,5 +389,8 @@ the synthetic fixture is not evidence that those source paths are fixed. Its
 recovery fields model the mutually exclusive publish/load/terminal state
 shapes and the `IMPORT_EFFECT_UNKNOWN` no-second-dispatch expectation only;
 they create no broker ledger, consume no ticket and launch no child.
+The reservation expectation is similarly shape-only: it models same-binding
+reservation, different-binding collision and terminal duplicate codes without
+reserving a record or dispatching a conflicting publish operation.
 Its UI fields are likewise a static `NOT_CONFIRMED` display expectation, never
 a currentness proof, retry handle or Activation Gate outcome.

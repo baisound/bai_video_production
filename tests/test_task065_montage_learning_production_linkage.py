@@ -441,14 +441,20 @@ def test_l3_crosswalk_preserves_one_way_receipt_consumption_and_effect_zero() ->
         "D2S operation terminal handoff -> TASK-061-B final CA-C (enabled:false)",
         "TASK-065 PL-A validation reader",
         "TASK069_U1A_C.N.C. / EFFECT0",
+        "TASK060_SOURCE.N.C. / EFFECT0",
+        "D2S_INTERFACE.N.C. / EFFECT0",
+        "TASK061A.N.C. / EFFECT0",
         "TASK067_CANONICAL_ALLOCATION.N.C. / EFFECT0",
         "TASK036_HANDOFF.N.C. / EFFECT0",
+        "TASK061B.N.C. / EFFECT0",
         "PREACTIVATION_CHAIN.N.C. / EFFECT0",
         "TASK065_M1_IMPORT_CONSUMER_VALIDATION_V1",
     ):
         assert required in crosswalk
     assert "`TASK036_D2S_EXECUTION_HANDOFF_V1` never crosses" in crosswalk
     assert "do not read, compare, copy or deserialize the private dispatch handoff" in crosswalk
+    assert "no activation authority crosses" in crosswalk
+    assert "Production Activation needs a separate Human Gate" in crosswalk
     assert "no additional design pr may be created" in crosswalk.lower()
     assert "PR #467 is the only carrier, and it is not merge authority" in crosswalk
     assert "`authority_created:false`" in crosswalk

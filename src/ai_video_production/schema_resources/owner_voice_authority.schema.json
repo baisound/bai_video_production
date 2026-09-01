@@ -1,0 +1,514 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/owner_voice_authority.schema.json",
+  "title": "TASK-074 Owner Voice Authority Body-Free Contracts",
+  "oneOf": [
+    { "$ref": "#/$defs/registryAmendment" },
+    { "$ref": "#/$defs/completionReceipt" },
+    { "$ref": "#/$defs/publicProjection" },
+    { "$ref": "#/$defs/executionInput" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$"
+    },
+    "publicRouteKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^narration(?:\\.[a-z0-9][a-z0-9_-]*){2,7}$"
+    },
+    "reasonCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[A-Z][A-Z0-9_]*$"
+    },
+    "alias": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001f\\u007f:/\\\\：／＼]+$",
+      "allOf": [
+        { "not": { "pattern": "^(?:[A-Za-z]:|[/\\\\])" } },
+        { "not": { "pattern": "^(?:[Ff][Ii][Ll][Ee]:|[Hh][Tt][Tt][Pp][Ss]?:|[Ss]3:)" } },
+        { "not": { "pattern": "\\\\" } },
+        { "not": { "pattern": "\\.\\." } }
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "routeMode": { "enum": ["ZERO_SHOT_LOCAL", "FINE_TUNED_LOCAL"] },
+    "computePreference": { "enum": ["AUTO", "CPU", "GPU"] },
+    "registryAmendment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "amendment_id", "human_action_registry_version",
+        "operation_profile_registry_version", "human_action_rows", "operation_profile_rows",
+        "design_receipt_sha256", "task071_producer_acceptance_state",
+        "task072_producer_acceptance_state", "status_only", "authority_created",
+        "operation_ticket_created", "effect_started", "created_at", "registry_amendment_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_OWNER_VOICE_REGISTRY_AMENDMENT_V1" },
+        "record_type": { "const": "OwnerVoiceRegistryAmendmentProposal" },
+        "amendment_id": { "$ref": "#/$defs/identifier" },
+        "human_action_registry_version": { "const": "HUMAN_ACTION_REGISTRY_V2" },
+        "operation_profile_registry_version": { "const": "ACTION_REGISTRY_V2" },
+        "human_action_rows": {
+          "const": [
+            { "action_code": "OWNER_VOICE_REFERENCE_PREPARE_V1", "purpose": "PRIVATE_REFERENCE_PAIR_PREPARATION", "effect_ceiling": "ONE_PREPARE_OPERATION" },
+            { "action_code": "OWNER_VOICE_LOCAL_INFERENCE_V1", "purpose": "TASK075_LOCAL_SYNTHESIS", "effect_ceiling": "ONE_INFERENCE_OPERATION" },
+            { "action_code": "OWNER_VOICE_LISTENING_DECISION_V1", "purpose": "TASK041_LISTENING_DECISION", "effect_ceiling": "ONE_DECISION" },
+            { "action_code": "OWNER_VOICE_REGENERATE_V1", "purpose": "NEW_NARRATION_ATTEMPT", "effect_ceiling": "ONE_NEW_ATTEMPT" },
+            { "action_code": "OWNER_VOICE_REFERENCE_REVOKE_V1", "purpose": "REFERENCE_CAPABILITY_INVALIDATION", "effect_ceiling": "ONE_REVOKE_TRANSITION" },
+            { "action_code": "OWNER_VOICE_REFERENCE_PURGE_V1", "purpose": "EXACT_OWNED_DERIVATIVE_PURGE", "effect_ceiling": "ONE_BOUNDED_PURGE" }
+          ]
+        },
+        "operation_profile_rows": {
+          "const": [
+            { "profile": "task074.owner_voice.reference.prepare", "consumer": "TASK-074" },
+            { "profile": "task074.owner_voice.profile_route.select", "consumer": "TASK-074" },
+            { "profile": "task075.owner_voice.local.inference", "consumer": "TASK-075" },
+            { "profile": "task075.owner_voice.private.playback", "consumer": "TASK-075" },
+            { "profile": "task041.owner_voice.listening.decision", "consumer": "TASK-041" },
+            { "profile": "task014.owner_voice.regenerate", "consumer": "TASK-014" },
+            { "profile": "task074.owner_voice.reference.revoke", "consumer": "TASK-074" },
+            { "profile": "task074.owner_voice.reference.purge", "consumer": "TASK-074" }
+          ]
+        },
+        "design_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "task071_producer_acceptance_state": { "const": "NOT_CONFIRMED" },
+        "task072_producer_acceptance_state": { "const": "NOT_CONFIRMED" },
+        "status_only": { "const": true },
+        "authority_created": { "const": false },
+        "operation_ticket_created": { "const": false },
+        "effect_started": { "const": false },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "registry_amendment_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "completionReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "task_id", "completion_id", "completion_class",
+        "project_id", "project_manifest_revision_sha256", "installed_startup_context_binding_sha256",
+        "voice_profile_id", "voice_profile_revision", "voice_profile_revision_sha256",
+        "consent_current_evaluation_sha256", "route_mode", "route_selection_revision",
+        "route_selection_sha256", "route_selection_store_receipt_sha256",
+        "reference_lifecycle_snapshot_sha256", "reference_preparation_receipt_sha256",
+        "reference_capability_binding_sha256", "reference_media_policy_sha256",
+        "reference_transcript_binding_receipt_sha256", "model_candidate_revision_sha256",
+        "model_candidate_currentness_sha256", "human_action_registry_version",
+        "operation_profile_registry_version", "human_action_registry_receipt_sha256",
+        "operation_profile_registry_receipt_sha256", "persistence_state", "private_reference_state",
+        "receipt_authority_kind", "owner_reference_verified", "producer_binding_state",
+        "fixture_only", "canonical_producer_readback", "execution_ready",
+        "task046_owner_acceptance_sha256", "task071_owner_acceptance_sha256",
+        "task072_owner_acceptance_sha256", "task075_owner_acceptance_sha256",
+        "task076_owner_acceptance_sha256", "issued_at", "expires_at",
+        "human_authorization_created", "operation_ticket_created", "execution_authorized",
+        "model_downloaded", "model_loaded", "model_probed", "training_started",
+        "inference_started", "playback_started", "wav_created", "asset_adopted",
+        "timeline_mutated", "export_started", "private_body_present", "path_present",
+        "secret_present", "production_eligible", "completion_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_OWNER_VOICE_AUTHORITY_COMPLETION_RECEIPT_V1" },
+        "record_type": { "const": "Task074OwnerVoiceAuthorityCompletionReceipt" },
+        "task_id": { "const": "TASK-074" },
+        "completion_id": { "$ref": "#/$defs/identifier" },
+        "completion_class": { "const": "TASK074_IMPLEMENTATION_COMPLETE" },
+        "project_id": { "$ref": "#/$defs/identifier" },
+        "project_manifest_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "installed_startup_context_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "voice_profile_id": { "$ref": "#/$defs/identifier" },
+        "voice_profile_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "voice_profile_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "consent_current_evaluation_sha256": { "$ref": "#/$defs/sha256" },
+        "route_mode": { "$ref": "#/$defs/routeMode" },
+        "route_selection_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "route_selection_sha256": { "$ref": "#/$defs/sha256" },
+        "route_selection_store_receipt_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "reference_lifecycle_snapshot_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "reference_preparation_receipt_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "reference_capability_binding_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "reference_media_policy_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "reference_transcript_binding_receipt_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "model_candidate_revision_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "model_candidate_currentness_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "human_action_registry_version": { "const": "HUMAN_ACTION_REGISTRY_V2" },
+        "operation_profile_registry_version": { "const": "ACTION_REGISTRY_V2" },
+        "human_action_registry_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "operation_profile_registry_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "persistence_state": { "enum": ["DURABLE_VERIFIED", "EPHEMERAL_NOT_EXECUTABLE"] },
+        "private_reference_state": { "enum": ["PREPARED_VERIFIED", "NOT_REQUIRED", "REVOKED", "NOT_CONFIRMED"] },
+        "receipt_authority_kind": { "const": "STATUS_ONLY" },
+        "owner_reference_verified": { "const": false },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "fixture_only": { "const": true },
+        "canonical_producer_readback": { "const": false },
+        "execution_ready": { "const": false },
+        "task046_owner_acceptance_sha256": { "type": "null" },
+        "task071_owner_acceptance_sha256": { "type": "null" },
+        "task072_owner_acceptance_sha256": { "type": "null" },
+        "task075_owner_acceptance_sha256": { "type": "null" },
+        "task076_owner_acceptance_sha256": { "type": "null" },
+        "issued_at": { "$ref": "#/$defs/timestamp" },
+        "expires_at": { "$ref": "#/$defs/timestamp" },
+        "human_authorization_created": { "const": false },
+        "operation_ticket_created": { "const": false },
+        "execution_authorized": { "const": false },
+        "model_downloaded": { "const": false },
+        "model_loaded": { "const": false },
+        "model_probed": { "const": false },
+        "training_started": { "const": false },
+        "inference_started": { "const": false },
+        "playback_started": { "const": false },
+        "wav_created": { "const": false },
+        "asset_adopted": { "const": false },
+        "timeline_mutated": { "const": false },
+        "export_started": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "production_eligible": { "const": false },
+        "completion_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "route_mode": { "const": "ZERO_SHOT_LOCAL" } }, "required": ["route_mode"] },
+          "then": {
+            "properties": {
+              "private_reference_state": { "enum": ["PREPARED_VERIFIED", "REVOKED", "NOT_CONFIRMED"] },
+              "model_candidate_revision_sha256": { "type": "null" },
+              "model_candidate_currentness_sha256": { "type": "null" }
+            }
+          },
+          "else": {
+            "properties": {
+              "private_reference_state": { "const": "NOT_REQUIRED" },
+              "reference_lifecycle_snapshot_sha256": { "type": "null" },
+              "reference_preparation_receipt_sha256": { "type": "null" },
+              "reference_capability_binding_sha256": { "type": "null" },
+              "reference_media_policy_sha256": { "type": "null" },
+              "reference_transcript_binding_receipt_sha256": { "type": "null" },
+              "model_candidate_revision_sha256": { "$ref": "#/$defs/sha256" },
+              "model_candidate_currentness_sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "private_reference_state": { "const": "PREPARED_VERIFIED" } }, "required": ["private_reference_state"] },
+          "then": {
+            "properties": {
+              "reference_lifecycle_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+              "reference_preparation_receipt_sha256": { "$ref": "#/$defs/sha256" },
+              "reference_capability_binding_sha256": { "$ref": "#/$defs/sha256" },
+              "reference_media_policy_sha256": { "const": "sha256:16002f6c747b42057f8dac54d8abf1bfe672dedc508675e544fa578d992aa70e" },
+              "reference_transcript_binding_receipt_sha256": { "$ref": "#/$defs/sha256" }
+            }
+          },
+          "else": {
+            "properties": {
+              "reference_preparation_receipt_sha256": { "type": "null" },
+              "reference_capability_binding_sha256": { "type": "null" },
+              "reference_media_policy_sha256": { "type": "null" },
+              "reference_transcript_binding_receipt_sha256": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "persistence_state": { "const": "DURABLE_VERIFIED" } }, "required": ["persistence_state"] },
+          "then": { "properties": { "route_selection_store_receipt_sha256": { "$ref": "#/$defs/sha256" } } },
+          "else": { "properties": { "route_selection_store_receipt_sha256": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "completion_class": { "const": "TASK074_IMPLEMENTATION_COMPLETE" } }, "required": ["completion_class"] },
+          "then": { "properties": { "owner_reference_verified": { "const": false } } },
+          "else": {
+            "properties": {
+              "owner_reference_verified": { "const": true },
+              "route_mode": { "const": "ZERO_SHOT_LOCAL" },
+              "persistence_state": { "const": "DURABLE_VERIFIED" },
+              "private_reference_state": { "const": "PREPARED_VERIFIED" }
+            }
+          }
+        }
+      ]
+    },
+    "publicProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "route_label", "public_route_key", "route_mode",
+        "compute_preference", "saved", "reference_status", "runnable_candidate", "reason_codes",
+        "profile_display_alias", "human_action_registry_version", "operation_profile_registry_version",
+        "authority_created", "execution_authorized", "private_body_present", "path_present",
+        "public_projection_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_OWNER_VOICE_AUTHORITY_PUBLIC_V1" },
+        "record_type": { "const": "OwnerVoiceAuthorityPublicProjection" },
+        "route_label": { "$ref": "#/$defs/alias" },
+        "public_route_key": { "$ref": "#/$defs/publicRouteKey" },
+        "route_mode": { "$ref": "#/$defs/routeMode" },
+        "compute_preference": { "$ref": "#/$defs/computePreference" },
+        "saved": { "type": "boolean" },
+        "reference_status": { "enum": ["NOT_CONFIGURED", "PREPARATION_REQUIRED", "READY", "REVOKED", "NOT_REQUIRED", "NOT_CONFIRMED"] },
+        "runnable_candidate": { "type": "boolean" },
+        "reason_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 64,
+          "items": { "$ref": "#/$defs/reasonCode" }
+        },
+        "profile_display_alias": { "$ref": "#/$defs/alias" },
+        "human_action_registry_version": { "const": "HUMAN_ACTION_REGISTRY_V2" },
+        "operation_profile_registry_version": { "const": "ACTION_REGISTRY_V2" },
+        "authority_created": { "const": false },
+        "execution_authorized": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "public_projection_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "route_mode": { "const": "ZERO_SHOT_LOCAL" } }, "required": ["route_mode"] },
+          "then": { "properties": { "reference_status": { "not": { "const": "NOT_REQUIRED" } } } },
+          "else": { "properties": { "reference_status": { "const": "NOT_REQUIRED" } } }
+        },
+        {
+          "if": { "properties": { "runnable_candidate": { "const": true } }, "required": ["runnable_candidate"] },
+          "then": {
+            "properties": {
+              "saved": { "const": true },
+              "reason_codes": { "maxItems": 0 }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "route_mode": { "const": "ZERO_SHOT_LOCAL" } }, "required": ["route_mode"] },
+                "then": { "properties": { "reference_status": { "const": "READY" } } },
+                "else": { "properties": { "reference_status": { "const": "NOT_REQUIRED" } } }
+              }
+            ]
+          },
+          "else": { "properties": { "reason_codes": { "minItems": 1 } } }
+        }
+      ]
+    },
+    "zeroShotInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant", "reference_lifecycle_snapshot_sha256", "pair_ledger_sha256",
+        "reference_capability_v2_binding_sha256", "media_policy_sha256",
+        "transcript_binding_receipt_sha256", "reference_roles", "worker_delegation_sha256",
+        "task072_begin_readback_sha256", "begin_nonce_binding_sha256",
+        "task076_worker_process_readback_sha256", "child_process_binding_sha256", "lease_state",
+        "model_candidate_revision_sha256", "model_candidate_currentness_sha256",
+        "installed_route_binding_sha256", "model_license_evidence_sha256",
+        "semantic_operation_key", "owner_operation_id", "reference_domain_snapshot_sha256",
+        "reference_version_fence_sha256", "current_v2_lease_identity_sha256",
+        "attachment_sha256", "task076_external_binding_slot_sha256",
+        "task076_armed_vector_sha256", "task076_bootstrap_waiting_readback_sha256",
+        "task076_job_object_custody_readback_sha256",
+        "task076_external_input_bound_readback_sha256",
+        "task076_external_input_validated_readback_sha256", "producer_binding_state",
+        "executable", "composite_child_lineage_sha256"
+      ],
+      "properties": {
+        "variant": { "const": "ZERO_SHOT_REFERENCE_INPUT_V2" },
+        "reference_lifecycle_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "pair_ledger_sha256": { "$ref": "#/$defs/sha256" },
+        "reference_capability_v2_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "media_policy_sha256": { "const": "sha256:16002f6c747b42057f8dac54d8abf1bfe672dedc508675e544fa578d992aa70e" },
+        "transcript_binding_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "reference_roles": { "const": ["REFERENCE_AUDIO_READ_HANDLE", "REFERENCE_TRANSCRIPT_UTF8_READ_HANDLE"] },
+        "worker_delegation_sha256": { "$ref": "#/$defs/sha256" },
+        "task072_begin_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "begin_nonce_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "task076_worker_process_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "child_process_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "lease_state": { "const": "CHILD_PAIR_READY" },
+        "model_candidate_revision_sha256": { "type": "null" },
+        "model_candidate_currentness_sha256": { "type": "null" },
+        "installed_route_binding_sha256": { "type": "null" },
+        "model_license_evidence_sha256": { "type": "null" },
+        "semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "owner_operation_id": { "$ref": "#/$defs/identifier" },
+        "reference_domain_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "reference_version_fence_sha256": { "$ref": "#/$defs/sha256" },
+        "current_v2_lease_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "attachment_sha256": { "$ref": "#/$defs/sha256" },
+        "task076_external_binding_slot_sha256": { "$ref": "#/$defs/sha256" },
+        "task076_armed_vector_sha256": { "$ref": "#/$defs/sha256" },
+        "task076_bootstrap_waiting_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "task076_job_object_custody_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "task076_external_input_bound_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "task076_external_input_validated_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "executable": { "const": false },
+        "composite_child_lineage_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "fineTunedInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant", "reference_lifecycle_snapshot_sha256", "pair_ledger_sha256",
+        "reference_capability_v2_binding_sha256", "media_policy_sha256",
+        "transcript_binding_receipt_sha256", "reference_roles", "worker_delegation_sha256",
+        "task072_begin_readback_sha256", "begin_nonce_binding_sha256",
+        "task076_worker_process_readback_sha256", "child_process_binding_sha256", "lease_state",
+        "model_candidate_revision_sha256", "model_candidate_currentness_sha256",
+        "installed_route_binding_sha256", "model_license_evidence_sha256",
+        "semantic_operation_key", "owner_operation_id", "reference_domain_snapshot_sha256",
+        "reference_version_fence_sha256", "current_v2_lease_identity_sha256",
+        "attachment_sha256", "task076_external_binding_slot_sha256",
+        "task076_armed_vector_sha256", "task076_bootstrap_waiting_readback_sha256",
+        "task076_job_object_custody_readback_sha256",
+        "task076_external_input_bound_readback_sha256",
+        "task076_external_input_validated_readback_sha256", "producer_binding_state",
+        "executable", "composite_child_lineage_sha256"
+      ],
+      "properties": {
+        "variant": { "const": "FINE_TUNED_MODEL_INPUT_V2" },
+        "reference_lifecycle_snapshot_sha256": { "type": "null" },
+        "pair_ledger_sha256": { "type": "null" },
+        "reference_capability_v2_binding_sha256": { "type": "null" },
+        "media_policy_sha256": { "type": "null" },
+        "transcript_binding_receipt_sha256": { "type": "null" },
+        "reference_roles": { "const": [] },
+        "worker_delegation_sha256": { "type": "null" },
+        "task072_begin_readback_sha256": { "type": "null" },
+        "begin_nonce_binding_sha256": { "type": "null" },
+        "task076_worker_process_readback_sha256": { "type": "null" },
+        "child_process_binding_sha256": { "type": "null" },
+        "lease_state": { "type": "null" },
+        "model_candidate_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "model_candidate_currentness_sha256": { "$ref": "#/$defs/sha256" },
+        "installed_route_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "model_license_evidence_sha256": { "$ref": "#/$defs/sha256" },
+        "semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "owner_operation_id": { "type": "null" },
+        "reference_domain_snapshot_sha256": { "type": "null" },
+        "reference_version_fence_sha256": { "type": "null" },
+        "current_v2_lease_identity_sha256": { "type": "null" },
+        "attachment_sha256": { "type": "null" },
+        "task076_external_binding_slot_sha256": { "type": "null" },
+        "task076_armed_vector_sha256": { "type": "null" },
+        "task076_bootstrap_waiting_readback_sha256": { "type": "null" },
+        "task076_job_object_custody_readback_sha256": { "type": "null" },
+        "task076_external_input_bound_readback_sha256": { "type": "null" },
+        "task076_external_input_validated_readback_sha256": { "type": "null" },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "executable": { "const": false },
+        "composite_child_lineage_sha256": { "type": "null" }
+      }
+    },
+    "executionInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "handoff_id", "durability_variant", "route_mode",
+        "semantic_operation_key", "aggregate_currentness_lease_binding_sha256", "expected_consumer",
+        "expected_product_build_sha256", "worker_protocol_version", "durable_completion_receipt_sha256",
+        "durable_selection_sha256", "durable_currentness_sha256", "live_route_plan_sha256",
+        "live_route_plan_lease_sha256", "task072_ticket_sha256", "live_currentness_fingerprint_sha256",
+        "zero_shot_input", "fine_tuned_input", "task046_owner_acceptance_sha256",
+        "task072_owner_acceptance_sha256", "task075_owner_acceptance_sha256",
+        "task076_owner_acceptance_sha256", "producer_binding_state", "fixture_only",
+        "execution_ready", "g11_structurally_complete", "authority_created", "execution_authorized", "body_present",
+        "path_present", "secret_present", "created_at", "execution_input_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_TO_TASK075_EXECUTION_INPUT_V2" },
+        "record_type": { "const": "Task074ToTask075ExecutionInputV2" },
+        "handoff_id": { "$ref": "#/$defs/identifier" },
+        "durability_variant": { "enum": ["DURABLE_SELECTION_HANDOFF_V1", "TASK074_ONE_OPERATION_EXECUTION_HANDOFF_V1"] },
+        "route_mode": { "$ref": "#/$defs/routeMode" },
+        "semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "aggregate_currentness_lease_binding_sha256": { "$ref": "#/$defs/sha256" },
+        "expected_consumer": { "const": "TASK-075" },
+        "expected_product_build_sha256": { "$ref": "#/$defs/sha256" },
+        "worker_protocol_version": { "$ref": "#/$defs/identifier" },
+        "durable_completion_receipt_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "durable_selection_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "durable_currentness_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "live_route_plan_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "live_route_plan_lease_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "task072_ticket_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "live_currentness_fingerprint_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "zero_shot_input": { "oneOf": [{ "$ref": "#/$defs/zeroShotInput" }, { "type": "null" }] },
+        "fine_tuned_input": { "oneOf": [{ "$ref": "#/$defs/fineTunedInput" }, { "type": "null" }] },
+        "task046_owner_acceptance_sha256": { "type": "null" },
+        "task072_owner_acceptance_sha256": { "type": "null" },
+        "task075_owner_acceptance_sha256": { "type": "null" },
+        "task076_owner_acceptance_sha256": { "type": "null" },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "fixture_only": { "const": true },
+        "execution_ready": { "const": false },
+        "g11_structurally_complete": { "const": false },
+        "authority_created": { "const": false },
+        "execution_authorized": { "const": false },
+        "body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "execution_input_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "durability_variant": { "const": "DURABLE_SELECTION_HANDOFF_V1" } }, "required": ["durability_variant"] },
+          "then": {
+            "properties": {
+              "durable_completion_receipt_sha256": { "$ref": "#/$defs/sha256" },
+              "durable_selection_sha256": { "$ref": "#/$defs/sha256" },
+              "durable_currentness_sha256": { "$ref": "#/$defs/sha256" },
+              "live_route_plan_sha256": { "type": "null" },
+              "live_route_plan_lease_sha256": { "type": "null" },
+              "task072_ticket_sha256": { "type": "null" },
+              "live_currentness_fingerprint_sha256": { "type": "null" }
+            }
+          },
+          "else": {
+            "properties": {
+              "durable_completion_receipt_sha256": { "type": "null" },
+              "durable_selection_sha256": { "type": "null" },
+              "durable_currentness_sha256": { "type": "null" },
+              "live_route_plan_sha256": { "$ref": "#/$defs/sha256" },
+              "live_route_plan_lease_sha256": { "$ref": "#/$defs/sha256" },
+              "task072_ticket_sha256": { "$ref": "#/$defs/sha256" },
+              "live_currentness_fingerprint_sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "route_mode": { "const": "ZERO_SHOT_LOCAL" } }, "required": ["route_mode"] },
+          "then": {
+            "properties": {
+              "zero_shot_input": { "$ref": "#/$defs/zeroShotInput" },
+              "fine_tuned_input": { "type": "null" }
+            }
+          },
+          "else": {
+            "properties": {
+              "zero_shot_input": { "type": "null" },
+              "fine_tuned_input": { "$ref": "#/$defs/fineTunedInput" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

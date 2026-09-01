@@ -5,8 +5,8 @@ Status: `LOCAL_PASS / DEV-4_PASS / COMMIT_ELIGIBLE`
 ## Bound source
 
 - Repository: `baisound/bai_video_production`
-- Current canonical comparison: `origin/main@7dc91c2112923e357bb5e3eab597f0c18ef33bbc`
-- Branch merge base: `35cdf1ad475633dcf035e0616e979b5a8fde0c88`
+- Current canonical comparison and branch merge base: `origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578`
+- Rebased HEAD: `deb037279a414572730c35f1bf2bfb81119825c4`
 - Branch: `codex/task-068-secure-authority-io`
 - Dedicated worktree: `task-068-secure-authority-io`
 - Source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
@@ -29,11 +29,10 @@ Status: `LOCAL_PASS / DEV-4_PASS / COMMIT_ELIGIBLE`
 
 ## Executed evidence
 
-- Windows Python 3.12 syntax compilation: PASS.
-- WSL Python syntax compilation: PASS.
+- Fresh bundled-Python syntax compilation: `3/3 PASS`.
 - WSL TASK-068 focused suite: `163 passed / 82 skipped / 0 failed`.
-- Windows-native TASK-068 focused suite through installed pytest: `82 passed / 0 skipped / 0 failed`.
-- WSL TASK-058/TASK-068 targeted boundary regression: `279 passed / 83 skipped / 0 failed`. The skips are one unavailable installed-SKILL fixture plus Windows-native cases, which were executed separately on Windows.
+- Fresh WSL TASK-058/TASK-068 targeted boundary regression: `242 passed / 82 skipped / 0 failed`.
+- Fresh Windows-native runtime: `NOT_CONFIRMED`; neither `py` nor bundled-Python pytest is available and no install/retry was attempted. The historical identical-content Builder result is retained only as historical evidence.
 - `git diff --check`: PASS; line-ending conversion warnings only.
 - Full repository regression: `NOT_CONFIRMED` for this corrective source. Historical broader runs are not promoted to current PASS.
 - Release/Deploy/Production/native/paid/external-account effects: 0.
@@ -43,6 +42,6 @@ Status: `LOCAL_PASS / DEV-4_PASS / COMMIT_ELIGIBLE`
 - Independent Tester static review: PASS, Critical/High/Medium/Low `0/0/0/0`; independent runtime `NOT_CONFIRMED`.
 - Independent implementation Critic: PASS, Critical/High/Medium/Low `0/0/0/0`.
 - Independent Judge: DEV-4 PASS, Critical/High/Medium/Low `0/0/0/0`.
-- The Judge accepted the Builder runtime evidence for this exact fixed-SHA commit gate without promoting it to independent runtime evidence and lifted `COMMIT STOP` for the nine Allowed Files.
+- The Judge accepted the fresh source/test rebind while retaining Windows-native runtime as `NOT_CONFIRMED`, and lifted `COMMIT STOP` for the ten Allowed Files.
 - Any source/test SHA or dirty-scope drift invalidates that decision and requires fresh review binding.
 - TASK-069 source mutation remains `START0` until TASK-068 is canonical on `main` and the TASK-069 dependency/start gate passes.

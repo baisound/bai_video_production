@@ -5,8 +5,8 @@ Status: `LOCAL_DEV-4_PASS / COMMIT_ELIGIBLE / CANONICALIZATION_PENDING`
 ## Bound implementation
 
 - Repository: `baisound/bai_video_production`
-- Current canonical comparison: `origin/main@7dc91c2112923e357bb5e3eab597f0c18ef33bbc`
-- Branch merge base: `35cdf1ad475633dcf035e0616e979b5a8fde0c88`
+- Current canonical comparison and branch merge base: `origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578`
+- Rebased HEAD: `deb037279a414572730c35f1bf2bfb81119825c4`
 - Branch: `codex/task-068-secure-authority-io`
 - Source: `src/ai_video_production/secure_authority_io.py`
 - Source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
@@ -14,18 +14,18 @@ Status: `LOCAL_DEV-4_PASS / COMMIT_ELIGIBLE / CANONICALIZATION_PENDING`
 - Windows test SHA-256: `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`
 - Profile: `DEV-4 / IMMUTABLE_ONLY_V1`
 
-This task-local receipt creates no canonical dependency authority. Fresh independent Tester, Critic, and Judge closure is bound to the same final source and test SHA set below, so the nine Allowed Files are eligible for commit and Draft PR update. TASK-069 source mutation remains `START0` until TASK-068 is merged into canonical `main` and its dependency gate is rebound.
+This task-local receipt creates no canonical dependency authority. Fresh independent Tester, Critic, and Judge closure is rebound to the same final source and test SHA set below after the current-main rebase, so the ten Allowed Files are eligible for commit and Draft PR update. TASK-069 source mutation remains `START0` until TASK-068 is merged into canonical `main` and its dependency gate is rebound.
 
 ## Current local result
 
-- Python compilation on WSL and Windows: PASS.
+- Fresh bundled-Python syntax compilation: `3/3 PASS`.
 - WSL TASK-068 focused pytest: `163 PASS / 82 SKIP / 0 FAIL`.
-- Windows-native TASK-068 focused pytest: `82 PASS / 0 SKIP / 0 FAIL`.
-- WSL TASK-058/TASK-068 targeted regression: `279 PASS / 83 SKIP / 0 FAIL`; skipped Windows cases were executed natively and the unavailable installed-SKILL fixture remains an explicit skip.
+- Fresh WSL TASK-058/TASK-068 targeted regression: `242 PASS / 82 SKIP / 0 FAIL`.
+- Fresh Windows-native runtime: `NOT_CONFIRMED`; this host has neither the `py` launcher nor pytest in its bundled Python, and no install or repeated denied route was attempted. The historical identical-content Windows Builder run (`82 PASS`) remains evidence only and is not promoted to fresh/independent runtime.
 - Independent Tester: static PASS, Critical/High/Medium/Low `0/0/0/0`; independent runtime remains `NOT_CONFIRMED`.
 - Independent implementation Critic: PASS, Critical/High/Medium/Low `0/0/0/0`.
 - Independent Judge: DEV-4 PASS, Critical/High/Medium/Low `0/0/0/0`; Builder runtime evidence accepted for this fixed-SHA commit gate without relabeling it as independent runtime evidence.
-- `COMMIT STOP`: lifted by the Judge for this exact three-file SHA set and the nine Allowed Files only.
+- `COMMIT STOP`: lifted by the Judge for this exact three-file SHA set and the ten Allowed Files only.
 - `git diff --check`: PASS; line-ending conversion warnings only.
 
 The broader repository suite is not claimed as PASS for this corrective source.

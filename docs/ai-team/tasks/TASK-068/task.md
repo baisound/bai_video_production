@@ -37,7 +37,7 @@ Owner-approved source implementation and focused verification are authorized. Re
 - Writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context.
 - Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
 - Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
-- POSIX and Windows race/fault focused tests pass locally. Independent Tester, Critic, and Judge bound the same final three-file SHA set and each reported Critical/High zero. The Judge accepted the Builder runtime evidence for this commit gate while preserving independent runtime as `NOT_CONFIRMED`, and lifted `COMMIT STOP` for the nine Allowed Files only.
+- POSIX focused tests pass after the current-main rebase; fresh Windows-native runtime remains `NOT_CONFIRMED` because this host lacks a pytest runner and no install/retry was attempted. Independent Tester, Critic, and Judge rebound the same normalized final three-file SHA set and each reported Critical/High zero. The Judge lifted `COMMIT STOP` for the ten Allowed Files only.
 
 ## Dependencies and next task
 

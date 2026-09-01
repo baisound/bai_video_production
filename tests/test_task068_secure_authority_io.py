@@ -24,6 +24,8 @@ def _assert_code(exc: pytest.ExceptionInfo[SecureAuthorityIOError], code: str) -
     assert exc.value.code == code
     assert str(exc.value) == code
     assert "secret" not in repr(exc.value).lower()
+    assert exc.value.__cause__ is None
+    assert exc.value.__context__ is None
 
 
 @contextmanager
@@ -110,6 +112,8 @@ def _plan_fingerprint(plan: TrustedImmutablePlan) -> str:
     payload = json.dumps(
         {
             "action": plan.action,
+            "authorization_sha256": "sha256:"
+            + hashlib.sha256(plan.authorization.encode("ascii")).hexdigest(),
             "backend_id": plan.backend_id,
             "body_sha256": plan.body_sha256,
             "build_id": plan.build_id,
@@ -119,6 +123,7 @@ def _plan_fingerprint(plan: TrustedImmutablePlan) -> str:
             "relative_path": plan.relative_path.replace("\\", "/"),
             "revision": plan.revision,
             "session_id": plan.session_id,
+            "version": "TASK068_IMMUTABLE_PLAN_V1",
         },
         ensure_ascii=True,
         sort_keys=True,
@@ -141,6 +146,80 @@ def _exact_plan_verifier(*plans: TrustedImmutablePlan):
 def _graph_fingerprint(*plans: TrustedImmutablePlan) -> str:
     payload = "\n".join(sorted(_plan_fingerprint(plan) for plan in plans)).encode("ascii")
     return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+class _ReceiptTrust:
+    def __init__(self) -> None:
+        self.allowed: set[str] = set()
+
+    def verify(self, fingerprint: str) -> bool:
+        return fingerprint in self.allowed
+
+    def accept(self, *receipts: ImmutablePublishReceipt) -> None:
+        self.allowed.update(receipt.receipt_fingerprint for receipt in receipts)
+
+
+class _GraphTrust:
+    def __init__(self) -> None:
+        self.allowed: set[tuple[str, str]] = set()
+
+    def verify(self, aggregate: str, specified: str) -> bool:
+        return (aggregate, specified) in self.allowed
+
+    def accept(
+        self,
+        *receipts: ImmutablePublishReceipt,
+        specified: ImmutablePublishReceipt,
+    ) -> None:
+        aggregate = "sha256:" + hashlib.sha256(
+            "\n".join(
+                sorted(receipt.receipt_fingerprint for receipt in receipts)
+            ).encode("ascii")
+        ).hexdigest()
+        self.allowed.add((aggregate, specified.receipt_fingerprint))
+
+
+def _receipt_fingerprint(receipt: ImmutablePublishReceipt) -> str:
+    identity = receipt.identity
+    payload = json.dumps(
+        {
+            "byte_count": receipt.byte_count,
+            "identity": {
+                "device": identity.device,
+                "inode": identity.inode,
+                "mode": identity.mode,
+                "nlink": identity.nlink,
+                "size": identity.size,
+                "mtime_ns": identity.mtime_ns,
+                "reparse_point": identity.reparse_point,
+            },
+            "plan_fingerprint": receipt.plan_fingerprint,
+            "predecessor_sha256": receipt.predecessor_sha256,
+            "security_sha256": receipt.security_sha256,
+            "sha256": receipt.sha256,
+            "version": receipt.version,
+        },
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _untrusted_receipt(
+    plan: TrustedImmutablePlan,
+    identity: ArtifactIdentity,
+) -> ImmutablePublishReceipt:
+    return ImmutablePublishReceipt(
+        sha256=plan.body_sha256,
+        predecessor_sha256=plan.expected_predecessor_sha256,
+        byte_count=identity.size,
+        identity=identity,
+        plan_fingerprint=_plan_fingerprint(plan),
+        security_sha256="sha256:" + "0" * 64,
+        receipt_fingerprint="sha256:" + "0" * 64,
+        version="TASK068_IMMUTABLE_RECEIPT_V1",
+    )
 
 
 def _exact_graph_verifier(*plans: TrustedImmutablePlan, specified: TrustedImmutablePlan):
@@ -991,6 +1070,7 @@ def test_complete_plan_fingerprint_verifier_rejects_every_field_rebinding(
     from dataclasses import replace
 
     document = {"generation": 1}
+    (tmp_path / ".immutable-authority").mkdir()
     exact_plan = _trusted_plan(document)
     changed_plan = replace(exact_plan, **plan_update)
     seen: list[str] = []
@@ -1007,18 +1087,18 @@ def test_complete_plan_fingerprint_verifier_rejects_every_field_rebinding(
         immutable_plan_verifier=verifier,
         authority_instance_id=changed_plan.instance_id,
     )
-    with pytest.raises(SecureAuthorityIOError) as exc:
-        authority.publish_immutable_json(
-            document,
-            plan=changed_plan,
-            lease=object(),  # type: ignore[arg-type]
-        )
+    with _writer(authority, tmp_path) as lease:
+        with pytest.raises(SecureAuthorityIOError) as exc:
+            authority.publish_immutable_json(
+                document,
+                plan=changed_plan,
+                lease=lease,
+            )
 
     _assert_code(exc, "TRUSTED_GENERATION_PLAN_REJECTED")
     assert seen == [_plan_fingerprint(changed_plan)]
-    if "authorization" not in plan_update:
-        assert seen[0] != _plan_fingerprint(exact_plan)
-    assert list(tmp_path.iterdir()) == []
+    assert seen[0] != _plan_fingerprint(exact_plan)
+    assert list((tmp_path / ".immutable-authority").iterdir()) == []
 
 
 @pytest.mark.parametrize(
@@ -1116,9 +1196,11 @@ def test_exact_terminal_republish_never_creates_duplicate_currentness_authority(
 
 def test_exact_immutable_read_never_scans_or_selects_highest_generation(tmp_path: Path) -> None:
     (tmp_path / ".immutable-authority").mkdir()
+    receipt_trust = _ReceiptTrust()
     authority = SecureAuthorityIO(
         tmp_path,
         immutable_plan_verifier=lambda _plan, _fingerprint: True,
+        immutable_receipt_verifier=receipt_trust.verify,
         authority_instance_id="authority-instance-1",
     )
     first_plan = _trusted_plan(
@@ -1134,11 +1216,12 @@ def test_exact_immutable_read_never_scans_or_selects_highest_generation(tmp_path
         first_receipt = authority.publish_immutable_json(
             {"generation": 1}, plan=first_plan, lease=lease
         )
+    receipt_trust.accept(first_receipt)
     with _writer(authority, tmp_path) as lease:
         authority.publish_immutable_json({"generation": 2}, plan=second_plan, lease=lease)
 
     exact = authority.read_immutable_json(
-        plan=first_plan, expected_identity=first_receipt.identity
+        plan=first_plan, receipt=first_receipt
     )
 
     assert exact.document == {"generation": 1}
@@ -1160,12 +1243,13 @@ def test_immutable_graph_inspection_is_exact_and_non_authoritative(tmp_path: Pat
         revision=2,
         predecessor_sha256=first_plan.body_sha256,
     )
+    receipt_trust = _ReceiptTrust()
+    graph_trust = _GraphTrust()
     authority = SecureAuthorityIO(
         tmp_path,
         immutable_plan_verifier=_exact_plan_verifier(first_plan, second_plan),
-        immutable_graph_verifier=_exact_graph_verifier(
-            first_plan, second_plan, specified=second_plan
-        ),
+        immutable_receipt_verifier=receipt_trust.verify,
+        immutable_graph_verifier=graph_trust.verify,
         authority_instance_id="authority-instance-1",
     )
     with _writer(authority, tmp_path) as lease:
@@ -1176,20 +1260,22 @@ def test_immutable_graph_inspection_is_exact_and_non_authoritative(tmp_path: Pat
         second = authority.publish_immutable_json(
             {"generation": 2}, plan=second_plan, lease=lease
         )
+    receipt_trust.accept(first, second)
+    graph_trust.accept(first, second, specified=second)
 
     inspection = authority.inspect_immutable_graph(
         plans=[first_plan, second_plan],
-        expected_identities={
-            first_plan.relative_path: first.identity,
-            second_plan.relative_path: second.identity,
+        expected_receipts={
+            first_plan.relative_path: first,
+            second_plan.relative_path: second,
         },
         specified_plan=second_plan,
     )
     repeated_inspection = authority.inspect_immutable_graph(
         plans=[first_plan, second_plan],
-        expected_identities={
-            first_plan.relative_path: first.identity,
-            second_plan.relative_path: second.identity,
+        expected_receipts={
+            first_plan.relative_path: first,
+            second_plan.relative_path: second,
         },
         specified_plan=second_plan,
     )
@@ -1228,8 +1314,9 @@ def test_consumer_bound_graph_verifier_stops_replayed_tombstone_and_resume(
         revision=3,
         predecessor_sha256=tombstone_plan.body_sha256,
     )
-    expected_graph = _graph_fingerprint(root_plan, tombstone_plan)
-    expected_specified = _plan_fingerprint(tombstone_plan)
+    receipt_trust = _ReceiptTrust()
+    expected_graph: str | None = None
+    expected_specified: str | None = None
     graph_checks = 0
 
     def one_shot_graph_verifier(
@@ -1246,6 +1333,7 @@ def test_consumer_bound_graph_verifier_stops_replayed_tombstone_and_resume(
     authority = SecureAuthorityIO(
         tmp_path,
         immutable_plan_verifier=_exact_plan_verifier(root_plan, tombstone_plan),
+        immutable_receipt_verifier=receipt_trust.verify,
         immutable_graph_verifier=one_shot_graph_verifier,
         authority_instance_id="authority-instance-1",
     )
@@ -1257,20 +1345,27 @@ def test_consumer_bound_graph_verifier_stops_replayed_tombstone_and_resume(
         tombstone = authority.publish_immutable_json(
             {"tombstone": True}, plan=tombstone_plan, lease=lease
         )
-    identities = {
-        root_plan.relative_path: root.identity,
-        tombstone_plan.relative_path: tombstone.identity,
+    receipt_trust.accept(root, tombstone)
+    expected_graph = "sha256:" + hashlib.sha256(
+        "\n".join(
+            sorted((root.receipt_fingerprint, tombstone.receipt_fingerprint))
+        ).encode("ascii")
+    ).hexdigest()
+    expected_specified = tombstone.receipt_fingerprint
+    receipts = {
+        root_plan.relative_path: root,
+        tombstone_plan.relative_path: tombstone,
     }
 
     authority.inspect_immutable_graph(
         plans=[root_plan, tombstone_plan],
-        expected_identities=identities,
+        expected_receipts=receipts,
         specified_plan=tombstone_plan,
     )
     with pytest.raises(SecureAuthorityIOError) as replay:
         authority.inspect_immutable_graph(
             plans=[root_plan, tombstone_plan],
-            expected_identities=identities,
+            expected_receipts=receipts,
             specified_plan=tombstone_plan,
         )
     _assert_code(replay, "TRUSTED_IMMUTABLE_GRAPH_REJECTED")
@@ -1290,23 +1385,28 @@ def test_consumer_bound_graph_verifier_stops_replayed_tombstone_and_resume(
 def test_immutable_graph_unknown_artifact_stops_and_preserves_everything(tmp_path: Path) -> None:
     (tmp_path / ".immutable-authority").mkdir()
     plan = _trusted_plan({"generation": 1})
+    receipt_trust = _ReceiptTrust()
+    graph_trust = _GraphTrust()
     authority = SecureAuthorityIO(
         tmp_path,
         immutable_plan_verifier=_exact_plan_verifier(plan),
-        immutable_graph_verifier=_exact_graph_verifier(plan, specified=plan),
+        immutable_receipt_verifier=receipt_trust.verify,
+        immutable_graph_verifier=graph_trust.verify,
         authority_instance_id="authority-instance-1",
     )
     with _writer(authority, tmp_path) as lease:
         receipt = authority.publish_immutable_json(
             {"generation": 1}, plan=plan, lease=lease
         )
+    receipt_trust.accept(receipt)
+    graph_trust.accept(receipt, specified=receipt)
     unknown = tmp_path / ".immutable-authority" / "unknown.json"
     unknown.write_bytes(b"FOREIGN")
 
     with pytest.raises(SecureAuthorityIOError) as exc:
         authority.inspect_immutable_graph(
             plans=[plan],
-            expected_identities={plan.relative_path: receipt.identity},
+            expected_receipts={plan.relative_path: receipt},
             specified_plan=plan,
         )
 
@@ -1319,6 +1419,8 @@ def test_immutable_graph_scan_race_stops_without_adopting_new_entry(tmp_path: Pa
     (tmp_path / ".immutable-authority").mkdir()
     scans = 0
     plan = _trusted_plan({"generation": 1})
+    receipt_trust = _ReceiptTrust()
+    graph_trust = _GraphTrust()
 
     def hook(stage: str) -> None:
         nonlocal scans
@@ -1330,7 +1432,8 @@ def test_immutable_graph_scan_race_stops_without_adopting_new_entry(tmp_path: Pa
     authority = SecureAuthorityIO(
         tmp_path,
         immutable_plan_verifier=_exact_plan_verifier(plan),
-        immutable_graph_verifier=_exact_graph_verifier(plan, specified=plan),
+        immutable_receipt_verifier=receipt_trust.verify,
+        immutable_graph_verifier=graph_trust.verify,
         authority_instance_id="authority-instance-1",
         _stage_hook=hook,
     )
@@ -1338,11 +1441,13 @@ def test_immutable_graph_scan_race_stops_without_adopting_new_entry(tmp_path: Pa
         receipt = authority.publish_immutable_json(
             {"generation": 1}, plan=plan, lease=lease
         )
+    receipt_trust.accept(receipt)
+    graph_trust.accept(receipt, specified=receipt)
 
     with pytest.raises(SecureAuthorityIOError) as exc:
         authority.inspect_immutable_graph(
             plans=[plan],
-            expected_identities={plan.relative_path: receipt.identity},
+            expected_receipts={plan.relative_path: receipt},
             specified_plan=plan,
         )
 
@@ -1355,19 +1460,22 @@ def test_immutable_read_rejects_same_body_different_inode(tmp_path: Path) -> Non
     (tmp_path / ".immutable-authority").mkdir()
     document = {"generation": 1}
     plan = _trusted_plan(document)
+    receipt_trust = _ReceiptTrust()
     authority = SecureAuthorityIO(
         tmp_path,
         immutable_plan_verifier=lambda _plan, _fingerprint: True,
+        immutable_receipt_verifier=receipt_trust.verify,
         authority_instance_id="authority-instance-1",
     )
     with _writer(authority, tmp_path) as lease:
         receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+    receipt_trust.accept(receipt)
     replacement = tmp_path / ".immutable-authority" / "replacement.json"
     replacement.write_bytes((tmp_path / plan.relative_path).read_bytes())
     os.replace(replacement, tmp_path / plan.relative_path)
 
     with pytest.raises(SecureAuthorityIOError) as exc:
-        authority.read_immutable_json(plan=plan, expected_identity=receipt.identity)
+        authority.read_immutable_json(plan=plan, receipt=receipt)
 
     _assert_code(exc, "IMMUTABLE_BINDING_MISMATCH")
     assert (tmp_path / plan.relative_path).read_bytes() == b'{"generation":1}'
@@ -1397,14 +1505,17 @@ def test_immutable_graph_fork_and_missing_predecessor_stop_without_winner(
         predecessor_sha256=root.body_sha256,
     )
     identities = {
-        plan.relative_path: ArtifactIdentity(1, index, stat.S_IFREG, 1, 1, 1, False)
+        plan.relative_path: _untrusted_receipt(
+            plan,
+            ArtifactIdentity(1, index, stat.S_IFREG, 1, 1, 1, False),
+        )
         for index, plan in enumerate((root, left, right), start=1)
     }
 
     with pytest.raises(SecureAuthorityIOError) as fork:
         authority.inspect_immutable_graph(
             plans=[root, left, right],
-            expected_identities=identities,
+            expected_receipts=identities,
             specified_plan=left,
         )
     _assert_code(fork, "IMMUTABLE_FORK_STOP")
@@ -1418,9 +1529,12 @@ def test_immutable_graph_fork_and_missing_predecessor_stop_without_winner(
     with pytest.raises(SecureAuthorityIOError) as predecessor:
         authority.inspect_immutable_graph(
             plans=[root, missing],
-            expected_identities={
-                root.relative_path: identities[root.relative_path],
-                missing.relative_path: ArtifactIdentity(1, 4, stat.S_IFREG, 1, 1, 1, False),
+                expected_receipts={
+                    root.relative_path: identities[root.relative_path],
+                    missing.relative_path: _untrusted_receipt(
+                        missing,
+                        ArtifactIdentity(1, 4, stat.S_IFREG, 1, 1, 1, False),
+                    ),
             },
             specified_plan=missing,
         )
@@ -1447,14 +1561,20 @@ def test_immutable_graph_orphan_cycle_and_cross_operation_are_effect_zero(
         predecessor_sha256=root.body_sha256,
     )
     identities = {
-        root.relative_path: ArtifactIdentity(1, 1, stat.S_IFREG, 1, 1, 1, False),
-        child.relative_path: ArtifactIdentity(1, 2, stat.S_IFREG, 1, 1, 1, False),
+        root.relative_path: _untrusted_receipt(
+            root,
+            ArtifactIdentity(1, 1, stat.S_IFREG, 1, 1, 1, False),
+        ),
+        child.relative_path: _untrusted_receipt(
+            child,
+            ArtifactIdentity(1, 2, stat.S_IFREG, 1, 1, 1, False),
+        ),
     }
 
     with pytest.raises(SecureAuthorityIOError) as orphan:
         authority.inspect_immutable_graph(
             plans=[root, child],
-            expected_identities=identities,
+            expected_receipts=identities,
             specified_plan=root,
         )
     _assert_code(orphan, "IMMUTABLE_ORPHAN_STOP")
@@ -1466,7 +1586,7 @@ def test_immutable_graph_orphan_cycle_and_cross_operation_are_effect_zero(
     with pytest.raises(SecureAuthorityIOError) as cross:
         authority.inspect_immutable_graph(
             plans=[root, cross_operation],
-            expected_identities={
+            expected_receipts={
                 root.relative_path: identities[root.relative_path],
                 cross_operation.relative_path: identities[child.relative_path],
             },
@@ -1490,14 +1610,730 @@ def test_immutable_graph_orphan_cycle_and_cross_operation_are_effect_zero(
     with pytest.raises(SecureAuthorityIOError) as cycle:
         authority.inspect_immutable_graph(
             plans=[root, cycle_left, cycle_right],
-            expected_identities={
-                root.relative_path: identities[root.relative_path],
-                cycle_left.relative_path: ArtifactIdentity(1, 3, stat.S_IFREG, 1, 1, 1, False),
-                cycle_right.relative_path: ArtifactIdentity(1, 4, stat.S_IFREG, 1, 1, 1, False),
+                expected_receipts={
+                    root.relative_path: identities[root.relative_path],
+                    cycle_left.relative_path: _untrusted_receipt(
+                        cycle_left,
+                        ArtifactIdentity(1, 3, stat.S_IFREG, 1, 1, 1, False),
+                    ),
+                    cycle_right.relative_path: _untrusted_receipt(
+                        cycle_right,
+                        ArtifactIdentity(1, 4, stat.S_IFREG, 1, 1, 1, False),
+                    ),
             },
             specified_plan=cycle_left,
         )
     _assert_code(cycle, "IMMUTABLE_CYCLE_STOP")
+
+
+def test_immutable_publish_uses_private_plan_snapshot_after_verifier_mutates_inputs(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+    approved_path = plan.relative_path
+    approved_body = plan.body_sha256
+    approved_predecessor = plan.expected_predecessor_sha256
+    approved_fingerprint = _plan_fingerprint(plan)
+    seen: list[TrustedImmutablePlan] = []
+
+    def verifier(candidate: TrustedImmutablePlan, fingerprint: str) -> bool:
+        seen.append(candidate)
+        document["generation"] = 2
+        object.__setattr__(
+            candidate,
+            "relative_path",
+            ".immutable-authority/verifier-foreign.json",
+        )
+        object.__setattr__(candidate, "body_sha256", "sha256:" + "d" * 64)
+        object.__setattr__(
+            candidate,
+            "expected_predecessor_sha256",
+            "sha256:" + "c" * 64,
+        )
+        object.__setattr__(candidate, "authorization", "verifier-mutated-token")
+        object.__setattr__(plan, "relative_path", ".immutable-authority/foreign.json")
+        object.__setattr__(plan, "body_sha256", "sha256:" + "f" * 64)
+        object.__setattr__(plan, "expected_predecessor_sha256", "sha256:" + "e" * 64)
+        object.__setattr__(plan, "authorization", "mutated-token")
+        return fingerprint == approved_fingerprint
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=verifier,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+
+    assert len(seen) == 1
+    assert seen[0] is not plan
+    assert receipt.sha256 == approved_body
+    assert receipt.predecessor_sha256 == approved_predecessor
+    assert receipt.plan_fingerprint == approved_fingerprint
+    assert (tmp_path / approved_path).read_bytes() == b'{"generation":1}'
+    assert not (tmp_path / ".immutable-authority" / "foreign.json").exists()
+    assert not (
+        tmp_path / ".immutable-authority" / "verifier-foreign.json"
+    ).exists()
+
+
+def test_immutable_publish_rejects_plan_subclass_before_verifier_or_effect(
+    tmp_path: Path,
+) -> None:
+    class PlanSubclass(TrustedImmutablePlan):
+        pass
+
+    document = {"generation": 1}
+    (tmp_path / ".immutable-authority").mkdir()
+    exact = _trusted_plan(document)
+    plan = PlanSubclass(
+        exact.relative_path,
+        exact.operation_id,
+        exact.revision,
+        exact.body_sha256,
+        exact.expected_predecessor_sha256,
+        exact.action,
+        exact.build_id,
+        exact.backend_id,
+        exact.session_id,
+        exact.instance_id,
+        exact.authorization,
+    )
+    calls = 0
+
+    def verifier(_: TrustedImmutablePlan, __: str) -> bool:
+        nonlocal calls
+        calls += 1
+        return True
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=verifier,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        with pytest.raises(SecureAuthorityIOError) as exc:
+            authority.publish_immutable_json(document, plan=plan, lease=lease)
+
+    _assert_code(exc, "TRUSTED_GENERATION_PLAN_REQUIRED")
+    assert calls == 0
+    assert list((tmp_path / ".immutable-authority").iterdir()) == []
+
+
+def test_immutable_publish_canonicalizes_body_once_and_publishes_that_snapshot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ai_video_production import secure_authority_io as secure_io
+
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        authority_instance_id="authority-instance-1",
+    )
+    real_canonical = secure_io._canonical_json_bytes
+    calls = 0
+
+    def canonical_once(value: object, **kwargs: int) -> bytes:
+        nonlocal calls
+        calls += 1
+        if calls > 1:
+            raise AssertionError("caller document was canonicalized twice")
+        payload = real_canonical(value, **kwargs)
+        document["generation"] = 2
+        return payload
+
+    monkeypatch.setattr(secure_io, "_canonical_json_bytes", canonical_once)
+    with _writer(authority, tmp_path) as lease:
+        receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+
+    assert calls == 1
+    assert receipt.sha256 == plan.body_sha256
+    assert (tmp_path / plan.relative_path).read_bytes() == b'{"generation":1}'
+
+
+def test_trusted_receipt_rejects_self_rehashed_same_body_replacement_identity(
+    tmp_path: Path,
+) -> None:
+    from dataclasses import replace
+
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+    trust = _ReceiptTrust()
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        immutable_receipt_verifier=trust.verify,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+    trust.accept(receipt)
+
+    target = tmp_path / plan.relative_path
+    replacement = target.with_name("replacement.json")
+    replacement.write_bytes(target.read_bytes())
+    os.replace(replacement, target)
+    replacement_read = SecureAuthorityIO(tmp_path).read_json(plan.relative_path)
+    forged = replace(
+        receipt,
+        identity=replacement_read.identity,
+        security_sha256=replacement_read.security_sha256,
+        receipt_fingerprint="sha256:" + "0" * 64,
+    )
+    forged = replace(forged, receipt_fingerprint=_receipt_fingerprint(forged))
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        authority.read_immutable_json(plan=plan, receipt=forged)
+
+    _assert_code(exc, "TRUSTED_IMMUTABLE_RECEIPT_REJECTED")
+    assert target.read_bytes() == b'{"generation":1}'
+
+
+@pytest.mark.parametrize("subclass_target", ["receipt", "identity"])
+def test_immutable_read_rejects_receipt_and_identity_subclasses(
+    tmp_path: Path,
+    subclass_target: str,
+) -> None:
+    from dataclasses import replace
+
+    class ReceiptSubclass(ImmutablePublishReceipt):
+        pass
+
+    class IdentitySubclass(ArtifactIdentity):
+        pass
+
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+    trust = _ReceiptTrust()
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        immutable_receipt_verifier=trust.verify,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+    trust.accept(receipt)
+    if subclass_target == "receipt":
+        candidate = ReceiptSubclass(
+            receipt.sha256,
+            receipt.predecessor_sha256,
+            receipt.byte_count,
+            receipt.identity,
+            receipt.plan_fingerprint,
+            receipt.security_sha256,
+            receipt.receipt_fingerprint,
+            receipt.version,
+        )
+        expected_code = "TRUSTED_IMMUTABLE_RECEIPT_REQUIRED"
+    else:
+        identity = receipt.identity
+        candidate = replace(
+            receipt,
+            identity=IdentitySubclass(
+                identity.device,
+                identity.inode,
+                identity.mode,
+                identity.nlink,
+                identity.size,
+                identity.mtime_ns,
+                identity.reparse_point,
+            ),
+        )
+        expected_code = "IMMUTABLE_IDENTITY_REQUIRED"
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        authority.read_immutable_json(plan=plan, receipt=candidate)
+
+    _assert_code(exc, expected_code)
+    assert (tmp_path / plan.relative_path).read_bytes() == b'{"generation":1}'
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX security commitment test")
+def test_immutable_read_rejects_stable_ancestor_security_drift(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+    trust = _ReceiptTrust()
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        immutable_receipt_verifier=trust.verify,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+    trust.accept(receipt)
+    os.chmod(tmp_path, stat.S_IMODE(tmp_path.stat().st_mode) ^ stat.S_IRGRP)
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        authority.read_immutable_json(plan=plan, receipt=receipt)
+
+    _assert_code(exc, "IMMUTABLE_BINDING_MISMATCH")
+    assert (tmp_path / plan.relative_path).read_bytes() == b'{"generation":1}'
+
+
+def test_immutable_graph_uses_internal_snapshots_after_verifier_mutates_callers(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    first_plan = _trusted_plan(
+        {"generation": 1}, relative_path=".immutable-authority/generation-1.json"
+    )
+    second_plan = _trusted_plan(
+        {"generation": 2},
+        relative_path=".immutable-authority/generation-2.json",
+        revision=2,
+        predecessor_sha256=first_plan.body_sha256,
+    )
+    receipt_trust = _ReceiptTrust()
+    plans = [first_plan, second_plan]
+    receipts: dict[str, ImmutablePublishReceipt] = {}
+    expected_graph: str | None = None
+    expected_specified: str | None = None
+    graph_calls = 0
+
+    def graph_verifier(aggregate: str, specified: str) -> bool:
+        nonlocal graph_calls
+        graph_calls += 1
+        plans.clear()
+        receipts.clear()
+        object.__setattr__(first, "receipt_fingerprint", "sha256:" + "a" * 64)
+        object.__setattr__(second, "receipt_fingerprint", "sha256:" + "b" * 64)
+        object.__setattr__(
+            second_plan,
+            "relative_path",
+            ".immutable-authority/untrusted.json",
+        )
+        return aggregate == expected_graph and specified == expected_specified
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(first_plan, second_plan),
+        immutable_receipt_verifier=receipt_trust.verify,
+        immutable_graph_verifier=graph_verifier,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        first = authority.publish_immutable_json(
+            {"generation": 1}, plan=first_plan, lease=lease
+        )
+        second = authority.publish_immutable_json(
+            {"generation": 2}, plan=second_plan, lease=lease
+        )
+    receipt_trust.accept(first, second)
+    receipts.update(
+        {
+            first_plan.relative_path: first,
+            second_plan.relative_path: second,
+        }
+    )
+    expected_graph = "sha256:" + hashlib.sha256(
+        "\n".join(
+            sorted((first.receipt_fingerprint, second.receipt_fingerprint))
+        ).encode("ascii")
+    ).hexdigest()
+    expected_specified = second.receipt_fingerprint
+
+    inspection = authority.inspect_immutable_graph(
+        plans=plans,
+        expected_receipts=receipts,
+        specified_plan=second_plan,
+    )
+
+    assert inspection.inspected_count == 2
+    assert graph_calls == 1
+    assert not (tmp_path / ".immutable-authority" / "untrusted.json").exists()
+
+
+def test_immutable_graph_snapshots_every_plan_and_receipt_before_any_callback(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    first_plan = _trusted_plan(
+        {"generation": 1}, relative_path=".immutable-authority/generation-1.json"
+    )
+    second_plan = _trusted_plan(
+        {"generation": 2},
+        relative_path=".immutable-authority/generation-2.json",
+        revision=2,
+        predecessor_sha256=first_plan.body_sha256,
+    )
+    receipts: dict[str, ImmutablePublishReceipt] = {}
+    allowed_plans = {
+        _plan_fingerprint(first_plan),
+        _plan_fingerprint(second_plan),
+    }
+    receipt_trust = _ReceiptTrust()
+    graph_trust = _GraphTrust()
+    plan_calls = 0
+
+    def plan_verifier(_: TrustedImmutablePlan, fingerprint: str) -> bool:
+        nonlocal plan_calls
+        plan_calls += 1
+        if plan_calls == 1 and receipts:
+            object.__setattr__(
+                second_plan,
+                "relative_path",
+                ".immutable-authority/untrusted.json",
+            )
+            object.__setattr__(
+                receipts[".immutable-authority/generation-2.json"],
+                "receipt_fingerprint",
+                "sha256:" + "f" * 64,
+            )
+        return fingerprint in allowed_plans
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=plan_verifier,
+        immutable_receipt_verifier=receipt_trust.verify,
+        immutable_graph_verifier=graph_trust.verify,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        first = authority.publish_immutable_json(
+            {"generation": 1}, plan=first_plan, lease=lease
+        )
+        second = authority.publish_immutable_json(
+            {"generation": 2}, plan=second_plan, lease=lease
+        )
+    receipt_trust.accept(first, second)
+    graph_trust.accept(first, second, specified=second)
+    receipts.update(
+        {
+            first_plan.relative_path: first,
+            second_plan.relative_path: second,
+        }
+    )
+    plan_calls = 0
+
+    inspection = authority.inspect_immutable_graph(
+        plans=[first_plan, second_plan],
+        expected_receipts=receipts,
+        specified_plan=second_plan,
+    )
+
+    assert inspection.inspected_count == 2
+    assert plan_calls == 2
+    assert not (tmp_path / ".immutable-authority" / "untrusted.json").exists()
+
+
+@pytest.mark.parametrize("oversized_input", ["plans", "receipts"])
+def test_immutable_graph_rejects_oversized_containers_before_callbacks(
+    tmp_path: Path,
+    oversized_input: str,
+) -> None:
+    plan = _trusted_plan({"generation": 1})
+    calls = 0
+
+    def verifier(_: TrustedImmutablePlan, __: str) -> bool:
+        nonlocal calls
+        calls += 1
+        return True
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=verifier,
+        immutable_receipt_verifier=lambda _: True,
+        immutable_graph_verifier=lambda _aggregate, _specified: True,
+        authority_instance_id="authority-instance-1",
+    )
+    plans = [plan] * (1025 if oversized_input == "plans" else 1)
+    receipts = (
+        {f"key-{index}": object() for index in range(1025)}
+        if oversized_input == "receipts"
+        else {plan.relative_path: object()}
+    )
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        authority.inspect_immutable_graph(
+            plans=plans,
+            expected_receipts=receipts,  # type: ignore[arg-type]
+            specified_plan=plan,
+        )
+
+    _assert_code(
+        exc,
+        "IMMUTABLE_GRAPH_BOUND_REJECTED"
+        if oversized_input == "plans"
+        else "IMMUTABLE_GRAPH_BINDINGS_REJECTED",
+    )
+    assert calls == 0
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_direct_private_lock_construction_cannot_self_register_even_with_nonce(
+    tmp_path: Path,
+) -> None:
+    from ai_video_production import secure_authority_io as secure_io
+
+    authority = SecureAuthorityIO(tmp_path)
+    nonce = authority._SecureAuthorityIO__lease_issuer_nonce
+    forged = secure_io._SecureFileLock(
+        authority,
+        ".writer.lock",
+        "initial",
+        nonce,
+    )
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        with forged:
+            pass
+
+    _assert_code(exc, "WRITER_LEASE_REQUIRED")
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("method_name", "expected_code"),
+    [
+        ("replace_json_cas", "CAS_ATOMIC_UNAVAILABLE"),
+        ("commit_directory_tree", "DIRECTORY_TREE_COMMIT_AUTHORITY_NOT_CREATED"),
+        ("advance_mutable_phase", "MUTABLE_PHASE_ADVANCE_UNAVAILABLE"),
+        ("cleanup_owned_file", "CLEANUP_ATOMIC_UNAVAILABLE"),
+    ],
+)
+def test_unavailable_effect_burns_lease_before_same_context_reuse(
+    tmp_path: Path,
+    method_name: str,
+    expected_code: str,
+) -> None:
+    authority = SecureAuthorityIO(tmp_path)
+    identity = ArtifactIdentity(1, 1, stat.S_IFREG, 1, 2, 1, False)
+    with _writer(authority, tmp_path) as lease:
+        with pytest.raises(SecureAuthorityIOError) as unavailable:
+            if method_name == "replace_json_cas":
+                authority.replace_json_cas(
+                    "target.json",
+                    {"x": 1},
+                    lease=lease,
+                    expected_identity=identity,
+                    expected_sha256="sha256:" + "0" * 64,
+                )
+            elif method_name == "cleanup_owned_file":
+                authority.cleanup_owned_file(
+                    "target.json",
+                    lease=lease,
+                    expected_identity=identity,
+                    expected_sha256="sha256:" + "0" * 64,
+                )
+            else:
+                getattr(authority, method_name)(
+                    "target.json",
+                    {"x": 1},
+                    lease=lease,
+                )
+        with pytest.raises(SecureAuthorityIOError) as burned:
+            authority.publish_json_noreplace(
+                "after-burn.json",
+                {"secret": "must-not-be-read"},
+                lease=lease,
+            )
+
+    _assert_code(unavailable, expected_code)
+    _assert_code(burned, "CAPABILITY_BURNED")
+    assert not (tmp_path / "target.json").exists()
+    assert not (tmp_path / "after-burn.json").exists()
+
+
+@pytest.mark.parametrize(
+    "method_name",
+    [
+        "replace_json_cas",
+        "commit_directory_tree",
+        "advance_mutable_phase",
+        "cleanup_owned_file",
+    ],
+)
+def test_unavailable_effect_validation_failure_still_burns_active_lease(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    method_name: str,
+) -> None:
+    from ai_video_production import secure_authority_io as secure_io
+
+    authority = SecureAuthorityIO(tmp_path)
+    identity = ArtifactIdentity(1, 1, stat.S_IFREG, 1, 2, 1, False)
+    real_security_digest = secure_io._fd_security_digest
+    calls = 0
+
+    def fail_once(fd: int) -> str:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise SecureAuthorityIOError("SECURITY_DESCRIPTOR_READ_FAILED")
+        return real_security_digest(fd)
+
+    with _writer(authority, tmp_path) as lease:
+        monkeypatch.setattr(secure_io, "_fd_security_digest", fail_once)
+        with pytest.raises(SecureAuthorityIOError) as validation_failure:
+            if method_name == "replace_json_cas":
+                authority.replace_json_cas(
+                    "target.json",
+                    {},
+                    lease=lease,
+                    expected_identity=identity,
+                    expected_sha256="sha256:" + "0" * 64,
+                )
+            elif method_name == "cleanup_owned_file":
+                authority.cleanup_owned_file(
+                    "target.json",
+                    lease=lease,
+                    expected_identity=identity,
+                    expected_sha256="sha256:" + "0" * 64,
+                )
+            else:
+                getattr(authority, method_name)("target.json", {}, lease=lease)
+        with pytest.raises(SecureAuthorityIOError) as burned:
+            authority.publish_json_noreplace("after.json", {}, lease=lease)
+
+    _assert_code(validation_failure, "SECURITY_DESCRIPTOR_READ_FAILED")
+    _assert_code(burned, "CAPABILITY_BURNED")
+    assert not (tmp_path / "target.json").exists()
+    assert not (tmp_path / "after.json").exists()
+
+
+@pytest.mark.parametrize("effect_kind", ["immutable_body", "raw_path"])
+def test_failed_public_publish_burns_lease_before_same_context_reuse(
+    tmp_path: Path,
+    effect_kind: str,
+) -> None:
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        authority_instance_id=plan.instance_id,
+    )
+
+    with _writer(authority, tmp_path) as lease:
+        with pytest.raises(SecureAuthorityIOError) as rejected:
+            if effect_kind == "immutable_body":
+                authority.publish_immutable_json(
+                    {"generation": 2},
+                    plan=plan,
+                    lease=lease,
+                )
+            else:
+                authority.publish_json_noreplace(
+                    "../outside.json",
+                    {"secret": "must-not-be-read"},
+                    lease=lease,
+                )
+        with pytest.raises(SecureAuthorityIOError) as burned:
+            authority.publish_json_noreplace(
+                "after-rejection.json",
+                {"secret": "must-not-be-read"},
+                lease=lease,
+            )
+
+    _assert_code(
+        rejected,
+        "IMMUTABLE_BODY_DIGEST_MISMATCH"
+        if effect_kind == "immutable_body"
+        else "RELATIVE_PATH_REJECTED",
+    )
+    _assert_code(burned, "CAPABILITY_BURNED")
+    assert not (tmp_path / ".immutable-authority" / "generation-1.json").exists()
+    assert not (tmp_path / "after-rejection.json").exists()
+    assert not (tmp_path.parent / "outside.json").exists()
+
+
+def test_writer_validation_failure_burns_active_lease_before_retry(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ai_video_production import secure_authority_io as secure_io
+
+    authority = SecureAuthorityIO(tmp_path)
+    real_security_digest = secure_io._fd_security_digest
+    calls = 0
+
+    def fail_once(fd: int) -> str:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise SecureAuthorityIOError("SECURITY_DESCRIPTOR_READ_FAILED")
+        return real_security_digest(fd)
+
+    with _writer(authority, tmp_path) as lease:
+        monkeypatch.setattr(secure_io, "_fd_security_digest", fail_once)
+        with pytest.raises(SecureAuthorityIOError) as validation_failure:
+            authority.publish_json_noreplace("first.json", {}, lease=lease)
+        with pytest.raises(SecureAuthorityIOError) as burned:
+            authority.publish_json_noreplace("second.json", {}, lease=lease)
+
+    _assert_code(validation_failure, "SECURITY_DESCRIPTOR_READ_FAILED")
+    _assert_code(burned, "CAPABILITY_BURNED")
+    assert not (tmp_path / "first.json").exists()
+    assert not (tmp_path / "second.json").exists()
+
+
+def test_publish_combined_cleanup_failures_are_completion_unknown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    with SecureAuthorityIO(tmp_path).lock(".writer.lock", mode="initial"):
+        pass
+
+    def inject(stage: str) -> None:
+        if stage == "before_noreplace":
+            raise RuntimeError("injected")
+
+    authority = SecureAuthorityIO(tmp_path, _stage_hook=inject)
+    real_write_temp = authority._write_temp
+    real_pin_parent = authority._pin_parent
+
+    def wrap_temp(*args: object, **kwargs: object):
+        lease = real_write_temp(*args, **kwargs)  # type: ignore[arg-type]
+        real_close = lease.close
+
+        def close_then_fail() -> None:
+            real_close()
+            raise SecureAuthorityIOError("TEMP_CLOSE_INJECTED")
+
+        lease.close = close_then_fail  # type: ignore[method-assign]
+        return lease
+
+    def wrap_parent(*args: object, **kwargs: object):
+        parent = real_pin_parent(*args, **kwargs)  # type: ignore[arg-type]
+        if parent.name == "receipt.json":
+            real_close = parent.close
+
+            def close_then_fail() -> None:
+                real_close()
+                raise SecureAuthorityIOError("PARENT_CLOSE_INJECTED")
+
+            parent.close = close_then_fail  # type: ignore[method-assign]
+        return parent
+
+    monkeypatch.setattr(authority, "_write_temp", wrap_temp)
+    monkeypatch.setattr(authority, "_pin_parent", wrap_parent)
+    monkeypatch.setattr(
+        authority,
+        "_cleanup_temp",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            SecureAuthorityIOError("TEMP_CLEANUP_INJECTED")
+        ),
+    )
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        _publish(authority, tmp_path, "receipt.json", {"x": 1})
+
+    _assert_code(exc, "HANDLE_CLEANUP_UNKNOWN")
+    assert exc.value.completion_unknown is True
+    assert not (tmp_path / "receipt.json").exists()
 
 
 def test_publish_never_overwrites_existing_destination(tmp_path: Path) -> None:
@@ -1611,7 +2447,7 @@ def test_publish_cleanup_failure_still_closes_temp_and_parent_handles(
 
     def capture_parent(*args: object, **kwargs: object):
         parent = real_pin_parent(*args, **kwargs)  # type: ignore[arg-type]
-        captured_parent.extend(fd for _, fd, _ in parent.pinned)
+        captured_parent.extend(fd for _, fd, _, _ in parent.pinned)
         return parent
 
     def reject_cleanup(*_: object, **__: object) -> None:
@@ -2031,6 +2867,148 @@ def test_errors_do_not_include_path_or_document_body(tmp_path: Path) -> None:
     assert rendered.count("STRICT_JSON_REJECTED") == 2
 
 
+def test_os_error_filename_is_detached_at_public_read_boundary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ai_video_production import secure_authority_io as secure_io
+
+    private_name = "private-os-owner-path.json"
+    private_target = tmp_path / private_name
+    real_lstat = secure_io.os.lstat
+
+    def rejecting_lstat(path: object, *args: object, **kwargs: object):
+        if os.path.abspath(os.fspath(path)) == os.path.abspath(os.fspath(private_target)):
+            raise OSError(5, "private-os-error-text", os.fspath(private_target))
+        return real_lstat(path, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(secure_io.os, "lstat", rejecting_lstat)
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        SecureAuthorityIO(tmp_path).read_json(private_name)
+
+    _assert_code(exc, "FILE_LSTAT_FAILED")
+    assert private_name not in repr(exc.value)
+
+
+def test_plan_verifier_exception_is_detached_at_public_publish_boundary(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+
+    def exploding_verifier(candidate: TrustedImmutablePlan, fingerprint: str) -> bool:
+        raise RuntimeError("private-plan-verifier-token")
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=exploding_verifier,
+        authority_instance_id=plan.instance_id,
+    )
+    with _writer(authority, tmp_path) as lease:
+        with pytest.raises(SecureAuthorityIOError) as exc:
+            authority.publish_immutable_json(document, plan=plan, lease=lease)
+
+    _assert_code(exc, "TRUSTED_GENERATION_PLAN_REJECTED")
+    assert "private-plan-verifier-token" not in repr(exc.value)
+    assert list((tmp_path / ".immutable-authority").iterdir()) == []
+
+
+def test_receipt_verifier_exception_is_detached_at_public_read_boundary(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+
+    def exploding_receipt_verifier(fingerprint: str) -> bool:
+        raise RuntimeError("private-receipt-verifier-token")
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        immutable_receipt_verifier=exploding_receipt_verifier,
+        authority_instance_id=plan.instance_id,
+    )
+    with _writer(authority, tmp_path) as lease:
+        receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        authority.read_immutable_json(plan=plan, receipt=receipt)
+
+    _assert_code(exc, "TRUSTED_IMMUTABLE_RECEIPT_REJECTED")
+    assert "private-receipt-verifier-token" not in repr(exc.value)
+
+
+def test_graph_verifier_exception_is_detached_at_public_inspection_boundary(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+    receipt_trust = _ReceiptTrust()
+
+    def exploding_graph_verifier(aggregate: str, specified: str) -> bool:
+        raise RuntimeError("private-graph-verifier-token")
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        immutable_receipt_verifier=receipt_trust.verify,
+        immutable_graph_verifier=exploding_graph_verifier,
+        authority_instance_id=plan.instance_id,
+    )
+    with _writer(authority, tmp_path) as lease:
+        receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+    receipt_trust.accept(receipt)
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        authority.inspect_immutable_graph(
+            plans=[plan],
+            expected_receipts={plan.relative_path: receipt},
+            specified_plan=plan,
+        )
+
+    _assert_code(exc, "TRUSTED_IMMUTABLE_GRAPH_REJECTED")
+    assert "private-graph-verifier-token" not in repr(exc.value)
+
+
+def test_public_error_detaches_caller_ambient_exception(tmp_path: Path) -> None:
+    (tmp_path / "receipt.json").write_text("private-json-body", encoding="utf-8")
+
+    try:
+        raise RuntimeError("private-ambient-token")
+    except RuntimeError:
+        with pytest.raises(SecureAuthorityIOError) as exc:
+            SecureAuthorityIO(tmp_path).read_json("receipt.json")
+
+    _assert_code(exc, "STRICT_JSON_REJECTED")
+    assert "private-ambient-token" not in repr(exc.value)
+
+
+def test_lock_cleanup_error_detaches_private_body_exception(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority = SecureAuthorityIO(tmp_path)
+    real_unlock = authority._unlock_fd
+
+    def unlock_then_fail(fd: int) -> None:
+        real_unlock(fd)
+        raise SecureAuthorityIOError("private-lock-cleanup-token")
+
+    monkeypatch.setattr(authority, "_unlock_fd", unlock_then_fail)
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        with authority.lock(".writer.lock", mode="initial"):
+            raise RuntimeError("private-lock-body-token")
+
+    _assert_code(exc, "LOCK_CLEANUP_UNKNOWN")
+    assert exc.value.completion_unknown is True
+    rendered = repr(exc.value)
+    assert "private-lock-cleanup-token" not in rendered
+    assert "private-lock-body-token" not in rendered
+
+
 def test_read_json_returns_deep_immutable_non_authority_snapshot(tmp_path: Path) -> None:
     (tmp_path / "receipt.json").write_text(
         '{"nested":{"items":[1,2]}}', encoding="utf-8"
@@ -2140,3 +3118,200 @@ def test_owned_cleanup_live_unlink_swap_preserves_foreign_target(tmp_path: Path)
     _assert_code(exc, "CLEANUP_ATOMIC_UNAVAILABLE")
     assert swapped is False
     assert (tmp_path / "pending.json").read_bytes() == b'{"x":1}'
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX native no-replace fault")
+def test_posix_publish_classifies_helper_fault_after_real_noreplace_as_unknown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority = SecureAuthorityIO(tmp_path)
+    with authority.lock(".writer.lock", mode="initial"):
+        pass
+    real_rename = authority._rename_noreplace
+
+    def publish_then_fail(parent: object, lease: object) -> None:
+        real_rename(parent, lease)  # type: ignore[arg-type]
+        raise RuntimeError("private-after-publish")
+
+    monkeypatch.setattr(authority, "_rename_noreplace", publish_then_fail)
+    with authority.lock(".writer.lock", mode="existing") as lease:
+        with pytest.raises(SecureAuthorityIOError) as exc:
+            authority.publish_json_noreplace(
+                "receipt.json",
+                {"x": 1},
+                lease=lease,
+            )
+
+    _assert_code(exc, "PUBLISH_COMMIT_UNKNOWN")
+    assert exc.value.completion_unknown is True
+    assert exc.value.__cause__ is None
+    assert exc.value.__context__ is None
+    assert (tmp_path / "receipt.json").read_bytes() == b'{"x":1}'
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX native no-replace fault")
+def test_posix_initial_lock_classifies_helper_fault_after_real_noreplace_as_unknown(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority = SecureAuthorityIO(tmp_path)
+    real_rename = authority._rename_noreplace
+
+    def publish_then_fail(parent: object, lease: object) -> None:
+        real_rename(parent, lease)  # type: ignore[arg-type]
+        raise RuntimeError("private-after-lock-publish")
+
+    monkeypatch.setattr(authority, "_rename_noreplace", publish_then_fail)
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        with authority.lock(".writer.lock", mode="initial"):
+            pass
+
+    _assert_code(exc, "LOCK_INITIALIZATION_UNKNOWN")
+    assert exc.value.completion_unknown is True
+    assert exc.value.__cause__ is None
+    assert exc.value.__context__ is None
+    assert (tmp_path / ".writer.lock").read_bytes() == b"\0"
+
+
+@pytest.mark.parametrize(
+    "filename",
+    ["generation with space.json", "generation-é.json", "g" * 129],
+)
+def test_immutable_plan_rejects_names_graph_scan_cannot_admit(
+    tmp_path: Path,
+    filename: str,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(
+        document,
+        relative_path=f".immutable-authority/{filename}",
+    )
+    verifier_calls = 0
+
+    def verifier(_: TrustedImmutablePlan, __: str) -> bool:
+        nonlocal verifier_calls
+        verifier_calls += 1
+        return True
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=verifier,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        with pytest.raises(SecureAuthorityIOError) as exc:
+            authority.publish_immutable_json(document, plan=plan, lease=lease)
+
+    _assert_code(exc, "IMMUTABLE_COORDINATE_REJECTED")
+    assert verifier_calls == 0
+    assert list((tmp_path / ".immutable-authority").iterdir()) == []
+
+
+def test_immutable_plan_filename_grammar_round_trips_through_graph_scan(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".immutable-authority").mkdir()
+    document = {"generation": 1}
+    plan = _trusted_plan(
+        document,
+        relative_path=".immutable-authority/generation-1_OK.json",
+    )
+    receipt_trust = _ReceiptTrust()
+    graph_trust = _GraphTrust()
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        immutable_receipt_verifier=receipt_trust.verify,
+        immutable_graph_verifier=graph_trust.verify,
+        authority_instance_id="authority-instance-1",
+    )
+    with _writer(authority, tmp_path) as lease:
+        receipt = authority.publish_immutable_json(document, plan=plan, lease=lease)
+    receipt_trust.accept(receipt)
+    graph_trust.accept(receipt, specified=receipt)
+
+    result = authority.inspect_immutable_graph(
+        plans=[plan],
+        expected_receipts={plan.relative_path: receipt},
+        specified_plan=plan,
+    )
+
+    assert result.inspected_count == 1
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected_code"),
+    [
+        ("oversized_body", "IMMUTABLE_RECEIPT_REJECTED"),
+        ("oversized_identity", "IMMUTABLE_IDENTITY_REQUIRED"),
+    ],
+)
+def test_immutable_receipt_integer_bounds_precede_fingerprint_canonicalization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    kind: str,
+    expected_code: str,
+) -> None:
+    from dataclasses import replace
+    from ai_video_production import secure_authority_io as secure_io
+
+    document = {"generation": 1}
+    plan = _trusted_plan(document)
+    base = _untrusted_receipt(
+        plan,
+        ArtifactIdentity(1, 1, stat.S_IFREG, 1, 1, 1, False),
+    )
+    if kind == "oversized_body":
+        size = 1024 * 1024 + 1
+        receipt = replace(
+            base,
+            byte_count=size,
+            identity=replace(base.identity, size=size),
+        )
+    else:
+        receipt = replace(
+            base,
+            identity=replace(base.identity, inode=1 << 100_000),
+        )
+    receipt_verifier_calls = 0
+
+    def receipt_verifier(_: str) -> bool:
+        nonlocal receipt_verifier_calls
+        receipt_verifier_calls += 1
+        return True
+
+    def forbidden_fingerprint(**_: object) -> str:
+        raise AssertionError("unbounded receipt reached canonicalization")
+
+    authority = SecureAuthorityIO(
+        tmp_path,
+        immutable_plan_verifier=_exact_plan_verifier(plan),
+        immutable_receipt_verifier=receipt_verifier,
+        authority_instance_id="authority-instance-1",
+    )
+    monkeypatch.setattr(
+        secure_io,
+        "_immutable_receipt_fingerprint",
+        forbidden_fingerprint,
+    )
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        authority.read_immutable_json(plan=plan, receipt=receipt)
+
+    _assert_code(exc, expected_code)
+    assert receipt_verifier_calls == 0
+
+
+def test_custom_pathlike_exception_is_normalized_without_body_leak(tmp_path: Path) -> None:
+    class ExplodingPath:
+        def __fspath__(self) -> str:
+            raise RuntimeError("private-path-body")
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        SecureAuthorityIO(tmp_path).read_json(ExplodingPath())  # type: ignore[arg-type]
+
+    _assert_code(exc, "RELATIVE_PATH_REJECTED")
+    assert "private-path-body" not in repr(exc.value)
+    assert exc.value.__cause__ is None
+    assert exc.value.__context__ is None

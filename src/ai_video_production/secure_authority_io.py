@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import ctypes
 from ctypes import wintypes
 import errno
+from functools import wraps
 import hashlib
 import json
 import math
@@ -13,6 +14,7 @@ from pathlib import Path, PurePath
 import secrets
 import stat
 from typing import Any, Callable, Literal, NoReturn
+import weakref
 
 
 _WINDOWS_REPARSE_POINT = 0x400
@@ -23,7 +25,12 @@ _DEFAULT_MAX_BYTES = 1024 * 1024
 _DEFAULT_MAX_DEPTH = 64
 _DEFAULT_MAX_NODES = 100_000
 _MAX_IMMUTABLE_REVISION = 1_000_000
+_MAX_U64 = (1 << 64) - 1
+_MIN_I64 = -(1 << 63)
+_MAX_I64 = (1 << 63) - 1
 _IMMUTABLE_NAMESPACE = ".immutable-authority"
+_IMMUTABLE_PLAN_VERSION = "TASK068_IMMUTABLE_PLAN_V1"
+_IMMUTABLE_RECEIPT_VERSION = "TASK068_IMMUTABLE_RECEIPT_V1"
 _CURRENTNESS_STATUS = "CURRENT_HEAD_AUTHORITY_NOT_CREATED"
 _DIRECTORY_TREE_STATUS = "DIRECTORY_TREE_COMMIT_AUTHORITY_NOT_CREATED"
 _MUTABLE_PHASE_STATUS = "MUTABLE_PHASE_ADVANCE_UNAVAILABLE"
@@ -50,7 +57,7 @@ class SecureAuthorityIOError(RuntimeError):
         super().__init__(code)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ArtifactIdentity:
     device: int
     inode: int
@@ -77,7 +84,7 @@ class ArtifactIdentity:
         return _DUPLICATE_CURRENTNESS_STATUS
 
 
-@dataclass(frozen=True, repr=False)
+@dataclass(frozen=True, repr=False, slots=True)
 class TrustedImmutablePlan:
     relative_path: str
     operation_id: str
@@ -111,13 +118,16 @@ class TrustedImmutablePlan:
         return "<TrustedImmutablePlan redacted>"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ImmutablePublishReceipt:
     sha256: str
     predecessor_sha256: str
     byte_count: int
     identity: ArtifactIdentity
     plan_fingerprint: str
+    security_sha256: str
+    receipt_fingerprint: str
+    version: str
 
     @property
     def authority_created(self) -> bool:
@@ -230,6 +240,7 @@ class SecureJsonRead:
     sha256: str
     byte_count: int
     identity: ArtifactIdentity
+    security_sha256: str
 
     @property
     def authority_created(self) -> bool:
@@ -261,6 +272,7 @@ class SecurePublishReceipt:
     sha256: str
     byte_count: int
     identity: ArtifactIdentity
+    security_sha256: str
 
     @property
     def authority_created(self) -> bool:
@@ -289,11 +301,51 @@ class SecurePublishReceipt:
 
 StageHook = Callable[[str], None]
 ImmutablePlanVerifier = Callable[[TrustedImmutablePlan, str], bool]
+ImmutableReceiptVerifier = Callable[[str], bool]
 ImmutableGraphVerifier = Callable[[str, str], bool]
+
+
+@dataclass(frozen=True, slots=True)
+class _ValidatedImmutablePlan:
+    snapshot: TrustedImmutablePlan
+    parts: tuple[str, ...]
+    fingerprint: str
+
+
+@dataclass(frozen=True, slots=True)
+class _ValidatedImmutableReceipt:
+    snapshot: ImmutablePublishReceipt
+    fingerprint: str
 
 
 def _fail(code: str, *, completion_unknown: bool = False) -> SecureAuthorityIOError:
     return SecureAuthorityIOError(code, completion_unknown=completion_unknown)
+
+
+def _detached_public_error_boundary(
+    operation: Callable[..., Any],
+) -> Callable[..., Any]:
+    """Reconstruct public failures after the private exception scope ends."""
+
+    @wraps(operation)
+    def detached(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return operation(*args, **kwargs)
+        except SecureAuthorityIOError as caught:
+            code = caught.code
+            completion_unknown = caught.completion_unknown
+        try:
+            raise _fail(code, completion_unknown=completion_unknown) from None
+        except SecureAuthorityIOError as public_error:
+            # `from None` suppresses display but Python still records any
+            # caller-ambient exception in __context__. Clear it on the actual
+            # raised instance, then bare-reraise without creating a new chain.
+            public_error.__cause__ = None
+            public_error.__context__ = None
+            public_error.__suppress_context__ = True
+            raise
+
+    return detached
 
 
 def _sha256(payload: bytes) -> str:
@@ -305,6 +357,85 @@ def _is_sha256(value: object) -> bool:
         return False
     suffix = value[7:]
     return suffix == suffix.lower() and all(character in "0123456789abcdef" for character in suffix)
+
+
+def _snapshot_artifact_identity(value: object) -> ArtifactIdentity:
+    if type(value) is not ArtifactIdentity:
+        raise _fail("IMMUTABLE_IDENTITY_REQUIRED")
+    first = (
+        value.device,
+        value.inode,
+        value.mode,
+        value.nlink,
+        value.size,
+        value.mtime_ns,
+        value.reparse_point,
+    )
+    second = (
+        value.device,
+        value.inode,
+        value.mode,
+        value.nlink,
+        value.size,
+        value.mtime_ns,
+        value.reparse_point,
+    )
+    if first != second:
+        raise _fail("IMMUTABLE_IDENTITY_CHANGED")
+    if (
+        any(type(field) is not int for field in first[:6])
+        or type(first[6]) is not bool
+        or not 0 <= first[0] <= _MAX_U64
+        or first[1] <= 0
+        or first[1] > _MAX_U64
+        or not 0 <= first[2] <= _MAX_U64
+        or not 0 <= first[3] <= _MAX_U64
+        or not 0 <= first[4] <= _MAX_U64
+        or not _MIN_I64 <= first[5] <= _MAX_I64
+    ):
+        raise _fail("IMMUTABLE_IDENTITY_REQUIRED")
+    snapshot = ArtifactIdentity(*first)
+    _require_regular(snapshot)
+    return snapshot
+
+
+def _identity_binding(identity: ArtifactIdentity) -> dict[str, int | bool]:
+    return {
+        "device": identity.device,
+        "inode": identity.inode,
+        "mode": identity.mode,
+        "nlink": identity.nlink,
+        "size": identity.size,
+        "mtime_ns": identity.mtime_ns,
+        "reparse_point": identity.reparse_point,
+    }
+
+
+def _immutable_receipt_fingerprint(
+    *,
+    sha256: str,
+    predecessor_sha256: str,
+    byte_count: int,
+    identity: ArtifactIdentity,
+    plan_fingerprint: str,
+    security_sha256: str,
+    version: str,
+) -> str:
+    payload = json.dumps(
+        {
+            "byte_count": byte_count,
+            "identity": _identity_binding(identity),
+            "plan_fingerprint": plan_fingerprint,
+            "predecessor_sha256": predecessor_sha256,
+            "security_sha256": security_sha256,
+            "sha256": sha256,
+            "version": version,
+        },
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    return _sha256(payload)
 
 
 def _bounded_identifier(value: object) -> bool:
@@ -563,12 +694,15 @@ def _freeze_json(value: Any) -> Any:
 
 
 def _relative_parts(value: str | os.PathLike[str]) -> tuple[str, ...]:
+    path: PurePath | None
     try:
         raw = os.fspath(value)
         if type(raw) is not str or len(raw) > _MAX_RELATIVE_PATH_CHARS:
             raise ValueError
         path = PurePath(raw)
-    except (TypeError, ValueError, OSError):
+    except Exception:
+        path = None
+    if path is None:
         raise _fail("RELATIVE_PATH_REJECTED") from None
     parts = tuple(path.parts)
     if (
@@ -748,16 +882,39 @@ def _windows_security_digest(fd: int) -> str | None:
             raise _fail("SECURITY_DESCRIPTOR_RELEASE_FAILED")
 
 
+def _fd_security_digest(fd: int) -> str:
+    if os.name == "nt":
+        digest = _windows_security_digest(fd)
+        if not _is_sha256(digest):
+            raise _fail("SECURITY_DESCRIPTOR_READ_FAILED")
+        return digest
+    try:
+        observed = os.fstat(fd)
+    except OSError:
+        raise _fail("SECURITY_DESCRIPTOR_READ_FAILED") from None
+    payload = json.dumps(
+        {
+            "gid": int(getattr(observed, "st_gid", -1)),
+            "mode": stat.S_IMODE(int(observed.st_mode)),
+            "uid": int(getattr(observed, "st_uid", -1)),
+        },
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("ascii")
+    return _sha256(payload)
+
+
 @dataclass
 class _PinnedParent:
     root: Path
     target: Path
     name: str
     parent_fd: int | None
-    pinned: list[tuple[Path, int, ArtifactIdentity]]
+    pinned: list[tuple[Path, int, ArtifactIdentity, str]]
 
     def verify(self) -> None:
-        for path, fd, expected in self.pinned:
+        for path, fd, expected, expected_security in self.pinned:
             try:
                 observed = _identity(os.fstat(fd))
                 named = _identity(os.lstat(path))
@@ -768,6 +925,8 @@ class _PinnedParent:
                 or not _same_ancestor_object(named, expected)
             ):
                 raise _fail("ANCESTOR_IDENTITY_CHANGED")
+            if _fd_security_digest(fd) != expected_security:
+                raise _fail("ANCESTOR_SECURITY_DRIFT")
 
     def close(self) -> None:
         failure: SecureAuthorityIOError | None = None
@@ -775,11 +934,16 @@ class _PinnedParent:
             self.verify()
         except SecureAuthorityIOError as exc:
             failure = exc
-        for _, fd, _ in reversed(self.pinned):
+        close_failed = False
+        for _, fd, _, _ in reversed(self.pinned):
             try:
                 os.close(fd)
             except OSError:
-                failure = failure or _fail("HANDLE_CLOSE_FAILED")
+                close_failed = True
+        if close_failed and failure is not None:
+            raise _fail("HANDLE_CLEANUP_UNKNOWN", completion_unknown=True)
+        if close_failed:
+            raise _fail("HANDLE_CLOSE_FAILED")
         if failure is not None:
             raise failure
 
@@ -880,6 +1044,7 @@ def _posix_link_handle_noreplace(fd: int, parent_fd: int, final_name: str) -> No
 
 class _SecureFileLock:
     __slots__ = (
+        "__weakref__",
         "__owner",
         "__relative_path",
         "__mode",
@@ -888,6 +1053,8 @@ class _SecureFileLock:
         "__identity_value",
         "__used",
         "__active",
+        "__burned",
+        "__issuer_nonce",
         "__security_digest",
     )
 
@@ -896,6 +1063,7 @@ class _SecureFileLock:
         owner: "SecureAuthorityIO",
         relative_path: str | os.PathLike[str],
         mode: Literal["initial", "existing"],
+        issuer_nonce: object,
     ) -> None:
         self.__owner = owner
         self.__relative_path = relative_path
@@ -905,15 +1073,25 @@ class _SecureFileLock:
         self.__identity_value: ArtifactIdentity | None = None
         self.__used = False
         self.__active = False
+        self.__burned = False
+        self.__issuer_nonce = issuer_nonce
         self.__security_digest: str | None = None
 
     @property
     def identity(self) -> ArtifactIdentity | None:
         return self.__identity_value
 
-    def _validate_for(self, owner: "SecureAuthorityIO") -> ArtifactIdentity:
+    def _validate_for(
+        self,
+        owner: "SecureAuthorityIO",
+        issuer_nonce: object,
+    ) -> ArtifactIdentity:
+        if self.__burned:
+            raise _fail("CAPABILITY_BURNED")
         if (
             self.__owner is not owner
+            or self.__issuer_nonce is not issuer_nonce
+            or not owner._lease_is_active(self)
             or not self.__active
             or self.__fd is None
             or self.__parent is None
@@ -926,20 +1104,49 @@ class _SecureFileLock:
                 raise _fail("WRITER_LEASE_CHANGED")
             if _identity(os.lstat(self.__parent.target)) != self.__identity_value:
                 raise _fail("WRITER_LEASE_CHANGED")
+            if _fd_security_digest(self.__fd) != self.__security_digest:
+                raise _fail("WRITER_LEASE_CHANGED")
         except OSError:
             raise _fail("WRITER_LEASE_CHANGED") from None
         if not self.__parent.pinned:
             raise _fail("WRITER_ROOT_CHANGED")
         return self.__parent.pinned[0][2]
 
+    def _burn_for(
+        self,
+        owner: "SecureAuthorityIO",
+        issuer_nonce: object,
+    ) -> ArtifactIdentity:
+        identity = _SecureFileLock._validate_for(self, owner, issuer_nonce)
+        self.__burned = True
+        owner._release_writer_lease(self)
+        return identity
+
+    def _revoke_after_failure(
+        self,
+        owner: "SecureAuthorityIO",
+        issuer_nonce: object,
+    ) -> None:
+        if (
+            self.__owner is owner
+            and self.__issuer_nonce is issuer_nonce
+            and self.__active
+        ):
+            self.__burned = True
+            owner._release_writer_lease(self)
+
+    @_detached_public_error_boundary
     def __enter__(self) -> "_SecureFileLock":
-        if self.__used:
+        if self.__used or self.__burned:
             raise _fail("CAPABILITY_BURNED")
+        self.__owner._require_issued_writer_lease(self, self.__issuer_nonce)
         self.__used = True
         parent = self.__owner._pin_parent(self.__relative_path)
         fd: int | None = None
         initial_lease: _TempLease | None = None
         initial_published = False
+        initial_effect_unknown = False
+        terminal_failure: BaseException | None = None
         try:
             self.__owner._stage("before_lock_open")
             if self.__mode == "initial":
@@ -953,13 +1160,25 @@ class _SecureFileLock:
                     raise _fail("LOCK_CREATE_COLLISION")
                 initial_lease = self.__owner._write_temp(parent, b"\0", share_write=True)
                 self.__owner._stage("before_initial_lock_publish")
+                publish_state: Literal["OWNED", "FOREIGN_COLLISION", "UNKNOWN"] | None = None
                 try:
                     self.__owner._rename_noreplace(parent, initial_lease)
-                except SecureAuthorityIOError as publish_error:
-                    if publish_error.code == "DESTINATION_EXISTS":
-                        raise _fail("LOCK_CREATE_COLLISION") from None
-                    raise
-                initial_published = True
+                    initial_published = True
+                except BaseException as publish_error:
+                    publish_state = self.__owner._classify_failed_noreplace(
+                        parent,
+                        initial_lease,
+                        publish_error,
+                    )
+                if publish_state == "FOREIGN_COLLISION":
+                    raise _fail("LOCK_CREATE_COLLISION") from None
+                if publish_state is not None:
+                    initial_published = publish_state == "OWNED"
+                    initial_effect_unknown = True
+                    raise _fail(
+                        "LOCK_INITIALIZATION_UNKNOWN",
+                        completion_unknown=True,
+                    ) from None
                 try:
                     self.__owner._directory_durable(parent)
                 except SecureAuthorityIOError:
@@ -992,7 +1211,7 @@ class _SecureFileLock:
                 if current.size != 1 or self.__owner._read_fd(fd, current) != b"\0":
                     raise _fail("LOCK_MARKER_REJECTED")
             self.__owner._lock_fd(fd)
-            self.__security_digest = _windows_security_digest(fd)
+            self.__security_digest = _fd_security_digest(fd)
             self.__owner._stage("lock_acquired")
             try:
                 named = _identity(os.lstat(parent.target))
@@ -1003,17 +1222,31 @@ class _SecureFileLock:
             parent.verify()
             self.__fd, self.__parent, self.__identity_value = fd, parent, current
             self.__active = True
+            self.__owner._activate_writer_lease(self, self.__issuer_nonce)
             if initial_lease is not None:
                 initial_lease = None
             return self
-        except BaseException:
+        except BaseException as caught_failure:
+            primary_failure = caught_failure
+            self.__owner._release_writer_lease(self)
+            self.__active = False
             cleanup_unknown = False
             if initial_lease is not None:
-                try:
-                    if initial_published:
+                if initial_published:
+                    try:
                         self.__owner._rollback_owned_publish(parent, b"\0", initial_lease)
-                    else:
+                    except SecureAuthorityIOError:
+                        cleanup_unknown = True
+                        try:
+                            self.__owner._cleanup_temp(parent, initial_lease)
+                        except SecureAuthorityIOError:
+                            cleanup_unknown = True
+                else:
+                    try:
                         self.__owner._cleanup_temp(parent, initial_lease)
+                    except SecureAuthorityIOError:
+                        cleanup_unknown = True
+                try:
                     self.__owner._directory_durable(parent)
                 except SecureAuthorityIOError:
                     cleanup_unknown = True
@@ -1031,43 +1264,57 @@ class _SecureFileLock:
                 parent.close()
             except SecureAuthorityIOError:
                 cleanup_unknown = True
-            if cleanup_unknown:
+            if initial_effect_unknown:
+                terminal_failure = _fail("LOCK_INITIALIZATION_UNKNOWN", completion_unknown=True)
+            elif cleanup_unknown:
                 code = "LOCK_INITIALIZATION_UNKNOWN" if initial_lease is not None else "LOCK_CLEANUP_UNKNOWN"
-                raise _fail(code, completion_unknown=True) from None
-            raise
+                terminal_failure = _fail(code, completion_unknown=True)
+            else:
+                terminal_failure = primary_failure
+        if terminal_failure is None:
+            raise _fail("LOCK_CLEANUP_UNKNOWN", completion_unknown=True)
+        raise terminal_failure from None
 
+    @_detached_public_error_boundary
     def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> bool:
-        failure: SecureAuthorityIOError | None = None
+        failures: list[SecureAuthorityIOError] = []
         if self.__fd is not None:
             if self.__identity_value is not None:
                 try:
                     if _identity(os.lstat(self.__parent.target)) != self.__identity_value:
-                        failure = _fail("LOCK_IDENTITY_CHANGED")
+                        failures.append(_fail("LOCK_IDENTITY_CHANGED"))
                 except OSError:
-                    failure = _fail("LOCK_IDENTITY_CHANGED")
+                    failures.append(_fail("LOCK_IDENTITY_CHANGED"))
             try:
-                if _windows_security_digest(self.__fd) != self.__security_digest:
-                    failure = _fail("LOCK_SECURITY_DRIFT")
+                if _fd_security_digest(self.__fd) != self.__security_digest:
+                    failures.append(_fail("LOCK_SECURITY_DRIFT"))
             except SecureAuthorityIOError as security_error:
-                failure = security_error
+                failures.append(security_error)
             try:
                 self.__owner._unlock_fd(self.__fd)
             except SecureAuthorityIOError as unlock_error:
-                failure = unlock_error
+                failures.append(unlock_error)
             try:
                 os.close(self.__fd)
             except OSError:
-                failure = failure or _fail("HANDLE_CLOSE_FAILED")
+                failures.append(_fail("HANDLE_CLOSE_FAILED"))
         if self.__parent is not None:
             try:
                 self.__parent.close()
             except SecureAuthorityIOError as parent_error:
-                failure = failure or parent_error
+                failures.append(parent_error)
+        self.__owner._release_writer_lease(self)
         self.__fd = None
         self.__parent = None
         self.__active = False
-        if failure is not None:
-            raise failure
+        if failures:
+            if (
+                exc_type is not None
+                or len(failures) > 1
+                or any(failure.completion_unknown for failure in failures)
+            ):
+                raise _fail("LOCK_CLEANUP_UNKNOWN", completion_unknown=True)
+            raise failures[0]
         return False
 
 
@@ -1087,6 +1334,7 @@ class SecureAuthorityIO:
         max_json_depth: int = _DEFAULT_MAX_DEPTH,
         max_json_nodes: int = _DEFAULT_MAX_NODES,
         immutable_plan_verifier: ImmutablePlanVerifier | None = None,
+        immutable_receipt_verifier: ImmutableReceiptVerifier | None = None,
         immutable_graph_verifier: ImmutableGraphVerifier | None = None,
         authority_instance_id: str | None = None,
         _stage_hook: StageHook | None = None,
@@ -1102,8 +1350,14 @@ class SecureAuthorityIO:
             raise _fail("TRUSTED_PLAN_CONFIGURATION_REJECTED")
         if immutable_plan_verifier is not None and not callable(immutable_plan_verifier):
             raise _fail("TRUSTED_PLAN_CONFIGURATION_REJECTED")
+        if immutable_receipt_verifier is not None and (
+            immutable_plan_verifier is None or not callable(immutable_receipt_verifier)
+        ):
+            raise _fail("TRUSTED_PLAN_CONFIGURATION_REJECTED")
         if immutable_graph_verifier is not None and (
-            immutable_plan_verifier is None or not callable(immutable_graph_verifier)
+            immutable_plan_verifier is None
+            or immutable_receipt_verifier is None
+            or not callable(immutable_graph_verifier)
         ):
             raise _fail("TRUSTED_PLAN_CONFIGURATION_REJECTED")
         if authority_instance_id is not None and not _bounded_identifier(authority_instance_id):
@@ -1113,9 +1367,14 @@ class SecureAuthorityIO:
         self._max_json_depth = max_json_depth
         self._max_json_nodes = max_json_nodes
         self._immutable_plan_verifier = immutable_plan_verifier
+        self._immutable_receipt_verifier = immutable_receipt_verifier
         self._immutable_graph_verifier = immutable_graph_verifier
         self._authority_instance_id = authority_instance_id
         self._stage_hook = _stage_hook
+        self.__lease_issuer_nonce = object()
+        self.__issued_leases: weakref.WeakKeyDictionary[_SecureFileLock, str] = (
+            weakref.WeakKeyDictionary()
+        )
 
     def _stage(self, name: str) -> None:
         if self._stage_hook is not None:
@@ -1157,7 +1416,7 @@ class SecureAuthorityIO:
     def _pin_parent(self, relative_path: str | os.PathLike[str]) -> _PinnedParent:
         parts = _relative_parts(relative_path)
         target = self._root.joinpath(*parts)
-        pinned: list[tuple[Path, int, ArtifactIdentity]] = []
+        pinned: list[tuple[Path, int, ArtifactIdentity, str]] = []
         current_path = self._root
         parent_fd: int | None = None
         opened_fd: int | None = None
@@ -1181,7 +1440,8 @@ class SecureAuthorityIO:
                     os.close(opened_fd)
                     opened_fd = None
                     raise _fail("ANCESTOR_BINDING_MISMATCH")
-                pinned.append((current_path, opened_fd, opened))
+                security = _fd_security_digest(opened_fd)
+                pinned.append((current_path, opened_fd, opened, security))
                 parent_fd = opened_fd
                 opened_fd = None
             return _PinnedParent(self._root, target, parts[-1], parent_fd, pinned)
@@ -1192,7 +1452,7 @@ class SecureAuthorityIO:
                     os.close(opened_fd)
                 except OSError:
                     cleanup_failed = True
-            for _, fd, _ in reversed(pinned):
+            for _, fd, _, _ in reversed(pinned):
                 try:
                     os.close(fd)
                 except OSError:
@@ -1253,6 +1513,49 @@ class SecureAuthorityIO:
             raise _fail("FILE_BINDING_MISMATCH")
         return opened
 
+    def _namespace_security_commitment(
+        self,
+        parent: _PinnedParent,
+        fd: int,
+        target_identity: ArtifactIdentity,
+    ) -> str:
+        parent.verify()
+        try:
+            current = _identity(os.fstat(fd))
+        except OSError:
+            raise _fail("FILE_IDENTITY_FAILED") from None
+        if current != target_identity:
+            raise _fail("FILE_IDENTITY_CHANGED")
+        target_security = _fd_security_digest(fd)
+        ancestors = [
+            {
+                "device": identity.device,
+                "file_type": stat.S_IFMT(identity.mode),
+                "index": index,
+                "inode": identity.inode,
+                "reparse_point": identity.reparse_point,
+                "security_sha256": security,
+            }
+            for index, (_, _, identity, security) in enumerate(parent.pinned)
+        ]
+        payload = json.dumps(
+            {
+                "ancestors": ancestors,
+                "target": {
+                    **_identity_binding(target_identity),
+                    "security_sha256": target_security,
+                },
+                "version": _IMMUTABLE_RECEIPT_VERSION,
+            },
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("ascii")
+        parent.verify()
+        if _fd_security_digest(fd) != target_security:
+            raise _fail("FILE_SECURITY_DRIFT")
+        return _sha256(payload)
+
     def _read_fd(self, fd: int, identity: ArtifactIdentity) -> bytes:
         if identity.size > self._max_bytes:
             raise _fail("BYTE_BOUND_EXCEEDED")
@@ -1277,10 +1580,11 @@ class SecureAuthorityIO:
             raise _fail("READ_SIZE_CHANGED")
         return payload
 
-    def _read_bytes(self, relative_path: str | os.PathLike[str]) -> tuple[bytes, ArtifactIdentity]:
+    def _read_bytes(
+        self, relative_path: str | os.PathLike[str]
+    ) -> tuple[bytes, ArtifactIdentity, str]:
         parent = self._pin_parent(relative_path)
         fd: int | None = None
-        security_digest: str | None = None
         try:
             self._stage("ancestors_pinned")
             try:
@@ -1297,7 +1601,7 @@ class SecureAuthorityIO:
             _require_regular(opened)
             if before != opened:
                 raise _fail("FILE_BINDING_MISMATCH")
-            security_digest = _windows_security_digest(fd)
+            security_digest = self._namespace_security_commitment(parent, fd, before)
             self._stage("target_fstat_complete")
             self._stage("read_bound")
             payload = self._read_fd(fd, before)
@@ -1308,37 +1612,49 @@ class SecureAuthorityIO:
             self._stage("post_lstat_complete")
             if before != after or before != named:
                 raise _fail("FILE_IDENTITY_CHANGED")
-            if _windows_security_digest(fd) != security_digest:
+            if self._namespace_security_commitment(parent, fd, before) != security_digest:
                 raise _fail("FILE_SECURITY_DRIFT")
             parent.verify()
-            return payload, before
+            return payload, before, security_digest
         except FileNotFoundError:
             raise _fail("NOT_FOUND") from None
         except OSError:
             raise _fail("READ_FAILED") from None
         finally:
-            close_failure: SecureAuthorityIOError | None = None
+            close_failures: list[SecureAuthorityIOError] = []
             if fd is not None:
                 try:
                     os.close(fd)
                 except OSError:
-                    close_failure = _fail("HANDLE_CLOSE_FAILED")
+                    close_failures.append(_fail("HANDLE_CLOSE_FAILED"))
             try:
                 parent.close()
             except SecureAuthorityIOError as exc:
-                close_failure = close_failure or exc
-            if close_failure is not None:
-                raise close_failure
+                close_failures.append(exc)
+            if close_failures:
+                if len(close_failures) > 1 or any(
+                    failure.completion_unknown for failure in close_failures
+                ):
+                    raise _fail("HANDLE_CLEANUP_UNKNOWN", completion_unknown=True)
+                raise close_failures[0]
 
+    @_detached_public_error_boundary
     def read_json(self, relative_path: str | os.PathLike[str]) -> SecureJsonRead:
-        payload, identity = self._read_bytes(relative_path)
+        payload, identity, security_sha256 = self._read_bytes(relative_path)
         document = _strict_json(
             payload,
             max_depth=self._max_json_depth,
             max_nodes=self._max_json_nodes,
         )
-        return SecureJsonRead(document, _sha256(payload), len(payload), identity)
+        return SecureJsonRead(
+            document,
+            _sha256(payload),
+            len(payload),
+            identity,
+            security_sha256,
+        )
 
+    @_detached_public_error_boundary
     def lock(
         self,
         relative_path: str | os.PathLike[str],
@@ -1347,12 +1663,92 @@ class SecureAuthorityIO:
     ) -> _SecureFileLock:
         if mode not in {"initial", "existing"}:
             raise _fail("LOCK_MODE_REJECTED")
-        return _SecureFileLock(self, relative_path, mode)
+        lease = _SecureFileLock(
+            self,
+            relative_path,
+            mode,
+            self.__lease_issuer_nonce,
+        )
+        self._issue_writer_lease(lease, self.__lease_issuer_nonce)
+        return lease
+
+    def _issue_writer_lease(
+        self,
+        lease: _SecureFileLock,
+        issuer_nonce: object,
+    ) -> None:
+        if (
+            type(lease) is not _SecureFileLock
+            or issuer_nonce is not self.__lease_issuer_nonce
+            or lease in self.__issued_leases
+        ):
+            raise _fail("WRITER_LEASE_REQUIRED")
+        self.__issued_leases[lease] = "ISSUED"
+
+    def _activate_writer_lease(
+        self,
+        lease: _SecureFileLock,
+        issuer_nonce: object,
+    ) -> None:
+        if (
+            type(lease) is not _SecureFileLock
+            or issuer_nonce is not self.__lease_issuer_nonce
+            or self.__issued_leases.get(lease) != "ISSUED"
+        ):
+            raise _fail("WRITER_LEASE_REQUIRED")
+        self.__issued_leases[lease] = "ACTIVE"
+
+    def _require_issued_writer_lease(
+        self,
+        lease: _SecureFileLock,
+        issuer_nonce: object,
+    ) -> None:
+        if (
+            type(lease) is not _SecureFileLock
+            or issuer_nonce is not self.__lease_issuer_nonce
+            or self.__issued_leases.get(lease) != "ISSUED"
+        ):
+            raise _fail("WRITER_LEASE_REQUIRED")
+
+    def _lease_is_active(self, lease: _SecureFileLock) -> bool:
+        return self.__issued_leases.get(lease) == "ACTIVE"
+
+    def _release_writer_lease(self, lease: _SecureFileLock) -> None:
+        self.__issued_leases.pop(lease, None)
 
     def _require_writer_lease(self, lease: _SecureFileLock) -> ArtifactIdentity:
-        if not isinstance(lease, _SecureFileLock):
+        if type(lease) is not _SecureFileLock:
             raise _fail("WRITER_LEASE_REQUIRED")
-        return lease._validate_for(self)
+        return _SecureFileLock._validate_for(
+            lease,
+            self,
+            self.__lease_issuer_nonce,
+        )
+
+    def _burn_writer_lease(self, lease: _SecureFileLock) -> ArtifactIdentity:
+        if type(lease) is not _SecureFileLock:
+            raise _fail("WRITER_LEASE_REQUIRED")
+        try:
+            return _SecureFileLock._burn_for(
+                lease,
+                self,
+                self.__lease_issuer_nonce,
+            )
+        except BaseException:
+            _SecureFileLock._revoke_after_failure(
+                lease,
+                self,
+                self.__lease_issuer_nonce,
+            )
+            raise
+
+    def _revoke_writer_lease_after_failure(self, lease: _SecureFileLock) -> None:
+        if type(lease) is _SecureFileLock:
+            _SecureFileLock._revoke_after_failure(
+                lease,
+                self,
+                self.__lease_issuer_nonce,
+            )
 
     def _bind_writer_parent(
         self,
@@ -1511,6 +1907,40 @@ class SecureAuthorityIO:
                 raise _fail("PARENT_HANDLE_MISSING")
             _posix_link_handle_noreplace(lease.fd, parent.parent_fd, parent.name)
 
+    def _classify_failed_noreplace(
+        self,
+        parent: _PinnedParent,
+        lease: _TempLease,
+        failure: BaseException,
+    ) -> Literal["OWNED", "FOREIGN_COLLISION", "UNKNOWN"]:
+        """Classify a failure that may have happened after namespace commit.
+
+        The native no-replace primitive and Python's next assignment are not a
+        single operation.  A helper fault or asynchronous exception can arrive
+        after the native effect but before the caller records it.  Only an
+        exact foreign destination paired with the native collision result is a
+        confirmed no-effect outcome; every other ambiguous observation stays
+        completion-unknown.
+        """
+
+        try:
+            live = _identity(os.fstat(lease.fd))
+            named = _identity(os.lstat(parent.target))
+            parent.verify()
+        except BaseException:
+            return "UNKNOWN"
+        live_is_owned = _same_file_object(live, lease.identity)
+        if live_is_owned and _same_file_object(named, live):
+            return "OWNED"
+        if (
+            live == lease.identity
+            and not _same_file_object(named, live)
+            and isinstance(failure, SecureAuthorityIOError)
+            and failure.code == "DESTINATION_EXISTS"
+        ):
+            return "FOREIGN_COLLISION"
+        return "UNKNOWN"
+
     def _validate_temp_lease(self, parent: _PinnedParent, lease: _TempLease) -> None:
         if lease.closed:
             raise _fail("TEMP_CAPABILITY_BURNED")
@@ -1611,7 +2041,7 @@ class SecureAuthorityIO:
         parent: _PinnedParent,
         expected_payload: bytes,
         lease: _TempLease,
-    ) -> ArtifactIdentity:
+    ) -> tuple[ArtifactIdentity, str]:
         try:
             current = _identity(os.fstat(lease.fd))
             named = _identity(os.lstat(parent.target))
@@ -1619,6 +2049,11 @@ class SecureAuthorityIO:
             _require_regular(named)
             if not _same_file_object(current, lease.identity) or current != named:
                 raise _fail("PUBLISHED_INODE_MISMATCH")
+            security_sha256 = self._namespace_security_commitment(
+                parent,
+                lease.fd,
+                current,
+            )
             if self._read_fd(lease.fd, current) != expected_payload:
                 raise _fail("PUBLISHED_BYTES_MISMATCH")
             self._stage("published_readback_complete")
@@ -1626,7 +2061,12 @@ class SecureAuthorityIO:
             named = _identity(os.lstat(parent.target))
             if current != after or current != named:
                 raise _fail("PUBLISHED_IDENTITY_CHANGED")
-            return current
+            if (
+                self._namespace_security_commitment(parent, lease.fd, current)
+                != security_sha256
+            ):
+                raise _fail("PUBLISHED_SECURITY_CHANGED")
+            return current, security_sha256
         except OSError:
             raise _fail("PUBLISHED_IDENTITY_CHANGED") from None
 
@@ -1651,66 +2091,240 @@ class SecureAuthorityIO:
             raise _fail("PUBLISH_ROLLBACK_OWNERSHIP_CHANGED") from None
         self._unlink_live_name(parent, parent.name, lease.fd, current)
 
-    def _validate_immutable_plan(self, plan: TrustedImmutablePlan) -> str:
-        if not isinstance(plan, TrustedImmutablePlan):
+    def _snapshot_immutable_plan(
+        self,
+        plan: TrustedImmutablePlan,
+    ) -> _ValidatedImmutablePlan:
+        if type(plan) is not TrustedImmutablePlan:
             raise _fail("TRUSTED_GENERATION_PLAN_REQUIRED")
-        parts = _relative_parts(plan.relative_path)
-        if len(parts) < 2 or parts[0] != _IMMUTABLE_NAMESPACE:
-            raise _fail("IMMUTABLE_COORDINATE_REJECTED")
-        if (
-            len(plan.operation_id) != 32
-            or plan.operation_id != plan.operation_id.lower()
-            or any(character not in "0123456789abcdef" for character in plan.operation_id)
-        ):
-            raise _fail("IMMUTABLE_OPERATION_ID_REJECTED")
-        if type(plan.revision) is not int or not 1 <= plan.revision <= _MAX_IMMUTABLE_REVISION:
-            raise _fail("IMMUTABLE_REVISION_REJECTED")
-        if not _is_sha256(plan.body_sha256) or not _is_sha256(
-            plan.expected_predecessor_sha256
-        ):
-            raise _fail("IMMUTABLE_DIGEST_REJECTED")
-        if plan.action not in {"GENERATION", "COMMIT", "TOMBSTONE", "ABORT", "COMPENSATE"}:
-            raise _fail("IMMUTABLE_ACTION_REJECTED")
-        identifiers = (
+        first = (
+            plan.relative_path,
+            plan.operation_id,
+            plan.revision,
+            plan.body_sha256,
+            plan.expected_predecessor_sha256,
+            plan.action,
             plan.build_id,
             plan.backend_id,
             plan.session_id,
             plan.instance_id,
             plan.authorization,
         )
+        second = (
+            plan.relative_path,
+            plan.operation_id,
+            plan.revision,
+            plan.body_sha256,
+            plan.expected_predecessor_sha256,
+            plan.action,
+            plan.build_id,
+            plan.backend_id,
+            plan.session_id,
+            plan.instance_id,
+            plan.authorization,
+        )
+        if first != second:
+            raise _fail("TRUSTED_GENERATION_PLAN_CHANGED")
+        snapshot = TrustedImmutablePlan(*first)
+        parts = _relative_parts(snapshot.relative_path)
+        if (
+            len(parts) != 2
+            or parts[0] != _IMMUTABLE_NAMESPACE
+            or not _bounded_identifier(parts[1])
+        ):
+            raise _fail("IMMUTABLE_COORDINATE_REJECTED")
+        if (
+            type(snapshot.operation_id) is not str
+            or len(snapshot.operation_id) != 32
+            or snapshot.operation_id != snapshot.operation_id.lower()
+            or any(
+                character not in "0123456789abcdef"
+                for character in snapshot.operation_id
+            )
+        ):
+            raise _fail("IMMUTABLE_OPERATION_ID_REJECTED")
+        if (
+            type(snapshot.revision) is not int
+            or not 1 <= snapshot.revision <= _MAX_IMMUTABLE_REVISION
+        ):
+            raise _fail("IMMUTABLE_REVISION_REJECTED")
+        if not _is_sha256(snapshot.body_sha256) or not _is_sha256(
+            snapshot.expected_predecessor_sha256
+        ):
+            raise _fail("IMMUTABLE_DIGEST_REJECTED")
+        if type(snapshot.action) is not str or snapshot.action not in {
+            "GENERATION",
+            "COMMIT",
+            "TOMBSTONE",
+            "ABORT",
+            "COMPENSATE",
+        }:
+            raise _fail("IMMUTABLE_ACTION_REJECTED")
+        identifiers = (
+            snapshot.build_id,
+            snapshot.backend_id,
+            snapshot.session_id,
+            snapshot.instance_id,
+            snapshot.authorization,
+        )
         if not all(_bounded_identifier(value) for value in identifiers):
             raise _fail("IMMUTABLE_BINDING_REJECTED")
         if (
             self._immutable_plan_verifier is None
             or self._authority_instance_id is None
-            or plan.instance_id != self._authority_instance_id
+            or snapshot.instance_id != self._authority_instance_id
         ):
             raise _fail("TRUSTED_GENERATION_PLAN_REQUIRED")
         fingerprint_payload = json.dumps(
             {
-                "action": plan.action,
-                "backend_id": plan.backend_id,
-                "body_sha256": plan.body_sha256,
-                "build_id": plan.build_id,
-                "expected_predecessor_sha256": plan.expected_predecessor_sha256,
-                "instance_id": plan.instance_id,
-                "operation_id": plan.operation_id,
+                "action": snapshot.action,
+                "authorization_sha256": _sha256(snapshot.authorization.encode("ascii")),
+                "backend_id": snapshot.backend_id,
+                "body_sha256": snapshot.body_sha256,
+                "build_id": snapshot.build_id,
+                "expected_predecessor_sha256": snapshot.expected_predecessor_sha256,
+                "instance_id": snapshot.instance_id,
+                "operation_id": snapshot.operation_id,
                 "relative_path": "/".join(parts),
-                "revision": plan.revision,
-                "session_id": plan.session_id,
+                "revision": snapshot.revision,
+                "session_id": snapshot.session_id,
+                "version": _IMMUTABLE_PLAN_VERSION,
             },
             ensure_ascii=True,
             sort_keys=True,
             separators=(",", ":"),
         ).encode("ascii")
         fingerprint = _sha256(fingerprint_payload)
+        return _ValidatedImmutablePlan(snapshot, parts, fingerprint)
+
+    def _admit_immutable_plan(
+        self,
+        plan: _ValidatedImmutablePlan,
+    ) -> _ValidatedImmutablePlan:
+        snapshot = plan.snapshot
+        verifier_snapshot = TrustedImmutablePlan(
+            snapshot.relative_path,
+            snapshot.operation_id,
+            snapshot.revision,
+            snapshot.body_sha256,
+            snapshot.expected_predecessor_sha256,
+            snapshot.action,
+            snapshot.build_id,
+            snapshot.backend_id,
+            snapshot.session_id,
+            snapshot.instance_id,
+            snapshot.authorization,
+        )
+        verifier = self._immutable_plan_verifier
+        if verifier is None:
+            raise _fail("TRUSTED_GENERATION_PLAN_REQUIRED")
         try:
-            accepted = self._immutable_plan_verifier(plan, fingerprint)
+            accepted = verifier(
+                verifier_snapshot,
+                plan.fingerprint,
+            )
         except Exception:
             raise _fail("TRUSTED_GENERATION_PLAN_REJECTED") from None
         if accepted is not True:
             raise _fail("TRUSTED_GENERATION_PLAN_REJECTED")
-        return fingerprint
+        return plan
+
+    def _validate_immutable_plan(
+        self,
+        plan: TrustedImmutablePlan,
+    ) -> _ValidatedImmutablePlan:
+        return self._admit_immutable_plan(self._snapshot_immutable_plan(plan))
+
+    def _snapshot_immutable_receipt(
+        self,
+        receipt: ImmutablePublishReceipt,
+    ) -> ImmutablePublishReceipt:
+        if type(receipt) is not ImmutablePublishReceipt:
+            raise _fail("TRUSTED_IMMUTABLE_RECEIPT_REQUIRED")
+        first = (
+            receipt.sha256,
+            receipt.predecessor_sha256,
+            receipt.byte_count,
+            receipt.identity,
+            receipt.plan_fingerprint,
+            receipt.security_sha256,
+            receipt.receipt_fingerprint,
+            receipt.version,
+        )
+        second = (
+            receipt.sha256,
+            receipt.predecessor_sha256,
+            receipt.byte_count,
+            receipt.identity,
+            receipt.plan_fingerprint,
+            receipt.security_sha256,
+            receipt.receipt_fingerprint,
+            receipt.version,
+        )
+        if (
+            first[:3] != second[:3]
+            or first[3] is not second[3]
+            or first[4:] != second[4:]
+        ):
+            raise _fail("IMMUTABLE_RECEIPT_CHANGED")
+        identity = _snapshot_artifact_identity(first[3])
+        return ImmutablePublishReceipt(
+            sha256=first[0],
+            predecessor_sha256=first[1],
+            byte_count=first[2],
+            identity=identity,
+            plan_fingerprint=first[4],
+            security_sha256=first[5],
+            receipt_fingerprint=first[6],
+            version=first[7],
+        )
+
+    def _validate_immutable_receipt(
+        self,
+        plan: _ValidatedImmutablePlan,
+        receipt: ImmutablePublishReceipt,
+    ) -> _ValidatedImmutableReceipt:
+        snapshot = self._snapshot_immutable_receipt(receipt)
+        if (
+            snapshot.version != _IMMUTABLE_RECEIPT_VERSION
+            or not _is_sha256(snapshot.sha256)
+            or not _is_sha256(snapshot.predecessor_sha256)
+            or type(snapshot.byte_count) is not int
+            or snapshot.byte_count < 0
+            or snapshot.byte_count > self._max_bytes
+            or snapshot.byte_count != snapshot.identity.size
+            or not _is_sha256(snapshot.plan_fingerprint)
+            or not _is_sha256(snapshot.security_sha256)
+            or not _is_sha256(snapshot.receipt_fingerprint)
+        ):
+            raise _fail("IMMUTABLE_RECEIPT_REJECTED")
+        if (
+            snapshot.sha256 != plan.snapshot.body_sha256
+            or snapshot.predecessor_sha256
+            != plan.snapshot.expected_predecessor_sha256
+            or snapshot.plan_fingerprint != plan.fingerprint
+        ):
+            raise _fail("IMMUTABLE_BINDING_MISMATCH")
+        fingerprint = _immutable_receipt_fingerprint(
+            sha256=snapshot.sha256,
+            predecessor_sha256=snapshot.predecessor_sha256,
+            byte_count=snapshot.byte_count,
+            identity=snapshot.identity,
+            plan_fingerprint=snapshot.plan_fingerprint,
+            security_sha256=snapshot.security_sha256,
+            version=snapshot.version,
+        )
+        if fingerprint != snapshot.receipt_fingerprint:
+            raise _fail("IMMUTABLE_RECEIPT_REJECTED")
+        if self._immutable_receipt_verifier is None:
+            raise _fail("TRUSTED_IMMUTABLE_RECEIPT_REQUIRED")
+        try:
+            accepted = self._immutable_receipt_verifier(fingerprint)
+        except Exception:
+            raise _fail("TRUSTED_IMMUTABLE_RECEIPT_REJECTED") from None
+        if accepted is not True:
+            raise _fail("TRUSTED_IMMUTABLE_RECEIPT_REJECTED")
+        return _ValidatedImmutableReceipt(snapshot, fingerprint)
 
     def _reject_reserved_immutable_parent(
         self,
@@ -1751,6 +2365,7 @@ class SecureAuthorityIO:
         finally:
             reserved.close()
 
+    @_detached_public_error_boundary
     def publish_immutable_json(
         self,
         document: Any,
@@ -1758,35 +2373,94 @@ class SecureAuthorityIO:
         plan: TrustedImmutablePlan,
         lease: _SecureFileLock,
     ) -> ImmutablePublishReceipt:
-        plan_fingerprint = self._validate_immutable_plan(plan)
+        try:
+            self._require_writer_lease(lease)
+            return self._publish_immutable_json_with_active_lease(
+                document,
+                plan=plan,
+                lease=lease,
+            )
+        except BaseException:
+            # A failed authority effect is terminal for the capability.  This
+            # prevents a caller from probing a rejected plan/body/path and
+            # then reusing the same live context for a different write.
+            self._revoke_writer_lease_after_failure(lease)
+            raise
+
+    def _publish_immutable_json_with_active_lease(
+        self,
+        document: Any,
+        *,
+        plan: TrustedImmutablePlan,
+        lease: _SecureFileLock,
+    ) -> ImmutablePublishReceipt:
+        validated_plan = self._snapshot_immutable_plan(plan)
         payload = _canonical_json_bytes(
             document,
             max_depth=self._max_json_depth,
             max_nodes=self._max_json_nodes,
             max_bytes=self._max_bytes,
         )
-        if _sha256(payload) != plan.body_sha256:
+        validated_plan = self._admit_immutable_plan(validated_plan)
+        if _sha256(payload) != validated_plan.snapshot.body_sha256:
             raise _fail("IMMUTABLE_BODY_DIGEST_MISMATCH")
-        receipt = self._publish_json_noreplace(plan.relative_path, document, lease=lease)
+        receipt = self._publish_payload_noreplace(
+            validated_plan.snapshot.relative_path,
+            payload,
+            lease=lease,
+        )
+        receipt_fingerprint = _immutable_receipt_fingerprint(
+            sha256=receipt.sha256,
+            predecessor_sha256=validated_plan.snapshot.expected_predecessor_sha256,
+            byte_count=receipt.byte_count,
+            identity=receipt.identity,
+            plan_fingerprint=validated_plan.fingerprint,
+            security_sha256=receipt.security_sha256,
+            version=_IMMUTABLE_RECEIPT_VERSION,
+        )
         return ImmutablePublishReceipt(
-            receipt.sha256,
-            plan.expected_predecessor_sha256,
-            receipt.byte_count,
-            receipt.identity,
-            plan_fingerprint,
+            sha256=receipt.sha256,
+            predecessor_sha256=validated_plan.snapshot.expected_predecessor_sha256,
+            byte_count=receipt.byte_count,
+            identity=receipt.identity,
+            plan_fingerprint=validated_plan.fingerprint,
+            security_sha256=receipt.security_sha256,
+            receipt_fingerprint=receipt_fingerprint,
+            version=_IMMUTABLE_RECEIPT_VERSION,
         )
 
+    @_detached_public_error_boundary
     def read_immutable_json(
         self,
         *,
         plan: TrustedImmutablePlan,
-        expected_identity: ArtifactIdentity,
+        receipt: ImmutablePublishReceipt,
     ) -> SecureJsonRead:
-        self._validate_immutable_plan(plan)
-        if not isinstance(expected_identity, ArtifactIdentity):
-            raise _fail("IMMUTABLE_IDENTITY_REQUIRED")
-        result = self.read_json(plan.relative_path)
-        if result.sha256 != plan.body_sha256 or result.identity != expected_identity:
+        plan_snapshot = self._snapshot_immutable_plan(plan)
+        receipt_snapshot = self._snapshot_immutable_receipt(receipt)
+        validated_plan = self._admit_immutable_plan(plan_snapshot)
+        validated_receipt = self._validate_immutable_receipt(
+            validated_plan,
+            receipt_snapshot,
+        )
+        return self._read_validated_immutable_json(
+            validated_plan,
+            validated_receipt,
+        )
+
+    def _read_validated_immutable_json(
+        self,
+        plan: _ValidatedImmutablePlan,
+        receipt: _ValidatedImmutableReceipt,
+    ) -> SecureJsonRead:
+        result = self.read_json(plan.snapshot.relative_path)
+        if (
+            result.sha256 != plan.snapshot.body_sha256
+            or result.sha256 != receipt.snapshot.sha256
+            or result.byte_count != receipt.snapshot.byte_count
+            or result.identity != receipt.snapshot.identity
+            or result.security_sha256 != receipt.snapshot.security_sha256
+        ):
             raise _fail("IMMUTABLE_BINDING_MISMATCH")
         return result
 
@@ -1833,27 +2507,81 @@ class SecureAuthorityIO:
         finally:
             parent.close()
 
+    @_detached_public_error_boundary
     def inspect_immutable_graph(
         self,
         *,
         plans: Sequence[TrustedImmutablePlan],
-        expected_identities: Mapping[str, ArtifactIdentity],
+        expected_receipts: Mapping[str, ImmutablePublishReceipt],
         specified_plan: TrustedImmutablePlan,
     ) -> ImmutableGraphInspectionReceipt:
-        if type(plans) not in {list, tuple} or not 1 <= len(plans) <= 1024:
+        if type(plans) not in {list, tuple}:
             raise _fail("IMMUTABLE_GRAPH_BOUND_REJECTED")
-        if type(expected_identities) is not dict:
+        plan_count = len(plans)
+        if not 1 <= plan_count <= 1024:
+            raise _fail("IMMUTABLE_GRAPH_BOUND_REJECTED")
+        try:
+            plan_objects = tuple(plans)
+            repeated_plan_objects = tuple(plans)
+        except Exception:
+            raise _fail("IMMUTABLE_GRAPH_BOUND_REJECTED") from None
+        if (
+            len(plan_objects) != plan_count
+            or len(repeated_plan_objects) != plan_count
+            or any(
+                first is not second
+                for first, second in zip(plan_objects, repeated_plan_objects)
+            )
+        ):
+            raise _fail("IMMUTABLE_GRAPH_CHANGED")
+        if type(expected_receipts) is not dict:
             raise _fail("IMMUTABLE_GRAPH_BINDINGS_REJECTED")
-        fingerprints: dict[str, str] = {}
-        plans_by_digest: dict[str, TrustedImmutablePlan] = {}
+        if len(expected_receipts) != plan_count:
+            raise _fail("IMMUTABLE_GRAPH_BINDINGS_REJECTED")
+        try:
+            receipt_items = tuple(expected_receipts.items())
+            repeated_receipt_items = tuple(expected_receipts.items())
+        except Exception:
+            raise _fail("IMMUTABLE_GRAPH_BINDINGS_REJECTED") from None
+        if (
+            len(receipt_items) != plan_count
+            or len(repeated_receipt_items) != plan_count
+            or any(
+                first_key != second_key or first_value is not second_value
+                for (first_key, first_value), (second_key, second_value) in zip(
+                    receipt_items,
+                    repeated_receipt_items,
+                )
+            )
+        ):
+            raise _fail("IMMUTABLE_GRAPH_CHANGED")
+        receipt_objects: dict[str, ImmutablePublishReceipt] = {}
+        for key, value in receipt_items:
+            if type(key) is not str or key in receipt_objects:
+                raise _fail("IMMUTABLE_GRAPH_BINDINGS_REJECTED")
+            receipt_objects[key] = self._snapshot_immutable_receipt(value)
+
+        plan_snapshots = tuple(
+            self._snapshot_immutable_plan(plan) for plan in plan_objects
+        )
+        specified_indexes = [
+            index for index, plan in enumerate(plan_objects) if plan is specified_plan
+        ]
+        if len(specified_indexes) != 1:
+            raise _fail("IMMUTABLE_SPECIFIED_COORDINATE_REJECTED")
+        validated_plans = tuple(
+            self._admit_immutable_plan(plan) for plan in plan_snapshots
+        )
+        specified = validated_plans[specified_indexes[0]]
+
+        plans_by_path: dict[str, _ValidatedImmutablePlan] = {}
+        plans_by_digest: dict[str, _ValidatedImmutablePlan] = {}
         revisions: set[tuple[str, int]] = set()
         names: set[str] = set()
         common: tuple[str, str, str, str, str] | None = None
-        for plan in plans:
-            fingerprint = self._validate_immutable_plan(plan)
-            parts = _relative_parts(plan.relative_path)
-            if len(parts) != 2 or parts[0] != _IMMUTABLE_NAMESPACE:
-                raise _fail("IMMUTABLE_COORDINATE_REJECTED")
+        for validated in validated_plans:
+            plan = validated.snapshot
+            parts = validated.parts
             binding = (
                 plan.operation_id,
                 plan.build_id,
@@ -1869,28 +2597,25 @@ class SecureAuthorityIO:
             if (
                 revision_key in revisions
                 or plan.body_sha256 in plans_by_digest
-                or plan.relative_path in fingerprints
+                or plan.relative_path in plans_by_path
                 or parts[1] in names
             ):
                 raise _fail("IMMUTABLE_DUPLICATE_ARTIFACT")
             revisions.add(revision_key)
             names.add(parts[1])
-            fingerprints[plan.relative_path] = fingerprint
-            plans_by_digest[plan.body_sha256] = plan
-        specified_fingerprint = self._validate_immutable_plan(specified_plan)
-        if fingerprints.get(specified_plan.relative_path) != specified_fingerprint:
-            raise _fail("IMMUTABLE_SPECIFIED_COORDINATE_REJECTED")
+            plans_by_path[plan.relative_path] = validated
+            plans_by_digest[plan.body_sha256] = validated
 
         roots = [
             plan
-            for plan in plans
-            if plan.expected_predecessor_sha256 == "sha256:" + "0" * 64
+            for plan in validated_plans
+            if plan.snapshot.expected_predecessor_sha256 == "sha256:" + "0" * 64
         ]
         if len(roots) != 1:
             raise _fail("IMMUTABLE_GRAPH_INCONSISTENT")
-        children: dict[str, list[TrustedImmutablePlan]] = {}
-        for plan in plans:
-            predecessor = plan.expected_predecessor_sha256
+        children: dict[str, list[_ValidatedImmutablePlan]] = {}
+        for plan in validated_plans:
+            predecessor = plan.snapshot.expected_predecessor_sha256
             if predecessor == "sha256:" + "0" * 64:
                 continue
             if predecessor not in plans_by_digest:
@@ -1900,46 +2625,67 @@ class SecureAuthorityIO:
             raise _fail("IMMUTABLE_FORK_STOP")
 
         visited: set[str] = set()
-        cursor = specified_plan
+        cursor = specified
         while True:
-            if cursor.body_sha256 in visited:
+            if cursor.snapshot.body_sha256 in visited:
                 raise _fail("IMMUTABLE_CYCLE_STOP")
-            visited.add(cursor.body_sha256)
-            predecessor = cursor.expected_predecessor_sha256
+            visited.add(cursor.snapshot.body_sha256)
+            predecessor = cursor.snapshot.expected_predecessor_sha256
             if predecessor == "sha256:" + "0" * 64:
                 break
             cursor = plans_by_digest[predecessor]
-        if len(visited) != len(plans):
+        if len(visited) != len(validated_plans):
             raise _fail("IMMUTABLE_ORPHAN_STOP")
 
+        if set(receipt_objects) != set(plans_by_path):
+            raise _fail("IMMUTABLE_UNKNOWN_ARTIFACT")
+        validated_receipts = {
+            relative_path: self._validate_immutable_receipt(
+                validated_plan,
+                receipt_objects[relative_path],
+            )
+            for relative_path, validated_plan in plans_by_path.items()
+        }
         aggregate = _sha256(
-            "\n".join(sorted(fingerprints.values())).encode("ascii")
+            "\n".join(
+                sorted(
+                    receipt.fingerprint
+                    for receipt in validated_receipts.values()
+                )
+            ).encode("ascii")
         )
         if self._immutable_graph_verifier is None:
             raise _fail("TRUSTED_IMMUTABLE_GRAPH_REQUIRED")
         try:
             graph_accepted = self._immutable_graph_verifier(
-                aggregate, specified_fingerprint
+                aggregate,
+                validated_receipts[specified.snapshot.relative_path].fingerprint,
             )
         except Exception:
             raise _fail("TRUSTED_IMMUTABLE_GRAPH_REJECTED") from None
         if graph_accepted is not True:
             raise _fail("TRUSTED_IMMUTABLE_GRAPH_REJECTED")
 
-        before = self._snapshot_immutable_namespace(specified_plan.relative_path)
-        if set(before) != names or set(expected_identities) != set(fingerprints):
+        before = self._snapshot_immutable_namespace(specified.snapshot.relative_path)
+        if set(before) != names:
             raise _fail("IMMUTABLE_UNKNOWN_ARTIFACT")
-        for plan in plans:
-            expected_identity = expected_identities.get(plan.relative_path)
-            if not isinstance(expected_identity, ArtifactIdentity):
-                raise _fail("IMMUTABLE_IDENTITY_REQUIRED")
-            self.read_immutable_json(plan=plan, expected_identity=expected_identity)
-        after = self._snapshot_immutable_namespace(specified_plan.relative_path)
+        for relative_path, validated_plan in plans_by_path.items():
+            self._read_validated_immutable_json(
+                validated_plan,
+                validated_receipts[relative_path],
+            )
+        after = self._snapshot_immutable_namespace(specified.snapshot.relative_path)
         if before != after:
             raise _fail("IMMUTABLE_SCAN_CHANGED")
+        for relative_path, validated_plan in plans_by_path.items():
+            self._read_validated_immutable_json(
+                validated_plan,
+                validated_receipts[relative_path],
+            )
 
-        return ImmutableGraphInspectionReceipt(len(plans), aggregate)
+        return ImmutableGraphInspectionReceipt(len(validated_plans), aggregate)
 
+    @_detached_public_error_boundary
     def publish_json_noreplace(
         self,
         relative_path: str | os.PathLike[str],
@@ -1947,15 +2693,20 @@ class SecureAuthorityIO:
         *,
         lease: _SecureFileLock,
     ) -> SecurePublishReceipt:
-        parts = _relative_parts(relative_path)
-        if parts[0].casefold() == _IMMUTABLE_NAMESPACE.casefold():
-            raise _fail("TRUSTED_GENERATION_PLAN_REQUIRED")
-        return self._publish_json_noreplace(
-            relative_path,
-            document,
-            lease=lease,
-            reject_physical_immutable_parent=True,
-        )
+        try:
+            self._require_writer_lease(lease)
+            parts = _relative_parts(relative_path)
+            if parts[0].casefold() == _IMMUTABLE_NAMESPACE.casefold():
+                raise _fail("TRUSTED_GENERATION_PLAN_REQUIRED")
+            return self._publish_json_noreplace(
+                relative_path,
+                document,
+                lease=lease,
+                reject_physical_immutable_parent=True,
+            )
+        except BaseException:
+            self._revoke_writer_lease_after_failure(lease)
+            raise
 
     def _publish_json_noreplace(
         self,
@@ -1966,20 +2717,39 @@ class SecureAuthorityIO:
         reject_physical_immutable_parent: bool = False,
     ) -> SecurePublishReceipt:
         self._require_writer_lease(lease)
+        payload = _canonical_json_bytes(
+            document,
+            max_depth=self._max_json_depth,
+            max_nodes=self._max_json_nodes,
+            max_bytes=self._max_bytes,
+        )
+        return self._publish_payload_noreplace(
+            relative_path,
+            payload,
+            lease=lease,
+            reject_physical_immutable_parent=reject_physical_immutable_parent,
+        )
+
+    def _publish_payload_noreplace(
+        self,
+        relative_path: str | os.PathLike[str],
+        payload: bytes,
+        *,
+        lease: _SecureFileLock,
+        reject_physical_immutable_parent: bool = False,
+    ) -> SecurePublishReceipt:
+        if type(payload) is not bytes or len(payload) > self._max_bytes:
+            raise _fail("BYTE_BOUND_EXCEEDED")
+        self._require_writer_lease(lease)
         parts = _relative_parts(relative_path)
         parent = self._pin_parent(relative_path)
         temp_lease: _TempLease | None = None
         published = False
+        namespace_effect_unknown = False
         try:
             self._bind_writer_parent(lease, parent)
             if reject_physical_immutable_parent:
                 self._reject_reserved_immutable_parent(parent, parts, lease)
-            payload = _canonical_json_bytes(
-                document,
-                max_depth=self._max_json_depth,
-                max_nodes=self._max_json_nodes,
-                max_bytes=self._max_bytes,
-            )
             try:
                 os.lstat(parent.target)
             except FileNotFoundError:
@@ -1992,8 +2762,25 @@ class SecureAuthorityIO:
             self._stage("temp_handle_live")
             self._stage("before_noreplace")
             parent.verify()
-            self._rename_noreplace(parent, temp_lease)
-            published = True
+            publish_state: Literal["OWNED", "FOREIGN_COLLISION", "UNKNOWN"] | None = None
+            try:
+                self._rename_noreplace(parent, temp_lease)
+                published = True
+            except BaseException as publish_error:
+                publish_state = self._classify_failed_noreplace(
+                    parent,
+                    temp_lease,
+                    publish_error,
+                )
+            if publish_state == "FOREIGN_COLLISION":
+                raise _fail("DESTINATION_EXISTS") from None
+            if publish_state is not None:
+                published = publish_state == "OWNED"
+                namespace_effect_unknown = True
+                raise _fail(
+                    "PUBLISH_COMMIT_UNKNOWN",
+                    completion_unknown=True,
+                ) from None
             try:
                 self._directory_durable(parent)
             except SecureAuthorityIOError as durability_error:
@@ -2010,32 +2797,46 @@ class SecureAuthorityIO:
                     raise _fail("PUBLISH_ROLLBACK_UNKNOWN", completion_unknown=True) from None
                 raise durability_error
             try:
-                final_identity = self._verify_published(parent, payload, temp_lease)
+                final_identity, security_sha256 = self._verify_published(
+                    parent,
+                    payload,
+                    temp_lease,
+                )
                 parent.verify()
             except SecureAuthorityIOError:
                 raise _fail("PUBLISH_COMMIT_UNKNOWN", completion_unknown=True) from None
-            return SecurePublishReceipt(_sha256(payload), len(payload), final_identity)
+            return SecurePublishReceipt(
+                _sha256(payload),
+                len(payload),
+                final_identity,
+                security_sha256,
+            )
         finally:
-            close_failure: SecureAuthorityIOError | None = None
+            close_failures: list[SecureAuthorityIOError] = []
             if temp_lease is not None:
                 if not published:
                     try:
                         self._cleanup_temp(parent, temp_lease)
                     except SecureAuthorityIOError as exc:
-                        close_failure = exc
+                        close_failures.append(exc)
                 try:
                     temp_lease.close()
                 except SecureAuthorityIOError as exc:
-                    close_failure = close_failure or exc
+                    close_failures.append(exc)
             try:
                 parent.close()
             except SecureAuthorityIOError as exc:
-                close_failure = close_failure or exc
-            if close_failure is not None:
-                if published:
+                close_failures.append(exc)
+            if close_failures:
+                if published or namespace_effect_unknown:
                     raise _fail("PUBLISH_COMMIT_UNKNOWN", completion_unknown=True) from None
-                raise close_failure
+                if len(close_failures) > 1 or any(
+                    failure.completion_unknown for failure in close_failures
+                ):
+                    raise _fail("HANDLE_CLEANUP_UNKNOWN", completion_unknown=True) from None
+                raise close_failures[0]
 
+    @_detached_public_error_boundary
     def replace_json_cas(
         self,
         relative_path: str | os.PathLike[str],
@@ -2051,13 +2852,14 @@ class SecureAuthorityIO:
         mutable CAS.  The live writer lease is validated and consumed, then the
         operation fails before inspecting caller data or touching the target.
         """
-        self._require_writer_lease(lease)
+        self._burn_writer_lease(lease)
         # Neither supported platform currently exposes a portable primitive
         # that atomically conditions replacement on the captured target inode
         # while also binding the source to this live handle. Fail closed before
         # payload allocation, temporary creation, or namespace effect.
         raise _fail("CAS_ATOMIC_UNAVAILABLE")
 
+    @_detached_public_error_boundary
     def commit_directory_tree(
         self,
         relative_path: str | os.PathLike[str],
@@ -2066,9 +2868,10 @@ class SecureAuthorityIO:
         lease: _SecureFileLock,
     ) -> NoReturn:
         """Discover that directory/tree publication is outside v1 authority."""
-        self._require_writer_lease(lease)
+        self._burn_writer_lease(lease)
         raise _fail("DIRECTORY_TREE_COMMIT_AUTHORITY_NOT_CREATED")
 
+    @_detached_public_error_boundary
     def advance_mutable_phase(
         self,
         relative_path: str | os.PathLike[str],
@@ -2077,7 +2880,7 @@ class SecureAuthorityIO:
         lease: _SecureFileLock,
     ) -> NoReturn:
         """Discover that fixed-path mutable phase advancement is unsupported."""
-        self._require_writer_lease(lease)
+        self._burn_writer_lease(lease)
         raise _fail("MUTABLE_PHASE_ADVANCE_UNAVAILABLE")
 
     def _cleanup_temp(self, parent: _PinnedParent, lease: _TempLease) -> None:
@@ -2096,6 +2899,7 @@ class SecureAuthorityIO:
         except OSError:
             raise _fail("TEMP_CLEANUP_FAILED") from None
 
+    @_detached_public_error_boundary
     def cleanup_owned_file(
         self,
         relative_path: str | os.PathLike[str],
@@ -2111,7 +2915,7 @@ class SecureAuthorityIO:
         separate Task/Human Gate.  This operation therefore burns a valid
         writer lease and fails before any read, hook, open, rename, or unlink.
         """
-        self._require_writer_lease(lease)
+        self._burn_writer_lease(lease)
         raise _fail("CLEANUP_ATOMIC_UNAVAILABLE")
 
 

@@ -1,6 +1,6 @@
 # TASK-068 — Secure Authority Artifact I/O Foundation
 
-Status: `IMPLEMENTATION_COMPLETE / DEV-4 / IMMUTABLE_ONLY_V1 / DRAFT_PR_READY`
+Status: `CORRECTIVE_IMPLEMENTATION_COMPLETE / DEV-4_PASS / IMMUTABLE_ONLY_V1 / COMMIT_ELIGIBLE`
 
 ## Responsibility
 
@@ -24,15 +24,20 @@ Owner-approved source implementation and focused verification are authorized. Re
 - JSON parsing is strict UTF-8 with byte, depth, node, duplicate-key, non-finite-number, and malformed-input rejection.
 - Existing and initial locks are securely opened/created and exclusively locked.
 - Publish uses an owned exclusive same-directory temporary file, exact write readback, file durability, no-replace namespace publication, and directory/Windows write-through durability.
+- A helper or asynchronous exception after native no-replace is classified from the still-live source handle and final name; only an exact foreign collision is confirmed no-effect, while owned or ambiguous publication is completion-unknown.
 - `SUPERSEDED / IMMUTABLE_ONLY_V1`: same-path mutable identity-CAS is not an effect-bearing v1 responsibility. `replace_json_cas` is a `NoReturn` discovery surface that returns body-free `CAS_ATOMIC_UNAVAILABLE`, effect zero, and `authority_created=false` after consuming a valid writer capability.
 - `SUPERSEDED / IMMUTABLE_ONLY_V1`: deletion of a published authority artifact is not an effect-bearing v1 responsibility. `cleanup_owned_file` is a `NoReturn` discovery surface that returns body-free `CLEANUP_ATOMIC_UNAVAILABLE`, effect zero, and `authority_created=false` after consuming a valid writer capability.
-- Generation/transition publication requires an exact coordinate bound by a consumer-owned trusted Product plan and monotonic durable receipt: random operation ID, bounded revision, body digest, physical identity, expected predecessor digest, and an opaque verifier over the complete semantic fingerprint. Unbound or field-rebound caller coordinates are rejected.
-- Graph inspection additionally requires a consumer-owned exact graph verifier over the complete allow-list fingerprint and specified coordinate. It proves consistency only for that specified chain and never selects a current/head/highest/latest generation. Fork, cycle, missing predecessor, unknown collision, orphan, stale/cross-operation/cross-instance coordinate, or replayed tombstone is STOP+preserve+effect zero.
+- Generation/transition publication requires an exact built-in private plan snapshot bound by a consumer-owned verifier. Its versioned fingerprint commits the flat two-component coordinate, operation/revision/action, body and predecessor digests, build/backend/session/instance bindings, and a digest of the opaque authorization. The verifier receives a separate canonical copy and cannot mutate the retained snapshot. The caller document is bounded and canonicalized once, then those exact bytes are published.
+- Immutable readback requires a versioned trusted receipt whose fingerprint commits the plan fingerprint, exact body/count, full physical file identity, predecessor, and root/ancestor/target security commitment. A fresh caller-created or self-rehashed receipt is audit data only and cannot pass the consumer-owned receipt verifier.
+- Trusted immutable filenames use the exact graph-scan filename grammar. Receipt byte counts and physical-identity integers are bounded before fingerprint encoding; custom `PathLike` and post-native helper failures are normalized outside active exception handlers to a body-free public code with no retained private cause/context.
+- Graph inspection requires exact built-in plan and receipt snapshots plus a consumer-owned verifier over the aggregate trusted-receipt fingerprints and the specified trusted receipt. It proves consistency only for that specified chain and never selects a current/head/highest/latest generation. Fork, cycle, missing predecessor, unknown collision, orphan, stale/cross-operation/cross-instance coordinate, or replayed tombstone is STOP+preserve+effect zero.
 - Revocation uses an immutable tombstone/transition. Published authority artifacts are never automatically deleted; physical lifecycle cleanup is a separate Task and Human Gate.
 - Directory-tree/snapshot publication and mutable phase advance are not v1 authority. Their `NoReturn` discovery surfaces return `DIRECTORY_TREE_COMMIT_AUTHORITY_NOT_CREATED` and `MUTABLE_PHASE_ADVANCE_UNAVAILABLE` before path/body/effect.
 - An immutable terminal record may be published/read only at its operation-specific exact coordinate. Re-publish collisions, fixed-history last-event inspection, or directory scan results never create a consumer `DUPLICATE`; statuses declare `DUPLICATE_CURRENTNESS_AUTHORITY_NOT_CREATED`.
-- Public receipts and errors contain no path or document body.
-- POSIX and Windows race/fault focused tests pass; unresolved Critical/High findings are zero.
+- Writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context.
+- Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
+- Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
+- POSIX and Windows race/fault focused tests pass locally. Independent Tester, Critic, and Judge bound the same final three-file SHA set and each reported Critical/High zero. The Judge accepted the Builder runtime evidence for this commit gate while preserving independent runtime as `NOT_CONFIRMED`, and lifted `COMMIT STOP` for the nine Allowed Files only.
 
 ## Dependencies and next task
 

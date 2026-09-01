@@ -1,48 +1,48 @@
 # TASK-068 verification checkpoint
 
-Status: `PASS / COMMIT_READY`
+Status: `LOCAL_PASS / DEV-4_PASS / COMMIT_ELIGIBLE`
 
 ## Bound source
 
-- Base: `origin/main@35cdf1ad475633dcf035e0616e979b5a8fde0c88`
+- Repository: `baisound/bai_video_production`
+- Current canonical comparison: `origin/main@7dc91c2112923e357bb5e3eab597f0c18ef33bbc`
+- Branch merge base: `35cdf1ad475633dcf035e0616e979b5a8fde0c88`
 - Branch: `codex/task-068-secure-authority-io`
 - Dedicated worktree: `task-068-secure-authority-io`
+- Source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
+- Generic/POSIX test SHA-256: `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`
+- Windows test SHA-256: `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`
+- Allowed-path drift from merge base to current `origin/main`: none
 - Shared files modified: none
+
+## Corrective coverage
+
+- Trusted plan: exact built-in frozen private snapshot, double observation, flat two-component immutable coordinate, authorization-bound versioned fingerprint, and a disposable canonical verifier copy that cannot mutate the retained effect state.
+- Caller document: bounded tree validation before encoding, one canonicalization, digest match, and exact canonical bytes passed to the native publish port.
+- Trusted receipt: versioned fingerprint over plan, predecessor, body/count, full physical identity, and root/ancestor/target security commitment; consumer receipt verifier required before immutable read authority.
+- Graph: lengths bounded before copy; every plan, receipt, and identity is snapshotted before the first callback; aggregate covers trusted receipt fingerprints and specified trusted receipt.
+- Writer lease: exact owner-issued object and private issuer registry; direct construction/subclass/foreign owner rejected; every active-owner public write or discovery failure, including validation drift, revokes the capability.
+- Cleanup: all still-owned handle cleanup is attempted; multiple close/identity faults become completion-unknown and no foreign pathname-only unlink is authorized.
+- Platform binding: POSIX unnamed live-handle publication and relative pinned dirfds; Windows live source handle plus pinned ancestors without delete sharing. Owner/DACL or POSIX uid/gid/mode drift invalidates the security commitment.
+- Native no-replace ambiguity: a helper or asynchronous exception after the native namespace effect is freshly classified from the live source handle and final name. Only an exact native collision with a foreign destination is confirmed no-effect; owned or ambiguous state is body-free completion-unknown.
+- Coordinate and input bounds: trusted immutable filenames use the same bounded ASCII predicate as graph scans; receipt body count and physical identity integers are bounded before fingerprint encoding; custom `PathLike` and post-native helper exceptions normalize outside the active exception handler so public errors retain neither private cause nor private context.
 
 ## Executed evidence
 
-- Python syntax compilation under WSL: PASS
-- Python syntax compilation on Windows after the latest P0 corrections: PASS
-- POSIX focused security/race/fault suite after the resume corrections: `89 passed`; Windows-only collection under WSL: `25 skipped`
-- POSIX primitive smoke: `O_TMPFILE` plus live-handle `linkat(AT_EMPTY_PATH)` publishes exactly one final name; no temporary namespace entry: PASS
-- Windows direct temporary-directory smoke for initial lock and immutable publish: PASS
-- Windows native handle-race smoke: live temp replacement denied, pinned ancestor rename denied, and live cleanup-target replacement denied; foreign files preserved: PASS
-- Windows private one-shot capability smoke: no public instance dictionary/reset field, normal reuse rejected with `CAPABILITY_BURNED`: PASS
-- Windows durability rollback smoke: initial-lock and immutable-publish first directory-flush failures remove only the exact owned inode, leave no named temp, and return confirmed non-unknown failure: PASS
-- Windows inheritance-failure smoke: the fd returned by the native open port is closed before the body-free rejection escapes: PASS
-- `IMMUTABLE_ONLY_V1` mutable-CAS discovery: returns `CAS_ATOMIC_UNAVAILABLE` before document traversal/effect, preserves target bytes, leaves zero temp artifacts, and reports `authority_created=false`; former mutable acceptance is `SUPERSEDED`
-- `IMMUTABLE_ONLY_V1` cleanup discovery on both platforms: returns `CLEANUP_ATOMIC_UNAVAILABLE` before target/hook/effect, preserves published and foreign artifacts, and reports `authority_created=false`; former physical-delete acceptance is `SUPERSEDED`
-- Windows-native focused test functions, executed unchanged through an isolated in-memory dependency-free runner because pytest is not installed: `25 passed`; `0 skipped`; `0 failed`. Each function received a fresh temporary root, every MonkeyPatch stack was reversed, and the current-source SHA-256 remained `A0F37468C35325D976366D504AA480489A0A5F0C9A66686D487FB5FB101FA6CF`.
-- Read target-handle close fault: the close is attempted, the document is not returned, and the public result is body-free `HANDLE_CLOSE_FAILED`: PASS
-- Windows named-temp open failure after CREATE_NEW: native handle delete plus close removes the exact owned name; cleanup ambiguity returns `HANDLE_CLEANUP_UNKNOWN`: PASS
-- POSIX unnamed-temp/ancestor validation close faults return `HANDLE_CLEANUP_UNKNOWN` after all available handle cleanup is attempted: PASS
-- Windows raw CREATE_NEW HANDLE abandonment marks the exact owned object delete-pending and closes the native handle before failure escapes: PASS
-- POSIX lock-inode migration into a substituted root is rejected before publication; both original and substituted roots have receipt delta zero: PASS
-- Windows targeted current-source smoke: basic initial lock/publish, raced final symlink no-redirect, and final-seam hardlink rejection all PASS. The full 25-function Windows-native focused file also PASSed through the dependency-free current-source runner; execution through the pytest package remains unavailable because pytest is absent.
-- Independent Tester rebound source SHA-256 `A0F37468C35325D976366D504AA480489A0A5F0C9A66686D487FB5FB101FA6CF`, repeated the WSL result (`89 passed`, `25 skipped`), and executed all 25 Windows-native focused functions through a dependency-free shim: `25 passed`, `0 skipped`, `0 failed`. No install or download occurred.
-- Historical independent DEV-4 rereview found Critical/High `0/2` under the superseded mutable-CAS/delete acceptance. The Owner-approved `IMMUTABLE_ONLY_V1` amendment removes those effects from v1 rather than weakening safety; fresh independent closure review is pending.
-- Independent architecture rereview confirmed that current Linux/Windows namespace primitives cannot bind replace/delete atomically to an expected target inode under an uncooperative writer. `IMMUTABLE_ONLY_V1` adopts exact-coordinate immutable generation/transition semantics and keeps both unsupported effects fail-closed.
-- Current source SHA-256 `EF52D9246770642BD7BC79A43711629F22D22723C89AA2E19B967E5DC5ADBBEE`: independent Tester reran the amended focused suite with `107 passed / 28 Windows-native skipped` under WSL and all 28 Windows-native functions through the dependency-free runner with `28 passed / 0 skipped / 0 failed`; Tester Critical/High is `0/0`.
-- Trusted-plan exact-coordinate and integrity negatives PASS: missing/forged/wrong-instance plans, malformed operation/revision/path, body mismatch, raw reserved-namespace bypass, same-body/different-inode binding, collision, unknown artifact, scan race, fork, missing predecessor, orphan, cycle, and cross-operation binding all STOP+preserve without winner/currentness authority.
-- Post-Critic corrective focused suite: Python compilation PASS; WSL `123 passed / 45 Windows-native skipped`. Added Windows case-variant/available-short-name namespace rejection, all semantic plan-fingerprint field rebinding, exact aggregate graph verifier, tombstone replay/resume STOP, directory-tree commit unavailable, and mutable-phase advance unavailable. Independent Windows rerun and fresh Critic/Judge are pending; this local PASS does not lift COMMIT STOP.
-- Independent Tester for source SHA-256 `CF7BE4EA6475ACD0B5559E84607310F6153213B26D6BCBC94EC6252307B0946B`: WSL `123 passed / 45 skipped / 0 failed`; Windows dependency-free runner `45 PASS / 0 SKIP / 0 FAIL`, including live distinct `IMMUTA~1` alias. Tester C/H `0/0`. This evidence predates the final pinned-parent TOCTOU correction and must be rerun against the final source.
-- Final source SHA-256 `839342F33050703EB21321A019EB5579501ED0611268DE65F0CF274B0732973A`: WSL focused `124 PASS / 48 Windows SKIP / 0 FAIL`; independent Windows dependency-free runner `48 PASS / 0 SKIP / 0 FAIL` across 34 functions/48 expanded cases. Direct and nested distinct 8.3 alias paths, both pinned-parent race seams, terminal repeat collision, and all public duplicate-currentness markers PASS. Independent Tester C/H `0/0`.
-- CI corrective source SHA-256 `C777B75D9E3DE9B0DEEBF3A884FBEDAE856F0264677D8EEE95F80D3DDF11A4A4`: WSL focused `124 PASS / 51 Windows SKIP / 0 FAIL`; independent Windows dependency-free runner `51 PASS / 0 SKIP / 0 FAIL` across 37 functions/51 expanded cases. Windows rooted path rejection and target/ancestor/live-lock replacement denial are now exercised under native semantics; generic POSIX swap seams remain active where the platform permits the namespace effect. Independent Tester and Critic/Judge C/H `0/0`.
-- Final TASK-058/TASK-068 targeted regression on the same source: `240 passed / 1 skipped`; the sole skip is the unavailable installed SKILL fixture and is not reported as PASS.
-- TASK-058 targeted regression with current TASK-068 POSIX suite: `221 passed / 1 skipped` (installed SKILL unavailable); TASK-068 failures zero.
-- Repository regression collection: `NOT_CONFIRMED` because the WSL environment lacks `cryptography.hazmat.primitives.kdf.argon2` for 29 unrelated collection targets.
-- Collection-compatible repository regression: `4320 passed`, `43 skipped`, `9 failed`; the 9 failures are environment-only (2 indirect Argon2id imports, 7 WSL attempts to execute Windows PowerShell with `Exec format error`). TASK-068 test failures: 0.
+- Windows Python 3.12 syntax compilation: PASS.
+- WSL Python syntax compilation: PASS.
+- WSL TASK-068 focused suite: `163 passed / 82 skipped / 0 failed`.
+- Windows-native TASK-068 focused suite through installed pytest: `82 passed / 0 skipped / 0 failed`.
+- WSL TASK-058/TASK-068 targeted boundary regression: `279 passed / 83 skipped / 0 failed`. The skips are one unavailable installed-SKILL fixture plus Windows-native cases, which were executed separately on Windows.
+- `git diff --check`: PASS; line-ending conversion warnings only.
+- Full repository regression: `NOT_CONFIRMED` for this corrective source. Historical broader runs are not promoted to current PASS.
+- Release/Deploy/Production/native/paid/external-account effects: 0.
 
 ## Review state
 
-Owner Design Gate `IMMUTABLE_ONLY_V1` is satisfied. Final independent implementation Critic/Judge and Tester both report Critical/High `0/0` against source SHA-256 `C777B75D9E3DE9B0DEEBF3A884FBEDAE856F0264677D8EEE95F80D3DDF11A4A4`; COMMIT STOP is lifted after final diff/scope check. TASK-069 source start remains prohibited until this completion receipt is merged into canonical main and a fresh TASK-069 Git/ownership gate passes.
+- Independent Tester static review: PASS, Critical/High/Medium/Low `0/0/0/0`; independent runtime `NOT_CONFIRMED`.
+- Independent implementation Critic: PASS, Critical/High/Medium/Low `0/0/0/0`.
+- Independent Judge: DEV-4 PASS, Critical/High/Medium/Low `0/0/0/0`.
+- The Judge accepted the Builder runtime evidence for this exact fixed-SHA commit gate without promoting it to independent runtime evidence and lifted `COMMIT STOP` for the nine Allowed Files.
+- Any source/test SHA or dirty-scope drift invalidates that decision and requires fresh review binding.
+- TASK-069 source mutation remains `START0` until TASK-068 is canonical on `main` and the TASK-069 dependency/start gate passes.

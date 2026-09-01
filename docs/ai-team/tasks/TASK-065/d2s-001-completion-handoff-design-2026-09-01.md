@@ -371,3 +371,5 @@ the synthetic fixture is not evidence that those source paths are fixed. Its
 recovery fields model the mutually exclusive publish/load/terminal state
 shapes and the `IMPORT_EFFECT_UNKNOWN` no-second-dispatch expectation only;
 they create no broker ledger, consume no ticket and launch no child.
+Its UI fields are likewise a static `NOT_CONFIRMED` display expectation, never
+a currentness proof, retry handle or Activation Gate outcome.

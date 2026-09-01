@@ -59,6 +59,18 @@
     "fixture_ticket_consumed": false,
     "fixture_child_launched": false
   },
+  "expected_ui_projection": {
+    "message_type": "BVP_LEARNING_LINKAGE_UI_STATUS_V1",
+    "schema_version": "1.0.0",
+    "display_correlation": "display_00000000000000000000000000000001",
+    "display_state": "NOT_CONFIRMED",
+    "authority_created": false,
+    "activation_authorized": false,
+    "activation_executed": false,
+    "ui_adapter_call_count": "0",
+    "ui_task036_call_count": "0",
+    "public_reason_code": "NOT_CONFIRMED"
+  },
   "effect_counters": {
     "project_delta": "0",
     "bridge_delta": "0",

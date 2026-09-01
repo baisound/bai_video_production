@@ -91,6 +91,28 @@ pointer, default-config omission, packaged `discover` refresh or caller-supplied
 path. The distribution config remains the disabled sentinel; no validation
 creates or enables a configuration.
 
+## D2S corrective design gates before Outcome L can progress
+
+Read-only audit of the clean D2S dedicated worktree at
+`6a391336ca9985d7c2d37c1c8a0846de63fd7b7a` against
+`origin/main=c86ec8c11724a3170d37e0fdc5a516979fcca703` confirms that the
+existing Draft PR is a data-only safety/privacy checkpoint, not an Outcome L
+completion. The focused adapter suite is `53/53` passing in WSL; this is
+source-level evidence only and does not make broker or installed E2E claims.
+
+| Gate | Required corrective contract | Mandatory negative/fault coverage | Current Outcome L result |
+| --- | --- | --- | --- |
+| D2S-H1 Product one-shot path | A Product-only broker must validate the same pinned v2 config identity plus action, command, operation/ticket, selected instance/build, argv/input, expiry and nonce; atomically move `ARMED -> IN_FLIGHT` before any stage; burn on success, reject, exception, timeout, cancellation, channel close, child exit and restart. Direct v1/v2 CLI commands are isolated from installed Product operation. Terminal confirmation is a distinct read-only broker query. | direct/copy/deserialized CLI config, wrong or cross command, expired/replayed/second/concurrent ticket, config swap, receipt-arrives-after-preflight, and every pre/post redemption/stage crash seam. Ticket one yields command effect exactly 0/1; terminal delivery delta 0; canonical/Profile/activation claim 0. | `BROKER_REDEMPTION.N.C. / TASK036_START0 / EFFECT0` |
+| D2S-H2 contained physical identity | Resolve root and every ancestor through nofollow handles, validate regular-directory/reparse/DACL/identity constraints and use handle-relative child open/publish (or an equivalently held trusted broker handle). Retain that lease through strict parse/hash or publish plus pinned readback. Path+lstat sampling is insufficient. | ancestor stat/open/read/post swap-and-restore, junction/reparse/case/cross-volume swap, same bytes/different inode, parent swap before temp create/move/after move, and config/receipt/Profile-root replacement. Foreign or ambiguous state is preserved. | `ANCESTOR_HANDLE_CURRENTNESS.N.C. / EFFECT0` |
+| D2S-M1 action closure | The v2 schema/validator must require a per-action exact null/non-null matrix: a publish operation binds its record/delivery/result and cannot borrow a Profile; a load operation binds its Profile/result and cannot borrow a record. | null-cross-action, unrelated record/Profile, altered result/input, and mixed action profile cases. | `ACTION_BINDING.N.C. / EFFECT0` |
+| D2S-M2 transport-only status | Enabled `connector-status` must be explicitly transport-only with `authority_created:false`, terminal/correlation/Profile verification false, and body-free closed output. | status-only substitution, READY/default-root inference, and public output leakage. | `STATUS_AUTHORITY.N.C. / EFFECT0` |
+| D2S-M3 durability seam | Maintain separate assertions for file-fsync failure before publish and directory-durability failure after publish, including preservation/current-target behavior and platform-honest native semantics. `BvpAdapterTests.test_atomic_publish_fsync_failure_has_no_target_or_temp_delta` is reproducibly passing; this row is a required future boundary test, not a recorded failure. | prepublish file fsync, postpublish directory durability, unsupported native port, foreign temp and target replacement. | `DURABILITY_BOUNDARY.N.C. / EFFECT0` |
+
+These are D2S-owner source and test gates. TASK-065 may consume only their
+future canonical release/install/readback completion receipt; it must not add a
+broker, use raw paths, emulate handle authority or amend the D2S source from
+this task-local consumer packet.
+
 ## Validation algorithm and phase separation
 
 ### PL65-C01a: preactivation chain validation
@@ -145,7 +167,8 @@ evidence receipt.
 ## Completion Gate
 
 Outcome L design is eligible for one coherent design review only when this
-packet and all linked task-local packets agree on graph, ABI and fault matrix.
+packet and all linked task-local packets agree on graph, ABI, D2S corrective
+gates and fault matrix.
 It is not a TASK-065 implementation or operational completion.
 
 Before a coherent design PR may be marked ready, an independent Critic must

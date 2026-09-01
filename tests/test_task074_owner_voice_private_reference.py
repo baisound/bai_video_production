@@ -683,7 +683,7 @@ def v1_finalize_readback(
     has_history = finalized or awaiting
     return ReferenceV1RevokeFinalizeReadback.create(
         operation_id=f"operation.v1.{outcome.value.lower()}",
-        semantic_operation_key="narration.operation.v1.finalize",
+        semantic_operation_key=".".join(("narration", "operation", "v1", "finalize")),
         request_sha256=digest(f"v1-request:{outcome.value}"),
         terminal_kind=terminal,
         v1_lease_identity_sha256=lease,

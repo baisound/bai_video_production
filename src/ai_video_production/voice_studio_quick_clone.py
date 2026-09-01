@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 import re
-from typing import Any, Final, Mapping
+from typing import Any, Mapping
 
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
 
@@ -25,9 +25,16 @@ SAMPLE_RATE_HZ = 48_000
 CHANNELS = 1
 SAMPLE_FORMAT = "PCM_S24LE"
 INTENDED_ARTIFACT = "STAGED_NARRATION_PCM_WAV_48000_MONO"
-TASK014_RESULT_ADMISSION_PRODUCER_STATE: Final = "NOT_BOUND"
-
-_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}")
+_FLOW_ID_RE = re.compile(r"quick-clone:[A-Za-z0-9][A-Za-z0-9._-]{0,243}")
+_STAGED_WAV_REF_RE = re.compile(
+    r"staged-narration:[A-Za-z0-9][A-Za-z0-9._-]{0,127}"
+    r"(?:/[A-Za-z0-9][A-Za-z0-9._-]{0,127})*/"
+    r"[A-Za-z0-9][A-Za-z0-9_-]{0,119}\.wav"
+)
+_ASSET_REF_RE = re.compile(
+    r"asset:[A-Za-z0-9][A-Za-z0-9._-]{0,127}"
+    r"(?:/[A-Za-z0-9][A-Za-z0-9._-]{0,127})*"
+)
 _REASON_RE = re.compile(r"[A-Z][A-Z0-9_]{1,95}")
 
 
@@ -279,18 +286,20 @@ _RESULT_ADMISSION_TRANSITIONS: dict[ResultAdmissionState, frozenset[ResultAdmiss
 def _logical_id(value: Any, name: str, *, nullable: bool = False) -> str | None:
     if value is None and nullable:
         return None
-    if not isinstance(value, str) or not _ID_RE.fullmatch(value):
-        raise ValueError(f"{name} is invalid")
+    patterns = {
+        "flow_id": _FLOW_ID_RE,
+        "staged_wav_ref": _STAGED_WAV_REF_RE,
+        "preview_asset_ref": _ASSET_REF_RE,
+    }
+    pattern = patterns.get(name)
+    if pattern is None:
+        raise AssertionError(f"no closed logical namespace is defined for {name}")
     if (
-        "\\" in value
-        or value.startswith("/")
-        or re.match(r"^[A-Za-z]:", value)
-        or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*://", value)
-        or value.lower().startswith("file:")
+        not isinstance(value, str)
+        or len(value) > 256
+        or not pattern.fullmatch(value)
     ):
-        raise ValueError(f"{name} must be a logical identifier")
-    if any(part == ".." for part in value.split("/")):
-        raise ValueError(f"{name} must not escape its logical namespace")
+        raise ValueError(f"{name} is invalid")
     return value
 
 
@@ -465,6 +474,10 @@ class QuickCloneFlowRevision:
         self._validate_result_and_review()
         self._validate_adoption()
 
+    def _task014_result_admission_producer_state(self) -> str:
+        """Return the immutable current Product producer state."""
+        return "NOT_BOUND"
+
     def _validate_setup(self) -> None:
         if self.runtime_aggregate_state is RuntimeAggregateState.BOUND_VERIFIED:
             _sha(
@@ -499,7 +512,7 @@ class QuickCloneFlowRevision:
 
     def _validate_execution(self) -> None:
         if (
-            TASK014_RESULT_ADMISSION_PRODUCER_STATE != "BOUND_VERIFIED"
+            self._task014_result_admission_producer_state() != "BOUND_VERIFIED"
             and self.execution_state
             not in {ExecutionState.DRAFT, ExecutionState.PREFLIGHT_BLOCKED}
         ):
@@ -561,7 +574,7 @@ class QuickCloneFlowRevision:
         if (
             self.result_admission_state is ResultAdmissionState.BOUND_VERIFIED
             or has_result
-        ) and TASK014_RESULT_ADMISSION_PRODUCER_STATE != "BOUND_VERIFIED":
+        ) and self._task014_result_admission_producer_state() != "BOUND_VERIFIED":
             raise ValueError(
                 "canonical TASK-014 result admission producer is NOT_BOUND"
             )
@@ -789,7 +802,7 @@ class QuickCloneFlowRevision:
             "record_type": "QuickCloneFlowRevision",
             "task_owner": "TASK-046",
             "task014_result_admission_producer_state": (
-                TASK014_RESULT_ADMISSION_PRODUCER_STATE
+                self._task014_result_admission_producer_state()
             ),
             "flow_id": self.flow_id,
             "revision": self.revision,
@@ -885,6 +898,18 @@ class QuickCloneFlowRevision:
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> "QuickCloneFlowRevision":
+        return cls._from_dict_for_producer_state(
+            value,
+            expected_producer_state="NOT_BOUND",
+        )
+
+    @classmethod
+    def _from_dict_for_producer_state(
+        cls,
+        value: Mapping[str, Any],
+        *,
+        expected_producer_state: str,
+    ) -> "QuickCloneFlowRevision":
         expected = set(cls._record_fields())
         if not isinstance(value, Mapping) or set(value) != expected:
             raise ValueError("QuickCloneFlowRevision fields are incomplete or unknown")
@@ -894,7 +919,7 @@ class QuickCloneFlowRevision:
             or value["record_type"] != "QuickCloneFlowRevision"
             or value["task_owner"] != "TASK-046"
             or value["task014_result_admission_producer_state"]
-            != TASK014_RESULT_ADMISSION_PRODUCER_STATE
+            != expected_producer_state
             or value["route"] != "ZERO_SHOT"
             or value["mode"] != "PREVIEW"
             or value["intended_artifact"] != INTENDED_ARTIFACT
@@ -1029,16 +1054,47 @@ class QuickCloneFlowRevision:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class QuickCloneFutureSemanticFixture(QuickCloneFlowRevision):
+    """Fixture-only future-state vector; never a Product/readback projection."""
+
+    def _task014_result_admission_producer_state(self) -> str:
+        return "BOUND_VERIFIED"
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any]) -> "QuickCloneFutureSemanticFixture":
+        raise ValueError("future semantic fixtures require explicit fixture ingress")
+
+    @classmethod
+    def from_fixture_dict(
+        cls,
+        value: Mapping[str, Any],
+    ) -> "QuickCloneFutureSemanticFixture":
+        return cls._from_dict_for_producer_state(
+            value,
+            expected_producer_state="BOUND_VERIFIED",
+        )
+
+
 def validate_flow_transition(
     previous: Mapping[str, Any] | QuickCloneFlowRevision,
     current: Mapping[str, Any] | QuickCloneFlowRevision,
 ) -> None:
     old = previous if isinstance(previous, QuickCloneFlowRevision) else QuickCloneFlowRevision.from_dict(previous)
     new = current if isinstance(current, QuickCloneFlowRevision) else QuickCloneFlowRevision.from_dict(current)
+    if type(old) is not type(new) or type(old) not in {
+        QuickCloneFlowRevision,
+        QuickCloneFutureSemanticFixture,
+    }:
+        raise ValueError("production and fixture revision types cannot cross")
     if new.flow_id != old.flow_id or new.revision != old.revision + 1:
         raise ValueError("flow revision identity/sequence mismatch")
     if new.parent_revision_sha256 != old.flow_revision_sha256:
         raise ValueError("flow parent CAS mismatch")
+    if datetime.fromisoformat(new.created_at[:-1] + "+00:00") < datetime.fromisoformat(
+        old.created_at[:-1] + "+00:00"
+    ):
+        raise ValueError("flow revision created_at cannot move backwards")
     immutable = (
         "source_kind",
         "source_binding_sha256",
@@ -1151,15 +1207,15 @@ def validate_flow_transition(
 
 def public_projection(value: Mapping[str, Any] | QuickCloneFlowRevision) -> dict[str, Any]:
     revision = value if isinstance(value, QuickCloneFlowRevision) else QuickCloneFlowRevision.from_dict(value)
+    if type(revision) is not QuickCloneFlowRevision:
+        raise ValueError("fixture-only revisions cannot produce a Product projection")
     has_result = revision.result_receipt_sha256 is not None
     return {
         "record_type": "QuickClonePublicProjection",
         "contract_version": CONTRACT_VERSION,
         "flow_id": revision.flow_id,
         "revision": revision.revision,
-        "task014_result_admission_producer_state": (
-            TASK014_RESULT_ADMISSION_PRODUCER_STATE
-        ),
+        "task014_result_admission_producer_state": "NOT_BOUND",
         "route": "ZERO_SHOT",
         "mode": "PREVIEW",
         "setup_state": revision.setup_state.value,

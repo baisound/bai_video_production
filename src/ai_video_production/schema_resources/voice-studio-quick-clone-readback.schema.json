@@ -38,7 +38,7 @@
     "unified_desktop_binding_state": {"const": "NOT_BOUND"},
     "trusted_time_binding_state": {"const": "NOT_BOUND"},
     "synthetic_fixture_flow_binding_state": {"const": "NOT_BOUND"},
-    "flow_id": {"$ref": "#/$defs/logicalId"},
+    "flow_id": {"$ref": "#/$defs/flowId"},
     "flow_revision": {"type": "integer", "minimum": 1},
     "flow_revision_sha256": {"$ref": "#/$defs/sha256"},
     "generated_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
@@ -157,15 +157,10 @@
   "$defs": {
     "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "nullableSha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
-    "logicalId": {
+    "flowId": {
       "type": "string",
-      "minLength": 1,
       "maxLength": 256,
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$",
-      "allOf": [
-        {"not": {"pattern": "^(?:[A-Za-z]:|[A-Za-z][A-Za-z0-9+.-]*://|[Ff][Ii][Ll][Ee]:)"}},
-        {"not": {"pattern": "(?:^|/)\\.\\.(?:/|$)"}}
-      ]
+      "pattern": "^quick-clone:[A-Za-z0-9][A-Za-z0-9._-]{0,243}$"
     },
     "flowReasons": {
       "type": "array",

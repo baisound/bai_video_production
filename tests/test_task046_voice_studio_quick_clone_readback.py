@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 from copy import deepcopy
-from dataclasses import replace
+from dataclasses import fields, replace
 import json
 from pathlib import Path
 from typing import Mapping
@@ -28,6 +28,7 @@ from ai_video_production.voice_studio_quick_clone import (
     ProfileAdoptionState,
     QualityState,
     QuickCloneFlowRevision,
+    QuickCloneFutureSemanticFixture,
     ReferenceRetentionState,
     ResultAdmissionState,
     RuntimeAggregateState,
@@ -879,6 +880,9 @@ def test_timestamp_causality_is_checked_but_trusted_currentness_is_not_claimed()
 
 
 def test_host_private_paths_raw_body_and_unknown_fields_are_rejected() -> None:
+    with pytest.raises(ValueError, match="flow_id is invalid"):
+        replace(draft(), flow_id="private/voice.wav")
+
     path_preflight = preflight(engine_binding=engine(engine_id="C:/private/model"))
     with pytest.raises(ValueError, match="host/private path"):
         compile_without_fixture(flow_for(path_preflight), path_preflight)
@@ -910,6 +914,18 @@ def test_host_private_paths_raw_body_and_unknown_fields_are_rejected() -> None:
             synthetic_fixture_receipt=raw_receipt,
             generated_at=NOW,
         )
+
+
+def test_future_semantic_fixture_cannot_enter_product_readback() -> None:
+    production = draft()
+    fixture = QuickCloneFutureSemanticFixture(
+        **{
+            field.name: getattr(production, field.name)
+            for field in fields(production)
+        }
+    )
+    with pytest.raises(ValueError, match="fixture-only"):
+        compile_without_fixture(fixture, None)
 
 
 def test_serialized_effect_reason_identity_digest_and_unknown_tampering_fail_closed() -> None:

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import fields, replace
 import json
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
 import pytest
 
-import ai_video_production.voice_studio_quick_clone as quick_clone_module
 from ai_video_production.voice_studio_quick_clone import (
     ComputePreference,
     ComputeResolutionState,
@@ -18,6 +17,7 @@ from ai_video_production.voice_studio_quick_clone import (
     ProfileAdoptionState,
     QualityState,
     QuickCloneFlowRevision,
+    QuickCloneFutureSemanticFixture,
     ReferenceRetentionState,
     ResultAdmissionState,
     RuntimeAggregateState,
@@ -42,14 +42,6 @@ MIRROR = (
 
 def _sha(number: int) -> str:
     return f"sha256:{number:064x}"
-
-
-def _enable_future_result_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        quick_clone_module,
-        "TASK014_RESULT_ADMISSION_PRODUCER_STATE",
-        "BOUND_VERIFIED",
-    )
 
 
 def _draft(**changes: object) -> QuickCloneFlowRevision:
@@ -84,8 +76,19 @@ def _draft(**changes: object) -> QuickCloneFlowRevision:
     return QuickCloneFlowRevision(**values)  # type: ignore[arg-type]
 
 
-def _ready(previous: QuickCloneFlowRevision | None = None) -> QuickCloneFlowRevision:
-    old = previous or _draft()
+def _fixture_draft(**changes: object) -> QuickCloneFutureSemanticFixture:
+    production = _draft(**changes)
+    values = {
+        field.name: getattr(production, field.name)
+        for field in fields(production)
+    }
+    return QuickCloneFutureSemanticFixture(**values)
+
+
+def _ready(
+    previous: QuickCloneFutureSemanticFixture | None = None,
+) -> QuickCloneFutureSemanticFixture:
+    old = previous or _fixture_draft()
     return replace(
         old,
         revision=old.revision + 1,
@@ -101,7 +104,9 @@ def _ready(previous: QuickCloneFlowRevision | None = None) -> QuickCloneFlowRevi
     )
 
 
-def _dispatching(previous: QuickCloneFlowRevision | None = None) -> QuickCloneFlowRevision:
+def _dispatching(
+    previous: QuickCloneFutureSemanticFixture | None = None,
+) -> QuickCloneFutureSemanticFixture:
     old = previous or _ready()
     return replace(
         old,
@@ -114,7 +119,9 @@ def _dispatching(previous: QuickCloneFlowRevision | None = None) -> QuickCloneFl
     )
 
 
-def _result(previous: QuickCloneFlowRevision | None = None) -> QuickCloneFlowRevision:
+def _result(
+    previous: QuickCloneFutureSemanticFixture | None = None,
+) -> QuickCloneFutureSemanticFixture:
     old = previous or _dispatching()
     return replace(
         old,
@@ -141,7 +148,9 @@ def _result(previous: QuickCloneFlowRevision | None = None) -> QuickCloneFlowRev
     )
 
 
-def _accepted(previous: QuickCloneFlowRevision | None = None) -> QuickCloneFlowRevision:
+def _accepted(
+    previous: QuickCloneFutureSemanticFixture | None = None,
+) -> QuickCloneFutureSemanticFixture:
     old = previous or _result()
     return replace(
         old,
@@ -210,11 +219,8 @@ def test_setup_fails_closed_for_unbound_runtime_and_unsupported_compute() -> Non
         QuickCloneFlowRevision.from_dict(invalid)
 
 
-def test_execution_bindings_and_immutable_voice_consent_profile_are_enforced(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
-    draft = _draft()
+def test_execution_bindings_and_immutable_voice_consent_profile_are_enforced() -> None:
+    draft = _fixture_draft()
     ready = _ready(draft)
     validate_flow_transition(draft, ready)
     dispatching = _dispatching(ready)
@@ -243,10 +249,7 @@ def test_execution_bindings_and_immutable_voice_consent_profile_are_enforced(
             validate_flow_transition(dispatching, changed)
 
 
-def test_result_is_exact_bounded_pcm24_48k_mono_and_digest_protected(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_result_is_exact_bounded_pcm24_48k_mono_and_digest_protected() -> None:
     dispatching = _dispatching()
     result = _result(dispatching)
     validate_flow_transition(dispatching, result)
@@ -272,18 +275,15 @@ def test_result_is_exact_bounded_pcm24_48k_mono_and_digest_protected(
         invalid[field] = value
         assert list(_validator().iter_errors(invalid))
         with pytest.raises(ValueError, match="WAV format"):
-            QuickCloneFlowRevision.from_dict(invalid)
+            QuickCloneFutureSemanticFixture.from_fixture_dict(invalid)
 
     hash_mismatch = dict(record)
     hash_mismatch["staged_wav_sha256"] = _sha(32)
     with pytest.raises(ValueError, match="result output hash mismatch"):
-        QuickCloneFlowRevision.from_dict(hash_mismatch)
+        QuickCloneFutureSemanticFixture.from_fixture_dict(hash_mismatch)
 
 
-def test_result_admission_matches_operation_profile_model_runtime_output_and_replay(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_result_admission_matches_operation_profile_model_runtime_output_and_replay() -> None:
     result = _result()
     invalid_changes = (
         {"result_admission_receipt_sha256": None},
@@ -301,10 +301,7 @@ def test_result_admission_matches_operation_profile_model_runtime_output_and_rep
             replace(result, **changes)
 
 
-def test_unknown_requires_same_operation_reconciliation_and_never_replay(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_unknown_requires_same_operation_reconciliation_and_never_replay() -> None:
     dispatching = _dispatching()
     unknown = replace(
         dispatching,
@@ -344,10 +341,7 @@ def test_unknown_requires_same_operation_reconciliation_and_never_replay(
     assert reconciled.to_dict()["automatic_retry_authorized"] is False
 
 
-def test_post_bind_receipts_and_terminal_states_are_monotonic(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_post_bind_receipts_and_terminal_states_are_monotonic() -> None:
     unknown = replace(
         _dispatching(),
         revision=4,
@@ -396,10 +390,7 @@ def test_post_bind_receipts_and_terminal_states_are_monotonic(
         validate_flow_transition(accepted, retention_rewind)
 
 
-def test_quality_and_owner_listening_gate_profile_and_asset_decisions(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_quality_and_owner_listening_gate_profile_and_asset_decisions() -> None:
     result = _result()
     with pytest.raises(ValueError, match="quality PASS"):
         replace(
@@ -414,15 +405,14 @@ def test_quality_and_owner_listening_gate_profile_and_asset_decisions(
 
     accepted = _accepted(result)
     validate_flow_transition(result, accepted)
-    projection = public_projection(accepted)
-    assert projection["can_save_profile"] is True
-    assert projection["can_publish_preview_asset"] is True
+    assert accepted.profile_adoption_state is ProfileAdoptionState.SAVE_DECISION_REQUIRED
+    assert accepted.reference_retention_state is ReferenceRetentionState.RETAIN_PRIVATE_REFERENCE
+    assert accepted.preview_asset_adoption_state is PreviewAssetAdoptionState.PUBLISH_DECISION_REQUIRED
+    with pytest.raises(ValueError, match="fixture-only"):
+        public_projection(accepted)
 
 
-def test_failed_or_rejected_preview_can_record_explicit_no_adoption(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_failed_or_rejected_preview_can_record_explicit_no_adoption() -> None:
     result = _result()
     rejected = replace(
         result,
@@ -441,17 +431,12 @@ def test_failed_or_rejected_preview_can_record_explicit_no_adoption(
         reference_retention_decision_sha256=_sha(94),
     )
     validate_flow_transition(result, rejected)
-    projection = public_projection(rejected)
-    assert projection["can_save_profile"] is False
-    assert projection["can_publish_preview_asset"] is False
-    assert projection["no_save_implies_physical_delete"] is False
+    assert rejected.profile_adoption_state is ProfileAdoptionState.PROFILE_NOT_SAVED
+    assert rejected.preview_asset_adoption_state is PreviewAssetAdoptionState.ASSET_NOT_PUBLISHED
     assert rejected.to_dict()["physical_delete_authorized"] is False
 
 
-def test_profile_save_and_preview_asset_publish_are_separate_decisions(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_profile_save_and_preview_asset_publish_are_separate_decisions() -> None:
     accepted = _accepted()
     saved_profile = replace(
         accepted,
@@ -478,9 +463,11 @@ def test_profile_save_and_preview_asset_publish_are_separate_decisions(
         asset_adoption_receipt_sha256=_sha(54),
     )
     validate_flow_transition(accepted, not_saved_but_published)
-    projection = public_projection(not_saved_but_published)
-    assert projection["profile_save_and_asset_publish_are_independent"] is True
-    assert projection["no_save_implies_physical_delete"] is False
+    assert not_saved_but_published.profile_adoption_state is ProfileAdoptionState.PROFILE_NOT_SAVED
+    assert (
+        not_saved_but_published.preview_asset_adoption_state
+        is PreviewAssetAdoptionState.ASSET_PUBLISHED_RESTRICTED
+    )
     assert not_saved_but_published.to_dict()["physical_delete_authorized"] is False
 
     with pytest.raises(ValueError, match="reference retention"):
@@ -490,10 +477,7 @@ def test_profile_save_and_preview_asset_publish_are_separate_decisions(
         )
 
 
-def test_stale_revoked_and_expired_states_require_fresh_currentness_receipts(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_stale_revoked_and_expired_states_require_fresh_currentness_receipts() -> None:
     accepted = _accepted()
     adopted = replace(
         accepted,
@@ -554,31 +538,71 @@ def test_stale_revoked_and_expired_states_require_fresh_currentness_receipts(
         r"\\server\private\voice.wav",
         "file:///C:/Users/owner/private.wav",
         "https://private.example/voice.wav",
+        "private/voice.wav",
+        "voice.wav",
     ],
 )
 def test_host_or_private_paths_are_rejected(
     leaked_ref: str,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _enable_future_result_contract(monkeypatch)
     with pytest.raises(ValueError, match="invalid|logical identifier"):
         replace(_result(), staged_wav_ref=leaked_ref)
 
 
-def test_current_contract_cannot_self_assert_task014_result_admission(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize(
+    "leaked_id",
+    [
+        "private/voice.wav",
+        "voice.wav",
+        "quick-clone:private/voice.wav",
+        "asset:restricted/preview-1",
+    ],
+)
+def test_public_flow_id_requires_the_closed_quick_clone_namespace(
+    leaked_id: str,
 ) -> None:
+    with pytest.raises(ValueError, match="flow_id is invalid"):
+        _draft(flow_id=leaked_id)
+    record = _draft().to_dict()
+    record["flow_id"] = leaked_id
+    assert list(_validator().iter_errors(record))
+
+
+@pytest.mark.parametrize(
+    "leaked_ref",
+    ["private/preview.wav", "preview.wav", "asset:../preview", "staged-narration:job/preview.wav"],
+)
+def test_asset_ref_requires_the_closed_asset_namespace(leaked_ref: str) -> None:
+    with pytest.raises(ValueError, match="preview_asset_ref is invalid"):
+        replace(
+            _accepted(),
+            profile_adoption_state=ProfileAdoptionState.PROFILE_NOT_SAVED,
+            profile_adoption_receipt_sha256=_sha(152),
+            preview_asset_adoption_state=PreviewAssetAdoptionState.ASSET_PUBLISHED_RESTRICTED,
+            preview_asset_ref=leaked_ref,
+            preview_asset_sha256=_sha(153),
+            asset_adoption_receipt_sha256=_sha(154),
+        )
+
+
+def test_current_contract_cannot_self_assert_task014_result_admission() -> None:
     with pytest.raises(ValueError, match="execution is blocked"):
-        _ready()
+        _draft(
+            setup_state=SetupState.READY,
+            execution_state=ExecutionState.READY_FOR_CONFIRMATION,
+            compute_resolution_state=ComputeResolutionState.GPU_READY,
+            runtime_aggregate_state=RuntimeAggregateState.BOUND_VERIFIED,
+            runtime_aggregate_binding_sha256=_sha(70),
+            preflight_sha256=_sha(7),
+            one_shot_authorization_sha256=_sha(8),
+        )
 
-    with monkeypatch.context() as future_contract:
-        _enable_future_result_contract(future_contract)
-        future_record = _result().to_dict()
-
-    assert quick_clone_module.TASK014_RESULT_ADMISSION_PRODUCER_STATE == "NOT_BOUND"
+    future_record = _result().to_dict()
     assert list(_validator().iter_errors(future_record))
     with pytest.raises(ValueError, match="identity is invalid"):
         QuickCloneFlowRevision.from_dict(future_record)
+    with pytest.raises(ValueError, match="fixture-only"):
+        public_projection(_result())
 
     forged = dict(future_record)
     forged["task014_result_admission_producer_state"] = "NOT_BOUND"
@@ -591,12 +615,9 @@ def test_current_contract_cannot_self_assert_task014_result_admission(
     assert projection["preview_ready_for_external_playback"] is False
 
 
-def test_schema_rejects_structural_cross_field_drift_before_python_ingress(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_schema_rejects_structural_cross_field_drift_before_python_ingress() -> None:
     validator = _validator()
     draft = _draft().to_dict()
-    _enable_future_result_contract(monkeypatch)
     ready = _ready().to_dict()
 
     structural_negatives = []
@@ -620,10 +641,7 @@ def test_schema_rejects_structural_cross_field_drift_before_python_ingress(
         assert list(validator.iter_errors(invalid))
 
 
-def test_python_ingress_enforces_future_semantics_json_schema_cannot_express(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    _enable_future_result_contract(monkeypatch)
+def test_python_ingress_enforces_future_semantics_json_schema_cannot_express() -> None:
     validator = _validator()
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     assert "canonical semantic ingress" in schema["$comment"]
@@ -632,13 +650,13 @@ def test_python_ingress_enforces_future_semantics_json_schema_cannot_express(
     duration_drift["duration_us"] += 1
     assert list(validator.iter_errors(duration_drift))
     with pytest.raises(ValueError, match="exact sample count"):
-        QuickCloneFlowRevision.from_dict(duration_drift)
+        QuickCloneFutureSemanticFixture.from_fixture_dict(duration_drift)
 
     digest_echo_drift = _result().to_dict()
     digest_echo_drift["result_preview_profile_revision_sha256"] = _sha(101)
     assert list(validator.iter_errors(digest_echo_drift))
     with pytest.raises(ValueError, match="VoiceProfile"):
-        QuickCloneFlowRevision.from_dict(digest_echo_drift)
+        QuickCloneFutureSemanticFixture.from_fixture_dict(digest_echo_drift)
 
     blocked = _draft(
         execution_state=ExecutionState.PREFLIGHT_BLOCKED,
@@ -646,7 +664,7 @@ def test_python_ingress_enforces_future_semantics_json_schema_cannot_express(
         reason_codes=("A_REASON", "Z_REASON"),
     ).to_dict()
     blocked["reason_codes"] = ["Z_REASON", "A_REASON"]
-    assert list(validator.iter_errors(blocked))
+    assert not list(validator.iter_errors(blocked))
     with pytest.raises(ValueError, match="sorted"):
         QuickCloneFlowRevision.from_dict(blocked)
 
@@ -674,9 +692,7 @@ def test_raw_body_unknown_fields_and_effect_flags_fail_closed() -> None:
             QuickCloneFlowRevision.from_dict(changed)
 
 
-def test_reason_codes_and_revision_cas_fail_closed(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_reason_codes_and_revision_cas_fail_closed() -> None:
     with pytest.raises(ValueError, match="require reason_codes"):
         _draft(
             execution_state=ExecutionState.PREFLIGHT_BLOCKED,
@@ -687,11 +703,14 @@ def test_reason_codes_and_revision_cas_fail_closed(
     with pytest.raises(ValueError, match="unique"):
         _draft(reason_codes=("A_REASON", "A_REASON"))
 
-    draft = _draft()
-    _enable_future_result_contract(monkeypatch)
+    draft = _fixture_draft()
     wrong_parent = replace(
         _ready(draft),
         parent_revision_sha256=_sha(61),
     )
     with pytest.raises(ValueError, match="parent CAS"):
         validate_flow_transition(draft, wrong_parent)
+
+    backwards = replace(_ready(draft), created_at="2026-08-31T23:59:59Z")
+    with pytest.raises(ValueError, match="created_at cannot move backwards"):
+        validate_flow_transition(draft, backwards)

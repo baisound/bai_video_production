@@ -42,7 +42,7 @@
     "record_type": {"const": "QuickCloneFlowRevision"},
     "task_owner": {"const": "TASK-046"},
     "task014_result_admission_producer_state": {"const": "NOT_BOUND"},
-    "flow_id": {"$ref": "#/$defs/logicalId"},
+    "flow_id": {"$ref": "#/$defs/flowId"},
     "revision": {"type": "integer", "minimum": 1},
     "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
     "created_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
@@ -91,7 +91,7 @@
     "result_replay": {"type": ["boolean", "null"], "enum": [false, null]},
     "quality_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
     "owner_listening_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
-    "staged_wav_ref": {"$ref": "#/$defs/nullableLogicalId"},
+    "staged_wav_ref": {"$ref": "#/$defs/nullableStagedWavRef"},
     "staged_wav_sha256": {"$ref": "#/$defs/nullableSha256"},
     "sample_rate_hz": {"type": ["integer", "null"], "enum": [48000, null]},
     "channels": {"type": ["integer", "null"], "enum": [1, null]},
@@ -101,7 +101,7 @@
     "saved_profile_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
     "profile_adoption_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
     "profile_currentness_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
-    "preview_asset_ref": {"$ref": "#/$defs/nullableLogicalId"},
+    "preview_asset_ref": {"$ref": "#/$defs/nullableAssetRef"},
     "preview_asset_sha256": {"$ref": "#/$defs/nullableSha256"},
     "asset_adoption_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
     "preview_asset_currentness_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
@@ -140,7 +140,7 @@
           "result_route": {"const": "ZERO_SHOT"},
           "result_replay": {"const": false},
           "quality_state": {"enum": ["PENDING", "PASS", "FAIL", "UNKNOWN"]},
-          "staged_wav_ref": {"$ref": "#/$defs/logicalId"},
+          "staged_wav_ref": {"$ref": "#/$defs/stagedWavRef"},
           "staged_wav_sha256": {"$ref": "#/$defs/sha256"},
           "sample_rate_hz": {"const": 48000},
           "channels": {"const": 1},
@@ -338,7 +338,7 @@
       "if": {"properties": {"preview_asset_adoption_state": {"const": "ASSET_PUBLISHED_RESTRICTED"}}},
       "then": {
         "properties": {
-          "preview_asset_ref": {"$ref": "#/$defs/logicalId"},
+          "preview_asset_ref": {"$ref": "#/$defs/assetRef"},
           "preview_asset_sha256": {"$ref": "#/$defs/sha256"},
           "asset_adoption_receipt_sha256": {"$ref": "#/$defs/sha256"}
         }
@@ -360,7 +360,7 @@
       "if": {"properties": {"preview_asset_adoption_state": {"enum": ["STALE", "REVOKED"]}}},
       "then": {
         "properties": {
-          "preview_asset_ref": {"$ref": "#/$defs/logicalId"},
+          "preview_asset_ref": {"$ref": "#/$defs/assetRef"},
           "preview_asset_sha256": {"$ref": "#/$defs/sha256"},
           "asset_adoption_receipt_sha256": {"$ref": "#/$defs/sha256"},
           "preview_asset_currentness_receipt_sha256": {"$ref": "#/$defs/sha256"}
@@ -396,16 +396,22 @@
   "$defs": {
     "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "nullableSha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
-    "logicalId": {
+    "flowId": {
       "type": "string",
-      "minLength": 1,
       "maxLength": 256,
-      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}$",
-      "allOf": [
-        {"not": {"pattern": "^(?:[A-Za-z]:|[A-Za-z][A-Za-z0-9+.-]*://|[Ff][Ii][Ll][Ee]:)"}},
-        {"not": {"pattern": "(?:^|/)\\.\\.(?:/|$)"}}
-      ]
+      "pattern": "^quick-clone:[A-Za-z0-9][A-Za-z0-9._-]{0,243}$"
     },
-    "nullableLogicalId": {"anyOf": [{"$ref": "#/$defs/logicalId"}, {"type": "null"}]}
+    "stagedWavRef": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^staged-narration:[A-Za-z0-9][A-Za-z0-9._-]{0,127}(?:/[A-Za-z0-9][A-Za-z0-9._-]{0,127})*/[A-Za-z0-9][A-Za-z0-9_-]{0,119}\\.wav$"
+    },
+    "nullableStagedWavRef": {"anyOf": [{"$ref": "#/$defs/stagedWavRef"}, {"type": "null"}]},
+    "assetRef": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^asset:[A-Za-z0-9][A-Za-z0-9._-]{0,127}(?:/[A-Za-z0-9][A-Za-z0-9._-]{0,127})*$"
+    },
+    "nullableAssetRef": {"anyOf": [{"$ref": "#/$defs/assetRef"}, {"type": "null"}]}
   }
 }

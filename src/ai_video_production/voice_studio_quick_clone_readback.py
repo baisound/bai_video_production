@@ -44,7 +44,6 @@ from .voice_studio_quick_clone import (
     RuntimeAggregateState,
     SetupState,
     SourceKind,
-    TASK014_RESULT_ADMISSION_PRODUCER_STATE,
 )
 
 
@@ -55,7 +54,7 @@ TRUSTED_TIME_BINDING_STATE = "NOT_BOUND"
 SYNTHETIC_FIXTURE_FLOW_BINDING_STATE = "NOT_BOUND"
 MAX_SYNTHETIC_PREVIEW_FRAMES = 48_000 * 60
 
-_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}")
+_FLOW_ID_RE = re.compile(r"quick-clone:[A-Za-z0-9][A-Za-z0-9._-]{0,243}")
 _REASON_RE = re.compile(r"[A-Z][A-Z0-9_]{1,95}")
 _URI_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 _DRIVE_RE = re.compile(r"^[A-Za-z]:")
@@ -91,17 +90,14 @@ class SyntheticFixtureState(str, Enum):
 
 
 def _logical_id(value: Any, name: str) -> str:
-    if not isinstance(value, str) or not _ID_RE.fullmatch(value):
-        raise ValueError(f"{name} is invalid")
+    if name != "flow_id":
+        raise AssertionError(f"no closed logical namespace is defined for {name}")
     if (
-        "\\" in value
-        or value.startswith("/")
-        or _DRIVE_RE.match(value)
-        or _URI_RE.match(value)
-        or value.lower().startswith("file:")
-        or any(part == ".." for part in value.split("/"))
+        not isinstance(value, str)
+        or len(value) > 256
+        or not _FLOW_ID_RE.fullmatch(value)
     ):
-        raise ValueError(f"{name} must be a contained logical identifier")
+        raise ValueError(f"{name} is invalid")
     return value
 
 
@@ -472,9 +468,7 @@ class QuickCloneReadbackReceipt:
             "contract_version": CONTRACT_VERSION,
             "record_type": "QuickCloneReadbackReceipt",
             "task_owner": "TASK-046",
-            "task014_result_admission_producer_state": (
-                TASK014_RESULT_ADMISSION_PRODUCER_STATE
-            ),
+            "task014_result_admission_producer_state": "NOT_BOUND",
             "unified_desktop_binding_state": UNIFIED_DESKTOP_BINDING_STATE,
             "trusted_time_binding_state": TRUSTED_TIME_BINDING_STATE,
             "synthetic_fixture_flow_binding_state": (
@@ -559,8 +553,7 @@ class QuickCloneReadbackReceipt:
             or value["contract_version"] != CONTRACT_VERSION
             or value["record_type"] != "QuickCloneReadbackReceipt"
             or value["task_owner"] != "TASK-046"
-            or value["task014_result_admission_producer_state"]
-            != TASK014_RESULT_ADMISSION_PRODUCER_STATE
+            or value["task014_result_admission_producer_state"] != "NOT_BOUND"
             or value["unified_desktop_binding_state"]
             != UNIFIED_DESKTOP_BINDING_STATE
             or value["trusted_time_binding_state"] != TRUSTED_TIME_BINDING_STATE
@@ -746,6 +739,8 @@ def compile_quick_clone_readback(
         if isinstance(flow, QuickCloneFlowRevision)
         else QuickCloneFlowRevision.from_dict(flow)
     )
+    if type(revision) is not QuickCloneFlowRevision:
+        raise ValueError("fixture-only revisions cannot enter Product read-back")
     _reject_host_paths(revision.to_dict(), "flow")
     generated_at_value = _timestamp_value(generated_at, "generated_at")
     flow_created_at = _timestamp_value(revision.created_at, "flow.created_at")
@@ -966,9 +961,7 @@ def public_projection(
         "flow_revision": receipt.flow_revision,
         "route": "ZERO_SHOT",
         "mode": "PREVIEW",
-        "task014_result_admission_producer_state": (
-            TASK014_RESULT_ADMISSION_PRODUCER_STATE
-        ),
+        "task014_result_admission_producer_state": "NOT_BOUND",
         "unified_desktop_binding_state": UNIFIED_DESKTOP_BINDING_STATE,
         "trusted_time_binding_state": TRUSTED_TIME_BINDING_STATE,
         "trusted_currentness_verified": False,

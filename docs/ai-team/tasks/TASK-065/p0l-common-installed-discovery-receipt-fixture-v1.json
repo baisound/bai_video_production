@@ -35,14 +35,14 @@
   "lanes": {
     "P0_L": {
       "status": "NOT_CONFIRMED",
-      "expected_historical_adapter_stage_count": 1,
-      "expected_historical_task036_import_count": 1,
-      "task065_adapter_call_count": 0,
-      "task065_task036_call_count": 0,
-      "task065_project_delta": 0,
-      "task065_bridge_delta": 0,
-      "task065_profile_delta": 0,
-      "task065_config_history_delta": 0
+      "expected_historical_adapter_stage_count": "1",
+      "expected_historical_task036_import_count": "1",
+      "task065_adapter_call_count": "0",
+      "task065_task036_call_count": "0",
+      "task065_project_delta": "0",
+      "task065_bridge_delta": "0",
+      "task065_profile_delta": "0",
+      "task065_config_history_delta": "0"
     },
     "P0_E": {
       "status": "NOT_CONFIRMED",
@@ -61,9 +61,9 @@
   },
   "public_diagnostics": {
     "code": "NOT_CONFIRMED",
-    "absolute_path_count": 0,
-    "private_body_count": 0,
-    "secret_count": 0,
-    "os_detail_count": 0
+    "absolute_path_count": "0",
+    "private_body_count": "0",
+    "secret_count": "0",
+    "os_detail_count": "0"
   }
 }

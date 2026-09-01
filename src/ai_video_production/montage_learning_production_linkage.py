@@ -1,4 +1,4 @@
-"""Effect-zero TASK-065 validation of a synthetic preactivation fixture.
+"""Effect-zero TASK-065 validation of synthetic integration fixtures.
 
 The objects in this module are audit projections and consumer-local replay
 guards.  They do not create Product authority and never call the montage
@@ -8,7 +8,6 @@ adapter, TASK-036, or a Product store.
 from __future__ import annotations
 
 from dataclasses import dataclass
-import json
 import re
 from threading import Lock
 from typing import Any
@@ -25,8 +24,16 @@ EVIDENCE_MODE = "SYNTHETIC_PUBLIC_SAFE_FIXTURE"
 TASK072_DESIGN_SHA256 = (
     "sha256:4f6f21e97d96aa3ffca16f57679abf80d081de6d85d599347fd955c8899ce3c7"
 )
+COMMON_INSTALLED_CONTRACT = "TASK065-P0L-COMMON-INSTALLED-DISCOVERY-RECEIPT-V1"
+COMMON_INSTALLED_MODE = "SYNTHETIC_EXPECTED_COORDINATES"
+COMMON_INSTALLED_VALIDATION_MESSAGE_TYPE = (
+    "Task065CommonInstalledDiscoveryFixtureValidation"
+)
+COMMON_INSTALLED_VALIDATED_STATUS = "SYNTHETIC_COMMON_COORDINATES_VALIDATED"
 
 _OPAQUE_ID_RE = re.compile(r"^(?:op|inst|rec|prof|rcpt)_[0-9a-f]{32}$")
+_COMMON_ID_RE = re.compile(r"^(?:inst|desc|receipt)_[0-9a-f]{32}$")
+_RAW_SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _MAX_DEPTH = 10
 _MAX_NODES = 256
 _MAX_MAPPING_MEMBERS = 32
@@ -35,6 +42,10 @@ _MAX_STRING_CODEPOINTS = 512
 _MAX_STRING_BYTES = 2048
 _EVIDENCE_DOMAIN = b"TASK-065-PREACTIVATION-CHAIN-EVIDENCE-V1\x00"
 _VALIDATION_DOMAIN = b"TASK-065-PREACTIVATION-FIXTURE-VALIDATION-V1\x00"
+_COMMON_PLAN_DOMAIN = b"TASK-065-COMMON-INSTALLED-PLAN-V1\x00"
+_COMMON_FIXTURE_DOMAIN = b"TASK-065-COMMON-INSTALLED-FIXTURE-V1\x00"
+_COMMON_VALIDATION_DOMAIN = b"TASK-065-COMMON-INSTALLED-VALIDATION-V1\x00"
+_COMMON_MAX_CANONICAL_BYTES = 8192
 
 
 class MontageLearningProductionLinkageError(ValueError):
@@ -68,6 +79,22 @@ def _require_sha(value: object, code: str) -> str:
         _fail(code)
 
 
+def _require_common_id(value: object, prefix: str, code: str) -> str:
+    if (
+        type(value) is not str
+        or _COMMON_ID_RE.fullmatch(value) is None
+        or not value.startswith(f"{prefix}_")
+    ):
+        _fail(code)
+    return value
+
+
+def _require_raw_sha(value: object, code: str) -> str:
+    if type(value) is not str or _RAW_SHA_RE.fullmatch(value) is None:
+        _fail(code)
+    return value
+
+
 def _require_bool(value: object, expected: bool, code: str) -> None:
     if type(value) is not bool or value is not expected:
         _fail(code)
@@ -85,17 +112,17 @@ def _bounded_builtin_snapshot(value: object) -> dict[str, Any]:
     This prevents mapping subclasses, non-finite numbers, recursive structures,
     and resource-heavy trees from reaching hashing first.
     """
-
-    stack: list[tuple[object, int]] = [(value, 0)]
     nodes = 0
-    while stack:
-        current, depth = stack.pop()
+
+    def copy_bounded(current: object, depth: int) -> object:
+        nonlocal nodes
         nodes += 1
         if nodes > _MAX_NODES or depth > _MAX_DEPTH:
             _fail("ERR_TASK065_FIXTURE_BOUNDS")
         if type(current) is dict:
             if len(current) > _MAX_MAPPING_MEMBERS:
                 _fail("ERR_TASK065_FIXTURE_BOUNDS")
+            copied: dict[str, object] = {}
             for key, child in current.items():
                 if type(key) is not str:
                     _fail("ERR_TASK065_FIXTURE_TYPE")
@@ -104,11 +131,12 @@ def _bounded_builtin_snapshot(value: object) -> dict[str, Any]:
                     or len(key.encode("utf-8")) > _MAX_STRING_BYTES
                 ):
                     _fail("ERR_TASK065_FIXTURE_BOUNDS")
-                stack.append((child, depth + 1))
+                copied[key] = copy_bounded(child, depth + 1)
+            return copied
         elif type(current) is list:
             if len(current) > _MAX_SEQUENCE_ITEMS:
                 _fail("ERR_TASK065_FIXTURE_BOUNDS")
-            stack.extend((child, depth + 1) for child in current)
+            return [copy_bounded(child, depth + 1) for child in current]
         elif type(current) is str:
             if (
                 len(current) > _MAX_STRING_CODEPOINTS
@@ -116,19 +144,403 @@ def _bounded_builtin_snapshot(value: object) -> dict[str, Any]:
                 or "\x00" in current
             ):
                 _fail("ERR_TASK065_FIXTURE_BOUNDS")
+            return current
         elif type(current) is int:
             if current < -(2**63) or current > 2**63 - 1:
                 _fail("ERR_TASK065_FIXTURE_BOUNDS")
+            return current
         elif type(current) is bool or current is None:
-            pass
+            return current
         else:
             _fail("ERR_TASK065_FIXTURE_TYPE")
-    if type(value) is not dict:
+
+    try:
+        snapshot = copy_bounded(value, 0)
+    except RuntimeError:
+        _fail("ERR_TASK065_FIXTURE_ENCODING")
+    if type(snapshot) is not dict:
         _fail("ERR_TASK065_FIXTURE_SHAPE")
     try:
-        return json.loads(canonical_json_bytes(value))
+        canonical_json_bytes(snapshot)
     except (RecursionError, TypeError, UnicodeError, ValueError):
         _fail("ERR_TASK065_FIXTURE_ENCODING")
+    return snapshot
+
+
+_COMMON_TOP_FIELDS = frozenset(
+    {
+        "fixture_version",
+        "contract",
+        "mode",
+        "fixture_only",
+        "authority_created",
+        "currentness_selected",
+        "task063_completion_receipt_present",
+        "task072_design_receipt_sha256",
+        "task072_implementation_receipt_verified",
+        "installed_snapshot_verified",
+        "native_broker_executed",
+        "expected_coordinates",
+        "effects",
+        "lanes",
+        "public_diagnostics",
+    }
+)
+_COMMON_COORDINATE_FIELDS = frozenset(
+    {
+        "install_instance_id",
+        "descriptor_generation_id",
+        "product_build_sha256",
+        "package_payload_sha256",
+        "product_exe_sha256",
+        "owner_manifest_sha256",
+        "task036_receipt_id",
+        "task061b_receipt_id",
+    }
+)
+_COMMON_EFFECT_FIELDS = frozenset(
+    {
+        "installed_discovery_started",
+        "packaged_exe_started",
+        "adapter_stage_started",
+        "task036_import_started",
+        "wav_body_read",
+        "provider_started",
+        "install_started",
+        "release_started",
+        "deploy_started",
+        "production_activation_started",
+    }
+)
+_COMMON_LANE_FIELDS = frozenset({"P0_L", "P0_E", "P0_V"})
+_COMMON_P0L_FIELDS = frozenset(
+    {
+        "status",
+        "expected_historical_adapter_stage_count",
+        "expected_historical_task036_import_count",
+        "task065_adapter_call_count",
+        "task065_task036_call_count",
+        "task065_project_delta",
+        "task065_bridge_delta",
+        "task065_profile_delta",
+        "task065_config_history_delta",
+    }
+)
+_COMMON_P0E_FIELDS = frozenset(
+    {
+        "status",
+        "installed_package_readback_verified",
+        "packaged_exe_started",
+        "first_run_readback_verified",
+        "startup_settings_readback_verified",
+    }
+)
+_COMMON_P0V_FIELDS = frozenset(
+    {
+        "status",
+        "wav_receipt_verified",
+        "wav_body_read",
+        "media_qa_executed",
+        "provider_started",
+    }
+)
+_COMMON_DIAGNOSTIC_FIELDS = frozenset(
+    {
+        "code",
+        "absolute_path_count",
+        "private_body_count",
+        "secret_count",
+        "os_detail_count",
+    }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class CommonInstalledDiscoveryFixturePlan:
+    """Public-safe expected coordinates; never a currentness/effect authority."""
+
+    install_instance_id: str
+    descriptor_generation_id: str
+    product_build_sha256: str
+    package_payload_sha256: str
+    product_exe_sha256: str
+    owner_manifest_sha256: str
+    task036_receipt_id: str
+    task061b_receipt_id: str
+
+    def __post_init__(self) -> None:
+        _require_common_id(
+            self.install_instance_id, "inst", "ERR_TASK065_COMMON_PLAN_ID"
+        )
+        _require_common_id(
+            self.descriptor_generation_id, "desc", "ERR_TASK065_COMMON_PLAN_ID"
+        )
+        _require_common_id(
+            self.task036_receipt_id, "receipt", "ERR_TASK065_COMMON_PLAN_ID"
+        )
+        _require_common_id(
+            self.task061b_receipt_id, "receipt", "ERR_TASK065_COMMON_PLAN_ID"
+        )
+        for field in (
+            "product_build_sha256",
+            "package_payload_sha256",
+            "product_exe_sha256",
+            "owner_manifest_sha256",
+        ):
+            _require_raw_sha(getattr(self, field), "ERR_TASK065_COMMON_PLAN_DIGEST")
+
+    def expected_coordinates(self) -> dict[str, str]:
+        return {
+            "install_instance_id": self.install_instance_id,
+            "descriptor_generation_id": self.descriptor_generation_id,
+            "product_build_sha256": self.product_build_sha256,
+            "package_payload_sha256": self.package_payload_sha256,
+            "product_exe_sha256": self.product_exe_sha256,
+            "owner_manifest_sha256": self.owner_manifest_sha256,
+            "task036_receipt_id": self.task036_receipt_id,
+            "task061b_receipt_id": self.task061b_receipt_id,
+        }
+
+    def to_dict(self) -> dict[str, object]:
+        body: dict[str, object] = {
+            "contract": COMMON_INSTALLED_CONTRACT,
+            "mode": COMMON_INSTALLED_MODE,
+            "task072_design_receipt_sha256": TASK072_DESIGN_SHA256,
+            "expected_coordinates": self.expected_coordinates(),
+            "authority_created": False,
+            "currentness_selected": False,
+            "local_effects_authorized": False,
+        }
+        body["plan_sha256"] = sha256_bytes(
+            _COMMON_PLAN_DOMAIN + canonical_json_bytes(body)
+        )
+        return body
+
+
+@dataclass(frozen=True, slots=True)
+class CommonInstalledDiscoveryFixtureValidation:
+    install_instance_id: str
+    descriptor_generation_id: str
+    plan_sha256: str
+    fixture_sha256: str
+
+    def __post_init__(self) -> None:
+        _require_common_id(
+            self.install_instance_id, "inst", "ERR_TASK065_COMMON_VALIDATION_ID"
+        )
+        _require_common_id(
+            self.descriptor_generation_id,
+            "desc",
+            "ERR_TASK065_COMMON_VALIDATION_ID",
+        )
+        _require_sha(self.plan_sha256, "ERR_TASK065_COMMON_VALIDATION_DIGEST")
+        _require_sha(self.fixture_sha256, "ERR_TASK065_COMMON_VALIDATION_DIGEST")
+
+    def to_dict(self) -> dict[str, object]:
+        body: dict[str, object] = {
+            "schema_version": SCHEMA_VERSION,
+            "message_type": COMMON_INSTALLED_VALIDATION_MESSAGE_TYPE,
+            "status": COMMON_INSTALLED_VALIDATED_STATUS,
+            "contract": COMMON_INSTALLED_CONTRACT,
+            "mode": COMMON_INSTALLED_MODE,
+            "fixture_only": True,
+            "authority_created": False,
+            "currentness_selected": False,
+            "currentness_lease_created": False,
+            "lane_effect_authority_created": False,
+            "task063_completion_receipt_present": False,
+            "task072_design_receipt_sha256": TASK072_DESIGN_SHA256,
+            "task072_implementation_receipt_verified": False,
+            "installed_snapshot_verified": False,
+            "native_broker_executed": False,
+            "install_instance_id": self.install_instance_id,
+            "descriptor_generation_id": self.descriptor_generation_id,
+            "plan_sha256": self.plan_sha256,
+            "fixture_sha256": self.fixture_sha256,
+            "p0_l_status": "NOT_CONFIRMED",
+            "p0_e_status": "NOT_CONFIRMED",
+            "p0_v_status": "NOT_CONFIRMED",
+            "installed_discovery_started": False,
+            "packaged_exe_started": False,
+            "adapter_stage_started": False,
+            "task036_import_started": False,
+            "wav_body_read": False,
+            "provider_started": False,
+            "install_started": False,
+            "release_started": False,
+            "deploy_started": False,
+            "production_activation_started": False,
+        }
+        body["validation_sha256"] = sha256_bytes(
+            _COMMON_VALIDATION_DOMAIN + canonical_json_bytes(body)
+        )
+        return body
+
+
+class CommonInstalledDiscoveryFixtureConsumerPort:
+    """Validate an already-decoded synthetic mapping without minting authority.
+
+    Raw fixture bytes require the separate strict fixture parser Gate. This
+    audit-only port never treats a caller's decoder as Product currentness.
+    """
+
+    __slots__ = ("_plan", "_state", "_lock")
+
+    def __init__(self, plan: CommonInstalledDiscoveryFixturePlan) -> None:
+        if type(plan) is not CommonInstalledDiscoveryFixturePlan:
+            raise TypeError("exact CommonInstalledDiscoveryFixturePlan is required")
+        self._plan = plan
+        self._state = "ARMED"
+        self._lock = Lock()
+
+    @property
+    def state(self) -> str:
+        with self._lock:
+            return self._state
+
+    def validate(self, fixture: object) -> CommonInstalledDiscoveryFixtureValidation:
+        with self._lock:
+            if self._state != "ARMED":
+                _fail("ERR_TASK065_COMMON_CONSUMER_ALREADY_USED")
+            self._state = "IN_FLIGHT"
+        try:
+            snapshot = _bounded_builtin_snapshot(fixture)
+            canonical = canonical_json_bytes(snapshot)
+            if len(canonical) > _COMMON_MAX_CANONICAL_BYTES:
+                _fail("ERR_TASK065_COMMON_FIXTURE_BOUNDS")
+            validation = self._validate_snapshot(snapshot, canonical)
+        except Exception as exc:
+            with self._lock:
+                self._state = "FAILED_CLOSED"
+            if isinstance(exc, MontageLearningProductionLinkageError):
+                raise
+            raise MontageLearningProductionLinkageError(
+                "ERR_TASK065_COMMON_FIXTURE_REJECTED"
+            ) from None
+        with self._lock:
+            self._state = "COMPLETED"
+        return validation
+
+    def _validate_snapshot(
+        self, fixture: dict[str, Any], canonical: bytes
+    ) -> CommonInstalledDiscoveryFixtureValidation:
+        fixture = _exact_mapping(
+            fixture, _COMMON_TOP_FIELDS, "ERR_TASK065_COMMON_FIXTURE_SHAPE"
+        )
+        if (
+            fixture["fixture_version"] != "1.0"
+            or fixture["contract"] != COMMON_INSTALLED_CONTRACT
+            or fixture["mode"] != COMMON_INSTALLED_MODE
+            or fixture["task072_design_receipt_sha256"] != TASK072_DESIGN_SHA256
+        ):
+            _fail("ERR_TASK065_COMMON_FIXTURE_CONTRACT")
+        _require_bool(
+            fixture["fixture_only"], True, "ERR_TASK065_COMMON_AUTHORITY_CLAIM"
+        )
+        for field in (
+            "authority_created",
+            "currentness_selected",
+            "task063_completion_receipt_present",
+            "task072_implementation_receipt_verified",
+            "installed_snapshot_verified",
+            "native_broker_executed",
+        ):
+            _require_bool(
+                fixture[field], False, "ERR_TASK065_COMMON_AUTHORITY_CLAIM"
+            )
+
+        coordinates = _exact_mapping(
+            fixture["expected_coordinates"],
+            _COMMON_COORDINATE_FIELDS,
+            "ERR_TASK065_COMMON_COORDINATE_SHAPE",
+        )
+        for field, prefix in (
+            ("install_instance_id", "inst"),
+            ("descriptor_generation_id", "desc"),
+            ("task036_receipt_id", "receipt"),
+            ("task061b_receipt_id", "receipt"),
+        ):
+            _require_common_id(
+                coordinates[field], prefix, "ERR_TASK065_COMMON_COORDINATE_ID"
+            )
+        for field in (
+            "product_build_sha256",
+            "package_payload_sha256",
+            "product_exe_sha256",
+            "owner_manifest_sha256",
+        ):
+            _require_raw_sha(
+                coordinates[field], "ERR_TASK065_COMMON_COORDINATE_DIGEST"
+            )
+        if coordinates != self._plan.expected_coordinates():
+            _fail("ERR_TASK065_COMMON_COORDINATE_MISMATCH")
+
+        effects = _exact_mapping(
+            fixture["effects"],
+            _COMMON_EFFECT_FIELDS,
+            "ERR_TASK065_COMMON_EFFECT_SHAPE",
+        )
+        for value in effects.values():
+            _require_bool(value, False, "ERR_TASK065_COMMON_EFFECT_CLAIM")
+
+        lanes = _exact_mapping(
+            fixture["lanes"], _COMMON_LANE_FIELDS, "ERR_TASK065_COMMON_LANE_SHAPE"
+        )
+        p0_l = _exact_mapping(
+            lanes["P0_L"], _COMMON_P0L_FIELDS, "ERR_TASK065_COMMON_LANE_SHAPE"
+        )
+        p0_e = _exact_mapping(
+            lanes["P0_E"], _COMMON_P0E_FIELDS, "ERR_TASK065_COMMON_LANE_SHAPE"
+        )
+        p0_v = _exact_mapping(
+            lanes["P0_V"], _COMMON_P0V_FIELDS, "ERR_TASK065_COMMON_LANE_SHAPE"
+        )
+        if (
+            p0_l["status"] != "NOT_CONFIRMED"
+            or p0_l["expected_historical_adapter_stage_count"] != "1"
+            or p0_l["expected_historical_task036_import_count"] != "1"
+        ):
+            _fail("ERR_TASK065_COMMON_LANE_CLAIM")
+        for field in (
+            "task065_adapter_call_count",
+            "task065_task036_call_count",
+            "task065_project_delta",
+            "task065_bridge_delta",
+            "task065_profile_delta",
+            "task065_config_history_delta",
+        ):
+            if p0_l[field] != "0":
+                _fail("ERR_TASK065_COMMON_LANE_CLAIM")
+        for lane in (p0_e, p0_v):
+            if lane["status"] != "NOT_CONFIRMED":
+                _fail("ERR_TASK065_COMMON_LANE_CLAIM")
+            for field, value in lane.items():
+                if field != "status":
+                    _require_bool(value, False, "ERR_TASK065_COMMON_LANE_CLAIM")
+
+        diagnostics = _exact_mapping(
+            fixture["public_diagnostics"],
+            _COMMON_DIAGNOSTIC_FIELDS,
+            "ERR_TASK065_COMMON_DIAGNOSTIC_SHAPE",
+        )
+        if diagnostics["code"] != "NOT_CONFIRMED":
+            _fail("ERR_TASK065_COMMON_DIAGNOSTIC_CLAIM")
+        for field in (
+            "absolute_path_count",
+            "private_body_count",
+            "secret_count",
+            "os_detail_count",
+        ):
+            if diagnostics[field] != "0":
+                _fail("ERR_TASK065_COMMON_DIAGNOSTIC_CLAIM")
+
+        plan = self._plan.to_dict()
+        return CommonInstalledDiscoveryFixtureValidation(
+            install_instance_id=self._plan.install_instance_id,
+            descriptor_generation_id=self._plan.descriptor_generation_id,
+            plan_sha256=plan["plan_sha256"],
+            fixture_sha256=sha256_bytes(_COMMON_FIXTURE_DOMAIN + canonical),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -644,6 +1056,13 @@ class PreactivationChainConsumerPort:
 
 
 __all__ = [
+    "COMMON_INSTALLED_CONTRACT",
+    "COMMON_INSTALLED_MODE",
+    "COMMON_INSTALLED_VALIDATED_STATUS",
+    "COMMON_INSTALLED_VALIDATION_MESSAGE_TYPE",
+    "CommonInstalledDiscoveryFixtureConsumerPort",
+    "CommonInstalledDiscoveryFixturePlan",
+    "CommonInstalledDiscoveryFixtureValidation",
     "EVIDENCE_MODE",
     "FIXTURE_MESSAGE_TYPE",
     "MontageLearningProductionLinkageError",

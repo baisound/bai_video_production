@@ -4,7 +4,9 @@
   "title": "TASK-065 Montage Learning Production Linkage",
   "oneOf": [
     { "$ref": "#/$defs/PreactivationChainFixture" },
-    { "$ref": "#/$defs/PreactivationFixtureValidation" }
+    { "$ref": "#/$defs/PreactivationFixtureValidation" },
+    { "$ref": "#/$defs/CommonInstalledDiscoveryFixture" },
+    { "$ref": "#/$defs/CommonInstalledDiscoveryFixtureValidation" }
   ],
   "$defs": {
     "OperationId": {
@@ -30,6 +32,18 @@
     "Sha256": {
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "RawSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "DescriptorGenerationId": {
+      "type": "string",
+      "pattern": "^desc_[0-9a-f]{32}$"
+    },
+    "CommonReceiptId": {
+      "type": "string",
+      "pattern": "^receipt_[0-9a-f]{32}$"
     },
     "AdapterStage": {
       "type": "object",
@@ -302,6 +316,253 @@
         "activation_prerequisite_satisfied": { "const": false },
         "production_chain_complete": { "const": false },
         "task072_implementation_receipt_verified": { "const": false },
+        "validation_sha256": { "$ref": "#/$defs/Sha256" }
+      }
+    },
+    "CommonInstalledDiscoveryFixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixture_version",
+        "contract",
+        "mode",
+        "fixture_only",
+        "authority_created",
+        "currentness_selected",
+        "task063_completion_receipt_present",
+        "task072_design_receipt_sha256",
+        "task072_implementation_receipt_verified",
+        "installed_snapshot_verified",
+        "native_broker_executed",
+        "expected_coordinates",
+        "effects",
+        "lanes",
+        "public_diagnostics"
+      ],
+      "properties": {
+        "fixture_version": { "const": "1.0" },
+        "contract": { "const": "TASK065-P0L-COMMON-INSTALLED-DISCOVERY-RECEIPT-V1" },
+        "mode": { "const": "SYNTHETIC_EXPECTED_COORDINATES" },
+        "fixture_only": { "const": true },
+        "authority_created": { "const": false },
+        "currentness_selected": { "const": false },
+        "task063_completion_receipt_present": { "const": false },
+        "task072_design_receipt_sha256": { "const": "sha256:4f6f21e97d96aa3ffca16f57679abf80d081de6d85d599347fd955c8899ce3c7" },
+        "task072_implementation_receipt_verified": { "const": false },
+        "installed_snapshot_verified": { "const": false },
+        "native_broker_executed": { "const": false },
+        "expected_coordinates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "install_instance_id",
+            "descriptor_generation_id",
+            "product_build_sha256",
+            "package_payload_sha256",
+            "product_exe_sha256",
+            "owner_manifest_sha256",
+            "task036_receipt_id",
+            "task061b_receipt_id"
+          ],
+          "properties": {
+            "install_instance_id": { "$ref": "#/$defs/InstallInstanceId" },
+            "descriptor_generation_id": { "$ref": "#/$defs/DescriptorGenerationId" },
+            "product_build_sha256": { "$ref": "#/$defs/RawSha256" },
+            "package_payload_sha256": { "$ref": "#/$defs/RawSha256" },
+            "product_exe_sha256": { "$ref": "#/$defs/RawSha256" },
+            "owner_manifest_sha256": { "$ref": "#/$defs/RawSha256" },
+            "task036_receipt_id": { "$ref": "#/$defs/CommonReceiptId" },
+            "task061b_receipt_id": { "$ref": "#/$defs/CommonReceiptId" }
+          }
+        },
+        "effects": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "installed_discovery_started",
+            "packaged_exe_started",
+            "adapter_stage_started",
+            "task036_import_started",
+            "wav_body_read",
+            "provider_started",
+            "install_started",
+            "release_started",
+            "deploy_started",
+            "production_activation_started"
+          ],
+          "properties": {
+            "installed_discovery_started": { "const": false },
+            "packaged_exe_started": { "const": false },
+            "adapter_stage_started": { "const": false },
+            "task036_import_started": { "const": false },
+            "wav_body_read": { "const": false },
+            "provider_started": { "const": false },
+            "install_started": { "const": false },
+            "release_started": { "const": false },
+            "deploy_started": { "const": false },
+            "production_activation_started": { "const": false }
+          }
+        },
+        "lanes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["P0_L", "P0_E", "P0_V"],
+          "properties": {
+            "P0_L": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "status",
+                "expected_historical_adapter_stage_count",
+                "expected_historical_task036_import_count",
+                "task065_adapter_call_count",
+                "task065_task036_call_count",
+                "task065_project_delta",
+                "task065_bridge_delta",
+                "task065_profile_delta",
+                "task065_config_history_delta"
+              ],
+              "properties": {
+                "status": { "const": "NOT_CONFIRMED" },
+                "expected_historical_adapter_stage_count": { "const": "1" },
+                "expected_historical_task036_import_count": { "const": "1" },
+                "task065_adapter_call_count": { "const": "0" },
+                "task065_task036_call_count": { "const": "0" },
+                "task065_project_delta": { "const": "0" },
+                "task065_bridge_delta": { "const": "0" },
+                "task065_profile_delta": { "const": "0" },
+                "task065_config_history_delta": { "const": "0" }
+              }
+            },
+            "P0_E": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "status",
+                "installed_package_readback_verified",
+                "packaged_exe_started",
+                "first_run_readback_verified",
+                "startup_settings_readback_verified"
+              ],
+              "properties": {
+                "status": { "const": "NOT_CONFIRMED" },
+                "installed_package_readback_verified": { "const": false },
+                "packaged_exe_started": { "const": false },
+                "first_run_readback_verified": { "const": false },
+                "startup_settings_readback_verified": { "const": false }
+              }
+            },
+            "P0_V": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "status",
+                "wav_receipt_verified",
+                "wav_body_read",
+                "media_qa_executed",
+                "provider_started"
+              ],
+              "properties": {
+                "status": { "const": "NOT_CONFIRMED" },
+                "wav_receipt_verified": { "const": false },
+                "wav_body_read": { "const": false },
+                "media_qa_executed": { "const": false },
+                "provider_started": { "const": false }
+              }
+            }
+          }
+        },
+        "public_diagnostics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "absolute_path_count",
+            "private_body_count",
+            "secret_count",
+            "os_detail_count"
+          ],
+          "properties": {
+            "code": { "const": "NOT_CONFIRMED" },
+            "absolute_path_count": { "const": "0" },
+            "private_body_count": { "const": "0" },
+            "secret_count": { "const": "0" },
+            "os_detail_count": { "const": "0" }
+          }
+        }
+      }
+    },
+    "CommonInstalledDiscoveryFixtureValidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "message_type",
+        "status",
+        "contract",
+        "mode",
+        "fixture_only",
+        "authority_created",
+        "currentness_selected",
+        "currentness_lease_created",
+        "lane_effect_authority_created",
+        "task063_completion_receipt_present",
+        "task072_design_receipt_sha256",
+        "task072_implementation_receipt_verified",
+        "installed_snapshot_verified",
+        "native_broker_executed",
+        "install_instance_id",
+        "descriptor_generation_id",
+        "plan_sha256",
+        "fixture_sha256",
+        "p0_l_status",
+        "p0_e_status",
+        "p0_v_status",
+        "installed_discovery_started",
+        "packaged_exe_started",
+        "adapter_stage_started",
+        "task036_import_started",
+        "wav_body_read",
+        "provider_started",
+        "install_started",
+        "release_started",
+        "deploy_started",
+        "production_activation_started",
+        "validation_sha256"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "message_type": { "const": "Task065CommonInstalledDiscoveryFixtureValidation" },
+        "status": { "const": "SYNTHETIC_COMMON_COORDINATES_VALIDATED" },
+        "contract": { "const": "TASK065-P0L-COMMON-INSTALLED-DISCOVERY-RECEIPT-V1" },
+        "mode": { "const": "SYNTHETIC_EXPECTED_COORDINATES" },
+        "fixture_only": { "const": true },
+        "authority_created": { "const": false },
+        "currentness_selected": { "const": false },
+        "currentness_lease_created": { "const": false },
+        "lane_effect_authority_created": { "const": false },
+        "task063_completion_receipt_present": { "const": false },
+        "task072_design_receipt_sha256": { "const": "sha256:4f6f21e97d96aa3ffca16f57679abf80d081de6d85d599347fd955c8899ce3c7" },
+        "task072_implementation_receipt_verified": { "const": false },
+        "installed_snapshot_verified": { "const": false },
+        "native_broker_executed": { "const": false },
+        "install_instance_id": { "$ref": "#/$defs/InstallInstanceId" },
+        "descriptor_generation_id": { "$ref": "#/$defs/DescriptorGenerationId" },
+        "plan_sha256": { "$ref": "#/$defs/Sha256" },
+        "fixture_sha256": { "$ref": "#/$defs/Sha256" },
+        "p0_l_status": { "const": "NOT_CONFIRMED" },
+        "p0_e_status": { "const": "NOT_CONFIRMED" },
+        "p0_v_status": { "const": "NOT_CONFIRMED" },
+        "installed_discovery_started": { "const": false },
+        "packaged_exe_started": { "const": false },
+        "adapter_stage_started": { "const": false },
+        "task036_import_started": { "const": false },
+        "wav_body_read": { "const": false },
+        "provider_started": { "const": false },
+        "install_started": { "const": false },
+        "release_started": { "const": false },
+        "deploy_started": { "const": false },
+        "production_activation_started": { "const": false },
         "validation_sha256": { "$ref": "#/$defs/Sha256" }
       }
     }

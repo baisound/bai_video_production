@@ -10,7 +10,14 @@ import re
 import pytest
 from jsonschema import Draft202012Validator
 
+import ai_video_production.montage_learning_production_linkage as production_linkage
 from ai_video_production.montage_learning_production_linkage import (
+    COMMON_INSTALLED_CONTRACT,
+    COMMON_INSTALLED_MODE,
+    COMMON_INSTALLED_VALIDATED_STATUS,
+    COMMON_INSTALLED_VALIDATION_MESSAGE_TYPE,
+    CommonInstalledDiscoveryFixtureConsumerPort,
+    CommonInstalledDiscoveryFixturePlan,
     MontageLearningProductionLinkageError,
     PreactivationChainConsumerPort,
     PreactivationChainPlan,
@@ -22,6 +29,29 @@ from ai_video_production.serialization import sha256_bytes
 
 def _sha(label: str) -> str:
     return sha256_bytes(label.encode("ascii"))
+
+
+def _common_fixture() -> dict[str, object]:
+    path = (
+        Path(__file__).parents[1]
+        / "docs"
+        / "ai-team"
+        / "tasks"
+        / "TASK-065"
+        / "p0l-common-installed-discovery-receipt-fixture-v1.json"
+    )
+    value = json.loads(path.read_text(encoding="utf-8"))
+    assert type(value) is dict
+    return value
+
+
+def _common_plan(
+    fixture: dict[str, object] | None = None,
+) -> CommonInstalledDiscoveryFixturePlan:
+    source = _common_fixture() if fixture is None else fixture
+    coordinates = source["expected_coordinates"]
+    assert type(coordinates) is dict
+    return CommonInstalledDiscoveryFixturePlan(**coordinates)
 
 
 def _plan() -> PreactivationChainPlan:
@@ -207,6 +237,21 @@ def test_fixture_and_public_validation_use_closed_mirrored_schema() -> None:
     extra = deepcopy(fixture)
     extra["canonical_store_written"] = True
     assert not validator.is_valid(extra)
+
+    common_fixture = _common_fixture()
+    common_validation = CommonInstalledDiscoveryFixtureConsumerPort(
+        _common_plan(common_fixture)
+    ).validate(common_fixture).to_dict()
+    validator.validate(common_fixture)
+    validator.validate(common_validation)
+
+    authority_claim = deepcopy(common_fixture)
+    _set(authority_claim, ("effects", "installed_discovery_started"), True)
+    assert not validator.is_valid(authority_claim)
+
+    forged_lease = dict(common_validation)
+    forged_lease["currentness_lease_created"] = True
+    assert not validator.is_valid(forged_lease)
 
 
 def test_direct_or_copied_validation_cannot_mint_final_admission() -> None:
@@ -441,6 +486,177 @@ def test_concurrent_double_call_has_one_validation() -> None:
     assert port.state == "COMPLETED"
 
 
+def test_common_installed_fixture_port_validates_without_creating_authority() -> None:
+    fixture = _common_fixture()
+    before = deepcopy(fixture)
+    plan = _common_plan(fixture)
+    plan_projection = plan.to_dict()
+    port = CommonInstalledDiscoveryFixtureConsumerPort(plan)
+
+    result = port.validate(fixture).to_dict()
+
+    assert fixture == before
+    assert port.state == "COMPLETED"
+    assert plan_projection["contract"] == COMMON_INSTALLED_CONTRACT
+    assert plan_projection["mode"] == COMMON_INSTALLED_MODE
+    assert plan_projection["authority_created"] is False
+    assert plan_projection["currentness_selected"] is False
+    assert plan_projection["local_effects_authorized"] is False
+    assert result["message_type"] == COMMON_INSTALLED_VALIDATION_MESSAGE_TYPE
+    assert result["status"] == COMMON_INSTALLED_VALIDATED_STATUS
+    assert result["fixture_only"] is True
+    for field in (
+        "authority_created",
+        "currentness_selected",
+        "currentness_lease_created",
+        "lane_effect_authority_created",
+        "task063_completion_receipt_present",
+        "task072_implementation_receipt_verified",
+        "installed_snapshot_verified",
+        "native_broker_executed",
+        "installed_discovery_started",
+        "packaged_exe_started",
+        "adapter_stage_started",
+        "task036_import_started",
+        "wav_body_read",
+        "provider_started",
+        "install_started",
+        "release_started",
+        "deploy_started",
+        "production_activation_started",
+    ):
+        assert result[field] is False
+    assert result["p0_l_status"] == "NOT_CONFIRMED"
+    assert result["p0_e_status"] == "NOT_CONFIRMED"
+    assert result["p0_v_status"] == "NOT_CONFIRMED"
+    rendered = json.dumps(result, sort_keys=True)
+    assert "INSTALLED_STARTUP_CONTEXT_V1" not in rendered
+    assert "C:\\" not in rendered
+    assert "ProgramData" not in rendered
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "code"),
+    [
+        (("authority_created",), True, "ERR_TASK065_COMMON_AUTHORITY_CLAIM"),
+        (("currentness_selected",), True, "ERR_TASK065_COMMON_AUTHORITY_CLAIM"),
+        (("installed_snapshot_verified",), True, "ERR_TASK065_COMMON_AUTHORITY_CLAIM"),
+        (("effects", "packaged_exe_started"), True, "ERR_TASK065_COMMON_EFFECT_CLAIM"),
+        (("lanes", "P0_L", "task065_adapter_call_count"), False, "ERR_TASK065_COMMON_LANE_CLAIM"),
+        (("lanes", "P0_E", "packaged_exe_started"), True, "ERR_TASK065_COMMON_LANE_CLAIM"),
+        (("lanes", "P0_V", "wav_body_read"), True, "ERR_TASK065_COMMON_LANE_CLAIM"),
+        (("public_diagnostics", "secret_count"), 1, "ERR_TASK065_COMMON_DIAGNOSTIC_CLAIM"),
+        (("expected_coordinates", "product_exe_sha256"), "https://invalid", "ERR_TASK065_COMMON_COORDINATE_DIGEST"),
+        (("expected_coordinates", "install_instance_id"), "inst_ffffffffffffffffffffffffffffffff", "ERR_TASK065_COMMON_COORDINATE_MISMATCH"),
+    ],
+)
+def test_common_installed_fixture_port_rejects_claims_and_mismatches(
+    path: tuple[str, ...], value: object, code: str
+) -> None:
+    fixture = _common_fixture()
+    plan = _common_plan(fixture)
+    _set(fixture, path, value)
+    port = CommonInstalledDiscoveryFixtureConsumerPort(plan)
+    with pytest.raises(MontageLearningProductionLinkageError, match=f"^{code}$"):
+        port.validate(fixture)
+    assert port.state == "FAILED_CLOSED"
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "code"),
+    [
+        (
+            ("lanes", "P0_L", "expected_historical_adapter_stage_count"),
+            1.0,
+            "ERR_TASK065_FIXTURE_TYPE",
+        ),
+        (
+            ("lanes", "P0_L", "task065_adapter_call_count"),
+            0.0,
+            "ERR_TASK065_FIXTURE_TYPE",
+        ),
+        (
+            ("public_diagnostics", "absolute_path_count"),
+            0.0,
+            "ERR_TASK065_FIXTURE_TYPE",
+        ),
+    ],
+)
+def test_common_installed_schema_and_source_both_reject_float_counts(
+    path: tuple[str, ...], value: object, code: str
+) -> None:
+    fixture = _common_fixture()
+    plan = _common_plan(fixture)
+    _set(fixture, path, value)
+    assert not Draft202012Validator(_schemas()[2]).is_valid(fixture)
+    port = CommonInstalledDiscoveryFixtureConsumerPort(plan)
+    with pytest.raises(MontageLearningProductionLinkageError, match=f"^{code}$"):
+        port.validate(fixture)
+    assert port.state == "FAILED_CLOSED"
+
+
+def test_common_installed_snapshot_never_recanonicalizes_mutable_original(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fixture = _common_fixture()
+    plan = _common_plan(fixture)
+    canonical_json_bytes = production_linkage.canonical_json_bytes
+
+    def reject_original(value: object) -> bytes:
+        if value is fixture:
+            raise AssertionError("mutable caller tree was canonicalized")
+        return canonical_json_bytes(value)
+
+    monkeypatch.setattr(production_linkage, "canonical_json_bytes", reject_original)
+    result = CommonInstalledDiscoveryFixtureConsumerPort(plan).validate(fixture)
+    assert result.to_dict()["status"] == COMMON_INSTALLED_VALIDATED_STATUS
+
+
+def test_common_installed_fixture_port_is_one_shot_and_failure_burns() -> None:
+    fixture = _common_fixture()
+    port = CommonInstalledDiscoveryFixtureConsumerPort(_common_plan(fixture))
+    port.validate(fixture)
+    with pytest.raises(
+        MontageLearningProductionLinkageError,
+        match="^ERR_TASK065_COMMON_CONSUMER_ALREADY_USED$",
+    ):
+        port.validate(fixture)
+
+    failed_fixture = _common_fixture()
+    failed_fixture["contract"] = "wrong"
+    failed = CommonInstalledDiscoveryFixtureConsumerPort(_common_plan())
+    with pytest.raises(
+        MontageLearningProductionLinkageError,
+        match="^ERR_TASK065_COMMON_FIXTURE_CONTRACT$",
+    ):
+        failed.validate(failed_fixture)
+    assert failed.state == "FAILED_CLOSED"
+    with pytest.raises(
+        MontageLearningProductionLinkageError,
+        match="^ERR_TASK065_COMMON_CONSUMER_ALREADY_USED$",
+    ):
+        failed.validate(_common_fixture())
+
+
+def test_common_installed_fixture_port_concurrent_use_validates_once() -> None:
+    fixture = _common_fixture()
+    port = CommonInstalledDiscoveryFixtureConsumerPort(_common_plan(fixture))
+
+    def call() -> str:
+        try:
+            return port.validate(deepcopy(fixture)).to_dict()["status"]  # type: ignore[return-value]
+        except MontageLearningProductionLinkageError as exc:
+            return exc.code
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = sorted(executor.map(lambda _item: call(), range(2)))
+    assert results == [
+        "ERR_TASK065_COMMON_CONSUMER_ALREADY_USED",
+        COMMON_INSTALLED_VALIDATED_STATUS,
+    ]
+    assert port.state == "COMPLETED"
+
+
 def test_common_installed_discovery_receipt_fixture_is_closed_effect_zero() -> None:
     fixture_path = (
         Path(__file__).parents[1]
@@ -625,12 +841,10 @@ def test_common_installed_discovery_receipt_fixture_is_closed_effect_zero() -> N
         "provider_started",
     }
     assert all(lane["status"] == "NOT_CONFIRMED" for lane in lanes.values())
-    assert type(lanes["P0_L"]["expected_historical_adapter_stage_count"]) is int
-    assert lanes["P0_L"]["expected_historical_adapter_stage_count"] == 1
-    assert type(lanes["P0_L"]["expected_historical_task036_import_count"]) is int
-    assert lanes["P0_L"]["expected_historical_task036_import_count"] == 1
+    assert lanes["P0_L"]["expected_historical_adapter_stage_count"] == "1"
+    assert lanes["P0_L"]["expected_historical_task036_import_count"] == "1"
     assert all(
-        type(lanes["P0_L"][field]) is int and lanes["P0_L"][field] == 0
+        lanes["P0_L"][field] == "0"
         for field in (
             "task065_adapter_call_count",
             "task065_task036_call_count",
@@ -687,7 +901,7 @@ def test_common_installed_discovery_receipt_fixture_is_closed_effect_zero() -> N
     }
     assert diagnostics["code"] == "NOT_CONFIRMED"
     assert all(
-        type(diagnostics[field]) is int and diagnostics[field] == 0
+        diagnostics[field] == "0"
         for field in (
             "absolute_path_count",
             "private_body_count",
@@ -714,20 +928,15 @@ def test_common_installed_discovery_receipt_fixture_is_closed_effect_zero() -> N
         for lane_name in lanes:
             assert set(candidate_lanes[lane_name]) == set(lanes[lane_name])
         assert (
-            type(candidate_lanes["P0_L"]["expected_historical_adapter_stage_count"])
-            is int
-            and candidate_lanes["P0_L"]["expected_historical_adapter_stage_count"]
-            == 1
+            candidate_lanes["P0_L"]["expected_historical_adapter_stage_count"]
+            == "1"
         )
         assert (
-            type(candidate_lanes["P0_L"]["expected_historical_task036_import_count"])
-            is int
-            and candidate_lanes["P0_L"]["expected_historical_task036_import_count"]
-            == 1
+            candidate_lanes["P0_L"]["expected_historical_task036_import_count"]
+            == "1"
         )
         assert all(
-            type(candidate_lanes["P0_L"][field]) is int
-            and candidate_lanes["P0_L"][field] == 0
+            candidate_lanes["P0_L"][field] == "0"
             for field in (
                 "task065_adapter_call_count",
                 "task065_task036_call_count",
@@ -756,8 +965,7 @@ def test_common_installed_discovery_receipt_fixture_is_closed_effect_zero() -> N
             assert re.fullmatch(r"[0-9a-f]{64}", candidate_coordinates[field])
         assert candidate_diagnostics["code"] == "NOT_CONFIRMED"
         assert all(
-            type(candidate_diagnostics[field]) is int
-            and candidate_diagnostics[field] == 0
+            candidate_diagnostics[field] == "0"
             for field in (
                 "absolute_path_count",
                 "private_body_count",

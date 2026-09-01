@@ -154,7 +154,9 @@ The fixture is eligible only as a static, public-safe design input when:
 - every authority/currentness/execution/effect claim is false;
 - each lane is `NOT_CONFIRMED` and exposes only its expected future checks;
 - P0-L historical counts are labelled expectations, not observed local deltas;
-- all TASK-065 local call/delta counts are zero; and
+- P0-L counts and public diagnostic counters use closed decimal string tokens
+  (`"0"` / `"1"`), avoiding JSON Schema number equality with `0.0` / `1.0`;
+- all TASK-065 local call/delta count tokens are `"0"`; and
 - the serialized document contains no absolute path, account/SID, private
   correlation, WAV body, transcript, token or OS error detail.
 
@@ -180,3 +182,47 @@ Production Activation, install, Release or Deploy.
   Judge PASS.
 - Real installed/native/adapter/WAV/install/Release/Deploy/Production effects:
   zero. TASK-063/TASK-072 implementation and lane-owner receipts remain N.C.
+
+## Closed fixture consumer implementation checkpoint
+
+This supplement records the bounded source/schema implementation performed
+after the design-only checkpoint above. It does not supersede the effect
+ceiling or convert the fixture into an installed-currentness receipt.
+
+- Base HEAD/upstream before this implementation unit:
+  `f9a187a47b1938bec9fcaedf26b98ed249eb89ab`.
+- Implemented a one-use `ARMED -> IN_FLIGHT -> COMPLETED | FAILED_CLOSED`
+  consumer for the static public-safe fixture. Its only success state is
+  `SYNTHETIC_COMMON_COORDINATES_VALIDATED`.
+- The returned projection explicitly keeps currentness lease, lane effect
+  authority, TASK-063 completion receipt, TASK-072 implementation receipt,
+  installed snapshot, native broker and all local effects false.
+- Added closed public and packaged mirror schema variants for the fixture and
+  its validation projection; both schema files are byte-identical.
+- Added type-confusion, Boolean-as-integer, authority/effect claim, coordinate
+  mismatch, replay, concurrent use, exception burn and schema-forgery
+  negatives.
+- Windows Python 3.12 focused result after bounded Critic fixes:
+  `64 passed`.
+- Targeted TASK-065/TASK-058/TASK-061/TASK-036 boundary regression:
+  `178 passed, 2 skipped`; the two skips remain the existing
+  `FIFO fixture unavailable` condition and are not promoted to PASS.
+- JSON parse, schema mirror byte comparison, Python compilation and
+  `git diff --check`: PASS; line-ending conversion warnings only.
+- Critic M1 was closed by changing audit count/diagnostic values from JSON
+  numbers to exact `"0"` / `"1"` tokens across fixture, schema and source;
+  schema and source now both reject float substitution.
+- Critic M2 was closed by building a detached bounded built-in snapshot during
+  traversal and canonicalizing/hashing only that snapshot. The caller-owned
+  mutable tree is never reread after validation; mutation-during-copy fails
+  closed with a body-free code.
+- P0-E R4 was handed off as the abbreviated report string
+  `4D310016...BD797`. That is Evidence only: the full digest and authoritative
+  installed-startup completion receipt remain N.C., and old PR #474 was not
+  updated.
+- `INSTALLED_STARTUP_CONTEXT_V1`, TASK-070 private material, Owner WAV/audio,
+  real adapter/TASK-036 calls, enabled configuration, native install, Release,
+  Deploy and Production Activation were not consumed or executed.
+- Independent Critic re-review: `C=0 / H=0 / M=0 / L=0`; Tester PASS, Judge
+  PASS. The bounded fixture-consumer diff is commit eligible; upstream
+  completion receipts and all real/native/Production effects remain parked.

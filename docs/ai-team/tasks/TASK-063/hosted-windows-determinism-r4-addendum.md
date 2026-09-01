@@ -4,7 +4,9 @@ Status: `DESIGN_COMPLETE / DEV-4 / SOURCE_START0 / RERUN0`
 
 Design identity: `TASK063-PTD-HOSTED-WINDOWS-DETERMINISM-V7`
 
-Base: `origin/main@7dc91c2112923e357bb5e3eab597f0c18ef33bbc`
+Historical design base: `origin/main@7dc91c2112923e357bb5e3eab597f0c18ef33bbc`
+
+Current review parent: `origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578`
 
 Parent design: `TASK063-PTD-INSTALLER-SEMANTICS-READBACK-V2-R3`
 
@@ -1065,7 +1067,8 @@ linkage Gate.
 task: TASK-063
 unit: HOSTED_WINDOWS_ROOT_VALIDATION_DETERMINISM_R10
 design_identity: TASK063-PTD-HOSTED-WINDOWS-DETERMINISM-V7
-base: origin/main@7dc91c2112923e357bb5e3eab597f0c18ef33bbc
+historical_design_base: origin/main@7dc91c2112923e357bb5e3eab597f0c18ef33bbc
+review_parent_main: origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578
 allowed_file: docs/ai-team/tasks/TASK-063/hosted-windows-determinism-r4-addendum.md
 sole_writer: PLATFORM_TRUST_AND_DELIVERY_DESIGN_B
 superseded_r4_sha256: 797B36D53E191BAABA8B0DF9E31A855375D2D1B8BA48725C88693F49F00EAADE

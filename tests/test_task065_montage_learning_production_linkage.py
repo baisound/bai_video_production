@@ -89,6 +89,18 @@ def _l3_crosswalk() -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _l3_product_operation_design() -> str:
+    path = (
+        Path(__file__).parents[1]
+        / "docs"
+        / "ai-team"
+        / "tasks"
+        / "TASK-065"
+        / "l3-product-operation-integration-design-2026-09-02.md"
+    )
+    return path.read_text(encoding="utf-8")
+
+
 def _common_plan(
     fixture: dict[str, object] | None = None,
 ) -> CommonInstalledDiscoveryFixturePlan:
@@ -464,6 +476,47 @@ def test_l3_crosswalk_preserves_one_way_receipt_consumption_and_effect_zero() ->
         in crosswalk
     )
     assert "no other TASK-058 path is allowed" in crosswalk
+
+
+def test_l3_product_operation_design_closes_exe_inputs_and_effect_boundaries() -> None:
+    design = _l3_product_operation_design()
+    for required in (
+        "stage exact1 -> import_path exact1 -> pinned BVP receipt/correlation/Profile",
+        "D2S_001_OPERATION_TERMINAL_HANDOFF_V1",
+        "TASK065_M1_IMPORT_CONSUMER_VALIDATION_V1",
+        "PRODUCT_OPERATION_INPUT_INVALID / EFFECT0",
+        "EXACT_ONE_VIOLATION / FAILED_CLOSED / EFFECT0",
+        "PREACTIVATION_CHAIN.N.C. / EFFECT0",
+        "START0 / GATE_REQUIRED / EFFECT0",
+        "PREACTIVATION_CHAIN_VALIDATED",
+        "future TASK-069 U1a-c canonical allocation/schema/receipt identity/digest",
+        "TASK-060 strict source/promotion receipt identity/digest",
+        "TASK-063 selected instance/descriptor/owner receipt identity/digest",
+        "TASK061_PREACTIVATION_PREPARE_V1",
+        "TASK067_GENERIC_FACADE_COMPLETION_V1",
+        "D2S_001_INTERFACE_COMPLETION_READBACK_V1",
+        "TASK061_FINAL_CA_C_COMPLETION_V1",
+        "issuer/message-version/receipt digest",
+        "same `D2S_001_OPERATION_TERMINAL_HANDOFF_V1` operation/instance/config/build digest",
+        "a distinct current Production Activation Human receipt",
+    ):
+        assert required in design
+    for forbidden_input in (
+        "raw path",
+        "revision",
+        "store",
+        "mode",
+        "output path",
+        "`--config`",
+        "`--learning`",
+        "`--output`",
+    ):
+        assert forbidden_input in design
+    assert "`TASK036_D2S_EXECUTION_HANDOFF_V1` is private dispatch authority" in design
+    assert "adapter/TASK-036 zero times" in design
+    assert "`authority_created:false`" in design
+    assert "Project/Bridge/Profile/config/history/Activation delta zero" in design
+    assert "No screen state may display `READY`, `PASS`, an absolute path" in design
 
 
 def test_fixture_and_public_validation_use_closed_mirrored_schema() -> None:

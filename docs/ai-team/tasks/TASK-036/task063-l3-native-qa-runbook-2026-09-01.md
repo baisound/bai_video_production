@@ -7,6 +7,9 @@ Current state: `NOT_AUTHORIZED / DO_NOT_EXECUTE`
 
 - TASK-063 owner supplies the exact candidate commit, signed package/build
   manifest, native helper identity, Allowed Files and terminal-handoff schema.
+- The reported R3 Design Judge PASS is rebound to the full producer digest and
+  fresh completion receipt; the abbreviated `8D1E...` handoff is not used as
+  Product authority.
 - A clean disposable Windows/NTFS QA profile and an explicitly owned isolated
   installation root are allocated; no existing Product/user installation is
   used.

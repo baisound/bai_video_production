@@ -2,16 +2,22 @@
 
 Date: `2026-09-01`
 Input contract: `TASK063-L3-NATIVE-QA-INPUT-V1`
-State: `DESIGN_FIXTURE_READY / NATIVE_EXECUTION_START0`
+State: `DESIGN_R3_REVIEW_PASS / PRODUCER_RECEIPT_AND_NATIVE_START0`
 
 ## Authority boundary
 
-TASK-063 design hash `F91C...` remains `C0/H4 / Judge FAIL`. It is neither a
-completion receipt nor permission to install, provision, repair, update,
-rollback, or clean a real installation. TASK-036 may consume only the future
-trusted TASK-063 terminal handoff. This packet prepares native acceptance and
-fault injection without changing TASK-063 source, installation state, shared
-metadata, Release, Deploy, or Production.
+**SUPERSEDED currentness:** the earlier `F91C... / C0-H4 / Judge FAIL` design
+review is historical. The latest delegated TASK-063 R3 handoff reports design
+identity `8D1E...`, `C/H=0/0`, and `Judge PASS`. The handoff does not include
+the full digest or a producer completion receipt, so this consumer records the
+full identity and Product currentness as `NOT_CONFIRMED`. Design review PASS is
+neither a completion receipt nor permission to install, provision, repair,
+update, rollback, or clean a real installation.
+
+TASK-036 may consume only the future trusted TASK-063 terminal handoff after
+fresh producer receipt/lock/currentness verification. This packet prepares
+native acceptance and fault injection without changing TASK-063 source,
+installation state, shared metadata, Release, Deploy, or Production.
 
 The synthetic fixture is
 `task063-l3-native-fault-fixture-v1.json`. It contains expected observations,

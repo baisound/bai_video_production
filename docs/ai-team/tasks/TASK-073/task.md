@@ -1,6 +1,6 @@
 # TASK-073 — Owner Voice Local WAV Product Vertical Slice
 
-- Status: `D4_R3_DESIGN_ACTIVE / D4_R2_REVIEW_FAIL / SUCCESSOR_MOCK_OWNER_CHECK_PENDING / SOURCE_START0`
+- Status: `D4_R4_UX_DESIGN_ACCEPTED / TASK073_SOURCE_HOLD / TASK036_P0V_START0 / SUCCESSOR_MOCK_OWNER_CHECK_PENDING`
 - Priority: `P0-V / COEQUAL OWNER OUTCOME`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Allocation date: `2026-09-01`
@@ -13,6 +13,8 @@
 - D2 reconciliation base: `origin/main@70ba9e369887d3d7ded59e7197d20d133b2b4d38`
 - D3 correction base: `origin/main@70ba9e369887d3d7ded59e7197d20d133b2b4d38`
 - D4 closure base: `origin/main@70ba9e369887d3d7ded59e7197d20d133b2b4d38`
+- D4-R4 correction parent: PR `#482` merge
+  `efdcd77729732e3c50abb9e4a7e89ae2b7b37aa0`
 
 ## Objective
 
@@ -80,9 +82,11 @@ correlates their opaque receipts and projects only public-safe state.
 7. `docs/ai-team/tasks/TASK-073/p0v-owner-voice-local-wav-complete-design-d4-r2-closure.md`
    (`D4 R2`, immutable failed history)
 8. `docs/ai-team/tasks/TASK-073/p0v-owner-voice-local-wav-complete-design-d4-r3-closure.md`
-9. `docs/ai-team/tasks/TASK-073/design-review-receipt.md`
-10. `docs/ai-team/tasks/TASK-073/p0v-voice-studio-successor-mock.html`
-11. `docs/ai-team/tasks/TASK-073/p0v-voice-studio-successor-mock-manifest.md`
+   (`D4 R3`, immutable accepted mechanical history; mock UX superseded by R4)
+9. `docs/ai-team/tasks/TASK-073/p0v-owner-voice-local-wav-complete-design-d4-r4-ux-closure.md`
+10. `docs/ai-team/tasks/TASK-073/design-review-receipt.md`
+11. `docs/ai-team/tasks/TASK-073/p0v-voice-studio-successor-mock.html`
+12. `docs/ai-team/tasks/TASK-073/p0v-voice-studio-successor-mock-manifest.md`
 
 No Product source, schema, test, packaging, shared-state or CHANGELOG file may
 be changed until this complete design receives independent `C/H = 0` and Judge
@@ -152,7 +156,7 @@ effect that needs a producer receipt is parked.
 ## Completion
 
 `TASK073_IMPLEMENTATION_PR_READY` requires the accepted D4 plus D4-R1,
-D4-R2 and D4-R3 closures,
+D4-R2, D4-R3 and D4-R4 closures,
 TASK-073-owned implementation, focused and negative tests, required
 regressions, application-level synthetic composition QA, independent
 Critic/Tester/Judge, scope review, commit, push and one coherent Draft PR.  It
@@ -164,7 +168,7 @@ required hosted checks must succeed and a fresh-main readback must match the
 accepted implementation and receipt identities.
 
 `TASK036_P0V_INTEGRATION_COMPLETE` is a separate Outcome E result.  It
-requires canonical D4/D4-R1/D4-R2/D4-R3/mock/manifest hashes and their exact design
+requires canonical D4/D4-R1/D4-R2/D4-R3/D4-R4/mock/manifest hashes and their exact design
 bundle digest, successful hosted checks,
 fresh-main readback, a separate verified `TASK073_OWNER_MOCK_CHECK_RECEIPT_V1`
 with `OWNER_CHECK_PASS`, a separately authorized

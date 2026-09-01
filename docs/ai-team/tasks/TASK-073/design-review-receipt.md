@@ -236,3 +236,49 @@ their exact Allowed Files and fresh Git/overlap checks.  TASK-036 P0-V remains
 synthetic Gate all exist.  No real Owner audio, native model run, paid/cloud
 effect, Asset adoption, Export, Release, Deploy or Production Activation is
 authorized.
+
+## D4-R4 Owner-view UX correction review input
+
+- Canonical predecessor: PR `#482`, merged at exact commit
+  `efdcd77729732e3c50abb9e4a7e89ae2b7b37aa0`.
+- D4-R3 result above: immutable historical mechanical `PASS`.
+- Post-merge Owner-view mock QA: `FAIL`,
+  `Critical/High/Medium/Low = 0/2/0/0`.
+- D4-R4 packet:
+  `p0v-owner-voice-local-wav-complete-design-d4-r4-ux-closure.md`.
+- Reviewed pre-status D4-R4 `task.md` hash:
+  `3524AF44EDF48C895C99A6C1B75F55C16907F5FF8109B3325945B39C6EA08B39`.
+- Accepted current `task.md` hash:
+  `A5A1F76ECE6BC848487C656601B537C07DE971E64A0F170619705116DCB149A1`.
+- D4-R4 packet hash:
+  `9797C591B42F562F7A1A317C609A9C8DEA80D602AD6F28C5F4204D764039EF04`.
+- D4-R4 design bundle hash:
+  `517A1809A38DB235D65E000E83382D52F3B4E6B7849BD645199858AFC11DA6E5`.
+- Mock revision: `VOICE_STUDIO_SUCCESSOR_MOCK_D4_R4`.
+- Mock hash:
+  `1E70C7FC3CF7BCDF63A3C409F8CDDC3FA7DB29FDEC7F1F7B8C5F0567BE9683ED`.
+- Immutable D4-R4 manifest hash:
+  `1BA94AD93187E19B401AD86896F929DBBF6288C62F5F1BD36821DD323EECA17C`.
+- Fresh Owner-view static mock QA: `PASS_STATIC_ONLY`,
+  `Critical/High/Medium/Low = 0/0/0/0`.
+- Browser interactive/visual QA: `NOT_EXECUTED` due to the current local-URL
+  browser policy; it is not recorded as PASS.
+- Independent DEV-4 Critic: `PASS`, `Critical/High/Medium/Low = 0/0/0/0`.
+- Independent Judge: `PASS`.
+- Owner mock check receipt: `NOT_ISSUED / TASK036_P0V_GATE_ONLY`.
+- Correction review: `PASS / DESIGN_CORRECTION_ACCEPTED`.
+- Product source: `TASK073_SOURCE_HOLD / TASK036_P0V_START0`.
+
+The two post-merge findings were: an editable model selector duplicated the
+central `設定 > AIモデル` authority, and the visible Settings/fourteen-stage
+navigation had no route behavior.  D4-R4 replaces the feature selector with a
+read-only central-settings receipt, adds the central model page and gives every
+visible destination an in-memory route, focus transfer and return action.
+
+This section supersedes only D4-R3's current eligibility result.  It does not
+rewrite the exact R3 review as if it had failed.  The exact D4-R4 identities
+received fresh static Owner-view QA、independent `Critical=0 / High=0` and
+Judge `PASS`, so one coherent design-correction PR is eligible.  TASK-073
+Product-source execution and TASK-036 P0-V integration remain held for the
+separate interactive Owner check and their producer/runtime dependencies.  The
+static QA result does not fabricate browser/native/audio/model execution.

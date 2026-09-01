@@ -1,17 +1,18 @@
 # TASK-068 verification checkpoint
 
-Status: `LOCAL_PASS / DEV-4_PASS / COMMIT_ELIGIBLE`
+Status: `SUCCESSOR_REBIND_IN_PROGRESS / COMMIT_STOP`
 
 ## Bound source
 
 - Repository: `baisound/bai_video_production`
-- Current canonical comparison and branch merge base: `origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578`
-- Rebased HEAD: `deb037279a414572730c35f1bf2bfb81119825c4`
-- Branch: `codex/task-068-secure-authority-io`
+- Current canonical comparison and branch merge base: `origin/main@354ea2534ad5739a099d9eeaf0f1da9a7210ddb6`
+- No-force successor HEAD before final provenance commit: `71a8266acd7b7d3d7236fa8ace8e93cf9ccc7e8e`
+- Branch: `codex/task-068-secure-authority-io-successor-r1`
 - Dedicated worktree: `task-068-secure-authority-io`
-- Source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
-- Generic/POSIX test SHA-256: `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`
-- Windows test SHA-256: `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`
+- Canonical LF-normalized source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
+- Canonical LF-normalized generic/POSIX test SHA-256: `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`
+- Canonical LF-normalized Windows test SHA-256: `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`
+- Current Windows-worktree raw SHA-256: source `BE773FF8E9DBE0428472B20178848355BBDAAD63B1A74F40715D5BEC60F967A3`; generic/POSIX `ACA17C8C22CE313AAC31CBDDE70710E9FEDD1A4BEC8B9CC29A40C0F06FCCDDB8`; Windows `BDD1982DAB13D6380B13B187230AE20203463F322C1C2D1BD2BF8BA189D76B01`.
 - Allowed-path drift from merge base to current `origin/main`: none
 - Shared files modified: none
 
@@ -39,9 +40,7 @@ Status: `LOCAL_PASS / DEV-4_PASS / COMMIT_ELIGIBLE`
 
 ## Review state
 
-- Independent Tester static review: PASS, Critical/High/Medium/Low `0/0/0/0`; independent runtime `NOT_CONFIRMED`.
-- Independent implementation Critic: PASS, Critical/High/Medium/Low `0/0/0/0`.
-- Independent Judge: DEV-4 PASS, Critical/High/Medium/Low `0/0/0/0`.
-- The Judge accepted the fresh source/test rebind while retaining Windows-native runtime as `NOT_CONFIRMED`, and lifted `COMMIT STOP` for the ten Allowed Files.
-- Any source/test SHA or dirty-scope drift invalidates that decision and requires fresh review binding.
+- Historical identical-content Tester/Critic/Judge results remain evidence only.
+- Fresh successor Tester: syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, related TASK-058 regression `368 PASS / 6 SKIP`; Windows-native remains `NOT_CONFIRMED`.
+- Fresh successor Critic/Judge rebind remains required; `COMMIT STOP` stays active through final provenance commit and review.
 - TASK-069 source mutation remains `START0` until TASK-068 is canonical on `main` and the TASK-069 dependency/start gate passes.

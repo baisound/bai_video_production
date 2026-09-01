@@ -6,7 +6,15 @@ The working diff contains only the four allocated TASK-068 file groups. It does 
 
 ## Independent review status
 
-`COMMIT STOP` was active throughout corrective implementation. After rebase to `origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578`, the independent Tester returned static/WSL PASS with Critical/High/Medium/Low `0/0/0/0`, the independent Critic returned PASS with `0/0/0/0`, and the Judge returned DEV-4 source PASS with `0/0/0/0`. The normalized source and test SHA set is unchanged; fresh Windows-native runtime remains `NOT_CONFIRMED`. `COMMIT STOP` is therefore lifted for the ten Allowed Files only.
+Historical review applies to the identical-content predecessor only.  The four
+local commits were copied in order without force or rebase to successor branch
+`codex/task-068-secure-authority-io-successor-r1` from
+`origin/main@354ea2534ad5739a099d9eeaf0f1da9a7210ddb6`; pre-provenance head
+is `71a8266acd7b7d3d7236fa8ace8e93cf9ccc7e8e`.  The successor starts with
+`COMMIT STOP` active.  Fresh Tester records syntax `3/3 PASS`, focused
+`163 PASS / 82 SKIP`, and related TASK-058 regression `368 PASS / 6 SKIP`;
+Windows-native runtime is `NOT_CONFIRMED`.  Fresh Critic and Judge must close
+the final provenance snapshot before commit, push, or Draft PR.
 
 ## Findings addressed in the transition diff
 
@@ -72,6 +80,6 @@ The working diff contains only the four allocated TASK-068 file groups. It does 
 - Historical independent closure review found Critical/High `0/3` for Windows reserved-namespace aliases, replayed-tombstone consumer binding, and incomplete fingerprint-verifier negatives. Findings 30-32 and their final rereviews closed all three.
 - TASK-067 applicability is mode-scoped: strict pinned read may be evaluated only for `VERIFIED_READBACK/A2`. `FRESH`, `PRECOMMIT_RESUME`, and `JOURNAL_RECOVERY` need mutable manifest/journal/marker/anchor effects that remain explicitly unavailable; TASK-068 evidence or receipts must not be promoted to whole-Task or all-mode completion.
 - The earlier Critical/High `0/2`, `0/3`, `0/1`, and `0/0` results are historical evidence against superseded acceptance or intermediate source SHAs. They do not apply to the current corrective source.
-- Final closure is bound to source SHA-256 `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`, generic/POSIX test SHA-256 `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`, and Windows test SHA-256 `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`: WSL focused `163/82/0`, Windows-native pytest `82/0/0`, and TASK-058/TASK-068 boundary regression `279/83/0`. Independent Tester static review, Critic, and Judge each returned Critical/High `0/0`; the Judge lifted `COMMIT STOP` for this exact snapshot. Independent runtime remains `NOT_CONFIRMED` and was not promoted from Builder evidence.
+- Historical predecessor final closure was bound to canonical LF-normalized source SHA-256 `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`, generic/POSIX test SHA-256 `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`, and Windows test SHA-256 `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`: WSL focused `163/82/0`, Windows-native pytest `82/0/0`, and TASK-058/TASK-068 boundary regression `279/83/0`. Independent Tester static review, Critic, and Judge each returned Critical/High `0/0`; that predecessor Judge lift does not apply to this successor. Independent runtime remains `NOT_CONFIRMED` and was not promoted from Builder evidence.
 - Full repository regression is environment-blocked, not PASS. A collection-compatible run reached `4320 passed`, `43 skipped`, with 9 unrelated environment failures (Argon2id unavailable or Windows PowerShell not executable from this WSL process).
 - External/native/paid/Production effects: 0

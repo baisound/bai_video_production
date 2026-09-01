@@ -1,20 +1,27 @@
 # TASK-068 completion receipt
 
-Status: `LOCAL_DEV-4_PASS / COMMIT_ELIGIBLE / CANONICALIZATION_PENDING`
+Status: `SUCCESSOR_REBIND_IN_PROGRESS / COMMIT_STOP / CANONICALIZATION_PENDING`
 
 ## Bound implementation
 
 - Repository: `baisound/bai_video_production`
-- Current canonical comparison and branch merge base: `origin/main@74b85d7d3f5965cd515ff44bd5f4b7179185e578`
-- Rebased HEAD: `deb037279a414572730c35f1bf2bfb81119825c4`
-- Branch: `codex/task-068-secure-authority-io`
+- Current canonical comparison and branch merge base: `origin/main@354ea2534ad5739a099d9eeaf0f1da9a7210ddb6`
+- No-force successor HEAD: `71a8266acd7b7d3d7236fa8ace8e93cf9ccc7e8e`
+- Branch: `codex/task-068-secure-authority-io-successor-r1`
 - Source: `src/ai_video_production/secure_authority_io.py`
-- Source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
-- Generic/POSIX test SHA-256: `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`
-- Windows test SHA-256: `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`
+- Canonical LF-normalized source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
+- Canonical LF-normalized generic/POSIX test SHA-256: `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`
+- Canonical LF-normalized Windows test SHA-256: `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`
+- Current Windows-worktree raw SHA-256: source `BE773FF8E9DBE0428472B20178848355BBDAAD63B1A74F40715D5BEC60F967A3`; generic/POSIX `ACA17C8C22CE313AAC31CBDDE70710E9FEDD1A4BEC8B9CC29A40C0F06FCCDDB8`; Windows `BDD1982DAB13D6380B13B187230AE20203463F322C1C2D1BD2BF8BA189D76B01`.
 - Profile: `DEV-4 / IMMUTABLE_ONLY_V1`
 
-This task-local receipt creates no canonical dependency authority. Fresh independent Tester, Critic, and Judge closure is rebound to the same final source and test SHA set below after the current-main rebase, so the ten Allowed Files are eligible for commit and Draft PR update. TASK-069 source mutation remains `START0` until TASK-068 is merged into canonical `main` and its dependency gate is rebound.
+This task-local receipt creates no canonical dependency authority. The four
+local TASK-068 commits were copied in order without force or rebase onto the
+current-main successor above. Fresh independent Tester, Critic, and Judge
+closure must bind this successor head before its ten Allowed Files are eligible
+for push and Draft PR creation. TASK-069 source mutation remains `START0`
+until TASK-068 is merged into canonical `main` and its dependency gate is
+rebound.
 
 ## Current local result
 
@@ -22,10 +29,9 @@ This task-local receipt creates no canonical dependency authority. Fresh indepen
 - WSL TASK-068 focused pytest: `163 PASS / 82 SKIP / 0 FAIL`.
 - Fresh WSL TASK-058/TASK-068 targeted regression: `242 PASS / 82 SKIP / 0 FAIL`.
 - Fresh Windows-native runtime: `NOT_CONFIRMED`; this host has neither the `py` launcher nor pytest in its bundled Python, and no install or repeated denied route was attempted. The historical identical-content Windows Builder run (`82 PASS`) remains evidence only and is not promoted to fresh/independent runtime.
-- Independent Tester: static PASS, Critical/High/Medium/Low `0/0/0/0`; independent runtime remains `NOT_CONFIRMED`.
-- Independent implementation Critic: PASS, Critical/High/Medium/Low `0/0/0/0`.
-- Independent Judge: DEV-4 PASS, Critical/High/Medium/Low `0/0/0/0`; Builder runtime evidence accepted for this fixed-SHA commit gate without relabeling it as independent runtime evidence.
-- `COMMIT STOP`: lifted by the Judge for this exact three-file SHA set and the ten Allowed Files only.
+- Historical identical-content Tester/Critic/Judge evidence is retained only as evidence; it does not lift the successor gate.
+- Fresh successor Tester: syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, TASK-058/TASK-068 regression `368 PASS / 6 SKIP`; Windows-native remains `NOT_CONFIRMED`.
+- Fresh successor Critic/Judge rebind is pending; `COMMIT STOP` remains active until the final successor provenance commit is reviewed.
 - `git diff --check`: PASS; line-ending conversion warnings only.
 
 The broader repository suite is not claimed as PASS for this corrective source.

@@ -1,6 +1,6 @@
 # TASK-068 — Secure Authority Artifact I/O Foundation
 
-Status: `CORRECTIVE_IMPLEMENTATION_COMPLETE / DEV-4_PASS / IMMUTABLE_ONLY_V1 / COMMIT_ELIGIBLE`
+Status: `CORRECTIVE_IMPLEMENTATION_COMPLETE / SUCCESSOR_REBIND_IN_PROGRESS / IMMUTABLE_ONLY_V1 / COMMIT_STOP`
 
 ## Responsibility
 
@@ -37,7 +37,7 @@ Owner-approved source implementation and focused verification are authorized. Re
 - Writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context.
 - Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
 - Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
-- POSIX focused tests pass after the current-main rebase; fresh Windows-native runtime remains `NOT_CONFIRMED` because this host lacks a pytest runner and no install/retry was attempted. Independent Tester, Critic, and Judge rebound the same normalized final three-file SHA set and each reported Critical/High zero. The Judge lifted `COMMIT STOP` for the ten Allowed Files only.
+- POSIX focused tests pass on the no-force current-main successor; fresh Windows-native runtime remains `NOT_CONFIRMED` because this host lacks a pytest runner and no install/retry was attempted. Historical identical-content Tester, Critic, and Judge evidence is retained, while successor Critic/Judge rebind remains required. `COMMIT STOP` stays active until that final gate closes.
 
 ## Dependencies and next task
 

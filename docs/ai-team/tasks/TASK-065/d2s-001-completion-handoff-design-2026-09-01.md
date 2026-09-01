@@ -203,3 +203,26 @@ before a real stage. Only after TASK-036 can
 `D2S_001_OPERATION_TERMINAL_HANDOFF_V1` exist for TASK-061-B/TASK-065. Until
 the relevant receipt exists, each downstream real-effect cell is
 `N.C. / START0 / EFFECT0`.
+
+## Public-safe synthetic contract fixture
+
+`d2s-001-completion-handoff-fixture-v1.json` is a task-local, static
+shape-and-separation fixture. It exercises public-safe field presence,
+action separation and the expected historical-cardinality assertions without
+creating a ticket, broker capability, completion receipt, currentness proof or
+effect. Every execution/currentness/completion predicate in the fixture is
+explicitly `false`; every local delta is the string `"0"`.
+
+The fixture keeps `D2S_PUBLISH_LEARNING` record coordinates and
+`D2S_LOAD_PROFILE` profile coordinates in separate objects. Its one stage and
+one import values are observations expected of the historical TASK-036
+operation, never commands that TASK-065 may run. In particular, the fixture
+does not invoke the adapter, TASK-036, terminal query, installed config,
+native backend or activation path. It cannot satisfy either
+`D2S_001_INTERFACE_COMPLETION_READBACK_V1` or
+`D2S_001_OPERATION_TERMINAL_HANDOFF_V1`.
+
+Fixture validation is limited to static parsing, exact expected field values
+and body-free public projection assertions. Replay, expiry, crash, swap and
+durability rows remain source-owner negative tests in the fault matrix above;
+the synthetic fixture is not evidence that those source paths are fixed.

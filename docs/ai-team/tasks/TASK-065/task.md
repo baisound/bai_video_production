@@ -698,4 +698,7 @@ The D2S-owner implementation contract, exact TASK-036/TASK-069 handoffs,
 Allowed Files and source-start Gate are in
 `d2s-001-completion-handoff-design-2026-09-01.md`. This is a task-local
 handoff only; it neither selects a D2S worktree nor authorizes Canonical SKILL
-source, installed config or real-stage mutation.
+source, installed config or real-stage mutation. Its companion
+`d2s-001-completion-handoff-fixture-v1.json` is a public-safe static contract
+fixture only: it has no currentness, completion or operation authority and
+cannot execute the historical stage/import values it describes.

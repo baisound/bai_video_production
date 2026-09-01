@@ -1,0 +1,53 @@
+{
+  "fixture_version": "1.0",
+  "contract": "D2S-001-COMPLETION-HANDOFF-FIXTURE-V1",
+  "mode": "SYNTHETIC_PUBLIC_SAFE_EXPECTATIONS",
+  "fixture_only": true,
+  "authority_created": false,
+  "interface_completion_readback_verified": false,
+  "operation_terminal_handoff_verified": false,
+  "task072_platform_trust_completion_verified": false,
+  "installed_bytes_current_verified": false,
+  "broker_redeemed": false,
+  "real_stage_started": false,
+  "task036_import_started": false,
+  "terminal_query_started": false,
+  "expected_publish_coordinates": {
+    "action": "D2S_PUBLISH_LEARNING",
+    "operation_id": "op_00000000000000000000000000000001",
+    "install_instance_id": "inst_00000000000000000000000000000001",
+    "record_id": "record_00000000000000000000000000000001"
+  },
+  "expected_load_coordinates": {
+    "action": "D2S_LOAD_PROFILE",
+    "operation_id": "op_00000000000000000000000000000002",
+    "install_instance_id": "inst_00000000000000000000000000000001",
+    "profile_id": "profile_00000000000000000000000000000001"
+  },
+  "expected_terminal_coordinates": {
+    "action": "D2S_TERMINAL_QUERY_V1",
+    "operation_id": "op_00000000000000000000000000000003",
+    "install_instance_id": "inst_00000000000000000000000000000001"
+  },
+  "expected_historical_counts": {
+    "adapter_stage_count": "1",
+    "task036_import_count": "1",
+    "task065_adapter_call_count": "0",
+    "task065_task036_call_count": "0"
+  },
+  "effect_counters": {
+    "project_delta": "0",
+    "bridge_delta": "0",
+    "profile_delta": "0",
+    "config_history_delta": "0",
+    "activation_delta": "0"
+  },
+  "public_diagnostics": {
+    "code": "NOT_CONFIRMED",
+    "absolute_path_count": "0",
+    "private_body_count": "0",
+    "secret_count": "0",
+    "account_sid_count": "0",
+    "os_detail_count": "0"
+  }
+}

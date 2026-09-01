@@ -87,5 +87,6 @@ config, owner scope, secret, correlation body or capability.
 This packet is complete when its task-local fixture and focused test maintain
 the listed `null` / false placeholders and body-free effect-zero outcomes. It
 does **not** make TASK-067 canonical, issue any producer receipt, satisfy
-TASK-036, or authorize a design PR. A design PR remains prohibited until the
-owner confirms the full task-local packet is the intended sole design change.
+TASK-036, or authorize a merge. No additional design PR may be created: the
+already-open TASK-065 Draft PR #467 is the only permitted carrier for this
+packet, and it remains non-merge authority.

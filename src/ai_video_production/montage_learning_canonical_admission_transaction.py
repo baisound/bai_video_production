@@ -17,7 +17,7 @@ from pathlib import Path
 import re
 import stat
 import time
-from typing import Any, Callable, Iterator, Mapping
+from typing import Any, Callable, Iterator, Mapping, NoReturn, TypeVar
 
 from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .errors import ProductError
@@ -117,6 +117,77 @@ FailureHook = Callable[[str, Path], None]
 
 class MontageLearningCanonicalAdmissionError(ValueError):
     """Fail-closed canonical admission error."""
+
+
+_OPERATION_LOCK_UNAVAILABLE = "RECOVERY_REQUIRED: canonical admission operation unavailable"
+_OperationResult = TypeVar("_OperationResult")
+
+
+def _raise_operation_lock_unavailable() -> NoReturn:
+    raise MontageLearningCanonicalAdmissionError(_OPERATION_LOCK_UNAVAILABLE) from None
+
+
+def _run_canonical_admission_operation(
+    operation: Callable[[], _OperationResult],
+) -> _OperationResult:
+    lock_failure = False
+    try:
+        return operation()
+    except MontageLearningCanonicalAdmissionError as exc:
+        if str(exc) != _OPERATION_LOCK_UNAVAILABLE:
+            raise
+        lock_failure = True
+    except ProductError:
+        raise
+    except OSError:
+        lock_failure = True
+    if lock_failure:
+        _raise_operation_lock_unavailable()
+    raise AssertionError("unreachable canonical admission boundary")
+
+
+class _CanonicalAdmissionLockBoundary:
+    """Translate failures from one concrete lock guard, never its body."""
+
+    __slots__ = ("_guard",)
+
+    def __init__(self, guard_factory: Callable[[], Any]) -> None:
+        failed = False
+        try:
+            self._guard = guard_factory()
+        except (OSError, ValueError):
+            failed = True
+        if failed:
+            _raise_operation_lock_unavailable()
+
+    def __enter__(self) -> None:
+        failed = False
+        try:
+            self._guard.__enter__()
+        except (OSError, ValueError):
+            failed = True
+        if failed:
+            _raise_operation_lock_unavailable()
+
+    def __exit__(self, exc_type, exc, traceback) -> bool:
+        failed = False
+        suppressed = False
+        try:
+            suppressed = bool(self._guard.__exit__(exc_type, exc, traceback))
+        except (OSError, ValueError):
+            failed = True
+        if failed:
+            _raise_operation_lock_unavailable()
+        return suppressed
+
+
+class _CanonicalAdmissionOperationLock(_CanonicalAdmissionLockBoundary):
+    """The shared stable operation-lock coordinate for Exact and Generic."""
+
+    __slots__ = ()
+
+    def __init__(self, journal_path: Path) -> None:
+        super().__init__(lambda: exclusive_file_update_lock(journal_path))
 
 
 def _exact(value: object, name: str, *, max_nodes: int = 400_000) -> Any:
@@ -1537,8 +1608,14 @@ class MontageLearningCanonicalAdmissionTransactionStore:
 
     @contextmanager
     def _locks(self) -> Iterator[None]:
-        with _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root)):
-            with exclusive_file_update_lock(self.anchor_path):
+        with _CanonicalAdmissionLockBoundary(
+            lambda: _exclusive_project_lock(
+                ProductProjectManifestStore.path(self.project_root)
+            )
+        ):
+            with _CanonicalAdmissionLockBoundary(
+                lambda: exclusive_file_update_lock(self.anchor_path)
+            ):
                 self._validate_paths()
                 yield
 
@@ -2053,7 +2130,9 @@ class MontageLearningCanonicalAdmissionTransactionStore:
     def _commit_guard(self, journal: Mapping[str, Any], raw: Mapping[str, Any], *,
                       staging_store_id: str, owner_scope_hash: str,
                       staging_revision: int, staging_entry_sha256: str) -> Iterator[None]:
-        with exclusive_file_update_lock(self.anchor_path):
+        with _CanonicalAdmissionLockBoundary(
+            lambda: exclusive_file_update_lock(self.anchor_path)
+        ):
             self._validate_commit_guard_locked(
                 journal,
                 raw,
@@ -2325,21 +2404,28 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         failure_hook: FailureHook | None = None,
     ) -> MontageLearningCanonicalAdmissionResult:
         """Serialize one complete admission attempt on a stable lock inode."""
-        # ``exclusive_file_update_lock`` locks the sibling ``.<name>.lock``.
-        # The transaction journal itself may be atomically replaced/unlinked,
-        # but this stable lock file is never a transaction payload and remains
-        # locked through proposal, ProjectSave, receipt read-back and cleanup.
-        with exclusive_file_update_lock(self.journal_path):
-            return self._admit_exact_serialized(
-                delivery,
-                staging_store_id=staging_store_id,
-                expected_owner_scope_hash=expected_owner_scope_hash,
-                expected_staging_revision=expected_staging_revision,
-                expected_staging_entry_sha256=expected_staging_entry_sha256,
-                expected_canonical_store_commit_sha256=expected_canonical_store_commit_sha256,
-                expected_external_anchor_document_sha256=expected_external_anchor_document_sha256,
-                failure_hook=failure_hook,
-            )
+        def operation() -> MontageLearningCanonicalAdmissionResult:
+            # ``exclusive_file_update_lock`` locks the sibling ``.<name>.lock``.
+            # The transaction journal itself may be atomically replaced/unlinked,
+            # but this stable lock file is never a transaction payload and remains
+            # locked through proposal, ProjectSave, receipt read-back and cleanup.
+            with _CanonicalAdmissionOperationLock(self.journal_path):
+                return self._admit_exact_serialized(
+                    delivery,
+                    staging_store_id=staging_store_id,
+                    expected_owner_scope_hash=expected_owner_scope_hash,
+                    expected_staging_revision=expected_staging_revision,
+                    expected_staging_entry_sha256=expected_staging_entry_sha256,
+                    expected_canonical_store_commit_sha256=(
+                        expected_canonical_store_commit_sha256
+                    ),
+                    expected_external_anchor_document_sha256=(
+                        expected_external_anchor_document_sha256
+                    ),
+                    failure_hook=failure_hook,
+                )
+
+        return _run_canonical_admission_operation(operation)
 
     def _admit_exact_serialized(
         self,
@@ -2770,7 +2856,11 @@ class MontageLearningCanonicalAdmissionTransactionStore:
     def _generic_result_from_readback(
         self, outcome: str, readback: Mapping[str, Any],
     ) -> ReviewObservationAdmissionResult:
-        with _exclusive_project_lock(ProductProjectManifestStore.path(self.project_root)):
+        with _CanonicalAdmissionLockBoundary(
+            lambda: _exclusive_project_lock(
+                ProductProjectManifestStore.path(self.project_root)
+            )
+        ):
             anchored, manifest, binding, ledger = self._generic_trusted_readback_locked(readback)
             return self._generic_make_result(outcome, anchored, manifest, binding, ledger)
 
@@ -3176,6 +3266,22 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
         failure_hook: FailureHook | None = None,
     ) -> ReviewObservationAdmissionResult:
+        return _run_canonical_admission_operation(
+            lambda: self._admit_generic_observation(
+                delivery,
+                expected_revision=expected_revision,
+                generic_store_id=generic_store_id,
+                owner_scope_hash=owner_scope_hash,
+                failure_hook=failure_hook,
+            )
+        )
+
+    def _admit_generic_observation(
+        self, delivery: Mapping[str, Any], *, expected_revision: int,
+        generic_store_id: str = "task058-generic-review-observations",
+        owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
+        failure_hook: FailureHook | None = None,
+    ) -> ReviewObservationAdmissionResult:
         raw = _exact(delivery, "generic delivery", max_nodes=200_000)
         candidate = validate_generic_learning_delivery(raw)
         if _identifier(generic_store_id, "generic_store_id") != "task058-generic-review-observations":
@@ -3184,38 +3290,41 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         expected = _integer(expected_revision, "expected_revision", 0, _MAX_RECEIPTS - 1)
         if failure_hook is not None and not callable(failure_hook):
             raise TypeError("failure_hook must be callable")
-        with exclusive_file_update_lock(self.generic_journal_path):
-            if self.generic_journal_path.exists():
-                return self._generic_recover_v1_locked(
-                    raw, candidate, owner_scope_hash=scope, failure_hook=failure_hook
+        with _CanonicalAdmissionOperationLock(self.journal_path):
+            with _CanonicalAdmissionLockBoundary(
+                lambda: exclusive_file_update_lock(self.generic_journal_path)
+            ):
+                if self.generic_journal_path.exists():
+                    return self._generic_recover_v1_locked(
+                        raw, candidate, owner_scope_hash=scope, failure_hook=failure_hook
+                    )
+                manifest = self._load_manifest_pinned()
+                current = self._generic_load_current_v1(
+                    manifest,
+                    project_scope_hash=self._generic_project_scope_hash(manifest.project_id),
+                    owner_scope_hash=_as_bare_sha(scope),
                 )
-            manifest = self._load_manifest_pinned()
-            current = self._generic_load_current_v1(
-                manifest,
-                project_scope_hash=self._generic_project_scope_hash(manifest.project_id),
-                owner_scope_hash=_as_bare_sha(scope),
-            )
-            revision = 0 if current is None else current[0]["store_revision"]
-            if revision != expected:
-                raise MontageLearningCanonicalAdmissionError("generic CAS is stale")
-            duplicate = self._generic_duplicate_v1(raw, candidate, current)
-            if duplicate is not None:
-                return duplicate
-            journal, target, documents, marker = self._generic_prepare_v1(
-                raw, candidate, manifest, current, owner_scope_hash=scope
-            )
-            AtomicJsonWriter.write(
-                self.generic_journal_path, journal, validator=_parse_generic_journal_v1
-            )
-            if failure_hook is not None:
-                failure_hook("after_generic_journal_write", self.generic_journal_path)
-            ProductProjectSaveCoordinator().save(
-                self.project_root, target, documents,
-                expected_previous_manifest_sha256=manifest.project_manifest_sha256,
-            )
-            if failure_hook is not None:
-                failure_hook("after_generic_project_commit", self.generic_observation_path)
-            return self._generic_finish_v1(journal, marker, failure_hook=failure_hook)
+                revision = 0 if current is None else current[0]["store_revision"]
+                if revision != expected:
+                    raise MontageLearningCanonicalAdmissionError("generic CAS is stale")
+                duplicate = self._generic_duplicate_v1(raw, candidate, current)
+                if duplicate is not None:
+                    return duplicate
+                journal, target, documents, marker = self._generic_prepare_v1(
+                    raw, candidate, manifest, current, owner_scope_hash=scope
+                )
+                AtomicJsonWriter.write(
+                    self.generic_journal_path, journal, validator=_parse_generic_journal_v1
+                )
+                if failure_hook is not None:
+                    failure_hook("after_generic_journal_write", self.generic_journal_path)
+                ProductProjectSaveCoordinator().save(
+                    self.project_root, target, documents,
+                    expected_previous_manifest_sha256=manifest.project_manifest_sha256,
+                )
+                if failure_hook is not None:
+                    failure_hook("after_generic_project_commit", self.generic_observation_path)
+                return self._generic_finish_v1(journal, marker, failure_hook=failure_hook)
 
     def record_exact_generic_observation(
         self, delivery: Mapping[str, Any], *, expected_revision: int,
@@ -3235,6 +3344,21 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
         failure_hook: FailureHook | None = None,
     ) -> ReviewObservationAdmissionResult:
+        return _run_canonical_admission_operation(
+            lambda: self._recover_generic_observation(
+                delivery,
+                generic_store_id=generic_store_id,
+                owner_scope_hash=owner_scope_hash,
+                failure_hook=failure_hook,
+            )
+        )
+
+    def _recover_generic_observation(
+        self, delivery: Mapping[str, Any], *,
+        generic_store_id: str = "task058-generic-review-observations",
+        owner_scope_hash: str = _GENERIC_UNBOUND_OWNER_SCOPE,
+        failure_hook: FailureHook | None = None,
+    ) -> ReviewObservationAdmissionResult:
         raw = _exact(delivery, "generic delivery", max_nodes=200_000)
         candidate = validate_generic_learning_delivery(raw)
         if _identifier(generic_store_id, "generic_store_id") != "task058-generic-review-observations":
@@ -3242,12 +3366,15 @@ class MontageLearningCanonicalAdmissionTransactionStore:
         scope = _sha(owner_scope_hash, "owner_scope_hash")
         if failure_hook is not None and not callable(failure_hook):
             raise TypeError("failure_hook must be callable")
-        with exclusive_file_update_lock(self.generic_journal_path):
-            if not self.generic_journal_path.exists():
-                raise MontageLearningCanonicalAdmissionError("generic recovery is not required")
-            return self._generic_recover_v1_locked(
-                raw, candidate, owner_scope_hash=scope, failure_hook=failure_hook
-            )
+        with _CanonicalAdmissionOperationLock(self.journal_path):
+            with _CanonicalAdmissionLockBoundary(
+                lambda: exclusive_file_update_lock(self.generic_journal_path)
+            ):
+                if not self.generic_journal_path.exists():
+                    raise MontageLearningCanonicalAdmissionError("generic recovery is not required")
+                return self._generic_recover_v1_locked(
+                    raw, candidate, owner_scope_hash=scope, failure_hook=failure_hook
+                )
 
     def get_verified_generic_observation(
         self, *, record_id: str, learning_sha256: str,

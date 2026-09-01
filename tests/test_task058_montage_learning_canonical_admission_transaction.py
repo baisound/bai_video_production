@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from copy import deepcopy
 import json
 import multiprocessing
@@ -14,9 +15,12 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from ai_video_production import montage_learning_canonical_admission_transaction as module
+from ai_video_production import project_save as project_save_module
 from ai_video_production.montage_learning_admission_store import MontageLearningAdmissionStore
 from ai_video_production.montage_learning_bridge_contracts import (
-    EXACT_CONTRACT_PROFILE, canonical_learning_sha256,
+    EXACT_CONTRACT_PROFILE,
+    MontageLearningBridgeContractError,
+    canonical_learning_sha256,
 )
 from ai_video_production.montage_learning_canonical_admission_transaction import (
     ANCHOR_FILE_NAME,
@@ -31,6 +35,9 @@ from ai_video_production.montage_learning_canonical_admission_transaction import
 from ai_video_production.montage_learning_canonical_preflight import (
     derive_canonical_evidence_id,
     derive_human_binding_sha256,
+)
+from ai_video_production.montage_learning_durable_staging_readback import (
+    MontageLearningDurableStagingReadbackError,
 )
 from ai_video_production.montage_learning_receipt_contracts import (
     derive_montage_learning_idempotency_key_sha256,
@@ -227,6 +234,12 @@ def _snapshot_inventory(root: Path) -> dict[str, tuple[str, bytes]]:
         else:
             snapshot[relative] = (f"irregular:{stat.S_IFMT(info.st_mode)}", b"")
     return snapshot
+
+
+def _assert_no_raw_lock_error(results: list[tuple[object, ...]]) -> None:
+    public = " ".join(str(part) for result in results for part in result)
+    for forbidden in ("PermissionError", "OSError", "WinError", "errno"):
+        assert forbidden not in public
 
 
 def _windows_process_handle_count() -> int:
@@ -1655,6 +1668,8 @@ def test_multiprocess_generic_same_cas_has_one_accepted_and_cleans_journal(
         project = tmp_path / f"project-{iteration}"
         anchor = tmp_path / f"anchor-{iteration}"
         project.mkdir(); anchor.mkdir(); _project(project)
+        unrelated = project / "unrelated-owner-bytes.bin"
+        unrelated.write_bytes(b"preserve-generic-cas")
         delivery = _generic_delivery()
         ctx = multiprocessing.get_context("spawn")
         start = ctx.Event()
@@ -1677,8 +1692,21 @@ def test_multiprocess_generic_same_cas_has_one_accepted_and_cleans_journal(
             _cleanup_processes(started, queue)
         assert sum(item[:2] == ("GENERIC", "ACCEPTED") for item in results) == 1
         assert sum(item[0] == "GENERIC_ERROR" for item in results) == 1
+        generic_error = next(item for item in results if item[0] == "GENERIC_ERROR")
+        assert generic_error[1] in {
+            "MontageLearningCanonicalAdmissionError", "ProductError",
+        }, results
+        _assert_no_raw_lock_error(results)
         writer = _writer(project, anchor)
         assert not writer.generic_journal_path.exists()
+        assert unrelated.read_bytes() == b"preserve-generic-cas"
+        assert len(list(writer.generic_object_root.glob("*.json"))) == 1
+        assert len(list(writer.generic_marker_root.glob("*.json"))) == 1
+        manifest = ProductProjectManifestStore.load(project)
+        assert manifest.project_revision == 2
+        ledger = json.loads(writer.generic_observation_path.read_text(encoding="utf-8"))
+        assert ledger["store_revision"] == 1
+        assert len(ledger["entries"]) == 1
         accepted = next(item for item in results if item[0] == "GENERIC")
         verified = writer.get_verified_generic_observation(
             record_id=str(delivery["record_id"]),
@@ -1727,6 +1755,7 @@ def test_multiprocess_generic_and_exact_project_writes_serialize(
         assert all(type(item) is tuple and len(item) == 3 for item in results), results
         assert sum(item[0] in {"RESULT", "ERROR"} for item in results) == 1, results
         assert sum(item[0] in {"GENERIC", "GENERIC_ERROR"} for item in results) == 1, results
+        _assert_no_raw_lock_error(results)
         writer = _writer(project, anchor)
         exact_worker = next(item for item in results if item[0] in {"RESULT", "ERROR"})
         if exact_worker[0] == "ERROR":
@@ -1972,6 +2001,687 @@ def test_exact_source_classification_and_product_save_share_one_lock(
         learning_sha256=str(generic["learning_sha256"]),
         canonical_commit_sha256="sha256:" + results[0].canonical_commit_sha256,
     ).status == "ACCEPTED"
+    assert not writer.journal_path.exists()
+    assert not writer.generic_journal_path.exists()
+
+
+def test_generic_journal_and_project_transition_hold_shared_lock_against_exact(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+    started = threading.Event()
+    acquire_attempted = threading.Event()
+    finished = threading.Event()
+    results: list[module.MontageLearningCanonicalAdmissionResult] = []
+    errors: list[BaseException] = []
+    threads: list[threading.Thread] = []
+    original_enter = module._CanonicalAdmissionOperationLock.__enter__
+
+    def observed_enter(self) -> None:
+        if threading.current_thread().name == "task058-exact-waiter":
+            acquire_attempted.set()
+        return original_enter(self)
+
+    monkeypatch.setattr(
+        module._CanonicalAdmissionOperationLock,
+        "__enter__",
+        observed_enter,
+    )
+
+    def exact_worker() -> None:
+        started.set()
+        try:
+            results.append(writer.admit_exact(exact, **_arguments(staged)))
+        except BaseException as exc:  # pragma: no cover - asserted below
+            errors.append(exc)
+        finally:
+            finished.set()
+
+    def start_exact_while_generic_is_prepared(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_generic_journal_write":
+            thread = threading.Thread(
+                target=exact_worker,
+                name="task058-exact-waiter",
+                daemon=True,
+            )
+            threads.append(thread)
+            thread.start()
+            assert started.wait(timeout=5)
+            assert acquire_attempted.wait(timeout=5)
+            assert not finished.wait(timeout=0.2)
+
+    generic_result = writer.admit_generic_observation(
+        generic,
+        expected_revision=0,
+        failure_hook=start_exact_while_generic_is_prepared,
+    )
+    assert generic_result.status == "ACCEPTED"
+    assert len(threads) == 1
+    threads[0].join(timeout=30)
+    assert not threads[0].is_alive()
+    assert errors == []
+    assert len(results) == 1 and results[0].status == "ACCEPTED"
+    assert writer.get_verified_receipt().receipt.to_dict() == results[0].receipt.to_dict()
+    assert writer.get_verified_generic_observation(
+        record_id=str(generic["record_id"]),
+        learning_sha256=str(generic["learning_sha256"]),
+        canonical_commit_sha256="sha256:" + generic_result.canonical_commit_sha256,
+    ).status == "ACCEPTED"
+    assert not writer.journal_path.exists()
+    assert not writer.generic_journal_path.exists()
+
+
+@pytest.mark.parametrize("operation", ["exact", "generic"])
+@pytest.mark.parametrize("fault_kind", ["oserror", "valueerror"])
+def test_shared_operation_lock_enter_failure_is_fixed_and_effect_free(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+    fault_kind: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+    before_project = _snapshot_inventory(project)
+    before_anchor = _snapshot_inventory(anchor)
+    original_lock = module.exclusive_file_update_lock
+    lock_calls = 0
+    effect_body_calls = 0
+
+    class FailingGuard:
+        def __enter__(self):
+            if fault_kind == "oserror":
+                raise OSError(5, r"C:\private\authority\lock")
+            raise ValueError(r"unsafe C:\private\authority\lock")
+
+        def __exit__(self, exc_type, exc, traceback):  # pragma: no cover
+            del exc_type, exc, traceback
+            raise AssertionError("operation-lock body must not start")
+
+    def failing_operation_lock(path: Path):
+        nonlocal lock_calls
+        if Path(path) == writer.journal_path:
+            lock_calls += 1
+            return FailingGuard()
+        return original_lock(path)
+
+    if operation == "exact":
+        original_body = module.MontageLearningCanonicalAdmissionTransactionStore._admit_exact_serialized
+
+        def counted_exact_body(self, *args, **kwargs):
+            nonlocal effect_body_calls
+            effect_body_calls += 1
+            return original_body(self, *args, **kwargs)
+
+        monkeypatch.setattr(
+            module.MontageLearningCanonicalAdmissionTransactionStore,
+            "_admit_exact_serialized",
+            counted_exact_body,
+        )
+    else:
+        original_body = module.MontageLearningCanonicalAdmissionTransactionStore._load_manifest_pinned
+
+        def counted_generic_body(self, *args, **kwargs):
+            nonlocal effect_body_calls
+            effect_body_calls += 1
+            return original_body(self, *args, **kwargs)
+
+        monkeypatch.setattr(
+            module.MontageLearningCanonicalAdmissionTransactionStore,
+            "_load_manifest_pinned",
+            counted_generic_body,
+        )
+    monkeypatch.setattr(module, "exclusive_file_update_lock", failing_operation_lock)
+    with pytest.raises(MontageLearningCanonicalAdmissionError) as captured:
+        if operation == "exact":
+            writer.admit_exact(exact, **_arguments(staged))
+        else:
+            writer.admit_generic_observation(generic, expected_revision=0)
+    assert str(captured.value) == module._OPERATION_LOCK_UNAVAILABLE
+    assert captured.value.__cause__ is None
+    assert captured.value.__context__ is None
+    assert captured.value.__suppress_context__ is True
+    assert lock_calls == 1
+    assert effect_body_calls == 0
+    assert _snapshot_inventory(project) == before_project
+    assert _snapshot_inventory(anchor) == before_anchor
+
+
+@pytest.mark.parametrize(
+    "mode",
+    ["terminal-exact", "pending-exact", "terminal-generic", "pending-generic"],
+)
+def test_shared_operation_lock_exit_failure_is_fixed_and_recoverable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mode: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+    original_lock = module.exclusive_file_update_lock
+
+    class FailingExitGuard:
+        def __init__(self, guard) -> None:
+            self._guard = guard
+            self._release_required = False
+
+        def __enter__(self):
+            return self._guard.__enter__()
+
+        def __exit__(self, exc_type, exc, traceback):
+            del exc_type, exc, traceback
+            self._release_required = True
+            raise OSError(5, r"C:\private\authority\unlock")
+
+        def release_after_fault(self) -> None:
+            assert self._release_required is True
+            self._guard.__exit__(None, None, None)
+            self._release_required = False
+
+    retained_guards: list[FailingExitGuard] = []
+
+    def failing_operation_unlock(path: Path):
+        guard = original_lock(path)
+        if Path(path) == writer.journal_path:
+            failing = FailingExitGuard(guard)
+            retained_guards.append(failing)
+            return failing
+        return guard
+
+    monkeypatch.setattr(module, "exclusive_file_update_lock", failing_operation_unlock)
+
+    def fail_after_generic_journal(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_generic_journal_write":
+            raise RuntimeError("simulated generic body failure")
+
+    def fail_after_exact_commit(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_project_save_committed":
+            raise RuntimeError("simulated exact body failure")
+
+    with pytest.raises(MontageLearningCanonicalAdmissionError) as captured:
+        if mode == "terminal-exact":
+            writer.admit_exact(exact, **_arguments(staged))
+        elif mode == "pending-exact":
+            writer.admit_exact(
+                exact,
+                failure_hook=fail_after_exact_commit,
+                **_arguments(staged),
+            )
+        elif mode == "terminal-generic":
+            writer.admit_generic_observation(generic, expected_revision=0)
+        else:
+            writer.admit_generic_observation(
+                generic,
+                expected_revision=0,
+                failure_hook=fail_after_generic_journal,
+            )
+    assert str(captured.value) == module._OPERATION_LOCK_UNAVAILABLE
+    assert captured.value.__cause__ is None
+    assert captured.value.__context__ is None
+    assert captured.value.__suppress_context__ is True
+    assert len(retained_guards) == 1
+    if mode == "pending-exact":
+        assert writer.journal_path.is_file()
+    if mode == "terminal-generic":
+        assert not writer.generic_journal_path.exists()
+        assert writer.generic_observation_path.is_file()
+    retained_guards[0].release_after_fault()
+    monkeypatch.setattr(module, "exclusive_file_update_lock", original_lock)
+
+    if mode == "terminal-exact":
+        assert not writer.journal_path.exists()
+        verified = writer.get_verified_receipt()
+        projection = verified.to_public_projection()
+        duplicate = writer.admit_exact(exact, **{
+            **_arguments(staged),
+            "expected_canonical_store_commit_sha256": projection[
+                "canonical_store_commit_sha256"
+            ],
+            "expected_external_anchor_document_sha256": projection[
+                "external_anchor_document_sha256"
+            ],
+        })
+        assert duplicate.status == "DUPLICATE"
+    elif mode == "pending-exact":
+        recovered = writer.admit_exact(exact, **_arguments(staged))
+        assert recovered.status == "ACCEPTED"
+        assert recovered.recovered is True
+        assert not writer.journal_path.exists()
+    elif mode == "terminal-generic":
+        duplicate = writer.admit_generic_observation(generic, expected_revision=1)
+        assert duplicate.status == "DUPLICATE"
+    else:
+        assert writer.generic_journal_path.is_file()
+        recovered = writer.recover_generic_observation(generic)
+        assert recovered.status == "ACCEPTED"
+        assert not writer.generic_journal_path.exists()
+
+
+@pytest.mark.parametrize("fault_phase", ["enter", "exit"])
+@pytest.mark.parametrize(("operation", "lock_kind"), [
+    ("exact", "product"),
+    ("exact", "anchor"),
+    ("generic", "generic"),
+    ("generic", "save-product"),
+    ("generic", "readback-product"),
+    ("generic-recovery", "generic"),
+    ("generic-recovery", "save-product"),
+    ("generic-recovery", "readback-product"),
+])
+def test_lower_operation_lock_failures_are_fixed_and_recoverable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+    lock_kind: str,
+    fault_phase: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+
+    if operation == "generic-recovery":
+        def stop_after_journal(phase: str, path: Path) -> None:
+            del path
+            if phase == "after_generic_journal_write":
+                raise RuntimeError("prepare lower-lock recovery")
+
+        with pytest.raises(RuntimeError, match="prepare lower-lock recovery"):
+            writer.admit_generic_observation(
+                generic, expected_revision=0, failure_hook=stop_after_journal
+            )
+
+    class FaultGuard:
+        def __init__(self, guard) -> None:
+            self._guard = guard
+            self._release_required = False
+
+        def __enter__(self):
+            if fault_phase == "enter":
+                if lock_kind == "save-product":
+                    raise OSError(5, r"C:\private\lower-lock")
+                raise ValueError(r"unsafe C:\private\lower-lock")
+            return self._guard.__enter__()
+
+        def __exit__(self, exc_type, exc, traceback):
+            if fault_phase == "exit":
+                self._release_required = True
+                raise OSError(5, r"C:\private\lower-unlock")
+            return self._guard.__exit__(exc_type, exc, traceback)
+
+        def release_after_fault(self) -> None:
+            assert self._release_required is True
+            self._guard.__exit__(None, None, None)
+            self._release_required = False
+
+    fault_guards: list[FaultGuard] = []
+
+    with monkeypatch.context() as fault_patch:
+        if lock_kind in {"generic", "anchor"}:
+            original = module.exclusive_file_update_lock
+            target = (
+                writer.generic_journal_path if lock_kind == "generic"
+                else writer.anchor_path
+            )
+
+            def fault_file_lock(path: Path):
+                guard = original(path)
+                if Path(path) != target:
+                    return guard
+                fault_guard = FaultGuard(guard)
+                fault_guards.append(fault_guard)
+                return fault_guard
+
+            fault_patch.setattr(module, "exclusive_file_update_lock", fault_file_lock)
+        elif lock_kind in {"product", "readback-product"}:
+            original = module._exclusive_project_lock
+
+            def fault_project_lock(path: Path):
+                fault_guard = FaultGuard(original(path))
+                fault_guards.append(fault_guard)
+                return fault_guard
+
+            fault_patch.setattr(module, "_exclusive_project_lock", fault_project_lock)
+        else:
+            original = project_save_module._exclusive_project_lock
+
+            def fault_save_project_lock(path: Path):
+                fault_guard = FaultGuard(original(path))
+                fault_guards.append(fault_guard)
+                return fault_guard
+
+            fault_patch.setattr(
+                project_save_module,
+                "_exclusive_project_lock",
+                fault_save_project_lock,
+            )
+
+        with pytest.raises(MontageLearningCanonicalAdmissionError) as captured:
+            if operation == "exact":
+                writer.admit_exact(exact, **_arguments(staged))
+            elif operation == "generic":
+                writer.admit_generic_observation(generic, expected_revision=0)
+            else:
+                writer.recover_generic_observation(generic)
+
+        assert str(captured.value) == module._OPERATION_LOCK_UNAVAILABLE
+        assert captured.value.__cause__ is None
+        assert captured.value.__context__ is None
+        assert captured.value.__suppress_context__ is True
+        assert len(fault_guards) == 1
+        if fault_phase == "exit":
+            fault_guards[0].release_after_fault()
+
+    if operation == "exact":
+        result = writer.admit_exact(exact, **_arguments(staged))
+        assert result.status == "ACCEPTED"
+        assert writer.get_verified_receipt().receipt.to_dict() == result.receipt.to_dict()
+        assert not writer.journal_path.exists()
+    else:
+        if writer.generic_journal_path.exists():
+            result = writer.recover_generic_observation(generic)
+        else:
+            expected_revision = 1 if writer.generic_observation_path.exists() else 0
+            result = writer.admit_generic_observation(
+                generic, expected_revision=expected_revision
+            )
+        assert result.status in {"ACCEPTED", "DUPLICATE"}
+        assert writer.get_verified_generic_observation(
+            record_id=str(generic["record_id"]),
+            learning_sha256=str(generic["learning_sha256"]),
+            canonical_commit_sha256="sha256:" + result.canonical_commit_sha256,
+        ).status == "ACCEPTED"
+        assert not writer.generic_journal_path.exists()
+
+
+def test_generic_contract_error_is_not_relabelled_as_lock_unavailable(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+    generic["learning_sha256"] = "sha256:" + "0" * 64
+    before_project = _snapshot_inventory(project)
+    before_anchor = _snapshot_inventory(anchor)
+
+    with pytest.raises(MontageLearningBridgeContractError) as captured:
+        writer.admit_generic_observation(generic, expected_revision=0)
+
+    assert "learning_sha256 mismatch" in str(captured.value)
+    assert str(captured.value) != module._OPERATION_LOCK_UNAVAILABLE
+    assert _snapshot_inventory(project) == before_project
+    assert _snapshot_inventory(anchor) == before_anchor
+
+
+def test_exact_staging_readback_error_is_not_relabelled_as_lock_unavailable(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    arguments = _arguments(staged)
+    arguments["expected_staging_entry_sha256"] = "sha256:" + "0" * 64
+    with module.exclusive_file_update_lock(writer.journal_path):
+        pass
+    with module.exclusive_file_update_lock(writer.anchor_path):
+        pass
+    before_project = _snapshot_inventory(project)
+    before_anchor = _snapshot_inventory(anchor)
+
+    with pytest.raises(MontageLearningDurableStagingReadbackError) as captured:
+        writer.admit_exact(exact, **arguments)
+
+    assert str(captured.value) != module._OPERATION_LOCK_UNAVAILABLE
+    assert _snapshot_inventory(project) == before_project
+    assert _snapshot_inventory(anchor) == before_anchor
+
+
+def test_failure_hook_value_error_is_not_relabelled_as_lock_unavailable(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+
+    def reject_after_journal(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_generic_journal_write":
+            raise ValueError("caller callback rejected")
+
+    with pytest.raises(ValueError) as captured:
+        writer.admit_generic_observation(
+            generic,
+            expected_revision=0,
+            failure_hook=reject_after_journal,
+        )
+
+    assert type(captured.value) is ValueError
+    assert str(captured.value) == "caller callback rejected"
+    assert writer.generic_journal_path.is_file()
+    recovered = writer.recover_generic_observation(generic)
+    assert recovered.status == "ACCEPTED"
+    assert not writer.generic_journal_path.exists()
+
+
+@pytest.mark.parametrize("operation", ["exact", "generic", "generic-recovery"])
+def test_canonical_admission_lock_order_has_one_shared_outer_acquisition(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+
+    if operation == "generic-recovery":
+        def stop_after_journal(phase: str, path: Path) -> None:
+            del path
+            if phase == "after_generic_journal_write":
+                raise RuntimeError("prepare recovery")
+
+        with pytest.raises(RuntimeError, match="prepare recovery"):
+            writer.admit_generic_observation(
+                generic, expected_revision=0, failure_hook=stop_after_journal
+            )
+
+    events: list[tuple[str, str]] = []
+    active: list[str] = []
+    original_file_lock = module.exclusive_file_update_lock
+    original_project_lock = module._exclusive_project_lock
+    original_save = module.ProductProjectSaveCoordinator.save
+
+    def file_label(path: Path) -> str:
+        candidate = Path(path)
+        if candidate == writer.journal_path:
+            return "shared"
+        if candidate == writer.generic_journal_path:
+            return "generic"
+        if candidate == writer.anchor_path:
+            return "anchor"
+        return f"file:{candidate.name}"
+
+    @contextmanager
+    def traced_file_lock(path: Path):
+        label = file_label(path)
+        if label == "shared":
+            assert active == []
+        elif label == "generic":
+            assert active == ["shared"]
+        elif label == "anchor":
+            assert active == ["shared", "product"]
+        events.append(("enter", label))
+        active.append(label)
+        try:
+            with original_file_lock(path):
+                yield
+        finally:
+            assert active.pop() == label
+            events.append(("exit", label))
+
+    @contextmanager
+    def traced_project_lock(path: Path):
+        assert Path(path) == ProductProjectManifestStore.path(project)
+        expected_active = ["shared"] if operation == "exact" else ["shared", "generic"]
+        assert active == expected_active
+        events.append(("enter", "product"))
+        active.append("product")
+        try:
+            with original_project_lock(path):
+                yield
+        finally:
+            assert active.pop() == "product"
+            events.append(("exit", "product"))
+
+    def traced_save(self, *args, **kwargs):
+        assert active == ["shared", "generic"]
+        events.append(("enter", "product"))
+        active.append("product")
+        try:
+            return original_save(self, *args, **kwargs)
+        finally:
+            assert active.pop() == "product"
+            events.append(("exit", "product"))
+
+    monkeypatch.setattr(module, "exclusive_file_update_lock", traced_file_lock)
+    monkeypatch.setattr(module, "_exclusive_project_lock", traced_project_lock)
+    if operation == "exact":
+        result = writer.admit_exact(exact, **_arguments(staged))
+        assert result.status == "ACCEPTED"
+        expected_prefix = ["shared", "product", "anchor"]
+    else:
+        monkeypatch.setattr(module.ProductProjectSaveCoordinator, "save", traced_save)
+        if operation == "generic":
+            result = writer.admit_generic_observation(generic, expected_revision=0)
+        else:
+            result = writer.recover_generic_observation(generic)
+        assert result.status == "ACCEPTED"
+        expected_prefix = ["shared", "generic", "product"]
+
+    enters = [label for event, label in events if event == "enter"]
+    assert enters[:3] == expected_prefix
+    assert enters.count("shared") == 1
+    if operation == "exact":
+        assert enters.count("anchor") >= 1
+    else:
+        assert enters.count("product") >= 2
+        assert "anchor" not in enters
+    assert active == []
+
+
+def test_waiting_exact_releases_after_generic_failure_and_recovery_is_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    project = tmp_path / "project"
+    anchor = tmp_path / "anchor"
+    project.mkdir(); anchor.mkdir(); _project(project)
+    exact, staged = _stage(project)
+    writer = _writer(project, anchor)
+    generic = _generic_delivery()
+    unrelated = project / "unrelated-owner-bytes.bin"
+    unrelated.write_bytes(b"preserve-exactly")
+    started = threading.Event()
+    acquire_attempted = threading.Event()
+    finished = threading.Event()
+    exact_results: list[module.MontageLearningCanonicalAdmissionResult] = []
+    exact_errors: list[BaseException] = []
+    threads: list[threading.Thread] = []
+    original_enter = module._CanonicalAdmissionOperationLock.__enter__
+
+    def observed_enter(self) -> None:
+        if threading.current_thread().name == "task058-exact-waiter":
+            acquire_attempted.set()
+        return original_enter(self)
+
+    monkeypatch.setattr(
+        module._CanonicalAdmissionOperationLock,
+        "__enter__",
+        observed_enter,
+    )
+
+    def exact_worker() -> None:
+        started.set()
+        try:
+            exact_results.append(writer.admit_exact(exact, **_arguments(staged)))
+        except BaseException as exc:  # pragma: no cover - asserted below
+            exact_errors.append(exc)
+        finally:
+            finished.set()
+
+    def fail_with_waiting_exact(phase: str, path: Path) -> None:
+        del path
+        if phase == "after_generic_journal_write":
+            thread = threading.Thread(
+                target=exact_worker,
+                name="task058-exact-waiter",
+                daemon=True,
+            )
+            threads.append(thread)
+            thread.start()
+            assert started.wait(timeout=5)
+            assert acquire_attempted.wait(timeout=5)
+            assert not finished.wait(timeout=0.2)
+            raise RuntimeError("generic prepared fault")
+
+    with pytest.raises(RuntimeError, match="generic prepared fault"):
+        writer.admit_generic_observation(
+            generic,
+            expected_revision=0,
+            failure_hook=fail_with_waiting_exact,
+        )
+    assert writer.generic_journal_path.is_file()
+    assert len(threads) == 1
+    threads[0].join(timeout=30)
+    assert not threads[0].is_alive()
+    assert len(exact_results) + len(exact_errors) == 1
+    if exact_errors:
+        assert isinstance(
+            exact_errors[0],
+            (MontageLearningCanonicalAdmissionError, module.ProductError),
+        )
+        _assert_no_raw_lock_error([
+            (type(exact_errors[0]).__name__, str(exact_errors[0])),
+        ])
+    else:
+        assert exact_results[0].status == "ACCEPTED"
+
+    recovered = writer.recover_generic_observation(generic)
+    assert recovered.status == "ACCEPTED"
+    assert not writer.generic_journal_path.exists()
+    with pytest.raises(MontageLearningCanonicalAdmissionError, match="not required"):
+        writer.recover_generic_observation(generic)
+    if exact_results:
+        accepted = exact_results[0]
+    else:
+        accepted = writer.admit_exact(exact, **_arguments(staged))
+        assert accepted.status == "ACCEPTED"
+    assert writer.get_verified_receipt().receipt.to_dict() == accepted.receipt.to_dict()
+    assert unrelated.read_bytes() == b"preserve-exactly"
     assert not writer.journal_path.exists()
     assert not writer.generic_journal_path.exists()
 

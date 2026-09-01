@@ -1,0 +1,966 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/owner_voice_private_reference.schema.json",
+  "title": "TASK-074 Owner Voice Private Reference Body-Free Contracts",
+  "oneOf": [
+    { "$ref": "#/$defs/mediaPolicy" },
+    { "$ref": "#/$defs/mediaFacts" },
+    { "$ref": "#/$defs/transcriptFacts" },
+    { "$ref": "#/$defs/transcriptBinding" },
+    { "$ref": "#/$defs/preparePlan" },
+    { "$ref": "#/$defs/domainSnapshot" },
+    { "$ref": "#/$defs/issueReadback" },
+    { "$ref": "#/$defs/terminalRetireRequest" },
+    { "$ref": "#/$defs/terminalRetireReadback" },
+    { "$ref": "#/$defs/v1FinalizeReadback" },
+    { "$ref": "#/$defs/childAbortReadback" }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "nullableSha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$"
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "mediaPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "audio_container_signature", "allowed_codec_tuples",
+        "allowed_sample_rates_hz", "channels", "channel_layout", "duration_ms_inclusive",
+        "decoded_frame_count_inclusive", "container_size_bytes_inclusive", "transcript_encoding",
+        "transcript_bom_allowed", "transcript_normalization", "transcript_line_endings",
+        "transcript_nul_allowed", "transcript_control_policy", "transcript_scalar_count_inclusive",
+        "transcript_utf8_bytes_inclusive", "post_admission_rewrite_allowed", "media_policy_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "OWNER_VOICE_REFERENCE_MEDIA_POLICY_V1" },
+        "record_type": { "const": "OwnerVoiceReferenceMediaPolicy" },
+        "audio_container_signature": { "const": "RIFF/WAVE" },
+        "allowed_codec_tuples": {
+          "const": [
+            { "codec_name": "pcm_s16le", "sample_format": "signed-integer", "valid_bits_per_sample": 16 },
+            { "codec_name": "pcm_s24le", "sample_format": "signed-integer", "valid_bits_per_sample": 24 }
+          ]
+        },
+        "allowed_sample_rates_hz": { "const": [16000, 22050, 24000, 32000, 44100, 48000] },
+        "channels": { "const": 1 },
+        "channel_layout": { "const": "mono" },
+        "duration_ms_inclusive": { "const": [1000, 60000] },
+        "decoded_frame_count_inclusive": { "const": [1, 2880000] },
+        "container_size_bytes_inclusive": { "const": [45, 8704000] },
+        "transcript_encoding": { "const": "UTF-8" },
+        "transcript_bom_allowed": { "const": false },
+        "transcript_normalization": { "const": "NFC" },
+        "transcript_line_endings": { "const": "LF_ONLY" },
+        "transcript_nul_allowed": { "const": false },
+        "transcript_control_policy": { "const": "LF_ONLY" },
+        "transcript_scalar_count_inclusive": { "const": [1, 4000] },
+        "transcript_utf8_bytes_inclusive": { "const": [1, 16384] },
+        "post_admission_rewrite_allowed": { "const": false },
+        "media_policy_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "mediaFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "media_policy_sha256", "audio_container_signature",
+        "audio_stream_count", "video_stream_count", "data_stream_count", "codec_name",
+        "sample_format", "valid_bits_per_sample", "sample_rate_hz", "channels", "channel_layout",
+        "duration_ms", "decoded_frame_count", "container_size_bytes", "audio_sha256",
+        "body_present", "path_present", "media_facts_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "OWNER_VOICE_REFERENCE_MEDIA_FACTS_V1" },
+        "record_type": { "const": "OwnerVoiceReferenceMediaFacts" },
+        "media_policy_sha256": { "$ref": "#/$defs/sha256" },
+        "audio_container_signature": { "const": "RIFF/WAVE" },
+        "audio_stream_count": { "const": 1 },
+        "video_stream_count": { "const": 0 },
+        "data_stream_count": { "const": 0 },
+        "codec_name": { "enum": ["pcm_s16le", "pcm_s24le"] },
+        "sample_format": { "const": "signed-integer" },
+        "valid_bits_per_sample": { "enum": [16, 24] },
+        "sample_rate_hz": { "enum": [16000, 22050, 24000, 32000, 44100, 48000] },
+        "channels": { "const": 1 },
+        "channel_layout": { "const": "mono" },
+        "duration_ms": { "type": "integer", "minimum": 1000, "maximum": 60000 },
+        "decoded_frame_count": { "type": "integer", "minimum": 1, "maximum": 2880000 },
+        "container_size_bytes": { "type": "integer", "minimum": 45, "maximum": 8704000 },
+        "audio_sha256": { "$ref": "#/$defs/sha256" },
+        "body_present": { "const": false },
+        "path_present": { "const": false },
+        "media_facts_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "codec_name": { "const": "pcm_s16le" } }, "required": ["codec_name"] },
+          "then": { "properties": { "valid_bits_per_sample": { "const": 16 } } },
+          "else": { "properties": { "valid_bits_per_sample": { "const": 24 } } }
+        }
+      ]
+    },
+    "transcriptFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "media_policy_sha256", "transcript_utf8_sha256",
+        "unicode_scalar_count", "utf8_byte_count", "strict_utf8_valid", "bom_present",
+        "nfc_normalized", "lf_only", "nul_present", "forbidden_control_present",
+        "post_admission_rewrite_performed", "body_present", "path_present", "transcript_facts_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "OWNER_VOICE_REFERENCE_TRANSCRIPT_FACTS_V1" },
+        "record_type": { "const": "OwnerVoiceReferenceTranscriptFacts" },
+        "media_policy_sha256": { "$ref": "#/$defs/sha256" },
+        "transcript_utf8_sha256": { "$ref": "#/$defs/sha256" },
+        "unicode_scalar_count": { "type": "integer", "minimum": 1, "maximum": 4000 },
+        "utf8_byte_count": { "type": "integer", "minimum": 1, "maximum": 16384 },
+        "strict_utf8_valid": { "const": true },
+        "bom_present": { "const": false },
+        "nfc_normalized": { "const": true },
+        "lf_only": { "const": true },
+        "nul_present": { "const": false },
+        "forbidden_control_present": { "const": false },
+        "post_admission_rewrite_performed": { "const": false },
+        "body_present": { "const": false },
+        "path_present": { "const": false },
+        "transcript_facts_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "transcriptBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "binding_id", "semantic_owner",
+        "intended_semantic_owner", "project_id",
+        "voice_profile_id", "voice_profile_revision_sha256", "consent_current_evaluation_sha256",
+        "audio_source_identity_sha256", "audio_sha256", "transcript_revision",
+        "transcript_utf8_sha256", "transcript_facts_sha256", "media_policy_sha256",
+        "speaker_profile_exact_match", "transcript_audio_exact_match_human_verified",
+        "human_verification_receipt_sha256", "verified_at", "producer_binding_state",
+        "fixture_only", "canonical_producer_receipt", "execution_ready",
+        "task046_owner_acceptance_sha256", "body_present", "path_present",
+        "authority_created", "transcript_binding_receipt_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK046_OWNER_REFERENCE_TRANSCRIPT_BINDING_FIXTURE_V1" },
+        "record_type": { "const": "Task046OwnerReferenceTranscriptBindingFixture" },
+        "binding_id": { "$ref": "#/$defs/identifier" },
+        "semantic_owner": { "const": "TASK-074-FIXTURE" },
+        "intended_semantic_owner": { "const": "TASK-046" },
+        "project_id": { "$ref": "#/$defs/identifier" },
+        "voice_profile_id": { "$ref": "#/$defs/identifier" },
+        "voice_profile_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "consent_current_evaluation_sha256": { "$ref": "#/$defs/sha256" },
+        "audio_source_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "audio_sha256": { "$ref": "#/$defs/sha256" },
+        "transcript_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "transcript_utf8_sha256": { "$ref": "#/$defs/sha256" },
+        "transcript_facts_sha256": { "$ref": "#/$defs/sha256" },
+        "media_policy_sha256": { "$ref": "#/$defs/sha256" },
+        "speaker_profile_exact_match": { "const": true },
+        "transcript_audio_exact_match_human_verified": { "const": true },
+        "human_verification_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "verified_at": { "$ref": "#/$defs/timestamp" },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "fixture_only": { "const": true },
+        "canonical_producer_receipt": { "const": false },
+        "execution_ready": { "const": false },
+        "task046_owner_acceptance_sha256": { "type": "null" },
+        "body_present": { "const": false },
+        "path_present": { "const": false },
+        "authority_created": { "const": false },
+        "transcript_binding_receipt_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "preparePlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "operation_id", "project_id",
+        "project_manifest_revision_sha256", "installed_context_sha256", "voice_profile_id",
+        "voice_profile_revision_sha256", "consent_current_evaluation_sha256", "route_selection_sha256",
+        "source_classification", "audio_source_identity_sha256", "transcript_source_identity_sha256",
+        "media_policy_sha256", "media_facts_sha256", "transcript_facts_sha256",
+        "transcript_binding_receipt_sha256", "retention_policy", "retention_policy_revision_sha256",
+        "expires_at", "expected_lifecycle_snapshot_sha256", "human_action_receipt_sha256",
+        "task072_ticket_sha256", "created_at", "authority_created", "private_body_present",
+        "path_present", "secret_present", "model_loaded", "inference_started", "wav_created",
+        "external_effect_started", "prepare_plan_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "OWNER_VOICE_REFERENCE_PREPARE_PLAN_V1" },
+        "record_type": { "const": "OwnerVoiceReferencePreparePlan" },
+        "operation_id": { "$ref": "#/$defs/identifier" },
+        "project_id": { "$ref": "#/$defs/identifier" },
+        "project_manifest_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "installed_context_sha256": { "$ref": "#/$defs/sha256" },
+        "voice_profile_id": { "$ref": "#/$defs/identifier" },
+        "voice_profile_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "consent_current_evaluation_sha256": { "$ref": "#/$defs/sha256" },
+        "route_selection_sha256": { "$ref": "#/$defs/sha256" },
+        "source_classification": { "enum": ["TASK046_PRIVATE_RECORDING_REFERENCE", "TASK003_PRIVATE_ASSET_REFERENCE", "TRUSTED_PICKER_EXTERNAL_REFERENCE"] },
+        "audio_source_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "transcript_source_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "media_policy_sha256": { "$ref": "#/$defs/sha256" },
+        "media_facts_sha256": { "$ref": "#/$defs/sha256" },
+        "transcript_facts_sha256": { "$ref": "#/$defs/sha256" },
+        "transcript_binding_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "retention_policy": { "enum": ["UNTIL_EXPLICIT_REVOKE", "UNTIL_PROJECT_DELETE_HUMAN_GATED", "OWNER_SELECTED_EXPIRY"] },
+        "retention_policy_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "expires_at": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }] },
+        "expected_lifecycle_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "human_action_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "task072_ticket_sha256": { "$ref": "#/$defs/sha256" },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "authority_created": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "model_loaded": { "const": false },
+        "inference_started": { "const": false },
+        "wav_created": { "const": false },
+        "external_effect_started": { "const": false },
+        "prepare_plan_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "domainSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "reference_id", "reference_revision",
+        "predecessor_snapshot_sha256", "project_id", "project_manifest_revision_sha256",
+        "voice_profile_id", "voice_profile_revision_sha256",
+        "consent_current_evaluation_sha256", "route_selection_sha256", "reference_pair_sha256",
+        "reference_lifecycle", "retained_object", "retained_object_generation",
+        "retained_object_revision_sha256", "v1_state", "v1_lease_identity_sha256",
+        "v1_live_handle_count", "v1_terminal_history_sha256", "v2_state",
+        "v2_lease_identity_sha256", "v2_live_handle_count", "v2_terminal_history_sha256",
+        "revoke_or_expiry_intent", "revoke_or_expiry_event_sha256",
+        "purge_human_action_receipt_sha256", "ownership_recovery_readback_sha256",
+        "broker_domain_sha256", "broker_process_identity_sha256", "broker_session_sha256",
+        "product_build_sha256", "broker_protocol_version", "trusted_time_domain_sha256",
+        "trusted_time_receipt_sha256", "currentness_readback_sha256",
+        "semantic_operation_key", "current_operation_id", "last_retired_semantic_operation_key",
+        "last_retired_operation_id", "committed_event_sha256",
+        "fence_revision", "predecessor_fence_sha256", "fence_sha256", "guard_current",
+        "observed_at", "authority_created", "private_body_present", "path_present", "secret_present",
+        "model_loaded", "inference_started", "wav_created", "external_effect_started", "snapshot_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_REFERENCE_DOMAIN_SNAPSHOT_V1" },
+        "record_type": { "const": "ReferenceDomainSnapshot" },
+        "reference_id": { "$ref": "#/$defs/identifier" },
+        "reference_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "predecessor_snapshot_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "project_id": { "$ref": "#/$defs/identifier" },
+        "project_manifest_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "voice_profile_id": { "$ref": "#/$defs/identifier" },
+        "voice_profile_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "consent_current_evaluation_sha256": { "$ref": "#/$defs/sha256" },
+        "route_selection_sha256": { "$ref": "#/$defs/sha256" },
+        "reference_pair_sha256": { "$ref": "#/$defs/sha256" },
+        "reference_lifecycle": { "enum": ["UNBOUND", "PREPARE_PLANNED", "PREPARING", "PREPARED", "PREPARE_FAILED_NO_DERIVATIVE", "PREPARE_FAILED_RETAINED", "REVOKE_PENDING", "REVOKED", "PURGE_PENDING", "PURGED", "PURGE_NOT_CONFIRMED"] },
+        "retained_object": { "enum": ["NONE", "ALLOCATED", "ENCRYPTED_UNPUBLISHED", "PUBLISHED", "RECONCILIATION_REQUIRED", "RECOVERABLE_RETAINED", "KEY_REVOKED", "PURGED", "FOREIGN_PRESERVED"] },
+        "retained_object_generation": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "retained_object_revision_sha256": { "$ref": "#/$defs/sha256" },
+        "v1_state": { "enum": ["NONE", "ISSUED", "IN_FLIGHT", "BODY_READ_STARTED", "CONSUMED", "BURNED", "FAILED_CLOSED"] },
+        "v1_lease_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "v1_live_handle_count": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "v1_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "v2_state": { "enum": ["V2_ABSENT", "ISSUED", "IN_FLIGHT_PARENT_DELEGATION", "CHILD_TRANSFER_IN_FLIGHT", "CHILD_PAIR_READY", "BODY_READ_STARTED", "CONSUMED", "BURNED", "FAILED_CLOSED"] },
+        "v2_lease_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "v2_live_handle_count": { "type": "integer", "minimum": 0, "maximum": 4 },
+        "v2_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "revoke_or_expiry_intent": { "enum": ["ABSENT", "EXPLICIT_REVOKE", "TRUSTED_TIME_EXPIRY"] },
+        "revoke_or_expiry_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "purge_human_action_receipt_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "ownership_recovery_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "broker_domain_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_process_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_session_sha256": { "$ref": "#/$defs/sha256" },
+        "product_build_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_protocol_version": { "$ref": "#/$defs/identifier" },
+        "trusted_time_domain_sha256": { "$ref": "#/$defs/sha256" },
+        "trusted_time_receipt_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "currentness_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "current_operation_id": { "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+        "last_retired_semantic_operation_key": { "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+        "last_retired_operation_id": { "oneOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }] },
+        "committed_event_sha256": { "$ref": "#/$defs/sha256" },
+        "fence_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "predecessor_fence_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "fence_sha256": { "$ref": "#/$defs/sha256" },
+        "guard_current": { "const": true },
+        "observed_at": { "$ref": "#/$defs/timestamp" },
+        "authority_created": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "model_loaded": { "const": false },
+        "inference_started": { "const": false },
+        "wav_created": { "const": false },
+        "external_effect_started": { "const": false },
+        "snapshot_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "v1_state": { "const": "NONE" } }, "required": ["v1_state"] },
+          "then": { "properties": { "v1_lease_identity_sha256": { "type": "null" }, "v1_live_handle_count": { "const": 0 } } },
+          "else": {
+            "properties": { "v1_lease_identity_sha256": { "$ref": "#/$defs/sha256" } },
+            "allOf": [
+              {
+                "if": { "properties": { "v1_state": { "enum": ["ISSUED", "IN_FLIGHT", "BODY_READ_STARTED"] } }, "required": ["v1_state"] },
+                "then": { "properties": { "v1_live_handle_count": { "const": 1 } } },
+                "else": { "properties": { "v1_live_handle_count": { "const": 0 }, "v1_terminal_history_sha256": { "$ref": "#/$defs/sha256" } } }
+              }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "v1_state": { "not": { "const": "NONE" } } }, "required": ["v1_state"] },
+          "then": { "properties": { "v2_state": { "const": "V2_ABSENT" } } }
+        },
+        {
+          "if": { "properties": { "v2_state": { "const": "V2_ABSENT" } }, "required": ["v2_state"] },
+          "then": { "properties": { "v2_lease_identity_sha256": { "type": "null" }, "v2_live_handle_count": { "const": 0 } } },
+          "else": {
+            "properties": { "v2_lease_identity_sha256": { "$ref": "#/$defs/sha256" } },
+            "allOf": [
+              {
+                "if": { "properties": { "v2_state": { "const": "CHILD_TRANSFER_IN_FLIGHT" } }, "required": ["v2_state"] },
+                "then": { "properties": { "v2_live_handle_count": { "minimum": 2, "maximum": 4 } } },
+                "else": {
+                  "if": { "properties": { "v2_state": { "enum": ["CONSUMED", "BURNED", "FAILED_CLOSED"] } }, "required": ["v2_state"] },
+                  "then": { "properties": { "v2_live_handle_count": { "const": 0 }, "v2_terminal_history_sha256": { "$ref": "#/$defs/sha256" } } },
+                  "else": { "properties": { "v2_live_handle_count": { "const": 2 } } }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": { "properties": { "revoke_or_expiry_intent": { "const": "ABSENT" } }, "required": ["revoke_or_expiry_intent"] },
+          "then": { "properties": { "revoke_or_expiry_event_sha256": { "type": "null" } } },
+          "else": { "properties": { "revoke_or_expiry_event_sha256": { "$ref": "#/$defs/sha256" } } }
+        },
+        {
+          "if": { "properties": { "reference_lifecycle": { "enum": ["PURGE_PENDING", "PURGED", "PURGE_NOT_CONFIRMED"] } }, "required": ["reference_lifecycle"] },
+          "then": { "properties": { "purge_human_action_receipt_sha256": { "$ref": "#/$defs/sha256" } } },
+          "else": { "properties": { "purge_human_action_receipt_sha256": { "type": "null" }, "ownership_recovery_readback_sha256": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "last_retired_operation_id": { "type": "null" } }, "required": ["last_retired_operation_id"] },
+          "then": { "properties": { "last_retired_semantic_operation_key": { "type": "null" } } },
+          "else": { "properties": { "last_retired_semantic_operation_key": { "$ref": "#/$defs/identifier" } } }
+        }
+      ]
+    },
+    "issueReadback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "operation_id", "semantic_operation_key",
+        "request_sha256", "outcome", "expected_fence_revision", "expected_fence_sha256",
+        "predecessor_snapshot_sha256", "expected_v1_terminal_history_sha256",
+        "expected_v2_terminal_history_sha256", "result_fence_revision", "result_fence_sha256",
+        "result_snapshot_sha256", "committed_event_sha256", "trusted_time_receipt_sha256",
+        "broker_domain_sha256", "broker_process_identity_sha256", "broker_session_sha256",
+        "product_build_sha256", "broker_protocol_version", "result_lifecycle",
+        "result_retained_object", "result_v1_state", "result_v1_lease_identity_sha256",
+        "result_v1_handle_count", "result_v1_terminal_history_sha256", "result_v2_state",
+        "result_v2_lease_identity_sha256", "result_v2_handle_count",
+        "result_v2_terminal_history_sha256", "result_revoke_or_expiry_intent",
+        "result_revoke_or_expiry_event_sha256", "request_issuance_effect",
+        "request_live_handle_effect",
+        "live_capability_delivery_acknowledged", "automatic_retry_started", "serialized_capability_present",
+        "readback_at", "producer_binding_state", "fixture_only",
+        "canonical_producer_acceptance_state", "canonical_producer_readback", "execution_ready",
+        "authority_created", "private_body_present", "path_present", "secret_present",
+        "model_loaded", "inference_started", "wav_created", "external_effect_started", "issue_readback_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_REFERENCE_V2_ISSUE_OR_REVOKE_READBACK_V1" },
+        "record_type": { "const": "ReferenceV2IssueOrRevokeReadback" },
+        "operation_id": { "$ref": "#/$defs/identifier" },
+        "semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "request_sha256": { "$ref": "#/$defs/sha256" },
+        "outcome": { "enum": ["V2_ISSUE_COMMITTED_DELIVERY_ACKNOWLEDGED", "V2_ISSUE_COMMITTED_DELIVERY_NOT_CONFIRMED", "REVOKE_COMMITTED", "EXPIRY_COMMITTED", "NO_COMMIT_STALE_PREDECESSOR", "OUTCOME_NOT_CONFIRMED"] },
+        "expected_fence_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "expected_fence_sha256": { "$ref": "#/$defs/sha256" },
+        "predecessor_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "expected_v1_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "expected_v2_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_fence_revision": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+        "result_fence_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_snapshot_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "committed_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "trusted_time_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_domain_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_process_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_session_sha256": { "$ref": "#/$defs/sha256" },
+        "product_build_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_protocol_version": { "$ref": "#/$defs/identifier" },
+        "result_lifecycle": { "type": ["string", "null"], "enum": ["UNBOUND", "PREPARE_PLANNED", "PREPARING", "PREPARED", "PREPARE_FAILED_NO_DERIVATIVE", "PREPARE_FAILED_RETAINED", "REVOKE_PENDING", "REVOKED", "PURGE_PENDING", "PURGED", "PURGE_NOT_CONFIRMED", null] },
+        "result_retained_object": { "type": ["string", "null"], "enum": ["NONE", "ALLOCATED", "ENCRYPTED_UNPUBLISHED", "PUBLISHED", "RECONCILIATION_REQUIRED", "RECOVERABLE_RETAINED", "KEY_REVOKED", "PURGED", "FOREIGN_PRESERVED", null] },
+        "result_v1_state": { "type": ["string", "null"], "enum": ["NONE", "ISSUED", "IN_FLIGHT", "BODY_READ_STARTED", "CONSUMED", "BURNED", "FAILED_CLOSED", null] },
+        "result_v1_lease_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v1_handle_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 1 },
+        "result_v1_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v2_state": { "type": ["string", "null"], "enum": ["V2_ABSENT", "ISSUED", "IN_FLIGHT_PARENT_DELEGATION", "CHILD_TRANSFER_IN_FLIGHT", "CHILD_PAIR_READY", "BODY_READ_STARTED", "CONSUMED", "BURNED", "FAILED_CLOSED", null] },
+        "result_v2_lease_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v2_handle_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 4 },
+        "result_v2_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_revoke_or_expiry_intent": { "type": ["string", "null"], "enum": ["ABSENT", "EXPLICIT_REVOKE", "TRUSTED_TIME_EXPIRY", null] },
+        "result_revoke_or_expiry_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "live_capability_delivery_acknowledged": { "type": ["boolean", "null"] },
+        "request_issuance_effect": { "enum": ["ZERO", "OBSERVED", "NOT_CONFIRMED"] },
+        "request_live_handle_effect": { "enum": ["ZERO", "OBSERVED", "NOT_CONFIRMED"] },
+        "automatic_retry_started": { "const": false },
+        "serialized_capability_present": { "const": false },
+        "readback_at": { "$ref": "#/$defs/timestamp" },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "fixture_only": { "const": true },
+        "canonical_producer_acceptance_state": { "const": "NOT_CONFIRMED" },
+        "canonical_producer_readback": { "const": false },
+        "execution_ready": { "const": false },
+        "authority_created": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "model_loaded": { "const": false },
+        "inference_started": { "const": false },
+        "wav_created": { "const": false },
+        "external_effect_started": { "const": false },
+        "issue_readback_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "outcome": { "const": "V2_ISSUE_COMMITTED_DELIVERY_ACKNOWLEDGED" } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "result_fence_revision": { "type": "integer" }, "result_fence_sha256": { "$ref": "#/$defs/sha256" },
+            "result_snapshot_sha256": { "$ref": "#/$defs/sha256" }, "committed_event_sha256": { "$ref": "#/$defs/sha256" },
+            "result_lifecycle": { "const": "PREPARED" }, "result_retained_object": { "const": "PUBLISHED" },
+            "result_v1_state": { "const": "NONE" }, "result_v1_lease_identity_sha256": { "type": "null" }, "result_v1_handle_count": { "const": 0 },
+            "result_v2_state": { "const": "ISSUED" }, "result_v2_lease_identity_sha256": { "$ref": "#/$defs/sha256" }, "result_v2_handle_count": { "const": 2 },
+            "result_revoke_or_expiry_intent": { "const": "ABSENT" }, "result_revoke_or_expiry_event_sha256": { "type": "null" },
+            "live_capability_delivery_acknowledged": { "const": true }, "request_issuance_effect": { "const": "OBSERVED" }, "request_live_handle_effect": { "const": "OBSERVED" }
+          } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "V2_ISSUE_COMMITTED_DELIVERY_NOT_CONFIRMED" } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "result_fence_revision": { "type": "integer" }, "result_fence_sha256": { "$ref": "#/$defs/sha256" },
+            "result_snapshot_sha256": { "$ref": "#/$defs/sha256" }, "committed_event_sha256": { "$ref": "#/$defs/sha256" },
+            "result_lifecycle": { "const": "PREPARED" }, "result_retained_object": { "const": "PUBLISHED" },
+            "result_v1_state": { "const": "NONE" }, "result_v1_lease_identity_sha256": { "type": "null" }, "result_v1_handle_count": { "const": 0 },
+            "result_v2_state": { "const": "BURNED" }, "result_v2_lease_identity_sha256": { "$ref": "#/$defs/sha256" }, "result_v2_handle_count": { "const": 0 }, "result_v2_terminal_history_sha256": { "$ref": "#/$defs/sha256" },
+            "result_revoke_or_expiry_intent": { "const": "ABSENT" }, "result_revoke_or_expiry_event_sha256": { "type": "null" },
+            "live_capability_delivery_acknowledged": { "const": false }, "request_issuance_effect": { "const": "OBSERVED" }, "request_live_handle_effect": { "const": "OBSERVED" }
+          } }
+        },
+        {
+          "if": { "properties": { "outcome": { "enum": ["REVOKE_COMMITTED", "EXPIRY_COMMITTED"] } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "result_fence_revision": { "type": "integer" }, "result_fence_sha256": { "$ref": "#/$defs/sha256" },
+            "result_snapshot_sha256": { "$ref": "#/$defs/sha256" }, "committed_event_sha256": { "$ref": "#/$defs/sha256" },
+            "result_lifecycle": { "const": "REVOKED" }, "result_retained_object": { "const": "PUBLISHED" },
+            "result_v1_state": { "const": "NONE" }, "result_v1_lease_identity_sha256": { "type": "null" }, "result_v1_handle_count": { "const": 0 },
+            "result_v2_state": { "const": "V2_ABSENT" }, "result_v2_lease_identity_sha256": { "type": "null" }, "result_v2_handle_count": { "const": 0 },
+            "live_capability_delivery_acknowledged": { "type": "null" }, "request_issuance_effect": { "const": "ZERO" }, "request_live_handle_effect": { "const": "ZERO" }
+          } },
+          "else": true
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "OUTCOME_NOT_CONFIRMED" } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "result_fence_revision": { "type": "null" }, "result_fence_sha256": { "type": "null" },
+            "result_snapshot_sha256": { "type": "null" }, "committed_event_sha256": { "type": "null" },
+            "result_lifecycle": { "type": "null" }, "result_retained_object": { "type": "null" },
+            "result_v1_state": { "type": "null" }, "result_v1_lease_identity_sha256": { "type": "null" }, "result_v1_handle_count": { "type": "null" }, "result_v1_terminal_history_sha256": { "type": "null" },
+            "result_v2_state": { "type": "null" }, "result_v2_lease_identity_sha256": { "type": "null" }, "result_v2_handle_count": { "type": "null" }, "result_v2_terminal_history_sha256": { "type": "null" },
+            "result_revoke_or_expiry_intent": { "type": "null" }, "result_revoke_or_expiry_event_sha256": { "type": "null" },
+            "live_capability_delivery_acknowledged": { "type": "null" }, "request_issuance_effect": { "const": "NOT_CONFIRMED" }, "request_live_handle_effect": { "const": "NOT_CONFIRMED" }
+          } }
+        }
+      ]
+    },
+    "terminalRetireRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "operation_id", "semantic_operation_key",
+        "retired_operation_id", "retired_semantic_operation_key", "requested_action",
+        "terminal_kind", "retired_lease_identity_sha256", "terminal_readback_sha256",
+        "consumer_two_role_close_readback_sha256", "burn_abort_close_readback_sha256",
+        "failed_closed_gate_proof_sha256", "expected_fence_revision", "expected_fence_sha256",
+        "predecessor_snapshot_sha256", "expected_terminal_history_event_sha256",
+        "expected_terminal_history_sha256", "trusted_time_receipt_sha256",
+        "broker_domain_sha256", "broker_process_identity_sha256", "broker_session_sha256",
+        "product_build_sha256", "broker_protocol_version", "new_issue_combined",
+        "automatic_retry_allowed", "producer_binding_state", "fixture_only",
+        "canonical_producer_acceptance_state", "canonical_producer_readback", "execution_ready",
+        "authority_created", "private_body_present", "path_present", "secret_present",
+        "model_loaded", "inference_started", "wav_created", "external_effect_started",
+        "terminal_retire_request_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_REFERENCE_V2_TERMINAL_RETIRE_REQUEST_V1" },
+        "record_type": { "const": "ReferenceTerminalRetireRequest" },
+        "operation_id": { "$ref": "#/$defs/identifier" },
+        "semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "retired_operation_id": { "$ref": "#/$defs/identifier" },
+        "retired_semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "requested_action": { "enum": ["RETIRE", "EXPLICIT_REVOKE", "TRUSTED_TIME_EXPIRY"] },
+        "terminal_kind": { "enum": ["CONSUMED", "BURNED", "FAILED_CLOSED"] },
+        "retired_lease_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "terminal_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "consumer_two_role_close_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "burn_abort_close_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "failed_closed_gate_proof_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "expected_fence_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "expected_fence_sha256": { "$ref": "#/$defs/sha256" },
+        "predecessor_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "expected_terminal_history_event_sha256": { "$ref": "#/$defs/sha256" },
+        "expected_terminal_history_sha256": { "$ref": "#/$defs/sha256" },
+        "trusted_time_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_domain_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_process_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_session_sha256": { "$ref": "#/$defs/sha256" },
+        "product_build_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_protocol_version": { "$ref": "#/$defs/identifier" },
+        "new_issue_combined": { "const": false },
+        "automatic_retry_allowed": { "const": false },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "fixture_only": { "const": true },
+        "canonical_producer_acceptance_state": { "const": "NOT_CONFIRMED" },
+        "canonical_producer_readback": { "const": false },
+        "execution_ready": { "const": false },
+        "authority_created": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "model_loaded": { "const": false },
+        "inference_started": { "const": false },
+        "wav_created": { "const": false },
+        "external_effect_started": { "const": false },
+        "terminal_retire_request_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "terminal_kind": { "const": "CONSUMED" } }, "required": ["terminal_kind"] },
+          "then": { "properties": {
+            "consumer_two_role_close_readback_sha256": { "$ref": "#/$defs/sha256" },
+            "burn_abort_close_readback_sha256": { "type": "null" },
+            "failed_closed_gate_proof_sha256": { "type": "null" }
+          } }
+        },
+        {
+          "if": { "properties": { "terminal_kind": { "const": "BURNED" } }, "required": ["terminal_kind"] },
+          "then": { "properties": {
+            "consumer_two_role_close_readback_sha256": { "type": "null" },
+            "burn_abort_close_readback_sha256": { "$ref": "#/$defs/sha256" },
+            "failed_closed_gate_proof_sha256": { "type": "null" }
+          } }
+        },
+        {
+          "if": { "properties": { "terminal_kind": { "const": "FAILED_CLOSED" } }, "required": ["terminal_kind"] },
+          "then": { "properties": {
+            "consumer_two_role_close_readback_sha256": { "type": "null" },
+            "burn_abort_close_readback_sha256": { "type": "null" },
+            "failed_closed_gate_proof_sha256": { "$ref": "#/$defs/sha256" }
+          } }
+        }
+      ]
+    },
+    "terminalRetireReadback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "operation_id", "semantic_operation_key",
+        "retired_operation_id", "retired_semantic_operation_key", "request_sha256",
+        "requested_action", "terminal_kind", "retired_lease_identity_sha256",
+        "terminal_readback_sha256", "consumer_two_role_close_readback_sha256",
+        "burn_abort_close_readback_sha256", "failed_closed_gate_proof_sha256",
+        "expected_fence_revision", "expected_fence_sha256", "predecessor_snapshot_sha256",
+        "result_fence_revision", "result_fence_sha256", "result_snapshot_sha256",
+        "committed_event_sha256", "terminal_history_event_sha256", "terminal_history_sha256",
+        "terminal_history_disposition", "history_append_count", "outcome",
+        "trusted_time_receipt_sha256", "broker_domain_sha256", "broker_process_identity_sha256",
+        "broker_session_sha256", "product_build_sha256", "broker_protocol_version",
+        "result_lifecycle", "result_retained_object", "result_v1_state",
+        "result_v1_lease_identity_sha256", "result_v1_handle_count",
+        "result_v1_terminal_history_sha256", "result_v2_state",
+        "result_v2_lease_identity_sha256", "result_v2_handle_count",
+        "result_v2_terminal_history_sha256", "result_revoke_or_expiry_intent",
+        "result_revoke_or_expiry_event_sha256", "body_effect", "model_effect", "new_lease_issued",
+        "history_duplicate_count", "automatic_retry_started", "readback_at",
+        "producer_binding_state", "fixture_only", "canonical_producer_acceptance_state",
+        "canonical_producer_readback", "execution_ready", "authority_created",
+        "private_body_present", "path_present", "secret_present", "model_loaded", "inference_started",
+        "wav_created", "external_effect_started", "terminal_retire_readback_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_REFERENCE_V2_TERMINAL_RETIRE_READBACK_V1" },
+        "record_type": { "const": "ReferenceTerminalRetireReadback" },
+        "operation_id": { "$ref": "#/$defs/identifier" },
+        "semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "retired_operation_id": { "$ref": "#/$defs/identifier" },
+        "retired_semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "request_sha256": { "$ref": "#/$defs/sha256" },
+        "requested_action": { "enum": ["RETIRE", "EXPLICIT_REVOKE", "TRUSTED_TIME_EXPIRY"] },
+        "terminal_kind": { "enum": ["CONSUMED", "BURNED", "FAILED_CLOSED"] },
+        "retired_lease_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "terminal_readback_sha256": { "$ref": "#/$defs/sha256" },
+        "consumer_two_role_close_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "burn_abort_close_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "failed_closed_gate_proof_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "expected_fence_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "expected_fence_sha256": { "$ref": "#/$defs/sha256" },
+        "predecessor_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "result_fence_revision": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+        "result_fence_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_snapshot_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "committed_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "terminal_history_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "terminal_history_disposition": { "enum": ["EXACT_PRESENT", "SEALED_ONCE", "NOT_CONFIRMED"] },
+        "history_append_count": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "outcome": { "enum": ["CONSUMED_RETIRED", "BURNED_RETIRED", "FAILED_CLOSED_RETIRED_NOT_CONFIRMED", "TERMINAL_REVOKE_COMMITTED", "TERMINAL_EXPIRY_COMMITTED", "NO_COMMIT_TERMINAL_STILL_CURRENT", "STALE_OTHER_COMMIT", "OUTCOME_NOT_CONFIRMED"] },
+        "trusted_time_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_domain_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_process_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_session_sha256": { "$ref": "#/$defs/sha256" },
+        "product_build_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_protocol_version": { "$ref": "#/$defs/identifier" },
+        "result_lifecycle": { "type": ["string", "null"], "enum": ["UNBOUND", "PREPARE_PLANNED", "PREPARING", "PREPARED", "PREPARE_FAILED_NO_DERIVATIVE", "PREPARE_FAILED_RETAINED", "REVOKE_PENDING", "REVOKED", "PURGE_PENDING", "PURGED", "PURGE_NOT_CONFIRMED", null] },
+        "result_retained_object": { "type": ["string", "null"], "enum": ["NONE", "ALLOCATED", "ENCRYPTED_UNPUBLISHED", "PUBLISHED", "RECONCILIATION_REQUIRED", "RECOVERABLE_RETAINED", "KEY_REVOKED", "PURGED", "FOREIGN_PRESERVED", null] },
+        "result_v1_state": { "type": ["string", "null"], "enum": ["NONE", "ISSUED", "IN_FLIGHT", "BODY_READ_STARTED", "CONSUMED", "BURNED", "FAILED_CLOSED", null] },
+        "result_v1_lease_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v1_handle_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 1 },
+        "result_v1_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v2_state": { "type": ["string", "null"], "enum": ["V2_ABSENT", "ISSUED", "IN_FLIGHT_PARENT_DELEGATION", "CHILD_TRANSFER_IN_FLIGHT", "CHILD_PAIR_READY", "BODY_READ_STARTED", "CONSUMED", "BURNED", "FAILED_CLOSED", null] },
+        "result_v2_lease_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v2_handle_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 4 },
+        "result_v2_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_revoke_or_expiry_intent": { "type": ["string", "null"], "enum": ["ABSENT", "EXPLICIT_REVOKE", "TRUSTED_TIME_EXPIRY", null] },
+        "result_revoke_or_expiry_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "body_effect": { "enum": ["ZERO", "OBSERVED", "NOT_CONFIRMED"] },
+        "model_effect": { "enum": ["ZERO", "OBSERVED", "NOT_CONFIRMED"] },
+        "new_lease_issued": { "const": false },
+        "history_duplicate_count": { "const": 0 },
+        "automatic_retry_started": { "const": false },
+        "readback_at": { "$ref": "#/$defs/timestamp" },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "fixture_only": { "const": true },
+        "canonical_producer_acceptance_state": { "const": "NOT_CONFIRMED" },
+        "canonical_producer_readback": { "const": false },
+        "execution_ready": { "const": false },
+        "authority_created": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "model_loaded": { "const": false },
+        "inference_started": { "const": false },
+        "wav_created": { "const": false },
+        "external_effect_started": { "const": false },
+        "terminal_retire_readback_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "terminal_kind": { "const": "CONSUMED" } }, "required": ["terminal_kind"] },
+          "then": { "properties": { "consumer_two_role_close_readback_sha256": { "$ref": "#/$defs/sha256" }, "burn_abort_close_readback_sha256": { "type": "null" }, "failed_closed_gate_proof_sha256": { "type": "null" }, "body_effect": { "const": "OBSERVED" }, "model_effect": { "const": "OBSERVED" } } },
+          "else": {
+            "if": { "properties": { "terminal_kind": { "const": "BURNED" } }, "required": ["terminal_kind"] },
+            "then": { "properties": { "consumer_two_role_close_readback_sha256": { "type": "null" }, "burn_abort_close_readback_sha256": { "$ref": "#/$defs/sha256" }, "failed_closed_gate_proof_sha256": { "type": "null" } } },
+            "else": { "properties": { "consumer_two_role_close_readback_sha256": { "type": "null" }, "burn_abort_close_readback_sha256": { "type": "null" }, "failed_closed_gate_proof_sha256": { "$ref": "#/$defs/sha256" }, "body_effect": { "const": "NOT_CONFIRMED" }, "model_effect": { "const": "NOT_CONFIRMED" } } }
+          }
+        },
+        {
+          "if": { "properties": { "terminal_history_disposition": { "const": "SEALED_ONCE" } }, "required": ["terminal_history_disposition"] },
+          "then": { "properties": { "history_append_count": { "const": 1 } } },
+          "else": { "properties": { "history_append_count": { "const": 0 } } }
+        },
+        {
+          "if": { "properties": { "outcome": { "enum": ["CONSUMED_RETIRED", "BURNED_RETIRED", "FAILED_CLOSED_RETIRED_NOT_CONFIRMED"] } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "requested_action": { "const": "RETIRE" }, "result_fence_revision": { "type": "integer" },
+            "result_fence_sha256": { "$ref": "#/$defs/sha256" }, "result_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+            "committed_event_sha256": { "$ref": "#/$defs/sha256" }, "terminal_history_event_sha256": { "$ref": "#/$defs/sha256" }, "terminal_history_sha256": { "$ref": "#/$defs/sha256" },
+            "result_lifecycle": { "const": "PREPARED" }, "result_retained_object": { "const": "PUBLISHED" },
+            "result_v1_state": { "const": "NONE" }, "result_v1_lease_identity_sha256": { "type": "null" }, "result_v1_handle_count": { "const": 0 },
+            "result_v2_state": { "const": "V2_ABSENT" }, "result_v2_lease_identity_sha256": { "type": "null" }, "result_v2_handle_count": { "const": 0 }, "result_v2_terminal_history_sha256": { "$ref": "#/$defs/sha256" },
+            "result_revoke_or_expiry_intent": { "const": "ABSENT" }, "result_revoke_or_expiry_event_sha256": { "type": "null" }
+          } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "TERMINAL_REVOKE_COMMITTED" } }, "required": ["outcome"] },
+          "then": { "properties": { "requested_action": { "const": "EXPLICIT_REVOKE" }, "result_lifecycle": { "const": "REVOKED" }, "result_revoke_or_expiry_intent": { "const": "EXPLICIT_REVOKE" }, "result_revoke_or_expiry_event_sha256": { "$ref": "#/$defs/sha256" }, "result_v2_state": { "const": "V2_ABSENT" }, "result_v2_terminal_history_sha256": { "$ref": "#/$defs/sha256" } } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "TERMINAL_EXPIRY_COMMITTED" } }, "required": ["outcome"] },
+          "then": { "properties": { "requested_action": { "const": "TRUSTED_TIME_EXPIRY" }, "result_lifecycle": { "const": "REVOKED" }, "result_revoke_or_expiry_intent": { "const": "TRUSTED_TIME_EXPIRY" }, "result_revoke_or_expiry_event_sha256": { "$ref": "#/$defs/sha256" }, "result_v2_state": { "const": "V2_ABSENT" }, "result_v2_terminal_history_sha256": { "$ref": "#/$defs/sha256" } } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "NO_COMMIT_TERMINAL_STILL_CURRENT" } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "terminal_history_event_sha256": { "$ref": "#/$defs/sha256" },
+            "terminal_history_sha256": { "$ref": "#/$defs/sha256" },
+            "terminal_history_disposition": { "const": "EXACT_PRESENT" }
+          } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "OUTCOME_NOT_CONFIRMED" } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "result_fence_revision": { "type": "null" }, "result_fence_sha256": { "type": "null" }, "result_snapshot_sha256": { "type": "null" }, "committed_event_sha256": { "type": "null" },
+            "terminal_history_event_sha256": { "type": "null" }, "terminal_history_sha256": { "type": "null" }, "terminal_history_disposition": { "const": "NOT_CONFIRMED" },
+            "result_lifecycle": { "type": "null" }, "result_retained_object": { "type": "null" }, "result_v1_state": { "type": "null" }, "result_v1_handle_count": { "type": "null" }, "result_v2_state": { "type": "null" }, "result_v2_handle_count": { "type": "null" }, "result_revoke_or_expiry_intent": { "type": "null" }
+          } }
+        }
+      ]
+    },
+    "v1FinalizeReadback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "operation_id", "semantic_operation_key",
+        "request_sha256", "terminal_kind", "v1_lease_identity_sha256",
+        "terminal_readback_sha256", "terminal_close_readback_sha256",
+        "failed_closed_gate_proof_sha256", "revoke_or_expiry_intent",
+        "revoke_or_expiry_event_sha256", "expected_fence_revision", "expected_fence_sha256",
+        "predecessor_snapshot_sha256", "result_fence_revision", "result_fence_sha256",
+        "result_snapshot_sha256", "committed_event_sha256", "terminal_history_event_sha256",
+        "terminal_history_sha256", "terminal_history_disposition", "history_append_count",
+        "outcome", "trusted_time_receipt_sha256", "broker_domain_sha256",
+        "broker_process_identity_sha256", "broker_session_sha256", "product_build_sha256",
+        "broker_protocol_version", "result_lifecycle", "result_retained_object",
+        "result_v1_state", "result_v1_lease_identity_sha256", "result_v1_handle_count",
+        "result_v1_terminal_history_sha256", "result_v2_state",
+        "result_v2_lease_identity_sha256", "result_v2_handle_count",
+        "result_v2_terminal_history_sha256", "result_revoke_or_expiry_intent",
+        "result_revoke_or_expiry_event_sha256", "body_effect", "model_effect",
+        "new_v1_or_v2_lease_issued", "history_duplicate_count", "automatic_retry_started",
+        "body_or_model_entry_started", "readback_at", "producer_binding_state",
+        "fixture_only", "canonical_producer_acceptance_state", "canonical_producer_readback",
+        "execution_ready", "authority_created",
+        "private_body_present", "path_present", "secret_present", "model_loaded",
+        "inference_started", "wav_created", "external_effect_started", "v1_finalize_readback_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_REFERENCE_V1_REVOKE_FINALIZE_READBACK_V1" },
+        "record_type": { "const": "ReferenceV1RevokeFinalizeReadback" },
+        "operation_id": { "$ref": "#/$defs/identifier" },
+        "semantic_operation_key": { "$ref": "#/$defs/identifier" },
+        "request_sha256": { "$ref": "#/$defs/sha256" },
+        "terminal_kind": { "type": ["string", "null"], "enum": ["CONSUMED", "BURNED", "FAILED_CLOSED", null] },
+        "v1_lease_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "terminal_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "terminal_close_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "failed_closed_gate_proof_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "revoke_or_expiry_intent": { "enum": ["EXPLICIT_REVOKE", "TRUSTED_TIME_EXPIRY"] },
+        "revoke_or_expiry_event_sha256": { "$ref": "#/$defs/sha256" },
+        "expected_fence_revision": { "type": "integer", "minimum": 1, "maximum": 2147483647 },
+        "expected_fence_sha256": { "$ref": "#/$defs/sha256" },
+        "predecessor_snapshot_sha256": { "$ref": "#/$defs/sha256" },
+        "result_fence_revision": { "type": ["integer", "null"], "minimum": 1, "maximum": 2147483647 },
+        "result_fence_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_snapshot_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "committed_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "terminal_history_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "terminal_history_disposition": { "enum": ["EXACT_PRESENT", "SEALED_ONCE", "NOT_CONFIRMED"] },
+        "history_append_count": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "outcome": { "enum": ["V1_CONSUMED_REVOKE_FINALIZED", "V1_BURNED_REVOKE_FINALIZED", "V1_FAILED_CLOSED_REVOKE_FINALIZED_NOT_CONFIRMED", "V1_TERMINAL_AWAITING_FINALIZE", "V1_ACTIVE_RECOVERY_REQUIRED", "STALE_OTHER_COMMIT", "OUTCOME_NOT_CONFIRMED"] },
+        "trusted_time_receipt_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_domain_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_process_identity_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_session_sha256": { "$ref": "#/$defs/sha256" },
+        "product_build_sha256": { "$ref": "#/$defs/sha256" },
+        "broker_protocol_version": { "$ref": "#/$defs/identifier" },
+        "result_lifecycle": { "type": ["string", "null"], "enum": ["UNBOUND", "PREPARE_PLANNED", "PREPARING", "PREPARED", "PREPARE_FAILED_NO_DERIVATIVE", "PREPARE_FAILED_RETAINED", "REVOKE_PENDING", "REVOKED", "PURGE_PENDING", "PURGED", "PURGE_NOT_CONFIRMED", null] },
+        "result_retained_object": { "type": ["string", "null"], "enum": ["NONE", "ALLOCATED", "ENCRYPTED_UNPUBLISHED", "PUBLISHED", "RECONCILIATION_REQUIRED", "RECOVERABLE_RETAINED", "KEY_REVOKED", "PURGED", "FOREIGN_PRESERVED", null] },
+        "result_v1_state": { "type": ["string", "null"], "enum": ["NONE", "ISSUED", "IN_FLIGHT", "BODY_READ_STARTED", "CONSUMED", "BURNED", "FAILED_CLOSED", null] },
+        "result_v1_lease_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v1_handle_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 1 },
+        "result_v1_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v2_state": { "type": ["string", "null"], "enum": ["V2_ABSENT", "ISSUED", "IN_FLIGHT_PARENT_DELEGATION", "CHILD_TRANSFER_IN_FLIGHT", "CHILD_PAIR_READY", "BODY_READ_STARTED", "CONSUMED", "BURNED", "FAILED_CLOSED", null] },
+        "result_v2_lease_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_v2_handle_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 4 },
+        "result_v2_terminal_history_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "result_revoke_or_expiry_intent": { "type": ["string", "null"], "enum": ["ABSENT", "EXPLICIT_REVOKE", "TRUSTED_TIME_EXPIRY", null] },
+        "result_revoke_or_expiry_event_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "body_effect": { "enum": ["ZERO", "OBSERVED", "NOT_CONFIRMED"] },
+        "model_effect": { "enum": ["ZERO", "OBSERVED", "NOT_CONFIRMED"] },
+        "new_v1_or_v2_lease_issued": { "const": false },
+        "history_duplicate_count": { "const": 0 },
+        "automatic_retry_started": { "const": false },
+        "body_or_model_entry_started": { "const": false },
+        "readback_at": { "$ref": "#/$defs/timestamp" },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "fixture_only": { "const": true },
+        "canonical_producer_acceptance_state": { "const": "NOT_CONFIRMED" },
+        "canonical_producer_readback": { "const": false },
+        "execution_ready": { "const": false },
+        "authority_created": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "model_loaded": { "const": false },
+        "inference_started": { "const": false },
+        "wav_created": { "const": false },
+        "external_effect_started": { "const": false },
+        "v1_finalize_readback_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "terminal_kind": { "enum": ["CONSUMED", "BURNED"] } }, "required": ["terminal_kind"] },
+          "then": { "properties": { "terminal_readback_sha256": { "$ref": "#/$defs/sha256" }, "terminal_close_readback_sha256": { "$ref": "#/$defs/sha256" }, "failed_closed_gate_proof_sha256": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "terminal_kind": { "const": "FAILED_CLOSED" } }, "required": ["terminal_kind"] },
+          "then": { "properties": { "terminal_readback_sha256": { "$ref": "#/$defs/sha256" }, "terminal_close_readback_sha256": { "type": "null" }, "failed_closed_gate_proof_sha256": { "$ref": "#/$defs/sha256" }, "body_effect": { "const": "NOT_CONFIRMED" }, "model_effect": { "const": "NOT_CONFIRMED" } } }
+        },
+        {
+          "if": { "properties": { "terminal_history_disposition": { "const": "SEALED_ONCE" } }, "required": ["terminal_history_disposition"] },
+          "then": { "properties": { "history_append_count": { "const": 1 } } },
+          "else": { "properties": { "history_append_count": { "const": 0 } } }
+        },
+        {
+          "if": { "properties": { "outcome": { "enum": ["V1_CONSUMED_REVOKE_FINALIZED", "V1_BURNED_REVOKE_FINALIZED", "V1_FAILED_CLOSED_REVOKE_FINALIZED_NOT_CONFIRMED"] } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "result_fence_revision": { "type": "integer" }, "result_fence_sha256": { "$ref": "#/$defs/sha256" }, "result_snapshot_sha256": { "$ref": "#/$defs/sha256" }, "committed_event_sha256": { "$ref": "#/$defs/sha256" },
+            "terminal_history_event_sha256": { "$ref": "#/$defs/sha256" }, "terminal_history_sha256": { "$ref": "#/$defs/sha256" },
+            "result_lifecycle": { "const": "REVOKED" }, "result_retained_object": { "const": "PUBLISHED" },
+            "result_v1_state": { "const": "NONE" }, "result_v1_lease_identity_sha256": { "type": "null" }, "result_v1_handle_count": { "const": 0 }, "result_v1_terminal_history_sha256": { "$ref": "#/$defs/sha256" },
+            "result_v2_state": { "const": "V2_ABSENT" }, "result_v2_lease_identity_sha256": { "type": "null" }, "result_v2_handle_count": { "const": 0 }
+          } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "V1_TERMINAL_AWAITING_FINALIZE" } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "terminal_history_event_sha256": { "$ref": "#/$defs/sha256" },
+            "terminal_history_sha256": { "$ref": "#/$defs/sha256" },
+            "terminal_history_disposition": { "const": "EXACT_PRESENT" },
+            "result_revoke_or_expiry_event_sha256": { "$ref": "#/$defs/sha256" }
+          } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "V1_ACTIVE_RECOVERY_REQUIRED" } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "result_revoke_or_expiry_event_sha256": { "$ref": "#/$defs/sha256" }
+          } }
+        },
+        {
+          "if": { "properties": { "outcome": { "const": "OUTCOME_NOT_CONFIRMED" } }, "required": ["outcome"] },
+          "then": { "properties": {
+            "terminal_kind": { "type": "null" }, "result_fence_revision": { "type": "null" }, "result_fence_sha256": { "type": "null" }, "result_snapshot_sha256": { "type": "null" }, "committed_event_sha256": { "type": "null" },
+            "terminal_history_event_sha256": { "type": "null" }, "terminal_history_sha256": { "type": "null" }, "terminal_history_disposition": { "const": "NOT_CONFIRMED" },
+            "result_lifecycle": { "type": "null" }, "result_retained_object": { "type": "null" }, "result_v1_state": { "type": "null" }, "result_v1_handle_count": { "type": "null" }, "result_v2_state": { "type": "null" }, "result_v2_handle_count": { "type": "null" }, "result_revoke_or_expiry_intent": { "type": "null" }, "body_effect": { "const": "NOT_CONFIRMED" }, "model_effect": { "const": "NOT_CONFIRMED" }
+          } }
+        }
+      ]
+    },
+    "childAbortReadback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version", "record_type", "operation_id", "attachment_sha256",
+        "begin_lineage_sha256", "spawn_truth", "lifecycle_events", "child_process_identity_sha256",
+        "body_gate_opened", "audio_role_read_count", "transcript_role_read_count",
+        "model_invocation_start_count", "child_exited", "no_surviving_child",
+        "audio_remote_role_state", "transcript_remote_role_state", "body_effect", "model_effect",
+        "body_observation_readback_sha256", "model_observation_readback_sha256",
+        "unrelated_process_affected", "pid_or_name_fallback_used", "replay_started", "readback_at",
+        "producer_binding_state", "fixture_only", "canonical_producer_acceptance_state",
+        "canonical_producer_readback", "execution_ready",
+        "authority_created", "private_body_present", "path_present", "secret_present", "model_loaded",
+        "inference_started", "wav_created", "external_effect_started", "child_abort_readback_sha256"
+      ],
+      "properties": {
+        "contract_version": { "const": "TASK074_REFERENCE_CHILD_ABORT_RECOVERY_READBACK_V1" },
+        "record_type": { "const": "ReferenceChildAbortRecoveryReadback" },
+        "operation_id": { "$ref": "#/$defs/identifier" },
+        "attachment_sha256": { "$ref": "#/$defs/sha256" },
+        "begin_lineage_sha256": { "$ref": "#/$defs/sha256" },
+        "spawn_truth": { "enum": ["PROVEN_FALSE", "PROVEN_TRUE", "NOT_CONFIRMED"] },
+        "lifecycle_events": {
+          "type": "array",
+          "maxItems": 6,
+          "items": { "enum": ["SPAWN_COMMITTED", "ABORT_REQUESTED", "EXIT_WAIT_STARTED", "CHILD_EXITED", "REMOTE_CLOSE_VERIFIED", "ABORT_COMPLETE"] }
+        },
+        "child_process_identity_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "body_gate_opened": { "type": ["boolean", "null"] },
+        "audio_role_read_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 2147483647 },
+        "transcript_role_read_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 2147483647 },
+        "model_invocation_start_count": { "type": ["integer", "null"], "minimum": 0, "maximum": 2147483647 },
+        "child_exited": { "type": ["boolean", "null"] },
+        "no_surviving_child": { "type": ["boolean", "null"] },
+        "audio_remote_role_state": { "enum": ["ABSENT_PROVEN", "CREATED_THEN_CLOSED_VERIFIED", "NOT_CONFIRMED"] },
+        "transcript_remote_role_state": { "enum": ["ABSENT_PROVEN", "CREATED_THEN_CLOSED_VERIFIED", "NOT_CONFIRMED"] },
+        "body_effect": { "enum": ["ZERO", "OBSERVED", "NOT_CONFIRMED"] },
+        "model_effect": { "enum": ["ZERO", "OBSERVED", "NOT_CONFIRMED"] },
+        "body_observation_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "model_observation_readback_sha256": { "$ref": "#/$defs/nullableSha256" },
+        "unrelated_process_affected": { "const": false },
+        "pid_or_name_fallback_used": { "const": false },
+        "replay_started": { "const": false },
+        "readback_at": { "$ref": "#/$defs/timestamp" },
+        "producer_binding_state": { "const": "NOT_BOUND" },
+        "fixture_only": { "const": true },
+        "canonical_producer_acceptance_state": { "const": "NOT_CONFIRMED" },
+        "canonical_producer_readback": { "const": false },
+        "execution_ready": { "const": false },
+        "authority_created": { "const": false },
+        "private_body_present": { "const": false },
+        "path_present": { "const": false },
+        "secret_present": { "const": false },
+        "model_loaded": { "const": false },
+        "inference_started": { "const": false },
+        "wav_created": { "const": false },
+        "external_effect_started": { "const": false },
+        "child_abort_readback_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "body_effect": { "const": "OBSERVED" } }, "required": ["body_effect"] },
+          "then": { "properties": { "body_observation_readback_sha256": { "$ref": "#/$defs/sha256" } } },
+          "else": { "properties": { "body_observation_readback_sha256": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "model_effect": { "const": "OBSERVED" } }, "required": ["model_effect"] },
+          "then": { "properties": { "model_observation_readback_sha256": { "$ref": "#/$defs/sha256" } } },
+          "else": { "properties": { "model_observation_readback_sha256": { "type": "null" } } }
+        },
+        {
+          "if": { "properties": { "spawn_truth": { "const": "PROVEN_FALSE" } }, "required": ["spawn_truth"] },
+          "then": { "properties": {
+            "lifecycle_events": { "maxItems": 0 }, "child_process_identity_sha256": { "type": "null" },
+            "body_gate_opened": { "const": false }, "audio_role_read_count": { "const": 0 },
+            "transcript_role_read_count": { "const": 0 }, "model_invocation_start_count": { "const": 0 },
+            "child_exited": { "const": false }, "no_surviving_child": { "const": true },
+            "audio_remote_role_state": { "const": "ABSENT_PROVEN" }, "transcript_remote_role_state": { "const": "ABSENT_PROVEN" },
+            "body_effect": { "const": "ZERO" }, "model_effect": { "const": "ZERO" }
+          } }
+        },
+        {
+          "if": { "properties": { "spawn_truth": { "const": "PROVEN_TRUE" } }, "required": ["spawn_truth"] },
+          "then": { "properties": { "child_process_identity_sha256": { "$ref": "#/$defs/sha256" }, "lifecycle_events": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "spawn_truth": { "const": "NOT_CONFIRMED" } }, "required": ["spawn_truth"] },
+          "then": { "properties": { "body_effect": { "const": "NOT_CONFIRMED" }, "model_effect": { "const": "NOT_CONFIRMED" } } }
+        }
+      ]
+    }
+  }
+}

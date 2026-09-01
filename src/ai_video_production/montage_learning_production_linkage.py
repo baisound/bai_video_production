@@ -185,6 +185,8 @@ class PreactivationChainPlan:
             "phase": PREACTIVATION_PHASE,
             "evidence_mode": EVIDENCE_MODE,
             "task072_design_sha256": TASK072_DESIGN_SHA256,
+            "fixture_only": True,
+            "native_broker_executed": False,
             "operation_id": self.operation_id,
             "install_instance_id": self.install_instance_id,
             "record_id": self.record_id,
@@ -273,6 +275,8 @@ class PreactivationFixtureValidation:
             "status": VALIDATED_STATUS,
             "evidence_mode": EVIDENCE_MODE,
             "task072_design_sha256": self.task072_design_sha256,
+            "fixture_only": True,
+            "native_broker_executed": False,
             "operation_id": self.operation_id,
             "install_instance_id": self.install_instance_id,
             "record_id": self.record_id,
@@ -318,6 +322,8 @@ _TOP_FIELDS = frozenset(
         "phase",
         "evidence_mode",
         "task072_design_sha256",
+        "fixture_only",
+        "native_broker_executed",
         "plan_sha256",
         "operation_id",
         "install_instance_id",
@@ -454,6 +460,12 @@ class PreactivationChainConsumerPort:
             _fail("ERR_TASK065_FIXTURE_CONTRACT")
         _require_bool(fixture["evidence_complete"], True, "ERR_TASK065_EVIDENCE_INCOMPLETE")
         _require_bool(fixture["authority_created"], False, "ERR_TASK065_AUTHORITY_CLAIM")
+        _require_bool(fixture["fixture_only"], True, "ERR_TASK065_NOT_FIXTURE")
+        _require_bool(
+            fixture["native_broker_executed"],
+            False,
+            "ERR_TASK065_NATIVE_BROKER_CLAIM",
+        )
         if fixture["plan_sha256"] != plan_value["plan_sha256"]:
             _fail("ERR_TASK065_PLAN_MISMATCH")
         for field in ("operation_id", "install_instance_id"):

@@ -5,7 +5,7 @@ Date: 2026-08-31
 ## P0-L fixture-consumer implementation checkpoint — 2026-09-01 JST
 
 Status: `IMPLEMENTED / FOCUSED_PASS / TARGETED_REGRESSION_PASS /
-CRITIC_PASS / JUDGE_PASS / P0-L_COMMIT_STOP_CLEARED`.
+CRITIC_PASS / JUDGE_PASS / TASK072_FIXTURE_FOLLOWUP_COMMIT_READY`.
 
 The central Owner continuation superseded the restart stop for this bounded
 Unit only. No real installed adapter call, `enabled:true`, native/config state,
@@ -63,7 +63,10 @@ Implemented boundary:
 - TASK-072 design receipt
   `sha256:4f6f21e97d96aa3ffca16f57679abf80d081de6d85d599347fd955c8899ce3c7`
   is pinned in the plan/fixture/validation; implementation receipt verification
-  is explicitly false and real consume stays parked;
+  is explicitly false. The PR #475 source bytes were read back with the same
+  SHA-256, and §7.10's `fixture_only:true` / `native_broker_executed:false`
+  declarations are exact in both fixture and validation. Real consume stays
+  parked;
 - TASK-065 adapter/TASK-036 call counts and Project/Bridge/Profile/config/
   history deltas are all exactly `0`.
 
@@ -79,9 +82,9 @@ Validation Evidence:
   and public-validation ID fields;
 - current focused source mini-runner: `35 PASS` (supplemental only);
 - current host Python 3.12 focused TASK-065 including all Draft 2020-12 schema
-  tests: `44 passed in 0.78s`;
+  tests after the TASK-072 §7.10 follow-up: `46 passed in 0.61s`;
 - current host Python 3.12 TASK-065 + TASK-058 canonical admission + TASK-061
-  connector activation targeted regression: `152 passed, 2 skipped in 62.66s`;
+  connector activation targeted regression: `154 passed, 2 skipped in 65.18s`;
   both skips are the existing `FIFO fixture unavailable` condition and are not
   promoted to PASS;
 - `git diff --check`: PASS with line-ending conversion warnings only;
@@ -107,6 +110,11 @@ clears only its local commit stop. TASK-067 preserved-dirty, TASK-072
 implementation receipt, real-installed dependencies, `enabled:true`, install,
 Release, Deploy, Production Activation and whole-TASK completion Gates remain
 unchanged.
+
+The post-commit TASK-072 §7.10 follow-up received a second independent
+`C=0/H=0/M=0`, Critic/Tester/Judge PASS after the `46`/`154` current test runs.
+It is commit-eligible but does not authorize a ticket, broker launch, adapter
+call or any other real effect.
 
 ## Active stop checkpoint — 2026-09-01 JST
 

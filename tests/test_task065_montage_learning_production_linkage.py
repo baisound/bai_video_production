@@ -54,6 +54,8 @@ def _fixture(plan: PreactivationChainPlan | None = None) -> dict[str, object]:
         "phase": "PREACTIVATION",
         "evidence_mode": "SYNTHETIC_PUBLIC_SAFE_FIXTURE",
         "task072_design_sha256": TASK072_DESIGN_SHA256,
+        "fixture_only": True,
+        "native_broker_executed": False,
         "plan_sha256": plan_value["plan_sha256"],
         "operation_id": plan.operation_id,
         "install_instance_id": plan.install_instance_id,
@@ -184,6 +186,8 @@ def test_valid_fixture_is_joined_without_any_task065_effect() -> None:
         assert result[field] is False
     assert result["hidden_correlation_fixture_matched"] is True
     assert result["task072_design_sha256"] == TASK072_DESIGN_SHA256
+    assert result["fixture_only"] is True
+    assert result["native_broker_executed"] is False
     rendered = json.dumps(result, sort_keys=True)
     assert plan.hidden_correlation_sha256 not in rendered
     assert "C:\\" not in rendered
@@ -361,6 +365,8 @@ def test_failure_burns_consumer_and_error_is_body_free() -> None:
         (("profile_readback", "auto_apply_authorized"), True, "ERR_TASK065_PROFILE_AUTHORITY"),
         (("evidence_complete",), False, "ERR_TASK065_EVIDENCE_INCOMPLETE"),
         (("authority_created",), True, "ERR_TASK065_AUTHORITY_CLAIM"),
+        (("fixture_only",), False, "ERR_TASK065_NOT_FIXTURE"),
+        (("native_broker_executed",), True, "ERR_TASK065_NATIVE_BROKER_CLAIM"),
         (("task072_design_sha256",), _sha("wrong-task072-design"), "ERR_TASK065_FIXTURE_CONTRACT"),
     ],
 )

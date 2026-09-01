@@ -50,6 +50,8 @@ version-pinned to the TASK-072 final design receipt
 (design commit `52203bc9962340016f4b7ac494ea02d25202484d`, Draft PR #475).
 This is design Evidence, not an implementation completion receipt. The
 synthetic validation must emit `task072_implementation_receipt_verified:false`;
+the early fixture and its validation also declare `fixture_only:true` and
+`native_broker_executed:false` exactly as TASK-072 §7.10 requires;
 real capability consumption and any real-installed effect remain parked until
 the separate TASK-072 implementation receipt and the dependency chain above
 are current. A caller mapping, design hash or schema-valid fixture cannot mint

@@ -29,6 +29,14 @@ It does not edit or synchronize the canonical/installed SKILL distribution
 config. The historical fixed-ProgramData default remains disabled and is never
 an active production fallback.
 
+The L3 common installed discovery/receipt harness Design Packet is
+`p0l-common-installed-discovery-receipt-harness-design-2026-09-01.md` with
+versioned public-safe fixture
+`p0l-common-installed-discovery-receipt-fixture-v1.json`. It shares installed
+currentness coordinates across P0-L, P0-E packaged QA and future P0-V WAV QA,
+but never shares or creates lane effect authority. The current fixture remains
+synthetic, `NOT_CONFIRMED` and effect zero.
+
 ## Dependency order
 
 The one-way dependency graph is authoritative over older whole-task TASK-061

@@ -5,6 +5,7 @@ from copy import deepcopy
 from dataclasses import fields, replace
 import json
 from pathlib import Path
+import re
 
 import pytest
 from jsonschema import Draft202012Validator
@@ -438,3 +439,365 @@ def test_concurrent_double_call_has_one_validation() -> None:
         "SYNTHETIC_FIXTURE_VALIDATED",
     ]
     assert port.state == "COMPLETED"
+
+
+def test_common_installed_discovery_receipt_fixture_is_closed_effect_zero() -> None:
+    fixture_path = (
+        Path(__file__).parents[1]
+        / "docs"
+        / "ai-team"
+        / "tasks"
+        / "TASK-065"
+        / "p0l-common-installed-discovery-receipt-fixture-v1.json"
+    )
+    raw_bytes = fixture_path.read_bytes()
+
+    def parse_fixture(data: bytes) -> dict[str, object]:
+        if len(data) > 8192:
+            raise ValueError("fixture byte bounds")
+        if data.startswith(b"\xef\xbb\xbf"):
+            raise ValueError("fixture BOM")
+        try:
+            body = data.decode("utf-8", errors="strict")
+        except UnicodeDecodeError as exc:
+            raise ValueError("fixture UTF-8") from exc
+
+        def reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+            result: dict[str, object] = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError("duplicate fixture key")
+                result[key] = value
+            return result
+
+        parsed = json.loads(
+            body,
+            object_pairs_hook=reject_duplicates,
+            parse_constant=lambda _value: (_ for _ in ()).throw(
+                ValueError("non-finite fixture number")
+            ),
+        )
+        if type(parsed) is not dict:
+            raise ValueError("fixture root type")
+
+        item_count = 0
+
+        def visit(value: object, depth: int) -> None:
+            nonlocal item_count
+            item_count += 1
+            if item_count > 128 or depth > 5:
+                raise ValueError("fixture tree bounds")
+            if type(value) is dict:
+                if len(value) > 24:  # type: ignore[arg-type]
+                    raise ValueError("fixture tree bounds")
+                for key, child in value.items():  # type: ignore[union-attr]
+                    if type(key) is not str or len(key) > 64:
+                        raise ValueError("fixture key bounds")
+                    visit(child, depth + 1)
+            elif type(value) is str:
+                if len(value) > 128 or len(value.encode("utf-8")) > 256:
+                    raise ValueError("fixture string bounds")
+                if any(ord(character) < 32 for character in value):
+                    raise ValueError("fixture string control")
+            elif type(value) not in {bool, int}:
+                raise ValueError("fixture value type")
+
+        visit(parsed, 0)
+        return parsed
+
+    fixture = parse_fixture(raw_bytes)
+    with pytest.raises(ValueError, match="^duplicate fixture key$"):
+        parse_fixture(b'{"mode":"safe","mode":"unsafe"}')
+    with pytest.raises(ValueError, match="^non-finite fixture number$"):
+        parse_fixture(b'{"effect":NaN}')
+    with pytest.raises(ValueError, match="^fixture BOM$"):
+        parse_fixture(b"\xef\xbb\xbf{}")
+    with pytest.raises(ValueError, match="^fixture byte bounds$"):
+        parse_fixture(b'{"value":"' + (b"x" * 8192) + b'"}')
+    deep: dict[str, object] = {"leaf": 0}
+    for _index in range(7):
+        deep = {"child": deep}
+    with pytest.raises(ValueError, match="^fixture tree bounds$"):
+        parse_fixture(json.dumps(deep).encode("utf-8"))
+
+    assert set(fixture) == {
+        "fixture_version",
+        "contract",
+        "mode",
+        "fixture_only",
+        "authority_created",
+        "currentness_selected",
+        "task063_completion_receipt_present",
+        "task072_design_receipt_sha256",
+        "task072_implementation_receipt_verified",
+        "installed_snapshot_verified",
+        "native_broker_executed",
+        "expected_coordinates",
+        "effects",
+        "lanes",
+        "public_diagnostics",
+    }
+    assert fixture["fixture_version"] == "1.0"
+    assert fixture["contract"] == (
+        "TASK065-P0L-COMMON-INSTALLED-DISCOVERY-RECEIPT-V1"
+    )
+    assert fixture["mode"] == "SYNTHETIC_EXPECTED_COORDINATES"
+    assert fixture["task072_design_receipt_sha256"] == TASK072_DESIGN_SHA256
+
+    coordinates = fixture["expected_coordinates"]
+    assert type(coordinates) is dict
+    assert set(coordinates) == {
+        "install_instance_id",
+        "descriptor_generation_id",
+        "product_build_sha256",
+        "package_payload_sha256",
+        "product_exe_sha256",
+        "owner_manifest_sha256",
+        "task036_receipt_id",
+        "task061b_receipt_id",
+    }
+    assert re.fullmatch(r"inst_[0-9a-f]{32}", coordinates["install_instance_id"])
+    assert re.fullmatch(
+        r"desc_[0-9a-f]{32}", coordinates["descriptor_generation_id"]
+    )
+    for field in (
+        "product_build_sha256",
+        "package_payload_sha256",
+        "product_exe_sha256",
+        "owner_manifest_sha256",
+    ):
+        assert re.fullmatch(r"[0-9a-f]{64}", coordinates[field])
+    for field in ("task036_receipt_id", "task061b_receipt_id"):
+        assert re.fullmatch(r"receipt_[0-9a-f]{32}", coordinates[field])
+
+    for field in (
+        "authority_created",
+        "currentness_selected",
+        "task063_completion_receipt_present",
+        "task072_implementation_receipt_verified",
+        "installed_snapshot_verified",
+        "native_broker_executed",
+    ):
+        assert fixture[field] is False
+    assert fixture["fixture_only"] is True
+    effects = fixture["effects"]
+    assert type(effects) is dict
+    assert set(effects) == {
+        "installed_discovery_started",
+        "packaged_exe_started",
+        "adapter_stage_started",
+        "task036_import_started",
+        "wav_body_read",
+        "provider_started",
+        "install_started",
+        "release_started",
+        "deploy_started",
+        "production_activation_started",
+    }
+    assert all(type(value) is bool and value is False for value in effects.values())
+
+    lanes = fixture["lanes"]
+    assert type(lanes) is dict
+    assert set(lanes) == {"P0_L", "P0_E", "P0_V"}
+    assert set(lanes["P0_L"]) == {
+        "status",
+        "expected_historical_adapter_stage_count",
+        "expected_historical_task036_import_count",
+        "task065_adapter_call_count",
+        "task065_task036_call_count",
+        "task065_project_delta",
+        "task065_bridge_delta",
+        "task065_profile_delta",
+        "task065_config_history_delta",
+    }
+    assert set(lanes["P0_E"]) == {
+        "status",
+        "installed_package_readback_verified",
+        "packaged_exe_started",
+        "first_run_readback_verified",
+        "startup_settings_readback_verified",
+    }
+    assert set(lanes["P0_V"]) == {
+        "status",
+        "wav_receipt_verified",
+        "wav_body_read",
+        "media_qa_executed",
+        "provider_started",
+    }
+    assert all(lane["status"] == "NOT_CONFIRMED" for lane in lanes.values())
+    assert type(lanes["P0_L"]["expected_historical_adapter_stage_count"]) is int
+    assert lanes["P0_L"]["expected_historical_adapter_stage_count"] == 1
+    assert type(lanes["P0_L"]["expected_historical_task036_import_count"]) is int
+    assert lanes["P0_L"]["expected_historical_task036_import_count"] == 1
+    assert all(
+        type(lanes["P0_L"][field]) is int and lanes["P0_L"][field] == 0
+        for field in (
+            "task065_adapter_call_count",
+            "task065_task036_call_count",
+            "task065_project_delta",
+            "task065_bridge_delta",
+            "task065_profile_delta",
+            "task065_config_history_delta",
+        )
+    )
+    assert lanes["P0_E"]["packaged_exe_started"] is False
+    assert all(
+        type(value) is bool and value is False
+        for field, value in lanes["P0_E"].items()
+        if field != "status"
+    )
+    assert lanes["P0_V"]["wav_body_read"] is False
+    assert lanes["P0_V"]["provider_started"] is False
+    assert all(
+        type(value) is bool and value is False
+        for field, value in lanes["P0_V"].items()
+        if field != "status"
+    )
+
+    string_values: list[str] = []
+
+    def collect_strings(value: object) -> None:
+        if type(value) is dict:
+            for child in value.values():
+                collect_strings(child)
+        elif type(value) is str:
+            string_values.append(value)
+
+    collect_strings(fixture)
+    for value in string_values:
+        assert not re.search(r"[A-Za-z]:[\\/]", value)
+        assert not value.startswith("\\\\")
+        assert not re.search(r"(?:https?|file)://", value, re.IGNORECASE)
+        assert not re.search(r"\bS-\d-", value, re.IGNORECASE)
+        assert not re.search(r"[^\s@]+@[^\s@]+\.[^\s@]+", value)
+        assert not re.search(
+            r"(?:account|secret|token|correlation_sha256|transcript)",
+            value,
+            re.IGNORECASE,
+        )
+
+    diagnostics = fixture["public_diagnostics"]
+    assert type(diagnostics) is dict
+    assert set(diagnostics) == {
+        "code",
+        "absolute_path_count",
+        "private_body_count",
+        "secret_count",
+        "os_detail_count",
+    }
+    assert diagnostics["code"] == "NOT_CONFIRMED"
+    assert all(
+        type(diagnostics[field]) is int and diagnostics[field] == 0
+        for field in (
+            "absolute_path_count",
+            "private_body_count",
+            "secret_count",
+            "os_detail_count",
+        )
+    )
+
+    def validate_negative_candidate(candidate: dict[str, object]) -> None:
+        candidate_effects = candidate["effects"]
+        candidate_lanes = candidate["lanes"]
+        candidate_coordinates = candidate["expected_coordinates"]
+        candidate_diagnostics = candidate["public_diagnostics"]
+        assert type(candidate_effects) is dict
+        assert type(candidate_lanes) is dict
+        assert type(candidate_coordinates) is dict
+        assert type(candidate_diagnostics) is dict
+        assert set(candidate_effects) == set(effects)
+        assert all(
+            type(value) is bool and value is False
+            for value in candidate_effects.values()
+        )
+        assert set(candidate_lanes) == set(lanes)
+        for lane_name in lanes:
+            assert set(candidate_lanes[lane_name]) == set(lanes[lane_name])
+        assert (
+            type(candidate_lanes["P0_L"]["expected_historical_adapter_stage_count"])
+            is int
+            and candidate_lanes["P0_L"]["expected_historical_adapter_stage_count"]
+            == 1
+        )
+        assert (
+            type(candidate_lanes["P0_L"]["expected_historical_task036_import_count"])
+            is int
+            and candidate_lanes["P0_L"]["expected_historical_task036_import_count"]
+            == 1
+        )
+        assert all(
+            type(candidate_lanes["P0_L"][field]) is int
+            and candidate_lanes["P0_L"][field] == 0
+            for field in (
+                "task065_adapter_call_count",
+                "task065_task036_call_count",
+                "task065_project_delta",
+                "task065_bridge_delta",
+                "task065_profile_delta",
+                "task065_config_history_delta",
+            )
+        )
+        assert all(
+            type(value) is bool and value is False
+            for field, value in candidate_lanes["P0_E"].items()
+            if field != "status"
+        )
+        assert all(
+            type(value) is bool and value is False
+            for field, value in candidate_lanes["P0_V"].items()
+            if field != "status"
+        )
+        for field in (
+            "product_build_sha256",
+            "package_payload_sha256",
+            "product_exe_sha256",
+            "owner_manifest_sha256",
+        ):
+            assert re.fullmatch(r"[0-9a-f]{64}", candidate_coordinates[field])
+        assert candidate_diagnostics["code"] == "NOT_CONFIRMED"
+        assert all(
+            type(candidate_diagnostics[field]) is int
+            and candidate_diagnostics[field] == 0
+            for field in (
+                "absolute_path_count",
+                "private_body_count",
+                "secret_count",
+                "os_detail_count",
+            )
+        )
+
+    bad = deepcopy(fixture)
+    bad["effects"]["unknown_effect"] = False
+    with pytest.raises(AssertionError):
+        validate_negative_candidate(bad)
+    bad = deepcopy(fixture)
+    bad["lanes"]["P0_V"]["hidden_correlation"] = "opaque"
+    with pytest.raises(AssertionError):
+        validate_negative_candidate(bad)
+    bad = deepcopy(fixture)
+    bad["lanes"]["P0_E"]["packaged_exe_started"] = True
+    with pytest.raises(AssertionError):
+        validate_negative_candidate(bad)
+    bad = deepcopy(fixture)
+    bad["lanes"]["P0_L"]["task065_adapter_call_count"] = False
+    with pytest.raises(AssertionError):
+        validate_negative_candidate(bad)
+    for sensitive in (
+        "C:\\private\\product.exe",
+        "\\\\host\\share",
+        "https://invalid.example",
+        "owner@example.invalid",
+        "S-1-5-21-0000",
+        "secret-token-value",
+        "correlation_sha256",
+        "transcript body",
+    ):
+        bad = deepcopy(fixture)
+        bad["expected_coordinates"]["product_exe_sha256"] = sensitive
+        with pytest.raises(AssertionError):
+            validate_negative_candidate(bad)
+    bad = deepcopy(fixture)
+    bad["public_diagnostics"]["code"] = 0
+    bad["public_diagnostics"]["absolute_path_count"] = "NOT_CONFIRMED"
+    with pytest.raises(AssertionError):
+        validate_negative_candidate(bad)

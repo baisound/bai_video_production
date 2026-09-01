@@ -207,6 +207,34 @@ status, explicitly records `authority_created:false`, terminal/correlation/
 Profile verification false and cannot be used as stage, canonical, activation
 or Profile authority.
 
+### Outcome L UI status projection ABI
+
+The future UI receives only `BVP_LEARNING_LINKAGE_UI_STATUS_V1`, a closed
+display projection built by a trusted read-only status resolver. It is never a
+broker request, ticket, command, retry handle or activation control. Rendering,
+refreshing, copying or deserializing the projection has no adapter, TASK-036,
+Profile, config/history or activation effect.
+
+| Closed UI field group | Allowed value | Forbidden interpretation/value |
+| --- | --- | --- |
+| identity | fixed message type/schema version and an opaque display correlation | raw operation/ticket/receipt/correlation/Profile IDs or bodies |
+| display state | exactly `DISABLED_LEGACY_SAFE`, `NOT_CONFIRMED`, `PREACTIVATION_CHAIN_OBSERVED_NO_ACTIVATION` or `FAILED_CLOSED` | `READY`, activation enabled, canonical admission or Profile-write success |
+| evidence flags | `authority_created:false`, `activation_authorized:false`, `activation_executed:false`, `ui_adapter_call_count:0`, `ui_task036_call_count:0` | any currentness/capability/command flag true because the UI rendered it |
+| optional outcome | one stable body-free reason code and opaque source/build digest only | filesystem/root/config path, account/SID, OS exception, secret, delivery/receipt/Profile content |
+
+The resolver applies this total, mutually exclusive precedence: (1) a trusted
+selected-instance `FAILED_CLOSED` outcome maps to `FAILED_CLOSED`; otherwise
+(2) an exact current pinned TASK-036/TASK-069/TASK-061-B historical chain maps
+to `PREACTIVATION_CHAIN_OBSERVED_NO_ACTIVATION`; otherwise (3) any expected or
+attempted chain that is missing, stale, ambiguous or incomplete maps to
+`NOT_CONFIRMED`; otherwise (4) only a current disabled sentinel with no
+producer-chain attempt or evidence maps to `DISABLED_LEGACY_SAFE`. Thus the
+sentinel cannot mask a verified, stale or failed-closed producer state. No UI
+state can replace the producer receipts or authorize a retry.
+`PREACTIVATION_CHAIN_OBSERVED_NO_ACTIVATION` describes historical evidence
+only: it does not set `enabled:true` or satisfy the separate Human Activation
+Gate.
+
 ## Exact-one stage, TASK-036 and TASK-069 handoffs
 
 The broker-issued `TASK036_D2S_EXECUTION_HANDOFF_V1` is private to the bounded
@@ -297,6 +325,8 @@ state; this public handoff is not an effect capability.
 | D2S-T01 | terminal query | stage/import historical facts exist | receipt-only, missing/wrong correlation/canonical/Profile, status-only or `canonical_store_written` | `TERMINAL_READBACK_N.C. / EFFECT0` | 0 | 0 | 0 | 0 | correlation/body 0 | no completion handoff |
 | D2S-C01 | v2 action validator | action document offered | publish Profile bind, load record bind, null/mixed result or cross-action identity | `ACTION_BINDING_INVALID / EFFECT0` | 0 | 0 | 0 | 0 | body 0 | no read receipt |
 | D2S-O01 | public projector | any outcome emitted | READY/status/handoff leaks path/body/secret/account/SID or implies authority | `PUBLIC_PROJECTION_REJECTED / EFFECT0` | 0 | 0 | 0 | 0 | raw value 0 | body-free only |
+| D2S-U01 | UI status resolver | display projection requested | copied/deserialized UI status, forged verified state, stale producer chain, render/refresh callback, path/body/error injection | `NOT_CONFIRMED` or `FAILED_CLOSED / EFFECT0`; UI adapter/TASK-036 calls 0 and activation false | 0 | 0 | 0 | 0 | path/body/account/SID/OS 0 | no capability or completion receipt |
+| D2S-U02 | UI status precedence | disabled sentinel is present with producer-state combination | sentinel plus current verified chain, stale/incomplete chain or selected-instance failed-closed outcome | verified -> `PREACTIVATION_CHAIN_OBSERVED_NO_ACTIVATION`; stale -> `NOT_CONFIRMED`; failed -> `FAILED_CLOSED`; UI local effect 0 | 0 | 0 | 0 | 0 | body/path/producer details 0 | display projection only; no capability or completion receipt |
 
 `D2S-A03` is limited to invalid pre-effect cross-action transitions. No row may
 map a post-dispatch publish, TASK-036 import or durability crash to `EFFECT0`:

@@ -55,27 +55,130 @@ def test_settings_nine_category_tabs_are_read_only_but_interactive() -> None:
     assert "paid_execution_authorized:false" in HTML
 
 
-def test_audio_model_selection_keeps_unavailable_reason_visible() -> None:
+def test_audio_and_quick_pages_only_show_central_settings_readiness() -> None:
     for marker in (
-        "const renderModelSelectionBase=renderModelSelection",
-        "NO_SELECTABLE_LOCAL_AUDIO_MODEL",
-        "利用可能な無料ローカル音声Modelがありません",
-        "modelSelectionUnavailableMessage(selector.unavailable_reason)",
+        "audioModelReadiness",
+        "quickModelReadiness",
+        "function featureSelectionState",
+        "音声・音楽用AIモデル",
+        "クイック生成用AIモデル",
+        "画像・動画用のAIモデル設定を使います。",
+        "AIモデル設定を開く",
     ):
         assert marker in HTML
 
-    assert r"replace(/Status: [^\n]*/,status)" in HTML
+    for local_editor_marker in (
+        "audioModelSelection",
+        "quickModelSelection",
+        "data.modelSelectionPage",
+        "Project既定Routeを保存",
+        "function renderModelSelection",
+    ):
+        assert local_editor_marker not in HTML
 
 
-def test_connection_settings_keeps_unavailable_audio_routes_disabled_and_explained() -> None:
+def test_central_settings_keeps_unavailable_audio_routes_disabled_and_explained() -> None:
     for marker in (
-        "const unavailable=item.selectable===false",
-        "option.disabled=unavailable",
-        "item.disabled_reasons||[]",
-        "Installed/runtime/current:",
-        "Availability: ${availability}",
+        "CENTRAL_MODEL_WORKLOADS=new Set(['PLANNING','IMAGE','VIDEO','AUDIO','MUSIC'])",
+        "ここだけで企画・画像・動画・音声・音楽のAIモデルを選択して保存します。",
+        "クイック生成は画像・動画の設定を使います。",
+        "option.disabled=route.selectable===false",
+        "settingsAvailabilityText",
+        "現在は利用できません。設定または準備状態を確認してください。",
+        "function centralPreferredRouteValue",
+        "preserveUnavailablePreferred",
+        "if(preferredRouteId!==undefined)preferredRouteIds[row.workload]=preferredRouteId",
+        "AIモデル設定を保存",
     ):
         assert marker in HTML
+
+
+def test_central_settings_preserves_unavailable_route_until_user_changes_it_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the central Settings behavior contract")
+
+    match = re.search(r"function centralPreferredRouteValue\(select\)\{[^\r\n]+", HTML)
+    assert match is not None
+    script = f"""
+const assert=require('node:assert/strict');
+{match.group(0)}
+assert.equal(centralPreferredRouteValue({{dataset:{{preserveUnavailablePreferred:'true'}},value:''}}),undefined);
+assert.equal(centralPreferredRouteValue({{dataset:{{}},value:'local-audio-route'}}),'local-audio-route');
+assert.equal(centralPreferredRouteValue({{dataset:{{}},value:''}}),null);
+console.log('OK');
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
+def test_planning_readiness_separates_settings_runtime_and_application_failures_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the planning readiness behavior contract")
+
+    copy_match = re.search(r"const FEATURE_MODEL_COPY=Object\.freeze\(\{[^\r\n]+", HTML)
+    selection_match = re.search(r"function featureSelectionState\(model,copy\)\{[^\r\n]+", HTML)
+    readiness_match = re.search(r"function featureReadinessState\(model,page,runtime,compute,operationStatus\)\{[^\r\n]+", HTML)
+    presentation_match = re.search(r"function planningGenerationPresentation\(status,readiness\)\{[^\r\n]+", HTML)
+    runtime_match = re.search(r"function renderOllamaRuntimeStatus\(host,runtime\)\{[^\r\n]+", HTML)
+    label_match = re.search(r"function settingsModelLabel\(route,index\)\{[^\r\n]+", HTML)
+    assert all((copy_match, selection_match, readiness_match, presentation_match, runtime_match, label_match))
+    script = f"""
+const assert=require('node:assert/strict');
+{copy_match.group(0)}
+{selection_match.group(0)}
+{readiness_match.group(0)}
+{presentation_match.group(0)}
+{runtime_match.group(0)}
+{label_match.group(0)}
+const centralSelection={{available:true,selectors:[{{page_id:'PLANNING',available:true,preferred_route_id:'plan-route',candidates:[{{route_id:'plan-route',configuration_selectable:true,display_name_ja:'企画用ローカルAI',model_id:'qwen3:8b'}}]}}]}};
+const combinedReady=featureReadinessState(centralSelection,'planning',{{state:'READY'}},{{workloads:[]}},{{available:true}});
+assert.equal(combinedReady.ready,true);
+assert.equal(combinedReady.computeRequired,false);
+assert.equal(featureReadinessState({{available:false}},'planning',{{state:'READY'}},{{workloads:[]}},{{available:true}}).ready,false);
+assert.equal(featureReadinessState(centralSelection,'planning',{{state:'STARTING'}},{{workloads:[]}},{{available:true}}).ready,false);
+assert.equal(featureReadinessState(centralSelection,'planning',{{state:'READY'}},{{workloads:[]}},{{available:false}}).ready,false);
+const missing=planningGenerationPresentation({{available:false,blocker_code:'ERR_TASK036_PLANNING_CONNECTION_STALE'}},{{selectionReady:false,computeReady:true,runtimeReady:true,runtimeState:'READY'}});
+assert.equal(missing.ready,false);
+assert.equal(missing.state,'MODEL_SETTINGS_REQUIRED');
+assert.match(missing.message,/設定/);
+assert.doesNotMatch(missing.message,/ERR_TASK036/);
+const starting=planningGenerationPresentation({{available:true,model_id:'qwen3:8b'}},{{selectionReady:true,computeReady:true,runtimeReady:false,runtimeState:'STARTING'}});
+assert.equal(starting.ready,false);
+assert.equal(starting.state,'RUNTIME_STARTING');
+assert.match(starting.message,/準備中/);
+const unbound=planningGenerationPresentation({{available:false}},{{selectionReady:true,computeReady:true,runtimeReady:true,runtimeState:'READY'}});
+assert.equal(unbound.ready,false);
+assert.equal(unbound.state,'APPLICATION_UNBOUND');
+assert.match(unbound.message,/プロジェクト/);
+const ready=planningGenerationPresentation({{available:true,model_id:'qwen3:8b'}},{{selectionReady:true,computeReady:true,runtimeReady:true,runtimeState:'READY'}});
+assert.equal(ready.ready,true);
+assert.equal(ready.state,'READY');
+assert.doesNotMatch(ready.message,/qwen3:8b/);
+assert.equal(settingsModelLabel({{model_id:'qwen3:8b'}},1),'登録済みローカルAIモデル');
+const host={{items:[],append(item){{this.items.push(item)}}}};
+function card(title,body){{return `${{title}}\n${{body}}`;}}
+renderOllamaRuntimeStatus(host,{{state:'FAILED',message_ja:'ERR_TASK036_SECRET C:\\Users\\owner\\token.txt'}});
+assert.doesNotMatch(host.items.join(String.fromCharCode(10)),/ERR_TASK036|token\\.txt|C:\\Users/);
+console.log('OK');
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
 
 
 def test_timeline_scrub_uses_python_owned_seek_without_frontend_truth() -> None:

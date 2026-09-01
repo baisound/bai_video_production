@@ -129,6 +129,30 @@ def test_home_export_and_settings_keep_canonical_information_composition() -> No
     assert "Projectの技術的な状態を表示" in SHELL_HTML
 
 
+def test_model_editor_is_central_and_feature_pages_offer_read_only_recovery() -> None:
+    for workload in ("PLANNING", "IMAGE", "VIDEO", "AUDIO", "MUSIC"):
+        assert f"'{workload}'" in SHELL_HTML
+    for readiness in (
+        "planningModelReadiness",
+        "imageModelReadiness",
+        "videoModelReadiness",
+        "audioModelReadiness",
+        "quickModelReadiness",
+    ):
+        assert f'id="{readiness}"' in SHELL_HTML
+    for local_editor in (
+        "planningModelSelection",
+        "imageModelSelection",
+        "videoModelSelection",
+        "audioModelSelection",
+        "quickModelSelection",
+        "Project既定Routeを保存",
+    ):
+        assert local_editor not in SHELL_HTML
+    assert "AIモデル設定を開く" in SHELL_HTML
+    assert "クイック生成は画像・動画の設定を使います。" in SHELL_HTML
+
+
 def test_home_has_explicit_project_open_action_without_demo_recent_state() -> None:
     assert 'id="homeOpenProjectButton"' in SHELL_HTML
     assert (
@@ -269,20 +293,33 @@ def test_planning_binds_human_confirmed_local_free_proposal_generation() -> None
         'id="planningRequest"',
         'id="planningGenerateButton" disabled',
         'id="planningGenerationStatus"',
-        "function renderPlanningGenerationStatus(status)",
+        "function renderPlanningGenerationStatus(status,readiness)",
+        "function featureReadinessState",
+        "function planningGenerationPresentation",
+        "model_selection_snapshot",
+        "ollama_runtime_snapshot",
+        "desktop_compute_settings_snapshot",
+        "async function closeSettings()",
+        "await refreshPage(currentPage)",
         "async function generatePlanning()",
         "planning_generation_status",
         "planning_generation_prepare",
         "expected_planning_snapshot_sha256:model.snapshot_sha256",
         "planning_generation_apply",
         "planning_generation_cancel",
-        "prepared.cost_class",
-        "有償Provider・課金・Resolve・Human GOは開始しません。続行しますか？",
+        "無料AIで企画候補を作成します",
+        "内容を確認してから候補を作成します。有償AI・課金・外部編集は開始しません。続行しますか？",
         "Provider: 未開始 / Paid: 未許可 / Budget reservation: なし / Resolve: 未変更 / Publish: 未開始",
         "if(warnings.length&&!window.confirm",
+        "企画用AIモデルが未設定です。右上の［設定］→［AIモデル］で設定してください。",
+        "企画候補を作る準備ができていません。プロジェクトを開き直してから、もう一度企画画面を開いてください。",
     ):
         assert marker in SHELL_HTML
+    planning_handler = SHELL_HTML.split("async function generatePlanning()", 1)[1].split("function renderPlanning(", 1)[0]
+    for internal_value in ("prepared.model_id", "prepared.route_id", "prepared.cost_class", "prepared.request_sha256"):
+        assert internal_value not in planning_handler
     assert "AI Proposal生成のtyped Application Serviceが未接続です" not in SHELL_HTML
+    assert "runtime?.message_ja" not in SHELL_HTML
 
 
 def test_scenes_browser_projects_exact_blueprint_and_selected_scene_revision() -> None:
@@ -588,14 +625,17 @@ def test_audio_workspace_connects_review_and_task026_plan_boundaries() -> None:
 
 
 
-def test_audio_page_consumes_audio_and_music_model_selectors_without_execution() -> None:
+def test_audio_page_consumes_central_audio_and_music_readiness_without_execution() -> None:
     for marker in (
-        'id="audioModelSelection"',
-        "audio:'audioModelSelection'",
-        "audio:['AUDIO','MUSIC']",
+        'id="audioModelReadiness"',
+        "audio:{pageIds:['AUDIO','MUSIC']",
+        "CENTRAL_MODEL_WORKLOADS=new Set(['PLANNING','IMAGE','VIDEO','AUDIO','MUSIC'])",
+        "AIモデル設定を開く",
         "['planning','imageGen','videoGen','audio','quick'].includes(page)",
     ):
         assert marker in SHELL_HTML
+    assert 'id="audioModelSelection"' not in SHELL_HTML
+    assert "Project既定Routeを保存" not in SHELL_HTML
     assert "audio_workspace_execute" not in SHELL_HTML
 def test_audio_workspace_keeps_external_execution_and_ambiguous_plan_disabled() -> None:
     for marker in (

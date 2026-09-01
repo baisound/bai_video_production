@@ -1,11 +1,11 @@
 # TASK-074 — Owner Voice Authority, Route Selection and Private Reference
 
-- Status: `DESIGN_ACCEPTED_R13 / TASK074_B_IMPLEMENTATION_ELIGIBLE / EFFECT0`
+- Status: `DESIGN_ACCEPTED_R14 / TASK074_B_IMPLEMENTATION_ELIGIBLE / TASK074_C_SOURCE_START_NC / EFFECT0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner allocation: `成果V Voice/WAV primaryへ再編`
 - Design owner: `Design A`
 - Required independent review: `Design B security review / Montage Critic and Judge`
-- Exact design base: `70ba9e369887d3d7ded59e7197d20d133b2b4d38`
+- Exact design base: `354ea2534ad5739a099d9eeaf0f1da9a7210ddb6`
 - Product: `BAI VIDEO PRODUCTION`
 
 ## Goal
@@ -45,7 +45,7 @@ TASK-074はmodel download/load、training、inference、playback、WAV生成、A
 - independent Judge `PASS`;
 - Product source change `0`。
 
-The accepted design is the immutable R9 packet plus R10、R11、R12 and R13 addenda. R13 closes V2 terminal-current retirement/repeated-operation issuance and the legacy V1 `REVOKE_PENDING` terminal finalize-only recovery seam. Fresh independent DEV-4 review reproduced the exact frozen set、reported `Critical/High/Medium/Low = 0/0/0/0` and returned Judge `PASS`. TASK074-B pure contracts may therefore start after fresh Git/worktree/dirty/overlap verification. TASK074-C and TASK074-D retain their explicit producer、native and Human Gates; design acceptance does not authorize those gated effects.
+The accepted design is the immutable R9 packet plus R10、R11、R12、R13 and R14 addenda. R13 closes V2 terminal-current retirement/repeated-operation issuance and the legacy V1 `REVOKE_PENDING` terminal finalize-only recovery seam. R14 freezes the exact TASK-074 owner-side producer profile for TASK-076 V3、pre-arm containment identity、bind/preflight/close/query/recovery ABIs and the non-circular TASK-075 V2 pre-close -> owner-close -> final-union seam. Fresh independent DEV-4 Tester、Critic and Judge reproduced the exact frozen set、reported `Critical/High/Medium/Low = 0/0/0/0` and returned `PASS`. TASK074-B pure contracts remain eligible after fresh Git/worktree/dirty/overlap verification. TASK074-C source start remains `NOT_CONFIRMED` until exact source/test Allowed Files、sole-writer、clean current-main worktree and all S1 dependency gates are separately established. TASK074-D retains its explicit native and Human Gates; design acceptance authorizes none of those gated effects.
 
 ### TASK074-B — Pure contracts and fixtures
 
@@ -53,7 +53,7 @@ TASK074-Aのaccept後に開始する。route selection、private-reference recei
 
 ### TASK074-C — Canonical producer binding
 
-TASK-071/TASK-072とTASK-043-owned canonical Project transaction portがcanonicalかつoverlap-freeになった後だけ、同じTask/PR内でexact adaptersを実装する。TASK-036/P0-EはProject store authorityを持たないconsumer/integration ownerである。cross-owner file mutationは各ownerのexplicit lock/Allowed Filesが揃うまで`NOT_CONFIRMED`。
+TASK-071/TASK-072とTASK-043-owned canonical Project transaction portがcanonicalかつoverlap-freeになった後だけ、同じTask/PR内でexact adaptersを実装する。R14のS1開始にはfresh source/test Allowed Files、sole-writer、clean current-main worktreeとimplementation Authorityが別途必要であり、下記candidate listはsource-start Authorityではない。TASK-075のtwo-stage V2 contracts、TASK-072 adapter、TASK-076 slotは各ownerのS2 compatibility実装・durable receiptが揃うまで`NOT_CONFIRMED`。TASK-036/P0-EはProject store authorityを持たないconsumer/integration ownerである。cross-owner file mutationは各ownerのexplicit lock/Allowed Filesが揃うまで`NOT_CONFIRMED`。
 
 ### TASK074-D — Private lifecycle native closure
 
@@ -67,6 +67,7 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r11-addendum.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r12-addendum.md`
 - `docs/ai-team/tasks/TASK-074/complete-design-packet-r13-addendum.md`
+- `docs/ai-team/tasks/TASK-074/complete-design-packet-r14-addendum.md`
 - `docs/ai-team/tasks/TASK-074/design-r1-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r2-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r3-review-receipt.md`
@@ -75,6 +76,7 @@ non-biometric native fixtureでWindows custody、DACL、revocation、physical pu
 - `docs/ai-team/tasks/TASK-074/design-r6-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r7-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-r13-review-receipt.md`
+- `docs/ai-team/tasks/TASK-074/design-r14-review-receipt.md`
 - `docs/ai-team/tasks/TASK-074/design-review-receipt.md`
 
 ## Candidate implementation Allowed Files

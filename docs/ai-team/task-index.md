@@ -61,6 +61,7 @@
 | TASK-062 | Montage Consumer Runtime Desktop UX | DEPENDENCY_BLOCKED_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | released ConsumerRuntimeService wheel digestとcurrent TASK-055 identityの固定を待つ。Desktop統合実装、Timeline/Resolve effectは未承認。 |
 
 | TASK-066 | GPU-First Desktop Execution, Packaging and Diagnostics | OWNER_AUTHORIZED_P0_DESIGN_ACCEPTED_IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY_NATIVE_PROOF_PENDING | OWNER_EXPLICIT_GPU_FIRST_ALL_DESKTOP_APPS_2026_08_31 | DEV-4 | GF-E deltas 1-4 accepted; journal-first cross-volume recovery and uninstall preservation are frozen. Delta-4 Critic 0/0/0/0, Judge ACCEPT. TASK-063 post-repair native terminal handoff remains required before GF-E installer mutation. |
+| TASK-078 | E-C Downstream Complete Design | DESIGN_FROZEN_JUDGE_ACCEPTED_IMPLEMENTATION_EFFECTS_NOT_AUTHORIZED | OWNER_EXPLICIT_EC_COMPLETE_DESIGN_2026_09_02 | DEV-4 | E-C1..E-C5 freeze Scene epoch through generated-video review, canonical Final Gates, GENERATED_VIDEO-only Timeline, Export read-back and EXE F0-F10. Both Critics and Judge residual 0/0/0/0. TASK-079..083 are implementation candidates only; TASK-079 awaits the canonical public TASK-077 completion receipt. |
 
 ## Roadmap authority
 

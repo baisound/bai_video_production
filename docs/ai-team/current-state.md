@@ -4,6 +4,8 @@
 
 - P0 GPU-first desktop prerequisite: `TASK-066 OWNER_AUTHORIZED / DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`. GF-E callable entry, source-backed build chain, durable receipt lifecycle and journal-first cross-volume recovery are accepted; delta-4 Critic `0/0/0/0`, Judge `ACCEPT`. TASK-063 repair source is canonical, but its post-repair native install/read-back terminal handoff is not yet confirmed, so GF-E installer mutation remains blocked; implementation/native/Release Gates remain separate.
 
+- E-C downstream complete design: `TASK-078 DESIGN_FROZEN / JUDGE_ACCEPTED / IMPLEMENTATION_EFFECTS_NOT_AUTHORIZED`. E-C1 through E-C5 freeze the TASK-027 Scene epoch handoff, typed generated-video adoption/review, canonical Final Gate owner readers, GENERATED_VIDEO-only Timeline placement, durable Export read-back and packaged EXE F0-F10 flow. Independent Completeness and Security Critics each report residual `0/0/0/0`; the Judge decision is `ACCEPT — TASK078_DESIGN_FROZEN` with residual `0/0/0/0`. TASK-079..083 are candidate implementation identities only; TASK-079 remains blocked until a canonical public TASK-077 development-completion receipt exists on canonical main. No implementation, Provider, native, Timeline, approval, Export, Release, Deploy or Production effect is authorized.
+
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
 - Project Status: `V0_23_0_RELEASED / TASK_036_P_UX_1C_VISUAL_HOSTED_CLOSED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / TASK_036_P_UX_2E_NATIVE_CLOSURE_PENDING / TASK_046_VOICE_ROUTE_SEPARATE / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE / TASK_049_GAME_INTELLIGENCE_INTEGRATED / TASK_050_TRAINING_STUDIO_FOUNDATION_INTEGRATED`

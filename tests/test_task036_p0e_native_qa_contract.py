@@ -12,6 +12,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "tools" / "windows" / "run-task036-p0e-native-qa.ps1"
 FIXTURE = ROOT / "tests" / "test_task036_p0e_fixture_vertical_slice.py"
+TASK063_FAULT_FIXTURE = (
+    ROOT
+    / "docs"
+    / "ai-team"
+    / "tasks"
+    / "TASK-036"
+    / "task063-l3-native-fault-fixture-v1.json"
+)
 SOURCE_COMMIT = "a" * 40
 DIGESTS = (
     "sha256:" + "b" * 64,
@@ -66,6 +74,80 @@ def test_p0e_native_qa_projection_is_filesystem_and_effect_free() -> None:
         "FileStream",
     ):
         assert forbidden not in source
+
+
+def test_task063_l3_native_fault_fixture_is_closed_and_effect_free() -> None:
+    fixture = json.loads(TASK063_FAULT_FIXTURE.read_text(encoding="utf-8"))
+    assert set(fixture) == {
+        "fixture_version",
+        "task",
+        "consumer",
+        "synthetic",
+        "authority_created",
+        "native_execution_started",
+        "install_or_update_started",
+        "rollback_or_cleanup_started",
+        "task063_completion_receipt_present",
+        "scenarios",
+    }
+    assert fixture["fixture_version"] == "task063-l3-native-fault-fixture/v1"
+    assert fixture["task"] == "TASK-063"
+    assert fixture["consumer"] == "TASK-036-P0-E"
+    assert fixture["synthetic"] is True
+    for key in (
+        "authority_created",
+        "native_execution_started",
+        "install_or_update_started",
+        "rollback_or_cleanup_started",
+        "task063_completion_receipt_present",
+    ):
+        assert fixture[key] is False
+
+    scenarios = fixture["scenarios"]
+    assert [scenario["id"] for scenario in scenarios] == [
+        "I63-NQA-01",
+        "I63-NQA-02",
+        "I63-NQA-03",
+        "I63-NQA-04",
+        "I63-NQA-05",
+        "I63-NQA-06",
+        "I63-NQA-07",
+        "I63-NQA-08",
+        "I63-NQA-09",
+    ]
+    assert len({scenario["seam"] for scenario in scenarios}) == 9
+    for scenario in scenarios:
+        assert set(scenario) == {
+            "id",
+            "seam",
+            "expected_results",
+            "duplicate_requires_exact_committed_event",
+            "authoritative_revision_delta",
+            "target_state",
+            "completion_receipt_authoritative",
+            "unrelated_delta",
+            "foreign_delete_or_overwrite",
+        }
+        assert scenario["expected_results"]
+        assert scenario["authoritative_revision_delta"] in (None, 0, 1)
+        assert type(scenario["duplicate_requires_exact_committed_event"]) is bool
+        assert type(scenario["completion_receipt_authoritative"]) is bool
+        assert type(scenario["target_state"]) is str
+        assert scenario["unrelated_delta"] == 0
+        assert scenario["foreign_delete_or_overwrite"] == 0
+
+    by_id = {scenario["id"]: scenario for scenario in scenarios}
+    assert by_id["I63-NQA-02"]["expected_results"] == [
+        "ACCEPTED",
+        "STALE_PREDECESSOR",
+        "DUPLICATE",
+    ]
+    assert by_id["I63-NQA-02"]["duplicate_requires_exact_committed_event"] is True
+    for scenario_id in ("I63-NQA-04", "I63-NQA-06", "I63-NQA-07"):
+        assert by_id[scenario_id]["authoritative_revision_delta"] is None
+        assert by_id[scenario_id]["completion_receipt_authoritative"] is False
+    assert by_id["I63-NQA-05"]["authoritative_revision_delta"] == 1
+    assert by_id["I63-NQA-05"]["completion_receipt_authoritative"] is False
 
 
 def _powershell() -> str:

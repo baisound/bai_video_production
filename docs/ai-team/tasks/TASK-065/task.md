@@ -688,3 +688,8 @@ sources are present but their completion receipts are missing; D2.5 TASK-067
 and TASK-036 completion receipts are missing. TASK-067 freeze and future
 allocation criteria are in
 `task067-candidate-allocation-and-freeze-packet-2026-08-31.md`.
+
+The complete Outcome L receipt-consumer ABI, phase split and design-review
+closure are fixed in
+`outcome-l-completion-consumer-contract-2026-09-01.md`. It adds no producer
+authority: missing receipts keep all real effects `START0 / EFFECT0`.

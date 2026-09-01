@@ -54,9 +54,12 @@ Implemented boundary:
   production-chain completion false so fixture PASS cannot be promoted;
 - public plan/validation explicitly set `authority_created:false`, activation
   false and steady-state false;
-- the validation API/status/hash/domain contain no Product-admission term;
-  `PREACTIVATION_CHAIN_ADMITTED` remains reserved for a future trusted durable
-  Product operation and cannot be emitted by this synthetic consumer;
+- **SUPERSEDED authority wording:** the validation API/status/hash/domain
+  contains no Product-admission term. `PREACTIVATION_CHAIN_ADMITTED` is not a
+  permitted future public status. The current consumer contract permits only
+  audit-only `PREACTIVATION_CHAIN_VALIDATED` after durable upstream validation,
+  and synthetic consumers cannot emit either a durable-chain validation or
+  authority;
 - exact opaque receipt ID is plan- and private-binding-bound; all emitted IDs
   use closed typed prefixes plus 128-bit lowercase hex and reject path,
   account, token-like, natural-language and homoglyph-bearing raw values;

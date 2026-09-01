@@ -76,9 +76,9 @@ A61-E/R/D/Z must all be present in one canonical consumer completion receipt.
 Public readiness/Human/E2E/transaction objects and their hashes remain display
 or audit data even when their fields match.
 
-## 4. TASK-065 read-only admission
+## 4. TASK-065 read-only validation
 
-PL-C preactivation admission performs no producer or consumer operation. It
+PL-C preactivation validation performs no producer or consumer operation. It
 pinned-reads both canonical completion receipts, verifies that A61-E/R/D/Z
 bind the exact T36-A/B/S/M/R/P/E operation and its current dependencies, and
 joins them with the independently observed historical stage-count 1,
@@ -100,9 +100,9 @@ Acceptance requires:
 - body-free public result with no absolute path, private body, token, OS detail,
   secret, account or transcript.
 
-Only then may PL-C record `PREACTIVATION_CHAIN_ADMITTED`. This status is a
-read-only dependency admission, not connector enable authority, Production
-Activation, runtime execution or a replacement receipt.
+Only then may PL-C record `PREACTIVATION_CHAIN_VALIDATED`. This is a read-only
+audit validation, not connector enable authority, Production Activation,
+runtime execution or a replacement receipt.
 
 ## 5. Dependency and completion Gate
 

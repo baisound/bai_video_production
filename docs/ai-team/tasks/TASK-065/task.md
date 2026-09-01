@@ -693,3 +693,9 @@ The complete Outcome L receipt-consumer ABI, phase split and design-review
 closure are fixed in
 `outcome-l-completion-consumer-contract-2026-09-01.md`. It adds no producer
 authority: missing receipts keep all real effects `START0 / EFFECT0`.
+
+The D2S-owner implementation contract, exact TASK-036/TASK-069 handoffs,
+Allowed Files and source-start Gate are in
+`d2s-001-completion-handoff-design-2026-09-01.md`. This is a task-local
+handoff only; it neither selects a D2S worktree nor authorizes Canonical SKILL
+source, installed config or real-stage mutation.

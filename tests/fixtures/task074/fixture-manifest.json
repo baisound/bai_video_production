@@ -1,0 +1,42 @@
+{
+  "fixture_version": "TASK074_BODY_FREE_FIXTURE_MANIFEST_V1",
+  "task_id": "TASK-074",
+  "atomic_unit": "TASK074-B",
+  "fixture_kind": "METADATA_ONLY_NON_BIOMETRIC",
+  "contract_families": [
+    "OWNER_VOICE_AUTHORITY",
+    "OWNER_VOICE_PRIVATE_REFERENCE_BODY_FREE",
+    "VOICE_PROFILE_ROUTE_SELECTION"
+  ],
+  "positive_vectors": [
+    "DURABLE_ZERO_SHOT_SELECTION",
+    "DURABLE_FINE_TUNED_SELECTION",
+    "EPHEMERAL_NON_EXECUTABLE_SELECTION",
+    "REFERENCE_LIFECYCLE_TYPED_SNAPSHOT",
+    "TASK074_TO_TASK075_ZERO_SHOT_V2",
+    "TASK074_TO_TASK075_FINE_TUNED_V2"
+  ],
+  "negative_vector_families": [
+    "AUTHORITY_ESCALATION",
+    "BODY_OR_HOST_PATH_LEAKAGE",
+    "CAS_LINEAGE_MISMATCH",
+    "CANONICAL_PRODUCER_FIXTURE_CONFUSION",
+    "CROSS_ROUTE_UNION_MIX",
+    "PRIVATE_REFERENCE_STATE_MISMATCH",
+    "RETIREMENT_OPERATION_IDENTITY_REPLAY",
+    "STALE_OR_NOT_CONFIRMED_PRODUCER",
+    "TERMINAL_HISTORY_OR_EVENT_CROSS_BINDING",
+    "TRUSTED_TIME_ROLLBACK",
+    "WRONG_MEDIA_OR_TRANSCRIPT_POLICY"
+  ],
+  "contains_audio_body": false,
+  "contains_pcm_or_wav": false,
+  "contains_transcript_body": false,
+  "contains_host_path": false,
+  "contains_private_capability": false,
+  "contains_secret_or_credential": false,
+  "model_download_or_load_performed": false,
+  "native_or_provider_effect_performed": false,
+  "private_voice_upload_performed": false,
+  "wav_generation_performed": false
+}

@@ -45,6 +45,38 @@ def _common_fixture() -> dict[str, object]:
     return value
 
 
+def _d2s_handoff_fixture() -> dict[str, object]:
+    """Read the task-local D2S placeholder strictly as non-authoritative data."""
+    path = (
+        Path(__file__).parents[1]
+        / "docs"
+        / "ai-team"
+        / "tasks"
+        / "TASK-065"
+        / "d2s-001-completion-handoff-fixture-v1.json"
+    )
+    raw = path.read_bytes()
+    assert raw.startswith(b"{")
+
+    def reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        value: dict[str, object] = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("duplicate fixture key")
+            value[key] = item
+        return value
+
+    value = json.loads(
+        raw.decode("utf-8", errors="strict"),
+        object_pairs_hook=reject_duplicates,
+        parse_constant=lambda _item: (_ for _ in ()).throw(
+            ValueError("non-finite fixture number")
+        ),
+    )
+    assert type(value) is dict
+    return value
+
+
 def _common_plan(
     fixture: dict[str, object] | None = None,
 ) -> CommonInstalledDiscoveryFixturePlan:
@@ -223,6 +255,156 @@ def test_valid_fixture_is_joined_without_any_task065_effect() -> None:
     assert plan.hidden_correlation_sha256 not in rendered
     assert "C:\\" not in rendered
     assert "ProgramData" not in rendered
+
+
+def test_d2s_handoff_placeholder_requires_separate_v2_receipt_and_has_no_effect() -> None:
+    fixture = _d2s_handoff_fixture()
+    placeholder = fixture["d2s_interface_rebind_placeholder"]
+    join = fixture["expected_preactivation_join"]
+    assert type(placeholder) is dict
+    assert type(join) is dict
+
+    assert fixture["fixture_only"] is True
+    assert fixture["authority_created"] is False
+    assert fixture["real_stage_started"] is False
+    assert fixture["task036_import_started"] is False
+    assert fixture["terminal_query_started"] is False
+    assert fixture["interface_completion_readback_verified"] is False
+    assert fixture["operation_terminal_handoff_verified"] is False
+    assert fixture["task069_canonical_task_present"] is False
+    assert fixture["task069_completion_receipt_present"] is False
+    assert fixture["task067_canonical_task_present"] is False
+    assert fixture["task067_completion_receipt_present"] is False
+    assert fixture["pl_a_effect_authorized"] is False
+    assert fixture["pl_b_source_started"] is False
+    assert fixture["pl_c_source_started"] is False
+    assert fixture["pl_d_source_started"] is False
+
+    assert placeholder["required_issuer"] == "CANONICAL_SKILL_D2S_OWNER"
+    assert placeholder["required_message_type"] == (
+        "D2S_001_INTERFACE_COMPLETION_READBACK_V1"
+    )
+    assert placeholder["required_schema_version"] == "1.0.0"
+    assert placeholder["final_source_commit"] is None
+    assert placeholder["canonical_source_tree_sha256"] is None
+    assert placeholder["installed_bytes_sha256"] is None
+    assert placeholder["rebind_required"] is True
+    assert placeholder["fixture_never_rebound"] is True
+    assert placeholder["placeholder_is_completion_receipt"] is False
+    assert placeholder["placeholder_is_effect_authority"] is False
+
+    observed = fixture["observed_canonical_source"]
+    assert type(observed) is dict
+    assert observed == {
+        "canonical_main_head": "1646a2e9f3f0cb0a468dd52e564093bde04f49de",
+        "canonical_skill_tree_sha256": (
+            "4c3269e00bb934edc15cd58b73eca06c8846b2ed7104e3fa8573e6441ad47dc2"
+        ),
+        "source_to_main_diff": "NONE",
+        "pl_a_source_identity_only": True,
+        "read_only_observation": True,
+        "installed_bytes_current_verified": False,
+        "interface_completion_receipt_present": False,
+        "operation_terminal_handoff_present": False,
+        "observation_is_effect_authority": False,
+    }
+
+    task067 = fixture["task067_completion_receipt_placeholder"]
+    assert type(task067) is dict
+    assert task067 == {
+        "required_issuer": "TASK067_CANONICAL_OWNER",
+        "required_message_type": "TASK067_GENERIC_FACADE_COMPLETION_V1",
+        "required_schema_version": "1.0.0",
+        "canonical_task_main_head": None,
+        "generic_facade_abi_sha256": None,
+        "generic_manifest_snapshot_sha256": None,
+        "journal_terminal_snapshot_sha256": None,
+        "task061a_prepare_receipt_sha256": None,
+        "task067_completion_receipt_sha256": None,
+        "rebind_required": True,
+        "canonical_task_absent": True,
+        "placeholder_is_completion_receipt": False,
+        "placeholder_is_effect_authority": False,
+    }
+
+    upstream = fixture["upstream_receipt_placeholders"]
+    assert type(upstream) is dict
+    assert upstream == {
+        "task061a_prepare": {
+            "required_issuer": "TASK061_CANONICAL_OWNER",
+            "required_message_type": "TASK061_PREACTIVATION_PREPARE_V1",
+            "required_schema_version": "1.0.0",
+            "receipt_sha256": None,
+            "enabled_must_remain_false": True,
+            "placeholder_is_effect_authority": False,
+        },
+        "task036_operation": {
+            "required_issuer": "TASK036_CANONICAL_OWNER",
+            "required_message_type": "TASK036_D2S_EXECUTION_HANDOFF_V1",
+            "required_schema_version": "1.0.0",
+            "receipt_sha256": None,
+            "stage_count": None,
+            "import_path_count": None,
+            "placeholder_is_effect_authority": False,
+        },
+        "task061b_final": {
+            "required_issuer": "TASK061_CANONICAL_OWNER",
+            "required_message_type": "TASK061_FINAL_CA_C_COMPLETION_V1",
+            "required_schema_version": "1.0.0",
+            "receipt_sha256": None,
+            "enabled_must_remain_false": True,
+            "placeholder_is_effect_authority": False,
+        },
+        "task069_terminal": {
+            "required_issuer": "TASK069_CANONICAL_OWNER",
+            "required_message_type": "TASK069_D2S_TERMINAL_READBACK_V1",
+            "required_schema_version": "1.0.0",
+            "receipt_sha256": None,
+            "canonical_task_absent": True,
+            "placeholder_is_effect_authority": False,
+        },
+    }
+
+    m1 = fixture["m1_import_consumer_placeholder"]
+    assert type(m1) is dict
+    assert m1 == {
+        "required_message_type": "TASK065_M1_IMPORT_CONSUMER_ADMISSION_V1",
+        "required_schema_version": "1.0.0",
+        "task067_receipt_sha256": None,
+        "task036_receipt_sha256": None,
+        "task061b_receipt_sha256": None,
+        "task069_receipt_sha256": None,
+        "canonical_task067_allocation_present": False,
+        "consumer_execution_started": False,
+        "authority_created": False,
+    }
+
+    v2 = placeholder["required_operation_config_v2"]
+    assert type(v2) is dict
+    assert v2 == {
+        "schema_version": "2.0.0",
+        "sealed_snapshot_required": True,
+        "raw_bytes_sha256": None,
+        "canonical_bytes_sha256": None,
+        "physical_identity_digest": None,
+        "raw_path_or_capability_present": False,
+    }
+    assert join["d2s_interface_completion_receipt"] == (
+        "REQUIRED_SEPARATE_PINNED_INPUT"
+    )
+    assert join["task067_completion_receipt"] == (
+        "NOT_AVAILABLE_CANONICAL_TASK_ABSENT"
+    )
+    assert join["task069_completion_receipt"] == (
+        "NOT_AVAILABLE_CANONICAL_TASK_ABSENT"
+    )
+    assert join["operation_config_v2_snapshot"] == (
+        "REQUIRED_SEPARATE_PINNED_INPUT"
+    )
+    assert join["task065_invokes_adapter"] is False
+    assert join["task065_invokes_task036"] is False
+    assert join["fixture_participates_in_runtime_join"] is False
+    assert join["acceptance_status_before_rebind"] == "PREACTIVATION_CHAIN.N.C."
 
 
 def test_fixture_and_public_validation_use_closed_mirrored_schema() -> None:

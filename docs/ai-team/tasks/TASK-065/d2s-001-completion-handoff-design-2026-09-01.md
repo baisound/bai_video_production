@@ -28,20 +28,28 @@ worktree in one coherent D2S PR.
 
 ### Source-start currentness checkpoint
 
-Read-only preflight on 2026-09-01 found the canonical SKILL checkout at
+**SUPERSEDED as a currentness claim.** The 2026-09-01 observation of
 `5573a186ea296ca3626e0ef9c0e5d37c98a3576e` on
-`codex/v0.7.0-governance-knowledge-skills`, not a fresh canonical `main`, with
-an unrelated dirty `AGENTS.md`. Therefore `D2S_SOURCE_START0` remains
-`N.C. / EFFECT0`: this checkout cannot be used to start, copy, commit or test
-the D2S implementation. The separate eight-file worktree above remains
-preserve-only.
+`codex/v0.7.0-governance-knowledge-skills` remains historical evidence only.
+It cannot select, replace or invalidate the present D2S PR.
 
-Exact source-start resume condition: a D2S owner must create or select a clean
-worktree from a freshly verified `origin/main` commit, record that commit and
-branch, receive an explicit Allowed Files/overlap/lock disposition, then
-rebind the source/release/install contract. Until all four are current, this
-packet is design evidence only and no adapter/config/install/native/activation
-effect is authorized.
+The consumer currently accepts only a **placeholder rebind coordinate** for
+the Canonical SKILL D2S Draft PR. The last reviewed source point
+`6a391336ca9985d7c2d37c1c8a0846de63fd7b7a` is not a completion receipt and
+does not satisfy H1 live broker redemption or H2 Windows full
+ancestor/handle-relative traversal. Consequently the D2S interface input is
+`D2S_INTERFACE_HEAD_TBD / N.C. / EFFECT0`, not a source-start or runtime PASS.
+
+Exact rebind condition: the D2S owner supplies a single current,
+body-free `D2S_001_INTERFACE_COMPLETION_READBACK_V1` from the final PR head,
+binding canonical source, schema/test and installed-byte identities plus the
+H1 broker-interface and H2 native-parent-handle contract versions. TASK-065
+keeps the fixture unchanged, pinned-reads that real receipt as a separate
+producer input, and creates a bounded private join snapshot only from the same
+opened producer receipts. A fixture field, public mapping, copy or rehash is
+never substituted into that snapshot. This read-only step does not call the
+adapter, create a broker/channel, select a path, or perform an
+install/native/Activation effect.
 
 ### Proposed D2S Allowed Files
 
@@ -269,7 +277,13 @@ state can replace the producer receipts or authorize a retry.
 only: it does not set `enabled:true` or satisfy the separate Human Activation
 Gate.
 
-## Exact-one stage, TASK-036 and TASK-069 handoffs
+## Exact-one stage, TASK-036 and proposed TASK-069 handoffs
+
+**Currentness correction:** no canonical TASK-069 Task or completion receipt
+exists. Every TASK-069 name and field below is a task-local future-consumer
+sketch only; it creates no dependency completion, effect authority or start
+permission. Until canonical allocation and its durable receipt arrive,
+TASK-065 PL-A remains `EFFECT0` and PL-B/PL-C/PL-D remain `START0`.
 
 The broker-issued `TASK036_D2S_EXECUTION_HANDOFF_V1` is private to the bounded
 Product operation. It resolves the immutable delivery coordinate internally;
@@ -287,10 +301,11 @@ config/build. It must never rerun `publish-learning` merely to check a receipt;
 `canonical_store_written` is false/non-authoritative. Terminal query produces
 no delivery, import, Profile, config or activation delta.
 
-### TASK-069 terminal-readback consumer ABI
+### Proposed TASK-069 terminal-readback consumer ABI (non-admission sketch)
 
-`TASK069_D2S_TERMINAL_READBACK_V1` is a closed, durable, body-free readback
-record, not an operation ticket or a substitute for producer state. TASK-069
+If canonically allocated later, `TASK069_D2S_TERMINAL_READBACK_V1` would be a
+closed, durable, body-free readback record, not an operation ticket or a
+substitute for producer state. No current TASK-069 receipt exists. TASK-069
 obtains every input from the same broker-held, strict, handle-pinned snapshots;
 it does not accept a caller mapping, path, status string, config object,
 receipt body, correlation body or Profile body. A public projection contains
@@ -411,3 +426,108 @@ reservation, different-binding collision and terminal duplicate codes without
 reserving a record or dispatching a conflicting publish operation.
 Its UI fields are likewise a static `NOT_CONFIRMED` display expectation, never
 a currentness proof, retry handle or Activation Gate outcome.
+
+## Consumer vertical slice: placeholder-to-receipt rebind
+
+This TASK-065-only slice closes the consumer shape without simulating a broker
+or a real Product effect. Its immutable order is:
+
+```text
+fixture placeholder -> SHAPE_ONLY / N.C. / EFFECT0
+
+trusted pinned D2S_001_INTERFACE_COMPLETION_READBACK_V1
+  -> TASK-061-A enabled:false prepare receipt
+  -> TASK-067 canonical allocation + completion receipt (currently absent)
+  -> TASK-036 historical stage=1 and import_path=1 receipt
+  -> public receipt + hidden correlation + canonical/Profile readback
+  -> TASK-061-B completion receipt
+  -> TASK-065 pinned read/join only
+```
+
+The placeholder is intentionally insufficient: it names a bounded expected
+issuer token, message type/version and field groups, including the required
+sealed v2 snapshot coordinate (`schema_version`, raw/canonical byte hashes and
+physical-identity digest), but contains no final D2S source hash,
+installed-byte hash, ticket, bridge coordinate, raw config, path or capability.
+It remains immutable with its `null` values forever. When the
+actual D2S receipt arrives, the TASK-065 resolver must pinned-read that
+separate producer input and reject it unless it binds all of the following to
+the same operation:
+
+TASK-067 has no canonical main directory, ABI or completion receipt today.
+Its Generic facade names in this document are non-admission design coordinates
+only. They cannot start PL-A/B/C/D, authorize a Generic mutation or satisfy
+the TASK-036 dependency edge.
+
+Its future producer input is reserved as the body-free
+`TASK067_GENERIC_FACADE_COMPLETION_V1`. The task-local placeholder requires a
+canonical owner, canonical-task main identity, closed Generic-facade ABI digest,
+same-snapshot Generic manifest and terminal-journal digests, and the exact
+TASK-061-A prepare receipt digest. All of those values remain `null` until the
+canonical task exists and issues a durable completion receipt. A filled/copy/
+rehash placeholder, public facade type or Generic fixture remains authority
+zero and cannot enter the PL-A join.
+
+### Versioned upstream dependency placeholders
+
+The fixture reserves the following closed message identities without inventing
+their body, issuer receipt or completion state. A placeholder is never a
+receipt; each value is `null` until its canonical owner publishes an exact
+durable producer record.
+
+| Dependency | Reserved message type | Required non-placeholder facts | Current task-local state |
+| --- | --- | --- | --- |
+| TASK-061-A | `TASK061_PREACTIVATION_PREPARE_V1` | exact receipt digest; connector remains `enabled:false` | `N.C. / EFFECT0` |
+| TASK-036 | `TASK036_D2S_EXECUTION_HANDOFF_V1` | exact receipt digest; stage count `1`; import-path count `1` | `N.C. / EFFECT0` |
+| TASK-061-B | `TASK061_FINAL_CA_C_COMPLETION_V1` | exact receipt digest; connector remains `enabled:false` | `N.C. / EFFECT0` |
+| TASK-069 | `TASK069_D2S_TERMINAL_READBACK_V1` | exact receipt/correlation/canonical/Profile readback group | canonical task absent; `N.C. / EFFECT0` |
+
+The placeholder table does not revise the canonical graph or authorize a
+future owner to use these illustrative names. A mismatched version, issuer,
+receipt digest, stage/import count or enabled state rejects the PL-A join
+without adapter, TASK-036, Product, config/history or Activation effect.
+
+| Join group | Required final receipt binding | Reject condition |
+| --- | --- | --- |
+| D2S H1 | broker protocol/build, one-use redemption lifecycle, exact publish action/command, immutable v2 config raw/canonical/physical identities, expiry and burn outcome | data-only v2 config, direct CLI, copied ticket/config, missing `IN_FLIGHT`, replay or second-stage claim |
+| D2S H2 | Windows-native backend/build, inherited trusted parent handle identity, handle-relative nofollow child traversal, ancestor/reparse/ABA result and owned-temp publication/readback outcome | path/lstat-only proof, reopened config, unpinned parent, reparse/ancestor swap or unobserved directory durability |
+| TASK-036 | same D2S operation/instance/config/build and historical adapter stage count `1`, `import_path` count `1` | adapter/TASK-036 call by TASK-065, count other than one, scan/`import_once`, retry or second publish/import |
+| terminal readback | strict public receipt digest, hidden correlation digest, canonical Generic/Project and advisory Profile identities/currentness | receipt-only/status-only/`canonical_store_written`, missing or cross-operation correlation/Profile, same-bytes/different-identity readback |
+| TASK-061-B | fresh trusted recomposition of that exact chain while connector remains `enabled:false` | public readiness/Human object, stale/mixed instance/config/build/time, activation implication or cross-phase receipt |
+
+The only permitted local result is `PREACTIVATION_CHAIN_VALIDATED` with every
+TASK-065 call counter and Project/Bridge/Profile/config/history/activation
+delta equal to zero. Any missing or inconsistent group returns the body-free
+`PREACTIVATION_CHAIN.N.C. / EFFECT0`; it is never repaired, retried, or
+converted into a post-activation ticket. A future steady-state operation still
+requires its own Production Activation Human Gate and a new operation/ticket.
+A filled, rehashed, copied or deserialized fixture is still
+`PREACTIVATION_CHAIN.N.C. / EFFECT0`; it cannot enter the private join snapshot
+or replace the real D2S completion receipt.
+
+### Consumer checkpoint — 2026-09-01
+
+The completed consumer-only column is bounded static parsing of the immutable
+placeholder, one-use synthetic-chain joining, exact historical stage/import
+cardinality checks, and public-receipt/hidden-correlation/canonical/Profile
+readback binding. The focused TASK-065 linkage suite exercises this column with
+no adapter, TASK-036, native broker, install or activation call.
+
+The deliberately unfilled column remains `N.C. / EFFECT0`: a separately
+pinned `D2S_001_INTERFACE_COMPLETION_READBACK_V1` carrying its final source,
+installed-byte, H1 broker, H2 native-parent-handle and v2 snapshot identities;
+then the current TASK-061-A, TASK-067, TASK-036 and TASK-061-B receipts. No
+fixture edit, rehash or copy can stand in for one of those producer receipts.
+
+#### Canonical source rebind observation — 2026-09-01
+
+The canonical completion receipt admits exactly two PL-A source values:
+canonical main head `1646a2e9f3f0cb0a468dd52e564093bde04f49de` and skill-tree
+SHA-256 `4c3269e00bb934edc15cd58b73eca06c8846b2ed7104e3fa8573e6441ad47dc2`
+(source-to-main diff `NONE`). The merged PR #8 head is audit provenance only,
+not an additional PL-A admission input.
+
+This source-only rebind is an audit observation only: installed bytes, the versioned D2S
+completion readback, the terminal handoff and every real/Activation effect are
+still absent. The observation is stored outside the immutable placeholder and
+cannot be used as a completion receipt or effect authority.

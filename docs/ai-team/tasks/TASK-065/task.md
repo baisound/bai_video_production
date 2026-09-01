@@ -235,9 +235,14 @@ completion is SUPERSEDED.
    free-form benign-key/ID/reason/style/context values can retain paths,
    accounts, tokens or transcript-like text. Production linkage requires an
    independent closed post-build privacy validator and bounded typed projection.
-   Production linkage therefore requires a separately owned canonical SKILL
-   correction, PR/main/release and installed-copy exact sync/read-back, followed
-   by a PL-A baseline hash rebind. The same correction must replace obsolete
+   **SUPERSEDED as a PL-A source-currentness gate:** the canonical source
+   correction is now merged on main at
+   `1646a2e9f3f0cb0a468dd52e564093bde04f49de` with exact skill-tree SHA-256
+   `4c3269e00bb934edc15cd58b73eca06c8846b2ed7104e3fa8573e6441ad47dc2`.
+   Those two values perform only the task-local PL-A source identity rebind;
+   installed-copy exact sync/read-back, TASK-072 native-broker completion,
+   versioned D2S completion, real-installed E2E and Activation remain separate
+   `N.C. / EFFECT0` Gates. The same correction must replace obsolete
    fixed-ProgramData/default-config activation instructions with the Option B
    explicit runtime-config route while keeping the distribution default an
    immutable disabled sentinel. TASK-061/065/067 cannot modify SKILL source.
@@ -484,8 +489,10 @@ receipt boundary are in
 Static import/spec/package-name PASS, `console=False`, stdout silence, exit0 or
 EXE presence never substitute for the real-installed Product-operation receipt.
 
-After every completion receipt is current, PL-A rebinds the baseline and PL-B
-publishes the immutable operation config. If the separate Production Activation
+The PL-A canonical-source identity rebind is already recorded separately; it
+does not make the baseline current. Only after every remaining completion
+receipt is current may PL-A admit the baseline and PL-B publish the immutable
+operation config. If the separate Production Activation
 Human Gate has not produced a current activation receipt, connector-enabled
 runtime effects remain parked at `enabled:false`. After that separate Gate,
 PL-C runs

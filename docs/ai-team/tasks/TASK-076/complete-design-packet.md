@@ -2,9 +2,9 @@
 
 Status: `DESIGN_COMPLETE / DEV-4 / SOURCE_START0`
 
-Design identity: `TASK076-PTD-DURABLE-PRODUCT-JOB-SECURE-ARTIFACT-V1`
+Design identity: `TASK076-PTD-DURABLE-PRODUCT-JOB-SECURE-ARTIFACT-V5`
 
-Canonical design base: `origin/main@70ba9e369887d3d7ded59e7197d20d133b2b4d38`
+Canonical design base: `origin/main@efdcd77729732e3c50abb9e4a7e89ae2b7b37aa0`
 
 Owner allocation: `2026-09-01 / Platform Trust & Delivery / Design B`
 
@@ -136,6 +136,18 @@ TASK-068 exact immutable publication/readback
     -> TASK-076-D RESULT/ARTIFACT terminal candidate
     -> TASK-043 terminal CAS/readback
     -> TASK-076 current public projection / next transition
+
+Sensitive-input consumer profile only:
+TASK-072 JOB_CHILD_BOOTSTRAP_BIND_RELEASE_ABI_V3 fixture
+consumer-owned typed external-binding ABI fixture
+    -> issue_and_arm_job_child_v3 after selected DISPATCHING
+    -> selected TASK-076 IN_FLIGHT
+    -> create_bootstrap_job_child_v3 (broker bootstrap only; model/artifact zero)
+    -> consumer owner binds sensitive handles directly to exact child broker
+    -> child preflight validates those handles with model/artifact-body zero
+    -> release-budget Artifact-prepare claim -> handle create -> truth commit
+    -> release claim -> child model/effect
+       | abort claim -> owner close -> child termination -> proven terminal
 ```
 
 TASK-076-A can freeze fixture shape before producer implementation. B/C/D remain
@@ -143,6 +155,10 @@ TASK-076-A can freeze fixture shape before producer implementation. B/C/D remain
 immutable event without TASK-043 currentness is historical/unselected evidence.
 A TASK-043 binding without TASK-068 pinned bytes/identity is not a valid event.
 A terminal result without TASK-072 child receipt is not a native effect proof.
+The V3 sensitive-input path is a fixture/consumer contract until TASK-072 and
+the named sensitive-input producer each publish exact accepted ABIs. V2 remains
+the ordinary single-phase path. No caller hook, generic callback or arbitrary
+producer can enter V3.
 
 This graph is acyclic because TASK-076 publishes a candidate immutable event,
 TASK-043 independently advances Project currentness to that exact event, and a
@@ -174,6 +190,7 @@ TASK-076 implementation may change exactly:
 - `tests/fixtures/task076/job-secure-artifact-fixture-v1.json`
 - `tests/fixtures/task076/job-immutable-event-chain-fixture-v1.json`
 - `tests/fixtures/task076/job-strict-json-negative-fixture-v1.json`
+- `tests/fixtures/task076/job-child-bootstrap-bind-release-fixture-v3.json`
 - `docs/ai-team/tasks/TASK-076/complete-design-packet.md`
 
 No executable helper, alternate event format, supplemental Evidence document or
@@ -198,6 +215,8 @@ Production fixes and attests:
   exact immutable-plan aggregate verifier;
 - the TASK-043 Project/current-Job reader and Project manifest verifier;
 - the TASK-072 broker/child terminal reader and process/build/session verifier;
+- the TASK-072 dedicated Windows Job Object sole-containment-handle and named
+  producer recovery-revoke adapter;
 - the consumer-owned Artifact class validator;
 - the Windows handle/file/ancestor/security currentness implementation;
 - the trusted broker monotonic/boot/session clock.
@@ -218,6 +237,8 @@ V1 protects against:
 - ancestor, reparse, hardlink, DACL, lock and operation-parent drift;
 - mutable fixed-file overwrite and scan-highest/latest selection;
 - forged, stale, wrong-action or receipt-only TASK-072 child terminals;
+- broker/channel crash after partial sensitive-role transfer, including leaked
+  bootstrap-process and child-local handle containment;
 - unknown/foreign output adoption or deletion;
 - crash at each reservation/event/child/artifact/currentness seam;
 - ambiguous JSON and resource-exhaustion input;
@@ -522,6 +543,407 @@ Public receipts, command output, process exit code alone, config equality or an
 in-process consumer boolean cannot prove a child effect. `BURNED_UNKNOWN` is not
 success and never authorizes replay.
 
+#### 7.8.1 Sensitive-input bootstrap/bind/release V3
+
+Some consumers cannot lawfully give a sensitive producer capability to the
+parent and cannot bind it before an exact worker process exists. Those consumers
+use the separate closed
+`TASK076_JOB_CHILD_BOOTSTRAP_BIND_RELEASE_V3` profile. V2 is not upgraded or
+aliased. V3 is available only when the consumer fixture declares exactly one
+allowlisted `TASK076_EXTERNAL_BINDING_SLOT_V1` containing:
+
+- producer Task and exact bind/preflight/recovery-revoke ABI plus
+  acceptance-receipt versions;
+- exact expected child-broker protocol/build/image and consumer operation key;
+- closed sensitive role-set digest and shared-lease policy digest;
+- exact body-free producer preflight result contract;
+- `parent_sensitive_handle_count=0` and `caller_hook_allowed=false`;
+- fixed process-create, external-bind, preflight, release and abort budgets one;
+- fixed false flags for model load/call, Artifact body write and consumer effect
+  before release; `artifact_handle_created` is a separate physical fact and is
+  false until external preflight is `VALIDATED`.
+
+The slot is metadata and authority-free. It never contains a callback, module,
+PID, process object, handle, body, path, URI, command or serialized capability.
+An unknown producer, ABI, role set, validator or extra slot is rejected before
+arming.
+
+`JOB_CHILD_ARMED_READBACK_V3` owns one durable state vector. Every transition is
+a one-winner CAS over that exact vector; no phase readback is a free-standing
+capability. The five budgets have these closed lifecycles:
+
+| budget | initial | legal winner | terminal outcomes |
+|---|---|---|---|
+| process-create | `OPEN` | bootstrap create, pre-bootstrap abort, or orphan abort | `CONSUMED_CREATED`, `CONSUMED_REJECTED`, `CONSUMED_ABORTED`, `BURNED_UNKNOWN` |
+| external-bind | `LOCKED` until `BOOTSTRAP_WAITING`, then `OPEN` | owner bind record or abort claim | `CONSUMED_BOUND`, `CONSUMED_FAILED`, `CONSUMED_ABORTED`, `CLOSED_REJECTED`, `BURNED_UNKNOWN` |
+| preflight | `LOCKED` until `BOUND`, then `OPEN` | child preflight or abort claim | `CONSUMED_VALIDATED`, `CONSUMED_FAILED`, `CONSUMED_ABORTED`, `CLOSED_REJECTED`, `BURNED_UNKNOWN` |
+| release | `LOCKED` until `VALIDATED`; then `ARTIFACT_PREPARE_OPEN -> ARTIFACT_PREPARE_PENDING -> ARTIFACT_PREPARED | ARTIFACT_PREPARE_FAILED`; finally release claim or abort claim | Artifact-prepare claim/commit, release claim or abort claim | `CONSUMED_STARTED`, `CONSUMED_REJECTED`, `CONSUMED_ABORTED`, `CLOSED_REJECTED`, `BURNED_UNKNOWN` |
+| abort | `OPEN` while no release winner exists; `ABORT_WAITING_ARTIFACT_TRUTH` when it wins during Artifact prepare | orphan/pre-bootstrap abort or bootstrap abort claim | `CONSUMED_ABORTED`, `CLOSED_RELEASE_WON`, `CLOSED_REJECTED`, `BURNED_UNKNOWN` |
+
+Arm-level `JOB_CHILD_REJECTED_READBACK_V3` is a pre-vector effect-zero result and
+proves `budget_vector_created=false`. Create-level
+`JOB_CHILD_BOOTSTRAP_REJECTED_READBACK_V3` is legal only when the same durable
+transaction proves no process was created and closes all five issued budgets.
+Any uncertain create, owner close,
+termination, release or resume goes to a vector-wide `BURNED_UNKNOWN`; no budget
+remains reusable. A result query may return the same terminal vector but cannot
+consume a second budget.
+
+The exact bootstrap-rejected terminal vector is:
+`process-create=CONSUMED_REJECTED`, `external-bind=CLOSED_REJECTED`,
+`preflight=CLOSED_REJECTED`, `release=CLOSED_REJECTED` and
+`abort=CLOSED_REJECTED`. The same tokens are frozen in fixture/schema/fault
+oracles; an implementation may not invent another terminal spelling.
+
+Every budget method first authenticates its private channel and matches the
+exact operation/vector identity without mutation. Unknown, forged, stale or
+cross-operation input is effect zero and cannot burn another operation. After
+the method durably enters the matching budget, success consumes it and every
+exception/uncertainty burns it; caller retry never does. Thus fail-closed budget
+consumption cannot be used as a public denial-of-service primitive.
+
+After selected DISPATCHING, TASK-072 issues and burns the V3 operation exactly
+once:
+
+```text
+issue_and_arm_job_child_v3(
+    EXACT_CURRENT_DISPATCHING_READBACK,
+    JOB_DISPATCH_PLAN_V3,
+    exact_private_consumer_inputs,
+    TASK076_EXTERNAL_BINDING_SLOT_V1
+) -> JOB_CHILD_ARMED_READBACK_V3
+   | JOB_CHILD_REJECTED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+`ARMED_V3` proves process/model/Artifact-handle/Artifact-body/consumer-effect
+zero and binds the complete five-budget vector. If the planned TASK-076
+IN_FLIGHT candidate is published but remains unselected while DISPATCHING is
+still current, only this V3 recovery call may close it:
+
+```text
+abort_armed_orphan_job_child_v3(
+    EXACT_CURRENT_DISPATCHING_READBACK,
+    JOB_CHILD_ARMED_READBACK_V3,
+    EXACT_UNSELECTED_TASK076_IN_FLIGHT_CANDIDATE_READBACK
+) -> JOB_CHILD_ORPHAN_ABORTED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+It atomically consumes process-create, external-bind, preflight, release and
+abort, proves `child_process_created=false`, `artifact_handle_created=false` and
+effect zero, and alone permits TASK-043 to select that exact orphan before the
+predecessor-correct FAILED_KNOWN terminal. It serializes with selection and every
+create/release path. V2 `ORPHAN_ABORTED` cannot substitute.
+
+After the exact TASK-076 IN_FLIGHT candidate becomes TASK-043-current, a cancel
+or local failure before bootstrap creation uses:
+
+```text
+abort_armed_prebootstrap_job_child_v3(
+    EXACT_CURRENT_TASK076_IN_FLIGHT_READBACK,
+    JOB_CHILD_ARMED_READBACK_V3,
+    closed_stable_reason
+) -> JOB_CHILD_PREBOOTSTRAP_ABORTED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+This CAS wins against bootstrap creation, consumes all five budgets and proves
+process/Artifact/model/consumer effect zero. A create winner makes this call
+return the exact later phase or `BURNED_UNKNOWN`, never a false no-effect result.
+Only while neither abort path has won may TASK-072 consume process-create:
+
+```text
+create_bootstrap_job_child_v3(
+    EXACT_CURRENT_TASK076_IN_FLIGHT_READBACK,
+    JOB_CHILD_ARMED_READBACK_V3,
+    FIXED_BOOTSTRAP_DECLARATION_V3
+) -> JOB_CHILD_BOOTSTRAP_WAITING_READBACK_V3
+   | JOB_CHILD_BOOTSTRAP_REJECTED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+TASK-072 creates the fixed child suspended, applies the restricted token,
+network/dump/loader policy and closed inherited bootstrap channel, records the
+exact process/token/session/image/build identity durably, then releases only the
+attested broker-bootstrap entry point. No script/model/input/output/Artifact
+handle is present and the bootstrap binary cannot enter consumer code. The
+readback truthfully records `child_process_created=true` while
+`model_loaded=false`, `model_called=false`, `artifact_handle_created=false`,
+`artifact_body_write_started=false` and
+`consumer_effect_started=false`.
+
+Before any bootstrap entry, TASK-072 assigns the child to a dedicated Windows
+Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. The sole containment handle
+is non-inheritable and remains inside the exact TASK-072 broker process; parent,
+consumer, producer and child handle counts are zero. It is never duplicated or
+serialized. Broker termination therefore kills the contained child and closes
+its child-local sensitive duplicates even when durable classification is unknown.
+
+`BOOTSTRAP_REJECTED` is emitted only by an atomic known-no-process rejection that
+closes every remaining budget as `CLOSED_REJECTED`. If a process may exist, if
+its identity commit is uncertain, or if rejection durability is uncertain, the
+only result is vector-wide `BURNED_UNKNOWN`. `BOOTSTRAP_REJECTED` never needs or
+permits a later abort/release.
+
+TASK-076 then exposes the private body-free binding coordinate only to the named
+producer broker. The producer, not TASK-076 or the parent, transfers its exact
+opened handles directly into that exact child-local broker and returns one
+nonserializable `OWNER_EXTERNAL_INPUT_BOUND_READBACK_V1`. TASK-072 accepts it
+only through the fixed owner adapter and records:
+
+```text
+record_job_child_external_binding_v3(
+    JOB_CHILD_BOOTSTRAP_WAITING_READBACK_V3,
+    OWNER_EXTERNAL_INPUT_BOUND_READBACK_V1
+      | OWNER_EXTERNAL_INPUT_BINDING_FAILED_READBACK_V1,
+    exact_owner_acceptance_receipt
+) -> JOB_CHILD_EXTERNAL_INPUT_BOUND_READBACK_V3
+   | JOB_CHILD_EXTERNAL_BINDING_FAILED_CLOSED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+The readback binds the exact child process/broker, role set, owner operation,
+shared lease, producer/currentness and `parent_sensitive_handle_count=0`; it
+contains no handle/body/path. Partial transfer, process drift, duplicate role,
+wrong owner or broker loss consumes the external-bind budget as failed and
+returns an exact failure readback binding owner/lease identity, attempted and
+accepted role-set digests, `owner_close_required=true | false` and a stable code,
+but no handle/body/path. The producer quiesces the lease but must not
+independently close it: close is serialized by the abort claim below. Unknown
+transfer state is vector-wide `BURNED_UNKNOWN`, never failed-known.
+
+The child bootstrap validates the bound roles under the owner lease before any
+model/output access and returns exactly one authenticated body-free preflight:
+
+```text
+validate_job_child_external_input_v3(
+    JOB_CHILD_EXTERNAL_INPUT_BOUND_READBACK_V3,
+    FIXED_OWNER_PREFLIGHT_PROFILE_V1
+) -> JOB_CHILD_EXTERNAL_INPUT_VALIDATED_READBACK_V3
+   | JOB_CHILD_EXTERNAL_INPUT_FAILED_CLOSED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+Only `VALIDATED` permits the consumer to create its operation-owned Artifact.
+Failure consumes preflight as failed, keeps Artifact handle/body, model and
+consumer effect zero, and requires the serialized abort claim. Artifact creation
+is not an out-of-vector consumer action. After VALIDATED the release budget must
+first win this Task-072-owned CAS against abort:
+
+```text
+claim_job_child_artifact_prepare_v3(
+    EXACT_CURRENT_TASK076_IN_FLIGHT_READBACK,
+    JOB_CHILD_ARMED_READBACK_V3,
+    JOB_CHILD_BOOTSTRAP_WAITING_READBACK_V3,
+    JOB_CHILD_EXTERNAL_INPUT_VALIDATED_READBACK_V3,
+    FIXED_ARTIFACT_DECLARATION_V1 | FIXED_RECEIPT_ONLY_DECLARATION_V1
+) -> JOB_CHILD_ARTIFACT_PREPARE_PENDING_READBACK_V3
+   | JOB_CHILD_ABORT_PENDING_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+
+commit_job_child_artifact_prepare_v3(
+    JOB_CHILD_ARTIFACT_PREPARE_COMMIT_CONTEXT_V3 :=
+        PREPARE_ONLY {
+            JOB_CHILD_ARTIFACT_PREPARE_PENDING_READBACK_V3
+        }
+      | PREPARE_WITH_ABORT_WAIT {
+            JOB_CHILD_ARTIFACT_PREPARE_PENDING_READBACK_V3,
+            JOB_CHILD_ARTIFACT_ABORT_WAIT_READBACK_V3
+        },
+    JOB_ARTIFACT_HANDLE_PREPARED_READBACK_V1
+      | JOB_ARTIFACT_KNOWN_NO_CREATE_READBACK_V1
+      | JOB_ARTIFACT_RECEIPT_ONLY_PREPARED_READBACK_V1
+) -> JOB_CHILD_ARTIFACT_PREPARED_READBACK_V3
+   | JOB_CHILD_ARTIFACT_PREPARE_FAILED_ABORT_REQUIRED_READBACK_V3
+   | JOB_CHILD_ABORT_PENDING_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+Only the nonserializable `ARTIFACT_PREPARE_PENDING` lease authorizes exactly one
+exclusive handle create. The commit binds exact physical identity and
+`artifact_handle_created=true` while `artifact_body_write_started=false`,
+`artifact_body_written=false` and `artifact_adopted=false`; or it binds a durable
+known-no-create/collision/receipt-only result. Creation is a physical fact, not
+an effect-zero claim. Collision creates nothing and preserves the foreign target.
+`JOB_ARTIFACT_KNOWN_NO_CREATE_READBACK_V1` is issued only by the exact retained
+exclusive-create operation with pinned ancestor/currentness and no opened handle;
+a caller boolean, absence check or path reopen cannot mint it.
+The commit context is selected by the exact durable vector, not by the caller.
+`PREPARE_ONLY` is rejected without mutation once abort-wait is current;
+`PREPARE_WITH_ABORT_WAIT` requires the exact same-vector pending lease and
+abort-wait readback. `ARTIFACT_PREPARED` leaves release open for exactly release or abort;
+`ARTIFACT_PREPARE_FAILED_ABORT_REQUIRED` consumes release as rejected and leaves
+abort open; and a commit under `ABORT_WAITING_ARTIFACT_TRUTH` atomically consumes
+release/abort as aborted and returns ABORT_PENDING. No outcome is retryable.
+
+Abort cannot return `ABORT_PENDING` while Artifact prepare is `PENDING`. The
+typed `PREPARE_IN_PROGRESS` abort request below supplies the exact pending
+readback without claiming Artifact truth. It
+atomically moves abort to `ABORT_WAITING_ARTIFACT_TRUTH`, blocks any release, and
+returns `JOB_CHILD_ARTIFACT_ABORT_WAIT_READBACK_V3`. The same prepare commit then
+binds exact truth and atomically returns `ABORT_PENDING`; no second abort claim is
+needed or permitted. A caller
+exception after Artifact-prepare entry must commit the exact observed result or
+become vector-wide BURNED_UNKNOWN; it cannot omit the handle. `NONE` is never
+accepted as Artifact truth. Before prepare entry, TASK-072 can issue only
+`JOB_CHILD_ARTIFACT_NEVER_ENTERED_READBACK_V3`, derived from the exact release
+budget state, and the prepare CAS cannot later win after abort.
+
+Release is a two-step durable transition hidden behind one private operation.
+Its first Task-072 CAS validates current IN_FLIGHT, the full lineage, a live
+producer lease and `JOB_CHILD_ARTIFACT_PREPARED_READBACK_V3`, then wins
+`RELEASE_PENDING` against
+`ABORT_PENDING`. That CAS consumes release and closes abort. Only the winner may
+attach non-sensitive/Artifact handles, record RUNNING, and send one resume:
+
+```text
+attach_artifact_and_release_job_child_v3(
+    EXACT_CURRENT_TASK076_IN_FLIGHT_READBACK,
+    JOB_CHILD_ARMED_READBACK_V3,
+    JOB_CHILD_BOOTSTRAP_WAITING_READBACK_V3,
+    JOB_CHILD_EXTERNAL_INPUT_VALIDATED_READBACK_V3,
+    JOB_CHILD_ARTIFACT_PREPARED_READBACK_V3,
+    exact_private_non_sensitive_input_and_artifact_handles
+) -> JOB_CHILD_STARTED_READBACK_V3
+   | JOB_CHILD_RELEASE_REJECTED_ABORT_REQUIRED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+An input rejected before exact operation/vector match has effect zero. A release
+precondition rejection after durable entry consumes release as rejected and
+leaves only abort open; it cannot be retried. Uncertainty after `RELEASE_PENDING` is
+`BURNED_UNKNOWN`, because consumer entry may have occurred. Before release wins,
+the producer lease cannot close without an earlier abort claim; after STARTED it
+closes only through the exact child-terminal protocol. Release atomically rejects
+an abort claim or non-live lease.
+
+Every known bootstrap-phase cancellation/failure uses this claim/commit pair.
+Its Artifact phase is a closed tagged union; fields from different variants
+cannot be combined:
+
+```text
+JOB_CHILD_ABORT_ARTIFACT_PHASE_V3 :=
+    BEFORE_PREPARE {
+        current_phase:
+            JOB_CHILD_EXTERNAL_INPUT_BOUND_READBACK_V3
+              | JOB_CHILD_EXTERNAL_BINDING_FAILED_CLOSED_READBACK_V3
+              | JOB_CHILD_EXTERNAL_INPUT_VALIDATED_READBACK_V3
+              | JOB_CHILD_EXTERNAL_INPUT_FAILED_CLOSED_READBACK_V3
+              | NONE_IF_NEVER_BOUND,
+        artifact_truth: JOB_CHILD_ARTIFACT_NEVER_ENTERED_READBACK_V3
+    }
+  | PREPARE_IN_PROGRESS {
+        artifact_prepare_pending:
+            JOB_CHILD_ARTIFACT_PREPARE_PENDING_READBACK_V3
+    }
+  | AFTER_PREPARE {
+        current_phase:
+            JOB_CHILD_ARTIFACT_PREPARED_READBACK_V3
+              | JOB_CHILD_ARTIFACT_PREPARE_FAILED_ABORT_REQUIRED_READBACK_V3
+    }
+  | AFTER_RELEASE_REJECTED {
+        current_phase:
+            JOB_CHILD_RELEASE_REJECTED_ABORT_REQUIRED_READBACK_V3
+    }
+
+claim_job_child_abort_v3(
+    EXACT_CURRENT_TASK076_IN_FLIGHT_READBACK,
+    JOB_CHILD_ARMED_READBACK_V3,
+    JOB_CHILD_BOOTSTRAP_WAITING_READBACK_V3,
+    JOB_CHILD_ABORT_ARTIFACT_PHASE_V3,
+    closed_stable_reason
+) -> JOB_CHILD_ABORT_PENDING_READBACK_V3
+   | JOB_CHILD_ARTIFACT_ABORT_WAIT_READBACK_V3
+   | JOB_CHILD_STARTED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+
+commit_job_child_abort_v3(
+    JOB_CHILD_ABORT_PENDING_READBACK_V3,
+    OWNER_EXTERNAL_INPUT_CLOSED_READBACK_V1 | NONE_IF_NO_ROLE_TRANSFER,
+    JOB_CHILD_TERMINATED_WAITED_READBACK_V3
+) -> JOB_CHILD_BOOTSTRAP_ABORTED_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+`PREPARE_IN_PROGRESS` is the only claim variant that can return
+`JOB_CHILD_ARTIFACT_ABORT_WAIT_READBACK_V3`; its one-winner CAS closes the release
+winner path, binds the pending lease, and asserts no Artifact truth. BEFORE_PREPARE
+requires exact NEVER_ENTERED. AFTER_PREPARE and AFTER_RELEASE_REJECTED derive
+truth only from their exact transitively bound phase readback. `ABORT_PENDING` is
+the only instruction authorizing the named producer to close
+or burn transferred roles. The ordinary abort claim—or the Artifact-prepare
+commit when abort is waiting—atomically consumes abort, closes every still-open
+bind/preflight/release budget, and wins against `RELEASE_PENDING`.
+Every `JOB_CHILD_ABORT_PENDING_READBACK_V3` embeds a mandatory
+`JOB_CHILD_ARTIFACT_ABORT_TRUTH_READBACK_V3`, derived only from the exact
+NEVER_ENTERED, PREPARED or PREPARE_FAILED state already bound by the winning
+claim or matching prepare commit. The abort commit consumes that embedded truth;
+it accepts no caller-supplied reconstruction and never accepts `NONE`.
+After producer close, TASK-072 terminates and waits the exact child before commit.
+`BOOTSTRAP_ABORTED` records `consumer_effect_started=false`, model/body-write
+zero, the truthful `child_process_created=true`, and the truthful
+`artifact_handle_created=true | false` plus exact retained Artifact identity when
+created. It never labels an existing handle as no Artifact. The operation-owned
+file remains preserved/quarantined for its separate lifecycle; TASK-076 does not
+delete it during abort. Owner close, terminate/wait or Artifact-truth uncertainty
+is vector-wide `BURNED_UNKNOWN`.
+
+`BURNED_UNKNOWN` closes effect authority but never disables containment. TASK-072
+exposes one idempotent recovery-only operation:
+
+```text
+contain_burned_unknown_job_child_v3(
+    EXACT_JOB_CHILD_BURNED_UNKNOWN_READBACK_V3,
+    exact_original_project_job_operation_coordinate,
+    TASK076_RECOVERY_CONTAINMENT_PROFILE_V1
+) -> JOB_CHILD_UNKNOWN_CONTAINMENT_READBACK_V3
+```
+
+The operation can exact-query the named producer lease and child Job Object,
+issue `OWNER_EXTERNAL_INPUT_RECOVERY_REVOKE_V1` for every attempted/accepted
+role, close the sole containment handle or terminate the exact Job Object, and
+wait for the child. It can run after Product/broker restart and after any bind,
+preflight, Artifact-prepare, release or abort uncertainty. It can never bind,
+preflight, attach, release, resume, read a body, delete an Artifact, or return
+FAILED_KNOWN/SUCCEEDED. The readback records owner roles as
+`REVOKED_CONFIRMED | UNKNOWN`, child as
+`TERMINATED_WAITED | KILL_ON_CLOSE_CONFIRMED | UNKNOWN`, and exact retained
+Artifact truth when available. The Job outcome remains BURNED_UNKNOWN even when
+containment is confirmed. Same-operation replay is an idempotent query; a wrong
+operation/vector has effect zero. Project/Job-head advancement cannot authorize
+effect but does not block containment of the exact original process/lease.
+Unknown containment is retried only as the same
+idempotent safety action under explicit recovery policy, never automatically and
+never as child execution or state repair.
+
+Failure to publish local state, Artifact collision, cancellation or exception
+at any bootstrap/pre-release seam must use the applicable abort path. Product,
+broker or worker restart invalidates every nonterminal V3 live channel. Recovery
+may exact-query and finish an already durable `ABORT_PENDING` claim; it may never
+begin a new bind, preflight, release or owner close. A delayed bind/release after
+ABORTED is rejected and any presented handles are closed/burned by their owner.
+
+Effect-bearing completion requires a distinct non-aliased terminal ABI:
+
+```text
+read_job_child_terminal_v3(
+    JOB_CHILD_STARTED_READBACK_V3,
+    exact_child_exit_and_result_coordinate,
+    exact_owner_lease_terminal_readback,
+    exact_artifact_validation_readback | exact_receipt_only_result
+) -> JOB_CHILD_TERMINAL_READBACK_V3
+   | JOB_CHILD_BURNED_UNKNOWN_READBACK_V3
+```
+
+`JOB_CHILD_TERMINAL_READBACK_V3` binds the exact ARMED, BOOTSTRAP_WAITING,
+BOUND, VALIDATED, ARTIFACT_PREPARED and STARTED identities; all five terminal
+budget states; child process/token/session/image/build and exit/result; owner
+lease close/terminal;
+Artifact handle/body/validator/durability truth; and consumer result digest. It
+contains no sensitive handle/body/path. Missing lineage, owner terminal,
+Artifact truth or semantic result is `BURNED_UNKNOWN`, not V2 and not success.
+
 ### 7.9 `SECURE_JOB_ARTIFACT_V1`
 
 V1 supports exactly zero or one regular single-file Artifact per Job terminal.
@@ -566,7 +988,10 @@ external owner receipt and validator result are bound instead.
 `SUCCEEDED` requires:
 
 - exact current `IN_FLIGHT` event;
-- exact TASK-072 committed child terminal;
+- exactly one version-discriminated TASK-072 committed child terminal:
+  `JOB_CHILD_TERMINAL_READBACK_V2` for the ordinary path or
+  `JOB_CHILD_TERMINAL_READBACK_V3` for the sensitive-input path; neither may be
+  converted, aliased or accepted by equal public fields;
 - zero-or-one exact Artifact manifest/readback according to the profile;
 - consumer semantic result validator PASS;
 - final Project/input/security/build currentness;
@@ -597,14 +1022,21 @@ content. A public status object is never accepted by a transition API.
 
 ### 7.12 Early fixture contract
 
-The three exact fixture files in section 5 supply static positive and negative
-vectors for each registered Job kind. Every fixture declares:
+The four exact fixture files in section 5 supply static positive and negative
+vectors for each registered Job kind. The V3 child fixture freezes every legal
+V3 state/receipt shape, the named-owner slot, no-hook rules and every
+create/bind/preflight/Artifact-prepare/release/abort rejection code, the exact
+BOOTSTRAP_REJECTED five-budget token vector and containment-only results. Every
+fixture declares:
 
 - `fixture_only=true`;
 - `authority_created=false`;
 - `task068_real_io=false`;
 - `task043_project_currentness=false`;
 - `task072_child_executed=false`;
+- `bootstrap_child_created=false` and a separate closed
+  `simulated_expected_bootstrap_state` field;
+- `external_sensitive_body_read=false`;
 - `artifact_body_written=false`;
 - `production_eligible=false`;
 - fixed fake identities/builds/bytes/hashes and expected deltas.
@@ -674,15 +1106,51 @@ READY selected by TASK-043
  -> terminal event published and selected by TASK-043
 ```
 
+The sensitive-input V3 profile replaces only the final attach/start segment:
+
+```text
+selected TASK-076 IN_FLIGHT + TASK-072 ARMED_V3
+ -> create fixed broker-bootstrap child (consumer/model/Artifact-handle/body zero)
+ -> durable BOOTSTRAP_WAITING readback with exact process identity
+ -> named producer transfers sensitive roles directly to exact child broker
+ -> durable EXTERNAL_INPUT_BOUND readback; parent handle count zero
+ -> child broker validates complete role set under producer lease
+ -> durable EXTERNAL_INPUT_VALIDATED readback; model/Artifact-handle/body zero
+ -> release-budget ARTIFACT_PREPARE_PENDING wins against abort
+ -> abort request during PENDING uses PREPARE_IN_PROGRESS(PENDING) and either
+    loses, or durably returns ABORT_WAITING_ARTIFACT_TRUTH with release blocked
+ -> operation-owned Artifact handle created exclusively
+ -> the same pending lease commits exact created/no-create physical truth;
+    PREPARE_WITH_ABORT_WAIT returns truth-embedded ABORT_PENDING, otherwise
+    ARTIFACT_PREPARED leaves release open
+ -> release CAS wins against abort, consumes release, records RUNNING,
+    attaches only non-sensitive/Artifact handles and releases consumer code once
+ -> JOB_CHILD_TERMINAL_READBACK_V3 binds the complete V3 lineage
+ -> Artifact/child terminal validated
+```
+
+Before bootstrap creation, exact pre-bootstrap or orphan abort consumes every V3
+budget and proves process/Artifact/model/consumer effect zero. After bootstrap
+creation, an abort claim must win or lose against release under TASK-072 CAS.
+During Artifact prepare, abort first enters ABORT_WAITING_ARTIFACT_TRUTH and
+cannot claim completion until the prepare lease commits exact truth.
+Exact BOOTSTRAP_ABORTED proves consumer/model/body-write effect zero and
+truthfully preserves both `child_process_created=true` and the separate
+`artifact_handle_created=true | false` fact. Unknown owner-close, terminate,
+Artifact-handle truth or release state is BURNED_UNKNOWN. Empty/missing content
+is never used as proof of no Artifact-handle creation.
+
 If TASK-072 arm/burn succeeds but TASK-076 `IN_FLIGHT` cannot become current, child
 and Artifact creation stay zero and recovery classifies
 `BURNED_UNKNOWN_CANDIDATE_REQUIRED`; it is not yet current. Exact broker query
 is allowed but replay is not. If Artifact creation/validation fails after
-selected TASK-076 IN_FLIGHT while broker state is ARMED, TASK-076 must call the
-serialized abort ABI. Exact ABORTED readback permits an IN_FLIGHT -> FAILED_KNOWN
-candidate with child effect zero; abort crash/unknown permits only an
-IN_FLIGHT -> BURNED_UNKNOWN candidate after exact broker query. No terminal
-candidate may race ahead of consuming/classifying the ARMED start budget.
+selected TASK-076 IN_FLIGHT, V2 must call its serialized `abort_armed` ABI; V3
+must use pre-bootstrap abort or the bootstrap abort claim/commit matching its
+exact current phase. Exact profile-matching ABORTED permits an IN_FLIGHT ->
+FAILED_KNOWN candidate with consumer effect zero and truthful Artifact-handle
+facts; abort crash/unknown permits only an IN_FLIGHT -> BURNED_UNKNOWN candidate
+after exact broker query. No terminal candidate may race ahead of
+consuming/classifying every profile budget.
 
 `BURNED_UNKNOWN` is not current merely because the broker burned. Recovery pins
 the still-current `DISPATCHING` readback, exact TASK-072 burned/ARMED broker
@@ -690,12 +1158,15 @@ readback and the planned TASK-076 `IN_FLIGHT` coordinate:
 
 - if the planned `IN_FLIGHT` candidate is absent, publish a predecessor-bound
   `BURNED_UNKNOWN` candidate and ask TASK-043 to CAS-select it;
-- if the exact planned `IN_FLIGHT` candidate exists, first obtain exact
-  `JOB_CHILD_ORPHAN_ABORTED_READBACK_V2` while DISPATCHING remains current. Only
-  then may TASK-043 CAS-select that exact orphan against unchanged DISPATCHING,
-  followed by an `IN_FLIGHT -> FAILED_KNOWN` candidate/readback. If orphan abort
-  is unknown, currentness changes or another actor selects the orphan, stop and
-  exact-query; never precompute/select a terminal or claim child/artifact zero;
+- if the exact planned `IN_FLIGHT` candidate exists, first obtain the exact
+  profile-matching `JOB_CHILD_ORPHAN_ABORTED_READBACK_V2` or
+  `JOB_CHILD_ORPHAN_ABORTED_READBACK_V3` while DISPATCHING remains current. The
+  V3 readback atomically closes all five budgets and proves process/Artifact zero.
+  Only then may TASK-043 CAS-select that exact orphan against unchanged
+  DISPATCHING, followed by an `IN_FLIGHT -> FAILED_KNOWN` candidate/readback. If
+  orphan abort is unknown, currentness changes or another actor selects the
+  orphan, stop and exact-query; never precompute/select a terminal or claim
+  child/artifact zero;
 - if another body/identity occupies the slot, or Project/head changed, STOP and
   preserve. A competing terminal is never published into the orphan slot.
 
@@ -718,6 +1189,7 @@ transaction. Before every phase the ordered logical currentness is revalidated:
 TASK-043 selected Project/Job head
  -> TASK-076 immutable predecessor/current candidate
  -> TASK-072 ticket/child state
+ -> named owner external-binding/preflight state (V3 only)
  -> consumer Artifact handle state
 ```
 
@@ -733,6 +1205,33 @@ Any reverse dependency request, stale readback or phase drift fails closed.
   `BURNED_UNKNOWN_CANDIDATE_REQUIRED`; restart itself appends/selects nothing.
   Only the legal predecessor-specific recovery sequence in section 9 can make
   `BURNED_UNKNOWN` current; no replay.
+- V3 restart never starts bind, preflight, release or a fresh normal owner-close/
+  abort transition. Recovery-only `contain_burned_unknown_job_child_v3` remains
+  available and cannot release/resume or change the BURNED_UNKNOWN outcome. An
+  exact already-durable `ABORT_PENDING` may finish the same claim using its
+  embedded Artifact truth plus bound owner-close and terminate/wait coordinates;
+  missing/changed evidence is BURNED_UNKNOWN. A trusted Task-072 same-vector
+  continuation query may return an already-live private continuation for durable
+  `ARTIFACT_PREPARE_PENDING` or `ABORT_WAITING_ARTIFACT_TRUTH` only while the
+  original broker session and exact retained operation/handle remain live. It
+  never reissues a lease, creates a budget or changes the tagged variant. After a
+  broker/Product restart there is no live continuation and the vector becomes
+  BURNED_UNKNOWN plus containment. `ABORT_WAITING_ARTIFACT_TRUTH` may advance only
+  through `PREPARE_WITH_ABORT_WAIT` using the same pending lease and exact
+  retained-operation created/no-create readback. A lost handle, uncommitted
+  truth, different vector or changed Artifact identity likewise becomes
+  BURNED_UNKNOWN plus containment and the observed file is preserved. A
+  DISPATCHING-current exact unselected orphan may use only
+  `abort_armed_orphan_job_child_v3`, whose CAS proves process-create was never
+  entered and closes all five budgets. Every other pre-bootstrap or
+  `BOOTSTRAP_WAITING/BOUND/VALIDATED` state without a pre-crash abort claim is
+  BURNED_UNKNOWN, invokes recovery containment, and is never rebound or released.
+- V3 known `BOOTSTRAP_REJECTED`, `PREBOOTSTRAP_ABORTED`, `ORPHAN_ABORTED` and
+  `BOOTSTRAP_ABORTED` are terminal five-budget vectors. Recovery only queries
+  their exact same-operation readback; it does not invoke another abort.
+- V3 `RELEASED/RUNNING` is never reattached or resumed. Missing terminal is
+  BURNED_UNKNOWN until exact `JOB_CHILD_TERMINAL_READBACK_V3` or a separately
+  authorized child/Artifact reconciliation proves otherwise.
 - A committed TASK-072 terminal plus exact Artifact may be reconciled only by a
   consumer-specific semantic verifier and a new immutable reconciliation event.
 - A terminal event not yet selected by TASK-043 remains an orphan until TASK-043
@@ -760,10 +1259,25 @@ Any reverse dependency request, stale readback or phase drift fails closed.
 | TASK072 arm/burn succeeds, exact TASK076 IN_FLIGHT orphan exists | recovery abort required | ORPHAN_ABORTED while DISPATCHING current -> select exact orphan -> FAILED_KNOWN; unknown/currentness race claims no child/artifact-zero |
 | TASK072 arm/burn succeeds, TASK076 IN_FLIGHT slot collision | `JOB_RECEIPT_COLLISION` | STOP+preserve; publish/select/delete zero |
 | TASK072 exact pre-effect REJECTED at DISPATCHING | `FAILED_KNOWN` candidate | current only after publish + TASK043 CAS; child/artifact zero |
-| Artifact create/validation/collision fails after selected TASK076 IN_FLIGHT while broker ARMED; abort wins | `FAILED_KNOWN` candidate | exact ABORTED proves child/create/start/effect zero; preserve foreign target |
+| V2 Artifact create/validation/collision fails after selected TASK076 IN_FLIGHT while broker ARMED; abort wins | `FAILED_KNOWN` candidate | exact V2 ABORTED proves child/create/start/effect zero; preserve foreign target |
 | abort_armed crashes/returns unknown, or attach_and_start wins its race | `BURNED_UNKNOWN` candidate | exact broker query/classification; never claim no-effect or retry |
 | attach_and_start exact pre-create rejection | Job `FAILED_KNOWN` candidate | predecessor is current TASK076 IN_FLIGHT; child effect zero; publish + TASK043 CAS required |
 | attach_and_start uncertainty after start-budget entry | `BURNED_UNKNOWN` candidate | predecessor is current TASK076 IN_FLIGHT; exact broker query only; no reattach/start |
+| V3 exact IN_FLIGHT candidate remains orphan | `ORPHAN_ABORTED_V3 | BURNED_UNKNOWN` | while DISPATCHING current, V3 orphan abort consumes all five budgets and proves process/Artifact/effect zero before selection; V2 cannot substitute |
+| V3 selected IN_FLIGHT cancellation before create | `PREBOOTSTRAP_ABORTED_V3 | BURNED_UNKNOWN` | CAS wins against create, consumes all five budgets and proves process/Artifact/effect zero |
+| V3 bootstrap child create/attestation fails before process identity commit | `BOOTSTRAP_REJECTED | BURNED_UNKNOWN` | REJECTED only from known no-process atomic closure of all five budgets; any possible process is BURNED_UNKNOWN |
+| V3 known-no-process BOOTSTRAP_REJECTED | exact terminal vector | create=`CONSUMED_REJECTED`; bind/preflight/release/abort=`CLOSED_REJECTED`; no other token is valid |
+| V3 owner transfer is partial, wrong-process or broker-lost | `EXTERNAL_BINDING_FAILED_CLOSED` then abort claim | owner quiesces but closes only after ABORT_PENDING wins against release; parent handle zero; unknown transfer is BURNED_UNKNOWN |
+| V3 external preflight fails | `EXTERNAL_INPUT_FAILED_CLOSED` then abort claim | Artifact handle/body/model/consumer effect zero; owner close and child termination occur only under ABORT_PENDING |
+| V3 abort races Artifact prepare | exact typed prepare/abort substate winner | PREPARE_IN_PROGRESS(PENDING) can alone produce ABORT_WAITING_ARTIFACT_TRUTH and block release; same-lease PREPARE_WITH_ABORT_WAIT commits created/no-create and returns truth-embedded ABORT_PENDING; NONE is invalid |
+| V3 Artifact handle create/collision/local state fails after validated preflight | prepare commit then abort claim/commit | BOOTSTRAP_ABORTED truthfully binds handle-created true/false and body-write/effect zero; foreign target preserved; unknown is BURNED_UNKNOWN plus containment |
+| V3 release precondition rejects | `RELEASE_REJECTED_ABORT_REQUIRED` | release cannot retry; abort remains the sole known closure |
+| V3 abort claim races release | exact `ABORT_PENDING` or `RELEASE_PENDING` winner | loser cannot close owner lease, attach, resume or claim no-effect |
+| V3 crash during owner close or child terminate/wait after ABORT_PENDING | exact same-claim completion or `BURNED_UNKNOWN` | no new bind/preflight/release/abort; created Artifact truth preserved |
+| V3 release receipt or terminal lineage is lost | `BURNED_UNKNOWN` until exact V3 terminal | no second bind/release/resume and no V2 terminal substitution |
+| V3 any vector-wide BURNED_UNKNOWN with possible child/role | recovery containment | producer recovery revoke + Job-object kill/terminate/wait; outcome remains BURNED_UNKNOWN; release/resume/delete zero |
+| wrong/cross-operation vector before any V3 method entry | stable effect-zero reject | victim vector bytes/revision unchanged |
+| exact matching V3 method throws after durable budget entry | exact budget/vector BURNED_UNKNOWN | only matched operation changes; recovery containment as required |
 | child failure after entry | `BURNED_UNKNOWN` | preserve; no retry |
 | Artifact create collision while broker ARMED | `ARTIFACT_COLLISION_STOP` reason + exact abort classification | foreign winner preserved; FAILED_KNOWN only from ABORTED, otherwise BURNED_UNKNOWN |
 | Artifact flush/validate/readback failure | `BURNED_UNKNOWN` | success terminal zero |
@@ -776,7 +1290,8 @@ Any reverse dependency request, stale readback or phase drift fails closed.
 ## 12. Negative matrix
 
 Each negative independently asserts reservation/event count, TASK-043 revision
-delta, TASK-072 child count, Artifact delta and unrelated overwrite/delete.
+delta, TASK-072 child count, exact TASK-072 budget-vector bytes/revision delta,
+Artifact delta and unrelated overwrite/delete.
 
 ### T76-AUTH
 
@@ -785,6 +1300,8 @@ delta, TASK-072 child count, Artifact delta and unrelated overwrite/delete.
 - public request/status/legacy `operation_identity` used for issuance;
 - caller-selected Project/root/path/Job/event/ticket/time/backend;
 - fake TASK-068/TASK-043/TASK-072 verifier or test clock in Production;
+- caller callback/generic hook/fake owner adapter used as a V3 external-binding
+  producer, or caller-selected PID/process/handle/role set;
 - extra/missing/wrong producer/action/profile/version;
 - same semantic effect with new request/reservation/ticket IDs.
 
@@ -841,8 +1358,44 @@ Expected: next effect/current status zero; orphan preserved.
   stale/cross-Job/cross-Project DISPATCHING readback;
 - `attach_and_start_job_child_v2` before selected TASK076 IN_FLIGHT, without an
   exact ARMED readback, with stale/cross-operation handles, or called twice;
+- V3 create-bootstrap before selected IN_FLIGHT, with a V2 ARMED readback, or
+  with extra script/model/input/output/Artifact handles;
+- for each V3 create/bind/preflight/Artifact-prepare/release/abort method: wrong,
+  stale or cross-operation vector presented before identity match; victim vector
+  bytes/revision must remain exact unchanged;
+- for each same method: authenticated exact-vector durable entry followed by
+  injected exception/uncertainty; exactly that vector/budget becomes
+  BURNED_UNKNOWN and no other operation changes;
+- V3 orphan selected before exact `JOB_CHILD_ORPHAN_ABORTED_READBACK_V3`, V2
+  orphan receipt substituted, or orphan abort after selection/create entry;
+- V3 cancel before bootstrap without exact `PREBOOTSTRAP_ABORTED`, create and
+  pre-bootstrap abort both winning, or any of five budgets remaining open after
+  orphan/pre-bootstrap/rejected terminal;
+- forged/copied/wrong-process `BOOTSTRAP_WAITING`, owner-bound or validated
+  readback; equal fields/hashes without the live child broker;
+- V3 owner binding missing/wrong ABI/acceptance, wrong producer, partial role
+  set, parent handle possession, duplicate/cross-operation lease or process swap;
+- V3 child preflight skipped, run after Artifact creation, or validation receipt
+  forged from public metadata;
+- V3 Artifact created before external input VALIDATED, or release called without
+  exact Artifact handle/currentness and all prior readbacks;
+- V3 Artifact create without `ARTIFACT_PREPARE_PENDING`, abort reports NONE after
+  prepare entry, BEFORE_PREPARE used during PENDING, PREPARE_IN_PROGRESS with a
+  wrong/cross-vector pending readback, delayed create after abort, abort during
+  PENDING returns final ABORTED before exact same-lease prepare commit, a
+  PREPARE_ONLY commit bypasses current abort-wait, or release bypasses PREPARED;
+- V3 producer close before `ABORT_PENDING`, abort claim omitting a partial/failed
+  binding outcome, close crash then new claim, or release accepting a stale/
+  closing owner lease;
+- delayed bind/release after ABORTED, release and abort both winning, or restart
+  followed by a new bind/preflight/release/abort rather than exact-querying an
+  existing abort claim;
+- BURNED_UNKNOWN containment accepts a public/wrong operation, binds/releases/
+  resumes, returns FAILED_KNOWN/SUCCEEDED, deletes an Artifact, or fails to revoke
+  owner roles and terminate/wait the exact Job Object where available;
 - local terminal publication after Artifact failure without exact
-  `JOB_CHILD_ABORTED_READBACK_V2` or exact broker unknown classification;
+  profile-matching V2 ABORTED or V3 PREBOOTSTRAP/BOOTSTRAP_ABORTED readback, or
+  without exact broker unknown classification;
 - delayed/concurrent attach-and-start racing `abort_armed_job_child_v2`, both
   reporting winner, or attach succeeding after ABORTED;
 - wrong/cross command, action, config, child, process, build, user/session;
@@ -853,10 +1406,15 @@ Expected: next effect/current status zero; orphan preserved.
   issue-and-arm, TASK076 IN_FLIGHT candidate publication/selection, Artifact
   create, attach-and-start,
   child start, effect and terminal;
+- V3 crash before/after bootstrap process identity commit, owner transfer first/
+  second role, binding readback, child preflight, abort claim, owner close,
+  terminate/wait, abort commit, Artifact-handle create, release claim, RUNNING
+  readback and consumer-code release;
 - atomic issue-and-arm burn with planned IN_FLIGHT absent, exact orphan
   present, or a colliding event at the expected predecessor/slot;
-- exact orphan selected before `JOB_CHILD_ORPHAN_ABORTED_READBACK_V2`, orphan
-  abort attempted after selection, or delayed attach/start winning the gap;
+- exact orphan selected before the profile-matching V2/V3 ORPHAN_ABORTED,
+  profile-crossed abort, orphan abort attempted after selection, or delayed
+  create/attach/start winning the gap;
 - Product/broker restart with ARMED state followed by reattachment/start;
 - abort crash followed by retry, public/local reason treated as abort proof, or
   FAILED_KNOWN selected before ARMED budget classification;
@@ -865,7 +1423,10 @@ Expected: next effect/current status zero; orphan preserved.
 - exact effect-zero child-process start failure whose terminal candidate does
   not name the current selected IN_FLIGHT predecessor;
 - success exit code with missing/wrong consumer result digest;
-- BURNED_UNKNOWN reclassified as FAIL/SUCCESS or replayed.
+- V3 child result promoted without exact `JOB_CHILD_TERMINAL_READBACK_V3`, with
+  missing/wrong ARMED/BOOTSTRAP/BOUND/VALIDATED/STARTED/owner-lease/Artifact
+  lineage, or by converting a V2 terminal;
+- BURNED_UNKNOWN reclassified as FAIL/SUCCESS or replayed;
 - TASK-072 REJECTED/BURNED classification returned publicly as current Job state
   before the matching immutable terminal is TASK-043-selected.
 
@@ -881,6 +1442,8 @@ Expected: child effect exact 0/1; no blind retry.
 - flush/durability/readback failure;
 - manifest without child terminal or child terminal without Artifact;
 - receipt-only profile given a local file or local profile given receipt-only;
+- V3 pre-release abort reports Artifact zero after a handle was created, omits
+  exact handle identity, or deletes/rewrites the retained operation-owned file;
 - Artifact manifest treated as Asset/Timeline/provider authority;
 - failure/unknown followed by delete/restore/overwrite.
 
@@ -934,6 +1497,29 @@ or Artifact content.
 - READY dispatch-plan validation terminal edge, atomic post-DISPATCHING
   issue-and-arm, ARMED restart invalidation, one-winner abort-vs-attach/start, and
   orphan-abort-before-select-before-terminal property tests;
+- V3 process-create/external-bind/preflight/release/abort budget exhaustive
+  state-machine tests, including Artifact-prepare substates, exact
+  BOOTSTRAP_REJECTED token vector and terminal-vector no-open-budget invariants;
+- per-method wrong/cross-vector victim byte/revision unchanged tests and exact
+  matching post-entry exception single-vector burn tests;
+- V3 orphan and pre-bootstrap abort one-winner property tests against candidate
+  selection and process creation;
+- exact allowlisted owner-slot adapter tests with generic hook/callback/PID/
+  handle injection rejected before arm;
+- direct owner-to-child broker all-or-none binding, parent sensitive-handle
+  count zero and external preflight-before-Artifact property tests;
+- V3 ABORT_PENDING claim -> owner close -> terminate/wait -> abort commit versus
+  RELEASE_PENDING one-winner tests, including partial binding at every seam;
+- V3 Artifact-handle-created versus body-write/effect truth property tests;
+- typed BEFORE_PREPARE/PREPARE_IN_PROGRESS/AFTER_PREPARE/AFTER_RELEASE_REJECTED
+  union construction and non-interchangeability tests;
+- Artifact-prepare pending/commit versus abort-request one-winner property tests,
+  including PENDING -> ABORT_WAIT -> same-lease truth commit -> ABORT_PENDING,
+  release blocking, wrong-context effect zero, caller-crash continuation while
+  the original broker remains live, and broker/Product-restart containment;
+- BURNED_UNKNOWN recovery containment never-release/resume/state-reclassify
+  property tests;
+- exact V3 terminal lineage and V2/V3 non-alias property tests;
 - TASK-068/TASK-043/TASK-072 fixture adapters;
 - state/fault/recovery table exhaustive transition tests;
 - strict JSON/resource-boundary tests before hash/canonicalization;
@@ -950,9 +1536,25 @@ or Artifact content.
 - concurrent two-process reservation/transition/dispatch exact one;
 - candidate-publish/TASK-043-CAS race and orphan-preservation at every phase;
 - broker-arm/TASK-076-IN_FLIGHT-selection partial-commit yields child/artifact0;
-- exact Task072 ARMED/ABORTED/ORPHAN_ABORTED/STARTED/process/config/handle/
+- exact Task072 V2 ARMED/ABORTED/ORPHAN_ABORTED/STARTED/process/config/handle/
   terminal readback;
+- V3 BOOTSTRAP_WAITING/EXTERNAL_INPUT_BOUND/VALIDATED/BOOTSTRAP_ABORTED/
+  PREBOOTSTRAP_ABORTED/ORPHAN_ABORTED/ARTIFACT_PREPARE_PENDING/PREPARED/
+  ABORT_WAITING_ARTIFACT_TRUTH/ABORT_PENDING/RELEASE_PENDING/STARTED/TERMINAL
+  exact readback and process/currentness tests;
+- real two-process PENDING abort request proves only PREPARE_IN_PROGRESS can win,
+  release remains blocked, the original prepare lease alone supplies truth, and
+  caller crash with the live broker may finish that exact continuation while a
+  broker/Product restart cannot recreate it and enters containment;
+- harmless two-role owner fixture proving partial transfer/preflight failure
+  enters ABORT_PENDING before owner close, burns both roles, records truthful
+  Artifact-handle state, model/body-write/consumer effect zero and parent handle
+  zero;
 - Artifact failure/cancel/exception abort race and abort-crash exact-query tests;
+- dedicated Job Object sole-handle/non-inheritance and
+  `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` broker-crash proof;
+- BURNED_UNKNOWN at every owner-transfer/preflight/Artifact/release seam proves
+  recovery revoke plus terminate/wait containment while outcome stays unknown;
 - crash injection at every event/child/artifact/Task043 bind seam;
 - restart proves scan0/mutation0/replay0;
 - foreign output replacement remains preserved;
@@ -1004,8 +1606,8 @@ Design acceptance requires:
 15. Every immutable candidate must be selected by an exact TASK-043 next
     revision before it authorizes a following phase or child/Artifact effect.
 16. READY holds only a non-authoritative dispatch plan. Exact TASK-043-selected
-    DISPATCHING currentness is required by atomic TASK-072 issue-and-arm. Exact
-    TASK-076/TASK-043 IN_FLIGHT selection and Artifact handle creation then
+    DISPATCHING currentness is required by atomic TASK-072 issue-and-arm. For V2,
+    exact TASK-076/TASK-043 IN_FLIGHT selection and Artifact handle creation then
     precede one-use attach-and-start. No child process/effect exists while ARMED,
     and there is no live credential gap before DISPATCHING.
 17. Initial Job creation is reservation -> RESERVED candidate -> TASK-043
@@ -1018,14 +1620,50 @@ Design acceptance requires:
     Post-DISPATCHING issue-and-arm and post-IN_FLIGHT attach-and-start have exact
     REJECTED versus burned/orphan branches; TASK-072 classification alone is not
     current Job state.
-21. After selected TASK076 IN_FLIGHT, only serialized attach-and-start or
-    abort-armed may consume the ARMED start budget. Exact ABORTED is mandatory for
-    a no-effect FAILED_KNOWN terminal; abort unknown is BURNED_UNKNOWN and no
-    delayed/retried start is allowed.
+21. After selected TASK076 IN_FLIGHT, V2 permits only serialized
+    attach-and-start or abort-armed to consume the ARMED start budget. Exact
+    ABORTED is mandatory for a no-effect FAILED_KNOWN terminal; abort unknown is
+    BURNED_UNKNOWN and no delayed/retried start is allowed.
 22. A published unselected IN_FLIGHT orphan becomes TASK043-current only after
-    exact broker ORPHAN_ABORTED consumes the ARMED start budget while DISPATCHING
-    is still current; unknown/race never claims child/artifact zero.
-23. Independent Critic returns `Critical=0 / High=0` and Judge returns `PASS`.
+    exact profile-matching V2/V3 ORPHAN_ABORTED consumes every remaining profile
+    budget while DISPATCHING is still current; unknown/race never claims
+    child/artifact zero.
+23. V3 assigns durable one-winner lifecycles to process-create, external-bind,
+    preflight, release and abort. Every known terminal closes all five; any
+    uncertain phase burns the vector and leaves no reusable budget. The release
+    budget contains the Artifact-prepare claim/commit substates and serializes
+    them against abort. Bootstrap child creation is truthfully reported but
+    cannot load a model, create an Artifact handle/body or enter consumer code.
+24. V3 sensitive handles move only from the named producer into the exact
+    child-local broker; admission requires the complete role set,
+    TASK-076/parent handle count is zero, partial transfer enters failed binding,
+    and no generic hook/callback/caller PID can substitute.
+25. V3 external preflight is current before Artifact-handle creation. Artifact
+    create requires exact ARTIFACT_PREPARE_PENDING. The closed abort phase union
+    accepts BEFORE_PREPARE only with NEVER_ENTERED, PREPARE_IN_PROGRESS only with
+    the exact pending readback, and AFTER_PREPARE/AFTER_RELEASE_REJECTED only with
+    their exact terminal phase. Abort during prepare becomes
+    ABORT_WAITING_ARTIFACT_TRUTH, blocks release, and cannot reach truth-embedded
+    ABORT_PENDING until the same prepare lease commits created/no-create truth.
+    `NONE` and caller-reconstructed truth are never authority.
+    After that, abort first wins ABORT_PENDING against release, then authorizes
+    exact producer close, child terminate/wait and abort commit. Release first
+    wins RELEASE_PENDING, validates a live owner lease and forbids close/abort.
+26. V3 distinguishes Artifact-handle creation from body write and consumer
+    effect. Every abort/terminal records the truthful handle identity/state;
+    created files are preserved and never erased to manufacture effect zero.
+27. V3 effect-bearing completion requires exact
+    `JOB_CHILD_TERMINAL_READBACK_V3` binding the entire V3 lineage and all five
+    terminal budgets. V2 public/equal-field evidence cannot substitute.
+28. Every vector-wide BURNED_UNKNOWN retains an idempotent containment-only ABI.
+    Producer roles are recovery-revoked and the sole-handle kill-on-close Job
+    Object is closed or terminated/waited; release/resume/state reclassification
+    and Artifact deletion remain zero even when containment stays unknown.
+29. Wrong/cross-operation input before exact vector match leaves the victim
+    bytes/revision unchanged. An exception after authenticated durable entry
+    burns only the exact matched budget/vector; focused/fault/native tests assert
+    both outcomes for every V3 method.
+30. Independent Critic returns `Critical=0 / High=0` and Judge returns `PASS`.
 
 ## 16. Completion receipt template
 
@@ -1034,15 +1672,27 @@ frozen and independently reviewed.
 
 ```text
 task: TASK-076
-design_identity: TASK076-PTD-DURABLE-PRODUCT-JOB-SECURE-ARTIFACT-V1
-base: origin/main@70ba9e369887d3d7ded59e7197d20d133b2b4d38
+design_identity: TASK076-PTD-DURABLE-PRODUCT-JOB-SECURE-ARTIFACT-V5
+base: origin/main@efdcd77729732e3c50abb9e4a7e89ae2b7b37aa0
 allowed_files: docs/ai-team/tasks/TASK-076/complete-design-packet.md
-review_target_sha256: 9C6EF3A5334C6FFFAC7EAA90BE49190A725DA25FBEFB491174F7408C7DAC38F5
-review_target_lines: 1054
-review_target_bytes: 52946
-critic: INDEPENDENT_EUCLID_CRITICAL0_HIGH0
-judge: INDEPENDENT_PARFIT_PASS
+review_target_sha256: 95157212CD98435B0516310B07B88E35886BC403F53161E15CA2E74A85B458FA
+review_target_lines: 1706
+review_target_bytes: 92817
+critic: INDEPENDENT_EUCLID_PASS_CRITICAL0_HIGH0_MEDIUM0_LOW0
+judge: INDEPENDENT_PARFIT_PASS_CRITICAL0_HIGH0_MEDIUM0_LOW0
 design_frozen: true
+superseded_r4_review_target_sha256: 445D6D52945054F5EA2D6E2E8007DF9B70C902E7D4AFCD0819441C1424C0373A
+superseded_r4_critic: INDEPENDENT_EUCLID_REVISE_CRITICAL0_HIGH1_MEDIUM0
+superseded_r4_judge: INDEPENDENT_PARFIT_FAIL_CRITICAL0_HIGH1
+superseded_r3_review_target_sha256: 0022C2C7A5427DCDFA4E5D14DB758AB5225BD01E6C098C5CC73845674615468E
+superseded_r3_critic: INDEPENDENT_EUCLID_REVISE_CRITICAL0_HIGH2_MEDIUM1
+superseded_r3_judge: INDEPENDENT_PARFIT_FAIL_CRITICAL0_HIGH1
+superseded_r2_review_target_sha256: E00B33C8034C5F9C23FEE93AD91680BD25C8A775868E06472CCB18255183181D
+superseded_r2_critic: INDEPENDENT_EUCLID_REVISE_CRITICAL0_HIGH3_MEDIUM1
+superseded_r2_judge: INDEPENDENT_PARFIT_FAIL_CRITICAL0_HIGH2
+superseded_v1_review_target_sha256: 9C6EF3A5334C6FFFAC7EAA90BE49190A725DA25FBEFB491174F7408C7DAC38F5
+superseded_v1_critic: INDEPENDENT_EUCLID_CRITICAL0_HIGH0
+superseded_v1_judge: INDEPENDENT_PARFIT_PASS
 source_effect: 0
 schema_effect: 0
 test_effect: 0

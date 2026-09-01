@@ -169,6 +169,112 @@ def test_connection_settings_bridge_projects_and_updates_exact_modes_without_exe
     assert loaded.profile.routes[0].route_id == "local-image"
 
 
+def test_central_model_settings_save_restarts_into_page_readiness_without_execution(tmp_path):
+    routes = (
+        ModelRoute(
+            "local-planning", AiWorkload.PLANNING, ProviderFamily.LOCAL_OPEN_SOURCE,
+            "ollama", "qwen3-8b", CostClass.LOCAL_FREE_AI,
+            priority=10, capabilities=("TEXT_GENERATION",),
+        ),
+        ModelRoute(
+            "local-planning-alt", AiWorkload.PLANNING, ProviderFamily.LOCAL_OPEN_SOURCE,
+            "ollama", "qwen3-14b", CostClass.LOCAL_FREE_AI,
+            priority=20, capabilities=("TEXT_GENERATION",),
+        ),
+        ModelRoute(
+            "local-image", AiWorkload.IMAGE, ProviderFamily.COMFYUI,
+            "comfyui", "image-workflow-v1", CostClass.LOCAL_FREE_AI,
+            priority=10, capabilities=("IMAGE_GENERATION",),
+        ),
+        ModelRoute(
+            "local-image-alt", AiWorkload.IMAGE, ProviderFamily.COMFYUI,
+            "comfyui", "image-workflow-v2", CostClass.LOCAL_FREE_AI,
+            priority=20, capabilities=("IMAGE_GENERATION",),
+        ),
+        ModelRoute(
+            "local-video", AiWorkload.VIDEO, ProviderFamily.COMFYUI,
+            "comfyui", "video-workflow-v1", CostClass.LOCAL_FREE_AI,
+            priority=10, capabilities=("VIDEO_GENERATION",),
+        ),
+        ModelRoute(
+            "local-video-alt", AiWorkload.VIDEO, ProviderFamily.COMFYUI,
+            "comfyui", "video-workflow-v2", CostClass.LOCAL_FREE_AI,
+            priority=20, capabilities=("VIDEO_GENERATION",),
+        ),
+        ModelRoute(
+            "local-audio", AiWorkload.AUDIO, ProviderFamily.LOCAL_OPEN_SOURCE,
+            "local-audio", "tts-local-v1", CostClass.LOCAL_FREE_AI, capabilities=("TTS",),
+        ),
+        ModelRoute(
+            "local-music", AiWorkload.MUSIC, ProviderFamily.LOCAL_OPEN_SOURCE,
+            "local-music", "music-local-v1", CostClass.LOCAL_FREE_AI, capabilities=("MUSIC_GENERATION",),
+        ),
+    )
+    settings_path = tmp_path / "ai-connection-settings.json"
+    initial_service = ConnectionSettingsWebService(
+        settings_path,
+        AiConnectionProfile("central-restart", "1", SelectionMode.AUTO, routes),
+        0,
+        ConnectionAvailability(frozenset(route.route_id for route in routes)),
+    )
+    initial_bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        connection_settings=initial_service,
+    )
+
+    initial = initial_bridge.connection_settings_snapshot({})
+    initial_preferred = {row["workload"]: row["preferred_route_id"] for row in initial["workloads"]}
+    assert initial_preferred["PLANNING"] == "local-planning"
+    assert initial_preferred["IMAGE"] == "local-image"
+    assert initial_preferred["VIDEO"] == "local-video"
+    modes = {row["workload"]: row["selection_mode"] for row in initial["workloads"]}
+    preferred = {row["workload"]: None for row in initial["workloads"]}
+    preferred.update({
+        "PLANNING": "local-planning-alt",
+        "IMAGE": "local-image-alt",
+        "VIDEO": "local-video-alt",
+    })
+    saved = initial_bridge.connection_settings_update({
+        "revision": initial["revision"],
+        "workload_modes": modes,
+        "preferred_route_ids": preferred,
+    })
+    assert saved["revision"] == 1
+    assert saved["provider_execution_started"] is False
+    assert saved["paid_execution_authorized"] is False
+    assert saved["generation_started"] is False
+
+    restarted_service = ConnectionSettingsWebService.from_paths(settings_path, None)
+    restarted_bridge = Task036ShellBridge(
+        ShellApplicationService(product_version="0.21.0"),
+        connection_settings=restarted_service,
+    )
+    readback = restarted_bridge.model_selection_snapshot({})
+    selectors = {row["page_id"]: row for row in readback["selectors"]}
+    for page_id, route_id in (
+        ("PLANNING", "local-planning-alt"),
+        ("IMAGE", "local-image-alt"),
+        ("VIDEO", "local-video-alt"),
+    ):
+        assert selectors[page_id]["available"] is True
+        assert selectors[page_id]["preferred_route_id"] == route_id
+        assert next(row for row in selectors[page_id]["candidates"] if row["route_id"] == route_id)[
+            "configuration_selectable"
+        ] is True
+    assert selectors["QUICK_IMAGE"]["workload"] == "IMAGE"
+    assert selectors["QUICK_IMAGE"]["preferred_route_id"] == "local-image-alt"
+    assert selectors["QUICK_VIDEO"]["workload"] == "VIDEO"
+    assert selectors["QUICK_VIDEO"]["preferred_route_id"] == "local-video-alt"
+    for workload, route_id in (("AUDIO", "local-audio"), ("MUSIC", "local-music")):
+        assert selectors[workload]["available"] is False
+        assert selectors[workload]["unavailable_reason"] == "NO_SELECTABLE_LOCAL_AUDIO_MODEL"
+        assert selectors[workload]["preferred_route_id"] == route_id
+        assert selectors[workload]["candidates"][0]["configuration_selectable"] is False
+    assert readback["provider_execution_started"] is False
+    assert readback["paid_execution_authorized"] is False
+    assert readback["generation_started"] is False
+
+
 def test_connection_settings_bridge_is_fail_closed_when_unbound_or_request_is_broad(tmp_path):
     bridge = Task036ShellBridge(ShellApplicationService(product_version="0.21.0"))
     assert bridge.connection_settings_snapshot({})["available"] is False

@@ -104,7 +104,7 @@
     }
   },
   "m1_import_consumer_placeholder": {
-    "required_message_type": "TASK065_M1_IMPORT_CONSUMER_ADMISSION_V1",
+    "required_message_type": "TASK065_M1_IMPORT_CONSUMER_VALIDATION_V1",
     "required_schema_version": "1.0.0",
     "task067_receipt_sha256": null,
     "task036_receipt_sha256": null,

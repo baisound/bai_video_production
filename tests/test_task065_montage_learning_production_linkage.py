@@ -368,7 +368,7 @@ def test_d2s_handoff_placeholder_requires_separate_v2_receipt_and_has_no_effect(
     m1 = fixture["m1_import_consumer_placeholder"]
     assert type(m1) is dict
     assert m1 == {
-        "required_message_type": "TASK065_M1_IMPORT_CONSUMER_ADMISSION_V1",
+        "required_message_type": "TASK065_M1_IMPORT_CONSUMER_VALIDATION_V1",
         "required_schema_version": "1.0.0",
         "task067_receipt_sha256": None,
         "task036_receipt_sha256": None,

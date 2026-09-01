@@ -9,10 +9,10 @@ Project or Bridge, synchronize an installed SKILL, or authorize Activation.
 ## M1 role and issuance boundary
 
 M1 is a **read-only import consumer**, never an authority issuer. It can
-request a pinned admission join only after the canonical TASK-067 owner has
+request a pinned validation join only after the canonical TASK-067 owner has
 issued a durable `TASK067_GENERIC_FACADE_COMPLETION_V1` record. It cannot mint,
 copy, deserialize, rehash or select that record; a public Generic object,
-fixture, status, plan or TASK-061-A receipt is not an M1 admission input.
+fixture, status, plan or TASK-061-A receipt is not an M1 validation input.
 
 Absent or inconsistent input returns `M1_IMPORT_CONSUMER.N.C. / EFFECT0`.
 M1 does not retry TASK-067, adapter staging or TASK-036 import and cannot turn
@@ -43,7 +43,7 @@ mapping, absent journal, stale terminal, or exception/replay claim.
 M1/PL-A reads the producer records in this order; no local effect is allowed:
 
 ```text
-canonical SKILL source identity
+pinned D2S_001_INTERFACE_COMPLETION_READBACK_V1
   -> TASK-061-A prepare (enabled:false)
   -> TASK-067 canonical completion
   -> TASK-036 exact-one operation handoff
@@ -51,10 +51,15 @@ canonical SKILL source identity
   -> TASK-065 pinned PL-A consumer join
 ```
 
+The canonical SKILL main/tree identity is an audit-only side observation. It
+has no dependency edge and cannot substitute for the separately pinned D2S
+completion readback, which must bind the installed bytes and H1/H2/v2 snapshot
+completion before TASK-061-A may proceed.
+
 TASK-069 is currently absent from canonical allocation, so its proposed
 terminal-readback shape is explicitly `N.C.` and cannot be inserted as a
-substitute. The future M1 consumer result is body-free
-`TASK065_M1_IMPORT_CONSUMER_ADMISSION_V1`; it contains only opaque producer
+substitute. The future M1 consumer validation result is body-free
+`TASK065_M1_IMPORT_CONSUMER_VALIDATION_V1`; it contains only opaque producer
 receipt digests, a typed `NOT_CONFIRMED`/`VALIDATED` state and
 `authority_created:false`. It contains no raw path, ticket, record body,
 config, owner scope, secret, correlation body or capability.

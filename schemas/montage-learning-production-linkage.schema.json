@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.baisound.com/montage-learning-production-linkage.schema.json",
+  "title": "TASK-065 Montage Learning Production Linkage",
+  "oneOf": [
+    { "$ref": "#/$defs/PreactivationChainFixture" },
+    { "$ref": "#/$defs/PreactivationFixtureValidation" }
+  ],
+  "$defs": {
+    "OperationId": {
+      "type": "string",
+      "pattern": "^op_[0-9a-f]{32}$"
+    },
+    "InstallInstanceId": {
+      "type": "string",
+      "pattern": "^inst_[0-9a-f]{32}$"
+    },
+    "RecordId": {
+      "type": "string",
+      "pattern": "^rec_[0-9a-f]{32}$"
+    },
+    "ProfileId": {
+      "type": "string",
+      "pattern": "^prof_[0-9a-f]{32}$"
+    },
+    "ReceiptId": {
+      "type": "string",
+      "pattern": "^rcpt_[0-9a-f]{32}$"
+    },
+    "Sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "AdapterStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "record_id",
+        "learning_sha256",
+        "config_sha256",
+        "adapter_build_sha256",
+        "invocation_count",
+        "status",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "operation_id": { "$ref": "#/$defs/OperationId" },
+        "record_id": { "$ref": "#/$defs/RecordId" },
+        "learning_sha256": { "$ref": "#/$defs/Sha256" },
+        "config_sha256": { "$ref": "#/$defs/Sha256" },
+        "adapter_build_sha256": { "$ref": "#/$defs/Sha256" },
+        "invocation_count": { "const": 1 },
+        "status": { "const": "STAGED" },
+        "receipt_sha256": { "$ref": "#/$defs/Sha256" }
+      }
+    },
+    "Task036Import": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "record_id",
+        "learning_sha256",
+        "invocation_count",
+        "status",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "operation_id": { "$ref": "#/$defs/OperationId" },
+        "record_id": { "$ref": "#/$defs/RecordId" },
+        "learning_sha256": { "$ref": "#/$defs/Sha256" },
+        "invocation_count": { "const": 1 },
+        "status": { "enum": ["ACCEPTED", "DUPLICATE"] },
+        "receipt_sha256": { "$ref": "#/$defs/Sha256" }
+      }
+    },
+    "PublicReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_id",
+        "record_id",
+        "learning_sha256",
+        "status",
+        "receipt_sha256",
+        "authority_created"
+      ],
+      "properties": {
+        "receipt_id": { "$ref": "#/$defs/ReceiptId" },
+        "record_id": { "$ref": "#/$defs/RecordId" },
+        "learning_sha256": { "$ref": "#/$defs/Sha256" },
+        "status": { "enum": ["ACCEPTED", "DUPLICATE"] },
+        "receipt_sha256": { "$ref": "#/$defs/Sha256" },
+        "authority_created": { "const": false }
+      }
+    },
+    "HiddenCorrelation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation_id",
+        "install_instance_id",
+        "config_sha256",
+        "record_id",
+        "learning_sha256",
+        "public_receipt_sha256",
+        "canonical_readback_sha256",
+        "profile_readback_sha256",
+        "correlation_sha256"
+      ],
+      "properties": {
+        "operation_id": { "$ref": "#/$defs/OperationId" },
+        "install_instance_id": { "$ref": "#/$defs/InstallInstanceId" },
+        "config_sha256": { "$ref": "#/$defs/Sha256" },
+        "record_id": { "$ref": "#/$defs/RecordId" },
+        "learning_sha256": { "$ref": "#/$defs/Sha256" },
+        "public_receipt_sha256": { "$ref": "#/$defs/Sha256" },
+        "canonical_readback_sha256": { "$ref": "#/$defs/Sha256" },
+        "profile_readback_sha256": { "$ref": "#/$defs/Sha256" },
+        "correlation_sha256": { "$ref": "#/$defs/Sha256" }
+      }
+    },
+    "CanonicalReadback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_id",
+        "learning_sha256",
+        "canonical_revision",
+        "readback_sha256",
+        "durable_readback_verified",
+        "authority_created"
+      ],
+      "properties": {
+        "record_id": { "$ref": "#/$defs/RecordId" },
+        "learning_sha256": { "$ref": "#/$defs/Sha256" },
+        "canonical_revision": { "type": "integer", "minimum": 1, "maximum": 9223372036854775807 },
+        "readback_sha256": { "$ref": "#/$defs/Sha256" },
+        "durable_readback_verified": { "const": true },
+        "authority_created": { "const": false }
+      }
+    },
+    "ProfileReadback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "profile_sha256",
+        "source_record_id",
+        "source_learning_sha256",
+        "readback_sha256",
+        "advisory_only",
+        "canonical_timeline",
+        "auto_apply_authorized",
+        "durable_readback_verified",
+        "authority_created"
+      ],
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/ProfileId" },
+        "profile_sha256": { "$ref": "#/$defs/Sha256" },
+        "source_record_id": { "$ref": "#/$defs/RecordId" },
+        "source_learning_sha256": { "$ref": "#/$defs/Sha256" },
+        "readback_sha256": { "$ref": "#/$defs/Sha256" },
+        "advisory_only": { "const": true },
+        "canonical_timeline": { "const": false },
+        "auto_apply_authorized": { "const": false },
+        "durable_readback_verified": { "const": true },
+        "authority_created": { "const": false }
+      }
+    },
+    "PreactivationChainFixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "message_type",
+        "phase",
+        "evidence_mode",
+        "task072_design_sha256",
+        "plan_sha256",
+        "operation_id",
+        "install_instance_id",
+        "task036_completion_receipt_sha256",
+        "task061b_completion_receipt_sha256",
+        "adapter_stage",
+        "task036_import",
+        "public_receipt",
+        "hidden_correlation",
+        "canonical_readback",
+        "profile_readback",
+        "evidence_complete",
+        "authority_created"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "message_type": { "const": "Task065PreactivationChainFixture" },
+        "phase": { "const": "PREACTIVATION" },
+        "evidence_mode": { "const": "SYNTHETIC_PUBLIC_SAFE_FIXTURE" },
+        "task072_design_sha256": { "const": "sha256:4f6f21e97d96aa3ffca16f57679abf80d081de6d85d599347fd955c8899ce3c7" },
+        "plan_sha256": { "$ref": "#/$defs/Sha256" },
+        "operation_id": { "$ref": "#/$defs/OperationId" },
+        "install_instance_id": { "$ref": "#/$defs/InstallInstanceId" },
+        "task036_completion_receipt_sha256": { "$ref": "#/$defs/Sha256" },
+        "task061b_completion_receipt_sha256": { "$ref": "#/$defs/Sha256" },
+        "adapter_stage": { "$ref": "#/$defs/AdapterStage" },
+        "task036_import": { "$ref": "#/$defs/Task036Import" },
+        "public_receipt": { "$ref": "#/$defs/PublicReceipt" },
+        "hidden_correlation": { "$ref": "#/$defs/HiddenCorrelation" },
+        "canonical_readback": { "$ref": "#/$defs/CanonicalReadback" },
+        "profile_readback": { "$ref": "#/$defs/ProfileReadback" },
+        "evidence_complete": { "const": true },
+        "authority_created": { "const": false }
+      }
+    },
+    "PreactivationFixtureValidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "message_type",
+        "phase",
+        "status",
+        "evidence_mode",
+        "task072_design_sha256",
+        "operation_id",
+        "install_instance_id",
+        "record_id",
+        "learning_sha256",
+        "profile_id",
+        "profile_sha256",
+        "public_receipt_id",
+        "plan_sha256",
+        "task036_completion_receipt_sha256",
+        "task061b_completion_receipt_sha256",
+        "public_receipt_sha256",
+        "canonical_readback_sha256",
+        "profile_readback_sha256",
+        "evidence_binding_sha256",
+        "hidden_correlation_fixture_matched",
+        "historical_stage_invocation_count",
+        "historical_import_invocation_count",
+        "task065_adapter_call_count",
+        "task065_task036_call_count",
+        "project_delta_count",
+        "bridge_delta_count",
+        "profile_delta_count",
+        "config_delta_count",
+        "history_delta_count",
+        "authority_created",
+        "activation_authorized",
+        "steady_state_authorized",
+        "real_installed_adapter_verified",
+        "activation_prerequisite_satisfied",
+        "production_chain_complete",
+        "task072_implementation_receipt_verified",
+        "validation_sha256"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "message_type": { "const": "Task065PreactivationFixtureValidation" },
+        "phase": { "const": "PREACTIVATION" },
+        "status": { "const": "SYNTHETIC_FIXTURE_VALIDATED" },
+        "evidence_mode": { "const": "SYNTHETIC_PUBLIC_SAFE_FIXTURE" },
+        "task072_design_sha256": { "const": "sha256:4f6f21e97d96aa3ffca16f57679abf80d081de6d85d599347fd955c8899ce3c7" },
+        "operation_id": { "$ref": "#/$defs/OperationId" },
+        "install_instance_id": { "$ref": "#/$defs/InstallInstanceId" },
+        "record_id": { "$ref": "#/$defs/RecordId" },
+        "learning_sha256": { "$ref": "#/$defs/Sha256" },
+        "profile_id": { "$ref": "#/$defs/ProfileId" },
+        "profile_sha256": { "$ref": "#/$defs/Sha256" },
+        "public_receipt_id": { "$ref": "#/$defs/ReceiptId" },
+        "plan_sha256": { "$ref": "#/$defs/Sha256" },
+        "task036_completion_receipt_sha256": { "$ref": "#/$defs/Sha256" },
+        "task061b_completion_receipt_sha256": { "$ref": "#/$defs/Sha256" },
+        "public_receipt_sha256": { "$ref": "#/$defs/Sha256" },
+        "canonical_readback_sha256": { "$ref": "#/$defs/Sha256" },
+        "profile_readback_sha256": { "$ref": "#/$defs/Sha256" },
+        "evidence_binding_sha256": { "$ref": "#/$defs/Sha256" },
+        "hidden_correlation_fixture_matched": { "const": true },
+        "historical_stage_invocation_count": { "const": 1 },
+        "historical_import_invocation_count": { "const": 1 },
+        "task065_adapter_call_count": { "const": 0 },
+        "task065_task036_call_count": { "const": 0 },
+        "project_delta_count": { "const": 0 },
+        "bridge_delta_count": { "const": 0 },
+        "profile_delta_count": { "const": 0 },
+        "config_delta_count": { "const": 0 },
+        "history_delta_count": { "const": 0 },
+        "authority_created": { "const": false },
+        "activation_authorized": { "const": false },
+        "steady_state_authorized": { "const": false },
+        "real_installed_adapter_verified": { "const": false },
+        "activation_prerequisite_satisfied": { "const": false },
+        "production_chain_complete": { "const": false },
+        "task072_implementation_receipt_verified": { "const": false },
+        "validation_sha256": { "$ref": "#/$defs/Sha256" }
+      }
+    }
+  }
+}

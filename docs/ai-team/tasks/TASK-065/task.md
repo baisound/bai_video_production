@@ -1,6 +1,6 @@
 # TASK-065 — Production Montage Learning Linkage Closure
 
-- Status: `ALLOCATED / PRE_IMPLEMENTATION_DEPENDENCY_GATED`
+- Status: `IMPLEMENTATION_IN_PROGRESS / REAL_INSTALLED_DEPENDENCY_GATED`
 - Capability: `BVP-PRODUCTION-MONTAGE-LEARNING-LINKAGE-001`
 - Development profile: `DEV-4 FOUNDATION CRITICAL`
 - Canonical audit base: `35cdf1ad475633dcf035e0616e979b5a8fde0c88`
@@ -43,6 +43,17 @@ TASK-061-A -> TASK-067
 TASK-036 -> TASK-061-B FINAL CA-C
 all completion receipts -> TASK-065 PL-A/PL-B/PL-C/PL-D
 ```
+
+For the bounded P0-L fixture consumer only, the operation plan and join are
+version-pinned to the TASK-072 final design receipt
+`sha256:4f6f21e97d96aa3ffca16f57679abf80d081de6d85d599347fd955c8899ce3c7`
+(design commit `52203bc9962340016f4b7ac494ea02d25202484d`, Draft PR #475).
+This is design Evidence, not an implementation completion receipt. The
+synthetic validation must emit `task072_implementation_receipt_verified:false`;
+real capability consumption and any real-installed effect remain parked until
+the separate TASK-072 implementation receipt and the dependency chain above
+are current. A caller mapping, design hash or schema-valid fixture cannot mint
+that missing authority.
 
 TASK-061-A closes only CA-A/B corrections and the CA-C sealed operation plan,
 config candidate and challenge contract at `enabled:false`. It does not claim
@@ -614,9 +625,25 @@ frozen in `pl-b-option-b-runtime-config-design-correction-2026-08-31.md`.
 
 ## Current mutation boundary
 
-While D0 through D2 remain incomplete, only TASK-065-local design and test-plan
-documents may change. Source, schema, tests, installed config, native state, and
-production state remain mutation zero.
+**SUPERSEDED for the bounded P0-L fixture-consumer Unit:** the later central
+Owner continuation permits TASK-065 to implement and test the effect-zero,
+versioned preactivation-chain consumer in the Candidate Allowed Files above
+before upstream real-installed receipts arrive. The Unit may change only
+`montage_learning_production_linkage.py`, its two mirrored schemas, its focused
+TASK-065 tests and TASK-065-local documentation. It consumes a synthetic,
+public-safe contract fixture representing historical TASK-036/TASK-061-B
+Evidence; fixture PASS is not real-installed PASS, dependency completion or
+Production authority.
+
+The consumer must observe historical adapter-stage count `1` and TASK-036
+import count `1`, plus exact public receipt, hidden correlation, canonical
+read-back and advisory Profile read-back. TASK-065 local adapter/TASK-036 calls
+and Project/Bridge/Profile/config/history deltas remain exactly `0`.
+Real adapter execution, installed runtime validation, `enabled:true`, config or
+native state, post-activation execution, Release, Deploy and Production
+Activation remain mutation zero behind their existing receipts and Human
+Gates. The older all-source `START0` wording remains historical Evidence only
+for Units outside this explicit bounded exception.
 
 TASK-067 is not currently implementation-authorized. Any local source/test
 candidate is non-authoritative, must remain uncommitted/unpushed and cannot be

@@ -10,6 +10,8 @@ from __future__ import annotations
 from contextlib import nullcontext
 from functools import wraps
 import json
+from collections.abc import Mapping
+import unicodedata
 from typing import Any, Callable, ContextManager
 
 from .cut_candidates import CutCandidate, CutCandidateKind, CutCandidateManifest
@@ -23,6 +25,13 @@ from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_pre_edit_runtime import Task036PreEditRuntime
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .connection_settings_web import ConnectionSettingsWebService
+from .desktop_compute_policy import (
+    CompatibilityStatus,
+    DesktopComputeProfileStore,
+    ProfileLoadStatus,
+    frozen_renderer_evidence_registry,
+    frozen_workload_registry,
+)
 from .task036_model_selection import Task036ModelSelectionProjection
 from .visual_generation_handoff import Task036VisualGenerationHandoffProjection
 from .final_review_readiness import Task036FinalReviewReadinessProjection
@@ -60,6 +69,19 @@ from .interactive_timeline import (
 from .serialization import sha256_bytes
 from .timebase import FrameRate
 from .task036_shell_v611 import HTML as V611_HTML
+
+
+_MODEL_DISPLAY_FALLBACK = "登録済みローカルAIモデル"
+_COMPUTE_PREFERENCE_OPTIONS = (
+    {"value": "AUTO_GPU_FIRST", "label_ja": "自動（GPU優先）"},
+    {"value": "GPU_REQUIRED", "label_ja": "GPUのみ"},
+    {"value": "CPU_EXPLICIT", "label_ja": "CPUのみ"},
+)
+_COMPUTE_WORKLOAD_LABELS = {
+    "planning.local.ollama": "企画AI",
+    "image.local.comfyui": "画像生成AI",
+    "video.local.generation": "動画生成AI",
+}
 
 
 LEGACY_HTML = r'''<!doctype html>
@@ -213,6 +235,12 @@ class Task036ShellBridge:
         audio_placement_application: Task026AudioPlacementApplication | None = None,
         quick_generation_application: Task042QuickGenerationApplication | None = None,
         connection_settings: ConnectionSettingsWebService | None = None,
+        desktop_compute_profile_store: DesktopComputeProfileStore | None = None,
+        desktop_compute_active_binding: object | None = None,
+        gpu_workload_admission_provider: object | None = None,
+        product_process_run: object | None = None,
+        model_label_provider: object | None = None,
+        model_selection_context_provider: Callable[[str], object | None] | None = None,
         ollama_runtime_snapshot_provider: Callable[[], dict[str, object]] | None = None,
         owner_signing_key_import: OwnerSigningKeyPpkShellService | None = None,
         final_review_application: FinalReviewApprovalApplication | None = None,
@@ -265,6 +293,17 @@ class Task036ShellBridge:
         self._audio_placement_application = audio_placement_application
         self._quick_generation_application = quick_generation_application
         self._connection_settings = connection_settings
+        self._desktop_compute_profile_store = desktop_compute_profile_store
+        self._desktop_compute_active_binding = desktop_compute_active_binding
+        self._gpu_workload_admission_provider = gpu_workload_admission_provider
+        self._product_process_run = product_process_run
+        self._model_label_provider = model_label_provider
+        if model_selection_context_provider is not None and not callable(
+            model_selection_context_provider
+        ):
+            raise ValueError("Model Selection context provider is invalid")
+        self._model_selection_context_provider = model_selection_context_provider
+        self._desktop_compute_recovery_required = False
         if ollama_runtime_snapshot_provider is not None and not callable(ollama_runtime_snapshot_provider):
             raise ValueError("Ollama runtime snapshot provider is invalid")
         self._ollama_runtime_snapshot_provider = ollama_runtime_snapshot_provider
@@ -1039,15 +1078,237 @@ class Task036ShellBridge:
         return {"available": True, **self._quick_generation_application.snapshot()}
 
     @staticmethod
-    def _connection_settings_projection(form: dict[str, object]) -> dict[str, object]:
+    def _safe_public_model_label(value: object) -> str | None:
+        if type(value) is not str or not value or len(value) > 80:
+            return None
+        if len(value.encode("utf-8")) > 256 or unicodedata.normalize("NFC", value) != value:
+            return None
+        lowered = value.casefold()
+        if (
+            any(ord(char) < 0x20 or ord(char) == 0x7F for char in value)
+            or any(char in value for char in ("/", "\\", "@"))
+            or "://" in value
+            or any(token in lowered for token in ("token=", "secret", "api_key", "apikey"))
+        ):
+            return None
+        return value
+
+    def _selected_model_label(self, workload_id: str) -> str:
+        # The sealed producer ABI is not present in this exact4 consumer scope.
+        # Do not turn injected/public-shaped values into a display authority.
+        return _MODEL_DISPLAY_FALLBACK
+
+    def _connection_settings_projection(self, form: dict[str, object]) -> dict[str, object]:
+        projected_workloads: list[dict[str, object]] = []
+        workloads = form.get("workloads", [])
+        if isinstance(workloads, list):
+            for row in workloads:
+                if not isinstance(row, dict):
+                    continue
+                projected = dict(row)
+                routes: list[dict[str, object]] = []
+                for index, route in enumerate(row.get("routes", []), start=1):
+                    if not isinstance(route, dict):
+                        continue
+                    routes.append(
+                        {
+                            **route,
+                            "display_name_ja": (
+                                _MODEL_DISPLAY_FALLBACK
+                                if len(row.get("routes", [])) == 1
+                                else f"{_MODEL_DISPLAY_FALLBACK} {index}"
+                            ),
+                        }
+                    )
+                projected["routes"] = routes
+                preferred = row.get("preferred_route_id")
+                projected["selected_model_display_name"] = (
+                    None
+                    if preferred is None
+                    else self._selected_model_label(str(row.get("workload", "")))
+                )
+                projected_workloads.append(projected)
         return {
             "available": True,
             **form,
+            "workloads": projected_workloads,
             "credential_values_redisplayed": False,
             "provider_execution_started": False,
             "paid_execution_authorized": False,
             "generation_started": False,
         }
+
+    @staticmethod
+    def _desktop_compute_unavailable_projection() -> dict[str, object]:
+        return {
+            "available": False,
+            "reason_code": "DESKTOP_COMPUTE_SETTINGS_NOT_BOUND",
+            "message_ja": "インストール情報を確認できないため、実行方法を変更できません。",
+            "next_action_ja": "アプリを再起動して、もう一度状態を確認してください。",
+            "preference_options": [dict(item) for item in _COMPUTE_PREFERENCE_OPTIONS],
+            "workloads": [],
+            "renderer": None,
+            "restart_state": "UNKNOWN",
+            "restart_required": False,
+            "save_allowed": False,
+            "provider_execution_started": False,
+            "workload_execution_started": False,
+            "webview_gpu_disable_flag_applied": False,
+        }
+
+    def _live_gpu_admission(self, workload_id: str, revision: int) -> dict[str, object]:
+        return {
+            "state": "UNKNOWN",
+            "ready": False,
+            "age_seconds": None,
+            "reason_code": "LIVE_GPU_ADMISSION_SEALED_PROVIDER_REQUIRED",
+        }
+
+    def _desktop_compute_restart_state(self, profile_status: ProfileLoadStatus, profile: object) -> str:
+        # The sealed active-runtime binding ABI is owned outside exact4.  A
+        # public-shaped binding cannot manufacture a restart-complete claim.
+        return "UNKNOWN"
+
+    def desktop_compute_settings_snapshot(self, args: Any = None) -> dict[str, object]:
+        self._empty_args(args, "Desktop compute Settings snapshot")
+        if self._desktop_compute_profile_store is None:
+            return self._desktop_compute_unavailable_projection()
+        if self._desktop_compute_recovery_required:
+            return {
+                **self._desktop_compute_unavailable_projection(),
+                "available": True,
+                "reason_code": "AMBIGUOUS_WRITE",
+                "message_ja": "保存結果を確認できないため、設定の編集を停止しています。",
+                "next_action_ja": "安全な状態確認を実行してから、もう一度設定してください。",
+                "profile_status": "RECOVERY_REQUIRED",
+                "revision": None,
+                "selected_preference": None,
+            }
+        loaded = self._desktop_compute_profile_store.load()
+        profile = loaded.profile
+        routes = {item.workload_id: item for item in profile.workload_routes}
+        definitions = {
+            item["workload_id"]: item
+            for item in frozen_workload_registry()["workloads"]
+            if item["workload_id"] in _COMPUTE_WORKLOAD_LABELS
+        }
+        workloads: list[dict[str, object]] = []
+        for workload_id, label_ja in _COMPUTE_WORKLOAD_LABELS.items():
+            definition = definitions[workload_id]
+            route = routes.get(workload_id)
+            static_compatible = bool(
+                route is not None
+                and route.compatibility_status is CompatibilityStatus.PASS
+                and route.effective_backend != "DISABLED"
+            )
+            requires_live_gpu = bool(route is not None and route.adapter_identity is not None)
+            live = (
+                self._live_gpu_admission(workload_id, profile.revision)
+                if requires_live_gpu
+                else {
+                    "state": "NOT_APPLICABLE",
+                    "ready": static_compatible,
+                    "age_seconds": None,
+                    "reason_code": "LIVE_GPU_ADMISSION_NOT_APPLICABLE",
+                }
+            )
+            ready = static_compatible and bool(live["ready"])
+            workloads.append(
+                {
+                    "workload_id": workload_id,
+                    "label_ja": label_ja,
+                    "workload_class": definition["workload_class"],
+                    "static_compatibility": (
+                        route.compatibility_status.value if route is not None else "BLOCKED"
+                    ),
+                    "live_admission_state": live["state"],
+                    "live_admission_age_seconds": live["age_seconds"],
+                    "ready": ready,
+                    "effective_backend": (
+                        route.effective_backend if route is not None else "DISABLED"
+                    ),
+                    "reason_code": (
+                        "WORKLOAD_READY"
+                        if ready
+                        else live["reason_code"]
+                        if requires_live_gpu
+                        else route.reason_code
+                        if route is not None
+                        else str(definition["adapter_admission_state"])
+                    ),
+                    "loaded_runtime_versions": (
+                        list(route.loaded_runtime_versions) if route is not None else []
+                    ),
+                    "cpu_fallback_visible_before_execution": bool(
+                        route is not None and route.cpu_fallback_visible_before_execution
+                    ),
+                }
+            )
+        renderer = next(
+            item
+            for item in frozen_renderer_evidence_registry()["renderers"]
+            if item["renderer_id"] == "shell.webview2.renderer"
+        )
+        restart_state = self._desktop_compute_restart_state(loaded.status, profile)
+        status_messages = {
+            "LOADED": "保存済みの実行方法を読み込みました。",
+            "DEFAULT_MISSING": "未設定のため、自動（GPU優先）を表示しています。",
+            "DEFAULT_REJECTED": "保存済み設定を安全に読み込めないため、元の設定を保持しています。",
+        }
+        return {
+            "available": True,
+            "revision": profile.revision,
+            "selected_preference": profile.selected_preference.value,
+            "preference_options": [dict(item) for item in _COMPUTE_PREFERENCE_OPTIONS],
+            "profile_status": loaded.status.value,
+            "reason_code": loaded.reason_code,
+            "message_ja": status_messages[loaded.status.value],
+            "next_action_ja": (
+                "設定内容を確認してください。"
+                if loaded.status is not ProfileLoadStatus.DEFAULT_REJECTED
+                else "サポート情報を確認して、安全な回復操作を行ってください。"
+            ),
+            "rejected_source_preserved": loaded.rejected_source_preserved,
+            "workloads": workloads,
+            "renderer": renderer,
+            "restart_state": restart_state,
+            "restart_required": restart_state == "REQUIRED",
+            "save_allowed": False,
+            "provider_execution_started": False,
+            "workload_execution_started": False,
+            "webview_gpu_disable_flag_applied": False,
+        }
+
+    def desktop_compute_settings_update(self, args: Any) -> dict[str, object]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"revision", "selected_preference"}
+            or type(args["revision"]) is not int
+            or args["revision"] < 0
+            or type(args["selected_preference"]) is not str
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Desktop compute Settings request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._desktop_compute_profile_store is None:
+            raise ProductError(
+                "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_NOT_BOUND",
+                "Desktop compute Settings are not bound to this Shell",
+                ProductErrorCategory.STATE,
+            )
+        if self._desktop_compute_recovery_required:
+            raise ProductError(
+                "ERR_TASK066_DESKTOP_COMPUTE_SETTINGS_RECOVERY_REQUIRED",
+                "Desktop compute Settings require trusted recovery",
+                ProductErrorCategory.STATE,
+            )
+        raise ProductError(
+            "ERR_TASK066_DESKTOP_COMPUTE_SAVE_OUTCOME_NOT_BOUND",
+            "Desktop compute Settings require the sealed save-outcome provider",
+            ProductErrorCategory.STATE,
+        )
 
     @staticmethod
     def _ollama_runtime_unavailable_projection() -> dict[str, object]:

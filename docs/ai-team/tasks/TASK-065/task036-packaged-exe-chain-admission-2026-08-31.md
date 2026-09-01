@@ -125,14 +125,16 @@ the other.
 
 ## TASK-065 admission
 
-TASK-065 PL-C never runs this producer operation. PL65-C01a pinned-reads the
-already completed TASK-036 and TASK-061-B receipts and admits them only if the
-TASK-036 receipt covers T36-A/B/S/M/R/P/E and T36-P01-P14. The historical
-stage/import deltas belong to TASK-036; TASK-065 local Product/Project/Bridge/
-Profile/config/history deltas and adapter/TASK-036/installer calls are all
-zero. A later PL65-C01b operation requires a distinct Production Activation
-Human receipt and a new operation/ticket; the preactivation packaged receipt
-cannot be replayed or substituted.
+TASK-065 PL-C never runs this producer operation. `TASK036_D2S_EXECUTION_HANDOFF_V1`
+is private dispatch authority and is not a TASK-065 input. PL65-C01a
+pinned-reads the future body-free `D2S_001_OPERATION_TERMINAL_HANDOFF_V1` and
+the already completed TASK-061-B receipt; it requires independently pinned
+producer state proving all T36-A/B/S/M/R/P/E and T36-P01-P14 conditions. The
+historical stage/import deltas belong to TASK-036; TASK-065 local
+Product/Project/Bridge/Profile/config/history deltas and adapter/TASK-036/
+installer calls are all zero. A later PL65-C01b operation requires a distinct
+Production Activation Human receipt and a new operation/ticket; the
+preactivation packaged receipt cannot be replayed or substituted.
 
 Until the producer implementation, focused packaging coverage, real-installed
 execution and canonical completion receipt all exist, TASK-036 and PL-C remain

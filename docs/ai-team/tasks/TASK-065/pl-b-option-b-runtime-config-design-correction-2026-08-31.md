@@ -719,12 +719,15 @@ sequence is:
 
 The TASK-065 phase split is mandatory:
 
-- `PL65-C01a PREACTIVATION CHAIN ADMISSION` performs pinned read/join of the
-  already completed TASK-036 durable receipt, observed stage count 1, import
-  count 1, strict public receipt, hidden correlation and Profile read-back.
-  TASK-065 calls the adapter and TASK-036 zero times. The observed stage/import
-  deltas belong to historical TASK-036 execution; TASK-065 local Project,
-  Bridge, Profile, config and history deltas are all zero.
+- `PL65-C01a PREACTIVATION CHAIN VALIDATION` performs pinned read/join of the
+  future body-free `D2S_001_OPERATION_TERMINAL_HANDOFF_V1`, plus the already
+  completed TASK-061-B receipt, observed stage count 1, import count 1, strict
+  public receipt, hidden correlation and Profile read-back. The private
+  `TASK036_D2S_EXECUTION_HANDOFF_V1` is not a TASK-065 input. TASK-065 calls
+  the adapter and TASK-036 zero times. The observed stage/import deltas belong
+  to historical TASK-036 execution; TASK-065 local Project, Bridge, Profile,
+  config and history deltas are all zero.
+  Until that terminal handoff exists, this validation remains `N.C. / EFFECT0`.
 - `PL65-C01b STEADY-STATE/POST-ACTIVATION` remains `START0` under current
   authority. It becomes eligible only after a separate Production Activation
   Human receipt and with a new operation ID, new one-shot ticket and fresh

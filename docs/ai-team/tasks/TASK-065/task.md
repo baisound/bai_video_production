@@ -653,9 +653,12 @@ Evidence; fixture PASS is not real-installed PASS, dependency completion or
 Production authority.
 
 The consumer must observe historical adapter-stage count `1` and TASK-036
-import count `1`, plus exact public receipt, hidden correlation, canonical
-read-back and advisory Profile read-back. TASK-065 local adapter/TASK-036 calls
-and Project/Bridge/Profile/config/history deltas remain exactly `0`.
+import count `1` only through the future body-free
+`D2S_001_OPERATION_TERMINAL_HANDOFF_V1`, plus exact public receipt, hidden
+correlation, canonical read-back and advisory Profile read-back. The private
+`TASK036_D2S_EXECUTION_HANDOFF_V1` is never a TASK-065 input. TASK-065 local
+adapter/TASK-036 calls and Project/Bridge/Profile/config/history deltas remain
+exactly `0`.
 Real adapter execution, installed runtime validation, `enabled:true`, config or
 native state, post-activation execution, Release, Deploy and Production
 Activation remain mutation zero behind their existing receipts and Human

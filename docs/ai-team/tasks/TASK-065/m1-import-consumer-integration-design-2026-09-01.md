@@ -46,7 +46,8 @@ M1/PL-A reads the producer records in this order; no local effect is allowed:
 pinned D2S_001_INTERFACE_COMPLETION_READBACK_V1
   -> TASK-061-A prepare (enabled:false)
   -> TASK-067 canonical completion
-  -> TASK-036 exact-one operation handoff
+  -> TASK-036 exact-one private operation
+  -> D2S terminal handoff (pinned result, never dispatch authority)
   -> TASK-061-B final completion (enabled:false)
   -> TASK-065 pinned PL-A consumer join
 ```
@@ -55,6 +56,11 @@ The canonical SKILL main/tree identity is an audit-only side observation. It
 has no dependency edge and cannot substitute for the separately pinned D2S
 completion readback, which must bind the installed bytes and H1/H2/v2 snapshot
 completion before TASK-061-A may proceed.
+
+`TASK036_D2S_EXECUTION_HANDOFF_V1` is private to the bounded TASK-036 Product
+operation and is never an M1/PL-A input. TASK-065 may only validate the future
+body-free `D2S_001_OPERATION_TERMINAL_HANDOFF_V1`, after independently pinned
+producer readback; neither handoff currently exists, so both remain `N.C.`.
 
 TASK-069 is currently absent from canonical allocation, so its proposed
 terminal-readback shape is explicitly `N.C.` and cannot be inserted as a
@@ -70,7 +76,8 @@ config, owner scope, secret, correlation body or capability.
 | --- | --- | ---: |
 | TASK-067 absent / no canonical owner / no durable receipt | `TASK067_CANONICAL_ALLOCATION.N.C.` | 0 |
 | M1 direct import, direct factory, public/copy/rehash receipt | `M1_IMPORT_CONSUMER.N.C.` | 0 |
-| TASK-061-A/B or TASK-036 version/issuer/digest mismatch | `UPSTREAM_RECEIPT_MISMATCH` | 0 |
+| TASK-061-A/B or D2S terminal-handoff version/issuer/digest mismatch | `UPSTREAM_RECEIPT_MISMATCH` | 0 |
+| private TASK-036 dispatch handoff supplied as an M1 input | `TERMINAL_HANDOFF.N.C. / EFFECT0` | 0 |
 | stage/import count not exactly one, second publish/import, receipt-only or `canonical_store_written` | `PREACTIVATION_CHAIN.N.C.` | 0 |
 | TASK-069 proposal/fixture/status used as a receipt | `TERMINAL_READBACK.N.C.` | 0 |
 | installed sync, real E2E, connector enable or Activation requested | `GATE_REQUIRED / EFFECT0` | 0 |

@@ -338,13 +338,22 @@ def test_d2s_handoff_placeholder_requires_separate_v2_receipt_and_has_no_effect(
             "enabled_must_remain_false": True,
             "placeholder_is_effect_authority": False,
         },
-        "task036_operation": {
+        "task036_private_dispatch_handoff": {
             "required_issuer": "TASK036_CANONICAL_OWNER",
             "required_message_type": "TASK036_D2S_EXECUTION_HANDOFF_V1",
             "required_schema_version": "1.0.0",
             "receipt_sha256": None,
-            "stage_count": None,
-            "import_path_count": None,
+            "consumer_readable": False,
+            "placeholder_is_completion_receipt": False,
+            "placeholder_is_effect_authority": False,
+        },
+        "d2s_operation_terminal_handoff": {
+            "required_issuer": "CANONICAL_SKILL_D2S_OWNER",
+            "required_message_type": "D2S_001_OPERATION_TERMINAL_HANDOFF_V1",
+            "required_schema_version": "1.0.0",
+            "receipt_sha256": None,
+            "consumer_readable": True,
+            "placeholder_is_completion_receipt": False,
             "placeholder_is_effect_authority": False,
         },
         "task061b_final": {
@@ -371,7 +380,7 @@ def test_d2s_handoff_placeholder_requires_separate_v2_receipt_and_has_no_effect(
         "required_message_type": "TASK065_M1_IMPORT_CONSUMER_VALIDATION_V1",
         "required_schema_version": "1.0.0",
         "task067_receipt_sha256": None,
-        "task036_receipt_sha256": None,
+        "d2s_terminal_handoff_sha256": None,
         "task061b_receipt_sha256": None,
         "task069_receipt_sha256": None,
         "canonical_task067_allocation_present": False,
@@ -401,6 +410,10 @@ def test_d2s_handoff_placeholder_requires_separate_v2_receipt_and_has_no_effect(
     assert join["operation_config_v2_snapshot"] == (
         "REQUIRED_SEPARATE_PINNED_INPUT"
     )
+    assert join["task036_private_dispatch_handoff"] == (
+        "NOT_A_TASK065_CONSUMER_INPUT"
+    )
+    assert join["d2s_operation_terminal_handoff"] == "REQUIRED_CURRENT"
     assert join["task065_invokes_adapter"] is False
     assert join["task065_invokes_task036"] is False
     assert join["fixture_participates_in_runtime_join"] is False

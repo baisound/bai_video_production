@@ -478,7 +478,8 @@ durable producer record.
 | Dependency | Reserved message type | Required non-placeholder facts | Current task-local state |
 | --- | --- | --- | --- |
 | TASK-061-A | `TASK061_PREACTIVATION_PREPARE_V1` | exact receipt digest; connector remains `enabled:false` | `N.C. / EFFECT0` |
-| TASK-036 | `TASK036_D2S_EXECUTION_HANDOFF_V1` | exact receipt digest; stage count `1`; import-path count `1` | `N.C. / EFFECT0` |
+| TASK-036 private dispatch | `TASK036_D2S_EXECUTION_HANDOFF_V1` | exact private dispatch binding; stage count `1`; import-path count `1`; never consumer-readable | `N.C. / EFFECT0` |
+| D2S terminal handoff | `D2S_001_OPERATION_TERMINAL_HANDOFF_V1` | body-free terminal binding plus independently pinned producer state; the only future TASK-061-B/TASK-065 input | `N.C. / EFFECT0` |
 | TASK-061-B | `TASK061_FINAL_CA_C_COMPLETION_V1` | exact receipt digest; connector remains `enabled:false` | `N.C. / EFFECT0` |
 | TASK-069 | `TASK069_D2S_TERMINAL_READBACK_V1` | exact receipt/correlation/canonical/Profile readback group | canonical task absent; `N.C. / EFFECT0` |
 

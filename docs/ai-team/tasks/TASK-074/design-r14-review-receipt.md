@@ -13,7 +13,7 @@ Status: `PASS / DESIGN_ACCEPTED_R14 / DEV-4 / EFFECT0`
 - R11 addendum: `CD73E8C6584C96B39D68C3A0D32E635DEC17EFC98145C7344779816400397690`
 - R12 addendum: `38FB784A74C7A51397B3B4243566F62CB87B4CF49AAB7724986061B65DF54687`
 - R13 addendum: `E49E35DBA314EA8D170AE182DA5983D2703DBD9E103BD387AFC32EEE03132FF5`
-- R14 addendum: `8342803DE90C0BE2779713D2F0AA8D3876B8B4B0D1529C1373BC409FAAF28DE5`
+- R14 addendum: `CCACEE067571B03C92BEE33627061D04F5C871DDC6FFA8C180733359D172370C`
   (1742 lines, canonical LF UTF-8 bytes)
 - Canonical TASK-076 packet:
   `AA86CF218176AD127C1A04BFEC5FD4C7C2A53B33119F0E88F44560109CE616F1`
@@ -42,6 +42,15 @@ it to accepted source or implementation authority.
 - Final independent DEV-4 Critic: `PASS`,
   `Critical/High/Medium/Low = 0/0/0/0`.
 - Final independent DEV-4 Judge: `PASS`.
+- Post-hosted-security lexical rebind independent Tester: `PASS`,
+  `Critical/High/Medium/Low = 0/0/0/0`.
+- Post-hosted-security lexical rebind independent Critic: `PASS`,
+  `Critical/High/Medium/Low = 0/0/0/0`.
+- Post-hosted-security lexical rebind independent Judge: `PASS`,
+  `Critical/High/Medium/Low = 0/0/0/0`.
+- Lexical rebind semantic contract delta: `0`; the change is limited to one
+  non-normative descriptor word, and no flagged secret-like literal or value was
+  copied into this receipt.
 - R14 acceptance / negative / fault additions: `33 / 45 / 33`.
 - Effective acceptance / negative / fault rows: `93 / 130 / 84`.
 - Missing or effective duplicate row IDs: `0 / 0`.

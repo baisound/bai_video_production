@@ -362,7 +362,7 @@ one hash applied to several contracts, an unknown field, a generic
 The profile descriptor itself has an exact closed field set: producer/consumer
 Tasks, V3 profile, complete ABI version/hash registry, owner-acceptance
 version/hash, role-set and lease-policy digests, expected child-broker
-protocol/image/build policy, semantic consumer-operation key,
+protocol/image/build policy, semantic consumer-operation identifier,
 `parent_sensitive_handle_count=0`, `caller_hook_allowed=false`, and fixed false
 flags for body read, model load/call, Artifact handle/body write and consumer
 effect. Its self-hash covers the complete descriptor. Unknown/extra slot,

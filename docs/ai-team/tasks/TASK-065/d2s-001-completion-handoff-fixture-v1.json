@@ -35,6 +35,30 @@
     "task065_adapter_call_count": "0",
     "task065_task036_call_count": "0"
   },
+  "expected_broker_recovery": {
+    "publish_states": [
+      "IN_FLIGHT",
+      "LAUNCH_ATTEMPTED",
+      "STAGE_REPORTED",
+      "IMPORT_ATTEMPTED",
+      "IMPORT_REPORTED"
+    ],
+    "load_states": [
+      "IN_FLIGHT",
+      "LOAD_ATTEMPTED",
+      "LOAD_REPORTED"
+    ],
+    "terminal_states": [
+      "IN_FLIGHT",
+      "TERMINAL_READBACK"
+    ],
+    "post_import_crash_result": "IMPORT_EFFECT_UNKNOWN",
+    "post_import_second_dispatch_count": "0",
+    "invalid_cross_action_result": "ACTION_TRANSITION_INVALID",
+    "fixture_broker_ledger_created": false,
+    "fixture_ticket_consumed": false,
+    "fixture_child_launched": false
+  },
   "effect_counters": {
     "project_delta": "0",
     "bridge_delta": "0",

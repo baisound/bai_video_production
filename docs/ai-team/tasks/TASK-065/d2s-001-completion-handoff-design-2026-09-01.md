@@ -337,4 +337,7 @@ native backend or activation path. It cannot satisfy either
 Fixture validation is limited to static parsing, exact expected field values
 and body-free public projection assertions. Replay, expiry, crash, swap and
 durability rows remain source-owner negative tests in the fault matrix above;
-the synthetic fixture is not evidence that those source paths are fixed.
+the synthetic fixture is not evidence that those source paths are fixed. Its
+recovery fields model the mutually exclusive publish/load/terminal state
+shapes and the `IMPORT_EFFECT_UNKNOWN` no-second-dispatch expectation only;
+they create no broker ledger, consume no ticket and launch no child.

@@ -26,6 +26,23 @@ no rebase/copy/commit and no authority. A fresh owner disposition is required
 before any concept can be reimplemented from a clean canonical `origin/main`
 worktree in one coherent D2S PR.
 
+### Source-start currentness checkpoint
+
+Read-only preflight on 2026-09-01 found the canonical SKILL checkout at
+`5573a186ea296ca3626e0ef9c0e5d37c98a3576e` on
+`codex/v0.7.0-governance-knowledge-skills`, not a fresh canonical `main`, with
+an unrelated dirty `AGENTS.md`. Therefore `D2S_SOURCE_START0` remains
+`N.C. / EFFECT0`: this checkout cannot be used to start, copy, commit or test
+the D2S implementation. The separate eight-file worktree above remains
+preserve-only.
+
+Exact source-start resume condition: a D2S owner must create or select a clean
+worktree from a freshly verified `origin/main` commit, record that commit and
+branch, receive an explicit Allowed Files/overlap/lock disposition, then
+rebind the source/release/install contract. Until all four are current, this
+packet is design evidence only and no adapter/config/install/native/activation
+effect is authorized.
+
 ### Proposed D2S Allowed Files
 
 The D2S owner may change only these implementation paths after its fresh

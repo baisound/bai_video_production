@@ -36,6 +36,10 @@ path overlap.
   Windows-port skip-aware, and TASK-058 boundary regression: `202 passed,
   84 skipped in 17.33s`. The Windows-native skips remain `NOT_CONFIRMED`;
   historical R4 results are not promoted.
+- A Windows-native suite attempt used the preinstalled host Python with
+  `pytest` available, but collection stopped before execution because its
+  environment lacks `jsonschema`. No dependency install or retry was
+  performed; Windows-native evidence remains `NOT_CONFIRMED`.
 - H1 corrective Git blobs (source, generic test, Windows test):
   `770099f2cca4c0cafca8bf03159a2e7c5ed4567e`,
   `32e648eb3b2fd57fccf3451f5d3d39e5591dacfa`, and

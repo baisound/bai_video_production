@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import pickle
+import threading
 
 import pytest
 
@@ -23,11 +24,113 @@ from ai_video_production.montage_learning_installation import (
 
 
 MANIFEST_SHA = "sha256:" + "a" * 64
+ROOT_SECURITY_SHA = "sha256:" + "b" * 64
 provision_and_write_installer_readback = (
     installation._legacy_test_only_provision_and_write_installer_readback
 )
 provision_installed_bridge = installation._legacy_test_only_provision_installed_bridge
 write_installer_readback = installation._legacy_test_only_write_installer_readback
+
+
+def _commitment(seed: str) -> str:
+    return installation.sha256_json({"seed": seed})
+
+
+def _v2_descriptor_fixture(
+    instance_id: str = "bvp-install-" + "1" * 32,
+) -> dict[str, object]:
+    body: dict[str, object] = {
+        "schema_version": installation.DESCRIPTOR_SCHEMA_VERSION,
+        "message_type": installation.DESCRIPTOR_MESSAGE_TYPE,
+        "product_id": installation.PRODUCT_ID,
+        "install_instance_id": instance_id,
+        "bridge_relative_path": installation.BRIDGE_RELATIVE_PATH,
+        "initial_installer_manifest_sha256": _commitment("initial-manifest"),
+        "initial_product_build_sha256": _commitment("initial-product"),
+        "created_at_utc": "2026-09-03T00:00:00Z",
+    }
+    document = dict(body)
+    document["descriptor_sha256"] = installation.sha256_json(body)
+    return document
+
+
+def _fixture_root_plan(tmp_path: Path):
+    selected_root = tmp_path / "selected"
+    selected_root.mkdir()
+    plan = installation._fixture_only_build_selected_root_plan(
+        action=installation._InstallationAction.FIRST_PROVISION,
+        selected_root=selected_root,
+        predecessor_bound=False,
+        existing_relative_directories=(),
+        selected_root_security_sha256=ROOT_SECURITY_SHA,
+    )
+    return selected_root, plan
+
+
+def _issue_pair_fixture(
+    plan: object,
+    descriptor: dict[str, object],
+    **overrides: object,
+):
+    values: dict[str, object] = {
+        "action": installation._InstallationAction.FIRST_PROVISION,
+        "operation_id": "operation-1",
+        "ticket_event_sha256": _commitment("ticket"),
+        "install_instance_id": descriptor["install_instance_id"],
+        "descriptor_document": descriptor,
+        "owner_instance_id": descriptor["install_instance_id"],
+        "owner_contract_profile": installation.BRIDGE_CONTRACT_PROFILE,
+        "pair_action": "PAIR_GENESIS",
+        "pair_generation_sha256": _commitment("pair-generation"),
+        "descriptor_generation_sha256": _commitment("pair-generation"),
+        "owner_generation_sha256": _commitment("pair-generation"),
+        "pair_terminal_sha256": _commitment("pair-terminal"),
+        "predecessor_terminal_sha256": _commitment("no-predecessor"),
+        "successor_reservation_sha256": _commitment("reservation"),
+        "installation_revision": 1,
+        "descriptor_identity_sha256": _commitment("descriptor-identity"),
+        "owner_identity_sha256": _commitment("owner-identity"),
+        "owner_manifest_sha256": _commitment("owner-manifest"),
+        "selected_root_security_sha256": plan.selected_root_security_sha256,
+        "directory_set_sha256": plan.directory_set_sha256,
+        "package_manifest_sha256": _commitment("package-manifest"),
+        "payload_tree_sha256": _commitment("payload-tree"),
+        "product_build_sha256": _commitment("product-build"),
+        "installer_build_sha256": _commitment("installer-build"),
+        "backend_sha256": _commitment("backend"),
+        "session_sha256": _commitment("session"),
+        "observed_at_utc": "2026-09-03T00:01:00Z",
+        "simultaneous_current": True,
+    }
+    values.update(overrides)
+    return installation._fixture_only_issue_pair_readback(**values)
+
+
+def _consume_pair_fixture(
+    pair: object,
+    plan: object,
+    descriptor: dict[str, object],
+    **overrides: object,
+):
+    values: dict[str, object] = {
+        "root_plan": plan,
+        "expected_operation_id": "operation-1",
+        "expected_ticket_event_sha256": _commitment("ticket"),
+        "expected_install_instance_id": descriptor["install_instance_id"],
+        "expected_descriptor_document": descriptor,
+        "expected_predecessor_terminal_sha256": _commitment("no-predecessor"),
+        "expected_successor_reservation_sha256": _commitment("reservation"),
+        "expected_installation_revision": 1,
+        "expected_package_manifest_sha256": _commitment("package-manifest"),
+        "expected_payload_tree_sha256": _commitment("payload-tree"),
+        "expected_product_build_sha256": _commitment("product-build"),
+        "expected_installer_build_sha256": _commitment("installer-build"),
+        "expected_backend_sha256": _commitment("backend"),
+        "expected_session_sha256": _commitment("session"),
+        "consumer_operation_key": "consumer-operation-1",
+    }
+    values.update(overrides)
+    return installation._fixture_only_consume_pair_readback(pair, **values)
 
 
 def test_installer_cli_mutation_fails_closed_without_private_composition(
@@ -138,6 +241,7 @@ def test_fixture_root_plan_derives_only_closed_literal_children_without_effect(
         selected_root=selected_root,
         predecessor_bound=predecessor_bound,
         existing_relative_directories=existing,
+        selected_root_security_sha256=ROOT_SECURITY_SHA,
     )
 
     assert plan.directory_paths == tuple(
@@ -182,6 +286,7 @@ def test_fixture_root_plan_rejects_unknown_action_before_touching_root() -> None
             selected_root=RootMustNotBeRead(),
             predecessor_bound=False,
             existing_relative_directories=(),
+            selected_root_security_sha256=ROOT_SECURITY_SHA,
         )
 
 
@@ -198,6 +303,7 @@ def test_fixture_root_plan_rejects_relative_or_traversing_root(
             selected_root=selected_root,
             predecessor_bound=False,
             existing_relative_directories=(),
+            selected_root_security_sha256=ROOT_SECURITY_SHA,
         )
 
 
@@ -233,6 +339,7 @@ def test_fixture_root_plan_rejects_unbound_existing_or_case_alias_without_effect
             selected_root=selected_root,
             predecessor_bound=predecessor_bound,
             existing_relative_directories=existing,
+            selected_root_security_sha256=ROOT_SECURITY_SHA,
         )
 
     assert sentinel.read_bytes() == b"preserve"
@@ -267,11 +374,290 @@ def test_fixture_root_plan_fault_ports_have_zero_filesystem_effect(
             selected_root=selected_root,
             predecessor_bound=False,
             existing_relative_directories=(),
+            selected_root_security_sha256=ROOT_SECURITY_SHA,
             fault_port=fault,
         )
 
     assert sentinel.read_bytes() == b"preserve"
     assert sorted(path.name for path in selected_root.iterdir()) == ["preserve.txt"]
+
+
+def test_pair_consumer_issues_one_path_free_data_only_installed_readback(
+    tmp_path: Path,
+) -> None:
+    selected_root, plan = _fixture_root_plan(tmp_path)
+    sentinel = selected_root / "preserve.txt"
+    sentinel.write_bytes(b"preserve")
+    descriptor = _v2_descriptor_fixture()
+    pair = _issue_pair_fixture(plan, descriptor)
+
+    installed = _consume_pair_fixture(pair, plan, descriptor)
+
+    assert installed.fixture_only is True
+    assert installed.authority_created is False
+    assert installed.native_effect_executed is False
+    projection = installation._fixture_only_consume_installed_readback(
+        installed,
+        consumer_operation_key="consumer-operation-1",
+    )
+    assert projection["status"] == "VERIFIED_DISABLED"
+    assert projection["authority_created"] is False
+    assert projection["currentness_selected"] is False
+    assert projection["connector_enabled"] is False
+    assert projection["activation_authorized"] is False
+    supplied_hash = projection.pop("audit_self_hash")
+    assert supplied_hash == installation.sha256_json(projection)
+    public_bytes = json.dumps(projection, ensure_ascii=False)
+    assert str(selected_root) not in public_bytes
+    assert str(descriptor["install_instance_id"]) not in public_bytes
+    assert sentinel.read_bytes() == b"preserve"
+    assert sorted(path.name for path in selected_root.iterdir()) == ["preserve.txt"]
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REUSED$",
+    ):
+        _consume_pair_fixture(pair, plan, descriptor)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_INSTALLED_READBACK_REUSED$",
+    ):
+        installation._fixture_only_consume_installed_readback(
+            installed,
+            consumer_operation_key="consumer-operation-1",
+        )
+
+
+def test_pair_consumer_rejects_public_direct_copy_and_serialized_forgery(
+    tmp_path: Path,
+) -> None:
+    _, plan = _fixture_root_plan(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+    pair = _issue_pair_fixture(plan, descriptor)
+    assert not {
+        "_InstallationPairReadbackFixture",
+        "_InstallationReadbackFixture",
+        "_fixture_only_issue_pair_readback",
+        "_fixture_only_consume_pair_readback",
+        "_fixture_only_consume_installed_readback",
+    }.intersection(installation.__all__)
+
+    with pytest.raises(TypeError, match="NONCOPYABLE"):
+        copy.copy(pair)
+    with pytest.raises(TypeError, match="NONCOPYABLE"):
+        copy.deepcopy(pair)
+    with pytest.raises(TypeError, match="NONSERIALIZABLE"):
+        pickle.dumps(pair)
+
+    forged = replace(pair)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _consume_pair_fixture(forged, plan, descriptor)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _consume_pair_fixture(pair.__dict__ if hasattr(pair, "__dict__") else {}, plan, descriptor)
+
+    installed = _consume_pair_fixture(pair, plan, descriptor)
+    with pytest.raises(TypeError, match="NONCOPYABLE"):
+        copy.copy(installed)
+    with pytest.raises(TypeError, match="NONSERIALIZABLE"):
+        pickle.dumps(installed)
+    installed_forgery = replace(installed)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_INSTALLED_READBACK_REJECTED$",
+    ):
+        installation._fixture_only_consume_installed_readback(
+            installed_forgery,
+            consumer_operation_key="consumer-operation-1",
+        )
+
+    projection = installation._fixture_only_consume_installed_readback(
+        installed,
+        consumer_operation_key="consumer-operation-1",
+    )
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_INSTALLED_READBACK_REJECTED$",
+    ):
+        installation._fixture_only_consume_installed_readback(
+            projection,
+            consumer_operation_key="consumer-operation-1",
+        )
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    ["extra", "wrong_hash", "wrong_instance", "legacy_updated_at"],
+)
+def test_pair_fixture_rejects_noncanonical_descriptor_semantics_before_issue(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    selected_root, plan = _fixture_root_plan(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+    if mutation == "extra":
+        descriptor["extra"] = "forged"
+    elif mutation == "wrong_hash":
+        descriptor["descriptor_sha256"] = _commitment("wrong-descriptor")
+    elif mutation == "wrong_instance":
+        descriptor["install_instance_id"] = "foreign"
+    else:
+        descriptor["updated_at"] = "2026-09-03T00:02:00Z"
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _issue_pair_fixture(plan, descriptor)
+
+    assert list(selected_root.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"descriptor_generation_sha256": _commitment("other-generation")},
+        {"owner_generation_sha256": _commitment("other-generation")},
+        {"owner_instance_id": "bvp-install-" + "2" * 32},
+        {"owner_contract_profile": "forged-profile"},
+        {"pair_action": "PAIR_ADOPTION"},
+        {"simultaneous_current": False},
+        {
+            "owner_identity_sha256": _commitment("descriptor-identity"),
+        },
+        {"session_sha256": _commitment("wrong-session")},
+    ],
+)
+def test_pair_consumer_burns_semantic_or_generation_mismatch(
+    tmp_path: Path,
+    overrides: dict[str, object],
+) -> None:
+    selected_root, plan = _fixture_root_plan(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+    pair = _issue_pair_fixture(plan, descriptor, **overrides)
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _consume_pair_fixture(pair, plan, descriptor)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REUSED$",
+    ):
+        _consume_pair_fixture(pair, plan, descriptor)
+
+    assert list(selected_root.iterdir()) == []
+
+
+def test_pair_consumer_exception_and_wrong_installed_consumer_burn_once(
+    tmp_path: Path,
+) -> None:
+    _, plan = _fixture_root_plan(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+    pair = _issue_pair_fixture(plan, descriptor)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _consume_pair_fixture(
+            pair,
+            plan,
+            descriptor,
+            expected_package_manifest_sha256=_commitment("wrong-package"),
+        )
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REUSED$",
+    ):
+        _consume_pair_fixture(pair, plan, descriptor)
+
+    fresh_pair = _issue_pair_fixture(plan, descriptor)
+    installed = _consume_pair_fixture(fresh_pair, plan, descriptor)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_INSTALLED_READBACK_REJECTED$",
+    ):
+        installation._fixture_only_consume_installed_readback(
+            installed,
+            consumer_operation_key="wrong-consumer",
+        )
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_INSTALLED_READBACK_REUSED$",
+    ):
+        installation._fixture_only_consume_installed_readback(
+            installed,
+            consumer_operation_key="consumer-operation-1",
+        )
+
+
+def test_pair_consumer_concurrent_double_call_has_one_success(
+    tmp_path: Path,
+) -> None:
+    _, plan = _fixture_root_plan(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+    pair = _issue_pair_fixture(plan, descriptor)
+    barrier = threading.Barrier(2)
+    results: list[str] = []
+
+    def consume() -> None:
+        barrier.wait()
+        try:
+            _consume_pair_fixture(pair, plan, descriptor)
+        except MontageLearningInstallationError as exc:
+            results.append(str(exc))
+        else:
+            results.append("SUCCESS")
+
+    threads = [threading.Thread(target=consume) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert sorted(results) == ["SUCCESS", "TASK063_PAIR_READBACK_REUSED"]
+
+
+def test_installed_readback_concurrent_double_call_has_one_success(
+    tmp_path: Path,
+) -> None:
+    _, plan = _fixture_root_plan(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+    installed = _consume_pair_fixture(
+        _issue_pair_fixture(plan, descriptor),
+        plan,
+        descriptor,
+    )
+    barrier = threading.Barrier(2)
+    results: list[str] = []
+
+    def consume() -> None:
+        barrier.wait()
+        try:
+            installation._fixture_only_consume_installed_readback(
+                installed,
+                consumer_operation_key="consumer-operation-1",
+            )
+        except MontageLearningInstallationError as exc:
+            results.append(str(exc))
+        else:
+            results.append("SUCCESS")
+
+    threads = [threading.Thread(target=consume) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert sorted(results) == ["SUCCESS", "TASK063_INSTALLED_READBACK_REUSED"]
 
 
 def test_custom_unicode_install_root_provisions_exact_relative_tree(tmp_path: Path) -> None:

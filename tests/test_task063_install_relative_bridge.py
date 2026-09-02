@@ -110,6 +110,182 @@ def test_repair_preserves_instance_and_readback_detects_descriptor_tamper(
         discover_installed_bridge(install_root)
 
 
+@pytest.mark.parametrize(
+    "case",
+    [
+        "duplicate_equal",
+        "duplicate_different",
+        "nan",
+        "infinity",
+        "negative_infinity",
+        "bom",
+        "trailing",
+        "control",
+        "deep",
+        "oversize",
+        "array_pairs",
+        "scalar",
+    ],
+)
+def test_discovery_strict_descriptor_json_rejects_ambiguous_bytes_without_effect(
+    tmp_path: Path,
+    case: str,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    discovery = provision_installed_bridge(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+        now="2026-08-30T00:00:00Z",
+    )
+    descriptor = discovery.layout.root / "bridge-instance.json"
+    owner = discovery.layout.owner_manifest
+    owner_before = owner.read_bytes()
+    original = json.loads(descriptor.read_text(encoding="utf-8"))
+    fields = ",".join(
+        f"{json.dumps(key)}:{json.dumps(value)}"
+        for key, value in original.items()
+    )
+    if case == "duplicate_equal":
+        payload = (
+            "{" + fields + ",\"install_instance_id\":"
+            + json.dumps(original["install_instance_id"]) + "}"
+        ).encode("utf-8")
+    elif case == "duplicate_different":
+        payload = (
+            "{" + fields + ",\"install_instance_id\":\"bvp-install-"
+            + "f" * 32 + "\"}"
+        ).encode("utf-8")
+    elif case == "nan":
+        payload = b'{"value":NaN}'
+    elif case == "infinity":
+        payload = b'{"value":Infinity}'
+    elif case == "negative_infinity":
+        payload = b'{"value":-Infinity}'
+    elif case == "bom":
+        payload = b"\xef\xbb\xbf" + json.dumps(original).encode("utf-8")
+    elif case == "trailing":
+        payload = json.dumps(original).encode("utf-8") + b"\n{}"
+    elif case == "control":
+        payload = b'{"value":"unsafe\x00value"}'
+    elif case == "deep":
+        payload = b'{"value":' + (b"[" * 16) + b"0" + (b"]" * 16) + b"}"
+    elif case == "oversize":
+        payload = b" " * (installation._MAX_DESCRIPTOR_BYTES + 1)
+    elif case == "array_pairs":
+        payload = json.dumps(list(original.items())).encode("utf-8")
+    else:
+        payload = b"null"
+    descriptor.write_bytes(payload)
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="descriptor secure read rejected",
+    ) as caught:
+        discover_installed_bridge(install_root)
+
+    assert descriptor.read_bytes() == payload
+    assert owner.read_bytes() == owner_before
+    assert str(descriptor) not in str(caught.value)
+    assert repr(payload[:64]) not in str(caught.value)
+
+
+def test_discovery_rejects_same_bytes_different_descriptor_identity_at_open_seam(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    discovery = provision_installed_bridge(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+    )
+    descriptor = discovery.layout.root / "bridge-instance.json"
+    original_bytes = descriptor.read_bytes()
+    original_identity = descriptor.stat(follow_symlinks=False).st_ino
+    replacement = descriptor.with_name("replacement-descriptor.json")
+    replacement.write_bytes(original_bytes)
+    real_authority = installation.SecureAuthorityIO
+    swapped = False
+
+    def stage(name: str) -> None:
+        nonlocal swapped
+        if name == "target_lstat_complete" and not swapped:
+            swapped = True
+            os.replace(replacement, descriptor)
+
+    def authority(root: object, **kwargs: object):
+        return real_authority(root, **kwargs, _stage_hook=stage)
+
+    monkeypatch.setattr(installation, "SecureAuthorityIO", authority)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="descriptor secure read rejected",
+    ):
+        discover_installed_bridge(install_root)
+
+    assert swapped is True
+    assert descriptor.read_bytes() == original_bytes
+    assert descriptor.stat(follow_symlinks=False).st_ino != original_identity
+
+
+def test_discovery_rejects_hardlinked_descriptor_without_mutating_pair(
+    tmp_path: Path,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    discovery = provision_installed_bridge(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+    )
+    descriptor = discovery.layout.root / "bridge-instance.json"
+    owner = discovery.layout.owner_manifest
+    descriptor_before = descriptor.read_bytes()
+    owner_before = owner.read_bytes()
+    alias = tmp_path / "descriptor-alias.json"
+    try:
+        os.link(descriptor, alias)
+    except OSError as exc:
+        pytest.skip(f"hardlink creation unavailable: {exc}")
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="descriptor secure read rejected",
+    ):
+        discover_installed_bridge(install_root)
+
+    assert descriptor.read_bytes() == descriptor_before
+    assert owner.read_bytes() == owner_before
+    assert descriptor.stat(follow_symlinks=False).st_nlink == 2
+
+
+def test_discovery_is_read_only_and_keeps_disabled_audit_projection(
+    tmp_path: Path,
+) -> None:
+    install_root = tmp_path / "installed"
+    install_root.mkdir()
+    provisioned = provision_installed_bridge(
+        install_root,
+        installer_manifest_sha256=MANIFEST_SHA,
+    )
+    descriptor = provisioned.layout.root / "bridge-instance.json"
+    owner = provisioned.layout.owner_manifest
+    before = {
+        path: (path.read_bytes(), path.stat(follow_symlinks=False).st_ino)
+        for path in (descriptor, owner)
+    }
+
+    discovered = discover_installed_bridge(install_root)
+
+    assert discovered == provisioned
+    assert discovered.public_receipt()["connector_enabled"] is False
+    assert discovered.public_receipt()["activation_authorized"] is False
+    assert {
+        path: (path.read_bytes(), path.stat(follow_symlinks=False).st_ino)
+        for path in (descriptor, owner)
+    } == before
+
+
 def test_packaged_private_installer_command_bypasses_desktop_probe(tmp_path: Path) -> None:
     from ai_video_production.task036_packaged_entry import packaged_main
 

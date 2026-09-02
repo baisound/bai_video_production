@@ -6,6 +6,7 @@ installer-selected application root is the only coordinate accepted here.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -25,6 +26,7 @@ from .montage_learning_file_bridge import (
     load_bridge_owner,
     provision_bridge,
 )
+from .secure_authority_io import SecureAuthorityIO, SecureAuthorityIOError
 from .serialization import canonical_json_bytes, sha256_json
 
 
@@ -717,21 +719,22 @@ def _call_receipt_failure(
 
 
 def _read_descriptor(path: Path) -> BridgeInstanceDescriptor:
-    if path.is_symlink():
-        raise MontageLearningInstallationError("descriptor must not be a symlink")
     try:
-        metadata = path.stat(follow_symlinks=False)
-    except OSError as exc:
-        raise MontageLearningInstallationError("descriptor is unavailable") from exc
-    reparse = getattr(metadata, "st_file_attributes", 0) & 0x400
-    if not stat.S_ISREG(metadata.st_mode) or reparse:
-        raise MontageLearningInstallationError("descriptor must be a regular file")
-    if not 1 <= metadata.st_size <= _MAX_DESCRIPTOR_BYTES:
-        raise MontageLearningInstallationError("descriptor size is invalid")
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
-        raise MontageLearningInstallationError("descriptor JSON is invalid") from exc
+        snapshot = SecureAuthorityIO(
+            path.parent,
+            max_bytes=_MAX_DESCRIPTOR_BYTES,
+            max_json_depth=2,
+            max_json_nodes=32,
+        ).read_json(path.name)
+    except SecureAuthorityIOError:
+        raise MontageLearningInstallationError(
+            "descriptor secure read rejected"
+        ) from None
+    if not isinstance(snapshot.document, Mapping):
+        raise MontageLearningInstallationError(
+            "descriptor secure read rejected"
+        ) from None
+    value = dict(snapshot.document)
     _validate_descriptor_document(value)
     return BridgeInstanceDescriptor(
         install_instance_id=value["install_instance_id"],

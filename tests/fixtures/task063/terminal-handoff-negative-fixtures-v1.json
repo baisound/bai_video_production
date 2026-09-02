@@ -1,0 +1,147 @@
+{
+  "schema_version": "task063-terminal-handoff-negative-fixtures-v1",
+  "source_revision": "df99723ee6e94d657652641b1b2825bbaa8fffc6",
+  "fixture_only": true,
+  "authority_created": false,
+  "native_effect_executed": false,
+  "groups": [
+    {
+      "id": "I63-R01",
+      "target": "descriptor_owner_sealed_snapshot",
+      "cases": [
+        "descriptor_stat_open_swap",
+        "owner_stat_open_swap",
+        "descriptor_read_post_swap",
+        "owner_read_post_swap",
+        "descriptor_same_bytes_different_inode",
+        "owner_same_bytes_different_inode",
+        "descriptor_owner_mixed_generation",
+        "descriptor_nested_duplicate_equal",
+        "descriptor_nested_duplicate_different",
+        "owner_nested_duplicate_equal",
+        "owner_nested_duplicate_different",
+        "readback_nested_duplicate_equal",
+        "rollback_preimage_nested_duplicate_different",
+        "json_nan",
+        "json_infinity",
+        "json_negative_infinity",
+        "json_bom",
+        "json_trailing_data",
+        "json_control_character",
+        "json_depth_limit",
+        "json_size_limit"
+      ],
+      "expected": {
+        "discovery_receipt_count": 0,
+        "descriptor_mutation_count": 0,
+        "owner_mutation_count": 0,
+        "ambiguous_input_preserved": true,
+        "error_body_free": true
+      }
+    },
+    {
+      "id": "I63-L01",
+      "target": "secure_installer_operation_lock",
+      "cases": [
+        "initial_lock_race_loser",
+        "existing_lock_identity_swap",
+        "lock_symlink",
+        "lock_reparse",
+        "lock_hardlink",
+        "lock_dacl_drift",
+        "lock_ancestor_drift"
+      ],
+      "expected": {
+        "pair_effect_count": 0,
+        "automatic_retry_count": 0,
+        "unrelated_mutation_count": 0,
+        "foreign_cleanup_count": 0
+      }
+    },
+    {
+      "id": "I63-P01",
+      "target": "provision_update_pair_publication",
+      "cases": [
+        "concurrent_first_provision",
+        "absent_descriptor_appears_identical",
+        "absent_descriptor_appears_different",
+        "existing_descriptor_inode_swap_before_publish",
+        "existing_descriptor_bytes_swap_before_publish",
+        "owner_generation_swap_before_publish",
+        "descriptor_swap_after_publish_before_readback",
+        "owner_swap_after_publish_before_readback",
+        "directory_fsync_failure"
+      ],
+      "expected": {
+        "pair_generation_count": "0_or_1",
+        "installation_readback_count": 0,
+        "foreign_overwrite_count": 0,
+        "foreign_delete_count": 0,
+        "directory_durability_unknown_is_pass": false
+      }
+    },
+    {
+      "id": "I63-B01",
+      "target": "installer_readback_publication",
+      "cases": [
+        "operation_temp_close_then_foreign_swap",
+        "readback_target_appears_identical",
+        "readback_target_appears_different",
+        "existing_readback_swap_before_publish",
+        "readback_swap_after_publish",
+        "readback_directory_fsync_failure",
+        "readback_exact_bytes_mismatch"
+      ],
+      "expected": {
+        "installer_readback_count": "0_or_1",
+        "foreign_overwrite_count": 0,
+        "foreign_delete_count": 0,
+        "absolute_path_leak_count": 0,
+        "os_detail_leak_count": 0
+      }
+    },
+    {
+      "id": "I63-RB01",
+      "target": "rollback_and_recovery",
+      "cases": [
+        "fresh_rollback_foreign_descriptor_replacement",
+        "fresh_rollback_foreign_readback_replacement",
+        "update_rollback_foreign_descriptor_replacement",
+        "update_rollback_foreign_readback_replacement",
+        "ambiguous_descriptor_preimage",
+        "ambiguous_readback_preimage",
+        "one_sided_descriptor_only_state",
+        "one_sided_owner_only_state",
+        "unknown_terminal_state"
+      ],
+      "expected": {
+        "path_only_restore_count": 0,
+        "path_only_delete_count": 0,
+        "foreign_cleanup_count": 0,
+        "unknown_state_preserved": true,
+        "automatic_repair_count": 0
+      }
+    },
+    {
+      "id": "I63-LC01",
+      "target": "installation_lifecycle",
+      "cases": [
+        "verify_repair_preserves_exact_instance",
+        "upgrade_preserves_exact_pair_and_advances_revision_once",
+        "portable_rebind_requires_bound_predecessor",
+        "portable_rebind_rejects_nonempty_destination",
+        "multiple_install_same_raw_instance_ambiguity",
+        "multiple_install_mixed_pair_ambiguity",
+        "uninstall_manifest_excludes_bridge_data",
+        "fixed_programdata_fallback_absent"
+      ],
+      "expected": {
+        "install_instance_count": 1,
+        "automatic_old_data_delete_count": 0,
+        "learning_data_preserved": true,
+        "fixed_programdata_fallback_count": 0,
+        "cross_instance_adoption_count": 0
+      }
+    }
+  ]
+}

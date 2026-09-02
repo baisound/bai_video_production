@@ -67,6 +67,27 @@ def _fixture_root_plan(tmp_path: Path):
     return selected_root, plan
 
 
+def _lifecycle_root_plan(
+    tmp_path: Path,
+    action_name: str,
+    security_sha256: str,
+):
+    selected_root = tmp_path / f"selected-{security_sha256[-8:]}"
+    selected_root.mkdir(exist_ok=True)
+    existing = (
+        ()
+        if action_name in {"FIRST_PROVISION", "PORTABLE_REBIND"}
+        else installation._DIRECTORY_RELATIVE_PATHS
+    )
+    return installation._fixture_only_build_selected_root_plan(
+        action=installation._InstallationAction[action_name],
+        selected_root=selected_root,
+        predecessor_bound=action_name != "FIRST_PROVISION",
+        existing_relative_directories=existing,
+        selected_root_security_sha256=security_sha256,
+    )
+
+
 def _issue_pair_fixture(
     plan: object,
     descriptor: dict[str, object],
@@ -658,6 +679,273 @@ def test_installed_readback_concurrent_double_call_has_one_success(
 
     assert all(not thread.is_alive() for thread in threads)
     assert sorted(results) == ["SUCCESS", "TASK063_INSTALLED_READBACK_REUSED"]
+
+
+def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effect(
+    tmp_path: Path,
+) -> None:
+    instance_id = "bvp-install-" + "1" * 32
+    root_one = _commitment("root-one")
+    root_two = _commitment("root-two")
+    pair_one = _commitment("pair-one")
+    package_one = _commitment("package-one")
+    payload_one = _commitment("payload-one")
+    product_one = _commitment("product-one")
+    installer_one = _commitment("installer-one")
+
+    first = installation._fixture_only_plan_lifecycle_transition(
+        root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_one),
+        current=None,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=pair_one,
+        expected_pair_terminal_sha256=_commitment("terminal-one"),
+        package_manifest_sha256=package_one,
+        payload_tree_sha256=payload_one,
+        product_build_sha256=product_one,
+        installer_build_sha256=installer_one,
+    )
+    repaired = installation._fixture_only_plan_lifecycle_transition(
+        root_plan=_lifecycle_root_plan(tmp_path, "VERIFY_REPAIR", root_one),
+        current=first,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=pair_one,
+        expected_pair_terminal_sha256=first.pair_terminal_sha256,
+        package_manifest_sha256=package_one,
+        payload_tree_sha256=payload_one,
+        product_build_sha256=product_one,
+        installer_build_sha256=installer_one,
+    )
+    revised = installation._fixture_only_plan_lifecycle_transition(
+        root_plan=_lifecycle_root_plan(
+            tmp_path,
+            "PUBLISH_INSTALL_REVISION",
+            root_one,
+        ),
+        current=repaired,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=pair_one,
+        expected_pair_terminal_sha256=_commitment("terminal-two"),
+        package_manifest_sha256=_commitment("package-two"),
+        payload_tree_sha256=_commitment("payload-two"),
+        product_build_sha256=_commitment("product-two"),
+        installer_build_sha256=_commitment("installer-two"),
+    )
+    adopted = installation._fixture_only_plan_lifecycle_transition(
+        root_plan=_lifecycle_root_plan(tmp_path, "ADOPT_EXISTING", root_one),
+        current=revised,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=pair_one,
+        expected_pair_terminal_sha256=_commitment("terminal-three"),
+        package_manifest_sha256=revised.package_manifest_sha256,
+        payload_tree_sha256=revised.payload_tree_sha256,
+        product_build_sha256=revised.product_build_sha256,
+        installer_build_sha256=revised.installer_build_sha256,
+    )
+    rebound = installation._fixture_only_plan_lifecycle_transition(
+        root_plan=_lifecycle_root_plan(tmp_path, "PORTABLE_REBIND", root_two),
+        current=adopted,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=_commitment("pair-two"),
+        expected_pair_terminal_sha256=_commitment("terminal-four"),
+        package_manifest_sha256=adopted.package_manifest_sha256,
+        payload_tree_sha256=adopted.payload_tree_sha256,
+        product_build_sha256=adopted.product_build_sha256,
+        installer_build_sha256=adopted.installer_build_sha256,
+    )
+
+    assert first.installation_revision == 1
+    assert repaired.installation_revision == 1
+    assert repaired.pair_generation_sha256 == first.pair_generation_sha256
+    assert revised.installation_revision == 2
+    assert revised.pair_generation_sha256 == first.pair_generation_sha256
+    assert adopted.installation_revision == 2
+    assert adopted.install_instance_id == instance_id
+    assert rebound.installation_revision == 2
+    assert rebound.install_instance_id == instance_id
+    assert rebound.pair_generation_sha256 != adopted.pair_generation_sha256
+    assert rebound.selected_root_security_sha256 == root_two
+    assert all(list(path.iterdir()) == [] for path in tmp_path.iterdir())
+
+    projection = rebound.public_projection()
+    assert projection["authority_created"] is False
+    assert projection["preserve_learning_data"] is True
+    assert instance_id not in json.dumps(projection)
+    assert not {
+        "_InstallationLifecycleStateFixture",
+        "_fixture_only_plan_lifecycle_transition",
+        "_fixture_only_uninstall_preservation_projection",
+    }.intersection(installation.__all__)
+    with pytest.raises(TypeError, match="NONCOPYABLE"):
+        copy.copy(rebound)
+    with pytest.raises(TypeError, match="NONSERIALIZABLE"):
+        pickle.dumps(rebound)
+
+
+@pytest.mark.parametrize(
+    ("action_name", "changes"),
+    [
+        ("VERIFY_REPAIR", {"expected_install_instance_id": "bvp-install-" + "2" * 32}),
+        ("VERIFY_REPAIR", {"expected_pair_generation_sha256": _commitment("wrong-pair")}),
+        ("VERIFY_REPAIR", {"package_manifest_sha256": _commitment("changed-package")}),
+        ("ADOPT_EXISTING", {"expected_pair_terminal_sha256": _commitment("terminal-one")}),
+        ("ADOPT_EXISTING", {"payload_tree_sha256": _commitment("changed-payload")}),
+        ("PUBLISH_INSTALL_REVISION", {"expected_pair_terminal_sha256": _commitment("terminal-one")}),
+    ],
+)
+def test_lifecycle_rejects_cross_instance_stale_pair_or_invalid_successor(
+    tmp_path: Path,
+    action_name: str,
+    changes: dict[str, object],
+) -> None:
+    instance_id = "bvp-install-" + "1" * 32
+    root_security = _commitment("root")
+    pair_generation = _commitment("pair")
+    current = installation._fixture_only_plan_lifecycle_transition(
+        root_plan=_lifecycle_root_plan(
+            tmp_path,
+            "FIRST_PROVISION",
+            root_security,
+        ),
+        current=None,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=pair_generation,
+        expected_pair_terminal_sha256=_commitment("terminal-one"),
+        package_manifest_sha256=_commitment("package"),
+        payload_tree_sha256=_commitment("payload"),
+        product_build_sha256=_commitment("product"),
+        installer_build_sha256=_commitment("installer"),
+    )
+    values: dict[str, object] = {
+        "root_plan": _lifecycle_root_plan(tmp_path, action_name, root_security),
+        "current": current,
+        "expected_install_instance_id": instance_id,
+        "expected_pair_generation_sha256": pair_generation,
+        "expected_pair_terminal_sha256": _commitment("terminal-two"),
+        "package_manifest_sha256": current.package_manifest_sha256,
+        "payload_tree_sha256": current.payload_tree_sha256,
+        "product_build_sha256": current.product_build_sha256,
+        "installer_build_sha256": current.installer_build_sha256,
+    }
+    if action_name == "PUBLISH_INSTALL_REVISION":
+        values["package_manifest_sha256"] = _commitment("package-two")
+    values.update(changes)
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_LIFECYCLE_REJECTED$",
+    ):
+        installation._fixture_only_plan_lifecycle_transition(**values)
+
+    assert all(list(path.iterdir()) == [] for path in tmp_path.iterdir())
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"selected_root": "same"},
+        {"expected_pair_generation_sha256": _commitment("pair-one")},
+        {"package_manifest_sha256": _commitment("changed-package")},
+    ],
+)
+def test_lifecycle_portable_rebind_rejects_same_root_pair_or_changed_package(
+    tmp_path: Path,
+    changes: dict[str, object],
+) -> None:
+    instance_id = "bvp-install-" + "1" * 32
+    root_one = _commitment("root-one")
+    root_two = _commitment("root-two")
+    current = installation._fixture_only_plan_lifecycle_transition(
+        root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_one),
+        current=None,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=_commitment("pair-one"),
+        expected_pair_terminal_sha256=_commitment("terminal-one"),
+        package_manifest_sha256=_commitment("package"),
+        payload_tree_sha256=_commitment("payload"),
+        product_build_sha256=_commitment("product"),
+        installer_build_sha256=_commitment("installer"),
+    )
+    target_root = root_one if changes.pop("selected_root", None) else root_two
+    values: dict[str, object] = {
+        "root_plan": _lifecycle_root_plan(
+            tmp_path,
+            "PORTABLE_REBIND",
+            target_root,
+        ),
+        "current": current,
+        "expected_install_instance_id": instance_id,
+        "expected_pair_generation_sha256": _commitment("pair-two"),
+        "expected_pair_terminal_sha256": _commitment("terminal-two"),
+        "package_manifest_sha256": current.package_manifest_sha256,
+        "payload_tree_sha256": current.payload_tree_sha256,
+        "product_build_sha256": current.product_build_sha256,
+        "installer_build_sha256": current.installer_build_sha256,
+    }
+    values.update(changes)
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_LIFECYCLE_REJECTED$",
+    ):
+        installation._fixture_only_plan_lifecycle_transition(**values)
+
+
+def test_lifecycle_first_provision_rejects_existing_state_without_effect(
+    tmp_path: Path,
+) -> None:
+    instance_id = "bvp-install-" + "1" * 32
+    root_security = _commitment("root")
+    first_plan = _lifecycle_root_plan(
+        tmp_path,
+        "FIRST_PROVISION",
+        root_security,
+    )
+    current = installation._fixture_only_plan_lifecycle_transition(
+        root_plan=first_plan,
+        current=None,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=_commitment("pair"),
+        expected_pair_terminal_sha256=_commitment("terminal"),
+        package_manifest_sha256=_commitment("package"),
+        payload_tree_sha256=_commitment("payload"),
+        product_build_sha256=_commitment("product"),
+        installer_build_sha256=_commitment("installer"),
+    )
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_LIFECYCLE_REJECTED$",
+    ):
+        installation._fixture_only_plan_lifecycle_transition(
+            root_plan=first_plan,
+            current=current,
+            expected_install_instance_id=instance_id,
+            expected_pair_generation_sha256=_commitment("other-pair"),
+            expected_pair_terminal_sha256=_commitment("other-terminal"),
+            package_manifest_sha256=current.package_manifest_sha256,
+            payload_tree_sha256=current.payload_tree_sha256,
+            product_build_sha256=current.product_build_sha256,
+            installer_build_sha256=current.installer_build_sha256,
+        )
+
+    assert all(list(path.iterdir()) == [] for path in tmp_path.iterdir())
+
+
+def test_uninstall_projection_preserves_bridge_learning_and_history() -> None:
+    projection = installation._fixture_only_uninstall_preservation_projection()
+
+    assert projection == {
+        "schema_version": "TASK063_UNINSTALL_PRESERVATION_FIXTURE_V1",
+        "action": "UNINSTALL_PRESERVE",
+        "bridge_data_preserved": True,
+        "pair_history_preserved": True,
+        "learning_data_preserved": True,
+        "automatic_old_data_delete_count": 0,
+        "fixed_programdata_fallback_count": 0,
+        "fixture_only": True,
+        "authority_created": False,
+        "native_effect_executed": False,
+    }
 
 
 def test_custom_unicode_install_root_provisions_exact_relative_tree(tmp_path: Path) -> None:

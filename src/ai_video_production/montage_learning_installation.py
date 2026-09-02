@@ -52,6 +52,7 @@ _PAIR_READBACK_REJECTED = "TASK063_PAIR_READBACK_REJECTED"
 _PAIR_READBACK_REUSED = "TASK063_PAIR_READBACK_REUSED"
 _INSTALLED_READBACK_REJECTED = "TASK063_INSTALLED_READBACK_REJECTED"
 _INSTALLED_READBACK_REUSED = "TASK063_INSTALLED_READBACK_REUSED"
+_LIFECYCLE_REJECTED = "TASK063_LIFECYCLE_REJECTED"
 _OPAQUE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$")
 _DIRECTORY_RELATIVE_PATHS = (
     "data",
@@ -242,6 +243,57 @@ class _InstallationReadbackFixture:
 
     def __reduce_ex__(self, protocol: int):
         raise TypeError("TASK063_INSTALLED_READBACK_FIXTURE_NONSERIALIZABLE")
+
+
+@dataclass(frozen=True, repr=False, slots=True)
+class _InstallationLifecycleStateFixture:
+    action: _InstallationAction
+    install_instance_id: str
+    pair_generation_sha256: str
+    pair_terminal_sha256: str
+    installation_revision: int
+    selected_root_security_sha256: str
+    package_manifest_sha256: str
+    payload_tree_sha256: str
+    product_build_sha256: str
+    installer_build_sha256: str
+    fixture_only: bool = True
+    authority_created: bool = False
+    native_effect_executed: bool = False
+
+    def public_projection(self) -> dict[str, object]:
+        return {
+            "schema_version": "TASK063_LIFECYCLE_FIXTURE_V1",
+            "action": self.action.value,
+            "install_instance_commitment_sha256": sha256_json(
+                {"install_instance_id": self.install_instance_id}
+            ),
+            "pair_generation_sha256": self.pair_generation_sha256,
+            "pair_terminal_sha256": self.pair_terminal_sha256,
+            "installation_revision": self.installation_revision,
+            "package_manifest_sha256": self.package_manifest_sha256,
+            "payload_tree_sha256": self.payload_tree_sha256,
+            "product_build_sha256": self.product_build_sha256,
+            "installer_build_sha256": self.installer_build_sha256,
+            "connector_enabled": False,
+            "activation_authorized": False,
+            "preserve_learning_data": True,
+            "fixture_only": True,
+            "authority_created": False,
+            "native_effect_executed": False,
+        }
+
+    def __repr__(self) -> str:
+        return "<_InstallationLifecycleStateFixture redacted>"
+
+    def __copy__(self):
+        raise TypeError("TASK063_LIFECYCLE_FIXTURE_NONCOPYABLE")
+
+    def __deepcopy__(self, memo: object):
+        raise TypeError("TASK063_LIFECYCLE_FIXTURE_NONCOPYABLE")
+
+    def __reduce_ex__(self, protocol: int):
+        raise TypeError("TASK063_LIFECYCLE_FIXTURE_NONSERIALIZABLE")
 
 
 _PAIR_FIXTURE_REGISTRY_LOCK = threading.Lock()
@@ -602,6 +654,162 @@ def _fixture_only_consume_installed_readback(
         _reject_installed_readback()
 
 
+def _fixture_only_plan_lifecycle_transition(
+    *,
+    root_plan: _SelectedInstallRootPlanFixture,
+    current: _InstallationLifecycleStateFixture | None,
+    expected_install_instance_id: str,
+    expected_pair_generation_sha256: str,
+    expected_pair_terminal_sha256: str,
+    package_manifest_sha256: str,
+    payload_tree_sha256: str,
+    product_build_sha256: str,
+    installer_build_sha256: str,
+) -> _InstallationLifecycleStateFixture:
+    """Model one effect-free lifecycle transition for negative verification."""
+
+    try:
+        if (
+            type(root_plan) is not _SelectedInstallRootPlanFixture
+            or root_plan.authority_created
+            or not root_plan.fixture_only
+            or type(expected_install_instance_id) is not str
+            or _INSTANCE_RE.fullmatch(expected_install_instance_id) is None
+        ):
+            _reject_lifecycle()
+        for value in (
+            expected_pair_generation_sha256,
+            expected_pair_terminal_sha256,
+            package_manifest_sha256,
+            payload_tree_sha256,
+            product_build_sha256,
+            installer_build_sha256,
+        ):
+            _require_sha(value, "lifecycle commitment")
+
+        action = root_plan.action
+        if action is _InstallationAction.FIRST_PROVISION:
+            if current is not None:
+                _reject_lifecycle()
+            revision = 1
+        else:
+            if (
+                type(current) is not _InstallationLifecycleStateFixture
+                or current.authority_created
+                or not current.fixture_only
+                or current.install_instance_id != expected_install_instance_id
+            ):
+                _reject_lifecycle()
+
+            if action is _InstallationAction.PORTABLE_REBIND:
+                if (
+                    root_plan.selected_root_security_sha256
+                    == current.selected_root_security_sha256
+                    or expected_pair_generation_sha256
+                    == current.pair_generation_sha256
+                    or expected_pair_terminal_sha256
+                    == current.pair_terminal_sha256
+                    or not _same_lifecycle_package(
+                        current,
+                        package_manifest_sha256=package_manifest_sha256,
+                        payload_tree_sha256=payload_tree_sha256,
+                        product_build_sha256=product_build_sha256,
+                        installer_build_sha256=installer_build_sha256,
+                    )
+                ):
+                    _reject_lifecycle()
+                revision = current.installation_revision
+            else:
+                if (
+                    root_plan.selected_root_security_sha256
+                    != current.selected_root_security_sha256
+                    or expected_pair_generation_sha256
+                    != current.pair_generation_sha256
+                ):
+                    _reject_lifecycle()
+                same_package = _same_lifecycle_package(
+                    current,
+                    package_manifest_sha256=package_manifest_sha256,
+                    payload_tree_sha256=payload_tree_sha256,
+                    product_build_sha256=product_build_sha256,
+                    installer_build_sha256=installer_build_sha256,
+                )
+                if action is _InstallationAction.VERIFY_REPAIR:
+                    if (
+                        not same_package
+                        or expected_pair_terminal_sha256
+                        != current.pair_terminal_sha256
+                    ):
+                        _reject_lifecycle()
+                    revision = current.installation_revision
+                elif action is _InstallationAction.ADOPT_EXISTING:
+                    if (
+                        not same_package
+                        or expected_pair_terminal_sha256
+                        == current.pair_terminal_sha256
+                    ):
+                        _reject_lifecycle()
+                    revision = current.installation_revision
+                elif action is _InstallationAction.PUBLISH_INSTALL_REVISION:
+                    if (
+                        same_package
+                        or expected_pair_terminal_sha256
+                        == current.pair_terminal_sha256
+                    ):
+                        _reject_lifecycle()
+                    revision = current.installation_revision + 1
+                else:
+                    _reject_lifecycle()
+    except (MontageLearningInstallationError, TypeError, ValueError):
+        _reject_lifecycle()
+
+    return _InstallationLifecycleStateFixture(
+        action=root_plan.action,
+        install_instance_id=expected_install_instance_id,
+        pair_generation_sha256=expected_pair_generation_sha256,
+        pair_terminal_sha256=expected_pair_terminal_sha256,
+        installation_revision=revision,
+        selected_root_security_sha256=root_plan.selected_root_security_sha256,
+        package_manifest_sha256=package_manifest_sha256,
+        payload_tree_sha256=payload_tree_sha256,
+        product_build_sha256=product_build_sha256,
+        installer_build_sha256=installer_build_sha256,
+    )
+
+
+def _fixture_only_uninstall_preservation_projection() -> dict[str, object]:
+    """Return the static TASK-063 uninstall contract with no delete operation."""
+
+    return {
+        "schema_version": "TASK063_UNINSTALL_PRESERVATION_FIXTURE_V1",
+        "action": "UNINSTALL_PRESERVE",
+        "bridge_data_preserved": True,
+        "pair_history_preserved": True,
+        "learning_data_preserved": True,
+        "automatic_old_data_delete_count": 0,
+        "fixed_programdata_fallback_count": 0,
+        "fixture_only": True,
+        "authority_created": False,
+        "native_effect_executed": False,
+    }
+
+
+def _same_lifecycle_package(
+    current: _InstallationLifecycleStateFixture,
+    *,
+    package_manifest_sha256: str,
+    payload_tree_sha256: str,
+    product_build_sha256: str,
+    installer_build_sha256: str,
+) -> bool:
+    return (
+        current.package_manifest_sha256 == package_manifest_sha256
+        and current.payload_tree_sha256 == payload_tree_sha256
+        and current.product_build_sha256 == product_build_sha256
+        and current.installer_build_sha256 == installer_build_sha256
+    )
+
+
 def _take_pair_fixture(value: object) -> None:
     if type(value) is not _InstallationPairReadbackFixture:
         _reject_pair_readback()
@@ -683,6 +891,10 @@ def _reject_pair_readback() -> None:
 
 def _reject_installed_readback() -> None:
     raise MontageLearningInstallationError(_INSTALLED_READBACK_REJECTED) from None
+
+
+def _reject_lifecycle() -> None:
+    raise MontageLearningInstallationError(_LIFECYCLE_REJECTED) from None
 
 
 def provision_installed_bridge(

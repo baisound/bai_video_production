@@ -3,7 +3,7 @@
 ## Bind
 
 - Repository: `baisound/bai_video_production`
-- Worktree: `C:/Users/user/.codex/visualizations/2026/08/29/01a04d4b-8e43-7b23-9feb-c32019b11d43/task-068-secure-authority-io`
+- Worktree: `TASK-068 dedicated worktree (historical checkpoint label)`
 - Branch: `codex/task-068-secure-authority-io`
 - HEAD/base: `35cdf1ad475633dcf035e0616e979b5a8fde0c88`
 - Development depth: `DEV-4`

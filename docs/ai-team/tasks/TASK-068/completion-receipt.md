@@ -24,19 +24,31 @@ historical evidence only. Fresh exact-head closure is required before push or
 Draft PR. TASK-069 real binding remains stopped until TASK-068 is merged into
 canonical `main` and its dependency gate is rebound.
 
-## Current local result
+## Current H1/H2 execution state
 
-- Fresh bundled-Python syntax compilation: `3/3 PASS`.
-- WSL TASK-068 focused pytest: `163 PASS / 82 SKIP / 0 FAIL`.
-- Fresh WSL TASK-058/TASK-068 targeted regression: `242 PASS / 82 SKIP / 0 FAIL`.
-- Fresh Windows-native runtime: `NOT_CONFIRMED`; this host has neither the `py` launcher nor pytest in its bundled Python, and no install or repeated denied route was attempted. The historical identical-content Windows Builder run (`82 PASS`) remains evidence only and is not promoted to fresh/independent runtime.
-- Pre-H1/H2 successor evidence remains historical only: syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, TASK-058/TASK-068 regression `368 PASS / 6 SKIP`, and independent Critical/High `0/0`.
-- H1 generic and Windows negatives are present; runtime execution for the H1/H2 bytes is `NOT_CONFIRMED` because local Python and WSL are unavailable after restart, with no install or repeated denied route attempted.
+- Target source/test `293dd7143e6215ca9d19ecca9edff16dd4a08b15`: syntax,
+  focused, boundary, and Windows-native runtime execution are all
+  `NOT_CONFIRMED` on this restarted host. Local Python and WSL are unavailable;
+  no install or repeated denied route was attempted.
+- H1 generic and Windows negatives are present in the target source, but their
+  presence is not a runtime PASS.
 - `h1-h2-source-test-binding-2026-09-02.md` binds the three current artifacts to the fixed target without granting review, runtime, or Product authority.
 - Successor-r3 H1/H2 exact-head Critic/Judge rebind is pending; `COMMIT STOP` and `NO_PUSH` remain active until corrective review is complete.
 - `git diff --check`: PASS; line-ending conversion warnings only.
 
-The broader repository suite is not claimed as PASS for this corrective source.
+## Historical predecessor execution evidence (not current)
+
+- Pre-H1/H2 successor `71a8266acd7b7d3d7236fa8ace8e93cf9ccc7e8e`:
+  bundled syntax `3/3 PASS`, WSL focused `163 PASS / 82 SKIP / 0 FAIL`, and
+  WSL boundary regression `242 PASS / 82 SKIP / 0 FAIL`. These counts bind
+  that predecessor exact SHA only.
+- Pre-H1/H2 successor `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1`:
+  independent Tester recorded syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`,
+  TASK-058/TASK-068 regression `368 PASS / 6 SKIP`, and independent
+  Critical/High `0/0`. These results bind that predecessor exact SHA only.
+- Historical Windows Builder `82 PASS` and broader-suite observations are
+  predecessor evidence only. They do not create current runtime PASS, review
+  lift, canonical receipt, or downstream authority for the H1/H2 target.
 
 ## Authority created
 

@@ -9,8 +9,11 @@ The working diff contains only the four allocated TASK-068 file groups. It does 
 Successor-r3 was created without force from
 `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70` on branch
 `codex/task-068-secure-authority-io-successor-r3`.  Committed candidate
-`3bf28d74a02741b189663bda7194159c34d17f0b` has exactly the ten Allowed Files;
-current main has no Allowed-File drift and no open PR other than own #497
+`3bf28d74a02741b189663bda7194159c34d17f0b` has exactly the ten Allowed Files.
+The H1/H2 corrective source/test target is
+`293dd7143e6215ca9d19ecca9edff16dd4a08b15`; its three fresh raw SHA-256 and
+Git blob identities are bound in `h1-h2-source-test-binding-2026-09-02.md`.
+Current main has no Allowed-File drift and no open PR other than own #497
 touches those paths.
 
 The H1/H2 corrective diff adds only lexical Windows superscript device-alias

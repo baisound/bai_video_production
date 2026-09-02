@@ -40,6 +40,19 @@ path overlap.
   `pytest` available, but collection stopped before execution because its
   environment lacks `jsonschema`. No dependency install or retry was
   performed; Windows-native evidence remains `NOT_CONFIRMED`.
+
+## Windows runner audit
+
+- TASK-077 is a Scene Structure Gate design task and owns no repository-local
+  test runner or venv. The repository-local `.venv` described by the
+  historical TASK-053 diagnostic is absent.
+- The retained TASK-053 isolated Python has `jsonschema` but no `pytest`; the
+  preinstalled host Python has `pytest` but no `jsonschema`. No existing local
+  interpreter can therefore collect this suite without an unapproved install.
+- `.github/workflows/ci.yml` installs `.[dev]` and executes the Windows full
+  non-installer suite with only `test_task047_obs_installer_contract.py`
+  ignored. It therefore includes `test_task068_secure_authority_io_windows.py`.
+  No test-invocation correction is needed or made.
 - H1 corrective Git blobs (source, generic test, Windows test):
   `770099f2cca4c0cafca8bf03159a2e7c5ed4567e`,
   `32e648eb3b2fd57fccf3451f5d3d39e5591dacfa`, and

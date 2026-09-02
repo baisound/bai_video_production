@@ -6,21 +6,18 @@ The working diff contains only the four allocated TASK-068 file groups. It does 
 
 ## Independent review status
 
-Successor-r2 is prepared without force from
-`origin/main@0de3d2ef026c2d7e21ce75ff395e4df3254530e4` on branch
-`codex/task-068-secure-authority-io-successor-r2`.  The five successor-r1
-commits through `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1` were applied with no
-commit, producing only the exact ten Allowed Files.  Current main has no
-Allowed-File drift, and no other open PR touches those paths.
+Successor-r3 was created without force from
+`origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70` on branch
+`codex/task-068-secure-authority-io-successor-r3`.  Committed candidate
+`3bf28d74a02741b189663bda7194159c34d17f0b` has exactly the ten Allowed Files;
+current main has no Allowed-File drift and no open PR other than own #497
+touches those paths.
 
-The source and tests are byte-identical to successor-r1.  Its independent
-Tester recorded syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, and related
-TASK-058 regression `368 PASS / 6 SKIP`; independent Critic and Judge closed
-Critical/High at `0/0`.  PR #497 CI also passed Ubuntu and Windows on Python
-3.11-3.13 plus dependency and secret checks.  Those results are content
-evidence, not an r2 exact-head lift.  Local Python/WSL execution after restart
-is `NOT_CONFIRMED`; the r2 candidate remains uncommitted under `COMMIT STOP`
-until final provenance and exact-head review close.
+The H1/H2 corrective diff adds only lexical Windows superscript device-alias
+rejection, generic/Windows body-free effect-zero negatives, and current r3
+provenance.  Earlier Tester/Critic/Judge and PR #497 CI are historical
+evidence only.  The new exact head requires fresh review; local Python/WSL
+runtime execution is `NOT_CONFIRMED`, so `COMMIT STOP` and `NO_PUSH` remain.
 
 ## Findings addressed in the transition diff
 
@@ -75,6 +72,7 @@ until final provenance and exact-head review close.
 49. **Medium — suppressed private exception context:** `raise ... from None` inside an active handler hid private helper/path text from display but retained it in `__context__`. Path-like rejection and post-native classification now leave the handler before constructing/raising the public result; POSIX and Windows negatives require both `__cause__` and `__context__` to be `None`.
 50. **High — incomplete global body-free boundary:** parser, consumer-verifier, and representative OS failures could still retain private bodies, tokens, or filenames through suppressed `__context__`. Every exported authority operation and lock lifecycle now crosses one detached-error adapter that reconstructs only the stable code and completion flag after the private handler ends. Generic error assertions and explicit POSIX/Windows malformed-JSON, plan/receipt/graph verifier, and OS-filename negatives require cause/context `None`.
 51. **High — caller-ambient exception chaining:** constructing the fresh public error outside the adapter's own catch was insufficient when the caller was already handling an exception, including lock cleanup during `with`-body unwinding. The adapter now catches its actually raised fresh instance, clears cause/context, and bare-reraises that same instance. POSIX and Windows negatives cover a public read inside a private caller `except` and a private lock-body exception combined with injected cleanup failure.
+52. **High — Windows superscript device aliases:** lexical validation now translates only `¹`/`²`/`³` to device digits before reserved-name comparison, rejecting `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` with case and extension variants before filesystem access. Generic and Windows negatives require `RELATIVE_PATH_REJECTED`, body-free errors, authority/currentness false, and unchanged unrelated inventory.
 
 ## Residual assessment
 

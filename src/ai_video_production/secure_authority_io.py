@@ -40,6 +40,7 @@ _WINDOWS_RESERVED_NAMES = frozenset(
     | {f"COM{index}" for index in range(1, 10)}
     | {f"LPT{index}" for index in range(1, 10)}
 )
+_WINDOWS_SUPERSCRIPT_DEVICE_DIGITS = str.maketrans({"¹": "1", "²": "2", "³": "3"})
 
 
 class SecureAuthorityIOError(RuntimeError):
@@ -715,7 +716,13 @@ def _relative_parts(value: str | os.PathLike[str]) -> tuple[str, ...]:
         or any(any(ord(character) < 32 for character in part) for part in parts)
         or any((os.altsep and os.altsep in part) for part in parts)
         or any(":" in part or part.endswith((".", " ")) for part in parts)
-        or any(part.split(".", 1)[0].upper() in _WINDOWS_RESERVED_NAMES for part in parts)
+        or any(
+            part.split(".", 1)[0]
+            .upper()
+            .translate(_WINDOWS_SUPERSCRIPT_DEVICE_DIGITS)
+            in _WINDOWS_RESERVED_NAMES
+            for part in parts
+        )
     ):
         raise _fail("RELATIVE_PATH_REJECTED")
     return parts

@@ -30,21 +30,35 @@ Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / N
 - Native no-replace ambiguity: a helper or asynchronous exception after the native namespace effect is freshly classified from the live source handle and final name. Only an exact native collision with a foreign destination is confirmed no-effect; owned or ambiguous state is body-free completion-unknown.
 - Coordinate and input bounds: trusted immutable filenames use the same bounded ASCII predicate as graph scans; receipt body count and physical identity integers are bounded before fingerprint encoding; custom `PathLike` and post-native helper exceptions normalize outside the active exception handler so public errors retain neither private cause nor private context.
 
-## Executed evidence
+## Current H1/H2 execution state
 
-- Fresh bundled-Python syntax compilation: `3/3 PASS`.
-- WSL TASK-068 focused suite: `163 passed / 82 skipped / 0 failed`.
-- Fresh WSL TASK-058/TASK-068 targeted boundary regression: `242 passed / 82 skipped / 0 failed`.
-- Fresh Windows-native runtime: `NOT_CONFIRMED`; neither `py` nor bundled-Python pytest is available and no install/retry was attempted. The historical identical-content Builder result is retained only as historical evidence.
-- `git diff --check`: PASS; line-ending conversion warnings only.
-- Full repository regression: `NOT_CONFIRMED` for this corrective source. Historical broader runs are not promoted to current PASS.
+- Fixed target `293dd7143e6215ca9d19ecca9edff16dd4a08b15`: syntax, focused,
+  boundary, and Windows-native runtime execution are `NOT_CONFIRMED`.
+  Neither local Python nor WSL is available after restart; no install or
+  repeated denied route was attempted.
+- `git diff --check` for the H1/H2 target transition: PASS; line-ending
+  conversion warnings only. This is static evidence, not a runtime PASS.
+- Full repository regression is `NOT_CONFIRMED` for the H1/H2 target.
 - Release/Deploy/Production/native/paid/external-account effects: 0.
+
+## Historical predecessor execution evidence (not current)
+
+- Exact predecessor `71a8266acd7b7d3d7236fa8ace8e93cf9ccc7e8e`: bundled syntax
+  `3/3 PASS`, WSL focused `163 PASS / 82 SKIP / 0 FAIL`, and WSL boundary
+  regression `242 PASS / 82 SKIP / 0 FAIL`.
+- Exact predecessor `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1`: independent
+  Tester syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, and TASK-058/TASK-068
+  regression `368 PASS / 6 SKIP`; Windows-native remained `NOT_CONFIRMED`.
+- Historical Windows Builder and broader-suite results are evidence for their
+  own predecessor bytes only and cannot be promoted to the H1/H2 target.
 
 ## Review state
 
-- Historical identical-content Tester/Critic/Judge results remain evidence only.
-- Pre-H1/H2 successor evidence remains historical only: syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, related TASK-058 regression `368 PASS / 6 SKIP`, and successor-r1 independent Critic/Judge Critical/High `0/0`.
-- H1 generic and Windows negative coverage is present in the corrective source. Runtime execution for the H1/H2 bytes is `NOT_CONFIRMED` on this restarted host because local Python and WSL are unavailable; no install or repeated denied route was attempted.
+- Historical predecessor Critic/Judge results remain evidence only; independent
+  Critical/High `0/0` binds predecessor `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1`,
+  not the H1/H2 target.
+- H1 generic and Windows negative coverage is present in the corrective source.
+  Runtime execution for the H1/H2 bytes remains `NOT_CONFIRMED`.
 - `h1-h2-source-test-binding-2026-09-02.md` binds the three current artifacts to the fixed target without granting review, runtime, or Product authority.
 - PR #497 CI is evidence for its earlier head only. The H1/H2 exact head needs fresh review; `COMMIT STOP` and `NO_PUSH` remain active.
 - TASK-069 source mutation remains `START0` until TASK-068 is canonical on `main` and the TASK-069 dependency/start gate passes.

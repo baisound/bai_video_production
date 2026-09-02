@@ -1,8 +1,13 @@
 # TASK-068 verification checkpoint
 
-Status: `CURRENT_MAIN_R5_H1_REWORK / EXACT_HEAD_REVIEW_PENDING / NO_PUSH`
+Status: `CURRENT_MAIN_R6_REBIND / DEV4_JUDGE_ACCEPTED_LOCAL_ONLY / NO_PUSH`
 
-## Current r5 binding
+## Historical r5 binding
+
+R5 evidence below is historical only. Current R6 replay head is
+`4e12ff64dceb0eb59e7c2e4c93f8b28eb26cc7c3` on
+`origin/main@df99723ee6e94d657652641b1b2825bbaa8fffc6`; its exact focused
+result is recorded in `current-main-r6-integration-packet.md`.
 
 - Remote canonical main observed read-only: `42d377242b19284007843d1d03bf1ed319010390`.
 - Branch: `codex/task-068-secure-authority-io-current-main-r5`.

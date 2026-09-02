@@ -1,6 +1,6 @@
 # TASK-068 — Secure Authority Artifact I/O Foundation
 
-Status: `CURRENT_MAIN_R5_H1_REWORK / DEV4_JUDGE_ACCEPTED_FOR_LOCAL_PACKET / NO_PUSH`
+Status: `CURRENT_MAIN_R6_REBIND / DEV4_JUDGE_ACCEPTED_LOCAL_ONLY / NO_PUSH`
 
 ## Responsibility
 
@@ -37,9 +37,9 @@ Owner-approved source implementation and focused verification are authorized. Re
 - Within the Product module/API boundary, writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context. Arbitrary hostile Python already executing in the same interpreter, with private-state mutation or monkeypatch authority, is outside this API boundary and requires process/native isolation.
 - Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
 - Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
-- Current canonical base: `origin/main@42d377242b19284007843d1d03bf1ed319010390`.
-- Branch: `codex/task-068-secure-authority-io-current-main-r5`; r3/r4 evidence is preserved historical evidence.
-- R5 retains lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, and it removes the callable writer-lease issuer surface. `current-main-r5-integration-packet.md` is the current binding; fresh independent review remains required and `NO_PUSH` remains active.
+- Current canonical base: `origin/main@df99723ee6e94d657652641b1b2825bbaa8fffc6`.
+- Branch: `codex/task-068-secure-authority-io-current-main-r6`; r3/r4/r5 evidence is preserved historical evidence.
+- R6 retains lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, and it removes the callable writer-lease issuer surface. `current-main-r6-integration-packet.md` is the current binding; fresh independent review remains required and `NO_PUSH` remains active.
 
 ## Dependencies and next task
 

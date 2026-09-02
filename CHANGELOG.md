@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-068: Product-local の secure authority artifact I/O foundation を追加し、pinned root/ancestor、strict JSON、exclusive lock、immutable no-replace publish、durable read-back、consumer-verified receipt/graph inspection を fail-closed で提供します。native real-data、Provider、Release/Deploy/Production Activation は開始しません。
+
 ・TASK-036 P0-E: パッケージド native QA の effect-zero 契約と公開安全な検証フィクスチャを追加しました。native 実行・Provider 実行・書き出し dispatch・Release/Deploy は開始しません。
 
 - TASK-074-Bとして、Owner Voice private referenceのWindows準備順序、失敗後readback、delivery loss／reconcileを、非native・non-biometric・effect-zeroのdeterministic trace fixtureで検証可能にしました。G01–G14、canonical producer binding、実DACL／暗号化／filesystem、実Owner音声、model load／inference／WAV、Product wiring、Release／Deploy／Productionは未確認・未実行のままです。

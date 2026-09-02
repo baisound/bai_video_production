@@ -14,46 +14,84 @@ from ai_video_production.montage_learning_installation import (
     INSTALLER_READBACK_FILENAME,
     MontageLearningInstallationError,
     discover_installed_bridge,
-    provision_and_write_installer_readback,
-    provision_installed_bridge,
-    write_installer_readback,
+    provision_and_write_installer_readback as public_provision_and_write,
+    provision_installed_bridge as public_provision,
+    write_installer_readback as public_write_readback,
 )
 
 
 MANIFEST_SHA = "sha256:" + "a" * 64
+provision_and_write_installer_readback = (
+    installation._legacy_test_only_provision_and_write_installer_readback
+)
+provision_installed_bridge = installation._legacy_test_only_provision_installed_bridge
+write_installer_readback = installation._legacy_test_only_write_installer_readback
 
 
-def test_installer_cli_provision_readback_is_one_bounded_operation(
+def test_installer_cli_mutation_fails_closed_without_private_composition(
     tmp_path: Path,
 ) -> None:
     install_root = tmp_path / "installed"
     install_root.mkdir()
+    sentinel = install_root / "preserve.txt"
+    sentinel.write_bytes(b"preserve")
 
-    assert installer_main(
-        [
-            "provision-readback",
-            "--install-root",
-            str(install_root),
-            "--installer-manifest-sha256",
-            MANIFEST_SHA,
-        ]
-    ) == 0
-    first = discover_installed_bridge(install_root)
-    target = first.layout.migration / INSTALLER_READBACK_FILENAME
-    assert json.loads(target.read_text(encoding="utf-8")) == first.public_receipt()
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PRIVATE_COMPOSITION_REQUIRED$",
+    ):
+        installer_main(
+            [
+                "provision-readback",
+                "--install-root",
+                str(install_root),
+                "--installer-manifest-sha256",
+                MANIFEST_SHA,
+            ]
+        )
 
-    assert installer_main(
-        [
-            "provision-readback",
-            "--install-root",
-            str(install_root),
-            "--installer-manifest-sha256",
-            "sha256:" + "b" * 64,
-        ]
-    ) == 0
-    second = discover_installed_bridge(install_root)
-    assert second.descriptor.descriptor_sha256 != first.descriptor.descriptor_sha256
-    assert json.loads(target.read_text(encoding="utf-8")) == second.public_receipt()
+    assert sentinel.read_bytes() == b"preserve"
+    assert sorted(path.name for path in install_root.iterdir()) == ["preserve.txt"]
+
+
+def test_public_mutation_surfaces_fail_before_arguments_hooks_or_filesystem(
+    tmp_path: Path,
+) -> None:
+    install_root = tmp_path / "selected"
+    hook_calls: list[tuple[str, Path]] = []
+
+    def hook(stage: str, path: Path) -> None:
+        hook_calls.append((stage, path))
+
+    calls = (
+        lambda: public_provision(
+            install_root,
+            installer_manifest_sha256="caller-controlled",
+            now="caller-controlled",
+        ),
+        lambda: public_provision_and_write(
+            install_root,
+            installer_manifest_sha256="caller-controlled",
+            now="caller-controlled",
+            failure_injector=hook,
+        ),
+        lambda: public_write_readback(object(), failure_injector=hook),
+    )
+    for call in calls:
+        with pytest.raises(
+            MontageLearningInstallationError,
+            match="^TASK063_PRIVATE_COMPOSITION_REQUIRED$",
+        ) as caught:
+            call()
+        assert str(install_root) not in str(caught.value)
+
+    assert hook_calls == []
+    assert not install_root.exists()
+    assert not {
+        "_legacy_test_only_provision_installed_bridge",
+        "_legacy_test_only_provision_and_write_installer_readback",
+        "_legacy_test_only_write_installer_readback",
+    }.intersection(installation.__all__)
 
 
 def test_custom_unicode_install_root_provisions_exact_relative_tree(tmp_path: Path) -> None:
@@ -286,7 +324,9 @@ def test_discovery_is_read_only_and_keeps_disabled_audit_projection(
     } == before
 
 
-def test_packaged_private_installer_command_bypasses_desktop_probe(tmp_path: Path) -> None:
+def test_packaged_installer_command_fails_closed_without_private_composition(
+    tmp_path: Path,
+) -> None:
     from ai_video_production.task036_packaged_entry import packaged_main
 
     install_root = tmp_path / "installed"
@@ -307,11 +347,11 @@ def test_packaged_private_installer_command_bypasses_desktop_probe(tmp_path: Pat
         ],
         probe=ProbeMustNotRun(),
     )
-    assert result == 0
-    assert discover_installed_bridge(install_root).layout.root.is_dir()
+    assert result == 3
+    assert list(install_root.iterdir()) == []
 
 
-def test_discover_command_writes_only_the_fixed_installer_readback(
+def test_packaged_discover_cannot_publish_legacy_readback(
     tmp_path: Path,
 ) -> None:
     from ai_video_production.task036_packaged_entry import packaged_main
@@ -333,9 +373,8 @@ def test_discover_command_writes_only_the_fixed_installer_readback(
         ]
     )
     target = discovery.layout.migration / INSTALLER_READBACK_FILENAME
-    assert result == 0
-    assert json.loads(target.read_text(encoding="utf-8")) == discovery.public_receipt()
-    assert target.read_bytes().endswith(b"\n")
+    assert result == 3
+    assert not target.exists()
 
     outside = tmp_path / "outside.json"
     rejected = packaged_main(

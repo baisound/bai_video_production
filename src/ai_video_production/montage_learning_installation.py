@@ -43,6 +43,7 @@ _MAX_INSTALLER_READBACK_BYTES = 64 * 1024
 _WINDOWS_REPARSE_POINT = 0x400
 
 ReceiptFailureInjector = Callable[[str, Path], None]
+_PRIVATE_COMPOSITION_REQUIRED = "TASK063_PRIVATE_COMPOSITION_REQUIRED"
 
 
 class MontageLearningInstallationError(ValueError):
@@ -101,7 +102,18 @@ def provision_installed_bridge(
     installer_manifest_sha256: str,
     now: str | None = None,
 ) -> InstalledBridgeDiscovery:
-    """Provision one bridge as an installer-owned, idempotent operation."""
+    """Fail closed until the private Product installation composition is bound."""
+
+    raise MontageLearningInstallationError(_PRIVATE_COMPOSITION_REQUIRED)
+
+
+def _legacy_test_only_provision_installed_bridge(
+    install_root: str | Path,
+    *,
+    installer_manifest_sha256: str,
+    now: str | None = None,
+) -> InstalledBridgeDiscovery:
+    """Exercise the historical fixture path; never a Product authority surface."""
 
     _require_sha(installer_manifest_sha256, "installer_manifest_sha256")
     layout = BridgeLayout.production(install_root)
@@ -171,19 +183,31 @@ def provision_and_write_installer_readback(
     now: str | None = None,
     failure_injector: ReceiptFailureInjector | None = None,
 ) -> tuple[InstalledBridgeDiscovery, Path]:
-    """Provision and publish while binding an update to its exact predecessor."""
+    """Fail closed until the private Product installation composition is bound."""
+
+    raise MontageLearningInstallationError(_PRIVATE_COMPOSITION_REQUIRED)
+
+
+def _legacy_test_only_provision_and_write_installer_readback(
+    install_root: str | Path,
+    *,
+    installer_manifest_sha256: str,
+    now: str | None = None,
+    failure_injector: ReceiptFailureInjector | None = None,
+) -> tuple[InstalledBridgeDiscovery, Path]:
+    """Exercise the historical fixture path; never a Product authority surface."""
 
     root = Path(install_root)
     layout = BridgeLayout.production(root)
     descriptor_path = layout.root / DESCRIPTOR_FILENAME
     if not (descriptor_path.exists() or descriptor_path.is_symlink()):
-        discovery = provision_installed_bridge(
+        discovery = _legacy_test_only_provision_installed_bridge(
             root,
             installer_manifest_sha256=installer_manifest_sha256,
             now=now,
         )
         try:
-            return discovery, write_installer_readback(
+            return discovery, _legacy_test_only_write_installer_readback(
                 discovery,
                 failure_injector=failure_injector,
             )
@@ -203,7 +227,7 @@ def provision_and_write_installer_readback(
                 previous,
                 allowed_descriptor_sha256={previous.descriptor.descriptor_sha256},
             )
-            discovery = provision_installed_bridge(
+            discovery = _legacy_test_only_provision_installed_bridge(
                 root,
                 installer_manifest_sha256=installer_manifest_sha256,
                 now=now,
@@ -296,7 +320,17 @@ def write_installer_readback(
     *,
     failure_injector: ReceiptFailureInjector | None = None,
 ) -> Path:
-    """Atomically publish the discovery receipt at its sole installer-owned path."""
+    """Fail closed until the private Product installation composition is bound."""
+
+    raise MontageLearningInstallationError(_PRIVATE_COMPOSITION_REQUIRED)
+
+
+def _legacy_test_only_write_installer_readback(
+    discovery: InstalledBridgeDiscovery,
+    *,
+    failure_injector: ReceiptFailureInjector | None = None,
+) -> Path:
+    """Exercise the historical fixture path; never a Product authority surface."""
 
     target, _ = _installer_readback_coordinates(discovery)
     try:

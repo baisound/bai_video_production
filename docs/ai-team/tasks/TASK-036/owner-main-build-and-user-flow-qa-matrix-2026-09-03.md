@@ -165,3 +165,116 @@ Acceptance for the repair:
 - Real Ollama process start/stop/probe: not performed.
 - Real Provider, real user data, install/download, and release effects: not performed.
 - Next independent action: hand off the two consolidated source gaps (central DbD model responsibility and Japanese operator copy), then rebuild the accepted repair head and execute the same matrix plus packaged-native observation.
+
+## Next packaged-native QA readiness package
+
+### Exact PR rebind
+
+- Draft PR: `#512`
+- Rebound PR head: `c0c429125cbc6c8fb1169be217f0667cd6d6d358`
+- Base: `d1c41e2f57600caef5668f19e5e6040c90601cc6`
+- PR state at read-back: `OPEN / DRAFT / MERGEABLE`
+- Hosted read-back at preparation time: Linux 3.11/3.12/3.13, Windows 3.12, metadata, dependency audit and secret scan passed; Windows 3.11/3.13 remained in progress.
+
+### Native gate decision
+
+`task063-l3-native-qa-runbook-2026-09-01.md` remains
+`NOT_AUTHORIZED / DO_NOT_EXECUTE`. Its required TASK-063 exact candidate,
+signed package/build manifest, trusted native helper identity and terminal
+handoff have not been supplied to this QA operation. The whole native launch
+effect therefore remains `PARKED`, while static/package preparation continues.
+
+The older `native-layout-spike-runbook.md` is a layout-only probe and cannot
+override this Product packaged-native gate or establish startup, persistence,
+single-instance, output, or renderer PASS.
+
+### Read-only build/native prerequisite observation
+
+- `C:` free bytes: `68,198,178,816`
+- `E:` free bytes: `1,214,783,565,824`
+- `ffmpeg.exe`: available on PATH
+- `ffprobe.exe`: available on PATH
+- `tesseract.exe`: available on PATH
+- `ollama.exe`: available on PATH
+- BAI Video Production process count: `0`
+- BAI DbD Training Studio process count: `0`
+- Ollama process count: `1` — pre-existing process, not started/stopped/probed by this unit
+- WebView2 registry lookup used by the manual inventory returned no entry.
+- Canonical read-only native probe with the exact build Python and current-source `PYTHONPATH`: `PASS`
+  - pywebview available: `true`
+  - WebView2 candidate: `C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.62`
+  - install path supported: `true`
+  - ready to launch layout spike: `true`
+  - renderer native validated: `false`
+  - dependency install performed: `false`
+
+The convenience script `run-task036-native-layout-spike.ps1` uses unqualified
+`python`. On this host it selected
+`E:\BAI_AI\runtimes\Python31314\python.exe` and failed with
+`ModuleNotFoundError: ai_video_production`. Re-running the module explicitly
+with the exact build Python succeeded. This is a runbook/tooling reproducibility
+gap; it must not be reported as a missing WebView2 dependency or Product-native
+failure.
+
+### Required process preflight when the gate clears
+
+Before launching either package:
+
+1. rebind source commit, package tree, main EXE and bundled-helper hashes to the accepted terminal handoff;
+2. confirm BAI Video Production and BAI DbD Training Studio process counts are both zero;
+3. record the pre-existing Ollama PID/count without starting or stopping it;
+4. allocate a new operation-owned synthetic QA root; do not select an existing Owner project or media directory;
+5. launch the main packaged EXE once and record Product PID, renderer, window title and startup state;
+6. attempt a second packaged launch and prove the named mutex rejects it with one visible Japanese message while the original process remains usable;
+7. prove the Product reuses the pre-existing Ollama process and never terminates it on Product close;
+8. after normal close, confirm Product/helper process count is zero and Ollama identity/count is unchanged.
+
+No PID absence/presence alone is a functional PASS. Window content, action
+result, durable read-back and next-screen transition require separate evidence.
+
+### F0–F10 operator sequence and evidence
+
+| Checkpoint | Owner-visible action | Required evidence |
+|---|---|---|
+| F0 | EXE起動 | exact EXE hash, process identity, renderer, one window, no layout-spike title |
+| F1 | 初回プロジェクト作成 | synthetic root selection, created directory/read-back, actionable failure state |
+| F2 | 右上「設定」→「AIモデル」 | populated rows or exact zero-candidate reasons; no blank panel |
+| F3 | 無料モデル選択・保存 | selection, saving, success only after canonical read-back; no Provider execution |
+| F4 | EXE終了・再起動 | same selected identity restored; no duplicate Product/Ollama process |
+| F5 | 企画 | saved planning model bound; unset warning only when missing; next scene action works |
+| F6 | シーン割→WORLD LOCK→Scene設計→Start/End | each screen has populated/empty-state next action and a working handler/result |
+| F7 | AI画像→AI動画→クイック生成 | central model read-only status, truthful runtime/queue state, no duplicate selectors |
+| F8 | 音声制作→素材確認→素材管理 | actual synthetic WAV identity when separately authorized, playable/read-back state, no invented model |
+| F9 | 編集→最終レビュー→書き出し | durable edit read-back and exactly one queued export; dispatch remains gated |
+| F10 | ゲーム解析→DbD学習スタジオ→実況・解説 | Japanese navigation, central model identity only, no in-screen selector/save, empty/loading/error/success states |
+
+Each checkpoint records expected/actual, `PASS`/`FAIL`/`NOT_CONFIRMED`,
+screenshot identity, clicked control, handler/receipt, persisted identity,
+restart result and next-screen transition. An empty screen, a disabled control
+without an actionable reason, or a visible shell without a working handler is
+`FAIL`, not `PASS`.
+
+### Remaining evidence gaps before native acceptance
+
+- exact trusted TASK-063 terminal handoff and pinned package/fixture identity;
+- packaged renderer/window screenshots at the accepted source head;
+- central AI model populated, zero-candidate, loading, save-success,
+  save-failure and restart-restored states;
+- native proof that every F0–F10 page is more than visual shell;
+- real synthetic WAV generation/playback/read-back under its separate gate;
+- export output bytes and media-property QA under the later dispatch gate;
+- DbD model responsibility repair and Japanese product wording repair;
+- packaged entry errors in `task036_packaged_entry.py` are still English
+  (`BAI Video Production could not start`, `Error code`, `Recovery`), which
+  does not meet the Owner-facing Japanese requirement.
+
+### Prepared focused regression command groups
+
+The next accepted source head can reuse the already-proven two groups:
+
+1. package/entry/first-run/central-settings/planning/final-review/P0E — 186 tests;
+2. WORLD LOCK/visual/Quick/narration/DbD model panel/Training Studio — 213 tests plus two Windows-inapplicable POSIX crash skips.
+
+Run with Python 3.12, `PYTHONDONTWRITEBYTECODE=1`, pytest cache disabled, and a
+pre-created operation-local `--basetemp` parent. If either group fails, rerun
+only the failing file with a short traceback before changing source.

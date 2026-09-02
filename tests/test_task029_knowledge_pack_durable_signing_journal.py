@@ -51,7 +51,16 @@ def kwargs(tmp_path: Path):
     }
 
 
-def _multiprocess_execute(queue: object, journal_path: str, arguments: dict[str, object]) -> None:
+def _multiprocess_execute(
+    queue: object,
+    ready_queue: object,
+    journal_path: str,
+    arguments: dict[str, object],
+    start_event: object,
+) -> None:
+    ready_queue.put("ready")
+    if not start_event.wait(10):
+        raise TimeoutError("multiprocess start synchronization timed out")
     try:
         receipt, _ = DurableSigningCeremonyJournal(journal_path).execute_once(**arguments)
         queue.put(("success", receipt.state.value))
@@ -432,8 +441,13 @@ def test_actual_multiprocess_same_path_serializes_one_success(tmp_path: Path) ->
     journal_path = str(tmp_path / "journal.json")
     context = mp.get_context("spawn")
     queue = context.Queue()
+    ready_queue = context.Queue()
+    start_event = context.Event()
     processes = [
-        context.Process(target=_multiprocess_execute, args=(queue, journal_path, arguments))
+        context.Process(
+            target=_multiprocess_execute,
+            args=(queue, ready_queue, journal_path, arguments, start_event),
+        )
         for _ in range(2)
     ]
     started: list[mp.Process] = []
@@ -441,6 +455,8 @@ def test_actual_multiprocess_same_path_serializes_one_success(tmp_path: Path) ->
         for process in processes:
             process.start()
             started.append(process)
+        assert sorted(ready_queue.get(timeout=10) for _ in started) == ["ready", "ready"]
+        start_event.set()
         for process in started:
             process.join(30)
         assert all(not process.is_alive() and process.exitcode == 0 for process in started)
@@ -456,7 +472,13 @@ def test_actual_multiprocess_same_path_serializes_one_success(tmp_path: Path) ->
             try:
                 queue.close()
             finally:
-                queue.join_thread()
+                try:
+                    queue.join_thread()
+                finally:
+                    try:
+                        ready_queue.close()
+                    finally:
+                        ready_queue.join_thread()
 
 
 def test_multiprocess_cleanup_helper_terminates_live_child() -> None:

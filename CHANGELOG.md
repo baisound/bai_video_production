@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- Windows: fresh atomic lockの遅延flush競合を修正し、TASK-029同時実行を安定化。
+
 - TASK-074-Bのfixture-only統合として、route selection契約のfirst-writer-winsなin-memory CAS store seamを追加し、duplicate／replay／fault後reconcile・read-back境界を検証可能にしました。このstoreは`NOT_BOUND`／`fixture_only`／`canonical=false`／`execution=false`であり、Product wiring、永続化、model／provider／native／WAV、Release／Deploy／Productionのauthorityやeffectは生成しません。
 
 - TASK-074-Bとして、Owner Voiceの権限、private reference、zero-shot／fine-tuned route選択をbody-freeな純粋契約として追加し、currentness、CAS/readback、replay fence、公開projectionのprivacy境界をfail closedにしました。実Owner音声、model load/inference、WAV生成、Windows native custody、Release／Deploy／Production Activationは引き続き未実行または別Gateです。

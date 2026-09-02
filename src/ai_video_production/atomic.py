@@ -22,10 +22,10 @@ def exclusive_file_update_lock(path: str | Path) -> Iterator[None]:
     if lock_path.is_symlink() or (lock_path.exists() and not lock_path.is_file()):
         raise ValueError("atomic update lock must be a regular non-symlink file")
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a+b") as handle:
-        if handle.seek(0, os.SEEK_END) == 0:
-            handle.write(b"0")
-            handle.flush()
+    # Raw I/O makes the single-byte marker write immediate.  A buffered handle
+    # can defer that write until a peer already owns the byte-zero lock, and a
+    # later seek in cleanup can then retry the same failing flush.
+    with lock_path.open("a+b", buffering=0) as handle:
         handle.seek(0)
         locked = False
         try:
@@ -38,6 +38,13 @@ def exclusive_file_update_lock(path: str | Path) -> Iterator[None]:
 
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             locked = True
+            # A Windows byte-range lock can cover byte zero even while the
+            # newly created file is empty.  Initialize the marker only after
+            # acquiring that lock.  Raw I/O has no deferred flush that could
+            # write into a region already locked by the other contender.
+            if handle.seek(0, os.SEEK_END) == 0:
+                handle.write(b"0")
+            handle.seek(0)
             yield
         finally:
             if locked:

@@ -55,10 +55,10 @@ def _v2_descriptor_fixture(
     return document
 
 
-def _fixture_root_plan(tmp_path: Path):
+def _fixture_root_snapshot(tmp_path: Path):
     selected_root = tmp_path / "selected"
     selected_root.mkdir()
-    plan = installation._fixture_only_build_selected_root_plan(
+    plan = installation._fixture_only_build_selected_root_semantic_snapshot(
         action=installation._InstallationAction.FIRST_PROVISION,
         selected_root=selected_root,
         predecessor_bound=False,
@@ -68,7 +68,7 @@ def _fixture_root_plan(tmp_path: Path):
     return selected_root, plan
 
 
-def _lifecycle_root_plan(
+def _lifecycle_root_snapshot(
     tmp_path: Path,
     action_name: str,
     security_sha256: str,
@@ -80,7 +80,7 @@ def _lifecycle_root_plan(
         if action_name in {"FIRST_PROVISION", "PORTABLE_REBIND"}
         else installation._DIRECTORY_RELATIVE_PATHS
     )
-    return installation._fixture_only_build_selected_root_plan(
+    return installation._fixture_only_build_selected_root_semantic_snapshot(
         action=installation._InstallationAction[action_name],
         selected_root=selected_root,
         predecessor_bound=action_name != "FIRST_PROVISION",
@@ -91,10 +91,10 @@ def _lifecycle_root_plan(
 
 def _plan_lifecycle(**provided: object):
     values = dict(provided)
-    root_plan = values["root_plan"]
+    root_snapshot = values["root_snapshot"]
     current = values["current"]
     terminal = str(values["expected_pair_terminal_sha256"])
-    action_name = root_plan.action.value
+    action_name = root_snapshot.action.value
     current_revision = current.installation_revision if current is not None else 0
     values.setdefault(
         "operation_id",
@@ -109,7 +109,21 @@ def _plan_lifecycle(**provided: object):
     )
     values.setdefault(
         "successor_reservation_sha256",
-        _commitment(f"reservation-{action_name}-{terminal}"),
+        None
+        if action_name == "VERIFY_REPAIR"
+        else _commitment(f"reservation-{action_name}-{terminal}"),
+    )
+    values.setdefault(
+        "revision_terminal_sha256",
+        _commitment(f"revision-{action_name}-{terminal}")
+        if current is None or action_name == "PUBLISH_INSTALL_REVISION"
+        else current.revision_terminal_sha256,
+    )
+    values.setdefault(
+        "predecessor_revision_terminal_sha256",
+        current.revision_terminal_sha256
+        if current is not None and action_name == "PUBLISH_INSTALL_REVISION"
+        else None,
     )
     values.setdefault(
         "currentness_sha256",
@@ -125,7 +139,7 @@ def _plan_lifecycle(**provided: object):
 
 
 def _issue_pair_fixture(
-    plan: object,
+    snapshot: object,
     descriptor: dict[str, object],
     **overrides: object,
 ):
@@ -149,8 +163,8 @@ def _issue_pair_fixture(
         "descriptor_identity_sha256": _commitment("descriptor-identity"),
         "owner_identity_sha256": _commitment("owner-identity"),
         "owner_manifest_sha256": _commitment("owner-manifest"),
-        "selected_root_security_sha256": plan.selected_root_security_sha256,
-        "directory_set_sha256": plan.directory_set_sha256,
+        "selected_root_security_sha256": snapshot.selected_root_security_sha256,
+        "directory_set_sha256": snapshot.directory_set_sha256,
         "package_manifest_sha256": _commitment("package-manifest"),
         "payload_tree_sha256": _commitment("payload-tree"),
         "product_build_sha256": _commitment("product-build"),
@@ -166,12 +180,12 @@ def _issue_pair_fixture(
 
 def _consume_pair_fixture(
     pair: object,
-    plan: object,
+    snapshot: object,
     descriptor: dict[str, object],
     **overrides: object,
 ):
     values: dict[str, object] = {
-        "root_plan": plan,
+        "root_snapshot": snapshot,
         "expected_operation_id": "operation-1",
         "expected_ticket_event_sha256": _commitment("ticket"),
         "expected_install_instance_id": descriptor["install_instance_id"],
@@ -282,7 +296,7 @@ def test_public_mutation_surfaces_fail_before_arguments_hooks_or_filesystem(
         ("PORTABLE_REBIND", True, (), "REBIND"),
     ],
 )
-def test_fixture_root_plan_derives_only_closed_literal_children_without_effect(
+def test_fixture_root_semantic_snapshot_is_data_only_without_effect(
     tmp_path: Path,
     action_name: str,
     predecessor_bound: bool,
@@ -294,7 +308,7 @@ def test_fixture_root_plan_derives_only_closed_literal_children_without_effect(
     sentinel = selected_root / "preserve.txt"
     sentinel.write_bytes(b"preserve")
 
-    plan = installation._fixture_only_build_selected_root_plan(
+    snapshot = installation._fixture_only_build_selected_root_semantic_snapshot(
         action=installation._InstallationAction[action_name],
         selected_root=selected_root,
         predecessor_bound=predecessor_bound,
@@ -302,20 +316,20 @@ def test_fixture_root_plan_derives_only_closed_literal_children_without_effect(
         selected_root_security_sha256=ROOT_SECURITY_SHA,
     )
 
-    assert plan.directory_paths == tuple(
+    assert snapshot.directory_paths == tuple(
         selected_root.joinpath(*relative_path.split("/"))
         for relative_path in installation._DIRECTORY_RELATIVE_PATHS
     )
-    assert plan.expected_pair_action == pair_action
-    assert plan.fixture_only is True
-    assert plan.authority_created is False
-    assert plan.native_effect_executed is False
+    assert snapshot.expected_pair_action == pair_action
+    assert snapshot.fixture_only is True
+    assert snapshot.authority_created is False
+    assert snapshot.native_effect_executed is False
     assert not {
         "_InstallationAction",
-        "_SelectedInstallRootPlanFixture",
-        "_fixture_only_build_selected_root_plan",
+        "_SelectedInstallRootSemanticSnapshotFixture",
+        "_fixture_only_build_selected_root_semantic_snapshot",
     }.intersection(installation.__all__)
-    projection = plan.public_projection()
+    projection = snapshot.public_projection()
     assert projection["authority_created"] is False
     assert projection["connector_enabled"] is False
     assert projection["activation_authorized"] is False
@@ -323,23 +337,59 @@ def test_fixture_root_plan_derives_only_closed_literal_children_without_effect(
     assert sorted(path.name for path in selected_root.iterdir()) == ["preserve.txt"]
 
     with pytest.raises(TypeError, match="NONCOPYABLE"):
-        copy.copy(plan)
+        copy.copy(snapshot)
     with pytest.raises(TypeError, match="NONCOPYABLE"):
-        copy.deepcopy(plan)
+        copy.deepcopy(snapshot)
     with pytest.raises(TypeError, match="NONSERIALIZABLE"):
-        pickle.dumps(plan)
+        pickle.dumps(snapshot)
 
 
-def test_fixture_root_plan_rejects_unknown_action_before_touching_root() -> None:
+def test_root_semantic_snapshot_forgery_never_creates_consumer_authority(
+    tmp_path: Path,
+) -> None:
+    _, snapshot = _fixture_root_snapshot(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+
+    authority_forgery = replace(snapshot, authority_created=True)
+    pair = _issue_pair_fixture(snapshot, descriptor)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _consume_pair_fixture(pair, authority_forgery, descriptor)
+
+    semantic_forgery = replace(
+        snapshot,
+        directory_set_sha256=_commitment("forged-directory-set"),
+    )
+    fresh_pair = _issue_pair_fixture(snapshot, descriptor)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _consume_pair_fixture(fresh_pair, semantic_forgery, descriptor)
+
+    mapping_pair = _issue_pair_fixture(snapshot, descriptor)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _consume_pair_fixture(mapping_pair, snapshot.public_projection(), descriptor)
+
+    assert snapshot.authority_created is False
+    assert snapshot.fixture_only is True
+
+
+def test_fixture_root_snapshot_rejects_unknown_action_before_touching_root() -> None:
     class RootMustNotBeRead:
         def __fspath__(self) -> str:
             raise AssertionError("root must not be read for an unknown action")
 
     with pytest.raises(
         MontageLearningInstallationError,
-        match="^TASK063_ROOT_PLAN_REJECTED$",
+        match="^TASK063_ROOT_SNAPSHOT_REJECTED$",
     ):
-        installation._fixture_only_build_selected_root_plan(
+        installation._fixture_only_build_selected_root_semantic_snapshot(
             action="FIRST_PROVISION",
             selected_root=RootMustNotBeRead(),
             predecessor_bound=False,
@@ -349,14 +399,14 @@ def test_fixture_root_plan_rejects_unknown_action_before_touching_root() -> None
 
 
 @pytest.mark.parametrize("selected_root", ["relative/root", "../escape"])
-def test_fixture_root_plan_rejects_relative_or_traversing_root(
+def test_fixture_root_snapshot_rejects_relative_or_traversing_root(
     selected_root: str,
 ) -> None:
     with pytest.raises(
         MontageLearningInstallationError,
-        match="^TASK063_ROOT_PLAN_REJECTED$",
+        match="^TASK063_ROOT_SNAPSHOT_REJECTED$",
     ):
-        installation._fixture_only_build_selected_root_plan(
+        installation._fixture_only_build_selected_root_semantic_snapshot(
             action=installation._InstallationAction.FIRST_PROVISION,
             selected_root=selected_root,
             predecessor_bound=False,
@@ -377,7 +427,7 @@ def test_fixture_root_plan_rejects_relative_or_traversing_root(
         ("PORTABLE_REBIND", True, ("data",)),
     ],
 )
-def test_fixture_root_plan_rejects_unbound_existing_or_case_alias_without_effect(
+def test_fixture_root_snapshot_rejects_unbound_existing_or_case_alias_without_effect(
     tmp_path: Path,
     action_name: str,
     predecessor_bound: bool,
@@ -390,9 +440,9 @@ def test_fixture_root_plan_rejects_unbound_existing_or_case_alias_without_effect
 
     with pytest.raises(
         MontageLearningInstallationError,
-        match="^TASK063_ROOT_PLAN_REJECTED$",
+        match="^TASK063_ROOT_SNAPSHOT_REJECTED$",
     ):
-        installation._fixture_only_build_selected_root_plan(
+        installation._fixture_only_build_selected_root_semantic_snapshot(
             action=installation._InstallationAction[action_name],
             selected_root=selected_root,
             predecessor_bound=predecessor_bound,
@@ -413,7 +463,7 @@ def test_fixture_root_plan_rejects_unbound_existing_or_case_alias_without_effect
         "before_fixture_projection",
     ],
 )
-def test_fixture_root_plan_fault_ports_have_zero_filesystem_effect(
+def test_fixture_root_snapshot_fault_ports_have_zero_filesystem_effect(
     tmp_path: Path,
     fault_stage: str,
 ) -> None:
@@ -424,10 +474,10 @@ def test_fixture_root_plan_fault_ports_have_zero_filesystem_effect(
 
     def fault(stage: str) -> None:
         if stage == fault_stage:
-            raise RuntimeError("injected root-plan fixture fault")
+            raise RuntimeError("injected root-snapshot fixture fault")
 
-    with pytest.raises(RuntimeError, match="injected root-plan fixture fault"):
-        installation._fixture_only_build_selected_root_plan(
+    with pytest.raises(RuntimeError, match="injected root-snapshot fixture fault"):
+        installation._fixture_only_build_selected_root_semantic_snapshot(
             action=installation._InstallationAction.FIRST_PROVISION,
             selected_root=selected_root,
             predecessor_bound=False,
@@ -443,7 +493,7 @@ def test_fixture_root_plan_fault_ports_have_zero_filesystem_effect(
 def test_pair_consumer_issues_one_path_free_data_only_installed_readback(
     tmp_path: Path,
 ) -> None:
-    selected_root, plan = _fixture_root_plan(tmp_path)
+    selected_root, plan = _fixture_root_snapshot(tmp_path)
     sentinel = selected_root / "preserve.txt"
     sentinel.write_bytes(b"preserve")
     descriptor = _v2_descriptor_fixture()
@@ -486,6 +536,80 @@ def test_pair_consumer_issues_one_path_free_data_only_installed_readback(
         )
 
 
+def test_pair_repair_has_no_successor_and_revision_publish_keeps_pair_terminal(
+    tmp_path: Path,
+) -> None:
+    descriptor = _v2_descriptor_fixture()
+    stable_terminal = _commitment("stable-pair-terminal")
+    repair_snapshot = _lifecycle_root_snapshot(
+        tmp_path,
+        "VERIFY_REPAIR",
+        ROOT_SECURITY_SHA,
+    )
+    repair = _issue_pair_fixture(
+        repair_snapshot,
+        descriptor,
+        action=installation._InstallationAction.VERIFY_REPAIR,
+        pair_action="NO_PAIR_SUCCESSOR",
+        pair_terminal_sha256=stable_terminal,
+        predecessor_terminal_sha256=stable_terminal,
+        successor_reservation_sha256=None,
+    )
+    installed = _consume_pair_fixture(
+        repair,
+        repair_snapshot,
+        descriptor,
+        expected_predecessor_terminal_sha256=stable_terminal,
+        expected_successor_reservation_sha256=None,
+    )
+    assert installed.pair_terminal_sha256 == stable_terminal
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _issue_pair_fixture(
+            repair_snapshot,
+            descriptor,
+            action=installation._InstallationAction.VERIFY_REPAIR,
+            pair_action="NO_PAIR_SUCCESSOR",
+            pair_terminal_sha256=stable_terminal,
+            predecessor_terminal_sha256=stable_terminal,
+            successor_reservation_sha256=_commitment("forbidden-reservation"),
+        )
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _issue_pair_fixture(
+            repair_snapshot,
+            descriptor,
+            action=installation._InstallationAction.VERIFY_REPAIR,
+            pair_action="PAIR_ADOPTION",
+            pair_terminal_sha256=stable_terminal,
+            predecessor_terminal_sha256=stable_terminal,
+            successor_reservation_sha256=None,
+        )
+
+    revision_snapshot = _lifecycle_root_snapshot(
+        tmp_path,
+        "PUBLISH_INSTALL_REVISION",
+        ROOT_SECURITY_SHA,
+    )
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _issue_pair_fixture(
+            revision_snapshot,
+            descriptor,
+            action=installation._InstallationAction.PUBLISH_INSTALL_REVISION,
+            pair_action="REVISION",
+            pair_terminal_sha256=_commitment("changed-pair-terminal"),
+            predecessor_terminal_sha256=stable_terminal,
+        )
+
+
 def test_installation_readback_schema_pair_is_byte_identical_and_closed() -> None:
     repository_root = Path(__file__).parents[1]
     root_schema = (
@@ -515,7 +639,7 @@ def test_installation_readback_projection_validates_hash_and_closed_schema(
     tmp_path: Path,
 ) -> None:
     jsonschema = pytest.importorskip("jsonschema")
-    _, plan = _fixture_root_plan(tmp_path)
+    _, plan = _fixture_root_snapshot(tmp_path)
     descriptor = _v2_descriptor_fixture()
     installed = _consume_pair_fixture(
         _issue_pair_fixture(plan, descriptor),
@@ -551,7 +675,7 @@ def test_installation_readback_projection_validates_hash_and_closed_schema(
 def test_pair_consumer_rejects_public_direct_copy_and_serialized_forgery(
     tmp_path: Path,
 ) -> None:
-    _, plan = _fixture_root_plan(tmp_path)
+    _, plan = _fixture_root_snapshot(tmp_path)
     descriptor = _v2_descriptor_fixture()
     pair = _issue_pair_fixture(plan, descriptor)
     assert not {
@@ -618,7 +742,7 @@ def test_pair_fixture_rejects_noncanonical_descriptor_semantics_before_issue(
     tmp_path: Path,
     mutation: str,
 ) -> None:
-    selected_root, plan = _fixture_root_plan(tmp_path)
+    selected_root, plan = _fixture_root_snapshot(tmp_path)
     descriptor = _v2_descriptor_fixture()
     if mutation == "extra":
         descriptor["extra"] = "forged"
@@ -645,7 +769,6 @@ def test_pair_fixture_rejects_noncanonical_descriptor_semantics_before_issue(
         {"owner_generation_sha256": _commitment("other-generation")},
         {"owner_instance_id": "bvp-install-" + "2" * 32},
         {"owner_contract_profile": "forged-profile"},
-        {"pair_action": "PAIR_ADOPTION"},
         {"simultaneous_current": False},
         {
             "owner_identity_sha256": _commitment("descriptor-identity"),
@@ -657,7 +780,7 @@ def test_pair_consumer_burns_semantic_or_generation_mismatch(
     tmp_path: Path,
     overrides: dict[str, object],
 ) -> None:
-    selected_root, plan = _fixture_root_plan(tmp_path)
+    selected_root, plan = _fixture_root_snapshot(tmp_path)
     descriptor = _v2_descriptor_fixture()
     pair = _issue_pair_fixture(plan, descriptor, **overrides)
 
@@ -678,7 +801,7 @@ def test_pair_consumer_burns_semantic_or_generation_mismatch(
 def test_pair_consumer_exception_and_wrong_installed_consumer_burn_once(
     tmp_path: Path,
 ) -> None:
-    _, plan = _fixture_root_plan(tmp_path)
+    _, plan = _fixture_root_snapshot(tmp_path)
     descriptor = _v2_descriptor_fixture()
     pair = _issue_pair_fixture(plan, descriptor)
     with pytest.raises(
@@ -720,7 +843,7 @@ def test_pair_consumer_exception_and_wrong_installed_consumer_burn_once(
 def test_pair_consumer_requires_issue_bound_exact_operation_key_and_burns(
     tmp_path: Path,
 ) -> None:
-    _, plan = _fixture_root_plan(tmp_path)
+    _, plan = _fixture_root_snapshot(tmp_path)
     descriptor = _v2_descriptor_fixture()
     pair = _issue_pair_fixture(
         plan,
@@ -753,7 +876,7 @@ def test_pair_consumer_requires_issue_bound_exact_operation_key_and_burns(
 def test_pair_consumer_concurrent_double_call_has_one_success(
     tmp_path: Path,
 ) -> None:
-    _, plan = _fixture_root_plan(tmp_path)
+    _, plan = _fixture_root_snapshot(tmp_path)
     descriptor = _v2_descriptor_fixture()
     pair = _issue_pair_fixture(plan, descriptor)
     barrier = threading.Barrier(2)
@@ -781,7 +904,7 @@ def test_pair_consumer_concurrent_double_call_has_one_success(
 def test_installed_readback_concurrent_double_call_has_one_success(
     tmp_path: Path,
 ) -> None:
-    _, plan = _fixture_root_plan(tmp_path)
+    _, plan = _fixture_root_snapshot(tmp_path)
     descriptor = _v2_descriptor_fixture()
     installed = _consume_pair_fixture(
         _issue_pair_fixture(plan, descriptor),
@@ -826,7 +949,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
     installer_one = _commitment("installer-one")
 
     first = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_one),
+        root_snapshot=_lifecycle_root_snapshot(tmp_path, "FIRST_PROVISION", root_one),
         current=None,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=pair_one,
@@ -837,7 +960,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         installer_build_sha256=installer_one,
     )
     repaired = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(tmp_path, "VERIFY_REPAIR", root_one),
+        root_snapshot=_lifecycle_root_snapshot(tmp_path, "VERIFY_REPAIR", root_one),
         current=first,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=pair_one,
@@ -848,7 +971,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         installer_build_sha256=installer_one,
     )
     revised = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(
+        root_snapshot=_lifecycle_root_snapshot(
             tmp_path,
             "PUBLISH_INSTALL_REVISION",
             root_one,
@@ -856,14 +979,14 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         current=repaired,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=pair_one,
-        expected_pair_terminal_sha256=_commitment("terminal-two"),
+        expected_pair_terminal_sha256=repaired.pair_terminal_sha256,
         package_manifest_sha256=_commitment("package-two"),
         payload_tree_sha256=_commitment("payload-two"),
         product_build_sha256=_commitment("product-two"),
         installer_build_sha256=_commitment("installer-two"),
     )
     adopted = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(tmp_path, "ADOPT_EXISTING", root_one),
+        root_snapshot=_lifecycle_root_snapshot(tmp_path, "ADOPT_EXISTING", root_one),
         current=revised,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=pair_one,
@@ -874,7 +997,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         installer_build_sha256=revised.installer_build_sha256,
     )
     rebound = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(tmp_path, "PORTABLE_REBIND", root_two),
+        root_snapshot=_lifecycle_root_snapshot(tmp_path, "PORTABLE_REBIND", root_two),
         current=adopted,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=_commitment("pair-two"),
@@ -890,6 +1013,13 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
     assert repaired.pair_generation_sha256 == first.pair_generation_sha256
     assert revised.installation_revision == 2
     assert revised.pair_generation_sha256 == first.pair_generation_sha256
+    assert revised.pair_terminal_sha256 == repaired.pair_terminal_sha256
+    assert revised.revision_terminal_sha256 != repaired.revision_terminal_sha256
+    assert (
+        revised.predecessor_revision_terminal_sha256
+        == repaired.revision_terminal_sha256
+    )
+    assert repaired.successor_reservation_sha256 is None
     assert adopted.installation_revision == 2
     assert adopted.install_instance_id == instance_id
     assert rebound.installation_revision == 2
@@ -919,9 +1049,32 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         ("VERIFY_REPAIR", {"expected_install_instance_id": "bvp-install-" + "2" * 32}),
         ("VERIFY_REPAIR", {"expected_pair_generation_sha256": _commitment("wrong-pair")}),
         ("VERIFY_REPAIR", {"package_manifest_sha256": _commitment("changed-package")}),
+        (
+            "VERIFY_REPAIR",
+            {"expected_pair_terminal_sha256": _commitment("changed-pair-terminal")},
+        ),
+        (
+            "VERIFY_REPAIR",
+            {"successor_reservation_sha256": _commitment("forbidden-reservation")},
+        ),
         ("ADOPT_EXISTING", {"expected_pair_terminal_sha256": _commitment("terminal-one")}),
         ("ADOPT_EXISTING", {"payload_tree_sha256": _commitment("changed-payload")}),
-        ("PUBLISH_INSTALL_REVISION", {"expected_pair_terminal_sha256": _commitment("terminal-one")}),
+        (
+            "PUBLISH_INSTALL_REVISION",
+            {"expected_pair_terminal_sha256": _commitment("changed-pair-terminal")},
+        ),
+        (
+            "PUBLISH_INSTALL_REVISION",
+            {
+                "predecessor_revision_terminal_sha256": _commitment(
+                    "wrong-revision-predecessor"
+                )
+            },
+        ),
+        (
+            "PUBLISH_INSTALL_REVISION",
+            {"revision_terminal_sha256": "CURRENT"},
+        ),
     ],
 )
 def test_lifecycle_rejects_cross_instance_stale_pair_or_invalid_successor(
@@ -933,7 +1086,7 @@ def test_lifecycle_rejects_cross_instance_stale_pair_or_invalid_successor(
     root_security = _commitment("root")
     pair_generation = _commitment("pair")
     current = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(
+        root_snapshot=_lifecycle_root_snapshot(
             tmp_path,
             "FIRST_PROVISION",
             root_security,
@@ -948,11 +1101,15 @@ def test_lifecycle_rejects_cross_instance_stale_pair_or_invalid_successor(
         installer_build_sha256=_commitment("installer"),
     )
     values: dict[str, object] = {
-        "root_plan": _lifecycle_root_plan(tmp_path, action_name, root_security),
+        "root_snapshot": _lifecycle_root_snapshot(tmp_path, action_name, root_security),
         "current": current,
         "expected_install_instance_id": instance_id,
         "expected_pair_generation_sha256": pair_generation,
-        "expected_pair_terminal_sha256": _commitment("terminal-two"),
+        "expected_pair_terminal_sha256": (
+            current.pair_terminal_sha256
+            if action_name in {"VERIFY_REPAIR", "PUBLISH_INSTALL_REVISION"}
+            else _commitment("terminal-two")
+        ),
         "package_manifest_sha256": current.package_manifest_sha256,
         "payload_tree_sha256": current.payload_tree_sha256,
         "product_build_sha256": current.product_build_sha256,
@@ -961,6 +1118,8 @@ def test_lifecycle_rejects_cross_instance_stale_pair_or_invalid_successor(
     if action_name == "PUBLISH_INSTALL_REVISION":
         values["package_manifest_sha256"] = _commitment("package-two")
     values.update(changes)
+    if values.get("revision_terminal_sha256") == "CURRENT":
+        values["revision_terminal_sha256"] = current.revision_terminal_sha256
 
     with pytest.raises(
         MontageLearningInstallationError,
@@ -987,7 +1146,7 @@ def test_lifecycle_portable_rebind_rejects_same_root_pair_or_changed_package(
     root_one = _commitment("root-one")
     root_two = _commitment("root-two")
     current = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_one),
+        root_snapshot=_lifecycle_root_snapshot(tmp_path, "FIRST_PROVISION", root_one),
         current=None,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=_commitment("pair-one"),
@@ -999,7 +1158,7 @@ def test_lifecycle_portable_rebind_rejects_same_root_pair_or_changed_package(
     )
     target_root = root_one if changes.pop("selected_root", None) else root_two
     values: dict[str, object] = {
-        "root_plan": _lifecycle_root_plan(
+        "root_snapshot": _lifecycle_root_snapshot(
             tmp_path,
             "PORTABLE_REBIND",
             target_root,
@@ -1027,13 +1186,13 @@ def test_lifecycle_first_provision_rejects_existing_state_without_effect(
 ) -> None:
     instance_id = "bvp-install-" + "1" * 32
     root_security = _commitment("root")
-    first_plan = _lifecycle_root_plan(
+    first_plan = _lifecycle_root_snapshot(
         tmp_path,
         "FIRST_PROVISION",
         root_security,
     )
     current = _plan_lifecycle(
-        root_plan=first_plan,
+        root_snapshot=first_plan,
         current=None,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=_commitment("pair"),
@@ -1049,7 +1208,7 @@ def test_lifecycle_first_provision_rejects_existing_state_without_effect(
         match="^TASK063_LIFECYCLE_REJECTED$",
     ):
         _plan_lifecycle(
-            root_plan=first_plan,
+            root_snapshot=first_plan,
             current=current,
             expected_install_instance_id=instance_id,
             expected_pair_generation_sha256=_commitment("other-pair"),
@@ -1079,7 +1238,7 @@ def test_lifecycle_rejects_stale_predecessor_gap_and_reused_commitments(
     instance_id = "bvp-install-" + "1" * 32
     root_security = _commitment("root")
     current = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_security),
+        root_snapshot=_lifecycle_root_snapshot(tmp_path, "FIRST_PROVISION", root_security),
         current=None,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=_commitment("pair"),
@@ -1091,7 +1250,7 @@ def test_lifecycle_rejects_stale_predecessor_gap_and_reused_commitments(
         installer_build_sha256=_commitment("installer"),
     )
     values: dict[str, object] = {
-        "root_plan": _lifecycle_root_plan(tmp_path, "VERIFY_REPAIR", root_security),
+        "root_snapshot": _lifecycle_root_snapshot(tmp_path, "VERIFY_REPAIR", root_security),
         "current": current,
         "expected_install_instance_id": instance_id,
         "expected_pair_generation_sha256": current.pair_generation_sha256,
@@ -1121,7 +1280,7 @@ def test_lifecycle_rejects_dataclass_replace_and_concurrent_successor_fork(
     instance_id = "bvp-install-" + "1" * 32
     root_security = _commitment("root")
     current = _plan_lifecycle(
-        root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_security),
+        root_snapshot=_lifecycle_root_snapshot(tmp_path, "FIRST_PROVISION", root_security),
         current=None,
         expected_install_instance_id=instance_id,
         expected_pair_generation_sha256=_commitment("pair"),
@@ -1137,7 +1296,7 @@ def test_lifecycle_rejects_dataclass_replace_and_concurrent_successor_fork(
         match="^TASK063_LIFECYCLE_REJECTED$",
     ):
         _plan_lifecycle(
-            root_plan=_lifecycle_root_plan(tmp_path, "VERIFY_REPAIR", root_security),
+            root_snapshot=_lifecycle_root_snapshot(tmp_path, "VERIFY_REPAIR", root_security),
             current=forged,
             expected_install_instance_id=instance_id,
             expected_pair_generation_sha256=current.pair_generation_sha256,
@@ -1155,7 +1314,7 @@ def test_lifecycle_rejects_dataclass_replace_and_concurrent_successor_fork(
         barrier.wait()
         try:
             _plan_lifecycle(
-                root_plan=_lifecycle_root_plan(
+                root_snapshot=_lifecycle_root_snapshot(
                     tmp_path,
                     "VERIFY_REPAIR",
                     root_security,

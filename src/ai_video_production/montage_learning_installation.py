@@ -38,7 +38,7 @@ _WINDOWS_REPARSE_POINT = 0x400
 
 ReceiptFailureInjector = Callable[[str, Path], None]
 _PRIVATE_COMPOSITION_REQUIRED = "TASK063_PRIVATE_COMPOSITION_REQUIRED"
-_ROOT_PLAN_REJECTED = "TASK063_ROOT_PLAN_REJECTED"
+_ROOT_SNAPSHOT_REJECTED = "TASK063_ROOT_SNAPSHOT_REJECTED"
 _PAIR_READBACK_REJECTED = "TASK063_PAIR_READBACK_REJECTED"
 _PAIR_READBACK_REUSED = "TASK063_PAIR_READBACK_REUSED"
 _INSTALLED_READBACK_REJECTED = "TASK063_INSTALLED_READBACK_REJECTED"
@@ -83,7 +83,7 @@ _PAIR_ACTION_BY_INSTALL_ACTION = {
 
 
 @dataclass(frozen=True, repr=False, slots=True)
-class _SelectedInstallRootPlanFixture:
+class _SelectedInstallRootSemanticSnapshotFixture:
     action: _InstallationAction
     selected_root: Path
     directory_paths: tuple[Path, ...]
@@ -97,7 +97,7 @@ class _SelectedInstallRootPlanFixture:
 
     def public_projection(self) -> dict[str, object]:
         return {
-            "schema_version": "TASK063_ROOT_PLAN_FIXTURE_V1",
+            "schema_version": "TASK063_ROOT_SNAPSHOT_FIXTURE_V1",
             "action": self.action.value,
             "directory_set_sha256": self.directory_set_sha256,
             "expected_pair_action": self.expected_pair_action,
@@ -110,16 +110,16 @@ class _SelectedInstallRootPlanFixture:
         }
 
     def __repr__(self) -> str:
-        return "<_SelectedInstallRootPlanFixture redacted>"
+        return "<_SelectedInstallRootSemanticSnapshotFixture redacted>"
 
     def __copy__(self):
-        raise TypeError("TASK063_ROOT_PLAN_FIXTURE_NONCOPYABLE")
+        raise TypeError("TASK063_ROOT_SNAPSHOT_FIXTURE_NONCOPYABLE")
 
     def __deepcopy__(self, memo: object):
-        raise TypeError("TASK063_ROOT_PLAN_FIXTURE_NONCOPYABLE")
+        raise TypeError("TASK063_ROOT_SNAPSHOT_FIXTURE_NONCOPYABLE")
 
     def __reduce_ex__(self, protocol: int):
-        raise TypeError("TASK063_ROOT_PLAN_FIXTURE_NONSERIALIZABLE")
+        raise TypeError("TASK063_ROOT_SNAPSHOT_FIXTURE_NONSERIALIZABLE")
 
 
 @dataclass(frozen=True, repr=False, slots=True)
@@ -138,7 +138,7 @@ class _InstallationPairReadbackFixture:
     owner_generation_sha256: str
     pair_terminal_sha256: str
     predecessor_terminal_sha256: str
-    successor_reservation_sha256: str
+    successor_reservation_sha256: str | None
     installation_revision: int
     descriptor_identity_sha256: str
     owner_identity_sha256: str
@@ -247,7 +247,9 @@ class _InstallationLifecycleStateFixture:
     pair_generation_sha256: str
     pair_terminal_sha256: str
     predecessor_terminal_sha256: str
-    successor_reservation_sha256: str
+    successor_reservation_sha256: str | None
+    revision_terminal_sha256: str
+    predecessor_revision_terminal_sha256: str | None
     currentness_sha256: str
     requested_revision: int
     installation_revision: int
@@ -275,6 +277,10 @@ class _InstallationLifecycleStateFixture:
             "pair_terminal_sha256": self.pair_terminal_sha256,
             "predecessor_terminal_sha256": self.predecessor_terminal_sha256,
             "successor_reservation_sha256": self.successor_reservation_sha256,
+            "revision_terminal_sha256": self.revision_terminal_sha256,
+            "predecessor_revision_terminal_sha256": (
+                self.predecessor_revision_terminal_sha256
+            ),
             "currentness_sha256": self.currentness_sha256,
             "requested_revision": self.requested_revision,
             "installation_revision": self.installation_revision,
@@ -360,59 +366,59 @@ class InstalledBridgeDiscovery:
         }
 
 
-_RootPlanFaultPort = Callable[[str], None]
+_RootSnapshotFaultPort = Callable[[str], None]
 
 
-def _fixture_only_build_selected_root_plan(
+def _fixture_only_build_selected_root_semantic_snapshot(
     *,
     action: _InstallationAction,
     selected_root: str | Path,
     predecessor_bound: bool,
     existing_relative_directories: tuple[str, ...],
     selected_root_security_sha256: str,
-    fault_port: _RootPlanFaultPort | None = None,
-) -> _SelectedInstallRootPlanFixture:
-    """Build an effect-free fixture projection of the closed root plan."""
+    fault_port: _RootSnapshotFaultPort | None = None,
+) -> _SelectedInstallRootSemanticSnapshotFixture:
+    """Build an effect-free, data-only snapshot of closed root semantics."""
 
     if type(action) is not _InstallationAction:
-        _reject_root_plan()
-    _call_root_plan_fault(fault_port, "after_action_validation")
+        _reject_root_snapshot()
+    _call_root_snapshot_fault(fault_port, "after_action_validation")
 
     if type(predecessor_bound) is not bool:
-        _reject_root_plan()
+        _reject_root_snapshot()
     try:
         _require_sha(
             selected_root_security_sha256,
             "selected_root_security_sha256",
         )
     except MontageLearningInstallationError:
-        _reject_root_plan()
+        _reject_root_snapshot()
     if not (type(selected_root) is str or isinstance(selected_root, Path)):
-        _reject_root_plan()
+        _reject_root_snapshot()
     root = Path(selected_root)
     if not root.is_absolute() or ".." in root.parts:
-        _reject_root_plan()
-    _call_root_plan_fault(fault_port, "after_root_validation")
+        _reject_root_snapshot()
+    _call_root_snapshot_fault(fault_port, "after_root_validation")
 
     if type(existing_relative_directories) is not tuple or any(
         type(value) is not str for value in existing_relative_directories
     ):
-        _reject_root_plan()
+        _reject_root_snapshot()
     if len(existing_relative_directories) != len(set(existing_relative_directories)):
-        _reject_root_plan()
+        _reject_root_snapshot()
     planned = frozenset(_DIRECTORY_RELATIVE_PATHS)
     existing = frozenset(existing_relative_directories)
     if not existing.issubset(planned):
-        _reject_root_plan()
+        _reject_root_snapshot()
 
     if action is _InstallationAction.FIRST_PROVISION:
         if predecessor_bound or existing:
-            _reject_root_plan()
+            _reject_root_snapshot()
     elif action is _InstallationAction.PORTABLE_REBIND:
         if not predecessor_bound or existing:
-            _reject_root_plan()
+            _reject_root_snapshot()
     elif not predecessor_bound or existing != planned:
-        _reject_root_plan()
+        _reject_root_snapshot()
 
     directories = tuple(
         root.joinpath(*relative_path.split("/"))
@@ -420,14 +426,14 @@ def _fixture_only_build_selected_root_plan(
     )
     root_parts = root.parts
     if any(path.parts[: len(root_parts)] != root_parts for path in directories):
-        _reject_root_plan()
-    _call_root_plan_fault(fault_port, "after_directory_derivation")
+        _reject_root_snapshot()
+    _call_root_snapshot_fault(fault_port, "after_directory_derivation")
 
     directory_set_sha256 = sha256_json(
         {"relative_directories": list(_DIRECTORY_RELATIVE_PATHS)}
     )
-    _call_root_plan_fault(fault_port, "before_fixture_projection")
-    return _SelectedInstallRootPlanFixture(
+    _call_root_snapshot_fault(fault_port, "before_fixture_projection")
+    return _SelectedInstallRootSemanticSnapshotFixture(
         action=action,
         selected_root=root,
         directory_paths=directories,
@@ -438,16 +444,16 @@ def _fixture_only_build_selected_root_plan(
     )
 
 
-def _call_root_plan_fault(
-    fault_port: _RootPlanFaultPort | None,
+def _call_root_snapshot_fault(
+    fault_port: _RootSnapshotFaultPort | None,
     stage: str,
 ) -> None:
     if fault_port is not None:
         fault_port(stage)
 
 
-def _reject_root_plan() -> None:
-    raise MontageLearningInstallationError(_ROOT_PLAN_REJECTED) from None
+def _reject_root_snapshot() -> None:
+    raise MontageLearningInstallationError(_ROOT_SNAPSHOT_REJECTED) from None
 
 
 def _fixture_only_issue_pair_readback(
@@ -466,7 +472,7 @@ def _fixture_only_issue_pair_readback(
     owner_generation_sha256: str,
     pair_terminal_sha256: str,
     predecessor_terminal_sha256: str,
-    successor_reservation_sha256: str,
+    successor_reservation_sha256: str | None,
     installation_revision: int,
     descriptor_identity_sha256: str,
     owner_identity_sha256: str,
@@ -496,7 +502,7 @@ def _fixture_only_issue_pair_readback(
             or type(owner_contract_profile) is not str
             or type(pair_action) is not str
             or type(installation_revision) is not int
-            or installation_revision < 0
+            or installation_revision < 1
             or type(simultaneous_current) is not bool
         ):
             raise MontageLearningInstallationError(_PAIR_READBACK_REJECTED)
@@ -507,7 +513,6 @@ def _fixture_only_issue_pair_readback(
             owner_generation_sha256,
             pair_terminal_sha256,
             predecessor_terminal_sha256,
-            successor_reservation_sha256,
             descriptor_identity_sha256,
             owner_identity_sha256,
             owner_manifest_sha256,
@@ -521,6 +526,18 @@ def _fixture_only_issue_pair_readback(
             session_sha256,
         ):
             _require_sha(value, "pair fixture commitment")
+        if pair_action != _PAIR_ACTION_BY_INSTALL_ACTION[action]:
+            raise MontageLearningInstallationError(_PAIR_READBACK_REJECTED)
+        if action is _InstallationAction.VERIFY_REPAIR:
+            if successor_reservation_sha256 is not None:
+                raise MontageLearningInstallationError(_PAIR_READBACK_REJECTED)
+        else:
+            _require_sha(successor_reservation_sha256, "pair fixture commitment")
+        if action in {
+            _InstallationAction.VERIFY_REPAIR,
+            _InstallationAction.PUBLISH_INSTALL_REVISION,
+        } and pair_terminal_sha256 != predecessor_terminal_sha256:
+            raise MontageLearningInstallationError(_PAIR_READBACK_REJECTED)
         _require_timestamp(observed_at_utc, "observed_at_utc")
     except (MontageLearningInstallationError, TypeError, ValueError):
         raise MontageLearningInstallationError(_PAIR_READBACK_REJECTED) from None
@@ -565,13 +582,13 @@ def _fixture_only_issue_pair_readback(
 def _fixture_only_consume_pair_readback(
     pair_readback: _InstallationPairReadbackFixture,
     *,
-    root_plan: _SelectedInstallRootPlanFixture,
+    root_snapshot: _SelectedInstallRootSemanticSnapshotFixture,
     expected_operation_id: str,
     expected_ticket_event_sha256: str,
     expected_install_instance_id: str,
     expected_descriptor_document: dict[str, object],
     expected_predecessor_terminal_sha256: str,
-    expected_successor_reservation_sha256: str,
+    expected_successor_reservation_sha256: str | None,
     expected_installation_revision: int,
     expected_package_manifest_sha256: str,
     expected_payload_tree_sha256: str,
@@ -589,11 +606,11 @@ def _fixture_only_consume_pair_readback(
         _require_opaque_id(expected_operation_id)
         _require_opaque_id(consumer_operation_key)
         if (
-            type(root_plan) is not _SelectedInstallRootPlanFixture
-            or root_plan.authority_created
-            or not root_plan.fixture_only
-            or pair_readback.action is not root_plan.action
-            or pair_readback.pair_action != root_plan.expected_pair_action
+            type(root_snapshot) is not _SelectedInstallRootSemanticSnapshotFixture
+            or root_snapshot.authority_created
+            or not root_snapshot.fixture_only
+            or pair_readback.action is not root_snapshot.action
+            or pair_readback.pair_action != root_snapshot.expected_pair_action
             or pair_readback.operation_id != expected_operation_id
             or pair_readback.consumer_operation_key != consumer_operation_key
             or pair_readback.ticket_event_sha256 != expected_ticket_event_sha256
@@ -603,8 +620,8 @@ def _fixture_only_consume_pair_readback(
             or descriptor["install_instance_id"] != expected_install_instance_id
             or pair_readback.owner_contract_profile != BRIDGE_CONTRACT_PROFILE
             or pair_readback.selected_root_security_sha256
-            != root_plan.selected_root_security_sha256
-            or pair_readback.directory_set_sha256 != root_plan.directory_set_sha256
+            != root_snapshot.selected_root_security_sha256
+            or pair_readback.directory_set_sha256 != root_snapshot.directory_set_sha256
             or pair_readback.predecessor_terminal_sha256
             != expected_predecessor_terminal_sha256
             or pair_readback.successor_reservation_sha256
@@ -670,7 +687,7 @@ def _fixture_only_consume_installed_readback(
 
 def _fixture_only_plan_lifecycle_transition(
     *,
-    root_plan: _SelectedInstallRootPlanFixture,
+    root_snapshot: _SelectedInstallRootSemanticSnapshotFixture,
     current: _InstallationLifecycleStateFixture | None,
     operation_id: str,
     session_sha256: str,
@@ -678,7 +695,9 @@ def _fixture_only_plan_lifecycle_transition(
     expected_pair_generation_sha256: str,
     expected_pair_terminal_sha256: str,
     expected_predecessor_terminal_sha256: str,
-    successor_reservation_sha256: str,
+    successor_reservation_sha256: str | None,
+    revision_terminal_sha256: str,
+    predecessor_revision_terminal_sha256: str | None,
     currentness_sha256: str,
     requested_revision: int,
     package_manifest_sha256: str,
@@ -693,9 +712,9 @@ def _fixture_only_plan_lifecycle_transition(
     try:
         _require_opaque_id(operation_id)
         if (
-            type(root_plan) is not _SelectedInstallRootPlanFixture
-            or root_plan.authority_created
-            or not root_plan.fixture_only
+            type(root_snapshot) is not _SelectedInstallRootSemanticSnapshotFixture
+            or root_snapshot.authority_created
+            or not root_snapshot.fixture_only
             or type(expected_install_instance_id) is not str
             or _INSTANCE_RE.fullmatch(expected_install_instance_id) is None
             or type(requested_revision) is not int
@@ -707,7 +726,7 @@ def _fixture_only_plan_lifecycle_transition(
             expected_pair_generation_sha256,
             expected_pair_terminal_sha256,
             expected_predecessor_terminal_sha256,
-            successor_reservation_sha256,
+            revision_terminal_sha256,
             currentness_sha256,
             package_manifest_sha256,
             payload_tree_sha256,
@@ -716,10 +735,11 @@ def _fixture_only_plan_lifecycle_transition(
         ):
             _require_sha(value, "lifecycle commitment")
 
-        action = root_plan.action
+        action = root_snapshot.action
         if action is _InstallationAction.FIRST_PROVISION:
-            if current is not None:
+            if current is not None or predecessor_revision_terminal_sha256 is not None:
                 _reject_lifecycle()
+            _require_sha(successor_reservation_sha256, "lifecycle commitment")
             revision = 1
         else:
             if (
@@ -730,19 +750,23 @@ def _fixture_only_plan_lifecycle_transition(
                 or expected_predecessor_terminal_sha256
                 != current.pair_terminal_sha256
                 or operation_id == current.operation_id
-                or successor_reservation_sha256
-                == current.successor_reservation_sha256
             ):
                 _reject_lifecycle()
 
             if action is _InstallationAction.PORTABLE_REBIND:
+                _require_sha(successor_reservation_sha256, "lifecycle commitment")
                 if (
-                    root_plan.selected_root_security_sha256
+                    root_snapshot.selected_root_security_sha256
                     == current.selected_root_security_sha256
                     or expected_pair_generation_sha256
                     == current.pair_generation_sha256
                     or expected_pair_terminal_sha256
                     == current.pair_terminal_sha256
+                    or successor_reservation_sha256
+                    == current.successor_reservation_sha256
+                    or predecessor_revision_terminal_sha256 is not None
+                    or revision_terminal_sha256
+                    != current.revision_terminal_sha256
                     or not _same_lifecycle_package(
                         current,
                         package_manifest_sha256=package_manifest_sha256,
@@ -755,7 +779,7 @@ def _fixture_only_plan_lifecycle_transition(
                 revision = current.installation_revision
             else:
                 if (
-                    root_plan.selected_root_security_sha256
+                    root_snapshot.selected_root_security_sha256
                     != current.selected_root_security_sha256
                     or expected_pair_generation_sha256
                     != current.pair_generation_sha256
@@ -773,22 +797,43 @@ def _fixture_only_plan_lifecycle_transition(
                         not same_package
                         or expected_pair_terminal_sha256
                         != current.pair_terminal_sha256
+                        or successor_reservation_sha256 is not None
+                        or predecessor_revision_terminal_sha256 is not None
+                        or revision_terminal_sha256
+                        != current.revision_terminal_sha256
                     ):
                         _reject_lifecycle()
                     revision = current.installation_revision
                 elif action is _InstallationAction.ADOPT_EXISTING:
+                    _require_sha(successor_reservation_sha256, "lifecycle commitment")
                     if (
                         not same_package
                         or expected_pair_terminal_sha256
                         == current.pair_terminal_sha256
+                        or successor_reservation_sha256
+                        == current.successor_reservation_sha256
+                        or predecessor_revision_terminal_sha256 is not None
+                        or revision_terminal_sha256
+                        != current.revision_terminal_sha256
                     ):
                         _reject_lifecycle()
                     revision = current.installation_revision
                 elif action is _InstallationAction.PUBLISH_INSTALL_REVISION:
+                    _require_sha(successor_reservation_sha256, "lifecycle commitment")
+                    _require_sha(
+                        predecessor_revision_terminal_sha256,
+                        "lifecycle commitment",
+                    )
                     if (
                         same_package
                         or expected_pair_terminal_sha256
-                        == current.pair_terminal_sha256
+                        != current.pair_terminal_sha256
+                        or successor_reservation_sha256
+                        == current.successor_reservation_sha256
+                        or predecessor_revision_terminal_sha256
+                        != current.revision_terminal_sha256
+                        or revision_terminal_sha256
+                        == current.revision_terminal_sha256
                     ):
                         _reject_lifecycle()
                     revision = current.installation_revision + 1
@@ -800,7 +845,7 @@ def _fixture_only_plan_lifecycle_transition(
         _reject_lifecycle()
 
     fixture = _InstallationLifecycleStateFixture(
-        action=root_plan.action,
+        action=root_snapshot.action,
         operation_id=operation_id,
         session_sha256=session_sha256,
         install_instance_id=expected_install_instance_id,
@@ -808,10 +853,14 @@ def _fixture_only_plan_lifecycle_transition(
         pair_terminal_sha256=expected_pair_terminal_sha256,
         predecessor_terminal_sha256=expected_predecessor_terminal_sha256,
         successor_reservation_sha256=successor_reservation_sha256,
+        revision_terminal_sha256=revision_terminal_sha256,
+        predecessor_revision_terminal_sha256=(
+            predecessor_revision_terminal_sha256
+        ),
         currentness_sha256=currentness_sha256,
         requested_revision=requested_revision,
         installation_revision=revision,
-        selected_root_security_sha256=root_plan.selected_root_security_sha256,
+        selected_root_security_sha256=root_snapshot.selected_root_security_sha256,
         package_manifest_sha256=package_manifest_sha256,
         payload_tree_sha256=payload_tree_sha256,
         product_build_sha256=product_build_sha256,

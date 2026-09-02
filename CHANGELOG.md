@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- TASK-074-Bとして、Owner Voice private referenceのWindows準備順序、失敗後readback、delivery loss／reconcileを、非native・non-biometric・effect-zeroのdeterministic trace fixtureで検証可能にしました。G01–G14、canonical producer binding、実DACL／暗号化／filesystem、実Owner音声、model load／inference／WAV、Product wiring、Release／Deploy／Productionは未確認・未実行のままです。
+
 - Windows: fresh atomic lockの遅延flush競合を修正し、TASK-029同時実行を安定化。
 
 - TASK-074-Bのfixture-only統合として、route selection契約のfirst-writer-winsなin-memory CAS store seamを追加し、duplicate／replay／fault後reconcile・read-back境界を検証可能にしました。このstoreは`NOT_BOUND`／`fixture_only`／`canonical=false`／`execution=false`であり、Product wiring、永続化、model／provider／native／WAV、Release／Deploy／Productionのauthorityやeffectは生成しません。

@@ -11,6 +11,8 @@ Status: `DEV4_JUDGE_ACCEPTED / LOCAL_COMMIT-READY / NO_PUSH`
 - R3 and R4 remain preserved predecessors and are neither rewritten nor reopened.
 - R5 replay head before the H1 corrective delta:
   `7b3b16792656d31460e6d1fc21756ae291c63329`.
+- R5 H1 corrective implementation/evidence commit:
+  `0a4d789ecac2576dc77d5565d662099efbb324b5`.
 
 R5 replays the four existing TASK-068 foundation/evidence commits onto the
 latest observed main. The upstream delta from R4's `c5d7a3b` base contains

@@ -1,0 +1,112 @@
+{
+  "fixture_version": "task063-l3-native-fault-fixture/v1",
+  "task": "TASK-063",
+  "consumer": "TASK-036-P0-E",
+  "synthetic": true,
+  "authority_created": false,
+  "native_execution_started": false,
+  "install_or_update_started": false,
+  "rollback_or_cleanup_started": false,
+  "task063_completion_receipt_present": false,
+  "scenarios": [
+    {
+      "id": "I63-NQA-01",
+      "seam": "INITIAL_LOCK_CREATE_RACE",
+      "expected_results": ["ACCEPTED", "CONFLICT_REQUIRES_FRESH_RESOLVE"],
+      "duplicate_requires_exact_committed_event": false,
+      "authoritative_revision_delta": 1,
+      "target_state": "EXACT_COMMITTED_CURRENT",
+      "completion_receipt_authoritative": true,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    },
+    {
+      "id": "I63-NQA-02",
+      "seam": "CONCURRENT_EXPECTED_PREDECESSOR_UPDATE",
+      "expected_results": ["ACCEPTED", "STALE_PREDECESSOR", "DUPLICATE"],
+      "duplicate_requires_exact_committed_event": true,
+      "authoritative_revision_delta": 1,
+      "target_state": "EXACT_COMMITTED_CURRENT",
+      "completion_receipt_authoritative": true,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    },
+    {
+      "id": "I63-NQA-03",
+      "seam": "TEMP_CLOSE_THEN_FOREIGN_TARGET",
+      "expected_results": ["FOREIGN_TARGET_PRESERVED"],
+      "duplicate_requires_exact_committed_event": false,
+      "authoritative_revision_delta": 0,
+      "target_state": "FOREIGN_TARGET_PRESERVED",
+      "completion_receipt_authoritative": false,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    },
+    {
+      "id": "I63-NQA-04",
+      "seam": "DESCRIPTOR_DIRECTORY_DURABILITY_FAILURE",
+      "expected_results": ["DESCRIPTOR_DURABILITY_UNKNOWN"],
+      "duplicate_requires_exact_committed_event": false,
+      "authoritative_revision_delta": null,
+      "target_state": "UNKNOWN_REQUIRES_FRESH_PINNED_RESOLVE",
+      "completion_receipt_authoritative": false,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    },
+    {
+      "id": "I63-NQA-05",
+      "seam": "TERMINAL_RECEIPT_DIRECTORY_DURABILITY_FAILURE",
+      "expected_results": ["RECEIPT_DURABILITY_UNKNOWN"],
+      "duplicate_requires_exact_committed_event": false,
+      "authoritative_revision_delta": 1,
+      "target_state": "DESCRIPTOR_DURABLE_RECEIPT_AUTHORITY_UNKNOWN",
+      "completion_receipt_authoritative": false,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    },
+    {
+      "id": "I63-NQA-06",
+      "seam": "POST_PUBLISH_PRE_READBACK_SWAP",
+      "expected_results": ["POST_PUBLISH_IDENTITY_MISMATCH"],
+      "duplicate_requires_exact_committed_event": false,
+      "authoritative_revision_delta": null,
+      "target_state": "FOREIGN_PRESERVED_REQUIRES_FRESH_PINNED_RESOLVE",
+      "completion_receipt_authoritative": false,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    },
+    {
+      "id": "I63-NQA-07",
+      "seam": "ROLLBACK_FOREIGN_CURRENT_REPLACEMENT",
+      "expected_results": ["ROLLBACK_FOREIGN_CURRENT_PRESERVED"],
+      "duplicate_requires_exact_committed_event": false,
+      "authoritative_revision_delta": null,
+      "target_state": "FOREIGN_PRESERVED_REQUIRES_FRESH_PINNED_RESOLVE",
+      "completion_receipt_authoritative": false,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    },
+    {
+      "id": "I63-NQA-08",
+      "seam": "CLEANUP_FOREIGN_TEMP_REPLACEMENT",
+      "expected_results": ["CLEANUP_FOREIGN_TEMP_PRESERVED"],
+      "duplicate_requires_exact_committed_event": false,
+      "authoritative_revision_delta": 0,
+      "target_state": "PREDECESSOR_UNCHANGED",
+      "completion_receipt_authoritative": false,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    },
+    {
+      "id": "I63-NQA-09",
+      "seam": "ANCESTOR_OR_DACL_DRIFT_UNDER_LOCK",
+      "expected_results": ["SECURITY_CURRENTNESS_LOST"],
+      "duplicate_requires_exact_committed_event": false,
+      "authoritative_revision_delta": 0,
+      "target_state": "PREDECESSOR_UNCHANGED",
+      "completion_receipt_authoritative": false,
+      "unrelated_delta": 0,
+      "foreign_delete_or_overwrite": 0
+    }
+  ]
+}

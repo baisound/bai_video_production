@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
 from hashlib import sha256
 import json
 import os
@@ -44,10 +45,80 @@ _WINDOWS_REPARSE_POINT = 0x400
 
 ReceiptFailureInjector = Callable[[str, Path], None]
 _PRIVATE_COMPOSITION_REQUIRED = "TASK063_PRIVATE_COMPOSITION_REQUIRED"
+_ROOT_PLAN_REJECTED = "TASK063_ROOT_PLAN_REJECTED"
+_DIRECTORY_RELATIVE_PATHS = (
+    "data",
+    "data/montage-learning-bridge",
+    "data/montage-learning-bridge/.immutable-authority",
+    "data/montage-learning-bridge/learning-inbox",
+    "data/montage-learning-bridge/learning-processing",
+    "data/montage-learning-bridge/learning-quarantine",
+    "data/montage-learning-bridge/learning-receipts",
+    "data/montage-learning-bridge/preference",
+    "data/montage-learning-bridge/preference/profiles",
+    "data/montage-learning-bridge/state",
+    "data/montage-learning-bridge/migration",
+)
 
 
 class MontageLearningInstallationError(ValueError):
     """Raised when an installer instance or descriptor is not trustworthy."""
+
+
+class _InstallationAction(Enum):
+    FIRST_PROVISION = "FIRST_PROVISION"
+    ADOPT_EXISTING = "ADOPT_EXISTING"
+    VERIFY_REPAIR = "VERIFY_REPAIR"
+    PUBLISH_INSTALL_REVISION = "PUBLISH_INSTALL_REVISION"
+    PORTABLE_REBIND = "PORTABLE_REBIND"
+
+
+_PAIR_ACTION_BY_INSTALL_ACTION = {
+    _InstallationAction.FIRST_PROVISION: "PAIR_GENESIS",
+    _InstallationAction.ADOPT_EXISTING: "PAIR_ADOPTION",
+    _InstallationAction.VERIFY_REPAIR: "NO_PAIR_SUCCESSOR",
+    _InstallationAction.PUBLISH_INSTALL_REVISION: "REVISION",
+    _InstallationAction.PORTABLE_REBIND: "REBIND",
+}
+
+
+@dataclass(frozen=True, repr=False, slots=True)
+class _SelectedInstallRootPlanFixture:
+    action: _InstallationAction
+    selected_root: Path
+    directory_paths: tuple[Path, ...]
+    directory_set_sha256: str
+    expected_pair_action: str
+    predecessor_bound: bool
+    fixture_only: bool = True
+    authority_created: bool = False
+    native_effect_executed: bool = False
+
+    def public_projection(self) -> dict[str, object]:
+        return {
+            "schema_version": "TASK063_ROOT_PLAN_FIXTURE_V1",
+            "action": self.action.value,
+            "directory_set_sha256": self.directory_set_sha256,
+            "expected_pair_action": self.expected_pair_action,
+            "connector_enabled": False,
+            "activation_authorized": False,
+            "preserve_learning_data": True,
+            "fixture_only": True,
+            "authority_created": False,
+            "native_effect_executed": False,
+        }
+
+    def __repr__(self) -> str:
+        return "<_SelectedInstallRootPlanFixture redacted>"
+
+    def __copy__(self):
+        raise TypeError("TASK063_ROOT_PLAN_FIXTURE_NONCOPYABLE")
+
+    def __deepcopy__(self, memo: object):
+        raise TypeError("TASK063_ROOT_PLAN_FIXTURE_NONCOPYABLE")
+
+    def __reduce_ex__(self, protocol: int):
+        raise TypeError("TASK063_ROOT_PLAN_FIXTURE_NONSERIALIZABLE")
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +165,87 @@ class InstalledBridgeDiscovery:
             "connector_enabled": False,
             "activation_authorized": False,
         }
+
+
+_RootPlanFaultPort = Callable[[str], None]
+
+
+def _fixture_only_build_selected_root_plan(
+    *,
+    action: _InstallationAction,
+    selected_root: str | Path,
+    predecessor_bound: bool,
+    existing_relative_directories: tuple[str, ...],
+    fault_port: _RootPlanFaultPort | None = None,
+) -> _SelectedInstallRootPlanFixture:
+    """Build an effect-free fixture projection of the closed root plan."""
+
+    if type(action) is not _InstallationAction:
+        _reject_root_plan()
+    _call_root_plan_fault(fault_port, "after_action_validation")
+
+    if type(predecessor_bound) is not bool:
+        _reject_root_plan()
+    if not (type(selected_root) is str or isinstance(selected_root, Path)):
+        _reject_root_plan()
+    root = Path(selected_root)
+    if not root.is_absolute() or ".." in root.parts:
+        _reject_root_plan()
+    _call_root_plan_fault(fault_port, "after_root_validation")
+
+    if type(existing_relative_directories) is not tuple or any(
+        type(value) is not str for value in existing_relative_directories
+    ):
+        _reject_root_plan()
+    if len(existing_relative_directories) != len(set(existing_relative_directories)):
+        _reject_root_plan()
+    planned = frozenset(_DIRECTORY_RELATIVE_PATHS)
+    existing = frozenset(existing_relative_directories)
+    if not existing.issubset(planned):
+        _reject_root_plan()
+
+    if action is _InstallationAction.FIRST_PROVISION:
+        if predecessor_bound or existing:
+            _reject_root_plan()
+    elif action is _InstallationAction.PORTABLE_REBIND:
+        if not predecessor_bound or existing:
+            _reject_root_plan()
+    elif not predecessor_bound or existing != planned:
+        _reject_root_plan()
+
+    directories = tuple(
+        root.joinpath(*relative_path.split("/"))
+        for relative_path in _DIRECTORY_RELATIVE_PATHS
+    )
+    root_parts = root.parts
+    if any(path.parts[: len(root_parts)] != root_parts for path in directories):
+        _reject_root_plan()
+    _call_root_plan_fault(fault_port, "after_directory_derivation")
+
+    directory_set_sha256 = sha256_json(
+        {"relative_directories": list(_DIRECTORY_RELATIVE_PATHS)}
+    )
+    _call_root_plan_fault(fault_port, "before_fixture_projection")
+    return _SelectedInstallRootPlanFixture(
+        action=action,
+        selected_root=root,
+        directory_paths=directories,
+        directory_set_sha256=directory_set_sha256,
+        expected_pair_action=_PAIR_ACTION_BY_INSTALL_ACTION[action],
+        predecessor_bound=predecessor_bound,
+    )
+
+
+def _call_root_plan_fault(
+    fault_port: _RootPlanFaultPort | None,
+    stage: str,
+) -> None:
+    if fault_port is not None:
+        fault_port(stage)
+
+
+def _reject_root_plan() -> None:
+    raise MontageLearningInstallationError(_ROOT_PLAN_REJECTED) from None
 
 
 def provision_installed_bridge(

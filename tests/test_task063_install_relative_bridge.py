@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import replace
 import json
 import os
 from pathlib import Path
+import pickle
 
 import pytest
 
@@ -92,6 +94,184 @@ def test_public_mutation_surfaces_fail_before_arguments_hooks_or_filesystem(
         "_legacy_test_only_provision_and_write_installer_readback",
         "_legacy_test_only_write_installer_readback",
     }.intersection(installation.__all__)
+
+
+@pytest.mark.parametrize(
+    ("action_name", "predecessor_bound", "existing", "pair_action"),
+    [
+        ("FIRST_PROVISION", False, (), "PAIR_GENESIS"),
+        (
+            "ADOPT_EXISTING",
+            True,
+            installation._DIRECTORY_RELATIVE_PATHS,
+            "PAIR_ADOPTION",
+        ),
+        (
+            "VERIFY_REPAIR",
+            True,
+            installation._DIRECTORY_RELATIVE_PATHS,
+            "NO_PAIR_SUCCESSOR",
+        ),
+        (
+            "PUBLISH_INSTALL_REVISION",
+            True,
+            installation._DIRECTORY_RELATIVE_PATHS,
+            "REVISION",
+        ),
+        ("PORTABLE_REBIND", True, (), "REBIND"),
+    ],
+)
+def test_fixture_root_plan_derives_only_closed_literal_children_without_effect(
+    tmp_path: Path,
+    action_name: str,
+    predecessor_bound: bool,
+    existing: tuple[str, ...],
+    pair_action: str,
+) -> None:
+    selected_root = tmp_path / "Product root 日本語"
+    selected_root.mkdir()
+    sentinel = selected_root / "preserve.txt"
+    sentinel.write_bytes(b"preserve")
+
+    plan = installation._fixture_only_build_selected_root_plan(
+        action=installation._InstallationAction[action_name],
+        selected_root=selected_root,
+        predecessor_bound=predecessor_bound,
+        existing_relative_directories=existing,
+    )
+
+    assert plan.directory_paths == tuple(
+        selected_root.joinpath(*relative_path.split("/"))
+        for relative_path in installation._DIRECTORY_RELATIVE_PATHS
+    )
+    assert plan.expected_pair_action == pair_action
+    assert plan.fixture_only is True
+    assert plan.authority_created is False
+    assert plan.native_effect_executed is False
+    assert not {
+        "_InstallationAction",
+        "_SelectedInstallRootPlanFixture",
+        "_fixture_only_build_selected_root_plan",
+    }.intersection(installation.__all__)
+    projection = plan.public_projection()
+    assert projection["authority_created"] is False
+    assert projection["connector_enabled"] is False
+    assert projection["activation_authorized"] is False
+    assert str(selected_root) not in json.dumps(projection, ensure_ascii=False)
+    assert sorted(path.name for path in selected_root.iterdir()) == ["preserve.txt"]
+
+    with pytest.raises(TypeError, match="NONCOPYABLE"):
+        copy.copy(plan)
+    with pytest.raises(TypeError, match="NONCOPYABLE"):
+        copy.deepcopy(plan)
+    with pytest.raises(TypeError, match="NONSERIALIZABLE"):
+        pickle.dumps(plan)
+
+
+def test_fixture_root_plan_rejects_unknown_action_before_touching_root() -> None:
+    class RootMustNotBeRead:
+        def __fspath__(self) -> str:
+            raise AssertionError("root must not be read for an unknown action")
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_ROOT_PLAN_REJECTED$",
+    ):
+        installation._fixture_only_build_selected_root_plan(
+            action="FIRST_PROVISION",
+            selected_root=RootMustNotBeRead(),
+            predecessor_bound=False,
+            existing_relative_directories=(),
+        )
+
+
+@pytest.mark.parametrize("selected_root", ["relative/root", "../escape"])
+def test_fixture_root_plan_rejects_relative_or_traversing_root(
+    selected_root: str,
+) -> None:
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_ROOT_PLAN_REJECTED$",
+    ):
+        installation._fixture_only_build_selected_root_plan(
+            action=installation._InstallationAction.FIRST_PROVISION,
+            selected_root=selected_root,
+            predecessor_bound=False,
+            existing_relative_directories=(),
+        )
+
+
+@pytest.mark.parametrize(
+    ("action_name", "predecessor_bound", "existing"),
+    [
+        ("FIRST_PROVISION", True, ()),
+        ("FIRST_PROVISION", False, ("data",)),
+        ("ADOPT_EXISTING", False, installation._DIRECTORY_RELATIVE_PATHS),
+        ("ADOPT_EXISTING", True, ()),
+        ("VERIFY_REPAIR", True, ("Data",)),
+        ("PUBLISH_INSTALL_REVISION", True, ("data", "data")),
+        ("PORTABLE_REBIND", True, ("data",)),
+    ],
+)
+def test_fixture_root_plan_rejects_unbound_existing_or_case_alias_without_effect(
+    tmp_path: Path,
+    action_name: str,
+    predecessor_bound: bool,
+    existing: tuple[str, ...],
+) -> None:
+    selected_root = tmp_path / "selected"
+    selected_root.mkdir()
+    sentinel = selected_root / "preserve.txt"
+    sentinel.write_bytes(b"preserve")
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_ROOT_PLAN_REJECTED$",
+    ):
+        installation._fixture_only_build_selected_root_plan(
+            action=installation._InstallationAction[action_name],
+            selected_root=selected_root,
+            predecessor_bound=predecessor_bound,
+            existing_relative_directories=existing,
+        )
+
+    assert sentinel.read_bytes() == b"preserve"
+    assert sorted(path.name for path in selected_root.iterdir()) == ["preserve.txt"]
+
+
+@pytest.mark.parametrize(
+    "fault_stage",
+    [
+        "after_action_validation",
+        "after_root_validation",
+        "after_directory_derivation",
+        "before_fixture_projection",
+    ],
+)
+def test_fixture_root_plan_fault_ports_have_zero_filesystem_effect(
+    tmp_path: Path,
+    fault_stage: str,
+) -> None:
+    selected_root = tmp_path / "selected"
+    selected_root.mkdir()
+    sentinel = selected_root / "preserve.txt"
+    sentinel.write_bytes(b"preserve")
+
+    def fault(stage: str) -> None:
+        if stage == fault_stage:
+            raise RuntimeError("injected root-plan fixture fault")
+
+    with pytest.raises(RuntimeError, match="injected root-plan fixture fault"):
+        installation._fixture_only_build_selected_root_plan(
+            action=installation._InstallationAction.FIRST_PROVISION,
+            selected_root=selected_root,
+            predecessor_bound=False,
+            existing_relative_directories=(),
+            fault_port=fault,
+        )
+
+    assert sentinel.read_bytes() == b"preserve"
+    assert sorted(path.name for path in selected_root.iterdir()) == ["preserve.txt"]
 
 
 def test_custom_unicode_install_root_provisions_exact_relative_tree(tmp_path: Path) -> None:

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import ai_video_production.desktop_install_layout as install_layout
+from task063_legacy_installation_fixture import provision_installed_bridge
 from ai_video_production.atomic import AtomicJsonWriter
 from ai_video_production.desktop_install_layout import (
     AclAceSnapshot,
@@ -19,9 +20,6 @@ from ai_video_production.desktop_install_layout import (
     read_task063_descriptor_identity,
     resolve_desktop_install_layout,
 )
-from ai_video_production.montage_learning_installation import provision_installed_bridge
-
-
 MANIFEST_SHA = "sha256:" + "a" * 64
 USER_SID = "S-1-5-21-1000"
 SYSTEM_USER_SID = "S-1-5-21-2000"

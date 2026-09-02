@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
+from task063_legacy_installation_fixture import provision_installed_bridge
 
 from ai_video_production.montage_learning_bridge_migration import (
     MontageLearningBridgeMigrationError,
@@ -19,7 +20,6 @@ from ai_video_production.montage_learning_bridge_security import (
     BridgeSecurityState,
     attest_bridge_security,
 )
-from ai_video_production.montage_learning_installation import provision_installed_bridge
 from ai_video_production.serialization import sha256_json
 
 

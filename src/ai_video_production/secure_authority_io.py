@@ -1331,6 +1331,11 @@ class SecureAuthorityIO:
     The class performs no I/O at construction time. Every effect pins the root
     and each ancestor, refuses reparse/symlink and multi-link files, and verifies
     identities again after the operation.
+
+    This is an API-boundary control, not a sandbox against arbitrary hostile
+    Python running in this same interpreter.  Code able to inspect or mutate
+    private object state can also monkeypatch this module or the runtime; that
+    requires process or native isolation outside this Product-local API.
     """
 
     def __init__(
@@ -1676,21 +1681,8 @@ class SecureAuthorityIO:
             mode,
             self.__lease_issuer_nonce,
         )
-        self._issue_writer_lease(lease, self.__lease_issuer_nonce)
-        return lease
-
-    def _issue_writer_lease(
-        self,
-        lease: _SecureFileLock,
-        issuer_nonce: object,
-    ) -> None:
-        if (
-            type(lease) is not _SecureFileLock
-            or issuer_nonce is not self.__lease_issuer_nonce
-            or lease in self.__issued_leases
-        ):
-            raise _fail("WRITER_LEASE_REQUIRED")
         self.__issued_leases[lease] = "ISSUED"
+        return lease
 
     def _activate_writer_lease(
         self,

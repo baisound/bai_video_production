@@ -691,6 +691,24 @@ def test_windows_direct_private_lock_cannot_self_register_with_stolen_nonce(
     assert list(tmp_path.iterdir()) == []
 
 
+def test_windows_direct_private_lock_has_no_registration_issuer_with_nonce(
+    tmp_path: Path,
+) -> None:
+    from ai_video_production import secure_authority_io as secure_io
+
+    authority = SecureAuthorityIO(tmp_path)
+    nonce = authority._SecureAuthorityIO__lease_issuer_nonce
+    forged = secure_io._SecureFileLock(
+        authority,
+        ".writer.lock",
+        "initial",
+        nonce,
+    )
+
+    assert not hasattr(authority, "_issue_writer_lease")
+    assert list(tmp_path.iterdir()) == []
+
+
 @pytest.mark.parametrize(
     ("method_name", "expected_code"),
     [

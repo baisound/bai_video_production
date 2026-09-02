@@ -1,6 +1,6 @@
 # TASK-068 — Secure Authority Artifact I/O Foundation
 
-Status: `SUCCESSOR_R3_H1_H2_REWORK / IMMUTABLE_ONLY_V1 / COMMIT_STOP / NO_PUSH`
+Status: `CURRENT_MAIN_R5_H1_REWORK / DEV4_JUDGE_ACCEPTED_FOR_LOCAL_PACKET / NO_PUSH`
 
 ## Responsibility
 
@@ -34,12 +34,12 @@ Owner-approved source implementation and focused verification are authorized. Re
 - Revocation uses an immutable tombstone/transition. Published authority artifacts are never automatically deleted; physical lifecycle cleanup is a separate Task and Human Gate.
 - Directory-tree/snapshot publication and mutable phase advance are not v1 authority. Their `NoReturn` discovery surfaces return `DIRECTORY_TREE_COMMIT_AUTHORITY_NOT_CREATED` and `MUTABLE_PHASE_ADVANCE_UNAVAILABLE` before path/body/effect.
 - An immutable terminal record may be published/read only at its operation-specific exact coordinate. Re-publish collisions, fixed-history last-event inspection, or directory scan results never create a consumer `DUPLICATE`; statuses declare `DUPLICATE_CURRENTNESS_AUTHORITY_NOT_CREATED`.
-- Writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context.
+- Within the Product module/API boundary, writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context. Arbitrary hostile Python already executing in the same interpreter, with private-state mutation or monkeypatch authority, is outside this API boundary and requires process/native isolation.
 - Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
 - Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
-- Current canonical base: `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`.
-- Branch: `codex/task-068-secure-authority-io-successor-r3`; corrective source/test target: `293dd7143e6215ca9d19ecca9edff16dd4a08b15`; predecessor: `3bf28d74a02741b189663bda7194159c34d17f0b`.
-- H1 adds lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, including case and extension variants. Exact source/test identities are bound in `h1-h2-source-test-binding-2026-09-02.md`; the H1/H2 corrective exact head requires fresh independent review, and `COMMIT STOP` and `NO_PUSH` remain active.
+- Current canonical base: `origin/main@42d377242b19284007843d1d03bf1ed319010390`.
+- Branch: `codex/task-068-secure-authority-io-current-main-r5`; r3/r4 evidence is preserved historical evidence.
+- R5 retains lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, and it removes the callable writer-lease issuer surface. `current-main-r5-integration-packet.md` is the current binding; fresh independent review remains required and `NO_PUSH` remains active.
 
 ## Dependencies and next task
 

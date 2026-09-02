@@ -1,5 +1,8 @@
 # TASK-068 restart checkpoint (2026-08-31)
 
+Historical checkpoint only; it does not bind current R5 work. See
+`current-main-r5-integration-packet.md` for the current main/branch binding.
+
 ## Bind
 
 - Repository: `baisound/bai_video_production`

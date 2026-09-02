@@ -1,6 +1,10 @@
 # TASK-068 completion receipt
 
-Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / NO_PUSH / CANONICALIZATION_PENDING`
+Status: `HISTORICAL_R3_EVIDENCE / NOT_CURRENT_R5_BINDING`
+
+This receipt records r3 evidence only. The current R5 binding is
+`current-main-r5-integration-packet.md` on
+`origin/main@42d377242b19284007843d1d03bf1ed319010390`.
 
 ## Bound implementation
 

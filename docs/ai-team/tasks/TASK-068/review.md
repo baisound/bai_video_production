@@ -6,6 +6,16 @@ The working diff contains only the four allocated TASK-068 file groups. It does 
 
 ## Independent review status
 
+The current candidate is successor-r5 on
+`origin/main@42d377242b19284007843d1d03bf1ed319010390`, branch
+`codex/task-068-secure-authority-io-current-main-r5`. It preserves r3/r4
+without rewriting or reopening #501. R5 removes the callable issuer surface;
+the exact object created by `lock()` is registered directly. This is a
+Product API boundary, not a sandbox against arbitrary hostile Python with
+private-state mutation or monkeypatch authority. Fresh R5 review, including
+Windows-native evidence, remains pending; the historical paragraphs below do
+not bind R5.
+
 Successor-r3 was created without force from
 `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70` on branch
 `codex/task-068-secure-authority-io-successor-r3`.  Committed candidate

@@ -1,8 +1,19 @@
 # TASK-068 verification checkpoint
 
-Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / NO_PUSH`
+Status: `CURRENT_MAIN_R5_H1_REWORK / EXACT_HEAD_REVIEW_PENDING / NO_PUSH`
 
-## Bound source
+## Current r5 binding
+
+- Remote canonical main observed read-only: `42d377242b19284007843d1d03bf1ed319010390`.
+- Branch: `codex/task-068-secure-authority-io-current-main-r5`.
+- R5 preserves r3/r4 history without force, reopening, or push.
+- The callable writer-lease issuer is absent; direct construction still cannot self-register at the API boundary. Same-interpreter arbitrary private-state mutation is explicitly outside the Python API security boundary and requires process/native isolation.
+- R5 bundled-Python syntax check for source and both focused suites: `PASS`.
+- R5 Linux focused generic TASK-068, Windows-port skip-aware, and TASK-058 boundary regression: `202 passed, 84 skipped in 17.33s`.
+- Windows-native execution remains `NOT_CONFIRMED`; its 84 Linux skips are not promoted.
+- Release/Deploy/Production/native-real-data/paid/external-account effects: `0`.
+
+## Historical r3 bound source
 
 - Repository: `baisound/bai_video_production`
 - Current canonical comparison and candidate base: `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`
@@ -30,7 +41,7 @@ Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / N
 - Native no-replace ambiguity: a helper or asynchronous exception after the native namespace effect is freshly classified from the live source handle and final name. Only an exact native collision with a foreign destination is confirmed no-effect; owned or ambiguous state is body-free completion-unknown.
 - Coordinate and input bounds: trusted immutable filenames use the same bounded ASCII predicate as graph scans; receipt body count and physical identity integers are bounded before fingerprint encoding; custom `PathLike` and post-native helper exceptions normalize outside the active exception handler so public errors retain neither private cause nor private context.
 
-## Current H1/H2 execution state
+## Historical r3 H1/H2 execution state
 
 - Fixed target `293dd7143e6215ca9d19ecca9edff16dd4a08b15`: syntax, focused,
   boundary, and Windows-native runtime execution are `NOT_CONFIRMED`.

@@ -1,6 +1,6 @@
 # TASK-068 — Secure Authority Artifact I/O Foundation
 
-Status: `CORRECTIVE_IMPLEMENTATION_COMPLETE / SUCCESSOR_R2_COMMIT_READY_PREPARATION / IMMUTABLE_ONLY_V1 / COMMIT_STOP`
+Status: `SUCCESSOR_R3_H1_H2_REWORK / IMMUTABLE_ONLY_V1 / COMMIT_STOP / NO_PUSH`
 
 ## Responsibility
 
@@ -37,7 +37,7 @@ Owner-approved source implementation and focused verification are authorized. Re
 - Writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context.
 - Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
 - Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
-- The source and focused tests are byte-identical to successor-r1 head `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1`, whose Ubuntu/Windows CI and independent Tester/Critic/Judge evidence closed Critical/High at `0/0`. Successor-r2 is a staged, uncommitted current-main candidate; its exact-head review remains required. Local Python/WSL re-execution after the host restart is `NOT_CONFIRMED`, and no install or repeated denied route was attempted. `COMMIT STOP` stays active until the r2 exact-head gate closes.
+- Current canonical base is `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`; branch `codex/task-068-secure-authority-io-successor-r3` has committed candidate `3bf28d74a02741b189663bda7194159c34d17f0b`. H1 adds lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, including case and extension variants. The H1/H2 corrective exact head requires fresh independent review; `COMMIT STOP` and `NO_PUSH` remain active.
 
 ## Dependencies and next task
 

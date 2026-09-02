@@ -334,6 +334,33 @@ def test_path_rejects_windows_ads_devices_and_ambiguous_suffixes(
     _assert_code(exc, "RELATIVE_PATH_REJECTED")
 
 
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "cOm¹.TxT",
+        "COM².json",
+        "com³.ext",
+        "lPt¹.TxT",
+        "LPT².json",
+        "lpt³.ext",
+    ],
+)
+def test_path_rejects_windows_superscript_device_aliases_without_effect(
+    relative: str, tmp_path: Path
+) -> None:
+    unrelated = tmp_path / "unrelated.json"
+    unrelated.write_bytes(b'{"preserve":true}')
+    before = {entry.name: entry.read_bytes() for entry in tmp_path.iterdir()}
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        SecureAuthorityIO(tmp_path).read_json(relative)
+
+    _assert_code(exc, "RELATIVE_PATH_REJECTED")
+    assert exc.value.authority_created is False
+    assert exc.value.currentness_selected is False
+    assert {entry.name: entry.read_bytes() for entry in tmp_path.iterdir()} == before
+
+
 def test_read_rejects_symlink_without_following_it(tmp_path: Path) -> None:
     target = tmp_path / "secret.json"
     target.write_text('{"secret":"do-not-leak"}', encoding="utf-8")

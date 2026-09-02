@@ -1,14 +1,14 @@
 # TASK-068 completion receipt
 
-Status: `SUCCESSOR_R2_COMMIT_READY_PREPARATION / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / CANONICALIZATION_PENDING`
+Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / NO_PUSH / CANONICALIZATION_PENDING`
 
 ## Bound implementation
 
 - Repository: `baisound/bai_video_production`
-- Current canonical comparison and candidate base: `origin/main@0de3d2ef026c2d7e21ce75ff395e4df3254530e4`
-- Candidate HEAD: pending; exact ten-file diff is staged and uncommitted
-- Content source: successor-r1 `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1`
-- Branch: `codex/task-068-secure-authority-io-successor-r2`
+- Current canonical comparison and candidate base: `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`
+- Committed r3 candidate: `3bf28d74a02741b189663bda7194159c34d17f0b`
+- H1/H2 corrective exact head: fresh review pending
+- Branch: `codex/task-068-secure-authority-io-successor-r3`
 - Source: `src/ai_video_production/secure_authority_io.py`
 - Canonical LF-normalized source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
 - Canonical LF-normalized generic/POSIX test SHA-256: `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`
@@ -16,13 +16,12 @@ Status: `SUCCESSOR_R2_COMMIT_READY_PREPARATION / EXACT_HEAD_REVIEW_PENDING / COM
 - Current Windows-worktree raw SHA-256: source `BE773FF8E9DBE0428472B20178848355BBDAAD63B1A74F40715D5BEC60F967A3`; generic/POSIX `ACA17C8C22CE313AAC31CBDDE70710E9FEDD1A4BEC8B9CC29A40C0F06FCCDDB8`; Windows `BDD1982DAB13D6380B13B187230AE20203463F322C1C2D1BD2BF8BA189D76B01`.
 - Profile: `DEV-4 / IMMUTABLE_ONLY_V1`
 
-This task-local receipt creates no canonical dependency authority. The five
-successor-r1 commits were applied in order without force or rebase onto the
-current-main r2 candidate above, with no commit created. Existing independent
-Tester/Critic/Judge closure and PR #497 CI remain content evidence only. Fresh
-exact-head closure must bind the eventual r2 commit before push or Draft PR.
-TASK-069 real binding remains stopped until TASK-068 is merged into canonical
-`main` and its dependency gate is rebound.
+This task-local receipt creates no canonical dependency authority. The r3
+committed candidate above is corrected only within the ten Allowed Files for
+H1/H2. Earlier independent Tester/Critic/Judge closure and PR #497 CI remain
+historical evidence only. Fresh exact-head closure is required before push or
+Draft PR. TASK-069 real binding remains stopped until TASK-068 is merged into
+canonical `main` and its dependency gate is rebound.
 
 ## Current local result
 
@@ -30,10 +29,9 @@ TASK-069 real binding remains stopped until TASK-068 is merged into canonical
 - WSL TASK-068 focused pytest: `163 PASS / 82 SKIP / 0 FAIL`.
 - Fresh WSL TASK-058/TASK-068 targeted regression: `242 PASS / 82 SKIP / 0 FAIL`.
 - Fresh Windows-native runtime: `NOT_CONFIRMED`; this host has neither the `py` launcher nor pytest in its bundled Python, and no install or repeated denied route was attempted. The historical identical-content Windows Builder run (`82 PASS`) remains evidence only and is not promoted to fresh/independent runtime.
-- Successor-r1 exact-head Tester/Critic/Judge evidence closes Critical/High at `0/0` for the byte-identical source/tests, but it does not lift the uncommitted r2 exact-head gate.
-- Fresh successor Tester: syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, TASK-058/TASK-068 regression `368 PASS / 6 SKIP`; Windows-native remains `NOT_CONFIRMED`.
-- Successor-r2 local runtime re-execution is `NOT_CONFIRMED` because local Python and WSL are unavailable after restart; no install or repeated denied route was attempted.
-- Successor-r2 exact-head Critic/Judge rebind is pending; `COMMIT STOP` remains active until the candidate commit and final provenance review are complete.
+- Pre-H1/H2 successor evidence remains historical only: syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, TASK-058/TASK-068 regression `368 PASS / 6 SKIP`, and independent Critical/High `0/0`.
+- H1 generic and Windows negatives are present; runtime execution for the H1/H2 bytes is `NOT_CONFIRMED` because local Python and WSL are unavailable after restart, with no install or repeated denied route attempted.
+- Successor-r3 H1/H2 exact-head Critic/Judge rebind is pending; `COMMIT STOP` and `NO_PUSH` remain active until corrective review is complete.
 - `git diff --check`: PASS; line-ending conversion warnings only.
 
 The broader repository suite is not claimed as PASS for this corrective source.

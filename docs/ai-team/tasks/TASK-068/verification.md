@@ -1,20 +1,20 @@
 # TASK-068 verification checkpoint
 
-Status: `SUCCESSOR_R2_COMMIT_READY_PREPARATION / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP`
+Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / NO_PUSH`
 
 ## Bound source
 
 - Repository: `baisound/bai_video_production`
-- Current canonical comparison and candidate base: `origin/main@0de3d2ef026c2d7e21ce75ff395e4df3254530e4`
-- Candidate HEAD: pending; exact ten-file diff is staged and uncommitted
-- Content source: successor-r1 `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1`
-- Branch: `codex/task-068-secure-authority-io-successor-r2`
-- Dedicated worktree: `task-068-secure-authority-io-r2`
+- Current canonical comparison and candidate base: `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`
+- Committed r3 candidate: `3bf28d74a02741b189663bda7194159c34d17f0b`
+- H1/H2 corrective exact head: fresh review pending
+- Branch: `codex/task-068-secure-authority-io-successor-r3`
+- Dedicated worktree: `task-068-secure-authority-io-r3`
 - Canonical LF-normalized source SHA-256: `018D653E9D9226933585E51CFC2A936559C4A954A69B45EF93B234F38EF36798`
 - Canonical LF-normalized generic/POSIX test SHA-256: `4E6B5FF9E75E8C314EC764BD6DF5175BB899C45F55BAE9B3631B7E95F486A7D2`
 - Canonical LF-normalized Windows test SHA-256: `7FC07A78D5165921F80A9029A0B4E6CD62C2BD8234D838896F2763D430EB4558`
 - Current Windows-worktree raw SHA-256: source `BE773FF8E9DBE0428472B20178848355BBDAAD63B1A74F40715D5BEC60F967A3`; generic/POSIX `ACA17C8C22CE313AAC31CBDDE70710E9FEDD1A4BEC8B9CC29A40C0F06FCCDDB8`; Windows `BDD1982DAB13D6380B13B187230AE20203463F322C1C2D1BD2BF8BA189D76B01`.
-- Allowed-path drift from merge base to current `origin/main`: none
+- Allowed-path drift from the r3 parent/current `origin/main`: none
 - Shared files modified: none
 
 ## Corrective coverage
@@ -42,9 +42,7 @@ Status: `SUCCESSOR_R2_COMMIT_READY_PREPARATION / EXACT_HEAD_REVIEW_PENDING / COM
 ## Review state
 
 - Historical identical-content Tester/Critic/Judge results remain evidence only.
-- Fresh successor Tester: syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, related TASK-058 regression `368 PASS / 6 SKIP`; Windows-native remains `NOT_CONFIRMED`.
-- Successor-r1 independent Critic/Judge: Critical/High `0/0` at exact head `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1`.
-- PR #497: Ubuntu and Windows CI on Python 3.11-3.13, dependency audit, and secret scan `PASS`; release metadata failed only because shared `CHANGELOG.md` is intentionally outside this unit.
-- Successor-r2 local runtime re-execution: `NOT_CONFIRMED`; after restart neither local Python nor the WSL route is available, and no install or repeated denied route was attempted.
-- Successor-r2 exact-head Critic/Judge rebind remains required; `COMMIT STOP` stays active through candidate commit and final review.
+- Pre-H1/H2 successor evidence remains historical only: syntax `3/3 PASS`, focused `163 PASS / 82 SKIP`, related TASK-058 regression `368 PASS / 6 SKIP`, and successor-r1 independent Critic/Judge Critical/High `0/0`.
+- H1 generic and Windows negative coverage is present in the corrective source. Runtime execution for the H1/H2 bytes is `NOT_CONFIRMED` on this restarted host because local Python and WSL are unavailable; no install or repeated denied route was attempted.
+- PR #497 CI is evidence for its earlier head only. The H1/H2 exact head needs fresh review; `COMMIT STOP` and `NO_PUSH` remain active.
 - TASK-069 source mutation remains `START0` until TASK-068 is canonical on `main` and the TASK-069 dependency/start gate passes.

@@ -299,6 +299,35 @@ def test_windows_path_component_policy_is_effect_zero(tmp_path: Path) -> None:
     assert list(tmp_path.iterdir()) == []
 
 
+def test_windows_superscript_device_aliases_are_body_free_and_effect_zero(
+    tmp_path: Path,
+) -> None:
+    authority = SecureAuthorityIO(tmp_path)
+    unrelated = tmp_path / "unrelated.json"
+    unrelated.write_bytes(b'{"preserve":true}')
+    before = {entry.name: entry.read_bytes() for entry in tmp_path.iterdir()}
+
+    for relative in (
+        "cOm¹.TxT",
+        "COM².json",
+        "com³.ext",
+        "lPt¹.TxT",
+        "LPT².json",
+        "lpt³.ext",
+    ):
+        with pytest.raises(SecureAuthorityIOError) as exc:
+            authority.read_json(relative)
+        assert exc.value.code == "RELATIVE_PATH_REJECTED"
+        assert str(exc.value) == "RELATIVE_PATH_REJECTED"
+        assert exc.value.authority_created is False
+        assert exc.value.currentness_selected is False
+        assert relative not in repr(exc.value)
+        assert exc.value.__cause__ is None
+        assert exc.value.__context__ is None
+
+    assert {entry.name: entry.read_bytes() for entry in tmp_path.iterdir()} == before
+
+
 def test_windows_junction_or_symlink_ancestor_is_rejected(tmp_path: Path) -> None:
     actual = tmp_path / "actual"
     actual.mkdir()

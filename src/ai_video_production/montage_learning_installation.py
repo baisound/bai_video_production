@@ -10,27 +10,18 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from hashlib import sha256
-import json
-import os
 from pathlib import Path
 import re
-import stat
-import tempfile
 import threading
 from typing import Callable
-import uuid
 
-from .atomic import AtomicJsonWriter, exclusive_file_update_lock
 from .montage_learning_file_bridge import (
     BRIDGE_CONTRACT_PROFILE,
     BridgeLayout,
-    MontageLearningFileBridgeError,
     load_bridge_owner,
-    provision_bridge,
 )
 from .secure_authority_io import SecureAuthorityIO, SecureAuthorityIOError
-from .serialization import canonical_json_bytes, sha256_json
+from .serialization import sha256_json
 
 
 DESCRIPTOR_FILENAME = "bridge-instance.json"
@@ -53,6 +44,7 @@ _PAIR_READBACK_REUSED = "TASK063_PAIR_READBACK_REUSED"
 _INSTALLED_READBACK_REJECTED = "TASK063_INSTALLED_READBACK_REJECTED"
 _INSTALLED_READBACK_REUSED = "TASK063_INSTALLED_READBACK_REUSED"
 _LIFECYCLE_REJECTED = "TASK063_LIFECYCLE_REJECTED"
+_LIFECYCLE_REUSED = "TASK063_LIFECYCLE_REUSED"
 _OPAQUE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$")
 _DIRECTORY_RELATIVE_PATHS = (
     "data",
@@ -134,6 +126,7 @@ class _SelectedInstallRootPlanFixture:
 class _InstallationPairReadbackFixture:
     action: _InstallationAction
     operation_id: str
+    consumer_operation_key: str
     ticket_event_sha256: str
     install_instance_id: str
     descriptor_items: tuple[tuple[str, object], ...]
@@ -248,9 +241,15 @@ class _InstallationReadbackFixture:
 @dataclass(frozen=True, repr=False, slots=True)
 class _InstallationLifecycleStateFixture:
     action: _InstallationAction
+    operation_id: str
+    session_sha256: str
     install_instance_id: str
     pair_generation_sha256: str
     pair_terminal_sha256: str
+    predecessor_terminal_sha256: str
+    successor_reservation_sha256: str
+    currentness_sha256: str
+    requested_revision: int
     installation_revision: int
     selected_root_security_sha256: str
     package_manifest_sha256: str
@@ -265,11 +264,19 @@ class _InstallationLifecycleStateFixture:
         return {
             "schema_version": "TASK063_LIFECYCLE_FIXTURE_V1",
             "action": self.action.value,
+            "operation_commitment_sha256": sha256_json(
+                {"operation_id": self.operation_id}
+            ),
+            "session_sha256": self.session_sha256,
             "install_instance_commitment_sha256": sha256_json(
                 {"install_instance_id": self.install_instance_id}
             ),
             "pair_generation_sha256": self.pair_generation_sha256,
             "pair_terminal_sha256": self.pair_terminal_sha256,
+            "predecessor_terminal_sha256": self.predecessor_terminal_sha256,
+            "successor_reservation_sha256": self.successor_reservation_sha256,
+            "currentness_sha256": self.currentness_sha256,
+            "requested_revision": self.requested_revision,
             "installation_revision": self.installation_revision,
             "package_manifest_sha256": self.package_manifest_sha256,
             "payload_tree_sha256": self.payload_tree_sha256,
@@ -298,10 +305,13 @@ class _InstallationLifecycleStateFixture:
 
 _PAIR_FIXTURE_REGISTRY_LOCK = threading.Lock()
 _PAIR_FIXTURE_REGISTRY: dict[int, _InstallationPairReadbackFixture] = {}
-_PAIR_FIXTURE_BURNED_IDS: set[int] = set()
+_PAIR_FIXTURE_BURNED: dict[int, _InstallationPairReadbackFixture] = {}
 _INSTALLED_FIXTURE_REGISTRY_LOCK = threading.Lock()
 _INSTALLED_FIXTURE_REGISTRY: dict[int, _InstallationReadbackFixture] = {}
-_INSTALLED_FIXTURE_BURNED_IDS: set[int] = set()
+_INSTALLED_FIXTURE_BURNED: dict[int, _InstallationReadbackFixture] = {}
+_LIFECYCLE_FIXTURE_REGISTRY_LOCK = threading.Lock()
+_LIFECYCLE_FIXTURE_REGISTRY: dict[int, _InstallationLifecycleStateFixture] = {}
+_LIFECYCLE_FIXTURE_BURNED: dict[int, _InstallationLifecycleStateFixture] = {}
 
 
 @dataclass(frozen=True, slots=True)
@@ -444,6 +454,7 @@ def _fixture_only_issue_pair_readback(
     *,
     action: _InstallationAction,
     operation_id: str,
+    consumer_operation_key: str,
     ticket_event_sha256: str,
     install_instance_id: str,
     descriptor_document: dict[str, object],
@@ -476,6 +487,7 @@ def _fixture_only_issue_pair_readback(
     try:
         descriptor = _validated_v2_descriptor_fixture(descriptor_document)
         _require_opaque_id(operation_id)
+        _require_opaque_id(consumer_operation_key)
         if (
             type(action) is not _InstallationAction
             or type(install_instance_id) is not str
@@ -516,6 +528,7 @@ def _fixture_only_issue_pair_readback(
     fixture = _InstallationPairReadbackFixture(
         action=action,
         operation_id=operation_id,
+        consumer_operation_key=consumer_operation_key,
         ticket_event_sha256=ticket_event_sha256,
         install_instance_id=install_instance_id,
         descriptor_items=tuple(descriptor.items()),
@@ -582,6 +595,7 @@ def _fixture_only_consume_pair_readback(
             or pair_readback.action is not root_plan.action
             or pair_readback.pair_action != root_plan.expected_pair_action
             or pair_readback.operation_id != expected_operation_id
+            or pair_readback.consumer_operation_key != consumer_operation_key
             or pair_readback.ticket_event_sha256 != expected_ticket_event_sha256
             or pair_readback.install_instance_id != expected_install_instance_id
             or pair_readback.owner_instance_id != expected_install_instance_id
@@ -658,9 +672,15 @@ def _fixture_only_plan_lifecycle_transition(
     *,
     root_plan: _SelectedInstallRootPlanFixture,
     current: _InstallationLifecycleStateFixture | None,
+    operation_id: str,
+    session_sha256: str,
     expected_install_instance_id: str,
     expected_pair_generation_sha256: str,
     expected_pair_terminal_sha256: str,
+    expected_predecessor_terminal_sha256: str,
+    successor_reservation_sha256: str,
+    currentness_sha256: str,
+    requested_revision: int,
     package_manifest_sha256: str,
     payload_tree_sha256: str,
     product_build_sha256: str,
@@ -668,18 +688,27 @@ def _fixture_only_plan_lifecycle_transition(
 ) -> _InstallationLifecycleStateFixture:
     """Model one effect-free lifecycle transition for negative verification."""
 
+    if current is not None:
+        _take_lifecycle_fixture(current)
     try:
+        _require_opaque_id(operation_id)
         if (
             type(root_plan) is not _SelectedInstallRootPlanFixture
             or root_plan.authority_created
             or not root_plan.fixture_only
             or type(expected_install_instance_id) is not str
             or _INSTANCE_RE.fullmatch(expected_install_instance_id) is None
+            or type(requested_revision) is not int
+            or requested_revision < 1
         ):
             _reject_lifecycle()
         for value in (
+            session_sha256,
             expected_pair_generation_sha256,
             expected_pair_terminal_sha256,
+            expected_predecessor_terminal_sha256,
+            successor_reservation_sha256,
+            currentness_sha256,
             package_manifest_sha256,
             payload_tree_sha256,
             product_build_sha256,
@@ -698,6 +727,11 @@ def _fixture_only_plan_lifecycle_transition(
                 or current.authority_created
                 or not current.fixture_only
                 or current.install_instance_id != expected_install_instance_id
+                or expected_predecessor_terminal_sha256
+                != current.pair_terminal_sha256
+                or operation_id == current.operation_id
+                or successor_reservation_sha256
+                == current.successor_reservation_sha256
             ):
                 _reject_lifecycle()
 
@@ -760,14 +794,22 @@ def _fixture_only_plan_lifecycle_transition(
                     revision = current.installation_revision + 1
                 else:
                     _reject_lifecycle()
+        if requested_revision != revision:
+            _reject_lifecycle()
     except (MontageLearningInstallationError, TypeError, ValueError):
         _reject_lifecycle()
 
-    return _InstallationLifecycleStateFixture(
+    fixture = _InstallationLifecycleStateFixture(
         action=root_plan.action,
+        operation_id=operation_id,
+        session_sha256=session_sha256,
         install_instance_id=expected_install_instance_id,
         pair_generation_sha256=expected_pair_generation_sha256,
         pair_terminal_sha256=expected_pair_terminal_sha256,
+        predecessor_terminal_sha256=expected_predecessor_terminal_sha256,
+        successor_reservation_sha256=successor_reservation_sha256,
+        currentness_sha256=currentness_sha256,
+        requested_revision=requested_revision,
         installation_revision=revision,
         selected_root_security_sha256=root_plan.selected_root_security_sha256,
         package_manifest_sha256=package_manifest_sha256,
@@ -775,6 +817,9 @@ def _fixture_only_plan_lifecycle_transition(
         product_build_sha256=product_build_sha256,
         installer_build_sha256=installer_build_sha256,
     )
+    with _LIFECYCLE_FIXTURE_REGISTRY_LOCK:
+        _LIFECYCLE_FIXTURE_REGISTRY[id(fixture)] = fixture
+    return fixture
 
 
 def _fixture_only_uninstall_preservation_projection() -> dict[str, object]:
@@ -816,9 +861,9 @@ def _take_pair_fixture(value: object) -> None:
     with _PAIR_FIXTURE_REGISTRY_LOCK:
         registered = _PAIR_FIXTURE_REGISTRY.pop(id(value), None)
         if registered is value:
-            _PAIR_FIXTURE_BURNED_IDS.add(id(value))
+            _PAIR_FIXTURE_BURNED[id(value)] = value
             return
-        if id(value) in _PAIR_FIXTURE_BURNED_IDS:
+        if _PAIR_FIXTURE_BURNED.get(id(value)) is value:
             raise MontageLearningInstallationError(_PAIR_READBACK_REUSED) from None
     _reject_pair_readback()
 
@@ -829,13 +874,26 @@ def _take_installed_fixture(value: object) -> None:
     with _INSTALLED_FIXTURE_REGISTRY_LOCK:
         registered = _INSTALLED_FIXTURE_REGISTRY.pop(id(value), None)
         if registered is value:
-            _INSTALLED_FIXTURE_BURNED_IDS.add(id(value))
+            _INSTALLED_FIXTURE_BURNED[id(value)] = value
             return
-        if id(value) in _INSTALLED_FIXTURE_BURNED_IDS:
+        if _INSTALLED_FIXTURE_BURNED.get(id(value)) is value:
             raise MontageLearningInstallationError(
                 _INSTALLED_READBACK_REUSED
             ) from None
     _reject_installed_readback()
+
+
+def _take_lifecycle_fixture(value: object) -> None:
+    if type(value) is not _InstallationLifecycleStateFixture:
+        _reject_lifecycle()
+    with _LIFECYCLE_FIXTURE_REGISTRY_LOCK:
+        registered = _LIFECYCLE_FIXTURE_REGISTRY.pop(id(value), None)
+        if registered is value:
+            _LIFECYCLE_FIXTURE_BURNED[id(value)] = value
+            return
+        if _LIFECYCLE_FIXTURE_BURNED.get(id(value)) is value:
+            raise MontageLearningInstallationError(_LIFECYCLE_REUSED) from None
+    _reject_lifecycle()
 
 
 def _validated_v2_descriptor_fixture(value: object) -> dict[str, object]:
@@ -908,56 +966,6 @@ def provision_installed_bridge(
     raise MontageLearningInstallationError(_PRIVATE_COMPOSITION_REQUIRED)
 
 
-def _legacy_test_only_provision_installed_bridge(
-    install_root: str | Path,
-    *,
-    installer_manifest_sha256: str,
-    now: str | None = None,
-) -> InstalledBridgeDiscovery:
-    """Exercise the historical fixture path; never a Product authority surface."""
-
-    _require_sha(installer_manifest_sha256, "installer_manifest_sha256")
-    layout = BridgeLayout.production(install_root)
-    _ensure_installer_data_root(layout)
-    descriptor_path = layout.root / DESCRIPTOR_FILENAME
-    existing: BridgeInstanceDescriptor | None = None
-    if descriptor_path.exists() or descriptor_path.is_symlink():
-        existing = _read_descriptor(descriptor_path)
-
-    owner_path = layout.owner_manifest
-    if existing is not None:
-        instance_id = existing.install_instance_id
-        created_at = existing.created_at
-    elif owner_path.exists() or owner_path.is_symlink():
-        owner = load_bridge_owner(layout)
-        instance_id = owner.bridge_instance_id
-        created_at = _timestamp(now)
-    else:
-        instance_id = f"bvp-install-{uuid.uuid4().hex}"
-        created_at = _timestamp(now)
-
-    owner = provision_bridge(layout, bridge_instance_id=instance_id)
-    updated_at = _timestamp(now)
-    body = {
-        "schema_version": DESCRIPTOR_SCHEMA_VERSION,
-        "message_type": DESCRIPTOR_MESSAGE_TYPE,
-        "product_id": PRODUCT_ID,
-        "install_instance_id": instance_id,
-        "bridge_relative_path": BRIDGE_RELATIVE_PATH,
-        "installer_manifest_sha256": installer_manifest_sha256,
-        "created_at": created_at,
-        "updated_at": updated_at,
-    }
-    document = dict(body)
-    document["descriptor_sha256"] = sha256_json(body)
-    AtomicJsonWriter.write(
-        descriptor_path,
-        document,
-        validator=_validate_descriptor_document,
-    )
-    return discover_installed_bridge(install_root)
-
-
 def discover_installed_bridge(install_root: str | Path) -> InstalledBridgeDiscovery:
     """Read back one exact installer instance without creating or repairing it."""
 
@@ -989,133 +997,6 @@ def provision_and_write_installer_readback(
     raise MontageLearningInstallationError(_PRIVATE_COMPOSITION_REQUIRED)
 
 
-def _legacy_test_only_provision_and_write_installer_readback(
-    install_root: str | Path,
-    *,
-    installer_manifest_sha256: str,
-    now: str | None = None,
-    failure_injector: ReceiptFailureInjector | None = None,
-) -> tuple[InstalledBridgeDiscovery, Path]:
-    """Exercise the historical fixture path; never a Product authority surface."""
-
-    root = Path(install_root)
-    layout = BridgeLayout.production(root)
-    descriptor_path = layout.root / DESCRIPTOR_FILENAME
-    if not (descriptor_path.exists() or descriptor_path.is_symlink()):
-        discovery = _legacy_test_only_provision_installed_bridge(
-            root,
-            installer_manifest_sha256=installer_manifest_sha256,
-            now=now,
-        )
-        try:
-            return discovery, _legacy_test_only_write_installer_readback(
-                discovery,
-                failure_injector=failure_injector,
-            )
-        except Exception:
-            _rollback_fresh_installer_publication(discovery)
-            raise
-
-    previous = discover_installed_bridge(root)
-    target, _ = _installer_readback_coordinates(previous)
-    try:
-        with exclusive_file_update_lock(target):
-            previous = _capture_discovery_source_binding(previous)
-            previous_descriptor_bytes = _read_stable_regular_bytes(descriptor_path)
-            existing_bytes = _read_stable_regular_bytes(target)
-            _validate_existing_installer_readback(
-                existing_bytes,
-                previous,
-                allowed_descriptor_sha256={previous.descriptor.descriptor_sha256},
-            )
-            discovery = _legacy_test_only_provision_installed_bridge(
-                root,
-                installer_manifest_sha256=installer_manifest_sha256,
-                now=now,
-            )
-            try:
-                return discovery, _write_installer_readback_locked(
-                    discovery,
-                    allowed_existing_descriptor_sha256={
-                        previous.descriptor.descriptor_sha256,
-                        discovery.descriptor.descriptor_sha256,
-                    },
-                    failure_injector=failure_injector,
-                )
-            except Exception:
-                _rollback_installer_update(
-                    previous,
-                    descriptor_bytes=previous_descriptor_bytes,
-                    receipt_bytes=existing_bytes,
-                )
-                raise
-    except ValueError as exc:
-        if isinstance(exc, MontageLearningInstallationError):
-            raise
-        raise MontageLearningInstallationError(
-            "installer readback update lock failed"
-        ) from exc
-
-
-def _rollback_fresh_installer_publication(
-    discovery: InstalledBridgeDiscovery,
-) -> None:
-    target, _ = _installer_readback_coordinates(discovery)
-    descriptor_path = discovery.layout.root / DESCRIPTOR_FILENAME
-    try:
-        if _safe_receipt_identity(target) is not None:
-            target.unlink()
-        current = _capture_discovery_source_binding(discovery)
-        if current != discovery:
-            raise MontageLearningInstallationError(
-                "fresh installer discovery changed before rollback"
-            )
-        descriptor_path.unlink()
-        _directory_fsync(target.parent)
-        _directory_fsync(descriptor_path.parent)
-    except Exception as rollback_exc:
-        raise MontageLearningInstallationError(
-            "fresh installer publication rollback requires recovery"
-        ) from rollback_exc
-
-
-def _rollback_installer_update(
-    previous: InstalledBridgeDiscovery,
-    *,
-    descriptor_bytes: bytes,
-    receipt_bytes: bytes,
-) -> None:
-    target, _ = _installer_readback_coordinates(previous)
-    descriptor_path = previous.layout.root / DESCRIPTOR_FILENAME
-    try:
-        current_receipt = (
-            None
-            if _safe_receipt_identity(target) is None
-            else _read_stable_regular_bytes(target)
-        )
-        if current_receipt != receipt_bytes:
-            receipt_document = json.loads(receipt_bytes.decode("utf-8"))
-            AtomicJsonWriter.write(target, receipt_document)
-        descriptor_document = json.loads(descriptor_bytes.decode("utf-8"))
-        _validate_descriptor_document(descriptor_document)
-        AtomicJsonWriter.write(
-            descriptor_path,
-            descriptor_document,
-            validator=_validate_descriptor_document,
-        )
-        _capture_discovery_source_binding(previous)
-        restored_receipt = _read_stable_regular_bytes(target)
-        _validate_existing_installer_readback(
-            restored_receipt,
-            previous,
-            allowed_descriptor_sha256={previous.descriptor.descriptor_sha256},
-        )
-    except Exception as rollback_exc:
-        raise MontageLearningInstallationError(
-            "installer update rollback requires recovery"
-        ) from rollback_exc
-
-
 def write_installer_readback(
     discovery: InstalledBridgeDiscovery,
     *,
@@ -1124,433 +1005,6 @@ def write_installer_readback(
     """Fail closed until the private Product installation composition is bound."""
 
     raise MontageLearningInstallationError(_PRIVATE_COMPOSITION_REQUIRED)
-
-
-def _legacy_test_only_write_installer_readback(
-    discovery: InstalledBridgeDiscovery,
-    *,
-    failure_injector: ReceiptFailureInjector | None = None,
-) -> Path:
-    """Exercise the historical fixture path; never a Product authority surface."""
-
-    target, _ = _installer_readback_coordinates(discovery)
-    try:
-        with exclusive_file_update_lock(target):
-            return _write_installer_readback_locked(
-                discovery,
-                allowed_existing_descriptor_sha256={
-                    discovery.descriptor.descriptor_sha256
-                },
-                failure_injector=failure_injector,
-            )
-    except ValueError as exc:
-        if isinstance(exc, MontageLearningInstallationError):
-            raise
-        raise MontageLearningInstallationError(
-            "installer readback update lock failed"
-        ) from exc
-
-
-def _write_installer_readback_locked(
-    discovery: InstalledBridgeDiscovery,
-    *,
-    allowed_existing_descriptor_sha256: set[str],
-    failure_injector: ReceiptFailureInjector | None,
-) -> Path:
-    discovery = _capture_discovery_source_binding(discovery)
-    target, directories = _installer_readback_coordinates(discovery)
-    ancestor_identities = tuple(_safe_directory_identity(path) for path in directories)
-    existing_identity = _safe_receipt_identity(target)
-    existing_digest: bytes | None = None
-    if existing_identity is not None:
-        existing_bytes = _read_stable_regular_bytes(target)
-        _validate_existing_installer_readback(
-            existing_bytes,
-            discovery,
-            allowed_descriptor_sha256=allowed_existing_descriptor_sha256,
-        )
-        existing_digest = sha256(existing_bytes).digest()
-    data = canonical_json_bytes(discovery.public_receipt()) + b"\n"
-    if len(data) > _MAX_INSTALLER_READBACK_BYTES:
-        raise MontageLearningInstallationError("installer readback is too large")
-
-    fd, temporary_name = tempfile.mkstemp(
-        dir=target.parent,
-        prefix=f".{target.name}.",
-        suffix=".tmp",
-    )
-    temporary = Path(temporary_name)
-    replaced = False
-    try:
-        _verify_directory_identities(directories, ancestor_identities)
-        with os.fdopen(fd, "wb", closefd=True) as handle:
-            handle.write(data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        _require_safe_regular_file(temporary, expected_size=len(data))
-        if _read_stable_regular_bytes(temporary) != data:
-            raise MontageLearningInstallationError(
-                "installer readback temporary verification failed"
-            )
-        _call_receipt_failure(failure_injector, "after_temp_fsync", temporary)
-
-        _call_receipt_failure(failure_injector, "before_replace", target)
-        discovery = _capture_discovery_source_binding(discovery)
-        _verify_directory_identities(directories, ancestor_identities)
-        if _safe_receipt_identity(target) != existing_identity:
-            raise MontageLearningInstallationError(
-                "installer readback target identity changed"
-            )
-        if existing_identity is not None:
-            current_bytes = _read_stable_regular_bytes(target)
-            _validate_existing_installer_readback(
-                current_bytes,
-                discovery,
-                allowed_descriptor_sha256=allowed_existing_descriptor_sha256,
-            )
-            if sha256(current_bytes).digest() != existing_digest:
-                raise MontageLearningInstallationError(
-                    "installer readback target bytes changed"
-                )
-        if existing_identity is None:
-            try:
-                os.link(temporary, target, follow_symlinks=False)
-            except FileExistsError as exc:
-                raise MontageLearningInstallationError(
-                    "installer readback target appeared concurrently"
-                ) from exc
-            try:
-                temporary.unlink()
-            except OSError as exc:
-                try:
-                    target.unlink()
-                except OSError as rollback_exc:
-                    raise MontageLearningInstallationError(
-                        "installer readback new-target cleanup requires recovery"
-                    ) from rollback_exc
-                raise MontageLearningInstallationError(
-                    "installer readback new-target cleanup failed"
-                ) from exc
-        else:
-            os.replace(temporary, target)
-        replaced = True
-        _directory_fsync(target.parent)
-
-        _verify_directory_identities(directories, ancestor_identities)
-        _call_receipt_failure(failure_injector, "before_readback", target)
-        _require_safe_regular_file(target, expected_size=len(data))
-        readback = _read_stable_regular_bytes(target)
-        if readback != data or sha256(readback).digest() != sha256(data).digest():
-            raise MontageLearningInstallationError(
-                "installer readback byte verification failed"
-            )
-        _capture_discovery_source_binding(discovery)
-        return target
-    finally:
-        if not replaced:
-            try:
-                temporary.unlink(missing_ok=True)
-            except OSError:
-                pass
-
-
-def _installer_readback_coordinates(
-    discovery: InstalledBridgeDiscovery,
-) -> tuple[Path, tuple[Path, ...]]:
-    install_root = discovery.install_root
-    if not install_root.is_absolute():
-        raise MontageLearningInstallationError("install root must be absolute")
-    expected_layout = BridgeLayout.production(install_root)
-    if expected_layout.root != discovery.layout.root:
-        raise MontageLearningInstallationError("discovery layout mismatch")
-    data_root = install_root / "data"
-    bridge_root = data_root / "montage-learning-bridge"
-    migration_root = bridge_root / "migration"
-    if (
-        data_root.parent != install_root
-        or bridge_root.parent != data_root
-        or migration_root.parent != bridge_root
-        or discovery.layout.migration != migration_root
-    ):
-        raise MontageLearningInstallationError("installer readback path mismatch")
-    target = migration_root / INSTALLER_READBACK_FILENAME
-    if target.parent != discovery.layout.migration:
-        raise MontageLearningInstallationError("installer readback target escaped")
-    return target, _complete_directory_chain(migration_root)
-
-
-def _complete_directory_chain(path: Path) -> tuple[Path, ...]:
-    if not path.is_absolute():
-        raise MontageLearningInstallationError(
-            "installer readback ancestor chain must be absolute"
-        )
-    return tuple(reversed(path.parents)) + (path,)
-
-
-def _capture_discovery_source_binding(
-    expected: InstalledBridgeDiscovery,
-) -> InstalledBridgeDiscovery:
-    descriptor_path = expected.layout.root / DESCRIPTOR_FILENAME
-    owner_path = expected.layout.owner_manifest
-    before = (
-        _safe_receipt_identity(descriptor_path),
-        _safe_receipt_identity(owner_path),
-    )
-    if None in before:
-        raise MontageLearningInstallationError(
-            "installer discovery source is unavailable"
-        )
-    current = discover_installed_bridge(expected.install_root)
-    after = (
-        _safe_receipt_identity(descriptor_path),
-        _safe_receipt_identity(owner_path),
-    )
-    if before != after or current != expected:
-        raise MontageLearningInstallationError(
-            "installer discovery source identity changed"
-        )
-    return current
-
-
-def _safe_directory_identity(path: Path) -> tuple[int, int, str]:
-    if path.is_symlink():
-        raise MontageLearningInstallationError(
-            "installer readback ancestor must not be a symlink"
-        )
-    try:
-        metadata = path.stat(follow_symlinks=False)
-    except OSError as exc:
-        raise MontageLearningInstallationError(
-            "installer readback ancestor is unavailable"
-        ) from exc
-    if not stat.S_ISDIR(metadata.st_mode) or _stat_is_reparse(metadata):
-        raise MontageLearningInstallationError(
-            "installer readback ancestor must be a safe directory"
-        )
-    if os.name == "nt" and not hasattr(metadata, "st_file_attributes"):
-        raise MontageLearningInstallationError(
-            "installer readback ancestor safety is not observable"
-        )
-    if metadata.st_dev < 0 or metadata.st_ino <= 0:
-        raise MontageLearningInstallationError(
-            "installer readback ancestor identity is unavailable"
-        )
-    try:
-        resolved = str(path.resolve(strict=True))
-    except OSError as exc:
-        raise MontageLearningInstallationError(
-            "installer readback ancestor cannot be resolved"
-        ) from exc
-    return metadata.st_dev, metadata.st_ino, resolved
-
-
-def _verify_directory_identities(
-    paths: tuple[Path, ...],
-    expected: tuple[tuple[int, int, str], ...],
-) -> None:
-    current = tuple(_safe_directory_identity(path) for path in paths)
-    if current != expected:
-        raise MontageLearningInstallationError(
-            "installer readback ancestor identity changed"
-        )
-
-
-def _safe_receipt_identity(path: Path) -> tuple[int, int, int, int, int] | None:
-    try:
-        metadata = path.stat(follow_symlinks=False)
-    except FileNotFoundError:
-        return None
-    except OSError as exc:
-        raise MontageLearningInstallationError(
-            "installer readback target is unavailable"
-        ) from exc
-    _require_safe_regular_metadata(path, metadata)
-    return (
-        metadata.st_dev,
-        metadata.st_ino,
-        metadata.st_size,
-        metadata.st_mtime_ns,
-        metadata.st_nlink,
-    )
-
-
-def _require_safe_regular_file(path: Path, *, expected_size: int) -> None:
-    try:
-        metadata = path.stat(follow_symlinks=False)
-    except OSError as exc:
-        raise MontageLearningInstallationError(
-            "installer readback file is unavailable"
-        ) from exc
-    _require_safe_regular_metadata(path, metadata)
-    if metadata.st_size != expected_size:
-        raise MontageLearningInstallationError(
-            "installer readback file size mismatch"
-        )
-
-
-def _require_safe_regular_metadata(path: Path, metadata: os.stat_result) -> None:
-    if (
-        path.is_symlink()
-        or not stat.S_ISREG(metadata.st_mode)
-        or _stat_is_reparse(metadata)
-    ):
-        raise MontageLearningInstallationError(
-            "installer readback target must be a safe regular file"
-        )
-    if metadata.st_nlink != 1:
-        raise MontageLearningInstallationError(
-            "installer readback target must not be hard linked"
-        )
-    if os.name == "nt" and not hasattr(metadata, "st_file_attributes"):
-        raise MontageLearningInstallationError(
-            "installer readback target safety is not observable"
-        )
-
-
-def _read_stable_regular_bytes(path: Path) -> bytes:
-    try:
-        before = path.stat(follow_symlinks=False)
-    except OSError as exc:
-        raise MontageLearningInstallationError(
-            "installer readback cannot be inspected"
-        ) from exc
-    _require_safe_regular_metadata(path, before)
-    if not 1 <= before.st_size <= _MAX_INSTALLER_READBACK_BYTES:
-        raise MontageLearningInstallationError("installer readback size is invalid")
-    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
-    try:
-        descriptor = os.open(path, flags)
-    except OSError as exc:
-        raise MontageLearningInstallationError(
-            "installer readback cannot be read"
-        ) from exc
-    try:
-        opened = os.fstat(descriptor)
-        _require_safe_regular_metadata(path, opened)
-        if _regular_identity(opened) != _regular_identity(before):
-            raise MontageLearningInstallationError(
-                "installer readback changed before open"
-            )
-        chunks: list[bytes] = []
-        remaining = _MAX_INSTALLER_READBACK_BYTES + 1
-        while remaining > 0:
-            chunk = os.read(descriptor, remaining)
-            if not chunk:
-                break
-            chunks.append(chunk)
-            remaining -= len(chunk)
-        data = b"".join(chunks)
-        after_open = os.fstat(descriptor)
-    finally:
-        os.close(descriptor)
-    try:
-        after = path.stat(follow_symlinks=False)
-    except OSError as exc:
-        raise MontageLearningInstallationError(
-            "installer readback cannot be re-inspected"
-        ) from exc
-    _require_safe_regular_metadata(path, after)
-    if (
-        _regular_identity(before) != _regular_identity(after_open)
-        or _regular_identity(after_open) != _regular_identity(after)
-        or len(data) != after.st_size
-    ):
-        raise MontageLearningInstallationError("installer readback is unstable")
-    return data
-
-
-def _regular_identity(metadata: os.stat_result) -> tuple[int, int, int, int, int]:
-    return (
-        metadata.st_dev,
-        metadata.st_ino,
-        metadata.st_size,
-        metadata.st_mtime_ns,
-        metadata.st_nlink,
-    )
-
-
-def _validate_existing_installer_readback(
-    data: bytes,
-    discovery: InstalledBridgeDiscovery,
-    *,
-    allowed_descriptor_sha256: set[str],
-) -> None:
-    try:
-        value = json.loads(
-            data.decode("utf-8"),
-            object_pairs_hook=_reject_duplicate_receipt_keys,
-        )
-    except (UnicodeError, json.JSONDecodeError) as exc:
-        raise MontageLearningInstallationError(
-            "existing installer readback JSON is invalid"
-        ) from exc
-    expected = discovery.public_receipt()
-    if type(value) is not dict or set(value) != set(expected):
-        raise MontageLearningInstallationError(
-            "existing installer readback fields mismatch"
-        )
-    for field in (
-        "schema_version",
-        "message_type",
-        "product_id",
-        "install_instance_id",
-        "bridge_relative_path",
-        "owner_manifest_sha256",
-        "capability",
-        "status",
-        "connector_enabled",
-        "activation_authorized",
-    ):
-        if value[field] != expected[field]:
-            raise MontageLearningInstallationError(
-                "existing installer readback ownership mismatch"
-            )
-    descriptor_sha256 = _require_sha(
-        value["descriptor_sha256"], "descriptor_sha256"
-    )
-    if descriptor_sha256 not in allowed_descriptor_sha256:
-        raise MontageLearningInstallationError(
-            "existing installer readback descriptor transition mismatch"
-        )
-
-
-def _reject_duplicate_receipt_keys(
-    pairs: list[tuple[str, object]],
-) -> dict[str, object]:
-    result: dict[str, object] = {}
-    for key, value in pairs:
-        if type(key) is not str or key in result:
-            raise MontageLearningInstallationError(
-                "existing installer readback has duplicate fields"
-            )
-        result[key] = value
-    return result
-
-
-def _stat_is_reparse(metadata: os.stat_result) -> bool:
-    return bool(getattr(metadata, "st_file_attributes", 0) & _WINDOWS_REPARSE_POINT)
-
-
-def _directory_fsync(path: Path) -> None:
-    try:
-        descriptor = os.open(path, os.O_RDONLY)
-    except OSError:
-        return
-    try:
-        os.fsync(descriptor)
-    except OSError:
-        pass
-    finally:
-        os.close(descriptor)
-
-
-def _call_receipt_failure(
-    failure_injector: ReceiptFailureInjector | None,
-    phase: str,
-    path: Path,
-) -> None:
-    if failure_injector is not None:
-        failure_injector(phase, path)
 
 
 def _read_descriptor(path: Path) -> BridgeInstanceDescriptor:
@@ -1579,33 +1033,6 @@ def _read_descriptor(path: Path) -> BridgeInstanceDescriptor:
         updated_at=value["updated_at"],
         descriptor_sha256=value["descriptor_sha256"],
     )
-
-
-def _ensure_installer_data_root(layout: BridgeLayout) -> None:
-    install_root = layout.root.parent.parent
-    data_root = layout.root.parent
-    for path in (install_root,):
-        if path.is_symlink() or not path.is_dir():
-            raise MontageLearningInstallationError(
-                "installer-selected root must be an existing non-symlink directory"
-            )
-        metadata = path.stat(follow_symlinks=False)
-        if getattr(metadata, "st_file_attributes", 0) & 0x400:
-            raise MontageLearningInstallationError(
-                "installer-selected root must not be a reparse point"
-            )
-    if data_root.exists() or data_root.is_symlink():
-        if data_root.is_symlink() or not data_root.is_dir():
-            raise MontageLearningInstallationError(
-                "installer data root must be a non-symlink directory"
-            )
-        metadata = data_root.stat(follow_symlinks=False)
-        if getattr(metadata, "st_file_attributes", 0) & 0x400:
-            raise MontageLearningInstallationError(
-                "installer data root must not be a reparse point"
-            )
-    else:
-        data_root.mkdir(mode=0o700)
 
 
 def _validate_descriptor_document(value: object) -> None:

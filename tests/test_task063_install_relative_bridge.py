@@ -11,6 +11,7 @@ import threading
 import pytest
 
 import ai_video_production.montage_learning_installation as installation
+import task063_legacy_installation_fixture as legacy_installation
 from ai_video_production.montage_learning_installer_cli import main as installer_main
 from ai_video_production.montage_learning_installation import (
     BRIDGE_RELATIVE_PATH,
@@ -26,10 +27,10 @@ from ai_video_production.montage_learning_installation import (
 MANIFEST_SHA = "sha256:" + "a" * 64
 ROOT_SECURITY_SHA = "sha256:" + "b" * 64
 provision_and_write_installer_readback = (
-    installation._legacy_test_only_provision_and_write_installer_readback
+    legacy_installation.provision_and_write_installer_readback
 )
-provision_installed_bridge = installation._legacy_test_only_provision_installed_bridge
-write_installer_readback = installation._legacy_test_only_write_installer_readback
+provision_installed_bridge = legacy_installation.provision_installed_bridge
+write_installer_readback = legacy_installation.write_installer_readback
 
 
 def _commitment(seed: str) -> str:
@@ -88,6 +89,41 @@ def _lifecycle_root_plan(
     )
 
 
+def _plan_lifecycle(**provided: object):
+    values = dict(provided)
+    root_plan = values["root_plan"]
+    current = values["current"]
+    terminal = str(values["expected_pair_terminal_sha256"])
+    action_name = root_plan.action.value
+    current_revision = current.installation_revision if current is not None else 0
+    values.setdefault(
+        "operation_id",
+        f"operation-{action_name.lower()}-{current_revision}",
+    )
+    values.setdefault("session_sha256", _commitment("lifecycle-session"))
+    values.setdefault(
+        "expected_predecessor_terminal_sha256",
+        current.pair_terminal_sha256
+        if current is not None
+        else _commitment("no-predecessor"),
+    )
+    values.setdefault(
+        "successor_reservation_sha256",
+        _commitment(f"reservation-{action_name}-{terminal}"),
+    )
+    values.setdefault(
+        "currentness_sha256",
+        _commitment(f"currentness-{action_name}-{terminal}"),
+    )
+    values.setdefault(
+        "requested_revision",
+        current_revision + 1
+        if action_name == "PUBLISH_INSTALL_REVISION"
+        else max(1, current_revision),
+    )
+    return installation._fixture_only_plan_lifecycle_transition(**values)
+
+
 def _issue_pair_fixture(
     plan: object,
     descriptor: dict[str, object],
@@ -96,6 +132,7 @@ def _issue_pair_fixture(
     values: dict[str, object] = {
         "action": installation._InstallationAction.FIRST_PROVISION,
         "operation_id": "operation-1",
+        "consumer_operation_key": "consumer-operation-1",
         "ticket_event_sha256": _commitment("ticket"),
         "install_instance_id": descriptor["install_instance_id"],
         "descriptor_document": descriptor,
@@ -217,7 +254,7 @@ def test_public_mutation_surfaces_fail_before_arguments_hooks_or_filesystem(
         "_legacy_test_only_provision_installed_bridge",
         "_legacy_test_only_provision_and_write_installer_readback",
         "_legacy_test_only_write_installer_readback",
-    }.intersection(installation.__all__)
+    }.intersection(vars(installation))
 
 
 @pytest.mark.parametrize(
@@ -449,6 +486,68 @@ def test_pair_consumer_issues_one_path_free_data_only_installed_readback(
         )
 
 
+def test_installation_readback_schema_pair_is_byte_identical_and_closed() -> None:
+    repository_root = Path(__file__).parents[1]
+    root_schema = (
+        repository_root
+        / "schemas"
+        / "montage-learning-installation-readback.schema.json"
+    )
+    packaged_schema = (
+        repository_root
+        / "src"
+        / "ai_video_production"
+        / "schema_resources"
+        / "montage-learning-installation-readback.schema.json"
+    )
+
+    assert root_schema.read_bytes() == packaged_schema.read_bytes()
+    schema = json.loads(root_schema.read_text(encoding="utf-8"))
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == set(schema["properties"])
+    assert schema["properties"]["audit_self_hash"]["pattern"] == (
+        "^sha256:[0-9a-f]{64}$"
+    )
+
+
+def test_installation_readback_projection_validates_hash_and_closed_schema(
+    tmp_path: Path,
+) -> None:
+    jsonschema = pytest.importorskip("jsonschema")
+    _, plan = _fixture_root_plan(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+    installed = _consume_pair_fixture(
+        _issue_pair_fixture(plan, descriptor),
+        plan,
+        descriptor,
+    )
+    projection = installation._fixture_only_consume_installed_readback(
+        installed,
+        consumer_operation_key="consumer-operation-1",
+    )
+    body = dict(projection)
+    supplied_hash = body.pop("audit_self_hash")
+    assert supplied_hash == installation.sha256_json(body)
+
+    schema_path = (
+        Path(__file__).parents[1]
+        / "schemas"
+        / "montage-learning-installation-readback.schema.json"
+    )
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    validator = jsonschema.Draft202012Validator(
+        schema,
+        format_checker=jsonschema.FormatChecker(),
+    )
+    validator.validate(projection)
+
+    with pytest.raises(jsonschema.ValidationError):
+        validator.validate({**projection, "unknown": "rejected"})
+    with pytest.raises(jsonschema.ValidationError):
+        validator.validate({**projection, "audit_self_hash": "sha256:invalid"})
+
+
 def test_pair_consumer_rejects_public_direct_copy_and_serialized_forgery(
     tmp_path: Path,
 ) -> None:
@@ -618,6 +717,39 @@ def test_pair_consumer_exception_and_wrong_installed_consumer_burn_once(
         )
 
 
+def test_pair_consumer_requires_issue_bound_exact_operation_key_and_burns(
+    tmp_path: Path,
+) -> None:
+    _, plan = _fixture_root_plan(tmp_path)
+    descriptor = _v2_descriptor_fixture()
+    pair = _issue_pair_fixture(
+        plan,
+        descriptor,
+        consumer_operation_key="consumer-operation-a",
+    )
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REJECTED$",
+    ):
+        _consume_pair_fixture(
+            pair,
+            plan,
+            descriptor,
+            consumer_operation_key="consumer-operation-b",
+        )
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_PAIR_READBACK_REUSED$",
+    ):
+        _consume_pair_fixture(
+            pair,
+            plan,
+            descriptor,
+            consumer_operation_key="consumer-operation-a",
+        )
+
+
 def test_pair_consumer_concurrent_double_call_has_one_success(
     tmp_path: Path,
 ) -> None:
@@ -693,7 +825,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
     product_one = _commitment("product-one")
     installer_one = _commitment("installer-one")
 
-    first = installation._fixture_only_plan_lifecycle_transition(
+    first = _plan_lifecycle(
         root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_one),
         current=None,
         expected_install_instance_id=instance_id,
@@ -704,7 +836,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         product_build_sha256=product_one,
         installer_build_sha256=installer_one,
     )
-    repaired = installation._fixture_only_plan_lifecycle_transition(
+    repaired = _plan_lifecycle(
         root_plan=_lifecycle_root_plan(tmp_path, "VERIFY_REPAIR", root_one),
         current=first,
         expected_install_instance_id=instance_id,
@@ -715,7 +847,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         product_build_sha256=product_one,
         installer_build_sha256=installer_one,
     )
-    revised = installation._fixture_only_plan_lifecycle_transition(
+    revised = _plan_lifecycle(
         root_plan=_lifecycle_root_plan(
             tmp_path,
             "PUBLISH_INSTALL_REVISION",
@@ -730,7 +862,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         product_build_sha256=_commitment("product-two"),
         installer_build_sha256=_commitment("installer-two"),
     )
-    adopted = installation._fixture_only_plan_lifecycle_transition(
+    adopted = _plan_lifecycle(
         root_plan=_lifecycle_root_plan(tmp_path, "ADOPT_EXISTING", root_one),
         current=revised,
         expected_install_instance_id=instance_id,
@@ -741,7 +873,7 @@ def test_lifecycle_models_first_repair_revision_adoption_and_rebind_without_effe
         product_build_sha256=revised.product_build_sha256,
         installer_build_sha256=revised.installer_build_sha256,
     )
-    rebound = installation._fixture_only_plan_lifecycle_transition(
+    rebound = _plan_lifecycle(
         root_plan=_lifecycle_root_plan(tmp_path, "PORTABLE_REBIND", root_two),
         current=adopted,
         expected_install_instance_id=instance_id,
@@ -800,7 +932,7 @@ def test_lifecycle_rejects_cross_instance_stale_pair_or_invalid_successor(
     instance_id = "bvp-install-" + "1" * 32
     root_security = _commitment("root")
     pair_generation = _commitment("pair")
-    current = installation._fixture_only_plan_lifecycle_transition(
+    current = _plan_lifecycle(
         root_plan=_lifecycle_root_plan(
             tmp_path,
             "FIRST_PROVISION",
@@ -834,7 +966,7 @@ def test_lifecycle_rejects_cross_instance_stale_pair_or_invalid_successor(
         MontageLearningInstallationError,
         match="^TASK063_LIFECYCLE_REJECTED$",
     ):
-        installation._fixture_only_plan_lifecycle_transition(**values)
+        _plan_lifecycle(**values)
 
     assert all(list(path.iterdir()) == [] for path in tmp_path.iterdir())
 
@@ -854,7 +986,7 @@ def test_lifecycle_portable_rebind_rejects_same_root_pair_or_changed_package(
     instance_id = "bvp-install-" + "1" * 32
     root_one = _commitment("root-one")
     root_two = _commitment("root-two")
-    current = installation._fixture_only_plan_lifecycle_transition(
+    current = _plan_lifecycle(
         root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_one),
         current=None,
         expected_install_instance_id=instance_id,
@@ -887,7 +1019,7 @@ def test_lifecycle_portable_rebind_rejects_same_root_pair_or_changed_package(
         MontageLearningInstallationError,
         match="^TASK063_LIFECYCLE_REJECTED$",
     ):
-        installation._fixture_only_plan_lifecycle_transition(**values)
+        _plan_lifecycle(**values)
 
 
 def test_lifecycle_first_provision_rejects_existing_state_without_effect(
@@ -900,7 +1032,7 @@ def test_lifecycle_first_provision_rejects_existing_state_without_effect(
         "FIRST_PROVISION",
         root_security,
     )
-    current = installation._fixture_only_plan_lifecycle_transition(
+    current = _plan_lifecycle(
         root_plan=first_plan,
         current=None,
         expected_install_instance_id=instance_id,
@@ -916,7 +1048,7 @@ def test_lifecycle_first_provision_rejects_existing_state_without_effect(
         MontageLearningInstallationError,
         match="^TASK063_LIFECYCLE_REJECTED$",
     ):
-        installation._fixture_only_plan_lifecycle_transition(
+        _plan_lifecycle(
             root_plan=first_plan,
             current=current,
             expected_install_instance_id=instance_id,
@@ -929,6 +1061,127 @@ def test_lifecycle_first_provision_rejects_existing_state_without_effect(
         )
 
     assert all(list(path.iterdir()) == [] for path in tmp_path.iterdir())
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"expected_predecessor_terminal_sha256": _commitment("stale-terminal")},
+        {"requested_revision": 3},
+        {"operation_id": "operation-first_provision-0"},
+        {"successor_reservation_sha256": _commitment("same-reservation")},
+    ],
+)
+def test_lifecycle_rejects_stale_predecessor_gap_and_reused_commitments(
+    tmp_path: Path,
+    changes: dict[str, object],
+) -> None:
+    instance_id = "bvp-install-" + "1" * 32
+    root_security = _commitment("root")
+    current = _plan_lifecycle(
+        root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_security),
+        current=None,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=_commitment("pair"),
+        expected_pair_terminal_sha256=_commitment("terminal-one"),
+        successor_reservation_sha256=_commitment("same-reservation"),
+        package_manifest_sha256=_commitment("package"),
+        payload_tree_sha256=_commitment("payload"),
+        product_build_sha256=_commitment("product"),
+        installer_build_sha256=_commitment("installer"),
+    )
+    values: dict[str, object] = {
+        "root_plan": _lifecycle_root_plan(tmp_path, "VERIFY_REPAIR", root_security),
+        "current": current,
+        "expected_install_instance_id": instance_id,
+        "expected_pair_generation_sha256": current.pair_generation_sha256,
+        "expected_pair_terminal_sha256": current.pair_terminal_sha256,
+        "package_manifest_sha256": current.package_manifest_sha256,
+        "payload_tree_sha256": current.payload_tree_sha256,
+        "product_build_sha256": current.product_build_sha256,
+        "installer_build_sha256": current.installer_build_sha256,
+    }
+    values.update(changes)
+
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_LIFECYCLE_REJECTED$",
+    ):
+        _plan_lifecycle(**values)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_LIFECYCLE_REUSED$",
+    ):
+        _plan_lifecycle(**values)
+
+
+def test_lifecycle_rejects_dataclass_replace_and_concurrent_successor_fork(
+    tmp_path: Path,
+) -> None:
+    instance_id = "bvp-install-" + "1" * 32
+    root_security = _commitment("root")
+    current = _plan_lifecycle(
+        root_plan=_lifecycle_root_plan(tmp_path, "FIRST_PROVISION", root_security),
+        current=None,
+        expected_install_instance_id=instance_id,
+        expected_pair_generation_sha256=_commitment("pair"),
+        expected_pair_terminal_sha256=_commitment("terminal-one"),
+        package_manifest_sha256=_commitment("package"),
+        payload_tree_sha256=_commitment("payload"),
+        product_build_sha256=_commitment("product"),
+        installer_build_sha256=_commitment("installer"),
+    )
+    forged = replace(current)
+    with pytest.raises(
+        MontageLearningInstallationError,
+        match="^TASK063_LIFECYCLE_REJECTED$",
+    ):
+        _plan_lifecycle(
+            root_plan=_lifecycle_root_plan(tmp_path, "VERIFY_REPAIR", root_security),
+            current=forged,
+            expected_install_instance_id=instance_id,
+            expected_pair_generation_sha256=current.pair_generation_sha256,
+            expected_pair_terminal_sha256=current.pair_terminal_sha256,
+            package_manifest_sha256=current.package_manifest_sha256,
+            payload_tree_sha256=current.payload_tree_sha256,
+            product_build_sha256=current.product_build_sha256,
+            installer_build_sha256=current.installer_build_sha256,
+        )
+
+    barrier = threading.Barrier(2)
+    results: list[str] = []
+
+    def advance() -> None:
+        barrier.wait()
+        try:
+            _plan_lifecycle(
+                root_plan=_lifecycle_root_plan(
+                    tmp_path,
+                    "VERIFY_REPAIR",
+                    root_security,
+                ),
+                current=current,
+                expected_install_instance_id=instance_id,
+                expected_pair_generation_sha256=current.pair_generation_sha256,
+                expected_pair_terminal_sha256=current.pair_terminal_sha256,
+                package_manifest_sha256=current.package_manifest_sha256,
+                payload_tree_sha256=current.payload_tree_sha256,
+                product_build_sha256=current.product_build_sha256,
+                installer_build_sha256=current.installer_build_sha256,
+            )
+        except MontageLearningInstallationError as exc:
+            results.append(str(exc))
+        else:
+            results.append("SUCCESS")
+
+    threads = [threading.Thread(target=advance) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=5)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert sorted(results) == ["SUCCESS", "TASK063_LIFECYCLE_REUSED"]
 
 
 def test_uninstall_projection_preserves_bridge_learning_and_history() -> None:
@@ -1326,14 +1579,14 @@ def test_installer_readback_replace_failure_preserves_existing_bytes(
     original = target.read_bytes()
     descriptor = first.layout.root / "bridge-instance.json"
     original_descriptor = descriptor.read_bytes()
-    real_replace = installation.os.replace
+    real_replace = legacy_installation.os.replace
 
     def fail_replace(source: object, destination: object) -> None:
         if Path(destination) == target:
             raise OSError("injected replace failure")
         real_replace(source, destination)
 
-    monkeypatch.setattr(installation.os, "replace", fail_replace)
+    monkeypatch.setattr(legacy_installation.os, "replace", fail_replace)
     with pytest.raises(OSError, match="injected replace failure"):
         provision_and_write_installer_readback(
             install_root,
@@ -1445,7 +1698,7 @@ def test_installer_readback_rejects_upper_ancestor_identity_drift(
         installer_manifest_sha256=MANIFEST_SHA,
     )
     target = discovery.layout.migration / INSTALLER_READBACK_FILENAME
-    real_identity = installation._safe_directory_identity
+    real_identity = legacy_installation._safe_directory_identity
     drift = False
 
     def identity(path: Path) -> tuple[int, int, str]:
@@ -1459,7 +1712,7 @@ def test_installer_readback_rejects_upper_ancestor_identity_drift(
         if phase == "after_temp_fsync":
             drift = True
 
-    monkeypatch.setattr(installation, "_safe_directory_identity", identity)
+    monkeypatch.setattr(legacy_installation, "_safe_directory_identity", identity)
     with pytest.raises(MontageLearningInstallationError, match="ancestor identity"):
         write_installer_readback(discovery, failure_injector=inject)
     assert not target.exists()

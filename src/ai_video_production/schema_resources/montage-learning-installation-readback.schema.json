@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.video.production/schemas/montage-learning-installation-readback.schema.json",
+  "title": "TASK-063 Installation Readback Audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "message_type",
+    "task_id",
+    "action",
+    "operation_commitment_sha256",
+    "install_instance_commitment_sha256",
+    "pair_terminal_sha256",
+    "installation_revision",
+    "descriptor_sha256",
+    "owner_manifest_sha256",
+    "package_manifest_sha256",
+    "payload_tree_sha256",
+    "product_build_sha256",
+    "installer_build_sha256",
+    "directory_set_sha256",
+    "observed_at_utc",
+    "status",
+    "reason_codes",
+    "connector_enabled",
+    "activation_authorized",
+    "native_install_observed",
+    "fixture_only",
+    "authority_created",
+    "currentness_selected",
+    "audit_self_hash"
+  ],
+  "properties": {
+    "schema_version": {"const": "2.0.0"},
+    "message_type": {"const": "BvpInstallationReadbackAudit"},
+    "task_id": {"const": "TASK-063"},
+    "action": {
+      "enum": [
+        "FIRST_PROVISION",
+        "ADOPT_EXISTING",
+        "VERIFY_REPAIR",
+        "PUBLISH_INSTALL_REVISION",
+        "PORTABLE_REBIND"
+      ]
+    },
+    "operation_commitment_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "install_instance_commitment_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "pair_terminal_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "installation_revision": {"type": "integer", "minimum": 1},
+    "descriptor_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "owner_manifest_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "package_manifest_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "payload_tree_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "product_build_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "installer_build_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "directory_set_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "observed_at_utc": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "status": {"const": "VERIFIED_DISABLED"},
+    "reason_codes": {
+      "type": "array",
+      "prefixItems": [
+        {"const": "FIXTURE_ONLY"},
+        {"const": "NATIVE_NOT_EXECUTED"}
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true
+    },
+    "connector_enabled": {"const": false},
+    "activation_authorized": {"const": false},
+    "native_install_observed": {"const": false},
+    "fixture_only": {"const": true},
+    "authority_created": {"const": false},
+    "currentness_selected": {"const": false},
+    "audit_self_hash": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}
+

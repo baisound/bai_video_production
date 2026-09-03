@@ -231,8 +231,24 @@ def test_config_schema_is_closed_and_command_pair_is_exactly_bound() -> None:
     validator = jsonschema.Draft202012Validator(
         schema, format_checker=jsonschema.FormatChecker()
     )
+    portable_validator = jsonschema.Draft202012Validator(schema)
     value = _config_body()
     assert not list(validator.iter_errors(value))
+    assert not list(
+        portable_validator.iter_errors(
+            {**value, "expiry_utc": "2000-02-29T23:59:59Z"}
+        )
+    )
+    assert list(
+        portable_validator.iter_errors(
+            {**value, "expiry_utc": "2026-02-31T12:30:00Z"}
+        )
+    )
+    assert list(
+        portable_validator.iter_errors(
+            {**value, "expiry_utc": "1900-02-29T12:30:00Z"}
+        )
+    )
     assert list(validator.iter_errors({**value, "unknown": False}))
     assert list(validator.iter_errors({**value, "authority_created": True}))
     schema_only_cross_pair = {**value, "subcommand": "emit-proposal"}
@@ -257,6 +273,7 @@ def test_receipt_schema_is_byte_identical_and_closed() -> None:
     validator = jsonschema.Draft202012Validator(
         schema, format_checker=jsonschema.FormatChecker()
     )
+    portable_validator = jsonschema.Draft202012Validator(schema)
     audit_receipt = {
         "message_type": "BvpProductOperationAuditReceipt",
         "schema_version": "1.0.0",
@@ -277,6 +294,11 @@ def test_receipt_schema_is_byte_identical_and_closed() -> None:
         "receipt_sha256": _sha("6"),
     }
     assert not list(validator.iter_errors(audit_receipt))
+    assert not list(
+        portable_validator.iter_errors(
+            {**audit_receipt, "event_utc": "2000-02-29T23:59:59Z"}
+        )
+    )
     assert list(
         validator.iter_errors(
             {**audit_receipt, "message_type": "BvpProductOperationRedemptionReceipt"}
@@ -288,8 +310,13 @@ def test_receipt_schema_is_byte_identical_and_closed() -> None:
         )
     )
     assert list(
-        validator.iter_errors(
+        portable_validator.iter_errors(
             {**audit_receipt, "event_utc": "2026-02-31T12:30:01Z"}
+        )
+    )
+    assert list(
+        portable_validator.iter_errors(
+            {**audit_receipt, "event_utc": "1900-02-29T12:30:01Z"}
         )
     )
     assert list(

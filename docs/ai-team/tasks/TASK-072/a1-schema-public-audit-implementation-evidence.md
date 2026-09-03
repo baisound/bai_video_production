@@ -30,14 +30,14 @@ filesystem mutation or Production authority.
 | `docs/ai-team/tasks/TASK-072/op-ticket-core-v1-detailed-design.md` | `397BB12A8C6DE72F5DF691006F071314916D6BC2BD01D7DB8D85798B74173DBC` |
 | `src/ai_video_production/product_operation_broker.py` | `0B7BCFD9BC25DF4E2DCC0D4DFC88753FA5912750E8CAD5798DC25BD6BF566D6F` |
 | `src/ai_video_production/product_operation_config.py` | `4A8F962ADDA0A9B7528703F040162995C0EE6A96E2A759B2FFDCF7897A4991DB` |
-| `schemas/product-operation-ticket.schema.json` | `5DADD143FDEFAF04B7ACB577AC7938F69DB0C6B59FD224BE6B598EB941D16449` |
-| `schemas/product-operation-config.schema.json` | `C03B403E1B0648CBF7E93CB171000CCB5FAEF8E1D2E3A8C5E50602AF47C1679E` |
-| `schemas/product-operation-receipt.schema.json` | `94B412263E78601429AA9DFB286E2453BB7E0BB4DBB15C807071D967752373D6` |
-| `src/ai_video_production/schema_resources/product-operation-ticket.schema.json` | `5DADD143FDEFAF04B7ACB577AC7938F69DB0C6B59FD224BE6B598EB941D16449` |
-| `src/ai_video_production/schema_resources/product-operation-config.schema.json` | `C03B403E1B0648CBF7E93CB171000CCB5FAEF8E1D2E3A8C5E50602AF47C1679E` |
-| `src/ai_video_production/schema_resources/product-operation-receipt.schema.json` | `94B412263E78601429AA9DFB286E2453BB7E0BB4DBB15C807071D967752373D6` |
-| `tests/test_task072_product_operation_broker.py` | `1771D04B57D2EE33F050DE741C7FD285FCD279D7F151D5E87D18ADA91E0EF6F4` |
-| `tests/test_task072_product_operation_config.py` | `F27E41E45ED9C838CF869226A06F1FCE61BD13E4BC9F80E4928D285B17A9F79C` |
+| `schemas/product-operation-ticket.schema.json` | `A295CF7E867D67A68203434A60CB30E53A083E462E53887A78E9D207F6BA98B6` |
+| `schemas/product-operation-config.schema.json` | `596BA93A39F75B9933E3B6922B36C5EFDBCCEFE10B2EC814974D02BA61698ACD` |
+| `schemas/product-operation-receipt.schema.json` | `61E48985DE8B7414FF5DAC38CF737ED498786A6F3F10DCFBD62E59D0A6312A13` |
+| `src/ai_video_production/schema_resources/product-operation-ticket.schema.json` | `A295CF7E867D67A68203434A60CB30E53A083E462E53887A78E9D207F6BA98B6` |
+| `src/ai_video_production/schema_resources/product-operation-config.schema.json` | `596BA93A39F75B9933E3B6922B36C5EFDBCCEFE10B2EC814974D02BA61698ACD` |
+| `src/ai_video_production/schema_resources/product-operation-receipt.schema.json` | `61E48985DE8B7414FF5DAC38CF737ED498786A6F3F10DCFBD62E59D0A6312A13` |
+| `tests/test_task072_product_operation_broker.py` | `BF973014D74912F7875C580F6AC84922CF9B489C1E3D68D831B3BDCA11E2F1E9` |
+| `tests/test_task072_product_operation_config.py` | `57E0F32E53E216637DEFAC2060E63296709844C75B2C31D59073D73F2AF51765` |
 | `tests/fixtures/task072/operation-port-v1/action-profiles.json` | `E7511D5C67FD1A089F7FA9BCF3030AB982816132BB6E079D21F9A7817E545127` |
 | `tests/fixtures/task072/operation-port-v1/ticket-schema-vectors.json` | `E885156571531DCE2A8B3243802CD6502CC88EE5A96EAE87126D42DA86BDAD78` |
 
@@ -52,12 +52,20 @@ Focused command:
 python -m pytest tests/test_task072_product_operation_broker.py tests/test_task072_product_operation_config.py -q
 ```
 
-Result: `107 passed, 5 skipped, 0 failed`.
+Result in the default local runtime: `107 passed, 5 skipped, 0 failed`.
 
-The five skips are the Draft 2020-12 schema execution checks. The current
-Python runtime does not contain the declared project dependency `jsonschema`,
-so executable JSON Schema plus `FormatChecker` validation is
-`NOT_CONFIRMED`; it is not reported as PASS. No dependency was installed.
+The five skips are the Draft 2020-12 schema execution checks because the
+default local Python runtime does not contain the declared project dependency
+`jsonschema`. An isolated temporary validation environment using Python
+3.13.14, `jsonschema` 4.26.0 and `pytest` 9.1.1 executed the same focused
+command with result `112 passed, 0 skipped, 0 failed`.
+
+CI run `33707958266` exposed that a `date-time` format checker may be inert
+when its optional validation dependency is unavailable. The original ticket
+and receipt schema tests therefore accepted an impossible calendar date. The
+successor change makes ticket, config and receipt UTC fields independently
+calendar-complete for years 0001 through 9999, including Gregorian leap-year
+rules, and directly tests all three with no format checker.
 
 Additional checks:
 
@@ -69,9 +77,9 @@ Additional checks:
 
 ## Independent Assurance
 
-- Design Judge: `PASS`, Critical/High `0/0`, exact design hash verified.
-- Independent Tester: `PASS`, Critical/High/Medium `0/0/0`.
-- Implementation Critic: `GO`, Critical/High/Medium `0/0/0`.
+- Design Judge successor verdict: `GO`, Critical/High/Medium `0/0/0`.
+- Independent Tester successor verdict: `PASS`, Critical/High/Medium `0/0/0`.
+- Implementation Critic successor verdict: `GO`, Critical/High/Medium `0/0/0`.
 
 ## Remaining Gates
 

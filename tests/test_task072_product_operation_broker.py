@@ -567,16 +567,27 @@ def test_ticket_schema_accepts_exact_coordinates_and_rejects_invalid_vectors() -
     validator = jsonschema.Draft202012Validator(
         schema, format_checker=jsonschema.FormatChecker()
     )
+    portable_validator = jsonschema.Draft202012Validator(schema)
     assert not list(validator.iter_errors(vectors["valid_reservation"]))
     assert not list(validator.iter_errors(vectors["valid_first_event"]))
+    assert not list(
+        portable_validator.iter_errors(
+            {**vectors["valid_reservation"], "expiry_utc": "2000-02-29T23:59:59Z"}
+        )
+    )
     assert list(
-        validator.iter_errors(
+        portable_validator.iter_errors(
             {**vectors["valid_reservation"], "expiry_utc": "2026-02-31T12:30:00Z"}
         )
     )
     assert list(
-        validator.iter_errors(
+        portable_validator.iter_errors(
             {**vectors["valid_first_event"], "event_utc": "2026-02-31T12:30:01Z"}
+        )
+    )
+    assert list(
+        portable_validator.iter_errors(
+            {**vectors["valid_first_event"], "event_utc": "1900-02-29T12:30:01Z"}
         )
     )
     assert list(

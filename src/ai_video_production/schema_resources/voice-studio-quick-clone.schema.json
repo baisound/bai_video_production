@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/voice-studio-quick-clone.schema.json",
+  "title": "TASK-046 Voice Studio Quick Clone Flow Revision",
+  "$comment": "QuickCloneFlowRevision.from_dict is the canonical semantic ingress. Cross-field digest equality, exact sample-count duration arithmetic, lexicographic reason ordering, and revision-to-revision monotonicity are enforced there.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id", "contract_version", "record_type", "task_owner",
+    "model_configuration_source", "model_configuration_access",
+    "voice_model_selector_present",
+    "task014_result_admission_producer_state", "flow_id",
+    "revision", "parent_revision_sha256", "created_at", "route", "mode",
+    "intended_artifact", "source_kind", "setup_state", "execution_state",
+    "quality_state", "owner_listening_state", "profile_adoption_state",
+    "preview_asset_adoption_state", "reference_retention_state",
+    "compute_preference", "compute_resolution_state", "model_execution_policy",
+    "runtime_aggregate_state", "result_admission_state", "source_binding_sha256",
+    "consent_binding_sha256",
+    "reference_transcript_sha256", "preview_text_sha256", "preview_text_code_points",
+    "preview_profile_revision_sha256", "model_selection_binding_sha256",
+    "runtime_aggregate_binding_sha256",
+    "preflight_sha256", "one_shot_authorization_sha256", "durable_job_sha256",
+    "render_operation_identity_sha256", "result_receipt_sha256",
+    "result_admission_receipt_sha256", "result_render_operation_identity_sha256",
+    "result_preview_profile_revision_sha256", "result_model_selection_binding_sha256",
+    "result_runtime_aggregate_binding_sha256", "result_output_sha256",
+    "result_route", "result_replay", "quality_receipt_sha256",
+    "owner_listening_receipt_sha256", "staged_wav_ref", "staged_wav_sha256",
+    "sample_rate_hz", "channels", "sample_format", "sample_count", "duration_us",
+    "saved_profile_revision_sha256", "profile_adoption_receipt_sha256",
+    "profile_currentness_receipt_sha256",
+    "preview_asset_ref", "preview_asset_sha256", "asset_adoption_receipt_sha256",
+    "preview_asset_currentness_receipt_sha256",
+    "reference_retention_decision_sha256",
+    "reference_retention_currentness_receipt_sha256", "reconciliation_receipt_sha256",
+    "reason_codes", "private_body_embedded", "host_path_persisted",
+    "secret_persisted", "effect_authorized", "automatic_retry_authorized",
+    "physical_delete_authorized", "flow_revision_sha256"
+  ],
+  "properties": {
+    "schema_id": {"const": "bai.task046.voice-studio-quick-clone.v1"},
+    "contract_version": {"const": "1.0.0"},
+    "record_type": {"const": "QuickCloneFlowRevision"},
+    "task_owner": {"const": "TASK-046"},
+    "model_configuration_source": {"const": "CENTRAL_AI_SETTINGS"},
+    "model_configuration_access": {"const": "READ_ONLY"},
+    "voice_model_selector_present": {"const": false},
+    "task014_result_admission_producer_state": {"const": "NOT_BOUND"},
+    "flow_id": {"$ref": "#/$defs/flowId"},
+    "revision": {"type": "integer", "minimum": 1},
+    "parent_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "created_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "route": {"const": "ZERO_SHOT"},
+    "mode": {"const": "PREVIEW"},
+    "intended_artifact": {"const": "STAGED_NARRATION_PCM_WAV_48000_MONO"},
+    "source_kind": {"type": "string", "enum": ["TASK003_ASSET", "TASK046_PRIVATE_REFERENCE"]},
+    "setup_state": {
+      "type": "string",
+      "enum": ["NOT_INSTALLED", "INSTALL_APPROVAL_REQUIRED", "VERIFYING", "FAILED", "READY", "OFFLINE_BUNDLE_REQUIRED", "RESTART_REQUIRED", "LOCKED_PRIVATE_DATA", "BLOCKED", "UNKNOWN"]
+    },
+    "execution_state": {
+      "type": "string",
+      "enum": ["DRAFT", "PREFLIGHT_BLOCKED", "READY_FOR_CONFIRMATION", "DISPATCHING", "RUNNING", "READY_FOR_QA_REVIEW", "FAILED_KNOWN", "UNKNOWN"]
+    },
+    "quality_state": {"type": "string", "enum": ["NOT_AVAILABLE", "PENDING", "PASS", "FAIL", "UNKNOWN"]},
+    "owner_listening_state": {"type": "string", "enum": ["NOT_AVAILABLE", "REQUIRED", "ACCEPTED", "REJECTED"]},
+    "profile_adoption_state": {"type": "string", "enum": ["NOT_AVAILABLE", "SAVE_DECISION_REQUIRED", "SAVED_LOCAL_CANDIDATE", "PROFILE_NOT_SAVED", "STALE", "REVOKED"]},
+    "preview_asset_adoption_state": {"type": "string", "enum": ["NOT_AVAILABLE", "PUBLISH_DECISION_REQUIRED", "ASSET_NOT_PUBLISHED", "ASSET_PUBLISHED_RESTRICTED", "STALE", "REVOKED"]},
+    "reference_retention_state": {"type": "string", "enum": ["UNDECIDED", "RETAIN_PRIVATE_REFERENCE", "DO_NOT_RETAIN_PRIVATE_REFERENCE", "RETENTION_REVOKED", "EXPIRED"]},
+    "compute_preference": {"type": "string", "enum": ["AUTO", "GPU", "CPU"]},
+    "compute_resolution_state": {"type": "string", "enum": ["NOT_RESOLVED", "GPU_READY", "CPU_READY", "BLOCKED", "UNKNOWN"]},
+    "model_execution_policy": {"type": "string", "enum": ["CUDA_ONLY", "CPU_ALLOWED"]},
+    "runtime_aggregate_state": {"type": "string", "enum": ["NOT_BOUND", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "result_admission_state": {"type": "string", "enum": ["NOT_BOUND", "MISMATCH", "UNKNOWN"]},
+    "source_binding_sha256": {"$ref": "#/$defs/sha256"},
+    "consent_binding_sha256": {"$ref": "#/$defs/sha256"},
+    "reference_transcript_sha256": {"$ref": "#/$defs/sha256"},
+    "preview_text_sha256": {"$ref": "#/$defs/sha256"},
+    "preview_text_code_points": {"type": "integer", "minimum": 1, "maximum": 200},
+    "preview_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+    "model_selection_binding_sha256": {"$ref": "#/$defs/sha256"},
+    "runtime_aggregate_binding_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "preflight_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "one_shot_authorization_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "durable_job_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "render_operation_identity_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "result_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "result_admission_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "result_render_operation_identity_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "result_preview_profile_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "result_model_selection_binding_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "result_runtime_aggregate_binding_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "result_output_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "result_route": {"type": ["string", "null"], "enum": ["ZERO_SHOT", null]},
+    "result_replay": {"type": ["boolean", "null"], "enum": [false, null]},
+    "quality_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "owner_listening_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "staged_wav_ref": {"$ref": "#/$defs/nullableStagedWavRef"},
+    "staged_wav_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "sample_rate_hz": {"type": ["integer", "null"], "enum": [48000, null]},
+    "channels": {"type": ["integer", "null"], "enum": [1, null]},
+    "sample_format": {"type": ["string", "null"], "enum": ["PCM_S24LE", null]},
+    "sample_count": {"type": ["integer", "null"], "minimum": 1, "maximum": 2880000},
+    "duration_us": {"type": ["integer", "null"], "minimum": 21, "maximum": 60000000},
+    "saved_profile_revision_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "profile_adoption_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "profile_currentness_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "preview_asset_ref": {"$ref": "#/$defs/nullableAssetRef"},
+    "preview_asset_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "asset_adoption_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "preview_asset_currentness_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "reference_retention_decision_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "reference_retention_currentness_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "reconciliation_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "reason_codes": {
+      "type": "array", "maxItems": 64, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}
+    },
+    "private_body_embedded": {"const": false},
+    "host_path_persisted": {"const": false},
+    "secret_persisted": {"const": false},
+    "effect_authorized": {"const": false},
+    "automatic_retry_authorized": {"const": false},
+    "physical_delete_authorized": {"const": false},
+    "flow_revision_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"task014_result_admission_producer_state": {"const": "NOT_BOUND"}}},
+      "then": {"properties": {"execution_state": {"enum": ["DRAFT", "PREFLIGHT_BLOCKED"]}}}
+    },
+    {
+      "if": {"properties": {"result_admission_state": {"const": "BOUND_VERIFIED"}}},
+      "then": {
+        "properties": {
+          "execution_state": {"const": "READY_FOR_QA_REVIEW"},
+          "result_receipt_sha256": {"$ref": "#/$defs/sha256"},
+          "result_admission_receipt_sha256": {"$ref": "#/$defs/sha256"},
+          "result_render_operation_identity_sha256": {"$ref": "#/$defs/sha256"},
+          "result_preview_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+          "result_model_selection_binding_sha256": {"$ref": "#/$defs/sha256"},
+          "result_runtime_aggregate_binding_sha256": {"$ref": "#/$defs/sha256"},
+          "result_output_sha256": {"$ref": "#/$defs/sha256"},
+          "result_route": {"const": "ZERO_SHOT"},
+          "result_replay": {"const": false},
+          "quality_state": {"enum": ["PENDING", "PASS", "FAIL", "UNKNOWN"]},
+          "staged_wav_ref": {"$ref": "#/$defs/stagedWavRef"},
+          "staged_wav_sha256": {"$ref": "#/$defs/sha256"},
+          "sample_rate_hz": {"const": 48000},
+          "channels": {"const": 1},
+          "sample_format": {"const": "PCM_S24LE"},
+          "sample_count": {"type": "integer", "minimum": 1, "maximum": 2880000},
+          "duration_us": {"type": "integer", "minimum": 21, "maximum": 60000000}
+        }
+      },
+      "else": {
+        "properties": {
+          "result_receipt_sha256": {"const": null},
+          "result_admission_receipt_sha256": {"const": null},
+          "result_render_operation_identity_sha256": {"const": null},
+          "result_preview_profile_revision_sha256": {"const": null},
+          "result_model_selection_binding_sha256": {"const": null},
+          "result_runtime_aggregate_binding_sha256": {"const": null},
+          "result_output_sha256": {"const": null},
+          "result_route": {"const": null},
+          "result_replay": {"const": null},
+          "quality_state": {"const": "NOT_AVAILABLE"},
+          "owner_listening_state": {"const": "NOT_AVAILABLE"},
+          "quality_receipt_sha256": {"const": null},
+          "owner_listening_receipt_sha256": {"const": null},
+          "staged_wav_ref": {"const": null},
+          "staged_wav_sha256": {"const": null},
+          "sample_rate_hz": {"const": null},
+          "channels": {"const": null},
+          "sample_format": {"const": null},
+          "sample_count": {"const": null},
+          "duration_us": {"const": null}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"execution_state": {"const": "READY_FOR_QA_REVIEW"}}},
+      "then": {"properties": {"result_admission_state": {"const": "BOUND_VERIFIED"}}}
+    },
+    {
+      "if": {"properties": {"result_admission_state": {"const": "MISMATCH"}}},
+      "then": {"properties": {"execution_state": {"const": "FAILED_KNOWN"}}}
+    },
+    {
+      "if": {"properties": {"result_admission_state": {"const": "UNKNOWN"}}},
+      "then": {"properties": {"execution_state": {"const": "UNKNOWN"}}}
+    },
+    {
+      "if": {"properties": {"setup_state": {"const": "READY"}}},
+      "then": {
+        "properties": {
+          "runtime_aggregate_state": {"const": "BOUND_VERIFIED"},
+          "runtime_aggregate_binding_sha256": {"$ref": "#/$defs/sha256"},
+          "compute_resolution_state": {"enum": ["GPU_READY", "CPU_READY"]}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"setup_state": {"const": "FAILED"}}},
+      "then": {"properties": {"reason_codes": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"runtime_aggregate_state": {"const": "BOUND_VERIFIED"}}},
+      "then": {"properties": {"runtime_aggregate_binding_sha256": {"$ref": "#/$defs/sha256"}}},
+      "else": {"properties": {"runtime_aggregate_binding_sha256": {"const": null}}}
+    },
+    {
+      "if": {"properties": {"execution_state": {"const": "DRAFT"}}},
+      "then": {
+        "properties": {
+          "preflight_sha256": {"const": null},
+          "one_shot_authorization_sha256": {"const": null},
+          "durable_job_sha256": {"const": null},
+          "render_operation_identity_sha256": {"const": null}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"execution_state": {"const": "PREFLIGHT_BLOCKED"}}},
+      "then": {
+        "properties": {
+          "preflight_sha256": {"$ref": "#/$defs/sha256"},
+          "one_shot_authorization_sha256": {"const": null},
+          "durable_job_sha256": {"const": null},
+          "render_operation_identity_sha256": {"const": null},
+          "reason_codes": {"minItems": 1}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"execution_state": {"const": "READY_FOR_CONFIRMATION"}}},
+      "then": {
+        "properties": {
+          "setup_state": {"const": "READY"},
+          "preflight_sha256": {"$ref": "#/$defs/sha256"},
+          "one_shot_authorization_sha256": {"$ref": "#/$defs/sha256"},
+          "durable_job_sha256": {"const": null},
+          "render_operation_identity_sha256": {"const": null}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_state": {
+            "enum": ["DISPATCHING", "RUNNING", "READY_FOR_QA_REVIEW", "FAILED_KNOWN", "UNKNOWN"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "setup_state": {"const": "READY"},
+          "preflight_sha256": {"$ref": "#/$defs/sha256"},
+          "one_shot_authorization_sha256": {"$ref": "#/$defs/sha256"},
+          "durable_job_sha256": {"$ref": "#/$defs/sha256"},
+          "render_operation_identity_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_state": {"enum": ["PREFLIGHT_BLOCKED", "FAILED_KNOWN", "UNKNOWN"]}
+        }
+      },
+      "then": {"properties": {"reason_codes": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"quality_state": {"enum": ["PASS", "FAIL", "UNKNOWN"]}}},
+      "then": {"properties": {"quality_receipt_sha256": {"$ref": "#/$defs/sha256"}}},
+      "else": {"properties": {"quality_receipt_sha256": {"const": null}}}
+    },
+    {
+      "if": {"properties": {"owner_listening_state": {"enum": ["ACCEPTED", "REJECTED"]}}},
+      "then": {"properties": {"owner_listening_receipt_sha256": {"$ref": "#/$defs/sha256"}}},
+      "else": {"properties": {"owner_listening_receipt_sha256": {"const": null}}}
+    },
+    {
+      "if": {"properties": {"owner_listening_state": {"const": "ACCEPTED"}}},
+      "then": {"properties": {"quality_state": {"const": "PASS"}}}
+    },
+    {
+      "if": {
+        "properties": {
+          "profile_adoption_state": {"enum": ["SAVE_DECISION_REQUIRED", "SAVED_LOCAL_CANDIDATE", "STALE", "REVOKED"]}
+        }
+      },
+      "then": {
+        "properties": {
+          "quality_state": {"const": "PASS"},
+          "owner_listening_state": {"const": "ACCEPTED"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "preview_asset_adoption_state": {"enum": ["PUBLISH_DECISION_REQUIRED", "ASSET_PUBLISHED_RESTRICTED", "STALE", "REVOKED"]}
+        }
+      },
+      "then": {
+        "properties": {
+          "quality_state": {"const": "PASS"},
+          "owner_listening_state": {"const": "ACCEPTED"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"profile_adoption_state": {"const": "SAVED_LOCAL_CANDIDATE"}}},
+      "then": {
+        "properties": {
+          "reference_retention_state": {"const": "RETAIN_PRIVATE_REFERENCE"},
+          "saved_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+          "profile_adoption_receipt_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"profile_adoption_state": {"const": "PROFILE_NOT_SAVED"}}},
+      "then": {
+        "properties": {
+          "quality_state": {"enum": ["PASS", "FAIL"]},
+          "owner_listening_state": {"enum": ["ACCEPTED", "REJECTED"]},
+          "saved_profile_revision_sha256": {"const": null},
+          "profile_adoption_receipt_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"profile_adoption_state": {"enum": ["STALE", "REVOKED"]}}},
+      "then": {
+        "properties": {
+          "saved_profile_revision_sha256": {"$ref": "#/$defs/sha256"},
+          "profile_adoption_receipt_sha256": {"$ref": "#/$defs/sha256"},
+          "profile_currentness_receipt_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      },
+      "else": {"properties": {"profile_currentness_receipt_sha256": {"const": null}}}
+    },
+    {
+      "if": {"properties": {"preview_asset_adoption_state": {"const": "ASSET_PUBLISHED_RESTRICTED"}}},
+      "then": {
+        "properties": {
+          "preview_asset_ref": {"$ref": "#/$defs/assetRef"},
+          "preview_asset_sha256": {"$ref": "#/$defs/sha256"},
+          "asset_adoption_receipt_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"preview_asset_adoption_state": {"const": "ASSET_NOT_PUBLISHED"}}},
+      "then": {
+        "properties": {
+          "quality_state": {"enum": ["PASS", "FAIL"]},
+          "owner_listening_state": {"enum": ["ACCEPTED", "REJECTED"]},
+          "preview_asset_ref": {"const": null},
+          "preview_asset_sha256": {"const": null},
+          "asset_adoption_receipt_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"preview_asset_adoption_state": {"enum": ["STALE", "REVOKED"]}}},
+      "then": {
+        "properties": {
+          "preview_asset_ref": {"$ref": "#/$defs/assetRef"},
+          "preview_asset_sha256": {"$ref": "#/$defs/sha256"},
+          "asset_adoption_receipt_sha256": {"$ref": "#/$defs/sha256"},
+          "preview_asset_currentness_receipt_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      },
+      "else": {"properties": {"preview_asset_currentness_receipt_sha256": {"const": null}}}
+    },
+    {
+      "if": {"properties": {"reference_retention_state": {"const": "UNDECIDED"}}},
+      "then": {"properties": {"reference_retention_decision_sha256": {"const": null}}},
+      "else": {"properties": {"reference_retention_decision_sha256": {"$ref": "#/$defs/sha256"}}}
+    },
+    {
+      "if": {"properties": {"reference_retention_state": {"enum": ["RETENTION_REVOKED", "EXPIRED"]}}},
+      "then": {"properties": {"reference_retention_currentness_receipt_sha256": {"$ref": "#/$defs/sha256"}}},
+      "else": {"properties": {"reference_retention_currentness_receipt_sha256": {"const": null}}}
+    },
+    {
+      "if": {"properties": {"revision": {"const": 1}}},
+      "then": {"properties": {"parent_revision_sha256": {"const": null}}},
+      "else": {"properties": {"parent_revision_sha256": {"$ref": "#/$defs/sha256"}}}
+    },
+    {
+      "not": {
+        "properties": {
+          "model_execution_policy": {"const": "CUDA_ONLY"},
+          "compute_resolution_state": {"const": "CPU_READY"}
+        },
+        "required": ["model_execution_policy", "compute_resolution_state"]
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullableSha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "flowId": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^quick-clone:[A-Za-z0-9][A-Za-z0-9._-]{0,243}$"
+    },
+    "stagedWavRef": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^staged-narration:[A-Za-z0-9][A-Za-z0-9._-]{0,127}(?:/[A-Za-z0-9][A-Za-z0-9._-]{0,127})*/[A-Za-z0-9][A-Za-z0-9_-]{0,119}\\.wav$"
+    },
+    "nullableStagedWavRef": {"anyOf": [{"$ref": "#/$defs/stagedWavRef"}, {"type": "null"}]},
+    "assetRef": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^asset:[A-Za-z0-9][A-Za-z0-9._-]{0,127}(?:/[A-Za-z0-9][A-Za-z0-9._-]{0,127})*$"
+    },
+    "nullableAssetRef": {"anyOf": [{"$ref": "#/$defs/assetRef"}, {"type": "null"}]}
+  }
+}

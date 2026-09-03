@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-046: Voice Studio Quick Cloneの復旧・読戻しをschema-boundかつfail-closedな契約として追加しました。実際のVoice処理、Provider、モデルdownload、native、Release/Deploy/Productionは開始しません。
+
 ・TASK-063: モンタージュ学習Bridgeのinstaller選択ルート相対readbackをfixture-onlyで厳格化し、root/ancestor検証、pair lifecycle、closed public projection、schema readbackをfail-closedで検証可能にしました。native installer/install/repair/uninstall、Provider、Release/Deploy/Production Activationは開始しません。
 
 ・TASK-068: Product-local の secure authority artifact I/O foundation を追加し、pinned root/ancestor、strict JSON、exclusive lock、immutable no-replace publish、durable read-back、consumer-verified receipt/graph inspection を fail-closed で提供します。native real-data、Provider、Release/Deploy/Production Activation は開始しません。

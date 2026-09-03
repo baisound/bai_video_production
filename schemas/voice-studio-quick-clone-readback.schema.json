@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.dev/schemas/voice-studio-quick-clone-readback.schema.json",
+  "title": "TASK-046 Voice Studio Quick Clone Read-back Receipt",
+  "$comment": "QuickCloneReadbackReceipt.from_dict is the canonical semantic ingress. Exact TASK-014/flow source binding and paired synthetic request/receipt validation are enforced by compile_quick_clone_readback. TASK-048 quality remains unbound.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_id", "contract_version", "record_type", "task_owner",
+    "model_configuration_source", "model_configuration_access",
+    "voice_model_selector_present",
+    "task014_result_admission_producer_state", "unified_desktop_binding_state",
+    "trusted_time_binding_state", "synthetic_fixture_flow_binding_state",
+    "flow_id", "flow_revision", "flow_revision_sha256", "generated_at",
+    "route", "mode", "source_kind", "setup_state", "execution_state", "compute_preference",
+    "compute_resolution_state", "runtime_aggregate_state", "result_admission_state",
+    "output_quality_state", "owner_listening_state", "profile_adoption_state",
+    "preview_asset_adoption_state", "reference_retention_state", "flow_reason_codes",
+    "task014_preflight_sha256", "task014_preflight_decision",
+    "model_selection_binding_sha256", "model_binding_state", "model_route_mode",
+    "model_license_state", "model_capability_probe_state",
+    "calibration_binding_sha256", "calibration_contract_state", "calibration_result",
+    "calibration_receipt_sha256", "synthetic_fixture_state",
+    "synthetic_fixture_request_sha256",
+    "synthetic_fixture_receipt_sha256", "synthetic_fixture_output_sha256",
+    "synthetic_fixture_format_state", "synthetic_fixture_sample_count",
+    "synthetic_fixture_duration_us", "synthetic_boundary_analysis_state",
+    "synthetic_loudness_analysis_state", "synthetic_style_analysis_state",
+    "reason_codes", "product_result_bound", "model_loaded", "audio_body_persisted",
+    "text_body_persisted", "host_path_persisted", "secret_persisted",
+    "execution_authorized", "playback_authorized", "profile_adoption_authorized",
+    "asset_publication_authorized", "automatic_retry_authorized", "readback_sha256"
+  ],
+  "properties": {
+    "schema_id": {"const": "bai.task046.voice-studio-quick-clone-readback.v1"},
+    "contract_version": {"const": "1.0.0"},
+    "record_type": {"const": "QuickCloneReadbackReceipt"},
+    "task_owner": {"const": "TASK-046"},
+    "model_configuration_source": {"const": "CENTRAL_AI_SETTINGS"},
+    "model_configuration_access": {"const": "READ_ONLY"},
+    "voice_model_selector_present": {"const": false},
+    "task014_result_admission_producer_state": {"const": "NOT_BOUND"},
+    "unified_desktop_binding_state": {"const": "NOT_BOUND"},
+    "trusted_time_binding_state": {"const": "NOT_BOUND"},
+    "synthetic_fixture_flow_binding_state": {"const": "NOT_BOUND"},
+    "flow_id": {"$ref": "#/$defs/flowId"},
+    "flow_revision": {"type": "integer", "minimum": 1},
+    "flow_revision_sha256": {"$ref": "#/$defs/sha256"},
+    "generated_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "route": {"const": "ZERO_SHOT"},
+    "mode": {"const": "PREVIEW"},
+    "source_kind": {"type": "string", "enum": ["TASK003_ASSET", "TASK046_PRIVATE_REFERENCE"]},
+    "setup_state": {
+      "type": "string",
+      "enum": ["NOT_INSTALLED", "INSTALL_APPROVAL_REQUIRED", "VERIFYING", "FAILED", "READY", "OFFLINE_BUNDLE_REQUIRED", "RESTART_REQUIRED", "LOCKED_PRIVATE_DATA", "BLOCKED", "UNKNOWN"]
+    },
+    "execution_state": {"type": "string", "enum": ["DRAFT", "PREFLIGHT_BLOCKED"]},
+    "compute_preference": {"type": "string", "enum": ["AUTO", "GPU", "CPU"]},
+    "compute_resolution_state": {"type": "string", "enum": ["NOT_RESOLVED", "GPU_READY", "CPU_READY", "BLOCKED", "UNKNOWN"]},
+    "runtime_aggregate_state": {"type": "string", "enum": ["NOT_BOUND", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "result_admission_state": {"const": "NOT_BOUND"},
+    "output_quality_state": {"const": "NOT_AVAILABLE"},
+    "owner_listening_state": {"const": "NOT_AVAILABLE"},
+    "profile_adoption_state": {"const": "NOT_AVAILABLE"},
+    "preview_asset_adoption_state": {"const": "NOT_AVAILABLE"},
+    "reference_retention_state": {"type": "string", "enum": ["UNDECIDED", "RETAIN_PRIVATE_REFERENCE", "DO_NOT_RETAIN_PRIVATE_REFERENCE", "RETENTION_REVOKED", "EXPIRED"]},
+    "flow_reason_codes": {"$ref": "#/$defs/flowReasons"},
+    "task014_preflight_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "task014_preflight_decision": {"type": ["string", "null"], "enum": ["READY_FOR_OWNER_HUMAN_GATE", "BLOCKED", "UNKNOWN", null]},
+    "model_selection_binding_sha256": {"$ref": "#/$defs/sha256"},
+    "model_binding_state": {"type": "string", "enum": ["NOT_BOUND", "BOUND_VERIFIED", "MISMATCH", "UNKNOWN"]},
+    "model_route_mode": {"type": ["string", "null"], "enum": ["ZERO_SHOT_LOCAL", null]},
+    "model_license_state": {"type": ["string", "null"], "enum": ["COMMERCIAL_ALLOWED", "NONCOMMERCIAL_ONLY", "RESTRICTED", "LEGAL_REVIEW_REQUIRED", "REVOKED", "UNKNOWN", null]},
+    "model_capability_probe_state": {"type": ["string", "null"], "enum": ["VERIFIED", "FAILED", "UNKNOWN", null]},
+    "calibration_binding_sha256": {"$ref": "#/$defs/sha256"},
+    "calibration_contract_state": {"const": "CANONICAL_REF_NOT_PROVIDED"},
+    "calibration_result": {"const": null},
+    "calibration_receipt_sha256": {"const": null},
+    "synthetic_fixture_state": {"type": "string", "enum": ["NOT_PROVIDED", "DEVELOPMENT_FIXTURE_ONLY"]},
+    "synthetic_fixture_request_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "synthetic_fixture_receipt_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "synthetic_fixture_output_sha256": {"$ref": "#/$defs/nullableSha256"},
+    "synthetic_fixture_format_state": {"type": ["string", "null"], "enum": ["PASS", null]},
+    "synthetic_fixture_sample_count": {"type": ["integer", "null"], "minimum": 1, "maximum": 2880000},
+    "synthetic_fixture_duration_us": {"type": ["integer", "null"], "minimum": 21, "maximum": 60000000},
+    "synthetic_boundary_analysis_state": {"type": ["string", "null"], "enum": ["UNKNOWN", null]},
+    "synthetic_loudness_analysis_state": {"type": ["string", "null"], "enum": ["UNKNOWN", null]},
+    "synthetic_style_analysis_state": {"type": ["string", "null"], "enum": ["UNKNOWN", null]},
+    "reason_codes": {"$ref": "#/$defs/reasons"},
+    "product_result_bound": {"const": false},
+    "model_loaded": {"const": false},
+    "audio_body_persisted": {"const": false},
+    "text_body_persisted": {"const": false},
+    "host_path_persisted": {"const": false},
+    "secret_persisted": {"const": false},
+    "execution_authorized": {"const": false},
+    "playback_authorized": {"const": false},
+    "profile_adoption_authorized": {"const": false},
+    "asset_publication_authorized": {"const": false},
+    "automatic_retry_authorized": {"const": false},
+    "readback_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"setup_state": {"const": "FAILED"}}},
+      "then": {"properties": {"flow_reason_codes": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"task014_preflight_sha256": {"type": "null"}}},
+      "then": {
+        "properties": {
+          "task014_preflight_decision": {"const": null},
+          "model_binding_state": {"const": "NOT_BOUND"},
+          "model_route_mode": {"const": null},
+          "model_license_state": {"const": null},
+          "model_capability_probe_state": {"const": null}
+        }
+      },
+      "else": {
+        "properties": {
+          "task014_preflight_decision": {"type": "string"},
+          "model_route_mode": {"const": "ZERO_SHOT_LOCAL"},
+          "source_kind": {"const": "TASK003_ASSET"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"model_binding_state": {"const": "BOUND_VERIFIED"}}},
+      "then": {
+        "properties": {
+          "model_license_state": {"type": "string"},
+          "model_capability_probe_state": {"type": "string"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"synthetic_fixture_state": {"const": "NOT_PROVIDED"}}},
+      "then": {
+        "properties": {
+          "synthetic_fixture_request_sha256": {"const": null},
+          "synthetic_fixture_receipt_sha256": {"const": null},
+          "synthetic_fixture_output_sha256": {"const": null},
+          "synthetic_fixture_format_state": {"const": null},
+          "synthetic_fixture_sample_count": {"const": null},
+          "synthetic_fixture_duration_us": {"const": null},
+          "synthetic_boundary_analysis_state": {"const": null},
+          "synthetic_loudness_analysis_state": {"const": null},
+          "synthetic_style_analysis_state": {"const": null}
+        }
+      },
+      "else": {
+        "properties": {
+          "synthetic_fixture_request_sha256": {"$ref": "#/$defs/sha256"},
+          "synthetic_fixture_receipt_sha256": {"$ref": "#/$defs/sha256"},
+          "synthetic_fixture_output_sha256": {"$ref": "#/$defs/sha256"},
+          "synthetic_fixture_format_state": {"const": "PASS"},
+          "synthetic_fixture_sample_count": {"type": "integer"},
+          "synthetic_fixture_duration_us": {"type": "integer"},
+          "synthetic_boundary_analysis_state": {"const": "UNKNOWN"},
+          "synthetic_loudness_analysis_state": {"const": "UNKNOWN"},
+          "synthetic_style_analysis_state": {"const": "UNKNOWN"}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullableSha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "flowId": {
+      "type": "string",
+      "maxLength": 256,
+      "pattern": "^quick-clone:[A-Za-z0-9][A-Za-z0-9._-]{0,243}$"
+    },
+    "flowReasons": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}
+    },
+    "reasons": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 96,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,95}$"}
+    }
+  }
+}

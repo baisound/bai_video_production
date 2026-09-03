@@ -1637,7 +1637,7 @@ def test_generation_and_adoption_bridge_obey_inflight_close_lease_barrier(tmp_pa
         def apply_execution(self, *, confirmation_id):
             assert confirmation_id == "inflight-confirm"
             entered.set()
-            assert release.wait(5)
+            release.wait()
             counters["provider"] += 1
             counters["execution_store"] += 1
             return {"events": [{"state": "COMPLETED"}]}
@@ -1670,36 +1670,41 @@ def test_generation_and_adoption_bridge_obey_inflight_close_lease_barrier(tmp_pa
             bridge.generation_execution_apply({"confirmation_id": "inflight-confirm"})
         ),
     )
+    close_thread: Thread | None = None
     operation_thread.start()
-    assert entered.wait(5)
-    lease = launch._runtime_lease
-    assert lease is not None
-    close_thread = Thread(target=launch.close)
-    close_thread.start()
-    deadline = monotonic() + 5
-    while not lease._closing and monotonic() < deadline:  # type: ignore[attr-defined]
-        sleep(0.01)
-    assert lease._closing  # type: ignore[attr-defined]
-    assert counters == {"provider": 0, "execution_store": 0, "asset": 0}
-    with pytest.raises(ProductError) as rejected_execution:
-        bridge.generation_execution_apply({"confirmation_id": "new-confirm"})
-    assert rejected_execution.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
-    with pytest.raises(ProductError) as rejected_adoption:
-        bridge.generation_output_adoption_apply({"confirmation_id": "adopt-confirm"})
-    assert rejected_adoption.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
-    assert counters == {"provider": 0, "execution_store": 0, "asset": 0}
-    with pytest.raises(ProductError) as successor_error:
-        build_trusted_launch(
-            config,
-            native_dialog=Task036NativeDialogService(DialogBackend()),
-            asr_provider=AsrProvider(),
-            resolve_adapter=ResolveAdapter(),
-            comfy_client=ComfyClient(),
-        )
-    assert successor_error.value.code == "ERR_TASK036_RUNTIME_ALREADY_ACTIVE"
-    release.set()
-    operation_thread.join(5)
-    close_thread.join(5)
+    try:
+        assert entered.wait(5)
+        lease = launch._runtime_lease
+        assert lease is not None
+        close_thread = Thread(target=launch.close)
+        close_thread.start()
+        deadline = monotonic() + 5
+        while not lease._closing and monotonic() < deadline:  # type: ignore[attr-defined]
+            sleep(0.01)
+        assert lease._closing  # type: ignore[attr-defined]
+        assert counters == {"provider": 0, "execution_store": 0, "asset": 0}
+        with pytest.raises(ProductError) as rejected_execution:
+            bridge.generation_execution_apply({"confirmation_id": "new-confirm"})
+        assert rejected_execution.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+        with pytest.raises(ProductError) as rejected_adoption:
+            bridge.generation_output_adoption_apply({"confirmation_id": "adopt-confirm"})
+        assert rejected_adoption.value.code == "ERR_TASK036_RUNTIME_LEASE_REQUIRED"
+        assert counters == {"provider": 0, "execution_store": 0, "asset": 0}
+        with pytest.raises(ProductError) as successor_error:
+            build_trusted_launch(
+                config,
+                native_dialog=Task036NativeDialogService(DialogBackend()),
+                asr_provider=AsrProvider(),
+                resolve_adapter=ResolveAdapter(),
+                comfy_client=ComfyClient(),
+            )
+        assert successor_error.value.code == "ERR_TASK036_RUNTIME_ALREADY_ACTIVE"
+    finally:
+        release.set()
+        operation_thread.join(5)
+        if close_thread is not None:
+            close_thread.join(5)
+    assert close_thread is not None
     assert not operation_thread.is_alive() and not close_thread.is_alive()
     assert result == [{"events": [{"state": "COMPLETED"}]}]
     assert counters == {"provider": 1, "execution_store": 1, "asset": 0}

@@ -1,0 +1,282 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.com/schemas/product-operation-ticket.schema.json",
+  "title": "BAI VIDEO PRODUCTION Product operation ticket contracts",
+  "oneOf": [
+    {"$ref": "#/$defs/operationRequestV1"},
+    {"$ref": "#/$defs/issuanceReservationV1"},
+    {"$ref": "#/$defs/opTicketEventV1"}
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "opaqueId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "operationId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "eventCoordinate": {
+      "type": "string",
+      "pattern": "^task072/operations/[0-9a-f]{32}/events/[0-9]{8}\\.v1\\.json$"
+    },
+    "firstEventCoordinate": {
+      "type": "string",
+      "pattern": "^task072/operations/[0-9a-f]{32}/events/00000001\\.v1\\.json$"
+    },
+    "utcAuditTime": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 20,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "format": "date-time"
+    },
+    "actionProfile": {
+      "enum": [
+        "INSTALL_AUTHORITY_PAIR_WRITE",
+        "MIGRATION_CA_A_EXECUTE",
+        "PROFILE_BIND_CA_B_EXECUTE",
+        "GPU_REQUIRED_LAUNCH",
+        "D2S_VALIDATE",
+        "D2S_EMIT_PROPOSAL",
+        "D2S_FEEDBACK_TO_LEARNING",
+        "D2S_ROUND_TRIP",
+        "D2S_CONVERT_FRAME",
+        "D2S_VALIDATE_TASK056_SIDECAR",
+        "D2S_CONNECTOR_STATUS",
+        "D2S_PUBLISH_LEARNING",
+        "PRODUCT_BROKER_TERMINAL_QUERY",
+        "D2S_LOAD_PROFILE",
+        "PRODUCT_D2S_ROUNDTRIP_E2E_VERIFY",
+        "ACTIVATION_CONFIG_FINALIZE"
+      ]
+    },
+    "d2sActionProfile": {
+      "enum": [
+        "D2S_VALIDATE",
+        "D2S_EMIT_PROPOSAL",
+        "D2S_FEEDBACK_TO_LEARNING",
+        "D2S_ROUND_TRIP",
+        "D2S_CONVERT_FRAME",
+        "D2S_VALIDATE_TASK056_SIDECAR",
+        "D2S_CONNECTOR_STATUS",
+        "D2S_PUBLISH_LEARNING",
+        "D2S_LOAD_PROFILE"
+      ]
+    },
+    "operationRequestV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "message_type",
+        "schema_version",
+        "request_id",
+        "action_profile",
+        "upstream_receipt_sha256",
+        "requested_state",
+        "authority_created"
+      ],
+      "properties": {
+        "message_type": {"const": "BvpProductOperationRequest"},
+        "schema_version": {"const": "1.0.0"},
+        "request_id": {"$ref": "#/$defs/opaqueId"},
+        "action_profile": {"$ref": "#/$defs/actionProfile"},
+        "upstream_receipt_sha256": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/sha256"}
+        },
+        "requested_state": {"const": "REQUESTED"},
+        "authority_created": {"const": false}
+      }
+    },
+    "issuanceReservationV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "message_type",
+        "schema_version",
+        "consumer_operation_key",
+        "authorization_fingerprint_sha256",
+        "operation_id",
+        "ticket_id",
+        "consumer_task",
+        "action_profile",
+        "profile_version",
+        "plan_revision",
+        "predecessor_sha256",
+        "currentness_receipt_sha256",
+        "config_parent_binding_sha256",
+        "product_build_sha256",
+        "broker_build_sha256",
+        "backend_sha256",
+        "boot_commitment_sha256",
+        "session_commitment_sha256",
+        "issue_monotonic_ms",
+        "deadline_monotonic_ms",
+        "expiry_utc",
+        "invocation_budget",
+        "first_event_coordinate",
+        "authority_created",
+        "reservation_sha256"
+      ],
+      "properties": {
+        "message_type": {"const": "BvpProductOperationIssuanceReservation"},
+        "schema_version": {"const": "1.0.0"},
+        "consumer_operation_key": {"$ref": "#/$defs/sha256"},
+        "authorization_fingerprint_sha256": {"$ref": "#/$defs/sha256"},
+        "operation_id": {"$ref": "#/$defs/operationId"},
+        "ticket_id": {"$ref": "#/$defs/operationId"},
+        "consumer_task": {"$ref": "#/$defs/opaqueId"},
+        "action_profile": {"$ref": "#/$defs/actionProfile"},
+        "profile_version": {"$ref": "#/$defs/opaqueId"},
+        "plan_revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "predecessor_sha256": {"$ref": "#/$defs/sha256"},
+        "currentness_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "config_parent_binding_sha256": {"$ref": "#/$defs/sha256"},
+        "product_build_sha256": {"$ref": "#/$defs/sha256"},
+        "broker_build_sha256": {"$ref": "#/$defs/sha256"},
+        "backend_sha256": {"$ref": "#/$defs/sha256"},
+        "boot_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "session_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "issue_monotonic_ms": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+        "deadline_monotonic_ms": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+        "expiry_utc": {"$ref": "#/$defs/utcAuditTime"},
+        "invocation_budget": {"const": 1},
+        "first_event_coordinate": {"$ref": "#/$defs/firstEventCoordinate"},
+        "authority_created": {"const": false},
+        "reservation_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "opTicketEventV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "message_type",
+        "schema_version",
+        "operation_id",
+        "ticket_id",
+        "consumer_operation_key",
+        "event_revision",
+        "durable_state",
+        "action_profile",
+        "profile_version",
+        "command",
+        "subcommand",
+        "argv_sha256",
+        "predecessor_event_coordinate",
+        "predecessor_event_sha256",
+        "predecessor_identity_sha256",
+        "reservation_sha256",
+        "reservation_identity_sha256",
+        "broker_build_sha256",
+        "backend_sha256",
+        "boot_commitment_sha256",
+        "session_commitment_sha256",
+        "config_sha256",
+        "config_identity_sha256",
+        "child_identity_sha256",
+        "consumer_result_sha256",
+        "terminal_receipt_sha256",
+        "event_monotonic_ms",
+        "event_utc",
+        "next_event_coordinate",
+        "authority_created",
+        "event_sha256"
+      ],
+      "properties": {
+        "message_type": {"const": "BvpProductOperationTicketEvent"},
+        "schema_version": {"const": "1.0.0"},
+        "operation_id": {"$ref": "#/$defs/operationId"},
+        "ticket_id": {"$ref": "#/$defs/operationId"},
+        "consumer_operation_key": {"$ref": "#/$defs/sha256"},
+        "event_revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "durable_state": {
+          "enum": [
+            "RESERVED",
+            "ISSUED",
+            "CONFIG_READY",
+            "CHILD_BOUND",
+            "IN_FLIGHT",
+            "COMMITTED",
+            "REJECTED",
+            "BURNED",
+            "BURNED_UNKNOWN"
+          ]
+        },
+        "action_profile": {"$ref": "#/$defs/d2sActionProfile"},
+        "profile_version": {"$ref": "#/$defs/opaqueId"},
+        "command": {"const": "SKILL_D2S_ADAPTER_V1"},
+        "subcommand": {
+          "enum": [
+            "validate",
+            "emit-proposal",
+            "feedback-to-learning",
+            "round-trip",
+            "convert-frame",
+            "validate-task056-sidecar",
+            "connector-status",
+            "publish-learning",
+            "load-profile"
+          ]
+        },
+        "argv_sha256": {"$ref": "#/$defs/sha256"},
+        "predecessor_event_coordinate": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/eventCoordinate"}]
+        },
+        "predecessor_event_sha256": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+        },
+        "predecessor_identity_sha256": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+        },
+        "reservation_sha256": {"$ref": "#/$defs/sha256"},
+        "reservation_identity_sha256": {"$ref": "#/$defs/sha256"},
+        "broker_build_sha256": {"$ref": "#/$defs/sha256"},
+        "backend_sha256": {"$ref": "#/$defs/sha256"},
+        "boot_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "session_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "config_sha256": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+        },
+        "config_identity_sha256": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+        },
+        "child_identity_sha256": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+        },
+        "consumer_result_sha256": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+        },
+        "terminal_receipt_sha256": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/sha256"}]
+        },
+        "event_monotonic_ms": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+        "event_utc": {"$ref": "#/$defs/utcAuditTime"},
+        "next_event_coordinate": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/eventCoordinate"}]
+        },
+        "authority_created": {"const": false},
+        "event_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {"if": {"properties": {"action_profile": {"const": "D2S_VALIDATE"}}}, "then": {"properties": {"subcommand": {"const": "validate"}}}},
+        {"if": {"properties": {"action_profile": {"const": "D2S_EMIT_PROPOSAL"}}}, "then": {"properties": {"subcommand": {"const": "emit-proposal"}}}},
+        {"if": {"properties": {"action_profile": {"const": "D2S_FEEDBACK_TO_LEARNING"}}}, "then": {"properties": {"subcommand": {"const": "feedback-to-learning"}}}},
+        {"if": {"properties": {"action_profile": {"const": "D2S_ROUND_TRIP"}}}, "then": {"properties": {"subcommand": {"const": "round-trip"}}}},
+        {"if": {"properties": {"action_profile": {"const": "D2S_CONVERT_FRAME"}}}, "then": {"properties": {"subcommand": {"const": "convert-frame"}}}},
+        {"if": {"properties": {"action_profile": {"const": "D2S_VALIDATE_TASK056_SIDECAR"}}}, "then": {"properties": {"subcommand": {"const": "validate-task056-sidecar"}}}},
+        {"if": {"properties": {"action_profile": {"const": "D2S_CONNECTOR_STATUS"}}}, "then": {"properties": {"subcommand": {"const": "connector-status"}}}},
+        {"if": {"properties": {"action_profile": {"const": "D2S_PUBLISH_LEARNING"}}}, "then": {"properties": {"subcommand": {"const": "publish-learning"}}}},
+        {"if": {"properties": {"action_profile": {"const": "D2S_LOAD_PROFILE"}}}, "then": {"properties": {"subcommand": {"const": "load-profile"}}}}
+      ]
+    }
+  }
+}

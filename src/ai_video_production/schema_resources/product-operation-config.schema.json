@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.com/schemas/product-operation-config.schema.json",
+  "title": "BAI VIDEO PRODUCTION operation-specific config v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "message_type",
+    "schema_version",
+    "contract_profile",
+    "command",
+    "subcommand",
+    "operation_id",
+    "ticket_id",
+    "install_instance_id",
+    "upstream_receipt_sha256",
+    "expected_input_sha256",
+    "expected_record_sha256",
+    "expected_profile_sha256",
+    "expected_delivery_sha256",
+    "expected_result_sha256",
+    "product_build_sha256",
+    "adapter_build_sha256",
+    "config_projection_build_sha256",
+    "issue_monotonic_ms",
+    "deadline_monotonic_ms",
+    "expiry_utc",
+    "invocation_budget",
+    "distribution_config_mutated",
+    "authority_created",
+    "config_sha256"
+  ],
+  "properties": {
+    "message_type": {"const": "BvpOperationSpecificConfig"},
+    "schema_version": {"const": "2.0.0"},
+    "contract_profile": {
+      "enum": [
+        "D2S_VALIDATE",
+        "D2S_EMIT_PROPOSAL",
+        "D2S_FEEDBACK_TO_LEARNING",
+        "D2S_ROUND_TRIP",
+        "D2S_CONVERT_FRAME",
+        "D2S_VALIDATE_TASK056_SIDECAR",
+        "D2S_CONNECTOR_STATUS",
+        "D2S_PUBLISH_LEARNING",
+        "D2S_LOAD_PROFILE"
+      ]
+    },
+    "command": {
+      "const": "SKILL_D2S_ADAPTER_V1"
+    },
+    "subcommand": {
+      "enum": [
+        "validate",
+        "emit-proposal",
+        "feedback-to-learning",
+        "round-trip",
+        "convert-frame",
+        "validate-task056-sidecar",
+        "connector-status",
+        "publish-learning",
+        "load-profile"
+      ]
+    },
+    "operation_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "ticket_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "install_instance_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "upstream_receipt_sha256": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/sha256"}
+    },
+    "expected_input_sha256": {"$ref": "#/$defs/sha256"},
+    "expected_record_sha256": {"$ref": "#/$defs/sha256"},
+    "expected_profile_sha256": {"$ref": "#/$defs/sha256"},
+    "expected_delivery_sha256": {"$ref": "#/$defs/sha256"},
+    "expected_result_sha256": {"$ref": "#/$defs/sha256"},
+    "product_build_sha256": {"$ref": "#/$defs/sha256"},
+    "adapter_build_sha256": {"$ref": "#/$defs/sha256"},
+    "config_projection_build_sha256": {"$ref": "#/$defs/sha256"},
+    "issue_monotonic_ms": {"type": "integer", "minimum": 0, "maximum": 9223372036854775807},
+    "deadline_monotonic_ms": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+    "expiry_utc": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 20,
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "format": "date-time"
+    },
+    "invocation_budget": {"const": 1},
+    "distribution_config_mutated": {"const": false},
+    "authority_created": {"const": false},
+    "config_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "allOf": [
+    {"if": {"properties": {"contract_profile": {"const": "D2S_VALIDATE"}}}, "then": {"properties": {"subcommand": {"const": "validate"}}}},
+    {"if": {"properties": {"contract_profile": {"const": "D2S_EMIT_PROPOSAL"}}}, "then": {"properties": {"subcommand": {"const": "emit-proposal"}}}},
+    {"if": {"properties": {"contract_profile": {"const": "D2S_FEEDBACK_TO_LEARNING"}}}, "then": {"properties": {"subcommand": {"const": "feedback-to-learning"}}}},
+    {"if": {"properties": {"contract_profile": {"const": "D2S_ROUND_TRIP"}}}, "then": {"properties": {"subcommand": {"const": "round-trip"}}}},
+    {"if": {"properties": {"contract_profile": {"const": "D2S_CONVERT_FRAME"}}}, "then": {"properties": {"subcommand": {"const": "convert-frame"}}}},
+    {"if": {"properties": {"contract_profile": {"const": "D2S_VALIDATE_TASK056_SIDECAR"}}}, "then": {"properties": {"subcommand": {"const": "validate-task056-sidecar"}}}},
+    {"if": {"properties": {"contract_profile": {"const": "D2S_CONNECTOR_STATUS"}}}, "then": {"properties": {"subcommand": {"const": "connector-status"}}}},
+    {"if": {"properties": {"contract_profile": {"const": "D2S_PUBLISH_LEARNING"}}}, "then": {"properties": {"subcommand": {"const": "publish-learning"}}}},
+    {"if": {"properties": {"contract_profile": {"const": "D2S_LOAD_PROFILE"}}}, "then": {"properties": {"subcommand": {"const": "load-profile"}}}}
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

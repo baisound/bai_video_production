@@ -793,6 +793,7 @@ def _windows_open(
     directory: bool,
     delete_access: bool = False,
     share_write: bool = False,
+    share_delete: bool = False,
 ) -> int:
     if os.name != "nt":
         raise _fail("WINDOWS_BACKEND_UNAVAILABLE")
@@ -811,9 +812,12 @@ def _windows_open(
     ]
     create_file.restype = wintypes.HANDLE
     access = 0x80000000 | (0x40000000 if writable else 0) | (0x00010000 if delete_access else 0)
-    # Delete sharing is intentionally absent: an opened ancestor or target
-    # cannot be renamed/reparsed out from under its operation.
-    share = 0x1 | (0x2 if directory or share_write else 0)
+    # Delete sharing is intentionally absent for authority-bearing opens: an
+    # opened ancestor or target cannot be renamed/reparsed out from under its
+    # operation.  A fresh read-only collision observer may opt in solely to
+    # satisfy the already-live winner's delete access; that observer never
+    # obtains delete access itself and the winner still denies outside delete.
+    share = 0x1 | (0x2 if directory or share_write else 0) | (0x4 if share_delete else 0)
     disposition = 1 if create_new else 3
     flags = 0x00200000 | (0x02000000 if directory else 0)  # OPEN_REPARSE_POINT | BACKUP_SEMANTICS
     handle = create_file(str(path), access, share, None, disposition, flags, None)
@@ -1489,6 +1493,7 @@ class SecureAuthorityIO:
         create_new: bool = False,
         delete_access: bool = False,
         share_write: bool = False,
+        share_delete: bool = False,
     ) -> int:
         fd: int | None = None
         try:
@@ -1500,6 +1505,7 @@ class SecureAuthorityIO:
                     directory=False,
                     delete_access=delete_access,
                     share_write=share_write,
+                    share_delete=share_delete,
                 )
             else:
                 fd = os.open(
@@ -1980,7 +1986,12 @@ class SecureAuthorityIO:
             # read-only observation, but must share write access so Windows can
             # open the same stable object; all identity/security checks below
             # still reject a mutation or namespace race.
-            fd = self._open_target(parent, writable=False, share_write=True)
+            fd = self._open_target(
+                parent,
+                writable=False,
+                share_write=True,
+                share_delete=True,
+            )
             winner = self._bind_regular(parent, fd)
             security = self._namespace_security_commitment(parent, fd, winner)
             if _identity(os.fstat(fd)) != winner or _identity(os.lstat(parent.target)) != winner:

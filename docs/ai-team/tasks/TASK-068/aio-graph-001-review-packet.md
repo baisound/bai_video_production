@@ -2,16 +2,20 @@
 
 - Repository: BAI VIDEO PRODUCTION; branch `codex/task-068-aio-graph-001`.
 - Canonical parent after rebase: `origin/main@4d233c8c77c7328f5b221642040faf06c0a6a15c`.
-- Status: Recovery after hosted Windows failure on prior candidate `e34093b`;
-  the current corrective successor is uncommitted.
-- Changed paths: TASK-068 task-local acceptance, `secure_authority_io.py`,
-  `test_task068_secure_authority_io.py`,
+- Status: Recovery R2 after hosted Windows 3.11/3.12/3.13 failure on
+  `ff7d1f03e77bd86a9f20a21e80c5d868d397b625`; the current corrective
+  successor is uncommitted.
+- Changed paths in R2: `secure_authority_io.py`,
   `test_task068_secure_authority_io_windows.py`, and this TASK-068 packet only.
 - Diff check: PASS (line-ending warnings only).
 - Recovery source/test/task acceptance diff SHA-256:
   `92cd60f6e72ec84a4967b577192e7e780a0023dcabe7d308c29799106ca72d53`
   from `git diff --no-ext-diff e34093b --` over `secure_authority_io.py`, both
   focused TASK-068 test files, and TASK-068 `task.md`.
+- R2 source/test textual diff SHA-256:
+  `452b95c5729fef96e4371c9e10b91040fa5445d644d8bb1dd5a3babea0c118ed`
+  from the current `git diff --no-ext-diff --` over the two R2 source/test
+  paths. The packet is deliberately excluded from that scoped hash.
 
 ## Executed evidence
 
@@ -72,6 +76,33 @@ test venv, and the available Windows Python runtimes lack the declared
 `jsonschema` dependency.  Hosted Windows jobs are therefore the required
 successor reproduction route.
 
+## Hosted Windows R2 recovery
+
+All three hosted Windows variants failed the same exact assertion in
+`test_initial_lock_contention_has_one_winner_and_one_stable_loser_per_run`:
+the two outcomes were `WINNER` and `LOCK_INITIALIZATION_UNKNOWN`, with no
+`LOCK_CREATE_COLLISION`. Ubuntu 3.11/3.12/3.13 and Security checks passed.
+
+The remaining root cause is the other half of Windows share-mode symmetry. The
+live winner has `DELETE` access because its operation-owned temporary handle
+must support handle-bound cleanup. The fresh read-only classifier already
+shares write access, but must also share that existing `DELETE` access before
+Windows permits its read open. R2 adds a default-deny `share_delete` parameter
+to the Windows open adapter and forwards it through the private target opener.
+Only the fresh read-only initial-lock classifier opts in; it never receives
+delete access. Authority-bearing writer opens and pinned ancestors retain
+default delete-sharing denial, so a third party cannot obtain delete access
+while the live winner remains open.
+
+The added Windows-native regression creates and holds the exact live winner
+handle (`create_new`, writable, delete-capable, write-shared), then requires a
+body-free `LOCK_CREATE_COLLISION`, unchanged marker bytes, and no temporary
+residue. Existing sharing-blocked observation coverage still requires
+`LOCK_INITIALIZATION_UNKNOWN` and preservation. Local syntax/compileall and
+`git diff --check` pass. WSL was unavailable after restart (`E_ACCESS_DENIED`);
+the available local Windows Python still lacks `jsonschema` at collection, and
+no dependency installation was performed.
+
 ## Superseded prior review
 
 - Prior Critic rereview: `C/H/M/L = 0/0/0/0`. Its local replay was
@@ -96,3 +127,15 @@ successor reproduction route.
 Known open item: Windows-native contention/fault execution must pass on the
 successor hosted jobs. No secret values, artifact bodies, external effects,
 commit, push, or PR are included in this Recovery checkpoint.
+
+## Recovery R2 review
+
+- Critic: `C/H/M/L = 0/0/0/0`; the read-only share-delete exception is isolated
+  to the fresh classifier and retains all identity/security/ancestor checks.
+- Tester: static `PASS`, `C/H = 0/0`; the native live-winner regression and
+  existing sharing-blocked negative cover the positive and fail-closed paths.
+- Judge: `ACCEPT`, `C/H = 0/0`; hosted Windows remains the required final gate.
+
+Open item: commit/push is deferred until this R2 checkpoint is reviewed for
+scope and a current Owner-authorized PR update path is reconfirmed. Hosted
+Windows must pass before TASK-068 completion can be claimed.

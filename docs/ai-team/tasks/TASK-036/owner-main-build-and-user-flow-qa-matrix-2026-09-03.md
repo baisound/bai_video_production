@@ -11,14 +11,14 @@ DEV profile: DEV-2 STANDARD (integration/package/user-flow contract); native obs
 - Repository: `baisound/bai_video_production`
 - Canonical source: `origin/main`
 - Exact source commit: `d1c41e2f57600caef5668f19e5e6040c90601cc6`
-- Worktree: `C:\Users\user\.codex\visualizations\2026\08\30\01a051d0-03e9-74b0-af5c-13e37836926c\bvp-owner-qa-main-20260903`
 - Branch: `codex/task-036-owner-main-qa-20260903`
+- Build workspace: dedicated clean TASK-036 QA worktree (local coordinate withheld)
 - Source state before build: clean
 - Root checkout dirty state: pre-existing untracked worktrees and TASK-036 task-local material only; preserved and not modified by this unit
 
 ## Reproducible Windows package build
 
-- Python: `C:\Users\user\AppData\Local\Programs\Python\Python312\python.exe`
+- Python runtime identity: local CPython 3.12 build runtime (absolute executable coordinate withheld)
 - Python version: `3.12.4`
 - PyInstaller: `6.22.0`
 - pywebview: `6.2.1`
@@ -33,7 +33,7 @@ DEV profile: DEV-2 STANDARD (integration/package/user-flow contract); native obs
 - Package: `1,560` files / `308,390,030` bytes
 - Helper staged/bundled identity: exact match
 - Secret-free helper protocol smoke: `PASS`
-- Source contamination check: `Analysis-00.toc` and xref contain no `task-050` source; sampled packaged resources resolve to this exact QA worktree.
+- Source contamination check: `Analysis-00.toc` and xref contain no `task-050` source; sampled packaged resources resolve to the dedicated QA source identity at commit `d1c41e2`.
 - Warnings: optional Android webview hook, pycparser generated tables, and `pkg_resources` deprecation only. No build failure.
 
 No install, model/runtime download, Provider call, paid action, Release, Deploy, or Production activation occurred.
@@ -171,10 +171,26 @@ Acceptance for the repair:
 ### Exact PR rebind
 
 - Draft PR: `#512`
-- Rebound PR head: `c0c429125cbc6c8fb1169be217f0667cd6d6d358`
 - Base: `d1c41e2f57600caef5668f19e5e6040c90601cc6`
-- PR state at read-back: `OPEN / DRAFT / MERGEABLE`
-- Hosted read-back at preparation time: Linux 3.11/3.12/3.13, Windows 3.12, metadata, dependency audit and secret scan passed; Windows 3.11/3.13 remained in progress.
+- Artifact and executed-test source identity: canonical main commit `d1c41e2`; neither
+  PR documentation commit changes Product source or packaged artifact bytes.
+- Executed-test identity: the two command groups recorded above (`186 PASS` and
+  `213 PASS / 2 platform SKIP`) ran against `d1c41e2` on 2026-09-03 JST. Exact
+  wall-clock start/end timestamps were not captured and remain `NOT_CONFIRMED`.
+- Evidence-observed PR head during the original read-back:
+  `c0c429125cbc6c8fb1169be217f0667cd6d6d358`.
+- Document head reviewed by the independent Critic before this correction:
+  `4c9a63a71425e635f8d67327848812f6a5ac4787`.
+- `4c9a63a` is a documentation-only successor to `c0c429`; the bounded Git
+  comparison contains only this QA matrix and has Product code delta zero.
+- PR state observed at `4c9a63a`: `OPEN / DRAFT`.
+- Hosted checks observed at `4c9a63a`: Linux 3.11/3.12/3.13, Windows
+  3.11/3.12/3.13, release metadata, dependency audit and secret scan all
+  `SUCCESS`. These results are historical Evidence for `4c9a63a` only.
+- Correction-candidate head: assigned by the next non-force documentation
+  commit. Fresh head receipt, CI/Security results, mergeability and independent
+  Critic acceptance are `NOT_CONFIRMED` until read back against that exact new
+  head. Results from `4c9a63a` must not be reused as its merge receipt.
 
 ### Native gate decision
 
@@ -190,8 +206,8 @@ single-instance, output, or renderer PASS.
 
 ### Read-only build/native prerequisite observation
 
-- `C:` free bytes: `68,198,178,816`
-- `E:` free bytes: `1,214,783,565,824`
+- System-volume free bytes at observation: `68,198,178,816`
+- AI-data-volume free bytes at observation: `1,214,783,565,824`
 - `ffmpeg.exe`: available on PATH
 - `ffprobe.exe`: available on PATH
 - `tesseract.exe`: available on PATH
@@ -202,15 +218,15 @@ single-instance, output, or renderer PASS.
 - WebView2 registry lookup used by the manual inventory returned no entry.
 - Canonical read-only native probe with the exact build Python and current-source `PYTHONPATH`: `PASS`
   - pywebview available: `true`
-  - WebView2 candidate: `C:\Program Files (x86)\Microsoft\EdgeWebView\Application\152.0.4191.62`
+  - WebView2 candidate identity: installed Evergreen Runtime version `152.0.4191.62` (absolute runtime coordinate withheld)
   - install path supported: `true`
   - ready to launch layout spike: `true`
   - renderer native validated: `false`
   - dependency install performed: `false`
 
-The convenience script `run-task036-native-layout-spike.ps1` uses unqualified
-`python`. On this host it selected
-`E:\BAI_AI\runtimes\Python31314\python.exe` and failed with
+The convenience script `run-task036-native-layout-spike.ps1` used unqualified
+`python` at this Evidence point. It selected the host's AI-runtime CPython
+3.13.14 identity (absolute executable coordinate withheld) and failed with
 `ModuleNotFoundError: ai_video_production`. Re-running the module explicitly
 with the exact build Python succeeded. This is a runbook/tooling reproducibility
 gap; it must not be reported as a missing WebView2 dependency or Product-native

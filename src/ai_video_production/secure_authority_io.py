@@ -1168,17 +1168,25 @@ class _SecureFileLock:
                 initial_lease = self.__owner._write_temp(parent, b"\0", share_write=True)
                 self.__owner._stage("before_initial_lock_publish")
                 publish_state: Literal["OWNED", "FOREIGN_COLLISION", "UNKNOWN"] | None = None
+                publish_failure: BaseException | None = None
                 try:
                     self.__owner._rename_noreplace(parent, initial_lease)
                     initial_published = True
                 except BaseException as publish_error:
+                    publish_failure = publish_error
                     publish_state = self.__owner._classify_failed_noreplace(
                         parent,
                         initial_lease,
                         publish_error,
                     )
                 if publish_state == "FOREIGN_COLLISION":
-                    raise _fail("LOCK_CREATE_COLLISION") from None
+                    if self.__owner._classify_initial_lock_loser(
+                        self.__relative_path, initial_lease, publish_failure
+                    ):
+                        raise _fail("LOCK_CREATE_COLLISION") from None
+                    raise _fail(
+                        "LOCK_INITIALIZATION_UNKNOWN", completion_unknown=True
+                    ) from None
                 if publish_state is not None:
                     initial_published = publish_state == "OWNED"
                     initial_effect_unknown = True
@@ -1939,6 +1947,59 @@ class SecureAuthorityIO:
         ):
             return "FOREIGN_COLLISION"
         return "UNKNOWN"
+
+    def _classify_initial_lock_loser(
+        self,
+        relative_path: str,
+        lease: _TempLease,
+        failure: BaseException,
+    ) -> bool:
+        """Fresh read-only classification for an initial-lock no-replace loser.
+
+        This deliberately does not reuse the loser's pre-publication parent pin:
+        a concurrent winner may have changed that namespace after it was pinned.
+        Only the exact native collision plus a fresh stable marker observation is
+        a confirmed loser outcome; no lock/write capability is acquired here.
+        """
+
+        if not (
+            isinstance(failure, SecureAuthorityIOError)
+            and failure.code == "DESTINATION_EXISTS"
+        ):
+            return False
+        parent: _PinnedParent | None = None
+        fd: int | None = None
+        try:
+            if not _same_file_object(_identity(os.fstat(lease.fd)), lease.identity):
+                return False
+            parent = self._pin_parent(relative_path)
+            fd = self._open_target(parent, writable=False)
+            winner = self._bind_regular(parent, fd)
+            if winner.size != 1 or self._read_fd(fd, winner) != b"\0":
+                return False
+            security = self._namespace_security_commitment(parent, fd, winner)
+            if _identity(os.fstat(fd)) != winner or _identity(os.lstat(parent.target)) != winner:
+                return False
+            if self._namespace_security_commitment(parent, fd, winner) != security:
+                return False
+            parent.verify()
+            return True
+        except (OSError, SecureAuthorityIOError):
+            return False
+        finally:
+            close_failed = False
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    close_failed = True
+            if parent is not None:
+                try:
+                    parent.close()
+                except SecureAuthorityIOError:
+                    close_failed = True
+            if close_failed:
+                return False
 
     def _validate_temp_lease(self, parent: _PinnedParent, lease: _TempLease) -> None:
         if lease.closed:

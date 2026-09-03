@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import stat
+import threading
 from typing import get_type_hints, NoReturn
 
 import pytest
@@ -815,7 +816,7 @@ def test_initial_lock_collision_does_not_retry_and_burns_capability(tmp_path: Pa
     assert target.read_bytes() == b"competitor"
 
 
-def test_initial_lock_publish_race_is_classified_and_preserves_competitor(
+def test_initial_lock_publish_race_with_nonmarker_foreign_file_is_unknown_and_preserved(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "authority.lock"
@@ -834,10 +835,182 @@ def test_initial_lock_publish_race_is_classified_and_preserves_competitor(
         with capability:
             pass
 
-    _assert_code(collision, "LOCK_CREATE_COLLISION")
+    _assert_code(collision, "LOCK_INITIALIZATION_UNKNOWN")
+    assert collision.value.completion_unknown is True
     _assert_code(burned, "CAPABILITY_BURNED")
     assert target.read_bytes() == b"competitor"
     assert list(tmp_path.glob(".authority-*.tmp")) == []
+
+
+def test_initial_lock_contention_has_one_winner_and_one_stable_loser_per_run(
+    tmp_path: Path,
+) -> None:
+    """Repeated initial contention must not turn a winner into a pin failure."""
+
+    for run in range(20):
+        root = tmp_path / f"run-{run}"
+        root.mkdir()
+        sentinel = root / "unrelated-sentinel.bin"
+        sentinel.write_bytes(b"unrelated-sentinel")
+        sentinel_before = sentinel.stat()
+        sentinel_bytes = sentinel.read_bytes()
+        root_before = root.stat()
+        gate = threading.Barrier(2)
+        outcomes: list[str] = []
+
+        def contend() -> None:
+            capability = SecureAuthorityIO(root).lock("authority.lock", mode="initial")
+            try:
+                gate.wait(timeout=5)
+                with capability:
+                    outcomes.append("WINNER")
+            except SecureAuthorityIOError as exc:
+                outcomes.append(exc.code)
+
+        left = threading.Thread(target=contend)
+        right = threading.Thread(target=contend)
+        left.start()
+        right.start()
+        left.join(timeout=10)
+        right.join(timeout=10)
+        assert not left.is_alive() and not right.is_alive()
+        assert outcomes.count("WINNER") == 1
+        assert outcomes.count("LOCK_CREATE_COLLISION") == 1
+        assert (root / "authority.lock").read_bytes() == b"\0"
+        assert sorted(path.name for path in root.iterdir()) == [
+            "authority.lock",
+            "unrelated-sentinel.bin",
+        ]
+        sentinel_after = sentinel.stat()
+        assert sentinel.read_bytes() == sentinel_bytes
+        assert (sentinel_before.st_dev, sentinel_before.st_ino) == (
+            sentinel_after.st_dev,
+            sentinel_after.st_ino,
+        )
+        root_after = root.stat()
+        assert (root_before.st_dev, root_before.st_ino) == (
+            root_after.st_dev,
+            root_after.st_ino,
+        )
+
+
+@pytest.mark.parametrize(
+    ("fail_target_close", "fail_parent_close"),
+    [(True, False), (False, True), (True, True)],
+    ids=["target-fd", "parent", "target-fd-and-parent"],
+)
+def test_initial_lock_loser_cleanup_faults_are_body_free_and_preserve_foreign_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fail_target_close: bool,
+    fail_parent_close: bool,
+) -> None:
+    """A failed fresh loser cleanup never turns a foreign winner into authority."""
+
+    from ai_video_production import secure_authority_io as secure_io
+
+    target = tmp_path / "authority.lock"
+    sentinel = tmp_path / "unrelated-sentinel.bin"
+    sentinel.write_bytes(b"sentinel-must-not-change")
+    sentinel_before = sentinel.stat()
+    sentinel_bytes = sentinel.read_bytes()
+
+    def create_winner(stage: str) -> None:
+        if stage == "before_initial_lock_publish":
+            target.write_bytes(b"\0")
+
+    authority = SecureAuthorityIO(tmp_path, _stage_hook=create_winner)
+    real_pin_parent = authority._pin_parent
+    real_write_temp = authority._write_temp
+    real_open_target = authority._open_target
+    real_close = secure_io.os.close
+    pin_calls = 0
+    initial_temp_fds: list[int] = []
+    classifier_target_fds: list[int] = []
+    classifier_parent_fds: list[int] = []
+    target_close_attempts: list[int] = []
+    parent_close_attempts: list[int] = []
+
+    def capture_temp(*args: object, **kwargs: object):
+        lease = real_write_temp(*args, **kwargs)  # type: ignore[arg-type]
+        initial_temp_fds.append(lease.fd)
+        return lease
+
+    def wrap_parent(relative_path: object):
+        nonlocal pin_calls
+        parent = real_pin_parent(relative_path)  # type: ignore[arg-type]
+        pin_calls += 1
+        if pin_calls == 2:
+            classifier_parent_fds.extend(fd for _, fd, _, _ in parent.pinned)
+            real_parent_close = parent.close
+
+            def close_then_maybe_fail() -> None:
+                parent_close_attempts.extend(
+                    fd for _, fd, _, _ in parent.pinned
+                )
+                real_parent_close()
+                if fail_parent_close:
+                    raise SecureAuthorityIOError("PRIVATE_PARENT_CLOSE_FAILURE")
+
+            parent.close = close_then_maybe_fail  # type: ignore[method-assign]
+        return parent
+
+    def capture_classifier_target(
+        parent: object,
+        *,
+        writable: bool,
+        **kwargs: object,
+    ) -> int:
+        fd = real_open_target(parent, writable=writable, **kwargs)  # type: ignore[arg-type]
+        if not writable:
+            classifier_target_fds.append(fd)
+        return fd
+
+    def close_then_maybe_fail(fd: int) -> None:
+        if fd in classifier_target_fds:
+            target_close_attempts.append(fd)
+            real_close(fd)
+            if fail_target_close:
+                raise OSError("private target close failure")
+            return
+        real_close(fd)
+
+    monkeypatch.setattr(authority, "_write_temp", capture_temp)
+    monkeypatch.setattr(authority, "_pin_parent", wrap_parent)
+    monkeypatch.setattr(authority, "_open_target", capture_classifier_target)
+    monkeypatch.setattr(secure_io.os, "close", close_then_maybe_fail)
+
+    capability = authority.lock("authority.lock", mode="initial")
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        with capability:
+            pass
+    with pytest.raises(SecureAuthorityIOError) as burned:
+        with capability:
+            pass
+
+    _assert_code(exc, "LOCK_INITIALIZATION_UNKNOWN")
+    assert exc.value.completion_unknown is True
+    assert str(exc.value) == "LOCK_INITIALIZATION_UNKNOWN"
+    assert exc.value.__cause__ is None
+    assert exc.value.__context__ is None
+    _assert_code(burned, "CAPABILITY_BURNED")
+    assert target_close_attempts == classifier_target_fds
+    assert parent_close_attempts == classifier_parent_fds
+    assert initial_temp_fds and classifier_target_fds and classifier_parent_fds
+    for fd in (*initial_temp_fds, *classifier_target_fds, *classifier_parent_fds):
+        with pytest.raises(OSError):
+            os.fstat(fd)
+    assert target.read_bytes() == b"\0"
+    assert sentinel.read_bytes() == sentinel_bytes
+    sentinel_after = sentinel.stat()
+    assert (sentinel_before.st_dev, sentinel_before.st_ino) == (
+        sentinel_after.st_dev,
+        sentinel_after.st_ino,
+    )
+    assert sorted(path.name for path in tmp_path.iterdir()) == [
+        "authority.lock",
+        "unrelated-sentinel.bin",
+    ]
 
 
 @pytest.mark.skipif(os.name == "nt", reason="POSIX durability classification")

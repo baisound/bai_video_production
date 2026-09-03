@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-072-A: 権限ゼロのProduct Operation Ticket／Config／Receipt契約と検証用brokerを追加しました。実際のProvider、native、外部操作、Release/Deploy/Productionは開始しません。
+
 ・TASK-046: Voice Studio Quick Cloneの復旧・読戻しをschema-boundかつfail-closedな契約として追加しました。実際のVoice処理、Provider、モデルdownload、native、Release/Deploy/Productionは開始しません。
 
 ・TASK-063: モンタージュ学習Bridgeのinstaller選択ルート相対readbackをfixture-onlyで厳格化し、root/ancestor検証、pair lifecycle、closed public projection、schema readbackをfail-closedで検証可能にしました。native installer/install/repair/uninstall、Provider、Release/Deploy/Production Activationは開始しません。

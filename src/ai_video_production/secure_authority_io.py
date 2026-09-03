@@ -1958,8 +1958,11 @@ class SecureAuthorityIO:
 
         This deliberately does not reuse the loser's pre-publication parent pin:
         a concurrent winner may have changed that namespace after it was pinned.
-        Only the exact native collision plus a fresh stable marker observation is
-        a confirmed loser outcome; no lock/write capability is acquired here.
+        Only the exact native collision plus a fresh stable regular-target
+        observation is a confirmed loser outcome.  The target may be a live
+        one-byte lock winner or an arbitrary pre-existing foreign file: its
+        bytes are deliberately not interpreted by the losing create capability.
+        No lock/write capability is acquired here.
         """
 
         if not (
@@ -1973,10 +1976,12 @@ class SecureAuthorityIO:
             if not _same_file_object(_identity(os.fstat(lease.fd)), lease.identity):
                 return False
             parent = self._pin_parent(relative_path)
-            fd = self._open_target(parent, writable=False)
+            # The winner can retain a write-capable live handle.  This remains a
+            # read-only observation, but must share write access so Windows can
+            # open the same stable object; all identity/security checks below
+            # still reject a mutation or namespace race.
+            fd = self._open_target(parent, writable=False, share_write=True)
             winner = self._bind_regular(parent, fd)
-            if winner.size != 1 or self._read_fd(fd, winner) != b"\0":
-                return False
             security = self._namespace_security_commitment(parent, fd, winner)
             if _identity(os.fstat(fd)) != winner or _identity(os.lstat(parent.target)) != winner:
                 return False

@@ -38,9 +38,11 @@ Owner-approved source implementation and focused verification are authorized. Re
 - Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
 - AIO-GRAPH-001 initial-lock contention is an exact-one-effect contract: a
   burned create capability is never retried, while its loser outcome is derived
-  only by a separate fresh read-only classification.  An exact stable live
-  winner may yield the body-free loser collision result; any namespace swap,
-  identity/security drift, or ambiguity is STOP+preserve+completion-unknown.
+  only by a separate fresh read-only classification.  An exact stable regular
+  foreign target or live winner may yield the body-free loser collision result;
+  the losing capability does not interpret target bytes.  A sharing-blocked
+  observation, namespace swap, identity/security drift, or other ambiguity is
+  STOP+preserve+completion-unknown.
   The loser receives no existing-lock write capability and may clean up only its
   own live-handle-bound temporary artifact.  Repeated stress must prove exactly
   one winner lease/effect, zero foreign overwrite/delete, and unchanged

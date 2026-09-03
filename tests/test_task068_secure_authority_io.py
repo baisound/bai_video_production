@@ -816,7 +816,7 @@ def test_initial_lock_collision_does_not_retry_and_burns_capability(tmp_path: Pa
     assert target.read_bytes() == b"competitor"
 
 
-def test_initial_lock_publish_race_with_nonmarker_foreign_file_is_unknown_and_preserved(
+def test_initial_lock_publish_race_with_stable_foreign_file_is_collision_and_preserved(
     tmp_path: Path,
 ) -> None:
     target = tmp_path / "authority.lock"
@@ -835,8 +835,8 @@ def test_initial_lock_publish_race_with_nonmarker_foreign_file_is_unknown_and_pr
         with capability:
             pass
 
-    _assert_code(collision, "LOCK_INITIALIZATION_UNKNOWN")
-    assert collision.value.completion_unknown is True
+    _assert_code(collision, "LOCK_CREATE_COLLISION")
+    assert collision.value.completion_unknown is False
     _assert_code(burned, "CAPABILITY_BURNED")
     assert target.read_bytes() == b"competitor"
     assert list(tmp_path.glob(".authority-*.tmp")) == []

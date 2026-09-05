@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-069: Montage Learning Bridgeのowner/import journal/receipt/pending/correlation読取をroot-boundなSecureAuthorityIO経由へ固定し、link・非regular file・JSON曖昧性・inode差替え・1 MiB超過をfail-closedで扱います。既存4 MiB Delivery/Profile経路は別Gateへ隔離し、実行、Provider、native、Release、Deploy、Production Activationは開始しません。
+
 ・TASK-048: エアコンOFF/ONの音声A/B測定を同一発話プロンプト・改訂・比較計画へ固定し、条件不一致、重複・欠落、cross-effort、replay、危険な出力先をrunner実行前にfail-closedで拒否します。実音声、private audio、OBS/native A/B、Dataset、Training、Release、Deploy、Production Activationは開始しません。
 
 ・TASK-075: TASK-073向けに、実音声や推論を伴わないUNKNOWN状態の合成実行結果fixtureを追加し、canonical self-hash、field order、改ざん・権限昇格拒否を検証可能にしました。実Owner音声、model/provider、native、Release、Deploy、Production Activationは開始しません。

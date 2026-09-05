@@ -1278,6 +1278,21 @@ def test_environment_missing_speech_levels_requires_review(missing_level: str) -
     assert receipt.reason_codes == (ReasonCode.AB_REVIEW_REQUIRED,)
 
 
+def test_environment_missing_room_tone_blocks_ab_delta_without_recommendation() -> None:
+    key = (CaptureCondition.AIR_CONDITIONER_ON, VoiceEffort.NORMAL)
+    receipt = FixtureVoiceQualityAudioFinishingService(
+        runner(environment=environment_bundle(segment_changes={
+            key: {"room_tone_noise_floor_dbfs": None},
+        }))
+    ).compare_environment(environment_plan())
+
+    assert receipt.comparison_state is QAState.UNKNOWN
+    assert receipt.reason_codes == (ReasonCode.AB_MEASUREMENT_SET_INVALID,)
+    assert receipt.measurement_bundle_sha256 is None
+    assert receipt.noise_deltas == ()
+    assert receipt.recommended_condition is None
+
+
 def test_environment_reject_is_reflected_in_top_level_comparison_state() -> None:
     key = (CaptureCondition.AIR_CONDITIONER_ON, VoiceEffort.SHOUT)
     receipt = FixtureVoiceQualityAudioFinishingService(

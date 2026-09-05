@@ -277,7 +277,8 @@ not reported PASS by this unit.
 - Bundled workspace Python `py_compile` for the new source: PASS.
 - Isolated fixture-only focused pytest after Critic authority, identity,
   cardinality, scalar strictness, meter-calibration and crossfade-accounting
-  closure: `167 passed`.
+  closure, including the missing-room-tone A/B delta fail-closed case:
+  `168 passed`.
 - Existing TASK-048 regression collection: `NOT_EXECUTED` because the available
   pytest runtime lacks `jsonschema`; no dependency was installed and this is
   not reported as PASS.

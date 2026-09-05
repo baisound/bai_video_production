@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-048: OBS録音原本からspeech-continuous WAVを構成する非Native仕上げ契約を追加し、無音除去、fade、peak/clipping/dropout/room-tone評価、エアコンON/OFF A/B、片側基準欠落、0 dBFS境界をfail-closedで検証可能にしました。実音声、native、Release、Deploy、Production Activationは開始しません。
+
 ・TASK-068: Windowsの同時initial-lock作成時に、winnerによる親ディレクトリのmtime更新をancestor置換と誤分類しないよう照合を安定化しました。device/inode/type/reparseとpermission modeは引き続きfail-closedで固定し、競合loserを決定的に`LOCK_CREATE_COLLISION`として返します。native real-data、Release、Deploy、Production Activationは開始しません。
 
 ・TASK-068: AIO-GRAPH-001のinitial-lock競合をfresh read-onlyで分類し、安定したforeign targetまたはlive winnerだけをbody-free collisionとして扱うfail-closed契約とfocused fault/contention testsを追加しました。Windows native実行、Release、Deploy、Production Activationは開始しません。

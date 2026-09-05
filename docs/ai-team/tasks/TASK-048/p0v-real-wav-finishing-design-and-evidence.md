@@ -5,7 +5,7 @@
 - Atomic Unit: `TASK-048 / P-QC-P0V-FINISH-1`
 - DEV profile: `DEV-4 FOUNDATION CRITICAL`
 - Owner: Development 3
-- Base: `origin/main@4d233c8c77c7328f5b221642040faf06c0a6a15c`
+- Base: `origin/main@2bded5ec61cd2be359e3312c0728c20994583144`
 - State: fixture contract implemented; native audio execution is `NOT_EXECUTED / NOT_CONFIRMED`
 - Production, Release, Dataset adoption, model training and real audio effects remain gated.
 
@@ -161,6 +161,13 @@ noise-floor and low/mid/high-band ON-minus-OFF deltas in dBFS. Without acoustic
 calibration it never claims dBA or SPL and never automatically recommends ON or
 OFF.
 
+The OFF and ON capture bindings additionally carry one exact
+`same_content_prompt_sha256` and positive bounded `prompt_revision`. Both must
+match before the fixture runner is called. Every one of the six segment
+measurements repeats those exact prompt coordinates and the current comparison
+plan digest; a cross-prompt, cross-revision or cross-plan measurement is
+rejected as non-current Evidence with no measurement bundle admitted.
+
 Segment policy returns only `TRAINING_ELIGIBLE`, `REVIEW` or `REJECT` with
 closed reason codes. Non-finite input, clipping, dropout, excessive DC, severe
 low SNR and low speech ratio reject. Approximate or marginal SNR and missing
@@ -252,7 +259,9 @@ Covered in the focused test file:
   require exact JSON-compatible types (integer rate/channels, string format);
 - source and public identifier fields reject drive paths, traversal and URIs;
 - OFF/ON capture/room-tone generation, source physical identity/currentness,
-  chain mismatch, stale capture receipts, incomplete or permuted six-cell grids,
+  chain or same-content prompt/revision mismatch, stale capture receipts,
+  incomplete or permuted six-cell grids, cross-prompt/cross-revision/cross-plan
+  segment Evidence,
   missing RMS/peak, non-finite or positive-invalid dBFS meter scalars, and fixed
   no-dBA/no-SPL/no-condition-recommendation projection,
   non-finite/dBFS bounds, threshold boundaries, approximate SNR, stationary
@@ -278,7 +287,8 @@ not reported PASS by this unit.
 - Isolated fixture-only focused pytest after Critic authority, identity,
   cardinality, scalar strictness, meter-calibration and crossfade-accounting
   closure, including the missing-room-tone A/B delta fail-closed case and the
-  exact `0 dBFS` peak-versus-clipping fact boundary: `169 passed`.
+  exact `0 dBFS` peak-versus-clipping fact boundary, and same-content prompt /
+  revision / plan binding: `178 passed`.
 - Existing TASK-048 regression collection: `NOT_EXECUTED` because the available
   pytest runtime lacks `jsonschema`; no dependency was installed and this is
   not reported as PASS.
@@ -287,3 +297,46 @@ not reported PASS by this unit.
 
 Actual FFmpeg, audio files, E-drive recordings, private Owner voice and
 paid/cloud execution were not used by this unit.
+
+## 2026-09-06 same-content A/B binding checkpoint
+
+- Project / Task / Unit / run: `BAI VIDEO PRODUCTION` / `TASK-048` /
+  `P-QC-P0V-AB-PROMPT-BIND` / `20260906T053341+0900`.
+- Worktree: `C:\home\baisound\worktrees\bai-video-production\task-048-ab-prompt-bind-r0`.
+- Branch / HEAD / base: `codex/task-048-ab-prompt-bind-r0` /
+  `2bded5ec61cd2be359e3312c0728c20994583144` /
+  `origin/main@2bded5ec61cd2be359e3312c0728c20994583144`.
+- Dirty paths are exactly this document,
+  `src/ai_video_production/voice_quality_audio_finishing.py`, and
+  `tests/test_task048_voice_quality_audio_finishing.py`; all are inside the
+  TASK-048 Atomic Unit Allowed Files. Foreign main-checkout dirt is untouched.
+- The six OFF/ON x effort measurements now bind the same content prompt digest,
+  positive prompt revision, and exact comparison-plan digest. Capture-level
+  cross-prompt or cross-revision mismatch stops before the runner; a forged
+  measurement coordinate admits no bundle.
+- Focused fixture regression: `178 passed` (`PASS`). Python `py_compile` for
+  source and test: `PASS`. `git diff --check`: `PASS`.
+- Source SHA-256:
+  `42dce713e66a021ae2d2fb84b212d648348e3da2baeb1bb0e4c710b7ea13c3ef`.
+  Test SHA-256:
+  `7612cac79fd0a7c7d6c64a518419263b5ac36bb67992e6c8485d5ec0f1da339d`.
+- Build / QA / runtime / output roots: none. The only intentional residual is
+  the operation-owned bytecode cache at
+  `C:\Users\user\AppData\Local\Temp\bvp-task048-ab-prompt-bind-91a2f754a2564637b25270c4accb4d4a`;
+  it is not reused or automatically deleted.
+- External Evidence destination:
+  `C:\home\baisound\evidence\bai-video-production\TASK-048\P-QC-P0V-AB-PROMPT-BIND\20260906T053341+0900\`.
+- Real/private audio, OBS/analyzer execution, Dataset adoption, Training,
+  Release, Deploy, and Production remain `NOT_EXECUTED / NOT_CONFIRMED` and
+  Human-gated. Native A/B remains parked.
+- Independent Tester: `PASS / COMMIT_READY`, Critical/High/Medium/Low
+  `0 / 0 / 0 / 0`; exact focused extraction `32 passed`, isolated fixture
+  suite `178 passed`, and 22 additional in-memory mismatch/revision probes
+  passed with `external_effect_count=0`.
+- Independent Critic/Judge: `PASS / COMMIT_READY`,
+  Critical/High/Medium/Low `0 / 0 / 0 / 0`; no prompt coordinates leak into
+  the public receipt, and existing peak/clipping, room-tone, silence,
+  240-sample fade and speech-continuous boundaries remain unchanged.
+- The broader TASK-048 collection remains `NOT_EXECUTED`: the available
+  standard pytest environment lacks `jsonschema`, while the bundled workspace
+  Python lacks `pytest`. No package installation was attempted.

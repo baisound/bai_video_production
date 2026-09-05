@@ -130,6 +130,7 @@ class ReasonCode(str, Enum):
     GENERATED_FINISH_FAILED = "GENERATED_FINISH_FAILED"
     GENERATED_READBACK_MISMATCH = "GENERATED_READBACK_MISMATCH"
     AB_CHAIN_MISMATCH = "AB_CHAIN_MISMATCH"
+    AB_CONTENT_PROMPT_MISMATCH = "AB_CONTENT_PROMPT_MISMATCH"
     AB_CAPTURE_NOT_CURRENT = "AB_CAPTURE_NOT_CURRENT"
     AB_MEASUREMENT_SET_INVALID = "AB_MEASUREMENT_SET_INVALID"
     AB_MEASUREMENT_NOT_CURRENT = "AB_MEASUREMENT_NOT_CURRENT"
@@ -617,6 +618,8 @@ class EnvironmentCaptureBinding:
     source_identity_sha256: str
     capture_generation_sha256: str
     room_tone_generation_sha256: str
+    same_content_prompt_sha256: str
+    prompt_revision: int
     capture_receipt_current: bool
     room_tone_receipt_current: bool
     source_identity_current: bool
@@ -633,6 +636,8 @@ class EnvironmentCaptureBinding:
         _digest(self.source_identity_sha256, "source_identity_sha256")
         _digest(self.capture_generation_sha256, "capture_generation_sha256")
         _digest(self.room_tone_generation_sha256, "room_tone_generation_sha256")
+        _digest(self.same_content_prompt_sha256, "same_content_prompt_sha256")
+        _positive_int(self.prompt_revision, "prompt_revision", maximum=2**31 - 1)
         for name in (
             "capture_receipt_current", "room_tone_receipt_current",
             "source_identity_current", "source_read_current", "source_ancestor_current",
@@ -664,6 +669,8 @@ class EnvironmentCaptureBinding:
             "source_identity_sha256": self.source_identity_sha256,
             "capture_generation_sha256": self.capture_generation_sha256,
             "room_tone_generation_sha256": self.room_tone_generation_sha256,
+            "same_content_prompt_sha256": self.same_content_prompt_sha256,
+            "prompt_revision": self.prompt_revision,
             "capture_receipt_current": self.capture_receipt_current,
             "room_tone_receipt_current": self.room_tone_receipt_current,
             "source_identity_current": self.source_identity_current,
@@ -695,6 +702,9 @@ class EnvironmentSegmentMeasurement:
     effort: VoiceEffort
     source_sha256: str
     source_identity_sha256: str
+    same_content_prompt_sha256: str
+    prompt_revision: int
+    comparison_plan_sha256: str
     room_tone_noise_floor_dbfs: float | None
     speech_rms_dbfs: float | None
     speech_peak_dbfs: float | None
@@ -713,6 +723,9 @@ class EnvironmentSegmentMeasurement:
         object.__setattr__(self, "effort", _enum(VoiceEffort, self.effort, "effort"))
         _digest(self.source_sha256, "source_sha256")
         _digest(self.source_identity_sha256, "source_identity_sha256")
+        _digest(self.same_content_prompt_sha256, "same_content_prompt_sha256")
+        _positive_int(self.prompt_revision, "prompt_revision", maximum=2**31 - 1)
+        _digest(self.comparison_plan_sha256, "comparison_plan_sha256")
         for name in ("room_tone_noise_floor_dbfs", "speech_rms_dbfs", "speech_peak_dbfs", "dc_offset_abs", "snr_db", "speech_ratio"):
             value = getattr(self, name)
             if value is not None:
@@ -736,6 +749,9 @@ class EnvironmentSegmentMeasurement:
             "effort": self.effort.value,
             "source_sha256": self.source_sha256,
             "source_identity_sha256": self.source_identity_sha256,
+            "same_content_prompt_sha256": self.same_content_prompt_sha256,
+            "prompt_revision": self.prompt_revision,
+            "comparison_plan_sha256": self.comparison_plan_sha256,
             "room_tone_noise_floor_dbfs": self.room_tone_noise_floor_dbfs,
             "speech_rms_dbfs": self.speech_rms_dbfs,
             "speech_peak_dbfs": self.speech_peak_dbfs,
@@ -865,6 +881,14 @@ class EnvironmentABPlan:
             and self.on_capture.secure_and_current
             and replace(self.off_capture.capture_chain, current=True)
             == replace(self.on_capture.capture_chain, current=True)
+        )
+
+    @property
+    def content_prompt_comparable(self) -> bool:
+        return (
+            self.off_capture.same_content_prompt_sha256
+            == self.on_capture.same_content_prompt_sha256
+            and self.off_capture.prompt_revision == self.on_capture.prompt_revision
         )
 
 
@@ -2456,6 +2480,8 @@ class FixtureVoiceQualityAudioFinishingService:
             raise FinishingContractError("runner build does not match plan")
         if not plan.off_capture.secure_and_current or not plan.on_capture.secure_and_current:
             return self._environment_receipt(plan, None, {ReasonCode.AB_CAPTURE_NOT_CURRENT})
+        if not plan.content_prompt_comparable:
+            return self._environment_receipt(plan, None, {ReasonCode.AB_CONTENT_PROMPT_MISMATCH})
         if not plan.comparable:
             return self._environment_receipt(plan, None, {ReasonCode.AB_CHAIN_MISMATCH})
         try:
@@ -2473,6 +2499,10 @@ class FixtureVoiceQualityAudioFinishingService:
             not item.current
             or item.source_sha256 != captures[item.condition].source_sha256
             or item.source_identity_sha256 != captures[item.condition].source_identity_sha256
+            or item.same_content_prompt_sha256
+            != captures[item.condition].same_content_prompt_sha256
+            or item.prompt_revision != captures[item.condition].prompt_revision
+            or item.comparison_plan_sha256 != plan.operation_plan_sha256
             for item in bundle.segments
         )
         invalid = invalid or any(

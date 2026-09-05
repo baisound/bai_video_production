@@ -192,6 +192,8 @@ def capture(condition: CaptureCondition, **changes: object) -> EnvironmentCaptur
         "source_identity_sha256": digest("0") if condition is CaptureCondition.AIR_CONDITIONER_OFF else digest("1"),
         "capture_generation_sha256": digest("2"),
         "room_tone_generation_sha256": digest("2"),
+        "same_content_prompt_sha256": digest("3"),
+        "prompt_revision": 1,
         "capture_receipt_current": True,
         "room_tone_receipt_current": True,
         "source_identity_current": True,
@@ -209,6 +211,9 @@ def environment_segment(condition: CaptureCondition, effort: VoiceEffort, **chan
         "effort": effort,
         "source_sha256": digest("a") if condition is CaptureCondition.AIR_CONDITIONER_OFF else digest("b"),
         "source_identity_sha256": digest("0") if condition is CaptureCondition.AIR_CONDITIONER_OFF else digest("1"),
+        "same_content_prompt_sha256": digest("3"),
+        "prompt_revision": 1,
+        "comparison_plan_sha256": digest("0"),
         "room_tone_noise_floor_dbfs": -54.0 if condition is CaptureCondition.AIR_CONDITIONER_OFF else -48.0,
         "speech_rms_dbfs": -20.0,
         "speech_peak_dbfs": -4.0,
@@ -750,6 +755,8 @@ def test_environment_ab_compares_measurements_not_condition_labels() -> None:
     assert body["recommended_condition"] is None
     assert body["authority_created"] is False
     assert body["dataset_adoption_started"] is False
+    assert "same_content_prompt_sha256" not in body
+    assert "prompt_revision" not in body
 
 
 def test_environment_chain_mismatch_is_not_comparable_and_skips_runner() -> None:
@@ -764,6 +771,53 @@ def test_environment_chain_mismatch_is_not_comparable_and_skips_runner() -> None
     assert receipt.comparison_state is QAState.UNKNOWN
     assert receipt.reason_codes == (ReasonCode.AB_CHAIN_MISMATCH,)
     assert fake.calls == []
+
+
+@pytest.mark.parametrize(
+    "capture_changes",
+    [
+        {"same_content_prompt_sha256": digest("4")},
+        {"prompt_revision": 2},
+    ],
+)
+def test_environment_ab_requires_same_content_prompt_and_revision(capture_changes) -> None:
+    mismatched = capture(CaptureCondition.AIR_CONDITIONER_ON, **capture_changes)
+    fake = runner(environment=environment_bundle())
+    receipt = FixtureVoiceQualityAudioFinishingService(fake).compare_environment(
+        environment_plan(on_capture=mismatched)
+    )
+
+    assert receipt.comparison_state is QAState.UNKNOWN
+    assert receipt.reason_codes == (ReasonCode.AB_CONTENT_PROMPT_MISMATCH,)
+    assert receipt.measurement_bundle_sha256 is None
+    assert fake.calls == []
+
+
+@pytest.mark.parametrize(
+    "segment_changes",
+    [
+        {"same_content_prompt_sha256": digest("4")},
+        {"prompt_revision": 2},
+        {"comparison_plan_sha256": digest("5")},
+    ],
+)
+def test_environment_measurement_must_bind_prompt_revision_and_plan(segment_changes) -> None:
+    key = (CaptureCondition.AIR_CONDITIONER_ON, VoiceEffort.NORMAL)
+    receipt = FixtureVoiceQualityAudioFinishingService(
+        runner(environment=environment_bundle(segment_changes={key: segment_changes}))
+    ).compare_environment(environment_plan())
+
+    assert receipt.comparison_state is QAState.UNKNOWN
+    assert receipt.reason_codes == (ReasonCode.AB_MEASUREMENT_NOT_CURRENT,)
+    assert receipt.measurement_bundle_sha256 is None
+    assert receipt.segment_assessments == ()
+    assert receipt.noise_deltas == ()
+
+
+@pytest.mark.parametrize("prompt_revision", [True, 0, -1, 2**31])
+def test_environment_prompt_revision_requires_bounded_positive_integer(prompt_revision) -> None:
+    with pytest.raises(FinishingContractError, match="prompt_revision"):
+        capture(CaptureCondition.AIR_CONDITIONER_OFF, prompt_revision=prompt_revision)
 
 
 def test_environment_stale_capture_is_not_comparable() -> None:

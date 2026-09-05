@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-069: Montage Learning Bridgeのowner/import journal/receipt/pending/correlation読取をroot-boundなSecureAuthorityIO経由へ固定し、link・非regular file・JSON曖昧性・inode差替え・1 MiB超過をfail-closedで扱います。既存4 MiB Delivery/Profile経路は別Gateへ隔離し、実行、Provider、native、Release、Deploy、Production Activationは開始しません。
+
 ・TASK-048: OBS録音原本からspeech-continuous WAVを構成する非Native仕上げ契約を追加し、無音除去、fade、peak/clipping/dropout/room-tone評価、エアコンON/OFF A/B、片側基準欠落、0 dBFS境界をfail-closedで検証可能にしました。実音声、native、Release、Deploy、Production Activationは開始しません。
 
 ・TASK-068: Windowsの同時initial-lock作成時に、winnerによる親ディレクトリのmtime更新をancestor置換と誤分類しないよう照合を安定化しました。device/inode/type/reparseとpermission modeは引き続きfail-closedで固定し、競合loserを決定的に`LOCK_CREATE_COLLISION`として返します。native real-data、Release、Deploy、Production Activationは開始しません。

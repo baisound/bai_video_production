@@ -186,6 +186,61 @@ training, and capture transport never aliases inference custody.
    ModelCandidateRevision, ModelArtifactBinding, Owner approval and current
    Consent/rights. Reject/retest/revoke/stale keeps the candidate quarantined.
 
+### Q2 -> Q3 body-free handoff seam
+
+The shortest TASK-048-to-TASK-046 path is one sealed Q2 terminal handoff, not a
+directory scan or a caller-supplied collection of unrelated hashes. Its future
+versioned schema must bind all of the following in one canonical digest domain:
+
+- Project, opaque OwnerSubject revision, current
+  `OWNER_VOICE_DATA_PREPARATION` evaluation and exact Q1 capture-chain terminal;
+- Q2 operation/idempotency identity and the assigned durable transaction/
+  currentness coordinates;
+- processed Asset logical ref/revision/checksum/sample count, secure-custody
+  receipt, TASK-003 adoption receipt and TASK-003 current readback;
+- distinct training-copy Asset logical ref/revision/checksum/sample count,
+  `PCM_S24LE/48000/mono`, secure-custody receipt, TASK-003 adoption receipt and
+  TASK-003 current readback;
+- exact quality, speech-continuous, retained/removed/uncertain range-map and
+  source-to-output sample-map receipt digests;
+- policy, analyzer, producer-code and runtime digests;
+- immutable candidate digest, publication/readback digest, post-selection
+  currentness digest, trusted created/observed/freshness coordinates,
+  `replay=false` and the handoff receipt digest.
+
+The durable Q2 candidate/publication/CAS owners are still unallocated and must
+be named by a later accepted amendment. This seam does not silently borrow
+TASK-076, TASK-068 or TASK-043 narration-Job authority. Until the assigned
+owners return a sealed `BOUND_VERIFIED` terminal plus fresh current readback,
+TASK-046 Q3 returns `PREFLIGHT_BLOCKED` and creates no Transcript or Dataset
+proposal.
+
+Q3 validates and consumes this exact handoff. It does not create, convert,
+custody, adopt, republish or select either Q2 Asset. Public/fixture views contain
+only logical refs and digests; absolute/UNC paths, filenames, audio or transcript
+bodies, prompts, secrets, device identities and voice fingerprints are
+forbidden.
+
+A later effect-zero fixture candidate may validate only this body-free mapping:
+
+- `src/ai_video_production/task046_q2_q3_handoff_contract.py`;
+- `tests/test_task046_q2_q3_handoff_contract.py`.
+
+Its immutable authority markers must be
+`authority_kind=SYNTHETIC_CONTRACT_TEST`, `owner_audio_used=false`,
+`external_effect_count=0` and `product_authority=false`. It may not import or
+invoke the TASK-048 deterministic audio runner, read media, manufacture a
+Product receipt or unlock Q3. Implementation remains unallocated until an exact
+Allowed Files/start receipt, clean current worktree, sole writer and fresh
+DEV-4 review exist.
+
+Required handoff negatives include missing/unbound producer or durable owner,
+partial receipt sets, wrong owner/schema/version, stale/revoked/wrong-purpose
+Consent, Q1/Q2 subject mismatch, processed/training-copy identity collision,
+checksum/sample/range-map mismatch, wrong media/format/rate/channel/bit depth,
+publication/readback/CAS disagreement, duplicate/replay/lost-reply/expiry and
+host/private body leakage.
+
 ### Narration inference and result lane
 
 8. **Discriminated route selection before arm.** The request is exactly one of

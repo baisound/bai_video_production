@@ -124,6 +124,23 @@ canonical Asset truth.
 Raw, processed, training-copy, Dataset, TrainingSnapshot and ModelArtifact
 lineage remains explicit and non-collapsing.
 
+The future Q2 terminal handoff to TASK-046 Q3 is a single sealed body-free
+record over the exact processed and training-copy Asset pairs. It must bind each
+Asset's logical ref/revision/checksum/sample count, custody, TASK-003 adoption
+and current readback; quality/speech-continuous/range-map/sample-map receipts;
+the current data-preparation Consent; policy/analyzer/code/runtime digests; and
+the assigned durable candidate, immutable publication/readback and post-
+selection currentness receipts. The owner of that durable Q2 transaction is
+still unallocated. TASK-048 cannot self-attest currentness, and the handoff does
+not borrow TASK-076/TASK-068/TASK-043 narration-Job authority.
+
+TASK-046 may consume the handoff only when the terminal and current readback are
+both `BOUND_VERIFIED`, exact and fresh. Otherwise Q3 remains
+`PREFLIGHT_BLOCKED`. The handoff contains no host path, filename, audio or
+transcript body, prompt, secret, device identity or voice fingerprint. A future
+synthetic mapping fixture remains `SYNTHETIC_CONTRACT_TEST`, uses no Owner audio
+and creates no Product receipt or authority.
+
 ## Negative and fault requirements
 
 - missing/stale/mismatched Q1 terminal, format, chain or sequence receipt;

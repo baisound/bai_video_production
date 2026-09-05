@@ -31,6 +31,7 @@ CHANNELS = 1
 SAMPLE_FORMAT = "PCM_S24LE"
 PCM_BYTES_PER_SAMPLE = 3
 CONFIRMED_NON_SPEECH_CONFIDENCE = 0.95
+BOUNDARY_CROSSFADE_SAMPLES = 240
 _ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}")
 _OPAQUE_REF_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,199}")
 
@@ -1047,7 +1048,7 @@ class SpeechContinuityPolicy:
     post_speech_padding_samples: int = 3_600
     hangover_samples: int = 2_400
     minimum_speech_samples: int = 4_800
-    fade_samples: int = 240
+    fade_samples: int = BOUNDARY_CROSSFADE_SAMPLES
     minimum_confirmed_non_speech_confidence: float = CONFIRMED_NON_SPEECH_CONFIDENCE
 
     def __post_init__(self) -> None:
@@ -1060,6 +1061,8 @@ class SpeechContinuityPolicy:
             _positive_int(getattr(self, name), name, maximum=10 * SAMPLE_RATE_HZ)
         if self.long_non_speech_min_samples <= self.max_natural_pause_samples:
             raise FinishingContractError("long non-speech threshold must preserve natural pauses")
+        if self.fade_samples != BOUNDARY_CROSSFADE_SAMPLES:
+            raise FinishingContractError("boundary fade sample count is fixed")
         if self.fade_samples >= min(self.pre_speech_padding_samples, self.post_speech_padding_samples):
             raise FinishingContractError("fade must not consume speech padding")
         confidence = _finite(
@@ -2009,6 +2012,8 @@ class SpeechContinuousReceipt:
                 raise FinishingContractError("speech receipt range map is invalid")
             range_cursor = item.end_sample
         _positive_int(self.fade_samples, "fade_samples", maximum=SAMPLE_RATE_HZ)
+        if self.fade_samples != BOUNDARY_CROSSFADE_SAMPLES:
+            raise FinishingContractError("speech receipt fade sample count is fixed")
         object.__setattr__(self, "boundary_mode", _enum(BoundaryMode, self.boundary_mode, "boundary_mode"))
         expected_boundary_count = max(0, len(self.retained_ranges) - 1)
         if (

@@ -1,11 +1,23 @@
 # TASK-068 verification checkpoint
 
-Status: `CURRENT_MAIN_R6_REBIND / DEV4_JUDGE_ACCEPTED_LOCAL_ONLY / NO_PUSH`
+Status: `CANONICAL_MAIN_R6_INTEGRATED / DEV4_REVIEWED / PLATFORM_NATIVE_NOT_CONFIRMED`
+
+## Canonical R6 authority correction
+
+- R6 integration commit `7543dd266f23733f465f9f961dee69dc291d37eb` is an
+  ancestor of canonical `main@e7ca98d9050918cf731f378cc3311e76a5e9fce2`.
+- Canonical R6 blobs are source `770099f2cca4c0cafca8bf03159a2e7c5ed4567e`,
+  generic/POSIX test `32e648eb3b2fd57fccf3451f5d3d39e5591dacfa`, and Windows
+  test `dc43e44571386f5145b1fd16283678e70dfe6cac`.
+- The former `NO_PUSH` candidate label is superseded by the Git ancestor
+  relation. Native POSIX/Windows seams remain `NOT_CONFIRMED`; no install,
+  Release, Deploy, Production, paid-provider, or external-account effect is
+  inferred by this correction.
 
 ## Historical r5 binding
 
-R5 evidence below is historical only. Current R6 replay head is
-`4e12ff64dceb0eb59e7c2e4c93f8b28eb26cc7c3` on
+R5 evidence below is historical only. At the R6 replay checkpoint, its head
+was `4e12ff64dceb0eb59e7c2e4c93f8b28eb26cc7c3` on
 `origin/main@df99723ee6e94d657652641b1b2825bbaa8fffc6`; its exact focused
 result is recorded in `current-main-r6-integration-packet.md`.
 
@@ -76,5 +88,9 @@ result is recorded in `current-main-r6-integration-packet.md`.
 - H1 generic and Windows negative coverage is present in the corrective source.
   Runtime execution for the H1/H2 bytes remains `NOT_CONFIRMED`.
 - `h1-h2-source-test-binding-2026-09-02.md` binds the three current artifacts to the fixed target without granting review, runtime, or Product authority.
-- PR #497 CI is evidence for its earlier head only. The H1/H2 exact head needs fresh review; `COMMIT STOP` and `NO_PUSH` remain active.
-- TASK-069 source mutation remains `START0` until TASK-068 is canonical on `main` and the TASK-069 dependency/start gate passes.
+- PR #497 CI is evidence for its earlier head only. The H1/H2 candidate's
+  historical `COMMIT STOP`/`NO_PUSH` note is superseded by the canonical R6
+  ancestor binding; neither r3 nor R6 evidence becomes native runtime proof.
+- TASK-069 may now rebind this dependency from the canonical R6 receipt, but
+  its source mutation remains blocked until its own fresh ownership/start gate
+  passes.

@@ -1,6 +1,6 @@
 # TASK-068 — Secure Authority Artifact I/O Foundation
 
-Status: `CURRENT_MAIN_R6_REBIND / DEV4_JUDGE_ACCEPTED_LOCAL_ONLY / NO_PUSH`
+Status: `CANONICAL_MAIN_R6_INTEGRATED / DEV4_REVIEWED / PLATFORM_NATIVE_NOT_CONFIRMED`
 
 ## Responsibility
 
@@ -9,6 +9,15 @@ Provide one Product-local, production-authority-artifact I/O foundation so Monta
 ## Authority
 
 Owner-approved source implementation and focused verification are authorized. Release, Deploy, Production Activation, native real-data effects, and edits to shared current-state, task-index, roadmap, CHANGELOG, `atomic.py`, or existing Montage owner modules are not authorized.
+
+## Canonical R6 authority correction
+
+Owner-authorized GitHub readback confirms that R6 commit
+`7543dd266f23733f465f9f961dee69dc291d37eb` is an ancestor of canonical
+`main@e7ca98d9050918cf731f378cc3311e76a5e9fce2`. The previous `NO_PUSH`
+wording described a pre-integration candidate gate and is superseded by this
+Git ancestry. This admits only the TASK-068 foundation dependency receipt; it
+does not create Product, native, Release, Deploy, or Production authority.
 
 ## Allowed files
 
@@ -37,12 +46,12 @@ Owner-approved source implementation and focused verification are authorized. Re
 - Within the Product module/API boundary, writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context. Arbitrary hostile Python already executing in the same interpreter, with private-state mutation or monkeypatch authority, is outside this API boundary and requires process/native isolation.
 - Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
 - Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
-- Current canonical base: `origin/main@df99723ee6e94d657652641b1b2825bbaa8fffc6`.
+- Current canonical main: `e7ca98d9050918cf731f378cc3311e76a5e9fce2`; R6 integration commit: `7543dd266f23733f465f9f961dee69dc291d37eb`.
 - Branch: `codex/task-068-secure-authority-io-current-main-r6`; r3/r4/r5 evidence is preserved historical evidence.
-- R6 retains lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, and it removes the callable writer-lease issuer surface. `current-main-r6-integration-packet.md` is the current binding; fresh independent review remains required and `NO_PUSH` remains active.
+- R6 retains lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, and it removes the callable writer-lease issuer surface. `current-main-r6-integration-packet.md` is the current dependency binding; native runtime remains `NOT_CONFIRMED`.
 
 ## Dependencies and next task
 
-TASK-069 may consume this foundation only after TASK-068 has a canonical completion receipt. TASK-067 may evaluate the strict pinned read primitive only for `VERIFIED_READBACK/A2`; TASK-068 creates no write-mode authority for `FRESH`, `PRECOMMIT_RESUME`, or `JOURNAL_RECOVERY`. Project-manifest mutable CAS, mutable journal phase, cleanup, marker/anchor transition, and directory-tree commit remain unavailable. No consumer may promote a TASK-068 receipt to completion for every TASK-067 mode.
+TASK-069 may rebind its foundation dependency through the canonical R6 completion receipt, then must separately pass its own fresh main/worktree/dirty/overlap/work-lock/sole-writer and source-start gates. TASK-067 may evaluate the strict pinned read primitive only for `VERIFIED_READBACK/A2`; TASK-068 creates no write-mode authority for `FRESH`, `PRECOMMIT_RESUME`, or `JOURNAL_RECOVERY`. Project-manifest mutable CAS, mutable journal phase, cleanup, marker/anchor transition, and directory-tree commit remain unavailable. No consumer may promote a TASK-068 receipt to completion for every TASK-067 mode.
 
 Consumers must not infer authority from directory scans, highest-number selection, mtime, filename/lexicographic order, mutable pointers, content equality, fixed-history last event, directory-tree commit, mutable phase advance, or a TASK-068 receipt alone. All receipts/statuses declare `authority_created=false`, `currentness_selected=false`, `CURRENT_HEAD_AUTHORITY_NOT_CREATED`, `DUPLICATE_CURRENTNESS_AUTHORITY_NOT_CREATED`, `DIRECTORY_TREE_COMMIT_AUTHORITY_NOT_CREATED`, and `MUTABLE_PHASE_ADVANCE_UNAVAILABLE`. TASK-068 does not modify TASK-058/TASK-067/TASK-069 owner modules.

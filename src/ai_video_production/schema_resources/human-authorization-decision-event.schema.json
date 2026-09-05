@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/human-authorization-decision-event.schema.json",
+  "title": "TASK-071 Effect-zero Human Authorization Decision Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_kind", "decision_event_id", "reservation_id", "reservation_sha256", "action", "decision", "occurred_at", "authority_created", "effect_performed", "native_user_presence_verified"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "HUMAN_AUTHORIZATION_DECISION_EVENT_V1"},
+    "decision_event_id": {"type": "string", "minLength": 36, "maxLength": 36, "pattern": "^hde-[0-9a-f]{32}$"},
+    "reservation_id": {"type": "string", "minLength": 36, "maxLength": 36, "pattern": "^har-[0-9a-f]{32}$"},
+    "reservation_sha256": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
+    "action": {"enum": ["PREFERENCE_PROMOTE", "PREFERENCE_ROLLBACK", "CONNECTOR_ACTIVATE", "CONNECTOR_DEACTIVATE"]},
+    "decision": {"enum": ["AUDIT_ONLY", "REJECTED", "EXPIRED", "REPLAY_REJECTED"]},
+    "occurred_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "authority_created": {"const": false},
+    "effect_performed": {"const": false},
+    "native_user_presence_verified": {"const": false}
+  }
+}

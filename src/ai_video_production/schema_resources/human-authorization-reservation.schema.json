@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.example/schemas/human-authorization-reservation.schema.json",
+  "title": "TASK-071 Effect-zero Human Authorization Reservation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_kind", "reservation_id", "action", "operation_id", "action_plan_sha256", "issued_at", "expires_at", "invocation_budget", "authority_created", "effect_performed", "native_user_presence_verified"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "record_kind": {"const": "HUMAN_AUTHORIZATION_RESERVATION_V1"},
+    "reservation_id": {"type": "string", "minLength": 36, "maxLength": 36, "pattern": "^har-[0-9a-f]{32}$"},
+    "action": {"enum": ["PREFERENCE_PROMOTE", "PREFERENCE_ROLLBACK", "CONNECTOR_ACTIVATE", "CONNECTOR_DEACTIVATE"]},
+    "operation_id": {"type": "string", "minLength": 36, "maxLength": 36, "pattern": "^hop-[0-9a-f]{32}$"},
+    "action_plan_sha256": {"type": "string", "minLength": 71, "maxLength": 71, "pattern": "^sha256:[0-9a-f]{64}$"},
+    "issued_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "expires_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "invocation_budget": {"const": 1},
+    "authority_created": {"const": false},
+    "effect_performed": {"const": false},
+    "native_user_presence_verified": {"const": false}
+  }
+}

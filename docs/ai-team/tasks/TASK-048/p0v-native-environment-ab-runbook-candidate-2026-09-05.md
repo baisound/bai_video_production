@@ -32,6 +32,33 @@ those authorities.
 5. No partial or failed output becomes current. Unknown state is preserved for
    Human review; it is not repaired, overwritten, or deleted automatically.
 
+## Windows output-root preflight (mandatory)
+
+This is a pre-effect STOP rule for every future build, QA, analyzer, capture,
+fixture, temporary file, runtime-state, log, derivative-output and Evidence
+write. It does not grant native authority and an Owner/Human approval cannot
+waive it.
+
+1. Before creating a process or file, resolve each destination to an absolute
+   physical path. Stop if the destination or its task-owned top-level directory
+   is a drive root or a direct child of one (for example `C:\\BVP-QA-x`,
+   `D:\\build` or `E:\\runtime-state`).
+2. The private target and derivative output must be contained below the exact
+   authorized private sink root and bind the active Task, operation ID and
+   expected-absent identity. Existing foreign or unknown-ownership paths stop
+   before effect; they are never reused, overwritten or cleaned up.
+3. Temporary material uses a unique, operation-owned root allocated beneath the
+   operating system temporary root. Public-safe Evidence uses only
+   `C:\\home\\baisound\\evidence\\bai-video-production\\TASK-048\\<unit>\\<run-id>\\`.
+   Private body, audio, machine path and secret material remain outside public
+   Evidence under the applicable custody/Consent contract.
+4. `C:\\BVP-QA-471-*` is preserved historical QA material. This operation must
+   not read for reuse, write, append, overwrite, delete or clean it.
+5. Record the resolved output/temp/runtime/Evidence roots and intentional
+   residuals in the private operation receipt and path-free public projection.
+   Cleanup is eligible only for an artifact this same operation created after
+   its physical identity is revalidated.
+
 ## Private input manifest
 
 The runner receives a sealed private manifest. It is canonical UTF-8 JSON with

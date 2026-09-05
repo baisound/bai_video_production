@@ -820,6 +820,32 @@ def test_environment_prompt_revision_requires_bounded_positive_integer(prompt_re
         capture(CaptureCondition.AIR_CONDITIONER_OFF, prompt_revision=prompt_revision)
 
 
+def test_environment_bundle_rejects_duplicate_effort_pair_and_missing_counterpart() -> None:
+    bundle = environment_bundle()
+    duplicate = bundle.segments[:-1] + (bundle.segments[0],)
+    with pytest.raises(FinishingContractError, match="segment measurement set"):
+        replace(bundle, segments=duplicate)
+
+
+def test_environment_bundle_rejects_cross_effort_substitution() -> None:
+    bundle = environment_bundle()
+    substituted = list(bundle.segments)
+    substituted[4] = replace(substituted[4], effort=VoiceEffort.WHISPER)
+    with pytest.raises(FinishingContractError, match="segment measurement set"):
+        replace(bundle, segments=tuple(substituted))
+
+
+def test_environment_operation_replay_is_rejected_before_second_runner_call() -> None:
+    fake = runner(environment=environment_bundle())
+    service = FixtureVoiceQualityAudioFinishingService(fake)
+    service.compare_environment(environment_plan())
+
+    with pytest.raises(OperationAlreadyConsumedError):
+        service.compare_environment(environment_plan())
+
+    assert fake.calls == [(OperationKind.ENVIRONMENT_AB_QA, "environment/op-1")]
+
+
 def test_environment_stale_capture_is_not_comparable() -> None:
     stale = capture(
         CaptureCondition.AIR_CONDITIONER_ON,

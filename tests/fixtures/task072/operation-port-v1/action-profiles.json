@@ -1,0 +1,54 @@
+{
+  "fixture_type": "TASK072_OPERATION_PORT_ACTION_MATRIX_V1",
+  "schema_version": "1.0.0",
+  "design_sha256": "sha256:4f6f21e97d96aa3ffca16f57679abf80d081de6d85d599347fd955c8899ce3c7",
+  "fixture_only": true,
+  "authority_created": false,
+  "native_broker_executed": false,
+  "fake_build_sha256": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "fake_install_instance_id": "fixture-install-instance",
+  "fake_receipt_sha256": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "public_contract": {
+    "request_message_type": "BvpProductOperationRequest",
+    "audit_receipt_message_type": "BvpProductOperationAuditReceipt",
+    "authority_created": false
+  },
+  "profile_contracts": [
+    {"action_profile": "INSTALL_AUTHORITY_PAIR_WRITE", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": null},
+    {"action_profile": "MIGRATION_CA_A_EXECUTE", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": null},
+    {"action_profile": "PROFILE_BIND_CA_B_EXECUTE", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": null},
+    {"action_profile": "GPU_REQUIRED_LAUNCH", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": null},
+    {"action_profile": "D2S_VALIDATE", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "validate"}},
+    {"action_profile": "D2S_EMIT_PROPOSAL", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "emit-proposal"}},
+    {"action_profile": "D2S_FEEDBACK_TO_LEARNING", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "feedback-to-learning"}},
+    {"action_profile": "D2S_ROUND_TRIP", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "round-trip"}},
+    {"action_profile": "D2S_CONVERT_FRAME", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "convert-frame"}},
+    {"action_profile": "D2S_VALIDATE_TASK056_SIDECAR", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "validate-task056-sidecar"}},
+    {"action_profile": "D2S_CONNECTOR_STATUS", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "connector-status"}},
+    {"action_profile": "D2S_PUBLISH_LEARNING", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "publish-learning"}},
+    {"action_profile": "PRODUCT_BROKER_TERMINAL_QUERY", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": null},
+    {"action_profile": "D2S_LOAD_PROFILE", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": {"command": "SKILL_D2S_ADAPTER_V1", "subcommand": "load-profile"}},
+    {"action_profile": "PRODUCT_D2S_ROUNDTRIP_E2E_VERIFY", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": null},
+    {"action_profile": "ACTIVATION_CONFIG_FINALIZE", "request_message_type": "BvpProductOperationRequest", "audit_receipt_message_type": "BvpProductOperationAuditReceipt", "config_binding": null}
+  ],
+  "coordinate_vectors": {
+    "operation_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "valid_first_event": "task072/operations/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/events/00000001.v1.json",
+    "valid_later_event": "task072/operations/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/events/00000042.v1.json",
+    "invalid": [
+      "C:\\task072\\operations\\aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\events\\00000001.v1.json",
+      "../task072/operations/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/events/00000001.v1.json",
+      "task072/operations/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/events/00000001.v1.json",
+      "task072/operations/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/events/1.v1.json",
+      "task072/operations/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/config.v2.json"
+    ]
+  },
+  "negative_vectors": [
+    "UNKNOWN_ACTION_PROFILE",
+    "CROSS_PROFILE_SUBCOMMAND",
+    "PUBLIC_REDEMPTION_MESSAGE_TYPE",
+    "COMMITTED_WITHOUT_OBSERVED_EFFECT",
+    "REJECTED_WITH_OBSERVED_EFFECT",
+    "AUTHORIZATION_CODE_MISMATCH"
+  ]
+}

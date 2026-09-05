@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.com/schemas/product-operation-receipt.schema.json",
+  "title": "BAI VIDEO PRODUCTION Product operation audit receipts",
+  "oneOf": [
+    {"$ref": "#/$defs/auditReceiptV1"},
+    {"$ref": "#/$defs/terminalStatusV1"},
+    {"$ref": "#/$defs/authorizationResolutionV1"}
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "opaqueId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+    },
+    "actionProfile": {
+      "enum": [
+        "INSTALL_AUTHORITY_PAIR_WRITE",
+        "MIGRATION_CA_A_EXECUTE",
+        "PROFILE_BIND_CA_B_EXECUTE",
+        "GPU_REQUIRED_LAUNCH",
+        "D2S_VALIDATE",
+        "D2S_EMIT_PROPOSAL",
+        "D2S_FEEDBACK_TO_LEARNING",
+        "D2S_ROUND_TRIP",
+        "D2S_CONVERT_FRAME",
+        "D2S_VALIDATE_TASK056_SIDECAR",
+        "D2S_CONNECTOR_STATUS",
+        "D2S_PUBLISH_LEARNING",
+        "PRODUCT_BROKER_TERMINAL_QUERY",
+        "D2S_LOAD_PROFILE",
+        "PRODUCT_D2S_ROUNDTRIP_E2E_VERIFY",
+        "ACTIVATION_CONFIG_FINALIZE"
+      ]
+    },
+    "stableCode": {
+      "enum": [
+        "TASK072_AUTHORIZATION_REJECTED",
+        "TASK072_AUTHORIZATION_NC",
+        "TASK072_RESERVATION_COLLISION",
+        "TASK072_RESERVATION_UNKNOWN",
+        "TASK072_TICKET_CONSUMED",
+        "TASK072_TICKET_EXPIRED",
+        "TASK072_SESSION_MISMATCH",
+        "TASK072_CHANNEL_REJECTED",
+        "TASK072_CONFIG_REJECTED",
+        "TASK072_COMPLETION_UNKNOWN"
+      ]
+    },
+    "auditReceiptV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "message_type",
+        "schema_version",
+        "action_profile",
+        "terminal_state",
+        "stable_code",
+        "event_revision",
+        "event_utc",
+        "operation_commitment_sha256",
+        "ticket_commitment_sha256",
+        "event_commitment_sha256",
+        "config_commitment_sha256",
+        "result_sha256",
+        "upstream_receipt_count",
+        "downstream_receipt_count",
+        "consumer_effect_observed",
+        "authority_created",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "message_type": {"const": "BvpProductOperationAuditReceipt"},
+        "schema_version": {"const": "1.0.0"},
+        "action_profile": {"$ref": "#/$defs/actionProfile"},
+        "terminal_state": {"enum": ["COMMITTED", "REJECTED", "BURNED_UNKNOWN"]},
+        "stable_code": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/stableCode"}]
+        },
+        "event_revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "event_utc": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 20,
+          "pattern": "^(?:(?:(?:[0-9]{3}[1-9]|[0-9]{2}[1-9][0-9]|[0-9][1-9][0-9]{2}|[1-9][0-9]{3})-(?:(?:01|03|05|07|08|10|12)-(?:0[1-9]|[12][0-9]|3[01])|(?:04|06|09|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8])))|(?:(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00)-02-29))T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$",
+          "format": "date-time"
+        },
+        "operation_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "ticket_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "event_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "config_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "result_sha256": {"$ref": "#/$defs/sha256"},
+        "upstream_receipt_count": {"type": "integer", "minimum": 0, "maximum": 32},
+        "downstream_receipt_count": {"type": "integer", "minimum": 0, "maximum": 32},
+        "consumer_effect_observed": {"type": "boolean"},
+        "authority_created": {"const": false},
+        "receipt_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"terminal_state": {"const": "COMMITTED"}}},
+          "then": {
+            "properties": {
+              "stable_code": {"type": "null"},
+              "consumer_effect_observed": {"const": true}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"terminal_state": {"enum": ["REJECTED", "BURNED_UNKNOWN"]}}},
+          "then": {
+            "properties": {
+              "stable_code": {"$ref": "#/$defs/stableCode"},
+              "consumer_effect_observed": {"const": false}
+            }
+          }
+        }
+      ]
+    },
+    "terminalStatusV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "message_type",
+        "schema_version",
+        "operation_commitment_sha256",
+        "durable_state",
+        "stable_code",
+        "terminal",
+        "committed",
+        "effect_confirmed",
+        "authority_created",
+        "status_sha256"
+      ],
+      "properties": {
+        "message_type": {"const": "BvpProductOperationTerminalStatus"},
+        "schema_version": {"const": "1.0.0"},
+        "operation_commitment_sha256": {"$ref": "#/$defs/sha256"},
+        "durable_state": {
+          "enum": [
+            "REQUESTED",
+            "AUTHORIZED",
+            "RESERVED",
+            "ISSUED",
+            "CONFIG_READY",
+            "CHILD_BOUND",
+            "IN_FLIGHT",
+            "COMMITTED",
+            "REJECTED",
+            "BURNED",
+            "BURNED_UNKNOWN",
+            "BURNED_BY_SESSION_MISMATCH"
+          ]
+        },
+        "stable_code": {
+          "oneOf": [{"type": "null"}, {"$ref": "#/$defs/stableCode"}]
+        },
+        "terminal": {"type": "boolean"},
+        "committed": {"type": "boolean"},
+        "effect_confirmed": {"type": "boolean"},
+        "authority_created": {"const": false},
+        "status_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"durable_state": {"const": "COMMITTED"}}},
+          "then": {
+            "properties": {
+              "stable_code": {"type": "null"},
+              "terminal": {"const": true},
+              "committed": {"const": true},
+              "effect_confirmed": {"const": true}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"durable_state": {"enum": ["REQUESTED", "AUTHORIZED", "RESERVED", "ISSUED", "CONFIG_READY", "CHILD_BOUND", "IN_FLIGHT"]}}},
+          "then": {
+            "properties": {
+              "stable_code": {"type": "null"},
+              "terminal": {"const": false},
+              "committed": {"const": false},
+              "effect_confirmed": {"const": false}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"durable_state": {"enum": ["REJECTED", "BURNED", "BURNED_UNKNOWN", "BURNED_BY_SESSION_MISMATCH"]}}},
+          "then": {
+            "properties": {
+              "stable_code": {"$ref": "#/$defs/stableCode"},
+              "terminal": {"const": true},
+              "committed": {"const": false},
+              "effect_confirmed": {"const": false}
+            }
+          }
+        }
+      ]
+    },
+    "authorizationResolutionV1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "message_type",
+        "schema_version",
+        "request_id",
+        "action_profile",
+        "resolution",
+        "stable_code",
+        "reservation_created",
+        "ticket_created",
+        "authority_created",
+        "resolution_sha256"
+      ],
+      "properties": {
+        "message_type": {"const": "BvpProductOperationAuthorizationResolution"},
+        "schema_version": {"const": "1.0.0"},
+        "request_id": {"$ref": "#/$defs/opaqueId"},
+        "action_profile": {"$ref": "#/$defs/actionProfile"},
+        "resolution": {"enum": ["REJECTED", "NOT_CONFIRMED"]},
+        "stable_code": {
+          "enum": ["TASK072_AUTHORIZATION_REJECTED", "TASK072_AUTHORIZATION_NC"]
+        },
+        "reservation_created": {"const": false},
+        "ticket_created": {"const": false},
+        "authority_created": {"const": false},
+        "resolution_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"resolution": {"const": "REJECTED"}}},
+          "then": {"properties": {"stable_code": {"const": "TASK072_AUTHORIZATION_REJECTED"}}}
+        },
+        {
+          "if": {"properties": {"resolution": {"const": "NOT_CONFIRMED"}}},
+          "then": {"properties": {"stable_code": {"const": "TASK072_AUTHORIZATION_NC"}}}
+        }
+      ]
+    }
+  }
+}

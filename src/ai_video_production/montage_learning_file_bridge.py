@@ -20,7 +20,15 @@ import threading
 from typing import Any, Callable, Iterator, Mapping
 
 from .atomic import AtomicJsonWriter, exclusive_file_update_lock
-from .serialization import canonical_json_bytes, sha256_json
+from .secure_authority_io import (
+    ArtifactIdentity,
+    FrozenJsonArray,
+    FrozenJsonObject,
+    SecureAuthorityIO,
+    SecureAuthorityIOError,
+    SecureJsonRead,
+)
+from .serialization import canonical_json_bytes, sha256_bytes, sha256_json
 
 
 PRODUCTION_BRIDGE_RELATIVE_PARTS = ("data", "montage-learning-bridge")
@@ -28,6 +36,7 @@ BRIDGE_CONTRACT_PROFILE = "bvp-task029-file-bridge-v1"
 OWNER_MANIFEST_TYPE = "BvpMontageLearningBridgeOwnerManifest"
 OWNER_MANIFEST_VERSION = "1.0.0"
 MAX_DELIVERY_BYTES = 4 * 1024 * 1024
+_TASK068_READ_MAX_BYTES = 1024 * 1024
 MAX_IMPORT_FILES = 256
 RECEIPT_PENDING_SCHEMA_VERSION = "1.0.0"
 RECEIPT_PENDING_MESSAGE_TYPE = "BvpMontageLearningReceiptPublicationPending"
@@ -203,6 +212,7 @@ class ReceiptPublicationPaths:
     receipt_path: Path
     pending_path: Path
     correlation_path: Path
+    bridge_root: Path
     exact_v2: bool
 
 
@@ -263,7 +273,9 @@ def provision_bridge(
 def load_bridge_owner(layout: BridgeLayout) -> BridgeOwner:
     for directory in _bridge_directories(layout):
         _require_safe_directory(directory)
-    value = _read_json_regular(layout.owner_manifest, max_bytes=64 * 1024)
+    value = _read_json_regular(
+        layout.owner_manifest, max_bytes=64 * 1024, layout=layout
+    )
     expected_fields = {
         "schema_version",
         "message_type",
@@ -531,7 +543,6 @@ def snapshot_delivery(claim: DeliveryClaim, layout: BridgeLayout) -> DeliverySna
         _verify_ancestor_identities(journal, layout)
         candidate = claim.processing_path
         _verify_identity_path(candidate, claim.pre_claim_file_identity, "processing")
-
         flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
@@ -649,6 +660,7 @@ def receipt_publication_paths(
         receipt_path=receipt_path,
         pending_path=layout.receipts / f".{receipt_path.name}.pending.json",
         correlation_path=layout.receipts / f".{receipt_path.name}.correlation.json",
+        bridge_root=layout.root,
         exact_v2=exact_v2,
     )
 
@@ -714,7 +726,13 @@ def load_published_receipt(
     _require_safe_directory(paths.receipt_path.parent)
     if not paths.receipt_path.exists():
         return None
-    return _read_json_regular(paths.receipt_path, max_bytes=MAX_DELIVERY_BYTES)
+    return _decode_builtin_json(
+        _read_regular_bytes(
+            paths.receipt_path,
+            max_bytes=MAX_DELIVERY_BYTES,
+            root=paths.bridge_root,
+        )
+    )
 
 
 def load_receipt_publication_pending(
@@ -725,7 +743,9 @@ def load_receipt_publication_pending(
     _require_safe_directory(paths.pending_path.parent)
     if not paths.pending_path.exists():
         return None
-    value = _read_json_regular(paths.pending_path, max_bytes=64 * 1024)
+    value = _read_json_regular(
+        paths.pending_path, max_bytes=64 * 1024, root=paths.bridge_root
+    )
     return _validate_receipt_publication_pending(value, paths)
 
 
@@ -780,7 +800,9 @@ def publish_generic_receipt_correlation_new_or_identical(
 ) -> None:
     expected = _validate_generic_receipt_correlation(correlation, paths)
     _write_new_or_identical(paths.correlation_path, expected)
-    actual = _read_json_regular(paths.correlation_path, max_bytes=64 * 1024)
+    actual = _read_json_regular(
+        paths.correlation_path, max_bytes=64 * 1024, root=paths.bridge_root
+    )
     if _validate_generic_receipt_correlation(actual, paths) != expected:
         raise MontageLearningFileBridgeError(
             "generic receipt correlation read-back mismatch"
@@ -796,7 +818,9 @@ def load_generic_receipt_correlation(
         )
     if not paths.correlation_path.exists():
         return None
-    value = _read_json_regular(paths.correlation_path, max_bytes=64 * 1024)
+    value = _read_json_regular(
+        paths.correlation_path, max_bytes=64 * 1024, root=paths.bridge_root
+    )
     return _validate_generic_receipt_correlation(value, paths)
 
 
@@ -875,7 +899,9 @@ def create_pending_receipt_publication_new_or_identical(
     expected = _validate_receipt_publication_pending(pending, paths)
     expected_bytes = canonical_json_bytes(expected) + b"\n"
     if paths.pending_path.exists():
-        actual = _read_regular_bytes(paths.pending_path, max_bytes=64 * 1024)
+        actual = _read_regular_bytes(
+            paths.pending_path, max_bytes=64 * 1024, root=paths.bridge_root
+        )
         loaded = _validate_receipt_publication_pending(
             _decode_builtin_json(actual), paths
         )
@@ -883,7 +909,9 @@ def create_pending_receipt_publication_new_or_identical(
             raise MontageLearningFileBridgeError("pending receipt request conflicts")
         return
     _write_new_or_identical(paths.pending_path, expected)
-    actual = _read_regular_bytes(paths.pending_path, max_bytes=64 * 1024)
+    actual = _read_regular_bytes(
+        paths.pending_path, max_bytes=64 * 1024, root=paths.bridge_root
+    )
     if actual != expected_bytes:
         raise MontageLearningFileBridgeError("pending receipt durable read-back mismatch")
 
@@ -896,7 +924,9 @@ def clear_pending_receipt_publication_exact(
 
     expected = _validate_receipt_publication_pending(pending, paths)
     expected_bytes = canonical_json_bytes(expected) + b"\n"
-    actual = _read_regular_bytes(paths.pending_path, max_bytes=64 * 1024)
+    actual = _read_regular_bytes(
+        paths.pending_path, max_bytes=64 * 1024, root=paths.bridge_root
+    )
     current = _validate_receipt_publication_pending(
         _decode_builtin_json(actual), paths
     )
@@ -1285,7 +1315,7 @@ def _validate_import_journal(
 
 
 def _load_import_journal(path: Path, layout: BridgeLayout) -> dict[str, object]:
-    value = _read_json_regular(path, max_bytes=128 * 1024)
+    value = _read_json_regular(path, max_bytes=128 * 1024, layout=layout)
     return _validate_import_journal(value, layout)
 
 
@@ -1561,7 +1591,11 @@ def publish_current_profile(
     with exclusive_file_update_lock(layout.profile_journal):
         if layout.profile_journal.exists():
             pending = _validate_profile_journal(
-                _read_json_regular(layout.profile_journal, max_bytes=128 * 1024),
+                _read_json_regular(
+                    layout.profile_journal,
+                    max_bytes=128 * 1024,
+                    legacy_compatibility=True,
+                ),
                 layout,
             )
             if pending["state"] == "PREPARED":
@@ -1589,7 +1623,9 @@ def publish_current_profile(
             ):
                 _verify_profile_publication(layout, current_pointer)
                 if _read_json_regular(
-                    layout.current_profile, max_bytes=MAX_DELIVERY_BYTES
+                    layout.current_profile,
+                    max_bytes=MAX_DELIVERY_BYTES,
+                    legacy_compatibility=True,
                 ) != value:
                     raise MontageLearningFileBridgeError(
                         "duplicate profile bytes do not match current view"
@@ -1768,6 +1804,7 @@ def _validate_profile_journal(
             _read_json_regular(
                 layout.root / str(value["payload_relative_path"]),
                 max_bytes=MAX_DELIVERY_BYTES,
+                legacy_compatibility=True,
             ),
             layout,
         )
@@ -1836,7 +1873,11 @@ def _validate_profile_journal(
 def _require_profile_journal_exact(
     layout: BridgeLayout, expected: Mapping[str, object]
 ) -> None:
-    actual = _read_json_regular(layout.profile_journal, max_bytes=128 * 1024)
+    actual = _read_json_regular(
+        layout.profile_journal,
+        max_bytes=128 * 1024,
+        legacy_compatibility=True,
+    )
     if _validate_profile_journal(actual, layout) != dict(expected):
         raise MontageLearningFileBridgeError("profile journal durable read-back mismatch")
 
@@ -1902,7 +1943,11 @@ def _profile_marker_from_journal(
 def _load_profile_pointer(layout: BridgeLayout) -> dict[str, object] | None:
     if not layout.profile_pointer.exists():
         return None
-    value = _read_json_regular(layout.profile_pointer, max_bytes=128 * 1024)
+    value = _read_json_regular(
+        layout.profile_pointer,
+        max_bytes=128 * 1024,
+        legacy_compatibility=True,
+    )
     expected = {
         "schema_version", "message_type", "operation_id", "profile_id", "profile_version",
         "profile_sha256", "payload_relative_path", "payload_document_sha256",
@@ -1920,6 +1965,7 @@ def _load_profile_pointer(layout: BridgeLayout) -> dict[str, object] | None:
         _read_json_regular(
             layout.root / str(value["payload_relative_path"]),
             max_bytes=MAX_DELIVERY_BYTES,
+            legacy_compatibility=True,
         ),
         layout,
     )
@@ -1942,7 +1988,11 @@ def _recover_profile_promotion_locked(
     failure_hook: Callable[[str, Path], None] | None,
 ) -> dict[str, object]:
     journal = _validate_profile_journal(
-        _read_json_regular(layout.profile_journal, max_bytes=128 * 1024), layout
+        _read_json_regular(
+            layout.profile_journal,
+            max_bytes=128 * 1024,
+            legacy_compatibility=True,
+        ), layout
     )
     pointer = _profile_pointer_from_journal(journal)
     marker = _profile_marker_from_journal(journal, pointer)
@@ -1956,7 +2006,11 @@ def _recover_profile_promotion_locked(
         raise MontageLearningFileBridgeError(
             "profile PREPARED recovery requires the original envelope"
         )
-    payload = _read_json_regular(payload_path, max_bytes=MAX_DELIVERY_BYTES)
+    payload = _read_json_regular(
+        payload_path,
+        max_bytes=MAX_DELIVERY_BYTES,
+        legacy_compatibility=True,
+    )
     payload_bytes = canonical_json_bytes(payload) + b"\n"
     if f"sha256:{sha256(payload_bytes).hexdigest()}" != journal["payload_document_sha256"]:
         raise MontageLearningFileBridgeError("profile payload durable hash mismatch")
@@ -1970,14 +2024,20 @@ def _recover_profile_promotion_locked(
     if journal["state"] == "POINTER_COMMITTED":
         AtomicJsonWriter.write(layout.current_profile, payload)
         if _read_regular_bytes(
-            layout.current_profile, max_bytes=MAX_DELIVERY_BYTES
+            layout.current_profile,
+            max_bytes=MAX_DELIVERY_BYTES,
+            legacy_compatibility=True,
         ) != payload_bytes:
             raise MontageLearningFileBridgeError("profile v1 view byte mismatch")
         journal = _advance_profile_journal(layout, journal, "VIEW_COMMITTED")
         _call_profile_failure(failure_hook, "after_profile_view", layout.current_profile)
     if journal["state"] == "VIEW_COMMITTED":
         AtomicJsonWriter.write(layout.profile_marker, marker)
-        if _read_json_regular(layout.profile_marker, max_bytes=128 * 1024) != marker:
+        if _read_json_regular(
+            layout.profile_marker,
+            max_bytes=128 * 1024,
+            legacy_compatibility=True,
+        ) != marker:
             raise MontageLearningFileBridgeError("profile marker read-back mismatch")
         journal = _advance_profile_journal(layout, journal, "MARKER_COMMITTED")
         _call_profile_failure(failure_hook, "after_profile_marker", layout.profile_marker)
@@ -2002,7 +2062,11 @@ def _write_profile_payload_and_recover(
     payload_path = layout.root / str(journal["payload_relative_path"])
     _mkdir_safe(payload_path.parent)
     _write_new_or_identical(payload_path, envelope)
-    if _read_regular_bytes(payload_path, max_bytes=MAX_DELIVERY_BYTES) != (
+    if _read_regular_bytes(
+        payload_path,
+        max_bytes=MAX_DELIVERY_BYTES,
+        legacy_compatibility=True,
+    ) != (
         canonical_json_bytes(dict(envelope)) + b"\n"
     ):
         raise MontageLearningFileBridgeError("profile immutable payload mismatch")
@@ -2018,12 +2082,24 @@ def _verify_profile_publication(
     if current != dict(pointer):
         raise MontageLearningFileBridgeError("profile pointer currentness mismatch")
     payload_path = layout.root / str(pointer["payload_relative_path"])
-    payload_bytes = _read_regular_bytes(payload_path, max_bytes=MAX_DELIVERY_BYTES)
+    payload_bytes = _read_regular_bytes(
+        payload_path,
+        max_bytes=MAX_DELIVERY_BYTES,
+        legacy_compatibility=True,
+    )
     if f"sha256:{sha256(payload_bytes).hexdigest()}" != pointer["payload_document_sha256"]:
         raise MontageLearningFileBridgeError("profile payload hash mismatch")
-    if _read_regular_bytes(layout.current_profile, max_bytes=MAX_DELIVERY_BYTES) != payload_bytes:
+    if _read_regular_bytes(
+        layout.current_profile,
+        max_bytes=MAX_DELIVERY_BYTES,
+        legacy_compatibility=True,
+    ) != payload_bytes:
         raise MontageLearningFileBridgeError("profile compatibility view mismatch")
-    marker = _read_json_regular(layout.profile_marker, max_bytes=128 * 1024)
+    marker = _read_json_regular(
+        layout.profile_marker,
+        max_bytes=128 * 1024,
+        legacy_compatibility=True,
+    )
     expected_marker = _profile_marker_from_journal(pointer, pointer)
     if marker != expected_marker:
         raise MontageLearningFileBridgeError("profile marker binding mismatch")
@@ -2053,7 +2129,9 @@ def _write_new_or_identical(path: Path, value: Mapping[str, object]) -> None:
         try:
             os.link(temporary, path, follow_symlinks=False)
         except FileExistsError:
-            existing = _read_regular_bytes(path, max_bytes=max(len(data), 64 * 1024))
+            existing = _legacy_read_regular_bytes(
+                path, max_bytes=max(len(data), 64 * 1024)
+            )
             if existing != data:
                 raise MontageLearningFileBridgeError("immutable publication collision")
         else:
@@ -2113,11 +2191,99 @@ def _exact_json_snapshot(value: object, *, path: str, max_depth: int) -> Any:
     )
 
 
-def _read_json_regular(path: Path, *, max_bytes: int) -> dict[str, Any]:
-    return _decode_builtin_json(_read_regular_bytes(path, max_bytes=max_bytes))
+def _read_json_regular(
+    path: Path,
+    *,
+    max_bytes: int,
+    layout: BridgeLayout | None = None,
+    root: Path | None = None,
+    legacy_compatibility: bool = False,
+) -> dict[str, Any]:
+    if layout is None and root is None:
+        if not legacy_compatibility:
+            raise MontageLearningFileBridgeError("secure bridge root is required")
+        return _decode_builtin_json(_legacy_read_regular_bytes(path, max_bytes=max_bytes))
+    value, payload_sha256, _ = _secure_bridge_json_read(
+        path, max_bytes=max_bytes, layout=layout, root=root
+    )
+    if sha256_bytes(canonical_json_bytes(value) + b"\n") != payload_sha256:
+        raise MontageLearningFileBridgeError("bridge bytes are not canonical")
+    return value
 
 
-def _read_regular_bytes(path: Path, *, max_bytes: int) -> bytes:
+def _read_regular_bytes(
+    path: Path,
+    *,
+    max_bytes: int,
+    layout: BridgeLayout | None = None,
+    root: Path | None = None,
+    legacy_compatibility: bool = False,
+) -> bytes:
+    """Return canonical bridge bytes only after a pinned read and hash match."""
+
+    if layout is None and root is None:
+        if not legacy_compatibility:
+            raise MontageLearningFileBridgeError("secure bridge root is required")
+        return _legacy_read_regular_bytes(path, max_bytes=max_bytes)
+    value, payload_sha256, _ = _secure_bridge_json_read(
+        path, max_bytes=max_bytes, layout=layout, root=root
+    )
+    canonical = canonical_json_bytes(value) + b"\n"
+    if sha256_bytes(canonical) != payload_sha256:
+        raise MontageLearningFileBridgeError("bridge bytes are not canonical")
+    return canonical
+
+
+def _secure_bridge_json_read(
+    path: Path,
+    *,
+    max_bytes: int,
+    layout: BridgeLayout | None,
+    root: Path | None,
+) -> tuple[dict[str, Any], str, ArtifactIdentity]:
+    bridge_root = _bridge_root(layout=layout, root=root)
+    try:
+        relative = path.relative_to(bridge_root)
+        read = SecureAuthorityIO(
+            bridge_root, max_bytes=min(max_bytes, _TASK068_READ_MAX_BYTES)
+        ).read_json(
+            relative.as_posix()
+        )
+        value = _thaw_secure_json(read.document)
+    except SecureAuthorityIOError as exc:
+        if exc.code == "STRICT_JSON_REJECTED":
+            raise MontageLearningFileBridgeError("duplicate or invalid JSON key") from None
+        raise MontageLearningFileBridgeError("secure bridge read rejected") from None
+    except (ValueError, TypeError):
+        raise MontageLearningFileBridgeError("secure bridge read rejected") from None
+    if type(value) is not dict:
+        raise MontageLearningFileBridgeError("secure bridge JSON root is invalid")
+    return value, read.sha256, read.identity
+
+
+def _bridge_root(*, layout: BridgeLayout | None, root: Path | None) -> Path:
+    if (layout is None) == (root is None):
+        raise MontageLearningFileBridgeError("secure bridge root is required")
+    candidate = layout.root if layout is not None else root
+    assert candidate is not None
+    if not candidate.is_absolute():
+        raise MontageLearningFileBridgeError("secure bridge root is invalid")
+    return candidate
+
+
+def _thaw_secure_json(value: object) -> Any:
+    if value is None or type(value) in {str, bool, int, float}:
+        return value
+    if isinstance(value, FrozenJsonObject):
+        return {key: _thaw_secure_json(child) for key, child in value.items()}
+    if isinstance(value, FrozenJsonArray):
+        return [_thaw_secure_json(child) for child in value]
+    raise MontageLearningFileBridgeError("secure bridge JSON value is invalid")
+
+
+def _legacy_read_regular_bytes(path: Path, *, max_bytes: int) -> bytes:
+    """Compatibility-only path for artifacts above TASK-068's 1 MiB ceiling."""
+
     _reject_unsafe_path(path)
     stat = path.stat(follow_symlinks=False)
     if not _is_regular_stat(stat) or _stat_is_reparse(stat):

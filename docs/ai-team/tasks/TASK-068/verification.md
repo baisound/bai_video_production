@@ -1,8 +1,22 @@
 # TASK-068 verification checkpoint
 
-Status: `SUCCESSOR_R3_H1_H2_CORRECTED / EXACT_HEAD_REVIEW_COMPLETE / CANONICALIZATION_COMPLETE / COMMIT_READY / PLATFORM_NATIVE_NOT_CONFIRMED`
+Status: `CANONICAL_MAIN_R6_INTEGRATED / DEV4_REVIEWED / PLATFORM_NATIVE_NOT_CONFIRMED`
 
-## Bound source
+## Canonical R6 integration
+
+- Owner-authorized GitHub readback: R6 commit
+  `7543dd266f23733f465f9f961dee69dc291d37eb` is an ancestor of canonical
+  `main@e7ca98d9050918cf731f378cc3311e76a5e9fce2`.
+- Canonical R6 blobs are source `770099f2cca4c0cafca8bf03159a2e7c5ed4567e`,
+  generic/POSIX test `32e648eb3b2fd57fccf3451f5d3d39e5591dacfa`, and Windows
+  test `dc43e44571386f5145b1fd16283678e70dfe6cac`.
+- The successor-r3 focused result (`228 passed / 24 skipped`) and its
+  `C/H/M/L = 0/0/0/0` Critic/Judge closure remain evidence for the r3 blobs
+  only. They are not relabeled as native or R6 runtime execution.
+- Windows/POSIX native seams remain `NOT_CONFIRMED`. No install, Release,
+  Deploy, Production, paid-provider, or external-account effect occurred.
+
+## Historical successor-r3 bound source
 
 - Repository: `baisound/bai_video_production`
 - Current canonical comparison and candidate base: `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`
@@ -67,4 +81,6 @@ Status: `SUCCESSOR_R3_H1_H2_CORRECTED / EXACT_HEAD_REVIEW_COMPLETE / CANONICALIZ
 - PR #497 CI is evidence for its earlier head only. The H1/H2 exact head has
   fresh local review and Owner-delegated task-local canonicalization. Draft PR
   creation remains queued for the PR integration successor.
-- TASK-069 source mutation remains `START0` until TASK-068 is canonical on `main` and the TASK-069 dependency/start gate passes.
+- TASK-069 may now rebind this dependency from the canonical R6 receipt, but
+  its source mutation remains blocked until its own fresh ownership/start gate
+  passes.

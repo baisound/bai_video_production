@@ -1,6 +1,20 @@
 # TASK-068 completion receipt
 
-Status: `SUCCESSOR_R3_H1_H2_CORRECTED / EXACT_HEAD_REVIEW_COMPLETE / CANONICALIZATION_COMPLETE / COMMIT_READY / PLATFORM_NATIVE_NOT_CONFIRMED`
+Status: `CANONICAL_MAIN_R6_FOUNDATION_RECEIPT / DEV4_REVIEWED / PLATFORM_NATIVE_NOT_CONFIRMED`
+
+## Canonical R6 completion binding
+
+- Repository: `baisound/bai_video_production`
+- R6 integration commit: `7543dd266f23733f465f9f961dee69dc291d37eb`
+- Canonical main readback: `e7ca98d9050918cf731f378cc3311e76a5e9fce2`
+- GitHub compare confirms the R6 commit is an ancestor of that canonical main.
+- The historical `NO_PUSH/FRESH_REVIEW_PENDING` wording describes the
+  pre-integration candidate gate and is superseded by the observed Git
+  ancestry.
+
+This is the exact dependency receipt for TASK-069 to consume the immutable
+foundation. It creates no Product currentness selection, native execution,
+Release, Deploy, Production, paid-provider, or external-account authority.
 
 ## Bound implementation
 
@@ -18,13 +32,11 @@ Status: `SUCCESSOR_R3_H1_H2_CORRECTED / EXACT_HEAD_REVIEW_COMPLETE / CANONICALIZ
 - Earlier normalized and Windows-worktree hashes are predecessor evidence only and do not bind the H1/H2 target.
 - Profile: `DEV-4 / IMMUTABLE_ONLY_V1`
 
-This task-local receipt creates no downstream dependency authority. The r3
-candidate is corrected only within the ten Allowed Files for H1/H2. Earlier
-independent Tester/Critic/Judge closure and PR #497 CI remain historical
-evidence only. Exact-head closure and Owner-delegated task-local
-canonicalization permit commit and non-force push; Draft PR remains queued.
-TASK-069 real binding remains stopped until TASK-068 is merged into canonical
-`main` and its dependency gate is rebound.
+The r3 candidate is corrected only within the ten Allowed Files for H1/H2.
+Earlier independent Tester/Critic/Judge closure and PR #497 CI remain
+historical evidence only. The R6 Git ancestor binding supersedes the prior
+candidate-only gate. TASK-069 may consume the foundation receipt but must
+independently fresh-bind its own source-start authority.
 
 ## Current H1/H2 execution state
 
@@ -81,7 +93,7 @@ Public results remain audit data and declare:
 
 ## Downstream applicability
 
-- TASK-069 may consume the immutable publication/readback foundation only after this receipt is canonical on `main`. TASK-069 retains responsibility for its own privacy/schema/semantic/state-machine and Production linkage gates.
+- TASK-069 may consume the immutable publication/readback foundation through this canonical R6 receipt. TASK-069 retains responsibility for its own privacy/schema/semantic/state-machine and Production linkage gates, including its separate fresh source-start check.
 - TASK-067 may evaluate the strict pinned read primitive only for `VERIFIED_READBACK/A2`. `FRESH`, `PRECOMMIT_RESUME`, and `JOURNAL_RECOVERY` write/state-transition modes remain unsupported by TASK-068.
 - Every downstream Task must fresh-check main/worktree/dirty/overlap/work-lock/sole-writer and must not treat this audit receipt as runtime or Production proof.
 

@@ -1,6 +1,6 @@
 # BAISOUND Codex Development Workspace Policy
 
-Version: `2.1`
+Version: `2.2`
 Status: `CURRENT`
 Primary use: `BAI VIDEO PRODUCTION development under BAI Development OS governance`
 
@@ -23,6 +23,25 @@ This policy governs:
 - session rotation and handoff.
 
 It does **not** grant authority to perform paid, native, destructive, release, deployment, or production side effects.
+
+### 1.1 Non-negotiable filesystem placement safety
+
+This rule is an **Owner-mandated safety invariant**. It applies before every build, test, QA run, installer run, runtime launch, diagnostic run, fixture generation, and Evidence collection. Human approval does not waive it.
+
+- **MUST NOT** create a task-owned file or directory directly under any drive root, including `C:\`, `D:\`, `E:\`, mapped drives, mounted volume roots, or equivalent aliases. Prohibited examples include `C:\BVP-QA-*`, `D:\build`, and `E:\runtime-state`.
+- Build output, QA/install extraction, runtime state, debug output, logs, temporary files, fixtures, and Evidence must use either:
+  - an OS-allocated unique temporary directory such as `pytest` `tmp_path` or a run-specific directory beneath the system temporary root; or
+  - the Active Task's dedicated worktree, visualization root, or explicitly authorized Evidence root.
+- Before process, build, install, or write effects begin, resolve the destination to an absolute canonical path and fail closed unless all of the following are true:
+  - neither the destination nor its intended task-owned top-level directory is a drive root or direct child of a drive root;
+  - it is inside the exact authorized root;
+  - it is not an existing foreign or unknown-ownership path;
+  - it is bound to the Active Task and a unique run/operation identity.
+- Cleanup may remove only an exact artifact created by the current operation after revalidating the same physical identity. Never delete, overwrite, reuse, or "repair" a foreign, historical, or unknown path merely because its name matches a task convention.
+- Every native/build/QA operation must record its resolved output root and any intentional residual artifacts in Evidence or Handoff.
+- Existing `C:\BVP-QA-471-*` directories are preserved historical QA artifacts. Do not delete, overwrite, append to, or reuse them without a separate explicit cleanup authority.
+
+A path-placement violation is a pre-effect `STOP`, not a warning. Existing Allowed Files and native, Release, Deploy, and Production Gates still apply.
 
 ---
 
@@ -572,6 +591,44 @@ Prefer updating the canonical current-state/Task record and producing one bounde
 
 Historical evidence remains immutable; later corrections belong in current canonical records or a newly authorized follow-up Task.
 
+### 18.1 Mandatory Evidence persistence after worktree activity
+
+A worktree is an execution workspace, **not** the sole durable Evidence store. Before a task stops, rotates sessions, hands off, declares an Atomic Unit complete, or becomes eligible for worktree cleanup, it must persist and read back an Evidence checkpoint outside the worktree's disposable state.
+
+The canonical external Evidence root for BAI VIDEO PRODUCTION is:
+
+```text
+C:\home\baisound\evidence\bai-video-production
+```
+
+Every external Evidence run must use this contained layout:
+
+```text
+C:\home\baisound\evidence\bai-video-production\TASK-###\<atomic-unit>\<run-id>\
+```
+
+This is the single default external Evidence root. Do not substitute a drive root, repository worktree, visualization directory, system temporary directory, or ad hoc user directory. A different durable root requires an explicit Owner policy revision and must not be inferred from ordinary Task or Human approval.
+
+Use the following destinations:
+
+1. **Canonical, reviewable Evidence:** store bounded public-safe Markdown or JSON under the Active Task's tracked repository area, normally `docs/ai-team/tasks/TASK-###/evidence/`, when that path is inside Allowed Files. Existing canonical task-local Evidence layouts may be preserved instead of creating a duplicate hierarchy.
+2. **Large, native, or non-repository Evidence:** store it under `C:\home\baisound\evidence\bai-video-production\TASK-###\<atomic-unit>\<run-id>\`. Resolve and verify containment beneath the canonical external Evidence root before writing. Never use a drive root or the worktree itself as the only copy.
+3. **Private or sensitive material:** do not commit raw audio, private media, secrets, credentials, unrestricted logs, or private absolute paths. Follow the Task's encrypted-storage, Consent, retention, and access-control contract; place only a public-safe manifest, opaque reference, and digest in canonical Evidence.
+
+Every checkpoint must record at least:
+
+- Active Project, Task, Atomic Unit, and run/operation identity;
+- exact worktree path, branch, HEAD, base/current-main identity, and dirty state;
+- changed paths and their ownership/Allowed Files result;
+- executed tests and exact `PASS` / `FAIL` / `NOT_CONFIRMED` result;
+- relevant artifact hashes or immutable receipt identities;
+- resolved build/QA/runtime/temp/output roots and all intentional residual artifacts;
+- active dependencies, Human Gates, prohibited effects, and the next action.
+
+After writing the checkpoint, reopen/read it and verify its expected identity or digest. If canonical documentation is outside the current Allowed Files, write the checkpoint to the external Task Evidence root and reference it in the Handoff; do not expand scope merely to commit it.
+
+Do not delete, prune, move, reset, or repurpose a worktree until required Evidence has been persisted and read back. Evidence persistence does not authorize destructive cleanup; cleanup still requires exact ownership and eligibility under Sections 13 and 17.
+
 ### Documentation filename policy
 
 Documentation file and directory names under `docs/` MUST use ASCII English-safe names. Japanese prose is allowed inside documents, but Japanese/non-ASCII path names and escaped/mojibake forms such as `#Uxxxx` are not allowed. When correcting an existing documentation filename, update all in-repository references and keep the OSS/readiness link checks green.
@@ -591,6 +648,8 @@ An Atomic Unit is complete only when all applicable items are true:
 - diff/scope was reviewed,
 - no unauthorized external/native/paid/production side effect occurred,
 - repository state is commit-ready or the exact commit is recorded,
+- no task artifact was created directly under a drive root, and all temporary/residual paths satisfy Section 1.1,
+- required Evidence was persisted and read back under Section 18.1, and the worktree is not its only copy,
 - next action and Human Gates are explicit.
 
 Do not equate "code written" with "unit complete".
@@ -603,14 +662,15 @@ For a normal BAI VIDEO PRODUCTION Codex run:
 
 1. confirm BAI VIDEO PRODUCTION is the Primary/Active Project;
 2. inspect Git root, HEAD, branch/worktree and status;
-3. read `docs/ai-team/current-state.md`;
-4. identify the Active Task/Atomic Unit from current authority and the Owner request;
-5. verify that an existing Task ID is not being incorrectly reused;
-6. select/confirm DEV profile;
-7. establish the minimal Context Scope;
-8. read only exact source/schema/tests needed;
-9. execute one bounded Atomic Unit through commit-ready state;
-10. create/update concise Evidence/Handoff only as required.
+3. bind every prospective build, QA, installer, runtime, temporary, fixture, log, and Evidence destination to Section 1.1 and reject any drive-root direct child before effects;
+4. read `docs/ai-team/current-state.md`;
+5. identify the Active Task/Atomic Unit from current authority and the Owner request;
+6. verify that an existing Task ID is not being incorrectly reused;
+7. select/confirm DEV profile;
+8. establish the minimal Context Scope;
+9. read only exact source/schema/tests needed;
+10. execute one bounded Atomic Unit through commit-ready state;
+11. create/update concise Evidence/Handoff only as required, including the resolved output root and intentional residual artifacts for native/build/QA work.
 
 Use BAI Development OS secondary-source documents only when exact governance/contract interpretation is necessary. Do not recursively inspect the entire OS repository at startup.
 

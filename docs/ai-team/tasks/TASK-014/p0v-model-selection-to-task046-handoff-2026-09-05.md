@@ -144,3 +144,68 @@ The first four cases are the minimum focused suite. `N5` through `N10` are requi
 - Main, P0V worker, callable candidates, and TASK-046 OBS intake received no source mutation from this unit.
 
 These are contract and design checks. They are not evidence of native audio, real model execution, Dataset mutation, training, publication, release, or Production activation.
+
+## 9. Dependency receipt ABI and implementation allocation (current-main audit)
+
+This section freezes the dependency boundary discovered at main
+`b7b2f33f9acca95b5bf0d727361f0e794a2d5f82`.  It does not introduce a public
+receipt type, a compatibility wrapper, or a substitute authority.  A named
+design artifact is not a completion receipt, and a public data object remains
+Evidence with `authority_created=false`.
+
+| Dependency | Current source/design fact | TASK-014 consumer rule | Implementation allocation / status |
+| --- | --- | --- | --- |
+| TASK-046 voice route | `VoiceProfileRouteSelection` and `QuickCloneReadbackReceipt` are revision/readback contracts. `QuickCloneReadbackReceipt` keeps the producer state `NOT_BOUND`; the public projection is not an execution capability. | A future zero-shot producer must obtain a TASK-046-owned current private reference/transcript binding; fine-tuned must obtain the separate Dataset/ModelCandidate/artifact chain. Neither public readback nor a matching revision/hash is accepted. | TASK-046 owns the sealed production binding/read API. It is **DEPENDENCY N.C.** for this handoff; TASK-014 must not add a parallel VoiceProfile, Dataset, ModelCandidate, transcript, or store reader. |
+| TASK-066 compute | `CapabilityAdmissionReceipt` and `capability_from_probe_result(...)` are public current-source policy/probe data. The frozen probe registry is unsealed in the current product and the public conversion path must not be treated as a producer capability. | Require a TASK-066-owned private one-use compute admission bound to the exact workload, installed runtime/process identity, profile currentness, and result readback. A probe, adapter identity, helper hash, or CPU/GPU preference alone is insufficient. | TASK-066 GF-C / its cross-owner corrective allocation owns this broker boundary. No sealed TASK-014-consumable compute receipt is currently available: **DEPENDENCY N.C.** |
+| TASK-071 Human authorization | The documented V1 action matrix has no owner-voice inference action. The future V2 packet names `OWNER_VOICE_LOCAL_INFERENCE_V1`, but its live broker capability is explicitly nonserializable and its implementation/completion state is not current. | Consume only the live, exact-action capability over the authenticated broker channel; never consume a JSON receipt, confirmation text, display projection, timestamp, or copied ticket field. | TASK-071 owns the V2 producer ABI, reservation, consume/burn and terminal audit. Until its exact completion receipt exists, TASK-014 has no Human-ticket input: **DEPENDENCY N.C.** |
+| TASK-072 consumer ticket | The TASK-075 design names `OWNER_VOICE_LOCAL_INFERENCE_TICKET_V3` and `TASK072_OWNER_VOICE_WORKER_BEGIN_READBACK_V1`, but records their implementation/completion receipts as N.C. | Bind a private producer operation only to the exact ticket/profile supplied through the TASK-071 authenticated channel. Do not parse, reconstruct, or serialize the ticket. | TASK-072 owns ticket/profile issuance and worker-begin readback. No current TASK-014 integration source is allocated: **DEPENDENCY N.C.** |
+| TASK-074 route/reference producer | TASK-074 is design accepted; it owns route/reference custody and states that TASK-075 receives a durable completion handoff or private live one-operation handoff. | Receive only the owner-provided sealed zero-shot route/reference handoff. It must remain route-specific and cannot be converted into a fine-tuned authority. | TASK-074 owns producer/custody completion. Its native producer binding is still separately gated; no TASK-014 bridge implementation is authorized. |
+| TASK-075 executor | TASK-075 is `DESIGN_CANDIDATE_R6 / SOURCE_START0`. Its chain explicitly requires a TASK-014 call profile/capability and a TASK-014 output-sink capability before native execution. | TASK-014 will hand one private operation to the executor only after every preceding dependency resolves. Executor output must return through its sealed result and independent readback; it cannot create Asset, Dataset, training, or profile-promotion authority. | TASK-075 owns native execution/listening composition. There is no executable consumer ABI to call today: **DEPENDENCY N.C.** |
+
+### 9.1 Frozen direction and minimum private bindings
+
+The producer resolver may be allocated only after all six rows above have
+exact completion identities.  Its private input must bind, in one in-process
+resolution operation, the following already-owned coordinates:
+
+1. exact Project and narration-plan identity/currentness from TASK-014;
+2. either the zero-shot reference/transcript binding **or** the fine-tuned
+   Dataset/ModelCandidate/artifact chain from TASK-046, never both;
+3. exact TASK-066 workload/runtime/process admission and readback;
+4. exact TASK-071 action capability plus its TASK-072 consumer ticket/profile;
+5. exact TASK-074 custody/route handoff and the TASK-075 executor contract;
+6. trusted current time and one-shot budget at the same consume seam.
+
+The current handoff deliberately does not freeze field names or a serialized
+wire shape for those private bindings.  The individual owners must publish
+their immutable, versioned completion identities first.  TASK-014 may then
+freeze an adapter only by consuming those identities through private owner
+ports; it may not recover the ABI by inspecting files, public projections, or
+matching caller fields.
+
+### 9.2 Implementation sequence and no-change boundary
+
+1. Main Merge first recovers the preserved zero-shot callable contract onto
+   current main under its existing owner/disposition gate.  That recovery stays
+   body-free and `BLOCKED`/`UNKNOWN` only.
+2. TASK-046, TASK-066, TASK-071, TASK-072, TASK-074 and TASK-075 each deliver
+   their own exact completion receipt/owner port.  A design document, test
+   fixture, package presence, or public preflight is not delivery.
+3. Only then may a separately allocated TASK-014 implementation use the
+   existing two callable files plus one private producer/composition module and
+   one focused test module already listed in Section 5.  No additional file
+   is approved by this handoff.
+4. The first implementation test must prove all dependency inputs are absent
+   or public-only today and that the resolver produces no private operation,
+   executor call, child process, model load, audio read/write, or persistence
+   delta.  After dependencies arrive, it must add the Section 7 matrix before
+   any native-execution gate is requested.
+
+Accordingly, no source implementation is presently eligible from this ABI
+audit.  The current safe result is a closed dependency allocation, not a
+claim that local narration execution is available.
+
+Validation for this documentation delta: `git diff --check` passed.  The
+targeted current-source regression was not executed in this worktree because
+the available Python runtime lacks the required `jsonschema` package; no
+runtime installation or other environment mutation was performed.

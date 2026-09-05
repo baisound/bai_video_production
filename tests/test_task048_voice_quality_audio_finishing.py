@@ -805,6 +805,47 @@ def test_environment_segment_policy_is_effort_and_measurement_based(changes, rea
     assert reason in assessment.reason_codes
 
 
+@pytest.mark.parametrize("condition", list(CaptureCondition))
+def test_environment_policy_threshold_edges_do_not_depend_on_air_conditioner_label(
+    condition: CaptureCondition,
+) -> None:
+    key = (condition, VoiceEffort.WHISPER)
+
+    def assess(changes: dict[str, object]):
+        receipt = FixtureVoiceQualityAudioFinishingService(
+            runner(environment=environment_bundle(segment_changes={key: changes}))
+        ).compare_environment(environment_plan())
+        assessment = next(
+            item for item in receipt.segment_assessments
+            if (item.condition, item.effort) == key
+        )
+        return assessment, receipt
+
+    assessment, receipt = assess({
+        "snr_db": 20.0,
+        "speech_ratio": 0.5,
+        "dc_offset_abs": 0.01,
+    })
+    assert assessment.eligibility is SegmentEligibility.TRAINING_ELIGIBLE
+    assert receipt.recommended_condition is None
+
+    assessment, receipt = assess({"snr_db": 15.0})
+    assert assessment.eligibility is SegmentEligibility.REVIEW
+    assert receipt.comparison_state is QAState.UNKNOWN
+    assert receipt.recommended_condition is None
+
+    for changes, reason in (
+        ({"snr_db": 14.999}, ReasonCode.SNR_BELOW_POLICY),
+        ({"speech_ratio": 0.499999}, ReasonCode.SPEECH_RATIO_OUT_OF_POLICY),
+        ({"dc_offset_abs": 0.010001}, ReasonCode.DC_OFFSET_OUT_OF_POLICY),
+    ):
+        assessment, receipt = assess(changes)
+        assert assessment.eligibility is SegmentEligibility.REJECT
+        assert reason in assessment.reason_codes
+        assert receipt.comparison_state is QAState.FAIL
+        assert receipt.recommended_condition is None
+
+
 def test_environment_denoise_improvement_and_distortion_are_separate() -> None:
     key = (CaptureCondition.AIR_CONDITIONER_ON, VoiceEffort.SHOUT)
     bundle = environment_bundle(pair_changes={key: {
@@ -930,6 +971,27 @@ def test_confirmed_non_speech_confidence_boundary_is_closed_and_fixed() -> None:
         continuity_policy(minimum_confirmed_non_speech_confidence=0.5)
 
 
+@pytest.mark.parametrize(
+    ("middle_end", "expected_removed", "expected_reduction_bytes"),
+    [
+        (71_999, (), 0),
+        (72_000, (SampleRange(30_000, 69_600),), 119_520),
+    ],
+)
+def test_long_non_speech_duration_threshold_is_exact_and_capacity_is_sample_derived(
+    middle_end: int,
+    expected_removed: tuple[SampleRange, ...],
+    expected_reduction_bytes: int,
+) -> None:
+    plan = speech_plan(intervals=speech_intervals(middle_end=middle_end))
+    assert plan.removed_ranges == expected_removed
+    assert plan.size_reduction_bytes == expected_reduction_bytes
+    assert plan.size_reduction_bytes == (
+        sum(item.sample_count for item in plan.removed_ranges)
+        + plan.crossfade_overlap_samples
+    ) * 3
+
+
 def test_speech_padding_preserves_attack_tail_and_hangover_around_long_silence() -> None:
     intervals = (
         SpeechEvidenceInterval(SampleRange(0, 48_000), IntervalClass.NON_SPEECH, 0.99, digest("1")),
@@ -1027,10 +1089,27 @@ def test_multichannel_policy_requires_explicit_phase_or_channel_evidence() -> No
 def test_lossy_training_format_and_unsafe_fade_policy_are_rejected() -> None:
     with pytest.raises(FinishingContractError, match="lossy"):
         format_policy(lossy_codec=True)
-    with pytest.raises(FinishingContractError, match="fade"):
-        continuity_policy(fade_samples=3_000)
     with pytest.raises(FinishingContractError, match="natural pauses"):
         continuity_policy(long_non_speech_min_samples=10_000, max_natural_pause_samples=20_000)
+
+
+@pytest.mark.parametrize(
+    ("fade_samples", "message"),
+    [
+        (True, "positive integer"),
+        (240.0, "positive integer"),
+        (1, "fade sample count is fixed"),
+        (239, "fade sample count is fixed"),
+        (241, "fade sample count is fixed"),
+        (3_000, "fade sample count is fixed"),
+    ],
+)
+def test_equal_power_boundary_fade_is_fixed_to_240_samples(
+    fade_samples: object,
+    message: str,
+) -> None:
+    with pytest.raises(FinishingContractError, match=message):
+        continuity_policy(fade_samples=fade_samples)
 
 
 def test_speech_continuous_fixture_pass_binds_ranges_and_never_publishes_partial() -> None:
@@ -1247,6 +1326,19 @@ def test_crossfade_boundaries_have_exact_overlap_and_per_boundary_evidence() -> 
     assert receipt.state is QAState.FAIL
     assert ReasonCode.COPY_READBACK_MISMATCH in receipt.reason_codes
     assert receipt.task046_lineage_candidate_sha256 is None
+
+
+def test_public_pass_receipt_cannot_redefine_fixed_crossfade_duration() -> None:
+    receipt = FixtureVoiceQualityAudioFinishingService(
+        runner(speech=speech_readback())
+    ).finish_speech_continuous(speech_plan())
+    with pytest.raises(FinishingContractError, match="fade sample count is fixed"):
+        replace(
+            receipt,
+            fade_samples=120,
+            crossfade_overlap_samples=120,
+            output_sample_count=56_280,
+        )
 
 
 def test_exact_nested_types_and_boolean_markers_reject_subclasses_and_ints() -> None:

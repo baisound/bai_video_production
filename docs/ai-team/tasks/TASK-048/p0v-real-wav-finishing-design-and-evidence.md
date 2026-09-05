@@ -179,7 +179,10 @@ contiguously cover the complete input. All-silence and insufficient-speech
 inputs stop with effect zero.
 
 Only non-speech with fixed confidence `>= 0.95` and duration of at least one
-second is removable. Lower-confidence non-speech is retained exactly like an
+second is removable. The equal-power boundary overlap is likewise fixed at
+exactly 240 samples; a caller cannot alter the fade to manipulate the reported
+capacity reduction or select a longer fade that consumes preserved speech
+padding. Lower-confidence non-speech is retained exactly like an
 uncertain interval. A short pause
 (up to 0.5 seconds) is always retained; uncertain intervals are also retained
 so low-SNR whisper, BGM/Discord ambiguity or fan noise cannot cause destructive
@@ -274,7 +277,7 @@ not reported PASS by this unit.
 - Bundled workspace Python `py_compile` for the new source: PASS.
 - Isolated fixture-only focused pytest after Critic authority, identity,
   cardinality, scalar strictness, meter-calibration and crossfade-accounting
-  closure: `156 passed`.
+  closure: `167 passed`.
 - Existing TASK-048 regression collection: `NOT_EXECUTED` because the available
   pytest runtime lacks `jsonschema`; no dependency was installed and this is
   not reported as PASS.

@@ -4,7 +4,9 @@
 
 - Atomic Unit: `TASK-048 / P-QC-P0V-FINISH-REBIND-R1`.
 - DEV profile: `DEV-4 FOUNDATION CRITICAL`.
-- Base: `origin/main@4e150c17f3cd2fe9398d75518473dc8428fae322`.
+- Bound current base: `origin/main@b7b2f33f9acca95b5bf0d727361f0e794a2d5f82`.
+- Voice-scope source snapshot: `4e150c17f3cd2fe9398d75518473dc8428fae322`;
+  the intervening main delta changes only TASK-036 launcher tests.
 - State: read-only preservation and dependency rebind; implementation authority
   is false.
 
@@ -16,13 +18,16 @@ The original sole writer has frozen the exact3 candidate in immutable commit
 - `src/ai_video_production/voice_quality_audio_finishing.py`;
 - `tests/test_task048_voice_quality_audio_finishing.py`.
 
-The commit parent is historical base `4d233c8`, the dedicated worktree is
-clean/ahead 1, all three paths remain absent from current main, and its patch
-applies to the current design worktree. The original owner reports focused 156/156 PASS,
-`py_compile`/diff-check PASS and independent Critic/Tester C/H/M/L 0/0/0/0.
-These are preserved branch Evidence, not a rerun by this unit and not native/audio
-proof. The commit is not on main and has not been copied, amended, rebased or
-merged by this unit.
+The commit parent is historical base `4d233c8`; all three committed paths remain
+absent from current main, and the commit patch applies to the current design
+worktree. The owner worktree HEAD remains `3361023` at ahead 1/behind 6, but it
+now contains concurrent unstaged modifications to the same exact3. This unit
+does not modify, discard, copy or treat those later bytes as accepted Evidence.
+The immutable commit snapshot independently reruns focused 156/156 PASS; the
+original owner also reported focused 156/156 PASS, `py_compile`/diff-check PASS
+and independent Critic/Tester C/H/M/L 0/0/0/0. These are committed-snapshot
+Evidence, not native/audio proof. The commit is not on main and has not been
+copied, amended, rebased or merged by this unit.
 
 ## Reusable design content
 
@@ -163,9 +168,10 @@ forces `適正判定 未確定`.
 
 The frozen exact3 may be rebound into the coherent integration only when:
 
-1. commit `3361023b` and the original sole-writer/clean status are revalidated;
-2. current `origin/main`, path overlap and patch applicability are revalidated at
-   integration time without mutating the preserved worktree;
+1. immutable commit `3361023b`, current owner/dirty status and sole-writer scope
+   are revalidated without consuming uncommitted bytes;
+2. current `origin/main`, path overlap and the committed patch applicability are
+   revalidated at integration time without mutating the preserved worktree;
 3. this Q1/Q2/Q3 dependency rebind, including secure custody and TASK-003
    adoption/readback, is incorporated without weakening the preserved
    conservative policy;

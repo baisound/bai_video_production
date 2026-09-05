@@ -4,7 +4,9 @@
 
 - Atomic Unit: `TASK-047 / P-OBS-1B-CAPTURE-TRUTH-R1`.
 - DEV profile: `DEV-4 FOUNDATION CRITICAL`.
-- Base: `origin/main@4e150c17f3cd2fe9398d75518473dc8428fae322`.
+- Bound current base: `origin/main@b7b2f33f9acca95b5bf0d727361f0e794a2d5f82`.
+- Voice-scope source snapshot: `4e150c17f3cd2fe9398d75518473dc8428fae322`;
+  the intervening main delta changes only TASK-036 launcher tests.
 - State: design only; implementation/native recording authority is false.
 - Responsibility: close Q1 between authenticated OBS callback frames and a
   canonical private `PCM_S24LE/48000/mono` capture Asset receipt.

@@ -5,7 +5,9 @@
 - Active Project: BAI VIDEO PRODUCTION.
 - Atomic Unit: `TASK-046 / P0V-PRODUCTION-DEPENDENCY-REBIND-R1`.
 - DEV profile: `DEV-4 FOUNDATION CRITICAL`.
-- Base: `origin/main@4e150c17f3cd2fe9398d75518473dc8428fae322`.
+- Bound current base: `origin/main@b7b2f33f9acca95b5bf0d727361f0e794a2d5f82`.
+- Voice-scope source snapshot: `4e150c17f3cd2fe9398d75518473dc8428fae322`;
+  the intervening main delta changes only TASK-036 launcher tests.
 - State: design and read-only preservation audit only.
 - Owner intent: shortest path from an OBS Owner-microphone capture to a
   speech-continuous training WAV, reviewed Dataset, sealed voice model and local
@@ -47,13 +49,13 @@ observations but are not a final quality authority.
 |---|---|---|---|
 | TASK-046 Quick Clone recovery R3 | merge `4e150c1`; implementation `2bcf859`; metadata `f95ab55`; exact8 source/schema/test plus shared CHANGELOG | landed on current main through PR #513 | canonical central-model read-only UI/lifecycle/restart/readback contract; it is not a model worker or training path, and no preserved R1/R2/alternate branch may be replayed in parallel |
 | TASK-046 Quick Clone historical alternatives | R2 tip `948f9ef`; coherent merge `831ea764` | superseded by current-main R3 and retained only as history | do not integrate, select, merge or treat as a second model selector |
-| TASK-073 reference-binding A | tip `d58c3ea`; exact3; historical merge-base `4d233c8` | not on current main `4e150c1`; standalone patch does not apply to current main because it depends on predecessor work | preserve its nominal TASK-046/TASK-014 binding pattern only; a fresh-current successor must re-author it against Q1/Q2/Q3 receipts rather than merge/rebase the old branch |
+| TASK-073 reference-binding A | tip `d58c3ea`; exact3; historical merge-base `4d233c8` | not on bound main `b7b2f33`; standalone patch does not apply because it depends on predecessor work | preserve its nominal TASK-046/TASK-014 binding pattern only; a fresh-current successor must re-author it against Q1/Q2/Q3 receipts rather than merge/rebase the old branch |
 | TASK-073 local-WAV composition V4 | staged exact4 on base `d1c41e2`; patch applies textually to current main | not committed or reviewed independently | preserve fixed-slot/topology/currentness ideas only; receipt names and owners must be regenerated from landed producer ABIs |
 | TASK-075 R7 correction proposal | tip `3cbdf21`; design-only | not on main | supplement for playback/listening, failure totality and phase separation; creates no producer or implementation authority |
 | TASK-078 E-C downstream design | `e549e13`; PR #495 design | not on main | out of the Owner-voice WAV/training critical path; retain only as unrelated downstream video design |
-| TASK-014 synthetic executor | `9d52e923a216bc11b7ecba4004dd63951657aab3`; exact2; historical base `4d233c8` | not on current main `4e150c1`; ahead 1/behind 3 with no exact-path collision; current-main successor recovery is separately owned | consume only after that successor lands; it remains synthetic and satisfies no production producer, compute, Human, custody, model-load or result-adoption dependency |
-| TASK-046 OBS intake synthetic Unit A | `c918d5ca95f0aa920ffd0e782928f832d6b94d99`; exact3; historical base `4d233c8` | pushed task branch, not on current main `4e150c1`; fresh patch/currentness revalidation required | recover only through a fresh-current successor as `SYNTHETIC_CONTRACT_TEST`; it rejects Owner audio and cannot be called by the production Q3 producer |
-| TASK-048 P-QC-P0V-FINISH-1 | `3361023bab02bf2d7a593231ccc81ba6b2d0b9b3`; exact3; historical parent/base `4d233c8` | clean owner worktree, ahead 1/behind 3, not on current main `4e150c1`; patch applies but must be revalidated at integration time | coherent-integration candidate for Q2 only; reported 156/156 PASS and independent C/H/M/L 0/0/0/0, while native/audio remain NOT_CONFIRMED |
+| TASK-014 synthetic executor | `9d52e923a216bc11b7ecba4004dd63951657aab3`; exact2; historical base `4d233c8` | not on bound main `b7b2f33`; ahead 1/behind 6 with no exact-path collision; current-main successor recovery is separately owned | consume only after that successor lands; it remains synthetic and satisfies no production producer, compute, Human, custody, model-load or result-adoption dependency |
+| TASK-046 OBS intake synthetic Unit A | `c918d5ca95f0aa920ffd0e782928f832d6b94d99`; exact3; historical base `4d233c8` | pushed task branch, not on bound main `b7b2f33`; fresh patch/currentness revalidation required | recover only through a fresh-current successor as `SYNTHETIC_CONTRACT_TEST`; it rejects Owner audio and cannot be called by the production Q3 producer |
+| TASK-048 P-QC-P0V-FINISH-1 | immutable commit `3361023bab02bf2d7a593231ccc81ba6b2d0b9b3`; exact3; historical parent/base `4d233c8` | HEAD remains `3361023`, ahead 1/behind 6 and not on bound main `b7b2f33`; the owner worktree now has concurrent unstaged exact3 edits, which this unit preserves and does not inspect as authority | coherent-integration candidate is the committed `3361023` snapshot only; local rerun 156/156 PASS and independent C/H/M/L 0/0/0/0 apply to that commit, while later dirty bytes and native/audio remain NOT_CONFIRMED |
 
 Apart from the Quick Clone R3 already merged by PR #513, no preserved branch is
 merged, rebased or copied wholesale by this unit. Staged composition bytes and

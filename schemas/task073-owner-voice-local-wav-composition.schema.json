@@ -1,0 +1,221 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://baisound.local/schemas/task073-owner-voice-local-wav-composition.schema.json",
+  "title": "TASK-073 owner voice local WAV composition V4",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "record_type", "task_owner", "composition_id",
+    "composition_revision", "parent_composition_sha256", "observed_at",
+    "project_id", "project_manifest_revision", "project_manifest_sha256",
+    "installed_session_sha256", "operation_plan_sha256",
+    "design_bundle_sha256", "receipts", "derived_state", "reason_codes",
+    "fixture_lineage", "composition_sha256"
+  ],
+  "properties": {
+    "schema": {"const": "TASK073_OWNER_VOICE_LOCAL_WAV_COMPOSITION_V4"},
+    "record_type": {"const": "OwnerVoiceLocalWavCompositionV4"},
+    "task_owner": {"const": "TASK-073"},
+    "composition_id": {"$ref": "#/$defs/id"},
+    "composition_revision": {"$ref": "#/$defs/positiveInteger"},
+    "parent_composition_sha256": {"$ref": "#/$defs/nullableDigest"},
+    "observed_at": {"$ref": "#/$defs/timestamp"},
+    "project_id": {"$ref": "#/$defs/id"},
+    "project_manifest_revision": {"$ref": "#/$defs/positiveInteger"},
+    "project_manifest_sha256": {"$ref": "#/$defs/digest"},
+    "installed_session_sha256": {"$ref": "#/$defs/nullableDigest"},
+    "operation_plan_sha256": {"$ref": "#/$defs/nullableDigest"},
+    "design_bundle_sha256": {"const": "sha256:a56472b0d99f58a9170838e113efd0f75565e42490e477e2640a07b86c4ac71a"},
+    "receipts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["installed_session", "quick_clone", "selection", "reference", "call_profile", "compute_admission", "human_plan", "operation_ticket", "durable_job", "inference", "wav", "qa", "playback", "listening_join"],
+      "properties": {
+        "installed_session": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/installedSession"}]},
+        "quick_clone": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/quickClone"}]},
+        "selection": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/selection"}]},
+        "reference": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/reference"}]},
+        "call_profile": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/callProfile"}]},
+        "compute_admission": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/computeAdmission"}]},
+        "human_plan": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/humanPlan"}]},
+        "operation_ticket": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/operationTicket"}]},
+        "durable_job": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/durableJob"}]},
+        "inference": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/inference"}]},
+        "wav": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/wav"}]},
+        "qa": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/qa"}]},
+        "playback": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/playback"}]},
+        "listening_join": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/listeningJoin"}]}
+      }
+    },
+    "derived_state": {"enum": ["SETUP_REQUIRED", "REFERENCE_REQUIRED", "MODEL_SELECTION_REQUIRED", "READY_TO_RENDER", "CONFIRMATION_REQUIRED", "QUEUED", "RUNNING", "RECOVERY_REQUIRED", "UNKNOWN", "QA_REQUIRED", "LISTENING_REQUIRED", "WAV_RETEST_REQUIRED", "WAV_ACCEPTED", "WAV_REJECTED", "BLOCKED"]},
+    "reason_codes": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {"enum": ["MISSING_REQUIRED_RECEIPT", "UNKNOWN_RECEIPT_TYPE", "UNKNOWN_RECEIPT_VERSION", "STALE_RECEIPT", "EXPIRED_RECEIPT", "PROJECT_MISMATCH", "INSTALL_MISMATCH", "OPERATION_MISMATCH", "QUICK_CLONE_HEAD_MISMATCH", "CANDIDATE_MISMATCH", "MULTIPLE_CURRENT_RECEIPTS", "PRODUCER_BLOCKED", "PRODUCER_UNKNOWN", "FIXTURE_ONLY", "FIXTURE_TAINT_MISMATCH", "PRIVACY_BOUNDARY_VIOLATION"]}
+    },
+    "fixture_lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixture_only", "authority_created", "production_eligible", "fixture_set_sha256", "producer_fixture_count"],
+      "properties": {
+        "fixture_only": {"type": "boolean"},
+        "authority_created": {"const": false},
+        "production_eligible": {"type": "boolean"},
+        "fixture_set_sha256": {"$ref": "#/$defs/digest"},
+        "producer_fixture_count": {"type": "integer", "minimum": 0, "maximum": 14}
+      }
+    },
+    "composition_sha256": {"$ref": "#/$defs/digest"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"composition_revision": {"const": 1}}},
+      "then": {"properties": {"parent_composition_sha256": {"const": null}}},
+      "else": {"properties": {"parent_composition_sha256": {"$ref": "#/$defs/digest"}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"quick_clone": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"installed_session": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"reference": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"quick_clone": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"selection": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"reference": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"call_profile": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"selection": {"not": {"type": "null"}}, "compute_admission": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"compute_admission": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"call_profile": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"human_plan": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"call_profile": {"not": {"type": "null"}}, "compute_admission": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"operation_ticket": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"human_plan": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"durable_job": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"operation_ticket": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"inference": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"durable_job": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"wav": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"inference": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"qa": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"wav": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"playback": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"qa": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"receipts": {"properties": {"listening_join": {"not": {"type": "null"}}}}}},
+      "then": {"properties": {"receipts": {"properties": {"playback": {"not": {"type": "null"}}}}}}
+    },
+    {
+      "if": {"properties": {"derived_state": {"const": "SETUP_REQUIRED"}}},
+      "then": {"properties": {"installed_session_sha256": {"const": null}}},
+      "else": {
+        "if": {"properties": {"derived_state": {"not": {"const": "BLOCKED"}}}},
+        "then": {"properties": {"installed_session_sha256": {"$ref": "#/$defs/digest"}}}
+      }
+    },
+    {
+      "if": {"properties": {"derived_state": {"enum": ["SETUP_REQUIRED", "REFERENCE_REQUIRED", "MODEL_SELECTION_REQUIRED", "READY_TO_RENDER"]}}},
+      "then": {"properties": {"operation_plan_sha256": {"const": null}}},
+      "else": {
+        "if": {"properties": {"derived_state": {"not": {"const": "BLOCKED"}}}},
+        "then": {"properties": {"operation_plan_sha256": {"$ref": "#/$defs/digest"}}}
+      }
+    },
+    {
+      "if": {"properties": {"derived_state": {"const": "WAV_ACCEPTED"}}},
+      "then": {"properties": {"receipts": {"properties": {"quick_clone": {"type": "object", "properties": {"producer_state": {"const": "ACCEPTED"}}}, "listening_join": {"type": "object", "properties": {"producer_state": {"const": "ACCEPTED"}}}}}}}
+    },
+    {
+      "if": {"properties": {"derived_state": {"const": "WAV_REJECTED"}}},
+      "then": {"properties": {"receipts": {"properties": {"quick_clone": {"type": "object", "properties": {"producer_state": {"const": "REJECTED"}}}, "listening_join": {"type": "object", "properties": {"producer_state": {"const": "REJECTED"}}}}}}}
+    },
+    {
+      "if": {"properties": {"derived_state": {"const": "WAV_RETEST_REQUIRED"}}},
+      "then": {"properties": {"receipts": {"properties": {"quick_clone": {"type": "object"}, "listening_join": {"type": "object"}}, "anyOf": [{"properties": {"quick_clone": {"type": "object", "properties": {"producer_state": {"const": "RETEST_REQUIRED"}}}}}, {"properties": {"listening_join": {"type": "object", "properties": {"producer_state": {"const": "RETEST_REQUIRED"}}}}}]}}}
+    },
+    {
+      "if": {"properties": {"derived_state": {"const": "BLOCKED"}}},
+      "then": {"properties": {"reason_codes": {"minItems": 1}}},
+      "else": {"properties": {"reason_codes": {"maxItems": 0}}}
+    },
+    {
+      "if": {"properties": {"derived_state": {"not": {"const": "WAV_ACCEPTED"}}}},
+      "then": {"properties": {"fixture_lineage": {"properties": {"production_eligible": {"const": false}}}}}
+    }
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "minLength": 71, "maxLength": 71},
+    "nullableDigest": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/digest"}]},
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$", "minLength": 1, "maxLength": 200},
+    "timestamp": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$", "minLength": 20, "maxLength": 24},
+    "positiveInteger": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "candidateNull": {"properties": {"candidate_id": {"const": null}, "candidate_sha256": {"const": null}}},
+    "candidateRequired": {"properties": {"candidate_id": {"$ref": "#/$defs/id"}, "candidate_sha256": {"$ref": "#/$defs/digest"}}},
+    "receiptBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["owner_task", "receipt_type", "schema_version", "opaque_ref", "receipt_sha256", "producer_build_sha256", "producer_state", "candidate_id", "candidate_sha256", "project_id", "project_manifest_sha256", "installed_session_sha256", "operation_plan_sha256", "quick_clone_flow_sha256", "revision", "head_sha256", "observed_at", "expires_at", "current", "fixture_only", "authority_created", "production_eligible"],
+      "properties": {
+        "owner_task": {"type": "string"},
+        "receipt_type": {"type": "string"},
+        "schema_version": {"type": "integer", "minimum": 1, "maximum": 3},
+        "opaque_ref": {"$ref": "#/$defs/id"},
+        "receipt_sha256": {"$ref": "#/$defs/digest"},
+        "producer_build_sha256": {"$ref": "#/$defs/digest"},
+        "producer_state": {"type": "string"},
+        "candidate_id": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/id"}]},
+        "candidate_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "project_id": {"$ref": "#/$defs/id"},
+        "project_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "installed_session_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "operation_plan_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "quick_clone_flow_sha256": {"$ref": "#/$defs/nullableDigest"},
+        "revision": {"$ref": "#/$defs/positiveInteger"},
+        "head_sha256": {"$ref": "#/$defs/digest"},
+        "observed_at": {"$ref": "#/$defs/timestamp"},
+        "expires_at": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]},
+        "current": {"type": "boolean"},
+        "fixture_only": {"type": "boolean"},
+        "authority_created": {"type": "boolean"},
+        "production_eligible": {"type": "boolean"}
+      },
+      "oneOf": [{"$ref": "#/$defs/candidateNull"}, {"$ref": "#/$defs/candidateRequired"}],
+      "allOf": [{"if": {"properties": {"fixture_only": {"const": true}}}, "then": {"properties": {"authority_created": {"const": false}, "production_eligible": {"const": false}}}}]
+    },
+    "installedSession": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"properties": {"owner_task":{"const":"TASK-036"},"receipt_type":{"const":"INSTALLED_STARTUP_CONTEXT_V1"},"schema_version":{"const":1},"producer_state":{"enum":["READY","BLOCKED","UNKNOWN"]},"candidate_id":{"const":null},"candidate_sha256":{"const":null},"operation_plan_sha256":{"const":null},"quick_clone_flow_sha256":{"const":null},"expires_at":{"const":null}}}]},
+    "quickClone": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"properties": {"owner_task":{"const":"TASK-046"},"receipt_type":{"const":"QUICK_CLONE_FLOW_READBACK_V2"},"schema_version":{"const":2},"producer_state":{"enum":["ACTIVE","RETEST_REQUIRED","ACCEPTED","REJECTED","BLOCKED","UNKNOWN"]},"operation_plan_sha256":{"const":null},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"const":null}}}, {"if":{"properties":{"producer_state":{"const":"ACTIVE"}}},"then":{"$ref":"#/$defs/candidateNull"}}, {"if":{"properties":{"producer_state":{"enum":["RETEST_REQUIRED","ACCEPTED","REJECTED"]}}},"then":{"$ref":"#/$defs/candidateRequired"}}]},
+    "selection": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateNull"}, {"properties": {"owner_task":{"const":"TASK-074"},"receipt_type":{"const":"VOICE_PROFILE_ROUTE_SELECTION_READBACK_V1"},"schema_version":{"const":1},"producer_state":{"enum":["SELECTED","BLOCKED","UNKNOWN"]},"operation_plan_sha256":{"const":null},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"const":null}}}]},
+    "reference": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateNull"}, {"properties": {"owner_task":{"const":"TASK-074"},"receipt_type":{"const":"OWNER_VOICE_PRIVATE_REFERENCE_READBACK_V1"},"schema_version":{"const":1},"producer_state":{"enum":["PREPARED_VERIFIED","BLOCKED","UNKNOWN"]},"operation_plan_sha256":{"const":null},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"$ref":"#/$defs/timestamp"}}}]},
+    "callProfile": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateNull"}, {"properties": {"owner_task":{"const":"TASK-014"},"receipt_type":{"const":"LOCAL_PRIMARY_NARRATION_CALL_PROFILE_V2"},"schema_version":{"const":2},"producer_state":{"enum":["READY_FOR_TASK075_DISPATCH","BLOCKED","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"$ref":"#/$defs/timestamp"}}}]},
+    "computeAdmission": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateNull"}, {"properties": {"owner_task":{"const":"TASK-066"},"receipt_type":{"const":"AUDIO_VOICE_COMPUTE_ADMISSION_V1"},"schema_version":{"const":1},"producer_state":{"enum":["ADMITTED","BLOCKED","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"$ref":"#/$defs/timestamp"}}}]},
+    "humanPlan": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateNull"}, {"properties": {"owner_task":{"const":"TASK-071"},"receipt_type":{"const":"OWNER_VOICE_LOCAL_INFERENCE_PLAN_V1"},"schema_version":{"const":1},"producer_state":{"enum":["CONFIRMATION_REQUIRED","CONFIRMED","BLOCKED","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"$ref":"#/$defs/timestamp"}}}]},
+    "operationTicket": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateNull"}, {"properties": {"owner_task":{"const":"TASK-072"},"receipt_type":{"const":"OWNER_VOICE_LOCAL_INFERENCE_TICKET_V3"},"schema_version":{"const":3},"producer_state":{"enum":["ISSUED","CONSUMED","BURNED","BLOCKED","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"$ref":"#/$defs/timestamp"}}}]},
+    "durableJob": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateNull"}, {"properties": {"owner_task":{"const":"TASK-076"},"receipt_type":{"const":"DURABLE_PRODUCT_JOB_READBACK_V1"},"schema_version":{"const":1},"producer_state":{"enum":["QUEUED","DISPATCHING","RUNNING","RECOVERY_REQUIRED","SUCCEEDED","FAILED_KNOWN","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"$ref":"#/$defs/timestamp"}}}]},
+    "inference": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateNull"}, {"properties": {"owner_task":{"const":"TASK-075"},"receipt_type":{"const":"TASK075_LOCAL_VOICE_EXECUTION_RESULT_V1"},"schema_version":{"const":1},"producer_state":{"enum":["SUCCESS","FAILED_KNOWN","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"const":null}}}]},
+    "wav": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateRequired"}, {"properties": {"owner_task":{"const":"TASK-014"},"receipt_type":{"const":"TASK014_LOCAL_PRIMARY_NARRATION_POST_RECEIPT_V1"},"schema_version":{"const":1},"producer_state":{"enum":["PUBLISHED_READBACK_VERIFIED","FAILED_KNOWN","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"const":null}}}]},
+    "qa": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateRequired"}, {"properties": {"owner_task":{"const":"TASK-048"},"receipt_type":{"const":"OWNER_VOICE_TECHNICAL_QA_RECEIPT_V1"},"schema_version":{"const":1},"producer_state":{"enum":["PASS","FAIL","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"const":null}}}]},
+    "playback": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateRequired"}, {"properties": {"owner_task":{"const":"TASK-075"},"receipt_type":{"const":"VOICE_PLAYBACK_OBSERVATION_V1"},"schema_version":{"const":1},"producer_state":{"enum":["READY","PLAYING","COMPLETED","STOPPED","FAILED_KNOWN","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"const":null}}}]},
+    "listeningJoin": {"allOf": [{"$ref": "#/$defs/receiptBase"}, {"$ref":"#/$defs/candidateRequired"}, {"properties": {"owner_task":{"const":"TASK-075"},"receipt_type":{"const":"VOICE_QA_LISTENING_BINDING_V1"},"schema_version":{"const":1},"producer_state":{"enum":["ACCEPTED","REJECTED","RETEST_REQUIRED","BLOCKED","UNKNOWN"]},"operation_plan_sha256":{"$ref":"#/$defs/digest"},"quick_clone_flow_sha256":{"$ref":"#/$defs/digest"},"expires_at":{"const":null}}}]}
+  }
+}

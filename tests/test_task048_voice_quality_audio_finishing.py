@@ -898,6 +898,42 @@ def test_uncalibrated_or_nonfinite_meter_scalars_cannot_enter_ab_evidence(change
         environment_segment(CaptureCondition.AIR_CONDITIONER_OFF, VoiceEffort.NORMAL, **changes)
 
 
+def test_zero_dbfs_peak_is_a_level_fact_not_a_clipping_decision() -> None:
+    key = (CaptureCondition.AIR_CONDITIONER_OFF, VoiceEffort.NORMAL)
+    receipt = FixtureVoiceQualityAudioFinishingService(
+        runner(environment=environment_bundle(segment_changes={key: {
+            "speech_peak_dbfs": 0.0,
+            "clipped_sample_count": 0,
+        }}))
+    ).compare_environment(environment_plan())
+    assessment = next(
+        item for item in receipt.segment_assessments
+        if (item.condition, item.effort) == key
+    )
+    assert assessment.eligibility is SegmentEligibility.TRAINING_ELIGIBLE
+    assert ReasonCode.CLIPPING_DETECTED not in assessment.reason_codes
+
+    clipped = FixtureVoiceQualityAudioFinishingService(
+        runner(environment=environment_bundle(segment_changes={key: {
+            "speech_peak_dbfs": 0.0,
+            "clipped_sample_count": 1,
+        }}))
+    ).compare_environment(environment_plan(operation_id="environment/op-zero-dbfs-clipped"))
+    clipped_assessment = next(
+        item for item in clipped.segment_assessments
+        if (item.condition, item.effort) == key
+    )
+    assert clipped_assessment.eligibility is SegmentEligibility.REJECT
+    assert ReasonCode.CLIPPING_DETECTED in clipped_assessment.reason_codes
+
+    with pytest.raises(FinishingContractError, match="dBFS"):
+        environment_segment(
+            CaptureCondition.AIR_CONDITIONER_OFF,
+            VoiceEffort.NORMAL,
+            speech_peak_dbfs=math.nextafter(0.0, 1.0),
+        )
+
+
 def test_environment_receipt_never_promotes_dbfs_to_dba_or_spl() -> None:
     body = FixtureVoiceQualityAudioFinishingService(
         runner(environment=environment_bundle())

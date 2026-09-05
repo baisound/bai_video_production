@@ -45,6 +45,18 @@ does not create Product, native, Release, Deploy, or Production authority.
 - An immutable terminal record may be published/read only at its operation-specific exact coordinate. Re-publish collisions, fixed-history last-event inspection, or directory scan results never create a consumer `DUPLICATE`; statuses declare `DUPLICATE_CURRENTNESS_AUTHORITY_NOT_CREATED`.
 - Within the Product module/API boundary, writer capabilities are exact owner-issued objects and cannot be forged, subclassed, reset, or reused. Every accepted write attempt that raises burns the capability before the caller can try a different path/body/plan in the same context. Arbitrary hostile Python already executing in the same interpreter, with private-state mutation or monkeypatch authority, is outside this API boundary and requires process/native isolation.
 - Public receipts and errors contain no path or document body; receipt/identity objects remain non-authoritative audit data.
+- AIO-GRAPH-001 initial-lock contention is an exact-one-effect contract: a
+  burned create capability is never retried, while its loser outcome is derived
+  only by a separate fresh read-only classification.  An exact stable regular
+  foreign target or live winner may yield the body-free loser collision result;
+  the losing capability does not interpret target bytes.  A sharing-blocked
+  observation, namespace swap, identity/security drift, or other ambiguity is
+  STOP+preserve+completion-unknown.
+  The loser receives no existing-lock write capability and may clean up only its
+  own live-handle-bound temporary artifact.  Repeated stress must prove exactly
+  one winner lease/effect, zero foreign overwrite/delete, and unchanged
+  unrelated inventory for every run; collision, binding mismatch, and unknown
+  are never counted as success.
 - Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
 - Current canonical main: `e7ca98d9050918cf731f378cc3311e76a5e9fce2`; R6 integration commit: `7543dd266f23733f465f9f961dee69dc291d37eb`.
 - Branch: `codex/task-068-secure-authority-io-current-main-r6`; r3/r4/r5 evidence is preserved historical evidence.

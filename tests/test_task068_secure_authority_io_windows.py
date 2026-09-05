@@ -434,6 +434,85 @@ def test_windows_initial_lock_publish_race_preserves_competitor(tmp_path: Path) 
     assert list(tmp_path.glob(".authority-*.tmp")) == []
 
 
+def test_windows_initial_lock_loser_observes_live_winner_with_delete_access(
+    tmp_path: Path,
+) -> None:
+    """A read-only loser shares the live winner's access without granting delete."""
+
+    from ai_video_production import secure_authority_io as secure_io
+
+    target = tmp_path / "authority.lock"
+    winner_fd: int | None = None
+
+    def hook(stage: str) -> None:
+        nonlocal winner_fd
+        if stage != "before_initial_lock_publish":
+            return
+        winner_fd = secure_io._windows_open(
+            target,
+            writable=True,
+            create_new=True,
+            directory=False,
+            delete_access=True,
+            share_write=True,
+        )
+        assert os.write(winner_fd, b"\0") == 1
+        os.fsync(winner_fd)
+
+    capability = SecureAuthorityIO(tmp_path, _stage_hook=hook).lock(
+        "authority.lock", mode="initial"
+    )
+    try:
+        with pytest.raises(SecureAuthorityIOError) as exc:
+            with capability:
+                pass
+    finally:
+        if winner_fd is not None:
+            os.close(winner_fd)
+
+    assert exc.value.code == "LOCK_CREATE_COLLISION"
+    assert exc.value.completion_unknown is False
+    assert target.read_bytes() == b"\0"
+    assert list(tmp_path.glob(".authority-*.tmp")) == []
+
+
+def test_windows_initial_lock_locked_competitor_is_unknown_and_preserved(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A sharing-blocked fresh observation is ambiguity, not a collision."""
+
+    target = tmp_path / "authority.lock"
+
+    def hook(stage: str) -> None:
+        if stage == "before_initial_lock_publish":
+            target.write_bytes(b"COMPETITOR")
+
+    authority = SecureAuthorityIO(tmp_path, _stage_hook=hook)
+    real_open_target = authority._open_target
+
+    def block_competitor_observation(
+        parent: object,
+        *,
+        writable: bool,
+        **kwargs: object,
+    ) -> int:
+        if getattr(parent, "name", None) == "authority.lock" and not writable:
+            raise SecureAuthorityIOError("WINDOWS_SHARING_VIOLATION")
+        return real_open_target(parent, writable=writable, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(authority, "_open_target", block_competitor_observation)
+    capability = authority.lock("authority.lock", mode="initial")
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        with capability:
+            pass
+
+    assert exc.value.code == "LOCK_INITIALIZATION_UNKNOWN"
+    assert exc.value.completion_unknown is True
+    assert target.read_bytes() == b"COMPETITOR"
+    assert list(tmp_path.glob(".authority-*.tmp")) == []
+
+
 def test_windows_initial_lock_case_collision_is_effect_zero(tmp_path: Path) -> None:
     competitor = tmp_path / "AUTHORITY.LOCK"
     competitor.write_bytes(b"COMPETITOR")

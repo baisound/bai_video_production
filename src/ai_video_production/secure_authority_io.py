@@ -793,6 +793,7 @@ def _windows_open(
     directory: bool,
     delete_access: bool = False,
     share_write: bool = False,
+    share_delete: bool = False,
 ) -> int:
     if os.name != "nt":
         raise _fail("WINDOWS_BACKEND_UNAVAILABLE")
@@ -811,9 +812,12 @@ def _windows_open(
     ]
     create_file.restype = wintypes.HANDLE
     access = 0x80000000 | (0x40000000 if writable else 0) | (0x00010000 if delete_access else 0)
-    # Delete sharing is intentionally absent: an opened ancestor or target
-    # cannot be renamed/reparsed out from under its operation.
-    share = 0x1 | (0x2 if directory or share_write else 0)
+    # Delete sharing is intentionally absent for authority-bearing opens: an
+    # opened ancestor or target cannot be renamed/reparsed out from under its
+    # operation.  A fresh read-only collision observer may opt in solely to
+    # satisfy the already-live winner's delete access; that observer never
+    # obtains delete access itself and the winner still denies outside delete.
+    share = 0x1 | (0x2 if directory or share_write else 0) | (0x4 if share_delete else 0)
     disposition = 1 if create_new else 3
     flags = 0x00200000 | (0x02000000 if directory else 0)  # OPEN_REPARSE_POINT | BACKUP_SEMANTICS
     handle = create_file(str(path), access, share, None, disposition, flags, None)
@@ -1168,17 +1172,25 @@ class _SecureFileLock:
                 initial_lease = self.__owner._write_temp(parent, b"\0", share_write=True)
                 self.__owner._stage("before_initial_lock_publish")
                 publish_state: Literal["OWNED", "FOREIGN_COLLISION", "UNKNOWN"] | None = None
+                publish_failure: BaseException | None = None
                 try:
                     self.__owner._rename_noreplace(parent, initial_lease)
                     initial_published = True
                 except BaseException as publish_error:
+                    publish_failure = publish_error
                     publish_state = self.__owner._classify_failed_noreplace(
                         parent,
                         initial_lease,
                         publish_error,
                     )
                 if publish_state == "FOREIGN_COLLISION":
-                    raise _fail("LOCK_CREATE_COLLISION") from None
+                    if self.__owner._classify_initial_lock_loser(
+                        self.__relative_path, initial_lease, publish_failure
+                    ):
+                        raise _fail("LOCK_CREATE_COLLISION") from None
+                    raise _fail(
+                        "LOCK_INITIALIZATION_UNKNOWN", completion_unknown=True
+                    ) from None
                 if publish_state is not None:
                     initial_published = publish_state == "OWNED"
                     initial_effect_unknown = True
@@ -1481,6 +1493,7 @@ class SecureAuthorityIO:
         create_new: bool = False,
         delete_access: bool = False,
         share_write: bool = False,
+        share_delete: bool = False,
     ) -> int:
         fd: int | None = None
         try:
@@ -1492,6 +1505,7 @@ class SecureAuthorityIO:
                     directory=False,
                     delete_access=delete_access,
                     share_write=share_write,
+                    share_delete=share_delete,
                 )
             else:
                 fd = os.open(
@@ -1939,6 +1953,69 @@ class SecureAuthorityIO:
         ):
             return "FOREIGN_COLLISION"
         return "UNKNOWN"
+
+    def _classify_initial_lock_loser(
+        self,
+        relative_path: str,
+        lease: _TempLease,
+        failure: BaseException,
+    ) -> bool:
+        """Fresh read-only classification for an initial-lock no-replace loser.
+
+        This deliberately does not reuse the loser's pre-publication parent pin:
+        a concurrent winner may have changed that namespace after it was pinned.
+        Only the exact native collision plus a fresh stable regular-target
+        observation is a confirmed loser outcome.  The target may be a live
+        one-byte lock winner or an arbitrary pre-existing foreign file: its
+        bytes are deliberately not interpreted by the losing create capability.
+        No lock/write capability is acquired here.
+        """
+
+        if not (
+            isinstance(failure, SecureAuthorityIOError)
+            and failure.code == "DESTINATION_EXISTS"
+        ):
+            return False
+        parent: _PinnedParent | None = None
+        fd: int | None = None
+        try:
+            if not _same_file_object(_identity(os.fstat(lease.fd)), lease.identity):
+                return False
+            parent = self._pin_parent(relative_path)
+            # The winner can retain a write-capable live handle.  This remains a
+            # read-only observation, but must share write access so Windows can
+            # open the same stable object; all identity/security checks below
+            # still reject a mutation or namespace race.
+            fd = self._open_target(
+                parent,
+                writable=False,
+                share_write=True,
+                share_delete=True,
+            )
+            winner = self._bind_regular(parent, fd)
+            security = self._namespace_security_commitment(parent, fd, winner)
+            if _identity(os.fstat(fd)) != winner or _identity(os.lstat(parent.target)) != winner:
+                return False
+            if self._namespace_security_commitment(parent, fd, winner) != security:
+                return False
+            parent.verify()
+            return True
+        except (OSError, SecureAuthorityIOError):
+            return False
+        finally:
+            close_failed = False
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    close_failed = True
+            if parent is not None:
+                try:
+                    parent.close()
+                except SecureAuthorityIOError:
+                    close_failed = True
+            if close_failed:
+                return False
 
     def _validate_temp_lease(self, parent: _PinnedParent, lease: _TempLease) -> None:
         if lease.closed:

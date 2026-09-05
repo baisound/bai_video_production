@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-068: AIO-GRAPH-001のinitial-lock競合をfresh read-onlyで分類し、安定したforeign targetまたはlive winnerだけをbody-free collisionとして扱うfail-closed契約とfocused fault/contention testsを追加しました。Windows native実行、Release、Deploy、Production Activationは開始しません。
+
 ・TASK-073: Owner Voice Local WAVの14スロットReceiptRefV2構成、候補座標、G0-G12状態導出、fixture lineage、canonical self-hashを非権威read modelとして追加しました。実音声、model/provider、filesystem/process、Asset/Timeline/Export、native、Release/Deploy/Productionは開始しません。
 
 ・TASK-046: Q2からQ3へのbody-free合成受領契約を追加し、Product authorityなし・Q2 producer未接続・Q3 preflight blockedをfail-closedで検証可能にしました。実音声、native、Dataset、Training、model load/inference、Release/Deploy/Productionは開始しません。

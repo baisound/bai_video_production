@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-075: TASK-073向けに、実音声や推論を伴わないUNKNOWN状態の合成実行結果fixtureを追加し、canonical self-hash、field order、改ざん・権限昇格拒否を検証可能にしました。実Owner音声、model/provider、native、Release、Deploy、Production Activationは開始しません。
+
 ・TASK-048: OBS録音原本からspeech-continuous WAVを構成する非Native仕上げ契約を追加し、無音除去、fade、peak/clipping/dropout/room-tone評価、エアコンON/OFF A/B、片側基準欠落、0 dBFS境界をfail-closedで検証可能にしました。実音声、native、Release、Deploy、Production Activationは開始しません。
 
 ・TASK-068: Windowsの同時initial-lock作成時に、winnerによる親ディレクトリのmtime更新をancestor置換と誤分類しないよう照合を安定化しました。device/inode/type/reparseとpermission modeは引き続きfail-closedで固定し、競合loserを決定的に`LOCK_CREATE_COLLISION`として返します。native real-data、Release、Deploy、Production Activationは開始しません。

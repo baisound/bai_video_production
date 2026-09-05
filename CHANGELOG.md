@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-048: OBS録音原本からspeech-continuous WAVを構成する非Native仕上げ契約を追加し、無音除去、fade、peak/clipping/dropout/room-tone評価、エアコンON/OFF A/B、片側基準欠落、0 dBFS境界をfail-closedで検証可能にしました。実音声、native、Release、Deploy、Production Activationは開始しません。
+
 ・TASK-068: AIO-GRAPH-001のinitial-lock競合をfresh read-onlyで分類し、安定したforeign targetまたはlive winnerだけをbody-free collisionとして扱うfail-closed契約とfocused fault/contention testsを追加しました。Windows native実行、Release、Deploy、Production Activationは開始しません。
 
 ・TASK-073: Owner Voice Local WAVの14スロットReceiptRefV2構成、候補座標、G0-G12状態導出、fixture lineage、canonical self-hashを非権威read modelとして追加しました。実音声、model/provider、filesystem/process、Asset/Timeline/Export、native、Release/Deploy/Productionは開始しません。

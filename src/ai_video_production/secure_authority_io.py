@@ -1460,7 +1460,13 @@ class SecureAuthorityIO:
                 )
                 opened = _identity(os.fstat(opened_fd))
                 _require_directory(opened)
-                if named != opened:
+                # A concurrent no-replace creation may update directory
+                # metadata without replacing the pinned ancestor itself.  The
+                # security-relevant mode must nevertheless remain identical.
+                if (
+                    not _same_ancestor_object(named, opened)
+                    or named.mode != opened.mode
+                ):
                     os.close(opened_fd)
                     opened_fd = None
                     raise _fail("ANCESTOR_BINDING_MISMATCH")

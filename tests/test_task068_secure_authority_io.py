@@ -894,6 +894,75 @@ def test_initial_lock_contention_has_one_winner_and_one_stable_loser_per_run(
         )
 
 
+def test_parent_metadata_change_between_lstat_and_open_keeps_same_ancestor_bound(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A concurrent entry creation may update directory metadata, not identity."""
+
+    authority = SecureAuthorityIO(tmp_path)
+    real_open = authority._open_directory
+    changed = False
+
+    def mutate_metadata_then_open(*args: object, **kwargs: object) -> int:
+        nonlocal changed
+        if not changed:
+            before = os.stat(tmp_path)
+            os.utime(
+                tmp_path,
+                ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000),
+            )
+            changed = True
+        return real_open(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(authority, "_open_directory", mutate_metadata_then_open)
+
+    parent = authority._pin_parent("authority.lock")
+    try:
+        parent.verify()
+    finally:
+        parent.close()
+
+    assert changed
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_parent_mode_change_between_lstat_and_open_is_binding_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A security-relevant mode change cannot be mistaken for metadata churn."""
+
+    from ai_video_production import secure_authority_io as secure_io
+
+    authority = SecureAuthorityIO(tmp_path)
+    real_identity = secure_io._identity
+    identity_calls = 0
+
+    def change_opened_mode(value: os.stat_result) -> ArtifactIdentity:
+        nonlocal identity_calls
+        identity_calls += 1
+        identity = real_identity(value)
+        if identity_calls == 2:
+            return ArtifactIdentity(
+                device=identity.device,
+                inode=identity.inode,
+                mode=identity.mode ^ stat.S_IWUSR,
+                nlink=identity.nlink,
+                size=identity.size,
+                mtime_ns=identity.mtime_ns,
+                reparse_point=identity.reparse_point,
+            )
+        return identity
+
+    monkeypatch.setattr(secure_io, "_identity", change_opened_mode)
+
+    with pytest.raises(SecureAuthorityIOError) as exc:
+        authority._pin_parent("authority.lock")
+
+    _assert_code(exc, "ANCESTOR_BINDING_MISMATCH")
+    assert identity_calls >= 2
+    assert list(tmp_path.iterdir()) == []
+
+
 @pytest.mark.parametrize(
     ("fail_target_close", "fail_parent_close"),
     [(True, False), (False, True), (True, True)],

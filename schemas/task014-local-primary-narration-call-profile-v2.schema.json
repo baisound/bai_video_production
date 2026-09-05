@@ -1,0 +1,477 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai.task014.local-primary-narration-call-profile.v2",
+  "title": "TASK-014 Local Primary Narration Call Profile V2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "record_type",
+    "task_owner",
+    "profile_id",
+    "profile_revision",
+    "route_mode",
+    "intended_usage",
+    "parent_profile_sha256",
+    "compiled_at",
+    "expires_at",
+    "project_id",
+    "project_manifest_revision",
+    "project_manifest_sha256",
+    "installed_session_sha256",
+    "operation_plan_id",
+    "operation_plan_sha256",
+    "callable_envelope_id",
+    "callable_envelope_sha256",
+    "render_admission_sha256",
+    "preflight_sha256",
+    "canonical_plan_sha256",
+    "subject_binding_receipt_sha256",
+    "plan_derivation_receipt_sha256",
+    "reference_transcript_receipt_sha256",
+    "reference_transcript_revision_sha256",
+    "reference_transcript_body_sha256",
+    "script_text_revision_sha256",
+    "preview_call_text_body_sha256",
+    "voice_profile_revision_sha256",
+    "route_selection_revision_sha256",
+    "registered_job_revision_sha256",
+    "render_operation_identity_sha256",
+    "authorization_sha256",
+    "engine_revision_sha256",
+    "model_artifact_sha256",
+    "runtime_sha256",
+    "code_revision_sha256",
+    "reference_asset_checksum_sha256",
+    "reference_profile_sha256",
+    "destination_policy_sha256",
+    "call_surface_sha256",
+    "required_artifact_class",
+    "required_sample_rate_hz",
+    "required_channels",
+    "required_sample_format",
+    "max_attempts",
+    "automatic_retry_allowed",
+    "fixture_lineage_sha256",
+    "decision",
+    "reason_codes",
+    "profile_sha256"
+  ],
+  "x-bai-field-order": [
+    "schema",
+    "record_type",
+    "task_owner",
+    "profile_id",
+    "profile_revision",
+    "route_mode",
+    "intended_usage",
+    "parent_profile_sha256",
+    "compiled_at",
+    "expires_at",
+    "project_id",
+    "project_manifest_revision",
+    "project_manifest_sha256",
+    "installed_session_sha256",
+    "operation_plan_id",
+    "operation_plan_sha256",
+    "callable_envelope_id",
+    "callable_envelope_sha256",
+    "render_admission_sha256",
+    "preflight_sha256",
+    "canonical_plan_sha256",
+    "subject_binding_receipt_sha256",
+    "plan_derivation_receipt_sha256",
+    "reference_transcript_receipt_sha256",
+    "reference_transcript_revision_sha256",
+    "reference_transcript_body_sha256",
+    "script_text_revision_sha256",
+    "preview_call_text_body_sha256",
+    "voice_profile_revision_sha256",
+    "route_selection_revision_sha256",
+    "registered_job_revision_sha256",
+    "render_operation_identity_sha256",
+    "authorization_sha256",
+    "engine_revision_sha256",
+    "model_artifact_sha256",
+    "runtime_sha256",
+    "code_revision_sha256",
+    "reference_asset_checksum_sha256",
+    "reference_profile_sha256",
+    "destination_policy_sha256",
+    "call_surface_sha256",
+    "required_artifact_class",
+    "required_sample_rate_hz",
+    "required_channels",
+    "required_sample_format",
+    "max_attempts",
+    "automatic_retry_allowed",
+    "fixture_lineage_sha256",
+    "decision",
+    "reason_codes",
+    "profile_sha256"
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "identity": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$"
+    },
+    "positiveRevision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+    }
+  },
+  "properties": {
+    "schema": {
+      "const": "bai.task014.local-primary-narration-call-profile.v2"
+    },
+    "record_type": {
+      "const": "LocalPrimaryNarrationCallProfileV2"
+    },
+    "task_owner": {
+      "const": "TASK-014"
+    },
+    "profile_id": {
+      "$ref": "#/$defs/identity"
+    },
+    "profile_revision": {
+      "$ref": "#/$defs/positiveRevision"
+    },
+    "route_mode": {
+      "const": "ZERO_SHOT_LOCAL"
+    },
+    "intended_usage": {
+      "const": "PREVIEW"
+    },
+    "parent_profile_sha256": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/digest"
+        }
+      ]
+    },
+    "compiled_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "expires_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "project_id": {
+      "$ref": "#/$defs/identity"
+    },
+    "project_manifest_revision": {
+      "$ref": "#/$defs/positiveRevision"
+    },
+    "project_manifest_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "installed_session_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "operation_plan_id": {
+      "$ref": "#/$defs/identity"
+    },
+    "operation_plan_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "callable_envelope_id": {
+      "$ref": "#/$defs/identity"
+    },
+    "callable_envelope_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "render_admission_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "preflight_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "canonical_plan_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "subject_binding_receipt_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "plan_derivation_receipt_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "reference_transcript_receipt_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "reference_transcript_revision_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "reference_transcript_body_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "script_text_revision_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "preview_call_text_body_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "voice_profile_revision_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "route_selection_revision_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "registered_job_revision_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "render_operation_identity_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "authorization_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "engine_revision_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "model_artifact_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "runtime_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "code_revision_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "reference_asset_checksum_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "reference_profile_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "destination_policy_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "call_surface_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "required_artifact_class": {
+      "const": "STAGED_NARRATION_PCM_WAV_48000_MONO"
+    },
+    "required_sample_rate_hz": {
+      "const": 48000
+    },
+    "required_channels": {
+      "const": 1
+    },
+    "required_sample_format": {
+      "const": "PCM_S24LE"
+    },
+    "max_attempts": {
+      "const": 1
+    },
+    "automatic_retry_allowed": {
+      "const": false
+    },
+    "fixture_lineage_sha256": {
+      "$ref": "#/$defs/digest"
+    },
+    "decision": {
+      "enum": [
+        "READY_FOR_TASK075_DISPATCH",
+        "BLOCKED",
+        "UNKNOWN"
+      ]
+    },
+    "reason_codes": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "ADMISSION_NOT_READY",
+          "AUTHORIZATION_EXPIRED",
+          "AUTHORIZATION_SCOPE_MISMATCH",
+          "CALLABLE_ENVELOPE_BINDING_MISMATCH",
+          "CALLABLE_EVIDENCE_EXPIRED",
+          "CALLABLE_TIME_ORDER_MISMATCH",
+          "CALL_PROFILE_TIME_ORDER_MISMATCH",
+          "CANONICAL_AUTHORITY_NOT_CONFIRMED",
+          "CANONICAL_BINDING_UNRESOLVED",
+          "CANONICAL_TRANSCRIPT_AUTHORITY_NOT_CONFIRMED",
+          "ENGINE_BINDING_MISMATCH",
+          "JOB_BINDING_MISMATCH",
+          "OPERATION_IDENTITY_MISMATCH",
+          "PLAN_CHUNK_INTEGRITY_MISMATCH",
+          "PLAN_COORDINATE_MISMATCH",
+          "PLAN_DERIVATION_EXPIRED",
+          "PLAN_DERIVATION_MISMATCH",
+          "PLAN_DERIVATION_NOT_PROVIDED",
+          "PLAN_DERIVATION_UNKNOWN",
+          "PREFLIGHT_BINDING_MISMATCH",
+          "PREFLIGHT_NOT_READY",
+          "PREVIEW_CALL_TEXT_DERIVATION_MISMATCH",
+          "PREVIEW_TEXT_TOO_LONG",
+          "PREVIEW_USAGE_REQUIRED",
+          "REFERENCE_TRANSCRIPT_BINDING_MISMATCH",
+          "REFERENCE_TRANSCRIPT_EXPIRED",
+          "REFERENCE_TRANSCRIPT_MISMATCH",
+          "REFERENCE_TRANSCRIPT_NOT_PROVIDED",
+          "REFERENCE_TRANSCRIPT_UNKNOWN",
+          "RESOURCE_OR_DESTINATION_MISMATCH",
+          "SUBJECT_BINDING_EXPIRED",
+          "SUBJECT_BINDING_MISMATCH",
+          "SUBJECT_BINDING_NOT_PROVIDED",
+          "SUBJECT_BINDING_UNKNOWN",
+          "TRUSTED_EVALUATION_TIME_NOT_CONFIRMED",
+          "VOICE_PROFILE_NOT_ADMITTED",
+          "VOICE_PROFILE_REVISION_MISMATCH",
+          "ZERO_SHOT_REFERENCE_MISMATCH",
+          "ZERO_SHOT_ROUTE_REQUIRED"
+        ]
+      }
+    },
+    "profile_sha256": {
+      "$ref": "#/$defs/digest"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "profile_revision": {
+            "const": 1
+          }
+        },
+        "required": [
+          "profile_revision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parent_profile_sha256": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "parent_profile_sha256": {
+            "$ref": "#/$defs/digest"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "READY_FOR_TASK075_DISPATCH"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_codes": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "BLOCKED"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_codes": {
+            "contains": {
+              "enum": [
+                "ADMISSION_NOT_READY",
+                "AUTHORIZATION_EXPIRED",
+                "AUTHORIZATION_SCOPE_MISMATCH",
+                "CALLABLE_ENVELOPE_BINDING_MISMATCH",
+                "CALLABLE_EVIDENCE_EXPIRED",
+                "CALLABLE_TIME_ORDER_MISMATCH",
+                "CALL_PROFILE_TIME_ORDER_MISMATCH",
+                "ENGINE_BINDING_MISMATCH",
+                "JOB_BINDING_MISMATCH",
+                "OPERATION_IDENTITY_MISMATCH",
+                "PLAN_CHUNK_INTEGRITY_MISMATCH",
+                "PLAN_COORDINATE_MISMATCH",
+                "PLAN_DERIVATION_EXPIRED",
+                "PLAN_DERIVATION_MISMATCH",
+                "PREFLIGHT_BINDING_MISMATCH",
+                "PREFLIGHT_NOT_READY",
+                "PREVIEW_CALL_TEXT_DERIVATION_MISMATCH",
+                "PREVIEW_TEXT_TOO_LONG",
+                "PREVIEW_USAGE_REQUIRED",
+                "REFERENCE_TRANSCRIPT_BINDING_MISMATCH",
+                "REFERENCE_TRANSCRIPT_EXPIRED",
+                "REFERENCE_TRANSCRIPT_MISMATCH",
+                "RESOURCE_OR_DESTINATION_MISMATCH",
+                "SUBJECT_BINDING_EXPIRED",
+                "SUBJECT_BINDING_MISMATCH",
+                "VOICE_PROFILE_NOT_ADMITTED",
+                "VOICE_PROFILE_REVISION_MISMATCH",
+                "ZERO_SHOT_REFERENCE_MISMATCH",
+                "ZERO_SHOT_ROUTE_REQUIRED"
+              ]
+            },
+            "minContains": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "decision": {
+            "const": "UNKNOWN"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "then": {
+        "properties": {
+          "reason_codes": {
+            "minItems": 1,
+            "items": {
+              "enum": [
+                "CANONICAL_AUTHORITY_NOT_CONFIRMED",
+                "CANONICAL_BINDING_UNRESOLVED",
+                "CANONICAL_TRANSCRIPT_AUTHORITY_NOT_CONFIRMED",
+                "PLAN_DERIVATION_NOT_PROVIDED",
+                "PLAN_DERIVATION_UNKNOWN",
+                "REFERENCE_TRANSCRIPT_NOT_PROVIDED",
+                "REFERENCE_TRANSCRIPT_UNKNOWN",
+                "SUBJECT_BINDING_NOT_PROVIDED",
+                "SUBJECT_BINDING_UNKNOWN",
+                "TRUSTED_EVALUATION_TIME_NOT_CONFIRMED"
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

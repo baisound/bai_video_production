@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-046: Q2からQ3へのbody-free合成受領契約を追加し、Product authorityなし・Q2 producer未接続・Q3 preflight blockedをfail-closedで検証可能にしました。実音声、native、Dataset、Training、model load/inference、Release/Deploy/Productionは開始しません。
+
 ・TASK-046: Voice Studio Quick Cloneの復旧・読戻しをschema-boundかつfail-closedな契約として追加しました。実際のVoice処理、Provider、モデルdownload、native、Release/Deploy/Productionは開始しません。
 
 ・TASK-063: モンタージュ学習Bridgeのinstaller選択ルート相対readbackをfixture-onlyで厳格化し、root/ancestor検証、pair lifecycle、closed public projection、schema readbackをfail-closedで検証可能にしました。native installer/install/repair/uninstall、Provider、Release/Deploy/Production Activationは開始しません。

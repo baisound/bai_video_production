@@ -1,6 +1,6 @@
 # TASK-068 verification checkpoint
 
-Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / NO_PUSH`
+Status: `SUCCESSOR_R3_H1_H2_CORRECTED / EXACT_HEAD_REVIEW_COMPLETE / CANONICALIZATION_COMPLETE / COMMIT_READY / PLATFORM_NATIVE_NOT_CONFIRMED`
 
 ## Bound source
 
@@ -8,7 +8,8 @@ Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / N
 - Current canonical comparison and candidate base: `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`
 - Corrective source/test target: `293dd7143e6215ca9d19ecca9edff16dd4a08b15`
 - Target parent: `3bf28d74a02741b189663bda7194159c34d17f0b`
-- H1/H2 corrective review: fresh review pending
+- H1/H2 corrective review: fresh source Critic/Judge completed. Owner-delegated
+  task-local canonicalization permits commit and non-force push.
 - Branch: `codex/task-068-secure-authority-io-successor-r3`
 - Dedicated worktree: `task-068-secure-authority-io-r3`
 - Current corrective source raw SHA-256 / Git blob: `52C251E164B8D6B7B7A19F7526F9705DEE0B8008419889220FBB643791B07620` / `34088d3f17d391d1f4acc2be962690f16b67e303`
@@ -32,10 +33,10 @@ Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / N
 
 ## Current H1/H2 execution state
 
-- Fixed target `293dd7143e6215ca9d19ecca9edff16dd4a08b15`: syntax, focused,
-  boundary, and Windows-native runtime execution are `NOT_CONFIRMED`.
-  Neither local Python nor WSL is available after restart; no install or
-  repeated denied route was attempted.
+- Fixed target `293dd7143e6215ca9d19ecca9edff16dd4a08b15`: focused generic
+  plus platform-selected test execution is `228 passed / 24 skipped` with the
+  bound local runner. The skipped cases remain native POSIX/Windows runtime
+  `NOT_CONFIRMED`; no result is promoted to a cross-platform runtime PASS.
 - `git diff --check` for the H1/H2 target transition: PASS; line-ending
   conversion warnings only. This is static evidence, not a runtime PASS.
 - Full repository regression is `NOT_CONFIRMED` for the H1/H2 target.
@@ -58,7 +59,12 @@ Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / N
   Critical/High `0/0` binds predecessor `516fc73d449ae8aa76845eaca3a2b193f5c5f6d1`,
   not the H1/H2 target.
 - H1 generic and Windows negative coverage is present in the corrective source.
-  Runtime execution for the H1/H2 bytes remains `NOT_CONFIRMED`.
+  A fresh independent Critic on `1c725f3` reported `C/H/M/L = 0/0/0/0`.
+  A final independent Judge reported source/evidence `C/H/M/L = 0/0/0/0`.
+  Owner-delegated task-local canonicalization resolved the commit/push gate;
+  platform-native skips remain `NOT_CONFIRMED`.
 - `h1-h2-source-test-binding-2026-09-02.md` binds the three current artifacts to the fixed target without granting review, runtime, or Product authority.
-- PR #497 CI is evidence for its earlier head only. The H1/H2 exact head needs fresh review; `COMMIT STOP` and `NO_PUSH` remain active.
+- PR #497 CI is evidence for its earlier head only. The H1/H2 exact head has
+  fresh local review and Owner-delegated task-local canonicalization. Draft PR
+  creation remains queued for the PR integration successor.
 - TASK-069 source mutation remains `START0` until TASK-068 is canonical on `main` and the TASK-069 dependency/start gate passes.

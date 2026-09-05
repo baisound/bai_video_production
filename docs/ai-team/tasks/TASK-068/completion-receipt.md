@@ -1,6 +1,6 @@
 # TASK-068 completion receipt
 
-Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / NO_PUSH / CANONICALIZATION_PENDING`
+Status: `SUCCESSOR_R3_H1_H2_CORRECTED / EXACT_HEAD_REVIEW_COMPLETE / CANONICALIZATION_COMPLETE / COMMIT_READY / PLATFORM_NATIVE_NOT_CONFIRMED`
 
 ## Bound implementation
 
@@ -8,7 +8,8 @@ Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / N
 - Current canonical comparison and candidate base: `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`
 - Corrective source/test target: `293dd7143e6215ca9d19ecca9edff16dd4a08b15`
 - Target parent: `3bf28d74a02741b189663bda7194159c34d17f0b`
-- H1/H2 corrective review: fresh review pending
+- H1/H2 corrective review: fresh local Critic/Judge evidence is bound below;
+  Owner-delegated task-local canonicalization permits commit and non-force push.
 - Branch: `codex/task-068-secure-authority-io-successor-r3`
 - Source: `src/ai_video_production/secure_authority_io.py`
 - Current corrective source raw SHA-256 / Git blob: `52C251E164B8D6B7B7A19F7526F9705DEE0B8008419889220FBB643791B07620` / `34088d3f17d391d1f4acc2be962690f16b67e303`
@@ -17,23 +18,27 @@ Status: `SUCCESSOR_R3_H1_H2_REWORK / EXACT_HEAD_REVIEW_PENDING / COMMIT_STOP / N
 - Earlier normalized and Windows-worktree hashes are predecessor evidence only and do not bind the H1/H2 target.
 - Profile: `DEV-4 / IMMUTABLE_ONLY_V1`
 
-This task-local receipt creates no canonical dependency authority. The r3
-committed candidate above is corrected only within the ten Allowed Files for
-H1/H2. Earlier independent Tester/Critic/Judge closure and PR #497 CI remain
-historical evidence only. Fresh exact-head closure is required before push or
-Draft PR. TASK-069 real binding remains stopped until TASK-068 is merged into
-canonical `main` and its dependency gate is rebound.
+This task-local receipt creates no downstream dependency authority. The r3
+candidate is corrected only within the ten Allowed Files for H1/H2. Earlier
+independent Tester/Critic/Judge closure and PR #497 CI remain historical
+evidence only. Exact-head closure and Owner-delegated task-local
+canonicalization permit commit and non-force push; Draft PR remains queued.
+TASK-069 real binding remains stopped until TASK-068 is merged into canonical
+`main` and its dependency gate is rebound.
 
 ## Current H1/H2 execution state
 
-- Target source/test `293dd7143e6215ca9d19ecca9edff16dd4a08b15`: syntax,
-  focused, boundary, and Windows-native runtime execution are all
-  `NOT_CONFIRMED` on this restarted host. Local Python and WSL are unavailable;
-  no install or repeated denied route was attempted.
+- Target source/test `293dd7143e6215ca9d19ecca9edff16dd4a08b15`: the focused
+  generic plus platform-selected suite ran as `228 passed / 24 skipped` with
+  the bound local runner. Skipped POSIX/Windows native cases remain
+  `NOT_CONFIRMED`; this is not a cross-platform runtime PASS.
 - H1 generic and Windows negatives are present in the target source, but their
   presence is not a runtime PASS.
 - `h1-h2-source-test-binding-2026-09-02.md` binds the three current artifacts to the fixed target without granting review, runtime, or Product authority.
-- Successor-r3 H1/H2 exact-head Critic/Judge rebind is pending; `COMMIT STOP` and `NO_PUSH` remain active until corrective review is complete.
+- Successor-r3 H1/H2 exact-head Critic and final Judge each reported
+  source/evidence `C/H/M/L = 0/0/0/0`. Owner-delegated task-local
+  canonicalization permits commit and non-force push; platform-native skips
+  remain `NOT_CONFIRMED`.
 - `git diff --check`: PASS; line-ending conversion warnings only.
 
 ## Historical predecessor execution evidence (not current)

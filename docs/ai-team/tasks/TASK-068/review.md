@@ -18,9 +18,12 @@ touches those paths.
 
 The H1/H2 corrective diff adds only lexical Windows superscript device-alias
 rejection, generic/Windows body-free effect-zero negatives, and current r3
-provenance.  Earlier Tester/Critic/Judge and PR #497 CI are historical
-evidence only.  The new exact head requires fresh review; local Python/WSL
-runtime execution is `NOT_CONFIRMED`, so `COMMIT STOP` and `NO_PUSH` remain.
+provenance. Earlier Tester/Critic/Judge and PR #497 CI are historical evidence
+only. A fresh source Critic and final Judge each reported source/evidence
+`C/H/M/L = 0/0/0/0`; Owner-delegated task-local canonicalization permits
+commit and non-force push. Platform-native skips remain `NOT_CONFIRMED`.
+The bound focused suite ran `228 passed / 24 skipped`; platform-native skips
+remain `NOT_CONFIRMED` and are not promoted to runtime PASS.
 
 ## Findings addressed in the transition diff
 

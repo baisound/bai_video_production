@@ -1,6 +1,6 @@
 # TASK-068 — Secure Authority Artifact I/O Foundation
 
-Status: `SUCCESSOR_R3_H1_H2_REWORK / IMMUTABLE_ONLY_V1 / COMMIT_STOP / NO_PUSH`
+Status: `SUCCESSOR_R3_H1_H2_CORRECTED / IMMUTABLE_ONLY_V1 / CANONICALIZATION_COMPLETE / COMMIT_READY`
 
 ## Responsibility
 
@@ -39,7 +39,7 @@ Owner-approved source implementation and focused verification are authorized. Re
 - Every exported operation and lock lifecycle reconstructs public failures at a detached boundary; parser documents, verifier exceptions, OS filenames, private cause, and private context are never retained on the returned error.
 - Current canonical base: `origin/main@97a948de32ae6d3383f1f3b2fd5456c879e75b70`.
 - Branch: `codex/task-068-secure-authority-io-successor-r3`; corrective source/test target: `293dd7143e6215ca9d19ecca9edff16dd4a08b15`; predecessor: `3bf28d74a02741b189663bda7194159c34d17f0b`.
-- H1 adds lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, including case and extension variants. Exact source/test identities are bound in `h1-h2-source-test-binding-2026-09-02.md`; the H1/H2 corrective exact head requires fresh independent review, and `COMMIT STOP` and `NO_PUSH` remain active.
+- H1 adds lexical fail-closed rejection for Windows `COM¹`/`COM²`/`COM³` and `LPT¹`/`LPT²`/`LPT³` aliases, including case and extension variants. Exact source/test identities are bound in `h1-h2-source-test-binding-2026-09-02.md`; exact-head focused evidence and independent Critic/Judge are complete. Owner-delegated task-local canonicalization permits commit and non-force push. Platform-native skips remain `NOT_CONFIRMED`.
 
 ## Dependencies and next task
 

@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+・TASK-014: ローカル音声の実行直前境界に、V1 callable envelopeとsubject／plan／transcriptのfresh typed receiptを再結合するcall profile V2を追加しました。strict schema、期限・foreign receipt・改ざん拒否をfail-closedで検証し、実音声、model/provider、native、Release、Deploy、Production Activationは開始しません。
+
 ・TASK-075: TASK-073向けに、実音声や推論を伴わないUNKNOWN状態の合成実行結果fixtureを追加し、canonical self-hash、field order、改ざん・権限昇格拒否を検証可能にしました。実Owner音声、model/provider、native、Release、Deploy、Production Activationは開始しません。
 
 ・TASK-048: OBS録音原本からspeech-continuous WAVを構成する非Native仕上げ契約を追加し、無音除去、fade、peak/clipping/dropout/room-tone評価、エアコンON/OFF A/B、片側基準欠落、0 dBFS境界をfail-closedで検証可能にしました。実音声、native、Release、Deploy、Production Activationは開始しません。

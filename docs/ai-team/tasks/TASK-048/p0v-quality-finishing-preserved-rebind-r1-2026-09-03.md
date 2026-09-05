@@ -10,24 +10,25 @@
 - State: read-only preservation and dependency rebind; implementation authority
   is false.
 
-The original sole writer has frozen the exact3 candidate in immutable commit
-`3361023bab02bf2d7a593231ccc81ba6b2d0b9b3` on
-`codex/task-048-p0v-finishing-r0`:
+The current path-scoped preservation identity is immutable commit
+`b44ec1ff316d241e5afc94149b8902f7e306c9b3` on
+`codex/task-048-p0v-finishing-r0`. Relative to bound main, its TASK-048 delta is
+the following exact4:
 
+- `docs/ai-team/tasks/TASK-048/p0v-native-environment-ab-runbook-candidate-2026-09-05.md`;
 - `docs/ai-team/tasks/TASK-048/p0v-real-wav-finishing-design-and-evidence.md`;
 - `src/ai_video_production/voice_quality_audio_finishing.py`;
 - `tests/test_task048_voice_quality_audio_finishing.py`.
 
-The commit parent is historical base `4d233c8`; all three committed paths remain
-absent from current main, and the commit patch applies to the current design
-worktree. The owner worktree HEAD remains `3361023` at ahead 1/behind 6, but it
-now contains concurrent unstaged modifications to the same exact3. This unit
-does not modify, discard, copy or treat those later bytes as accepted Evidence.
-The immutable commit snapshot independently reruns focused 156/156 PASS; the
-original owner also reported focused 156/156 PASS, `py_compile`/diff-check PASS
-and independent Critic/Tester C/H/M/L 0/0/0/0. These are committed-snapshot
-Evidence, not native/audio proof. The commit is not on main and has not been
-copied, amended, rebased or merged by this unit.
+The preserved worktree is clean at `b44ec1f`; its exact4 is absent from current
+main and is preserved only as a path-scoped successor. Historical commit
+`3361023bab02bf2d7a593231ccc81ba6b2d0b9b3` is not an ancestor of `b44ec1f` and
+is superseded for this preservation decision. This unit does not modify, discard,
+copy, merge or rebase either branch or consume any uncommitted bytes. The
+`b44ec1f` fixture-only snapshot reports focused 167 PASS plus `py_compile` and
+diff-check PASS; the Native A/B runbook is an inventory of future native checks,
+not execution Evidence. These results do not establish real/native/private audio
+quality or Product authority, which remain `NOT_CONFIRMED`.
 
 ## Reusable design content
 
@@ -89,7 +90,16 @@ Speech-continuous finishing MUST:
   adoption/registration/readback before either becomes a canonical Product Asset;
 - remove only long confirmed non-speech; preserve short natural pauses, breaths,
   endings, uncertain/low-SNR regions and configured speech padding/hangover;
-- use verified zero crossing or short fades/crossfades at edit boundaries;
+- use `boundary_mode=EQUAL_POWER_CROSSFADE` and `fade_samples=240` exactly at
+  every speech-continuous join; bind one boundary-evidence digest per join with
+  the retained/removed map and boundary count, and reject every other mode or
+  239/241-sample fade;
+- calculate `crossfade_overlap_samples=boundary_count*240` and
+  `output_sample_count=retained_sample_count-crossfade_overlap_samples`; for
+  mono `PCM_S24LE`, bind input/output payload bytes respectively as
+  `input/output_sample_count*3` and reduction bytes as
+  `(removed_sample_count+crossfade_overlap_samples)*3`, rejecting every
+  boundary/overlap/output-count/PCM24-byte mismatch or receipt tamper;
 - prove consonant attack and speech-tail preservation;
 - avoid forced loudness normalization/limiting/denoising unless the exact
   operation policy owns it;
@@ -128,6 +138,10 @@ The future Q2 terminal handoff to TASK-046 Q3 is a single sealed body-free
 record over the exact processed and training-copy Asset pairs. It must bind each
 Asset's logical ref/revision/checksum/sample count, custody, TASK-003 adoption
 and current readback; quality/speech-continuous/range-map/sample-map receipts;
+the exact `EQUAL_POWER_CROSSFADE`/240-sample boundary binding, boundary count
+and evidence digest per join, overlap/output-sample equations and mono PCM24
+payload-byte arithmetic; and reject 239/241 fades, other boundary modes, receipt
+tamper and all related arithmetic mismatches;
 the current data-preparation Consent; policy/analyzer/code/runtime digests; and
 the assigned durable candidate, immutable publication/readback and post-
 selection currentness receipts. The owner of that durable Q2 transaction is
@@ -154,8 +168,9 @@ and creates no Product receipt or authority.
 - missing other-speaker/BGM classifier promoted to PASS;
 - overlapping/incomplete VAD coverage, all silence, short pause removal and
   uncertain interval removal;
-- consonant attack or speech tail damage, click boundary and fade/sample-map
-  mismatch;
+- consonant attack or speech tail damage, click boundary, non-equal-power mode,
+  239/241 fade, boundary-evidence/overlap/output-sample/PCM24-byte arithmetic
+  mismatch, receipt tamper or sample-map mismatch;
 - raw/processed/training-copy identity collision or in-place overwrite;
 - staged/private object presented as canonical without secure custody and exact
   TASK-003 adoption/readback;
@@ -183,12 +198,15 @@ sole-writer and fresh DEV-4 review before mutation. Its absence does not block
 capture transport or emergency stop, but suppresses readiness/target labels and
 forces `適正判定 未確定`.
 
-The frozen exact3 may be rebound into the coherent integration only when:
+The preserved `b44ec1f` exact4 may be rebound into the coherent integration only
+when:
 
-1. immutable commit `3361023b`, current owner/dirty status and sole-writer scope
-   are revalidated without consuming uncommitted bytes;
-2. current `origin/main`, path overlap and the committed patch applicability are
-   revalidated at integration time without mutating the preserved worktree;
+1. immutable commit `b44ec1f`, its clean owner worktree and sole-writer scope
+   are revalidated without consuming uncommitted bytes; historical `3361023b`
+   remains superseded and is never reintroduced;
+2. current `origin/main`, exact4 path overlap and the committed patch
+   applicability are revalidated at integration time without mutating the
+   preserved worktree or merging/rebasing the branch wholesale;
 3. this Q1/Q2/Q3 dependency rebind, including secure custody and TASK-003
    adoption/readback, is incorporated without weakening the preserved
    conservative policy;
@@ -214,7 +232,10 @@ Activation are prohibited.
 
 ## Acceptance for this rebind
 
-- frozen exact3 commit identity and no-touch condition are explicit;
+- current `b44ec1f` exact4 preservation identity, historical `3361023b`
+  supersession and no-touch/no-wholesale-branch condition are explicit;
+- 167-PASS fixture evidence and the Native A/B runbook inventory are recorded
+  without promoting native/private audio to PASS;
 - all Owner HVAC, dBFS, segment and speech-continuous requirements are formal;
 - exact Q1 inputs and Q3 outputs are identified;
 - MUST/prohibited/negative/recovery boundaries are testable;

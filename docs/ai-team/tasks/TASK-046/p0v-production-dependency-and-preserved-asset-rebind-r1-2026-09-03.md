@@ -55,7 +55,7 @@ observations but are not a final quality authority.
 | TASK-078 E-C downstream design | `e549e13`; PR #495 design | not on main | out of the Owner-voice WAV/training critical path; retain only as unrelated downstream video design |
 | TASK-014 synthetic executor | `9d52e923a216bc11b7ecba4004dd63951657aab3`; exact2; historical base `4d233c8` | not on bound main `b7b2f33`; ahead 1/behind 6 with no exact-path collision; current-main successor recovery is separately owned | consume only after that successor lands; it remains synthetic and satisfies no production producer, compute, Human, custody, model-load or result-adoption dependency |
 | TASK-046 OBS intake synthetic Unit A | `c918d5ca95f0aa920ffd0e782928f832d6b94d99`; exact3; historical base `4d233c8` | pushed task branch, not on bound main `b7b2f33`; fresh patch/currentness revalidation required | recover only through a fresh-current successor as `SYNTHETIC_CONTRACT_TEST`; it rejects Owner audio and cannot be called by the production Q3 producer |
-| TASK-048 P-QC-P0V-FINISH-1 | immutable commit `3361023bab02bf2d7a593231ccc81ba6b2d0b9b3`; exact3; historical parent/base `4d233c8` | HEAD remains `3361023`, ahead 1/behind 6 and not on bound main `b7b2f33`; the owner worktree now has concurrent unstaged exact3 edits, which this unit preserves and does not inspect as authority | coherent-integration candidate is the committed `3361023` snapshot only; local rerun 156/156 PASS and independent C/H/M/L 0/0/0/0 apply to that commit, while later dirty bytes and native/audio remain NOT_CONFIRMED |
+| TASK-048 P-QC-P0V-FINISH-1 | current preservation tip `b44ec1ff316d241e5afc94149b8902f7e306c9b3`; TASK-048 exact4 relative to bound main: Native A/B runbook, finishing design/evidence, fixture source and focused test | not on bound main `b7b2f33`; the preserved worktree is clean at `b44ec1f`; `3361023bab02bf2d7a593231ccc81ba6b2d0b9b3` is a non-ancestor historical snapshot and is superseded for this preservation decision | preserve only the Task-048 exact4 path-scoped successor, never the branch wholesale; fixture-only focused 167 PASS and `py_compile`/diff-check PASS are Evidence, while the Native A/B runbook is a future-check inventory only; native/private audio remains NOT_CONFIRMED and no Product authority is created |
 
 Apart from the Quick Clone R3 already merged by PR #513, no preserved branch is
 merged, rebased or copied wholesale by this unit. Staged composition bytes and
@@ -137,6 +137,16 @@ training, and capture transport never aliases inference custody.
    OwnerSubject revision, exact Q1 Asset lineage, the allowed
    `QUALITY_FINISHING` and `TRAINING_COPY_CREATION` operations, output purposes,
    decision=`ALLOW`, policy revision, expiry and revocation currentness.
+   Speech-continuous joins are closed to
+   `boundary_mode=EQUAL_POWER_CROSSFADE` and `fade_samples=240` exactly. The
+   retained/removed map, boundary count and one boundary-evidence digest per join
+   bind `crossfade_overlap_samples=boundary_count*240`,
+   `output_sample_count=retained_sample_count-crossfade_overlap_samples`, and
+   mono `PCM_S24LE` payload arithmetic: input/output bytes are respectively
+   `input/output_sample_count*3`, while reduction bytes are
+   `(removed_sample_count+crossfade_overlap_samples)*3`. A 239/241-sample fade,
+   non-equal-power mode, boundary/overlap/output-count mismatch, PCM24 byte
+   mismatch or receipt tamper is not a Q2 terminal.
 3. **Q3 / TASK-046 — production private ingest and Dataset proposal.** Folder
    discovery, canonical Transcript identity, segment review, fingerprint dedupe
    and Dataset proposal bind the exact TASK-003-read-back Q2 processed and
@@ -203,6 +213,10 @@ versioned schema must bind all of the following in one canonical digest domain:
   TASK-003 current readback;
 - exact quality, speech-continuous, retained/removed/uncertain range-map and
   source-to-output sample-map receipt digests;
+- fixed `EQUAL_POWER_CROSSFADE` boundary mode, exact 240-sample fade, boundary
+  count/evidence, overlap/output-sample equations and PCM24 mono payload-byte
+  equations; the handoff rejects 239/241 fades and every receipt/arithmetic
+  mismatch;
 - policy, analyzer, producer-code and runtime digests;
 - immutable candidate digest, publication/readback digest, post-selection
   currentness digest, trusted created/observed/freshness coordinates,
@@ -238,8 +252,9 @@ Required handoff negatives include missing/unbound producer or durable owner,
 partial receipt sets, wrong owner/schema/version, stale/revoked/wrong-purpose
 Consent, Q1/Q2 subject mismatch, processed/training-copy identity collision,
 checksum/sample/range-map mismatch, wrong media/format/rate/channel/bit depth,
-publication/readback/CAS disagreement, duplicate/replay/lost-reply/expiry and
-host/private body leakage.
+239/241 fade, non-equal-power boundary mode, boundary/overlap/output-sample or
+PCM24 payload-byte arithmetic mismatch, publication/readback/CAS disagreement,
+duplicate/replay/lost-reply/expiry and host/private body leakage.
 
 ### Narration inference and result lane
 
@@ -464,7 +479,7 @@ dedicated worktree, sole writer and exact files.
 |---|---|---|---|
 | P0 meter policy | TASK-048 | new exact body-free display-policy producer; no Q1 audio or quality PASS | design/Allowed Files/sole writer allocated; absence suppresses labels but does not block transport capture |
 | Q1 capture/canonical receipt | TASK-047 | controller worker, versioned receipt parser, synthetic format vectors | this design accepted; canonical TASK-047 START dependency amended from future local VoiceProfileRevision to current OwnerSubject plus closed-purpose Consent; OwnerSubject/private-custody/trusted-time owners and exact receipts allocated; TASK-043 capture Job and TASK-003 Asset adoption/readback ABIs allocated; no owner overlap |
-| Q2 quality/finishing | TASK-048 | adopt or supersede preserved exact3 without changing its frozen bytes | Q1 producer and TASK-003 canonical readback landed; original dirty ownership/freeze resolved; design/Critic/Judge current; Q2 durable transaction/currentness owner and candidate/publication/readback/CAS/reconcile ABI separately allocated—fixture in-memory ledger is never Product proof |
+| Q2 quality/finishing | TASK-048 | re-author a fresh-current successor from preserved `b44ec1f` Task-048 exact4 only; never merge/rebase its branch wholesale | Q1 producer and TASK-003 canonical readback landed; `b44ec1f` path applicability/currentness and ownership revalidated; design/Critic/Judge current; Q2 durable transaction/currentness owner and candidate/publication/readback/CAS/reconcile ABI separately allocated—fixture in-memory ledger is never Product proof |
 | Q3 production intake adapter | TASK-046 | new nominal production ABI; no call/relabel of synthetic Unit A | Q2 producer and TASK-003 processed/training-copy adoption/readback landed; `c918d5ca` synthetic branch separately reviewed/landed |
 | Q4 adoption/snapshot | TASK-046 | existing Dataset owner APIs only | Q3 exact candidate review complete |
 | training durable Job/head | TASK-043 | distinct `VOICE_MODEL_TRAINING` currentness behind `TrainingDurableJobBinding` | exact Project/head producer landed; no Dataset-adoption Job identity reuse |

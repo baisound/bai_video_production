@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import pickle
+import shutil
 import threading
 from typing import Any
 
@@ -63,7 +64,7 @@ class SyntheticCipher:
 def root_binding(root: Path, cipher: Any) -> windows.WindowsPrivateMediaRootBinding:
     return windows.WindowsPrivateMediaRootBinding.create(
         root_path_binding_sha256=windows._path_binding_sha256(root),
-        root_identity_sha256=digest("root-identity"),
+        root_identity_sha256=windows._root_identity_sha256_from_path(root),
         root_security_sha256=digest("root-security"),
         principal_sid_sha256=digest("principal-sid"),
         cipher_backend_identity_sha256=cipher.backend_identity_sha256,
@@ -1081,6 +1082,57 @@ def test_live_root_observation_drift_fails_under_writer_pin(
     assert not any(body)
     assert not list(tmp_path.glob("*.open.json"))
     assert not list(tmp_path.glob("*.manifest.json"))
+
+
+def _replace_custody_root(root: Path) -> Path:
+    """Replace the authority-root name with a distinct physical directory."""
+    displaced = root.with_name(root.name + "-displaced")
+    replacement = root.with_name(root.name + "-replacement")
+    replacement.mkdir()
+    os.replace(root, displaced)
+    os.replace(replacement, root)
+    return displaced
+
+
+def test_root_replacement_after_issuance_is_rejected_before_private_publish(
+    tmp_path: Path,
+) -> None:
+    custody_root = tmp_path / "custody"
+    custody_root.mkdir()
+    value, binding, _ = backend(custody_root)
+    body = bytearray(b"synthetic root replacement after issuance")
+    lease = value.issue_write_lease(write_grant(body, binding))
+    displaced = _replace_custody_root(custody_root)
+
+    with pytest.raises(windows.WindowsPrivateMediaBackendError) as rejected:
+        value.publish_private_media(lease, body)
+
+    assert rejected.value.reason is windows.WindowsBackendReason.COMPLETION_UNKNOWN
+    assert not any(body)
+    assert not list(custody_root.glob("*.chunk.json"))
+    assert not list(custody_root.glob("*.manifest.json"))
+    assert list(displaced.glob("*.issued.json"))
+
+
+def test_replaced_root_with_copied_durable_graph_is_not_a_trusted_readback(
+    tmp_path: Path,
+) -> None:
+    custody_root = tmp_path / "custody"
+    custody_root.mkdir()
+    value, binding, _cipher, result = published(custody_root)
+    grant = write_grant(b"synthetic owner voice pcm payload", binding)
+    replacement = custody_root.with_name(custody_root.name + "-replacement")
+    shutil.copytree(custody_root, replacement)
+    displaced = custody_root.with_name(custody_root.name + "-displaced")
+    os.replace(custody_root, displaced)
+    os.replace(replacement, custody_root)
+
+    with pytest.raises(windows.WindowsPrivateMediaBackendError) as rejected:
+        value.read_durable_lease_state(grant)
+
+    assert rejected.value.reason is windows.WindowsBackendReason.ROOT_BINDING_MISMATCH
+    assert result.receipt.opaque_artifact_id
+    assert list(custody_root.glob("*.manifest.json"))
 
 
 def test_write_completion_lost_reply_recovers_typed_body_free_result(

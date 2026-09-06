@@ -23,6 +23,7 @@ import hashlib
 import os
 from pathlib import Path
 import re
+import stat
 import threading
 from typing import Any, Callable, Iterator, Mapping, Protocol, Sequence
 
@@ -255,6 +256,51 @@ def _exact_mapping(value: object, fields: frozenset[str]) -> dict[str, Any]:
 def _path_binding_sha256(path: Path) -> str:
     spelling = os.path.normcase(os.path.abspath(os.fspath(path))).replace("\\", "/")
     return sha256_bytes(b"TASK082_WINDOWS_PRIVATE_ROOT_PATH_V1\0" + spelling.encode("utf-8"))
+
+
+def _root_identity_sha256_from_artifact_identity(identity: ArtifactIdentity) -> str:
+    """Bind the custody root to its stable physical directory object.
+
+    Directory mtime and link count legitimately change as immutable records are
+    published, so this commitment intentionally includes only the fields that
+    identify the directory object and reject a reparse-point replacement.
+    """
+    if (
+        type(identity) is not ArtifactIdentity
+        or identity.reparse_point
+        or not stat.S_ISDIR(identity.mode)
+        or identity.inode <= 0
+    ):
+        raise _fail(WindowsBackendReason.ROOT_UNSAFE)
+    projection = {
+        "device": identity.device,
+        "inode": identity.inode,
+        "file_type": stat.S_IFMT(identity.mode),
+        "reparse_point": identity.reparse_point,
+    }
+    return sha256_bytes(
+        b"TASK082_WINDOWS_PRIVATE_ROOT_IDENTITY_V1\0"
+        + canonical_json_bytes(projection)
+    )
+
+
+def _root_identity_sha256_from_path(path: Path) -> str:
+    try:
+        observed = os.lstat(path)
+    except OSError:
+        raise _fail(WindowsBackendReason.ROOT_UNSAFE) from None
+    attributes = int(getattr(observed, "st_file_attributes", 0))
+    return _root_identity_sha256_from_artifact_identity(
+        ArtifactIdentity(
+            device=int(observed.st_dev),
+            inode=int(observed.st_ino),
+            mode=int(observed.st_mode),
+            nlink=int(observed.st_nlink),
+            size=int(observed.st_size),
+            mtime_ns=int(observed.st_mtime_ns),
+            reparse_point=bool(attributes & 0x400),
+        )
+    )
 
 
 def _canonical_root(value: str | os.PathLike[str]) -> Path:
@@ -1253,6 +1299,53 @@ _WRITE_RECOVERY_FIELDS = frozenset(
 )
 
 
+class _RootBoundSecureAuthorityIO(SecureAuthorityIO):
+    """Require every authority-I/O root pin to match TASK-082's root binding.
+
+    ``SecureAuthorityIO`` holds the returned root/ancestor handles through the
+    individual effect and verifies them again on close.  This narrow adapter
+    rejects a substituted root *after that root is pinned*, before the base
+    implementation can read or publish any record through it.
+    """
+
+    def __init__(
+        self,
+        root: Path,
+        *,
+        expected_root_identity_sha256: str,
+        max_bytes: int,
+        max_json_depth: int,
+        max_json_nodes: int,
+        stage_hook: StageHook | None,
+    ) -> None:
+        _digest(expected_root_identity_sha256, "expected_root_identity_sha256")
+        super().__init__(
+            root,
+            max_bytes=max_bytes,
+            max_json_depth=max_json_depth,
+            max_json_nodes=max_json_nodes,
+            _stage_hook=stage_hook,
+        )
+        self._expected_root_identity_sha256 = expected_root_identity_sha256
+
+    def _pin_parent(self, relative_path: str | os.PathLike[str]) -> Any:
+        parent = super()._pin_parent(relative_path)
+        try:
+            if (
+                not parent.pinned
+                or _root_identity_sha256_from_artifact_identity(parent.pinned[0][2])
+                != self._expected_root_identity_sha256
+            ):
+                raise SecureAuthorityIOError("TASK082_ROOT_IDENTITY_MISMATCH")
+            return parent
+        except BaseException:
+            try:
+                parent.close()
+            except SecureAuthorityIOError:
+                pass
+            raise
+
+
 class WindowsPrivateMediaCustodyBackend:
     """One-use production lease broker and encrypted chunk custody backend."""
 
@@ -1374,6 +1467,11 @@ class WindowsPrivateMediaCustodyBackend:
             or cipher.backend_identity_sha256 == WINDOWS_DPAPI_BACKEND_IDENTITY_SHA256
         ):
             raise _fail(WindowsBackendReason.CIPHER_REJECTED)
+        if (
+            root_binding.root_identity_sha256
+            != _root_identity_sha256_from_path(canonical_root)
+        ):
+            raise _fail(WindowsBackendReason.ROOT_BINDING_MISMATCH)
         object.__setattr__(self, "_root", canonical_root)
         object.__setattr__(self, "_root_binding", root_binding)
         object.__setattr__(self, "_authorization_verifier", authorization_verifier)
@@ -1393,12 +1491,13 @@ class WindowsPrivateMediaCustodyBackend:
         object.__setattr__(
             self,
             "_io",
-            SecureAuthorityIO(
+            _RootBoundSecureAuthorityIO(
                 canonical_root,
+                expected_root_identity_sha256=root_binding.root_identity_sha256,
                 max_bytes=1024 * 1024,
                 max_json_depth=16,
                 max_json_nodes=10_000,
-                _stage_hook=stage_hook,
+                stage_hook=stage_hook,
             ),
         )
 
@@ -1420,6 +1519,11 @@ class WindowsPrivateMediaCustodyBackend:
     def _validate_root(self, observed_at: str) -> str:
         self._root_binding.validate(observed_at=observed_at)
         if self._root_binding.root_path_binding_sha256 != _path_binding_sha256(self._root):
+            raise _fail(WindowsBackendReason.ROOT_BINDING_MISMATCH)
+        if (
+            self._root_binding.root_identity_sha256
+            != _root_identity_sha256_from_path(self._root)
+        ):
             raise _fail(WindowsBackendReason.ROOT_BINDING_MISMATCH)
         if (
             self._root_binding.cipher_backend_identity_sha256
@@ -3123,6 +3227,9 @@ class WindowsPrivateMediaCustodyBackend:
             raise _fail(WindowsBackendReason.RECEIPT_AS_CAPABILITY)
         if grant.root_binding_sha256 != self._root_binding.binding_sha256:
             raise _fail(WindowsBackendReason.ROOT_BINDING_MISMATCH)
+        # A durable graph is never meaningful outside the currently bound
+        # physical root, even when its copied records recompute consistently.
+        self._validate_root(self._trusted_now())
         issue_name, open_name, completion_name = self._lease_names(
             kind,
             grant.operation_id,
@@ -3369,6 +3476,7 @@ class WindowsPrivateMediaCustodyBackend:
                 completion_unknown=True,
             )
         relative_name = self._write_recovery_name(grant.operation_id)
+        self._validate_root(self._trusted_now())
         readback = self._read_optional_record(relative_name)
         if readback is None:
             raise _fail(

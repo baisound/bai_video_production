@@ -1,6 +1,6 @@
 # Owner音声 OBS→学習→最適WAV 実行順
 
-- Status: `OWNER_DIRECTED_DESIGN_PROPOSAL / IMPLEMENTATION_NOT_STARTED`
+- TASK-082 Status: `PURE_CUSTODY_CORE_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_NOT_STARTED`
 - Scope: TASK-082/083/084の責任境界と全voice pipelineの実行順
 - Effect ceiling: 0（設計、readback、strict validationのみ）
 
@@ -9,6 +9,7 @@
 既存実装を作り直さず、producer receiptとconsumer adoptionを同一視しない。
 
 - TASK-047: OBS plugin、installer、selected-source transportの技術基盤は存在する。実音声のprivate custodyとcanonical Asset readbackは未成立。
+- TASK-082: Draft PR `#534`にV2 pure custody core candidateが存在する。strict parser、immutable generation event/currentness、write/read admission、body-free completion、fixture-only one-use stateは実装候補として検証済みだが、Windows backend、private body access、production lease、暗号化media I/Oは未着手である。
 - TASK-048: speech-continuous WAV、silence/fade、peak/clipping/dropout/room-tone、HVAC OFF/ON A/Bの契約とfixtureは存在する。実音声測定と正式QA receiptは未成立。
 - TASK-046: recording、Dataset revision、training intent/admission、synthetic model-builder基盤は存在する。正式Dataset採用、実学習engine/worker、terminal model custodyは未成立。
 - TASK-014/TASK-075: local narration preflight、render admission、body-free call/result境界は存在する。Owner承認済みfine-tuned model artifactを用いたactual WAVは未成立。
@@ -23,7 +24,25 @@
 
 本統合Taskは依存順と開発実行をcoordinateするが、各Taskのcanonical authority、state、receiptを統合・移転・aliasしない。
 
+## TASK-082 V2 pure-core seam
+
+| record / state | exact V2 boundary | source of truth |
+|---|---|---|
+| custody receipt | `Task082PrivateMediaCustodyReceiptV2` / schema `2` / role `PRIVATE_MEDIA_CUSTODY` | TASK-082 source + canonical schema + byte-identical package mirror |
+| generation event | `Task082PrivateMediaGenerationEventV2` / schema `2` / role `PRIVATE_MEDIA_GENERATION_EVENT` | same exact3 |
+| lease decision | `Task082PrivateMediaLeaseDecisionV2` / schema `2` / role `PRIVATE_MEDIA_LEASE_DECISION` | same exact3; fixture-only and body-free |
+| completion readback | `Task082PrivateMediaLeaseCompletionReadbackV2` / schema `2` / role `PRIVATE_MEDIA_LEASE_COMPLETION_READBACK` | same exact3; write/read completion variant is closed |
+| currentness / sentinel | sealed in-memory `GenerationCurrentness` and `Task082FixtureLeaseSentinel` | source + focused test only; neither is a production capability |
+
+V2 eventの`custody_binding_sha256`はfinal custody receipt digestではない。`TASK082_PRIVATE_MEDIA_STAGED_CUSTODY_BINDING_V2\0` domainでevent/receipt共通media identityから計算し、両parserが再計算する。complete receiptは別の`receipt_sha256`を`TASK082_PRIVATE_MEDIA_CUSTODY_RECEIPT_V2\0` domainで持つ。V1 discriminator、`custody_receipt_sha256`名へのpartial binding格納、binding/final receipt alias、event/receipt media identity差替えは拒否する。
+
+V2の残りのdigest domainはgeneration event=`TASK082_PRIVATE_MEDIA_GENERATION_EVENT_V2\0`、currentness=`TASK082_PRIVATE_MEDIA_CURRENTNESS_V2\0`、lease decision=`TASK082_PRIVATE_MEDIA_LEASE_DECISION_V2\0`、completion readback=`TASK082_PRIVATE_MEDIA_LEASE_COMPLETION_READBACK_V2\0`とする。schema `$id` は `bai.task082.owner-voice-private-media-custody.v2` であり、canonical schemaとpackage mirrorのfield/version/domain説明がsource/testと一致しなければReadyにしない。
+
+全currentness/decision/completionは `fixture_only=true`、`authority_created=false`、`body_access_granted=false`、`production_backend_invoked=false`、`private_media_effect_count=0` に固定する。このcandidateが返すREADYはsynthetic fixture stateだけであり、Windows/backend/native/private effectの実行可否を表さない。
+
 ## Canonical dependency DAG
+
+次のDAGにあるTASK-082 one-use write/read lease、publish、open、burnは将来のWindows backend stageである。現行V2 pure core candidateはその手前のstrict validationとfixture-only decision/readbackで停止する。
 
 ```text
 TASK-082 private custody plan/readiness
@@ -95,6 +114,8 @@ TASK-082 private custody plan/readiness
 | model-artifact custody | TASK-084 | encrypted immutable checkpoint/terminal file-set custody receipt、purpose-bound write/load lease | ModelArtifactBinding、evaluation、approval、selection、inference |
 | narration call/result | TASK-014/TASK-075 | admission、call、worker result、staged/POST WAV | Dataset/training/model approval |
 | listening/final adoption | TASK-041/TASK-003 | Human decision、final Asset adoption/readback | technical QA、model approval |
+
+責任行は将来のcanonical ownershipを示し、実装済み範囲を示さない。現在のTASK-082実装候補はpure V2 metadata coreだけで、encrypted binary mediaとproduction leaseは`WINDOWS_BACKEND_NOT_STARTED`である。
 
 ## Human Gates
 

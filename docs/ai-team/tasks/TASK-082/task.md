@@ -1,15 +1,15 @@
 # TASK-082 — Owner音声Private Media Custody
 
-- Status: `PURE_CUSTODY_CORE_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_NOT_STARTED`
+- Status: `PURE_CUSTODY_CORE_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_IMPLEMENTATION_CANDIDATE`
 - Development Depth: `DEV-4 FOUNDATION CRITICAL`
 - Execution coordinator: Owner指定の「OBS録音→学習→WAV最適化」統合Task
-- Canonical responsibility: TASK-082（設計PR `#532`で確定。pure core PR `#534`はimplementation candidate）
+- Canonical responsibility: TASK-082（設計PR `#532`で確定。pure coreとWindows backendはPR `#534`のimplementation candidate）
 
 ## 目的
 
 OBSで録音したOwner音声を、公開Evidenceへ本文、秘密値、speaker fingerprint、絶対host pathを出さず、`RAW_CAPTURE`、`CANONICAL_PCM`、`PROCESSED_SPEECH_CONTINUOUS`、`REVIEW_TRANSCRIPT`、`TRAINING_COPY` の各世代として暗号化保管する。TASK-047/048/046の各producerは出力をTASK-082へpublishし、後続consumerはbody-free custody receiptを用いて、同じOwnerSubject、Consent、purpose、media generation、logical object、physical identity/currentnessを検証する。
 
-TASK-082は録音、品質判定、TASK-003 Asset採用、Dataset採用、学習、モデル評価、ナレーション生成、最終WAV採用を所有しない。現行TASK-068はstrict JSONのimmutable publication/readbackだけを提供し、binary media、directory tree、mutable CAS、currentness selectionを提供しないため、TASK-082のphysical custody backendとして扱わない。将来のTASK-082 Windows backendがvoice-private binary custodyとgeneration-currentnessを固有責任として実装し、TASK-003のcanonical Asset責任を複製しない。
+TASK-082は録音、品質判定、TASK-003 Asset採用、Dataset採用、学習、モデル評価、ナレーション生成、最終WAV採用を所有しない。現行TASK-068はstrict JSONのimmutable publication/readbackだけを提供し、binary media、directory tree、mutable CAS、currentness selectionを提供しないため、TASK-082のphysical custody backendとして扱わない。PR `#534`のTASK-082 Windows backend implementation candidateがvoice-private binary custodyとgeneration-currentnessを固有責任として実装し、TASK-003のcanonical Asset責任を複製しない。
 
 ## 現在のAuthority
 
@@ -21,8 +21,9 @@ TASK-082は録音、品質判定、TASK-003 Asset採用、Dataset採用、学習
   5. `docs/ai-team/tasks/TASK-082/task.md`
   6. `docs/ai-team/tasks/TASK-082/voice-pipeline-execution-order.md`
 - pure coreはbody-free metadata validation、event/currentness derivation、fixture-only admission/state/readbackだけを実装する候補であり、private body access、authority mint、Windows/backend/native effectを持たない。
-- `src/ai_video_production/task082_owner_voice_private_media_custody_windows.py`、`tests/test_task082_owner_voice_private_media_custody_windows.py`、`CHANGELOG.md` は本Unit外である。Windows backendとRelease metadataは別のexact Authorityを要する。
-- 実音声のimport/write/read/delete、暗号鍵・DACL設定、OBS/native操作は本candidateから実行できない。Human Gateの承認状態だけで未実装backendやbody authorityを補わない。
+- `WINDOWS-PRIVATE-CUSTODY-BACKEND-R0`は `src/ai_video_production/task082_owner_voice_private_media_custody_windows.py` と `tests/test_task082_owner_voice_private_media_custody_windows.py` のexact2だけを追加所有し、同じDraft PR `#534`へ統合されたimplementation candidateである。
+- `CHANGELOG.md`はPR `#525`とのownership overlapがあるため変更せず、Release metadata checkとReady/mergeをBLOCKEDのまま保つ。
+- 実音声のimport/write/read/delete、暗号鍵・DACL設定、OBS/native操作は未実行である。candidateの存在やHuman Gateの承認状態だけでは、live lease、private body access、native/Production authorityを生成しない。
 
 既存TASK-003/014/041/046/047/048/068 source、shared roadmap/current-state/task-indexは変更禁止。scope追加は別のexact amendmentを要する。
 
@@ -38,7 +39,7 @@ TASK-082は録音、品質判定、TASK-003 Asset採用、Dataset採用、学習
 - `GENERATION_PUBLISHED`だけが `published_generation_revision`、opaque artifact ID、V2 `custody_binding_sha256`、content/media-metadata/opened-physical-identity/cipher-backend digestを非nullで持ち、`target_generation_revision`、`target_publish_event_sha256`、tombstone decision digestをnullにする。`custody_binding_sha256` は `TASK082_PRIVATE_MEDIA_STAGED_CUSTODY_BINDING_V2\0` domainで、opaque artifact ID、logical slot、generation、OwnerSubject、purpose、artifact class、content/media metadata/opened physical/cipher backend、Consent/rights、observed/fresh-untilの共通preimageから計算し、event parserとreceipt parserの双方が再計算する。binding mismatchとfinal receipt digestへのaliasを拒否する。`GENERATION_REVOKED`、`GENERATION_QUARANTINED`、`GENERATION_EXPIRED` は逆に、exact current `target_generation_revision`、同じlogical slotの`target_publish_event_sha256`、event-kindに一致するseparate decision/policy digestだけを非nullで持ち、artifact/custody/content/physical/cipher fieldと新しいpublished generationをnullにする。published/tombstone field混用、別slot/別class target、non-current target、同じtargetへの再tombstoneを拒否する。publish generationは同じslot/classの直前publish+1とし、event revisionとは別に管理する。
 - physical publish/readbackはTASK-082専用backendでsame-snapshot、nofollow、regular、`nlink=1`、pinned ancestor identity、no-replace、operation-owned temp、durable flush、post-publish pinned readbackを要求する。TASK-068 receiptやJSON file identityをbinary custody authorityへ昇格しない。
 - receiptはauthorityのEvidenceであり、TASK-003 adoption、TASK-046 Dataset authority、TASK-048 QA authorityを生成しない。
-- 将来のWindows backendによるproducer body ingressにはTASK-082-owned non-serializable `Task082PrivateMediaWriteLeaseV1`、consumer body accessには `Task082PrivateMediaReadLeaseV1` を使う。これらはV2 body-free decision recordとは別の未実装production capabilityである。leaseはexact producer/consumer Task、artifact class/generation、purpose、operation、OwnerSubject、Consent/decision revision、custody receipt/head、expiry、one-use/replay policyをbindする。receiptだけ、logical refだけ、hashだけ、caller pathだけからleaseを発行しない。
+- Windows backend implementation candidateによるproducer body ingressにはTASK-082-owned non-serializable `Task082PrivateMediaWriteLeaseV1`、consumer body accessには `Task082PrivateMediaReadLeaseV1` を使う。これらはV2 body-free decision recordとは別のunmerged production-capability candidateである。leaseはexact producer/consumer Task、artifact class/generation、purpose、operation、OwnerSubject、Consent/decision revision、custody receipt/head、expiry、one-use/replay policyをbindする。receiptだけ、logical refだけ、hashだけ、caller pathだけからleaseを発行しない。
 - write leaseはproducer output identityとexpected logical-slot predecessor/headをbindする。まだ存在しないTASK-003 adoption/readbackを要求せず、publish/pinned readback receiptを後続TASK-003へ渡す。
 - write leaseのpurpose matrixは次の5 tupleだけをclosed setとして許可する。`producer_output_role`はproducer-owned versioned output event/receiptのclosed roleであり、TASK-082がproducer結果を自己発行、relabel、rehashしてはならない。required欄以外のcross-row authority fieldは拒否する。
 
@@ -72,7 +73,7 @@ TASK-082は録音、品質判定、TASK-003 Asset採用、Dataset採用、学習
 `OPEN_STARTED`のdurable burnをbody accessの線形化点にし、terminalからの遷移、direct skip、self-transition、reissue/reopenを禁止する。burn後のcrash/lost replyは`COMPLETION_UNKNOWN`でnon-replayableとし、exact duplicateはbody/capabilityを再送せずstate readbackだけを返す。write leaseの`CONSUMED`はpublish+pinned readback後、read leaseの`CONSUMED`はclose+handle identity+completion readback後だけ許可する。
 - pure core candidateはstrict parser、event/currentness derivation、write/read admission compiler、body-free decision/completion readbackとfixture-only state machineを実装する。serialized decisionのdiscriminatorは `record_type=Task082PrivateMediaLeaseDecisionV2`、`schema_version=2`、`receipt_role=PRIVATE_MEDIA_LEASE_DECISION`、completionは `record_type=Task082PrivateMediaLeaseCompletionReadbackV2`、`schema_version=2`、`receipt_role=PRIVATE_MEDIA_LEASE_COMPLETION_READBACK` とする。decision/state/reasonはsourceが生成できるclosed unionだけをschema-validとし、`READY_FIXTURE_ONLY`、`BLOCKED`、`COMPLETION_UNKNOWN`の組合せを自由に読み替えない。
 - `GenerationCurrentness`、`LeaseDecision`、`LeaseCompletionReadback`とnon-serializable `Task082FixtureLeaseSentinel`はsubclass、pickle、typed-object tamper、通常のstate rewindを拒否し、untrusted Mapping/Sequenceを一度だけbounded snapshot化してから検証する。全decision/currentness/readbackは `fixture_only=true`、`authority_created=false`、`body_access_granted=false`、`production_backend_invoked=false`、`private_media_effect_count=0` を固定する。
-- pure core candidateはproduction `Task082PrivateMediaWriteLeaseV1` / `Task082PrivateMediaReadLeaseV1`、OS handle、stream、backend callを発行しない。将来のWindows backendはfixture sentinelを必ず拒否し、live lease mint/open/burnには別のWindows implementation AuthorityとH1/H2/H3該当Gateを要する。
+- pure core candidateはproduction `Task082PrivateMediaWriteLeaseV1` / `Task082PrivateMediaReadLeaseV1`、OS handle、stream、backend callを発行しない。Windows backend implementation candidateはfixture sentinelを必ず拒否し、live lease mint/open/burn前にexact grant/receipt、trusted time、Consent/currentness、root/DACL/cipher bindingを再検証する。候補実装の存在はH1/H2/H3該当Gate、native/private effect、Production authorityを代替しない。
 - private bodyはtrusted in-process stream/OS handleで渡し、public surfaceへpath/body/keyを返さない。consumerはlease lifetime外へplaintextを保持せず、close時にhandleを閉じ、実装可能な一時bufferをzeroizeする。zeroization未確認、close failure、handle identity driftはsuccessにしない。
 - delete/revokeは別の明示Human Gateを要する。logical refやpath名だけで対象を決めず、current physical identityを再検証する。
 
@@ -85,7 +86,16 @@ TASK-082は録音、品質判定、TASK-003 Asset採用、Dataset採用、学習
 - Single review surface: Draft PR `#534`。source/schema/testと本2文書を同じPR headでread backする。
 - Digest domains are exact: `TASK082_PRIVATE_MEDIA_STAGED_CUSTODY_BINDING_V2\0`、`TASK082_PRIVATE_MEDIA_CUSTODY_RECEIPT_V2\0`、`TASK082_PRIVATE_MEDIA_GENERATION_EVENT_V2\0`、`TASK082_PRIVATE_MEDIA_CURRENTNESS_V2\0`、`TASK082_PRIVATE_MEDIA_LEASE_DECISION_V2\0`、`TASK082_PRIVATE_MEDIA_LEASE_COMPLETION_READBACK_V2\0`。V1 domainとの混用を許可しない。
 - Candidate verification at the V2 implementation checkpoint: focused `84 PASS`、TASK-082/074/048/046 targeted regression `469 PASS`、independent Critic/Tester/JudgeでCritical/High `0`。これはprivate audio、Windows backend、native runtime、Production readinessの実行Evidenceではない。
-- Current product state remains `PURE_CUSTODY_CORE_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_NOT_STARTED`。Windows backend、private body、H1 effect、Release metadataは未実装・未実行である。
+- Current product state is `PURE_CUSTODY_CORE_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_IMPLEMENTATION_CANDIDATE`。private body、H1 effect、native runtime、Release metadata、Production Activationは未実行である。
+
+## WINDOWS-PRIVATE-CUSTODY-BACKEND-R0 candidate checkpoint
+
+- Canonical source candidate: `src/ai_video_production/task082_owner_voice_private_media_custody_windows.py`
+- Focused tests: `tests/test_task082_owner_voice_private_media_custody_windows.py`
+- CandidateはWindows Current User DPAPI、digest-only root/authorization verifier、root-pinned/no-replace/durable publication、generation CAS、one-use write/read lease、durable burn/completion/recovery readbackを境界とし、host path、plaintext body、key、reusable capabilityをpublic resultへ返さない。
+- trusted-time freshnessはlease issuance時だけでなくopen時にも再検証し、write grantの`fresh_until`またはread custody receiptの`fresh_until`がstaleならprivate effect/body access前に拒否する。
+- Synthetic/current-hash verification: focused freshness `2 PASS`、TASK-082/TASK-068 Windows/core targeted regression `300 PASS / 88 Windows-only skip`、hosted Windows Python 3.11/3.12/3.13 checks `PASS`、independent Critic/TesterでCritical/High `0`、Judgeはcommit/non-force pushを承認した。
+- Windows local testは既存Pythonに`jsonschema`がなく`NOT_CONFIRMED`のままとし、install/PATH変更を行っていない。hosted Windows checkのPASSはcurrent PR headの実行Evidenceだが、実Owner音声、private root、DPAPI/DACL、OBS、native Product、Productionの実行Evidenceではない。
 
 ## Human Gate H1
 

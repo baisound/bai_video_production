@@ -1,15 +1,15 @@
 # Owner音声 OBS→学習→最適WAV 実行順
 
-- TASK-082 Status: `PURE_CUSTODY_CORE_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_NOT_STARTED`
+- TASK-082 Status: `PURE_CUSTODY_CORE_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_IMPLEMENTATION_CANDIDATE`
 - Scope: TASK-082/083/084の責任境界と全voice pipelineの実行順
-- Effect ceiling: 0（設計、readback、strict validationのみ）
+- Effect ceiling: 0（本同期Unitは設計、readback、strict validationのみ）
 
 ## Current-source gap
 
 既存実装を作り直さず、producer receiptとconsumer adoptionを同一視しない。
 
 - TASK-047: OBS plugin、installer、selected-source transportの技術基盤は存在する。実音声のprivate custodyとcanonical Asset readbackは未成立。
-- TASK-082: Draft PR `#534`にV2 pure custody core candidateが存在する。strict parser、immutable generation event/currentness、write/read admission、body-free completion、fixture-only one-use stateは実装候補として検証済みだが、Windows backend、private body access、production lease、暗号化media I/Oは未着手である。
+- TASK-082: Draft PR `#534`にV2 pure custody coreとWindows backendのimplementation candidateが存在する。Windows candidateはCurrent User DPAPI、root/currentness revalidation、generation CAS、one-use production lease、暗号化chunk I/O、durable burn/completion/recovery readbackを実装し、synthetic/hosted Windows testsで検証済みである。ただし未mergeで、実Owner音声、private root、DACL/DPAPI、OBS/native Product、Production effectは未実行である。
 - TASK-048: speech-continuous WAV、silence/fade、peak/clipping/dropout/room-tone、HVAC OFF/ON A/Bの契約とfixtureは存在する。実音声測定と正式QA receiptは未成立。
 - TASK-046: recording、Dataset revision、training intent/admission、synthetic model-builder基盤は存在する。正式Dataset採用、実学習engine/worker、terminal model custodyは未成立。
 - TASK-014/TASK-075: local narration preflight、render admission、body-free call/result境界は存在する。Owner承認済みfine-tuned model artifactを用いたactual WAVは未成立。
@@ -42,7 +42,7 @@ V2の残りのdigest domainはgeneration event=`TASK082_PRIVATE_MEDIA_GENERATION
 
 ## Canonical dependency DAG
 
-次のDAGにあるTASK-082 one-use write/read lease、publish、open、burnは将来のWindows backend stageである。現行V2 pure core candidateはその手前のstrict validationとfixture-only decision/readbackで停止する。
+次のDAGにあるTASK-082 one-use write/read lease、publish、open、burnはWindows backend implementation candidateの境界である。現行V2 pure core candidateはその手前のstrict validationとfixture-only decision/readbackで停止し、Windows candidateも未merge・未native/private effect・未ProductionのためDAGの実行authorityを生成しない。
 
 ```text
 TASK-082 private custody plan/readiness
@@ -115,7 +115,7 @@ TASK-082 private custody plan/readiness
 | narration call/result | TASK-014/TASK-075 | admission、call、worker result、staged/POST WAV | Dataset/training/model approval |
 | listening/final adoption | TASK-041/TASK-003 | Human decision、final Asset adoption/readback | technical QA、model approval |
 
-責任行は将来のcanonical ownershipを示し、実装済み範囲を示さない。現在のTASK-082実装候補はpure V2 metadata coreだけで、encrypted binary mediaとproduction leaseは`WINDOWS_BACKEND_NOT_STARTED`である。
+責任行はcanonical ownershipを示し、実行済み範囲を示さない。現在のTASK-082はpure V2 metadata coreとWindows encrypted binary media/production lease backendのimplementation candidateを持つが、いずれも未mergeであり、実Owner音声、native/private effect、Production Activationは未実行である。
 
 ## Human Gates
 

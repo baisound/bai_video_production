@@ -202,6 +202,28 @@ async function scrollNle(direction){if(!currentNleModel?.available)return;const 
 async function pageTracks(direction){if(!currentNleModel?.available)return;const viewport=currentNleModel.projection.viewport,first=viewport.first_track_index+direction*viewport.visible_track_count;await updateNleViewport(viewport.visible_start_frame,viewport.visible_end_frame,first)}
 async function reconcileExport(row,action){let resultIdentity=null,renderQa=null;if(action==='ACCEPT_PROVEN_SUCCESS'){resultIdentity=window.prompt('検証済みExport result identity');if(!resultIdentity)return;renderQa=window.prompt('PASSしたRender QA SHA-256','sha256:');if(!renderQa)return}else if(!window.confirm(`${row.job_id} に ${action} を適用しますか？\n外部処理は再実行しません。`))return;await call('export_queue_reconcile',{job_id:row.job_id,expected_state_version:row.state_version,action,result_identity:resultIdentity,render_qa_sha256:renderQa});await refreshExport()}
 async function prepareExportQueue(){const model=await call('final_review_export_snapshot',{});if(!model?.queue_confirmation_ready)return;const prepared=await call('final_review_export_prepare',{expected_readiness_projection_sha256:model.readiness_projection_sha256,expected_approval_snapshot_sha256:model.approval_snapshot_sha256,expected_preparation_sha256:model.preparation_sha256});if(!prepared)return;const preset=prepared.preset||{};const ok=window.confirm(`このexact Export JobをQueueへ1件追加しますか？\nPreset: ${preset.preset_id||'UNKNOWN'} v${preset.preset_version||'UNKNOWN'}\nTarget: ${prepared.output_target_identity}\n\nDispatch・render・公開は開始しません。`);if(!ok){await call('final_review_export_cancel',{confirmation_id:prepared.confirmation_id});await refreshExport();return}const queued=await call('final_review_export_apply',{confirmation_id:prepared.confirmation_id});if(queued?.job_id)notify(`Export Job ${queued.job_id} をQueueへ追加しました。実行は別の個別確認が必要です。`);await refreshExport()}
+const exportDispatchInFlight=new Set();
+async function prepareExportDispatch(row){
+  if(exportDispatchInFlight.has(row.job_id))return;
+  exportDispatchInFlight.add(row.job_id);
+  try{
+    const prepared=await call('export_queue_prepare_dispatch',{job_id:row.job_id});
+    if(!prepared){await refreshExport();return}
+    const accepted=window.confirm(`このexact Export Jobを実行しますか？\nOperation: ${prepared.operation_identity}\n\n外部レンダーを開始します。UNKNOWN時は自動再実行しません。`);
+    if(!accepted){
+      await call('export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id});
+      await refreshExport();
+      notify(`Export ${row.job_id} の個別実行確認を取り消しました。Jobは実行していません。`);
+      return
+    }
+    await call('export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id});
+    const readback=await call('export_queue_snapshot'),current=readback?.rows?.find(item=>item.job_id===row.job_id);
+    await refreshExport();
+    notify(`書き出し状態の再読込: ${current?.stage||'UNKNOWN'} / 出力: ${current?.evidence_ref||'未確認'}`)
+  }finally{
+    exportDispatchInFlight.delete(row.job_id)
+  }
+}
 async function refreshExport(){
   const [model,preparation]=await Promise.all([call('export_queue_snapshot'),call('final_review_export_snapshot',{})]),
     host=$('exportContent'),add=$('addExportQueueButton'),state=$('exportPreparationState'),content=$('exportPreparationContent');
@@ -231,19 +253,7 @@ async function refreshExport(){
     }
     if(row.individual_confirmation_required){
       const run=element('button','btn primary','このJobを個別確認して実行');
-      run.addEventListener('click',async()=>{
-        const prepared=await call('export_queue_prepare_dispatch',{job_id:row.job_id});
-        if(!prepared)return;
-        const accepted=window.confirm(`このexact Export Jobを実行しますか？\nOperation: ${prepared.operation_identity}\n\n外部レンダーを開始します。UNKNOWN時は自動再実行しません。`);
-        if(!accepted){
-          await call('export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id});
-          await refreshExport();
-          return
-        }
-        const completed=await call('export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id});
-        if(completed)notify(`Export ${completed.state}: ${completed.result_identity||completed.job_id} / QA ${completed.render_qa_sha256||'PENDING'}`);
-        await refreshExport()
-      });
+      run.addEventListener('click',()=>prepareExportDispatch(row));
       actions.append(run)
     }
     if(row.safe_cancel){

@@ -181,6 +181,84 @@ console.log('OK');
     assert completed.stdout.strip() == "OK"
 
 
+def test_export_dispatch_ui_confirms_once_cancels_cleanly_and_reads_durable_state_in_node() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js is required for the Export dispatch behavior contract")
+
+    match = re.search(
+        r"async function prepareExportDispatch\(row\)\{.*?\r?\n\}",
+        HTML,
+        re.DOTALL,
+    )
+    assert match is not None
+    script = f"""
+const assert=require('node:assert/strict');
+const window={{confirm(){{return confirmDecision}}}};
+const notifications=[];
+function notify(message,isError=false){{notifications.push({{message,isError}})}}
+let refreshCount=0;
+async function refreshExport(){{refreshCount+=1}}
+const exportDispatchInFlight=new Set();
+let confirmDecision=true;
+let calls=[];
+let scenario='success';
+async function call(method,args){{
+  calls.push([method,args]);
+  if(method==='export_queue_preflight')return {{state:'READY'}};
+  if(method==='export_queue_prepare_dispatch')return {{confirmation_id:'confirmation-1',operation_identity:'operation-1'}};
+  if(method==='export_queue_cancel_dispatch')return {{cancelled:true}};
+  if(method==='export_queue_apply_dispatch')return scenario==='ambiguous'?null:{{state:'SUCCEEDED'}};
+  if(method==='export_queue_snapshot'){{
+    const stage=scenario==='ambiguous'?'DISPATCHING':scenario==='cancel'?'READY':'SUCCEEDED';
+    return {{available:true,rows:[{{job_id:'job-1',stage,evidence_ref:stage==='SUCCEEDED'?'render-artifact:'+'a'.repeat(64):null}}]}};
+  }}
+  throw new Error('unexpected method '+method);
+}}
+{match.group(0)}
+(async()=>{{
+  await Promise.all([
+    prepareExportDispatch({{job_id:'job-1',stage:'READY'}}),
+    prepareExportDispatch({{job_id:'job-1',stage:'READY'}}),
+  ]);
+  assert.deepEqual(calls.map(item=>item[0]),[
+    'export_queue_prepare_dispatch','export_queue_apply_dispatch','export_queue_snapshot'
+  ]);
+  assert.match(notifications.at(-1).message,/書き出し状態の再読込: SUCCEEDED/);
+  assert.match(notifications.at(-1).message,/render-artifact:/);
+  assert.equal(exportDispatchInFlight.size,0);
+  assert.equal(refreshCount,1);
+
+  calls=[];scenario='cancel';confirmDecision=false;
+  await prepareExportDispatch({{job_id:'job-1',stage:'READY'}});
+  assert.deepEqual(calls.map(item=>item[0]),[
+    'export_queue_prepare_dispatch','export_queue_cancel_dispatch'
+  ]);
+  assert.doesNotMatch(calls.map(item=>item[0]).join(','),/apply_dispatch/);
+  assert.match(notifications.at(-1).message,/Jobは実行していません/);
+
+  calls=[];scenario='ambiguous';confirmDecision=true;
+  await prepareExportDispatch({{job_id:'job-1',stage:'READY'}});
+  assert.deepEqual(calls.map(item=>item[0]),[
+    'export_queue_prepare_dispatch','export_queue_apply_dispatch','export_queue_snapshot'
+  ]);
+  assert.match(notifications.at(-1).message,/書き出し状態の再読込: DISPATCHING/);
+  assert.match(notifications.at(-1).message,/出力: 未確認/);
+  assert.doesNotMatch(notifications.at(-1).message,/SUCCEEDED/);
+  console.log('OK');
+}})().catch(error=>{{console.error(error);process.exitCode=1}});
+"""
+    completed = subprocess.run(
+        [node, "-e", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=NODE_BEHAVIORAL_CONTRACT_TIMEOUT_SECONDS,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "OK"
+
+
 def test_timeline_scrub_uses_python_owned_seek_without_frontend_truth() -> None:
     for marker in (
         "function startTimelineScrub(event,target)",

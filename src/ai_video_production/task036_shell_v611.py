@@ -84,7 +84,7 @@ const SETTINGS_VIEWS=Object.freeze({general:{title:'一般',summary:'言語・�
 function element(tag,className,text){const value=document.createElement(tag);if(className)value.className=className;if(text!==undefined)value.textContent=String(text);return value}
 function clear(node){if(node)node.replaceChildren()}
 function notify(message,isError=false){const box=$('dialogStatus');box.textContent=String(message);box.classList.add('show');box.classList.toggle('state',isError);window.clearTimeout(window.__bvpToast);window.__bvpToast=window.setTimeout(()=>box.classList.remove('show'),2600)}
-async function call(method,args={}){try{if(!window.pywebview?.api?.[method])throw new Error('操作は現在の実行環境へ接続されていません');return await window.pywebview.api[method](args)}catch(error){notify(`${method}: ${error?.message||error}`,true);return null}}
+async function call(method,args={},publicError=null){try{if(!window.pywebview?.api?.[method])throw new Error('操作は現在の実行環境へ接続されていません');return await window.pywebview.api[method](args)}catch(error){notify(publicError||`${method}: ${error?.message||error}`,true);return null}}
 function closeMenus(restore=false){qa('.menu-dropdown').forEach(menu=>menu.classList.remove('open'));qa('[data-menu-button]').forEach(button=>button.setAttribute('aria-expanded','false'));if(restore)lastMenuButton?.focus()}
 function openMenu(button,focusFirst=false){const menu=$(button.dataset.menuButton);if(!menu)return;closeMenus();menu.classList.add('open');button.setAttribute('aria-expanded','true');lastMenuButton=button;if(focusFirst)qa('.menuitem:not(:disabled)',menu)[0]?.focus()}
 async function navigate(page){if(!qa('.page').some(node=>node.dataset.page===page))return;currentPage=page;qa('.page').forEach(node=>node.classList.toggle('active',node.dataset.page===page));qa('.stage').forEach(node=>node.classList.toggle('active',node.dataset.nav===page));closeMenus();const workspace={planning:'PLANNING',locks:'PRODUCTION_CONTROL',sceneDesign:'CONTINUITY',imageGen:'GENERATION_SAFETY',videoGen:'GENERATION_QUEUE',audio:'AUDIO_WORKSPACE',assetReview:'REVIEW',edit:'EDIT',export:'EXPORT',quick:'PROMPT_EVIDENCE'}[page];if(workspace)await call('set_workspace',{workspace});await refreshPage(page)}
@@ -142,7 +142,7 @@ async function refreshQueue(){generationRuntimeReadiness.clear();const model=awa
 function visualHandoffTarget(state){if(state.startsWith('FEASIBILITY'))return'imageGen';if(state.startsWith('PROMPT'))return'sceneDesign';if(state==='READY_FOR_AUDIT')return'assetReview';if(state==='ACCEPTED_ASSET'||state==='LOCKED_ASSET')return'locks';return'videoGen'}
 function renderVisualGenerationHandoff(model,page){const host=q(`[data-visual-handoff="${page==='imageGen'?'image':'video'}"]`);clear(host);if(!model?.available){host.append(element('div','empty',`Visual handoff未接続: ${(model?.missing_sources||['UNKNOWN']).join(', ')}`));return}const imageKinds=new Set(['START_FRAME','END_FRAME','CHARACTER_REFERENCE','SPACE_REFERENCE','COMPOSITION_REFERENCE']),rows=(model.rows||[]).filter(row=>page==='imageGen'?imageKinds.has(row.slot_kind):['VIDEO','VFX'].includes(row.slot_kind));host.append(card('Visual lineage',`Required blockers: ${model.required_blocker_count} / All required adopted: ${model.all_required_visual_slots_adopted?'YES':'NO'} / Projection: ${model.projection_sha256} / Audio owner: ${model.delegated_audio_owner} / counted ${model.audio_slot_counted}`));if(!rows.length)host.append(element('div','empty','この画面種別のVisual Slotはありません。'));for(const row of rows){const node=card(`${row.scene_id} / ${row.slot_kind}`,`${row.slot_id} · ${row.state} / Prompt: ${row.prompt_id||'NONE'} v${row.prompt_version||'—'} / stale ${row.stale_prompt_count} / Queue: ${row.queue_entry_id||'NONE'} / Execution: ${row.execution_id||'NONE'} / Adoption: ${row.adoption_id||'NONE'} / Blockers: ${(row.blockers||[]).join(', ')||'NONE'}`),target=visualHandoffTarget(row.state);if(target!==page){const button=element('button','btn',target==='sceneDesign'?'Prompt証跡へ':target==='assetReview'?'素材確認へ':target==='locks'?'WORLD LOCKへ':target==='imageGen'?'Shot Feasibilityへ':'生成Queueへ');button.addEventListener('click',()=>navigate(target));node.append(button)}host.append(node)}host.append(element('div','help','このlineageは既存receiptのread-only突合です。Provider実行・Human判断・Asset/Timeline変更を許可しません。'))}
 async function refreshVisualGenerationHandoff(page){renderVisualGenerationHandoff(await call('visual_generation_handoff_snapshot'),page)}
-async function refreshJobs(){await refreshQueue();const model=await call('export_queue_snapshot');renderModel($('jobExportList'),model?.rows||[],'書き出しJobはありません。')}
+async function refreshJobs(){await refreshQueue();const model=await call('export_queue_snapshot',{},EXPORT_SAFE_ERROR);renderModel($('jobExportList'),model?.rows||[],'書き出しJobはありません。')}
 function featureModelHost(page){return $({planning:'planningModelReadiness',imageGen:'imageModelReadiness',videoGen:'videoModelReadiness',audio:'audioModelReadiness',quick:'quickModelReadiness'}[page])}
 const FEATURE_MODEL_COPY=Object.freeze({planning:{pageIds:['PLANNING'],computeWorkloads:['planning.local.ollama'],name:'企画用AIモデル',missing:'企画用AIモデルが未設定です。右上の［設定］→［AIモデル］で設定してください。'},imageGen:{pageIds:['IMAGE'],computeWorkloads:['image.local.comfyui'],name:'画像生成用AIモデル',missing:'画像生成用AIモデルが未設定です。右上の［設定］→［AIモデル］で設定してください。'},videoGen:{pageIds:['VIDEO'],computeWorkloads:['video.local.generation'],name:'動画生成用AIモデル',missing:'動画生成用AIモデルが未設定です。右上の［設定］→［AIモデル］で設定してください。'},audio:{pageIds:['AUDIO','MUSIC'],name:'音声・音楽用AIモデル',missing:'音声・音楽用AIモデルが未設定、または利用できません。右上の［設定］→［AIモデル］で設定を確認してください。'},quick:{pageIds:['QUICK_IMAGE','QUICK_VIDEO'],name:'クイック生成用AIモデル',alias:'画像・動画用のAIモデル設定を使います。',missing:'クイック生成用AIモデルが未設定です。右上の［設定］→［AIモデル］で画像・動画用のAIモデルを設定してください。'}})
 function openCentralModelSettings(){openSettings();void renderSettingsView('models')}
@@ -200,24 +200,27 @@ async function updateNleViewport(start,end,firstTrack){if(!currentNleModel?.avai
 async function zoomNle(factor){if(!currentNleModel?.available)return;const viewport=currentNleModel.projection.viewport,center=(viewport.visible_start_frame+viewport.visible_end_frame)/2,span=Math.max(2,(viewport.visible_end_frame-viewport.visible_start_frame)*factor);await updateNleViewport(center-span/2,center+span/2,viewport.first_track_index)}
 async function scrollNle(direction){if(!currentNleModel?.available)return;const viewport=currentNleModel.projection.viewport,span=viewport.visible_end_frame-viewport.visible_start_frame,shift=Math.max(1,Math.round(span*.25))*direction;let start=viewport.visible_start_frame+shift,end=viewport.visible_end_frame+shift;if(start<0){end-=start;start=0}if(end>currentNleModel.duration_frames){start-=end-currentNleModel.duration_frames;end=currentNleModel.duration_frames}await updateNleViewport(start,end,viewport.first_track_index)}
 async function pageTracks(direction){if(!currentNleModel?.available)return;const viewport=currentNleModel.projection.viewport,first=viewport.first_track_index+direction*viewport.visible_track_count;await updateNleViewport(viewport.visible_start_frame,viewport.visible_end_frame,first)}
-async function reconcileExport(row,action){let resultIdentity=null,renderQa=null;if(action==='ACCEPT_PROVEN_SUCCESS'){resultIdentity=window.prompt('検証済みExport result identity');if(!resultIdentity)return;renderQa=window.prompt('PASSしたRender QA SHA-256','sha256:');if(!renderQa)return}else if(!window.confirm(`${row.job_id} に ${action} を適用しますか？\n外部処理は再実行しません。`))return;await call('export_queue_reconcile',{job_id:row.job_id,expected_state_version:row.state_version,action,result_identity:resultIdentity,render_qa_sha256:renderQa});await refreshExport()}
-async function prepareExportQueue(){const model=await call('final_review_export_snapshot',{});if(!model?.queue_confirmation_ready)return;const prepared=await call('final_review_export_prepare',{expected_readiness_projection_sha256:model.readiness_projection_sha256,expected_approval_snapshot_sha256:model.approval_snapshot_sha256,expected_preparation_sha256:model.preparation_sha256});if(!prepared)return;const preset=prepared.preset||{};const ok=window.confirm(`このexact Export JobをQueueへ1件追加しますか？\nPreset: ${preset.preset_id||'UNKNOWN'} v${preset.preset_version||'UNKNOWN'}\nTarget: ${prepared.output_target_identity}\n\nDispatch・render・公開は開始しません。`);if(!ok){await call('final_review_export_cancel',{confirmation_id:prepared.confirmation_id});await refreshExport();return}const queued=await call('final_review_export_apply',{confirmation_id:prepared.confirmation_id});if(queued?.job_id)notify(`Export Job ${queued.job_id} をQueueへ追加しました。実行は別の個別確認が必要です。`);await refreshExport()}
+const EXPORT_SAFE_ERROR='書き出し操作の結果を確認できませんでした。状態を再読込してください。';
+async function reconcileExport(row,action){let resultIdentity=null,renderQa=null;if(action==='ACCEPT_PROVEN_SUCCESS'){resultIdentity=window.prompt('検証済みExport result identity');if(!resultIdentity)return;renderQa=window.prompt('PASSしたRender QA SHA-256','sha256:');if(!renderQa)return}else if(!window.confirm(`${row.job_id} に ${action} を適用しますか？\n外部処理は再実行しません。`))return;await call('export_queue_reconcile',{job_id:row.job_id,expected_state_version:row.state_version,action,result_identity:resultIdentity,render_qa_sha256:renderQa},EXPORT_SAFE_ERROR);await refreshExport()}
+async function prepareExportQueue(){const model=await call('final_review_export_snapshot',{},EXPORT_SAFE_ERROR);if(!model?.queue_confirmation_ready)return;const prepared=await call('final_review_export_prepare',{expected_readiness_projection_sha256:model.readiness_projection_sha256,expected_approval_snapshot_sha256:model.approval_snapshot_sha256,expected_preparation_sha256:model.preparation_sha256},EXPORT_SAFE_ERROR);if(!prepared)return;const preset=prepared.preset||{};const ok=window.confirm(`このexact Export JobをQueueへ1件追加しますか？\nPreset: ${preset.preset_id||'UNKNOWN'} v${preset.preset_version||'UNKNOWN'}\nTarget: ${prepared.output_target_identity}\n\nDispatch・render・公開は開始しません。`);if(!ok){await call('final_review_export_cancel',{confirmation_id:prepared.confirmation_id},EXPORT_SAFE_ERROR);await refreshExport();return}const queued=await call('final_review_export_apply',{confirmation_id:prepared.confirmation_id},EXPORT_SAFE_ERROR);if(queued?.job_id)notify(`Export Job ${queued.job_id} をQueueへ追加しました。実行は別の個別確認が必要です。`);await refreshExport()}
 const exportDispatchInFlight=new Set();
 async function prepareExportDispatch(row){
   if(exportDispatchInFlight.has(row.job_id))return;
   exportDispatchInFlight.add(row.job_id);
   try{
-    const prepared=await call('export_queue_prepare_dispatch',{job_id:row.job_id});
+    const prepared=await call('export_queue_prepare_dispatch',{job_id:row.job_id},EXPORT_SAFE_ERROR);
     if(!prepared){await refreshExport();return}
     const accepted=window.confirm(`このexact Export Jobを実行しますか？\nOperation: ${prepared.operation_identity}\n\n外部レンダーを開始します。UNKNOWN時は自動再実行しません。`);
     if(!accepted){
-      await call('export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id});
+      const cancelled=await call('export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id},EXPORT_SAFE_ERROR);
       await refreshExport();
-      notify(`Export ${row.job_id} の個別実行確認を取り消しました。Jobは実行していません。`);
+      if(cancelled?.cancelled===true&&cancelled.job_id===row.job_id&&cancelled.confirmation_id===prepared.confirmation_id&&cancelled.external_mutation_started===false){
+        notify(`Export ${row.job_id} の個別実行確認を取り消しました。Jobは実行していません。`)
+      }else notify(`Export ${row.job_id} の取消結果を確認できません。状態を再読込してください。`,true);
       return
     }
-    await call('export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id});
-    const readback=await call('export_queue_snapshot'),current=readback?.rows?.find(item=>item.job_id===row.job_id);
+    await call('export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id},EXPORT_SAFE_ERROR);
+    const readback=await call('export_queue_snapshot',{},EXPORT_SAFE_ERROR),current=readback?.rows?.find(item=>item.job_id===row.job_id);
     await refreshExport();
     notify(`書き出し状態の再読込: ${current?.stage||'UNKNOWN'} / 出力: ${current?.evidence_ref||'未確認'}`)
   }finally{
@@ -225,7 +228,7 @@ async function prepareExportDispatch(row){
   }
 }
 async function refreshExport(){
-  const [model,preparation]=await Promise.all([call('export_queue_snapshot'),call('final_review_export_snapshot',{})]),
+  const [model,preparation]=await Promise.all([call('export_queue_snapshot',{},EXPORT_SAFE_ERROR),call('final_review_export_snapshot',{},EXPORT_SAFE_ERROR)]),
     host=$('exportContent'),add=$('addExportQueueButton'),state=$('exportPreparationState'),content=$('exportPreparationContent');
   clear(host);
   const rows=model?.rows||[];
@@ -248,7 +251,7 @@ async function refreshExport(){
       actions=element('div','row');
     if(row.state==='QUEUED'){
       const preflight=element('button','btn','Preflight');
-      preflight.addEventListener('click',async()=>{await call('export_queue_preflight',{job_id:row.job_id});await refreshExport()});
+      preflight.addEventListener('click',async()=>{await call('export_queue_preflight',{job_id:row.job_id},EXPORT_SAFE_ERROR);await refreshExport()});
       actions.append(preflight)
     }
     if(row.individual_confirmation_required){
@@ -258,7 +261,7 @@ async function refreshExport(){
     }
     if(row.safe_cancel){
       const cancel=element('button','btn danger','安全にCancel');
-      cancel.addEventListener('click',async()=>{if(window.confirm(`${row.job_id} を安全にCancelしますか？`)){await call('export_queue_cancel',{job_id:row.job_id,expected_state_version:row.state_version});await refreshExport()}});
+      cancel.addEventListener('click',async()=>{if(window.confirm(`${row.job_id} を安全にCancelしますか？`)){await call('export_queue_cancel',{job_id:row.job_id,expected_state_version:row.state_version},EXPORT_SAFE_ERROR);await refreshExport()}});
       actions.append(cancel)
     }
     for(const action of row.recovery_actions||[]){

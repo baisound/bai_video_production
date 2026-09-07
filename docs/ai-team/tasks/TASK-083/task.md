@@ -1,6 +1,6 @@
 # TASK-083 — 音声学習Execution Resource Reservation
 
-- Status: `PURE_CONTRACT_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_NOT_STARTED`
+- Status: `PURE_CONTRACT_AND_EFFECT_ZERO_WINDOWS_BOUNDARY_CANDIDATE / NATIVE_RESERVATION_NOT_STARTED`
 - Development Depth: `DEV-4 FOUNDATION CRITICAL`
 - Execution coordinator: Owner指定の「OBS録音→学習→WAV最適化」統合Task
 - Canonical responsibility: TASK-083
@@ -13,7 +13,7 @@ TASK-083はDataset、training recipe、durable Job、worker、runtime/model acqu
 
 ## 現在のAuthorityと依存
 
-- 設計文書はPR #532でmainへmerge済みである。本Atomic Unitはeffect 0のpure contract/schema/fake backend/fault testsだけを実装候補とし、Windows backend/native reservationは未開始である。
+- 設計文書はPR #532でmainへmerge済みである。本Atomic Unitはeffect 0のpure contract/schema/fake backend/fault testsと、host inputを受け取らずnative effectをH3前に拒否するWindows composition boundaryだけを実装候補とする。Windows native reservationは未開始である。
 - 将来のcontract実装は、TASK-046 current `TrainingInputSnapshot`、TASK-043 current `VOICE_MODEL_TRAINING` durable Jobからeffect 0の `Task083ResourceReservationPlanV1` を作る。OwnerはこのplanとTASK-084 destination planを確認し、両plan digest、Job/head、run、snapshot、recipe、compound operationをbindするTASK-046-owned `TrainingExecutionAuthorizationBindingV2` amendmentをH3で使用する。現行authorizationは両plan digestを持たないため代用不可とする。
 - TASK-066 compute policy/probeはread-only advisory inputとし、TASK-083だけがlive reservation stateを所有する。
 - current sourceではTASK-043 `_LOCAL_JOB_KINDS` に `VOICE_MODEL_TRAINING` がなく、TASK-066 `audio.voice.local` も `DISABLED_UNTIL_MAPPED` である。自己整合hashを持つbody-free `TrainingDurableJobBinding` はfixture入力には使えてもcanonical Job sourceやworkload mappingの代用にならない。pure production admissionは `DURABLE_JOB_SOURCE_NOT_AVAILABLE` と `VOICE_TRAINING_WORKLOAD_NOT_MAPPED` を含めて常に`BLOCKED`とする。

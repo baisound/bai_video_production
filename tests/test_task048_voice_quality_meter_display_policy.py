@@ -6,8 +6,10 @@ from copy import deepcopy
 from dataclasses import replace
 from hashlib import sha256
 import json
+import math
 from pathlib import Path
 import pickle
+import sys
 from collections.abc import Iterator, Mapping
 
 import pytest
@@ -21,6 +23,7 @@ from ai_video_production.voice_quality_meter_display_policy import (
     MeterDisplayPolicyError,
     MeterDisplayPolicyRevision,
     MeterDisplayReason,
+    PeakObservation,
     PeakObservationState,
     PolicyBindingState,
     UNCONFIRMED_LABEL,
@@ -180,8 +183,10 @@ def test_noncurrent_binding_reason_precedes_missing_policy_document(
     assert result.thresholds_available is False
 
 
-@pytest.mark.parametrize("peak", [float("nan"), float("inf"), float("-inf"), 0.01])
-def test_invalid_meter_scalar_fails_to_unconfirmed_without_serializing_it(peak: float) -> None:
+@pytest.mark.parametrize(
+    "peak", [float("nan"), float("inf"), float("-inf"), True, False, 10**1000, "6.0"]
+)
+def test_invalid_meter_scalar_fails_to_unconfirmed_without_serializing_it(peak: object) -> None:
     result = compile_peak(peak)
     assert result.display_band is MeterDisplayBand.UNCONFIRMED
     assert result.operator_label == UNCONFIRMED_LABEL
@@ -191,6 +196,101 @@ def test_invalid_meter_scalar_fails_to_unconfirmed_without_serializing_it(peak: 
     assert result.thresholds_available is True
     assert result.fixture_policy_currentness_matched is True
     assert peak.__repr__() not in json.dumps(result.to_dict(), ensure_ascii=False)
+
+
+@pytest.mark.parametrize(
+    "peak", [math.nextafter(0.0, math.inf), 0.1, 1.9, 6.0, 12.0, 18.0, sys.float_info.max]
+)
+def test_positive_finite_peaks_are_measured_clips_and_round_trip_exactly(peak: float) -> None:
+    observed = PeakObservation.from_scalar(peak, measured_sample_values=48_000)
+    assert observed == PeakObservation(PeakObservationState.MEASURED, peak, 48_000)
+    assert observed.sample_peak_dbfs.hex() == peak.hex()
+    result = compile_peak(peak)
+    assert result.observation_state is PeakObservationState.MEASURED
+    assert result.sample_peak_dbfs.hex() == peak.hex()
+    assert result.display_band is MeterDisplayBand.TRUE_CLIP
+    assert result.operator_label == "クリップ"
+    assert result.reason_codes == ()
+    assert result.true_clip_dbfs == 0.0
+    document = result.to_dict()
+    decoded = MeterDisplayDecision.from_dict(json.loads(json.dumps(document)))
+    assert decoded.to_dict() == document
+    assert decoded.sample_peak_dbfs.hex() == peak.hex()
+    assert decoded.policy_currentness_confirmed is False
+    assert document["fixture_only"] is True
+    for flag in (
+        "authority_created", "production_eligible", "trusted_currentness_admitted",
+        "quality_receipt_issued",
+    ):
+        assert document[flag] is False
+
+
+@pytest.mark.parametrize(
+    "state",
+    [PolicyBindingState.NOT_BOUND, PolicyBindingState.STALE,
+     PolicyBindingState.REVOKED, PolicyBindingState.MISMATCH],
+)
+def test_positive_peaks_do_not_bypass_unconfirmed_policy(state: PolicyBindingState) -> None:
+    result = compile_peak(18.0, state=state)
+    assert result.observation_state is PeakObservationState.MEASURED
+    assert result.sample_peak_dbfs == 18.0
+    assert result.display_band is MeterDisplayBand.UNCONFIRMED
+    assert result.operator_label == UNCONFIRMED_LABEL
+    assert result.thresholds_available is False
+    assert MeterDisplayReason.INVALID_METER_SCALAR not in result.reason_codes
+    assert MeterDisplayDecision.from_dict(result.to_dict()).to_dict() == result.to_dict()
+
+
+@pytest.mark.parametrize(
+    "peak", [float("nan"), float("inf"), float("-inf"), True, False, 10**1000, "6.0"]
+)
+def test_direct_measured_observation_rejects_invalid_scalar(peak: object) -> None:
+    with pytest.raises(MeterDisplayPolicyError, match="finite numeric"):
+        PeakObservation(PeakObservationState.MEASURED, peak, 1)
+
+
+def test_positive_measurement_still_requires_samples_and_consistent_state() -> None:
+    with pytest.raises(MeterDisplayPolicyError):
+        PeakObservation.from_scalar(6.0, measured_sample_values=0)
+    for state in PeakObservationState:
+        if state is not PeakObservationState.MEASURED:
+            with pytest.raises(MeterDisplayPolicyError):
+                PeakObservation(state, 6.0, 1)
+
+
+@pytest.mark.parametrize("peak", [0.0, -0.0, -0.1, -sys.float_info.max])
+def test_finite_nonpositive_observations_keep_existing_numeric_contract(peak: float) -> None:
+    result = compile_peak(peak)
+    assert result.observation_state is PeakObservationState.MEASURED
+    assert result.sample_peak_dbfs.hex() == peak.hex()
+    assert MeterDisplayDecision.from_dict(result.to_dict()).sample_peak_dbfs.hex() == peak.hex()
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"display_band": "WARNING", "operator_label": "警告"},
+        {"sample_peak_dbfs": -12.0},
+        {"observation_state": "INVALID_OUT_OF_RANGE"},
+        {"policy_currentness_confirmed": True},
+        {"production_eligible": True},
+    ],
+)
+def test_positive_decision_rehashed_semantic_and_authority_tampering_is_rejected(
+    changes: dict[str, object],
+) -> None:
+    document = compile_peak(6.0).to_dict()
+    document.update(changes)
+    rehash_decision(document)
+    with pytest.raises(MeterDisplayPolicyError):
+        MeterDisplayDecision.from_dict(document)
+
+
+def test_legacy_invalid_out_of_range_decision_remains_readable() -> None:
+    document = compile_peak(float("nan")).to_dict()
+    document["observation_state"] = "INVALID_OUT_OF_RANGE"
+    rehash_decision(document)
+    assert MeterDisplayDecision.from_dict(document).to_dict() == document
 
 
 def test_insufficient_input_is_not_treated_as_measured_silence() -> None:

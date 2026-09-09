@@ -192,6 +192,19 @@ def _dbfs(value: Any, name: str) -> float:
     return result
 
 
+def _observation_dbfs(value: Any) -> float:
+    """Preserve finite measured peaks; policy limits are not signal limits."""
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise MeterDisplayPolicyError("sample_peak_dbfs must be finite numeric dBFS")
+    try:
+        result = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise MeterDisplayPolicyError("sample_peak_dbfs must be finite numeric dBFS") from exc
+    if not math.isfinite(result):
+        raise MeterDisplayPolicyError("sample_peak_dbfs must be finite numeric dBFS")
+    return result
+
+
 def _hash(domain: bytes, body: Mapping[str, Any], digest_field: str) -> str:
     return sha256_bytes(
         domain
@@ -557,7 +570,7 @@ class PeakObservation:
         if state is PeakObservationState.MEASURED:
             if measured == 0 or self.sample_peak_dbfs is None:
                 raise MeterDisplayPolicyError("MEASURED requires a numeric peak")
-            peak = _dbfs(self.sample_peak_dbfs, "sample_peak_dbfs")
+            peak = _observation_dbfs(self.sample_peak_dbfs)
             object.__setattr__(self, "sample_peak_dbfs", peak)
         elif state is PeakObservationState.MEASURED_LINEAR_ZERO:
             if measured == 0 or self.sample_peak_dbfs is not None:
@@ -584,17 +597,11 @@ class PeakObservation:
             return cls(PeakObservationState.INSUFFICIENT_INPUT, None, 0)
         if sample_peak_dbfs is None:
             return cls(PeakObservationState.MEASURED_LINEAR_ZERO, None, measured)
-        if (
-            not isinstance(sample_peak_dbfs, (int, float))
-            or isinstance(sample_peak_dbfs, bool)
-            or not math.isfinite(sample_peak_dbfs)
-        ):
+        try:
+            peak = _observation_dbfs(sample_peak_dbfs)
+        except MeterDisplayPolicyError:
             return cls(PeakObservationState.INVALID_NONFINITE, None, measured)
-        if float(sample_peak_dbfs) > 0.0:
-            return cls(
-                PeakObservationState.INVALID_OUT_OF_RANGE, None, measured
-            )
-        return cls(PeakObservationState.MEASURED, float(sample_peak_dbfs), measured)
+        return cls(PeakObservationState.MEASURED, peak, measured)
 
 
 def _classify_band(

@@ -1,9 +1,9 @@
 # TASK-084 — 音声モデルArtifact Custody
 
-- Status: `OWNER_DIRECTED_DESIGN_PROPOSAL / IMPLEMENTATION_NOT_STARTED`
+- Status: `PURE_CONTRACT_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_NOT_VERIFIED`
 - Development Depth: `DEV-4 FOUNDATION CRITICAL`
 - Execution coordinator: Owner指定の「OBS録音→学習→WAV最適化」統合Task
-- Canonical responsibility: TASK-084（本提案のreview/merge後に確定）
+- Canonical responsibility: TASK-084（設計PR `#532`で確定。pure contractはDraft PR `#537`のimplementation candidate）
 
 ## 目的
 
@@ -13,13 +13,21 @@ TASK-084はDataset採用、resource reservation、training実行、`ModelArtifac
 
 ## 現在のAuthorityと依存
 
-- 本Atomic UnitはTASK-082/083/084の4設計文書のreview・Evidence・commit/Draft PRだけを許可する。runtime source/schema/test/Windows adapterは未開始である。
+- 設計文書はPR `#532`でmainへmerge済みである。`PURE-CONTRACT-R0`のsource、canonical schema、package schema mirror、focused testsのexact4はcommit `e9d28ba686b3a2809c7f41ba6bea390beeca9943` / Draft PR `#537`の実装候補として存在する。Windows backendの受理済み実装・native実行は未確認である。
 - 将来のcustody contractはTASK-046 training plan、TASK-043 current Job/head、TASK-083 planからeffect 0の `Task084OutputArtifactDestinationPlanV1` を作る。両plan digestをbindするTASK-046-owned `TrainingExecutionAuthorizationBindingV2` と `VoiceTrainingCompoundOperationV1` amendmentがlandした後だけH3 compound operationでdestinationをactivateし、TASK-046 engine terminalとTASK-083 consumed/consumption-started lineageを別々の入力として検証する。
 - pure contract、synthetic artifact、fault testsは別の承認済み実装Unitでeffect 0として開始可能である。
 - 実model/checkpoint write、cipher/key/DACL操作、retention/revoke/deleteはHuman Gate `H3 TRAINING_START` と該当する追加Gateまで禁止する。
 - TASK-084はcheckpoint用 `Task084ModelCheckpointCustodyReceiptV1` とterminal用 `Task084ModelArtifactCustodyReceiptV1` だけを発行する。successful current terminalとpinned terminal custody readback後、TASK-046だけがterminal receiptを検証してnon-selectable `ModelArtifactBinding` を生成し、そこから`candidate_state=EVALUATION_PENDING`かつmodel/production use falseのpending candidateを登録できる。`EvaluationReceipt`はこのexact pending candidate digestを参照する。評価後のchildは、future/unlanded・TASK-046-owned `CandidateEvaluationAdmissionV2` とversioned candidate amendmentにより、exact pending parent digestとexact `EvaluationReceipt` digestを同時にbindして初めて`EVALUATED`になれる。
 - pending→evaluated childで変更可能なclosed setは `revision`、`parent_candidate_sha256`、`candidate_state`、`evaluation_receipt_sha256`、`created_at`、`candidate_sha256` だけとする。artifact binding、run intent/terminal、Dataset snapshot、Consent/rights/license、model identityと全authoritative lineageはparentと完全一致を要求する。legacy current contract、digest読み替え、pending/evaluated混用、単純rehashでこのV2 admissionを代用しない。
 - `CandidateEvaluationAdmissionV2`の設計、独立review、実装、merge、current readbackが完了するまでH4、promotion、selection、`FineTunedModelBinding`、model load/inferenceをfail closedで禁止する。checkpoint receiptやUNKNOWN/failed/cancelled/ambiguous terminalはbinding/candidate登録に使用不可とする。
+
+## PURE-CONTRACT-R0 implementation checkpoint
+
+- Candidate source: `src/ai_video_production/task084_voice_model_artifact_custody.py`。body-free metadata parser、destination plan、fixture inventory/event/lease/readbackとproduction/load admissionを実装する。productionとmodel loadのadmissionはcurrent sourceで`BLOCKED`に固定され、file I/O、暗号化、OS handle、model load、training/evaluation/inference authorityを生成しない。
+- Canonical schema: `schemas/task084-voice-model-artifact-custody.schema.json`。package mirrorは`src/ai_video_production/schema_resources/task084-voice-model-artifact-custody.schema.json`で、両者はbyte-identicalである。
+- Focused tests: `tests/test_task084_voice_model_artifact_custody.py`。上記commitの保存済みEvidenceはfocused `80 PASS`、直接依存regression `62 PASS`、独立Critic/Tester/JudgeのCritical/High `0`を記録する。これは既存の実行結果であり、本書の状態同期による再実行やnative確認を意味しない。
+- 上記commitのhosted Ubuntu/Windows matrixとSecurityはPASS、`changelog-and-version`は共有CHANGELOGの別Authority待ちでFAILである。PR `#537`はDraftを維持し、Ready/mergeは未成立である。
+- 本checkpointは既存pure contractの実装事実だけを記録する。Windows backend、private model/checkpoint I/O、H3/H4、consumer統合、Release/Deploy/Productionの権限を追加しない。未追跡の実装ファイルは受理済みcandidateやnative Evidenceに含めない。
 
 ## 将来の実装候補Allowed Files
 

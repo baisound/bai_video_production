@@ -78,6 +78,7 @@ internal sealed class CaptureForm : Form
     private string partialPath;
     private string finalPath;
     private string terminalReason;
+    private string completedGainSummary;
     private volatile bool connected;
     private volatile bool recording;
     private volatile bool paused;
@@ -153,7 +154,7 @@ internal sealed class CaptureForm : Form
         levelMeter.Height = 34;
         levelMeter.Dock = DockStyle.Fill;
         AddRow(table, 4, "入力レベル", levelMeter, null);
-        levelValues.Text = "Peak -- / RMS -- / 最大 -- dBFS\n0 dBFS = デジタル上限 / 警告・適正判定 未確定";
+        levelValues.Text = "Peak -- / RMS -- / 最大 -- dBFS\n0 dBFS = 基準線 / +値 = 基準超過 / 適正判定 未確定";
         levelValues.AutoSize = true;
         levelValues.MaximumSize = new Size(520, 0);
         AddRow(table, 5, "測定値", levelValues, null);
@@ -291,6 +292,7 @@ internal sealed class CaptureForm : Form
         finalPath = Path.Combine(root, "bai-learning-voice-" + stamp + ".wav");
         gainReceiptPath = Path.Combine(root, "bai-gain-check-" + stamp + ".receipt.json");
         terminalReason = null;
+        completedGainSummary = null;
         packetCount = payloadBytes = sequenceGaps = hmacFailures = reconnectCount = pauseCount =
             pauseBoundarySkippedSequences = receivedBytes = 0;
         lock (metricLock) {
@@ -661,8 +663,8 @@ internal sealed class CaptureForm : Form
         gainMeasurement = false;
         gainCheck.Enabled = true;
         start.Enabled = true;
+        completedGainSummary = completedGainMeasurement ? FormatGainSummary() : null;
         RefreshUi();
-        if (completedGainMeasurement) detail.Text = FormatGainSummary();
     }
 
     private void WriteGainReceipt(string reason)
@@ -832,7 +834,7 @@ internal sealed class CaptureForm : Form
             "Peak {0} / RMS {1} / 最大 {2} dBFS\n" +
             "clip 今回 {4}（赤バー）/ 累計 {3}（赤枠）\n" +
             "非有限(今回) {5} / {6} / {7}\n" +
-            "0 dBFS = デジタル上限 / 警告・適正判定 未確定",
+            "0 dBFS = 基準線 / +値 = 基準超過 / 適正判定 未確定",
             AudioMeterSnapshot.FormatDbfs(livePeak, window.Packet.SampleCount),
             AudioMeterSnapshot.FormatDbfs(liveRms, window.Packet.SampleCount),
             AudioMeterSnapshot.FormatDbfs(window.SessionMaximum, samples),
@@ -842,7 +844,8 @@ internal sealed class CaptureForm : Form
             var root = Path.GetPathRoot(Path.GetFullPath(destination.Text));
             freeSpace.Text = FormatBytes(new DriveInfo(root).AvailableFreeSpace);
         } catch { freeSpace.Text = "未確認"; }
-        if (!recording && !String.IsNullOrEmpty(terminalReason)) detail.Text = "停止理由: " + terminalReason;
+        if (!recording && !String.IsNullOrEmpty(terminalReason))
+            detail.Text = CaptureTerminalDisplay.Format(terminalReason, completedGainSummary);
     }
 
     private static string FormatBytes(long bytes)
@@ -924,6 +927,8 @@ internal struct AudioMeterSnapshot
 
     public string RangeState {
         get {
+            if (Packet.Peak > AudioMeterScale.MaximumAmplitude) return "表示範囲(+12)超過(今回)";
+            if (SessionMaximum > AudioMeterScale.MaximumAmplitude) return "表示範囲(+12)超過(履歴)";
             if (Packet.Peak > 1.0) return "入力範囲外(今回)";
             if (SessionMaximum > 1.0) return "入力範囲外(履歴)";
             return Packet.SampleCount > 0 ? "範囲外の検出なし" : "入力範囲 未観測";
@@ -934,8 +939,28 @@ internal struct AudioMeterSnapshot
     {
         if (sampleCount == 0) return "--";
         return amplitude > 0.0
-            ? (20.0 * Math.Log10(Math.Min(1.0, amplitude))).ToString("0.0", CultureInfo.InvariantCulture)
+            ? (20.0 * Math.Log10(amplitude)).ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture)
             : "-∞";
+    }
+}
+
+// Only the drawing coordinate saturates at +12 dBFS. Numeric readings and
+// receipts keep the original float amplitude, including values above this range.
+internal static class AudioMeterScale
+{
+    public const double MinimumDb = -60.0;
+    public const double MaximumDb = 12.0;
+    public static readonly double MaximumAmplitude = Math.Pow(10.0, MaximumDb / 20.0);
+
+    public static double Clamp(double value)
+    {
+        if (Double.IsNaN(value) || Double.IsInfinity(value)) return MinimumDb;
+        return Math.Max(MinimumDb, Math.Min(MaximumDb, value));
+    }
+
+    public static double Position(double value)
+    {
+        return (Clamp(value) - MinimumDb) / (MaximumDb - MinimumDb);
     }
 }
 
@@ -987,7 +1012,8 @@ internal sealed class AudioMeterPeakHold
 
     public void Observe(double peakDb, long monotonicTicks)
     {
-        if (Double.IsNaN(peakDb) || Double.IsInfinity(peakDb) || peakDb < -60.0 || peakDb > 0.0)
+        if (Double.IsNaN(peakDb) || Double.IsInfinity(peakDb) ||
+            peakDb < AudioMeterScale.MinimumDb || peakDb > AudioMeterScale.MaximumDb)
             throw new ArgumentOutOfRangeException("peakDb");
         if (monotonicTicks < lastObservedAt) throw new ArgumentOutOfRangeException("monotonicTicks");
         lastObservedAt = monotonicTicks;
@@ -1047,6 +1073,9 @@ internal sealed class AudioLevelMeter : Control
         base.OnPaint(e);
         var bounds = new Rectangle(1, 1, Math.Max(1, Width - 3), Math.Max(1, Height - 3));
         using (var background = new SolidBrush(BackColor)) e.Graphics.FillRectangle(background, bounds);
+        int zeroX = DbToX(0.0, bounds);
+        using (var overrangeBackground = new SolidBrush(Color.FromArgb(65, 28, 28)))
+            e.Graphics.FillRectangle(overrangeBackground, zeroX, bounds.Top, bounds.Right - zeroX, bounds.Height);
         int rmsX = DbToX(rmsDb, bounds);
         int peakX = DbToX(peakDb, bounds);
         using (var rmsBrush = new SolidBrush(clipDisplay.WindowClipped ? Color.FromArgb(220, 45, 45) : Color.FromArgb(65, 120, 180)))
@@ -1056,25 +1085,28 @@ internal sealed class AudioLevelMeter : Control
         int holdX = DbToX(peakHold.PeakDb, bounds);
         using (var holdPen = new Pen(Color.White, 2F))
             e.Graphics.DrawLine(holdPen, holdX, bounds.Top, holdX, bounds.Bottom);
+        using (var referencePen = new Pen(Color.Gold, 1F))
+            e.Graphics.DrawLine(referencePen, zeroX, bounds.Top, zeroX, bounds.Bottom);
         using (var border = new Pen(clipDisplay.SessionClipped ? Color.Red : Color.DimGray)) e.Graphics.DrawRectangle(border, bounds);
         using (var labelBrush = new SolidBrush(Color.WhiteSmoke)) {
-            foreach (int tick in new[] { -60, -48, -36, -24, -12, 0 }) {
+            foreach (int tick in new[] { -60, -48, -36, -24, -12, 0, 6, 12 }) {
                 int x = DbToX(tick, bounds);
-                e.Graphics.DrawString(tick.ToString(CultureInfo.InvariantCulture), Font, labelBrush,
-                    Math.Max(bounds.Left, x - 10), bounds.Top + 2);
+                string label = tick.ToString("+0;-0;0", CultureInfo.InvariantCulture);
+                float labelWidth = e.Graphics.MeasureString(label, Font).Width;
+                float labelX = Math.Max(bounds.Left, Math.Min(bounds.Right - labelWidth, x - labelWidth / 2));
+                e.Graphics.DrawString(label, Font, labelBrush, labelX, bounds.Top + 2);
             }
         }
     }
 
     private static double ClampDb(double value)
     {
-        if (Double.IsNaN(value) || Double.IsInfinity(value)) return -60.0;
-        return Math.Max(-60.0, Math.Min(0.0, value));
+        return AudioMeterScale.Clamp(value);
     }
 
     private static int DbToX(double value, Rectangle bounds)
     {
-        return bounds.Left + checked((int)Math.Round((ClampDb(value) + 60.0) / 60.0 * bounds.Width));
+        return bounds.Left + checked((int)Math.Round(AudioMeterScale.Position(value) * bounds.Width));
     }
 }
 
@@ -1185,6 +1217,15 @@ internal sealed class WaveFloatWriter : IDisposable
 
 // Explicit headless test entry: synthetic in-memory packets only. Unlike the
 // existing writer self-test, this does not open a Form, OBS, a pipe or a file.
+internal static class CaptureTerminalDisplay
+{
+    public static string Format(string reason, string gainSummary)
+    {
+        return "停止理由: " + reason +
+            (String.IsNullOrEmpty(gainSummary) ? "" : "\n" + gainSummary);
+    }
+}
+
 internal static class MeterObservationSelfTest
 {
     private static AudioMeterPacket Packet(params float[] samples)
@@ -1202,6 +1243,18 @@ internal static class MeterObservationSelfTest
     public static int Run()
     {
         try {
+            const string summary = "GAIN測定: Peak -26.4 dBFS / 音声保存なし。適正判定は未確定です。";
+            string terminal = CaptureTerminalDisplay.Format("GAIN_CHECK_COMPLETED", summary);
+            Require(terminal == "停止理由: GAIN_CHECK_COMPLETED\n" + summary,
+                "gain_summary_and_reason_remain_visible");
+            Require(CaptureTerminalDisplay.Format("GAIN_CHECK_COMPLETED", summary) == terminal,
+                "gain_summary_survives_repeated_refresh");
+            Require(CaptureTerminalDisplay.Format("FINALIZE_FAILED: IOException", summary) ==
+                "停止理由: FINALIZE_FAILED: IOException\n" + summary,
+                "gain_summary_does_not_hide_finalize_failure");
+            Require(CaptureTerminalDisplay.Format("USER_STOP", null) == "停止理由: USER_STOP" &&
+                CaptureTerminalDisplay.Format("USER_STOP", "") == "停止理由: USER_STOP",
+                "ordinary_recording_has_no_previous_gain_summary");
             var window = new AudioMeterWindow();
             window.Accumulate(Packet(0.875F));
             window.Accumulate(Packet(0.125F, 0.125F, 0.125F));
@@ -1236,8 +1289,8 @@ internal static class MeterObservationSelfTest
             var clipped = window.SnapshotAndReset();
             Require(clipped.Packet.ClipSampleCount == 3 && clipped.Packet.Peak == 1.25 &&
                 clipped.SessionMaximum == 1.25, "full_scale_and_overrange_observed_before_drawing_clamp");
-            Require(AudioMeterSnapshot.FormatDbfs(1.25, 3) == "0.0" &&
-                clipped.RangeState == "入力範囲外(今回)", "overrange_display_clamped_and_explicit");
+            Require(AudioMeterSnapshot.FormatDbfs(1.25, 3) == "+1.9" &&
+                clipped.RangeState == "入力範囲外(今回)", "overrange_numeric_value_is_positive_and_explicit");
             long sessionClips = clipped.Packet.ClipSampleCount;
             var clipDisplay = new AudioMeterClipDisplay(clipped.Packet.ClipSampleCount > 0, sessionClips > 0);
             Require(clipDisplay.WindowClipped && clipDisplay.SessionClipped, "clip_window_marks_bar_and_history");
@@ -1248,17 +1301,31 @@ internal static class MeterObservationSelfTest
             Require(!clipDisplay.WindowClipped && clipDisplay.SessionClipped,
                 "quiet_window_clears_red_bar_but_preserves_history");
             Require(quiet.RangeState == "入力範囲外(履歴)" && quiet.SessionMaximum == 1.25 &&
-                AudioMeterSnapshot.FormatDbfs(quiet.SessionMaximum, 3) == "0.0",
+                AudioMeterSnapshot.FormatDbfs(quiet.SessionMaximum, 3) == "+1.9",
                 "overrange_history_preserves_raw_session_maximum");
             Require(window.SnapshotAndReset().Packet.ClipSampleCount == 0,
                 "window_clip_delta_not_replayed");
-            foreach (double db in new[] { -60.0, -24.0, -12.0, -1.0, 0.0 }) {
+            foreach (double db in new[] { -60.0, -24.0, -12.0, -1.0, 0.0, 6.0, 12.0, 18.0 }) {
                 var measured = Packet((float)Math.Pow(10.0, db / 20.0));
                 Require(Math.Abs(20.0 * Math.Log10(measured.Peak) - db) < 0.001,
                     "known_dbfs_vector");
-                Require(measured.ClipSampleCount == (db == 0.0 ? 1 : 0),
+                Require(measured.ClipSampleCount == (db >= 0.0 ? 1 : 0),
                     "zero_dbfs_clip_is_not_warning_band");
             }
+            Require(AudioMeterScale.Position(-60.0) == 0.0 && AudioMeterScale.Position(12.0) == 1.0 &&
+                Math.Abs(AudioMeterScale.Position(0.0) - 5.0 / 6.0) < 1e-12 &&
+                AudioMeterScale.Position(6.0) > AudioMeterScale.Position(0.0),
+                "meter_has_visible_positive_headroom");
+            Require(AudioMeterScale.Position(18.0) == 1.0 && AudioMeterScale.Position(-80.0) == 0.0 &&
+                AudioMeterSnapshot.FormatDbfs(Math.Pow(10.0, 18.0 / 20.0), 1) == "+18.0",
+                "only_drawing_saturates_above_positive_scale");
+            window.ResetSession();
+            window.Accumulate(Packet(8.0F));
+            var aboveScale = window.SnapshotAndReset();
+            Require(aboveScale.RangeState == "表示範囲(+12)超過(今回)" &&
+                AudioMeterSnapshot.FormatDbfs(aboveScale.Packet.Peak, 1) == "+18.1" &&
+                window.SnapshotAndReset().RangeState == "表示範囲(+12)超過(履歴)",
+                "above_scale_current_and_history_remain_explicit");
             window.ResetSession();
             window.Accumulate(Packet(float.NaN, float.PositiveInfinity, float.NegativeInfinity, 0.25F));
             var invalid = window.SnapshotAndReset();
@@ -1289,6 +1356,12 @@ internal static class MeterObservationSelfTest
             Require(hold.PeakDb == -60.0, "pause_or_no_input_expires_hold");
             hold.Reset();
             Require(hold.PeakDb == -60.0, "hold_reset");
+            hold.Observe(6.0, 0);
+            hold.Observe(-12.0, TimeSpan.FromMilliseconds(1499).Ticks);
+            Require(hold.PeakDb == 6.0, "positive_peak_hold_is_not_clamped_to_zero");
+            hold.Observe(-12.0, TimeSpan.FromMilliseconds(1500).Ticks);
+            Require(hold.PeakDb == -12.0, "positive_peak_hold_expires");
+            hold.Reset();
             hold.Observe(-12.0, 10);
             bool rejected = false;
             try { hold.Observe(-20.0, 9); }

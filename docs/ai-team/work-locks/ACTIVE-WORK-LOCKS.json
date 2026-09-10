@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "registry_revision": 141,
+  "registry_revision": 142,
   "registry_state": "ACTIVE",
   "activation_scope": "AUTHORITATIVE_ONLY_WHEN_READ_FROM_MAIN",
   "audit_base_main_sha": "dc8a1949b58f7a5fa298a4d9153a2d410a1388da",
@@ -1045,6 +1045,78 @@
         "EXACT_MAIN_MERGE_POST_MERGE_CI_SECURITY_PASS",
         "APPEND_ONLY_LOCK_CLOSURE_HOSTED"
       ]
+    },
+    {
+      "lock_id": "BVP-INTEGRATION-LOCK-TASK048-PR540-METER-POSITIVE-DBFS-COMPAT-CHANGELOG-20260910",
+      "owner_agent": "root coordination / TASK-048 integration owner",
+      "owner_thread_id": null,
+      "lock_host_authority": "OWNER_EXPLICIT_TASK048_STACK_BASE_RETARGET_AND_SAFE_PROCESSING_20260910",
+      "integration_effect_authority_state": "AUTHORIZED_PENDING_HOST_MAIN_READBACK",
+      "target_merge_authority_state": "OWNER_AUTHORIZED_PENDING_TECHNICAL_GATES",
+      "implementation_authority_state": "TASK048_PR540_TECHNICAL_GO_HOSTED_8_OF_9_CHANGELOG_ONLY_FAIL",
+      "hosting_branch": "codex/task-048-pr540-changelog-lock-host-20260910",
+      "hosting_base_sha": "ea7128c5684f8c970f58bdeefbf1c2d3e818c35c",
+      "status": "PENDING_HOST_PR",
+      "activation_scope": "AUTHORITATIVE_ONLY_AFTER_MERGED_MAIN_EXACT_READ_BACK",
+      "target_pull_request": 540,
+      "target_pull_request_state": "OPEN_DRAFT_HOSTED_8_OF_9_PASS_CHANGELOG_ONLY_FAIL",
+      "target_branch": "codex/task-048-meter-positive-dbfs-compat-r1",
+      "expected_pre_integration_head": "fedde4176775a6824b89a541f64b6dda1d1a8cbd",
+      "purpose": "ONE_EXACT_TASK048_PR540_METER_POSITIVE_DBFS_COMPAT_CHANGELOG_ENTRY_REQUIRED_BY_CHANGELOG_AND_VERSION_CI",
+      "approved_changelog_bullet": "・TASK-048: 音質メーターの方針閾値と観測値の検証を分離し、有限の正のdBFSピークを直接生成・判定・再読込で保持する互換修正を追加しました。既存閾値・分類・digest・権限フラグと旧INVALID_OUT_OF_RANGE記録の読込を維持し、実音声、OBS/native、gain/capture、Provider/model、品質PASS、Dataset/Training、Release、Deploy、Production Activationは開始しません。",
+      "allowed_files": [
+        "CHANGELOG.md"
+      ],
+      "immutable_target_path_count": 2,
+      "immutable_target_projection_sha256": "b0af9a72e38096f52d6f17c051cd64662624493e38c4adbf4728ccd7d60e10bd",
+      "immutable_target_projection_spec": "LF_JOINED_GIT_LS_TREE_LINES_FOR_SORTED_TARGET_PATHS_NO_TRAILING_LF",
+      "controlled_shared_target_paths": [],
+      "open_pull_request_overlap": "ZERO_CHANGELOG_OR_ACTIVE_WORK_LOCKS_OVERLAP_ACROSS_10_OPEN_PRS",
+      "merge_order_reservation": "TASK048_PR540_FIRST_THEN_PR541",
+      "successor_reservation": "PR541_AFTER_PR540_HOSTED_CLOSED_RELEASED",
+      "denied": [
+        "TASK048_PR540_IMPLEMENTATION_OR_TEST_MUTATION_DURING_INTEGRATION_EFFECT",
+        "ACTIVE_WORK_LOCKS_REGISTRY_DURING_TARGET_INTEGRATION_EFFECT",
+        ".github/**",
+        "OTHER_SHARED_INTEGRATION_FILES",
+        "REAL_AUDIO_OBS_NATIVE_GAIN_CAPTURE_PROVIDER_MODEL_DATASET_OR_TRAINING_EFFECT",
+        "QUALITY_PASS_DATASET_PROMOTION_OR_PRODUCTION_ELIGIBILITY",
+        "VERSION_TAG_RELEASE_DEPLOY_OR_PRODUCTION_EFFECT",
+        "WORKFLOW_EXCEPTION_OR_CI_WEAKENING"
+      ],
+      "workflow_policy": "NO_WORKFLOW_EXCEPTION_NO_CI_WEAKENING_NO_UNCHANGED_HEAD_RETRY_NO_FORCE_NO_REBASE",
+      "composition_rule": "TARGET_PR_EXACT_2_IMMUTABLE_TASK048_PATHS_PLUS_1_INTEGRATION_OWNED_CHANGELOG_FILE",
+      "roadmap_delta": "NONE",
+      "prerequisites": [
+        "OWNER_EXPLICIT_PR540_THEN_PR541_BASE_RETARGET_AND_SAFE_PROCESSING_APPROVAL_ACTIVE",
+        "PR540_BASE_RETARGETED_TO_MAIN_WITH_EXACT_HEAD_AND_EXACT2_READ_BACK",
+        "PR533_AND_ITS_CHANGELOG_LOCK_HOSTED_CLOSED_RELEASED",
+        "TARGET_INDEPENDENT_TECHNICAL_REVIEW_C_H_M_L_0_0_0_0",
+        "TARGET_NON_CHANGELOG_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS_8_OF_8",
+        "REVISION141_HOSTED_CLOSED_RELEASED",
+        "LOCK_HOST_PR_HOSTED_CHECKS_ALL_TERMINAL_SUCCESS",
+        "LOCK_HOST_MERGED_MAIN_EXACT_READ_BACK",
+        "LOCK_HOST_POST_MERGE_CI_AND_SECURITY_SUCCESS",
+        "FRESH_MAIN_REGISTRY_TARGET_HEAD_AND_OVERLAP_REAUDIT",
+        "NORMAL_MAIN_INTO_TARGET_MERGE_NO_REBASE_NO_FORCE",
+        "TWO_IMMUTABLE_TARGET_BLOBS_PRESERVED",
+        "EXACT_APPROVED_CHANGELOG_LINE_ONLY"
+      ],
+      "expiry_conditions": [
+        "TARGET_HEAD_MISMATCH",
+        "TARGET_PR_CLOSED_OR_MERGED",
+        "MAIN_OR_REGISTRY_DRIFT_BEFORE_EFFECT",
+        "NEW_CHANGELOG_OR_REGISTRY_OVERLAP",
+        "TWO_IMMUTABLE_IMPLEMENTATION_OR_TEST_BLOB_DRIFT",
+        "SOLE_BUILDER_OR_OWNERSHIP_MISMATCH",
+        "FORBIDDEN_EFFECT_OR_WORKFLOW_POLICY_VIOLATION",
+        "CHANGELOG_INTEGRATION_COMPLETED_AND_LOCK_RELEASE_RECORDED"
+      ],
+      "release_condition": "EXACT_CHANGELOG_ONLY_TARGET_COMMIT_FRESH_MAIN_INTEGRATION_SHARED_PATH_OVERLAP_ZERO_ALL_HOSTED_CHECKS_SUCCESS_TARGET_PR_MERGE_AND_APPEND_ONLY_CLOSURE_EVIDENCE",
+      "integration_effect_authority_id": "OWNER_EXPLICIT_TASK048_STACK_BASE_RETARGET_AND_SAFE_PROCESSING_20260910",
+      "target_merge_authority_id": "OWNER_EXPLICIT_TASK048_STACK_BASE_RETARGET_AND_SAFE_PROCESSING_20260910",
+      "automatic_retry": false,
+      "automatic_rollback_or_revert": false
     }
   ],
   "shared_integration_files": [

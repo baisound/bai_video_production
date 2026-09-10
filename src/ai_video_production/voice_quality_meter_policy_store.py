@@ -633,8 +633,9 @@ def _root_pins(root: Path) -> tuple[tuple[Path, tuple[int, int]], ...]:
     for ancestor in (root, *root.parents):
         info = _safe_stat(ancestor, directory=True)
         assert info is not None
-        # Covers native volume roots and mounted-volume roots (including WSL).
-        if ancestor.is_mount() and (root == ancestor or root.parent == ancestor):
+        # os.path also supports Windows on Python 3.11, where Path.is_mount
+        # raises NotImplementedError. Never skip the mount-placement check.
+        if os.path.ismount(ancestor) and (root == ancestor or root.parent == ancestor):
             _fail("DRIVE_ROOT_PLACEMENT")
         pins.append((ancestor, _identity(info)))
     if root == Path(root.anchor) or root.parent == Path(root.anchor):

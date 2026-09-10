@@ -914,17 +914,55 @@ def test_guard_rejects_traversal_absolute_unc_and_aliases(project, relative):
     assert file_snapshot(project) == before
 
 
-def test_root_and_direct_mount_child_rejected_without_writes(project, monkeypatch):
+@pytest.mark.parametrize("mount_location", ["root", "parent"])
+def test_root_and_direct_mount_child_rejected_without_writes(project, monkeypatch, mount_location):
+    before = file_snapshot(project)
     with pytest.raises(meter.MeterPolicyStoreError, match="ROOT_INVALID"):
         store(Path("relative"))
     with pytest.raises(meter.MeterPolicyStoreError, match="ROOT_INVALID"):
         store(project / ".." / "synthetic-project")
     with pytest.raises(meter.MeterPolicyStoreError, match="DRIVE_ROOT_PLACEMENT"):
         store(Path(project.anchor))
-    original = Path.is_mount
-    monkeypatch.setattr(Path, "is_mount", lambda path: path == project.parent or original(path))
+    mount = project if mount_location == "root" else project.parent
+    original = os.path.ismount
+    monkeypatch.setattr(os.path, "ismount", lambda path: Path(path) == mount or original(path))
     with pytest.raises(meter.MeterPolicyStoreError, match="DRIVE_ROOT_PLACEMENT"):
         store(project)
+    assert file_snapshot(project) == before
+
+
+def test_python311_windows_path_mount_unavailable_preserves_lifecycle(project, monkeypatch):
+    def unavailable(path):
+        raise NotImplementedError("Path.is_mount() is unsupported on this system")
+
+    monkeypatch.setattr(Path, "is_mount", unavailable)
+    before = file_snapshot(project)
+    writer = store(project)
+    assert writer.read_snapshot(context()).status is meter.MeterPolicyReadStatus.NOT_BOUND
+    assert file_snapshot(project) == before
+    writer, document = selected(project, writer)
+    query = context()
+    result = writer.read_snapshot(query)
+    assert result.status is meter.MeterPolicyReadStatus.PROJECT_HEAD_MATCHED_SNAPSHOT
+    assert result.snapshot.policy.to_dict() == document
+    assert writer.revalidate(result.snapshot, query).status is meter.MeterPolicyReadStatus.PROJECT_HEAD_MATCHED_SNAPSHOT
+    reopened = store(project)
+    assert reopened.read_snapshot(context()).snapshot.policy.to_dict() == document
+    apply(project, writer, "REVOKE_POLICY", {"policy_revision_sha256": document["policy_revision_sha256"]})
+    assert reopened.read_snapshot(context()).status is meter.MeterPolicyReadStatus.REVOKED
+
+
+@pytest.mark.parametrize("failure", [OSError, NotImplementedError])
+def test_mount_probe_error_fails_closed_before_any_write(project, monkeypatch, failure):
+    before = file_snapshot(project)
+
+    def unavailable(path):
+        raise failure("synthetic mount probe unavailable")
+
+    monkeypatch.setattr(os.path, "ismount", unavailable)
+    with pytest.raises(failure, match="synthetic mount probe unavailable"):
+        store(project)
+    assert file_snapshot(project) == before
 
 
 @pytest.mark.parametrize("location", ["parent", "leaf", "control", "root"])

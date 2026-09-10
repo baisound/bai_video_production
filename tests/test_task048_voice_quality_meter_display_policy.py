@@ -632,3 +632,44 @@ def test_module_has_no_audio_filesystem_process_network_or_native_surface() -> N
         "qualitystate.pass",
     ):
         assert forbidden not in lowered
+
+
+
+@pytest.mark.parametrize("peak,expected", [
+    (None, MeterDisplayBand.BELOW_TARGET),
+    (-60.0, MeterDisplayBand.BELOW_TARGET),
+    (-24.0, MeterDisplayBand.TARGET), (-12.0, MeterDisplayBand.TARGET),
+    (-11.9, MeterDisplayBand.ABOVE_TARGET), (-1.0, MeterDisplayBand.WARNING),
+    (-0.5, MeterDisplayBand.WARNING), (0.0, MeterDisplayBand.TRUE_CLIP),
+    (0.1, MeterDisplayBand.TRUE_CLIP), (6.0, MeterDisplayBand.TRUE_CLIP),
+    (12.0, MeterDisplayBand.TRUE_CLIP), (18.0, MeterDisplayBand.TRUE_CLIP),
+    (sys.float_info.max, MeterDisplayBand.TRUE_CLIP),
+])
+def test_public_neutral_classification_seam(peak, expected):
+    from ai_video_production.voice_quality_meter_display_policy import classify_meter_band
+    assert classify_meter_band(policy(), PeakObservation.from_scalar(peak, measured_sample_values=1)) is expected
+
+
+def test_public_seam_exact_types_revalidates_copied_values():
+    from ai_video_production.voice_quality_meter_display_policy import classify_meter_band
+
+    valid = PeakObservation.from_scalar(-18.0, measured_sample_values=1)
+    for bad_policy, bad_observation in (
+        (policy().to_dict(), valid), (policy(), {"sample_peak_dbfs": -18.0}),
+        (policy(), PeakObservation.from_scalar(None, measured_sample_values=0)),
+        (policy(), PeakObservation.from_scalar(float("nan"), measured_sample_values=1)),
+    ):
+        with pytest.raises(MeterDisplayPolicyError):
+            classify_meter_band(bad_policy, bad_observation)
+    mutated_policy = policy()
+    object.__setattr__(mutated_policy, "true_clip_dbfs", 1.0)
+    with pytest.raises(MeterDisplayPolicyError):
+        classify_meter_band(mutated_policy, valid)
+    object.__setattr__(valid, "sample_peak_dbfs", float("inf"))
+    with pytest.raises(MeterDisplayPolicyError):
+        classify_meter_band(policy(), valid)
+    class PolicySubclass(MeterDisplayPolicyRevision):
+        pass
+    subclass = PolicySubclass("sub-policy", 1, None, -24.0, -12.0, -1.0, 0.0)
+    with pytest.raises(MeterDisplayPolicyError):
+        classify_meter_band(subclass, PeakObservation.from_scalar(-18.0, measured_sample_values=1))

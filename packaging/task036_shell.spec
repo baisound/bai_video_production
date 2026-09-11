@@ -69,9 +69,11 @@ meter_data = []
 meter_identity = []
 
 
-def add_meter_file(path, relative):
+def add_meter_file(path, relative, *, nonempty=False):
     checked_meter_path(str(path))
-    if not path.is_file() or not 1 <= path.stat().st_size <= 512 * 1024 * 1024:
+    # Hash empty regular metadata exactly; executable images remain nonempty.
+    minimum = 1 if nonempty else 0
+    if not path.is_file() or not minimum <= path.stat().st_size <= 512 * 1024 * 1024:
         raise ValueError("TASK-048 invalid closure file")
     with path.open("rb") as stream:
         digest = hashlib.file_digest(stream, "sha256").hexdigest()
@@ -81,7 +83,7 @@ def add_meter_file(path, relative):
     return digest
 
 
-controller_digest = add_meter_file(meter_controller, meter_controller.name)
+controller_digest = add_meter_file(meter_controller, meter_controller.name, nonempty=True)
 if controller_digest != meter_receipt.get("controller_sha256"):
     raise ValueError("TASK-048 Controller identity changed")
 worker_expected = meter_receipt.get("worker_files")
@@ -100,7 +102,8 @@ while pending_directories:
             pending_directories.append(path)
         else:
             relative = "worker\\" + str(path.relative_to(meter_worker)).replace("/", "\\")
-            worker_actual.append({"path": relative, "sha256": add_meter_file(path, relative)})
+            worker_actual.append({"path": relative, "sha256": add_meter_file(
+                path, relative, nonempty=relative == "worker\\BAI Meter Worker.exe")})
 if sorted(worker_actual, key=lambda item: item["path"].casefold()) != sorted(worker_expected, key=lambda item: item["path"].casefold()):
     raise ValueError("TASK-048 worker closure differs from compiled identity")
 meter_identity_module = "_bvp_task048_meter_identity"

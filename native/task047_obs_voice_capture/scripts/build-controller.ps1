@@ -93,9 +93,13 @@ if ($MeterWorkerBundle) {
       if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Worker reparse entry denied' }
       if ($entry.PSIsContainer) { $directories.Push($entry.FullName) }
       else {
-        if ($entry.Length -le 0 -or $entry.Length -gt 536870912 -or $workerFiles.Count -ge 4096) { throw 'Worker closure bounds exceeded' }
+        # Empty regular metadata (for example dist-info/REQUESTED) is part of
+        # the exact closure and must be hashed, never removed or synthesized.
+        if ($entry.Length -lt 0 -or $entry.Length -gt 536870912) { throw 'Worker closure file size limit exceeded' }
+        if ($workerFiles.Count -ge 4095) { throw 'Worker closure file count limit exceeded' }
         $relative = 'worker\' + $entry.FullName.Substring($workerRoot.Length + 1)
         if ($relative -notmatch '^[a-zA-Z0-9 _.\-\\]+$') { throw 'Worker path unsupported' }
+        if ($relative -ceq 'worker\BAI Meter Worker.exe' -and $entry.Length -eq 0) { throw 'Worker executable empty' }
         $workerFiles += [pscustomobject]@{ path = $relative; sha256 = (Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
       }
     }

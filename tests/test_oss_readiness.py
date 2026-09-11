@@ -71,20 +71,47 @@ def test_github_community_health_files_exist() -> None:
     assert all((ROOT / path).is_file() for path in required)
 
 
-def test_ci_is_offline_first_and_cross_platform() -> None:
-    ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-    assert "ubuntu-latest" in ci and "windows-latest" in ci
-    assert "timeout-minutes: 20" in ci
-    assert "pytest-xdist==3.8.0 pytest-timeout==2.4.0" in ci
-    assert "python -m pytest -q -n 2 --dist loadfile" in ci
-    assert "--timeout=120 --max-worker-restart=0 --durations=20" in ci
-    assert "python -m compileall -q src tests" in ci
-    assert "sudo apt-get update && sudo apt-get install --yes ffmpeg" in ci
-    assert "https://packages.chocolatey.org/ffmpeg.8.1.2.nupkg" in ci
-    assert "6c5746c8f0da8334d367131012ec1280bdd490651e108c35e19933587b06aed8" in ci
-    assert 'choco install ffmpeg --version=8.1.2 --source="$env:RUNNER_TEMP" --yes --no-progress' in ci
-    assert "ffprobe -version" in ci
-    assert "behavior-probe" not in ci
+def test_ci_is_tiered_and_full_regression_remains_cross_platform() -> None:
+    fast = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    full = (ROOT / ".github/workflows/full-regression.yml").read_text(encoding="utf-8")
+    release = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+
+    assert "name: Fast CI" in fast
+    assert "pull_request:" in fast and "branches: [main]" in fast
+    assert "python-version: \"3.13\"" in fast
+    assert "windows-latest" not in fast and "matrix:" not in fast
+    assert "fetch-depth: 0" in fast
+    assert "tools/ci/run-fast-tests.py" in fast
+    assert '--allowed-temp-root "${{ runner.temp }}"' in fast
+    assert '--basetemp "${{ runner.temp }}/bvp-fast-' in fast
+    assert "python -m pytest -q -n 2 --dist loadfile" not in fast
+    assert "python -m compileall -q src tests" in fast
+
+    assert "name: Full regression" in full
+    assert "workflow_call:" in full and "workflow_dispatch:" in full
+    assert '"integration/**"' in full and '"release/**"' in full
+    assert 'cron: "23 18 * * 0"' in full
+    assert 'ref: ${{ inputs.ref || github.sha }}' in full
+    assert "ubuntu-latest" in full and "windows-latest" in full
+    assert 'python-version: ["3.11", "3.12", "3.13"]' in full
+    assert "timeout-minutes: 20" in full
+    assert "pytest-xdist==3.8.0 pytest-timeout==2.4.0" in full
+    assert "python -m pytest -q -n 2 --dist loadfile" in full
+    assert "--timeout=120 --max-worker-restart=0 --durations=20" in full
+    assert "python -m compileall -q src tests" in full
+    assert '${{ runner.temp }}/bvp-full-' in full
+    assert '${{ runner.temp }}/bvp-installer-' in full
+    assert "sudo apt-get update && sudo apt-get install --yes ffmpeg" in full
+    assert "https://packages.chocolatey.org/ffmpeg.8.1.2.nupkg" in full
+    assert "6c5746c8f0da8334d367131012ec1280bdd490651e108c35e19933587b06aed8" in full
+    assert 'choco install ffmpeg --version=8.1.2 --source="$env:RUNNER_TEMP" --yes --no-progress' in full
+    assert "ffprobe -version" in full
+    assert "behavior-probe" not in full
+
+    assert "uses: ./.github/workflows/full-regression.yml" in release
+    assert "needs: full-regression" in release
+    assert release.count('ref: ${{ inputs.tag }}') == 2
+    assert "python -m pytest -q" not in release
 
 
 def test_security_automation_is_present() -> None:

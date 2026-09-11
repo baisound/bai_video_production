@@ -1,4 +1,4 @@
-name: CI
+name: Fast CI
 
 on:
   push:
@@ -10,36 +10,19 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12", "3.13"]
-    runs-on: ${{ matrix.os }}
+  focused-test:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
           cache: pip
-      - name: Install FFmpeg on Ubuntu
-        if: runner.os == 'Linux'
+      - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install --yes ffmpeg
-      - name: Install FFmpeg on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $package = Join-Path $env:RUNNER_TEMP "ffmpeg.8.1.2.nupkg"
-          curl.exe --silent --show-error --fail --location `
-            --output $package `
-            "https://packages.chocolatey.org/ffmpeg.8.1.2.nupkg"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $expected = "6c5746c8f0da8334d367131012ec1280bdd490651e108c35e19933587b06aed8"
-          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $package).Hash.ToLowerInvariant()
-          if ($actual -ne $expected) { throw "FFmpeg package checksum mismatch" }
-          choco install ffmpeg --version=8.1.2 --source="$env:RUNNER_TEMP" --yes --no-progress
       - name: Verify media executables
         run: |
           ffmpeg -version
@@ -50,20 +33,11 @@ jobs:
         run: >-
           python -m pip install --disable-pip-version-check --no-input
           pytest-xdist==3.8.0 pytest-timeout==2.4.0
-      - name: Run bounded parallel test suite on Linux
-        if: runner.os == 'Linux'
+      - name: Run changed and corresponding tests
         run: >-
-          python -m pytest -q -n 2 --dist loadfile
-          --timeout=120 --max-worker-restart=0 --durations=20
-      - name: Run bounded parallel non-installer suite on Windows
-        if: runner.os == 'Windows'
-        run: >-
-          python -m pytest -q -n 2 --dist loadfile
-          --timeout=120 --max-worker-restart=0 --durations=20
-          --ignore=tests/test_task047_obs_installer_contract.py
-      - name: Run native installer contract serially on Windows
-        if: runner.os == 'Windows'
-        run: >-
-          python -m pytest -q tests/test_task047_obs_installer_contract.py
-          --timeout=300 --durations=20
+          python tools/ci/run-fast-tests.py
+          --base "${{ github.event.pull_request.base.sha || github.event.before }}"
+          --head "${{ github.event.pull_request.head.sha || github.sha }}"
+          --allowed-temp-root "${{ runner.temp }}"
+          --basetemp "${{ runner.temp }}/bvp-fast-${{ github.run_id }}-${{ github.run_attempt }}"
       - run: python -m compileall -q src tests

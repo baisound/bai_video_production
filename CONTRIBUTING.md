@@ -14,11 +14,13 @@
 ```bash
 python -m venv .venv
 python -m pip install -e ".[dev]"
-python -m pytest -q
+python -m pytest -q tests/test_your_changed_area.py
 python -m compileall -q src tests
 ```
 
 通常テストは外部通信、課金API、Resolve mutation、GUI自動起動を必要としない形にしてください。実機確認が必要な変更は、合成素材、空Project、明示的Timeout、Evidence保存先、復旧方法を文書化してください。
+
+通常のPull Requestでは変更testと対応testをFast CIが自動選択します。全件のUbuntu/Windows × Python 3.11–3.13 regressionは、`integration/**`または`release/**` branch、手動実行、週次安全網、正式Releaseの直前に実行します。高リスクTaskが個別にfull regressionを要求する場合は、そのGateを優先して手動実行してください。
 
 ## Engineering rules
 
@@ -38,7 +40,7 @@ python -m compileall -q src tests
 - 実行したテストと結果
 - 外部通信、課金、権利、Privacyへの影響
 - Windows／Python／Runtime互換性
-- 文書とCHANGELOG更新
+- 必要な文書更新。CHANGELOGはProduct versionを変更するRelease PRだけで更新
 - 未解決事項とRollback方法
 
 ## Secrets, media and personal data

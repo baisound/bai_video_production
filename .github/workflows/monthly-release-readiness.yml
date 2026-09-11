@@ -26,6 +26,6 @@ jobs:
                 ...context.repo,
                 title,
                 labels: ["release"],
-                body: "- [ ] User-visible changes documented\n- [ ] Full CI and Security green\n- [ ] Version/changelog/citation synchronized\n- [ ] Demo and migration path verified\n- [ ] Real impact Evidence updated without invented metrics\n- [ ] Maintainer explicitly approves release"
+                body: "- [ ] User-visible changes documented\n- [ ] Exact release tree has Full regression and Security green\n- [ ] Version/changelog/citation synchronized\n- [ ] Demo and migration path verified\n- [ ] Real impact Evidence updated without invented metrics\n- [ ] Maintainer explicitly approves release"
               });
             }

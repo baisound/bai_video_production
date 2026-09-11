@@ -12,7 +12,13 @@ permissions:
   contents: write
 
 jobs:
+  full-regression:
+    uses: ./.github/workflows/full-regression.yml
+    with:
+      ref: ${{ inputs.tag }}
+
   build-and-release:
+    needs: full-regression
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -25,8 +31,6 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install --yes ffmpeg
       - run: python -m pip install --upgrade pip build
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest -q
-      - run: python -m compileall -q src tests
       - run: python -m build
       - name: Verify tag matches package version
         shell: bash

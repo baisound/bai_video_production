@@ -11,7 +11,12 @@ from jsonschema import Draft202012Validator
 import pytest
 
 import ai_video_production.task084_voice_model_artifact_custody as task084
+import ai_video_production.task083_voice_training_resource_reservation as task083
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
+from ai_video_production.task083_voice_training_resource_reservation import (
+    Task083ResourceReservationPlanV1,
+    compile_resource_reservation_plan,
+)
 from ai_video_production.task084_voice_model_artifact_custody import (
     ArtifactVariant,
     CustodyPhase,
@@ -426,17 +431,64 @@ DESTINATION_IDENTITIES = {
 TASK046_CHECKPOINT_BINDING_SHA256 = H("task046-checkpoint-binding")
 
 
+def reservation_plan(
+    snapshot: dict | None = None,
+    intent: dict | None = None,
+    job: dict | None = None,
+    **changes: object,
+) -> Task083ResourceReservationPlanV1:
+    snapshot = snapshot or training_snapshot()
+    intent = intent or training_intent(snapshot)
+    job = job or job_binding()
+    engine = intent["engine_admission_binding"]
+    recipe = intent["target_resource_feasibility_binding"]
+    kwargs = {
+        "training_input_snapshot": snapshot,
+        "training_job_binding": job,
+        "run_id": intent["run_intent_id"],
+        "training_input_snapshot_ref": intent["training_input_snapshot_ref"],
+        "recipe_revision_ref": recipe["recipe_revision_ref"],
+        "recipe_revision_sha256": recipe["recipe_revision_sha256"],
+        "backend_id": "fixture-reservation-backend",
+        "backend_build_sha256": H("reservation-backend"),
+        "runtime_revision": engine["runtime_revision"],
+        "runtime_sha256": engine["runtime_sha256"],
+        "device_profile_ref": "device-profile:task084:1",
+        "device_profile_sha256": H("device-profile"),
+        "capability_admission_sha256": H("advisory-capability"),
+        "resource_floor": {
+            "cpu_units": 4,
+            "ram_bytes": 8_000_000_000,
+            "vram_bytes": 6_000_000_000,
+            "disk_bytes": 20_000_000_000,
+        },
+        "resource_ceiling": {
+            "cpu_units": 12,
+            "ram_bytes": 32_000_000_000,
+            "vram_bytes": 24_000_000_000,
+            "disk_bytes": 100_000_000_000,
+        },
+        "policy_revision_sha256": H("resource-policy"),
+        "issued_at": NOW,
+        "expires_at": EXPIRES_AT,
+    }
+    kwargs.update(changes)
+    return compile_resource_reservation_plan(**kwargs)
+
+
 def make_plan(**changes: object):
-    snapshot = training_snapshot()
-    intent_value = training_intent(snapshot)
-    job_value = job_binding()
-    run_value = training_run_revision(intent_value, job_value)
+    snapshot = changes.pop("training_input_snapshot", None) or training_snapshot()
+    intent_value = changes.pop("training_intent", None) or training_intent(snapshot)
+    job_value = changes.pop("durable_job_binding", None) or job_binding()
+    run_value = changes.pop("training_run_revision", None) or training_run_revision(
+        intent_value, job_value
+    )
     kwargs = {
         "plan_id": "task084-plan:1",
         "training_run_head_sha256": run_value["revision_sha256"],
         "task043_job_readback_sha256": H("task043-job-readback"),
         "task043_job_head_sha256": H("task043-job-head"),
-        "task083_reservation_plan_sha256": H("task083-plan"),
+        "task083_reservation_plan": reservation_plan(snapshot, intent_value, job_value),
         "destination_coordinate": "artifact-destination:voice-models",
         "custody_policy_sha256": H("custody-policy"),
         "encryption_policy_sha256": H("encryption-policy"),
@@ -774,6 +826,12 @@ def test_destination_plan_is_deterministic_deeply_immutable_and_body_free() -> N
     assert first.to_dict() == second.to_dict()
     assert first.to_dict()["production_eligible"] is False
     assert first.to_dict()["resource_effect_count"] == 0
+    assert first.to_dict()["task083_contract_state"] == (
+        "PURE_CONTRACT_AVAILABLE_PRODUCTION_BLOCKED"
+    )
+    assert first.to_dict()["task083_reservation_plan_sha256"] == (
+        reservation_plan().to_dict()["plan_sha256"]
+    )
     changed = first.to_dict()
     changed["checkpoint_expected_entries"][0]["entry_id"] = "tampered"
     assert first.to_dict()["checkpoint_expected_entries"][0]["entry_id"] == "checkpoint-weight"
@@ -783,12 +841,193 @@ def test_destination_plan_is_deterministic_deeply_immutable_and_body_free() -> N
         assert forbidden not in exported
 
 
+def test_task083_typed_and_mapping_inputs_are_reparsed_without_aliasing() -> None:
+    typed = reservation_plan()
+    mapping = typed.to_dict()
+    first = make_plan(task083_reservation_plan=typed)
+    second = make_plan(task083_reservation_plan=mapping)
+    assert first.to_dict() == second.to_dict()
+    mapping["resource_floor"]["cpu_units"] = 0
+    assert first.to_dict()["task083_reservation_plan_sha256"] == (
+        typed.to_dict()["plan_sha256"]
+    )
+    assert "task083_reservation_plan" not in first.to_dict()
+    assert_effect_zero_surface(first)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("project_id", "project:other"),
+        ("job_id", "job:other"),
+        ("job_operation_id", "operation:other"),
+        ("job_revision", 2),
+        ("job_revision_sha256", H("wrong-job-revision")),
+        ("job_binding_sha256", H("wrong-job-binding")),
+        ("run_id", "training-run-intent:other"),
+        ("run_id", "training-run-revision:task084:1"),
+        ("training_input_snapshot_ref", "training-input:other"),
+        ("training_input_snapshot_sha256", H("wrong-snapshot")),
+        ("dataset_id", "dataset:other"),
+        ("recipe_revision_ref", "recipe:other"),
+        ("recipe_revision_sha256", H("wrong-recipe")),
+        ("runtime_revision", "runtime:other"),
+        ("runtime_sha256", H("wrong-runtime")),
+    ],
+)
+def test_task083_rehashed_plan_cannot_cross_bound_lineage(field: str, value: object) -> None:
+    changed = reservation_plan().to_dict()
+    changed[field] = value
+    rehash(changed, "plan_sha256", task083._PLAN_DOMAIN)
+    # It is a valid TASK-083 record, but not the plan for these companion inputs.
+    canonical = Task083ResourceReservationPlanV1.from_dict(changed)
+    with pytest.raises(ValueError, match=f"TASK-083 reservation plan {field} mismatch"):
+        make_plan(task083_reservation_plan=canonical)
+
+
+@pytest.mark.parametrize(
+    "compiled_at",
+    ["2026-09-05T23:59:59Z", EXPIRES_AT, "2026-09-06T01:00:01Z"],
+)
+def test_task083_plan_issue_and_expiry_bound_compilation(compiled_at: str) -> None:
+    with pytest.raises(ValueError, match="not current at compiled_at"):
+        make_plan(compiled_at=compiled_at)
+
+
+@pytest.mark.parametrize("compiled_at", [NOW, "2026-09-06T00:59:59Z"])
+def test_task083_plan_compilation_accepts_issue_and_pre_expiry(compiled_at: str) -> None:
+    plan = make_plan(compiled_at=compiled_at)
+    assert_effect_zero_surface(plan)
+    admission = compile_production_custody_admission(plan, evaluated_at=EXPIRES_AT)
+    assert admission.to_dict()["decision"] == "BLOCKED"
+    assert admission.to_dict()["native_backend_invoked"] is False
+
+
+def test_task083_digest_only_and_duck_mapping_cannot_replace_canonical_plan() -> None:
+    valid = reservation_plan().to_dict()
+    called = []
+
+    class Duck:
+        def to_dict(self):
+            called.append("duck")
+            return valid
+
+    class ForgedMapping(dict):
+        def to_dict(self):
+            called.append("mapping")
+            return valid
+
+    for supplied in (
+        valid["plan_sha256"],
+        {"plan_sha256": valid["plan_sha256"]},
+        Duck(),
+        ForgedMapping(plan_sha256=valid["plan_sha256"]),
+    ):
+        with pytest.raises(ValueError, match="canonical plan object|record_type is unknown"):
+            make_plan(task083_reservation_plan=supplied)
+    assert called == []
+    with pytest.raises(TypeError, match="task083_reservation_plan_sha256"):
+        make_plan(task083_reservation_plan_sha256=valid["plan_sha256"])
+
+
+def test_task083_subclass_is_rejected_without_calling_overridden_export() -> None:
+    called = []
+
+    class Derived(Task083ResourceReservationPlanV1):
+        def to_dict(self):
+            called.append(True)
+            raise AssertionError("subclass export must not execute")
+
+    supplied = Derived.from_dict(reservation_plan().to_dict())
+    with pytest.raises(ValueError, match="exact canonical type"):
+        make_plan(task083_reservation_plan=supplied)
+    assert called == []
+
+
+def test_task083_exact_typed_object_is_revalidated_after_tamper() -> None:
+    supplied = reservation_plan()
+    changed = supplied.to_dict()
+    changed["runtime_sha256"] = H("tampered-runtime")
+    object.__setattr__(supplied, "data", changed)
+    with pytest.raises(ValueError, match="plan_sha256 mismatch"):
+        make_plan(task083_reservation_plan=supplied)
+
+
+@pytest.mark.parametrize(
+    "companion",
+    ["job", "project", "dataset", "snapshot", "run", "recipe", "runtime"],
+)
+def test_valid_task083_hash_does_not_bypass_changed_companion(companion: str) -> None:
+    original = reservation_plan()
+    snapshot = training_snapshot()
+    intent = training_intent(snapshot)
+    job = job_binding()
+    if companion == "job":
+        job["job_id"] = "job:other"
+        job = add_training_digest(
+            {k: v for k, v in job.items() if k != "binding_sha256"}, "binding_sha256"
+        )
+    elif companion in {"project", "dataset", "snapshot"}:
+        field = {"project": "project_id", "dataset": "dataset_id", "snapshot": "snapshot_id"}[
+            companion
+        ]
+        snapshot[field] = "identity:other"
+        snapshot = add_dataset_digest(
+            {k: v for k, v in snapshot.items() if k != "snapshot_sha256"}, "snapshot_sha256"
+        )
+        intent = training_intent(snapshot)
+    elif companion == "run":
+        intent["run_intent_id"] = "training-run-intent:other"
+    elif companion == "recipe":
+        revised = intent["target_resource_feasibility_binding"]
+        revised["recipe_revision_sha256"] = H("other-companion-recipe")
+        intent["target_resource_feasibility_binding"] = add_training_digest(
+            {k: v for k, v in revised.items() if k != "binding_sha256"}, "binding_sha256"
+        )
+    elif companion == "runtime":
+        revised = intent["engine_admission_binding"]
+        revised["runtime_sha256"] = H("other-companion-runtime")
+        intent["engine_admission_binding"] = add_training_digest(
+            {k: v for k, v in revised.items() if k != "binding_sha256"}, "binding_sha256"
+        )
+    intent = add_training_digest(
+        {k: v for k, v in intent.items() if k != "intent_sha256"}, "intent_sha256"
+    )
+    with pytest.raises(ValueError, match="TASK-083 reservation plan .* mismatch"):
+        make_plan(
+            training_input_snapshot=snapshot,
+            training_intent=intent,
+            durable_job_binding=job,
+            task083_reservation_plan=original,
+        )
+
+
+@pytest.mark.parametrize(
+    "state",
+    ["NOT_AVAILABLE_CURRENT_SOURCE", "LIVE_RESERVATION_AVAILABLE"],
+)
+def test_schema_and_parser_reject_false_task083_contract_state(state: str) -> None:
+    changed = make_plan().to_dict()
+    changed["task083_contract_state"] = state
+    rehash(changed, "plan_sha256", task084._PLAN_DOMAIN)
+    with pytest.raises(ValueError, match="task083_contract_state"):
+        task084.Task084OutputArtifactDestinationPlanV1.from_dict(changed)
+    schema = json.loads(PUBLIC_SCHEMA.read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(schema).iter_errors(changed))
+
+
 def test_current_source_production_and_all_load_purposes_are_exact_blocked_effect0() -> None:
     plan = make_plan()
     admission = compile_production_custody_admission(plan, evaluated_at=ACTIVE_AT)
     assert admission.to_dict()["decision"] == "BLOCKED"
     assert len(admission.to_dict()["reason_codes"]) == 7
     assert "TASK084_WINDOWS_BACKEND_NOT_AVAILABLE" in admission.to_dict()["reason_codes"]
+    assert "TASK083_PRODUCTION_RESERVATION_NOT_AVAILABLE_CURRENT_SOURCE" in (
+        admission.to_dict()["reason_codes"]
+    )
+    assert "TASK083_RESERVATION_CONTRACT_NOT_AVAILABLE_CURRENT_SOURCE" not in (
+        admission.to_dict()["reason_codes"]
+    )
     assert_effect_zero_surface(admission)
     fields = {
         LoadPurpose.TRAINING_RESUME: {
@@ -856,7 +1095,7 @@ def test_plan_rejects_cross_project_snapshot_private_path_and_output_mismatch() 
             training_run_head_sha256=run_value["revision_sha256"],
             task043_job_readback_sha256=H("task043-job-readback"),
             task043_job_head_sha256=H("task043-job-head"),
-            task083_reservation_plan_sha256=H("reservation"),
+            task083_reservation_plan=reservation_plan(snapshot, intent, job_value),
             destination_coordinate="artifact-destination:voice-models",
             custody_policy_sha256=H("custody"),
             encryption_policy_sha256=H("encryption"),
@@ -2417,7 +2656,25 @@ def test_source_has_no_backend_import_or_effectful_surface() -> None:
     assert "ctypes" not in imported
     assert "socket" not in imported
     assert "secure_authority_io" not in imported
-    assert not any("task082" in name or "task083" in name for name in imported)
+    modules = {
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module is not None
+    }
+    assert "task083_voice_training_resource_reservation" in modules
+    assert not any(
+        "task082" in name or name.endswith("_windows")
+        for name in imported | modules
+    )
+    task083_imports = [
+        node for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom)
+        and node.module == "task083_voice_training_resource_reservation"
+    ]
+    assert len(task083_imports) == 1
+    assert [alias.name for alias in task083_imports[0].names] == [
+        "Task083ResourceReservationPlanV1"
+    ]
     source = SOURCE.read_text(encoding="utf-8")
     for forbidden in ("open(", "write_bytes(", "write_text(", "unlink(", "subprocess."):
         assert forbidden not in source

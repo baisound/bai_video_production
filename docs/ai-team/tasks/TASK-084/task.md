@@ -1,6 +1,6 @@
 # TASK-084 — 音声モデルArtifact Custody
 
-- Status: `PURE_CONTRACT_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_NOT_VERIFIED`
+- Status: `PURE_CONTRACT_IMPLEMENTATION_CANDIDATE / WINDOWS_BACKEND_NOT_ADOPTED_NOT_CONFIRMED`
 - Development Depth: `DEV-4 FOUNDATION CRITICAL`
 - Execution coordinator: Owner指定の「OBS録音→学習→WAV最適化」統合Task
 - Canonical responsibility: TASK-084（設計PR `#532`で確定。pure contractはDraft PR `#537`のimplementation candidate）
@@ -15,6 +15,8 @@ TASK-084はDataset採用、resource reservation、training実行、`ModelArtifac
 
 - 設計文書はPR `#532`でmainへmerge済みである。`PURE-CONTRACT-R0`のsource、canonical schema、package schema mirror、focused testsのexact4はcommit `e9d28ba686b3a2809c7f41ba6bea390beeca9943` / Draft PR `#537`の実装候補として存在する。Windows backendの受理済み実装・native実行は未確認である。
 - 将来のcustody contractはTASK-046 training plan、TASK-043 current Job/head、TASK-083 planからeffect 0の `Task084OutputArtifactDestinationPlanV1` を作る。両plan digestをbindするTASK-046-owned `TrainingExecutionAuthorizationBindingV2` と `VoiceTrainingCompoundOperationV1` amendmentがlandした後だけH3 compound operationでdestinationをactivateし、TASK-046 engine terminalとTASK-083 consumed/consumption-started lineageを別々の入力として検証する。
+- PR #536でmainへ統合されたTASK-083 pure planをcurrent-source依存とする。destination compilerはcaller-supplied digestだけを受け付けず、Mappingまたはexact `Task083ResourceReservationPlanV1` をcanonical parserで再検証し、project、Job ID/operation/revision/head/binding、snapshot ref/digest、Dataset、recipe ref/digest、runtime revision/digestをTASK-046入力と照合する。`run_id`はstableな`TrainingRunIntent.run_intent_id`へ固定し、`TrainingRunRevision.run_revision_id`を代用しない。`issued_at <= compiled_at < expires_at`を要求し、validated plan digestだけを出力へ保持する。
+- TASK-083との接続は`PURE_CONTRACT_AVAILABLE_PRODUCTION_BLOCKED`であり、live reservationを意味しない。production/load admissionは`TASK083_PRODUCTION_RESERVATION_NOT_AVAILABLE_CURRENT_SOURCE`を含めて引き続き`BLOCKED`とする。compile時のcurrentnessはfuture H3/effect時の両plan・live bindingの再検証を代替しない。
 - pure contract、synthetic artifact、fault testsは別の承認済み実装Unitでeffect 0として開始可能である。
 - 実model/checkpoint write、cipher/key/DACL操作、retention/revoke/deleteはHuman Gate `H3 TRAINING_START` と該当する追加Gateまで禁止する。
 - TASK-084はcheckpoint用 `Task084ModelCheckpointCustodyReceiptV1` とterminal用 `Task084ModelArtifactCustodyReceiptV1` だけを発行する。successful current terminalとpinned terminal custody readback後、TASK-046だけがterminal receiptを検証してnon-selectable `ModelArtifactBinding` を生成し、そこから`candidate_state=EVALUATION_PENDING`かつmodel/production use falseのpending candidateを登録できる。`EvaluationReceipt`はこのexact pending candidate digestを参照する。評価後のchildは、future/unlanded・TASK-046-owned `CandidateEvaluationAdmissionV2` とversioned candidate amendmentにより、exact pending parent digestとexact `EvaluationReceipt` digestを同時にbindして初めて`EVALUATED`になれる。
@@ -26,21 +28,21 @@ TASK-084はDataset採用、resource reservation、training実行、`ModelArtifac
 - Candidate source: `src/ai_video_production/task084_voice_model_artifact_custody.py`。body-free metadata parser、destination plan、fixture inventory/event/lease/readbackとproduction/load admissionを実装する。productionとmodel loadのadmissionはcurrent sourceで`BLOCKED`に固定され、file I/O、暗号化、OS handle、model load、training/evaluation/inference authorityを生成しない。
 - Canonical schema: `schemas/task084-voice-model-artifact-custody.schema.json`。package mirrorは`src/ai_video_production/schema_resources/task084-voice-model-artifact-custody.schema.json`で、両者はbyte-identicalである。
 - Focused tests: `tests/test_task084_voice_model_artifact_custody.py`。上記commitの保存済みEvidenceはfocused `80 PASS`、直接依存regression `62 PASS`、独立Critic/Tester/JudgeのCritical/High `0`を記録する。これは既存の実行結果であり、本書の状態同期による再実行やnative確認を意味しない。
-- 上記commitのhosted Ubuntu/Windows matrixとSecurityはPASS、`changelog-and-version`は共有CHANGELOGの別Authority待ちでFAILである。PR `#537`はDraftを維持し、Ready/mergeは未成立である。
+- Current-source統合修正の新しい検証はTASK-084 focused `113 PASS`、TASK-083 pure/Windows effect-zero `90 PASS`、TASK-043/046直接依存 `62 PASS`（合計`265 PASS / 0 FAIL / 0 SKIP`）、OSS readiness `12 PASS`である。schema mirror、Python compile、全5 ECMAScript patternのcompile/positiveと10 newline/CRLF negativeもPASS。新headのhosted Full regression・Security・metadataと最終独立reviewは別途確認する。
+- 旧commitのhosted Ubuntu/Windows matrixとSecurityはPASS、旧`changelog-and-version`のFAILは履歴Evidenceとして保持する。現在のReady/merge判断は旧FAILの無条件免除ではなく、Owner CHANGELOG Rule（2026-09-11）に従うexact candidate headのmetadata、必要なFull regression、独立review、fresh main/scope/readbackを必須とする。
 - 本checkpointは既存pure contractの実装事実だけを記録する。Windows backend、private model/checkpoint I/O、H3/H4、consumer統合、Release/Deploy/Productionの権限を追加しない。未追跡の実装ファイルは受理済みcandidateやnative Evidenceに含めない。
 
-## 将来の実装候補Allowed Files
+## 本pure contract統合PRのAllowed Files（exact5）
 
 1. `src/ai_video_production/task084_voice_model_artifact_custody.py`
-2. `src/ai_video_production/task084_voice_model_artifact_custody_windows.py`
-3. `schemas/task084-voice-model-artifact-custody.schema.json`
-4. `src/ai_video_production/schema_resources/task084-voice-model-artifact-custody.schema.json`
-5. `tests/test_task084_voice_model_artifact_custody.py`
-6. `tests/test_task084_voice_model_artifact_custody_windows.py`
-7. `docs/ai-team/tasks/TASK-084/task.md`
-8. `CHANGELOG.md`（実装PRの最小Unreleased項目のみ）
+2. `schemas/task084-voice-model-artifact-custody.schema.json`
+3. `src/ai_video_production/schema_resources/task084-voice-model-artifact-custody.schema.json`
+4. `tests/test_task084_voice_model_artifact_custody.py`
+5. `docs/ai-team/tasks/TASK-084/task.md`
 
-既存TASK-014/043/046/068 sourceとshared roadmap/current-state/task-indexは変更禁止。候補scopeは設計merge、fresh currentness、sole-writer、clean dedicated worktree、exact Authority確認まで有効化しない。
+Owner CHANGELOG Rule（`2026-09-11`）に従い、Product versionを変更しない本ordinary implementation PRはshared `CHANGELOG.md`を変更・予約しない。Product version consistency、policy-current checkerによるexact-head Release metadata PASS、必要なFull regressionと独立review、fresh main・scopeの再確認を経て通常Ready/mergeへ進める。実際にProduct versionを変更するPRだけは、そのexact release-version headingを含むCHANGELOG更新とserialized release/version-bump coordinationを別途要する。
+
+将来のWindows backend source/testは本exact5に含めず、別の明示scopeとnative Gateを要する。foreign worktreeのunknown/untracked backendは`NOT_ADOPTED / NOT_CONFIRMED`とし、コピー・統合・実行しない。既存TASK-014/043/046/068/083 sourceとshared roadmap/current-state/task-indexは変更禁止。fresh currentness、sole-writer、clean dedicated worktree、exact Authorityを継続確認する。
 
 ## Body-free state machine and contract
 

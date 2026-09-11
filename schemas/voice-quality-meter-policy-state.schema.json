@@ -1,0 +1,819 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai-video-production.local/schemas/voice-quality-meter-policy-state.schema.json",
+  "title": "TASK-048 Project-bound meter display policy state",
+  "$ref": "#/$defs/state",
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "format": "uuid"
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$"
+    },
+    "policy_ref": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "io_boundary": {
+      "type": "object",
+      "properties": {
+        "audio_semantic_decode_executed": {
+          "const": false
+        },
+        "audio_used_as_policy_input": {
+          "const": false
+        },
+        "project_integrity_hash_reads_possible": {
+          "const": true
+        }
+      },
+      "required": [
+        "audio_semantic_decode_executed",
+        "audio_used_as_policy_input",
+        "project_integrity_hash_reads_possible"
+      ],
+      "additionalProperties": false
+    },
+    "authority": {
+      "type": "object",
+      "properties": {
+        "authority_created": {
+          "const": false
+        },
+        "quality_pass_issued": {
+          "const": false
+        },
+        "capture_gain_obs_authorized": {
+          "const": false
+        },
+        "consent_asset_training_authorized": {
+          "const": false
+        },
+        "temporal_freshness_confirmed": {
+          "const": false
+        },
+        "production_authorized": {
+          "const": false
+        }
+      },
+      "required": [
+        "authority_created",
+        "quality_pass_issued",
+        "capture_gain_obs_authorized",
+        "consent_asset_training_authorized",
+        "temporal_freshness_confirmed",
+        "production_authorized"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterDisplayPolicyRevisionV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-048"
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/policy_ref"
+        },
+        "policy_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "predecessor_policy_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_floor_dbfs": {
+          "type": "number",
+          "maximum": 0
+        },
+        "target_ceiling_dbfs": {
+          "type": "number",
+          "maximum": 0
+        },
+        "warning_dbfs": {
+          "type": "number",
+          "maximum": 0
+        },
+        "true_clip_dbfs": {
+          "type": "number",
+          "maximum": 0
+        },
+        "policy_revision_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "policy_ref",
+        "policy_revision",
+        "predecessor_policy_sha256",
+        "target_floor_dbfs",
+        "target_ceiling_dbfs",
+        "warning_dbfs",
+        "true_clip_dbfs",
+        "policy_revision_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "request": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "record_type": {
+              "const": "Task048MeterPolicyOperationRequestV1"
+            },
+            "schema_version": {
+              "const": 1
+            },
+            "canonical_owner_task": {
+              "const": "TASK-048"
+            },
+            "project_id": {
+              "$ref": "#/$defs/project_id"
+            },
+            "operation_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "expected_project_revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "expected_project_manifest_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "action": {
+              "const": "BOOTSTRAP"
+            },
+            "expected_child_sha256": {
+              "type": "null"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "policy_ref": {
+                  "$ref": "#/$defs/policy_ref"
+                }
+              },
+              "required": [
+                "policy_ref"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "record_type",
+            "schema_version",
+            "canonical_owner_task",
+            "project_id",
+            "operation_id",
+            "expected_project_revision",
+            "expected_project_manifest_sha256",
+            "request_sha256",
+            "action",
+            "expected_child_sha256",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "record_type": {
+              "const": "Task048MeterPolicyOperationRequestV1"
+            },
+            "schema_version": {
+              "const": 1
+            },
+            "canonical_owner_task": {
+              "const": "TASK-048"
+            },
+            "project_id": {
+              "$ref": "#/$defs/project_id"
+            },
+            "operation_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "expected_project_revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "expected_project_manifest_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "action": {
+              "const": "PUBLISH_POLICY"
+            },
+            "expected_child_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "policy_document": {
+                  "$ref": "#/$defs/policy"
+                }
+              },
+              "required": [
+                "policy_document"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "record_type",
+            "schema_version",
+            "canonical_owner_task",
+            "project_id",
+            "operation_id",
+            "expected_project_revision",
+            "expected_project_manifest_sha256",
+            "request_sha256",
+            "action",
+            "expected_child_sha256",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "record_type": {
+              "const": "Task048MeterPolicyOperationRequestV1"
+            },
+            "schema_version": {
+              "const": 1
+            },
+            "canonical_owner_task": {
+              "const": "TASK-048"
+            },
+            "project_id": {
+              "$ref": "#/$defs/project_id"
+            },
+            "operation_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "expected_project_revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "expected_project_manifest_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "action": {
+              "const": "SELECT_POLICY"
+            },
+            "expected_child_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "policy_revision_sha256": {
+                  "$ref": "#/$defs/digest"
+                }
+              },
+              "required": [
+                "policy_revision_sha256"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "record_type",
+            "schema_version",
+            "canonical_owner_task",
+            "project_id",
+            "operation_id",
+            "expected_project_revision",
+            "expected_project_manifest_sha256",
+            "request_sha256",
+            "action",
+            "expected_child_sha256",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "record_type": {
+              "const": "Task048MeterPolicyOperationRequestV1"
+            },
+            "schema_version": {
+              "const": 1
+            },
+            "canonical_owner_task": {
+              "const": "TASK-048"
+            },
+            "project_id": {
+              "$ref": "#/$defs/project_id"
+            },
+            "operation_id": {
+              "$ref": "#/$defs/uuid"
+            },
+            "expected_project_revision": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "expected_project_manifest_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "request_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "action": {
+              "const": "REVOKE_POLICY"
+            },
+            "expected_child_sha256": {
+              "$ref": "#/$defs/digest"
+            },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "policy_revision_sha256": {
+                  "$ref": "#/$defs/digest"
+                }
+              },
+              "required": [
+                "policy_revision_sha256"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "record_type",
+            "schema_version",
+            "canonical_owner_task",
+            "project_id",
+            "operation_id",
+            "expected_project_revision",
+            "expected_project_manifest_sha256",
+            "request_sha256",
+            "action",
+            "expected_child_sha256",
+            "payload"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "event": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterPolicyOperationEventV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "previous_event_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "request": {
+          "$ref": "#/$defs/request"
+        },
+        "event_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "sequence",
+        "previous_event_sha256",
+        "request",
+        "event_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "state": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterPolicyProjectChildV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-048"
+        },
+        "project_id": {
+          "$ref": "#/$defs/project_id"
+        },
+        "policy_ref": {
+          "$ref": "#/$defs/policy_ref"
+        },
+        "state_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "published_policy_revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1024
+        },
+        "published_policy_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selected_policy_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "revoked_policy_sha256s": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/digest"
+          },
+          "maxItems": 1024,
+          "uniqueItems": true
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/event"
+          },
+          "minItems": 1,
+          "maxItems": 4096
+        },
+        "authority": {
+          "$ref": "#/$defs/authority"
+        },
+        "io_boundary": {
+          "$ref": "#/$defs/io_boundary"
+        },
+        "state_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "project_id",
+        "policy_ref",
+        "state_revision",
+        "published_policy_revision",
+        "published_policy_sha256",
+        "selected_policy_sha256",
+        "revoked_policy_sha256s",
+        "events",
+        "authority",
+        "io_boundary",
+        "state_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "query_context": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "$ref": "#/$defs/project_id"
+        },
+        "session_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "consumer_epoch": {
+          "$ref": "#/$defs/uuid"
+        },
+        "window_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        }
+      },
+      "required": [
+        "project_id",
+        "session_id",
+        "consumer_epoch",
+        "window_sequence",
+        "request_id"
+      ],
+      "additionalProperties": false
+    },
+    "operation_receipt": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterPolicyOperationReceiptV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "project_id": {
+          "$ref": "#/$defs/project_id"
+        },
+        "operation_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "event_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "committed_state_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "committed_project_revision": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9007199254740991
+        },
+        "observation": {
+          "enum": [
+            "APPLIED",
+            "ALREADY_APPLIED"
+          ]
+        },
+        "observed_project_revision": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9007199254740991
+        },
+        "observed_project_manifest_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "observed_child_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "authority_created": {
+          "const": false
+        },
+        "current_selection_proven": {
+          "const": false
+        },
+        "io_boundary": {
+          "$ref": "#/$defs/io_boundary"
+        },
+        "receipt_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "project_id",
+        "operation_id",
+        "request_sha256",
+        "event_sha256",
+        "committed_state_revision",
+        "committed_project_revision",
+        "observation",
+        "observed_project_revision",
+        "observed_project_manifest_sha256",
+        "observed_child_sha256",
+        "authority_created",
+        "current_selection_proven",
+        "io_boundary",
+        "receipt_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "readback_evidence": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterPolicyReadbackEvidenceV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "project_id": {
+          "$ref": "#/$defs/project_id"
+        },
+        "status": {
+          "enum": [
+            "PROJECT_HEAD_MATCHED_SNAPSHOT",
+            "NOT_BOUND",
+            "REVOKED",
+            "STALE",
+            "MISMATCH",
+            "RECOVERY_REQUIRED",
+            "ROLLBACK_UNCERTAIN",
+            "INVALID",
+            "READBACK_FAILED"
+          ]
+        },
+        "project_revision": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project_manifest_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "child_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state_revision": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4096
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selected_policy_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "query_context": {
+          "$ref": "#/$defs/query_context"
+        },
+        "producer_epoch": {
+          "$ref": "#/$defs/uuid"
+        },
+        "live_admission_serialized": {
+          "const": false
+        },
+        "authority_created": {
+          "const": false
+        },
+        "temporal_freshness_confirmed": {
+          "const": false
+        },
+        "io_boundary": {
+          "$ref": "#/$defs/io_boundary"
+        },
+        "evidence_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "project_id",
+        "status",
+        "project_revision",
+        "project_manifest_sha256",
+        "child_sha256",
+        "state_revision",
+        "selected_policy_sha256",
+        "query_context",
+        "producer_epoch",
+        "live_admission_serialized",
+        "authority_created",
+        "temporal_freshness_confirmed",
+        "io_boundary",
+        "evidence_sha256"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "PROJECT_HEAD_MATCHED_SNAPSHOT"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "project_revision": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "project_manifest_sha256": {
+                "$ref": "#/$defs/digest"
+              },
+              "child_sha256": {
+                "$ref": "#/$defs/digest"
+              },
+              "state_revision": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              "selected_policy_sha256": {
+                "$ref": "#/$defs/digest"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "project_revision": {
+                "type": "null"
+              },
+              "project_manifest_sha256": {
+                "type": "null"
+              },
+              "child_sha256": {
+                "type": "null"
+              },
+              "state_revision": {
+                "type": "null"
+              },
+              "selected_policy_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

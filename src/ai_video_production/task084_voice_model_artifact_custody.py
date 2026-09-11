@@ -21,6 +21,7 @@ from types import MappingProxyType
 from typing import Any, ClassVar, Mapping, Sequence
 
 from .serialization import canonical_json_bytes, sha256_bytes, validate_sha256
+from .task083_voice_training_resource_reservation import Task083ResourceReservationPlanV1
 from .voice_dataset_revision import TrainingInputSnapshot
 from .voice_training_run import (
     TrainingComputeTerminalReceipt,
@@ -129,7 +130,7 @@ _PRODUCTION_BLOCKERS = tuple(
             "TASK046_COMPOUND_OPERATION_NOT_AVAILABLE_CURRENT_SOURCE",
             "TASK046_OUTPUT_PRODUCER_EVENT_NOT_AVAILABLE_CURRENT_SOURCE",
             "TASK046_CUSTODY_AWARE_CONSUMER_NOT_AVAILABLE_CURRENT_SOURCE",
-            "TASK083_RESERVATION_CONTRACT_NOT_AVAILABLE_CURRENT_SOURCE",
+            "TASK083_PRODUCTION_RESERVATION_NOT_AVAILABLE_CURRENT_SOURCE",
             "TASK084_WINDOWS_BACKEND_NOT_AVAILABLE",
         }
     )
@@ -758,7 +759,7 @@ def _validate_plan(value: Mapping[str, Any]) -> None:
         raise ValueError("aead_suite is outside the closed v1 allowlist")
     fixed_states = {
         "task043_job_source_state": "NOT_AVAILABLE_CURRENT_SOURCE",
-        "task083_contract_state": "NOT_AVAILABLE_CURRENT_SOURCE",
+        "task083_contract_state": "PURE_CONTRACT_AVAILABLE_PRODUCTION_BLOCKED",
         "h3_v2_state": "NOT_AVAILABLE_CURRENT_SOURCE",
         "compound_operation_state": "NOT_AVAILABLE_CURRENT_SOURCE",
         "producer_event_state": "NOT_AVAILABLE_CURRENT_SOURCE",
@@ -1752,7 +1753,7 @@ def compile_output_artifact_destination_plan(
     training_run_head_sha256: str,
     task043_job_readback_sha256: str,
     task043_job_head_sha256: str,
-    task083_reservation_plan_sha256: str,
+    task083_reservation_plan: Mapping[str, Any] | Task083ResourceReservationPlanV1,
     destination_coordinate: str,
     custody_policy_sha256: str,
     encryption_policy_sha256: str,
@@ -1799,6 +1800,47 @@ def compile_output_artifact_destination_plan(
         raise ValueError("destination does not allow checkpoint and model output")
     if feasibility["contract_state"] != "BOUND_VERIFIED":
         raise ValueError("destination plan requires a bound recipe identity")
+    # Re-parse the canonical TASK-083 record; a digest or duck-typed object is
+    # neither matching lineage nor a live resource reservation capability.
+    if type(task083_reservation_plan) is Task083ResourceReservationPlanV1:
+        reservation_input = task083_reservation_plan.to_dict()
+    elif isinstance(task083_reservation_plan, Task083ResourceReservationPlanV1):
+        raise ValueError("task083_reservation_plan must use the exact canonical type")
+    elif isinstance(task083_reservation_plan, Mapping):
+        reservation_input = task083_reservation_plan
+    else:
+        raise ValueError("task083_reservation_plan must be a canonical plan object")
+    reservation = Task083ResourceReservationPlanV1.from_dict(reservation_input).to_dict()
+    expected_reservation_binding = {
+        "project_id": intent["project_id"],
+        "job_id": job["job_id"],
+        "job_operation_id": job["operation_id"],
+        "job_revision": job["job_revision"],
+        "job_revision_sha256": job["job_revision_sha256"],
+        "job_binding_sha256": job["binding_sha256"],
+        # run_intent_id is the stable run identity; run_revision_id identifies
+        # only one revision record and must not become a second run identity.
+        "run_id": intent["run_intent_id"],
+        "training_input_snapshot_ref": intent["training_input_snapshot_ref"],
+        "training_input_snapshot_sha256": snapshot["snapshot_sha256"],
+        "dataset_id": snapshot["dataset_id"],
+        "recipe_revision_ref": feasibility["recipe_revision_ref"],
+        "recipe_revision_sha256": feasibility["recipe_revision_sha256"],
+        "runtime_revision": engine["runtime_revision"],
+        "runtime_sha256": engine["runtime_sha256"],
+    }
+    for field, expected in expected_reservation_binding.items():
+        if reservation[field] != expected:
+            raise ValueError(f"TASK-083 reservation plan {field} mismatch")
+    compiled = _timestamp_value(_timestamp(compiled_at, "compiled_at"))
+    if not (
+        _timestamp_value(reservation["issued_at"])
+        <= compiled
+        < _timestamp_value(reservation["expires_at"])
+    ):
+        raise ValueError("TASK-083 reservation plan is not current at compiled_at")
+    # This compile-time check grants no authority. Future H3/effect admission
+    # must independently revalidate both plans and all live/current bindings.
     checkpoint_entries = _validate_expected_entries(
         [dict(item) for item in checkpoint_expected_entries], checkpoint_base=True
     )
@@ -1836,9 +1878,7 @@ def compile_output_artifact_destination_plan(
         "task043_job_head_sha256": _sha(
             task043_job_head_sha256, "task043_job_head_sha256"
         ),
-        "task083_reservation_plan_sha256": _sha(
-            task083_reservation_plan_sha256, "task083_reservation_plan_sha256"
-        ),
+        "task083_reservation_plan_sha256": reservation["plan_sha256"],
         "training_mode": intent["training_mode"],
         "recipe_revision_sha256": feasibility["recipe_revision_sha256"],
         "engine_admission_sha256": engine["binding_sha256"],
@@ -1882,7 +1922,7 @@ def compile_output_artifact_destination_plan(
         "max_relative_file_depth": MAX_RELATIVE_FILE_DEPTH,
         "compiled_at": _timestamp(compiled_at, "compiled_at"),
         "task043_job_source_state": "NOT_AVAILABLE_CURRENT_SOURCE",
-        "task083_contract_state": "NOT_AVAILABLE_CURRENT_SOURCE",
+        "task083_contract_state": "PURE_CONTRACT_AVAILABLE_PRODUCTION_BLOCKED",
         "h3_v2_state": "NOT_AVAILABLE_CURRENT_SOURCE",
         "compound_operation_state": "NOT_AVAILABLE_CURRENT_SOURCE",
         "producer_event_state": "NOT_AVAILABLE_CURRENT_SOURCE",

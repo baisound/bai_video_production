@@ -278,7 +278,7 @@
         "max_relative_file_depth": { "const": 8 },
         "compiled_at": { "$ref": "#/$defs/Timestamp" },
         "task043_job_source_state": { "const": "NOT_AVAILABLE_CURRENT_SOURCE" },
-        "task083_contract_state": { "const": "NOT_AVAILABLE_CURRENT_SOURCE" },
+        "task083_contract_state": { "const": "PURE_CONTRACT_AVAILABLE_PRODUCTION_BLOCKED" },
         "h3_v2_state": { "const": "NOT_AVAILABLE_CURRENT_SOURCE" },
         "compound_operation_state": { "const": "NOT_AVAILABLE_CURRENT_SOURCE" },
         "producer_event_state": { "const": "NOT_AVAILABLE_CURRENT_SOURCE" },

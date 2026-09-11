@@ -186,7 +186,15 @@ See `TASK-052-DESIGN-TO-IMPLEMENTATION-GAP-AUDIT-DETAILED-DESIGN.md`.
 - Overall TASK-052 implementation through R9: complete for available local
   Evidence. Real-video multi-Killer/UI-scale/process performance, complete 5–10
   match Human Gold and production accuracy remain `NOT_CONFIRMED` behind the
-  explicit Human/data gate; no further safe implementation unit is pending.
+  explicit Human/data gate. A 2026-09-06 fresh-source audit found that the R0
+  matrix still marks the dedicated GENERATOR_REMAINING detector/Teacher route as
+  `STUB`; current source has the temporal state machine but no canonical visual
+  training domain/ROI/Teacher detector route. R9 batch-confirm performance
+  preflight is now reproducible with synthetic PGM transaction surrogates and
+  explicit zero-effect receipts (`64 / 64`, manifest write `1`, Confirm
+  subprocesses `0`, one index rebuild, `1.4684153999987757 s`), but it does not
+  close or redefine that detector boundary and does not replace exact packaged
+  real-video observation.
 - Final integration regression: `3106 PASS / 2 platform-specific SKIP` in the
   existing WSL validation environment; native Windows focused regression remains
   `8 PASS`; unresolved Critical/High findings `0 / 0`.

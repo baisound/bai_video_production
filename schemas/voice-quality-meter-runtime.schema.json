@@ -1,0 +1,850 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai-video-production.local/schemas/voice-quality-meter-runtime.schema.json",
+  "title": "TASK-048 window-only meter runtime diagnostics",
+  "$ref": "#/$defs/projection",
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "maxLength": 71
+    },
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "maxLength": 36
+    },
+    "project_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$",
+      "maxLength": 64
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "positive": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PROJECT_HEAD_MATCHED_SNAPSHOT",
+        "NOT_BOUND",
+        "REVOKED",
+        "STALE",
+        "MISMATCH",
+        "RECOVERY_REQUIRED",
+        "ROLLBACK_UNCERTAIN",
+        "INVALID",
+        "READBACK_FAILED"
+      ]
+    },
+    "observation_state": {
+      "type": "string",
+      "enum": [
+        "INVALID_NUMERIC",
+        "COUNTS_UNAVAILABLE",
+        "INVALID_NONFINITE",
+        "CAPTURE_POINT_UNKNOWN",
+        "LOSS_REPORTED",
+        "LOSS_UNKNOWN",
+        "PAUSED",
+        "NO_INPUT",
+        "MEASURED_LINEAR_ZERO",
+        "MEASURED"
+      ]
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "$ref": "#/$defs/project_id"
+        },
+        "session_id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "consumer_epoch": {
+          "$ref": "#/$defs/uuid"
+        },
+        "window_sequence": {
+          "$ref": "#/$defs/positive"
+        },
+        "request_id": {
+          "$ref": "#/$defs/uuid"
+        }
+      },
+      "required": [
+        "project_id",
+        "session_id",
+        "consumer_epoch",
+        "window_sequence",
+        "request_id"
+      ],
+      "additionalProperties": false
+    },
+    "metric": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "FINITE",
+            "LINEAR_ZERO",
+            "NO_VALUE",
+            "OVERFLOW",
+            "INVALID"
+          ]
+        },
+        "value_dbfs": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "value_dbfs"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "FINITE"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value_dbfs": {
+                "type": "number"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "value_dbfs": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "window_counts": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "VALID",
+            "COUNTER_OVERFLOW",
+            "UNAVAILABLE"
+          ]
+        },
+        "finite_sample_values": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/count"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "nonfinite_sample_values": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/count"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clip_sample_values": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/count"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "finite_sample_values",
+        "nonfinite_sample_values",
+        "clip_sample_values"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "VALID"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "finite_sample_values": {
+                "$ref": "#/$defs/count"
+              },
+              "nonfinite_sample_values": {
+                "$ref": "#/$defs/count"
+              },
+              "clip_sample_values": {
+                "$ref": "#/$defs/count"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "finite_sample_values": {
+                "type": "null"
+              },
+              "nonfinite_sample_values": {
+                "type": "null"
+              },
+              "clip_sample_values": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "session_counts": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "VALID",
+            "COUNTER_OVERFLOW",
+            "UNAVAILABLE"
+          ]
+        },
+        "finite_sample_values": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/count"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clip_sample_values": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/count"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "finite_sample_values",
+        "clip_sample_values"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "VALID"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "finite_sample_values": {
+                "$ref": "#/$defs/count"
+              },
+              "clip_sample_values": {
+                "$ref": "#/$defs/count"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "finite_sample_values": {
+                "type": "null"
+              },
+              "clip_sample_values": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "observation": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterRuntimeObservationV1"
+        },
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-048"
+        },
+        "query_context": {
+          "$ref": "#/$defs/context"
+        },
+        "capture_point": {
+          "type": "string",
+          "enum": [
+            "TASK047_CONTROLLER_RECEIVED_FLOAT32_PRE_DRAW",
+            "UNKNOWN"
+          ]
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "window_loss_state": {
+          "type": "string",
+          "enum": [
+            "NO_LOSS_REPORTED",
+            "LOSS_REPORTED",
+            "UNKNOWN"
+          ]
+        },
+        "window_counts": {
+          "$ref": "#/$defs/window_counts"
+        },
+        "session_counts": {
+          "$ref": "#/$defs/session_counts"
+        },
+        "window_peak": {
+          "$ref": "#/$defs/metric"
+        },
+        "window_rms": {
+          "$ref": "#/$defs/metric"
+        },
+        "session_peak": {
+          "$ref": "#/$defs/metric"
+        },
+        "observation_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "query_context",
+        "capture_point",
+        "paused",
+        "window_loss_state",
+        "window_counts",
+        "session_counts",
+        "window_peak",
+        "window_rms",
+        "session_peak",
+        "observation_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "request": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterRuntimeWindowRequestV1"
+        },
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-048"
+        },
+        "query_context": {
+          "$ref": "#/$defs/context"
+        },
+        "runtime_epoch": {
+          "$ref": "#/$defs/uuid"
+        },
+        "policy_producer_epoch": {
+          "$ref": "#/$defs/uuid"
+        },
+        "observation": {
+          "$ref": "#/$defs/observation"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "query_context",
+        "runtime_epoch",
+        "policy_producer_epoch",
+        "observation",
+        "request_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterDisplayPolicyRevisionV1"
+        },
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-048"
+        },
+        "policy_ref": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$",
+          "maxLength": 128
+        },
+        "policy_revision": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "predecessor_policy_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_floor_dbfs": {
+          "type": "number",
+          "maximum": 0
+        },
+        "target_ceiling_dbfs": {
+          "type": "number",
+          "maximum": 0
+        },
+        "warning_dbfs": {
+          "type": "number",
+          "maximum": 0
+        },
+        "true_clip_dbfs": {
+          "type": "number",
+          "maximum": 0
+        },
+        "policy_revision_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "policy_ref",
+        "policy_revision",
+        "predecessor_policy_sha256",
+        "target_floor_dbfs",
+        "target_ceiling_dbfs",
+        "warning_dbfs",
+        "true_clip_dbfs",
+        "policy_revision_sha256"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "policy_revision": {
+                "const": 1
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "predecessor_policy_sha256": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "predecessor_policy_sha256": {
+                "$ref": "#/$defs/digest"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "$ref": "#/$defs/project_id"
+        },
+        "project_revision": {
+          "$ref": "#/$defs/positive"
+        },
+        "project_manifest_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "child_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "state_revision": {
+          "$ref": "#/$defs/positive"
+        },
+        "selected_policy_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "producer_epoch": {
+          "$ref": "#/$defs/uuid"
+        }
+      },
+      "required": [
+        "project_id",
+        "project_revision",
+        "project_manifest_sha256",
+        "child_sha256",
+        "state_revision",
+        "selected_policy_sha256",
+        "producer_epoch"
+      ],
+      "additionalProperties": false
+    },
+    "policy_observation": {
+      "type": "object",
+      "properties": {
+        "initial_status": {
+          "$ref": "#/$defs/status"
+        },
+        "final_status": {
+          "$ref": "#/$defs/status"
+        },
+        "effective_status": {
+          "$ref": "#/$defs/status"
+        },
+        "window_policy_matched": {
+          "type": "boolean"
+        },
+        "identity": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/identity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "policy_document": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/policy"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "initial_status",
+        "final_status",
+        "effective_status",
+        "window_policy_matched",
+        "identity",
+        "policy_document"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "initial_status": {
+                "const": "PROJECT_HEAD_MATCHED_SNAPSHOT"
+              },
+              "final_status": {
+                "const": "PROJECT_HEAD_MATCHED_SNAPSHOT"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "effective_status": {
+                "const": "PROJECT_HEAD_MATCHED_SNAPSHOT"
+              },
+              "window_policy_matched": {
+                "const": true
+              },
+              "identity": {
+                "$ref": "#/$defs/identity"
+              },
+              "policy_document": {
+                "$ref": "#/$defs/policy"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "window_policy_matched": {
+                "const": false
+              },
+              "identity": {
+                "type": "null"
+              },
+              "policy_document": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "authority": {
+      "type": "object",
+      "properties": {
+        "authority_created": {
+          "type": "boolean",
+          "const": false
+        },
+        "quality_pass_issued": {
+          "type": "boolean",
+          "const": false
+        },
+        "capture_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "gain_change_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "hardware_or_obs_setting_changed": {
+          "type": "boolean",
+          "const": false
+        },
+        "consent_asset_training_model_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "temporal_freshness_confirmed": {
+          "type": "boolean",
+          "const": false
+        },
+        "production_authorized": {
+          "type": "boolean",
+          "const": false
+        },
+        "provider_invoked": {
+          "type": "boolean",
+          "const": false
+        },
+        "capture_path_noninterference_confirmed": {
+          "type": "boolean",
+          "const": false
+        },
+        "emergency_stop_noninterference_confirmed": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "required": [
+        "authority_created",
+        "quality_pass_issued",
+        "capture_authorized",
+        "gain_change_authorized",
+        "hardware_or_obs_setting_changed",
+        "consent_asset_training_model_authorized",
+        "temporal_freshness_confirmed",
+        "production_authorized",
+        "provider_invoked",
+        "capture_path_noninterference_confirmed",
+        "emergency_stop_noninterference_confirmed"
+      ],
+      "additionalProperties": false
+    },
+    "io_boundary": {
+      "type": "object",
+      "properties": {
+        "audio_semantic_decode_executed": {
+          "type": "boolean",
+          "const": false
+        },
+        "audio_used_as_policy_input": {
+          "type": "boolean",
+          "const": false
+        },
+        "project_integrity_hash_reads_possible": {
+          "type": "boolean",
+          "const": true
+        },
+        "policy_or_project_write_executed": {
+          "type": "boolean",
+          "const": false
+        },
+        "capture_transport_api_invoked": {
+          "type": "boolean",
+          "const": false
+        },
+        "emergency_stop_api_invoked": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "required": [
+        "audio_semantic_decode_executed",
+        "audio_used_as_policy_input",
+        "project_integrity_hash_reads_possible",
+        "policy_or_project_write_executed",
+        "capture_transport_api_invoked",
+        "emergency_stop_api_invoked"
+      ],
+      "additionalProperties": false
+    },
+    "projection": {
+      "type": "object",
+      "properties": {
+        "record_type": {
+          "const": "Task048MeterRuntimeDecisionProjectionV1"
+        },
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-048"
+        },
+        "query_context": {
+          "$ref": "#/$defs/context"
+        },
+        "runtime_epoch": {
+          "$ref": "#/$defs/uuid"
+        },
+        "policy_producer_epoch": {
+          "$ref": "#/$defs/uuid"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "observation": {
+          "$ref": "#/$defs/observation"
+        },
+        "observation_state": {
+          "$ref": "#/$defs/observation_state"
+        },
+        "policy_observation": {
+          "$ref": "#/$defs/policy_observation"
+        },
+        "display_band": {
+          "type": "string",
+          "enum": [
+            "UNCONFIRMED",
+            "BELOW_TARGET",
+            "TARGET",
+            "ABOVE_TARGET",
+            "WARNING",
+            "TRUE_CLIP"
+          ]
+        },
+        "reason_code": {
+          "type": "string",
+          "enum": [
+            "POLICY_NOT_BOUND",
+            "POLICY_REVOKED",
+            "POLICY_STALE",
+            "POLICY_MISMATCH",
+            "PROJECT_RECOVERY_REQUIRED",
+            "PROJECT_ROLLBACK_UNCERTAIN",
+            "POLICY_INVALID",
+            "POLICY_READBACK_FAILED",
+            "OBSERVATION_INVALID_NUMERIC",
+            "OBSERVATION_COUNTS_UNAVAILABLE",
+            "OBSERVATION_NONFINITE",
+            "CAPTURE_POINT_UNKNOWN",
+            "OBSERVATION_LOSS",
+            "OBSERVATION_LOSS_UNKNOWN",
+            "OBSERVATION_PAUSED",
+            "OBSERVATION_NO_INPUT",
+            "WINDOW_POLICY_CLASSIFIED"
+          ]
+        },
+        "operator_label": {
+          "type": "string",
+          "enum": [
+            "適正判定 未確定",
+            "目標未満",
+            "目標範囲",
+            "目標超過",
+            "警告",
+            "クリップ"
+          ]
+        },
+        "scope_label": {
+          "const": "今回の観測窓に対する方針照合"
+        },
+        "window_only": {
+          "type": "boolean",
+          "const": true
+        },
+        "live_admission_serialized": {
+          "type": "boolean",
+          "const": false
+        },
+        "authority": {
+          "$ref": "#/$defs/authority"
+        },
+        "io_boundary": {
+          "$ref": "#/$defs/io_boundary"
+        },
+        "projection_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "query_context",
+        "runtime_epoch",
+        "policy_producer_epoch",
+        "request_sha256",
+        "observation",
+        "observation_state",
+        "policy_observation",
+        "display_band",
+        "reason_code",
+        "operator_label",
+        "scope_label",
+        "window_only",
+        "live_admission_serialized",
+        "authority",
+        "io_boundary",
+        "projection_sha256"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

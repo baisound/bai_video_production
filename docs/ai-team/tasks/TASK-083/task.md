@@ -29,7 +29,8 @@ TASK-083はDataset、training recipe、durable Job、worker、runtime/model acqu
 5. `tests/test_task083_voice_training_resource_reservation.py`
 6. `tests/test_task083_voice_training_resource_reservation_windows.py`
 7. `docs/ai-team/tasks/TASK-083/task.md`
-8. `CHANGELOG.md`（実装PRの最小Unreleased項目のみ）
+
+Owner CHANGELOG Rule（`2026-09-11`）に従い、Product versionを変更しない本ordinary implementation PRは上記exact7を維持し、shared `CHANGELOG.md`を変更・予約しない。Ready/mergeにはProduct version consistency、policy-current checkerによるexact candidate headのRelease metadata PASS、必要なregressionと独立review、fresh main・scopeの再確認を要する。実際にProduct versionを変更するPRだけは、そのexact release-version headingを含むCHANGELOG更新とserialized release/version-bump coordinationを別途要する。
 
 既存TASK-043/046/066 sourceとshared roadmap/current-state/task-indexは変更禁止。候補scopeは設計merge、fresh currentness、sole-writer、clean dedicated worktree、exact Authority確認まで有効化しない。
 

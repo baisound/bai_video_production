@@ -2,12 +2,13 @@
 
 ## Status and authority
 
-- Status: `IMPLEMENTED_LOCAL_VALIDATED_DRAFT_PUBLICATION_PENDING`
+- Status: `CORRECTED_LOCAL_VALIDATED_DRAFT_REVIEW_PENDING`
 - Profile: `DEV-3 HIGH ASSURANCE`
 - Authority: Owner instruction on `2026-09-11` to adopt release-branch and
   release-time full regression instead of running the full suite on every push.
 - Allocation base: `4cda0b418324fc24c3f871cc27a9e92340653021`
-- Finalization parent/current main: `19140f230cbb1b95d7f21e4f116fdc70a79e5b38`
+- Current integration base: `bd47c7ae4973d441ab471d5900876ee20f69acac`
+- Original public candidate: `7a5ba3201c3654346b69ca724ee600b2d0b59fc8`
 - Branch: `codex/task-087-release-train-ci`
 
 ## Bound design
@@ -30,6 +31,32 @@
    require Full regression earlier and remain authoritative.
 7. Release publication cannot begin until all six reusable matrix jobs pass for
    the exact supplied annotated tag.
+
+## Current-source corrections and verification
+
+- H1: baseline-only対象は明示した文書path/prefixに固定する。
+  `src/`、`schemas/`、`tools/`、`tests/`以外の未知path、native、packaging、
+  scripts、requirements lock、config、profiles、root build entrypointは
+  単一Fast環境の全testへ倒す。対応不明のProduct変更も同様。
+- M1: NUL-safe `--name-status -z --find-renames`を解析し、削除・rename・copy・
+  type変更は関連する旧新pathを保持して全testへ倒す。不明・切断statusは失敗で閉じる。
+- H3: Fullの各OS/Python jobはrun/attempt付きの新規・canonical・containedな
+  operation rootを一度だけ作成する。download、parallel、installerの各childは
+  effect直前に不存在を確認し、pytestによる既存childの削除・再利用を許さない。
+  Release build/distも同じ仕組みを使い、既存asset名への上書きを拒否する。
+- H2: strict tag名、annotated tag object、peeled commit SHAをremote exact refと照合し、
+  六Full jobとbuildを同じimmutable commitへ固定してcheckout HEADを確認する。
+  Release直前にremote tag objectとpeeled SHAを再照合し、同一tagのworkflowを直列化する。
+  外部からのtag強制移動禁止・tag保護は別のHuman/repository Gateであり、直前照合を
+  GitHub publicationとの原子的transactionとは主張しない。
+- 元の公開候補は45 PASS。修正後focused/negative/workflow/metadata testsは
+  **105 PASS / 0 FAIL / 0 SKIP**。合成Git repositoriesは各testの新規一時領域だけを使用。
+- 実remote/tag/Releaseへの書込み、native installer、Provider、private dataの実行は
+  `NOT_EXECUTED`。これらの権限をローカル合成testから導かない。
+- 修正設計Critic C/Hは0/0。最終実装review、修正headのhosted Fast/metadata/Security、
+  DEV-3 Full六環境は公開後に確認し、完了前にReady/mergeしない。
+- YAMLは構造・依存関係のstatic contractを検証する。GitHub workflow engineによる
+  実際の構文/実行受理は新headのhosted実行で確認する。
 
 ## Allowed files
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import Iterable
+from typing import Iterable, NamedTuple
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -29,6 +29,23 @@ BROAD_IMPACT_PATHS = {
     "uv.lock",
 }
 ZERO_SHA = "0" * 40
+CORRESPONDENCE_PREFIXES = ("src/", "schemas/", "tools/", "tests/")
+BASELINE_ONLY_PREFIXES = ("docs/", ".github/ISSUE_TEMPLATE/")
+BASELINE_ONLY_PATHS = {
+    "README.md", "README.en.md", "LICENSE.md", "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md", "SECURITY.md", "GOVERNANCE.md", "SUPPORT.md",
+    "CHANGELOG.md", "THIRD_PARTY_NOTICES.md", "CITATION.cff", "AGENTS.md",
+    "PROJECT.md", ".gitignore", ".gitattributes", ".editorconfig",
+    ".github/pull_request_template.md",
+}
+SHA_PATTERN = re.compile(r"[0-9a-f]{40}")
+TAG_PATTERN = re.compile(r"v[0-9][A-Za-z0-9._+-]*")
+
+
+class ChangedPath(NamedTuple):
+    status: str
+    path: str
+    old_path: str | None = None
 
 
 def _git_output(arguments: list[str]) -> str:
@@ -39,13 +56,45 @@ def _git_output(arguments: list[str]) -> str:
             text=True,
             encoding="utf-8",
             stderr=subprocess.PIPE,
+            timeout=30,
         )
-    except (OSError, subprocess.CalledProcessError) as exc:
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         rendered = " ".join(arguments)
         raise SystemExit(f"fast test selection: git {rendered} failed") from exc
 
 
-def changed_files(base: str, head: str) -> set[str]:
+def parse_changed_files(output: str) -> list[ChangedPath]:
+    """Preserve NUL-delimited status/path records; never guess truncated data."""
+    if not output:
+        return []
+    if not output.endswith("\0"):
+        raise SystemExit("fast test selection: truncated change status")
+    tokens = output.split("\0")[:-1]
+    result: list[ChangedPath] = []
+    cursor = 0
+    while cursor < len(tokens):
+        status = tokens[cursor]
+        cursor += 1
+        if not re.fullmatch(r"(?:[ADTU]|M(?:[0-9]{1,3})?|[RC][0-9]{1,3})", status):
+            raise SystemExit("fast test selection: unknown change status")
+        if len(status) > 1 and int(status[1:]) > 100:
+            raise SystemExit("fast test selection: invalid change score")
+        count = 2 if status[0] in "RC" else 1
+        paths = tokens[cursor:cursor + count]
+        if len(paths) != count or any(not path for path in paths):
+            raise SystemExit("fast test selection: truncated change paths")
+        if any(
+            path.startswith("/") or re.match(r"[A-Za-z]:", path)
+            or any(part in {"", ".", ".."} for part in path.split("/"))
+            for path in paths
+        ):
+            raise SystemExit("fast test selection: non-relative change path")
+        cursor += count
+        result.append(ChangedPath(status, paths[-1], paths[0] if count == 2 else None))
+    return result
+
+
+def changed_files(base: str, head: str) -> list[ChangedPath]:
     normalized_base = base.strip()
     normalized_head = head.strip() or "HEAD"
     if not normalized_base or normalized_base == ZERO_SHA:
@@ -60,19 +109,13 @@ def changed_files(base: str, head: str) -> set[str]:
             output = _git_output(
                 ["ls-tree", "-r", "--name-only", "-z", normalized_head]
             )
-            return {
-                line.strip().replace("\\", "/")
-                for line in output.split("\0")
-                if line.strip()
-            }
+            if output and not output.endswith("\0"):
+                raise SystemExit("fast test selection: truncated tracked paths")
+            return [ChangedPath("A", path) for path in output.split("\0") if path]
     output = _git_output(
-        ["diff", "--name-only", "-z", f"{normalized_base}...{normalized_head}"]
+        ["diff", "--name-status", "-z", "--find-renames", f"{normalized_base}...{normalized_head}"]
     )
-    return {
-        line.strip().replace("\\", "/")
-        for line in output.split("\0")
-        if line.strip()
-    }
+    return parse_changed_files(output)
 
 
 def _normalized_token(value: str) -> str:
@@ -96,18 +139,23 @@ def _selection_needles(path: str) -> set[str]:
     return needles
 
 
+def _baseline_only(path: str) -> bool:
+    return path in BASELINE_ONLY_PATHS or path.startswith(BASELINE_ONLY_PREFIXES)
+
+
 def _requires_all_tests(changed_paths: set[str]) -> bool:
     if changed_paths & BROAD_IMPACT_PATHS:
         return True
     return any(
-        (path.startswith("requirements") and path.endswith((".in", ".txt")))
+        path.startswith("requirements")
         or (path.startswith("tests/") and path.endswith("/conftest.py"))
         or (path.startswith("src/") and path.endswith("/__init__.py"))
+        or (not path.startswith(CORRESPONDENCE_PREFIXES) and not _baseline_only(path))
         for path in changed_paths
     )
 
 
-def select_tests(changed: Iterable[str], *, root: Path = ROOT) -> list[str]:
+def select_tests(changed: Iterable[str | ChangedPath], *, root: Path = ROOT) -> list[str]:
     available = {
         path.relative_to(root).as_posix(): path
         for path in (root / "tests").rglob("test_*.py")
@@ -120,7 +168,15 @@ def select_tests(changed: Iterable[str], *, root: Path = ROOT) -> list[str]:
             + ", ".join(missing_baseline)
         )
     selected = {name for name in ALWAYS_TESTS if name in available}
-    changed_paths = {path.replace("\\", "/") for path in changed}
+    records = [item if isinstance(item, ChangedPath) else ChangedPath("M", item) for item in changed]
+    changed_paths = {path for item in records for path in (item.path, item.old_path) if path is not None}
+
+    if any(
+        item.status[0] not in "AM"
+        and any(not _baseline_only(path) for path in (item.path, item.old_path) if path is not None)
+        for item in records
+    ):
+        return sorted(available)
 
     if _requires_all_tests(changed_paths):
         return sorted(available)
@@ -137,7 +193,7 @@ def select_tests(changed: Iterable[str], *, root: Path = ROOT) -> list[str]:
     relevant_changes = [
         path
         for path in changed_paths
-        if path.startswith(("src/", "schemas/", "tools/", "tests/"))
+        if path.startswith(CORRESPONDENCE_PREFIXES)
     ]
     content_cache: dict[str, str] = {}
     for changed_path in relevant_changes:
@@ -178,8 +234,12 @@ def validate_basetemp(target: Path, allowed_root: Path) -> Path:
     except OSError as exc:
         raise SystemExit("fast test selection: allowed temp root is unavailable") from exc
     resolved_target = target.resolve(strict=False)
+    if resolved_allowed != allowed_root.absolute():
+        raise SystemExit("fast test selection: allowed temp root uses a noncanonical alias")
     if resolved_target == resolved_allowed or resolved_allowed not in resolved_target.parents:
         raise SystemExit("fast test selection: basetemp is outside the allowed temp root")
+    if resolved_target != target.absolute():
+        raise SystemExit("fast test selection: basetemp uses a noncanonical alias")
     if len(resolved_target.parts) <= 2 or resolved_target.parent == Path(resolved_target.anchor):
         raise SystemExit("fast test selection: basetemp is too close to a filesystem root")
     if resolved_target.exists():
@@ -199,6 +259,8 @@ def prepare_basetemp_root(target: Path, allowed_root: Path) -> Path:
 def _run_pytest(tests: list[str], *, basetemp: Path, timeout: int) -> int:
     if not tests:
         return 0
+    # pytest owns/deletes its basetemp. Never let it reuse an existing child.
+    validate_basetemp(basetemp, basetemp.parent)
     command = [
         sys.executable,
         "-m",
@@ -218,13 +280,86 @@ def _run_pytest(tests: list[str], *, basetemp: Path, timeout: int) -> int:
     return subprocess.run(command, cwd=ROOT, check=False).returncode
 
 
+def _release_tag_ref(tag: str) -> str:
+    if not TAG_PATTERN.fullmatch(tag) or ".." in tag or tag.endswith("."):
+        raise SystemExit("release identity: invalid version tag name")
+    ref = f"refs/tags/{tag}"
+    _git_output(["check-ref-format", ref])
+    return ref
+
+
+def _sha(value: str) -> str:
+    if not SHA_PATTERN.fullmatch(value):
+        raise SystemExit("release identity: invalid object SHA")
+    return value
+
+
+def resolve_release_tag(tag: str) -> dict[str, str]:
+    """Read one annotated remote tag identity; do not create or move any ref."""
+    ref = _release_tag_ref(tag)
+    if _git_output(["cat-file", "-t", ref]).strip() != "tag":
+        raise SystemExit("release identity: annotated tag required")
+    identity = {
+        "tag_object_sha": _sha(_git_output(["rev-parse", "--verify", ref]).strip()),
+        "commit_sha": _sha(_git_output(["rev-parse", "--verify", f"{ref}^{{commit}}"]).strip()),
+    }
+    verify_release_tag(tag, **identity)
+    return identity
+
+
+def verify_release_tag(tag: str, *, tag_object_sha: str, commit_sha: str) -> None:
+    ref = _release_tag_ref(tag)
+    expected = {ref: _sha(tag_object_sha), f"{ref}^{{}}": _sha(commit_sha)}
+    output = _git_output(["ls-remote", "--exit-code", "--tags", "origin", ref, f"{ref}^{{}}"])
+    observed: dict[str, str] = {}
+    for line in output.splitlines():
+        fields = line.split("\t")
+        if len(fields) != 2 or fields[1] not in expected or fields[1] in observed:
+            raise SystemExit("release identity: malformed remote tag response")
+        observed[fields[1]] = _sha(fields[0])
+    if observed != expected:
+        raise SystemExit("release identity: remote annotated tag changed or is absent")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="")
     parser.add_argument("--head", default="HEAD")
-    parser.add_argument("--allowed-temp-root", type=Path, required=True)
-    parser.add_argument("--basetemp", type=Path, required=True)
+    parser.add_argument("--allowed-temp-root", type=Path)
+    parser.add_argument("--basetemp", type=Path)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--prepare-only", action="store_true")
+    modes.add_argument("--check-child", action="store_true")
+    modes.add_argument("--resolve-release-tag")
+    modes.add_argument("--verify-release-tag")
+    parser.add_argument("--expected-tag-object-sha")
+    parser.add_argument("--expected-commit-sha")
     args = parser.parse_args(argv)
+
+    if args.resolve_release_tag or args.verify_release_tag:
+        if args.allowed_temp_root or args.basetemp or args.base or args.head != "HEAD":
+            parser.error("release identity mode cannot accept selection/temp arguments")
+        if args.resolve_release_tag:
+            if args.expected_tag_object_sha or args.expected_commit_sha:
+                parser.error("resolution mode does not accept expected identities")
+            for key, value in resolve_release_tag(args.resolve_release_tag).items():
+                print(f"{key}={value}")
+        else:
+            if not args.expected_tag_object_sha or not args.expected_commit_sha:
+                parser.error("verification requires both expected identities")
+            verify_release_tag(args.verify_release_tag, tag_object_sha=args.expected_tag_object_sha, commit_sha=args.expected_commit_sha)
+            print("release identity: PASS")
+        return 0
+    if args.expected_tag_object_sha or args.expected_commit_sha:
+        parser.error("expected release identities require verification mode")
+    if args.allowed_temp_root is None or args.basetemp is None:
+        parser.error("both allowed-temp-root and basetemp are required")
+    if args.prepare_only or args.check_child:
+        if args.base or args.head != "HEAD":
+            parser.error("output-root modes cannot accept selection arguments")
+        safe = (prepare_basetemp_root if args.prepare_only else validate_basetemp)(args.basetemp, args.allowed_temp_root)
+        print(f"operation_root={safe}")
+        return 0
 
     selected = select_tests(changed_files(args.base, args.head))
     parallel = [path for path in selected if path not in SERIAL_TESTS]

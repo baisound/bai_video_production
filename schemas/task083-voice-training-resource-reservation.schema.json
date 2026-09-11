@@ -1,0 +1,2676 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai.local/schemas/task083-voice-training-resource-reservation.schema.json",
+  "title": "TASK-083 Voice Training Resource Reservation V1",
+  "description": "Body-free effect-0 plans, fixture-only state records, parse-only production receipts/readbacks, and fail-closed admission.",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "project_id",
+        "job_id",
+        "job_operation_id",
+        "job_revision",
+        "job_revision_sha256",
+        "job_binding_sha256",
+        "run_id",
+        "training_input_snapshot_ref",
+        "training_input_snapshot_sha256",
+        "dataset_id",
+        "recipe_revision_ref",
+        "recipe_revision_sha256",
+        "backend_id",
+        "backend_build_sha256",
+        "runtime_revision",
+        "runtime_sha256",
+        "device_profile_ref",
+        "device_profile_sha256",
+        "capability_admission_sha256",
+        "resource_floor",
+        "resource_ceiling",
+        "policy_revision_sha256",
+        "cpu_unit",
+        "memory_unit",
+        "durable_job_source_state",
+        "voice_training_workload_id",
+        "voice_training_workload_mapping_state",
+        "issued_at",
+        "expires_at",
+        "fixture_only",
+        "authority_created",
+        "audio_body_persisted",
+        "environment_body_persisted",
+        "native_reservation_invoked",
+        "training_dispatched",
+        "resource_effect_count",
+        "production_eligible",
+        "plan_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083ResourceReservationPlanV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-083"
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "job_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "job_binding_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "training_input_snapshot_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "training_input_snapshot_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "dataset_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "recipe_revision_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "recipe_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "backend_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "backend_build_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "runtime_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "runtime_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "device_profile_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "device_profile_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "capability_admission_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "resource_floor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_units",
+            "ram_bytes",
+            "vram_bytes",
+            "disk_bytes"
+          ],
+          "properties": {
+            "cpu_units": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "vram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "disk_bytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "resource_ceiling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_units",
+            "ram_bytes",
+            "vram_bytes",
+            "disk_bytes"
+          ],
+          "properties": {
+            "cpu_units": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "vram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "disk_bytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "policy_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "cpu_unit": {
+          "const": "LOGICAL_PROCESSOR"
+        },
+        "memory_unit": {
+          "const": "BYTES"
+        },
+        "durable_job_source_state": {
+          "const": "NOT_AVAILABLE_CURRENT_SOURCE"
+        },
+        "voice_training_workload_id": {
+          "const": "audio.voice.local"
+        },
+        "voice_training_workload_mapping_state": {
+          "const": "DISABLED_UNTIL_MAPPED"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "audio_body_persisted": {
+          "const": false
+        },
+        "environment_body_persisted": {
+          "const": false
+        },
+        "native_reservation_invoked": {
+          "const": false
+        },
+        "training_dispatched": {
+          "const": false
+        },
+        "resource_effect_count": {
+          "const": 0
+        },
+        "production_eligible": {
+          "const": false
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "fixture_only",
+        "plan_sha256",
+        "project_id",
+        "job_id",
+        "job_revision_sha256",
+        "run_id",
+        "training_input_snapshot_sha256",
+        "recipe_revision_sha256",
+        "backend_id",
+        "backend_build_sha256",
+        "runtime_sha256",
+        "device_profile_sha256",
+        "policy_revision_sha256",
+        "granted_resources",
+        "thermal_state",
+        "power_state",
+        "gpu_present",
+        "live_capability_present",
+        "observed_at",
+        "fresh_until",
+        "native_observation_invoked",
+        "raw_hardware_body_persisted",
+        "observation_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083FixtureResourceObservationV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "training_input_snapshot_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "recipe_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "backend_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "backend_build_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "runtime_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "device_profile_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "policy_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "granted_resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_units",
+            "ram_bytes",
+            "vram_bytes",
+            "disk_bytes"
+          ],
+          "properties": {
+            "cpu_units": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "vram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "disk_bytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "thermal_state": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "UNKNOWN"
+          ]
+        },
+        "power_state": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "UNKNOWN"
+          ]
+        },
+        "gpu_present": {
+          "type": "boolean"
+        },
+        "live_capability_present": {
+          "type": "boolean"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fresh_until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "native_observation_invoked": {
+          "const": false
+        },
+        "raw_hardware_body_persisted": {
+          "const": false
+        },
+        "observation_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "receipt_role",
+        "reservation_id",
+        "request_id",
+        "plan_sha256",
+        "h3_authorization_v2_sha256",
+        "task084_destination_plan_sha256",
+        "compound_operation_id",
+        "compound_operation_sha256",
+        "compound_stage",
+        "project_id",
+        "job_id",
+        "job_revision_sha256",
+        "run_id",
+        "training_input_snapshot_sha256",
+        "recipe_revision_sha256",
+        "backend_id",
+        "backend_build_sha256",
+        "runtime_sha256",
+        "device_profile_sha256",
+        "policy_revision_sha256",
+        "state",
+        "reservation_revision",
+        "previous_receipt_sha256",
+        "durable_negative_acknowledgement_sha256",
+        "granted_resources",
+        "thermal_state",
+        "power_state",
+        "reason_codes",
+        "event_at",
+        "expires_at",
+        "fixture_only",
+        "authority_created",
+        "live_capability_restorable",
+        "live_capability_present",
+        "production_backend_invoked",
+        "native_reservation_invoked",
+        "training_dispatched",
+        "training_started",
+        "resource_effect_count",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083FixtureExecutionResourceReservationReceiptV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-083"
+        },
+        "receipt_role": {
+          "const": "TRAINING_RESOURCE_RESERVATION"
+        },
+        "reservation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "h3_authorization_v2_sha256": {
+          "type": "null"
+        },
+        "task084_destination_plan_sha256": {
+          "type": "null"
+        },
+        "compound_operation_id": {
+          "type": "null"
+        },
+        "compound_operation_sha256": {
+          "type": "null"
+        },
+        "compound_stage": {
+          "const": "FIXTURE_ONLY"
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "training_input_snapshot_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "recipe_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "backend_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "backend_build_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "runtime_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "device_profile_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "policy_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "state": {
+          "enum": [
+            "RESERVED",
+            "CONSUMPTION_STARTED",
+            "CONSUMED",
+            "EXPIRED",
+            "CONSUMPTION_UNKNOWN",
+            "FAILED_CLOSED"
+          ]
+        },
+        "reservation_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "previous_receipt_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "granted_resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_units",
+            "ram_bytes",
+            "vram_bytes",
+            "disk_bytes"
+          ],
+          "properties": {
+            "cpu_units": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "vram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "disk_bytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "thermal_state": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "UNKNOWN"
+          ]
+        },
+        "power_state": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "UNKNOWN"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+          }
+        },
+        "event_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "live_capability_restorable": {
+          "const": false
+        },
+        "live_capability_present": {
+          "const": false
+        },
+        "production_backend_invoked": {
+          "const": false
+        },
+        "native_reservation_invoked": {
+          "const": false
+        },
+        "training_dispatched": {
+          "const": false
+        },
+        "training_started": {
+          "const": false
+        },
+        "resource_effect_count": {
+          "const": 0
+        },
+        "receipt_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "durable_negative_acknowledgement_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "RESERVED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_STARTED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "EXPIRED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "enum": [
+                  1,
+                  2
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_UNKNOWN"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "FAILED_CLOSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "enum": [
+                  1,
+                  2,
+                  3
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "RESERVED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_STARTED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "EXPIRED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_UNKNOWN"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "FAILED_CLOSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "oneOf": [
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "enum": [
+                      1,
+                      2
+                    ]
+                  },
+                  "durable_negative_acknowledgement_sha256": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "const": 3
+                  },
+                  "durable_negative_acknowledgement_sha256": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "receipt_role",
+        "reservation_id",
+        "request_id",
+        "plan_sha256",
+        "h3_authorization_v2_sha256",
+        "task084_destination_plan_sha256",
+        "compound_operation_id",
+        "compound_operation_sha256",
+        "compound_stage",
+        "project_id",
+        "job_id",
+        "job_revision_sha256",
+        "run_id",
+        "training_input_snapshot_sha256",
+        "recipe_revision_sha256",
+        "backend_id",
+        "backend_build_sha256",
+        "runtime_sha256",
+        "device_profile_sha256",
+        "policy_revision_sha256",
+        "state",
+        "reservation_revision",
+        "previous_receipt_sha256",
+        "durable_negative_acknowledgement_sha256",
+        "granted_resources",
+        "thermal_state",
+        "power_state",
+        "reason_codes",
+        "event_at",
+        "expires_at",
+        "fixture_only",
+        "authority_created",
+        "live_capability_restorable",
+        "live_capability_present",
+        "production_backend_invoked",
+        "native_reservation_invoked",
+        "training_dispatched",
+        "training_started",
+        "resource_effect_count",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083ExecutionResourceReservationReceiptV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-083"
+        },
+        "receipt_role": {
+          "const": "TRAINING_RESOURCE_RESERVATION"
+        },
+        "reservation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "h3_authorization_v2_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "task084_destination_plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "compound_operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "compound_operation_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "compound_stage": {
+          "enum": [
+            "RESERVATION_ACTIVATED",
+            "RESERVATION_CONSUMPTION_STARTED",
+            "TRAINING_DISPATCH_ACKNOWLEDGED",
+            "TRAINING_DISPATCH_NOT_STARTED",
+            "TRAINING_DISPATCH_UNKNOWN"
+          ]
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "training_input_snapshot_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "recipe_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "backend_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "backend_build_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "runtime_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "device_profile_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "policy_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "state": {
+          "enum": [
+            "RESERVED",
+            "CONSUMPTION_STARTED",
+            "CONSUMED",
+            "EXPIRED",
+            "CONSUMPTION_UNKNOWN",
+            "FAILED_CLOSED"
+          ]
+        },
+        "reservation_revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "previous_receipt_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "granted_resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cpu_units",
+            "ram_bytes",
+            "vram_bytes",
+            "disk_bytes"
+          ],
+          "properties": {
+            "cpu_units": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "vram_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "disk_bytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "thermal_state": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "UNKNOWN"
+          ]
+        },
+        "power_state": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "UNKNOWN"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+          }
+        },
+        "event_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fixture_only": {
+          "const": false
+        },
+        "authority_created": {
+          "const": false
+        },
+        "live_capability_restorable": {
+          "const": false
+        },
+        "live_capability_present": {
+          "type": "boolean"
+        },
+        "production_backend_invoked": {
+          "const": true
+        },
+        "native_reservation_invoked": {
+          "const": true
+        },
+        "training_dispatched": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "training_started": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resource_effect_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "receipt_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "durable_negative_acknowledgement_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "RESERVED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 1
+              },
+              "compound_stage": {
+                "const": "RESERVATION_ACTIVATED"
+              },
+              "live_capability_present": {
+                "const": true
+              },
+              "training_dispatched": {
+                "const": false
+              },
+              "training_started": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_STARTED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 2
+              },
+              "compound_stage": {
+                "const": "RESERVATION_CONSUMPTION_STARTED"
+              },
+              "live_capability_present": {
+                "const": true
+              },
+              "training_dispatched": {
+                "const": false
+              },
+              "training_started": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 3
+              },
+              "compound_stage": {
+                "const": "TRAINING_DISPATCH_ACKNOWLEDGED"
+              },
+              "live_capability_present": {
+                "const": false
+              },
+              "training_dispatched": {
+                "const": true
+              },
+              "training_started": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "EXPIRED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "enum": [
+                  1,
+                  2
+                ]
+              },
+              "compound_stage": {
+                "const": "TRAINING_DISPATCH_NOT_STARTED"
+              },
+              "live_capability_present": {
+                "const": false
+              },
+              "training_dispatched": {
+                "const": false
+              },
+              "training_started": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "FAILED_CLOSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "enum": [
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "compound_stage": {
+                "const": "TRAINING_DISPATCH_NOT_STARTED"
+              },
+              "live_capability_present": {
+                "const": false
+              },
+              "training_dispatched": {
+                "const": false
+              },
+              "training_started": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_UNKNOWN"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 3
+              },
+              "compound_stage": {
+                "const": "TRAINING_DISPATCH_UNKNOWN"
+              },
+              "live_capability_present": {
+                "const": false
+              },
+              "training_dispatched": {
+                "type": "null"
+              },
+              "training_started": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "RESERVED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_STARTED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "EXPIRED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_UNKNOWN"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "durable_negative_acknowledgement_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "FAILED_CLOSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "oneOf": [
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "enum": [
+                      1,
+                      2
+                    ]
+                  },
+                  "durable_negative_acknowledgement_sha256": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "const": 3
+                  },
+                  "durable_negative_acknowledgement_sha256": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "receipt_role",
+        "reservation_id",
+        "plan_sha256",
+        "h3_authorization_v2_sha256",
+        "task084_destination_plan_sha256",
+        "compound_operation_id",
+        "compound_operation_sha256",
+        "compound_stage",
+        "project_id",
+        "job_id",
+        "job_revision_sha256",
+        "run_id",
+        "training_input_snapshot_sha256",
+        "recipe_revision_sha256",
+        "backend_id",
+        "backend_build_sha256",
+        "runtime_sha256",
+        "device_profile_sha256",
+        "policy_revision_sha256",
+        "state",
+        "reservation_revision",
+        "head_receipt_sha256",
+        "event_count",
+        "read_back_at",
+        "fixture_only",
+        "authority_created",
+        "live_capability_present",
+        "live_capability_restorable",
+        "production_backend_invoked",
+        "training_dispatched",
+        "training_started",
+        "resource_effect_count",
+        "readback_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083FixtureResourceReservationReadbackV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-083"
+        },
+        "receipt_role": {
+          "const": "TRAINING_RESOURCE_RESERVATION"
+        },
+        "reservation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "h3_authorization_v2_sha256": {
+          "type": "null"
+        },
+        "task084_destination_plan_sha256": {
+          "type": "null"
+        },
+        "compound_operation_id": {
+          "type": "null"
+        },
+        "compound_operation_sha256": {
+          "type": "null"
+        },
+        "compound_stage": {
+          "const": "FIXTURE_ONLY"
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "training_input_snapshot_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "recipe_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "backend_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "backend_build_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "runtime_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "device_profile_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "policy_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "state": {
+          "enum": [
+            "PREPARED",
+            "RESERVED",
+            "CONSUMPTION_STARTED",
+            "CONSUMED",
+            "EXPIRED",
+            "CONSUMPTION_UNKNOWN",
+            "FAILED_CLOSED"
+          ]
+        },
+        "reservation_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "head_receipt_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "event_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "read_back_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "live_capability_present": {
+          "const": false
+        },
+        "live_capability_restorable": {
+          "const": false
+        },
+        "production_backend_invoked": {
+          "const": false
+        },
+        "training_dispatched": {
+          "const": false
+        },
+        "training_started": {
+          "const": false
+        },
+        "resource_effect_count": {
+          "const": 0
+        },
+        "readback_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "PREPARED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 0
+              },
+              "event_count": {
+                "const": 0
+              },
+              "head_receipt_sha256": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "RESERVED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 1
+              },
+              "event_count": {
+                "const": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_STARTED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 2
+              },
+              "event_count": {
+                "const": 2
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 3
+              },
+              "event_count": {
+                "const": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "EXPIRED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "oneOf": [
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "const": 1
+                  },
+                  "event_count": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "const": 2
+                  },
+                  "event_count": {
+                    "const": 2
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_UNKNOWN"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 3
+              },
+              "event_count": {
+                "const": 3
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "FAILED_CLOSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "oneOf": [
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "const": 1
+                  },
+                  "event_count": {
+                    "const": 1
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "const": 2
+                  },
+                  "event_count": {
+                    "const": 2
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "reservation_revision": {
+                    "const": 3
+                  },
+                  "event_count": {
+                    "const": 3
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "receipt_role",
+        "reservation_id",
+        "plan_sha256",
+        "h3_authorization_v2_sha256",
+        "task084_destination_plan_sha256",
+        "compound_operation_id",
+        "compound_operation_sha256",
+        "compound_stage",
+        "project_id",
+        "job_id",
+        "job_revision_sha256",
+        "run_id",
+        "training_input_snapshot_sha256",
+        "recipe_revision_sha256",
+        "backend_id",
+        "backend_build_sha256",
+        "runtime_sha256",
+        "device_profile_sha256",
+        "policy_revision_sha256",
+        "state",
+        "reservation_revision",
+        "head_receipt_sha256",
+        "event_count",
+        "read_back_at",
+        "fixture_only",
+        "authority_created",
+        "live_capability_present",
+        "live_capability_restorable",
+        "production_backend_invoked",
+        "training_dispatched",
+        "training_started",
+        "resource_effect_count",
+        "readback_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083ResourceReservationReadbackV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-083"
+        },
+        "receipt_role": {
+          "const": "TRAINING_RESOURCE_RESERVATION"
+        },
+        "reservation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "h3_authorization_v2_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "task084_destination_plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "compound_operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "compound_operation_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "compound_stage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "job_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "training_input_snapshot_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "recipe_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "backend_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "backend_build_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "runtime_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "device_profile_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "policy_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "state": {
+          "enum": [
+            "PREPARED",
+            "RESERVED",
+            "CONSUMPTION_STARTED",
+            "CONSUMED",
+            "EXPIRED",
+            "CONSUMPTION_UNKNOWN",
+            "FAILED_CLOSED"
+          ]
+        },
+        "reservation_revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "head_receipt_sha256": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "event_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "read_back_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fixture_only": {
+          "const": false
+        },
+        "authority_created": {
+          "const": false
+        },
+        "live_capability_present": {
+          "type": "boolean"
+        },
+        "live_capability_restorable": {
+          "const": false
+        },
+        "production_backend_invoked": {
+          "const": true
+        },
+        "training_dispatched": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "training_started": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resource_effect_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "readback_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "RESERVED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 1
+              },
+              "event_count": {
+                "const": 1
+              },
+              "compound_stage": {
+                "const": "RESERVATION_ACTIVATED"
+              },
+              "live_capability_present": {
+                "const": true
+              },
+              "training_dispatched": {
+                "const": false
+              },
+              "training_started": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_STARTED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 2
+              },
+              "event_count": {
+                "const": 2
+              },
+              "compound_stage": {
+                "const": "RESERVATION_CONSUMPTION_STARTED"
+              },
+              "live_capability_present": {
+                "const": true
+              },
+              "training_dispatched": {
+                "const": false
+              },
+              "training_started": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 3
+              },
+              "event_count": {
+                "const": 3
+              },
+              "compound_stage": {
+                "const": "TRAINING_DISPATCH_ACKNOWLEDGED"
+              },
+              "live_capability_present": {
+                "const": false
+              },
+              "training_dispatched": {
+                "const": true
+              },
+              "training_started": {
+                "const": true
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "EXPIRED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "enum": [
+                  1,
+                  2
+                ]
+              },
+              "compound_stage": {
+                "const": "TRAINING_DISPATCH_NOT_STARTED"
+              },
+              "live_capability_present": {
+                "const": false
+              },
+              "training_dispatched": {
+                "const": false
+              },
+              "training_started": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "FAILED_CLOSED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "enum": [
+                  1,
+                  2,
+                  3
+                ]
+              },
+              "compound_stage": {
+                "const": "TRAINING_DISPATCH_NOT_STARTED"
+              },
+              "live_capability_present": {
+                "const": false
+              },
+              "training_dispatched": {
+                "const": false
+              },
+              "training_started": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "CONSUMPTION_UNKNOWN"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reservation_revision": {
+                "const": 3
+              },
+              "event_count": {
+                "const": 3
+              },
+              "compound_stage": {
+                "const": "TRAINING_DISPATCH_UNKNOWN"
+              },
+              "live_capability_present": {
+                "const": false
+              },
+              "training_dispatched": {
+                "type": "null"
+              },
+              "training_started": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "plan_sha256",
+        "observation_sha256",
+        "decision",
+        "reason_codes",
+        "evaluated_at",
+        "fixture_only",
+        "authority_created",
+        "native_reservation_invoked",
+        "training_dispatched",
+        "resource_effect_count",
+        "decision_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083ResourceReservationDecisionV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-083"
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "observation_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "decision": {
+          "enum": [
+            "READY_FIXTURE_ONLY",
+            "BLOCKED"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+          }
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "native_reservation_invoked": {
+          "const": false
+        },
+        "training_dispatched": {
+          "const": false
+        },
+        "resource_effect_count": {
+          "const": 0
+        },
+        "decision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "plan_sha256",
+        "decision",
+        "reason_codes",
+        "evaluated_at",
+        "fixture_only",
+        "authority_created",
+        "native_reservation_invoked",
+        "training_dispatched",
+        "production_eligible",
+        "resource_effect_count",
+        "admission_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083ProductionReservationAdmissionV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-083"
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "decision": {
+          "const": "BLOCKED"
+        },
+        "reason_codes": {
+          "const": [
+            "COMPOUND_OPERATION_NOT_BOUND",
+            "DURABLE_JOB_SOURCE_NOT_AVAILABLE",
+            "H3_AUTHORIZATION_V2_NOT_PRESENT",
+            "NATIVE_BACKEND_NOT_IMPLEMENTED",
+            "TASK084_DESTINATION_PLAN_NOT_BOUND",
+            "VOICE_TRAINING_WORKLOAD_NOT_MAPPED"
+          ]
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "native_reservation_invoked": {
+          "const": false
+        },
+        "training_dispatched": {
+          "const": false
+        },
+        "production_eligible": {
+          "const": false
+        },
+        "resource_effect_count": {
+          "const": 0
+        },
+        "admission_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "reservation_id",
+        "acknowledgement_id",
+        "plan_sha256",
+        "job_revision_sha256",
+        "consumption_started_revision",
+        "consumption_started_receipt_sha256",
+        "process_not_started",
+        "job_head_unchanged",
+        "live_lease_released",
+        "observed_at",
+        "fixture_only",
+        "production_backend_invoked",
+        "training_started",
+        "resource_effect_count",
+        "acknowledgement_sha256"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "Task083FixtureDurableNegativeAcknowledgementV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "canonical_owner_task": {
+          "const": "TASK-083"
+        },
+        "reservation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "acknowledgement_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?![Ff][Ii][Ll][Ee]:)(?![Hh][Tt][Tt][Pp][Ss]?:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9][A-Za-z0-9._:/-]{0,255}(?![\\s\\S])"
+        },
+        "plan_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "job_revision_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "consumption_started_revision": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "consumption_started_receipt_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        },
+        "process_not_started": {
+          "const": true
+        },
+        "job_head_unchanged": {
+          "const": true
+        },
+        "live_lease_released": {
+          "const": true
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:(?!0000)[0-9]{4})-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12][0-9]|3[01])|(?:0[469]|11)-(?:0[1-9]|[12][0-9]|30)|02-(?:0[1-9]|1[0-9]|2[0-8]))|(?:(?!0000)(?:[0-9]{2}(?:0[48]|[2468][048]|[13579][26])|(?:0[48]|[2468][048]|[13579][26])00))-02-29)T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,6})?Z(?![\\s\\S])"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "production_backend_invoked": {
+          "const": false
+        },
+        "training_started": {
+          "const": false
+        },
+        "resource_effect_count": {
+          "const": 0
+        },
+        "acknowledgement_sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+        }
+      }
+    }
+  ]
+}

@@ -231,7 +231,9 @@ def main() -> int:
         sample_count=args.sample_count,
         max_total_seconds=args.max_total_seconds,
     )
-    print(json.dumps(receipt, ensure_ascii=False, sort_keys=True))
+    # stdout may be a legacy-encoded pipe on Windows. JSON escapes preserve
+    # localized labels without changing the persisted UTF-8 receipt.
+    print(json.dumps(receipt, ensure_ascii=True, sort_keys=True))
     return 0
 
 

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 import subprocess
 import sys
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,6 +72,35 @@ def test_receipt_is_explicitly_not_real_media_generator_or_accuracy_evidence(tmp
         "native_application_started",
     ):
         assert receipt[field] is False
+
+
+@pytest.mark.parametrize("stdio_encoding", ["cp1252:strict", "ascii:strict"])
+def test_stdout_is_ascii_without_changing_the_utf8_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, stdio_encoding: str
+) -> None:
+    monkeypatch.setenv("PYTHONIOENCODING", stdio_encoding)
+    monkeypatch.setenv("PYTHONUTF8", "0")
+    result = _run(tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.isascii()
+    receipt = json.loads(result.stdout)
+    assert receipt["operator_flow_reference"].endswith("確認したCropを一括登録")
+
+    receipt_path = (
+        tmp_path
+        / "authorized"
+        / "TASK-052"
+        / "r9-batch-confirm"
+        / "run-001"
+        / "task052-r9-batch-confirm-performance-preflight.json"
+    )
+    receipt_bytes = receipt_path.read_bytes()
+    receipt_text = receipt_bytes.decode("utf-8")
+    assert "画像学習データ" in receipt_text
+    assert json.loads(receipt_text) == {
+        key: value for key, value in receipt.items() if key != "receipt_sha256"
+    }
+    assert receipt["receipt_sha256"] == hashlib.sha256(receipt_bytes).hexdigest()
 
 
 def test_preflight_refuses_existing_or_out_of_scope_run_root(tmp_path: Path) -> None:

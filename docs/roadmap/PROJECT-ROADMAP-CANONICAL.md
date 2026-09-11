@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.95
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.96
 - Project: `ai-video-production`
 - Date: 2026-08-23
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -53,7 +53,9 @@ lane/Task/Unit内でfresh main・PR・Lock・path・dirty・overlap確認がPASS
 個別の実装権限発行依頼を待たずにbranch/worktree作成、実装、test、Critic/Judge、
 Draft PRまで自走する。これは担当外変更、Release/Deploy/Production、有料利用、
 新規credential/private account、推定license/Consent、破壊的overwrite/cleanupを
-許可しない。shared CHANGELOG等は引き続き直列化する。
+許可しない。通常PRはshared CHANGELOGを変更・予約せず、実際のProduct
+version変更を含むRelease/version-bump PRだけがCHANGELOGを更新して直列化する。
+全PRでProduct version定数の一致は必須とする。
 
 #### 二担当の現在地と排他的な次順序
 

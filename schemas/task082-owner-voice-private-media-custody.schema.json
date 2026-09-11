@@ -1,0 +1,510 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai.task082.owner-voice-private-media-custody.v2",
+  "title": "TASK-082 owner voice private media custody public records",
+  "oneOf": [
+    { "$ref": "#/$defs/custodyReceipt" },
+    { "$ref": "#/$defs/generationEvent" },
+    { "$ref": "#/$defs/leaseDecision" },
+    { "$ref": "#/$defs/leaseCompletionReadback" }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "nullableDigest": {
+      "oneOf": [
+        { "$ref": "#/$defs/digest" },
+        { "type": "null" }
+      ]
+    },
+    "identifier": {
+      "type": "string",
+      "allOf": [
+        { "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+        { "not": { "pattern": "\\.\\." } },
+        {
+          "not": {
+            "pattern": "[Pp][Rr][Ii][Vv][Aa][Tt][Ee]-[Pp][Aa][Tt][Hh]|[Hh][Oo][Ss][Tt]-[Pp][Aa][Tt][Hh]|[Cc][Rr][Ee][Dd][Ee][Nn][Tt][Ii][Aa][Ll]|[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Tt][Oo][Kk][Ee][Nn]|[Ss][Pp][Ee][Aa][Kk][Ee][Rr]-[Ff][Ii][Nn][Gg][Ee][Rr][Pp][Rr][Ii][Nn][Tt]"
+          }
+        }
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z$"
+    },
+    "positiveInteger": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "artifactClass": {
+      "enum": [
+        "RAW_CAPTURE",
+        "CANONICAL_PCM",
+        "PROCESSED_SPEECH_CONTINUOUS",
+        "REVIEW_TRANSCRIPT",
+        "TRAINING_COPY"
+      ]
+    },
+    "writePurpose": {
+      "enum": [
+        "CAPTURE_RAW_PUBLISH",
+        "CAPTURE_CANONICAL_PUBLISH",
+        "QUALITY_SPEECH_CONTINUOUS_PUBLISH",
+        "QUALITY_TRAINING_COPY_PUBLISH",
+        "DATASET_REVIEW_TRANSCRIPT_PUBLISH"
+      ]
+    },
+    "leasePurpose": {
+      "enum": [
+        "CAPTURE_RAW_PUBLISH",
+        "CAPTURE_CANONICAL_PUBLISH",
+        "QUALITY_SPEECH_CONTINUOUS_PUBLISH",
+        "QUALITY_TRAINING_COPY_PUBLISH",
+        "DATASET_REVIEW_TRANSCRIPT_PUBLISH",
+        "QUALITY_PROCESSING",
+        "DATASET_INTAKE",
+        "DATASET_REVIEW",
+        "VOICE_MODEL_TRAINING"
+      ]
+    },
+    "admissionBlockedReason": {
+      "enum": [
+        "REQUEST_INVALID",
+        "WRONG_SUBJECT",
+        "WRONG_PURPOSE",
+        "WRONG_CONSENT",
+        "WRONG_ARTIFACT_CLASS",
+        "WRONG_PRODUCER",
+        "WRONG_OUTPUT_ROLE",
+        "WRONG_CONSUMER",
+        "WRONG_OPERATION",
+        "WRONG_GENERATION",
+        "WRONG_ASSET_ADOPTION",
+        "REQUIRED_BINDING_MISSING",
+        "CURRENTNESS_NOT_CONFIRMED",
+        "STALE_BINDING",
+        "REVOKED",
+        "RECEIPT_AS_CAPABILITY"
+      ]
+    },
+    "purposeArtifactRules": {
+      "allOf": [
+        {
+          "if": { "properties": { "purpose": { "const": "CAPTURE_RAW_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "artifact_class": { "const": "RAW_CAPTURE" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "CAPTURE_CANONICAL_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "artifact_class": { "const": "CANONICAL_PCM" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "QUALITY_SPEECH_CONTINUOUS_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "artifact_class": { "const": "PROCESSED_SPEECH_CONTINUOUS" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "QUALITY_TRAINING_COPY_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "artifact_class": { "const": "TRAINING_COPY" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "DATASET_REVIEW_TRANSCRIPT_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "artifact_class": { "const": "REVIEW_TRANSCRIPT" } } }
+        }
+      ]
+    },
+    "leasePurposeArtifactRules": {
+      "allOf": [
+        {
+          "if": { "properties": { "purpose": { "const": "CAPTURE_RAW_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "WRITE" }, "artifact_class": { "const": "RAW_CAPTURE" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "CAPTURE_CANONICAL_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "WRITE" }, "artifact_class": { "const": "CANONICAL_PCM" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "QUALITY_SPEECH_CONTINUOUS_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "WRITE" }, "artifact_class": { "const": "PROCESSED_SPEECH_CONTINUOUS" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "QUALITY_TRAINING_COPY_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "WRITE" }, "artifact_class": { "const": "TRAINING_COPY" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "DATASET_REVIEW_TRANSCRIPT_PUBLISH" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "WRITE" }, "artifact_class": { "const": "REVIEW_TRANSCRIPT" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "QUALITY_PROCESSING" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "READ" }, "artifact_class": { "enum": ["RAW_CAPTURE", "CANONICAL_PCM"] } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "DATASET_INTAKE" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "READ" }, "artifact_class": { "enum": ["PROCESSED_SPEECH_CONTINUOUS", "TRAINING_COPY"] } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "DATASET_REVIEW" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "READ" }, "artifact_class": { "const": "REVIEW_TRANSCRIPT" } } }
+        },
+        {
+          "if": { "properties": { "purpose": { "const": "VOICE_MODEL_TRAINING" } }, "required": ["purpose"] },
+          "then": { "properties": { "lease_kind": { "const": "READ" }, "artifact_class": { "const": "TRAINING_COPY" } } }
+        }
+      ]
+    },
+    "custodyReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [{ "$ref": "#/$defs/purposeArtifactRules" }],
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "receipt_role",
+        "opaque_artifact_id",
+        "logical_slot_ref",
+        "generation_revision",
+        "predecessor_receipt_sha256",
+        "custody_binding_sha256",
+        "owner_subject_revision_sha256",
+        "purpose",
+        "artifact_class",
+        "content_sha256",
+        "media_metadata_sha256",
+        "opened_physical_identity_sha256",
+        "cipher_backend_identity_sha256",
+        "consent_rights_revision_sha256",
+        "generation_event_sha256",
+        "event_head_sha256",
+        "observed_at",
+        "fresh_until",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "record_type": { "const": "Task082PrivateMediaCustodyReceiptV2" },
+        "schema_version": { "const": 2 },
+        "canonical_owner_task": { "const": "TASK-082" },
+        "receipt_role": { "const": "PRIVATE_MEDIA_CUSTODY" },
+        "opaque_artifact_id": { "$ref": "#/$defs/identifier" },
+        "logical_slot_ref": { "$ref": "#/$defs/identifier" },
+        "generation_revision": { "$ref": "#/$defs/positiveInteger" },
+        "predecessor_receipt_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "custody_binding_sha256": {
+          "$ref": "#/$defs/digest",
+          "description": "V2 staged pre-event custody binding over the event/receipt common media identity fields; this is not the final custody receipt digest."
+        },
+        "owner_subject_revision_sha256": { "$ref": "#/$defs/digest" },
+        "purpose": { "$ref": "#/$defs/writePurpose" },
+        "artifact_class": { "$ref": "#/$defs/artifactClass" },
+        "content_sha256": { "$ref": "#/$defs/digest" },
+        "media_metadata_sha256": { "$ref": "#/$defs/digest" },
+        "opened_physical_identity_sha256": { "$ref": "#/$defs/digest" },
+        "cipher_backend_identity_sha256": { "$ref": "#/$defs/digest" },
+        "consent_rights_revision_sha256": { "$ref": "#/$defs/digest" },
+        "generation_event_sha256": { "$ref": "#/$defs/digest" },
+        "event_head_sha256": { "$ref": "#/$defs/digest" },
+        "observed_at": { "$ref": "#/$defs/timestamp" },
+        "fresh_until": { "$ref": "#/$defs/timestamp" },
+        "receipt_sha256": {
+          "$ref": "#/$defs/digest",
+          "description": "Canonical digest of the complete V2 custody receipt after event publication."
+        }
+      }
+    },
+    "generationEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "receipt_role",
+        "event_kind",
+        "logical_slot_ref",
+        "artifact_class",
+        "event_revision",
+        "predecessor_event_sha256",
+        "owner_subject_revision_sha256",
+        "purpose",
+        "consent_rights_revision_sha256",
+        "created_at",
+        "observed_at",
+        "fresh_until",
+        "trusted_time_binding_sha256",
+        "published_generation_revision",
+        "opaque_artifact_id",
+        "custody_binding_sha256",
+        "content_sha256",
+        "media_metadata_sha256",
+        "opened_physical_identity_sha256",
+        "cipher_backend_identity_sha256",
+        "target_generation_revision",
+        "target_publish_event_sha256",
+        "tombstone_decision_sha256",
+        "event_sha256"
+      ],
+      "properties": {
+        "record_type": { "const": "Task082PrivateMediaGenerationEventV2" },
+        "schema_version": { "const": 2 },
+        "canonical_owner_task": { "const": "TASK-082" },
+        "receipt_role": { "const": "PRIVATE_MEDIA_GENERATION_EVENT" },
+        "event_kind": {
+          "enum": [
+            "GENERATION_PUBLISHED",
+            "GENERATION_REVOKED",
+            "GENERATION_QUARANTINED",
+            "GENERATION_EXPIRED"
+          ]
+        },
+        "logical_slot_ref": { "$ref": "#/$defs/identifier" },
+        "artifact_class": { "$ref": "#/$defs/artifactClass" },
+        "event_revision": { "$ref": "#/$defs/positiveInteger" },
+        "predecessor_event_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "owner_subject_revision_sha256": { "$ref": "#/$defs/digest" },
+        "purpose": { "$ref": "#/$defs/writePurpose" },
+        "consent_rights_revision_sha256": { "$ref": "#/$defs/digest" },
+        "created_at": { "$ref": "#/$defs/timestamp" },
+        "observed_at": { "$ref": "#/$defs/timestamp" },
+        "fresh_until": { "$ref": "#/$defs/timestamp" },
+        "trusted_time_binding_sha256": { "$ref": "#/$defs/digest" },
+        "published_generation_revision": {
+          "oneOf": [
+            { "$ref": "#/$defs/positiveInteger" },
+            { "type": "null" }
+          ]
+        },
+        "opaque_artifact_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/identifier" },
+            { "type": "null" }
+          ]
+        },
+        "custody_binding_sha256": {
+          "$ref": "#/$defs/nullableDigest",
+          "description": "Published events bind and revalidate the V2 staged pre-event custody binding over the same common media identity fields as the receipt, never a partial value labeled as a receipt digest."
+        },
+        "content_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "media_metadata_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "opened_physical_identity_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "cipher_backend_identity_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "target_generation_revision": {
+          "oneOf": [
+            { "$ref": "#/$defs/positiveInteger" },
+            { "type": "null" }
+          ]
+        },
+        "target_publish_event_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "tombstone_decision_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "event_sha256": { "$ref": "#/$defs/digest" }
+      },
+      "allOf": [
+        { "$ref": "#/$defs/purposeArtifactRules" },
+        {
+          "if": {
+            "properties": { "event_kind": { "const": "GENERATION_PUBLISHED" } },
+            "required": ["event_kind"]
+          },
+          "then": {
+            "properties": {
+              "published_generation_revision": { "$ref": "#/$defs/positiveInteger" },
+              "opaque_artifact_id": { "$ref": "#/$defs/identifier" },
+              "custody_binding_sha256": { "$ref": "#/$defs/digest" },
+              "content_sha256": { "$ref": "#/$defs/digest" },
+              "media_metadata_sha256": { "$ref": "#/$defs/digest" },
+              "opened_physical_identity_sha256": { "$ref": "#/$defs/digest" },
+              "cipher_backend_identity_sha256": { "$ref": "#/$defs/digest" },
+              "target_generation_revision": { "type": "null" },
+              "target_publish_event_sha256": { "type": "null" },
+              "tombstone_decision_sha256": { "type": "null" }
+            }
+          },
+          "else": {
+            "properties": {
+              "published_generation_revision": { "type": "null" },
+              "opaque_artifact_id": { "type": "null" },
+              "custody_binding_sha256": { "type": "null" },
+              "content_sha256": { "type": "null" },
+              "media_metadata_sha256": { "type": "null" },
+              "opened_physical_identity_sha256": { "type": "null" },
+              "cipher_backend_identity_sha256": { "type": "null" },
+              "target_generation_revision": { "$ref": "#/$defs/positiveInteger" },
+              "target_publish_event_sha256": { "$ref": "#/$defs/digest" },
+              "tombstone_decision_sha256": { "$ref": "#/$defs/digest" }
+            }
+          }
+        }
+      ]
+    },
+    "leaseDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        { "$ref": "#/$defs/leasePurposeArtifactRules" },
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "reason_code": { "const": "READY" },
+                "decision": { "const": "READY_FIXTURE_ONLY" },
+                "state": { "enum": ["PREPARED", "ISSUED", "OPEN_STARTED", "CONSUMED"] }
+              },
+              "required": ["reason_code", "decision", "state"]
+            },
+            {
+              "properties": {
+                "reason_code": { "const": "COMPLETION_UNKNOWN" },
+                "decision": { "const": "COMPLETION_UNKNOWN" },
+                "state": { "const": "COMPLETION_UNKNOWN" }
+              },
+              "required": ["reason_code", "decision", "state"]
+            },
+            {
+              "properties": {
+                "reason_code": { "$ref": "#/$defs/admissionBlockedReason" },
+                "decision": { "const": "BLOCKED" },
+                "state": { "const": "PREPARED" }
+              },
+              "required": ["reason_code", "decision", "state"]
+            },
+            {
+              "properties": {
+                "reason_code": { "const": "STALE_BINDING" },
+                "decision": { "const": "BLOCKED" },
+                "state": { "const": "EXPIRED" }
+              },
+              "required": ["reason_code", "decision", "state"]
+            },
+            {
+              "properties": {
+                "reason_code": { "const": "STATE_TRANSITION_INVALID" },
+                "decision": { "const": "BLOCKED" },
+                "state": { "const": "FAILED_CLOSED" }
+              },
+              "required": ["reason_code", "decision", "state"]
+            }
+          ]
+        }
+      ],
+      "required": [
+        "record_type",
+        "schema_version",
+        "canonical_owner_task",
+        "receipt_role",
+        "lease_kind",
+        "purpose",
+        "operation_id",
+        "logical_slot_ref",
+        "artifact_class",
+        "generation_revision",
+        "event_head_sha256",
+        "state",
+        "decision",
+        "reason_code",
+        "fixture_only",
+        "authority_created",
+        "body_access_granted",
+        "production_backend_invoked",
+        "private_media_effect_count",
+        "decision_sha256"
+      ],
+      "properties": {
+        "record_type": { "const": "Task082PrivateMediaLeaseDecisionV2" },
+        "schema_version": { "const": 2 },
+        "canonical_owner_task": { "const": "TASK-082" },
+        "receipt_role": { "const": "PRIVATE_MEDIA_LEASE_DECISION" },
+        "lease_kind": { "enum": ["WRITE", "READ"] },
+        "purpose": { "$ref": "#/$defs/leasePurpose" },
+        "operation_id": { "$ref": "#/$defs/identifier" },
+        "logical_slot_ref": { "$ref": "#/$defs/identifier" },
+        "artifact_class": { "$ref": "#/$defs/artifactClass" },
+        "generation_revision": { "$ref": "#/$defs/positiveInteger" },
+        "event_head_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "state": {
+          "enum": [
+            "PREPARED",
+            "ISSUED",
+            "OPEN_STARTED",
+            "CONSUMED",
+            "EXPIRED",
+            "COMPLETION_UNKNOWN",
+            "FAILED_CLOSED"
+          ]
+        },
+        "decision": { "enum": ["READY_FIXTURE_ONLY", "BLOCKED", "COMPLETION_UNKNOWN"] },
+        "reason_code": {
+          "enum": [
+            "READY", "CURRENT", "NO_CURRENT_GENERATION", "JSON_INVALID", "JSON_DUPLICATE_KEY",
+            "JSON_NONFINITE", "JSON_OVERSIZE", "JSON_DEPTH_EXCEEDED", "RECORD_FIELDS_INVALID",
+            "RECORD_DISCRIMINATOR_INVALID", "IDENTIFIER_INVALID", "DIGEST_INVALID", "TIMESTAMP_INVALID",
+            "INTEGER_INVALID", "RECEIPT_DIGEST_MISMATCH", "CUSTODY_BINDING_MISMATCH", "EVENT_DIGEST_MISMATCH", "EVENT_REVISION_GAP",
+            "EVENT_PREDECESSOR_MISMATCH", "EVENT_LINEAGE_MISMATCH", "EVENT_VARIANT_FIELDS_INVALID",
+            "PUBLISH_GENERATION_GAP", "TOMBSTONE_TARGET_MISMATCH", "CURRENTNESS_NOT_CONFIRMED",
+            "REQUEST_INVALID", "WRONG_SUBJECT", "WRONG_PURPOSE", "WRONG_CONSENT", "WRONG_ARTIFACT_CLASS",
+            "WRONG_PRODUCER", "WRONG_OUTPUT_ROLE", "WRONG_CONSUMER", "WRONG_OPERATION", "WRONG_GENERATION",
+            "WRONG_ASSET_ADOPTION", "REQUIRED_BINDING_MISSING", "STALE_BINDING", "REVOKED",
+            "RECEIPT_AS_CAPABILITY", "STATE_TRANSITION_INVALID", "REPLAY", "COMPLETION_UNKNOWN"
+          ]
+        },
+        "fixture_only": { "const": true },
+        "authority_created": { "const": false },
+        "body_access_granted": { "const": false },
+        "production_backend_invoked": { "const": false },
+        "private_media_effect_count": { "const": 0 },
+        "decision_sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "leaseCompletionReadback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type", "schema_version", "canonical_owner_task", "receipt_role", "lease_kind",
+        "operation_id", "completion_kind", "write_publish_pinned_readback_sha256",
+        "read_close_handle_identity_sha256", "read_completion_readback_sha256", "fixture_only",
+        "authority_created", "body_access_granted", "production_backend_invoked",
+        "private_media_effect_count", "completion_sha256"
+      ],
+      "properties": {
+        "record_type": { "const": "Task082PrivateMediaLeaseCompletionReadbackV2" },
+        "schema_version": { "const": 2 },
+        "canonical_owner_task": { "const": "TASK-082" },
+        "receipt_role": { "const": "PRIVATE_MEDIA_LEASE_COMPLETION_READBACK" },
+        "lease_kind": { "enum": ["WRITE", "READ"] },
+        "operation_id": { "$ref": "#/$defs/identifier" },
+        "completion_kind": { "enum": ["WRITE_PUBLISH_PINNED_READBACK", "READ_CLOSE_IDENTITY_COMPLETION_READBACK"] },
+        "write_publish_pinned_readback_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "read_close_handle_identity_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "read_completion_readback_sha256": { "$ref": "#/$defs/nullableDigest" },
+        "fixture_only": { "const": true },
+        "authority_created": { "const": false },
+        "body_access_granted": { "const": false },
+        "production_backend_invoked": { "const": false },
+        "private_media_effect_count": { "const": 0 },
+        "completion_sha256": { "$ref": "#/$defs/digest" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "lease_kind": { "const": "WRITE" } }, "required": ["lease_kind"] },
+          "then": {
+            "properties": {
+              "completion_kind": { "const": "WRITE_PUBLISH_PINNED_READBACK" },
+              "write_publish_pinned_readback_sha256": { "$ref": "#/$defs/digest" },
+              "read_close_handle_identity_sha256": { "type": "null" },
+              "read_completion_readback_sha256": { "type": "null" }
+            }
+          },
+          "else": {
+            "properties": {
+              "completion_kind": { "const": "READ_CLOSE_IDENTITY_COMPLETION_READBACK" },
+              "write_publish_pinned_readback_sha256": { "type": "null" },
+              "read_close_handle_identity_sha256": { "$ref": "#/$defs/digest" },
+              "read_completion_readback_sha256": { "$ref": "#/$defs/digest" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

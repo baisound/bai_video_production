@@ -604,6 +604,23 @@ class PeakObservation:
         return cls(PeakObservationState.MEASURED, peak, measured)
 
 
+def classify_meter_band(
+    policy: MeterDisplayPolicyRevision, observation: PeakObservation
+) -> MeterDisplayBand:
+    """Compare validated values only; create no binding, receipt or authority."""
+    if type(policy) is not MeterDisplayPolicyRevision or type(observation) is not PeakObservation:
+        raise MeterDisplayPolicyError("classifier requires exact policy and observation types")
+    checked_policy = MeterDisplayPolicyRevision(
+        policy.policy_ref, policy.policy_revision, policy.predecessor_policy_sha256,
+        policy.target_floor_dbfs, policy.target_ceiling_dbfs,
+        policy.warning_dbfs, policy.true_clip_dbfs,
+    )
+    checked_observation = PeakObservation(
+        observation.state, observation.sample_peak_dbfs, observation.measured_sample_values,
+    )
+    return _classify_band(checked_policy, checked_observation)
+
+
 def _classify_band(
     policy: MeterDisplayPolicyRevision, observation: PeakObservation
 ) -> MeterDisplayBand:
@@ -1085,4 +1102,5 @@ __all__ = [
     "UNCONFIRMED_LABEL",
     "compile_fixture_meter_display_currentness",
     "compile_meter_display",
+    "classify_meter_band",
 ]

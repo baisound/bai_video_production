@@ -778,9 +778,18 @@ def test_export_projects_exact_durable_job_fields_and_safe_actions() -> None:
         "Individual confirmation: ${row.individual_confirmation_required?'REQUIRED':'NO'}",
         "if(row.individual_confirmation_required)",
         "このJobを個別確認して実行",
+        "const EXPORT_SAFE_ERROR='書き出し操作の結果を確認できませんでした。状態を再読込してください。'",
+        "const exportDispatchInFlight=new Set()",
+        "if(exportDispatchInFlight.has(row.job_id))return",
         "export_queue_preflight',{job_id:row.job_id}",
         "export_queue_apply_dispatch',{confirmation_id:prepared.confirmation_id}",
         "export_queue_cancel_dispatch',{confirmation_id:prepared.confirmation_id}",
+        "const readback=await call('export_queue_snapshot',{},EXPORT_SAFE_ERROR)",
+        "cancelled?.cancelled===true&&cancelled.job_id===row.job_id",
+        "cancelled.confirmation_id===prepared.confirmation_id&&cancelled.external_mutation_started===false",
+        "取消結果を確認できません。状態を再読込してください。",
+        "current?.evidence_ref||'未確認'",
+        "書き出し状態の再読込: ${current?.stage||'UNKNOWN'}",
         "if(row.safe_cancel)",
         "安全にCancel",
         "expected_state_version:row.state_version",
@@ -804,6 +813,7 @@ def test_export_does_not_use_undefined_fields_or_blanket_execution() -> None:
     assert "row.cancel_available" not in SHELL_HTML
     assert "row.progress_percent" not in SHELL_HTML
     assert "export_queue_execute_all" not in SHELL_HTML
+    assert "const completed=await call('export_queue_apply_dispatch'" not in SHELL_HTML
 
 
 def test_scene_and_placement_listeners_are_installed_exactly_once() -> None:

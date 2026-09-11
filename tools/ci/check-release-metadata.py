@@ -1,4 +1,4 @@
-"""Fail a pull request when product changes omit release metadata."""
+"""Validate version consistency and release-only changelog metadata."""
 
 from __future__ import annotations
 
@@ -19,47 +19,104 @@ VERSION_FILES = {
 
 
 def changed_files(base: str, head: str) -> set[str]:
-    output = subprocess.check_output(
-        ["git", "diff", "--name-only", f"{base}...{head}"], cwd=ROOT, text=True
+    output = _git_output(
+        ["diff", "--name-only", f"{base}...{head}"],
+        failure=f"cannot compare base {base} with head {head}",
     )
     return {line.strip().replace("\\", "/") for line in output.splitlines() if line.strip()}
 
 
-def is_product_change(path: str) -> bool:
-    return path == "pyproject.toml" or path.startswith(("src/", "schemas/", "tools/windows/"))
+def _git_output(arguments: list[str], *, failure: str) -> str:
+    try:
+        return subprocess.check_output(
+            ["git", *arguments],
+            cwd=ROOT,
+            text=True,
+            encoding="utf-8",
+            stderr=subprocess.PIPE,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(f"release metadata check: {failure}") from exc
+
+
+def _extract_version(name: str, text: str) -> str:
+    match = re.search(VERSION_FILES[name], text, re.MULTILINE)
+    if not match:
+        raise SystemExit(f"release metadata check: version not found in {name}")
+    return match.group(1)
 
 
 def versions() -> dict[str, str]:
     found: dict[str, str] = {}
-    for name, pattern in VERSION_FILES.items():
-        match = re.search(pattern, (ROOT / name).read_text(encoding="utf-8"), re.MULTILINE)
-        if not match:
-            raise SystemExit(f"release metadata check: version not found in {name}")
-        found[name] = match.group(1)
+    for name in VERSION_FILES:
+        try:
+            text = (ROOT / name).read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as exc:
+            raise SystemExit(
+                f"release metadata check: cannot read {name} in working tree"
+            ) from exc
+        found[name] = _extract_version(name, text)
     return found
+
+
+def versions_at_ref(ref: str) -> dict[str, str]:
+    found: dict[str, str] = {}
+    for name in VERSION_FILES:
+        text = _git_output(
+            ["show", f"{ref}:{name}"],
+            failure=f"cannot read {name} at {ref}",
+        )
+        found[name] = _extract_version(name, text)
+    return found
+
+
+def consistent_version(values: dict[str, str], *, label: str) -> str:
+    unique = set(values.values())
+    if len(unique) != 1:
+        details = ", ".join(f"{name}={value}" for name, value in values.items())
+        raise SystemExit(f"release metadata check: version mismatch at {label}: {details}")
+    return unique.pop()
+
+
+def changelog_has_version(changelog: str, version: str) -> bool:
+    return re.search(rf"^## \[{re.escape(version)}\](?:\s|$)", changelog, re.MULTILINE) is not None
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", required=True)
     parser.add_argument("--head", required=True)
-    parser.add_argument("--actor", default="")
+    parser.add_argument("--actor", default="", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
+
     changed = changed_files(args.base, args.head)
-    product_changed = any(is_product_change(path) for path in changed)
-    dependabot = args.actor == "dependabot[bot]"
-    if product_changed and not dependabot and "CHANGELOG.md" not in changed:
-        raise SystemExit("release metadata check: product changes require CHANGELOG.md in this PR")
-    version_values = versions()
-    unique = set(version_values.values())
-    if len(unique) != 1:
-        details = ", ".join(f"{name}={value}" for name, value in version_values.items())
-        raise SystemExit(f"release metadata check: version mismatch: {details}")
-    version = unique.pop()
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    if product_changed and not dependabot and f"## [{version}]" not in changelog:
-        raise SystemExit(f"release metadata check: CHANGELOG.md has no [{version}] heading")
-    print(f"release metadata check: OK ({version}; {len(changed)} changed files)")
+    working_version = consistent_version(versions(), label="working tree")
+    base_version = consistent_version(versions_at_ref(args.base), label=f"base {args.base}")
+    head_version = consistent_version(versions_at_ref(args.head), label=f"head {args.head}")
+    if working_version != head_version:
+        raise SystemExit(
+            "release metadata check: working tree version "
+            f"{working_version} does not match head {args.head} version {head_version}"
+        )
+
+    version_changed = base_version != head_version
+    if version_changed and "CHANGELOG.md" not in changed:
+        raise SystemExit("release metadata check: version changes require CHANGELOG.md in this PR")
+    if version_changed:
+        changelog = _git_output(
+            ["show", f"{args.head}:CHANGELOG.md"],
+            failure=f"cannot read CHANGELOG.md at {args.head}",
+        )
+        if not changelog_has_version(changelog, head_version):
+            raise SystemExit(
+                f"release metadata check: CHANGELOG.md has no [{head_version}] release heading"
+            )
+
+    change_summary = f"{base_version} -> {head_version}" if version_changed else "no version change"
+    print(
+        f"release metadata check: OK ({head_version}; {change_summary}; "
+        f"{len(changed)} changed files)"
+    )
     return 0
 
 

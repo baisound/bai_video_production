@@ -7,6 +7,71 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "native" / "task047_obs_voice_capture"
 
 
+def test_managed_meter_source_keeps_owned_worker_isolated_from_capture():
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    assert "--bvp-meter-managed-v1" in controller
+    assert "BaiMeterNativeWindows" in controller
+    assert "BaiMeterBuildIdentity.Files" in controller
+    assert "actual.SetEquals(admitted)" in controller
+    assert "FileAttributes.ReparsePoint" in controller
+    assert "--bvp-meter-protocol-self-test" in controller
+    assert "--bvp-meter-scalar-self-test" in controller
+    refresh = controller.split("private void RefreshUi()", 1)[1].split(
+        "private static string FormatBytes", 1)[0]
+    assert "SnapshotAndReset" in refresh
+    assert "meterSession.Offer(window, samples, clips, paused)" in refresh
+    capture_update = controller.split("private void UpdateMetrics(byte[] payload)", 1)[1].split(
+        "private void PauseCapture()", 1)[0]
+    assert "BaiMeterScalarWindow" not in capture_update
+    assert "WriteFile" not in capture_update
+    assert "SessionMaximum" in controller
+    assert "CreateJobObjectW" in controller
+    assert "TerminateJobObject" not in controller
+
+
+def test_managed_meter_legacy_wire_explicitly_keeps_loss_unknown():
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    scalar = controller.split("internal static class BaiMeterScalarWindow", 1)[1].split(
+        "internal sealed class BaiMeterManagedSession", 1)[0]
+    assert "BaiMeterProtocol.LegacyLossUnknown" in scalar
+    assert "BaiMeterProtocol.LegacyWindow(stream.ToArray())" in scalar
+    assert "payload" not in scalar
+
+
+def test_concrete_worker_partial_create_publishes_raw_receipt_before_validation():
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    create = controller.split("public BaiMeterProcessIdentity CreateProcessW(", 1)[1].split(
+        "private static IntPtr TokenInfo", 1)[0]
+    assert create.index("var rawOwner = new BaiMeterProcessIdentity()") < create.index("effects.Create(")
+    assert create.index("ownedChild = rawOwner") < create.index("Own(result.Process)") < create.index("Own(result.Thread)")
+    assert "rawOwner.Process = result.Process; rawOwner.Thread = result.Thread" in create
+    cleanup = controller.split("private bool CleanupRound(", 1)[1].split("private void StartCleanup", 1)[0]
+    assert "TryAction(CloseParentCopiesOfChildPipeEndsAndAttributes)" in cleanup
+    assert "TryAction(() => CloseOwned(parentInput))" in cleanup
+    assert "TryAction(() => BaiMeterProtocol.Require(effects.Terminate(ownedChild.Process)))" in cleanup
+    assert "TryAction(() => CloseOwned(job))" in cleanup
+    assert cleanup.index("effects.Terminate") < cleanup.index("if (!childExited) childExited = WaitExact()")
+    assert cleanup.index("if (!childExited) return false") < cleanup.index("TryAction(FinishCleanup)")
+    assert "pendingCleanup.Add(this)" in controller
+    assert "cleanupState = \"CLEANUP_PENDING\"" in controller
+    assert "Only our raw CreateProcess success can authorize a process effect" in controller
+
+
+def test_concrete_cleanup_inert_self_tests_cover_combined_faults_without_obs():
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    tests = controller.split("internal static void AssertCleanupContracts()", 1)[1].split(
+        "internal sealed class BaiMeterNativeOwnedWorker", 1)[0]
+    for scenario in ("thread-invalid", "pipe", "parent-pipe", "attributes", "free", "resume-pipe",
+                     "resume-attributes", "resume-uncertain", "graceful-parent-pipe", "delayed-exit",
+                     "terminate-failure", "wait-failure"):
+        assert '"' + scenario + '"' in tests
+    assert 'owner.cleanupState == "CLEANUP_PENDING"' in tests
+    assert 'fake.Calls.IndexOf("wait:0") < fake.Calls.IndexOf("close:120")' in tests
+    assert "empty.CleanupOwnedFailure" in tests
+    assert "BaiMeterNativeWindows.AssertCleanupContracts();" in controller
+    assert "new CaptureForm" not in tests and "Process.Start" not in tests
+
+
 def _text(relative: str) -> str:
     return (SOURCE / relative).read_text(encoding="utf-8")
 

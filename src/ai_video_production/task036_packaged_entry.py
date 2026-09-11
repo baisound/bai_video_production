@@ -10,6 +10,7 @@ from .errors import ProductError
 from .task036_native_probe import Task036NativeProbe
 from .task036_shell_cli import main as shell_main
 from .task036_single_instance import Task036SingleInstanceGuard
+from .task048_meter_controller_host import close_packaged_meter_hosts
 
 
 ErrorPresenter = Callable[[str, str], None]
@@ -64,3 +65,7 @@ def packaged_main(
             "Error code: ERR_TASK036_PACKAGED_STARTUP",
         )
         return 2
+    finally:
+        # A recording Controller is deliberately not in a kill-on-close Job.
+        # Main shutdown invalidates advisory and leaves its stop/WAV UI alive.
+        close_packaged_meter_hosts()

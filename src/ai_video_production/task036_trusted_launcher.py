@@ -60,6 +60,7 @@ from .final_review import FinalReviewApprovalReceipt
 from .final_review_application import FinalReviewApprovalApplication
 from .final_review_gate import FinalReviewExternalGateReceipt
 from .product_project_store import ProductProjectManifestStore
+from .task048_meter_controller_host import MeterControllerHost, packaged_meter_host
 from .product_project import ProductProjectManifest, ProjectTimebase
 from .production_control_application import Task037ProductionControlApplication
 from .production_control_store import _exclusive_snapshot_lock
@@ -604,10 +605,18 @@ class Task036TrustedLaunch:
     _local_operation_lifetime: "_Task036LocalOperationLifetime | None" = field(default=None, repr=False)
     _product_store: SQLiteProductStore | None = field(default=None, repr=False)
     _ollama_runtime: OllamaRuntimeLifecycle | None = field(default=None, repr=False)
+    _meter_controller_host: MeterControllerHost | None = field(default=None, repr=False)
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
 
+        meter_host = self._meter_controller_host
+        self._meter_controller_host = None
+        if meter_host is not None:
+            try:
+                meter_host.close()  # Advisory EOF only; never terminate recording.
+            except Exception:
+                pass  # Advisory cleanup must not strand the Project runtime lease.
         owner_signing_key_import = self._owner_signing_key_import
         self._owner_signing_key_import = None
         owner_signing_key_close_error: Exception | None = None
@@ -936,6 +945,7 @@ def build_trusted_launch(
     local_planning_inventory_provider: Callable[[], tuple[str, ...]] | None = None,
     ollama_runtime: OllamaRuntimeLifecycle | None = None,
     local_audio_inventory: LocalAudioModelInventory | None = None,
+    meter_host_factory: Callable[[Path, str], MeterControllerHost | None] = packaged_meter_host,
 ) -> Task036TrustedLaunch:
     managed_ollama_runtime = ollama_runtime or OllamaRuntimeLifecycle()
     if not allow_product_job_bootstrap:
@@ -1437,7 +1447,9 @@ def build_trusted_launch(
         # without creating the manifest-scoped OS lease file.
         local_operation_lifetime = _Task036LocalOperationLifetime()
     planning_generation_application = None
+    meter_controller_host = None
     try:
+        meter_controller_host = meter_host_factory(configuration.project_root, configuration.project_id)
         if (
             owner_signing_key_import is None
             and configuration.owner_signing_key_import is not None
@@ -1490,6 +1502,7 @@ def build_trusted_launch(
                 if runtime_lease is not None
                 else local_operation_lifetime.operation
             ),
+            meter_controller_host=meter_controller_host,
         )
         return Task036TrustedLaunch(
             configuration=configuration,
@@ -1501,8 +1514,14 @@ def build_trusted_launch(
             _local_operation_lifetime=local_operation_lifetime,
             _product_store=store,
             _ollama_runtime=managed_ollama_runtime,
+            _meter_controller_host=meter_controller_host,
         )
     except BaseException:
+        if meter_controller_host is not None:
+            try:
+                meter_controller_host.close()
+            except Exception:
+                pass  # Preserve the launch error and release canonical resources.
         if owner_signing_key_import is not None:
             try:
                 owner_signing_key_import.close()

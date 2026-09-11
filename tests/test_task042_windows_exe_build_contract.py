@@ -12,13 +12,26 @@ ROOT = Path(__file__).parents[1]
 def test_windows_build_contract_reuses_native_validated_task036_spec() -> None:
     batch = (ROOT / "build-windows-exe.bat").read_text(encoding="utf-8")
     assert "packaging\\task036_shell.spec" in batch
-    assert "--distpath \"%CD%\\builds\"" in batch
-    assert "--workpath \"%CD%\\builds\\work\"" in batch
-    assert "builds\\BAI Video Production\\BAI Video Production.exe" in batch
+    assert 'set "TASK048_BUILD_ROOT=%CD%\\builds"' in batch
+    assert "--distpath \"%TASK048_BUILD_ROOT%\"" in batch
+    assert "--workpath \"%TASK048_BUILD_ROOT%\\work\"" in batch
+    assert "%TASK048_BUILD_ROOT%\\BAI Video Production\\BAI Video Production.exe" in batch
+    assert "-PrepareShellBuild" in batch
+    assert batch.index("-PrepareShellBuild") < batch.index("import PyInstaller")
+    assert batch.index("task048_meter_worker.spec") < batch.index("-MeterWorkerBundle") < batch.index("packaging\\task036_shell.spec")
     assert "BVP_BUILD_PYTHON" in batch
     assert "pip install -e" in batch
     assert "-m pip install" in batch
     assert "call pip" not in batch.lower()
+
+
+def test_fresh_build_keeps_pyinstaller_cache_owned_and_never_cleans_shared_state():
+    batch = (ROOT / "build-windows-exe.bat").read_text(encoding="utf-8")
+    binding = 'set "PYINSTALLER_CONFIG_DIR=%TASK048_RUNTIME_ROOT%\\pyinstaller-config"'
+    assert binding in batch
+    assert batch.index("-PrepareShellBuild") < batch.index(binding) < batch.index("import PyInstaller")
+    assert "--clean" not in batch
+    assert "--noconfirm" not in batch
 
 
 def test_build_outputs_are_ignored_but_placeholder_is_kept() -> None:

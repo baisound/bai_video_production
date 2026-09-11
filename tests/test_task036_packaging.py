@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+import tomllib
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _execute_meter_spec(tmp_path, monkeypatch, *, damage=None):
+def _execute_meter_spec(tmp_path, monkeypatch, *, damage=None, resources=None, spec_source=None):
     import hashlib
     import json
     import sys
@@ -19,6 +22,19 @@ def _execute_meter_spec(tmp_path, monkeypatch, *, damage=None):
 
     repository = tmp_path / "synthetic-build-workspace"
     (repository / "packaging").mkdir(parents=True)
+    if resources is None:
+        resources = {
+            "workflow_resources/z-workflow.json": b"{}",
+            "workflow_resources/a-workflow.json": b"{}",
+            "schema_resources/z-schema.json": b"{}",
+            "schema_resources/a-schema.json": b"{}",
+            "profile_resources/z-profile.json": b"{}",
+            "profile_resources/dbd-chase-call-ja-v1.json": b"{}",
+            "profile_resources/ignored.txt": b"not-package-data",
+            "profile_resources/nested/ignored.json": b"{}",
+        }
+    for relative, body in resources.items():
+        put(repository / "src/ai_video_production" / relative, body)
     helper = put(repository / "build/helper/BAI Video Production Key Helper.exe", b"helper")
     controller = put(repository / "build/controller/bai-voice-capture-controller.exe", b"controller")
     worker = repository / "build/worker"
@@ -90,9 +106,81 @@ def _execute_meter_spec(tmp_path, monkeypatch, *, damage=None):
         "Analysis": analysis, "PYZ": lambda *_: None,
         "EXE": lambda *args, **kwargs: None, "COLLECT": lambda *args, **kwargs: None,
     }
-    exec(compile((ROOT / "packaging/task036_shell.spec").read_text(encoding="utf-8"),
-                 "task036_shell.spec", "exec"), namespace)
+    if spec_source is None:
+        spec_source = (ROOT / "packaging/task036_shell.spec").read_text(encoding="utf-8")
+    exec(compile(spec_source, "task036_shell.spec", "exec"), namespace)
     return namespace, captured
+
+
+def _assert_product_resource_data(namespace, captured, expected):
+    source_root = namespace["repository"] / "src"
+    collected = [
+        (Path(source).relative_to(source_root).as_posix(), Path(destination).as_posix())
+        for source, destination in captured["datas"]
+        if Path(source).is_relative_to(source_root)
+    ]
+    assert collected == [
+        ("ai_video_production/" + relative,
+         "ai_video_production/" + Path(relative).parent.as_posix())
+        for relative in sorted(expected)
+    ]
+
+
+def test_main_spec_collects_all_json_families_in_deterministic_order(tmp_path, monkeypatch):
+    original_glob = Path.glob
+    monkeypatch.setattr(
+        Path, "glob", lambda path, pattern: iter(reversed(list(original_glob(path, pattern)))),
+    )
+    namespace, captured = _execute_meter_spec(tmp_path, monkeypatch)
+    _assert_product_resource_data(namespace, captured, (
+        "schema_resources/a-schema.json", "schema_resources/z-schema.json",
+        "workflow_resources/a-workflow.json", "workflow_resources/z-workflow.json",
+        "profile_resources/dbd-chase-call-ja-v1.json", "profile_resources/z-profile.json",
+    ))
+
+
+def _declared_product_resources():
+    configuration = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    patterns = configuration["tool"]["setuptools"]["package-data"]["ai_video_production"]
+    assert set(patterns) == {
+        "schema_resources/*.json", "workflow_resources/*.json", "profile_resources/*.json",
+    }
+    package = ROOT / "src/ai_video_production"
+    resources = {}
+    for pattern in patterns:
+        paths = sorted(package.glob(pattern))
+        assert paths, f"Declared resource family is empty: {pattern}"
+        resources.update((path.relative_to(package).as_posix(), path.read_bytes()) for path in paths)
+    assert "profile_resources/dbd-chase-call-ja-v1.json" in resources
+    return resources
+
+
+def test_main_spec_matches_actual_pyproject_package_data(tmp_path, monkeypatch):
+    resources = _declared_product_resources()
+    namespace, captured = _execute_meter_spec(tmp_path, monkeypatch, resources=resources)
+    _assert_product_resource_data(namespace, captured, resources)
+
+
+@pytest.mark.parametrize("damage", (
+    "schema_resources", "workflow_resources", "profile_resources", "single_json", "destination",
+))
+def test_resource_parity_guard_detects_omissions_and_wrong_destination(tmp_path, monkeypatch, damage):
+    resources = _declared_product_resources()
+    source = (ROOT / "packaging/task036_shell.spec").read_text(encoding="utf-8")
+    if damage == "destination":
+        changed = source.replace('f"ai_video_production/{directory}"', '"ai_video_production/wrong"')
+    elif damage == "single_json":
+        excluded = next(name for name in resources if name.startswith("schema_resources/"))
+        expression = 'for path in sorted((package_directory / directory).glob("*.json"))'
+        changed = source.replace(expression, expression + f"\n    if path.name != {Path(excluded).name!r}")
+    else:
+        changed = source.replace(f'    "{damage}",\n', "")
+    assert changed != source, "The deliberate spec mutation must change the collection"
+    namespace, captured = _execute_meter_spec(
+        tmp_path, monkeypatch, resources=resources, spec_source=changed,
+    )
+    with pytest.raises(AssertionError):
+        _assert_product_resource_data(namespace, captured, resources)
 
 
 def test_main_spec_seals_complete_meter_closure_as_unmodified_data(tmp_path, monkeypatch):
@@ -288,5 +376,5 @@ def test_task036_pyinstaller_definition_is_one_dir_and_path_portable():
     assert 'collect_all("faster_whisper")' in spec
     assert "asr_binaries" in spec
     assert "asr_hiddenimports" in spec
-    assert 'schema_directory.glob("*.json")' in spec
+    assert '"schema_resources"' in spec
     assert "D:\\" not in spec

@@ -112,10 +112,17 @@ meter_identity_module = "_bvp_task048_meter_identity"
 
 webview_data, webview_binaries, webview_hiddenimports = collect_all("webview")
 asr_data, asr_binaries, asr_hiddenimports = collect_all("faster_whisper")
-schema_directory = repository / "src" / "ai_video_production" / "schema_resources"
+# Keep the frozen JSON closure aligned with pyproject.toml package-data.
+package_directory = repository / "src" / "ai_video_production"
+resource_directories = (
+    "schema_resources",
+    "workflow_resources",
+    "profile_resources",
+)
 product_data = [
-    (str(path), "ai_video_production/schema_resources")
-    for path in schema_directory.glob("*.json")
+    (str(path), f"ai_video_production/{directory}")
+    for directory in sorted(resource_directories)
+    for path in sorted((package_directory / directory).glob("*.json"))
 ]
 
 analysis = Analysis(

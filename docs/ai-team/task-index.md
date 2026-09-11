@@ -61,6 +61,7 @@
 | TASK-062 | Montage Consumer Runtime Desktop UX | DEPENDENCY_BLOCKED_IMPLEMENTATION_NOT_AUTHORIZED | OWNER_APPROVED_METADATA_ALLOCATION_2026_08_28 | DEV-4 | released ConsumerRuntimeService wheel digestとcurrent TASK-055 identityの固定を待つ。Desktop統合実装、Timeline/Resolve effectは未承認。 |
 
 | TASK-066 | GPU-First Desktop Execution, Packaging and Diagnostics | OWNER_AUTHORIZED_P0_DESIGN_ACCEPTED_IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY_NATIVE_PROOF_PENDING | OWNER_EXPLICIT_GPU_FIRST_ALL_DESKTOP_APPS_2026_08_31 | DEV-4 | GF-E deltas 1-4 accepted; journal-first cross-volume recovery and uninstall preservation are frozen. Delta-4 Critic 0/0/0/0, Judge ACCEPT. TASK-063 post-repair native terminal handoff remains required before GF-E installer mutation. |
+| TASK-086 | Release Metadata / CHANGELOG Policy Simplification | IMPLEMENTED_LOCAL_VALIDATED_COMMIT_READY | OWNER_EXPLICIT_CHANGELOG_POLICY_AND_GITHUB_ACTIONS_CHANGE_2026_09_11 | DEV-3 | Ordinary PRs no longer require or reserve `CHANGELOG.md`; exact Product version changes still require consistent version constants plus the matching release heading. Focused policy and OSS readiness regression is 25 PASS; hosted workflow execution is pending. |
 
 ## Roadmap authority
 

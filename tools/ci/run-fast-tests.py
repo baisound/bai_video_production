@@ -187,6 +187,15 @@ def validate_basetemp(target: Path, allowed_root: Path) -> Path:
     return resolved_target
 
 
+def prepare_basetemp_root(target: Path, allowed_root: Path) -> Path:
+    safe_root = validate_basetemp(target, allowed_root)
+    try:
+        safe_root.mkdir(mode=0o700, parents=False, exist_ok=False)
+    except OSError as exc:
+        raise SystemExit("fast test selection: basetemp could not be created") from exc
+    return safe_root
+
+
 def _run_pytest(tests: list[str], *, basetemp: Path, timeout: int) -> int:
     if not tests:
         return 0
@@ -220,7 +229,7 @@ def main(argv: list[str] | None = None) -> int:
     selected = select_tests(changed_files(args.base, args.head))
     parallel = [path for path in selected if path not in SERIAL_TESTS]
     serial = [path for path in selected if path in SERIAL_TESTS]
-    safe_root = validate_basetemp(args.basetemp, args.allowed_temp_root)
+    safe_root = prepare_basetemp_root(args.basetemp, args.allowed_temp_root)
     print(f"fast test selection: {len(selected)} files")
     for path in selected:
         print(f"  {path}")

@@ -219,6 +219,23 @@ def test_basetemp_must_be_new_and_below_allowed_root(tmp_path: Path) -> None:
         MODULE.validate_basetemp(target, allowed)
 
 
+def test_basetemp_parent_is_created_once_for_parallel_and_serial_children(
+    tmp_path: Path,
+) -> None:
+    allowed = tmp_path / "runner-temp"
+    allowed.mkdir()
+    target = allowed / "unique-run"
+
+    prepared = MODULE.prepare_basetemp_root(target, allowed)
+
+    assert prepared == target.resolve()
+    assert prepared.is_dir()
+    assert not (prepared / "parallel").exists()
+    assert not (prepared / "serial").exists()
+    with pytest.raises(SystemExit, match="already exists"):
+        MODULE.prepare_basetemp_root(target, allowed)
+
+
 def test_pytest_runner_uses_bounded_parallel_contract(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

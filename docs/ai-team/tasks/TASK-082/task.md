@@ -22,7 +22,7 @@ TASK-082は録音、品質判定、TASK-003 Asset採用、Dataset採用、学習
   6. `docs/ai-team/tasks/TASK-082/voice-pipeline-execution-order.md`
 - pure coreはbody-free metadata validation、event/currentness derivation、fixture-only admission/state/readbackだけを実装する候補であり、private body access、authority mint、Windows/backend/native effectを持たない。
 - `WINDOWS-PRIVATE-CUSTODY-BACKEND-R0`は `src/ai_video_production/task082_owner_voice_private_media_custody_windows.py` と `tests/test_task082_owner_voice_private_media_custody_windows.py` のexact2だけを追加所有し、同じDraft PR `#534`へ統合されたimplementation candidateである。
-- `CHANGELOG.md`はPR `#525`とのownership overlapがあるため変更せず、Release metadata checkとReady/mergeをBLOCKEDのまま保つ。
+- Owner CHANGELOG Rule（`2026-09-11`）に従い、Product versionを変更しない本ordinary implementation PRはshared `CHANGELOG.md`を変更・予約しない。Ready/mergeにはProduct version consistency、policy-current checkerによるexact candidate headのRelease metadata PASS、必要なregressionと独立review、fresh main・scopeの再確認を要する。実際にProduct versionを変更するPRだけは、そのexact release-version headingを含むCHANGELOG更新とserialized release/version-bump coordinationを別途要する。
 - 実音声のimport/write/read/delete、暗号鍵・DACL設定、OBS/native操作は未実行である。candidateの存在やHuman Gateの承認状態だけでは、live lease、private body access、native/Production authorityを生成しない。
 
 既存TASK-003/014/041/046/047/048/068 source、shared roadmap/current-state/task-indexは変更禁止。scope追加は別のexact amendmentを要する。

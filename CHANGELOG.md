@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+・TASK-048: 音質メーターの方針閾値と観測値の検証を分離し、有限の正のdBFSピークを直接生成・判定・再読込で保持する互換修正を追加しました。既存閾値・分類・digest・権限フラグと旧INVALID_OUT_OF_RANGE記録の読込を維持し、実音声、OBS/native、gain/capture、Provider/model、品質PASS、Dataset/Training、Release、Deploy、Production Activationは開始しません。
+
+・TASK-048: Peak-dBFSの目標・警告・true-clip表示帯をversioned policyとして追加し、fixture-only current-head seal、厳格なdigest/currentness、改ざん・失効・不正なproduction適格化のfail-closed拒否を実装しました。実音声、OBS/native、gain/capture、Provider/model、品質PASS、Dataset/Training、Release、Deploy、Production Activationは開始しません。
+
 ・TASK-014: ローカル音声の実行直前境界に、V1 callable envelopeとsubject／plan／transcriptのfresh typed receiptを再結合するcall profile V2を追加しました。strict schema、期限・foreign receipt・改ざん拒否をfail-closedで検証し、実音声、model/provider、native、Release、Deploy、Production Activationは開始しません。
 
 ・TASK-048: エアコンOFF/ONの音声A/B測定を同一発話プロンプト・改訂・比較計画へ固定し、条件不一致、重複・欠落、cross-effort、replay、危険な出力先をrunner実行前にfail-closedで拒否します。実音声、private audio、OBS/native A/B、Dataset、Training、Release、Deploy、Production Activationは開始しません。

@@ -80,7 +80,7 @@ def test_controller_has_live_gain_meter_and_persistent_recording_banners() -> No
     for token in (
         "AudioLevelMeter",
         'AddRow(table, 4, "入力レベル", levelMeter, null)',
-        "levelMeter.UpdateLevels(livePeakDb, liveRmsDb, clips > 0)",
+        "levelMeter.UpdateLevels(livePeakDb, liveRmsDb, window.Packet.ClipSampleCount > 0, clips > 0)",
         'status.Text = "● 学習データ録音中"',
         'status.Text = "⏸ 学習データ録音 一時停止中"',
         'dialog.Description = "学習データ録音の保存先を選択"',
@@ -113,3 +113,115 @@ def test_plugin_callback_stays_bounded_and_effect_free() -> None:
         assert forbidden not in callback
     assert "context->core.on_audio" in callback
     assert "std::ofstream" not in capture
+
+
+def test_meter_coalesces_packets_under_the_existing_metric_lock() -> None:
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    update = controller.split("private void UpdateMetrics(byte[] payload)", 1)[1].split(
+        "private void PauseCapture()", 1
+    )[0]
+    assert "AudioMeterPacket.Measure(payload)" in update
+    locked_update = update.split("lock (metricLock)", 1)[1]
+    assert "meterWindow.Accumulate(packet)" in locked_update
+    assert "latestMetricPeak" not in controller
+    refresh = controller.split("private void RefreshUi()", 1)[1].split(
+        "private static string FormatBytes", 1
+    )[0]
+    assert "window = meterWindow.SnapshotAndReset();" in refresh.split("lock (metricLock)", 1)[1]
+    assert "window.Packet.Rms" in refresh
+    assert "window.SessionMaximum" in refresh
+    assert "window.Packet.ClipSampleCount" in refresh
+    assert "window.ObservationState" in refresh
+
+
+def test_meter_preserves_session_facts_and_unconfirmed_quality_boundary() -> None:
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    assert controller.count("peak = meterWindow.SessionMaximum;") == 2
+    assert "meterWindow.ResetSession();" in controller
+    pause_resume = controller.split("private void PauseCapture()", 1)[1].split(
+        "private void StopCapture()", 1
+    )[0]
+    assert "ResetSession" not in pause_resume
+    assert "ResetLevels" not in pause_resume
+    for expected in (
+        "0 dBFS = 基準線 / +値 = 基準超過 / 適正判定 未確定",
+        "peakHold.Observe(peakDb, meterClock.Elapsed.Ticks)",
+        "Math.Max(MinimumDb, Math.Min(MaximumDb, value))",
+        "clipDisplay.SessionClipped ? Color.Red : Color.DimGray",
+        "UNKNOWN_POLICY_NOT_BOUND",
+    ):
+        assert expected in controller
+    hold = controller.split("internal sealed class AudioMeterPeakHold", 1)[1].split(
+        "internal sealed class AudioLevelMeter", 1
+    )[0]
+    assert "DateTime" not in hold
+
+
+def test_meter_separates_current_clip_bar_history_and_overrange_display() -> None:
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    paint = controller.split("protected override void OnPaint(PaintEventArgs e)", 1)[1].split(
+        "private static double ClampDb", 1
+    )[0]
+    assert paint.count("clipDisplay.WindowClipped ? Color.FromArgb(220, 45, 45)") == 2
+    assert "clipDisplay.SessionClipped ? Color.Red : Color.DimGray" in paint
+    assert "Math.Log10(Math.Min(1.0, amplitude))" not in controller
+    assert 'Math.Log10(amplitude)).ToString("+0.0;-0.0;0.0"' in controller
+    assert "window.RangeState" in controller
+    assert "入力範囲外(今回)" in controller
+    assert "入力範囲外(履歴)" in controller
+    assert "quiet_window_clears_red_bar_but_preserves_history" in controller
+    assert "overrange_numeric_value_is_positive_and_explicit" in controller
+    assert "public const double MaximumDb = 12.0;" in controller
+    assert "new[] { -60, -48, -36, -24, -12, 0, 6, 12 }" in controller
+    assert "meter_has_visible_positive_headroom" in controller
+    assert "only_drawing_saturates_above_positive_scale" in controller
+    assert "above_scale_current_and_history_remain_explicit" in controller
+    assert "positive_peak_hold_is_not_clamped_to_zero" in controller
+
+
+def test_meter_native_self_test_is_explicit_and_has_no_capture_or_file_effect() -> None:
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    assert controller.index('x == "--meter-self-test"') < controller.index("Application.Run(")
+    self_test = controller.split("internal static class MeterObservationSelfTest", 1)[1].split(
+        "internal static class ControllerSelfTest", 1
+    )[0]
+    for forbidden in ("new CaptureForm", "File.", "Directory.", "Process.", "NamedPipe", "WaveFloatWriter"):
+        assert forbidden not in self_test
+    for case in (
+        "high_then_low_preserves_peak",
+        "sample_weighted_window_rms",
+        "snapshot_resets_only_window",
+        "session_maximum_monotonic",
+        "silence_vs_missing_reading",
+        "window_clip_delta_not_replayed",
+        "nonfinite_samples_excluded_and_reported",
+        "full_scale_and_overrange_observed_before_drawing_clamp",
+        "hold_expires_at_exact_boundary",
+        "pause_or_no_input_expires_hold",
+    ):
+        assert case in self_test
+
+
+def test_gain_summary_survives_timer_refresh_without_hiding_terminal_failure() -> None:
+    controller = _text("controller/BaiVoiceCaptureController.cs")
+    start = controller.split("private async void StartOperation(bool measureGain)", 1)[1].split(
+        "private bool ValidateSameObsProcess", 1
+    )[0]
+    stop = controller.split("private void BeginStop(string reason)", 1)[1].split(
+        "private void WriteGainReceipt", 1
+    )[0]
+    refresh = controller.split("private void RefreshUi()", 1)[1].split(
+        "private static string FormatBytes", 1
+    )[0]
+    assert "completedGainSummary = null;" in start
+    assert "completedGainSummary = completedGainMeasurement ? FormatGainSummary() : null;" in stop
+    assert stop.index("completedGainSummary =") < stop.index("RefreshUi();")
+    assert "detail.Text = FormatGainSummary()" not in stop
+    assert "CaptureTerminalDisplay.Format(terminalReason, completedGainSummary)" in refresh
+    for case in (
+        "gain_summary_and_reason_remain_visible",
+        "gain_summary_survives_repeated_refresh",
+        "gain_summary_does_not_hide_finalize_failure",
+        "ordinary_recording_has_no_previous_gain_summary",
+    ):
+        assert case in controller

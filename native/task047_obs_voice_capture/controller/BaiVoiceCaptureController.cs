@@ -1066,6 +1066,9 @@ internal static class Program
         if (args.Length == 1 && args[0] == "--bvp-meter-protocol-self-test") return BaiMeterProtocolSelfTest.Run();
         if (args.Length == 1 && args[0] == "--bvp-meter-scalar-self-test") return BaiMeterScalarSelfTest.Run();
         if (args.Any(x => x == "--meter-self-test")) return MeterObservationSelfTest.Run();
+#if BVP_TASK047_READINESS
+        if (args.Any(x => x == "--readiness-self-test")) return BaiReadinessMonitorSelfTest.Run();
+#endif
         if (args.Any(x => x == "--self-test")) return ControllerSelfTest.Run();
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
@@ -1097,20 +1100,21 @@ internal sealed class CaptureForm : Form
     private readonly Button browse = new Button();
     private readonly Button browseObs = new Button();
     private readonly Button gainCheck = new Button();
+#if BVP_TASK047_READINESS
+    private readonly Button readinessCheck = new Button();
+#endif
     private readonly Button start = new Button();
     private readonly Button pause = new Button();
     private readonly Button resume = new Button();
     private readonly Button stop = new Button();
     private readonly System.Windows.Forms.Timer uiTimer = new System.Windows.Forms.Timer();
-    private readonly object stateLock = new object();
     private readonly object metricLock = new object();
     private readonly ManualResetEventSlim resumeGate = new ManualResetEventSlim(true);
 
-    private CancellationTokenSource cancellation;
     private NamedPipeServerStream pipe;
     private Process obs;
-    private WaveFloatWriter wave;
-    private byte[] sessionKey;
+    private BaiCaptureOperation currentOperation;
+    private Task stopSettlementTask;
     private DateTime startedUtc;
     private long packetCount;
     private long payloadBytes;
@@ -1125,25 +1129,23 @@ internal sealed class CaptureForm : Form
     private long nonFiniteSampleCount;
     private double metricSumSquares;
     private readonly AudioMeterWindow meterWindow = new AudioMeterWindow();
-    private string partialPath;
-    private string finalPath;
     private string terminalReason;
     private string completedGainSummary;
     private volatile bool connected;
     private volatile bool recording;
     private volatile bool paused;
     private volatile bool sequenceReanchorPending;
-    private volatile bool gainMeasurement;
     private volatile bool terminalStopRequested;
+    private volatile bool stopping;
     private int stopStarted;
     private TimeSpan maximumDurationValue;
     private long diskFloorBytes;
     private DateTime pauseStartedUtc;
     private TimeSpan completedPauseDuration;
     private DateTime measurementStartedUtc;
-    private string gainReceiptPath;
     private int obsProcessId;
     private bool obsReused;
+    private bool closeAfterSettlement;
 
     public CaptureForm(bool acceptance, bool managed = false)
     {
@@ -1229,6 +1231,12 @@ internal sealed class CaptureForm : Form
         gainCheck.AutoSize = true;
         gainCheck.Padding = new Padding(12, 6, 12, 6);
         gainCheck.Click += GainCheckClicked;
+#if BVP_TASK047_READINESS
+        readinessCheck.Text = "録音準備モニター（最大3分）";
+        readinessCheck.AutoSize = true;
+        readinessCheck.Padding = new Padding(12, 6, 12, 6);
+        readinessCheck.Click += ReadinessCheckClicked;
+#endif
         start.Text = "録音開始（OBS起動中でも可）";
         start.AutoSize = true;
         start.Padding = new Padding(12, 6, 12, 6);
@@ -1249,6 +1257,9 @@ internal sealed class CaptureForm : Form
         stop.Enabled = false;
         stop.Click += delegate { StopCapture(); };
         buttons.Controls.Add(gainCheck);
+#if BVP_TASK047_READINESS
+        buttons.Controls.Add(readinessCheck);
+#endif
         buttons.Controls.Add(start);
         buttons.Controls.Add(pause);
         buttons.Controls.Add(resume);
@@ -1315,6 +1326,17 @@ internal sealed class CaptureForm : Form
         StartOperation(true);
     }
 
+#if BVP_TASK047_READINESS
+    private void ReadinessCheckClicked(object sender, EventArgs e)
+    {
+        if (recording || currentOperation != null) return;
+        const string unavailable = "READINESS_DURABLE_EXCLUSION_NOT_BOUND";
+        detail.Text = "録音準備モニターは実装済みですが、Owner/Consent currentness・H1・永続排他が未結合のため開始できません。";
+        MessageBox.Show(this, unavailable + "\n安全のためOBS・マイクへ接続していません。",
+            "録音準備モニター未接続", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+#endif
+
     private async void StartOperation(bool measureGain)
     {
         if (recording) return;
@@ -1350,9 +1372,15 @@ internal sealed class CaptureForm : Form
         }
 
         var stamp = DateTime.UtcNow.ToString("yyyyMMddTHHmmssZ", CultureInfo.InvariantCulture);
-        partialPath = Path.Combine(root, "bai-learning-voice-" + stamp + ".partial.wav");
-        finalPath = Path.Combine(root, "bai-learning-voice-" + stamp + ".wav");
-        gainReceiptPath = Path.Combine(root, "bai-gain-check-" + stamp + ".receipt.json");
+        var partialPath = Path.Combine(root, "bai-learning-voice-" + stamp + ".partial.wav");
+        var finalPath = Path.Combine(root, "bai-learning-voice-" + stamp + ".wav");
+        var gainReceiptPath = Path.Combine(root, "bai-gain-check-" + stamp + ".receipt.json");
+        var operationId = "operation-" + Guid.NewGuid().ToString("N");
+        var sessionId = "session-" + Guid.NewGuid().ToString("N");
+        var operation = measureGain
+            ? BaiCaptureOperation.CreateLegacyGain(operationId, sessionId, gainReceiptPath)
+            : BaiCaptureOperation.CreateRecording(operationId, sessionId, partialPath, finalPath);
+        currentOperation = operation;
         terminalReason = null;
         completedGainSummary = null;
         if (meterSession != null) meterSession.Invalidate(8, false);
@@ -1368,8 +1396,8 @@ internal sealed class CaptureForm : Form
         recording = true;
         paused = false;
         sequenceReanchorPending = false;
-        gainMeasurement = measureGain;
         terminalStopRequested = false;
+        stopping = false;
         obsProcessId = 0;
         obsReused = existingObs != null;
         stopStarted = 0;
@@ -1379,26 +1407,30 @@ internal sealed class CaptureForm : Form
         resumeGate.Set();
         maximumDurationValue = TimeSpan.FromMinutes((double)maximumMinutes.Value);
         diskFloorBytes = (long)diskFloorGb.Value * 1024L * 1024L * 1024L;
-        cancellation = new CancellationTokenSource();
-        sessionKey = new byte[32];
-        using (var rng = RandomNumberGenerator.Create()) rng.GetBytes(sessionKey);
         start.Enabled = false;
         gainCheck.Enabled = false;
-        pause.Enabled = !gainMeasurement;
+#if BVP_TASK047_READINESS
+        readinessCheck.Enabled = false;
+#endif
+        pause.Enabled = operation.IsRecording;
         resume.Enabled = false;
         stop.Enabled = true;
         destination.Enabled = browse.Enabled = obsExecutable.Enabled = browseObs.Enabled =
             maximumMinutes.Enabled = diskFloorGb.Enabled = false;
         string obsMode = existingObs == null ? " OBSを起動して接続します。" :
             " 起動中のOBSへ安全に再接続します。";
-        detail.Text = gainMeasurement
+        detail.Text = operation.IsLegacyGain
             ? "5秒間の録音前GAIN測定中。音声bodyは保存せず、ハードウェア設定も変更しません。" + obsMode
             : (acceptanceMode ? "合成音声Acceptanceモード。Owner音声は使用しません。" :
                 "録音中。停止時にWAVとbody-free receiptを確定します。") + obsMode;
 
-        var receiveTask = Task.Run(() => ReceiveLoop(root, selectedObsPath, cancellation.Token));
+        var receiveTask = new Task(() => ReceiveLoop(operation, root, selectedObsPath, operation.Token),
+            CancellationToken.None, TaskCreationOptions.LongRunning);
+        operation.AttachReceiver(receiveTask);
+        receiveTask.Start(TaskScheduler.Default);
         await Task.Delay(300);
-        if (!recording) return;
+        if (!recording || stopping || operation.StopRequested ||
+            !Object.ReferenceEquals(currentOperation, operation)) return;
 
         if (existingObs != null) {
             obs = existingObs;
@@ -1473,7 +1505,8 @@ internal sealed class CaptureForm : Form
         }
     }
 
-    private void ReceiveLoop(string outputRoot, string selectedObsPath, CancellationToken token)
+    private void ReceiveLoop(BaiCaptureOperation operation, string outputRoot, string selectedObsPath,
+        CancellationToken token)
     {
         ulong expectedSequence = 0;
         bool sequenceInitialized = false;
@@ -1487,6 +1520,7 @@ internal sealed class CaptureForm : Form
                 if (paused) continue;
                 currentPipe = CreateSameUserPipe();
                 pipe = currentPipe;
+                operation.RegisterPipe(currentPipe);
                 var connection = currentPipe.WaitForConnectionAsync();
                 while (!connection.IsCompleted) {
                     token.ThrowIfCancellationRequested();
@@ -1495,13 +1529,13 @@ internal sealed class CaptureForm : Form
                 }
                 connection.GetAwaiter().GetResult();
                 ValidateObsPipeClient(currentPipe, selectedObsPath);
-                var hello = ControllerProtocol.BuildSessionHello(sessionKey);
+                var hello = ControllerProtocol.BuildSessionHello(operation.SessionKey);
                 currentPipe.Write(hello, 0, hello.Length);
                 currentPipe.Flush();
                 Array.Clear(hello, 0, hello.Length);
                 connected = true;
                 wasConnected = true;
-                if (gainMeasurement && measurementStartedUtc == DateTime.MinValue) {
+                if (operation.IsLegacyGain && measurementStartedUtc == DateTime.MinValue) {
                     measurementStartedUtc = DateTime.UtcNow;
                 }
 
@@ -1531,7 +1565,7 @@ internal sealed class CaptureForm : Form
                 var observedMac = new byte[32];
                 Buffer.BlockCopy(header, 56, observedMac, 0, observedMac.Length);
                 byte[] computedMac;
-                using (var hmac = new HMACSHA256(sessionKey)) {
+                using (var hmac = new HMACSHA256(operation.SessionKey)) {
                     hmac.TransformBlock(header, 0, 56, null, 0);
                     hmac.TransformFinalBlock(payload, 0, payload.Length);
                     computedMac = hmac.Hash;
@@ -1540,7 +1574,7 @@ internal sealed class CaptureForm : Form
                     Interlocked.Increment(ref hmacFailures);
                     throw new InvalidDataException("HMAC_INVALID");
                 }
-                UpdateMetrics(payload);
+                long observedGeneration = operation.Generation;
                 if (!sequenceInitialized) {
                     expectedSequence = sequence;
                     sequenceInitialized = true;
@@ -1558,17 +1592,19 @@ internal sealed class CaptureForm : Form
                 }
                 expectedSequence++;
 
-                lock (stateLock) {
-                    if (!gainMeasurement) {
-                        if (wave == null) wave = new WaveFloatWriter(partialPath, checked((ushort)planes), 48000);
-                        wave.WritePlanar(payload, checked((int)frames), checked((int)planes));
+                BaiCapturePacketLease packetLease;
+                if (!operation.TryAcquirePacketLease(observedGeneration, out packetLease)) break;
+                using (packetLease) {
+                    UpdateMetrics(payload);
+                    if (operation.IsRecording) {
+                        operation.WriteAudio(payload, checked((int)frames), checked((int)planes));
                     }
-                }
-                var count = Interlocked.Increment(ref packetCount);
-                Interlocked.Add(ref receivedBytes, payload.Length);
-                if (!gainMeasurement) {
-                    Interlocked.Add(ref payloadBytes, payload.Length);
-                    if ((count % 50) == 0) lock (stateLock) { if (wave != null) wave.Checkpoint(); }
+                    var count = Interlocked.Increment(ref packetCount);
+                    Interlocked.Add(ref receivedBytes, payload.Length);
+                    if (operation.IsRecording) {
+                        Interlocked.Add(ref payloadBytes, payload.Length);
+                        if ((count % 50) == 0) operation.CheckpointAudio();
+                    }
                 }
 
                 var drive = new DriveInfo(Path.GetPathRoot(outputRoot));
@@ -1577,13 +1613,13 @@ internal sealed class CaptureForm : Form
                     BeginInvoke(new Action(() => BeginStop("DISK_FLOOR_REACHED")));
                     break;
                 }
-                if (gainMeasurement && measurementStartedUtc != DateTime.MinValue &&
+                if (operation.IsLegacyGain && measurementStartedUtc != DateTime.MinValue &&
                     DateTime.UtcNow - measurementStartedUtc >= TimeSpan.FromSeconds(5)) {
                     terminalStopRequested = true;
                     BeginInvoke(new Action(() => BeginStop("GAIN_CHECK_COMPLETED")));
                     break;
                 }
-                if (!gainMeasurement && GetActiveElapsed() >= maximumDurationValue) {
+                if (operation.IsRecording && GetActiveElapsed() >= maximumDurationValue) {
                     terminalStopRequested = true;
                     BeginInvoke(new Action(() => BeginStop("MAX_DURATION_REACHED")));
                     break;
@@ -1610,6 +1646,7 @@ internal sealed class CaptureForm : Form
             } finally {
                 connected = false;
                 try { if (currentPipe != null) currentPipe.Dispose(); } catch { }
+                operation.ReleasePipe(currentPipe);
                 if (Object.ReferenceEquals(pipe, currentPipe)) pipe = null;
                 if (wasConnected && !paused && !token.IsCancellationRequested && !terminalStopRequested) {
                     if (meterSession != null) meterSession.Invalidate(6, false);
@@ -1643,7 +1680,8 @@ internal sealed class CaptureForm : Form
         resumeGate.Reset();
         connected = false;
         try { if (pipe != null) pipe.Dispose(); } catch { }
-        lock (stateLock) { if (wave != null) wave.Checkpoint(); }
+        var operation = currentOperation;
+        if (operation != null) operation.CheckpointAudio();
         pause.Enabled = false;
         resume.Enabled = true;
         RefreshUi();
@@ -1665,7 +1703,6 @@ internal sealed class CaptureForm : Form
     private void StopCapture()
     {
         if (!recording) return;
-        if (!ValidateSameObsProcess("STOP")) return;
         BeginStop("USER_STOP");
     }
 
@@ -1694,47 +1731,75 @@ internal sealed class CaptureForm : Form
     {
         if (Interlocked.Exchange(ref stopStarted, 1) != 0) return;
         if (meterSession != null) meterSession.Invalidate(6, false);
-        bool completedGainMeasurement = gainMeasurement;
+        var operation = currentOperation;
+        if (operation == null) return;
+        bool completedGainMeasurement = operation.IsLegacyGain;
         terminalReason = reason;
         if (paused) completedPauseDuration += DateTime.UtcNow - pauseStartedUtc;
         paused = false;
         resumeGate.Set();
-        recording = false;
+        stopping = true;
         connected = false;
         stop.Enabled = false;
         pause.Enabled = false;
         resume.Enabled = false;
-        try { cancellation.Cancel(); } catch { }
-        try { if (pipe != null) pipe.Dispose(); } catch { }
+        operation.RequestStop();
+        var settlement = operation.BeginSettlementAsync(TimeSpan.FromMilliseconds(2000));
+        stopSettlementTask = SettleAndFinalizeAsync(
+            operation, settlement, reason, completedGainMeasurement);
+        RefreshUi();
+    }
+
+    private async Task SettleAndFinalizeAsync(
+        BaiCaptureOperation operation, Task<bool> settlement,
+        string reason, bool completedGainMeasurement)
+    {
+        bool settled = await settlement;
+        if (!settled) {
+            terminalReason = "STOP_PENDING: " + reason;
+            if (!IsDisposed && IsHandleCreated) BeginInvoke(new Action(RefreshUi));
+            await operation.AwaitSettlementWithoutDeadlineAsync();
+        }
+        if (!IsDisposed && IsHandleCreated) {
+            BeginInvoke(new Action(() => FinalizeSettledOperation(
+                operation, reason, completedGainMeasurement)));
+        }
+    }
+
+    private void FinalizeSettledOperation(
+        BaiCaptureOperation operation, string reason, bool completedGainMeasurement)
+    {
+        if (!Object.ReferenceEquals(currentOperation, operation)) return;
         try {
-            lock (stateLock) {
-                if (wave != null) {
-                    wave.Dispose();
-                    wave = null;
-                }
-            }
+            operation.FinalizeAudioPrefix();
             if (completedGainMeasurement) {
-                WriteGainReceipt(reason);
-            } else if (File.Exists(partialPath)) {
-                if (File.Exists(finalPath)) throw new IOException("Final output already exists.");
-                File.Move(partialPath, finalPath);
-                WriteReceipt(finalPath, reason);
+                WriteGainReceipt(operation, reason);
+            } else if (operation.IsRecording && File.Exists(operation.PartialAudioPath)) {
+                if (File.Exists(operation.FinalAudioPath)) throw new IOException("Final output already exists.");
+                File.Move(operation.PartialAudioPath, operation.FinalAudioPath);
+                WriteReceipt(operation.FinalAudioPath, reason);
             }
         } catch (Exception ex) {
             terminalReason = "FINALIZE_FAILED: " + ex.Message;
         }
-        if (sessionKey != null) Array.Clear(sessionKey, 0, sessionKey.Length);
-        sessionKey = null;
+        operation.Dispose();
+        currentOperation = null;
+        stopSettlementTask = null;
+        recording = false;
+        stopping = false;
         destination.Enabled = browse.Enabled = obsExecutable.Enabled = browseObs.Enabled =
             maximumMinutes.Enabled = diskFloorGb.Enabled = true;
-        gainMeasurement = false;
         gainCheck.Enabled = true;
+#if BVP_TASK047_READINESS
+        readinessCheck.Enabled = true;
+#endif
         start.Enabled = true;
         completedGainSummary = completedGainMeasurement ? FormatGainSummary() : null;
         RefreshUi();
+        if (closeAfterSettlement) BeginInvoke(new Action(Close));
     }
 
-    private void WriteGainReceipt(string reason)
+    private void WriteGainReceipt(BaiCaptureOperation operation, string reason)
     {
         long samples;
         long clips;
@@ -1779,7 +1844,7 @@ internal sealed class CaptureForm : Form
             "  \"hardware_setting_changed\": false,\n" +
             "  \"session_key_persisted\": false\n" +
             "}\n";
-        File.WriteAllText(gainReceiptPath, json, new UTF8Encoding(false));
+        File.WriteAllText(operation.MetadataPath, json, new UTF8Encoding(false));
     }
 
     private string FormatGainSummary()
@@ -1857,9 +1922,15 @@ internal sealed class CaptureForm : Form
 
     private void RefreshUi()
     {
-        pause.Enabled = recording && !gainMeasurement && connected && !paused;
-        resume.Enabled = recording && !gainMeasurement && paused;
-        if (recording && gainMeasurement && connected) {
+        var operation = currentOperation;
+        bool gainMeasurement = operation != null && operation.IsLegacyGain;
+        pause.Enabled = recording && operation != null && operation.IsRecording && connected && !paused && !stopping;
+        resume.Enabled = recording && operation != null && operation.IsRecording && paused && !stopping;
+        if (stopping) {
+            status.Text = terminalReason != null && terminalReason.StartsWith("STOP_PENDING", StringComparison.Ordinal)
+                ? "停止処理未完了・再開始禁止" : "停止処理中";
+            status.BackColor = Color.FromArgb(150, 70, 0);
+        } else if (recording && gainMeasurement && connected) {
             status.Text = "● 録音前GAINチェック中（音声保存なし）";
             status.BackColor = Color.FromArgb(30, 100, 180);
         } else if (recording && paused) {
@@ -1927,7 +1998,13 @@ internal sealed class CaptureForm : Form
 
     private void OnClosing(object sender, FormClosingEventArgs e)
     {
-        if (recording) BeginStop("CONTROLLER_WINDOW_CLOSED");
+        if (currentOperation != null ||
+            (stopSettlementTask != null && !stopSettlementTask.IsCompleted)) {
+            closeAfterSettlement = true;
+            e.Cancel = true;
+            if (currentOperation != null) BeginStop("FORM_CLOSE");
+            return;
+        }
         advisoryTimer.Stop();
         if (meterSession != null) meterSession.Dispose();
     }

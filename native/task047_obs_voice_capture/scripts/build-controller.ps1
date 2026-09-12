@@ -5,6 +5,7 @@ param(
   [string]$MeterWorkerBundle,
   [string]$RuntimeRoot,
   [string]$OperationId,
+  [switch]$ReadinessBuild,
   [switch]$PrepareShellBuild
 )
 $ErrorActionPreference = 'Stop'
@@ -35,16 +36,28 @@ function Write-NewJson([string]$Path, $Value) {
   $Value | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $Path -Encoding UTF8
   return (Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json)
 }
-if (!$OperationId) { $OperationId = 'task048-build-' + [Guid]::NewGuid().ToString('N') }
-if ($OperationId -notmatch '^task048-build-[a-f0-9]{32}$') { throw 'Operation identity invalid' }
+$taskIdentity = 'TASK-048'
+$operationPrefix = 'task048-build-'
+if ($ReadinessBuild) {
+  $taskIdentity = 'TASK-047'
+  $operationPrefix = 'task047-readiness-build-'
+}
+if (!$OperationId) { $OperationId = $operationPrefix + [Guid]::NewGuid().ToString('N') }
+if ($OperationId -notmatch ('^' + [regex]::Escape($operationPrefix) + '[a-f0-9]{32}$')) { throw 'Operation identity invalid' }
 if (!$BuildRoot) {
   if ($PrepareShellBuild) { $BuildRoot = Join-Path $repositoryRoot 'builds' }
-  else { $BuildRoot = Join-Path $repositoryRoot ('builds\task048-controller\' + $OperationId) }
+  else {
+    $family = 'task048-controller'
+    if ($ReadinessBuild) { $family = 'task047-readiness-controller' }
+    $BuildRoot = Join-Path $repositoryRoot ('builds\' + $family + '\' + $OperationId)
+  }
 }
 $resolvedBuildRoot = Assert-ContainedPath $BuildRoot $repositoryRoot
 if (!$RuntimeRoot) { $RuntimeRoot = Join-Path ([IO.Path]::GetTempPath()) $OperationId }
 $resolvedRuntimeRoot = Assert-ContainedPath $RuntimeRoot ([IO.Path]::GetTempPath())
-$operationReceipt = Join-Path $resolvedBuildRoot 'task048-build-operation.json'
+$operationReceiptName = 'task048-build-operation.json'
+if ($ReadinessBuild) { $operationReceiptName = 'task047-readiness-build-operation.json' }
+$operationReceipt = Join-Path $resolvedBuildRoot $operationReceiptName
 
 if ($PrepareShellBuild -or !(Test-Path -LiteralPath $operationReceipt)) {
   # The default tracked builds/.gitkeep is the sole permitted pre-existing item.
@@ -59,20 +72,25 @@ if ($PrepareShellBuild -or !(Test-Path -LiteralPath $operationReceipt)) {
   New-Item -ItemType Directory -Path $resolvedBuildRoot -Force | Out-Null
   New-Item -ItemType Directory -Path $resolvedRuntimeRoot | Out-Null
   $record = Write-NewJson $operationReceipt @{
-    task = 'TASK-048'; operation = $OperationId; repository = $repositoryRoot
+    task = $taskIdentity; operation = $OperationId; repository = $repositoryRoot
     build_root = $resolvedBuildRoot; runtime_root = $resolvedRuntimeRoot
     residuals = 'Retain build, temporary output and receipts; no implicit cleanup'
   }
 } else {
   $record = Get-Content -Raw -LiteralPath $operationReceipt | ConvertFrom-Json
 }
-if ($record.task -ne 'TASK-048' -or $record.operation -ne $OperationId -or
+if ($record.task -ne $taskIdentity -or $record.operation -ne $OperationId -or
     $record.repository -ne $repositoryRoot -or $record.build_root -ne $resolvedBuildRoot -or
     $record.runtime_root -ne $resolvedRuntimeRoot) { throw 'Build operation receipt mismatch' }
 $env:TMP = $resolvedRuntimeRoot
 $env:TEMP = $resolvedRuntimeRoot
-Write-Output "TASK048_OUTPUT_ROOT=$resolvedBuildRoot"
-Write-Output "TASK048_RUNTIME_ROOT=$resolvedRuntimeRoot"
+if ($ReadinessBuild) {
+  Write-Output "TASK047_READINESS_OUTPUT_ROOT=$resolvedBuildRoot"
+  Write-Output "TASK047_READINESS_RUNTIME_ROOT=$resolvedRuntimeRoot"
+} else {
+  Write-Output "TASK048_OUTPUT_ROOT=$resolvedBuildRoot"
+  Write-Output "TASK048_RUNTIME_ROOT=$resolvedRuntimeRoot"
+}
 if ($PrepareShellBuild) { exit 0 }
 
 if (!(Test-Path -LiteralPath $Compiler -PathType Leaf)) { throw 'Pinned C# compiler not found' }
@@ -81,7 +99,23 @@ $controllerOutputRoot = Assert-ContainedPath $OutputDirectory $resolvedBuildRoot
 if (Test-Path -LiteralPath $controllerOutputRoot) { throw 'Existing Controller output denied' }
 $source = Join-Path $pluginRoot 'controller\BaiVoiceCaptureController.cs'
 $bridgeSource = Join-Path $pluginRoot 'controller\BaiMeterRuntimeBridge.cs'
-if (!(Test-Path -LiteralPath $source) -or !(Test-Path -LiteralPath $bridgeSource)) { throw 'Controller sources missing' }
+$operationSource = Join-Path $pluginRoot 'controller\BaiCaptureOperation.cs'
+$readinessSource = Join-Path $pluginRoot 'controller\BaiReadinessMonitor.cs'
+$receiptSource = Join-Path $pluginRoot 'controller\BaiReadinessReceipt.cs'
+$selfTestSource = Join-Path $pluginRoot 'controller\BaiReadinessMonitorSelfTest.cs'
+$schemaSource = Join-Path $repositoryRoot 'src\ai_video_production\schema_resources\task047-readiness-monitor-receipt-v1.schema.json'
+$readinessSources = @($readinessSource, $receiptSource, $selfTestSource)
+if (!(Test-Path -LiteralPath $source) -or !(Test-Path -LiteralPath $bridgeSource) -or
+    !(Test-Path -LiteralPath $operationSource -PathType Leaf)) { throw 'Controller sources missing' }
+$schemaSha = $null
+if ($ReadinessBuild) {
+  if (@($readinessSources | Where-Object { !(Test-Path -LiteralPath $_ -PathType Leaf) }).Count -ne 0 -or
+      !(Test-Path -LiteralPath $schemaSource -PathType Leaf)) { throw 'Readiness sources missing' }
+  $schemaSha = (Get-FileHash -LiteralPath $schemaSource -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($schemaSha -ne '61e87d762db8d0fbc28a95dc4c3c7642b83c19bb1a6d197e2fdd1ebc6ff18472') {
+    throw 'TASK-047 readiness schema identity mismatch'
+  }
+}
 $workerFiles = @()
 if ($MeterWorkerBundle) {
   $workerRoot = Assert-ContainedPath $MeterWorkerBundle $resolvedBuildRoot
@@ -111,7 +145,13 @@ New-Item -ItemType Directory -Path $controllerOutputRoot | Out-Null
 $output = Join-Path $controllerOutputRoot 'bai-voice-capture-controller.exe'
 $arguments = @('/nologo', '/warnaserror+', '/target:winexe', '/platform:x64', '/optimize+',
   "/out:$output", '/reference:System.dll', '/reference:System.Core.dll',
-  '/reference:System.Drawing.dll', '/reference:System.Windows.Forms.dll', $source, $bridgeSource)
+  '/reference:System.Drawing.dll', '/reference:System.Windows.Forms.dll', $source, $bridgeSource,
+  $operationSource)
+if ($ReadinessBuild) {
+  $arguments += $readinessSources
+  $arguments += '/define:BVP_TASK047_READINESS'
+  $arguments += '/resource:' + $schemaSource + ',BVP.Task047.ReadinessMonitorReceiptV1.Schema'
+}
 if ($MeterWorkerBundle) {
   $identitySource = Join-Path $controllerOutputRoot 'BaiMeterBuildIdentity.cs'
   $fileLiterals = @($workerFiles | ForEach-Object { '@"' + $_.path + '"' })
@@ -124,14 +164,19 @@ if ($MeterWorkerBundle) {
 }
 & $Compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw "Controller build failed with exit code $LASTEXITCODE" }
-foreach ($mode in @('--self-test', '--meter-self-test', '--bvp-meter-protocol-self-test', '--bvp-meter-scalar-self-test')) {
+$selfTestModes = @('--self-test', '--meter-self-test', '--bvp-meter-protocol-self-test',
+    '--bvp-meter-scalar-self-test')
+if ($ReadinessBuild) { $selfTestModes += '--readiness-self-test' }
+foreach ($mode in $selfTestModes) {
   $test = Start-Process -FilePath $output -ArgumentList $mode -WindowStyle Hidden -Wait -PassThru
   if ($test.ExitCode -ne 0) { throw "Controller self-test failed: $mode code=$($test.ExitCode)" }
 }
-$closureReceipt = Write-NewJson (Join-Path $controllerOutputRoot 'meter-build-identity.json') @{
-  task = 'TASK-048'; operation = $OperationId
+$closureFields = @{
+  task = $taskIdentity; operation = $OperationId
   controller_sha256 = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()
   worker_files = $workerFiles; result = 'PASS'; build_root = $resolvedBuildRoot; runtime_root = $resolvedRuntimeRoot
 }
+if ($ReadinessBuild) { $closureFields.readiness_schema_sha256 = $schemaSha }
+$closureReceipt = Write-NewJson (Join-Path $controllerOutputRoot 'meter-build-identity.json') $closureFields
 if ($closureReceipt.controller_sha256 -ne (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()) { throw 'Controller receipt readback failed' }
 Write-Output "CONTROLLER_BUILD_TEST_PASS exe=$output"

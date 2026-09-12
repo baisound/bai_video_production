@@ -132,8 +132,13 @@ def test_running_obs_start_pause_resume_stop_uses_one_exact_process() -> None:
 
     assert 'start.Text = "録音開始（OBS起動中でも可）"' in controller
     assert "obsProcessId = existingObs.Id" in controller
-    for operation in ("PAUSE", "RESUME", "STOP"):
+    for operation in ("PAUSE", "RESUME"):
         assert f'ValidateSameObsProcess("{operation}")' in controller
+    stop_capture = controller.split("private void StopCapture()", 1)[1].split(
+        "private TimeSpan GetActiveElapsed()", 1
+    )[0]
+    assert 'BeginStop("USER_STOP")' in stop_capture
+    assert 'ValidateSameObsProcess("STOP")' not in stop_capture
     assert '"VERIFIED_SAME_PROCESS"' in controller
     assert '\\"obs_process_id\\"' in controller
     assert '\\"obs_process_reused\\"' in controller
@@ -280,7 +285,7 @@ def test_gain_summary_survives_timer_refresh_without_hiding_terminal_failure() -
     )[0]
     assert "completedGainSummary = null;" in start
     assert "completedGainSummary = completedGainMeasurement ? FormatGainSummary() : null;" in stop
-    assert stop.index("completedGainSummary =") < stop.index("RefreshUi();")
+    assert stop.index("completedGainSummary =") < stop.rindex("RefreshUi();")
     assert "detail.Text = FormatGainSummary()" not in stop
     assert "CaptureTerminalDisplay.Format(terminalReason, completedGainSummary)" in refresh
     for case in (

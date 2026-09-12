@@ -207,6 +207,15 @@ def _nle_operation_guarded(method: Callable[..., dict[str, Any]]) -> Callable[..
     return guarded
 
 
+def _meter_write_guarded(method: Callable[..., dict[str, Any]]) -> Callable[..., dict[str, Any]]:
+    """Invalidate the old advisory epoch before a known Shell write/selection."""
+    @wraps(method)
+    def guarded(self: "Task036ShellBridge", *args: Any, **kwargs: Any) -> dict[str, Any]:
+        with self._meter_project_write():
+            return method(self, *args, **kwargs)
+    return guarded
+
+
 class Task036ShellBridge:
     """Allowlisted bridge used only by the native layout/runtime spike."""
 
@@ -257,6 +266,7 @@ class Task036ShellBridge:
         nle_controller: Task044NleShellController | None = None,
         nle_controller_factory: Callable[[Task036EditingApplication], Task044NleShellController] | None = None,
         nle_runtime_guard: Callable[[], ContextManager[None]] | None = None,
+        meter_controller_host: Any = None,
     ) -> None:
         if application is not None and application.shell is not service:
             raise ValueError("integrated application must use the supplied Shell service")
@@ -325,6 +335,7 @@ class Task036ShellBridge:
         if nle_runtime_guard is not None and not callable(nle_runtime_guard):
             raise ValueError("NLE runtime guard is invalid")
         self._nle_runtime_guard = nle_runtime_guard
+        self._meter_controller_host = meter_controller_host
         self._final_review_export_application = None
         if final_review_export_preparation_provider is not None:
             if final_review_application is None:
@@ -340,6 +351,31 @@ class Task036ShellBridge:
                 ),
                 preparation_provider=final_review_export_preparation_provider,
             )
+
+    def _meter_project_write(self) -> ContextManager[None]:
+        if self._meter_controller_host is None:
+            return nullcontext()
+        return self._meter_controller_host.project_write()
+
+    def recording_meter_snapshot(self, args: Any = None) -> dict[str, Any]:
+        # Unlike historical empty-argument bridges, this action admits only an
+        # actual empty dict. No Project/root/executable/nonce crosses the JS API.
+        if type(args) is not dict or args:
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                               "Recording meter request is invalid", ProductErrorCategory.VALIDATION)
+        if self._meter_controller_host is None:
+            from .task048_meter_controller_host import unavailable_meter_snapshot
+            return unavailable_meter_snapshot()
+        return self._meter_controller_host.snapshot()
+
+    def open_recording_meter(self, args: Any = None) -> dict[str, Any]:
+        if type(args) is not dict or args:
+            raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                               "Recording meter request is invalid", ProductErrorCategory.VALIDATION)
+        if self._meter_controller_host is None:
+            from .task048_meter_controller_host import unavailable_meter_snapshot
+            return unavailable_meter_snapshot()
+        return self._meter_controller_host.open()
 
     def _ensure_nle_controller(self) -> Task044NleShellController | None:
         if self._nle_controller is None and self._nle_controller_factory is not None:
@@ -421,6 +457,7 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().prepare_redo(args)
 
+    @_meter_write_guarded
     def interactive_timeline_apply_edit(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():
             return self._require_nle_controller().apply_edit(args)
@@ -444,6 +481,7 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().visual_asset_placement_prepare_replace(args)
 
+    @_meter_write_guarded
     def visual_asset_placement_apply(self, args: Any) -> dict[str, object]:
         with self._nle_operation():
             return self._require_nle_controller().visual_asset_placement_apply(args)
@@ -452,6 +490,7 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().visual_asset_placement_cancel(args)
 
+    @_meter_write_guarded
     def visual_asset_placement_recover(self, args: Any) -> dict[str, object]:
         with self._nle_operation():
             return self._require_nle_controller().visual_asset_placement_recover(args)
@@ -471,6 +510,7 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().export_prepare_dispatch(args)
 
+    @_meter_write_guarded
     def export_queue_apply_dispatch(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():
             return self._require_nle_controller().export_apply_dispatch(args)
@@ -479,10 +519,12 @@ class Task036ShellBridge:
         with self._nle_operation():
             return self._require_nle_controller().export_cancel_dispatch(args)
 
+    @_meter_write_guarded
     def export_queue_cancel(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():
             return self._require_nle_controller().export_cancel(args)
 
+    @_meter_write_guarded
     def export_queue_reconcile(self, args: Any) -> dict[str, Any]:
         with self._nle_operation():
             return self._require_nle_controller().export_reconcile(args)
@@ -540,6 +582,7 @@ class Task036ShellBridge:
                 return status
             return {"available": False}
 
+    @_meter_write_guarded
     def choose_and_ingest_media(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "media choose and ingest")
         with self._nle_operation():
@@ -626,6 +669,7 @@ class Task036ShellBridge:
                 raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
             return self._pre_edit_runtime.cancel_local_transcription(confirmation_id)
 
+    @_meter_write_guarded
     def run_local_transcription(self, args: Any = None) -> dict[str, Any]:
         confirmation_id = self._transcription_confirmation(args, "local transcription apply")
         with self._nle_operation():
@@ -669,6 +713,7 @@ class Task036ShellBridge:
                 "recovered_from_durable_result": result["recovered_from_durable_result"],
             }
 
+    @_meter_write_guarded
     def recover_local_transcription(self, args: Any = None) -> dict[str, Any]:
         confirmation_id = self._transcription_confirmation(args, "local transcription recovery apply")
         with self._nle_operation():
@@ -708,6 +753,7 @@ class Task036ShellBridge:
                 return {"available": False, "task_owner": "TASK-056"}
             return self._pre_edit_runtime.speech_cue_snapshot()
 
+    @_meter_write_guarded
     def generate_speech_cues(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "speech cue generation")
         with self._nle_operation():
@@ -765,6 +811,7 @@ class Task036ShellBridge:
                 confirmation_id=args["confirmation_id"],
             )
 
+    @_meter_write_guarded
     def apply_speech_cue_decision(self, args: Any) -> dict[str, Any]:
         if (
             not isinstance(args, dict)
@@ -788,6 +835,7 @@ class Task036ShellBridge:
                 confirmation_id=args["confirmation_id"],
             )
 
+    @_meter_write_guarded
     def create_runtime_subtitle_workspace(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Subtitle Workspace creation")
         with self._nle_operation():
@@ -827,6 +875,7 @@ class Task036ShellBridge:
                 "host_path_exposed": False,
             }
 
+    @_meter_write_guarded
     def generate_runtime_cut_candidates(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Cut Candidate generation")
         with self._nle_operation():
@@ -879,6 +928,7 @@ class Task036ShellBridge:
                 "host_path_exposed": False,
             }
 
+    @_meter_write_guarded
     def compile_resolve_assembly(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Resolve assembly compile")
         return self._require_workflow_runtime().compile_resolve_assembly()
@@ -887,6 +937,7 @@ class Task036ShellBridge:
         self._empty_args(args, "Resolve apply preparation")
         return self._require_workflow_runtime().prepare_resolve_apply()
 
+    @_meter_write_guarded
     def apply_resolve_assembly(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError(
@@ -904,6 +955,7 @@ class Task036ShellBridge:
         self._empty_args(args, "native render confirmation")
         return self._require_workflow_runtime().prepare_native_render_confirmation()
 
+    @_meter_write_guarded
     def execute_native_render(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError(
@@ -913,10 +965,12 @@ class Task036ShellBridge:
             )
         return self._require_workflow_runtime().execute_native_render(str(args["confirmation_id"]))
 
+    @_meter_write_guarded
     def bind_runtime_render_qa(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "Render QA binding")
         return self._require_workflow_runtime().bind_runtime_render_qa()
 
+    @_meter_write_guarded
     def create_editor_handoff(self, args: Any = None) -> dict[str, Any]:
         self._empty_args(args, "EDITOR_WORK creation")
         return self._require_workflow_runtime().create_editor_handoff()
@@ -926,6 +980,7 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "media chooser request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_native_dialog().choose_media_source().to_ui_dict()
 
+    @_meter_write_guarded
     def choose_project_folder(self, args: Any = None) -> dict[str, Any]:
         if args not in (None, {}):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Project folder chooser request is invalid", ProductErrorCategory.VALIDATION)
@@ -1536,6 +1591,7 @@ class Task036ShellBridge:
             )
         return self._connection_settings_projection(self._connection_settings.update(args))
 
+    @_meter_write_guarded
     def production_register_candidate(self, args: Any) -> dict[str, Any]:
         required = {"candidate_id", "slot_id", "asset_id", "asset_sha256", "expected_snapshot_sha256"}
         optional = {"generation_job_id", "parent_candidate_id", "supersedes"}
@@ -1548,6 +1604,7 @@ class Task036ShellBridge:
         values = {key: args.get(key) for key in required | optional}
         return self._require_production_control().register_candidate(**values)
 
+    @_meter_write_guarded
     def production_mark_ready_for_audit(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"candidate_id", "expected_snapshot_sha256"}:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Production audit-ready request is invalid", ProductErrorCategory.VALIDATION)
@@ -1565,6 +1622,7 @@ class Task036ShellBridge:
             expected_snapshot_sha256=str(args["expected_snapshot_sha256"]),
         )
 
+    @_meter_write_guarded
     def production_apply_lock(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Production lock request is invalid", ProductErrorCategory.VALIDATION)
@@ -1587,6 +1645,7 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Audit decision preparation request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_audit_application().prepare_human_decision(**{key: str(args[key]) for key in required})
 
+    @_meter_write_guarded
     def audit_apply_human_decision(self, args: Any) -> dict[str, Any]:
         required = {"confirmation_id", "actor_id"}
         if not isinstance(args, dict) or not required.issubset(args) or set(args) - required - {"notes"}:
@@ -1598,6 +1657,7 @@ class Task036ShellBridge:
             notes=None if notes is None else str(notes),
         )
 
+    @_meter_write_guarded
     def audit_apply_recovery(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"action"}:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Audit recovery request is invalid", ProductErrorCategory.VALIDATION)
@@ -1663,6 +1723,7 @@ class Task036ShellBridge:
                 expected_planning_snapshot_sha256=args["expected_planning_snapshot_sha256"],
             )
 
+    @_meter_write_guarded
     def planning_generation_apply(self, args: Any) -> dict[str, Any]:
         if (
             not isinstance(args, dict)
@@ -1703,6 +1764,7 @@ class Task036ShellBridge:
             expected_snapshot_sha256=str(args["expected_snapshot_sha256"]),
         )
 
+    @_meter_write_guarded
     def planning_apply_revision(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError(
@@ -1728,6 +1790,7 @@ class Task036ShellBridge:
             expected_snapshot_sha256=str(args["expected_snapshot_sha256"]),
         )
 
+    @_meter_write_guarded
     def planning_apply_scene_revision(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError(
@@ -1754,6 +1817,7 @@ class Task036ShellBridge:
             **{key: str(args[key]) for key in required},
         )
 
+    @_meter_write_guarded
     def planning_apply_scene_finalization(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError(
@@ -1787,6 +1851,7 @@ class Task036ShellBridge:
             expected_snapshot_sha256=str(args["expected_snapshot_sha256"]),
         )
 
+    @_meter_write_guarded
     def planning_approve_go(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id", "approved_by"}:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning GO request is invalid", ProductErrorCategory.VALIDATION)
@@ -1801,6 +1866,7 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning install preparation request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_planning_application().prepare_install_plan(**{key: str(args[key]) for key in required})
 
+    @_meter_write_guarded
     def planning_apply_install_plan(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Planning install request is invalid", ProductErrorCategory.VALIDATION)
@@ -1839,6 +1905,7 @@ class Task036ShellBridge:
             expected_safety_snapshot_sha256=str(args["expected_safety_snapshot_sha256"]),
         )
 
+    @_meter_write_guarded
     def generation_safety_apply_review(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id", "reviewed_by"}:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation Safety apply request is invalid", ProductErrorCategory.VALIDATION)
@@ -1878,11 +1945,13 @@ class Task036ShellBridge:
             expected_continuity_snapshot_sha256=args["expected_continuity_snapshot_sha256"],
         )
 
+    @_meter_write_guarded
     def continuity_apply_edge(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Continuity Edge apply request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_continuity_application().apply_register_edge(confirmation_id=args["confirmation_id"])
 
+    @_meter_write_guarded
     def continuity_inspect(self, args: Any) -> dict[str, Any]:
         required = {"edge_id", "expected_production_snapshot_sha256", "expected_continuity_snapshot_sha256"}
         if not isinstance(args, dict) or set(args) != required or not all(isinstance(args[key], str) for key in required):
@@ -1895,17 +1964,20 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Continuity soft approval preparation is invalid", ProductErrorCategory.VALIDATION)
         return self._require_continuity_application().prepare_soft_approval(**{key: args[key] for key in required})
 
+    @_meter_write_guarded
     def continuity_apply_soft_approval(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id", "approved_by"} or not all(isinstance(args[key], str) for key in args):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Continuity soft approval request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_continuity_application().apply_soft_approval(confirmation_id=args["confirmation_id"], approved_by=args["approved_by"])
 
+    @_meter_write_guarded
     def continuity_propagate_stale(self, args: Any) -> dict[str, Any]:
         required = {"root_slot_id", "expected_production_snapshot_sha256", "expected_continuity_snapshot_sha256"}
         if not isinstance(args, dict) or set(args) != required or not all(isinstance(args[key], str) for key in required):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Continuity STALE request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_continuity_application().propagate_stale(**{key: args[key] for key in required})
 
+    @_meter_write_guarded
     def continuity_apply_recovery(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"action"} or not isinstance(args["action"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Continuity recovery request is invalid", ProductErrorCategory.VALIDATION)
@@ -1943,6 +2015,7 @@ class Task036ShellBridge:
             input_asset_hashes=tuple(args["input_asset_hashes"]), keep_conditions=tuple(args["keep_conditions"]),
         )
 
+    @_meter_write_guarded
     def prompt_evidence_apply_prompt(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Prompt apply request is invalid", ProductErrorCategory.VALIDATION)
@@ -1977,6 +2050,7 @@ class Task036ShellBridge:
             expected_production_snapshot_sha256=args["expected_production_snapshot_sha256"],
         )
 
+    @_meter_write_guarded
     def prompt_evidence_apply_attempt(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation Evidence apply request is invalid", ProductErrorCategory.VALIDATION)
@@ -2010,11 +2084,13 @@ class Task036ShellBridge:
             expected_audit_snapshot_sha256=args["expected_audit_snapshot_sha256"],
         )
 
+    @_meter_write_guarded
     def prompt_evidence_apply_regeneration(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Regeneration Prompt apply request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_prompt_evidence_application().apply_regeneration(confirmation_id=args["confirmation_id"])
 
+    @_meter_write_guarded
     def prompt_evidence_apply_recovery(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"action"} or not isinstance(args["action"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Prompt Evidence recovery request is invalid", ProductErrorCategory.VALIDATION)
@@ -2205,6 +2281,7 @@ class Task036ShellBridge:
             expected_snapshot_sha256=args["expected_approval_snapshot_sha256"],
         )
 
+    @_meter_write_guarded
     def final_review_apply(self, args: Any) -> dict[str, Any]:
         if (
             not isinstance(args, dict)
@@ -2276,6 +2353,7 @@ class Task036ShellBridge:
         )
 
     @_nle_operation_guarded
+    @_meter_write_guarded
     def final_review_export_apply(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError(
@@ -2331,6 +2409,7 @@ class Task036ShellBridge:
         )
 
     @_nle_operation_guarded
+    @_meter_write_guarded
     def generation_queue_apply(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation Queue apply request is invalid", ProductErrorCategory.VALIDATION)
@@ -2377,6 +2456,7 @@ class Task036ShellBridge:
         )
 
     @_nle_operation_guarded
+    @_meter_write_guarded
     def generation_execution_apply(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation execution apply request is invalid", ProductErrorCategory.VALIDATION)
@@ -2394,6 +2474,7 @@ class Task036ShellBridge:
         return self._require_generation_execution_application().cancel_execution(confirmation_id=args["confirmation_id"])
 
     @_nle_operation_guarded
+    @_meter_write_guarded
     def generation_execution_recover(self, args: Any) -> dict[str, Any]:
         required = {"execution_id", "expected_execution_snapshot_sha256"}
         if (
@@ -2429,12 +2510,14 @@ class Task036ShellBridge:
         return self._require_generation_output_adoption_application().prepare_adoption(**args)
 
     @_nle_operation_guarded
+    @_meter_write_guarded
     def generation_output_adoption_apply(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption apply request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_generation_output_adoption_application().apply_adoption(confirmation_id=args["confirmation_id"])
 
     @_nle_operation_guarded
+    @_meter_write_guarded
     def generation_output_adoption_recover(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"adoption_id"} or not isinstance(args["adoption_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Generation output adoption recovery request is invalid", ProductErrorCategory.VALIDATION)
@@ -2471,6 +2554,7 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Audio placement preparation request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_audio_workspace_application().prepare_placement(**args)
 
+    @_meter_write_guarded
     def audio_workspace_apply_placement(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Audio placement request is invalid", ProductErrorCategory.VALIDATION)
@@ -2482,6 +2566,7 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Audio decision preparation request is invalid", ProductErrorCategory.VALIDATION)
         return self._require_audio_workspace_application().prepare_placement_decision(**args)
 
+    @_meter_write_guarded
     def audio_workspace_apply_decision(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"} or not isinstance(args["confirmation_id"], str):
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "Audio decision request is invalid", ProductErrorCategory.VALIDATION)
@@ -2524,6 +2609,7 @@ class Task036ShellBridge:
             )
         return self._require_audio_placement_application().prepare_compilation(**args)
 
+    @_meter_write_guarded
     def audio_placement_apply(self, args: Any) -> dict[str, Any]:
         if (
             not isinstance(args, dict)
@@ -2555,6 +2641,7 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_BRIDGE_REQUEST_INVALID", "candidate selection request is invalid", ProductErrorCategory.VALIDATION)
         return review.select_candidate(str(args["candidate_id"]))
 
+    @_meter_write_guarded
     def review_candidate(self, args: Any) -> dict[str, Any]:
         application = self._current_application()
         review = application.review if application is not None else self._review
@@ -2579,6 +2666,7 @@ class Task036ShellBridge:
             raise ProductError("ERR_SHELL_REVIEW_NOT_AVAILABLE", "Cut review is not bound to this Shell", ProductErrorCategory.STATE)
         return review.prepare_plan_approval()
 
+    @_meter_write_guarded
     def approve_edit_plan(self, args: Any) -> dict[str, Any]:
         application = self._current_application()
         review = application.review if application is not None else self._review

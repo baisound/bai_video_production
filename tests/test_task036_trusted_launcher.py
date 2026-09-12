@@ -64,6 +64,111 @@ from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
 
 
+def test_trusted_meter_factory_receives_selected_project_without_starting_capture(tmp_path):
+    path, _ = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    calls = []
+
+    class Meter:
+        def __init__(self):
+            self.closed = 0
+        def close(self):
+            self.closed += 1
+        def open(self):
+            raise AssertionError("launch must not open recording Controller")
+    meter = Meter()
+    def factory(root, project_id):
+        calls.append((root, project_id))
+        return meter
+    result = build_trusted_launch(
+        config, native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(), resolve_adapter=ResolveAdapter(),
+        meter_host_factory=factory)
+    assert calls == [(config.project_root, config.project_id)]
+    assert result.bridge._meter_controller_host is meter
+    assert str(config.project_root) not in repr(result._meter_controller_host)
+    result.close()
+    result.close()
+    assert meter.closed == 1
+
+
+def test_failing_advisory_close_cannot_strand_project_lease(tmp_path):
+    path, _ = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    class FailingMeter:
+        def close(self):
+            raise RuntimeError("advisory cleanup failed")
+    result = build_trusted_launch(
+        config, native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(), resolve_adapter=ResolveAdapter(),
+        meter_host_factory=lambda *_: FailingMeter())
+    result.close()
+    assert result._runtime_lease is None
+    assert result._product_store is None
+
+
+@pytest.mark.parametrize("has_manifest", [False, True])
+def test_failed_shell_construction_releases_resources_despite_advisory_close_error(
+    tmp_path, monkeypatch, has_manifest,
+):
+    from ai_video_production import task036_trusted_launcher as launcher
+
+    path, _ = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    if has_manifest:
+        ProductProjectManifestStore.save(
+            config.project_root,
+            ProductProjectManifest.create(
+                project_id=config.project_id, project_revision=1,
+                product_version="0.23.0",
+                timebase=ProjectTimebase(config.timeline_rate.numerator,
+                                        config.timeline_rate.denominator),
+                child_bindings=(), created_at="2026-09-01T00:00:00.000Z",
+                updated_at="2026-09-01T00:00:00.000Z",
+            ),
+        )
+    closed = []
+    signing = OwnerSigningKeyImportStub()
+    class FailingMeter:
+        def close(self):
+            closed.append("meter")
+            raise RuntimeError("advisory cleanup failed")
+
+    def broken_bridge(*_args, **_kwargs):
+        raise ValueError("shell construction failed")
+
+    for cls, label in ((launcher.SQLiteProductStore, "store"),
+                       (launcher._Task036ProjectRuntimeLease, "lease"),
+                       (launcher._Task036LocalOperationLifetime, "lifetime")):
+        original = cls.close
+        def close(instance, original=original, label=label):
+            closed.append(label)
+            return original(instance)
+        monkeypatch.setattr(cls, "close", close)
+    with monkeypatch.context() as context:
+        context.setattr(launcher, "Task036ShellBridge", broken_bridge)
+        with pytest.raises(ValueError, match="shell construction failed"):
+            build_trusted_launch(
+                config, native_dialog=Task036NativeDialogService(DialogBackend()),
+                asr_provider=AsrProvider(), resolve_adapter=ResolveAdapter(),
+                owner_signing_key_import=signing,
+                meter_host_factory=lambda *_: FailingMeter(),
+                local_planning_inventory_provider=lambda: (),
+            )
+    assert closed.count("meter") == 1
+    assert "store" in closed
+    assert ("lease" if has_manifest else "lifetime") in closed
+    assert signing.close_count == 1
+    # Reopening the same canonical Project proves no failed-launch lease survived.
+    successor = build_trusted_launch(
+        config, native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(), resolve_adapter=ResolveAdapter(),
+        meter_host_factory=lambda *_: None,
+        local_planning_inventory_provider=lambda: (),
+    )
+    successor.close()
+
+
 class DialogBackend:
     def choose_open_media(self):
         return None

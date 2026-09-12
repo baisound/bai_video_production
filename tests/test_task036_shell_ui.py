@@ -20,6 +20,171 @@ from ai_video_production.errors import ProductError, ProductErrorCategory
 from ai_video_production.task036_shell_ui import HTML, Task036ShellBridge
 
 
+def test_recording_meter_uses_existing_additive_extension_boundary():
+    from html.parser import HTMLParser
+    class MeterMarkup(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.inside = False
+            self.depth = 0
+            self.ids = set()
+        def handle_starttag(self, tag, attrs):
+            values = dict(attrs)
+            if values.get("data-contract-extension") == "TASK-048":
+                assert not self.inside
+                self.inside = True
+                self.depth = 1
+                return
+            if self.inside:
+                self.depth += 1
+                if "id" in values:
+                    self.ids.add(values["id"])
+        def handle_endtag(self, tag):
+            if self.inside:
+                self.depth -= 1
+                if self.depth == 0:
+                    self.inside = False
+    parser = MeterMarkup()
+    parser.feed(HTML)
+    assert parser.ids == {"openRecordingMeterButton", "recordingMeterStatus"}
+    assert parser.inside is False
+
+
+def test_recording_meter_javascript_uses_typed_empty_requests_and_safe_text():
+    import json
+    import re
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("Node.js required for exact JavaScript behavior")
+    lines = []
+    for name in ("refreshRecordingMeter", "openRecordingMeter", "pollRecordingMeter"):
+        matched = re.search(r"async function " + name + r"\(\)\{[^\r\n]+", HTML)
+        assert matched
+        lines.append(matched.group(0))
+    script = r"""
+const assert=require('node:assert/strict');
+const calls=[], scheduled=[];
+const button={disabled:true, attributes:{}, setAttribute(k,v){this.attributes[k]=v},removeAttribute(k){delete this.attributes[k]}};
+const status={textContent:''};
+const $=id=>id==='openRecordingMeterButton'?button:status;
+let available=true,currentPage='audio',inFlight=false;
+const window={pywebview:{},setTimeout:(fn,delay)=>scheduled.push([fn,delay])};
+async function call(name,args){
+  assert.deepEqual(args,{});
+  calls.push(name);
+  if(name==='recording_meter_snapshot')return {can_open:available,message:'<b>literal, not HTML</b>'};
+  assert.equal(name,'open_recording_meter');
+  assert.equal(button.disabled,true);
+  assert.equal(button.attributes['aria-busy'],'true');
+  available=false;
+  return {status:'OPENING'};
+}
+""" + "\n".join(lines) + r"""
+(async()=>{
+ await refreshRecordingMeter();
+ assert.equal(button.disabled,false);
+ assert.equal(status.textContent,'<b>literal, not HTML</b>');
+ await openRecordingMeter();
+ assert.equal(button.disabled,true);
+ assert.equal(button.attributes['aria-busy'],undefined);
+ assert.deepEqual(calls,['recording_meter_snapshot','open_recording_meter','recording_meter_snapshot']);
+ currentPage='edit';await pollRecordingMeter();
+ assert.equal(calls.length,3);
+ assert.equal(scheduled.length,1);
+ assert.equal(scheduled[0][1],500);
+ currentPage='audio';await pollRecordingMeter();
+ assert.equal(calls.length,4);
+ console.log('METER_JS_PASS');
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+    result = subprocess.run([node, "-e", script], capture_output=True, text=True, timeout=110)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "METER_JS_PASS"
+
+
+def test_canonical_write_endpoints_all_have_meter_invalidation_guard():
+    import ast
+    from pathlib import Path
+    path = Path(__file__).parents[1] / 'src/ai_video_production/task036_shell_ui.py'
+    tree = ast.parse(path.read_text(encoding='utf-8'))
+    bridge = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Task036ShellBridge')
+    actual = {node.name for node in bridge.body if isinstance(node, ast.FunctionDef)
+              and any(isinstance(item, ast.Name) and item.id == '_meter_write_guarded' for item in node.decorator_list)}
+    expected = ["interactive_timeline_apply_edit","visual_asset_placement_apply","visual_asset_placement_recover","export_queue_apply_dispatch","export_queue_cancel","export_queue_reconcile","choose_and_ingest_media","run_local_transcription","recover_local_transcription","generate_speech_cues","apply_speech_cue_decision","create_runtime_subtitle_workspace","generate_runtime_cut_candidates","compile_resolve_assembly","apply_resolve_assembly","execute_native_render","bind_runtime_render_qa","create_editor_handoff","choose_project_folder","production_register_candidate","production_mark_ready_for_audit","production_apply_lock","audit_apply_human_decision","audit_apply_recovery","planning_generation_apply","planning_apply_revision","planning_apply_scene_revision","planning_apply_scene_finalization","planning_approve_go","planning_apply_install_plan","generation_safety_apply_review","continuity_apply_edge","continuity_inspect","continuity_apply_soft_approval","continuity_propagate_stale","continuity_apply_recovery","prompt_evidence_apply_prompt","prompt_evidence_apply_attempt","prompt_evidence_apply_regeneration","prompt_evidence_apply_recovery","final_review_apply","final_review_export_apply","generation_queue_apply","generation_execution_apply","generation_execution_recover","generation_output_adoption_apply","generation_output_adoption_recover","audio_workspace_apply_placement","audio_workspace_apply_decision","audio_placement_apply","review_candidate","approve_edit_plan"]
+    assert actual == set(expected)
+
+
+class _MeterHost:
+    def __init__(self):
+        self.events = []
+
+    def snapshot(self):
+        self.events.append("snapshot")
+        return {"status": "AVAILABLE", "quality_pass": False}
+
+    def open(self):
+        self.events.append("open")
+        return {"status": "OPENING", "capture_started": False}
+
+    @contextmanager
+    def project_write(self):
+        self.events.append("invalidate")
+        try:
+            yield
+        finally:
+            self.events.append("write-finished")
+
+
+def test_recording_meter_bridge_has_only_two_empty_request_endpoints():
+    service = ShellApplicationService(product_version="0.23.0")
+    meter = _MeterHost()
+    bridge = Task036ShellBridge(service, meter_controller_host=meter)
+    assert bridge.recording_meter_snapshot({})["quality_pass"] is False
+    assert bridge.open_recording_meter({})["capture_started"] is False
+    assert meter.events == ["snapshot", "open"]
+    for method in (bridge.recording_meter_snapshot, bridge.open_recording_meter):
+        for value in (None, [], "", True, {"path": "private"}, {"capture": True}):
+            with pytest.raises(ProductError):
+                method(value)
+    assert meter.events == ["snapshot", "open"]
+    assert not hasattr(bridge, "meter_controller_host")
+
+
+def test_recording_meter_unavailable_does_not_create_runtime_or_claim_capture():
+    bridge = Task036ShellBridge(ShellApplicationService(product_version="0.23.0"))
+    assert bridge.open_recording_meter({}) == bridge.recording_meter_snapshot({})
+    assert bridge.open_recording_meter({})["can_open"] is False
+
+
+def test_project_bridge_write_is_guarded_before_mutation_and_even_on_failure():
+    service = ShellApplicationService(product_version="0.23.0")
+    service.open_project_context(project_id="meter-project", display_name="Meter")
+    meter = _MeterHost()
+    class Dialog:
+        def choose_project_folder(self):
+            assert meter.events[-1] == "invalidate"
+            class Result:
+                def to_ui_dict(self):
+                    return {"cancelled": True}
+            return Result()
+    bridge = Task036ShellBridge(service, meter_controller_host=meter, native_dialog=Dialog())
+    bridge.choose_project_folder({})
+    assert meter.events == ["invalidate", "write-finished"]
+    with pytest.raises(ProductError):
+        bridge.choose_project_folder({"root": "FORGED"})
+    assert meter.events == ["invalidate", "write-finished"] * 2
+
+
+def test_recording_meter_ui_is_additive_readonly_and_uses_text_not_payload_html():
+    assert "OBS録音チェック" in HTML
+    assert "open_recording_meter" in HTML
+    assert "recording_meter_snapshot" in HTML
+    assert "適正判定 未確定" in HTML
+    assert "録音開始" in HTML
+
+
 def test_ui_is_professional_nle_layout_not_chat_first():
     assert "TIMELINE" not in HTML  # track labels are Japanese/product-specific, not a placeholder title
     assert "文字起こし / カット候補" in HTML

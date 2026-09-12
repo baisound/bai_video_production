@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
@@ -13,17 +14,1063 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Win32.SafeHandles;
+
+// C1B actual Windows binding. The frozen C1A launcher owns admission order.
+internal static class BaiMeterWin32
+{
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct FileTime { internal uint Low, High; }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct FileInfo
+    {
+        internal uint Attributes; internal FileTime Creation, Access, Write;
+        internal uint Volume, SizeHigh, SizeLow, Links, IndexHigh, IndexLow;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct FileIdInfo
+    {
+        internal ulong Volume;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] internal byte[] Id;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct SecurityAttributes { internal int Length; internal IntPtr Descriptor; internal int Inherit; }
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    internal struct StartupInfo
+    {
+        internal uint Cb; internal string Reserved, Desktop, Title;
+        internal uint X, Y, Cx, Cy, CharsX, CharsY, Fill, Flags;
+        internal ushort Show, ReservedSize; internal IntPtr Reserved2, Stdin, Stdout, Stderr;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct StartupInfoEx { internal StartupInfo Info; internal IntPtr Attributes; }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ProcessInformation { internal IntPtr Process, Thread; internal uint Pid, Tid; }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct JobBasic
+    {
+        internal long ProcessTime, JobTime; internal uint Flags;
+        internal UIntPtr MinWorkingSet, MaxWorkingSet; internal uint ActiveLimit;
+        internal UIntPtr Affinity; internal uint Priority, Scheduling;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct IoCounters { internal ulong ReadOps, WriteOps, OtherOps, ReadBytes, WriteBytes, OtherBytes; }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct JobExtended
+    {
+        internal JobBasic Basic; internal IoCounters Io;
+        internal UIntPtr ProcessMemory, JobMemory, PeakProcessMemory, PeakJobMemory;
+    }
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern IntPtr CreateFileW(string path, uint access, uint share, IntPtr security, uint creation, uint flags, IntPtr template);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GetFileInformationByHandle(IntPtr file, out FileInfo info);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GetFileInformationByHandleEx(IntPtr file, int kind, out FileIdInfo info, uint size);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern uint GetFinalPathNameByHandleW(IntPtr file, StringBuilder path, uint size, uint flags);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool SetFilePointerEx(IntPtr file, long offset, IntPtr resulting, uint origin);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool SetHandleInformation(IntPtr handle, uint mask, uint flags);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool CloseHandle(IntPtr handle);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool CreatePipe(out IntPtr reader, out IntPtr writer, ref SecurityAttributes security, uint size);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool InitializeProcThreadAttributeList(IntPtr list, int count, uint flags, ref UIntPtr size);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool UpdateProcThreadAttribute(IntPtr list, uint flags, UIntPtr attribute, IntPtr value, UIntPtr size, IntPtr previous, IntPtr resultSize);
+    [DllImport("kernel32.dll")]
+    internal static extern void DeleteProcThreadAttributeList(IntPtr list);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool CreateProcessW(string image, StringBuilder command, IntPtr processSecurity, IntPtr threadSecurity,
+        bool inherit, uint flags, IntPtr environment, string cwd, ref StartupInfoEx startup, out ProcessInformation result);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern uint GetProcessId(IntPtr process);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool GetProcessTimes(IntPtr process, out FileTime created, out FileTime exited, out FileTime kernel, out FileTime user);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool QueryFullProcessImageNameW(IntPtr process, uint flags, StringBuilder image, ref uint size);
+    [DllImport("kernel32.dll")]
+    internal static extern IntPtr GetCurrentProcess();
+    [DllImport("advapi32.dll", SetLastError = true)]
+    internal static extern bool OpenProcessToken(IntPtr process, uint access, out IntPtr token);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    internal static extern bool GetTokenInformation(IntPtr token, int kind, IntPtr data, uint size, out uint needed);
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool ConvertSidToStringSidW(IntPtr sid, out IntPtr text);
+    [DllImport("kernel32.dll")]
+    internal static extern IntPtr LocalFree(IntPtr value);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern bool CreateDirectoryW(string path, IntPtr security);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    internal static extern uint GetWindowsDirectoryW(StringBuilder path, uint size);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    internal static extern IntPtr CreateJobObjectW(IntPtr security, string name);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool SetInformationJobObject(IntPtr job, int kind, ref JobExtended limits, uint size);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern uint ResumeThread(IntPtr thread);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool TerminateProcess(IntPtr process, uint code);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern uint WaitForSingleObject(IntPtr process, uint milliseconds);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern IntPtr GetStdHandle(int which);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern uint GetFileType(IntPtr handle);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool PeekNamedPipe(IntPtr pipe, IntPtr data, uint size, IntPtr read, out uint available, IntPtr left);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    internal static extern bool ReadFile(IntPtr pipe, byte[] data, uint size, out uint count, IntPtr overlapped);
+}
+
+internal sealed class BaiMeterFilePin
+{
+    internal IntPtr Handle; internal string Path; internal ulong Volume;
+    internal byte[] FileId, Digest; internal bool Directory;
+}
+internal sealed class BaiMeterPinLease : IDisposable
+{
+    private readonly Func<IntPtr, bool> closeHandle;
+    internal BaiMeterPinLease(Func<IntPtr, bool> closeHandle) { this.closeHandle = closeHandle; }
+    internal readonly List<BaiMeterFilePin> Items = new List<BaiMeterFilePin>();
+    public void Dispose()
+    {
+        foreach (BaiMeterFilePin item in Items) {
+            try { if (item.Handle != IntPtr.Zero && closeHandle(item.Handle)) item.Handle = IntPtr.Zero; }
+            catch (Exception) { } // Attempt every retained pin; keep failed identities.
+        }
+        BaiMeterProtocol.Require(Items.All(x => x.Handle == IntPtr.Zero));
+    }
+}
+
+#if !BVP_METER_PACKAGED
+// Standalone legacy Controller still records. Only managed advisory is unavailable.
+internal static class BaiMeterBuildIdentity
+{
+    internal static readonly string[] Files = new string[0];
+    internal static readonly string[] Digests = new string[0];
+}
+#endif
+
+// Injectable native effects for concrete partial-success/cleanup fault contracts.
+// The packaged path uses only these Win32 calls; self-tests provide inert effects.
+internal class BaiMeterNativeEffects
+{
+    internal virtual bool CloseHandle(IntPtr handle) { return BaiMeterWin32.CloseHandle(handle); }
+    internal virtual bool Terminate(IntPtr process) { return BaiMeterWin32.TerminateProcess(process, 97); }
+    internal virtual uint Wait(IntPtr process, uint milliseconds) { return BaiMeterWin32.WaitForSingleObject(process, milliseconds); }
+    internal virtual void DeleteAttributes(IntPtr value) { BaiMeterWin32.DeleteProcThreadAttributeList(value); }
+    internal virtual void FreeAllocation(IntPtr value) { Marshal.FreeHGlobal(value); }
+    internal virtual string WindowsDirectory()
+    {
+        var windows = new StringBuilder(32768);
+        uint count = BaiMeterWin32.GetWindowsDirectoryW(windows, (uint)windows.Capacity);
+        BaiMeterProtocol.Require(count > 0 && count < windows.Capacity); return windows.ToString();
+    }
+    internal virtual bool Create(string application, uint flags, IntPtr environment, string runtimeRoot,
+        ref BaiMeterWin32.StartupInfoEx startup, out BaiMeterWin32.ProcessInformation result)
+    {
+        return BaiMeterWin32.CreateProcessW(application,
+            new StringBuilder("\"" + application + "\" --bvp-meter-worker-v1"),
+            IntPtr.Zero, IntPtr.Zero, true, flags, environment, runtimeRoot, ref startup, out result);
+    }
+    internal virtual void QueueCleanup(Action action)
+    {
+        var thread = new Thread(delegate() { action(); });
+        thread.IsBackground = true; thread.Name = "bvp-c1-owned-cleanup"; thread.Start();
+    }
+}
+
+internal sealed class BaiMeterNativeWindows : IBaiMeterWindowsOps
+{
+    private readonly Func<bool> current;
+    private readonly BaiMeterNativeEffects effects;
+    internal BaiMeterNativeWindows(Func<bool> current) : this(current, new BaiMeterNativeEffects()) { }
+    internal BaiMeterNativeWindows(Func<bool> current, BaiMeterNativeEffects effects)
+    { this.current = current; this.effects = effects; pins = new BaiMeterPinLease(effects.CloseHandle); }
+    private readonly HashSet<IntPtr> handles = new HashSet<IntPtr>();
+    private readonly BaiMeterPinLease pins;
+    private IntPtr parentInput, parentOutput, parentError, childInput, childOutput, childError;
+    private IntPtr attributes, inheritedArray, job;
+    private bool attributeInitialized;
+    private BaiMeterProcessIdentity ownedChild;
+    private string root;
+    private int cleanupStarted;
+    private bool childExited, returnedProcessClosed, returnedThreadClosed, graceAttempted;
+    private volatile string cleanupState = "IDLE";
+    private static readonly object pendingGate = new object();
+    private static readonly HashSet<BaiMeterNativeWindows> pendingCleanup = new HashSet<BaiMeterNativeWindows>();
+
+    private static bool ValidHandle(IntPtr handle) { return handle.ToInt64() > 0; }
+    private IntPtr Own(IntPtr handle)
+    {
+        BaiMeterProtocol.Require(ValidHandle(handle) && handles.Add(handle));
+        return handle;
+    }
+    private void CloseOwned(IntPtr handle)
+    {
+        if (handle != IntPtr.Zero && handles.Contains(handle)) {
+            BaiMeterProtocol.Require(effects.CloseHandle(handle)); handles.Remove(handle);
+            MarkReturnedClosed(handle);
+        }
+    }
+    private void MarkReturnedClosed(IntPtr handle)
+    {
+        if (ownedChild == null) return;
+        if (handle == ownedChild.Process) returnedProcessClosed = true;
+        if (handle == ownedChild.Thread) returnedThreadClosed = true;
+    }
+    private static string FinalPath(IntPtr handle, out BaiMeterWin32.FileIdInfo identity, out uint attributes)
+    {
+        var path = new StringBuilder(32768);
+        uint count = BaiMeterWin32.GetFinalPathNameByHandleW(handle, path, (uint)path.Capacity, 0);
+        BaiMeterWin32.FileInfo info = default(BaiMeterWin32.FileInfo);
+        identity = default(BaiMeterWin32.FileIdInfo);
+        BaiMeterProtocol.Require(count > 0 && count < path.Capacity
+            && BaiMeterWin32.GetFileInformationByHandle(handle, out info)
+            && BaiMeterWin32.GetFileInformationByHandleEx(handle, 18, out identity,
+                (uint)Marshal.SizeOf(typeof(BaiMeterWin32.FileIdInfo))));
+        string value = path.ToString();
+        BaiMeterProtocol.Require(value.StartsWith(@"\\?\", StringComparison.Ordinal)
+            && !value.StartsWith(@"\\?\UNC\", StringComparison.Ordinal));
+        attributes = info.Attributes; return value.Substring(4);
+    }
+    private static byte[] FileHash(IntPtr handle)
+    {
+        BaiMeterProtocol.Require(BaiMeterWin32.SetFilePointerEx(handle, 0, IntPtr.Zero, 0));
+        byte[] digest;
+        using (var stream = new FileStream(new SafeFileHandle(handle, false), FileAccess.Read, 65536, false))
+        using (var sha = SHA256.Create()) digest = sha.ComputeHash(stream);
+        BaiMeterProtocol.Require(BaiMeterWin32.SetFilePointerEx(handle, 0, IntPtr.Zero, 0));
+        return digest;
+    }
+    private BaiMeterFilePin Pin(string path, bool directory, byte[] expected)
+    {
+        IntPtr handle = BaiMeterWin32.CreateFileW(path, directory ? 0x80U : 0x80000000U,
+            directory ? 3U : 1U, IntPtr.Zero, 3, 0x00200000U | (directory ? 0x02000000U : 0), IntPtr.Zero);
+        BaiMeterProtocol.Require(handle != IntPtr.Zero && handle != new IntPtr(-1));
+        var pin = new BaiMeterFilePin { Handle = handle, Path = path, Directory = directory, Digest = expected };
+        pins.Items.Add(pin);
+        BaiMeterProtocol.Require(BaiMeterWin32.SetHandleInformation(handle, 1, 0));
+        BaiMeterWin32.FileIdInfo identity; uint attributes;
+        string final = FinalPath(handle, out identity, out attributes);
+        BaiMeterProtocol.Require(final == path && (attributes & 0x400) == 0
+            && ((attributes & 0x10) != 0) == directory);
+        pin.Volume = identity.Volume; pin.FileId = identity.Id;
+        if (!directory) BaiMeterProtocol.Require(BaiMeterProtocol.Equal(FileHash(handle), expected));
+        return pin;
+    }
+    private void PinAncestors(string path)
+    {
+        var directories = new List<string>();
+        string cursor = path;
+        while (cursor != null) {
+            directories.Add(cursor);
+            var parent = Directory.GetParent(cursor); cursor = parent == null ? null : parent.FullName;
+        }
+        directories.Reverse();
+        foreach (string directory in directories)
+            if (!pins.Items.Any(x => x.Directory && x.Path == directory)) Pin(directory, true, null);
+    }
+    private static void SafeContained(string path, string allowed)
+    {
+        BaiMeterProtocol.Require(path != null && path.Length >= 4 && Char.IsLetter(path[0])
+            && path[1] == ':' && path[2] == '\\' && Path.GetFullPath(path) == path
+            && path.StartsWith(allowed.TrimEnd('\\') + "\\", StringComparison.Ordinal)
+            && Directory.GetParent(path) != null
+            && !String.Equals(Directory.GetParent(path).FullName.TrimEnd('\\'),
+                Path.GetPathRoot(path).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase));
+        foreach (string part in path.Substring(3).Split('\\'))
+            BaiMeterProtocol.Require(part.Length > 0 && part != "." && part != ".."
+                && !part.EndsWith(" ", StringComparison.Ordinal) && !part.EndsWith(".", StringComparison.Ordinal)
+                && !part.Any(c => c < 32 || "<>:\"|?*".IndexOf(c) >= 0));
+    }
+    public BaiMeterImageIdentity PinExactBundle()
+    {
+        BaiMeterProtocol.Require(current() && IntPtr.Size == 8 && BaiMeterBuildIdentity.Files.Length > 0
+            && BaiMeterBuildIdentity.Files.Length == BaiMeterBuildIdentity.Digests.Length
+            && BaiMeterBuildIdentity.Files.Length <= 4096);
+        root = Path.GetFullPath(AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\'));
+        string workerRoot = Path.Combine(root, "worker");
+        SafeContained(workerRoot, root); PinAncestors(workerRoot);
+        var admitted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < BaiMeterBuildIdentity.Files.Length; i++) {
+            string relative = BaiMeterBuildIdentity.Files[i];
+            string file = Path.Combine(root, relative);
+            SafeContained(file, workerRoot);
+            BaiMeterProtocol.Require(admitted.Add(file));
+            PinAncestors(Path.GetDirectoryName(file));
+            Pin(file, false, BaiMeterProtocol.Hex(BaiMeterBuildIdentity.Digests[i]));
+        }
+        var actual = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pending = new Stack<string>(); pending.Push(workerRoot);
+        int entryCount = 0;
+        while (pending.Count > 0) {
+            foreach (string entry in Directory.GetFileSystemEntries(pending.Pop())) {
+                BaiMeterProtocol.Require(++entryCount <= 8192);
+                FileAttributes attributes = File.GetAttributes(entry);
+                BaiMeterProtocol.Require((attributes & FileAttributes.ReparsePoint) == 0);
+                if ((attributes & FileAttributes.Directory) != 0) {
+                    PinAncestors(entry); pending.Push(entry);
+                } else BaiMeterProtocol.Require(actual.Add(entry) && admitted.Contains(entry));
+            }
+        }
+        BaiMeterProtocol.Require(actual.SetEquals(admitted));
+        string image = Path.Combine(workerRoot, "BAI Meter Worker.exe");
+        BaiMeterFilePin imagePin = pins.Items.Single(x => !x.Directory && x.Path == image);
+        return new BaiMeterImageIdentity {
+            CanonicalImage = image, Volume = imagePin.Volume, ImageFileId = imagePin.FileId,
+            ImageSha256 = imagePin.Digest, Pins = pins
+        };
+    }
+    public string CreateContainedUniqueRuntimeRoot()
+    {
+        string rawTemp = Path.GetTempPath();
+        BaiMeterProtocol.Require(rawTemp.Length > 3 && !rawTemp.StartsWith("\\\\", StringComparison.Ordinal));
+        string temp = Path.GetFullPath(rawTemp).TrimEnd('\\');
+        string runtime = Path.Combine(temp, "bvp-task048-c1-worker-" + Guid.NewGuid().ToString("N"));
+        SafeContained(runtime, temp); PinAncestors(temp);
+        BaiMeterProtocol.Require(!Directory.Exists(runtime) && !File.Exists(runtime));
+        BaiMeterProtocol.Require(BaiMeterWin32.CreateDirectoryW(runtime, IntPtr.Zero));
+        Pin(runtime, true, null); return runtime; // Intentional residual, never auto-cleaned.
+    }
+    public void CreatePrivatePipes()
+    {
+        var security = new BaiMeterWin32.SecurityAttributes {
+            Length = Marshal.SizeOf(typeof(BaiMeterWin32.SecurityAttributes)), Inherit = 1
+        };
+        IntPtr read, write;
+        BaiMeterProtocol.Require(BaiMeterWin32.CreatePipe(out read, out write, ref security, 65536));
+        childInput = Own(read); parentInput = Own(write);
+        BaiMeterProtocol.Require(BaiMeterWin32.CreatePipe(out read, out write, ref security, 65536));
+        parentOutput = Own(read); childOutput = Own(write);
+        BaiMeterProtocol.Require(BaiMeterWin32.CreatePipe(out read, out write, ref security, 65536));
+        parentError = Own(read); childError = Own(write);
+        foreach (IntPtr handle in new[] { parentInput, parentOutput, parentError })
+            BaiMeterProtocol.Require(BaiMeterWin32.SetHandleInformation(handle, 1, 0));
+    }
+    public void PrepareHandleList(uint attribute)
+    {
+        BaiMeterProtocol.Require(attribute == BaiMeterSuspendedLauncher.PROC_THREAD_ATTRIBUTE_HANDLE_LIST);
+        UIntPtr size = UIntPtr.Zero;
+        BaiMeterWin32.InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref size);
+        BaiMeterProtocol.Require(size.ToUInt64() > 0 && size.ToUInt64() <= 65536);
+        attributes = Marshal.AllocHGlobal((int)size.ToUInt64());
+        BaiMeterProtocol.Require(BaiMeterWin32.InitializeProcThreadAttributeList(attributes, 1, 0, ref size));
+        attributeInitialized = true;
+        inheritedArray = Marshal.AllocHGlobal(IntPtr.Size * 3);
+        Marshal.Copy(new[] { childInput, childOutput, childError }, 0, inheritedArray, 3);
+        BaiMeterProtocol.Require(BaiMeterWin32.UpdateProcThreadAttribute(attributes, 0, new UIntPtr(attribute),
+            inheritedArray, new UIntPtr((uint)(IntPtr.Size * 3)), IntPtr.Zero, IntPtr.Zero));
+    }
+    public BaiMeterProcessIdentity CreateProcessW(string application, uint flags, string runtimeRoot)
+    {
+        BaiMeterProtocol.Require(current() && ownedChild == null && cleanupStarted == 0);
+        var startup = new BaiMeterWin32.StartupInfoEx();
+        startup.Info.Cb = (uint)Marshal.SizeOf(typeof(BaiMeterWin32.StartupInfoEx));
+        startup.Info.Flags = 0x100;
+        startup.Info.Stdin = childInput; startup.Info.Stdout = childOutput; startup.Info.Stderr = childError;
+        startup.Attributes = attributes;
+        string win = effects.WindowsDirectory();
+        BaiMeterProtocol.Require(System.Text.RegularExpressions.Regex.IsMatch(win, @"\A[A-Z]:\\[A-Za-z0-9 _-]+\z"));
+        string environment = "PYTHONDONTWRITEBYTECODE=1\0PYTHONNOUSERSITE=1\0SystemRoot=" + win
+            + "\0TEMP=" + runtimeRoot + "\0TMP=" + runtimeRoot + "\0WINDIR=" + win + "\0\0";
+        var rawOwner = new BaiMeterProcessIdentity(); // Allocate before the native effect.
+        IntPtr block = Marshal.StringToHGlobalUni(environment);
+        try {
+            BaiMeterWin32.ProcessInformation result;
+            BaiMeterProtocol.Require(effects.Create(application, flags, block, runtimeRoot, ref startup, out result));
+            rawOwner.Process = result.Process; rawOwner.Thread = result.Thread; rawOwner.Pid = result.Pid;
+            ownedChild = rawOwner; // Publish BOTH raw handles before any fallible Own/validation.
+            Own(result.Process); Own(result.Thread);
+            return ownedChild;
+        } finally { Marshal.FreeHGlobal(block); }
+    }
+    private static IntPtr TokenInfo(IntPtr token, int kind)
+    {
+        uint size;
+        BaiMeterWin32.GetTokenInformation(token, kind, IntPtr.Zero, 0, out size);
+        BaiMeterProtocol.Require(size > 0 && size <= 65536);
+        IntPtr buffer = Marshal.AllocHGlobal((int)size);
+        if (!BaiMeterWin32.GetTokenInformation(token, kind, buffer, size, out size)) {
+            Marshal.FreeHGlobal(buffer); throw new BaiMeterProtocolException();
+        }
+        return buffer;
+    }
+    private static void Token(IntPtr process, BaiMeterProcessIdentity result)
+    {
+        IntPtr token;
+        BaiMeterProtocol.Require(BaiMeterWin32.OpenProcessToken(process, 8, out token));
+        try {
+            IntPtr user = TokenInfo(token, 1);
+            try {
+                IntPtr text;
+                BaiMeterProtocol.Require(BaiMeterWin32.ConvertSidToStringSidW(Marshal.ReadIntPtr(user), out text));
+                try { result.Sid = Marshal.PtrToStringUni(text); } finally { BaiMeterWin32.LocalFree(text); }
+            } finally { Marshal.FreeHGlobal(user); }
+            IntPtr session = TokenInfo(token, 12), elevation = IntPtr.Zero;
+            try {
+                elevation = TokenInfo(token, 20);
+                result.Session = unchecked((uint)Marshal.ReadInt32(session));
+                int elevated = Marshal.ReadInt32(elevation);
+                BaiMeterProtocol.Require(elevated == 0 || elevated == 1); result.Elevated = elevated == 1;
+            } finally {
+                Marshal.FreeHGlobal(session); if (elevation != IntPtr.Zero) Marshal.FreeHGlobal(elevation);
+            }
+        } finally { BaiMeterProtocol.Require(BaiMeterWin32.CloseHandle(token)); }
+    }
+    public BaiMeterProcessIdentity ObserveProcess(BaiMeterProcessIdentity receipt)
+    {
+        var result = new BaiMeterProcessIdentity { Process = receipt.Process, Thread = receipt.Thread };
+        result.Pid = BaiMeterWin32.GetProcessId(receipt.Process);
+        BaiMeterWin32.FileTime created, exited, kernel, user;
+        BaiMeterProtocol.Require(BaiMeterWin32.GetProcessTimes(receipt.Process, out created, out exited, out kernel, out user));
+        result.CreationTime = ((long)created.High << 32) | created.Low;
+        var path = new StringBuilder(32768); uint size = (uint)path.Capacity;
+        BaiMeterProtocol.Require(BaiMeterWin32.QueryFullProcessImageNameW(receipt.Process, 0, path, ref size));
+        result.ImagePath = path.ToString();
+        IntPtr file = BaiMeterWin32.CreateFileW(result.ImagePath, 0x80000000, 1, IntPtr.Zero, 3, 0x00200000, IntPtr.Zero);
+        BaiMeterProtocol.Require(file != IntPtr.Zero && file != new IntPtr(-1));
+        try {
+            BaiMeterWin32.FileIdInfo identity; uint attributes;
+            BaiMeterProtocol.Require(FinalPath(file, out identity, out attributes) == result.ImagePath
+                && (attributes & 0x410) == 0);
+            result.ImageVolume = identity.Volume; result.ImageFileId = identity.Id;
+        } finally { BaiMeterProtocol.Require(BaiMeterWin32.CloseHandle(file)); }
+        Token(receipt.Process, result); return result;
+    }
+    public void RevalidatePins(BaiMeterImageIdentity unused)
+    {
+        foreach (BaiMeterFilePin pin in pins.Items) {
+            BaiMeterWin32.FileIdInfo identity; uint attributes;
+            BaiMeterProtocol.Require(FinalPath(pin.Handle, out identity, out attributes) == pin.Path
+                && identity.Volume == pin.Volume && BaiMeterProtocol.Equal(identity.Id, pin.FileId)
+                && (attributes & 0x400) == 0 && ((attributes & 0x10) != 0) == pin.Directory);
+            if (!pin.Directory) BaiMeterProtocol.Require(BaiMeterProtocol.Equal(FileHash(pin.Handle), pin.Digest));
+        }
+    }
+    public void CheckCurrentUserSidSession(BaiMeterProcessIdentity child)
+    {
+        var current = new BaiMeterProcessIdentity(); Token(BaiMeterWin32.GetCurrentProcess(), current);
+        BaiMeterProtocol.Require(!current.Elevated && !child.Elevated && child.Sid == current.Sid && child.Session == current.Session);
+    }
+    public void AssignOwnedWorkerJob(BaiMeterProcessIdentity child, uint flags, uint activeProcessLimit)
+    {
+        BaiMeterProtocol.Require(flags == 0x2008 && activeProcessLimit == 1);
+        job = Own(BaiMeterWin32.CreateJobObjectW(IntPtr.Zero, null));
+        BaiMeterProtocol.Require(BaiMeterWin32.SetHandleInformation(job, 1, 0));
+        var limits = new BaiMeterWin32.JobExtended();
+        limits.Basic.Flags = flags; limits.Basic.ActiveLimit = activeProcessLimit;
+        BaiMeterProtocol.Require(BaiMeterWin32.SetInformationJobObject(job, 9, ref limits,
+            (uint)Marshal.SizeOf(typeof(BaiMeterWin32.JobExtended))));
+        BaiMeterProtocol.Require(BaiMeterWin32.AssignProcessToJobObject(job, child.Process));
+    }
+    public uint ResumeThread(IntPtr thread)
+    { BaiMeterProtocol.Require(current()); return BaiMeterWin32.ResumeThread(thread); }
+    public void CloseParentCopiesOfChildPipeEndsAndAttributes()
+    {
+        bool complete = TryAction(() => CloseOwned(childInput));
+        complete = TryAction(() => CloseOwned(childOutput)) & complete;
+        complete = TryAction(() => CloseOwned(childError)) & complete;
+        if (attributeInitialized)
+            complete = TryAction(() => { effects.DeleteAttributes(attributes); attributeInitialized = false; }) & complete;
+        // A failed deletion retains its allocation and handle-array storage.
+        if (!attributeInitialized) {
+            if (attributes != IntPtr.Zero)
+                complete = TryAction(() => { effects.FreeAllocation(attributes); attributes = IntPtr.Zero; }) & complete;
+            if (inheritedArray != IntPtr.Zero)
+                complete = TryAction(() => { effects.FreeAllocation(inheritedArray); inheritedArray = IntPtr.Zero; }) & complete;
+        }
+        BaiMeterProtocol.Require(complete);
+    }
+    public void WritePrivateBootstrap(byte[] bytes)
+    {
+        BaiMeterProtocol.Require(current());
+        using (var output = new FileStream(new SafeFileHandle(parentInput, false), FileAccess.Write, 4096, false)) {
+            output.Write(bytes, 0, bytes.Length); output.Flush();
+        }
+    }
+    public IBaiMeterOwnedWorker CompleteOwnedWorker(BaiMeterProcessIdentity child, BaiMeterImageIdentity image, string runtimeRoot, byte[] bootstrapHash)
+    {
+        CloseOwned(child.Thread);
+        return new BaiMeterNativeOwnedWorker(this, parentOutput, parentInput, parentError, bootstrapHash);
+    }
+    private void FinishCleanup()
+    {
+        bool complete = true;
+        foreach (IntPtr handle in handles.ToArray()) complete = TryAction(() => CloseOwned(handle)) & complete;
+        complete = TryAction(() => CloseReturned(false)) & complete;
+        complete = TryAction(() => CloseReturned(true)) & complete;
+        complete = TryAction(pins.Dispose) & complete;
+        BaiMeterProtocol.Require(complete);
+    }
+    private void CloseReturned(bool primary)
+    {
+        if (ownedChild == null || (primary ? returnedProcessClosed : returnedThreadClosed)) return;
+        IntPtr handle = primary ? ownedChild.Process : ownedChild.Thread;
+        if (!ValidHandle(handle)) {
+            if (primary) returnedProcessClosed = true; else returnedThreadClosed = true;
+            return;
+        }
+        if (handles.Contains(handle)) CloseOwned(handle);
+        else { BaiMeterProtocol.Require(effects.CloseHandle(handle)); MarkReturnedClosed(handle); }
+    }
+    private static bool TryAction(Action action)
+    {
+        try { action(); return true; } catch (Exception) { return false; }
+    }
+    private bool WaitExact()
+    {
+        try { return effects.Wait(ownedChild.Process, 1000) == 0; }
+        catch (Exception) { return false; }
+    }
+    private bool CleanupRound(bool resumeAttempted, bool graceful)
+    {
+        bool auxiliary = TryAction(CloseParentCopiesOfChildPipeEndsAndAttributes);
+        auxiliary = TryAction(() => CloseOwned(parentInput)) & auxiliary;
+        if (ownedChild != null && !childExited) {
+            if (!ValidHandle(ownedChild.Process)) return false;
+            if (!resumeAttempted) {
+                TryAction(() => BaiMeterProtocol.Require(effects.Terminate(ownedChild.Process)));
+            } else {
+                if (graceful && !graceAttempted) { graceAttempted = true; childExited = WaitExact(); }
+                if (!childExited) TryAction(() => CloseOwned(job)); // Only this pure-worker Job.
+            }
+            // Always attempt exact exit observation, even if pipe/attribute/kill failed.
+            if (!childExited) childExited = WaitExact();
+            if (!childExited) return false;
+        }
+        return TryAction(FinishCleanup) & auxiliary;
+    }
+    private void StartCleanup(bool resumeAttempted, bool graceful)
+    {
+        if (Interlocked.Exchange(ref cleanupStarted, 1) != 0) return;
+        cleanupState = "CLEANUP_PENDING";
+        lock (pendingGate) pendingCleanup.Add(this); // Retain exact raw receipt even if scheduling fails.
+        Action attempt = delegate {
+            while (true) {
+                bool complete = false;
+                TryAction(() => { complete = CleanupRound(resumeAttempted, graceful); });
+                if (complete) {
+                    cleanupState = "CLOSED";
+                    lock (pendingGate) pendingCleanup.Remove(this);
+                    return;
+                }
+                Thread.Sleep(100);
+            }
+        };
+        bool finished = false;
+        TryAction(() => { finished = CleanupRound(resumeAttempted, graceful); });
+        if (finished) {
+            cleanupState = "CLOSED"; lock (pendingGate) pendingCleanup.Remove(this); return;
+        }
+        TryAction(() => effects.QueueCleanup(attempt));
+    }
+    public void CleanupOwnedFailure(BaiMeterProcessIdentity child, bool resumeAttempted)
+    {
+        // Only our raw CreateProcess success can authorize a process effect.
+        // The caller's optional copy is not alternate ownership authority.
+        StartCleanup(resumeAttempted, false);
+    }
+    internal void ClosePureWorker()
+    {
+        StartCleanup(true, true);
+    }
+
+    private sealed class CleanupTestEffects : BaiMeterNativeEffects
+    {
+        internal readonly List<string> Calls = new List<string>();
+        internal string Fault;
+        internal bool Exited, HoldExit, Failed;
+        internal Action Queued;
+        internal override string WindowsDirectory() { return @"C:\Windows"; }
+        internal override bool Create(string application, uint flags, IntPtr environment, string runtimeRoot,
+            ref BaiMeterWin32.StartupInfoEx startup, out BaiMeterWin32.ProcessInformation result)
+        {
+            BaiMeterProtocol.Require((flags & BaiMeterSuspendedLauncher.CREATE_SUSPENDED) != 0);
+            Calls.Add("create");
+            result = new BaiMeterWin32.ProcessInformation {
+                Process = new IntPtr(700), Thread = Fault == "thread-invalid" ? IntPtr.Zero : new IntPtr(701), Pid = 77
+            };
+            return true;
+        }
+        private void FailOnce(bool matched)
+        { if (matched && !Failed) { Failed = true; throw new InvalidOperationException("injected cleanup fault"); } }
+        internal override bool CloseHandle(IntPtr handle)
+        {
+            long value = handle.ToInt64(); Calls.Add("close:" + value);
+            FailOnce((Fault == "pipe" || Fault == "resume-pipe") && value == 101
+                || (Fault == "parent-pipe" || Fault == "graceful-parent-pipe") && value == 104);
+            if (value == 109 && !HoldExit) Exited = true;
+            if (value == 700 || value == 701 || value == 120) BaiMeterProtocol.Require(Exited);
+            return true;
+        }
+        internal override bool Terminate(IntPtr process)
+        {
+            BaiMeterProtocol.Require(process == new IntPtr(700)); Calls.Add("terminate");
+            FailOnce(Fault == "terminate-failure");
+            if (!HoldExit) Exited = true;
+            return true;
+        }
+        internal override uint Wait(IntPtr process, uint milliseconds)
+        {
+            BaiMeterProtocol.Require(process == new IntPtr(700) && milliseconds <= 1000);
+            Calls.Add("wait-attempt"); FailOnce(Fault == "wait-failure");
+            Calls.Add(Exited ? "wait:0" : "wait:258"); return Exited ? 0U : 258U;
+        }
+        internal override void DeleteAttributes(IntPtr value)
+        { Calls.Add("attributes"); FailOnce(Fault == "attributes" || Fault == "resume-attributes"); }
+        internal override void FreeAllocation(IntPtr value)
+        { Calls.Add("free"); FailOnce(Fault == "free"); }
+        internal override void QueueCleanup(Action action) { Calls.Add("queue"); Queued = action; }
+    }
+
+    // Inert effects drive the same concrete ownership and cleanup methods. No
+    // real Win32 process/pipe/file, OBS, microphone or thread is created here.
+    internal static void AssertCleanupContracts()
+    {
+        foreach (string fault in new[] { "thread-invalid", "pipe", "parent-pipe", "attributes", "free",
+            "resume-pipe", "resume-attributes", "resume-uncertain", "graceful-parent-pipe",
+            "delayed-exit", "terminate-failure", "wait-failure" }) {
+            var fake = new CleanupTestEffects { Fault = fault, HoldExit = fault == "delayed-exit" };
+            var owner = new BaiMeterNativeWindows(() => true, fake);
+            owner.childInput = owner.Own(new IntPtr(101)); owner.childOutput = owner.Own(new IntPtr(102));
+            owner.childError = owner.Own(new IntPtr(103)); owner.parentInput = owner.Own(new IntPtr(104));
+            owner.parentOutput = owner.Own(new IntPtr(105)); owner.parentError = owner.Own(new IntPtr(106));
+            owner.job = owner.Own(new IntPtr(109));
+            owner.attributes = new IntPtr(800); owner.inheritedArray = new IntPtr(801); owner.attributeInitialized = true;
+            owner.pins.Items.Add(new BaiMeterFilePin { Handle = new IntPtr(120) });
+            bool rejected = false;
+            try { owner.CreateProcessW(@"C:\Users\fixture\worker.exe", 0x80404, @"C:\Users\fixture\runtime"); }
+            catch (BaiMeterProtocolException) { rejected = true; }
+            BaiMeterProtocol.Require(rejected == (fault == "thread-invalid") && owner.ownedChild != null
+                && owner.ownedChild.Process == new IntPtr(700));
+            bool resumed = fault.StartsWith("resume-", StringComparison.Ordinal)
+                || fault.StartsWith("graceful-", StringComparison.Ordinal);
+            if (fault.StartsWith("graceful-", StringComparison.Ordinal)) owner.ClosePureWorker();
+            else owner.CleanupOwnedFailure(null, resumed);
+            BaiMeterProtocol.Require(fake.Calls.Contains("wait-attempt"));
+            BaiMeterProtocol.Require(resumed ? !fake.Calls.Contains("terminate")
+                && fake.Calls.Contains("close:109") : fake.Calls.Contains("terminate"));
+            if (fault == "delayed-exit" || fault == "wait-failure" || fault == "terminate-failure")
+                BaiMeterProtocol.Require(owner.cleanupState == "CLEANUP_PENDING"
+                    && owner.pins.Items[0].Handle == new IntPtr(120)
+                    && !fake.Calls.Contains("close:700"));
+            fake.HoldExit = false; fake.Exited = true;
+            if (fake.Queued != null) fake.Queued();
+            BaiMeterProtocol.Require(owner.cleanupState == "CLOSED" && owner.handles.Count == 0
+                && owner.pins.Items.All(x => x.Handle == IntPtr.Zero));
+            BaiMeterProtocol.Require(fake.Calls.IndexOf("wait:0") < fake.Calls.IndexOf("close:120"));
+            int calls = fake.Calls.Count; owner.ClosePureWorker(); BaiMeterProtocol.Require(fake.Calls.Count == calls);
+        }
+        var foreign = new CleanupTestEffects();
+        var empty = new BaiMeterNativeWindows(() => true, foreign);
+        empty.CleanupOwnedFailure(new BaiMeterProcessIdentity { Process = new IntPtr(999), Thread = new IntPtr(998) }, false);
+        BaiMeterProtocol.Require(!foreign.Calls.Contains("terminate") && !foreign.Calls.Contains("wait-attempt")
+            && empty.cleanupState == "CLOSED");
+    }
+}
+
+internal sealed class BaiMeterNativeOwnedWorker : IBaiMeterOwnedWorker
+{
+    private readonly BaiMeterNativeWindows owner;
+    public Stream Reader { get; private set; }
+    public Stream Writer { get; private set; }
+    public Stream StderrReader { get; private set; }
+    public byte[] BootstrapSha256 { get; private set; }
+    internal BaiMeterNativeOwnedWorker(BaiMeterNativeWindows owner, IntPtr read, IntPtr write, IntPtr error, byte[] digest)
+    {
+        this.owner = owner; BootstrapSha256 = (byte[])digest.Clone();
+        Reader = new FileStream(new SafeFileHandle(read, false), FileAccess.Read, 4096, false);
+        Writer = new FileStream(new SafeFileHandle(write, false), FileAccess.Write, 4096, false);
+        StderrReader = new FileStream(new SafeFileHandle(error, false), FileAccess.Read, 4096, false);
+    }
+    public void ClosePureWorker() { owner.ClosePureWorker(); }
+}
+
+internal sealed class BaiMeterParentInput : Stream
+{
+    private readonly IntPtr handle;
+    private volatile bool cancelled;
+    internal BaiMeterParentInput()
+    {
+        handle = BaiMeterWin32.GetStdHandle(-10);
+        BaiMeterProtocol.Require(handle != IntPtr.Zero && handle != new IntPtr(-1)
+            && BaiMeterWin32.GetFileType(handle) == 3
+            && BaiMeterWin32.SetHandleInformation(handle, 1, 0));
+    }
+    internal void Cancel() { cancelled = true; }
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        BaiMeterProtocol.Require(buffer != null && offset >= 0 && count >= 0 && offset <= buffer.Length - count);
+        if (count == 0) return 0;
+        while (!cancelled) {
+            uint available;
+            if (!BaiMeterWin32.PeekNamedPipe(handle, IntPtr.Zero, 0, IntPtr.Zero, out available, IntPtr.Zero)) {
+                int error = Marshal.GetLastWin32Error();
+                if (error == 109 || error == 232) return 0;
+                throw new BaiMeterProtocolException();
+            }
+            if (available == 0) { Thread.Sleep(10); continue; }
+            byte[] data = new byte[Math.Min((uint)count, available)];
+            uint read;
+            BaiMeterProtocol.Require(BaiMeterWin32.ReadFile(handle, data, (uint)data.Length, out read, IntPtr.Zero));
+            Buffer.BlockCopy(data, 0, buffer, offset, (int)read); return (int)read;
+        }
+        return 0;
+    }
+    public override bool CanRead { get { return true; } }
+    public override bool CanSeek { get { return false; } }
+    public override bool CanWrite { get { return false; } }
+    public override long Length { get { throw new NotSupportedException(); } }
+    public override long Position { get { throw new NotSupportedException(); } set { throw new NotSupportedException(); } }
+    public override void Flush() { }
+    public override long Seek(long value, SeekOrigin origin) { throw new NotSupportedException(); }
+    public override void SetLength(long value) { throw new NotSupportedException(); }
+    public override void Write(byte[] buffer, int offset, int count) { throw new NotSupportedException(); }
+}
+
+// Tap only the first complete READY/BOOTSTRAP_REJECTED frame. Reads still return
+// each fragment immediately so the frozen bridge's partial-frame watchdog works.
+internal sealed class BaiMeterReadyRelay : Stream
+{
+    private readonly Stream inner;
+    private readonly Action<BaiMeterFrame> firstFrame;
+    private readonly MemoryStream pending = new MemoryStream();
+    private bool first = true;
+    internal BaiMeterReadyRelay(Stream inner, Action<BaiMeterFrame> firstFrame)
+    { this.inner = inner; this.firstFrame = firstFrame; }
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        int read = inner.Read(buffer, offset, count);
+        if (first && read > 0) {
+            BaiMeterProtocol.Require(pending.Length + read <= BaiMeterProtocol.MaxFrameBytes);
+            pending.Write(buffer, offset, read);
+            byte[] bytes = pending.ToArray();
+            if (bytes.Length >= 4) {
+                uint size = BaiMeterProtocol.U32(bytes, 0);
+                BaiMeterProtocol.Require(size >= 48 && size <= BaiMeterProtocol.MaxFrameBytes - 4);
+                if (bytes.Length == size + 4) {
+                    firstFrame(BaiMeterProtocol.Parse(bytes)); first = false; pending.Dispose();
+                } else BaiMeterProtocol.Require(bytes.Length < size + 4);
+            }
+        }
+        return read;
+    }
+    public override bool CanRead { get { return true; } }
+    public override bool CanSeek { get { return false; } }
+    public override bool CanWrite { get { return false; } }
+    public override long Length { get { throw new NotSupportedException(); } }
+    public override long Position { get { throw new NotSupportedException(); } set { throw new NotSupportedException(); } }
+    public override void Flush() { }
+    public override long Seek(long value, SeekOrigin origin) { throw new NotSupportedException(); }
+    public override void SetLength(long value) { throw new NotSupportedException(); }
+    public override void Write(byte[] buffer, int offset, int count) { throw new NotSupportedException(); }
+}
+internal sealed class BaiMeterRelayedWorker : IBaiMeterOwnedWorker
+{
+    private readonly IBaiMeterOwnedWorker owned;
+    public Stream Reader { get; private set; }
+    public Stream Writer { get { return owned.Writer; } }
+    public Stream StderrReader { get { return owned.StderrReader; } }
+    public byte[] BootstrapSha256 { get { return owned.BootstrapSha256; } }
+    internal BaiMeterRelayedWorker(IBaiMeterOwnedWorker owned, Action<BaiMeterFrame> ready)
+    { this.owned = owned; Reader = new BaiMeterReadyRelay(owned.Reader, ready); }
+    public void ClosePureWorker() { owned.ClosePureWorker(); }
+}
+
+internal static class BaiMeterScalarWindow
+{
+    private static void Metric(BinaryWriter writer, double amplitude, long samples)
+    {
+        byte state; double db = 0;
+        if (samples <= 0) state = 2;
+        else if (Double.IsNaN(amplitude) || amplitude < 0) state = 4;
+        else if (Double.IsInfinity(amplitude)) state = 3;
+        else if (amplitude == 0) state = 1;
+        else { state = 0; db = 20.0 * Math.Log10(amplitude); }
+        writer.Write(state); writer.Write(db);
+    }
+    internal static byte[] Create(Guid selection, Guid session, Guid consumer, Guid view, ulong sequence,
+        AudioMeterSnapshot window, long samples, long clips, bool paused)
+    {
+        using (var stream = new MemoryStream())
+        using (var writer = new BinaryWriter(stream)) {
+            writer.Write(BaiMeterProtocol.UuidBytes(selection)); writer.Write(BaiMeterProtocol.UuidBytes(session));
+            writer.Write(BaiMeterProtocol.UuidBytes(consumer)); writer.Write(BaiMeterProtocol.UuidBytes(view));
+            writer.Write(sequence); writer.Write((byte)1); writer.Write((byte)(paused ? 1 : 0));
+            writer.Write(BaiMeterProtocol.LegacyLossUnknown); writer.Write((byte)0);
+            bool windowValid = new[] { window.Packet.SampleCount, window.Packet.NonFiniteSampleCount,
+                window.Packet.ClipSampleCount }.All(x => x >= 0 && (ulong)x <= BaiMeterProtocol.MaxInteger)
+                && window.Packet.ClipSampleCount <= window.Packet.SampleCount;
+            writer.Write((byte)(windowValid ? 0 : 1));
+            writer.Write(windowValid ? (ulong)window.Packet.SampleCount : 0UL);
+            writer.Write(windowValid ? (ulong)window.Packet.NonFiniteSampleCount : 0UL);
+            writer.Write(windowValid ? (ulong)window.Packet.ClipSampleCount : 0UL);
+            bool sessionValid = samples >= 0 && clips >= 0 && clips <= samples
+                && (ulong)samples <= BaiMeterProtocol.MaxInteger && (ulong)clips <= BaiMeterProtocol.MaxInteger;
+            writer.Write((byte)(sessionValid ? 0 : 1));
+            writer.Write(sessionValid ? (ulong)samples : 0UL); writer.Write(sessionValid ? (ulong)clips : 0UL);
+            Metric(writer, window.Packet.Peak, window.Packet.SampleCount);
+            Metric(writer, window.Packet.Rms, window.Packet.SampleCount);
+            Metric(writer, window.SessionMaximum, samples);
+            return BaiMeterProtocol.LegacyWindow(stream.ToArray());
+        }
+    }
+}
+
+internal sealed class BaiMeterManagedSession : IDisposable
+{
+    private readonly object gate = new object();
+    private readonly object parentWriteGate = new object();
+    private readonly IBaiMeterClock clock = new BaiMeterMonotonicClock();
+    private BaiMeterRuntimeBridge bridge;
+    private BaiMeterParentInput input;
+    private Stream parentOutput;
+    private BaiMeterFrame bootstrap;
+    private Guid session = Guid.NewGuid(), consumer = Guid.NewGuid(), view = Guid.NewGuid();
+    private ulong windowSequence;
+    private volatile bool closed;
+    private bool started, readyForwarded;
+    private string reason = "NOT_CONNECTED";
+    private long partialSince = -1, startedAt;
+    private System.Threading.Timer deadline;
+
+    internal void Start()
+    {
+        lock (gate) {
+            BaiMeterProtocol.Require(!started); started = true; reason = "OPENING"; startedAt = clock.Now;
+        }
+        deadline = new System.Threading.Timer(CheckDeadline, null, 25, 25);
+        var thread = new Thread(ReadMain); thread.IsBackground = true; thread.Name = "bvp-c1-parent";
+        thread.Start();
+    }
+    private void CheckDeadline(object unused)
+    {
+        bool expired;
+        lock (gate) {
+            long now = clock.Now;
+            expired = !closed && ((bootstrap == null && now - startedAt >= clock.Frequency * 5)
+                || (partialSince >= 0 && now - partialSince >= clock.Frequency));
+        }
+        if (expired) Stop("TRANSPORT_TIMEOUT");
+    }
+    private void Partial(bool value) { lock (gate) partialSince = value ? clock.Now : -1; }
+    private void ReadMain()
+    {
+        IBaiMeterOwnedWorker pendingWorker = null;
+        try {
+            input = new BaiMeterParentInput();
+            if (closed) return;
+            IntPtr output = BaiMeterWin32.GetStdHandle(-11);
+            BaiMeterProtocol.Require(output != IntPtr.Zero && output != new IntPtr(-1)
+                && BaiMeterWin32.GetFileType(output) == 3 && BaiMeterWin32.SetHandleInformation(output, 1, 0));
+            // This process owns its inherited parent-link stdout, not a worker handle.
+            parentOutput = new FileStream(new SafeFileHandle(output, true), FileAccess.Write, 4096, false);
+            if (closed) return;
+            byte[] raw = BaiMeterProtocol.Read(input, Partial);
+            BaiMeterFrame initial = BaiMeterProtocol.Parse(raw);
+            BaiMeterProtocol.Require(initial.Type == 1 && initial.Sequence == 1);
+            lock (gate) { if (closed) return; bootstrap = initial; }
+            pendingWorker = BaiMeterSuspendedLauncher.Launch(
+                new BaiMeterNativeWindows(() => !closed), raw);
+            lock (gate) {
+                if (closed) return;
+                bridge = new BaiMeterRuntimeBridge(new BaiMeterRelayedWorker(pendingWorker, ForwardReady), raw, clock);
+                pendingWorker = null; // Bridge now owns all cleanup, including Start failures.
+                bridge.Start();
+            }
+            ulong sequence = 1;
+            while (!closed) {
+                raw = BaiMeterProtocol.Read(input, Partial);
+                if (raw == null) { Stop("PARENT_EXIT"); return; }
+                BaiMeterFrame control = BaiMeterProtocol.Parse(raw);
+                BaiMeterProtocol.Require(control.Sequence == ++sequence
+                    && BaiMeterProtocol.Equal(control.Nonce, initial.Nonce)
+                    && BaiMeterProtocol.Equal(BaiMeterProtocol.Slice(control.Body, 0, 16),
+                        BaiMeterProtocol.Slice(initial.Body, 0, 16)));
+                if (control.Type == 5) { Stop("PARENT_EXIT"); return; }
+                BaiMeterProtocol.Require(control.Type == 4
+                    && (control.Body[64] == 1 || control.Body[64] == 2 || control.Body[64] == 7));
+                Stop("PROJECT_CHANGED"); return;
+            }
+        } catch (Exception) { Stop("BOOTSTRAP_REJECTED"); }
+        finally {
+            if (pendingWorker != null) {
+                IBaiMeterOwnedWorker abandoned = pendingWorker;
+                ThreadPool.QueueUserWorkItem(delegate {
+                    try { abandoned.ClosePureWorker(); } catch (Exception) { }
+                });
+            }
+            if (input != null) input.Cancel();
+            CloseParentOutput();
+        }
+    }
+    private void ForwardReady(BaiMeterFrame result)
+    {
+        BaiMeterFrame request;
+        lock (gate) { if (closed) return; request = bootstrap; BaiMeterProtocol.Require(!readyForwarded); }
+        byte[] body = result.Body;
+        BaiMeterProtocol.Require(result.Type == 3 && result.Sequence == 1
+            && BaiMeterProtocol.Equal(result.Nonce, request.Nonce)
+            && BaiMeterProtocol.U16(body, 2) == 1 && BaiMeterProtocol.U64(body, 4) == 1
+            && BaiMeterProtocol.Equal(BaiMeterProtocol.Slice(body, 12, 32), BaiMeterProtocol.Hash(request.Wire))
+            && BaiMeterProtocol.Equal(BaiMeterProtocol.Slice(body, 44, 16), BaiMeterProtocol.Slice(request.Body, 0, 16)));
+        if (body[0] == 0) {
+            BaiMeterProtocol.Require(BaiMeterProtocol.U64(body, 60) == BaiMeterProtocol.U64(request.Body, 40)
+                && BaiMeterProtocol.Equal(BaiMeterProtocol.Slice(body, 68, 32), BaiMeterProtocol.Slice(request.Body, 48, 32))
+                && BaiMeterProtocol.U64(body, 100) == BaiMeterProtocol.U64(request.Body, 16)
+                && BaiMeterProtocol.Equal(BaiMeterProtocol.Slice(body, 108, 16), BaiMeterProtocol.Slice(request.Body, 24, 16)));
+        } else BaiMeterProtocol.Require(body[0] == 2 && body[1] == 1);
+        lock (parentWriteGate) {
+            if (closed) return;
+            parentOutput.Write(result.Wire, 0, result.Wire.Length); parentOutput.Flush();
+        }
+        lock (gate) readyForwarded = true;
+    }
+    internal void Offer(AudioMeterSnapshot window, long samples, long clips, bool paused)
+    {
+        lock (gate) {
+            if (closed || bridge == null) return;
+            try {
+                bridge.OfferNativeV1(BaiMeterScalarWindow.Create(
+                    BaiMeterProtocol.GuidAt(bootstrap.Body, 0), session, consumer, view,
+                    ++windowSequence, window, samples, clips, paused));
+            } catch (Exception) { Stop("PROTOCOL_FAILURE"); }
+        }
+    }
+    internal void Invalidate(byte why, bool paused)
+    {
+        lock (gate) {
+            if (closed) return;
+            if (why == 8) session = Guid.NewGuid();
+            consumer = Guid.NewGuid(); view = Guid.NewGuid(); windowSequence = 0;
+            if (bridge != null) {
+                try { bridge.Invalidate(session, consumer, view, why, paused); }
+                catch (Exception) { Stop("PROTOCOL_FAILURE"); }
+            }
+        }
+    }
+    internal BaiMeterDisplay Snapshot()
+    {
+        lock (gate) {
+            if (closed || bridge == null) return new BaiMeterDisplay(false, 0, reason);
+            BaiMeterDisplay display = bridge.Snapshot();
+            if (!display.Connected && display.Reason != "NOT_CONNECTED"
+                && display.Reason != "WINDOW_PENDING" && display.Reason != "INVALIDATED") {
+                Stop(display.Reason); return new BaiMeterDisplay(false, 0, reason);
+            }
+            return display;
+        }
+    }
+    private void CloseParentOutput()
+    {
+        lock (parentWriteGate) {
+            Stream output = parentOutput; parentOutput = null;
+            if (output != null) { try { output.Dispose(); } catch (Exception) { } }
+        }
+    }
+    private void Stop(string code)
+    {
+        BaiMeterRuntimeBridge previous;
+        lock (gate) {
+            if (closed) return; closed = true; reason = code; previous = bridge; bridge = null;
+        }
+        if (input != null) input.Cancel();
+        if (previous != null) previous.Dispose();
+        // All pipe closure and worker grace happens off UI/capture/emergency paths.
+        ThreadPool.QueueUserWorkItem(delegate { CloseParentOutput(); });
+        if (deadline != null) deadline.Dispose();
+    }
+    public void Dispose() { Stop("CLOSED"); }
+    internal static string ReasonLabel(string code)
+    {
+        if (code == "NOT_CONNECTED") return "未接続";
+        if (code == "OPENING") return "接続確認中";
+        if (code == "CONNECTED_NOT_CLASSIFIED" || code == "WINDOW_PENDING") return "観測窓を確認中";
+        if (code == "WINDOW_EXPIRED") return "応答期限を超過";
+        if (code == "INVALIDATED" || code == "PROJECT_CHANGED") return "接続条件が変わりました";
+        if (code == "P2_REASON_1") return "表示方針が未選択";
+        if (code == "P2_REASON_14") return "OBS側の欠落情報は未確認";
+        if (code == "P2_REASON_13") return "観測窓に欠落あり";
+        if (code == "P2_REASON_15") return "一時停止中";
+        if (code == "P2_REASON_16") return "今回の入力なし";
+        if (code == "P2_REASON_17") return "選択中の表示方針と照合";
+        if (code.StartsWith("P2_REASON_", StringComparison.Ordinal)) return "方針または観測値を確認できません";
+        if (code == "C1_STATUS_5") return "前の観測窓を処理中";
+        if (code == "BOOTSTRAP_REJECTED") return "Project接続を確認できません";
+        if (code == "PARENT_EXIT" || code == "CLOSED") return "メーター接続を終了";
+        return "メーター接続を確認できません";
+    }
+}
+
+internal static class BaiMeterScalarSelfTest
+{
+    internal static int Run()
+    {
+        try {
+            var selection = Guid.NewGuid(); var session = Guid.NewGuid();
+            var consumer = Guid.NewGuid(); var view = Guid.NewGuid();
+            var packet = new AudioMeterPacket(4, 2, 1, 100.0, 8.0);
+            byte[] value = BaiMeterScalarWindow.Create(selection, session, consumer, view, 1,
+                new AudioMeterSnapshot(packet, 9.0), 100, 3, false);
+            BaiMeterProtocol.Require(value.Length == 145 && value[74] == 2
+                && BaiMeterProtocol.U64(value, 77) == 4 && BaiMeterProtocol.U64(value, 85) == 1
+                && BaiMeterProtocol.U64(value, 93) == 2 && BaiMeterProtocol.U64(value, 102) == 100
+                && BaiMeterProtocol.U64(value, 110) == 3 && BitConverter.ToDouble(value, 119) > 12.0);
+            value = BaiMeterScalarWindow.Create(selection, session, consumer, view, 2,
+                new AudioMeterSnapshot(default(AudioMeterPacket), 9.0), 100, 3, true);
+            BaiMeterProtocol.Require(value[73] == 1 && value[118] == 2 && value[127] == 2
+                && value[136] == 0 && BaiMeterProtocol.U64(value, 110) == 3);
+            var silent = new AudioMeterPacket(4, 0, 0, 0, 0);
+            value = BaiMeterScalarWindow.Create(selection, session, consumer, view, 3,
+                new AudioMeterSnapshot(silent, 0), 4, 0, false);
+            BaiMeterProtocol.Require(value[118] == 1 && value[127] == 1 && value[136] == 1);
+            value = BaiMeterScalarWindow.Create(selection, session, consumer, view, 4,
+                new AudioMeterSnapshot(packet, 9), Int64.MaxValue, 3, false);
+            BaiMeterProtocol.Require(value[101] == 1 && BaiMeterProtocol.U64(value, 102) == 0);
+            BaiMeterProtocol.Require(Marshal.SizeOf(typeof(BaiMeterWin32.StartupInfo)) == 104
+                && Marshal.SizeOf(typeof(BaiMeterWin32.StartupInfoEx)) == 112
+                && Marshal.SizeOf(typeof(BaiMeterWin32.SecurityAttributes)) == 24
+                && Marshal.SizeOf(typeof(BaiMeterWin32.ProcessInformation)) == 24
+                && Marshal.SizeOf(typeof(BaiMeterWin32.FileIdInfo)) == 24
+                && Marshal.SizeOf(typeof(BaiMeterWin32.JobExtended)) == 144);
+            BaiMeterNativeWindows.AssertCleanupContracts();
+            byte[] ready = BaiMeterProtocol.Hex(BaiMeterProtocolSelfTest.Vectors[4].Bytes);
+            int forwarded = 0;
+            using (var raw = new MemoryStream(ready)) {
+                var relay = new BaiMeterReadyRelay(raw, delegate(BaiMeterFrame frame) {
+                    BaiMeterProtocol.Require(BaiMeterProtocol.Equal(frame.Wire, ready)); forwarded++;
+                });
+                byte[] copy = new byte[ready.Length];
+                BaiMeterProtocol.Require(relay.Read(copy, 0, 3) == 3 && forwarded == 0);
+                BaiMeterProtocol.Require(relay.Read(copy, 3, copy.Length - 3) == copy.Length - 3
+                    && forwarded == 1 && BaiMeterProtocol.Equal(copy, ready));
+                BaiMeterProtocol.Require(relay.Read(copy, 0, copy.Length) == 0 && forwarded == 1);
+            }
+            return 0;
+        } catch (Exception) { return 96; }
+    }
+}
 
 internal static class Program
 {
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == "--bvp-meter-protocol-self-test") return BaiMeterProtocolSelfTest.Run();
+        if (args.Length == 1 && args[0] == "--bvp-meter-scalar-self-test") return BaiMeterScalarSelfTest.Run();
         if (args.Any(x => x == "--meter-self-test")) return MeterObservationSelfTest.Run();
         if (args.Any(x => x == "--self-test")) return ControllerSelfTest.Run();
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
-        Application.Run(new CaptureForm(args.Any(x => x == "--acceptance")));
+        bool managed = args.Length == 1 && args[0] == "--bvp-meter-managed-v1";
+        Application.Run(new CaptureForm(args.Any(x => x == "--acceptance"), managed));
         return 0;
     }
 }
@@ -43,6 +1090,9 @@ internal sealed class CaptureForm : Form
     private readonly Label packets = new Label();
     private readonly AudioLevelMeter levelMeter = new AudioLevelMeter();
     private readonly Label levelValues = new Label();
+    private readonly Label meterAdvisory = new Label();
+    private readonly BaiMeterManagedSession meterSession;
+    private readonly System.Windows.Forms.Timer advisoryTimer = new System.Windows.Forms.Timer();
     private readonly Label detail = new Label();
     private readonly Button browse = new Button();
     private readonly Button browseObs = new Button();
@@ -95,9 +1145,10 @@ internal sealed class CaptureForm : Form
     private int obsProcessId;
     private bool obsReused;
 
-    public CaptureForm(bool acceptance)
+    public CaptureForm(bool acceptance, bool managed = false)
     {
         acceptanceMode = acceptance;
+        meterSession = managed ? new BaiMeterManagedSession() : null;
         Text = "BAI 学習データ録音コントローラ";
         TopMost = true;
         MinimumSize = new Size(720, 570);
@@ -115,7 +1166,7 @@ internal sealed class CaptureForm : Form
         status.Height = 70;
 
         var table = new TableLayoutPanel {
-            Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 12,
+            Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 13,
             Padding = new Padding(16), AutoSize = false
         };
         table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
@@ -204,6 +1255,11 @@ internal sealed class CaptureForm : Form
         buttons.Controls.Add(stop);
         table.Controls.Add(buttons, 1, 11);
         table.SetColumnSpan(buttons, 2);
+        meterAdvisory.AutoSize = true;
+        meterAdvisory.MaximumSize = new Size(520, 0);
+        meterAdvisory.Text = BaiMeterDisplay.ScopeLabel + "\n適正判定 未確定 / 未接続";
+        AddRow(table, 12, "判定の状態", meterAdvisory, null);
+        table.SetColumnSpan(meterAdvisory, 2);
 
         Controls.Add(table);
         Controls.Add(status);
@@ -211,6 +1267,12 @@ internal sealed class CaptureForm : Form
         uiTimer.Interval = 250;
         uiTimer.Tick += delegate { RefreshUi(); };
         uiTimer.Start();
+        // Read the advisory between 250ms scalar offers; offering a new window
+        // invalidates the previous band, so these two refresh paths are separate.
+        advisoryTimer.Interval = 25;
+        advisoryTimer.Tick += delegate { RefreshMeterAdvisory(); };
+        advisoryTimer.Start();
+        if (meterSession != null) meterSession.Start();
         FormClosing += OnClosing;
         RefreshUi();
     }
@@ -293,6 +1355,7 @@ internal sealed class CaptureForm : Form
         gainReceiptPath = Path.Combine(root, "bai-gain-check-" + stamp + ".receipt.json");
         terminalReason = null;
         completedGainSummary = null;
+        if (meterSession != null) meterSession.Invalidate(8, false);
         packetCount = payloadBytes = sequenceGaps = hmacFailures = reconnectCount = pauseCount =
             pauseBoundarySkippedSequences = receivedBytes = 0;
         lock (metricLock) {
@@ -549,6 +1612,7 @@ internal sealed class CaptureForm : Form
                 try { if (currentPipe != null) currentPipe.Dispose(); } catch { }
                 if (Object.ReferenceEquals(pipe, currentPipe)) pipe = null;
                 if (wasConnected && !paused && !token.IsCancellationRequested && !terminalStopRequested) {
+                    if (meterSession != null) meterSession.Invalidate(6, false);
                     Interlocked.Increment(ref reconnectCount);
                 }
             }
@@ -572,6 +1636,7 @@ internal sealed class CaptureForm : Form
         if (!recording || paused) return;
         if (!ValidateSameObsProcess("PAUSE")) return;
         paused = true;
+        if (meterSession != null) meterSession.Invalidate(4, true);
         sequenceReanchorPending = true;
         pauseStartedUtc = DateTime.UtcNow;
         Interlocked.Increment(ref pauseCount);
@@ -590,6 +1655,7 @@ internal sealed class CaptureForm : Form
         if (!ValidateSameObsProcess("RESUME")) return;
         completedPauseDuration += DateTime.UtcNow - pauseStartedUtc;
         paused = false;
+        if (meterSession != null) meterSession.Invalidate(5, false);
         resumeGate.Set();
         pause.Enabled = true;
         resume.Enabled = false;
@@ -627,6 +1693,7 @@ internal sealed class CaptureForm : Form
     private void BeginStop(string reason)
     {
         if (Interlocked.Exchange(ref stopStarted, 1) != 0) return;
+        if (meterSession != null) meterSession.Invalidate(6, false);
         bool completedGainMeasurement = gainMeasurement;
         terminalReason = reason;
         if (paused) completedPauseDuration += DateTime.UtcNow - pauseStartedUtc;
@@ -825,6 +1892,7 @@ internal sealed class CaptureForm : Form
             clips = clipSampleCount;
             samples = metricSampleCount;
         }
+        if (meterSession != null) meterSession.Offer(window, samples, clips, paused);
         double livePeak = window.Packet.Peak;
         double liveRms = window.Packet.Rms;
         double livePeakDb = livePeak > 0.0 ? 20.0 * Math.Log10(livePeak) : -60.0;
@@ -860,6 +1928,16 @@ internal sealed class CaptureForm : Form
     private void OnClosing(object sender, FormClosingEventArgs e)
     {
         if (recording) BeginStop("CONTROLLER_WINDOW_CLOSED");
+        advisoryTimer.Stop();
+        if (meterSession != null) meterSession.Dispose();
+    }
+
+    private void RefreshMeterAdvisory()
+    {
+        BaiMeterDisplay display = meterSession == null
+            ? new BaiMeterDisplay(false, 0, "NOT_CONNECTED") : meterSession.Snapshot();
+        meterAdvisory.Text = BaiMeterDisplay.ScopeLabel + "\n" + display.Label + " / "
+            + BaiMeterManagedSession.ReasonLabel(display.Reason);
     }
 }
 

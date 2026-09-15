@@ -9,6 +9,7 @@ param(
   [switch]$PrepareShellBuild
 )
 $ErrorActionPreference = 'Stop'
+Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 $pluginRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $repositoryRoot = (Resolve-Path (Join-Path $pluginRoot '..\..')).Path
 

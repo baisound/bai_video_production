@@ -72,6 +72,7 @@ const
   BAI_FILE_FLAG_OPEN_REPARSE_POINT = $00200000;
   BAI_FILE_FLAG_BACKUP_SEMANTICS = $02000000;
   BAI_INVALID_HANDLE_VALUE = $FFFFFFFF;
+  BAI_HEX_DIGITS = '0123456789abcdef';
 
 type
   TBaiFileInformation = record
@@ -117,6 +118,18 @@ begin
     ((Attributes and BAI_FILE_ATTRIBUTE_REPARSE_POINT) <> 0);
 end;
 
+function LongWordToFixedHex(Value: LongWord): String;
+var
+  Index: Integer;
+begin
+  Result := '';
+  for Index := 1 to 8 do
+  begin
+    Result := Copy(BAI_HEX_DIGITS, (Value mod 16) + 1, 1) + Result;
+    Value := Value div 16;
+  end;
+end;
+
 function ReadDirectoryIdentity(const Path: String; var Identity: String): Boolean;
 var
   Handle: LongWord;
@@ -136,8 +149,8 @@ begin
       exit;
     if (Info.FileAttributes and BAI_FILE_ATTRIBUTE_DIRECTORY) = 0 then
       exit;
-    Identity := IntToHex(Info.VolumeSerialNumber, 8) + ':' +
-      IntToHex(Info.FileIndexHigh, 8) + IntToHex(Info.FileIndexLow, 8);
+    Identity := LongWordToFixedHex(Info.VolumeSerialNumber) + ':' +
+      LongWordToFixedHex(Info.FileIndexHigh) + LongWordToFixedHex(Info.FileIndexLow);
     Result := True;
   finally
     CloseHandle(Handle);

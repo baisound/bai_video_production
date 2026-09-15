@@ -62,6 +62,7 @@
 
 | TASK-066 | GPU-First Desktop Execution, Packaging and Diagnostics | OWNER_AUTHORIZED_P0_DESIGN_ACCEPTED_IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY_NATIVE_PROOF_PENDING | OWNER_EXPLICIT_GPU_FIRST_ALL_DESKTOP_APPS_2026_08_31 | DEV-4 | GF-E deltas 1-4 accepted; journal-first cross-volume recovery and uninstall preservation are frozen. Delta-4 Critic 0/0/0/0, Judge ACCEPT. TASK-063 post-repair native terminal handoff remains required before GF-E installer mutation. |
 | TASK-086 | Release Metadata / CHANGELOG Policy Simplification | IMPLEMENTED_LOCAL_VALIDATED_COMMIT_READY | OWNER_EXPLICIT_CHANGELOG_POLICY_AND_GITHUB_ACTIONS_CHANGE_2026_09_11 | DEV-3 | Ordinary PRs no longer require or reserve `CHANGELOG.md`; exact Product version changes still require consistent version constants plus the matching release heading. Focused policy and OSS readiness regression is 25 PASS; hosted workflow execution is pending. |
+| TASK-091 | v0.24.0 Windows EXE / Installer Release Closure | OWNER_AUTHORIZED_RELEASE_CANDIDATE | OWNER_EXPLICIT_TAG_ALL_EXE_INSTALLER_RELEASE_2026_09_16 | DEV-4 | Version metadata, full hosted regression, annotated tag, all user-facing/internal Windows EXEs, unified per-user installer, GitHub Release assets and digest read-back are required. Production activation and real private/provider/media effects remain excluded. |
 
 ## Roadmap authority
 

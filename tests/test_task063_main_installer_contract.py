@@ -44,6 +44,11 @@ def test_main_installer_is_per_user_reparse_checked_and_preserves_data() -> None
     assert "BridgeProvisionFailed" in text
     assert "[UninstallDelete]" not in text
     assert "preserves learning data" in text
+    assert "function LongWordToFixedHex(Value: LongWord): String;" in text
+    assert "BAI_HEX_DIGITS = '0123456789abcdef';" in text
+    assert "Value mod 16" in text
+    assert "Value := Value div 16" in text
+    assert "IntToHex" not in text
     assert re.search(r"[A-Za-z]:\\", text) is None
 
 
@@ -55,6 +60,10 @@ def test_build_hash_binds_payload_and_acceptance_is_bounded() -> None:
         "payload_tree_sha256",
         "PayloadTreeSha",
         "Inno Setup compilation failed",
+        "OutputDirectory",
+        "Installer output must be contained by the repository worktree",
+        "Installer output already exists; use a fresh operation directory",
+        '"/O$output"',
     ):
         assert token in build
     for token in (

@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_24_0_RELEASE_CANDIDATE_TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED_P_UX_2E_PENDING_TASK_049_TASK_050_INTEGRATED_NATIVE_RUNTIME_GATES_PRESERVED`
+`V0_24_0_RELEASED_TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED_P_UX_2E_PENDING_TASK_049_TASK_050_INTEGRATED_NATIVE_RUNTIME_GATES_PRESERVED`
 
 ## Purpose
 
@@ -116,12 +116,12 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Separate Voice Route: TASK-046/TASK-047 retain their own exact Locks, authorities and Human gates; P-UX-1C no longer blocks their independently authorized work
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; P-OBS-0 installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may move forward separately, but P-VS-3 production training-material recording and P-VS-4 fine-tuning require P-OBS-1 hosted completion plus exact-path probe PASS, recording Consent, storage encryption and Owner GO
 - TASK-004: `COMPLETED`
-- Package: `0.23.0`
-- Release State: `V0_24_0_RELEASE_CANDIDATE`; exact release PR, annotated Tag, Windows EXE/installer build, GitHub Release and asset digest read-back are pending
-- Development Candidate: `0.24.0`
-- Selected Release Identity: `0.23.0 / v0.23.0 / stable`, explicitly selected by the Owner on 2026-08-30 for the editing-SKILL integration release
-- Completed Release Unit: `TASK-058 / v0.23.0 EDITING SKILL INTEGRATION`; PR #444 passed hosted `9 / 9` and merged at exact release-code main `382ae2aec8ecf83933973eb5c67fa6865b39194b`; annotated Tag object `31899fc40e4078f8a4d1f83b45f269a07d60f5df` dereferences to that commit; Release workflow `33280546212` passed `4709` tests with `17` skips and published six digest-bound assets. Production Deploy and real Resolve GUI runtime remain separate.
-- Current release verification: stable GitHub Release `v0.23.0` is published at `https://github.com/baisound/bai_video_production/releases/tag/v0.23.0`; the single canonical Evidence record is `docs/ai-team/tasks/TASK-058/v0.23.0-editing-skill-integration-release-evidence-2026-08-30.md`.
+- Package: `0.24.0`
+- Release State: `V0_24_0_PUBLISHED`; release PR #552 passed hosted `9 / 9`, annotated Tag, exact-tag Windows EXE/installer build, Release workflow and all nine published artifact digests are verified
+- Development Candidate: `NONE`
+- Selected Release Identity: `0.24.0 / v0.24.0 / stable`, explicitly selected by the Owner on 2026-09-16 for the Windows EXE / installer release
+- Completed Release Unit: `TASK-091 / v0.24.0 WINDOWS EXE / INSTALLER`; PR #552 exact head `2a5d9723e753fa03b2faf9e43910fa2d0b219cc2` passed hosted `9 / 9` and merged at exact release-code main `2bf7a04736ef9d1fddc4c35841352d448c1f8777`; annotated Tag object `d1c716f7a148ff6b83c81c04c2f16606e07c5468` dereferences to that commit; Release workflow `34994846928` passed full pytest, compileall, package build and release gates; the stable Release publishes nine digest-bound artifacts plus their complete `SHA256SUMS`. Installer execution, Production Deploy and real Resolve GUI runtime remain separate.
+- Current release verification: stable GitHub Release `v0.24.0` is published at `https://github.com/baisound/bai_video_production/releases/tag/v0.24.0`; canonical Evidence is `docs/ai-team/tasks/TASK-091/evidence/v0.24.0-windows-release-closure-2026-09-16.md`.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus Owner marker section 2.1 (`DONE / DEV1 NOW / DEV2 NOW / NEXT / FUTURE / GATE`)
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS

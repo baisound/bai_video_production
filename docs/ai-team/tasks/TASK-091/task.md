@@ -1,6 +1,6 @@
 # TASK-091 — v0.24.0 Windows EXE / Installer Release Closure
 
-- Status: `OWNER_AUTHORIZED_RELEASE_CANDIDATE`
+- Status: `COMPLETED`
 - Atomic Unit: `V0-24-0-WINDOWS-RELEASE-R0`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner authority: 2026-09-16 に、Tag作成、全EXEのコンパイル、Release、
@@ -83,3 +83,11 @@ Completion requires exact PR/main/tag/workflow/release identities, green hosted
 checks, successful Windows builds, installer compilation, complete local and
 remote asset digest reconciliation, and a durable Evidence checkpoint. Until
 then this Task remains a release candidate and no release claim is made.
+
+Completed on 2026-09-16. PR #552 passed hosted `9 / 9`, merged as
+`2bf7a04736ef9d1fddc4c35841352d448c1f8777`, and annotated tag `v0.24.0`
+dereferences to that commit. Release workflow `34994846928` passed, all Windows
+build targets and the unified installer were generated from the exact tag, and
+the stable GitHub Release plus all nine artifact digests were read back.
+Installer execution remains `NOT_EXECUTED` because installation is a distinct
+native mutation gate.

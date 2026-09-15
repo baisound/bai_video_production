@@ -11,6 +11,9 @@ ROOT = Path(__file__).parents[1]
 
 def test_windows_build_contract_reuses_native_validated_task036_spec() -> None:
     batch = (ROOT / "build-windows-exe.bat").read_text(encoding="utf-8")
+    controller_build = (
+        ROOT / "native" / "task047_obs_voice_capture" / "scripts" / "build-controller.ps1"
+    ).read_text(encoding="utf-8")
     assert "packaging\\task036_shell.spec" in batch
     assert 'set "TASK048_BUILD_ROOT=%CD%\\builds"' in batch
     assert "--distpath \"%TASK048_BUILD_ROOT%\"" in batch
@@ -23,6 +26,10 @@ def test_windows_build_contract_reuses_native_validated_task036_spec() -> None:
     assert "pip install -e" in batch
     assert "-m pip install" in batch
     assert "call pip" not in batch.lower()
+    assert "Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop" in controller_build
+    assert controller_build.index("Import-Module Microsoft.PowerShell.Utility") < controller_build.index(
+        "Get-FileHash"
+    )
 
 
 def test_fresh_build_keeps_pyinstaller_cache_owned_and_never_cleans_shared_state():

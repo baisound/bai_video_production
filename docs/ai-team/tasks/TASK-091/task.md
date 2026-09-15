@@ -44,6 +44,8 @@ Release-candidate source scope:
 - `src/ai_video_production/__init__.py`
 - `src/ai_video_production/connection_settings_web.py`
 - `src/ai_video_production/subtitle_workspace_web.py`
+- `native/task047_obs_voice_capture/scripts/build-controller.ps1`
+- `tests/test_task042_windows_exe_build_contract.py`
 - `docs/ai-team/current-state.md`
 - `docs/ai-team/task-index.md`
 - `docs/ai-team/tasks/TASK-091/**`

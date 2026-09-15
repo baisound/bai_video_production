@@ -1,17 +1,14 @@
 <#
 .SYNOPSIS
-SRTから本人声のMaster WAVを対話式で生成します。
+コマンド引数で指定したSRTから本人声のMaster WAVを生成します。
 
 .DESCRIPTION
-引数なしで実行すると、SRTと既存voice-dataset（または3～15秒の見本WAV）を
-順番に質問します。manifest作成、生成前チェック、SRT計画、本人声生成を自動実行し、
-最後にmaster-owner-voice.wavの保存先を表示します。
+SRTと既存voice-dataset（または3～15秒の見本WAV）を引数で受け取り、manifest作成、
+生成前チェック、SRT計画、本人声生成を実行します。ファイル選択画面や対話式質問は
+使用しません。
 
 .EXAMPLE
-.\tools\windows\make-owner-voice-wav.ps1
-
-.EXAMPLE
-.\tools\windows\make-owner-voice-wav.ps1 -Srt "E:\BAI_AI\jobs\input.srt" -ReferenceManifest "E:\BAI_AI\private\owner-voice\voice-dataset\dataset\reference-manifest.json"
+.\tools\windows\make-owner-voice-wav.ps1 -Srt "E:\BAI_AI\jobs\input.srt" -ReferenceManifest "E:\BAI_AI\private\owner-voice\voice-dataset\dataset\reference-manifest.json" -ConfirmOwnerApproved
 
 .NOTES
 詳しい説明は docs/user/SRT-OWNER-VOICE-WAV.md を参照してください。
@@ -19,21 +16,21 @@ SRTから本人声のMaster WAVを対話式で生成します。
 #>
 [CmdletBinding()]
 param(
-    [string]$Srt,
+    [Parameter(Mandatory = $true)][string]$Srt,
     [string]$ReferenceManifest,
     [string]$ReferenceWav,
     [string]$ReferenceText,
+    [Parameter(Mandatory = $true)][switch]$ConfirmOwnerApproved,
     [string]$Python,
     [string]$ModelRoot,
-    [string]$JobsRoot
+    [string]$JobsRoot,
+    [string]$ConfigPath
 )
 
 $ErrorActionPreference = 'Stop'
 
-function Resolve-InputFile([string]$Value, [string]$Prompt, [string]$Extension) {
-    while ([string]::IsNullOrWhiteSpace($Value)) {
-        $Value = Read-Host $Prompt
-    }
+function Resolve-InputFile([string]$Value, [string]$Label, [string]$Extension) {
+    if ([string]::IsNullOrWhiteSpace($Value)) { throw "$Label を指定してください。" }
     $Value = $Value.Trim().Trim('"')
     if (-not (Test-Path -LiteralPath $Value -PathType Leaf)) {
         throw "ファイルが見つかりません: $Value"
@@ -53,28 +50,17 @@ function Test-Python([string]$Candidate) {
     return $LASTEXITCODE -eq 0
 }
 
-$Srt = Resolve-InputFile $Srt 'SRTファイルを画面からここへドラッグして Enter' '.srt'
-
-if ([string]::IsNullOrWhiteSpace($ReferenceManifest)) {
-    $defaultManifest = Join-Path (Get-Location) 'voice-dataset\dataset\reference-manifest.json'
-    if (Test-Path -LiteralPath $defaultManifest -PathType Leaf) {
-        $ReferenceManifest = $defaultManifest
-        Write-Host "既存のvoice-datasetを使用します: $ReferenceManifest" -ForegroundColor Cyan
-    } elseif ([string]::IsNullOrWhiteSpace($ReferenceWav)) {
-        $datasetAnswer = Read-Host '以前作ったvoice-datasetフォルダーがあればドラッグして Enter（なければ空のままEnter）'
-        if (-not [string]::IsNullOrWhiteSpace($datasetAnswer)) {
-            $datasetAnswer = $datasetAnswer.Trim().Trim('"')
-            if (Test-Path -LiteralPath $datasetAnswer -PathType Container) {
-                $ReferenceManifest = Join-Path $datasetAnswer 'dataset\reference-manifest.json'
-            } else {
-                $ReferenceManifest = $datasetAnswer
-            }
-        }
-    }
+$Srt = Resolve-InputFile $Srt '-Srt' '.srt'
+if (-not $ConfirmOwnerApproved) {
+    throw '-ConfirmOwnerApproved が必要です。本人の声であり、使用権と音質・文字起こしを確認してから指定してください。'
+}
+if (-not [string]::IsNullOrWhiteSpace($ReferenceManifest) -and
+    (-not [string]::IsNullOrWhiteSpace($ReferenceWav) -or -not [string]::IsNullOrWhiteSpace($ReferenceText))) {
+    throw '-ReferenceManifest と -ReferenceWav/-ReferenceText は同時に指定できません。'
 }
 
 if (-not [string]::IsNullOrWhiteSpace($ReferenceManifest)) {
-    $ReferenceManifest = Resolve-InputFile $ReferenceManifest 'reference-manifest.jsonの場所を入力して Enter' '.json'
+    $ReferenceManifest = Resolve-InputFile $ReferenceManifest '-ReferenceManifest' '.json'
     $manifestData = Get-Content -Raw -LiteralPath $ReferenceManifest | ConvertFrom-Json
     $eligibleReferences = @($manifestData.candidates | Where-Object {
         $_.quality_pass -eq $true -and $_.owner_approved -eq $true -and $_.transcript_verified -eq $true
@@ -85,14 +71,29 @@ if (-not [string]::IsNullOrWhiteSpace($ReferenceManifest)) {
     $ReferenceWav = [string]$eligibleReferences[0].wav_path
     $referenceTextFile = [string]$eligibleReferences[0].transcript_path
 } else {
-    $ReferenceWav = Resolve-InputFile $ReferenceWav 'あなたの見本WAVを画面からここへドラッグして Enter' '.wav'
-    while ([string]::IsNullOrWhiteSpace($ReferenceText)) {
-        $ReferenceText = Read-Host '見本WAVで実際に話している文章を入力して Enter'
-    }
+    $ReferenceWav = Resolve-InputFile $ReferenceWav '-ReferenceWav' '.wav'
+    if ([string]::IsNullOrWhiteSpace($ReferenceText)) { throw '-ReferenceText を指定してください。' }
 }
 
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
 $sourceRoot = Join-Path $repoRoot 'src'
+$Ffmpeg = 'ffmpeg'
+
+if ([string]::IsNullOrWhiteSpace($ConfigPath)) {
+    $ConfigPath = Join-Path $env:LOCALAPPDATA 'BAI Video Production\owner-voice\runtime-config.json'
+}
+if (Test-Path -LiteralPath $ConfigPath -PathType Leaf) {
+    $runtimeConfig = Get-Content -Raw -LiteralPath $ConfigPath | ConvertFrom-Json
+    if ($runtimeConfig.schema_version -ne 1 -or $runtimeConfig.status -ne 'READY' -or
+        $runtimeConfig.model_revision -ne '5d83992436eae1d760afd27aff78a71d676296fc') {
+        throw "本人声runtime設定が未完了または未対応です。修復インストールしてください: $ConfigPath"
+    }
+    if ([string]::IsNullOrWhiteSpace($Python)) { $Python = [string]$runtimeConfig.python }
+    if ([string]::IsNullOrWhiteSpace($ModelRoot)) { $ModelRoot = [string]$runtimeConfig.model_root }
+    if ([string]::IsNullOrWhiteSpace($JobsRoot)) { $JobsRoot = [string]$runtimeConfig.jobs_root }
+    if (-not [string]::IsNullOrWhiteSpace([string]$runtimeConfig.ffmpeg)) { $Ffmpeg = [string]$runtimeConfig.ffmpeg }
+    Write-Host "インストーラーで準備済みの本人声環境を使用します。" -ForegroundColor Cyan
+}
 
 if (-not (Test-Python $Python)) {
     $pythonCandidates = @(
@@ -124,7 +125,7 @@ if ([string]::IsNullOrWhiteSpace($JobsRoot)) {
         $JobsRoot = Join-Path $datasetRoot 'master-wav-jobs'
         Write-Host "Master WAVの作業先: $JobsRoot" -ForegroundColor Cyan
     } else {
-        $JobsRoot = Read-Host '本人声データを保存するOwner承認済みフォルダーを指定して Enter'
+        throw '-JobsRoot を指定するか、本人声runtimeインストーラーを実行してください。'
     }
 }
 $JobsRoot = [IO.Path]::GetFullPath($JobsRoot.Trim().Trim('"'))
@@ -162,20 +163,12 @@ if ([string]::IsNullOrWhiteSpace($ReferenceManifest)) {
     $referencesFile = $ReferenceManifest
 }
 
-Write-Host ''
-Write-Host '確認してください:' -ForegroundColor Yellow
-Write-Host '  1. 見本WAVはあなた自身の声で、使用する権利があります。'
-Write-Host '  2. 入力した文章は見本WAVの発話と完全に一致します。'
-Write-Host '  3. 見本WAVの音質を確認しました。'
-$confirmation = Read-Host 'すべて正しければ YES と入力'
-if ($confirmation -cne 'YES') {
-    throw '確認されなかったため、音声生成を開始しませんでした。'
-}
-
 $previousPythonPath = $env:PYTHONPATH
 try {
-    $env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($previousPythonPath)) { $sourceRoot } else { "$sourceRoot;$previousPythonPath" }
-    & $Python -m ai_video_production.task014_srt_owner_voice_wav preflight --model-root $ModelRoot --reference-wav $ReferenceWav --reference-text $referenceTextFile --output $preflightFile
+    if (Test-Path -LiteralPath $sourceRoot -PathType Container) {
+        $env:PYTHONPATH = if ([string]::IsNullOrWhiteSpace($previousPythonPath)) { $sourceRoot } else { "$sourceRoot;$previousPythonPath" }
+    }
+    & $Python -m ai_video_production.task014_srt_owner_voice_wav preflight --model-root $ModelRoot --reference-wav $ReferenceWav --reference-text $referenceTextFile --ffmpeg $Ffmpeg --output $preflightFile
     if ($LASTEXITCODE -ne 0) { throw '生成前チェックに失敗しました。preflight.jsonを確認してください。' }
     $preflight = Get-Content -Raw -LiteralPath $preflightFile | ConvertFrom-Json
     if ($preflight.state -ne 'READY') { throw "GPUを含む生成準備が完了していません: $($preflight.state)" }
@@ -189,7 +182,7 @@ try {
     }
 
     Write-Host '本人声WAVを生成しています。字幕数により時間がかかります…' -ForegroundColor Cyan
-    & $Python -m ai_video_production.task014_srt_owner_voice_wav render --srt $Srt --model-root $ModelRoot --references $referencesFile --work-dir $workRoot --output $outputFile --report $reportFile
+    & $Python -m ai_video_production.task014_srt_owner_voice_wav render --srt $Srt --model-root $ModelRoot --references $referencesFile --work-dir $workRoot --output $outputFile --ffmpeg $Ffmpeg --report $reportFile
     if ($LASTEXITCODE -ne 0) { throw 'WAV生成に失敗しました。reportと直前のエラーを確認してください。' }
 } finally {
     $env:PYTHONPATH = $previousPythonPath

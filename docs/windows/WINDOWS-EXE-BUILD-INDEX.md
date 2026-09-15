@@ -12,6 +12,7 @@ This page is the canonical entry point for building every user-facing Windows ex
 | `BAI DbD Training Studio.exe` | GUI for single-item, CSV batch, and direct-video teacher-data / knowledge intake | [BUILDING-DBD-TRAINING-STUDIO-EXE.md](BUILDING-DBD-TRAINING-STUDIO-EXE.md) | [DBD-TRAINING-STUDIO-USAGE.md](../user/DBD-TRAINING-STUDIO-USAGE.md) |
 | `BAI DbD Trivia Editor.exe` | Lightweight manual DbD trivia editor | [BUILDING-DBD-TRIVIA-EDITOR-EXE.md](BUILDING-DBD-TRIVIA-EDITOR-EXE.md) | [DBD-TRIVIA-EDITOR-USAGE.md](../user/DBD-TRIVIA-EDITOR-USAGE.md) |
 | `BAI Voice Model Builder` installer / EXE | Windows client for the voice-model workflow Technical Preview | [BUILDING-VOICE-MODEL-BUILDER-INSTALLER.md](BUILDING-VOICE-MODEL-BUILDER-INSTALLER.md) | [VOICE-MODEL-BUILDER.md](../user/VOICE-MODEL-BUILDER.md) |
+| `BAI Owner Voice Runtime` installer | Isolated runtime for zero-shot SRT-to-Owner-Voice Master WAV | [BUILDING-OWNER-VOICE-RUNTIME-INSTALLER.md](BUILDING-OWNER-VOICE-RUNTIME-INSTALLER.md) | [SRT-OWNER-VOICE-WAV.md](../user/SRT-OWNER-VOICE-WAV.md) |
 | `BAI Voice Capture` OBS installer | Installs the OBS voice-capture plugin/runtime package | [BUILDING-OBS-VOICE-CAPTURE-INSTALLER.md](BUILDING-OBS-VOICE-CAPTURE-INSTALLER.md) | [OBS-VOICE-CAPTURE-PLUGIN.md](../user/OBS-VOICE-CAPTURE-PLUGIN.md) |
 
 ## Common Game Intelligence environment

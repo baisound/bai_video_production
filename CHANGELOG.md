@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-09-16
+
+- TASK-093: per-user Owner Voice Runtime installerを追加し、選択した安全な保存先へ署名検証済み専用Python 3.12、CUDA PyTorch、Qwen-TTS、ローカルffmpeg、exact Qwen3-TTS 0.6B Base Modelを構築・検証してから設定を公開するようにしました。
+- TASK-093: インストール済みruntime設定をSRT→本人声Master WAV helperが自動利用し、source checkout、手動Python環境、手動Model path、system PATH設定を不要にしました。生成はユーザーがSRTと参照音声を明示するPowerShellコマンドのままです。
+- TASK-093: エンドユーザー向け操作ガイドと、依存pin・build・実機検証・修復・Releaseを扱う開発者向けガイドを分離しました。zero-shot生成と未完了のfine-tuningは明確に区別します。
+
 ## [0.24.1] - 2026-09-16
 
 - TASK-092: BAI DbD Training StudioとBAI DbD Trivia Editorの個別per-user Windowsインストーラーを追加し、各PyInstaller payloadをtree SHA-256へ固定しました。

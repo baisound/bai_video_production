@@ -97,8 +97,8 @@ class CueRenderer(Protocol):
 
 
 class Qwen3OwnerVoiceRenderer:
-    def __init__(self,model_root:str|Path,*,device_map:str="cuda:0"):
-        self.model_root=Path(model_root); self.device_map=device_map; self._model=None
+    def __init__(self,model_root:str|Path,*,device_map:str="cuda:0",ffmpeg:str="ffmpeg"):
+        self.model_root=Path(model_root); self.device_map=device_map; self.ffmpeg=ffmpeg; self._model=None
     def _load(self):
         if self._model is None:
             torch=importlib.import_module("torch"); qwen=importlib.import_module("qwen_tts")
@@ -116,7 +116,7 @@ class Qwen3OwnerVoiceRenderer:
         if hasattr(waves,"detach"): waves=waves.detach().cpu().numpy()
         if not isinstance(output_sr,(int,float)) or int(output_sr)<=0: raise RuntimeError("Qwen voice clone returned an invalid sample rate")
         temp=output_path.with_suffix('.qwen.wav'); sf.write(str(temp),waves,int(output_sr),subtype="FLOAT")
-        proc=subprocess.run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-i",str(temp),"-ar","48000","-ac","1","-c:a","pcm_s24le",str(output_path)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,check=False,timeout=180,shell=False)
+        proc=subprocess.run([self.ffmpeg,"-nostdin","-hide_banner","-loglevel","error","-y","-i",str(temp),"-ar","48000","-ac","1","-c:a","pcm_s24le",str(output_path)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,check=False,timeout=180,shell=False)
         temp.unlink(missing_ok=True)
         if proc.returncode!=0: raise RuntimeError("Qwen output normalization failed")
         read_pcm_wav_info(output_path,require_canonical=True)
@@ -189,9 +189,9 @@ def main(argv:Sequence[str]|None=None)->int:
     p=argparse.ArgumentParser(); sub=p.add_subparsers(dest='cmd',required=True)
     planp=sub.add_parser('plan'); planp.add_argument('--srt',required=True); planp.add_argument('--output',required=True); planp.add_argument('--style',default='NORMAL'); planp.add_argument('--emotion',default='NORMAL'); planp.add_argument('--speaking-rate',type=float,default=1.0)
     asmp=sub.add_parser('assemble'); asmp.add_argument('--srt',required=True); asmp.add_argument('--cue-dir',required=True); asmp.add_argument('--output',required=True); asmp.add_argument('--report')
-    prep=sub.add_parser('preflight'); prep.add_argument('--model-root',required=True); prep.add_argument('--reference-wav'); prep.add_argument('--reference-text'); prep.add_argument('--output')
+    prep=sub.add_parser('preflight'); prep.add_argument('--model-root',required=True); prep.add_argument('--reference-wav'); prep.add_argument('--reference-text'); prep.add_argument('--ffmpeg',default='ffmpeg'); prep.add_argument('--output')
     refp=sub.add_parser('prepare-reference'); refp.add_argument('--reference-wav',required=True); refp.add_argument('--reference-text',required=True); refp.add_argument('--output',required=True); refp.add_argument('--confirm-owner-approved',action='store_true'); refp.add_argument('--confirm-quality-pass',action='store_true'); refp.add_argument('--confirm-transcript-verified',action='store_true')
-    rnd=sub.add_parser('render'); rnd.add_argument('--srt',required=True); rnd.add_argument('--model-root',required=True); rnd.add_argument('--references',required=True); rnd.add_argument('--work-dir',required=True); rnd.add_argument('--output',required=True); rnd.add_argument('--report'); rnd.add_argument('--style',default='NORMAL'); rnd.add_argument('--emotion',default='NORMAL'); rnd.add_argument('--speaking-rate',type=float,default=1.0); rnd.add_argument('--allow-neutral-fallback',action='store_true')
+    rnd=sub.add_parser('render'); rnd.add_argument('--srt',required=True); rnd.add_argument('--model-root',required=True); rnd.add_argument('--references',required=True); rnd.add_argument('--work-dir',required=True); rnd.add_argument('--output',required=True); rnd.add_argument('--report'); rnd.add_argument('--ffmpeg',default='ffmpeg'); rnd.add_argument('--style',default='NORMAL'); rnd.add_argument('--emotion',default='NORMAL'); rnd.add_argument('--speaking-rate',type=float,default=1.0); rnd.add_argument('--allow-neutral-fallback',action='store_true')
     a=p.parse_args(argv)
     if a.cmd=='plan':
         value=[x.to_public_dict() for x in build_srt_plan(a.srt,style_id=a.style,emotion_id=a.emotion,speaking_rate=a.speaking_rate)]; Path(a.output).write_text(json.dumps(value,ensure_ascii=False,indent=2),encoding='utf-8'); return 0
@@ -200,7 +200,7 @@ def main(argv:Sequence[str]|None=None)->int:
         if a.report: Path(a.report).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
         return 0
     if a.cmd=='preflight':
-        report=qwen_preflight(model_root=a.model_root,reference_wav=a.reference_wav,reference_text=a.reference_text)
+        report=qwen_preflight(model_root=a.model_root,reference_wav=a.reference_wav,reference_text=a.reference_text,ffmpeg=a.ffmpeg)
         if a.output: Path(a.output).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
         else: print(json.dumps(report,ensure_ascii=False,indent=2))
         return 0 if report['state']!='BLOCKED' else 2
@@ -209,7 +209,7 @@ def main(argv:Sequence[str]|None=None)->int:
             owner_approved=a.confirm_owner_approved,quality_pass=a.confirm_quality_pass,
             transcript_verified=a.confirm_transcript_verified)
         return 0
-    refs=_load_candidates(Path(a.references)); report=render_srt_to_wav(a.srt,renderer=Qwen3OwnerVoiceRenderer(a.model_root),candidates=refs,work_dir=a.work_dir,output=a.output,style_id=a.style,emotion_id=a.emotion,speaking_rate=a.speaking_rate,allow_neutral_fallback=a.allow_neutral_fallback)
+    refs=_load_candidates(Path(a.references)); report=render_srt_to_wav(a.srt,renderer=Qwen3OwnerVoiceRenderer(a.model_root,ffmpeg=a.ffmpeg),candidates=refs,work_dir=a.work_dir,output=a.output,style_id=a.style,emotion_id=a.emotion,speaking_rate=a.speaking_rate,allow_neutral_fallback=a.allow_neutral_fallback,ffmpeg=a.ffmpeg)
     if a.report: Path(a.report).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     return 0
 

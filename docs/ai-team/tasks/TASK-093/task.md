@@ -1,6 +1,6 @@
 # TASK-093 — Owner Voice Runtime Installer and v0.24.2 Release
 
-- Status: `OWNER_AUTHORIZED_IMPLEMENTATION_AND_RELEASE`
+- Status: `COMPLETED`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: 2026-09-16に「インストーラーだけで保存先、Qwen用Python環境、Model準備、検証、SRTから本人声Master WAV生成まで完結させ、利用者向け文書を更新してReleaseへ含める」と明示承認を受領
 - Base: TASK-092 / v0.24.1 closure。TASK-046とTASK-092の履歴は変更せず、本要件を新Taskとして扱う
@@ -72,3 +72,8 @@ Completion requires exact source/PR/main/tag/Release identities, all required ch
 an installer-managed fresh runtime or a truthful blocked receipt, successful config read-back,
 exact Model revision/file validation, installed helper routing, separate end-user/developer docs,
 remote asset digest read-back and durable external Evidence.
+
+Completed on 2026-09-16 by PR #555, exact main/tag commit
+`455c94c586b1c3fb72740b71cea7bd05a9a855fe`, Release workflow `35018509125`,
+all 16 published asset identity read-back and durable external Evidence. Actual Owner voice
+generation and listening-quality acceptance were not executed by the Release Unit.

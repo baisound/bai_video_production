@@ -59,7 +59,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "ISCC failed with exit code $LASTEXITCODE"
 }
 
-$installerPath = Join-Path $OutputDirectory 'bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe'
+$installerPath = Join-Path $OutputDirectory 'bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe'
 Assert-AbsoluteFile $installerPath 'Compiled installer'
 $installer = Get-Item -LiteralPath $installerPath
 $result = [ordered]@{

@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSET_ROOT = ROOT / "packaging" / "release-assets" / "task047"
-INSTALLER = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe"
+INSTALLER = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe"
 RUNTIME = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-windows-x64.zip"
 SOURCE = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-source.zip"
 SUMS = ASSET_ROOT / "SHA256SUMS"
@@ -14,7 +14,7 @@ RELEASE = ROOT / ".github" / "workflows" / "release.yml"
 
 
 EXPECTED = {
-    INSTALLER.name: "5eb7b00aa3830f880c724538023c6f7b0b52a032e2c1ed880d497cdd8cce1908",
+    INSTALLER.name: "f11dcd24520a6fcbd737763bef52a7c3fcf079032fef6d6cb748e8e3d64ea1ba",
     RUNTIME.name: "03286e9efbf5dd5af38230dcf7fee4bf53eb3fcc7d7a6d014833b9996bc1f558",
     SOURCE.name: "0ad4c83a957b37b455b38829f842f8318116c522cb542de0a9c5849567b29e72",
 }
@@ -51,7 +51,7 @@ def test_readmes_document_complete_plugin_and_installer_build() -> None:
     for name in ("README.md", "README.en.md"):
         text = (ROOT / name).read_text(encoding="utf-8")
         for token in (
-            "bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe",
+            "bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe",
             "bai-voice-capture-0.1.0-dev.10-windows-x64.zip",
             "bai-voice-capture-0.1.0-dev.10-source.zip",
             "CMake\\3.30.5\\bin\\cmake.exe",

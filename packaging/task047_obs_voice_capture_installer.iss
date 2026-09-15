@@ -1,5 +1,5 @@
 #define AppName "BAI Voice Capture"
-#define AppVersion "0.1.0-dev.10-installer.1"
+#define AppVersion "0.1.0-dev.10-installer.2"
 #ifndef PayloadRoot
   #define PayloadRoot "payload"
 #endif
@@ -43,10 +43,10 @@ Name: "ja"; MessagesFile: "compiler:Languages\Japanese.isl"
 
 [CustomMessages]
 en.ObsPageTitle=Choose the OBS Studio folder
-en.ObsPageDescription=Select the folder that contains bin\64bit\obs64.exe. OBS must be closed.
-en.ObsRootLabel=OBS Studio folder:
-en.BadObsRoot=OBS Studio 32.2.1 was not found in the selected folder.%nExpected: %1
-en.BadObsVersion=This installer supports OBS Studio 32.2.1 only.%nDetected version: %1
+en.ObsPageDescription=Select the OBS Studio root or its bin\64bit folder. OBS must be closed.
+en.ObsRootLabel=OBS Studio root or bin\64bit folder:
+en.BadObsRoot=OBS Studio was not found in the selected folder.%nExpected: %1
+en.BadObsVersion=This installer supports OBS Studio 32.2.1 and 32.2.2.%nDetected version: %1
 en.ObsRunning=Close OBS Studio before continuing. The installer never closes OBS automatically.
 en.ObsNetworkUnsupported=Network/UNC OBS paths are not supported. Select a local OBS Studio folder.
 en.ObsReparseUnsupported=Installation stopped because the OBS Studio folder is a reparse point. No file was changed.
@@ -55,10 +55,10 @@ en.ObsDiskLow=The OBS drive has less than 16 MB free. Free space and try again.
 en.TargetCollision=Installation stopped because an existing plugin file has different content:%n%1%nNo file was changed.
 en.ReadbackFailed=Installation finished copying files, but verification failed:%n%1%nDo not start OBS. Keep the installer log for recovery.
 ja.ObsPageTitle=OBS Studio の場所を選択
-ja.ObsPageDescription=bin\64bit\obs64.exe があるフォルダーを選びます。OBS は終了してください。
-ja.ObsRootLabel=OBS Studio フォルダー:
-ja.BadObsRoot=選択した場所に OBS Studio 32.2.1 が見つかりません。%n確認先: %1
-ja.BadObsVersion=このインストーラーが対応するのは OBS Studio 32.2.1 だけです。%n検出したバージョン: %1
+ja.ObsPageDescription=OBS Studio本体フォルダー、またはobs64.exeがあるbin\64bitフォルダーを選びます。OBSは終了してください。
+ja.ObsRootLabel=OBS Studio本体またはbin\64bitフォルダー:
+ja.BadObsRoot=選択した場所にOBS Studioが見つかりません。%n確認先: %1
+ja.BadObsVersion=このインストーラーが対応するのはOBS Studio 32.2.1と32.2.2です。%n検出したバージョン: %1
 ja.ObsRunning=続ける前に OBS Studio を終了してください。インストーラーが自動終了することはありません。
 ja.ObsNetworkUnsupported=ネットワーク/UNC上のOBSには導入できません。ローカルのOBS Studioフォルダーを選んでください。
 ja.ObsReparseUnsupported=OBS Studioフォルダーがreparse pointのため停止しました。ファイルは変更していません。
@@ -135,6 +135,22 @@ var
 function NormalizeRoot(Value: String): String;
 begin
   Result := RemoveBackslashUnlessRoot(Trim(Value));
+end;
+
+function NormalizeObsRoot(Value: String): String;
+var
+  Candidate: String;
+  Parent: String;
+begin
+  Candidate := NormalizeRoot(Value);
+  if FileExists(AddBackslash(Candidate) + 'obs64.exe') and
+    (CompareText(ExtractFileName(Candidate), '64bit') = 0) then
+  begin
+    Parent := NormalizeRoot(ExtractFileDir(Candidate));
+    if CompareText(ExtractFileName(Parent), 'bin') = 0 then
+      Candidate := NormalizeRoot(ExtractFileDir(Parent));
+  end;
+  Result := Candidate;
 end;
 
 function DefaultAppDir(Param: String): String;
@@ -260,7 +276,7 @@ var
 begin
   Result := False;
   LastPreflightError := '';
-  ObsRoot := NormalizeRoot(ObsRoot);
+  ObsRoot := NormalizeObsRoot(ObsRoot);
   ObsExe := AddBackslash(ObsRoot) + 'bin\64bit\obs64.exe';
   Log('Validating OBS root: ' + ObsRoot);
   if Pos('\\', ObsRoot) = 1 then
@@ -271,16 +287,17 @@ begin
   end;
   if not FileExists(ObsExe) then
   begin
-    LastPreflightError := FmtMessage(CustomMessage('BadObsRoot'), ObsExe);
+    LastPreflightError := FmtMessage(CustomMessage('BadObsRoot'), [ObsExe]);
     if ShowErrors then
       MsgBox(LastPreflightError, mbError, MB_OK);
     exit;
   end;
   if not GetVersionNumbersString(ObsExe, VersionText) then
     VersionText := '';
-  if (VersionText <> '32.2.1') and (VersionText <> '32.2.1.0') then
+  if (VersionText <> '32.2.1') and (VersionText <> '32.2.1.0') and
+    (VersionText <> '32.2.2') and (VersionText <> '32.2.2.0') then
   begin
-    LastPreflightError := FmtMessage(CustomMessage('BadObsVersion'), VersionText);
+    LastPreflightError := FmtMessage(CustomMessage('BadObsVersion'), [VersionText]);
     if ShowErrors then
       MsgBox(LastPreflightError, mbError, MB_OK);
     exit;
@@ -316,7 +333,7 @@ begin
   if (BadTarget = '') and (not ExistingFileIsAllowed(Target3, '{#JaSha}', '', T3Preexisting)) then BadTarget := Target3;
   if BadTarget <> '' then
   begin
-    LastPreflightError := FmtMessage(CustomMessage('TargetCollision'), BadTarget);
+    LastPreflightError := FmtMessage(CustomMessage('TargetCollision'), [BadTarget]);
     if ShowErrors then
       MsgBox(LastPreflightError, mbError, MB_OK);
     exit;
@@ -429,7 +446,7 @@ begin
   InitialRoot := ExpandConstant('{param:OBSROOT|}');
   if InitialRoot = '' then InitialRoot := ExpandConstant('{autopf}\obs-studio');
   ObsPage.Values[0] := InitialRoot;
-  ObsRoot := NormalizeRoot(InitialRoot);
+  ObsRoot := NormalizeObsRoot(InitialRoot);
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -437,7 +454,8 @@ begin
   Result := True;
   if CurPageID = ObsPage.ID then
   begin
-    ObsRoot := NormalizeRoot(ObsPage.Values[0]);
+    ObsRoot := NormalizeObsRoot(ObsPage.Values[0]);
+    ObsPage.Values[0] := ObsRoot;
     Result := ValidateObsAndTargets(not WizardSilent);
     if not Result then Log('NextButton preflight blocked: ' + LastPreflightError);
   end;
@@ -445,7 +463,7 @@ end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  ObsRoot := NormalizeRoot(ExpandConstant('{param:OBSROOT|' + ObsPage.Values[0] + '}'));
+  ObsRoot := NormalizeObsRoot(ExpandConstant('{param:OBSROOT|' + ObsPage.Values[0] + '}'));
   if not ValidateObsAndTargets(False) then
     Result := LastPreflightError
   else
@@ -480,7 +498,7 @@ begin
     else
     begin
       AppendJournal('VERIFY', 'READ_BACK', 'UNKNOWN', FailurePath);
-      MsgBox(FmtMessage(CustomMessage('ReadbackFailed'), FailurePath), mbError, MB_OK);
+      MsgBox(FmtMessage(CustomMessage('ReadbackFailed'), [FailurePath]), mbError, MB_OK);
     end;
   end;
 end;

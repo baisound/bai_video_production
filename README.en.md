@@ -153,22 +153,21 @@ silently rewritten; do not point migration at an ambiguous human-owned Project.
 Each GitHub Release includes these three TASK-047 artifacts in addition to the
 BAI Video Production Python packages:
 
-- `bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe` — beginner-friendly Windows installer
+- `bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe` — beginner-friendly Windows installer for OBS 32.2.1/32.2.2
 - `bai-voice-capture-0.1.0-dev.10-windows-x64.zip` — runtime package for verification and recovery
 - `bai-voice-capture-0.1.0-dev.10-source.zip` — corresponding Plugin source
 
 The Release workflow verifies [`SHA256SUMS`](packaging/release-assets/task047/SHA256SUMS)
 before publishing and stops if an artifact is missing or changed. This unsigned
-development candidate targets OBS Studio 32.2.1 x64. Follow the
+development candidate targets OBS Studio 32.2.1/32.2.2 x64 and accepts either
+the OBS root or its `bin\64bit` folder. Follow the
 [beginner guide](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) from top to bottom for installation and use.
 
-The current public Technical Preview is
-[BAI Voice Capture v0.1.0-dev.10 installer.1](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1).
-Most users should download
-`bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe` from its Release Assets.
-It is an unsigned Pre-release and is separate from the stable BAI Video Production `v0.23.0` release.
-The Dev.10 Controller can select a destination, run the five-second gain check, start, pause, resume, and
-stop while OBS 32.2.1 remains open. Keep the live gain meter and the persistent recording/paused banner visible.
+Download the corrected installer from the
+[BAI Video Production v0.24.1 Release](https://github.com/baisound/bai_video_production/releases/tag/v0.24.1):
+`bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe`.
+It is unsigned. The Dev.10 Controller can select a destination, run the five-second gain check, start, pause, resume, and
+stop while OBS 32.2.1/32.2.2 remains open. Keep the live gain meter and the persistent recording/paused banner visible.
 
 To rebuild the Plugin, runtime package, and installer, use a fresh directory with
 the OBS Studio `32.2.1` source and submodules, Visual Studio Build Tools 2026,

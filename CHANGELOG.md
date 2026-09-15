@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-09-16
+
+- TASK-092: BAI DbD Training StudioとBAI DbD Trivia Editorの個別per-user Windowsインストーラーを追加し、各PyInstaller payloadをtree SHA-256へ固定しました。
+- TASK-092: OBS Voice Capture installer.2でOBS本体または`bin\64bit`直指定を受理し、Inno Setupの`FmtMessage`型不一致を修正してOBS 32.2.2を許可しました。
+- TASK-092: SRTから本人声Master WAVを生成する独立実行ガイドと対話式1コマンドWindows helperを追加し、既存の`voice-dataset`を直接利用可能にしたうえで、Qwen3-TTSが返す生成音声sample rateを正しく使うよう修正しました。
+
 ## [0.24.0] - 2026-09-16
 
 ・TASK-048: 音質メーターの方針閾値と観測値の検証を分離し、有限の正のdBFSピークを直接生成・判定・再読込で保持する互換修正を追加しました。既存閾値・分類・digest・権限フラグと旧INVALID_OUT_OF_RANGE記録の読込を維持し、実音声、OBS/native、gain/capture、Provider/model、品質PASS、Dataset/Training、Release、Deploy、Production Activationは開始しません。

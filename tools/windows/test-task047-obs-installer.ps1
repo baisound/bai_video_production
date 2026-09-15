@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ObsExe,
     [string]$PayloadDirectory = '',
-    [string]$AcceptanceRoot = ''
+    [string]$AcceptanceRoot = '',
+    [switch]$UseBin64Selection
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,6 +15,7 @@ if ([IO.Path]::GetFileName($root) -ne 'bai-task047-installer-acceptance') {
 }
 $payloadRoot = if ($PayloadDirectory) { $PayloadDirectory } else { Join-Path $PSScriptRoot 'payload' }
 $obsRoot = Join-Path $root 'fake-obs'
+$obsSelection = if ($UseBin64Selection) { Join-Path $obsRoot 'bin\64bit' } else { $obsRoot }
 $appRoot = Join-Path $root 'app'
 $logRoot = Join-Path $root 'logs'
 
@@ -45,7 +47,7 @@ $targets = @(
 function Invoke-Setup([string]$LogName) {
     $arguments = @(
         '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER',
-        "/DIR=$appRoot", "/OBSROOT=$obsRoot", "/LOG=$(Join-Path $logRoot $LogName)"
+        "/DIR=$appRoot", "/OBSROOT=$obsSelection", "/LOG=$(Join-Path $logRoot $LogName)"
     )
     $process = Start-Process -FilePath $InstallerPath -ArgumentList $arguments -Wait -PassThru -WindowStyle Hidden
     if ($process.ExitCode -ne 0) {
@@ -108,7 +110,7 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $collisionTarget) -Force 
 [System.IO.File]::WriteAllText($collisionTarget, 'foreign-plugin')
 $before = Get-FileSha256 $collisionTarget
 $collisionLog = Join-Path $logRoot 'collision.log'
-$collisionArgs = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/DIR=$appRoot", "/OBSROOT=$obsRoot", "/LOG=$collisionLog")
+$collisionArgs = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/DIR=$appRoot", "/OBSROOT=$obsSelection", "/LOG=$collisionLog")
 $collision = Start-Process -FilePath $InstallerPath -ArgumentList $collisionArgs -Wait -PassThru -WindowStyle Hidden
 $after = Get-FileSha256 $collisionTarget
 if ($collision.ExitCode -eq 0) { throw 'Collision install unexpectedly succeeded' }
@@ -137,6 +139,7 @@ $receipt = [ordered]@{
     existing_exact3_adoption = 'PASS'
     existing_exact3_restore_on_uninstall = 'PASS'
     append_only_journal_hash_chain = 'PASS'
+    obs_selection_mode = if ($UseBin64Selection) { 'BIN_64BIT' } else { 'ROOT' }
     real_obs_mutated = $false
     owner_voice_recorded = $false
 } | ConvertTo-Json -Depth 4

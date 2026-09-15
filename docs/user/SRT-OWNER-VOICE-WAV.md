@@ -3,7 +3,8 @@
 このページは、SRTの各字幕を本人の参照音声でローカル合成し、字幕時刻に合わせた
 48 kHz・mono・PCM 24-bitのMaster WAVへまとめる実行手順です。
 
-現在の入口はBAI Video Production本体EXEの画面ではなく、Python module CLIです。
+現在の入口はBAI Video Production本体EXEの画面ではなく、対話式PowerShell helperです。
+helperの内部でPython module CLIを実行します。
 音声Modelの学習は必須ではありません。承認済みの本人参照WAVとその正確な書き起こしを使う
 Qwen3-TTS Base Modelのzero-shot voice cloneで生成できます。
 
@@ -34,8 +35,50 @@ PowerShellを開き、BAI VIDEO PRODUCTIONのフォルダーで次の1行を実�
 .\tools\windows\make-owner-voice-wav.ps1 -Srt ".\input.srt" -ReferenceManifest ".\voice-dataset\dataset\reference-manifest.json"
 ```
 
+スクリプト自身の使い方をPowerShellで表示することもできます。
+
+```powershell
+Get-Help .\tools\windows\make-owner-voice-wav.ps1 -Full
+```
+
+### `voice-dataset`はどこに作られるか
+
+`run-owner-voice-recording-prepare.ps1`の`-OutputDir`で指定した場所です。固定のEドライブ
+保存先はありません。たとえば、PowerShellの現在位置が`E:\BAI_AI`のときに
+`-OutputDir ".\voice-dataset"`を指定すると、実際の保存先は
+`E:\BAI_AI\voice-dataset`です。
+
+現在のBAI Video Production、Voice Model Builder、OBS Voice Captureの各インストーラーは、
+Owner Voice用の共通データルートを選択・保存しません。Voice Model Builderの現行版は
+工程表示用Technical Previewであり、インストール先はアプリ本体の場所です。OBS installerで
+選ぶフォルダーもOBS本体の場所であり、録音やDatasetの保存先ではありません。
+
+現在位置によって保存先が変わるのを避けるには、Ownerが承認した暗号化保存領域を絶対パスで
+指定してください。たとえば、その領域が`E:\BAI_AI\private\owner-voice`として準備・承認済み
+の場合だけ、次のように指定します。
+
+```powershell
+.\tools\windows\run-owner-voice-recording-prepare.ps1 `
+  -Input "E:\BAI_AI\private\owner-voice\recording.wav" `
+  -OutputDir "E:\BAI_AI\private\owner-voice\voice-dataset" `
+  -StyleId "NORMAL" `
+  -EmotionId "NORMAL" `
+  -OverallTargetSeconds 7200 `
+  -ApproveDerivedSegments `
+  -AcceptAsrTranscripts
+```
+
+この録音準備コマンドはSRTからWAVを生成するコマンドではありません。長い録音を3～15秒の
+参照音声へ分割し、`reference-manifest.json`を作る一度きりの準備です。SRTからMaster WAVを
+作るときは、その後に`make-owner-voice-wav.ps1`を実行します。
+
+`-RecordingPreflightReport`はこの録音準備スクリプトの引数ではありません。
+`recording-preflight.json`は録音開始前に別の`run-owner-voice-recording-preflight.ps1`で
+作る確認記録であり、すでに存在する`recording.wav`の分割処理には渡しません。
+
 完了時に表示される`master-owner-voice.wav`が成果物です。JSON作成、ハッシュ計算、
 事前チェック、字幕配置計画、作業フォルダー作成はスクリプトが自動で行います。
+既存の`voice-dataset`を指定した場合、生成ジョブはその中の`master-wav-jobs`へ保存されます。
 
 初回だけ、Qwen3-TTS用Python環境とModelの準備が必要です。`本人声生成用Python環境が
 見つかりません`または`Modelが見つかりません`と表示された場合は、下記のセットアップを

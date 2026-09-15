@@ -149,3 +149,5 @@ def test_beginner_windows_wrapper_supports_existing_dataset_manifest():
         'master-owner-voice.wav',
     ):
         assert required in script
+    assert 'D:\\BAI\\BAI_VIDEO_PRODUCTION_20260914\\owner-voice-jobs' not in script
+    assert "Join-Path $datasetRoot 'master-wav-jobs'" in script

@@ -1,3 +1,22 @@
+<#
+.SYNOPSIS
+SRTから本人声のMaster WAVを対話式で生成します。
+
+.DESCRIPTION
+引数なしで実行すると、SRTと既存voice-dataset（または3～15秒の見本WAV）を
+順番に質問します。manifest作成、生成前チェック、SRT計画、本人声生成を自動実行し、
+最後にmaster-owner-voice.wavの保存先を表示します。
+
+.EXAMPLE
+.\tools\windows\make-owner-voice-wav.ps1
+
+.EXAMPLE
+.\tools\windows\make-owner-voice-wav.ps1 -Srt "E:\BAI_AI\jobs\input.srt" -ReferenceManifest "E:\BAI_AI\private\owner-voice\voice-dataset\dataset\reference-manifest.json"
+
+.NOTES
+詳しい説明は docs/user/SRT-OWNER-VOICE-WAV.md を参照してください。
+本人音声は、Ownerが承認した暗号化保存領域だけに保存してください。
+#>
 [CmdletBinding()]
 param(
     [string]$Srt,
@@ -100,11 +119,12 @@ if ([string]::IsNullOrWhiteSpace($ModelRoot)) {
 $ModelRoot = (Resolve-Path -LiteralPath $ModelRoot).Path
 
 if ([string]::IsNullOrWhiteSpace($JobsRoot)) {
-    $preferredRoot = 'D:\BAI\BAI_VIDEO_PRODUCTION_20260914\owner-voice-jobs'
-    if (Test-Path -LiteralPath (Split-Path -Parent $preferredRoot) -PathType Container) {
-        $JobsRoot = $preferredRoot
+    if (-not [string]::IsNullOrWhiteSpace($ReferenceManifest)) {
+        $datasetRoot = Split-Path -Parent (Split-Path -Parent $ReferenceManifest)
+        $JobsRoot = Join-Path $datasetRoot 'master-wav-jobs'
+        Write-Host "Master WAVの作業先: $JobsRoot" -ForegroundColor Cyan
     } else {
-        $JobsRoot = Read-Host '本人声の作業を保存する既存フォルダーを指定して Enter'
+        $JobsRoot = Read-Host '本人声データを保存するOwner承認済みフォルダーを指定して Enter'
     }
 }
 $JobsRoot = [IO.Path]::GetFullPath($JobsRoot.Trim().Trim('"'))

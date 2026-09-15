@@ -1,4 +1,4 @@
-# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.96
+# AI動画制作自動化システム — Project Roadmap Canonical Ver.1.97
 - Project: `ai-video-production`
 - Date: 2026-08-23
 - Status: `CURRENT_CANONICAL_PROJECT_ROADMAP`
@@ -56,6 +56,12 @@ Draft PRまで自走する。これは担当外変更、Release/Deploy/Productio
 許可しない。通常PRはshared CHANGELOGを変更・予約せず、実際のProduct
 version変更を含むRelease/version-bump PRだけがCHANGELOGを更新して直列化する。
 全PRでProduct version定数の一致は必須とする。
+
+通常のfeature PR pushはchanged/corresponding testsを選択するFast CIとし、
+Ubuntu/Windows × Python 3.11–3.13のfull regressionは`integration/**`・
+`release/**` branch、明示manual/high-risk Gate、週次main safety net、正式Release
+直前へ集約する。full resultはexact treeへ拘束し、以後のsource変更で失効する。
+明示されたDEV-3/DEV-4/native/package Gateをこの既定頻度で弱めてはならない。
 
 #### 二担当の現在地と排他的な次順序
 

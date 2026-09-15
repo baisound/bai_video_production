@@ -71,20 +71,72 @@ def test_github_community_health_files_exist() -> None:
     assert all((ROOT / path).is_file() for path in required)
 
 
-def test_ci_is_offline_first_and_cross_platform() -> None:
-    ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
-    assert "ubuntu-latest" in ci and "windows-latest" in ci
-    assert "timeout-minutes: 20" in ci
-    assert "pytest-xdist==3.8.0 pytest-timeout==2.4.0" in ci
-    assert "python -m pytest -q -n 2 --dist loadfile" in ci
-    assert "--timeout=120 --max-worker-restart=0 --durations=20" in ci
-    assert "python -m compileall -q src tests" in ci
-    assert "sudo apt-get update && sudo apt-get install --yes ffmpeg" in ci
-    assert "https://packages.chocolatey.org/ffmpeg.8.1.2.nupkg" in ci
-    assert "6c5746c8f0da8334d367131012ec1280bdd490651e108c35e19933587b06aed8" in ci
-    assert 'choco install ffmpeg --version=8.1.2 --source="$env:RUNNER_TEMP" --yes --no-progress' in ci
-    assert "ffprobe -version" in ci
-    assert "behavior-probe" not in ci
+def test_ci_is_tiered_and_full_regression_remains_cross_platform() -> None:
+    fast = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    full = (ROOT / ".github/workflows/full-regression.yml").read_text(encoding="utf-8")
+    release = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+
+    assert "name: Fast CI" in fast
+    assert "pull_request:" in fast and "branches: [main]" in fast
+    assert "python-version: \"3.13\"" in fast
+    assert "windows-latest" not in fast and "matrix:" not in fast
+    assert "fetch-depth: 0" in fast
+    assert "tools/ci/run-fast-tests.py" in fast
+    assert '--allowed-temp-root "${{ runner.temp }}"' in fast
+    assert '--basetemp "${{ runner.temp }}/bvp-fast-' in fast
+    assert "python -m pytest -q -n 2 --dist loadfile" not in fast
+    assert "python -m compileall -q src tests" in fast
+
+    assert "name: Full regression" in full
+    assert "workflow_call:" in full and "workflow_dispatch:" in full
+    assert '"integration/**"' in full and '"release/**"' in full
+    assert 'cron: "23 18 * * 0"' in full
+    assert 'ref: ${{ inputs.ref || github.sha }}' in full
+    assert "ubuntu-latest" in full and "windows-latest" in full
+    assert 'python-version: ["3.11", "3.12", "3.13"]' in full
+    assert "timeout-minutes: 20" in full
+    assert "pytest-xdist==3.8.0 pytest-timeout==2.4.0" in full
+    assert "python -m pytest -q -n 2 --dist loadfile" in full
+    assert "--timeout=120 --max-worker-restart=0 --durations=20" in full
+    assert "python -m compileall -q src tests" in full
+    assert '${{ runner.temp }}/bvp-full-' in full
+    assert "--prepare-only" in full
+    assert "${{ matrix.os }}-${{ matrix.python-version }}" in full
+    assert full.count("--check-child") == 4
+    assert '$env:BVP_OPERATION_ROOT/installer' in full
+    assert 'steps.operation_root.outputs.operation_root' in full
+    assert "sudo apt-get update && sudo apt-get install --yes ffmpeg" in full
+    assert "https://packages.chocolatey.org/ffmpeg.8.1.2.nupkg" in full
+    assert "6c5746c8f0da8334d367131012ec1280bdd490651e108c35e19933587b06aed8" in full
+    assert 'choco install ffmpeg --version=8.1.2 --source="$env:BVP_OPERATION_ROOT" --yes --no-progress' in full
+    assert 'Join-Path $env:RUNNER_TEMP' not in full
+    assert full.index("--prepare-only") < full.index("curl.exe") < full.index("python -m pytest")
+    assert 'ref: ${{ needs.resolve-ref.outputs.commit_sha }}' in full
+    assert 'Verify immutable checkout' in full
+    assert "ffprobe -version" in full
+    assert "behavior-probe" not in full
+
+    assert "uses: ./.github/workflows/full-regression.yml" in release
+    assert "needs: [resolve-tag, full-regression]" in release
+    assert release.count('ref: ${{ needs.resolve-tag.outputs.commit_sha }}') == 2
+    assert 'ref: ${{ inputs.tag }}' not in release
+    assert '--resolve-release-tag "$RELEASE_TAG"' in release
+    assert '--verify-release-tag "$RELEASE_TAG"' in release
+    assert 'tag_object_sha: ${{ steps.identity.outputs.tag_object_sha }}' in release
+    assert 'EXPECTED_TAG_OBJECT_SHA: ${{ needs.resolve-tag.outputs.tag_object_sha }}' in release
+    assert 'EXPECTED_COMMIT_SHA: ${{ needs.resolve-tag.outputs.commit_sha }}' in release
+    assert 'test "$(git rev-parse --verify HEAD)" = "$EXPECTED_COMMIT_SHA"' in release
+    assert release.index('--verify-release-tag') < release.index('gh release create')
+    assert 'concurrency:' in release and 'group: release-${{ inputs.tag }}' in release
+    assert 'cancel-in-progress: false' in release
+    assert 'test "${{ inputs.tag }}"' not in release
+    assert 'create "${{ inputs.tag }}"' not in release
+    assert release.index('--prepare-only') < release.index('python -m build --outdir')
+    assert 'python -m build --outdir "$BVP_OPERATION_ROOT/dist"' in release
+    assert '--check-child --allowed-temp-root "$BVP_OPERATION_ROOT" --basetemp "$BVP_OPERATION_ROOT/dist"' in release
+    assert 'test ! -e "$BVP_OPERATION_ROOT/dist/$(basename "$asset")"' in release
+    assert '"$BVP_OPERATION_ROOT"/dist/* --verify-tag' in release
+    assert "python -m pytest -q" not in release
 
 
 def test_security_automation_is_present() -> None:

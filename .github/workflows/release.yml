@@ -9,28 +9,78 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
 
 jobs:
-  build-and-release:
+  resolve-tag:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag_object_sha: ${{ steps.identity.outputs.tag_object_sha }}
+      commit_sha: ${{ steps.identity.outputs.commit_sha }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - id: identity
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: python tools/ci/run-fast-tests.py --resolve-release-tag "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+  full-regression:
+    needs: resolve-tag
+    uses: ./.github/workflows/full-regression.yml
+    with:
+      ref: ${{ needs.resolve-tag.outputs.commit_sha }}
+
+  build-and-release:
+    needs: [resolve-tag, full-regression]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve-tag.outputs.commit_sha }}
+      - name: Verify immutable checkout
+        shell: bash
+        env:
+          EXPECTED_COMMIT_SHA: ${{ needs.resolve-tag.outputs.commit_sha }}
+        run: test "$(git rev-parse --verify HEAD)" = "$EXPECTED_COMMIT_SHA"
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
+      - name: Prepare exclusive release operation root
+        id: operation_root
+        shell: bash
+        run: >-
+          python tools/ci/run-fast-tests.py --prepare-only
+          --allowed-temp-root "${{ runner.temp }}"
+          --basetemp "${{ runner.temp }}/bvp-release-${{ github.run_id }}-${{ github.run_attempt }}"
+          | tee -a "$GITHUB_OUTPUT"
       - run: sudo apt-get update && sudo apt-get install --yes ffmpeg
       - run: python -m pip install --upgrade pip build
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest -q
-      - run: python -m compileall -q src tests
-      - run: python -m build
+      - name: Build into the admitted operation root
+        env:
+          BVP_OPERATION_ROOT: ${{ steps.operation_root.outputs.operation_root }}
+        run: |
+          python tools/ci/run-fast-tests.py --check-child --allowed-temp-root "$BVP_OPERATION_ROOT" --basetemp "$BVP_OPERATION_ROOT/dist"
+          python -m build --outdir "$BVP_OPERATION_ROOT/dist"
       - name: Verify tag matches package version
         shell: bash
-        run: test "${{ inputs.tag }}" = "v$(python -c 'import ai_video_production; print(ai_video_production.__version__)')"
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: test "$RELEASE_TAG" = "v$(python -c 'import ai_video_production; print(ai_video_production.__version__)')"
       - name: Verify TASK-047 OBS release assets
         shell: bash
         run: |
@@ -38,8 +88,25 @@ jobs:
           sha256sum --check SHA256SUMS
       - name: Stage TASK-047 OBS release assets
         shell: bash
-        run: cp packaging/release-assets/task047/* dist/
+        env:
+          BVP_OPERATION_ROOT: ${{ steps.operation_root.outputs.operation_root }}
+        run: |
+          for asset in packaging/release-assets/task047/*; do
+            test ! -e "$BVP_OPERATION_ROOT/dist/$(basename "$asset")"
+            cp -- "$asset" "$BVP_OPERATION_ROOT/dist/"
+          done
       - name: Publish GitHub Release
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ inputs.tag }}" dist/* --verify-tag --generate-notes --title "BAI Video Production ${{ inputs.tag }}"
+          RELEASE_TAG: ${{ inputs.tag }}
+          EXPECTED_TAG_OBJECT_SHA: ${{ needs.resolve-tag.outputs.tag_object_sha }}
+          EXPECTED_COMMIT_SHA: ${{ needs.resolve-tag.outputs.commit_sha }}
+          BVP_OPERATION_ROOT: ${{ steps.operation_root.outputs.operation_root }}
+        # Release authority must also forbid external tag mutation. This final
+        # readback does not claim an atomic transaction with GitHub publication.
+        run: |
+          python tools/ci/run-fast-tests.py --verify-release-tag "$RELEASE_TAG" \
+            --expected-tag-object-sha "$EXPECTED_TAG_OBJECT_SHA" \
+            --expected-commit-sha "$EXPECTED_COMMIT_SHA"
+          gh release create "$RELEASE_TAG" "$BVP_OPERATION_ROOT"/dist/* --verify-tag --generate-notes --title "BAI Video Production $RELEASE_TAG"

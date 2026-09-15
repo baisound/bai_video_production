@@ -38,6 +38,7 @@ user-facing EXEs. Every produced `.exe` is inventoried and hashed before upload.
 Release-candidate source scope:
 
 - `pyproject.toml`
+- `PROJECT.md`
 - `CITATION.cff`
 - `CHANGELOG.md`
 - `src/ai_video_production/__init__.py`

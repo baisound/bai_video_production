@@ -16,9 +16,9 @@
 - Voice Studio technical foundation: `TASK-046 / P-VS-1A AND P-VS-3A/3B/4A/4B BOUNDED FOUNDATIONS HOSTED CLOSED`; PR #93/#101/#163/#165/#168/#170/#173-#175/#180-#184 passed `9 / 9` hosted checks and merged the body-free VoiceProfile, recording/Dataset/Training/vertical-slice contracts, bounded synthetic runtime and unsigned development client/installer foundation. The merged Qwen3-TTS probes remain diagnostic and the representative training recipe remains blocked. P-VS-1B/P-VS-2, real recording/private audio, Dataset adoption, Training, model approval, narration/Master WAV and production use still require fresh exact runtime/path Evidence, current Consent/rights, verified encrypted storage and explicit Owner authorization.
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
-- Package: `0.24.0`
+- Package: `0.23.0`
 - Release State: `V0_24_0_RELEASE_CANDIDATE`; exact release PR, annotated Tag, Windows EXE/installer build, GitHub Release and asset digest read-back are pending
-- Development Candidate: `TASK-091 / v0.24.0 stable release closure`
+- Development Candidate: `0.24.0`
 - Selected Release Identity: `0.23.0 / v0.23.0 / stable`, explicitly selected by the Owner on 2026-08-30
 - Release commit: `382ae2aec8ecf83933973eb5c67fa6865b39194b`
 - Editing SKILL integration release Evidence: `docs/ai-team/tasks/TASK-058/v0.23.0-editing-skill-integration-release-evidence-2026-08-30.md`

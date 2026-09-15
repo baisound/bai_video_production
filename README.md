@@ -25,6 +25,7 @@
 | OBSで学習用音声を録音する方 | [OBS Installer構築](docs/windows/BUILDING-OBS-VOICE-CAPTURE-INSTALLER.md) / [OBS Voice Capture Plugin 導入・利用ガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md) | 日本語・Englishで準備から保存・復旧まで説明する初心者向けガイド |
 | 録音から音声Model作成の流れを確認する方 | [Voice Model Builder Installer構築](docs/windows/BUILDING-VOICE-MODEL-BUILDER-INSTALLER.md) / [BAI Voice Model Builder 初心者向けガイド](docs/user/VOICE-MODEL-BUILDER.md) | Windows installer、起動、現在の表示専用範囲、将来のDataset・学習・style・Master WAV工程、source build |
 | ローカル音声Modelを準備する方 | [Qwen3-TTS 0.6B Base セットアップ](docs/user/QWEN3-TTS-06B-BASE-SETUP.md) / [学習依存（flash-attn・TensorBoard）](docs/user/QWEN3-TTS-TRAINING-DEPENDENCIES.md) / [WSL2実測手順](docs/user/QWEN3-TTS-WSL2-VERIFIED-ENVIRONMENT.md) / [Windowsネイティブ検証手順](docs/user/QWEN3-TTS-WINDOWS-NATIVE-ENVIRONMENT.md) | 隔離環境、固定revision、GPU確認、Windows制約、学習を始めてよい条件 |
+| SRTから本人声のMaster WAVを作る方 | [SRT→本人声Master WAV実行手順](docs/user/SRT-OWNER-VOICE-WAV.md) | 参照WAV、参照文、SRT、事前確認、生成、PCM24検証、本人試聴Gate |
 | 利用を検討する方 | [機能と開発状況](PROJECT.md) | 実装済み／未実装、現在地、次の到達点 |
 | 開発者・Contributor | [開発者Architecture Guide](docs/developer/ARCHITECTURE.md) | Data flow、責任境界、Adapter、Test、変更手順 |
 | OSS活動を確認する方 | [公開準備Schedule](docs/oss/PUBLIC-READINESS-SCHEDULE.md) | 期限、Evidence、採択準備、実利用Gate |
@@ -216,21 +217,19 @@ Training Studioの **Knowledge Import** タブからは、ユーザー指定の�
 
 GitHub Releaseには、BAI Video Production本体に加えて次の3点を同梱します。
 
-- `bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe`：初心者向けWindowsインストーラー
+- `bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe`：OBS 32.2.1/32.2.2対応の初心者向けWindowsインストーラー
 - `bai-voice-capture-0.1.0-dev.10-windows-x64.zip`：検証・復旧用runtime package
 - `bai-voice-capture-0.1.0-dev.10-source.zip`：対応するPlugin source
 
 Release workflowは[`SHA256SUMS`](packaging/release-assets/task047/SHA256SUMS)を先に検証し、
-3点のどれかが欠落または改変されていればRelease作成前に停止します。現在のinstallerは
-OBS Studio 32.2.1 x64向けの未署名開発候補です。実際の導入と使い方は
+3点のどれかが欠落または改変されていればRelease作成前に停止します。現在のinstaller.2は
+OBS Studio 32.2.1/32.2.2 x64向けの未署名開発候補です。OBS本体フォルダーと
+`bin\64bit`フォルダーのどちらを選んでも正規化します。実際の導入と使い方は
 [初心者向けガイド](docs/user/OBS-VOICE-CAPTURE-PLUGIN.md)を上から順に読んでください。
 
-現在の公開Technical Previewは
-[BAI Voice Capture v0.1.0-dev.10 installer.1](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1)
-です。通常の利用者はRelease Assetsにある
-`bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe`を取得してください。
-これは未署名のPre-releaseであり、BAI Video Production全体の安定版`v0.23.0`とは別です。
-Dev.10 ControllerはOBS 32.2.1を起動したまま保存先選択、5秒GAIN確認、録音開始、一時停止、
+修正版installer.2は[BAI Video Production v0.24.1](https://github.com/baisound/bai_video_production/releases/tag/v0.24.1)
+のAssetsから`bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe`を取得してください。
+これは未署名です。Dev.10 ControllerはOBS 32.2.1/32.2.2を起動したまま保存先選択、5秒GAIN確認、録音開始、一時停止、
 再開、停止を行えます。GAINバーと`学習データ録音中` / `一時停止中`表示を常時確認してください。
 
 sourceからPlugin、runtime package、installerまで作り直す場合は、空の作業directoryを使い、

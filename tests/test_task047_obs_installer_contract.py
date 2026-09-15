@@ -19,7 +19,7 @@ MANUAL = ROOT / "docs" / "user" / "OBS-VOICE-CAPTURE-PLUGIN.md"
 README_JA = ROOT / "README.md"
 README_EN = ROOT / "README.en.md"
 ASSET_ROOT = ROOT / "packaging" / "release-assets" / "task047"
-INSTALLER = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe"
+INSTALLER = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe"
 RUNTIME = ASSET_ROOT / "bai-voice-capture-0.1.0-dev.10-windows-x64.zip"
 
 
@@ -66,6 +66,19 @@ def test_installer_preflight_and_exact3_are_fail_closed() -> None:
     assert "RestoreOrRemove(Target1" not in text.split("procedure DeinitializeSetup", 1)[1].split("procedure CurUninstallStepChanged", 1)[0]
 
 
+def test_installer_accepts_obs_root_or_bin64_and_formats_errors_safely() -> None:
+    text = _text(ISS)
+    assert "function NormalizeObsRoot(Value: String): String;" in text
+    assert "FileExists(AddBackslash(Candidate) + 'obs64.exe')" in text
+    assert "CompareText(ExtractFileName(Candidate), '64bit') = 0" in text
+    assert "CompareText(ExtractFileName(Parent), 'bin') = 0" in text
+    assert "VersionText <> '32.2.2'" in text
+    assert "FmtMessage(CustomMessage('BadObsRoot'), [ObsExe])" in text
+    assert "FmtMessage(CustomMessage('BadObsVersion'), [VersionText])" in text
+    assert "FmtMessage(CustomMessage('TargetCollision'), [BadTarget])" in text
+    assert "FmtMessage(CustomMessage('ReadbackFailed'), [FailurePath])" in text
+
+
 def test_installer_preserves_original_ownership_and_journals_repairs() -> None:
     text = _text(ISS)
     assert 'PreviousPluginSha "14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38"' in text
@@ -98,6 +111,8 @@ def test_acceptance_runner_covers_install_repair_collision_and_uninstall() -> No
         "Target remained after uninstall",
         "existing_exact3_restore_on_uninstall",
         "append_only_journal_hash_chain",
+        "UseBin64Selection",
+        "obs_selection_mode",
         "owner_voice_recorded = $false",
     ):
         assert token in text
@@ -152,8 +167,8 @@ def test_installer_executes_clean_repair_collision_and_uninstall(tmp_path: pathl
         textwrap.dedent(
             """
             using System.Reflection;
-            [assembly: AssemblyVersion("32.2.1.0")]
-            [assembly: AssemblyFileVersion("32.2.1.0")]
+            [assembly: AssemblyVersion("32.2.2.0")]
+            [assembly: AssemblyFileVersion("32.2.2.0")]
             public static class Program { public static void Main() { } }
             """
         ).strip(),
@@ -215,6 +230,7 @@ def test_installer_executes_clean_repair_collision_and_uninstall(tmp_path: pathl
             str(payload),
             "-AcceptanceRoot",
             str(acceptance_root),
+            "-UseBin64Selection",
         ],
         check=False,
         capture_output=True,

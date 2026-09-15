@@ -1,6 +1,6 @@
 # OBS Voice Capture Plugin 導入・利用・復旧ガイド
 
-> **文書状態: PUBLIC TECHNICAL PREVIEW / DEV.10 SOURCE・BUILD・PACKAGE・INSTALLER EVIDENCE BOUND / DEV.10実機LOAD・OWNER音声は再確認待ち**
+> **文書状態: PUBLIC TECHNICAL PREVIEW / DEV.10 INSTALLER.2 / OBS 32.2.1・32.2.2 / 実機LOAD・OWNER音声は再確認待ち**
 > `P_OBS_PLUGIN_DEVELOPMENT_COMPLETE`: `NOT_ESTABLISHED`
 
 この文書は、BAI Video ProductionのOBS Voice Capture Pluginを安全に導入し、
@@ -9,9 +9,9 @@
 Dev.10のPlugin source、build、runtime package、Windows installer、SHA-256は確認済みです。
 Dev.8ではOBS 32.2.1へのexact 3-entry配置、合成音声と短いOwner音声によるload・GAIN測定・
 開始・一時停止・再開・停止・WAV保存を確認しました。Dev.10の実機install/loadとOwner音声再試験は、
-稼働中OBSを安全に通常終了できる時点で行います。公開後のインストーラー、runtime、source、SHA-256は
-[GitHubの公開Technical Preview](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1)
-から取得できます（公開前はlinkが未成立です）。正式RecordingSession、Dataset採用、Production利用は未確認です。
+稼働中OBSを安全に通常終了できる時点で行います。修正版installer.2、runtime、source、SHA-256は
+[BAI Video Production v0.24.1](https://github.com/baisound/bai_video_production/releases/tag/v0.24.1)
+から取得できます。正式RecordingSession、Dataset採用、Production利用は未確認です。
 
 ## このPluginが行うこと
 
@@ -34,9 +34,9 @@ process停止、path containment、reparse/collision、disk floor、package hash
 staging、原子的配置、read-backを実施し、Install / Repair / Update / Uninstallを別transactionで
 扱います。Scene、Profile、Source、device、GAIN、+48V、PAD、HPFは自動変更しません。
 
-日本語・英語対応の`0.1.0-dev.10-installer.1`は技術候補として実装・検証され、公開Technical Previewへ
-同梱する候補です。
-OBS 32.2.1の選択、Version、停止状態、reparse、書込権限、空き容量、existing file hash、
+日本語・英語対応の`0.1.0-dev.10-installer.2`は、OBS本体フォルダーと`bin\64bit`直指定の両方を受け付け、
+無効な選択でも型不一致を起こさず理由を表示します。
+OBS 32.2.1/32.2.2の選択、Version、停止状態、reparse、書込権限、空き容量、existing file hash、
 backup、journal、read-backを検査します。現候補は未署名のPre-releaseです。Production installerや
 BAI Video Production全体の安定版として表示せず、署名とPublisher表示は後続Gateで扱います。
 
@@ -46,13 +46,13 @@ BAI Video Production全体の安定版として表示せず、署名とPublisher
 
 この章は項目数を覚えるための「10手順」ではありません。上から順に読むだけで、Pluginを安全に導入し、保存先と安全停止条件を決め、GAINを確認し、
 録音を開始・一時停止・再開・停止して、最後に保存fileを確認できます。現在のdev.10は公開Technical Previewです。
-[公式Release](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1)
-のAssetsから`bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe`を取得してください。
+[公式Release](https://github.com/baisound/bai_video_production/releases/tag/v0.24.1)
+のAssetsから`bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe`を取得してください。
 ZIPをOBSフォルダーへ手作業でコピーする必要はありません。
 
 ### 導入する前の準備
 
-Windows 10/11の64-bit版と、OBS Studio 32.2.1（64-bit）を用意します。OBSで配信や録画をして
+Windows 10/11の64-bit版と、OBS Studio 32.2.1または32.2.2（64-bit）を用意します。OBSで配信や録画をして
 いる場合は先に終了し、OBSを通常のメニューから閉じます。作業中のSceneや設定は保存しておきます。
 
 公式Releaseから入手し、VersionとSHA-256が一致することを確認します。現在のTechnical Previewは
@@ -61,8 +61,9 @@ Windows 10/11の64-bit版と、OBS Studio 32.2.1（64-bit）を用意します�
 
 ### インストーラーで導入する
 
-インストーラーが検出したOBSを確認します。OBSが複数ある場合は、普段使う32.2.1を選びます。
-先へ進むと、インストーラーがOBS停止、32.2.1、空き容量、reparse、書込権限、既存fileのhashを
+インストーラーが検出したOBSを確認します。OBSが複数ある場合は、普段使う32.2.1または32.2.2を選びます。
+`OBS Studio`本体フォルダーと、`obs64.exe`がある`bin\64bit`フォルダーのどちらも指定できます。
+先へ進むと、インストーラーがOBS停止、対応Version、空き容量、reparse、書込権限、既存fileのhashを
 確認します。不合格なら理由を表示して配置前に停止します。既存の同一fileがある場合はbackupされ、
 処理履歴が残ります。完了画面が出るまでPCやインストーラーを強制終了しないでください。
 
@@ -109,20 +110,21 @@ file削除、上書きインストール、自動rollbackを先に行わず、[�
 
 This is not a fixed ten-step checklist to memorize. Read this section from top to bottom to install the Plugin, select a destination and safety limits, check gain,
 record, pause, resume, stop, and verify the saved files. The current dev.10 build is a public Technical Preview.
-Download `bai-voice-capture-0.1.0-dev.10-installer.1-windows-x64-setup.exe` from the
-[official Release](https://github.com/baisound/bai_video_production/releases/tag/obs-voice-capture-v0.1.0-dev.10-installer.1).
+Download `bai-voice-capture-0.1.0-dev.10-installer.2-windows-x64-setup.exe` from the
+[official Release](https://github.com/baisound/bai_video_production/releases/tag/v0.24.1).
 It is not code-signed and must not be presented as a Production installer or the stable BAI Video Production release.
 
 ### Prepare the computer
 
-Use 64-bit Windows 10/11 and 64-bit OBS Studio 32.2.1. Finish any stream or recording, save your work, and exit
+Use 64-bit Windows 10/11 and 64-bit OBS Studio 32.2.1 or 32.2.2. Finish any stream or recording, save your work, and exit
 OBS normally. Download only from the official Release and verify its version and SHA-256. The current Technical
 Preview is unsigned, so Publisher information may be absent and Windows may show a warning. Do not run a copy
 obtained from another site, a repost, or an email attachment. Stop when the file or security prompt is unexpected.
 
 ### Install the Plugin
 
-Confirm the OBS installation detected by the installer. When several copies exist, select the 32.2.1 instance
+Confirm the OBS installation detected by the installer. Select either the OBS root or its `bin\64bit` folder.
+When several copies exist, select the 32.2.1 or 32.2.2 instance
 you normally use. The installer checks that OBS is closed and compatible, then checks disk space, reparse points,
 write access, and existing-file hashes. It stops before placement and explains the reason when a check fails.
 Matching existing files are backed up and the transaction is journaled. Wait for the standard completion page;

@@ -6,7 +6,7 @@
 
 - Project: `ai-video-production`
 - Mode: `BAI Development OS CONSUMER_PROJECT_MODE`
-- Project Status: `V0_24_0_RELEASED / TASK_036_P_UX_1C_VISUAL_HOSTED_CLOSED / TASK_036_P_UX_2_D4_D5_HOSTED_CLOSED / TASK_036_P_UX_2E_NATIVE_CLOSURE_PENDING / TASK_046_VOICE_ROUTE_SEPARATE / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE / TASK_049_GAME_INTELLIGENCE_INTEGRATED / TASK_050_TRAINING_STUDIO_FOUNDATION_INTEGRATED`
+- Project Status: `V0_24_1_RELEASE_CANDIDATE / TASK_092_INSTALLER_REMEDIATION_ACTIVE / TASK_036_P_UX_2E_NATIVE_CLOSURE_PENDING / TASK_047_P_OBS_1_PRODUCTION_RECORDING_P0_GATE`
 - Last Completed Release Unit: `TASK-091 — v0.24.0 Windows EXE / Installer`; release PR #552 exact head `2a5d9723e753fa03b2faf9e43910fa2d0b219cc2` passed hosted `9 / 9` and merged at exact release-code main `2bf7a04736ef9d1fddc4c35841352d448c1f8777`; annotated Tag object `d1c716f7a148ff6b83c81c04c2f16606e07c5468`, Release workflow `34994846928`, exact-tag Windows builds and all nine published artifact digests are verified
 - Last Completed Consumer Gate: `TASK-036 / P-UX-1C V6.1.1 NATIVE PARITY CLOSURE`; PR #122 exact head `5d0d8140659a6bf3a30e9b19ac183c206dee8d92` passed hosted `9 / 9`, merged at exact main `ea671ee75a6c1a6ef79756b33f68ecb07466c5b4`, and passed post-merge main CI/Security
 - Completed Consumer Task: `TASK-036 / P-UX-1C`; exact packaged native Evidence closes Home, WORLD LOCK, Scene Design, Edit, Quick, Settings, Export and all six top menus under `V6.1.1_VISUAL_PARITY_PASS`
@@ -17,8 +17,8 @@
 - TASK-004 Profile: `DEV-4 FOUNDATION CRITICAL` / score `25`
 - TASK-004 Status: `COMPLETED`
 - Package: `0.24.0`
-- Release State: `V0_24_0_PUBLISHED`; exact release PR, annotated Tag, exact-tag Windows EXE/installer build, GitHub Release and complete asset digest read-back are verified
-- Development Candidate: `NONE`
+- Release State: `V0_24_1_RELEASE_CANDIDATE`; two missing DbD utility installers, OBS installer.2 remediation, and the separate SRT-to-Owner-Voice-WAV guide are in TASK-092
+- Development Candidate: `0.24.1`
 - Selected Release Identity: `0.24.0 / v0.24.0 / stable`, explicitly selected by the Owner on 2026-09-16
 - Release commit: `2bf7a04736ef9d1fddc4c35841352d448c1f8777`
 - Windows EXE / installer release Evidence: `docs/ai-team/tasks/TASK-091/evidence/v0.24.0-windows-release-closure-2026-09-16.md`

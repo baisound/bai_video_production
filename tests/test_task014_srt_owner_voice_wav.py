@@ -1,5 +1,6 @@
 from pathlib import Path
-import json, math, wave, shutil
+import json, math, wave, shutil, sys
+from types import SimpleNamespace
 import pytest
 from ai_video_production.task014_srt_owner_voice_wav import *
 from ai_video_production.voice_reference_selector import VoiceReferenceCandidate
@@ -56,3 +57,34 @@ def test_neutral_fallback_is_opt_in(tmp_path):
     with pytest.raises(ValueError,match='NO_APPROVED_REFERENCE'):
         render_srt_to_wav(p,renderer=r,candidates=refs,work_dir=tmp_path/'a',output=tmp_path/'a.wav',style_id='WHISPER',emotion_id='SAD')
     render_srt_to_wav(p,renderer=r,candidates=refs,work_dir=tmp_path/'b',output=tmp_path/'b.wav',style_id='WHISPER',emotion_id='SAD',allow_neutral_fallback=True)
+
+
+def test_qwen_renderer_uses_generated_sample_rate_not_reference_rate(tmp_path, monkeypatch):
+    reference=candidate(tmp_path)
+    writes=[]
+
+    class Model:
+        def generate_voice_clone(self, **kwargs):
+            assert kwargs['ref_audio'][1] == 48_000
+            return [[0.0, 0.1]], 24_000
+
+    class ModelFactory:
+        @classmethod
+        def from_pretrained(cls, *args, **kwargs):
+            return Model()
+
+    fake_soundfile=SimpleNamespace(
+        read=lambda *args, **kwargs: ([0.0], 48_000),
+        write=lambda path, data, sample_rate, subtype: writes.append((path, sample_rate, subtype)),
+    )
+    fake_torch=SimpleNamespace(bfloat16='bf16')
+    fake_qwen=SimpleNamespace(Qwen3TTSModel=ModelFactory)
+    monkeypatch.setitem(sys.modules, 'soundfile', fake_soundfile)
+    monkeypatch.setitem(sys.modules, 'torch', fake_torch)
+    monkeypatch.setitem(sys.modules, 'qwen_tts', fake_qwen)
+    monkeypatch.setattr('ai_video_production.task014_srt_owner_voice_wav.subprocess.run', lambda *args, **kwargs: SimpleNamespace(returncode=1))
+
+    renderer=Qwen3OwnerVoiceRenderer(tmp_path/'model')
+    with pytest.raises(RuntimeError, match='normalization failed'):
+        renderer.render(text='こんにちは', reference=reference, output_path=tmp_path/'out.wav')
+    assert writes[0][1:] == (24_000, 'FLOAT')

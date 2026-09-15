@@ -110,10 +110,12 @@ class Qwen3OwnerVoiceRenderer:
         waveform,sr=sf.read(str(reference.wav_path),dtype="float32",always_2d=False)
         ref_text=reference.transcript_path.read_text(encoding="utf-8").strip()
         result=model.generate_voice_clone(text=text,language="Japanese",ref_audio=(waveform,sr),ref_text=ref_text,x_vector_only_mode=False,max_new_tokens=2048)
-        waves=result[0] if isinstance(result,tuple) else result
+        if not isinstance(result,tuple) or len(result)!=2: raise RuntimeError("Qwen voice clone returned an invalid result")
+        waves,output_sr=result
         if isinstance(waves,(list,tuple)) and len(waves)==1: waves=waves[0]
         if hasattr(waves,"detach"): waves=waves.detach().cpu().numpy()
-        temp=output_path.with_suffix('.qwen.wav'); sf.write(str(temp),waves,24_000 if sr is None else int(sr),subtype="FLOAT")
+        if not isinstance(output_sr,(int,float)) or int(output_sr)<=0: raise RuntimeError("Qwen voice clone returned an invalid sample rate")
+        temp=output_path.with_suffix('.qwen.wav'); sf.write(str(temp),waves,int(output_sr),subtype="FLOAT")
         proc=subprocess.run(["ffmpeg","-nostdin","-hide_banner","-loglevel","error","-y","-i",str(temp),"-ar","48000","-ac","1","-c:a","pcm_s24le",str(output_path)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,check=False,timeout=180,shell=False)
         temp.unlink(missing_ok=True)
         if proc.returncode!=0: raise RuntimeError("Qwen output normalization failed")

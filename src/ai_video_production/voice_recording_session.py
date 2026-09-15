@@ -872,8 +872,13 @@ class TeleprompterCheckpointRevision(_HashedRecord):
         _integer(self.plan_binding["plan_revision"], "plan_revision", minimum=1)
         _digest(self.plan_binding["plan_sha256"], "plan_sha256")
         _digest(self.plan_binding["approved_text_binding_sha256"], "approved_text_binding_sha256")
-        if self.plan_binding["planned_minutes"] not in {30, 60, 90, 120}:
-            raise ValueError("planned_minutes must be 30, 60, 90, or 120")
+        planned_minutes = self.plan_binding["planned_minutes"]
+        if (
+            not isinstance(planned_minutes, int)
+            or isinstance(planned_minutes, bool)
+            or not 1 <= planned_minutes <= 10_080
+        ):
+            raise ValueError("planned_minutes must be an integer from 1 to 10080")
         _integer(self.attempt_number, "attempt_number", minimum=1)
         _digest(self.source_text_binding_sha256, "source_text_binding_sha256")
         _integer(self.sentence_start_anchor, "sentence_start_anchor")

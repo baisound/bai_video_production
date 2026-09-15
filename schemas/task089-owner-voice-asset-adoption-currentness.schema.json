@@ -1,0 +1,1549 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bai.task089.owner-voice-asset-adoption-currentness.nonlive.v1",
+  "title": "TASK-089 non-live owner voice Asset adoption/currentness fixtures",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/subject"
+    },
+    {
+      "$ref": "#/$defs/grant"
+    },
+    {
+      "$ref": "#/$defs/producer"
+    },
+    {
+      "$ref": "#/$defs/custody"
+    },
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/registration"
+    },
+    {
+      "$ref": "#/$defs/readback"
+    },
+    {
+      "$ref": "#/$defs/assessment"
+    },
+    {
+      "$ref": "#/$defs/pair"
+    },
+    {
+      "$ref": "#/$defs/bundle"
+    }
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "nullableDigest": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/digest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "n": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "p": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "token": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+    },
+    "time": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$"
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "enum": [
+            "PCM_S16LE",
+            "PCM_S24LE",
+            "FLOAT32LE"
+          ]
+        },
+        "sample_rate_hz": {
+          "type": "integer",
+          "minimum": 8000,
+          "maximum": 192000
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "sample_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1382400000
+        }
+      },
+      "required": [
+        "format",
+        "sample_rate_hz",
+        "channels",
+        "sample_count"
+      ]
+    },
+    "assetSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "type": "string",
+          "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "production_job_id": {
+          "type": "string",
+          "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "asset_type": {
+          "const": "AUDIO"
+        },
+        "asset_role": {
+          "enum": [
+            "RAW_CAPTURE",
+            "CANONICAL_PCM",
+            "PROCESSED_SPEECH_CONTINUOUS",
+            "TRAINING_COPY"
+          ]
+        },
+        "logical_uri": {
+          "type": "string",
+          "pattern": "^asset://"
+        },
+        "checksum": {
+          "$ref": "#/$defs/digest"
+        },
+        "asset_version": {
+          "$ref": "#/$defs/p"
+        },
+        "producer_operation_id": {
+          "type": "string",
+          "pattern": "^OP-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "custody_receipt_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "asset_id",
+        "production_job_id",
+        "asset_type",
+        "asset_role",
+        "logical_uri",
+        "checksum",
+        "asset_version",
+        "producer_operation_id",
+        "custody_receipt_sha256"
+      ]
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089SubjectFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "fixture_case": {
+          "type": "string",
+          "pattern": "^fixture-[a-z0-9_-]{0,56}$"
+        },
+        "project_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,63}$"
+        },
+        "production_job_id": {
+          "type": "string",
+          "pattern": "^JOB-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "project_revision": {
+          "$ref": "#/$defs/p"
+        },
+        "owner_subject_revision": {
+          "$ref": "#/$defs/p"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "fixture_case",
+        "project_id",
+        "production_job_id",
+        "project_revision",
+        "owner_subject_revision"
+      ]
+    },
+    "grant": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089PurposeGrantFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "subject_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "scope": {
+          "enum": [
+            "OWNER_VOICE_CAPTURE",
+            "OWNER_VOICE_DATA_PREPARATION"
+          ]
+        },
+        "operation": {
+          "enum": [
+            "CAPTURE_RAW_PUBLISH",
+            "CAPTURE_CANONICAL_PUBLISH",
+            "QUALITY_FINISHING",
+            "TRAINING_COPY_CREATION"
+          ]
+        },
+        "output_role": {
+          "enum": [
+            "RAW_CAPTURE",
+            "CANONICAL_PCM",
+            "PROCESSED_SPEECH_CONTINUOUS",
+            "TRAINING_COPY"
+          ]
+        },
+        "decision": {
+          "enum": [
+            "ALLOW",
+            "DENY",
+            "UNKNOWN"
+          ]
+        },
+        "policy_revision": {
+          "$ref": "#/$defs/p"
+        },
+        "grant_revision": {
+          "$ref": "#/$defs/p"
+        },
+        "issued_at": {
+          "$ref": "#/$defs/time"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/time"
+        },
+        "q1_readback_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "subject_sha256",
+        "scope",
+        "operation",
+        "output_role",
+        "decision",
+        "policy_revision",
+        "grant_revision",
+        "issued_at",
+        "expires_at",
+        "q1_readback_sha256"
+      ],
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "scope": {
+                  "const": "OWNER_VOICE_CAPTURE"
+                },
+                "operation": {
+                  "const": "CAPTURE_RAW_PUBLISH"
+                },
+                "output_role": {
+                  "const": "RAW_CAPTURE"
+                },
+                "q1_readback_sha256": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "properties": {
+                "scope": {
+                  "const": "OWNER_VOICE_CAPTURE"
+                },
+                "operation": {
+                  "const": "CAPTURE_CANONICAL_PUBLISH"
+                },
+                "output_role": {
+                  "const": "CANONICAL_PCM"
+                },
+                "q1_readback_sha256": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "properties": {
+                "scope": {
+                  "const": "OWNER_VOICE_DATA_PREPARATION"
+                },
+                "operation": {
+                  "const": "QUALITY_FINISHING"
+                },
+                "output_role": {
+                  "const": "PROCESSED_SPEECH_CONTINUOUS"
+                },
+                "q1_readback_sha256": {
+                  "$ref": "#/$defs/digest"
+                }
+              }
+            },
+            {
+              "properties": {
+                "scope": {
+                  "const": "OWNER_VOICE_DATA_PREPARATION"
+                },
+                "operation": {
+                  "const": "TRAINING_COPY_CREATION"
+                },
+                "output_role": {
+                  "const": "TRAINING_COPY"
+                },
+                "q1_readback_sha256": {
+                  "$ref": "#/$defs/digest"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089ProducerOutputFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "subject_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "grant_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "producer_task": {
+          "enum": [
+            "TASK-047",
+            "TASK-048"
+          ]
+        },
+        "producer_output_role": {
+          "enum": [
+            "TASK047_RAW_CAPTURE_OUTPUT",
+            "TASK047_CANONICAL_PCM_OUTPUT",
+            "TASK048_SPEECH_CONTINUOUS_OUTPUT",
+            "TASK048_TRAINING_COPY_OUTPUT"
+          ]
+        },
+        "asset_role": {
+          "enum": [
+            "RAW_CAPTURE",
+            "CANONICAL_PCM",
+            "PROCESSED_SPEECH_CONTINUOUS",
+            "TRAINING_COPY"
+          ]
+        },
+        "producer_operation_id": {
+          "type": "string",
+          "pattern": "^OP-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "output_sequence": {
+          "$ref": "#/$defs/p"
+        },
+        "content_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "media": {
+          "$ref": "#/$defs/media"
+        },
+        "upstream_producer_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "q1_readback_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "subject_sha256",
+        "grant_sha256",
+        "producer_task",
+        "producer_output_role",
+        "asset_role",
+        "producer_operation_id",
+        "output_sequence",
+        "content_sha256",
+        "media",
+        "upstream_producer_sha256",
+        "q1_readback_sha256"
+      ],
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "producer_task": {
+                  "const": "TASK-047"
+                },
+                "producer_output_role": {
+                  "const": "TASK047_RAW_CAPTURE_OUTPUT"
+                },
+                "asset_role": {
+                  "const": "RAW_CAPTURE"
+                },
+                "upstream_producer_sha256": {
+                  "type": "null"
+                },
+                "q1_readback_sha256": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "properties": {
+                "producer_task": {
+                  "const": "TASK-047"
+                },
+                "producer_output_role": {
+                  "const": "TASK047_CANONICAL_PCM_OUTPUT"
+                },
+                "asset_role": {
+                  "const": "CANONICAL_PCM"
+                },
+                "media": {
+                  "properties": {
+                    "format": {
+                      "const": "PCM_S24LE"
+                    },
+                    "sample_rate_hz": {
+                      "const": 48000
+                    },
+                    "channels": {
+                      "const": 1
+                    }
+                  }
+                },
+                "upstream_producer_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "q1_readback_sha256": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "properties": {
+                "producer_task": {
+                  "const": "TASK-048"
+                },
+                "producer_output_role": {
+                  "const": "TASK048_SPEECH_CONTINUOUS_OUTPUT"
+                },
+                "asset_role": {
+                  "const": "PROCESSED_SPEECH_CONTINUOUS"
+                },
+                "media": {
+                  "properties": {
+                    "format": {
+                      "const": "PCM_S24LE"
+                    },
+                    "sample_rate_hz": {
+                      "const": 48000
+                    },
+                    "channels": {
+                      "const": 1
+                    }
+                  }
+                },
+                "upstream_producer_sha256": {
+                  "type": "null"
+                },
+                "q1_readback_sha256": {
+                  "$ref": "#/$defs/digest"
+                }
+              }
+            },
+            {
+              "properties": {
+                "producer_task": {
+                  "const": "TASK-048"
+                },
+                "producer_output_role": {
+                  "const": "TASK048_TRAINING_COPY_OUTPUT"
+                },
+                "asset_role": {
+                  "const": "TRAINING_COPY"
+                },
+                "media": {
+                  "properties": {
+                    "format": {
+                      "const": "PCM_S24LE"
+                    },
+                    "sample_rate_hz": {
+                      "const": 48000
+                    },
+                    "channels": {
+                      "const": 1
+                    }
+                  }
+                },
+                "upstream_producer_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "q1_readback_sha256": {
+                  "$ref": "#/$defs/digest"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089CustodyFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "producer_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "custody_receipt": {
+          "$ref": "bai.task082.owner-voice-private-media-custody.v2#/$defs/custodyReceipt"
+        },
+        "generation_events": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "$ref": "bai.task082.owner-voice-private-media-custody.v2#/$defs/generationEvent"
+          }
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "producer_sha256",
+        "custody_receipt",
+        "generation_events"
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089AdoptionRequestFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "subject_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "producer_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "custody_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "grant_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "adoption_operation_id": {
+          "type": "string",
+          "pattern": "^OP-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "expected_registry_generation": {
+          "$ref": "#/$defs/n"
+        },
+        "predecessor_registration_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "semantic_key_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "subject_sha256",
+        "producer_sha256",
+        "custody_sha256",
+        "grant_sha256",
+        "adoption_operation_id",
+        "expected_registry_generation",
+        "predecessor_registration_sha256",
+        "semantic_key_sha256"
+      ]
+    },
+    "registration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089RegistrationFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "outcome": {
+          "enum": [
+            "REGISTERED",
+            "REJECTED_NO_WRITE",
+            "COMPLETION_UNKNOWN"
+          ]
+        },
+        "registry_generation": {
+          "$ref": "#/$defs/n"
+        },
+        "asset_snapshot": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/assetSnapshot"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "request_sha256",
+        "outcome",
+        "registry_generation",
+        "asset_snapshot"
+      ],
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "outcome": {
+                  "const": "REGISTERED"
+                },
+                "asset_snapshot": {
+                  "$ref": "#/$defs/assetSnapshot"
+                }
+              }
+            },
+            {
+              "properties": {
+                "outcome": {
+                  "const": "REJECTED_NO_WRITE"
+                },
+                "asset_snapshot": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "properties": {
+                "outcome": {
+                  "const": "COMPLETION_UNKNOWN"
+                },
+                "asset_snapshot": {
+                  "type": "null"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "readback": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089CurrentReadbackFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "registration_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "observation_kind": {
+          "enum": [
+            "SNAPSHOT",
+            "NO_WRITE",
+            "UNRESOLVED",
+            "UNAVAILABLE",
+            "RESTARTED"
+          ]
+        },
+        "observed_subject_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "observed_grant_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "observed_registry_generation": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/n"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selected_asset_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selected_registration_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "observed_custody_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "fixture_session": {
+          "type": "string",
+          "pattern": "^fixture-[a-z0-9_-]{0,56}$"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/time"
+        },
+        "fresh_until": {
+          "$ref": "#/$defs/time"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "request_sha256",
+        "registration_sha256",
+        "observation_kind",
+        "observed_subject_sha256",
+        "observed_grant_sha256",
+        "observed_registry_generation",
+        "selected_asset_id",
+        "selected_registration_sha256",
+        "observed_custody_sha256",
+        "fixture_session",
+        "observed_at",
+        "fresh_until"
+      ],
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "observation_kind": {
+                  "const": "SNAPSHOT"
+                },
+                "registration_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "observed_subject_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "observed_grant_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "observed_registry_generation": {
+                  "$ref": "#/$defs/n"
+                },
+                "selected_asset_id": {
+                  "type": "string",
+                  "pattern": "^ASSET-[0-9A-HJKMNP-TV-Z]{26}$"
+                },
+                "selected_registration_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "observed_custody_sha256": {
+                  "$ref": "#/$defs/digest"
+                }
+              }
+            },
+            {
+              "properties": {
+                "observation_kind": {
+                  "const": "NO_WRITE"
+                },
+                "registration_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "observed_subject_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "observed_grant_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "observed_registry_generation": {
+                  "$ref": "#/$defs/n"
+                },
+                "selected_asset_id": {
+                  "type": "null"
+                },
+                "selected_registration_sha256": {
+                  "type": "null"
+                },
+                "observed_custody_sha256": {
+                  "$ref": "#/$defs/digest"
+                }
+              }
+            },
+            {
+              "properties": {
+                "observation_kind": {
+                  "const": "UNRESOLVED"
+                },
+                "registration_sha256": {
+                  "$ref": "#/$defs/digest"
+                },
+                "observed_subject_sha256": {
+                  "type": "null"
+                },
+                "observed_grant_sha256": {
+                  "type": "null"
+                },
+                "observed_registry_generation": {
+                  "$ref": "#/$defs/n"
+                },
+                "selected_asset_id": {
+                  "type": "null"
+                },
+                "selected_registration_sha256": {
+                  "type": "null"
+                },
+                "observed_custody_sha256": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "properties": {
+                "observation_kind": {
+                  "const": "UNAVAILABLE"
+                },
+                "registration_sha256": {
+                  "type": "null"
+                },
+                "observed_subject_sha256": {
+                  "type": "null"
+                },
+                "observed_grant_sha256": {
+                  "type": "null"
+                },
+                "observed_registry_generation": {
+                  "type": "null"
+                },
+                "selected_asset_id": {
+                  "type": "null"
+                },
+                "selected_registration_sha256": {
+                  "type": "null"
+                },
+                "observed_custody_sha256": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "properties": {
+                "observation_kind": {
+                  "const": "RESTARTED"
+                },
+                "registration_sha256": {
+                  "type": "null"
+                },
+                "observed_subject_sha256": {
+                  "type": "null"
+                },
+                "observed_grant_sha256": {
+                  "type": "null"
+                },
+                "observed_registry_generation": {
+                  "type": "null"
+                },
+                "selected_asset_id": {
+                  "type": "null"
+                },
+                "selected_registration_sha256": {
+                  "type": "null"
+                },
+                "observed_custody_sha256": {
+                  "type": "null"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089AdoptionAssessmentFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "readback_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "registration_sha256": {
+          "$ref": "#/$defs/nullableDigest"
+        },
+        "fixture_state": {
+          "enum": [
+            "CONSISTENT_REGISTERED",
+            "NOT_READY",
+            "UNKNOWN",
+            "STALE",
+            "CONFLICT"
+          ]
+        },
+        "reason_code": {
+          "enum": [
+            "FIXTURE_RELATIONS_MATCH",
+            "REGISTRATION_REJECTED",
+            "OUTCOME_UNKNOWN",
+            "SESSION_NOT_CURRENT",
+            "CURRENTNESS_MISMATCH",
+            "PURPOSE_NOT_ALLOWED",
+            "SEMANTIC_CONFLICT"
+          ]
+        },
+        "guard_status": {
+          "const": "UNAVAILABLE"
+        },
+        "required_owner_contracts": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "CANONICAL_ASSET"
+            },
+            {
+              "const": "PRIVATE_CUSTODY"
+            },
+            {
+              "const": "PURPOSE_CONSENT"
+            },
+            {
+              "const": "OWNER_SUBJECT"
+            }
+          ],
+          "items": false,
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "request_sha256",
+        "readback_sha256",
+        "registration_sha256",
+        "fixture_state",
+        "reason_code",
+        "guard_status",
+        "required_owner_contracts"
+      ],
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "properties": {
+                "fixture_state": {
+                  "const": "CONSISTENT_REGISTERED"
+                },
+                "reason_code": {
+                  "const": "FIXTURE_RELATIONS_MATCH"
+                }
+              }
+            },
+            {
+              "properties": {
+                "fixture_state": {
+                  "const": "NOT_READY"
+                },
+                "reason_code": {
+                  "const": "REGISTRATION_REJECTED"
+                }
+              }
+            },
+            {
+              "properties": {
+                "fixture_state": {
+                  "const": "NOT_READY"
+                },
+                "reason_code": {
+                  "const": "PURPOSE_NOT_ALLOWED"
+                }
+              }
+            },
+            {
+              "properties": {
+                "fixture_state": {
+                  "const": "UNKNOWN"
+                },
+                "reason_code": {
+                  "const": "OUTCOME_UNKNOWN"
+                }
+              }
+            },
+            {
+              "properties": {
+                "fixture_state": {
+                  "const": "UNKNOWN"
+                },
+                "reason_code": {
+                  "const": "SESSION_NOT_CURRENT"
+                }
+              }
+            },
+            {
+              "properties": {
+                "fixture_state": {
+                  "const": "STALE"
+                },
+                "reason_code": {
+                  "const": "CURRENTNESS_MISMATCH"
+                }
+              }
+            },
+            {
+              "properties": {
+                "fixture_state": {
+                  "const": "CONFLICT"
+                },
+                "reason_code": {
+                  "const": "SEMANTIC_CONFLICT"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "pair": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089Q2PairHandoffFixtureV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "adapter_owner_task": {
+          "const": "TASK-089"
+        },
+        "canonical_asset_owner_task": {
+          "const": "TASK-003"
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "private_media_effect_count": {
+          "const": 0
+        },
+        "asset_adoption_count": {
+          "const": 0
+        },
+        "record_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "subject_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "q1_readback_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "q2_producer_operation_id": {
+          "type": "string",
+          "pattern": "^OP-[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "processed_request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "processed_readback_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "copy_request_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "copy_readback_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "processed_assessment_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "copy_assessment_sha256": {
+          "$ref": "#/$defs/digest"
+        },
+        "consumer_owner_task": {
+          "const": "TASK-090"
+        },
+        "terminal_binding_status": {
+          "const": "NOT_BOUND"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "adapter_owner_task",
+        "canonical_asset_owner_task",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "private_media_effect_count",
+        "asset_adoption_count",
+        "record_sha256",
+        "subject_sha256",
+        "q1_readback_sha256",
+        "q2_producer_operation_id",
+        "processed_request_sha256",
+        "processed_readback_sha256",
+        "copy_request_sha256",
+        "copy_readback_sha256",
+        "processed_assessment_sha256",
+        "copy_assessment_sha256",
+        "consumer_owner_task",
+        "terminal_binding_status"
+      ]
+    },
+    "input": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/subject"
+        },
+        {
+          "$ref": "#/$defs/grant"
+        },
+        {
+          "$ref": "#/$defs/producer"
+        },
+        {
+          "$ref": "#/$defs/custody"
+        },
+        {
+          "$ref": "#/$defs/request"
+        },
+        {
+          "$ref": "#/$defs/registration"
+        },
+        {
+          "$ref": "#/$defs/readback"
+        }
+      ]
+    },
+    "bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "record_type": {
+          "const": "Task089FixtureBundleV1"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "fixture_case": {
+          "type": "string",
+          "pattern": "^fixture-[a-z0-9_-]{0,56}$"
+        },
+        "fixture_session": {
+          "type": "string",
+          "pattern": "^fixture-[a-z0-9_-]{0,56}$"
+        },
+        "observed_at": {
+          "$ref": "#/$defs/time"
+        },
+        "records": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/input"
+          }
+        },
+        "fixture_only": {
+          "const": true
+        },
+        "authority_created": {
+          "const": false
+        },
+        "execution_authorized": {
+          "const": false
+        },
+        "owner_port_contract_status": {
+          "const": "NOT_BOUND"
+        },
+        "bundle_sha256": {
+          "$ref": "#/$defs/digest"
+        }
+      },
+      "required": [
+        "record_type",
+        "schema_version",
+        "fixture_case",
+        "fixture_session",
+        "observed_at",
+        "records",
+        "fixture_only",
+        "authority_created",
+        "execution_authorized",
+        "owner_port_contract_status",
+        "bundle_sha256"
+      ]
+    }
+  }
+}

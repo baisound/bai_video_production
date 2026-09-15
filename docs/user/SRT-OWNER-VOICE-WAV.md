@@ -7,7 +7,45 @@
 音声Modelの学習は必須ではありません。承認済みの本人参照WAVとその正確な書き起こしを使う
 Qwen3-TTS Base Modelのzero-shot voice cloneで生成できます。
 
-## 事前準備
+## いちばん簡単な方法（初めての方はこちら）
+
+用意するものは次の3つだけです。
+
+1. 読ませたい字幕のSRTファイル
+2. あなたが3～15秒話した、48 kHz・mono・PCM 24-bitの見本WAV
+3. 見本WAVで話した内容を一字一句そのまま書いた文章
+
+PowerShellを開き、BAI VIDEO PRODUCTIONのフォルダーで次の1行を実行します。
+
+```powershell
+.\tools\windows\make-owner-voice-wav.ps1
+```
+
+あとは画面の質問に答えます。SRTとWAVは、エクスプローラーからPowerShellの画面へ
+ドラッグするとパスを入力できます。最後の確認で`YES`と入力すると生成が始まります。
+
+すでに`run-owner-voice-recording-prepare.ps1`で`voice-dataset`を作っている場合は、その
+フォルダーを質問画面へドラッグしてください。内部の承認済み3～15秒音声と書き起こしを
+自動で使用するため、見本WAVと文章をもう一度指定する必要はありません。
+
+質問を省略して1行で指定する場合は次の形です。
+
+```powershell
+.\tools\windows\make-owner-voice-wav.ps1 -Srt ".\input.srt" -ReferenceManifest ".\voice-dataset\dataset\reference-manifest.json"
+```
+
+完了時に表示される`master-owner-voice.wav`が成果物です。JSON作成、ハッシュ計算、
+事前チェック、字幕配置計画、作業フォルダー作成はスクリプトが自動で行います。
+
+初回だけ、Qwen3-TTS用Python環境とModelの準備が必要です。`本人声生成用Python環境が
+見つかりません`または`Modelが見つかりません`と表示された場合は、下記のセットアップを
+先に行います。
+
+## 手動で実行する場合
+
+ここから下は、保存先や生成条件を自分で管理したい方向けの詳細手順です。
+
+### 事前準備
 
 - Windows 10/11、NVIDIA GPUと利用可能なCUDA環境
 - Python 3.12の隔離環境
@@ -21,7 +59,7 @@ ModelとPython依存の準備は、先に
 [Qwen3-TTS 0.6B Baseセットアップ](QWEN3-TTS-06B-BASE-SETUP.md)を完了してください。
 本人音声は外部サービスへアップロードせず、暗号化されたOwner管理領域で扱ってください。
 
-## 1. 作業パスを設定する
+### 1. 作業パスを設定する
 
 次の例では、ドライブルート直下を使わず、既存のBAI VIDEO PRODUCTIONフォルダー配下に
 実行単位の専用フォルダーを置きます。実際のパスへ置き換えてください。
@@ -50,7 +88,7 @@ Release wheelを入れるか、source checkoutから次を実行します。
 & $Python -m pip install -e .
 ```
 
-## 2. 参照WAVの情報を確認する
+### 2. 参照WAVの情報を確認する
 
 ```powershell
 & $Python -c "from pathlib import Path; from ai_video_production.owner_voice_wav import read_pcm_wav_info; from ai_video_production.voice_reference_selector import sha256_file; p=Path(r'$RefWav'); i=read_pcm_wav_info(p, require_canonical=True); print('duration_samples=', i.sample_count); print('sha256=', sha256_file(p))"
@@ -81,7 +119,7 @@ Release wheelを入れるか、source checkoutから次を実行します。
 `true`は実際に確認した項目だけに設定します。参照文が音声と一致しない、権利・同意がない、
 品質を確認していない場合は生成へ進めません。
 
-## 3. 生成前チェックを行う
+### 3. 生成前チェックを行う
 
 ```powershell
 & $Python -m ai_video_production.task014_srt_owner_voice_wav preflight `
@@ -94,7 +132,7 @@ Release wheelを入れるか、source checkoutから次を実行します。
 終了コード0で、`preflight.json`の`state`が`READY`であることを確認します。
 `READY_WITH_WARNING`はCUDA未確認、`BLOCKED`は必須要素不足です。
 
-## 4. SRTの配置計画を確認する
+### 4. SRTの配置計画を確認する
 
 ```powershell
 & $Python -m ai_video_production.task014_srt_owner_voice_wav plan `
@@ -104,7 +142,7 @@ Release wheelを入れるか、source checkoutから次を実行します。
 
 字幕が重複していないこと、各字幕の開始・終了位置と文章が意図どおりであることを確認します。
 
-## 5. 本人声Master WAVを生成する
+### 5. 本人声Master WAVを生成する
 
 ```powershell
 & $Python -m ai_video_production.task014_srt_owner_voice_wav render `
@@ -123,7 +161,7 @@ Release wheelを入れるか、source checkoutから次を実行します。
 短縮されます。それでも字幕枠へ収まらない音声は切断せず、処理全体が失敗します。字幕間は
 無音で埋め、SRT終端までを1本のWAVにします。
 
-## 6. 出力を検証する
+### 6. 出力を検証する
 
 ```powershell
 & $Python -c "from ai_video_production.owner_voice_wav import read_pcm_wav_info; print(read_pcm_wav_info(r'$Output', require_canonical=True))"

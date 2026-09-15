@@ -8,7 +8,7 @@
 
 - TASK-092: BAI DbD Training StudioとBAI DbD Trivia Editorの個別per-user Windowsインストーラーを追加し、各PyInstaller payloadをtree SHA-256へ固定しました。
 - TASK-092: OBS Voice Capture installer.2でOBS本体または`bin\64bit`直指定を受理し、Inno Setupの`FmtMessage`型不一致を修正してOBS 32.2.2を許可しました。
-- TASK-092: SRTから本人声Master WAVを生成する独立実行ガイドを追加し、Qwen3-TTSが返す生成音声sample rateを正しく使うよう修正しました。
+- TASK-092: SRTから本人声Master WAVを生成する独立実行ガイドと対話式1コマンドWindows helperを追加し、既存の`voice-dataset`を直接利用可能にしたうえで、Qwen3-TTSが返す生成音声sample rateを正しく使うよう修正しました。
 
 ## [0.24.0] - 2026-09-16
 

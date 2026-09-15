@@ -13,7 +13,7 @@ import argparse, hashlib, importlib, importlib.util, json, math, shutil, subproc
 
 from .subtitle_workspace import SrtWorkspaceCodec
 from .owner_voice_wav import SAMPLE_RATE_HZ, SAMPLE_WIDTH_BYTES, copy_pcm24_range, new_canonical_writer, read_pcm_wav_info
-from .voice_reference_selector import VoiceReferenceCandidate, select_reference
+from .voice_reference_selector import VoiceReferenceCandidate, build_reference_manifest, select_reference, sha256_file
 
 DEFAULT_MAX_TOTAL_SPEED=1.35
 
@@ -153,14 +153,44 @@ def qwen_preflight(*,model_root:str|Path,reference_wav:str|Path|None=None,refere
 def _load_candidates(path:Path)->tuple[VoiceReferenceCandidate,...]:
     data=json.loads(path.read_text(encoding='utf-8')); out=[]
     for x in data.get("candidates",[]):
-        out.append(VoiceReferenceCandidate(x["candidate_id"],Path(x["wav_path"]),Path(x["transcript_path"]),x["content_sha256"],int(x["duration_samples"]),x["style_id"],x["emotion_id"],bool(x["quality_pass"]),bool(x["owner_approved"]),bool(x["transcript_verified"])))
+        candidate=VoiceReferenceCandidate(x["candidate_id"],Path(x["wav_path"]),Path(x["transcript_path"]),x["content_sha256"],int(x["duration_samples"]),x["style_id"],x["emotion_id"],bool(x["quality_pass"]),bool(x["owner_approved"]),bool(x["transcript_verified"]))
+        if not candidate.wav_path.is_file() or not candidate.transcript_path.is_file():
+            raise ValueError("reference file is missing")
+        if sha256_file(candidate.wav_path)!=candidate.content_sha256:
+            raise ValueError("reference WAV checksum mismatch")
+        if not candidate.transcript_path.read_text(encoding="utf-8").strip():
+            raise ValueError("reference transcript is empty")
+        out.append(candidate)
     return tuple(out)
+
+
+def prepare_reference_manifest(*, reference_wav:str|Path, reference_text:str|Path, output:str|Path,
+                               owner_approved:bool=False, quality_pass:bool=False,
+                               transcript_verified:bool=False)->dict[str,Any]:
+    """Create the one-reference manifest used by the beginner Windows wrapper."""
+    wav_path=Path(reference_wav).resolve(strict=True)
+    text_path=Path(reference_text).resolve(strict=True)
+    if not text_path.read_text(encoding="utf-8").strip():
+        raise ValueError("reference transcript is empty")
+    info=read_pcm_wav_info(wav_path,require_canonical=True)
+    candidate=VoiceReferenceCandidate(
+        "OWNER_NORMAL_001", wav_path, text_path, sha256_file(wav_path), info.sample_count,
+        "NORMAL", "NORMAL", quality_pass, owner_approved, transcript_verified,
+    )
+    if not candidate.eligible:
+        raise ValueError("reference confirmations are required")
+    manifest=build_reference_manifest((candidate,))
+    destination=Path(output)
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    destination.write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
+    return manifest
 
 def main(argv:Sequence[str]|None=None)->int:
     p=argparse.ArgumentParser(); sub=p.add_subparsers(dest='cmd',required=True)
     planp=sub.add_parser('plan'); planp.add_argument('--srt',required=True); planp.add_argument('--output',required=True); planp.add_argument('--style',default='NORMAL'); planp.add_argument('--emotion',default='NORMAL'); planp.add_argument('--speaking-rate',type=float,default=1.0)
     asmp=sub.add_parser('assemble'); asmp.add_argument('--srt',required=True); asmp.add_argument('--cue-dir',required=True); asmp.add_argument('--output',required=True); asmp.add_argument('--report')
     prep=sub.add_parser('preflight'); prep.add_argument('--model-root',required=True); prep.add_argument('--reference-wav'); prep.add_argument('--reference-text'); prep.add_argument('--output')
+    refp=sub.add_parser('prepare-reference'); refp.add_argument('--reference-wav',required=True); refp.add_argument('--reference-text',required=True); refp.add_argument('--output',required=True); refp.add_argument('--confirm-owner-approved',action='store_true'); refp.add_argument('--confirm-quality-pass',action='store_true'); refp.add_argument('--confirm-transcript-verified',action='store_true')
     rnd=sub.add_parser('render'); rnd.add_argument('--srt',required=True); rnd.add_argument('--model-root',required=True); rnd.add_argument('--references',required=True); rnd.add_argument('--work-dir',required=True); rnd.add_argument('--output',required=True); rnd.add_argument('--report'); rnd.add_argument('--style',default='NORMAL'); rnd.add_argument('--emotion',default='NORMAL'); rnd.add_argument('--speaking-rate',type=float,default=1.0); rnd.add_argument('--allow-neutral-fallback',action='store_true')
     a=p.parse_args(argv)
     if a.cmd=='plan':
@@ -174,6 +204,11 @@ def main(argv:Sequence[str]|None=None)->int:
         if a.output: Path(a.output).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
         else: print(json.dumps(report,ensure_ascii=False,indent=2))
         return 0 if report['state']!='BLOCKED' else 2
+    if a.cmd=='prepare-reference':
+        prepare_reference_manifest(reference_wav=a.reference_wav,reference_text=a.reference_text,output=a.output,
+            owner_approved=a.confirm_owner_approved,quality_pass=a.confirm_quality_pass,
+            transcript_verified=a.confirm_transcript_verified)
+        return 0
     refs=_load_candidates(Path(a.references)); report=render_srt_to_wav(a.srt,renderer=Qwen3OwnerVoiceRenderer(a.model_root),candidates=refs,work_dir=a.work_dir,output=a.output,style_id=a.style,emotion_id=a.emotion,speaking_rate=a.speaking_rate,allow_neutral_fallback=a.allow_neutral_fallback)
     if a.report: Path(a.report).write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
     return 0

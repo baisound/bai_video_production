@@ -24,6 +24,7 @@
 
 - SRT→本人声Master WAVの独立した公開実行ガイド
 - READMEから別リンクで到達可能
+- 対話式の1コマンドWindows helperでmanifest、preflight、plan、renderを自動化
 - Qwen3-TTS `generate_voice_clone`が返す生成sample rateを正しく使用
 
 ### R4 — v0.24.1 release
@@ -43,6 +44,7 @@
 - `tools/windows/build-task047-obs-installer.ps1`
 - `tools/windows/test-task047-obs-installer.ps1`
 - `tools/windows/build-task092-dbd-utility-installers.ps1`
+- `tools/windows/make-owner-voice-wav.ps1`
 - `src/ai_video_production/task014_srt_owner_voice_wav.py`
 - `docs/user/OBS-VOICE-CAPTURE-PLUGIN.md`
 - `docs/user/SRT-OWNER-VOICE-WAV.md`

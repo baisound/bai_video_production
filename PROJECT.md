@@ -116,12 +116,12 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Separate Voice Route: TASK-046/TASK-047 retain their own exact Locks, authorities and Human gates; P-UX-1C no longer blocks their independently authorized work
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; P-OBS-0 installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may move forward separately, but P-VS-3 production training-material recording and P-VS-4 fine-tuning require P-OBS-1 hosted completion plus exact-path probe PASS, recording Consent, storage encryption and Owner GO
 - TASK-004: `COMPLETED`
-- Package: `0.24.1`
-- Release State: `V0_24_2_RELEASE_CANDIDATE`; TASK-093 adds the installer-managed zero-shot Owner Voice runtime, stable noninteractive PowerShell command, and audience-separated documentation
-- Development Candidate: `0.24.2`
+- Package: `0.24.2`
+- Release State: `V0_24_2_RELEASED`; TASK-093 publishes the installer-managed zero-shot Owner Voice runtime, stable noninteractive PowerShell command, and audience-separated documentation
+- Development Candidate: `NONE`
 - Selected Release Identity: `0.24.2 / v0.24.2 / stable`, explicitly requested by the Owner on 2026-09-16
-- Completed Release Unit: `TASK-092 / v0.24.1 INSTALLER REMEDIATION`; PR #554 merged at exact main `af0bbcbab394b363ca77c41bbd87640d8b25d189`; annotated Tag object `ae3ed5ab2fa135ca80499123f64306d89b7e0110` dereferences to that commit; Release workflow `35005318837` and exact-tag Windows asset digest read-back passed.
-- Current release verification: stable GitHub Release `v0.24.1` is published at `https://github.com/baisound/bai_video_production/releases/tag/v0.24.1`; TASK-092 scope is recorded in `docs/ai-team/tasks/TASK-092/task.md`.
+- Completed Release Unit: `TASK-093 / v0.24.2 OWNER VOICE RUNTIME INSTALLER`; PR #555 exact head `e10c144ec2c0547d602b84d37ed32a063d204727` passed hosted `9 / 9` and merged at exact main `455c94c586b1c3fb72740b71cea7bd05a9a855fe`; annotated Tag object `7299a7d5e3b0045c9c3ba1203afbce43b452da14` dereferences to that commit; Release workflow `35018509125` and all 16 published asset identities passed read-back.
+- Current release verification: stable GitHub Release `v0.24.2` is published at `https://github.com/baisound/bai_video_production/releases/tag/v0.24.2`; TASK-093 scope and Evidence are recorded under `docs/ai-team/tasks/TASK-093/`.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus Owner marker section 2.1 (`DONE / DEV1 NOW / DEV2 NOW / NEXT / FUTURE / GATE`)
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS

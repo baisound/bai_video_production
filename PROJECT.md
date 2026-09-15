@@ -6,7 +6,7 @@
 
 ## Project Status
 
-`V0_24_1_RELEASE_CANDIDATE_TASK_092_INSTALLER_REMEDIATION_ACTIVE_NATIVE_RUNTIME_GATES_PRESERVED`
+`V0_24_2_RELEASE_CANDIDATE_TASK_093_OWNER_VOICE_RUNTIME_INSTALLER_ACTIVE_NATIVE_RUNTIME_GATES_PRESERVED`
 
 ## Purpose
 
@@ -116,12 +116,12 @@ TASK-004はTimebaseだけでなく、ComfyUI画像/動画生成、Character Iden
 - Separate Voice Route: TASK-046/TASK-047 retain their own exact Locks, authorities and Human gates; P-UX-1C no longer blocks their independently authorized work
 - P0 Production Recording Dependency: `TASK-047 / P-OBS-1 MINIMUM OBS CAPTURE MVP`; P-OBS-0 installed-target inventory plus separately sourced official SDK/Plugin Template identity, ABI/License/Build design/probe may move forward separately, but P-VS-3 production training-material recording and P-VS-4 fine-tuning require P-OBS-1 hosted completion plus exact-path probe PASS, recording Consent, storage encryption and Owner GO
 - TASK-004: `COMPLETED`
-- Package: `0.24.0`
-- Release State: `V0_24_1_RELEASE_CANDIDATE`; TASK-092 adds the two missing DbD utility installers, repairs OBS installer path/error/version handling, and publishes the separate SRT-to-Owner-Voice-WAV guide
-- Development Candidate: `0.24.1`
-- Selected Release Identity: `0.24.0 / v0.24.0 / stable`, explicitly selected by the Owner on 2026-09-16 for the Windows EXE / installer release
-- Completed Release Unit: `TASK-091 / v0.24.0 WINDOWS EXE / INSTALLER`; PR #552 exact head `2a5d9723e753fa03b2faf9e43910fa2d0b219cc2` passed hosted `9 / 9` and merged at exact release-code main `2bf7a04736ef9d1fddc4c35841352d448c1f8777`; annotated Tag object `d1c716f7a148ff6b83c81c04c2f16606e07c5468` dereferences to that commit; Release workflow `34994846928` passed full pytest, compileall, package build and release gates; the stable Release publishes nine digest-bound artifacts plus their complete `SHA256SUMS`. Installer execution, Production Deploy and real Resolve GUI runtime remain separate.
-- Current release verification: stable GitHub Release `v0.24.0` is published at `https://github.com/baisound/bai_video_production/releases/tag/v0.24.0`; canonical Evidence is `docs/ai-team/tasks/TASK-091/evidence/v0.24.0-windows-release-closure-2026-09-16.md`.
+- Package: `0.24.1`
+- Release State: `V0_24_2_RELEASE_CANDIDATE`; TASK-093 adds the installer-managed zero-shot Owner Voice runtime, stable noninteractive PowerShell command, and audience-separated documentation
+- Development Candidate: `0.24.2`
+- Selected Release Identity: `0.24.2 / v0.24.2 / stable`, explicitly requested by the Owner on 2026-09-16
+- Completed Release Unit: `TASK-092 / v0.24.1 INSTALLER REMEDIATION`; PR #554 merged at exact main `af0bbcbab394b363ca77c41bbd87640d8b25d189`; annotated Tag object `ae3ed5ab2fa135ca80499123f64306d89b7e0110` dereferences to that commit; Release workflow `35005318837` and exact-tag Windows asset digest read-back passed.
+- Current release verification: stable GitHub Release `v0.24.1` is published at `https://github.com/baisound/bai_video_production/releases/tag/v0.24.1`; TASK-092 scope is recorded in `docs/ai-team/tasks/TASK-092/task.md`.
 - Target-machine Gate: `TASK-036 / M3B MINIMUM_EDITING_PRODUCT_MVP_PASS / FORMAL_RELEASE_COMPLETE`
 - Project Roadmap: `docs/roadmap/PROJECT-ROADMAP-CANONICAL.md` Ver.1.90 Addendum LXXXIII plus Owner marker section 2.1 (`DONE / DEV1 NOW / DEV2 NOW / NEXT / FUTURE / GATE`)
 - TASK-022: `COMPLETED`; package 0.5.0 native-Windows regression `263 / 263 PASS` and compileall PASS

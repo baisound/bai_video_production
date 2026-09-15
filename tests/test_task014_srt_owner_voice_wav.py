@@ -136,18 +136,20 @@ def test_load_candidates_revalidates_reference_wav_checksum(tmp_path):
         _load_candidates(manifest)
 
 
-def test_beginner_windows_wrapper_supports_existing_dataset_manifest():
+def test_installed_windows_wrapper_is_explicit_noninteractive_command():
     script=(Path(__file__).parents[1]/'tools'/'windows'/'make-owner-voice-wav.ps1').read_text(encoding='utf-8')
     for required in (
         'ReferenceManifest',
         'voice-dataset\\dataset\\reference-manifest.json',
+        'ConfirmOwnerApproved',
+        'runtime-config.json',
         'prepare-reference',
         'preflight',
         ' plan ',
         ' render ',
-        "Read-Host 'すべて正しければ YES と入力'",
         'master-owner-voice.wav',
     ):
         assert required in script
+    assert 'Read-Host' not in script
     assert 'D:\\BAI\\BAI_VIDEO_PRODUCTION_20260914\\owner-voice-jobs' not in script
     assert "Join-Path $datasetRoot 'master-wav-jobs'" in script

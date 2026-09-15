@@ -45,7 +45,10 @@ Release-candidate source scope:
 - `src/ai_video_production/connection_settings_web.py`
 - `src/ai_video_production/subtitle_workspace_web.py`
 - `native/task047_obs_voice_capture/scripts/build-controller.ps1`
+- `packaging/task063_main_installer.iss`
+- `tools/windows/build-task063-main-installer.ps1`
 - `tests/test_task042_windows_exe_build_contract.py`
+- `tests/test_task063_main_installer_contract.py`
 - `docs/ai-team/current-state.md`
 - `docs/ai-team/task-index.md`
 - `docs/ai-team/tasks/TASK-091/**`

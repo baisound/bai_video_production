@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$IsccPath,
     [string]$Version = "0.23.0-task063",
-    [string]$PayloadRoot = ""
+    [string]$PayloadRoot = "",
+    [string]$OutputDirectory = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,6 +14,21 @@ if (-not $PayloadRoot) {
 $payload = (Resolve-Path -LiteralPath $PayloadRoot).Path
 $compiler = (Resolve-Path -LiteralPath $IsccPath).Path
 $iss = Join-Path $repoRoot "packaging\task063_main_installer.iss"
+if (-not $OutputDirectory) {
+    $OutputDirectory = Join-Path $repoRoot "packaging\output"
+}
+$output = [IO.Path]::GetFullPath($OutputDirectory).TrimEnd('\')
+$repoPrefix = $repoRoot.TrimEnd('\') + [IO.Path]::DirectorySeparatorChar
+if (-not $output.StartsWith($repoPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Installer output must be contained by the repository worktree: $output"
+}
+$outputParent = Split-Path -Parent $output
+if (-not (Test-Path -LiteralPath $outputParent -PathType Container)) {
+    New-Item -ItemType Directory -Path $outputParent | Out-Null
+}
+if (Test-Path -LiteralPath $output) {
+    throw "Installer output already exists; use a fresh operation directory: $output"
+}
 
 $files = Get-ChildItem -LiteralPath $payload -Recurse -File | Sort-Object FullName
 if ($files.Count -eq 0) { throw "Main application payload is empty" }
@@ -31,10 +47,10 @@ try {
     $sha.Dispose()
 }
 
-& $compiler "/DAppVersion=$Version" "/DPayloadRoot=$payload" "/DPayloadTreeSha=$payloadTreeSha" $iss
+& $compiler "/DAppVersion=$Version" "/DPayloadRoot=$payload" "/DPayloadTreeSha=$payloadTreeSha" "/O$output" $iss
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed: $LASTEXITCODE" }
 
-$installer = Join-Path $repoRoot "packaging\output\bai-video-production-$Version-windows-x64-setup.exe"
+$installer = Join-Path $output "bai-video-production-$Version-windows-x64-setup.exe"
 if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
     throw "Expected installer was not produced: $installer"
 }

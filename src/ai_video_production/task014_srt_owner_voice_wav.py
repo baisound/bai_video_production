@@ -12,7 +12,7 @@ from typing import Any, Mapping, Protocol, Sequence
 import argparse, hashlib, importlib, importlib.util, json, math, shutil, subprocess, tempfile
 
 from .subtitle_workspace import SrtWorkspaceCodec
-from .owner_voice_wav import SAMPLE_RATE_HZ, SAMPLE_WIDTH_BYTES, new_canonical_writer, read_pcm_wav_info
+from .owner_voice_wav import SAMPLE_RATE_HZ, SAMPLE_WIDTH_BYTES, copy_pcm24_range, new_canonical_writer, read_pcm_wav_info
 from .voice_reference_selector import VoiceReferenceCandidate, select_reference
 
 DEFAULT_MAX_TOTAL_SPEED=1.35
@@ -84,12 +84,7 @@ def assemble_cue_wavs(plan:Sequence[OwnerVoiceCuePlan],cue_paths:Mapping[str,str
                 w.writeframesraw(b"\0"*((cue.start_sample-cursor)*SAMPLE_WIDTH_BYTES)); cursor=cue.start_sample
             p=Path(cue_paths[cue.cue_id]); info=read_pcm_wav_info(p,require_canonical=True)
             if info.sample_count>cue.target_samples: raise ValueError("cue WAV exceeds SRT slot")
-            with p.open('rb') as f: pass
-            import wave
-            with wave.open(str(p),'rb') as r:
-                remaining=info.sample_count
-                while remaining:
-                    n=min(remaining,262_144); data=r.readframes(n); w.writeframesraw(data); remaining-=n
+            copy_pcm24_range(p,w,0,info.sample_count)
             cursor+=info.sample_count
             rows.append({"cue_id":cue.cue_id,"start_sample":cue.start_sample,"rendered_samples":info.sample_count,"slot_samples":cue.target_samples})
         final_end=max(c.end_sample for c in plan)

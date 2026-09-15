@@ -1,8 +1,9 @@
 from pathlib import Path
-import json, math, shutil, subprocess, wave
+import json, math, shutil, struct, subprocess, wave
 import pytest
+import ai_video_production.owner_voice_recording_pipeline as recording_pipeline_module
 from ai_video_production.ids import IdKind,generate_id
-from ai_video_production.owner_voice_wav import new_canonical_writer,read_pcm_wav_info
+from ai_video_production.owner_voice_wav import copy_pcm24_range,new_canonical_writer,read_pcm24_samples,read_pcm_wav_info
 from ai_video_production.owner_voice_recording_pipeline import *
 from ai_video_production.subtitles import TranscriptManifest,TranscriptSegment,TranscriptWord
 from ai_video_production.voice_recording_coverage import RecordingCoverageTarget
@@ -35,6 +36,41 @@ def test_canonicalizer_preserves_source_and_is_resumable(tmp_path):
     assert r1==r2 and sha256_file(raw)==before
     info=read_pcm_wav_info(out,require_canonical=True); assert info.sample_rate_hz==48_000
     assert r1['raw_source_preserved'] is True and r1['source_sample_rate_hz']==44100
+
+
+def test_canonicalizer_falls_back_only_when_soxr_is_unavailable(tmp_path,monkeypatch):
+    source=tmp_path/'source.wav'; canonical(source,[(1,1000)])
+    calls=[]
+    monkeypatch.setattr(recording_pipeline_module,'_ffprobe',lambda *_args,**_kwargs:{'channels':1,'sample_rate':'48000','sample_fmt':'s32'})
+    def fake_run(argv,**kwargs):
+        calls.append(argv)
+        if 'resampler=soxr' in argv[argv.index('-af')+1]:
+            return subprocess.CompletedProcess(argv,1,b'',b'Requested resampling engine is unavailable')
+        shutil.copyfile(source,Path(argv[-1]))
+        return subprocess.CompletedProcess(argv,0,b'',b'')
+    monkeypatch.setattr(recording_pipeline_module.subprocess,'run',fake_run)
+    report=recording_pipeline_module.canonicalize_obs_recording(source,tmp_path/'output.wav')
+    assert len(calls)==2
+    assert report['resampler']=='swresample' and report['resampler_precision'] is None
+
+
+def test_pcm24_extensible_header_is_supported_without_stdlib_wave(tmp_path):
+    samples=[-8388608,-1,0,1,8388607]
+    pcm=b''.join(value.to_bytes(3,'little',signed=True) for value in samples)
+    fmt=struct.pack('<HHIIHHHHI16s',0xFFFE,1,48_000,144_000,3,24,22,24,4,bytes.fromhex('0100000000001000800000aa00389b71'))
+    body=b'fmt '+struct.pack('<I',len(fmt))+fmt+b'data'+struct.pack('<I',len(pcm))+pcm+(b'\0' if len(pcm)%2 else b'')
+    path=tmp_path/'extensible.wav'; path.write_bytes(b'RIFF'+struct.pack('<I',len(body)+4)+b'WAVE'+body)
+    info=read_pcm_wav_info(path,require_canonical=True)
+    assert info.sample_count==len(samples)
+    assert read_pcm24_samples(path,0,len(samples))==samples
+    copied=tmp_path/'copied.wav'
+    with new_canonical_writer(copied) as writer: copy_pcm24_range(path,writer,0,len(samples))
+    assert read_pcm24_samples(copied,0,len(samples))==samples
+
+    not_pcm=bytearray(path.read_bytes()); not_pcm[44]=3
+    invalid=tmp_path/'extensible-float.wav'; invalid.write_bytes(not_pcm)
+    with pytest.raises(ValueError,match='unsupported extensible WAV subtype'):
+        read_pcm_wav_info(invalid)
 
 
 def test_multichannel_requires_explicit_channel(tmp_path):

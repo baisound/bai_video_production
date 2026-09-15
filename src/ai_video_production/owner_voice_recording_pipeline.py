@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
-import argparse, hashlib, json, math, os, shutil, statistics, subprocess, tempfile, wave
+import argparse, hashlib, json, math, os, shutil, statistics, subprocess, tempfile
 
 from .atomic import AtomicJsonWriter
 from .cut_candidates import load_transcript_manifest
@@ -18,7 +18,7 @@ from .faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider
 from .large_media_transcription import ChunkedTranscriptionConfig, ResumableTranscriptionService
 from .owner_voice_wav import (
     SAMPLE_RATE_HZ, SAMPLE_WIDTH_BYTES, copy_pcm24_range, encode_pcm24_samples,
-    new_canonical_writer, read_pcm24_samples, read_pcm_wav_info,
+    iter_pcm24_sample_chunks, new_canonical_writer, read_pcm24_samples, read_pcm_wav_info,
 )
 from .subtitles import TranscriptManifest, TranscriptSegment, TranscriptWord
 from .voice_recording_coverage import (
@@ -64,22 +64,33 @@ def canonicalize_obs_recording(
     if channels>1:
         if channel_index is None: raise ValueError('multichannel input requires explicit channel_index')
         if not 0<=channel_index<channels: raise ValueError('channel_index is outside source channels')
-        af=f'pan=mono|c0=c{channel_index},aresample=48000:resampler=soxr:precision=28:dither_method=triangular'
+        filter_prefix=f'pan=mono|c0=c{channel_index},'
         channel_policy=f'SELECT_CHANNEL_{channel_index}'
     else:
         if channel_index not in (None,0): raise ValueError('mono input cannot select a nonzero channel')
-        af='aresample=48000:resampler=soxr:precision=28:dither_method=triangular'; channel_policy='MONO_PRESERVE'
+        filter_prefix=''; channel_policy='MONO_PRESERVE'
     dst.parent.mkdir(parents=True,exist_ok=True)
     tmp=dst.with_suffix(dst.suffix+'.tmp.wav'); tmp.unlink(missing_ok=True)
-    argv=[ffmpeg,'-nostdin','-hide_banner','-loglevel','error','-y','-i',str(src),'-map','0:a:0','-vn','-af',af,'-ar','48000','-ac','1','-c:a','pcm_s24le',str(tmp)]
-    proc=subprocess.run(argv,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,check=False,timeout=3600,shell=False)
-    if proc.returncode!=0: tmp.unlink(missing_ok=True); raise RuntimeError('ffmpeg canonicalization failed')
+    candidates=(
+        ('libsoxr',28,'aresample=48000:resampler=soxr:precision=28:dither_method=triangular'),
+        ('swresample',None,'aresample=48000:resampler=swr:filter_size=64:phase_shift=10:linear_interp=false:dither_method=triangular'),
+    )
+    for candidate_index,(resampler,resampler_precision,resample_filter) in enumerate(candidates):
+        af=filter_prefix+resample_filter
+        argv=[ffmpeg,'-nostdin','-hide_banner','-loglevel','error','-y','-i',str(src),'-map','0:a:0','-vn','-af',af,'-ar','48000','-ac','1','-c:a','pcm_s24le',str(tmp)]
+        proc=subprocess.run(argv,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,check=False,timeout=3600,shell=False)
+        if proc.returncode==0: break
+        tmp.unlink(missing_ok=True)
+        unavailable=b'requested resampling engine is unavailable' in proc.stderr.lower()
+        if candidate_index==0 and unavailable: continue
+        raise RuntimeError('ffmpeg canonicalization failed')
+    else: raise RuntimeError('ffmpeg canonicalization failed')
     info=read_pcm_wav_info(tmp,require_canonical=True); os.replace(tmp,dst)
     if _sha(src)!=source_sha: raise RuntimeError('raw source changed during canonicalization')
     body={
         'report_version':'1.0.0','source_sha256':source_sha,'source_size_bytes':src.stat().st_size,
         'source_sample_rate_hz':rate,'source_channels':channels,'source_sample_format':sample_fmt,
-        'channel_policy':channel_policy,'resampler':'libsoxr','resampler_precision':28,'dither_policy':'FFMPEG_TRIANGULAR_TPDF',
+        'channel_policy':channel_policy,'resampler':resampler,'resampler_precision':resampler_precision,'dither_policy':'FFMPEG_TRIANGULAR_TPDF',
         'output_sample_rate_hz':48_000,'output_channels':1,'output_sample_format':'PCM_S24LE','output_samples':info.sample_count,
         'output_sha256':_sha(dst),'raw_source_preserved':True,'source_sha256_after':_sha(src),
     }
@@ -90,17 +101,10 @@ def analyze_canonical_recording(path: str|Path, *, chunk_frames: int=48_000) -> 
     """Streaming calibration metrics for canonical recording."""
     p=Path(path); info=read_pcm_wav_info(p,require_canonical=True)
     peak=0; sum_sq=0.0; count=0; clipped=0; chunk_rms=[]; dc_sum=0
-    with wave.open(str(p),'rb') as w:
-        while True:
-            raw=w.readframes(chunk_frames)
-            if not raw: break
-            vals=[]
-            for i in range(0,len(raw),3):
-                x=raw[i]|(raw[i+1]<<8)|(raw[i+2]<<16); x=x-(1<<24) if x&0x800000 else x; vals.append(x)
-            if not vals: continue
-            local_sq=sum(x*x for x in vals); local_peak=max(abs(x) for x in vals)
-            peak=max(peak,local_peak); sum_sq+=local_sq; count+=len(vals); dc_sum+=sum(vals); clipped+=sum(1 for x in vals if abs(x)>=8387000)
-            chunk_rms.append(math.sqrt(local_sq/len(vals))/8388607)
+    for vals in iter_pcm24_sample_chunks(p,chunk_frames=chunk_frames):
+        local_sq=sum(x*x for x in vals); local_peak=max(abs(x) for x in vals)
+        peak=max(peak,local_peak); sum_sq+=local_sq; count+=len(vals); dc_sum+=sum(vals); clipped+=sum(1 for x in vals if abs(x)>=8387000)
+        chunk_rms.append(math.sqrt(local_sq/len(vals))/8388607)
     if not count: raise ValueError('recording contains no samples')
     rms=math.sqrt(sum_sq/count)/8388607; peak_norm=peak/8388607
     db=lambda x: -120.0 if x<=0 else 20*math.log10(x)
@@ -130,13 +134,8 @@ def recording_start_preflight(*,obs_current:bool,sample_rate_hz:int,gain_ready:b
 def _quiet_ratio(path:Path,start:int,end:int,threshold:int)->float:
     if end<=start: return 1.0
     quiet=total=0
-    with wave.open(str(path),'rb') as w:
-        w.setpos(start); remain=end-start
-        while remain:
-            n=min(remain,262_144); raw=w.readframes(n); remain-=n
-            for i in range(0,len(raw),3):
-                x=raw[i]|(raw[i+1]<<8)|(raw[i+2]<<16); x=x-(1<<24) if x&0x800000 else x; total+=1
-                if abs(x)<=threshold: quiet+=1
+    for values in iter_pcm24_sample_chunks(path,start,end):
+        total+=len(values); quiet+=sum(1 for x in values if abs(x)<=threshold)
     return quiet/total if total else 1.0
 
 

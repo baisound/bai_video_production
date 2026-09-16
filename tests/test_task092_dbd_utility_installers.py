@@ -67,3 +67,9 @@ def test_installer_rejects_unsafe_destination_before_payload_effects() -> None:
     ):
         assert token in text
     assert re.search(r"[A-Za-z]:\\", text) is None
+    containment = text.split("function InstallRootIsContained", 1)[1].split(
+        "function PreparedAncestorsStillMatch", 1
+    )[0]
+    assert "CompareText(AddBackslash(Normalized), DriveRoot) = 0" in containment
+    assert "CompareText(AddBackslash(Parent), DriveRoot) = 0" not in containment
+    assert "ローカルドライブ直下の製品専用フォルダーは使用できます" in text

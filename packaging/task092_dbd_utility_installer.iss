@@ -41,6 +41,7 @@ Uninstallable=yes
 CloseApplications=no
 RestartApplications=no
 UsePreviousAppDir=yes
+DisableDirPage=no
 UsePreviousLanguage=yes
 ChangesEnvironment=no
 VersionInfoVersion={#AppVersion}
@@ -54,8 +55,24 @@ Name: "en"; MessagesFile: "compiler:Default.isl"
 Name: "ja"; MessagesFile: "compiler:Languages\Japanese.isl"
 
 [CustomMessages]
-en.UnsafeDestination=Installation stopped because the destination is a drive root, a direct child of a drive root, a network path, or crosses a reparse point. No payload file was written.
-ja.UnsafeDestination=インストール先がドライブルート、その直下、ネットワークパス、またはreparse pointをまたぐため停止しました。製品ファイルは書き込んでいません。
+en.UnsafeDestination=Installation stopped because the destination is a drive root, a network path, or crosses a reparse point. A product-specific folder directly below a local drive is supported. No payload file was written.
+en.ExistingInstallTitle=Existing installation found
+en.ExistingInstallDescription=Choose how Setup should handle the existing installation.
+en.ExistingInstallPrompt=Update/reinstall preserves the current location. Uninstall runs the existing uninstaller first. To make no changes, choose Cancel.
+en.ExistingInstallUpdate=Update or reinstall in the existing location
+en.ExistingInstallUninstall=Uninstall the existing version, then continue
+en.ExistingInstallCancel=Cancel Setup without making changes
+en.ExistingUninstallerMissing=The existing uninstaller is missing. Choose update/reinstall or cancel, then repair the installation first.
+en.ExistingUninstallFailed=The existing installation could not be uninstalled from:%n%1%nSetup has stopped without installing the replacement.
+ja.UnsafeDestination=インストール先がドライブルート、ネットワークパス、またはreparse pointをまたぐため停止しました。ローカルドライブ直下の製品専用フォルダーは使用できます。製品ファイルは書き込んでいません。
+ja.ExistingInstallTitle=既存のインストールが見つかりました
+ja.ExistingInstallDescription=既存版をどのように扱うか選択してください。
+ja.ExistingInstallPrompt=更新・再インストールは現在の場所を使用します。アンインストールを選ぶと既存のアンインストーラーを先に実行します。変更しない場合はキャンセルを選んでください。
+ja.ExistingInstallUpdate=既存の場所へ更新または再インストールする
+ja.ExistingInstallUninstall=既存版をアンインストールしてから続行する
+ja.ExistingInstallCancel=変更せずセットアップをキャンセルする
+ja.ExistingUninstallerMissing=既存のアンインストーラーが見つかりません。更新・再インストールまたはキャンセルを選び、先にインストールを修復してください。
+ja.ExistingUninstallFailed=次の場所の既存版をアンインストールできませんでした:%n%1%n新しい版はインストールせずに停止しました。
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut / デスクトップにショートカットを作成"; GroupDescription: "Shortcuts / ショートカット"; Flags: unchecked
@@ -105,6 +122,19 @@ var
   PreparedInstallRoot: String;
   PreparedExistingAncestor: String;
   PreparedAncestorSnapshot: String;
+
+function Task094ExistingInstallMarker(const InstallRoot: String): String;
+begin
+  Result := AddBackslash(InstallRoot) + '{#ExecutableName}';
+end;
+
+function Task094UninstallRegistryKey: String;
+begin
+  Result := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' +
+    '{#AppIdValue}' + '}_is1';
+end;
+
+#include "task094_existing_install_choice.iss"
 
 function GetFileAttributesW(FileName: String): LongWord;
   external 'GetFileAttributesW@kernel32.dll stdcall';
@@ -214,7 +244,6 @@ function InstallRootIsContained(const Path: String): Boolean;
 var
   Normalized: String;
   DriveRoot: String;
-  Parent: String;
 begin
   Result := False;
   Normalized := RemoveBackslashUnlessRoot(ExpandFileName(Path));
@@ -222,8 +251,6 @@ begin
   DriveRoot := AddBackslash(ExtractFileDrive(Normalized));
   if DriveRoot = '\' then exit;
   if CompareText(AddBackslash(Normalized), DriveRoot) = 0 then exit;
-  Parent := RemoveBackslashUnlessRoot(ExtractFileDir(Normalized));
-  if CompareText(AddBackslash(Parent), DriveRoot) = 0 then exit;
   Result := True;
 end;
 
@@ -235,11 +262,28 @@ begin
     (CurrentSnapshot = PreparedAncestorSnapshot);
 end;
 
+procedure InitializeWizard;
+begin
+  Task094InitializeExistingInstallChoice;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := Task094ShouldSkipExistingInstallPage(PageID);
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := Task094ExistingInstallChoiceNext(CurPageID);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   CurrentSnapshot: String;
 begin
-  Result := '';
+  Result := Task094PrepareExistingInstall;
+  if Result <> '' then
+    exit;
   PreparedInstallRoot := RemoveBackslashUnlessRoot(ExpandFileName(ExpandConstant('{app}')));
   if (not InstallRootIsContained(PreparedInstallRoot)) or
     (not FindDeepestExistingAncestor(PreparedInstallRoot, PreparedExistingAncestor)) or

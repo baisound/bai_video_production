@@ -18,15 +18,15 @@ def _text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def test_main_installer_allows_selected_destination_and_uses_relative_bridge() -> None:
+def test_main_installer_allows_selected_destination_and_parks_unbound_bridge() -> None:
     text = _text(ISS)
-    assert "DisableDirPage=yes" not in text
+    assert "DisableDirPage=no" in text
     assert "DefaultDirName={localappdata}\\Programs\\BAI Video Production" in text
-    assert "{app}\\data\\montage-learning-bridge" in text
-    assert "--install-root \"" in text
-    assert "--bvp-installer-bridge provision-readback" in text
+    assert "data\\montage-learning-bridge" in text
+    assert "--bvp-installer-bridge provision-readback" not in text
     assert "--bvp-installer-bridge discover" not in text
     assert "--receipt-output" not in text
+    assert "TASK-063 private Bridge composition remains gated" in text
     assert r"C:\ProgramData\BAI Video Production\montage-learning-bridge" not in text
 
 
@@ -41,9 +41,9 @@ def test_main_installer_is_per_user_reparse_checked_and_preserves_data() -> None
     assert "FindDeepestExistingAncestor" in text
     assert text.count("PreparedAncestorsStillMatch()") >= 3
     assert "PreparedAncestorSnapshot" in text
-    assert "BridgeProvisionFailed" in text
+    assert "BridgeProvisionFailed" not in text
     assert "[UninstallDelete]" not in text
-    assert "preserves learning data" in text
+    assert "does not call the fail-closed public TASK-063 mutation surface" in text
     assert "function LongWordToFixedHex(Value: LongWord): String;" in text
     assert "BAI_HEX_DIGITS = '0123456789abcdef';" in text
     assert "Value mod 16" in text
@@ -73,10 +73,9 @@ def test_build_hash_binds_payload_and_acceptance_is_bounded() -> None:
         "Get-SafeAncestorSnapshot",
         "[IO.Path]::DirectorySeparatorChar",
         "[StringComparison]::OrdinalIgnoreCase",
-        "bridge-instance.json",
-        "installer-readback.json",
-        "connector_enabled",
-        "activation_authorized",
+        "BAI Video Production.exe",
+        "bridge_invoked = $false",
+        "TASK-063 private bridge composition was not invoked",
     ):
         assert token in acceptance
     assert "$root.StartsWith($expectedPrefix" not in acceptance

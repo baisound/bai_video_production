@@ -82,6 +82,8 @@ def test_installer_accepts_obs_root_or_bin64_and_formats_errors_safely() -> None
 def test_installer_preserves_original_ownership_and_journals_repairs() -> None:
     text = _text(ISS)
     assert 'PreviousPluginSha "14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38"' in text
+    assert 'PreviousEnSha "c93279484a993fb6543fb898bfb2625fb1f8c717b545649729954ff2ff5ff031"' in text
+    assert 'PreviousJaSha "0d4b5e7c5f23cfe0264f124f05b64d554b4a6dd044fe2ab7ce5ec8228d07073c"' in text
     assert "(CompareText(ActualSha, PreviousSha) = 0)" in text
     assert "Repair/update detected; preserving original exact3 ownership state." in text
     assert "install-journal-v2.jsonl" in text

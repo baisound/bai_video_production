@@ -109,7 +109,8 @@ def test_launcher_performs_bounded_preview_and_contained_synthetic_self_check(tm
 
 def test_installer_is_bilingual_per_user_and_never_auto_launches() -> None:
     text = _text(ISS)
-    assert 'AppId={{4DA96B8F-C27E-4AD8-B7C5-5F8EF105AEEA}' in text
+    assert '#define AppIdValue "4DA96B8F-C27E-4AD8-B7C5-5F8EF105AEEA"' in text
+    assert "AppId={{{#AppIdValue}}" in text
     assert 'PrivilegesRequired=lowest' in text
     assert '{localappdata}\\Programs\\BAI Voice Model Builder' in text
     assert 'Name: "en"' in text and 'Name: "ja"' in text

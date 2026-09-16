@@ -29,7 +29,7 @@ from .local_audio_model_inventory import (
 
 
 MAX_REQUEST_BYTES = 64 * 1024
-PRODUCT_VERSION = "0.24.2"
+PRODUCT_VERSION = "0.24.3"
 
 
 _HTML = r"""<!doctype html>

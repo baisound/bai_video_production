@@ -1,6 +1,6 @@
 #define AppName "BAI Owner Voice Runtime"
 #ifndef AppVersion
-  #define AppVersion "0.24.2"
+  #define AppVersion "0.24.3"
 #endif
 #ifndef PayloadRoot
   #define PayloadRoot "payload"
@@ -33,7 +33,7 @@ UsePreviousAppDir=yes
 DisableDirPage=no
 UsePreviousLanguage=yes
 ChangesEnvironment=no
-VersionInfoVersion=0.24.2.0
+VersionInfoVersion=0.24.3.0
 VersionInfoProductName={#AppName}
 VersionInfoDescription=Installer-managed Qwen3-TTS Owner Voice runtime and SRT WAV maker
 VersionInfoCompany=BAI

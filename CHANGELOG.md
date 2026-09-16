@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [0.24.3] - 2026-09-16
+
+- TASK-094/TASK-095: 全6種のWindowsインストーラーで保存先選択を表示し、既存インストール検出時に更新・再インストール、アンインストール後の続行、キャンセルを明示的に選択できるよう修正しました。
+- TASK-094/TASK-095: BAI Video Production本体の未提供Bridge呼び出し、Owner Voice／DbD utilityのインストール先判定、Voice Captureの既知locale更新を修正しました。
+- TASK-095: v0.24.2より後にmainへマージされたインストーラー修正を、全EXE・インストーラー・ZIP・Pythonパッケージを再ビルドしたv0.24.3として公開します。
+
 ## [0.24.2] - 2026-09-16
 
 - TASK-093: per-user Owner Voice Runtime installerを追加し、選択した安全な保存先へ署名検証済み専用Python 3.12、CUDA PyTorch、Qwen-TTS、ローカルffmpeg、exact Qwen3-TTS 0.6B Base Modelを構築・検証してから設定を公開するようにしました。

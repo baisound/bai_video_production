@@ -14,7 +14,7 @@ RELEASE = ROOT / ".github" / "workflows" / "release.yml"
 
 
 EXPECTED = {
-    INSTALLER.name: "f11dcd24520a6fcbd737763bef52a7c3fcf079032fef6d6cb748e8e3d64ea1ba",
+    INSTALLER.name: "1bf2dd9015b9375d40daaf791b22055061718ca41660d0904c9ad709f4621d5c",
     RUNTIME.name: "03286e9efbf5dd5af38230dcf7fee4bf53eb3fcc7d7a6d014833b9996bc1f558",
     SOURCE.name: "0ad4c83a957b37b455b38829f842f8318116c522cb542de0a9c5849567b29e72",
 }

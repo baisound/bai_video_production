@@ -69,7 +69,7 @@ $Output = Join-Path $Repo '.task093-build\owner-voice-installer-r01'
   -IsccPath $Iscc `
   -WorkRoot $Work `
   -OutputDirectory $Output `
-  -Version '0.24.2'
+  -Version '0.24.3'
 ```
 
 The builder verifies the PSF signature and exact Python/Inno hashes, builds the exact-version wheel,
@@ -91,7 +91,7 @@ For a real fresh installer probe, allocate a unique nested temporary directory a
 $Probe = Join-Path ([IO.Path]::GetTempPath()) ('bvp-task093-native-' + [guid]::NewGuid().ToString('N'))
 $App = Join-Path $Probe 'installed\app'
 $Data = Join-Path $Probe 'data\owner-voice'
-& .\bai-owner-voice-runtime-0.24.2-windows-x64-setup.exe `
+& .\bai-owner-voice-runtime-0.24.3-windows-x64-setup.exe `
   /VERYSILENT /SUPPRESSMSGBOXES /NORESTART "/DIR=$App" "/DataRoot=$Data" "/LOG=$Probe\installer.log"
 ```
 
@@ -108,7 +108,7 @@ a correct existing model is reused and partial or wrong files never become READY
 copy remain outside `{app}`.
 
 After hosted checks are green and the PR is merged, create an annotated version tag from exact main,
-build from that tag, publish the installer with the other v0.24.2 assets, upload a complete SHA256SUMS,
+build from that tag, publish the installer with the other v0.24.3 assets, upload a complete SHA256SUMS,
 and read back each GitHub asset digest. Building does not itself authorize publishing.
 
 ## Training boundary

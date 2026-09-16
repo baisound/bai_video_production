@@ -1,6 +1,6 @@
 # TASK-094 — Windows Installer Existing-Install and Main Setup Repair
 
-- Status: `OWNER_AUTHORIZED / IMPLEMENTATION_ACTIVE`
+- Status: `IMPLEMENTED / LOCAL_GATES_PASS / PR_PREPARATION`
 - Capability: `BVP-WINDOWS-INSTALLER-REPAIR-001`
 - Development profile: `DEV-3 HIGH ASSURANCE`
 - Owner instruction: `2026-09-16` — every published product installer must let
@@ -68,3 +68,22 @@ installation remain separate gates.
 - no TASK-063 Bridge activation or fabricated read-back;
 - no tag, GitHub Release, deployment, paid-provider call, model download, or
   private-media access.
+
+## Implementation checkpoint
+
+- Exact implementation commit: `581b2e74714a71cba626a50195ecf01f6bb03308`
+- Focused contract and canonical-state regression: `41 PASS / 1 intentionally deselected native
+  legacy-asset test / 0 FAIL`.
+- Inno Setup 7.1.0 compiled all six production-shaped outputs and all six
+  isolated-AppId QA outputs.
+- Isolated native install, same-location repair and uninstall: main Product,
+  Training Studio, Trivia Editor and Voice Model Builder `PASS`.
+- Fake-OBS native acceptance: install, repair, collision refusal, append-only
+  journal, exact3 adoption/restoration and uninstall `PASS`; real OBS was not
+  modified.
+- The exact old `en-US.ini` and `ja-JP.ini` revisions observed on the Owner PC
+  were accepted, updated and restored on uninstall in a separate fake-OBS run.
+- Owner Voice bootstrap PlanOnly and root-policy test `PASS`. Full bootstrap was
+  intentionally not executed because it can download/install Python packages
+  and the pinned Qwen model; those effects remain outside this corrective unit.
+- Tagging and GitHub Release publication remain a separate Owner gate.

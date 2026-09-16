@@ -1,6 +1,6 @@
 # TASK-094 — Windows Installer Existing-Install and Main Setup Repair
 
-- Status: `IMPLEMENTED / LOCAL_GATES_PASS / PR_PREPARATION`
+- Status: `HOSTED_CLOSED / MERGED / RELEASE_PENDING`
 - Capability: `BVP-WINDOWS-INSTALLER-REPAIR-001`
 - Development profile: `DEV-3 HIGH ASSURANCE`
 - Owner instruction: `2026-09-16` — every published product installer must let
@@ -86,4 +86,11 @@ installation remain separate gates.
 - Owner Voice bootstrap PlanOnly and root-policy test `PASS`. Full bootstrap was
   intentionally not executed because it can download/install Python packages
   and the pinned Qwen model; those effects remain outside this corrective unit.
+- PR #557 exact head `7fbd101c41704f0393668062e9711138bf8c1b44`
+  passed all nine required hosted checks and merged as
+  `304d5f32ca7ba244fed4c15f22e1fe3727f0b4fd` at
+  `2026-09-16T01:02:31Z`.
+- Post-merge Security run `35042486504` passed. Post-merge CI run
+  `35042486519` passed all six Linux/Windows Python 3.11/3.12/3.13 jobs,
+  including the serial Windows native-installer contract.
 - Tagging and GitHub Release publication remain a separate Owner gate.

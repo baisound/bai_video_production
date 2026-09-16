@@ -4,6 +4,16 @@ This page is the canonical entry point for building every user-facing Windows ex
 
 > Normal users do not need to build every target. Build only the application or installer you actually intend to test. A successful local build does **not** authorize signing, publishing, deployment, paid Provider execution, or Production activation.
 
+## 全Windowsリリース成果物を1回で作る
+
+準備済みのWindows開発環境では、リポジトリのルートから次の1コマンドを実行します。
+
+```powershell
+.\tools\windows\build-all-windows-release.ps1
+```
+
+完了時に表示される `SUMMARY.txt` を開き、`result=PASS` と `exit_code=0` を確認してください。成果物は同時に表示される `artifacts` フォルダーにあります。前提ツールの準備、出力先変更、終了コード別の障害調査は [全Windowsリリース成果物の開発者向けビルド手順](BUILDING-ALL-WINDOWS-RELEASE.md) に分離しています。
+
 ## Build targets
 
 | Target | Purpose | Build guide | Usage guide |

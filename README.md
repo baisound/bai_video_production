@@ -14,7 +14,7 @@
 | 読む人 | ページ | 内容 |
 |---|---|---|
 | 初めて見る方・非開発者 | [やさしい導入ガイド](docs/user/GETTING-STARTED.md) | 何ができるか、費用・安全性、5分Demo、困った時 |
-| Windows EXE / Installerを構築する方 | [全EXE/Installer構築一覧](docs/windows/WINDOWS-EXE-BUILD-INDEX.md) / [今回機能のWindows環境構築](docs/windows/WINDOWS-GAME-INTELLIGENCE-ENVIRONMENT.md) | BVP本体、Training Studio、Trivia Editor、Voice Model Builder、OBS Voice Captureの個別構築手順と、FFmpeg/OCR/ASR/LLM環境 |
+| Windows EXE / Installerを構築する方 | [全EXE/Installer構築一覧](docs/windows/WINDOWS-EXE-BUILD-INDEX.md) / [1コマンドの全成果物ビルド](docs/windows/BUILDING-ALL-WINDOWS-RELEASE.md) / [今回機能のWindows環境構築](docs/windows/WINDOWS-GAME-INTELLIGENCE-ENVIRONMENT.md) | BVP本体、Training Studio、Trivia Editor、Voice Model Builder、Voice Capture、Owner Voice Runtimeの一括・個別構築手順 |
 | Windows EXEを構築・利用する方 | [EXE構築手順](docs/windows/BUILDING-WINDOWS-EXE.md) / [EXE利用ガイド](docs/user/WINDOWS-EXE-USAGE.md) | WindowsテストEXEの作成、起動、Project/Media選択、Game Intelligenceの現在の利用範囲、終了・再起動 |
 | DbD学習データをGUI/EXEから登録する方 | [Training Studio EXE構築](docs/windows/BUILDING-DBD-TRAINING-STUDIO-EXE.md) / [Training Studio操作方法](docs/user/DBD-TRAINING-STUDIO-USAGE.md) | 1件登録、CSV 1行/一括、動画からのROI Slice抽出、右上OCR候補、動画/Transcriptから豆知識Candidate作成、Index/Vocabulary構築 |
 | DbD学習・Knowledge・CGELデータを別PCへ移行する方 | [Backup / Restore移行ガイド](docs/user/DBD-DATA-BACKUP-RESTORE.md) | Project Game Intelligence、Training Studio、Trivia Knowledgeをchecksum付きZIPでBackup / Preview / Restore。Credentialは対象外 |
@@ -169,6 +169,14 @@ python -m pip install -e ".[dev]"
 ### Windows EXE build
 
 全Windows EXE / Installerの構築入口は [Windows EXE / Installer Build Index](docs/windows/WINDOWS-EXE-BUILD-INDEX.md)、今回のDbD Game Intelligence / Training Studioに必要なPython・FFmpeg・Tesseract OCR・Faster-Whisper・LLM設定は [Windows環境構築ガイド](docs/windows/WINDOWS-GAME-INTELLIGENCE-ENVIRONMENT.md) を参照してください。
+
+準備済みのWindows開発環境で全リリース成果物をまとめて作る場合は、次の1コマンドです。完了時に表示される `SUMMARY.txt` で `result=PASS` を確認してください。
+
+```powershell
+.\tools\windows\build-all-windows-release.ps1
+```
+
+前提条件と障害調査は [全Windowsリリース成果物の開発者向けビルド手順](docs/windows/BUILDING-ALL-WINDOWS-RELEASE.md) にあります。
 
 
 WindowsクライアントをEXEにする場合は、ビルド用の依存を明示的にインストールしてから、ルートのバッチを実行します。

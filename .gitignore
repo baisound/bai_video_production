@@ -9,6 +9,8 @@ build/
 dist/
 /builds/*
 !/builds/.gitkeep
+/.artifacts/
+/.build-prerequisites/
 *.egg-info/
 runtime/
 logs/

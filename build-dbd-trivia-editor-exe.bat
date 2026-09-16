@@ -18,12 +18,22 @@ if errorlevel 1 (
   echo   "%PYTHON_EXE%" -m pip install -e ".[windows-build]"
   exit /b 3
 )
-if not exist "builds" mkdir "builds"
-"%PYTHON_EXE%" -m PyInstaller --noconfirm --clean --distpath "%CD%\builds" --workpath "%CD%\builds\work-trivia" "%CD%\packaging\task049_trivia_editor.spec"
+if defined BVP_TASK049_TRIVIA_BUILD_ROOT (
+  set "BUILD_ROOT=%BVP_TASK049_TRIVIA_BUILD_ROOT%"
+) else (
+  set "BUILD_ROOT=%CD%\builds"
+)
+if exist "%BUILD_ROOT%" (
+  echo [ERROR] Build output already exists; choose a fresh BVP_TASK049_TRIVIA_BUILD_ROOT: %BUILD_ROOT%
+  exit /b 6
+)
+mkdir "%BUILD_ROOT%"
+if errorlevel 1 exit /b 6
+"%PYTHON_EXE%" -m PyInstaller --noconfirm --clean --distpath "%BUILD_ROOT%" --workpath "%BUILD_ROOT%\work-trivia" "%CD%\packaging\task049_trivia_editor.spec"
 if errorlevel 1 exit /b 4
-if not exist "builds\BAI DbD Trivia Editor\BAI DbD Trivia Editor.exe" (
+if not exist "%BUILD_ROOT%\BAI DbD Trivia Editor\BAI DbD Trivia Editor.exe" (
   echo [ERROR] Expected EXE is missing.
   exit /b 5
 )
-echo [PASS] %CD%\builds\BAI DbD Trivia Editor\BAI DbD Trivia Editor.exe
+echo [PASS] %BUILD_ROOT%\BAI DbD Trivia Editor\BAI DbD Trivia Editor.exe
 exit /b 0

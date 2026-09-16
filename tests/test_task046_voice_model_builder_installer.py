@@ -142,7 +142,7 @@ def test_build_is_hash_bound_and_has_no_runtime_effect() -> None:
     for token in (
         "ExpectedPythonSha256",
         "ExpectedCompilerSha256",
-        "PyInstaller 6.22.0 is required",
+        "PyInstaller 6.22.2 is required",
         "jsonschema_version",
         "python_sha256",
         "package_manifest_sha256",

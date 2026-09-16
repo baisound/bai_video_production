@@ -35,8 +35,8 @@ if ($compilerHash -ne $ExpectedCompilerSha256.ToLowerInvariant()) {
     throw "ISCC hash mismatch: $compilerHash"
 }
 $pyInstallerVersion = (& $PythonExe -c 'import PyInstaller; print(PyInstaller.__version__)').Trim()
-if ($LASTEXITCODE -ne 0 -or $pyInstallerVersion -ne '6.22.0') {
-    throw "PyInstaller 6.22.0 is required; observed: $pyInstallerVersion"
+if ($LASTEXITCODE -ne 0 -or $pyInstallerVersion -ne '6.22.2') {
+    throw "PyInstaller 6.22.2 is required; observed: $pyInstallerVersion"
 }
 $jsonschemaVersion = (& $PythonExe -c "from importlib.metadata import version; print(version('jsonschema'))").Trim()
 if ($LASTEXITCODE -ne 0 -or -not $jsonschemaVersion) {

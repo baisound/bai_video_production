@@ -16,7 +16,7 @@ try {
     [IO.File]::WriteAllText($manifest, (@{
         schema_version = 1
         task = 'TASK-093'
-        product_version = '0.24.2'
+        product_version = '0.24.3'
         model_revision = '5d83992436eae1d760afd27aff78a71d676296fc'
         python_installer = @{ file = 'python-3.12.10-amd64.exe'; sha256 = ('0' * 64) }
         application_wheel = @{ file = 'fixture.whl'; sha256 = ('0' * 64) }

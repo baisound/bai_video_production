@@ -196,7 +196,7 @@ from .export_queue import ExportAuthorityClass, ExportDispatchResult, ExportOutp
 from .export_queue_application import ExportQueueApplication
 from .task044_nle_shell import Task044NleShellController
 
-__version__ = "0.24.2"
+__version__ = "0.24.3"
 
 __all__ = [
     "AiConnectionProfile", "AiConnectionResolver", "AiWorkload", "ConnectionAvailability", "CostClass",

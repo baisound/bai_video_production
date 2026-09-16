@@ -6,7 +6,7 @@
 
 ## 最初の1回だけ: インストール
 
-1. GitHub Releaseから`bai-owner-voice-runtime-0.24.2-windows-x64-setup.exe`を取得します。
+1. GitHub Releaseから`bai-owner-voice-runtime-0.24.3-windows-x64-setup.exe`を取得します。
 2. インストーラーを起動します。
 3. 本人声データの保存先を選びます。12 GB以上の空きが必要です。
 4. 完了まで待ちます。初回は専用Python、CUDA版PyTorch、Qwen3-TTS、ffmpeg、約2.51 GBの
@@ -62,11 +62,11 @@ SRTや参照音声を選ぶ専用GUIも対話式質問もありません。`-Con
 
 ## うまくいかない場合
 
-- 「runtime設定が未完了」: 0.24.2インストーラーを再実行して修復します。
+- 「runtime設定が未完了」: 0.24.3インストーラーを再実行して修復します。
 - 「GPU準備が完了していない」: `nvidia-smi`でNVIDIA GPU/driverを確認し、修復します。
 - 「見本WAVの確認に失敗」: 3～15秒、48 kHz、mono、PCM 24-bitへ直します。
 - 「字幕枠へ収まらない」: SRTの表示時間を長くするか文章を短くします。音声は途中で切りません。
-- receipt: 選択データフォルダーの`receipts\owner-voice-0.24.2`を確認します。
+- receipt: 選択データフォルダーの`receipts\owner-voice-0.24.3`を確認します。
 
 ## 学習との違い
 

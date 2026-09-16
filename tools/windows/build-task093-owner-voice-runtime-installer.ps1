@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory = $true)][string]$IsccPath,
     [Parameter(Mandatory = $true)][string]$WorkRoot,
     [Parameter(Mandatory = $true)][string]$OutputDirectory,
-    [string]$Version = '0.24.2',
+    [string]$Version = '0.24.3',
     [string]$ExpectedPythonInstallerSha256 = '67b5635e80ea51072b87941312d00ec8927c4db9ba18938f7ad2d27b328b95fb',
     [string]$ExpectedIsccSha256 = 'd06ebd38f38e3cee60a3c50cc45bd449d77e0bc6a5cabc607ea9886808e4de1a'
 )
@@ -52,8 +52,9 @@ New-Item -ItemType Directory -Path $bootstrap, $tools, $docs, $wheelOutput, $out
 
 & $python -m pip wheel --disable-pip-version-check --no-cache-dir --no-build-isolation --no-deps --wheel-dir $wheelOutput $repoRoot
 if ($LASTEXITCODE -ne 0) { throw "Wheel build failed: $LASTEXITCODE" }
-$wheel = @(Get-ChildItem -LiteralPath $wheelOutput -Filter 'ai_video_production-0.24.2-*.whl' -File)
-if ($wheel.Count -ne 1) { throw "Expected one 0.24.2 wheel, found $($wheel.Count)." }
+$wheelVersion = $Version.Replace('-', '_')
+$wheel = @(Get-ChildItem -LiteralPath $wheelOutput -Filter "ai_video_production-$wheelVersion-*.whl" -File)
+if ($wheel.Count -ne 1) { throw "Expected one $Version wheel, found $($wheel.Count)." }
 Copy-Item -LiteralPath $pythonInstallerFile -Destination (Join-Path $bootstrap 'python-3.12.10-amd64.exe')
 Copy-Item -LiteralPath $wheel[0].FullName -Destination $bootstrap
 Copy-Item -LiteralPath (Join-Path $repoRoot 'tools\windows\install-owner-voice-runtime.ps1') -Destination $tools

@@ -122,14 +122,14 @@ Remove-Item -LiteralPath $script:BootstrapErrorPath -Force -ErrorAction Silently
 $safeInstallRoot = Resolve-SafeInstallRoot $InstallRoot
 $manifestFile = (Resolve-Path -LiteralPath $ManifestPath).Path
 $manifest = Get-Content -Raw -LiteralPath $manifestFile | ConvertFrom-Json
-if ($manifest.schema_version -ne 1 -or $manifest.task -ne 'TASK-093' -or $manifest.product_version -ne '0.24.2') {
+if ($manifest.schema_version -ne 1 -or $manifest.task -ne 'TASK-093' -or $manifest.product_version -ne '0.24.3') {
     throw 'Unsupported Owner Voice runtime manifest.'
 }
 
 $pythonRoot = Join-Path $safeDataRoot 'runtime\owner-voice-py312'
 $python = Join-Path $pythonRoot 'Scripts\python.exe'
 $modelRoot = Join-Path $safeDataRoot "models\Qwen3-TTS-12Hz-0.6B-Base\$($manifest.model_revision)"
-$receiptsRoot = Join-Path $safeDataRoot 'receipts\owner-voice-0.24.2'
+$receiptsRoot = Join-Path $safeDataRoot 'receipts\owner-voice-0.24.3'
 $jobsRoot = Join-Path $safeDataRoot 'jobs'
 $datasetRoot = Join-Path $safeDataRoot 'voice-dataset'
 $pythonInstaller = Join-Path $safeInstallRoot "bootstrap\$($manifest.python_installer.file)"
@@ -271,7 +271,7 @@ Copy-Item -LiteralPath $installedCommand -Destination $stableCommandPath -Force
 $config = [ordered]@{
     schema_version = 1
     status = 'READY'
-    product_version = '0.24.2'
+    product_version = '0.24.3'
     data_root = $safeDataRoot
     python = $python
     model_root = $selectedModel

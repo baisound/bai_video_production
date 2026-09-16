@@ -73,6 +73,30 @@ function Resolve-SafeRoot([string]$Path, [string]$Label) {
     return $full
 }
 
+function Resolve-SafeInstallRoot([string]$Path) {
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not [IO.Path]::IsPathRooted($Path)) {
+        throw 'InstallRoot must be an absolute local path.'
+    }
+    $full = [IO.Path]::GetFullPath($Path).TrimEnd('\')
+    if ($full.StartsWith('\\')) { throw "InstallRoot cannot be a network path: $full" }
+    $volume = [IO.Path]::GetPathRoot($full).TrimEnd('\')
+    if ($full -eq $volume) { throw "InstallRoot cannot be a drive root: $full" }
+    $current = $full
+    while (-not [string]::IsNullOrWhiteSpace($current)) {
+        if (Test-Path -LiteralPath $current) {
+            $item = Get-Item -LiteralPath $current -Force
+            if (-not $item.PSIsContainer) { throw "InstallRoot collides with a file: $current" }
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw "InstallRoot contains a reparse point: $current"
+            }
+        }
+        $next = Split-Path -Parent $current
+        if ([string]::IsNullOrWhiteSpace($next) -or $next -eq $current) { break }
+        $current = $next
+    }
+    return $full
+}
+
 function Invoke-Checked([string]$FilePath, [string[]]$Arguments, [string]$Label) {
     & $FilePath @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Label failed with exit code $LASTEXITCODE" }
@@ -89,13 +113,13 @@ function Write-JsonAtomic([string]$Path, [object]$Value) {
 }
 
 $safeDataRoot = Resolve-SafeRoot $DataRoot 'DataRoot'
-$safeInstallRoot = Resolve-SafeRoot $InstallRoot 'InstallRoot'
 $safeConfigRoot = Resolve-SafeRoot $ConfigRoot 'ConfigRoot'
 $script:BootstrapErrorPath = Join-Path $safeConfigRoot 'bootstrap-last-error.json'
 if (-not (Test-Path -LiteralPath $safeConfigRoot -PathType Container)) {
     New-Item -ItemType Directory -Path $safeConfigRoot | Out-Null
 }
 Remove-Item -LiteralPath $script:BootstrapErrorPath -Force -ErrorAction SilentlyContinue
+$safeInstallRoot = Resolve-SafeInstallRoot $InstallRoot
 $manifestFile = (Resolve-Path -LiteralPath $ManifestPath).Path
 $manifest = Get-Content -Raw -LiteralPath $manifestFile | ConvertFrom-Json
 if ($manifest.schema_version -ne 1 -or $manifest.task -ne 'TASK-093' -or $manifest.product_version -ne '0.24.2') {

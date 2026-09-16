@@ -20,9 +20,12 @@
 #ifndef NoticeSha
   #define NoticeSha "0000000000000000000000000000000000000000000000000000000000000000"
 #endif
+#ifndef AppIdValue
+  #define AppIdValue "4DA96B8F-C27E-4AD8-B7C5-5F8EF105AEEA"
+#endif
 
 [Setup]
-AppId={{4DA96B8F-C27E-4AD8-B7C5-5F8EF105AEEA}
+AppId={{{#AppIdValue}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=BAI
@@ -42,6 +45,7 @@ Uninstallable=yes
 CloseApplications=no
 RestartApplications=no
 UsePreviousAppDir=yes
+DisableDirPage=no
 UsePreviousLanguage=yes
 ChangesEnvironment=no
 VersionInfoVersion=0.1.0.1
@@ -60,11 +64,27 @@ en.ReparseUnsupported=Installation stopped because the destination is a reparse 
 en.TargetCollision=Installation stopped because an existing application file has different content:%n%1%nUninstall or reconcile that file before retrying.
 en.ReadbackFailed=Installed-file verification failed:%n%1%nDo not treat this installation as complete.
 en.DataNotice=Uninstalling the application does not delete your recordings, datasets, checkpoints, models, or generated audio.
+en.ExistingInstallTitle=Existing installation found
+en.ExistingInstallDescription=Choose how Setup should handle the existing BAI Voice Model Builder installation.
+en.ExistingInstallPrompt=Update/reinstall preserves the current location. Uninstall runs the existing uninstaller first. To make no changes, choose Cancel.
+en.ExistingInstallUpdate=Update or reinstall in the existing location
+en.ExistingInstallUninstall=Uninstall the existing version, then continue
+en.ExistingInstallCancel=Cancel Setup without making changes
+en.ExistingUninstallerMissing=The existing uninstaller is missing. Choose update/reinstall or cancel, then repair the installation first.
+en.ExistingUninstallFailed=The existing installation could not be uninstalled from:%n%1%nSetup has stopped without installing the replacement.
 ja.DiskLow=インストール先の空き容量が64 MB未満です。空き容量を確保して再実行してください。
 ja.ReparseUnsupported=インストール先がreparse pointのため停止しました。ファイルは変更していません。
 ja.TargetCollision=内容の異なる既存アプリファイルがあるため停止しました:%n%1%n再試行前にアンインストールまたは照合してください。
 ja.ReadbackFailed=インストール後のファイル検証に失敗しました:%n%1%n導入完了として扱わないでください。
 ja.DataNotice=アンインストールしても、録音・Dataset・checkpoint・model・生成音声は削除しません。
+ja.ExistingInstallTitle=既存のインストールが見つかりました
+ja.ExistingInstallDescription=既存の BAI Voice Model Builder をどのように扱うか選択してください。
+ja.ExistingInstallPrompt=更新・再インストールは現在の場所を使用します。アンインストールを選ぶと既存のアンインストーラーを先に実行します。変更しない場合はキャンセルを選んでください。
+ja.ExistingInstallUpdate=既存の場所へ更新または再インストールする
+ja.ExistingInstallUninstall=既存版をアンインストールしてから続行する
+ja.ExistingInstallCancel=変更せずセットアップをキャンセルする
+ja.ExistingUninstallerMissing=既存のアンインストーラーが見つかりません。更新・再インストールまたはキャンセルを選び、先にインストールを修復してください。
+ja.ExistingUninstallFailed=次の場所の既存版をアンインストールできませんでした:%n%1%n新しい版はインストールせずに停止しました。
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut / デスクトップにショートカットを作成"; GroupDescription: "Shortcuts / ショートカット"; Flags: unchecked
@@ -94,6 +114,19 @@ function TargetExecutable: String;
 begin
   Result := ExpandConstant('{app}\bai-voice-model-builder.exe');
 end;
+
+function Task094ExistingInstallMarker(const InstallRoot: String): String;
+begin
+  Result := AddBackslash(InstallRoot) + 'bai-voice-model-builder.exe';
+end;
+
+function Task094UninstallRegistryKey: String;
+begin
+  Result := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' +
+    '{#AppIdValue}' + '}_is1';
+end;
+
+#include "task094_existing_install_choice.iss"
 
 function TargetGuide: String;
 begin
@@ -160,7 +193,24 @@ end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  Result := ValidateDestination;
+  Result := Task094PrepareExistingInstall;
+  if Result = '' then
+    Result := ValidateDestination;
+end;
+
+procedure InitializeWizard;
+begin
+  Task094InitializeExistingInstallChoice;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := Task094ShouldSkipExistingInstallPage(PageID);
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := Task094ExistingInstallChoiceNext(CurPageID);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

@@ -5,9 +5,12 @@
 #ifndef PayloadRoot
   #define PayloadRoot "payload"
 #endif
+#ifndef AppIdValue
+  #define AppIdValue "9B42FB3B-AD03-4C77-8C9D-42F6C680B253"
+#endif
 
 [Setup]
-AppId={{9B42FB3B-AD03-4C77-8C9D-42F6C680B253}
+AppId={{{#AppIdValue}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=BAI
@@ -27,6 +30,7 @@ Uninstallable=yes
 CloseApplications=no
 RestartApplications=no
 UsePreviousAppDir=yes
+DisableDirPage=no
 UsePreviousLanguage=yes
 ChangesEnvironment=no
 VersionInfoVersion=0.24.2.0
@@ -45,17 +49,33 @@ en.DataRootDescription=Choose a local folder with at least 12 GB free. Recording
 en.DataRootPrompt=Owner Voice data folder:
 en.DataRootUnsafe=Choose a local folder below a normal parent directory. A drive root, its direct child, network path, or reparse point is not allowed.
 en.DiskLow=The selected drive has less than 12 GB free.
-en.RuntimeFailed=Owner Voice runtime setup or verification failed. Review the setup log and run Repair; do not treat this installation as complete.
+en.RuntimeFailed=Owner Voice runtime setup or verification failed. Review %LOCALAPPDATA%\BAI Video Production\owner-voice\bootstrap-last-error.json, then run Repair. Do not treat this installation as complete.
 en.RuntimeStatus=Installing and verifying the private Python, CUDA PyTorch, Qwen model, and ffmpeg runtime. This can take a long time on the first install.
 en.DataNotice=Uninstall preserves the selected data folder, model, receipts, recordings, datasets, and generated WAV files.
+en.ExistingInstallTitle=Existing installation found
+en.ExistingInstallDescription=Choose how Setup should handle the existing BAI Owner Voice Runtime installation.
+en.ExistingInstallPrompt=Update/reinstall preserves the current location and selected data. Uninstall removes only application/bootstrap files first. To make no changes, choose Cancel.
+en.ExistingInstallUpdate=Update or reinstall in the existing location
+en.ExistingInstallUninstall=Uninstall the existing version, then continue
+en.ExistingInstallCancel=Cancel Setup without making changes
+en.ExistingUninstallerMissing=The existing uninstaller is missing. Choose update/reinstall or cancel, then repair the installation first.
+en.ExistingUninstallFailed=The existing installation could not be uninstalled from:%n%1%nSetup has stopped without installing the replacement.
 ja.DataRootTitle=本人声データの保存先
 ja.DataRootDescription=12 GB以上の空きがあるローカルフォルダーを選択してください。アンインストールしても録音・生成WAVは残します。
 ja.DataRootPrompt=本人声データフォルダー:
 ja.DataRootUnsafe=通常フォルダーの配下を選択してください。ドライブルート、ドライブ直下、ネットワークパス、reparse pointは使用できません。
 ja.DiskLow=選択したドライブの空き容量が12 GB未満です。
-ja.RuntimeFailed=本人声runtimeの構築または検証に失敗しました。セットアップログを確認して修復を実行し、導入完了として扱わないでください。
+ja.RuntimeFailed=本人声runtimeの構築または検証に失敗しました。%LOCALAPPDATA%\BAI Video Production\owner-voice\bootstrap-last-error.json を確認して修復を実行し、導入完了として扱わないでください。
 ja.RuntimeStatus=専用Python、CUDA PyTorch、Qwen Model、ffmpegを構築・検証しています。初回は長い時間がかかります。
 ja.DataNotice=アンインストールしても、選択したデータフォルダー、Model、receipt、録音、Dataset、生成WAVは削除しません。
+ja.ExistingInstallTitle=既存のインストールが見つかりました
+ja.ExistingInstallDescription=既存の BAI Owner Voice Runtime をどのように扱うか選択してください。
+ja.ExistingInstallPrompt=更新・再インストールは現在の場所と選択済みデータを保持します。アンインストールを選ぶとアプリとbootstrapファイルだけを先に削除します。変更しない場合はキャンセルを選んでください。
+ja.ExistingInstallUpdate=既存の場所へ更新または再インストールする
+ja.ExistingInstallUninstall=既存版をアンインストールしてから続行する
+ja.ExistingInstallCancel=変更せずセットアップをキャンセルする
+ja.ExistingUninstallerMissing=既存のアンインストーラーが見つかりません。更新・再インストールまたはキャンセルを選び、先にインストールを修復してください。
+ja.ExistingUninstallFailed=次の場所の既存版をアンインストールできませんでした:%n%1%n新しい版はインストールせずに停止しました。
 
 [Files]
 Source: "{#PayloadRoot}\bootstrap\*"; DestDir: "{app}\bootstrap"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -76,6 +96,19 @@ const
 var
   DataRootPage: TInputDirWizardPage;
   RuntimeSetupFailed: Boolean;
+
+function Task094ExistingInstallMarker(const InstallRoot: String): String;
+begin
+  Result := AddBackslash(InstallRoot) + 'runtime-manifest.json';
+end;
+
+function Task094UninstallRegistryKey: String;
+begin
+  Result := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' +
+    '{#AppIdValue}' + '}_is1';
+end;
+
+#include "task094_existing_install_choice.iss"
 
 function GetFileAttributesW(FileName: String): LongWord;
   external 'GetFileAttributesW@kernel32.dll stdcall';
@@ -113,6 +146,7 @@ procedure InitializeWizard;
 var
   CommandLineDataRoot: String;
 begin
+  Task094InitializeExistingInstallChoice;
   DataRootPage := CreateInputDirPage(wpSelectDir,
     CustomMessage('DataRootTitle'), CustomMessage('DataRootDescription'),
     CustomMessage('DataRootPrompt'), False, '');
@@ -131,7 +165,9 @@ var
   TotalBytes: Int64;
   Path: String;
 begin
-  Result := True;
+  Result := Task094ExistingInstallChoiceNext(CurPageID);
+  if not Result then
+    exit;
   if CurPageID <> DataRootPage.ID then
     exit;
   Path := SelectedDataRoot('');
@@ -147,6 +183,16 @@ begin
     MsgBox(CustomMessage('DiskLow'), mbError, MB_OK);
     Result := False;
   end;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := Task094ShouldSkipExistingInstallPage(PageID);
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := Task094PrepareExistingInstall;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -169,6 +215,9 @@ begin
     (ResultCode <> 0) then
   begin
     RuntimeSetupFailed := True;
+    Log(Format('TASK-094 Owner Voice runtime bootstrap failed: exit_code=%d ' +
+      'diagnostic=%s', [ResultCode, ExpandConstant(
+      '{localappdata}\BAI Video Production\owner-voice\bootstrap-last-error.json')]));
     RaiseException(CustomMessage('RuntimeFailed'));
   end;
 end;

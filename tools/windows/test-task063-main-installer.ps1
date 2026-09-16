@@ -94,43 +94,18 @@ $process = Start-Process -FilePath $installer -ArgumentList @(
 ) -Wait -PassThru -WindowStyle Hidden
 if ($process.ExitCode -ne 0) { throw "Installer failed: $($process.ExitCode)" }
 
-$bridge = Join-Path $root "data\montage-learning-bridge"
-$required = @(
-    "bridge-instance.json",
-    "bridge-owner.json",
-    "learning-inbox",
-    "learning-processing",
-    "learning-quarantine",
-    "learning-receipts",
-    "preference",
-    "preference\profiles",
-    "state",
-    "migration",
-    "migration\installer-readback.json"
-)
-foreach ($relative in $required) {
-    if (-not (Test-Path -LiteralPath (Join-Path $bridge $relative))) {
-        throw "Installed bridge read-back missing: $relative"
-    }
+$mainExecutable = Join-Path $root "BAI Video Production.exe"
+if (-not (Test-Path -LiteralPath $mainExecutable -PathType Leaf)) {
+    throw "Installed main executable is missing"
 }
-$descriptor = Get-Content -Raw -LiteralPath (Join-Path $bridge "bridge-instance.json") | ConvertFrom-Json
-$receipt = Get-Content -Raw -LiteralPath (Join-Path $bridge "migration\installer-readback.json") | ConvertFrom-Json
-if ($descriptor.bridge_relative_path -ne "data/montage-learning-bridge") {
-    throw "Descriptor relative path mismatch"
-}
-if ($receipt.install_instance_id -ne $descriptor.install_instance_id) {
-    throw "Discovery receipt instance mismatch"
-}
-if ($receipt.connector_enabled -ne $false -or $receipt.activation_authorized -ne $false) {
-    throw "Installer illegally activated the production connector"
+$bridgeReadback = Join-Path $root "data\montage-learning-bridge\migration\installer-readback.json"
+if (Test-Path -LiteralPath $bridgeReadback) {
+    throw "TASK-063 private bridge composition was not invoked"
 }
 
 [pscustomobject]@{
     result = "PASS"
     install_root = $root
-    bridge_root = $bridge
-    install_instance_id = $descriptor.install_instance_id
-    descriptor_sha256 = $descriptor.descriptor_sha256
-    discovery_status = $receipt.status
-    connector_enabled = $receipt.connector_enabled
+    main_executable = $mainExecutable
+    bridge_invoked = $false
 } | ConvertTo-Json

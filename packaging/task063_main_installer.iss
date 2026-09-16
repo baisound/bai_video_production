@@ -8,9 +8,12 @@
 #ifndef PayloadTreeSha
   #define PayloadTreeSha "0000000000000000000000000000000000000000000000000000000000000000"
 #endif
+#ifndef AppIdValue
+  #define AppIdValue "A6313D5D-7E87-4EC6-A6B2-C0EDBA5D7B63"
+#endif
 
 [Setup]
-AppId={{A6313D5D-7E87-4EC6-A6B2-C0EDBA5D7B63}
+AppId={{{#AppIdValue}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=BAI
@@ -30,6 +33,7 @@ Uninstallable=yes
 CloseApplications=no
 RestartApplications=no
 UsePreviousAppDir=yes
+DisableDirPage=no
 UsePreviousLanguage=yes
 ChangesEnvironment=no
 VersionInfoVersion=0.23.0.63
@@ -44,11 +48,25 @@ Name: "ja"; MessagesFile: "compiler:Languages\Japanese.isl"
 
 [CustomMessages]
 en.ReparseUnsupported=Installation stopped because the destination or an existing ancestor is unsafe. Product payload placement was not started.
-en.BridgeProvisionFailed=The installer-relative montage learning bridge could not be provisioned or read back. Installation is not complete.
-en.DataNotice=Uninstall preserves data\montage-learning-bridge by default. Delete it only after a separate reviewed backup decision.
+en.DataNotice=Setup preserves any existing data\montage-learning-bridge folder. Montage Bridge provisioning remains unavailable until its separately gated private composition is completed.
+en.ExistingInstallTitle=Existing installation found
+en.ExistingInstallDescription=Choose how Setup should handle the existing BAI Video Production installation.
+en.ExistingInstallPrompt=Update/reinstall preserves the current location. Uninstall runs the existing uninstaller first. To make no changes, choose Cancel.
+en.ExistingInstallUpdate=Update or reinstall in the existing location
+en.ExistingInstallUninstall=Uninstall the existing version, then continue
+en.ExistingInstallCancel=Cancel Setup without making changes
+en.ExistingUninstallerMissing=The existing uninstaller is missing. Choose update/reinstall or cancel, then repair the installation first.
+en.ExistingUninstallFailed=The existing installation could not be uninstalled from:%n%1%nSetup has stopped without installing the replacement.
 ja.ReparseUnsupported=インストール先または既存ancestorが安全でないため停止しました。Product payloadの配置は開始していません。
-ja.BridgeProvisionFailed=インストール先相対のモンタージュ学習Bridgeを作成・読戻しできませんでした。導入完了ではありません。
-ja.DataNotice=アンインストール時も data\montage-learning-bridge は既定で保持します。別途バックアップ確認後に削除してください。
+ja.DataNotice=既存の data\montage-learning-bridge フォルダーは保持されます。モンタージュBridgeの作成は、別管理の内部接続が完了するまで利用できません。
+ja.ExistingInstallTitle=既存のインストールが見つかりました
+ja.ExistingInstallDescription=既存の BAI Video Production をどのように扱うか選択してください。
+ja.ExistingInstallPrompt=更新・再インストールは現在の場所を使用します。アンインストールを選ぶと既存のアンインストーラーを先に実行します。変更しない場合はキャンセルを選んでください。
+ja.ExistingInstallUpdate=既存の場所へ更新または再インストールする
+ja.ExistingInstallUninstall=既存版をアンインストールしてから続行する
+ja.ExistingInstallCancel=変更せずセットアップをキャンセルする
+ja.ExistingUninstallerMissing=既存のアンインストーラーが見つかりません。更新・再インストールまたはキャンセルを選び、先にインストールを修復してください。
+ja.ExistingUninstallFailed=次の場所の既存版をアンインストールできませんでした:%n%1%n新しい版はインストールせずに停止しました。
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut / デスクトップにショートカットを作成"; GroupDescription: "Shortcuts / ショートカット"; Flags: unchecked
@@ -95,6 +113,19 @@ var
   PreparedInstallRoot: String;
   PreparedExistingAncestor: String;
   PreparedAncestorSnapshot: String;
+
+function Task094ExistingInstallMarker(const InstallRoot: String): String;
+begin
+  Result := AddBackslash(InstallRoot) + 'BAI Video Production.exe';
+end;
+
+function Task094UninstallRegistryKey: String;
+begin
+  Result := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' +
+    '{#AppIdValue}' + '}_is1';
+end;
+
+#include "task094_existing_install_choice.iss"
 
 function GetFileAttributesW(FileName: String): LongWord;
   external 'GetFileAttributesW@kernel32.dll stdcall';
@@ -220,11 +251,28 @@ begin
     (CurrentSnapshot = PreparedAncestorSnapshot);
 end;
 
+procedure InitializeWizard;
+begin
+  Task094InitializeExistingInstallChoice;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := Task094ShouldSkipExistingInstallPage(PageID);
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := Task094ExistingInstallChoiceNext(CurPageID);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   CurrentSnapshot: String;
 begin
-  Result := '';
+  Result := Task094PrepareExistingInstall;
+  if Result <> '' then
+    exit;
   PreparedInstallRoot := RemoveBackslashUnlessRoot(
     ExpandFileName(ExpandConstant('{app}')));
   if (not FindDeepestExistingAncestor(
@@ -238,9 +286,6 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var
-  ResultCode: Integer;
-  Params: String;
-  ReceiptPath: String;
   CurrentRoot: String;
 begin
   if CurStep = ssInstall then
@@ -255,20 +300,8 @@ begin
   begin
     if not PreparedAncestorsStillMatch() then
       RaiseException(CustomMessage('ReparseUnsupported'));
-
-    Params := '--bvp-installer-bridge provision-readback --install-root "' +
-      ExpandConstant('{app}') + '" --installer-manifest-sha256 "sha256:{#PayloadTreeSha}"';
-    if (not Exec(ExpandConstant('{app}\BAI Video Production.exe'), Params,
-      ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode)) or
-      (ResultCode <> 0) then
-      RaiseException(CustomMessage('BridgeProvisionFailed'));
-
-    ReceiptPath := ExpandConstant(
-      '{app}\data\montage-learning-bridge\migration\installer-readback.json');
-    if (not FileExists(ReceiptPath)) or
-      (not PreparedAncestorsStillMatch()) then
-      RaiseException(CustomMessage('BridgeProvisionFailed'));
-    Log('TASK-063 installer-relative bridge provision/read-back: PASS');
+    Log('TASK-094 payload placement/read-back boundary: PASS; ' +
+      'TASK-063 private Bridge composition remains gated and was not invoked.');
   end;
 end;
 
@@ -279,6 +312,5 @@ begin
       Chr(13) + Chr(10) + CustomMessage('DataNotice');
 end;
 
-// No bridge directories are installer-owned or recursively removed. The private
-// installer helper creates them after payload placement; uninstall therefore
-// preserves learning data and receipts by default.
+// Bridge directories remain outside recursive uninstall ownership. TASK-094
+// deliberately does not call the fail-closed public TASK-063 mutation surface.

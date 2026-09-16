@@ -7,9 +7,14 @@
 #define PreviousPluginSha "14839bcad60fe47583a97729e3dc41c23b9f6c06012d5a83a38d8fc04b435b38"
 #define EnSha "066718cb394b9af07319f4bb4a0f6eb7cc50e45e73ffc76662c588ccbaa8ae8d"
 #define JaSha "c55315f3973893bfe9303766df7ab824751e93a84a0a607224a3b465fbf63f4e"
+#define PreviousEnSha "c93279484a993fb6543fb898bfb2625fb1f8c717b545649729954ff2ff5ff031"
+#define PreviousJaSha "0d4b5e7c5f23cfe0264f124f05b64d554b4a6dd044fe2ab7ce5ec8228d07073c"
+#ifndef AppIdValue
+  #define AppIdValue "91F1D154-4D4E-44C9-9856-313FD30B4C47"
+#endif
 
 [Setup]
-AppId={{91F1D154-4D4E-44C9-9856-313FD30B4C47}
+AppId={{{#AppIdValue}}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=BAI
@@ -30,6 +35,7 @@ Uninstallable=yes
 CloseApplications=no
 RestartApplications=no
 UsePreviousAppDir=yes
+DisableDirPage=no
 UsePreviousLanguage=yes
 VersionInfoVersion=0.1.0.10
 VersionInfoProductName={#AppName}
@@ -54,6 +60,14 @@ en.ObsNotWritable=The OBS Studio folder is not writable. Check its permissions o
 en.ObsDiskLow=The OBS drive has less than 16 MB free. Free space and try again.
 en.TargetCollision=Installation stopped because an existing plugin file has different content:%n%1%nNo file was changed.
 en.ReadbackFailed=Installation finished copying files, but verification failed:%n%1%nDo not start OBS. Keep the installer log for recovery.
+en.ExistingInstallTitle=Existing installation found
+en.ExistingInstallDescription=Choose how Setup should handle the existing BAI Voice Capture installation.
+en.ExistingInstallPrompt=Update/reinstall preserves the current location. Uninstall restores installer-owned OBS files first. To make no changes, choose Cancel.
+en.ExistingInstallUpdate=Update or reinstall in the existing location
+en.ExistingInstallUninstall=Uninstall the existing version, then continue
+en.ExistingInstallCancel=Cancel Setup without making changes
+en.ExistingUninstallerMissing=The existing uninstaller is missing. Choose update/reinstall or cancel, then repair the installation first.
+en.ExistingUninstallFailed=The existing installation could not be uninstalled from:%n%1%nSetup has stopped without installing the replacement.
 ja.ObsPageTitle=OBS Studio の場所を選択
 ja.ObsPageDescription=OBS Studio本体フォルダー、またはobs64.exeがあるbin\64bitフォルダーを選びます。OBSは終了してください。
 ja.ObsRootLabel=OBS Studio本体またはbin\64bitフォルダー:
@@ -66,6 +80,14 @@ ja.ObsNotWritable=OBS Studioフォルダーへ書き込めません。権限を�
 ja.ObsDiskLow=OBSがあるドライブの空き容量が16 MB未満です。空き容量を確保して再実行してください。
 ja.TargetCollision=内容の異なる既存Pluginファイルがあるため停止しました:%n%1%nファイルは変更していません。
 ja.ReadbackFailed=コピー後の検証に失敗しました:%n%1%nOBSを起動せず、復旧のためインストーラーログを保管してください。
+ja.ExistingInstallTitle=既存のインストールが見つかりました
+ja.ExistingInstallDescription=既存の BAI Voice Capture をどのように扱うか選択してください。
+ja.ExistingInstallPrompt=更新・再インストールは現在の場所を使用します。アンインストールを選ぶとインストーラー管理下のOBSファイルを先に復元します。変更しない場合はキャンセルを選んでください。
+ja.ExistingInstallUpdate=既存の場所へ更新または再インストールする
+ja.ExistingInstallUninstall=既存版をアンインストールしてから続行する
+ja.ExistingInstallCancel=変更せずセットアップをキャンセルする
+ja.ExistingUninstallerMissing=既存のアンインストーラーが見つかりません。更新・再インストールまたはキャンセルを選び、先にインストールを修復してください。
+ja.ExistingUninstallFailed=次の場所の既存版をアンインストールできませんでした:%n%1%n新しい版はインストールせずに停止しました。
 
 [Files]
 Source: "{#PayloadRoot}\controller\bai-voice-capture-controller.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -131,6 +153,20 @@ var
   LastPreflightError: String;
   PublishStarted: Boolean;
   InstallVerified: Boolean;
+
+function Task094ExistingInstallMarker(const InstallRoot: String): String;
+begin
+  Result := AddBackslash(InstallRoot) +
+    'bai-voice-capture-controller.exe';
+end;
+
+function Task094UninstallRegistryKey: String;
+begin
+  Result := 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' +
+    '{#AppIdValue}' + '}_is1';
+end;
+
+#include "task094_existing_install_choice.iss"
 
 function NormalizeRoot(Value: String): String;
 begin
@@ -329,8 +365,8 @@ begin
   end;
   BadTarget := '';
   if not ExistingFileIsAllowed(Target1, '{#PluginSha}', '{#PreviousPluginSha}', T1Preexisting) then BadTarget := Target1;
-  if (BadTarget = '') and (not ExistingFileIsAllowed(Target2, '{#EnSha}', '', T2Preexisting)) then BadTarget := Target2;
-  if (BadTarget = '') and (not ExistingFileIsAllowed(Target3, '{#JaSha}', '', T3Preexisting)) then BadTarget := Target3;
+  if (BadTarget = '') and (not ExistingFileIsAllowed(Target2, '{#EnSha}', '{#PreviousEnSha}', T2Preexisting)) then BadTarget := Target2;
+  if (BadTarget = '') and (not ExistingFileIsAllowed(Target3, '{#JaSha}', '{#PreviousJaSha}', T3Preexisting)) then BadTarget := Target3;
   if BadTarget <> '' then
   begin
     LastPreflightError := FmtMessage(CustomMessage('TargetCollision'), [BadTarget]);
@@ -440,6 +476,7 @@ procedure InitializeWizard;
 var
   InitialRoot: String;
 begin
+  Task094InitializeExistingInstallChoice;
   ObsPage := CreateInputDirPage(wpSelectDir, CustomMessage('ObsPageTitle'),
     CustomMessage('ObsPageDescription'), CustomMessage('ObsRootLabel'), False, '');
   ObsPage.Add('');
@@ -451,7 +488,9 @@ end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
-  Result := True;
+  Result := Task094ExistingInstallChoiceNext(CurPageID);
+  if not Result then
+    exit;
   if CurPageID = ObsPage.ID then
   begin
     ObsRoot := NormalizeObsRoot(ObsPage.Values[0]);
@@ -461,8 +500,16 @@ begin
   end;
 end;
 
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := Task094ShouldSkipExistingInstallPage(PageID);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
+  Result := Task094PrepareExistingInstall;
+  if Result <> '' then
+    exit;
   ObsRoot := NormalizeObsRoot(ExpandConstant('{param:OBSROOT|' + ObsPage.Values[0] + '}'));
   if not ValidateObsAndTargets(False) then
     Result := LastPreflightError

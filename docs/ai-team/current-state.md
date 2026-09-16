@@ -2,6 +2,8 @@
 
 ## Canonical project state
 
+- Active tooling unit: `TASK-096 / DEV-3 — One-command Windows Release Build Orchestrator`; A1 implementation and contract verification are complete on `codex/task-096-windows-release-build-orchestrator` from `origin/main` / `v0.24.3` / `0daa3026e4436d28c9522c65127a04a90582efaa`. Focused/targeted verification is `61 PASS / 1 intentionally deselected`; PowerShell parser, effect-zero/refusal checks, compileall, diff check, and durable Evidence read-back pass with `0 Critical / 0 High / 0 Medium` unresolved. The full native artifact run is intentionally `NOT_EXECUTED` and awaits the user's one-command run from a clean merged checkout. Tag/push/GitHub Release, signing, Product installation/launch, OBS mutation, model/runtime acquisition, Owner audio handling, paid execution, deploy and Production Activation remain separate and unauthorized.
+
 - P0 GPU-first desktop prerequisite: `TASK-066 OWNER_AUTHORIZED / DESIGN_ACCEPTED / IMPLEMENTATION_ALLOCATED_BY_DEPENDENCY / NATIVE_PROOF_PENDING`. GF-E callable entry, source-backed build chain, durable receipt lifecycle and journal-first cross-volume recovery are accepted; delta-4 Critic `0/0/0/0`, Judge `ACCEPT`. TASK-063 repair source is canonical, but its post-repair native install/read-back terminal handoff is not yet confirmed, so GF-E installer mutation remains blocked; implementation/native/Release Gates remain separate.
 
 - Project: `ai-video-production`

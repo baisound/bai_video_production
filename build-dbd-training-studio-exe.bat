@@ -18,12 +18,22 @@ if errorlevel 1 (
   echo   "%PYTHON_EXE%" -m pip install -e ".[windows-build]"
   exit /b 3
 )
-if not exist "builds" mkdir "builds"
-"%PYTHON_EXE%" -m PyInstaller --noconfirm --clean --distpath "%CD%\builds" --workpath "%CD%\builds\work-dbd-training" "%CD%\packaging\task049_training_studio.spec"
+if defined BVP_TASK049_TRAINING_BUILD_ROOT (
+  set "BUILD_ROOT=%BVP_TASK049_TRAINING_BUILD_ROOT%"
+) else (
+  set "BUILD_ROOT=%CD%\builds"
+)
+if exist "%BUILD_ROOT%" (
+  echo [ERROR] Build output already exists; choose a fresh BVP_TASK049_TRAINING_BUILD_ROOT: %BUILD_ROOT%
+  exit /b 6
+)
+mkdir "%BUILD_ROOT%"
+if errorlevel 1 exit /b 6
+"%PYTHON_EXE%" -m PyInstaller --noconfirm --clean --distpath "%BUILD_ROOT%" --workpath "%BUILD_ROOT%\work-dbd-training" "%CD%\packaging\task049_training_studio.spec"
 if errorlevel 1 exit /b 4
-if not exist "builds\BAI DbD Training Studio\BAI DbD Training Studio.exe" (
+if not exist "%BUILD_ROOT%\BAI DbD Training Studio\BAI DbD Training Studio.exe" (
   echo [ERROR] Expected EXE is missing.
   exit /b 5
 )
-echo [PASS] %CD%\builds\BAI DbD Training Studio\BAI DbD Training Studio.exe
+echo [PASS] %BUILD_ROOT%\BAI DbD Training Studio\BAI DbD Training Studio.exe
 exit /b 0

@@ -1,6 +1,6 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2_DESIGN_ACCEPTED / A2-R2A_COMPLETE / A2-R2B_REVIEW_ELIGIBLE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_DESIGN_ACCEPTED / A2-R2B1_IMPLEMENTATION_ALLOCATED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
@@ -9,8 +9,8 @@
 - Branch: `codex/task-098-universal-wav-review-integration`
 - Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`
 - Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
-- Active Atomic Unit: `none; A2-R2a is complete and A2-R2b awaits fresh pre-mutation review`
-- Next action: `perform the R2b pre-mutation review and exact allocation decision; do not implement R2b/R2c before that gate`
+- Active Atomic Unit: `TASK-098/A2-R2b1 — durable control coordinator`
+- Next action: `implement and fake-test only the exact six-file R2b1 allocation; R2b2/R2c remain unallocated`
 
 ## Objective
 
@@ -391,3 +391,19 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - R2b is review-eligible only. R2b/R2c implementation, store, Provider, engine,
   Shell, serialized v2/native, private media, model/training and release effects
   remain unallocated or gated.
+
+## A2-R2b1 pre-mutation review
+
+- Accepted review: `a2-r2b1-durable-coordinator-pre-mutation-review-20260920.md`.
+- Responsibility: durable control-row CAS ordering, hash-addressed immutable
+  control Evidence, atomic expected-attempt protection, generation-exclusion
+  lock and crash-resumable terminal closure; no Provider/engine lifecycle or UI.
+- Independent Critic: initial `0/3/2/0`; final `ACCEPT / 0/0/0/0`.
+- Independent Tester: initial `0/2/1/0`; final `PASS / 0/0/0/0`.
+- Independent Judge: `ACCEPT / R2b1 LIMITED IMPLEMENTATION ALLOCATED / 0/0/0/0`.
+- Exact allocation: new coordinator and tests; optional default-off
+  `expected_attempt` store CAS predicate and ABA tests; canonical v2 operation-
+  key helper call and golden test; bounded TASK-098/current-state/task-index docs.
+- R2b2 Provider/engine lifecycle integration, R2c Shell/Human application,
+  FasterWhisper changes, native/private/model/training/release effects remain
+  unallocated or gated.

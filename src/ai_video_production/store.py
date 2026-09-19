@@ -930,6 +930,7 @@ class SQLiteProductStore:
         increment_attempt: bool = False,
         result_ref: str | None = None,
         expected_result_refs: tuple[str | None, ...] | None = None,
+        expected_attempt: int | None = None,
         replace_result_ref: bool = False,
     ) -> tuple[OperationRecord, bool]:
         """Atomically admit exactly one caller from an explicit status set."""
@@ -940,6 +941,10 @@ class SQLiteProductStore:
             raise ValueError("expected_statuses are invalid")
         if status not in allowed:
             raise ValueError("unsupported operation status")
+        if expected_attempt is not None and (
+            type(expected_attempt) is not int or expected_attempt < 0
+        ):
+            raise ValueError("expected_attempt must be a non-negative integer or null")
         for value in (
             *((expected_result_refs or ())),
             result_ref,
@@ -972,15 +977,18 @@ class SQLiteProductStore:
                 result_parameters.extend(non_null)
             result_predicate = " AND (" + " OR ".join(clauses) + ")"
         result_assignment = "result_ref=?" if replace_result_ref else "result_ref=COALESCE(?, result_ref)"
+        attempt_predicate = "" if expected_attempt is None else " AND attempt=?"
+        attempt_parameters: tuple[int, ...] = () if expected_attempt is None else (expected_attempt,)
         now = utc_now_iso()
         with self._managed_connection() as conn:
             cursor = conn.execute(
                 f"UPDATE operations SET status=?, last_error_code=?, updated_at=?, "
                 f"attempt=attempt+?, {result_assignment} "
-                f"WHERE operation_id=? AND status IN ({placeholders}){result_predicate}",
+                f"WHERE operation_id=? AND status IN ({placeholders}){result_predicate}{attempt_predicate}",
                 (
                     status, last_error_code, now, 1 if increment_attempt else 0,
                     result_ref, operation_id, *expected_statuses, *result_parameters,
+                    *attempt_parameters,
                 ),
             )
             row = conn.execute(

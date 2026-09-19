@@ -44,6 +44,7 @@ from .serialization import canonical_json_bytes, sha256_bytes
 from .store import SQLiteProductStore
 from .subtitles import TranscriptManifest, TranscriptSegment, TranscriptWord
 from .task036_pre_edit_runtime import LocalTranscriptionOutcome
+from .task098_runtime_transcription_coordination import derive_runtime_operation_key_v2
 from .timebase import FrameRate
 
 
@@ -2415,23 +2416,16 @@ class Task036RuntimeManagedLocalTranscriptionPortV2:
         return "faster-whisper", self.settings.model_id, execution_sha
 
     def _operation_key(self, project_id: str, source_asset_id: str, source_asset_sha256: str) -> str:
-        if not isinstance(project_id, str) or not project_id.strip() or not isinstance(source_asset_id, str) or not source_asset_id.strip():
-            raise ValueError("project_id and source_asset_id must be non-empty")
         provider_id, model_id, execution_sha = self._execution_identity()
-        body = {
-            "contract": "task036-local-transcription/2.0.0",
-            "project_id": project_id,
-            "source_asset_id": source_asset_id,
-            "source_asset_sha256": source_asset_sha256,
-            "provider_id": provider_id,
-            "model_id": model_id,
-            "execution_config_sha256": execution_sha,
-            "runtime_request_sha256": self.runtime_request.record_sha256,
-            "model_download_authorized": False,
-        }
-        return "task036-transcription-" + hashlib.sha256(
-            b"bvp.task098.task036-runtime-operation.v2\0" + canonical_json_bytes(body),
-        ).hexdigest()
+        return derive_runtime_operation_key_v2(
+            project_id=project_id,
+            source_asset_id=source_asset_id,
+            source_asset_sha256=source_asset_sha256,
+            provider_id=provider_id,
+            model_id=model_id,
+            execution_config_sha256=execution_sha,
+            runtime_request=self.runtime_request,
+        )
 
     def _admission_ref(self, source_asset_sha256: str, decision: FasterWhisperRuntimeDecisionV1) -> str:
         return "task098-runtime-admission:v2:" + source_asset_sha256.removeprefix("sha256:") + ":" + decision.record_sha256.removeprefix("sha256:")

@@ -44,6 +44,66 @@ def test_duplicate_idempotency_key_returns_same_operation(tmp_path):
     assert first.operation_id == second.operation_id
 
 
+def test_operation_cas_expected_attempt_blocks_stale_aba_closure(tmp_path):
+    store = SQLiteProductStore(tmp_path / "attempt.sqlite3", clock=lambda: T0)
+    job = store.create_job(ProfileSnapshot.create("attempt", "1.0.0", {}).profile_snapshot_id)
+    operation, _ = store.reserve_operation(job.job_id, "CAS", "attempt-aba")
+
+    first, changed = store.compare_and_set_operation_status(
+        operation.operation_id,
+        expected_statuses=("PENDING",),
+        expected_result_refs=(None,),
+        expected_attempt=0,
+        status="IN_PROGRESS",
+        result_ref="same-owner",
+        replace_result_ref=True,
+        increment_attempt=True,
+    )
+    assert changed is True and first.attempt == 1
+    returned, changed = store.compare_and_set_operation_status(
+        operation.operation_id,
+        expected_statuses=("IN_PROGRESS",),
+        expected_result_refs=("same-owner",),
+        expected_attempt=1,
+        status="PENDING",
+        result_ref="same-owner",
+        replace_result_ref=True,
+    )
+    assert changed is True and returned.attempt == 1
+    second, changed = store.compare_and_set_operation_status(
+        operation.operation_id,
+        expected_statuses=("PENDING",),
+        expected_result_refs=("same-owner",),
+        expected_attempt=1,
+        status="IN_PROGRESS",
+        result_ref="same-owner",
+        replace_result_ref=True,
+        increment_attempt=True,
+    )
+    assert changed is True and second.attempt == 2
+
+    unchanged, changed = store.compare_and_set_operation_status(
+        operation.operation_id,
+        expected_statuses=("IN_PROGRESS",),
+        expected_result_refs=("same-owner",),
+        expected_attempt=1,
+        status="FAILED",
+        result_ref="stale-closure",
+        replace_result_ref=True,
+    )
+    assert changed is False
+    assert (unchanged.status, unchanged.attempt, unchanged.result_ref) == (
+        "IN_PROGRESS", 2, "same-owner",
+    )
+    with pytest.raises(ValueError, match="expected_attempt"):
+        store.compare_and_set_operation_status(
+            operation.operation_id,
+            expected_statuses=("IN_PROGRESS",),
+            expected_attempt=True,
+            status="FAILED",
+        )
+
+
 def test_unknown_job_idempotency_reservation_fails(tmp_path):
     from ai_video_production.ids import IdKind, generate_id
     import sqlite3, pytest

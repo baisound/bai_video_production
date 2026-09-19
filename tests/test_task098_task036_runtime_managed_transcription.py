@@ -24,6 +24,7 @@ from ai_video_production.task036_product_ports import (
     _Task036LocalTranscriptionOperationEngine,
 )
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
+from ai_video_production.task098_runtime_transcription_coordination import derive_runtime_operation_key_v2
 
 
 PROJECT_ID = "task098-project"
@@ -592,6 +593,16 @@ def test_v2_golden_key_and_execution_config_bytes_remain_unchanged(tmp_path: Pat
     source_sha = "sha256:" + "a" * 64
     assert port._execution_identity()[2] == "sha256:1c63c68c6dba14799755475fd6b3327339f44d460356fb627c2615d4ce603b5d"
     assert port._operation_key(PROJECT_ID, ASSET_ID, source_sha) == "task036-transcription-0d6fda3ba5e613937aa6517181c400ba9a6391493c7ff0164b78e3679a6a7441"
+    provider_id, model_id, execution_sha = port._execution_identity()
+    assert port._operation_key(PROJECT_ID, ASSET_ID, source_sha) == derive_runtime_operation_key_v2(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=source_sha,
+        provider_id=provider_id,
+        model_id=model_id,
+        execution_config_sha256=execution_sha,
+        runtime_request=port.runtime_request,
+    )
 
 
 def test_v2_cross_process_provider_entry_is_exclusive(tmp_path: Path) -> None:

@@ -1,6 +1,6 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_DESIGN_ACCEPTED / A2-R2B1_IMPLEMENTATION_ALLOCATED`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMMIT_READY / A2-R2B2_REVIEW_NEXT`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
@@ -10,7 +10,7 @@
 - Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`
 - Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
 - Active Atomic Unit: `TASK-098/A2-R2b1 — durable control coordinator`
-- Next action: `implement and fake-test only the exact six-file R2b1 allocation; R2b2/R2c remain unallocated`
+- Next action: `commit R2b1 and persist/read back its commit receipt; then begin R2b2 fresh pre-mutation review only`
 
 ## Objective
 
@@ -407,3 +407,30 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - R2b2 Provider/engine lifecycle integration, R2c Shell/Human application,
   FasterWhisper changes, native/private/model/training/release effects remain
   unallocated or gated.
+
+## A2-R2b1 implementation and Recovery verification
+
+- Exact implementation allocation: one durable coordinator, optional default-off
+  ordinary-CAS `expected_attempt`, canonical TASK-036 v2 key-helper reuse and
+  their three bounded test files; no Provider/engine/Shell/native effect.
+- Final control-row refs are exact typed durable refs for cancel request, cancel
+  outcome, commit barrier and terminal commit. Immutable Evidence remains
+  canonical `sha256:` digest-addressed JSON.
+- Immediately after the two generation-absence observations and their fault
+  boundary, control is re-read as exact `PARTIAL / typed barrier / attempt 0`
+  before any main terminal CAS. Post-main, pre-control and pre-slot checks remain.
+- Recovery focused verification: `42 PASS` at
+  `/tmp/bvp-task098-a2-r2b1-recovery-20260920T180000-r16`.
+- Direct TASK-006/023/036/098 regression: `354 PASS` at
+  `/tmp/bvp-task098-a2-r2b1-regression-20260920T181000-r17`.
+- Final independent Critic: `ACCEPT / 0/0/0/0`.
+- Final independent Tester after exact typed-barrier drift coverage:
+  `PASS / 0/0/0/0`.
+- Final independent Judge: `ACCEPT / COMMIT_READY / 0/0/0/0` after fresh
+  external checkpoint read-back `PASS`.
+- External checkpoint: `C:\home\baisound\evidence\bai-video-production\TASK-098\a2-r2b1-durable-coordinator\20260920T184000+0900\checkpoint.md`, SHA-256
+  `82484a0f1a9cb71ee5065ec9072f342f0a5d1063079f1a70a17e26c72365c2df`.
+- Canonical tracked Evidence:
+  `evidence/a2-r2b1-durable-coordinator-20260920-r01.md`.
+- R2b2 Provider/engine lifecycle and R2c Shell/Human work remain unallocated;
+  the next action is a fresh R2b2 pre-mutation review, not implementation.

@@ -1,6 +1,6 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2_DESIGN_ACCEPTED / A2-R2A_IMPLEMENTATION_ALLOCATED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
@@ -9,8 +9,8 @@
 - Branch: `codex/task-098-universal-wav-review-integration`
 - Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`
 - Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
-- Active Atomic Unit: `none; A2-R1c is complete and the next unit is not yet allocated`
-- Next action: `begin a fresh A2-R2 pre-mutation design/review; A2-R2 implementation remains unallocated`
+- Active Atomic Unit: `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`
+- Next action: `implement and test only the exact four-file R2a allocation; R2b/R2c remain unallocated`
 
 ## Objective
 

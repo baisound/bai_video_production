@@ -1,16 +1,16 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMMIT_READY / A2-R2B2_REVIEW_NEXT`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_IMPLEMENTATION_ALLOCATED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`
 - Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
-- Active Atomic Unit: `TASK-098/A2-R2b1 — durable control coordinator`
-- Next action: `commit R2b1 and persist/read back its commit receipt; then begin R2b2 fresh pre-mutation review only`
+- Active Atomic Unit: `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`
+- Next action: `implement and fake-test only the exact seven-file R2b2 allocation; R2c remains unallocated`
 
 ## Objective
 
@@ -432,5 +432,21 @@ Later Units must publish their own narrower allowed-file list before mutation.
   `82484a0f1a9cb71ee5065ec9072f342f0a5d1063079f1a70a17e26c72365c2df`.
 - Canonical tracked Evidence:
   `evidence/a2-r2b1-durable-coordinator-20260920-r01.md`.
-- R2b2 Provider/engine lifecycle and R2c Shell/Human work remain unallocated;
-  the next action is a fresh R2b2 pre-mutation review, not implementation.
+- At R2b1 closure, R2b2 Provider/engine lifecycle and R2c Shell/Human work were
+  still unallocated; the fresh R2b2 review outcome is recorded below.
+
+## A2-R2b2 pre-mutation review
+
+- Accepted review:
+  `a2-r2b2-provider-engine-lifecycle-pre-mutation-review-20260920.md`.
+- Responsibility: v2-only phase/cancel checkpoints, separate cooperative lazy-
+  iterator path, exact iterator-close outcome, first-write publication barrier,
+  main-before-control publication completion and Provider-zero reconciliation.
+- Independent Critic: initial `0/4/1/0`; final `ACCEPT / 0/0/0/0`.
+- Independent Tester: initial `0/3/1/0`; final `PASS / 0/0/0/0`.
+- Independent Judge: `ACCEPT / R2b2 LIMITED IMPLEMENTATION ALLOCATED / 0/0/0/0`.
+- Exact allocation: three source and four test files in the accepted review plus
+  bounded TASK-098/current-state/task-index documentation.
+- R2c, store/schema, Shell/launcher/CLI, serialized v2/native activation, real
+  Provider/model/private media, voice learning and release effects remain
+  unallocated or gated.

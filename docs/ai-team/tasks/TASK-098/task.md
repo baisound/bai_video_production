@@ -1,13 +1,13 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R0_COMPLETE / CRITIC_TESTER_JUDGE_PASS / A2-R1_DESIGN_OVERLAP_NEXT`
+- Status: `A2-R1_DESIGN_ACCEPTED / A2-R1A_IMPLEMENTATION_ALLOCATED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`
-- Next Atomic Unit: `TASK-098/A2-R1 — Provider/TASK-036 overlap design and allocation; integration mutation not yet authorized`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`
+- Next Atomic Unit: `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`
 
 ## Objective
 
@@ -240,5 +240,16 @@ Later Units must publish their own narrower allowed-file list before mutation.
   effects: `NOT_EXECUTED`.
 - Evidence: `evidence/a2-r0-runtime-contract-20260919-r01.md`.
 
-A2-R1 is design/overlap allocation only until a fresh review accepts its exact
-owner-contract changes, allowed files, state-machine migration rules and tests.
+## A2-R1 design completion
+
+- Accepted design: `a2-r1-runtime-integration-design-20260919.md`.
+- Independent Critic: final `0 Critical / 0 High / 0 Medium / 0 Low / ACCEPT`.
+- Independent Tester: `PASS`, final unresolved findings `0/0/0/0`.
+- Independent Judge: `ACCEPT`; only A2-R1a is implementation-allocated.
+- A2-R1a is limited to the typed fake capability observation, deterministic
+  request-bound resolver, exact schema/mirror and focused tests. It cannot probe
+  a real OS/GPU/DLL, construct a Provider, run inference or mutate TASK-036.
+- R1b/R1c/A2-R2 and real/native activation require later fresh reviews and remain
+  unallocated.
+- Product source/schema/runtime/native/private effects: `NOT_EXECUTED`.
+- Evidence: `evidence/a2-r1-design-allocation-20260919-r01.md`.

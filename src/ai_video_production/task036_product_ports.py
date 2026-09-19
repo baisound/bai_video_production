@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from contextlib import contextmanager
 import ctypes
 from datetime import datetime, timezone
@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import stat
 import tempfile
+from threading import Lock
 from typing import Any, Callable, Iterator, Protocol
 
 from .assets import AssetType, AudioRightsStatus, PermissionState, RetentionClass, RightsStatus
@@ -45,15 +46,26 @@ from .faster_whisper_runtime_preflight import (
     resolve_runtime_decision,
 )
 from .ingest import AssetIngestRequest, AssetIngestService
+from .ids import IdKind, generate_id
 from .local_comfy_image_generation_port import _PinnedDirectory
 from .serialization import canonical_json_bytes, sha256_bytes
 from .store import SQLiteProductStore
 from .subtitles import TranscriptManifest, TranscriptSegment, TranscriptWord
 from .task036_pre_edit_runtime import LocalTranscriptionOutcome
 from .task098_runtime_transcription_coordination import (
+    RuntimeTranscriptionControlChainSnapshotV1,
     RuntimeTranscriptionCoordinatesV1,
     RuntimeTranscriptionCoordinatorV1,
+    RuntimeTranscriptionDurableControlCoordinatesV1,
+    derive_control_key,
     derive_runtime_operation_key_v2,
+    runtime_control_artifacts_exist,
+)
+from .task098_runtime_transcription_control import (
+    RuntimeTranscriptionAdjudicationDecisionV1,
+    RuntimeTranscriptionLeaseFactV1,
+    RuntimeTranscriptionReducerFactsV1,
+    reduce_runtime_transcription_control,
 )
 from .timebase import FrameRate
 
@@ -2184,29 +2196,35 @@ class _Task036LocalTranscriptionOperationEngine:
                     task023_execution_sha256=diagnostic.execution_sha256,
                 )
 
-            return self._execute_admitted_lifecycle(
-                snapshot=snapshot,
-                temporary=temporary,
-                project_id=project_id,
-                source_asset_id=source_asset_id,
-                source_asset_sha256=source_asset_sha256,
-                operation=operation,
-                slot=slot,
-                provider_id=provider_id,
-                model_id=model_id,
-                admission_ref=admission_ref,
-                provider_factory=make_provider,
-                validate_provider=validate_provider,
-                store_publication=store_publication,
-                build_outcome=lambda outcome: binding._outcome(outcome, decision),
-                language=binding.language,
-                timeline_rate=binding.timeline_rate,
-                redact_unexpected=True,
-                runtime_coordinates=coordinates,
-                runtime_coordinator=coordinator,
-                phase_observer=binding._phase_observer,
-                lifecycle_observer=binding._lifecycle_observer,
-            )
+            invocation = binding._begin_runtime_invocation(coordinates)
+            try:
+                return self._execute_admitted_lifecycle(
+                    snapshot=snapshot,
+                    temporary=temporary,
+                    project_id=project_id,
+                    source_asset_id=source_asset_id,
+                    source_asset_sha256=source_asset_sha256,
+                    operation=operation,
+                    slot=slot,
+                    provider_id=provider_id,
+                    model_id=model_id,
+                    admission_ref=admission_ref,
+                    provider_factory=make_provider,
+                    validate_provider=validate_provider,
+                    store_publication=store_publication,
+                    build_outcome=lambda outcome: binding._outcome(outcome, decision),
+                    language=binding.language,
+                    timeline_rate=binding.timeline_rate,
+                    redact_unexpected=True,
+                    runtime_coordinates=coordinates,
+                    runtime_coordinator=coordinator,
+                    phase_observer=lambda phase: binding._observe_runtime_phase(
+                        invocation, phase,
+                    ),
+                    lifecycle_observer=binding._lifecycle_observer,
+                )
+            finally:
+                binding._end_runtime_invocation(invocation)
 
     def recover_runtime_managed(
         self,
@@ -2526,6 +2544,54 @@ class RuntimeManagedLocalTranscriptionOutcomeV2:
 
 _V2_ADMISSION_RE = re.compile(r"task098-runtime-admission:v2:([0-9a-f]{64}):([0-9a-f]{64})")
 
+_R2C_PUBLIC_KEYS = (
+    "control_mode", "phase", "cancel_state", "adjudication_state",
+    "available_action", "status_label", "provider_execution_started",
+    "provider_execution_known", "provider_stop_confirmed", "stop_evidence",
+    "slot_release_allowed", "no_replay",
+)
+
+
+def _operation_identity(value: Any | None) -> tuple[Any, ...] | None:
+    if value is None:
+        return None
+    return (
+        value.operation_id, value.job_id, value.command_type,
+        value.idempotency_key, value.status, value.attempt, value.created_at,
+        value.updated_at, value.last_error_code, value.result_ref,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeTranscriptionControlCaptureV2:
+    """Opaque Python-only snapshot used by the trusted confirmation boundary."""
+
+    production_job_id: str
+    project_id: str
+    source_asset_id: str
+    source_asset_sha256: str
+    operation_identity: tuple[Any, ...] | None
+    lease_identity: tuple[Any, ...] | None
+    slot_identity: tuple[Any, ...] | None
+    control_chain_identity: tuple[Any, ...]
+    recovery_state: str
+    phase_coordinate: tuple[Any, ...] | None
+    active_worker_coordinate: tuple[Any, ...] | None
+    public_items: tuple[tuple[str, Any], ...]
+    coordinates: RuntimeTranscriptionDurableControlCoordinatesV1 | None = field(
+        compare=False, repr=False,
+    )
+
+    def public_projection(self) -> dict[str, Any]:
+        projection = dict(self.public_items)
+        if tuple(projection) != _R2C_PUBLIC_KEYS:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                "Runtime transcription control projection is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return projection
+
 
 def _task036_parse_utc_timestamp(value: str) -> datetime:
     """Parse only the canonical TASK-036 historical-admission timestamp grammar."""
@@ -2641,6 +2707,95 @@ class Task036RuntimeManagedLocalTranscriptionPortV2:
         self.timeline_rate = timeline_rate
         self._phase_observer = phase_observer
         self._lifecycle_observer = lifecycle_observer
+        self._runtime_control_lock = Lock()
+        self._runtime_invocation_epoch = 0
+        self._runtime_phase_coordinate: tuple[Any, ...] | None = None
+        self._runtime_active_worker_coordinate: tuple[Any, ...] | None = None
+
+    @staticmethod
+    def _invocation_coordinate(
+        *,
+        production_job_id: str,
+        project_id: str,
+        source_asset_id: str,
+        source_asset_sha256: str,
+        runtime_operation_id: str,
+        runtime_admission_ref: str,
+        expected_attempt: int,
+        epoch: int,
+    ) -> tuple[Any, ...]:
+        return (
+            production_job_id, project_id, source_asset_id, source_asset_sha256,
+            runtime_operation_id, runtime_admission_ref, expected_attempt, epoch,
+        )
+
+    def _begin_runtime_invocation(
+        self, coordinates: RuntimeTranscriptionCoordinatesV1,
+    ) -> tuple[Any, ...]:
+        with self._runtime_control_lock:
+            if self._runtime_active_worker_coordinate is not None:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_WORKER_CONFLICT",
+                    "A runtime transcription worker is already active",
+                    ProductErrorCategory.STATE,
+                )
+            self._runtime_invocation_epoch += 1
+            coordinate = self._invocation_coordinate(
+                production_job_id=coordinates.production_job_id,
+                project_id=coordinates.project_id,
+                source_asset_id=coordinates.source_asset_id,
+                source_asset_sha256=coordinates.source_asset_sha256,
+                runtime_operation_id=coordinates.runtime_operation_id,
+                runtime_admission_ref=coordinates.runtime_admission_ref,
+                expected_attempt=coordinates.expected_attempt,
+                epoch=self._runtime_invocation_epoch,
+            )
+            self._runtime_active_worker_coordinate = coordinate
+            self._runtime_phase_coordinate = coordinate + ("ADMISSION",)
+            return coordinate
+
+    def _observe_runtime_phase(self, coordinate: tuple[Any, ...], phase: str) -> None:
+        phase_order = {
+            "ADMISSION": 0,
+            "PROVIDER_STARTING": 1,
+            "PROVIDER_RUNNING": 2,
+            "PUBLICATION_VALIDATING": 3,
+            "PUBLICATION_COMMITTING": 4,
+            "COMPLETED": 5,
+            "BLOCKED": 5,
+        }
+        with self._runtime_control_lock:
+            if self._runtime_active_worker_coordinate != coordinate:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_PHASE_STALE",
+                    "Runtime phase observation does not bind the active invocation",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            current = (
+                self._runtime_phase_coordinate[-1]
+                if self._runtime_phase_coordinate is not None
+                else None
+            )
+            if (
+                phase not in phase_order
+                or current not in phase_order
+                or phase_order[phase] < phase_order[current]
+                or current in {"COMPLETED", "BLOCKED"} and phase != current
+            ):
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_PHASE_STALE",
+                    "Runtime phase observation is outside the closed forward order",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            self._runtime_phase_coordinate = coordinate + (phase,)
+        if self._phase_observer is not None:
+            self._phase_observer(phase)
+
+    def _end_runtime_invocation(self, coordinate: tuple[Any, ...]) -> None:
+        with self._runtime_control_lock:
+            if self._runtime_active_worker_coordinate == coordinate:
+                self._runtime_active_worker_coordinate = None
+                self._runtime_phase_coordinate = None
 
     def _engine(self, provider: FasterWhisperProvider | None = None) -> _Task036LocalTranscriptionOperationEngine:
         # The engine methods used before factory entry never touch provider.
@@ -3083,6 +3238,389 @@ class Task036RuntimeManagedLocalTranscriptionPortV2:
             operation, project_id=project_id, source_asset_id=source_asset_id,
             source_asset_sha256=source_asset_sha256,
         )
+
+    def capture_runtime_transcription_control(
+        self,
+        *,
+        project_id: str,
+        source_asset_id: str,
+        source_asset_sha256: str,
+    ) -> RuntimeTranscriptionControlCaptureV2:
+        """Capture one exact private durable snapshot and its R2a projection."""
+
+        engine = self._engine()
+        operation_key = self._operation_key(
+            project_id, source_asset_id, source_asset_sha256,
+        )
+        operation = self.store.find_operation(self.production_job_id, operation_key)
+        guard_key = engine._cross_version_guard_key(
+            project_id, source_asset_id, source_asset_sha256,
+        )
+        lease = self.store.find_operation(self.production_job_id, guard_key)
+        slot = self.store.find_operation(
+            self.production_job_id, engine._slot_key(project_id),
+        )
+        recovery_state = "PENDING_ADMISSION"
+        publication_decision: FasterWhisperRuntimeDecisionV1 | None = None
+        admission_ref: str | None = None
+        decision_sha256: str | None = None
+        chain = RuntimeTranscriptionControlChainSnapshotV1(
+            control=None, identity=("NOT_APPLICABLE",),
+        )
+        invalid = False
+
+        if slot is not None and (
+            slot.job_id != self.production_job_id
+            or slot.command_type != "task036.local_transcription_output_slot"
+            or slot.idempotency_key != engine._slot_key(project_id)
+        ):
+            invalid = True
+
+        if operation is None:
+            if lease is not None or slot is not None:
+                invalid = True
+        else:
+            if (
+                operation.job_id != self.production_job_id
+                or operation.command_type != "task036.local_transcription.v2"
+                or operation.idempotency_key != operation_key
+            ):
+                invalid = True
+            admission_match = (
+                _V2_ADMISSION_RE.fullmatch(operation.result_ref)
+                if isinstance(operation.result_ref, str) else None
+            )
+            if admission_match is not None:
+                admission_ref = operation.result_ref
+                decision_sha256 = "sha256:" + admission_match.group(2)
+            if (
+                isinstance(operation.result_ref, str)
+                and re.fullmatch(r"sha256:[0-9a-f]{64}", operation.result_ref)
+            ):
+                try:
+                    values, raw = engine._read_immutable_publication_payloads(
+                        operation.operation_id,
+                    )
+                    _transcript, publication_decision = self._decode_v2_publication_set(
+                        engine, values, raw, operation.operation_id,
+                        operation.result_ref, project_id=project_id,
+                        source_asset_id=source_asset_id,
+                        source_asset_sha256=source_asset_sha256,
+                    )
+                    recovery_state = self._classify_validated_runtime_recovery(
+                        operation, project_id=project_id,
+                        source_asset_id=source_asset_id,
+                        source_asset_sha256=source_asset_sha256,
+                        publication=publication_decision,
+                    )
+                    admission_ref = self._admission_ref(
+                        source_asset_sha256, publication_decision,
+                    )
+                    decision_sha256 = publication_decision.record_sha256
+                except ProductError:
+                    invalid = True
+            elif not invalid:
+                recovery_state = self._classify_validated_runtime_recovery(
+                    operation, project_id=project_id,
+                    source_asset_id=source_asset_id,
+                    source_asset_sha256=source_asset_sha256,
+                )
+
+            if operation.status == "PENDING":
+                control_key = derive_control_key(
+                    production_job_id=self.production_job_id,
+                    project_id=project_id,
+                    source_asset_id=source_asset_id,
+                    source_asset_sha256=source_asset_sha256,
+                    runtime_operation_id=operation.operation_id,
+                )
+                try:
+                    unexpected_control = (
+                        self.store.find_operation(
+                            self.production_job_id, control_key,
+                        ) is not None
+                        or runtime_control_artifacts_exist(
+                            self.output_directory, operation.operation_id,
+                        )
+                    )
+                except (OSError, ProductError, TypeError, ValueError):
+                    unexpected_control = True
+                if unexpected_control:
+                    invalid = True
+            elif slot is None:
+                invalid = True
+            else:
+                try:
+                    chain = RuntimeTranscriptionCoordinatorV1(
+                        store=self.store,
+                        output_directory=self.output_directory.resolve(strict=True),
+                        clock=self.clock,
+                    ).read_control_chain(
+                        production_job_id=self.production_job_id,
+                        project_id=project_id,
+                        source_asset_id=source_asset_id,
+                        source_asset_sha256=source_asset_sha256,
+                        runtime_operation_id=operation.operation_id,
+                        expected_attempt=operation.attempt,
+                        runtime_request_sha256=self.runtime_request.record_sha256,
+                        slot_operation_id=slot.operation_id,
+                        runtime_admission_ref=admission_ref,
+                        runtime_decision_sha256=decision_sha256,
+                    )
+                    admission_ref = chain.runtime_admission_ref or admission_ref
+                    decision_sha256 = chain.runtime_decision_sha256 or decision_sha256
+                except (OSError, ProductError, TypeError, ValueError):
+                    invalid = True
+                    chain = RuntimeTranscriptionControlChainSnapshotV1(
+                        control=None, identity=("INVALID",),
+                    )
+            if (
+                operation.status == "FAILED"
+                and chain.terminal_commit is not None
+                and chain.control is not None
+                and chain.control.status == "COMPLETED"
+                and not invalid
+            ):
+                recovery_state = "FAILED_TERMINAL"
+
+        lease_fact: RuntimeTranscriptionLeaseFactV1 | None = None
+        if lease is not None:
+            try:
+                lease_fact = RuntimeTranscriptionLeaseFactV1(
+                    production_job_id=self.production_job_id,
+                    project_id=project_id,
+                    source_asset_id=source_asset_id,
+                    source_asset_sha256=source_asset_sha256,
+                    operation_id=lease.operation_id,
+                    command_type=lease.command_type,
+                    idempotency_key=lease.idempotency_key,
+                    status=lease.status,
+                    attempt=lease.attempt,
+                    result_ref=lease.result_ref,
+                )
+            except (TypeError, ValueError):
+                invalid = True
+
+        with self._runtime_control_lock:
+            phase_coordinate = self._runtime_phase_coordinate
+            active_coordinate = self._runtime_active_worker_coordinate
+        phase: str | None = None
+        if phase_coordinate is not None:
+            if operation is None or admission_ref is None:
+                invalid = True
+            else:
+                expected_prefix = (
+                    self.production_job_id, project_id, source_asset_id,
+                    source_asset_sha256, operation.operation_id, admission_ref,
+                    operation.attempt,
+                )
+                if phase_coordinate[:7] != expected_prefix:
+                    invalid = True
+                else:
+                    phase = phase_coordinate[-1]
+        if active_coordinate is not None:
+            if operation is None or admission_ref is None or active_coordinate[:7] != (
+                self.production_job_id, project_id, source_asset_id,
+                source_asset_sha256, operation.operation_id, admission_ref,
+                operation.attempt,
+            ):
+                invalid = True
+
+        coordinates: RuntimeTranscriptionDurableControlCoordinatesV1 | None = None
+        if (
+            operation is not None and slot is not None
+            and admission_ref is not None and decision_sha256 is not None
+        ):
+            try:
+                provider_id, model_id, execution_sha = self._execution_identity()
+                coordinates = RuntimeTranscriptionDurableControlCoordinatesV1(
+                    production_job_id=self.production_job_id,
+                    project_id=project_id,
+                    source_asset_id=source_asset_id,
+                    source_asset_sha256=source_asset_sha256,
+                    runtime_operation_id=operation.operation_id,
+                    expected_attempt=operation.attempt,
+                    runtime_admission_ref=admission_ref,
+                    runtime_request=self.runtime_request,
+                    runtime_decision_sha256=decision_sha256,
+                    provider_id=provider_id,
+                    model_id=model_id,
+                    execution_config_sha256=execution_sha,
+                    slot_operation_id=slot.operation_id,
+                    recovery_state=(
+                        "ADJUDICATION_REQUIRED_NO_PUBLICATION"
+                        if recovery_state == "ADJUDICATION_REQUIRED_NO_PUBLICATION"
+                        else "ACTIVE_UNKNOWN"
+                    ),
+                )
+            except (TypeError, ValueError):
+                invalid = True
+
+        reducer_chain = chain
+        if (
+            chain.control is not None
+            and chain.control.status == "PARTIAL"
+            and chain.terminal_commit is not None
+        ):
+            reducer_chain = RuntimeTranscriptionControlChainSnapshotV1(
+                control=chain.control,
+                cancel_request=chain.cancel_request,
+                cancel_outcome=chain.cancel_outcome,
+                adjudication=chain.adjudication,
+                barrier=chain.barrier,
+                generation_observation=chain.generation_observation,
+                terminal_commit=None,
+                runtime_admission_ref=chain.runtime_admission_ref,
+                runtime_decision_sha256=chain.runtime_decision_sha256,
+                identity=chain.identity,
+            )
+        if recovery_state in {"RECOVERABLE_PUBLICATION", "VERIFICATION_ONLY"}:
+            expected_control_statuses = (
+                {"IN_PROGRESS", "COMPLETED"}
+                if recovery_state == "RECOVERABLE_PUBLICATION"
+                else {"COMPLETED"}
+            )
+            publication_chain_valid = (
+                chain.control is not None
+                and chain.control.status in expected_control_statuses
+                and chain.barrier is not None
+                and chain.barrier.barrier_owner == "PUBLICATION"
+                and chain.barrier.closure_record_sha256 is None
+                and chain.control.result_ref
+                == "task098-runtime-commit-barrier:v1:"
+                + chain.barrier.record_sha256.removeprefix("sha256:")
+                and chain.cancel_request is None
+                and chain.cancel_outcome is None
+                and chain.adjudication is None
+                and chain.generation_observation is None
+                and chain.terminal_commit is None
+            )
+            if not publication_chain_valid:
+                invalid = True
+            reducer_chain = RuntimeTranscriptionControlChainSnapshotV1(
+                control=chain.control,
+                runtime_admission_ref=chain.runtime_admission_ref,
+                runtime_decision_sha256=chain.runtime_decision_sha256,
+                identity=chain.identity,
+            )
+        facts = RuntimeTranscriptionReducerFactsV1(
+            production_job_id=self.production_job_id,
+            project_id=project_id,
+            source_asset_id=source_asset_id,
+            source_asset_sha256=source_asset_sha256,
+            runtime_operation_id=(None if operation is None else operation.operation_id),
+            operation_status=(None if operation is None else operation.status),
+            operation_attempt=(None if operation is None else operation.attempt),
+            operation_result_ref=(None if operation is None else operation.result_ref),
+            slot_operation_id=(None if slot is None else slot.operation_id),
+            slot_status=(None if slot is None else slot.status),
+            slot_result_ref=(None if slot is None else slot.result_ref),
+            recovery_state=("CORRUPT_BLOCKED" if invalid else recovery_state),
+            phase=phase,
+            lease=(None if invalid and operation is not None else lease_fact),
+            cancel_request=reducer_chain.cancel_request,
+            cancel_outcome=reducer_chain.cancel_outcome,
+            adjudication=reducer_chain.adjudication,
+            barrier=reducer_chain.barrier,
+            generation_observation=reducer_chain.generation_observation,
+            terminal_commit=reducer_chain.terminal_commit,
+        )
+        projection = reduce_runtime_transcription_control(facts)
+        if set(projection) != set(_R2C_PUBLIC_KEYS):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                "Runtime transcription reducer returned an invalid projection",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        public_items = tuple((key, projection[key]) for key in _R2C_PUBLIC_KEYS)
+        return RuntimeTranscriptionControlCaptureV2(
+            production_job_id=self.production_job_id,
+            project_id=project_id,
+            source_asset_id=source_asset_id,
+            source_asset_sha256=source_asset_sha256,
+            operation_identity=_operation_identity(operation),
+            lease_identity=_operation_identity(lease),
+            slot_identity=_operation_identity(slot),
+            control_chain_identity=chain.identity,
+            recovery_state=("CORRUPT_BLOCKED" if invalid else recovery_state),
+            phase_coordinate=phase_coordinate,
+            active_worker_coordinate=active_coordinate,
+            public_items=public_items,
+            coordinates=coordinates,
+        )
+
+    def apply_runtime_transcription_control(
+        self,
+        prepared: RuntimeTranscriptionControlCaptureV2,
+        *,
+        action: str,
+        project_id: str,
+        source_asset_id: str,
+        source_asset_sha256: str,
+    ) -> dict[str, Any]:
+        if type(prepared) is not RuntimeTranscriptionControlCaptureV2:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_STALE",
+                "Runtime transcription control snapshot is invalid",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        current = self.capture_runtime_transcription_control(
+            project_id=project_id,
+            source_asset_id=source_asset_id,
+            source_asset_sha256=source_asset_sha256,
+        )
+        if current != prepared or current.public_projection().get("available_action") != action:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_STALE",
+                "Runtime transcription control changed after confirmation",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        coordinates = current.coordinates
+        if coordinates is None:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_STALE",
+                "Runtime transcription control coordinate is unavailable",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        coordinator = RuntimeTranscriptionCoordinatorV1(
+            store=self.store,
+            output_directory=self.output_directory.resolve(strict=True),
+            clock=self.clock,
+        )
+        if action == "REQUEST_CANCEL":
+            coordinator.request_cancel_from_durable_coordinates(coordinates)
+        elif action == "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY":
+            if current.active_worker_coordinate is not None:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_WORKER_ACTIVE",
+                    "Human closure is unavailable while the exact worker is active",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            decision = RuntimeTranscriptionAdjudicationDecisionV1.create(
+                adjudication_id=generate_id(IdKind.OPERATION),
+                runtime_operation_id=coordinates.runtime_operation_id,
+                slot_operation_id=coordinates.slot_operation_id,
+                source_asset_sha256=coordinates.source_asset_sha256,
+                runtime_admission_ref=coordinates.runtime_admission_ref,
+                runtime_request_sha256=coordinates.runtime_request.record_sha256,
+                runtime_decision_sha256=coordinates.runtime_decision_sha256,
+                expected_attempt=coordinates.expected_attempt,
+                decided_at=coordinator._now(),
+            )
+            coordinator.close_human_adjudication_from_durable_coordinates(
+                coordinates, decision,
+            )
+        else:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_ACTION_INVALID",
+                "Runtime transcription control action is not authorized",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return self.capture_runtime_transcription_control(
+            project_id=project_id,
+            source_asset_id=source_asset_id,
+            source_asset_sha256=source_asset_sha256,
+        ).public_projection()
 
     def recover_local_media(
         self,

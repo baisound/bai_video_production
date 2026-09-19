@@ -8,7 +8,7 @@ private-media entrypoint.
 from __future__ import annotations
 
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -384,7 +384,110 @@ class RuntimeTranscriptionCoordinatesV1:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class RuntimeTranscriptionDurableControlCoordinatesV1:
+    """Detached R2c control coordinates; never a Provider execution admission."""
+
+    production_job_id: str
+    project_id: str
+    source_asset_id: str
+    source_asset_sha256: str
+    runtime_operation_id: str
+    expected_attempt: int
+    runtime_admission_ref: str
+    runtime_request: FasterWhisperRuntimeRequestV1
+    runtime_decision_sha256: str
+    provider_id: str
+    model_id: str
+    execution_config_sha256: str
+    slot_operation_id: str
+    recovery_state: str = "ACTIVE_UNKNOWN"
+
+    def __post_init__(self) -> None:
+        validate_id(self.production_job_id, IdKind.JOB)
+        validate_project_id(self.project_id)
+        validate_id(self.source_asset_id, IdKind.ASSET)
+        source_sha = _digest(self.source_asset_sha256, "source_asset_sha256")
+        validate_id(self.runtime_operation_id, IdKind.OPERATION)
+        validate_id(self.slot_operation_id, IdKind.OPERATION)
+        if type(self.expected_attempt) is not int or self.expected_attempt < 1:
+            raise ValueError("expected_attempt must be an integer of at least one")
+        request = FasterWhisperRuntimeRequestV1.from_dict(self.runtime_request.to_dict())
+        decision_sha256 = _digest(
+            self.runtime_decision_sha256, "runtime_decision_sha256",
+        )
+        admission = (
+            "task098-runtime-admission:v2:"
+            + source_sha.removeprefix("sha256:")
+            + ":"
+            + decision_sha256.removeprefix("sha256:")
+        )
+        if self.runtime_admission_ref != admission:
+            raise ValueError("runtime_admission_ref does not bind source and decision")
+        _text(self.provider_id, "provider_id")
+        _text(self.model_id, "model_id")
+        _digest(self.execution_config_sha256, "execution_config_sha256")
+        if self.recovery_state not in {
+            "ACTIVE_UNKNOWN", "ADJUDICATION_REQUIRED_NO_PUBLICATION",
+        }:
+            raise ValueError("recovery_state is outside the R2c closure states")
+        object.__setattr__(self, "runtime_request", request)
+        object.__setattr__(self, "runtime_decision_sha256", decision_sha256)
+
+    @property
+    def operation_key(self) -> str:
+        return derive_runtime_operation_key_v2(
+            project_id=self.project_id,
+            source_asset_id=self.source_asset_id,
+            source_asset_sha256=self.source_asset_sha256,
+            provider_id=self.provider_id,
+            model_id=self.model_id,
+            execution_config_sha256=self.execution_config_sha256,
+            runtime_request=self.runtime_request,
+        )
+
+    @property
+    def control_key(self) -> str:
+        return derive_control_key(
+            production_job_id=self.production_job_id,
+            project_id=self.project_id,
+            source_asset_id=self.source_asset_id,
+            source_asset_sha256=self.source_asset_sha256,
+            runtime_operation_id=self.runtime_operation_id,
+        )
+
+
+_ControlCoordinates = (
+    RuntimeTranscriptionCoordinatesV1
+    | RuntimeTranscriptionDurableControlCoordinatesV1
+)
+
+
+def _runtime_decision_sha256(coordinates: _ControlCoordinates) -> str:
+    if type(coordinates) is RuntimeTranscriptionCoordinatesV1:
+        return coordinates.runtime_decision.record_sha256
+    if type(coordinates) is RuntimeTranscriptionDurableControlCoordinatesV1:
+        return coordinates.runtime_decision_sha256
+    raise TypeError("runtime control coordinates have an invalid type")
+
+
 RecordT = TypeVar("RecordT")
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeTranscriptionControlChainSnapshotV1:
+    """Validated private control chain returned without mutating durable state."""
+
+    control: OperationRecord | None = field(compare=False)
+    cancel_request: RuntimeTranscriptionCancelRequestV1 | None = field(default=None, compare=False)
+    cancel_outcome: RuntimeTranscriptionCancelOutcomeV1 | None = field(default=None, compare=False)
+    adjudication: RuntimeTranscriptionAdjudicationDecisionV1 | None = field(default=None, compare=False)
+    barrier: RuntimeTranscriptionCommitBarrierV1 | None = field(default=None, compare=False)
+    generation_observation: RuntimeTranscriptionGenerationAbsenceObservationV1 | None = field(default=None, compare=False)
+    terminal_commit: RuntimeTranscriptionTerminalClosureCommitV1 | None = field(default=None, compare=False)
+    runtime_admission_ref: str | None = None
+    runtime_decision_sha256: str | None = None
+    identity: tuple[Any, ...] = ()
 
 
 class _ControlEvidenceStore:
@@ -397,7 +500,7 @@ class _ControlEvidenceStore:
         "terminal-commit": RuntimeTranscriptionTerminalClosureCommitV1,
     }
 
-    def __init__(self, output_root: Path, runtime_operation_id: str) -> None:
+    def __init__(self, output_root: Path, runtime_operation_id: str, *, create: bool = True) -> None:
         supplied_root = Path(output_root)
         self.output_root = supplied_root.resolve(strict=True)
         if not supplied_root.is_absolute() or supplied_root != self.output_root:
@@ -410,7 +513,8 @@ class _ControlEvidenceStore:
         self.runtime_operation_id = runtime_operation_id
         self.control_root = self.output_root / ".task036-runtime-control"
         self.operation_root = self.control_root / runtime_operation_id
-        self._ensure_roots()
+        if create:
+            self._ensure_roots()
 
     def _ensure_roots(self) -> None:
         with _PinnedDirectory(self.output_root) as output:
@@ -419,6 +523,28 @@ class _ControlEvidenceStore:
                 control.mkdir(self.runtime_operation_id, exist_ok=True)
                 with control.pin_child(self.runtime_operation_id) as operation:
                     operation.assert_current()
+
+    @staticmethod
+    def operation_artifacts_exist(output_root: Path, runtime_operation_id: str) -> bool:
+        validate_id(runtime_operation_id, IdKind.OPERATION)
+        with _PinnedDirectory(Path(output_root).resolve(strict=True)) as output:
+            if not output.child_exists(".task036-runtime-control"):
+                return False
+            with output.pin_child(".task036-runtime-control") as control:
+                if not control.child_exists(runtime_operation_id):
+                    return False
+                with control.pin_child(runtime_operation_id) as operation:
+                    count = 0
+                    for entry in os.scandir(operation.path):
+                        count += 1
+                        if count > 64:
+                            return True
+                        if entry.name != "generation-exclusion.lock":
+                            return True
+                    operation.assert_current()
+                    control.assert_current()
+                    output.assert_current()
+                    return False
 
     @contextmanager
     def pinned_operation(self) -> Iterator[_PinnedDirectory]:
@@ -549,6 +675,21 @@ class _ControlEvidenceStore:
             ) from exc
         return self._parse(expected, raw)
 
+    def has(self, kind: str, digest: str) -> bool:
+        if kind not in self._KINDS:
+            raise ValueError("record kind is invalid")
+        try:
+            with self.pinned_operation() as operation:
+                return operation.child_exists(self._filename(kind, digest))
+        except ProductError:
+            raise
+        except (OSError, ValueError) as exc:
+            raise ProductError(
+                "ERR_TASK098_CONTROL_EVIDENCE_INVALID",
+                "Runtime control Evidence presence cannot be established",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+
     @staticmethod
     def _parse(expected: type[RecordT], raw: bytes, *, expected_digest: str | None = None) -> RecordT:
         try:
@@ -580,6 +721,16 @@ class _ControlEvidenceStore:
                 ProductErrorCategory.DATA_INTEGRITY,
             )
         return record
+
+
+def runtime_control_artifacts_exist(
+    output_root: Path, runtime_operation_id: str,
+) -> bool:
+    """Read-only bounded presence check for a closed durable-state capture."""
+
+    return _ControlEvidenceStore.operation_artifacts_exist(
+        output_root, runtime_operation_id,
+    )
 
 
 class RuntimeTranscriptionCoordinatorV1:
@@ -641,10 +792,10 @@ class RuntimeTranscriptionCoordinatorV1:
             ProductErrorCategory.DATA_INTEGRITY,
         )
 
-    def _evidence(self, coordinates: RuntimeTranscriptionCoordinatesV1) -> _ControlEvidenceStore:
+    def _evidence(self, coordinates: _ControlCoordinates) -> _ControlEvidenceStore:
         return _ControlEvidenceStore(self.output_directory, coordinates.runtime_operation_id)
 
-    def _require_lease(self, c: RuntimeTranscriptionCoordinatesV1) -> OperationRecord:
+    def _require_lease(self, c: _ControlCoordinates) -> OperationRecord:
         key = derive_cross_version_guard_key(
             project_id=c.project_id,
             source_asset_id=c.source_asset_id,
@@ -666,7 +817,7 @@ class RuntimeTranscriptionCoordinatorV1:
 
     def _require_main(
         self,
-        c: RuntimeTranscriptionCoordinatesV1,
+        c: _ControlCoordinates,
         *,
         statuses: tuple[str, ...],
         result_refs: tuple[str, ...],
@@ -684,7 +835,7 @@ class RuntimeTranscriptionCoordinatorV1:
         return operation
 
     def _require_slot(
-        self, c: RuntimeTranscriptionCoordinatesV1, *, statuses: tuple[str, ...],
+        self, c: _ControlCoordinates, *, statuses: tuple[str, ...],
     ) -> OperationRecord:
         slot = self.store.get_operation(c.slot_operation_id)
         if (
@@ -699,7 +850,7 @@ class RuntimeTranscriptionCoordinatorV1:
             raise self._conflict("Runtime output slot is missing or changed")
         return slot
 
-    def _reserve_control(self, c: RuntimeTranscriptionCoordinatesV1) -> OperationRecord:
+    def _reserve_control(self, c: _ControlCoordinates) -> OperationRecord:
         control, _created = self.store.reserve_operation(
             c.production_job_id, CONTROL_COMMAND, c.control_key,
         )
@@ -714,7 +865,7 @@ class RuntimeTranscriptionCoordinatorV1:
 
     def _require_control(
         self,
-        c: RuntimeTranscriptionCoordinatesV1,
+        c: _ControlCoordinates,
         operation_id: str,
         *,
         status: str,
@@ -733,7 +884,7 @@ class RuntimeTranscriptionCoordinatorV1:
         return control
 
     @staticmethod
-    def _record_binds(record: Any, c: RuntimeTranscriptionCoordinatesV1) -> bool:
+    def _record_binds(record: Any, c: _ControlCoordinates) -> bool:
         return (
             record.runtime_operation_id == c.runtime_operation_id
             and record.slot_operation_id == c.slot_operation_id
@@ -745,11 +896,11 @@ class RuntimeTranscriptionCoordinatorV1:
                 == c.runtime_admission_ref
             and getattr(record, "runtime_request_sha256", c.runtime_request.record_sha256)
                 == c.runtime_request.record_sha256
-            and getattr(record, "runtime_decision_sha256", c.runtime_decision.record_sha256)
-                == c.runtime_decision.record_sha256
+            and getattr(record, "runtime_decision_sha256", _runtime_decision_sha256(c))
+                == _runtime_decision_sha256(c)
         )
 
-    def _require_active(self, c: RuntimeTranscriptionCoordinatesV1, *, status: str) -> None:
+    def _require_active(self, c: _ControlCoordinates, *, status: str) -> None:
         self._require_lease(c)
         self._require_main(c, statuses=(status,), result_refs=(c.runtime_admission_ref,))
         self._require_slot(c, statuses=("IN_PROGRESS",))
@@ -757,6 +908,15 @@ class RuntimeTranscriptionCoordinatorV1:
     @contextmanager
     def generation_exclusion_lock(
         self, coordinates: RuntimeTranscriptionCoordinatesV1,
+    ) -> Iterator[None]:
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
+        with self._generation_exclusion_lock(coordinates):
+            yield
+
+    @contextmanager
+    def _generation_exclusion_lock(
+        self, coordinates: _ControlCoordinates,
     ) -> Iterator[None]:
         evidence = self._evidence(coordinates)
         with evidence.pinned_operation() as operation:
@@ -767,6 +927,24 @@ class RuntimeTranscriptionCoordinatorV1:
 
     def request_cancel(
         self, coordinates: RuntimeTranscriptionCoordinatesV1,
+        *, fault_hook: Callable[[str], None] | None = None,
+    ) -> RuntimeTranscriptionCancelRequestV1:
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
+        return self._request_cancel(coordinates, fault_hook=fault_hook)
+
+    def request_cancel_from_durable_coordinates(
+        self, coordinates: RuntimeTranscriptionDurableControlCoordinatesV1,
+        *, fault_hook: Callable[[str], None] | None = None,
+    ) -> RuntimeTranscriptionCancelRequestV1:
+        if type(coordinates) is not RuntimeTranscriptionDurableControlCoordinatesV1:
+            raise TypeError(
+                "coordinates must be RuntimeTranscriptionDurableControlCoordinatesV1",
+            )
+        return self._request_cancel(coordinates, fault_hook=fault_hook)
+
+    def _request_cancel(
+        self, coordinates: _ControlCoordinates,
         *, fault_hook: Callable[[str], None] | None = None,
     ) -> RuntimeTranscriptionCancelRequestV1:
         c = coordinates
@@ -791,7 +969,7 @@ class RuntimeTranscriptionCoordinatorV1:
             source_asset_sha256=c.source_asset_sha256,
             runtime_admission_ref=c.runtime_admission_ref,
             runtime_request_sha256=c.runtime_request.record_sha256,
-            runtime_decision_sha256=c.runtime_decision.record_sha256,
+            runtime_decision_sha256=_runtime_decision_sha256(c),
             expected_attempt=c.expected_attempt,
             requested_at=self._request_time(control.created_at),
         )
@@ -823,6 +1001,8 @@ class RuntimeTranscriptionCoordinatorV1:
     ) -> RuntimeTranscriptionCancelRequestV1 | None:
         """Read one exact worker-visible request without reserving control."""
 
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
         c = coordinates
         self._require_active(c, status="IN_PROGRESS")
         control = self.store.find_operation(c.production_job_id, c.control_key)
@@ -930,6 +1110,262 @@ class RuntimeTranscriptionCoordinatorV1:
         except (OSError, ProductError, TypeError, ValueError):
             return False
 
+    def read_control_chain(
+        self,
+        *,
+        production_job_id: str,
+        project_id: str,
+        source_asset_id: str,
+        source_asset_sha256: str,
+        runtime_operation_id: str,
+        expected_attempt: int,
+        runtime_request_sha256: str,
+        slot_operation_id: str,
+        runtime_admission_ref: str | None = None,
+        runtime_decision_sha256: str | None = None,
+    ) -> RuntimeTranscriptionControlChainSnapshotV1:
+        """Read and validate the exact R2 durable chain without creating state."""
+
+        try:
+            validate_id(production_job_id, IdKind.JOB)
+            validate_project_id(project_id)
+            validate_id(source_asset_id, IdKind.ASSET)
+            source_sha = _digest(source_asset_sha256, "source_asset_sha256")
+            validate_id(runtime_operation_id, IdKind.OPERATION)
+            validate_id(slot_operation_id, IdKind.OPERATION)
+            request_sha = _digest(runtime_request_sha256, "runtime_request_sha256")
+            if type(expected_attempt) is not int or expected_attempt < 1:
+                raise ValueError("expected_attempt must be at least one")
+            if runtime_decision_sha256 is not None:
+                runtime_decision_sha256 = _digest(
+                    runtime_decision_sha256, "runtime_decision_sha256",
+                )
+            if runtime_admission_ref is not None:
+                admission_match = re.fullmatch(
+                    r"task098-runtime-admission:v2:([0-9a-f]{64}):([0-9a-f]{64})",
+                    runtime_admission_ref,
+                )
+                if (
+                    admission_match is None
+                    or admission_match.group(1) != source_sha.removeprefix("sha256:")
+                    or (
+                        runtime_decision_sha256 is not None
+                        and admission_match.group(2)
+                        != runtime_decision_sha256.removeprefix("sha256:")
+                    )
+                ):
+                    raise ValueError("runtime admission coordinate is invalid")
+                runtime_decision_sha256 = "sha256:" + admission_match.group(2)
+            control_key = derive_control_key(
+                production_job_id=production_job_id,
+                project_id=project_id,
+                source_asset_id=source_asset_id,
+                source_asset_sha256=source_sha,
+                runtime_operation_id=runtime_operation_id,
+            )
+            control = self.store.find_operation(production_job_id, control_key)
+            if control is None:
+                if _ControlEvidenceStore.operation_artifacts_exist(
+                    self.output_directory, runtime_operation_id,
+                ):
+                    raise self._conflict(
+                        "Runtime control Evidence exists without its control row",
+                    )
+                return RuntimeTranscriptionControlChainSnapshotV1(
+                    control=None,
+                    runtime_admission_ref=runtime_admission_ref,
+                    runtime_decision_sha256=runtime_decision_sha256,
+                    identity=("ABSENT", control_key),
+                )
+            if (
+                control.job_id != production_job_id
+                or control.command_type != CONTROL_COMMAND
+                or control.idempotency_key != control_key
+                or control.attempt != 0
+            ):
+                raise self._conflict("Runtime control row identity is invalid")
+            control_identity = (
+                control.operation_id, control.job_id, control.command_type,
+                control.idempotency_key, control.status, control.attempt,
+                control.created_at, control.updated_at, control.last_error_code,
+                control.result_ref,
+            )
+            if control.status == "PENDING" and control.result_ref is None:
+                if _ControlEvidenceStore.operation_artifacts_exist(
+                    self.output_directory, runtime_operation_id,
+                ):
+                    raise self._conflict(
+                        "Pending runtime control has unexpected Evidence",
+                    )
+                return RuntimeTranscriptionControlChainSnapshotV1(
+                    control=control,
+                    runtime_admission_ref=runtime_admission_ref,
+                    runtime_decision_sha256=runtime_decision_sha256,
+                    identity=("PENDING", control_identity),
+                )
+            if control.result_ref is None:
+                raise self._conflict("Runtime control row lacks its typed reference")
+
+            evidence = _ControlEvidenceStore(
+                self.output_directory, runtime_operation_id, create=False,
+            )
+            request: RuntimeTranscriptionCancelRequestV1 | None = None
+            outcome: RuntimeTranscriptionCancelOutcomeV1 | None = None
+            adjudication: RuntimeTranscriptionAdjudicationDecisionV1 | None = None
+            barrier: RuntimeTranscriptionCommitBarrierV1 | None = None
+            observation: RuntimeTranscriptionGenerationAbsenceObservationV1 | None = None
+            commit: RuntimeTranscriptionTerminalClosureCommitV1 | None = None
+
+            if control.status == "IN_PROGRESS":
+                for kind in ("cancel-request", "cancel-outcome", "commit-barrier"):
+                    try:
+                        digest = _typed_control_digest(kind, control.result_ref)
+                    except ValueError:
+                        continue
+                    if kind == "cancel-request":
+                        request = evidence.load(kind, digest)
+                    elif kind == "cancel-outcome":
+                        outcome = evidence.load(kind, digest)
+                        request = evidence.load("cancel-request", outcome.cancel_request_sha256)
+                    else:
+                        barrier = evidence.load(kind, digest)
+                        if barrier.barrier_owner != "PUBLICATION":
+                            raise self._conflict("In-progress barrier is not publication-owned")
+                    break
+                else:
+                    raise self._conflict("Runtime control ref is not an accepted in-progress type")
+            elif control.status == "PARTIAL":
+                digest = _typed_control_digest("commit-barrier", control.result_ref)
+                barrier = evidence.load("commit-barrier", digest)
+                if barrier.barrier_owner != "TERMINAL_CLOSURE" or barrier.closure_record_sha256 is None:
+                    raise self._conflict("Partial control lacks a terminal closure barrier")
+                closure_sha = barrier.closure_record_sha256
+                has_outcome = evidence.has("cancel-outcome", closure_sha)
+                has_adjudication = evidence.has("adjudication", closure_sha)
+                if has_outcome == has_adjudication:
+                    raise self._conflict("Terminal closure kind is missing or ambiguous")
+                if has_outcome:
+                    outcome = evidence.load("cancel-outcome", closure_sha)
+                    request = evidence.load("cancel-request", outcome.cancel_request_sha256)
+                else:
+                    adjudication = evidence.load("adjudication", closure_sha)
+                observation = evidence.load_anchor(
+                    "generation-absence", "generation-absence.json",
+                )
+                commit = evidence.load_anchor("terminal-commit", "terminal-commit.json")
+            elif control.status == "COMPLETED":
+                try:
+                    digest = _typed_control_digest("commit-barrier", control.result_ref)
+                except ValueError:
+                    digest = _typed_control_digest("terminal-commit", control.result_ref)
+                    commit = evidence.load("terminal-commit", digest)
+                    barrier = evidence.load("commit-barrier", commit.commit_barrier_sha256)
+                    observation = evidence.load(
+                        "generation-absence",
+                        commit.generation_absence_observation_sha256,
+                    )
+                    if commit.closure_kind == "CONFIRMED_CANCEL":
+                        outcome = evidence.load("cancel-outcome", commit.closure_record_sha256)
+                        request = evidence.load("cancel-request", outcome.cancel_request_sha256)
+                    else:
+                        adjudication = evidence.load("adjudication", commit.closure_record_sha256)
+                else:
+                    barrier = evidence.load("commit-barrier", digest)
+                    if barrier.barrier_owner != "PUBLICATION":
+                        raise self._conflict("Completed barrier is not publication-owned")
+            else:
+                raise self._conflict("Runtime control status is outside the closed matrix")
+
+            records = tuple(
+                value for value in (
+                    request, outcome, adjudication, barrier, observation, commit,
+                ) if value is not None
+            )
+            admissions: set[str] = set()
+            decision_digests: set[str] = set()
+            for record in records:
+                if (
+                    record.runtime_operation_id != runtime_operation_id
+                    or record.slot_operation_id != slot_operation_id
+                    or record.source_asset_sha256 != source_sha
+                    or record.expected_attempt != expected_attempt
+                ):
+                    raise self._conflict("Runtime control Evidence binds a foreign coordinate")
+                admission = getattr(
+                    record, "runtime_admission_ref",
+                    getattr(record, "prior_runtime_admission_ref", None),
+                )
+                if admission is not None:
+                    admissions.add(admission)
+                decision_sha = getattr(record, "runtime_decision_sha256", None)
+                if decision_sha is not None:
+                    decision_digests.add(decision_sha)
+                record_request_sha = getattr(record, "runtime_request_sha256", None)
+                if record_request_sha is not None and record_request_sha != request_sha:
+                    raise self._conflict("Runtime control Evidence binds a foreign request")
+            if request is not None and request.cancel_request_id != control.operation_id:
+                raise self._conflict("Cancel request does not bind its control operation")
+            if outcome is not None and (
+                request is None or outcome.cancel_request_sha256 != request.record_sha256
+            ):
+                raise self._conflict("Cancel outcome predecessor is invalid")
+            if barrier is not None and barrier.barrier_owner == "TERMINAL_CLOSURE":
+                closure = outcome or adjudication
+                if closure is None or barrier.closure_record_sha256 != closure.record_sha256:
+                    raise self._conflict("Terminal barrier predecessor is invalid")
+            if observation is not None and (
+                barrier is None or observation.commit_barrier_sha256 != barrier.record_sha256
+            ):
+                raise self._conflict("Generation observation predecessor is invalid")
+            if commit is not None and (
+                barrier is None
+                or observation is None
+                or commit.commit_barrier_sha256 != barrier.record_sha256
+                or commit.generation_absence_observation_sha256 != observation.record_sha256
+                or commit.closure_record_sha256
+                != (outcome or adjudication).record_sha256
+            ):
+                raise self._conflict("Terminal commit predecessor chain is invalid")
+            if runtime_admission_ref is not None:
+                admissions.add(runtime_admission_ref)
+            if runtime_decision_sha256 is not None:
+                decision_digests.add(runtime_decision_sha256)
+            if len(admissions) > 1 or len(decision_digests) > 1:
+                raise self._conflict("Runtime control admission identity is mixed")
+            resolved_admission = next(iter(admissions), None)
+            resolved_decision = next(iter(decision_digests), None)
+            if resolved_admission is not None:
+                match = re.fullmatch(
+                    r"task098-runtime-admission:v2:([0-9a-f]{64}):([0-9a-f]{64})",
+                    resolved_admission,
+                )
+                if match is None or match.group(1) != source_sha.removeprefix("sha256:"):
+                    raise self._conflict("Runtime control admission is invalid")
+                admitted_decision = "sha256:" + match.group(2)
+                if resolved_decision not in {None, admitted_decision}:
+                    raise self._conflict("Runtime control decision digest is mixed")
+                resolved_decision = admitted_decision
+            identities = tuple(
+                None if value is None else value.record_sha256
+                for value in (request, outcome, adjudication, barrier, observation, commit)
+            )
+            return RuntimeTranscriptionControlChainSnapshotV1(
+                control=control,
+                cancel_request=request,
+                cancel_outcome=outcome,
+                adjudication=adjudication,
+                barrier=barrier,
+                generation_observation=observation,
+                terminal_commit=commit,
+                runtime_admission_ref=resolved_admission,
+                runtime_decision_sha256=resolved_decision,
+                identity=("CHAIN", control_identity, *identities),
+            )
+        except ProductError:
+            raise
+        except (OSError, TypeError, ValueError, AttributeError) as exc:
+            raise self._conflict("Runtime control chain could not be validated") from exc
+
     def acknowledge_worker_cancel(
         self,
         coordinates: RuntimeTranscriptionCoordinatesV1,
@@ -940,6 +1376,8 @@ class RuntimeTranscriptionCoordinatorV1:
     ) -> RuntimeTranscriptionCancelOutcomeV1:
         """Bind a closed worker outcome and terminal-close only a proven stop."""
 
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
         if type(provider_execution_started) is not bool or type(provider_stop_confirmed) is not bool:
             raise TypeError("worker cancellation facts must be booleans")
         if not provider_execution_started and not provider_stop_confirmed:
@@ -1022,7 +1460,7 @@ class RuntimeTranscriptionCoordinatorV1:
             source_asset_sha256=c.source_asset_sha256,
             runtime_admission_ref=c.runtime_admission_ref,
             runtime_request_sha256=c.runtime_request.record_sha256,
-            runtime_decision_sha256=c.runtime_decision.record_sha256,
+            runtime_decision_sha256=_runtime_decision_sha256(c),
             expected_attempt=c.expected_attempt,
             outcome=outcome_name,
             provider_execution_started=provider_execution_started,
@@ -1042,6 +1480,8 @@ class RuntimeTranscriptionCoordinatorV1:
         *,
         fault_hook: Callable[[str], None] | None = None,
     ) -> RuntimeTranscriptionCancelOutcomeV1:
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
         c = coordinates
         checked = RuntimeTranscriptionCancelOutcomeV1.from_dict(outcome.to_dict())
         if not self._record_binds(checked, c):
@@ -1089,10 +1529,12 @@ class RuntimeTranscriptionCoordinatorV1:
         *,
         fault_hook: Callable[[str], None] | None = None,
     ) -> RuntimeTranscriptionCommitBarrierV1:
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
         if not callable(first_generation_writer):
             raise TypeError("first_generation_writer must be callable")
         c = coordinates
-        with self.generation_exclusion_lock(c):
+        with self._generation_exclusion_lock(c):
             self._require_active(c, status="IN_PROGRESS")
             control = self._reserve_control(c)
             evidence = self._evidence(c)
@@ -1154,6 +1596,8 @@ class RuntimeTranscriptionCoordinatorV1:
     ) -> RuntimeTranscriptionCommitBarrierV1:
         """Close only the exact publication barrier after main binds its digest."""
 
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
         c = coordinates
         digest = _digest(publication_set_sha256, "publication_set_sha256")
         checked = RuntimeTranscriptionCommitBarrierV1.from_dict(barrier.to_dict())
@@ -1217,6 +1661,8 @@ class RuntimeTranscriptionCoordinatorV1:
     ) -> RuntimeTranscriptionCommitBarrierV1:
         """Recover an exact already-bound publication without reserving control."""
 
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
         c = coordinates
         control = self.store.find_operation(c.production_job_id, c.control_key)
         if control is None or control.result_ref is None:
@@ -1246,8 +1692,10 @@ class RuntimeTranscriptionCoordinatorV1:
         *,
         fault_hook: Callable[[str], None] | None = None,
     ) -> RuntimeTranscriptionTerminalClosureCommitV1:
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
         c = coordinates
-        with self.generation_exclusion_lock(c):
+        with self._generation_exclusion_lock(c):
             self._require_lease(c)
             control = self._reserve_control(c)
             evidence = self._evidence(c)
@@ -1313,13 +1761,41 @@ class RuntimeTranscriptionCoordinatorV1:
         *,
         fault_hook: Callable[[str], None] | None = None,
     ) -> RuntimeTranscriptionTerminalClosureCommitV1:
+        if type(coordinates) is not RuntimeTranscriptionCoordinatesV1:
+            raise TypeError("coordinates must be RuntimeTranscriptionCoordinatesV1")
+        return self._close_human_adjudication(
+            coordinates, decision, fault_hook=fault_hook,
+        )
+
+    def close_human_adjudication_from_durable_coordinates(
+        self,
+        coordinates: RuntimeTranscriptionDurableControlCoordinatesV1,
+        decision: RuntimeTranscriptionAdjudicationDecisionV1,
+        *,
+        fault_hook: Callable[[str], None] | None = None,
+    ) -> RuntimeTranscriptionTerminalClosureCommitV1:
+        if type(coordinates) is not RuntimeTranscriptionDurableControlCoordinatesV1:
+            raise TypeError(
+                "coordinates must be RuntimeTranscriptionDurableControlCoordinatesV1",
+            )
+        return self._close_human_adjudication(
+            coordinates, decision, fault_hook=fault_hook,
+        )
+
+    def _close_human_adjudication(
+        self,
+        coordinates: _ControlCoordinates,
+        decision: RuntimeTranscriptionAdjudicationDecisionV1,
+        *,
+        fault_hook: Callable[[str], None] | None = None,
+    ) -> RuntimeTranscriptionTerminalClosureCommitV1:
         c = coordinates
         if c.recovery_state != "ADJUDICATION_REQUIRED_NO_PUBLICATION":
             raise ValueError("Human closure requires the exact adjudication recovery state")
         checked = RuntimeTranscriptionAdjudicationDecisionV1.from_dict(decision.to_dict())
         if not self._record_binds(checked, c):
             raise ValueError("Human decision does not bind the exact runtime coordinate")
-        with self.generation_exclusion_lock(c):
+        with self._generation_exclusion_lock(c):
             self._require_lease(c)
             control = self._reserve_control(c)
             evidence = self._evidence(c)
@@ -1375,7 +1851,7 @@ class RuntimeTranscriptionCoordinatorV1:
                 fault_hook=fault_hook,
             )
 
-    def _observe_generation(self, c: RuntimeTranscriptionCoordinatesV1) -> str:
+    def _observe_generation(self, c: _ControlCoordinates) -> str:
         try:
             with _PinnedDirectory(self.output_directory.resolve(strict=True)) as output:
                 if not output.child_exists(".task036-publications"):
@@ -1395,7 +1871,7 @@ class RuntimeTranscriptionCoordinatorV1:
 
     def _finish_terminal(
         self,
-        c: RuntimeTranscriptionCoordinatesV1,
+        c: _ControlCoordinates,
         *,
         control_operation_id: str,
         evidence: _ControlEvidenceStore,
@@ -1582,7 +2058,7 @@ class RuntimeTranscriptionCoordinatorV1:
 
     def _resume_completed(
         self,
-        c: RuntimeTranscriptionCoordinatesV1,
+        c: _ControlCoordinates,
         control: OperationRecord,
         evidence: _ControlEvidenceStore,
         *,
@@ -1655,6 +2131,7 @@ class RuntimeTranscriptionCoordinatorV1:
 
 __all__ = [
     "RuntimeTranscriptionCoordinatesV1",
+    "RuntimeTranscriptionDurableControlCoordinatesV1",
     "RuntimeTranscriptionCoordinatorV1",
     "derive_control_key",
     "derive_cross_version_guard_key",

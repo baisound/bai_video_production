@@ -22,7 +22,12 @@ from .desktop_shell_projection import DesktopEditingProjectionService, EditingPr
 from .task036_view_model import Task036DesktopViewModel
 from .task036_native_dialog import Task036NativeDialogService
 from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
-from .task036_pre_edit_runtime import Task036PreEditRuntime
+from .task036_pre_edit_runtime import (
+    Task036PreEditRuntime,
+    _RUNTIME_CONTROL_EXACT_ROWS,
+    _RUNTIME_CONTROL_KEYS,
+    _validate_runtime_control_projection,
+)
 from .task036_workflow_runtime import Task036WorkflowRuntime
 from .connection_settings_web import ConnectionSettingsWebService
 from .desktop_compute_policy import (
@@ -199,6 +204,15 @@ applyAccessibility();window.addEventListener('pywebviewready',refresh);setTimeou
 def _compose_runtime_managed_v611_html(html: str) -> str:
     """Add the bounded v2 transcription route without changing v1 behavior."""
 
+    control_keys_json = json.dumps(
+        list(_RUNTIME_CONTROL_KEYS), ensure_ascii=False, separators=(",", ":"),
+    )
+    control_rows_json = json.dumps(
+        [list(row) for row in sorted(_RUNTIME_CONTROL_EXACT_ROWS, key=repr)],
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+
     replacements = (
         (
             "action.disabled=transcriptionInFlight||preEditStageInFlight||!workflow.next_recommended_action;action.dataset.nextAction=workflow.next_recommended_action||'';action.textContent=workflow.next_recommended_label||workflow.next_recommended_action||'次の工程'",
@@ -214,7 +228,7 @@ def _compose_runtime_managed_v611_html(html: str) -> str:
         ),
         (
             "const result=await call(recovery?'recover_local_transcription':'run_local_transcription',{confirmation_id:prepared.confirmation_id}),identity=transcriptionIdentity(result);",
-            "const result=await call(route[1],{confirmation_id:prepared.confirmation_id}),identity=transcriptionIdentity(result);",
+            "const runtimeControlDuringTranscription=$('runtimeControlButton');if(v2&&action==='START'){runtimeControlDuringTranscription.disabled=false;runtimeControlDuringTranscription.textContent='文字起こしをキャンセル'}const result=await call(route[1],{confirmation_id:prepared.confirmation_id}),identity=transcriptionIdentity(result);",
         ),
         (
             "notify(`${recovery?'文字起こしEvidenceを再結合':'ローカル文字起こしを完了'}しました: ${identity.digest}`)",
@@ -225,6 +239,84 @@ def _compose_runtime_managed_v611_html(html: str) -> str:
         if html.count(old) != 1:
             raise RuntimeError("V6.1.1 transcription HTML anchor changed")
         html = html.replace(old, new)
+    inflight_anchor = "let transcriptionInFlight=false;"
+    if html.count(inflight_anchor) != 1:
+        raise RuntimeError("V6.1.1 transcription in-flight anchor changed")
+    html = html.replace(
+        inflight_anchor,
+        inflight_anchor + "let runtimeControlInFlightEligible=false;",
+    )
+    enable_anchor = (
+        "if(v2&&action==='START'){runtimeControlDuringTranscription.disabled=false;"
+    )
+    if html.count(enable_anchor) != 1:
+        raise RuntimeError("V6.1.1 runtime control enable anchor changed")
+    html = html.replace(
+        enable_anchor,
+        "if(v2&&action==='START'){runtimeControlInFlightEligible=true;"
+        "runtimeControlDuringTranscription.disabled=false;",
+    )
+    finally_anchor = "finally{transcriptionInFlight=false;"
+    if html.count(finally_anchor) != 1:
+        raise RuntimeError("V6.1.1 transcription finally anchor changed")
+    html = html.replace(
+        finally_anchor,
+        "finally{transcriptionInFlight=false;runtimeControlInFlightEligible=false;",
+    )
+    button_anchor = '<button class="btn" id="workflowActionButton" disabled>次の編集工程</button>'
+    if html.count(button_anchor) != 1:
+        raise RuntimeError("V6.1.1 runtime control button anchor changed")
+    html = html.replace(
+        button_anchor,
+        button_anchor + '<button class="btn" id="runtimeControlButton" disabled>文字起こし制御</button>',
+    )
+    refresh_anchor = "}else{action.disabled=true;action.textContent='次の工程'}}const mediaReady="
+    if html.count(refresh_anchor) != 1:
+        raise RuntimeError("V6.1.1 runtime control refresh anchor changed")
+    html = html.replace(
+        refresh_anchor,
+        "}else{action.disabled=true;action.textContent='次の工程'}}"
+        "const runtimeControl=$('runtimeControlButton'),nested=workflow?.transcription_control,"
+        "nestedAction=nested?.available_action,topAction=workflow?.transcription_available_action,"
+        "controlAvailable=workflow?.transcription_runtime_mode==='RUNTIME_MANAGED_V2'&&"
+        "workflow?.next_recommended_action==='transcription.start'&&topAction==='NONE'&&"
+        "['REQUEST_CANCEL','CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY'].includes(nestedAction);"
+        "runtimeControl.disabled=preEditStageInFlight||(!runtimeControlInFlightEligible&&!controlAvailable);"
+        "runtimeControl.textContent=runtimeControlInFlightEligible?'文字起こしをキャンセル':(controlAvailable?(nested.status_label||'文字起こし制御'):'文字起こし制御');"
+        "const mediaReady=",
+    )
+    function_anchor = "async function workflowAction(){"
+    if html.count(function_anchor) != 1:
+        raise RuntimeError("V6.1.1 runtime control function anchor changed")
+    control_function = (
+        f"const runtimeControlProjectionKeys={control_keys_json};"
+        f"const runtimeControlProjectionRows=new Set({control_rows_json}.map(row=>JSON.stringify(row)));"
+        "function isExactRuntimeControlProjection(value){"
+        "if(!value||Array.isArray(value)||typeof value!=='object')return false;"
+        "if(JSON.stringify(Object.keys(value))!==JSON.stringify(runtimeControlProjectionKeys))return false;"
+        "if(value.control_mode!=='PHASE_ONLY_V1'||value.no_replay!==true)return false;"
+        "for(const key of ['provider_execution_started','provider_execution_known','provider_stop_confirmed','slot_release_allowed','no_replay'])if(typeof value[key]!=='boolean')return false;"
+        "const row=[value.phase,value.cancel_state,value.adjudication_state,value.available_action,value.status_label,value.provider_execution_started,value.provider_execution_known,value.provider_stop_confirmed,value.stop_evidence,value.slot_release_allowed];"
+        "return runtimeControlProjectionRows.has(JSON.stringify(row))}"
+        "function isExactRuntimeControlApplyResult(value){"
+        "if(!value||Array.isArray(value)||typeof value!=='object')return false;"
+        "if(JSON.stringify(Object.keys(value))!==JSON.stringify(['task_owner','status','transcription_control']))return false;"
+        "return value.task_owner==='TASK-098'&&value.status==='RUNTIME_TRANSCRIPTION_CONTROL_APPLIED'&&isExactRuntimeControlProjection(value.transcription_control)}"
+        "async function runRuntimeTranscriptionControl(){"
+        "const prepared=await call('prepare_runtime_transcription_control',{});if(!prepared?.confirmation_id)return;"
+        "if(!window.confirm(`${prepared.status_label}\\n\\n${prepared.warning}`)){await call('cancel_runtime_transcription_control',{confirmation_id:prepared.confirmation_id});return;}"
+        "try{const applied=await call('apply_runtime_transcription_control',{confirmation_id:prepared.confirmation_id});"
+        "if(isExactRuntimeControlApplyResult(applied))notify('文字起こし制御を受け付けました')}"
+        "finally{await refreshShell()}}"
+    )
+    html = html.replace(function_anchor, control_function + function_anchor)
+    listener_anchor = "$('workflowActionButton').addEventListener('click',workflowAction);"
+    if html.count(listener_anchor) != 1:
+        raise RuntimeError("V6.1.1 runtime control listener anchor changed")
+    html = html.replace(
+        listener_anchor,
+        listener_anchor + "$('runtimeControlButton').addEventListener('click',runRuntimeTranscriptionControl);",
+    )
     return html
 
 
@@ -759,6 +851,120 @@ class Task036ShellBridge:
                 ProductErrorCategory.VALIDATION,
             )
         return confirmation_id
+
+    @staticmethod
+    def _runtime_control_public_projection(value: Any) -> dict[str, Any]:
+        try:
+            return _validate_runtime_control_projection(value)
+        except ValueError as exc:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                "Runtime transcription control projection is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+
+    def prepare_runtime_transcription_control(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "runtime transcription control prepare")
+        if self._pre_edit_runtime is None:
+            raise ProductError(
+                "ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND",
+                "Trusted pre-edit runtime is not bound",
+                ProductErrorCategory.STATE,
+            )
+        result = self._pre_edit_runtime.prepare_runtime_transcription_control()
+        expected = {
+            "task_owner", "operation", "confirmation_id", "action",
+            "status_label", "warning", "expires_in_seconds",
+        }
+        if (
+            not isinstance(result, dict)
+            or set(result) != expected
+            or result.get("task_owner") != "TASK-098"
+            or result.get("operation") != "RUNTIME_TRANSCRIPTION_CONTROL_PREPARE"
+            or result.get("action") not in {
+                "REQUEST_CANCEL",
+                "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY",
+            }
+            or any(type(result.get(name)) is not str for name in (
+                "confirmation_id", "status_label", "warning",
+            ))
+            or not result["confirmation_id"].strip()
+            or len(result["confirmation_id"]) > 256
+            or result.get("expires_in_seconds") != 300
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                "Runtime transcription control prepare result is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return {key: result[key] for key in (
+            "task_owner", "operation", "confirmation_id", "action",
+            "status_label", "warning", "expires_in_seconds",
+        )}
+
+    def apply_runtime_transcription_control(self, args: Any = None) -> dict[str, Any]:
+        confirmation_id = self._transcription_confirmation(
+            args, "runtime transcription control apply",
+        )
+        if self._pre_edit_runtime is None:
+            raise ProductError(
+                "ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND",
+                "Trusted pre-edit runtime is not bound",
+                ProductErrorCategory.STATE,
+            )
+        result = self._pre_edit_runtime.apply_runtime_transcription_control(
+            confirmation_id,
+        )
+        if (
+            not isinstance(result, dict)
+            or set(result) != {"task_owner", "status", "transcription_control"}
+            or result.get("task_owner") != "TASK-098"
+            or result.get("status") != "RUNTIME_TRANSCRIPTION_CONTROL_APPLIED"
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                "Runtime transcription control apply result is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return {
+            "task_owner": "TASK-098",
+            "status": "RUNTIME_TRANSCRIPTION_CONTROL_APPLIED",
+            "transcription_control": self._runtime_control_public_projection(
+                result["transcription_control"],
+            ),
+        }
+
+    def cancel_runtime_transcription_control(self, args: Any = None) -> dict[str, Any]:
+        confirmation_id = self._transcription_confirmation(
+            args, "runtime transcription control cancel",
+        )
+        if self._pre_edit_runtime is None:
+            raise ProductError(
+                "ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND",
+                "Trusted pre-edit runtime is not bound",
+                ProductErrorCategory.STATE,
+            )
+        result = self._pre_edit_runtime.cancel_runtime_transcription_control(
+            confirmation_id,
+        )
+        if (
+            not isinstance(result, dict)
+            or set(result) != {"task_owner", "status", "transcription_control"}
+            or result.get("task_owner") != "TASK-098"
+            or result.get("status") != "RUNTIME_TRANSCRIPTION_CONTROL_CANCELLED"
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                "Runtime transcription control cancel result is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return {
+            "task_owner": "TASK-098",
+            "status": "RUNTIME_TRANSCRIPTION_CONTROL_CANCELLED",
+            "transcription_control": self._runtime_control_public_projection(
+                result["transcription_control"],
+            ),
+        }
 
     def cancel_local_transcription(self, args: Any = None) -> dict[str, Any]:
         confirmation_id = self._transcription_confirmation(args, "local transcription cancel")

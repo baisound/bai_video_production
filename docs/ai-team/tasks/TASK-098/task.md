@@ -1,6 +1,6 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_IMPLEMENTATION_ALLOCATED`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_RECOVERY_R1_COMMIT_READY`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
@@ -8,9 +8,9 @@
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
 - Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`
-- Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
+- Completed recovery boundaries: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`; `TASK-098/A2-R2c Recovery R1 — final-Judge H2/M1 corrections implemented and independently accepted, final Judge pending`
 - Active Atomic Unit: `TASK-098/A2-R2c — trusted application/Shell projection and Human control`
-- Next action: `implement and fake-test only the exact four-source/five-test R2c allocation`
+- Next action: `commit the exact approved scope and persist the post-commit receipt`
 
 ## Objective
 
@@ -502,3 +502,72 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - Store/schema/reducer, launcher/first-run/CLI, serialized/native v2, real
   Provider/model/private media, voice learning and release effects remain
   read-only, unallocated or gated.
+
+## A2-R2c implementation checkpoint
+
+- Pre-commit HEAD: `4b0ddc3ba9ebf3509ab97fd63412c35f799f4f38`;
+  base/current local main: `28ba61e5f01047a716c681a3584be22500fe53fc`.
+- Implemented only the allocated four source and four changed test paths; the
+  fifth allowed launcher regression file remained unchanged.
+- Added read-only control-chain capture without row/Evidence creation or
+  repair; exact main/lease/slot/publication/terminal-chain validation; and
+  conservative orphan/corrupt-state blocking.
+- Added exact process-local forward-only phase and active-worker coordinates,
+  closed twelve-key R2a projection composition, private frozen snapshots and
+  exact revalidation before cancel/Human mutation.
+- Added bounded 300-second server-local single-use confirmations, separate
+  prepare/apply/cancel Bridge endpoints and v2 START-only in-flight Shell
+  cancellation presentation. JavaScript receives only public projection and
+  opaque confirmation identity.
+- Direct six-file R2a/R2b1/R2b2/R2c/R1c/TASK-036 regression:
+  `413 PASS / 0 FAIL` in `108.79s`; Python compile and Git diff check: `PASS`.
+- Final independent Critic: `ACCEPT / 0/0/0/0` after two bounded fix cycles.
+- Final independent Tester: `PASS / 0/0/0/0`; independent dynamic pytest is
+  `NOT_CONFIRMED` because of intermittent WSL service access, while the main
+  isolated WSL route and spawn-specific test passed.
+- Real Provider/model, private media/audio, native/packaged Shell, recording,
+  Dataset adoption, voice training, installation, Release, Deploy and
+  Production Activation were not executed.
+- Final Judge and commit remain pending. Serialized
+  v2/native activation is not allocated; the next safe action after commit is
+  a fresh bounded design/authority review for the next staged integration unit.
+- External pre-commit checkpoint:
+  `C:\home\baisound\evidence\bai-video-production\TASK-098\a2-r2c-shell-human-control\20260920T082311+0900\checkpoint.md`, SHA-256
+  `39d48dc57a601df2a27036ef2168bcf1d84135b2d74129497223fd9519fd36b4`,
+  read-back `PASS`.
+
+## A2-R2c Recovery R1 checkpoint
+
+- The first final Judge rejected the pre-recovery checkpoint with
+  `0 Critical / 2 High / 1 Medium / 0 Low`; no rejected-state commit occurred.
+- Recovery design `a2-r2c-recovery-r1-review-20260920.md` received independent
+  Critic `ACCEPT / 0/0/0/0`, Tester `PASS / 0/0/0/0`, and Judge
+  `ACCEPT / IMPLEMENTATION_ALLOCATED / 0/0/0/0`.
+- The legacy `RuntimeTranscriptionCoordinatesV1` again requires its complete
+  validated request/decision pair. Detached R2c application uses a distinct
+  frozen durable-control coordinate and exactly two dedicated coordinator
+  entrypoints; Provider/worker paths exact-reject that type.
+- A validated `terminal-commit.json` discovered while control remains
+  `PARTIAL` stays in the private chain identity but is withheld from the reducer.
+  The actual `after_terminal_commit_write` fault test proves main `FAILED`,
+  control `PARTIAL`, slot `IN_PROGRESS`, public `BLOCKED`, and release false;
+  resume commits control before exact slot release.
+- Shell JavaScript now validates the exact three-key apply response and the
+  Python-derived closed twelve-key R2a row set. A fake Node harness proves valid
+  notify/refresh `1/1` and malformed/throw notify/refresh `0/1` for null, array,
+  top/nested missing or extra/private keys, wrong type and invalid row.
+- Direct recovery tests: `3 PASS`, Medium corrections: `2 PASS`, focused
+  three-file regression: `220 PASS`, final six-file regression:
+  `416 PASS / 0 FAIL` in `110.24s`; Python compile and Git diff check: `PASS`.
+- Recovery implementation Critic cycle 1: initial `0/0/1/0`, final
+  `ACCEPT / 0/0/0/0`. Independent Tester cycle 1: initial `FAIL / 0/0/1/0`,
+  final `PASS / 0/0/0/0`; its Windows pytest route is `NOT_CONFIRMED` only
+  because that interpreter lacks `jsonschema`, while the Builder's WSL2 route
+  executed the Node harness and all six files.
+- Real Provider/model, private media/audio, native/packaged Shell, recording,
+  Dataset adoption, voice training, installation, Release, Deploy and
+  Production Activation were not executed. Unique Recovery checkpoint:
+  `C:\home\baisound\evidence\bai-video-production\TASK-098\a2-r2c-shell-human-control\20260920T085346+0900\checkpoint.md`, SHA-256
+  `cee6507b2fa9338c8daad5c916cc80d37c80262ba489dca1222a061fa89713c2`,
+  size `6474`, read-back `PASS`. Final Judge:
+  `ACCEPT / COMMIT_READY / 0/0/0/0`. Commit remains pending.

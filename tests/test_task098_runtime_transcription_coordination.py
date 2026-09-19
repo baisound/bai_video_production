@@ -24,6 +24,7 @@ from ai_video_production.task098_runtime_transcription_control import (
 from ai_video_production.task098_runtime_transcription_coordination import (
     RuntimeTranscriptionCoordinatesV1,
     RuntimeTranscriptionCoordinatorV1,
+    RuntimeTranscriptionDurableControlCoordinatesV1,
     derive_cross_version_guard_key,
     derive_output_slot_key,
     derive_runtime_operation_key_v2,
@@ -245,6 +246,136 @@ def test_worker_observation_does_not_reserve_absent_control(tmp_path: Path) -> N
     coordinator, store, coordinates, _output = make_runtime(tmp_path)
     assert coordinator.observe_cancel_request(coordinates) is None
     assert store.find_operation(coordinates.production_job_id, coordinates.control_key) is None
+
+
+def test_read_only_chain_does_not_create_control_or_evidence(tmp_path: Path) -> None:
+    coordinator, store, coordinates, output = make_runtime(tmp_path)
+    snapshot = coordinator.read_control_chain(
+        production_job_id=coordinates.production_job_id,
+        project_id=coordinates.project_id,
+        source_asset_id=coordinates.source_asset_id,
+        source_asset_sha256=coordinates.source_asset_sha256,
+        runtime_operation_id=coordinates.runtime_operation_id,
+        expected_attempt=coordinates.expected_attempt,
+        runtime_request_sha256=coordinates.runtime_request.record_sha256,
+        runtime_decision_sha256=coordinates.runtime_decision.record_sha256,
+        runtime_admission_ref=coordinates.runtime_admission_ref,
+        slot_operation_id=coordinates.slot_operation_id,
+    )
+    assert snapshot.control is None
+    assert snapshot.identity[0] == "ABSENT"
+    assert store.find_operation(coordinates.production_job_id, coordinates.control_key) is None
+    assert not (output / ".task036-runtime-control").exists()
+
+
+def test_read_only_chain_validates_cancel_request_and_separate_durable_coordinate(
+    tmp_path: Path,
+) -> None:
+    coordinator, _store, coordinates, _output = make_runtime(tmp_path)
+    with pytest.raises((TypeError, ValueError)):
+        replace(coordinates, runtime_decision=None)
+    detached = RuntimeTranscriptionDurableControlCoordinatesV1(
+        production_job_id=coordinates.production_job_id,
+        project_id=coordinates.project_id,
+        source_asset_id=coordinates.source_asset_id,
+        source_asset_sha256=coordinates.source_asset_sha256,
+        runtime_operation_id=coordinates.runtime_operation_id,
+        expected_attempt=coordinates.expected_attempt,
+        runtime_admission_ref=coordinates.runtime_admission_ref,
+        runtime_request=coordinates.runtime_request,
+        runtime_decision_sha256=coordinates.runtime_decision.record_sha256,
+        provider_id=coordinates.provider_id,
+        model_id=coordinates.model_id,
+        execution_config_sha256=coordinates.execution_config_sha256,
+        slot_operation_id=coordinates.slot_operation_id,
+        recovery_state=coordinates.recovery_state,
+    )
+    with pytest.raises(TypeError):
+        coordinator.request_cancel(detached)  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        coordinator.observe_cancel_request(detached)  # type: ignore[arg-type]
+    assert _store.find_operation(
+        coordinates.production_job_id, coordinates.control_key,
+    ) is None
+    with pytest.raises(TypeError):
+        coordinator.request_cancel_from_durable_coordinates(  # type: ignore[arg-type]
+            coordinates,
+        )
+    request = coordinator.request_cancel_from_durable_coordinates(detached)
+    snapshot = coordinator.read_control_chain(
+        production_job_id=coordinates.production_job_id,
+        project_id=coordinates.project_id,
+        source_asset_id=coordinates.source_asset_id,
+        source_asset_sha256=coordinates.source_asset_sha256,
+        runtime_operation_id=coordinates.runtime_operation_id,
+        expected_attempt=coordinates.expected_attempt,
+        runtime_request_sha256=coordinates.runtime_request.record_sha256,
+        slot_operation_id=coordinates.slot_operation_id,
+        runtime_admission_ref=None,
+        runtime_decision_sha256=None,
+    )
+    assert snapshot.cancel_request.to_dict() == request.to_dict()
+    assert snapshot.runtime_admission_ref == coordinates.runtime_admission_ref
+    assert snapshot.runtime_decision_sha256 == coordinates.runtime_decision.record_sha256
+    assert snapshot.identity[0] == "CHAIN"
+
+
+def test_durable_control_coordinate_rejects_mixed_bindings_without_control_effect(
+    tmp_path: Path,
+) -> None:
+    coordinator, store, coordinates, _output = make_runtime(tmp_path)
+    durable = RuntimeTranscriptionDurableControlCoordinatesV1(
+        production_job_id=coordinates.production_job_id,
+        project_id=coordinates.project_id,
+        source_asset_id=coordinates.source_asset_id,
+        source_asset_sha256=coordinates.source_asset_sha256,
+        runtime_operation_id=coordinates.runtime_operation_id,
+        expected_attempt=coordinates.expected_attempt,
+        runtime_admission_ref=coordinates.runtime_admission_ref,
+        runtime_request=coordinates.runtime_request,
+        runtime_decision_sha256=coordinates.runtime_decision.record_sha256,
+        provider_id=coordinates.provider_id,
+        model_id=coordinates.model_id,
+        execution_config_sha256=coordinates.execution_config_sha256,
+        slot_operation_id=coordinates.slot_operation_id,
+        recovery_state=coordinates.recovery_state,
+    )
+    with pytest.raises(ValueError, match="does not bind"):
+        replace(durable, runtime_decision_sha256="sha256:" + "e" * 64)
+    mixed = (
+        replace(durable, runtime_request=FasterWhisperRuntimeRequestV1.create("cuda")),
+        replace(durable, execution_config_sha256="sha256:" + "e" * 64),
+        replace(durable, slot_operation_id=generate_id(IdKind.OPERATION)),
+    )
+    for invalid in mixed:
+        with pytest.raises(ProductError):
+            coordinator.request_cancel_from_durable_coordinates(invalid)
+        assert store.find_operation(
+            coordinates.production_job_id, coordinates.control_key,
+        ) is None
+
+
+def test_read_only_chain_rejects_orphan_evidence_root_without_repair(tmp_path: Path) -> None:
+    coordinator, store, coordinates, output = make_runtime(tmp_path)
+    orphan = output / ".task036-runtime-control" / coordinates.runtime_operation_id
+    orphan.mkdir(parents=True)
+    (orphan / "orphan-evidence.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(ProductError) as rejected:
+        coordinator.read_control_chain(
+            production_job_id=coordinates.production_job_id,
+            project_id=coordinates.project_id,
+            source_asset_id=coordinates.source_asset_id,
+            source_asset_sha256=coordinates.source_asset_sha256,
+            runtime_operation_id=coordinates.runtime_operation_id,
+            expected_attempt=coordinates.expected_attempt,
+            runtime_request_sha256=coordinates.runtime_request.record_sha256,
+            runtime_decision_sha256=coordinates.runtime_decision.record_sha256,
+            runtime_admission_ref=coordinates.runtime_admission_ref,
+            slot_operation_id=coordinates.slot_operation_id,
+        )
+    assert rejected.value.code == "ERR_TASK098_CONTROL_CONFLICT"
+    assert store.find_operation(coordinates.production_job_id, coordinates.control_key) is None
+    assert orphan.is_dir()
 
 
 def test_worker_stop_not_confirmed_binds_outcome_without_terminal_or_slot_release(

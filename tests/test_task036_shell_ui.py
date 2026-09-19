@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import json
+import re
+import shutil
+import subprocess
 
 import pytest
 
@@ -18,6 +22,161 @@ from ai_video_production.connection_settings_web import ConnectionSettingsWebSer
 from ai_video_production.desktop_shell import ShellApplicationService
 from ai_video_production.errors import ProductError, ProductErrorCategory
 from ai_video_production.task036_shell_ui import HTML, Task036ShellBridge
+from ai_video_production.task036_pre_edit_runtime import (
+    _RUNTIME_CONTROL_EXACT_ROWS,
+    _RUNTIME_CONTROL_KEYS,
+)
+
+
+def test_r2c_shell_has_separate_body_free_control_route():
+    assert 'id="runtimeControlButton"' in HTML
+    assert "prepare_runtime_transcription_control',{}" in HTML
+    assert "apply_runtime_transcription_control',{confirmation_id:prepared.confirmation_id}" in HTML
+    assert "cancel_runtime_transcription_control',{confirmation_id:prepared.confirmation_id}" in HTML
+    assert "let runtimeControlInFlightEligible=false" in HTML
+    assert "(!runtimeControlInFlightEligible&&!controlAvailable)" in HTML
+    assert "runtimeControlInFlightEligible?'文字起こしをキャンセル'" in HTML
+    assert "(!transcriptionInFlight&&!controlAvailable)" not in HTML
+    assert "transcriptionInFlight?'文字起こしをキャンセル'" not in HTML
+    run_script = HTML[
+        HTML.index("async function runLocalTranscription"):
+        HTML.index("function deterministicPreEditIdentity")
+    ]
+    enable = (
+        "if(v2&&action==='START'){runtimeControlInFlightEligible=true;"
+        "runtimeControlDuringTranscription.disabled=false;"
+        "runtimeControlDuringTranscription.textContent='文字起こしをキャンセル'}"
+    )
+    assert enable in run_script
+    assert run_script.index(enable) < run_script.index("await call(route[1]")
+    assert run_script.index(
+        "finally{transcriptionInFlight=false;runtimeControlInFlightEligible=false"
+    ) > run_script.index("await call(route[1]")
+    assert "if(v2&&action==='START')" in run_script
+    assert "if(action==='START')" not in run_script
+    control_script = HTML[
+        HTML.index("const runtimeControlProjectionKeys="):
+        HTML.index("async function workflowAction")
+    ]
+    assert "workflow_status" not in control_script
+    assert "function isExactRuntimeControlProjection(value)" in control_script
+    assert "function isExactRuntimeControlApplyResult(value)" in control_script
+    assert "if(!value||Array.isArray(value)||typeof value!=='object')return false" in control_script
+    assert "JSON.stringify(Object.keys(value))!==JSON.stringify(runtimeControlProjectionKeys)" in control_script
+    assert "value.control_mode!=='PHASE_ONLY_V1'||value.no_replay!==true" in control_script
+    assert "runtimeControlProjectionRows.has(JSON.stringify(row))" in control_script
+    assert "JSON.stringify(['task_owner','status','transcription_control'])" in control_script
+    assert "if(isExactRuntimeControlApplyResult(applied))notify('文字起こし制御を受け付けました')" in control_script
+    assert "finally{await refreshShell()}" in control_script
+    key_match = re.search(
+        r"const runtimeControlProjectionKeys=(\[.*?\]);const runtimeControlProjectionRows=",
+        control_script,
+    )
+    assert key_match is not None and json.loads(key_match.group(1)) == list(_RUNTIME_CONTROL_KEYS)
+    row_prefix = "const runtimeControlProjectionRows=new Set("
+    row_start = control_script.index(row_prefix) + len(row_prefix)
+    row_end = control_script.index(".map(row=>JSON.stringify(row)));", row_start)
+    embedded_rows = {tuple(row) for row in json.loads(control_script[row_start:row_end])}
+    assert embedded_rows == set(_RUNTIME_CONTROL_EXACT_ROWS)
+    assert control_script.index("try{const applied=await call(") < control_script.index(
+        "if(isExactRuntimeControlApplyResult(applied))"
+    ) < control_script.index("finally{await refreshShell()}")
+    for private_name in (
+        "runtime_operation_id", "slot_operation_id", "source_asset_sha256",
+        "runtime_admission_ref", "expected_attempt", "record_sha256",
+    ):
+        assert private_name not in control_script
+
+
+def test_r2c_shell_javascript_rejects_malformed_apply_results_and_refreshes_once():
+    node = shutil.which("node")
+    assert node is not None, "Node.js is required for the bounded Shell JavaScript contract test"
+    control_script = HTML[
+        HTML.index("const runtimeControlProjectionKeys="):
+        HTML.index("async function workflowAction")
+    ]
+    row = sorted(_RUNTIME_CONTROL_EXACT_ROWS, key=repr)[0]
+    projection = {
+        "control_mode": "PHASE_ONLY_V1",
+        "phase": row[0],
+        "cancel_state": row[1],
+        "adjudication_state": row[2],
+        "available_action": row[3],
+        "status_label": row[4],
+        "provider_execution_started": row[5],
+        "provider_execution_known": row[6],
+        "provider_stop_confirmed": row[7],
+        "stop_evidence": row[8],
+        "slot_release_allowed": row[9],
+        "no_replay": True,
+    }
+    assert tuple(projection) == _RUNTIME_CONTROL_KEYS
+    valid = {
+        "task_owner": "TASK-098",
+        "status": "RUNTIME_TRANSCRIPTION_CONTROL_APPLIED",
+        "transcription_control": projection,
+    }
+    missing_top = dict(valid)
+    missing_top.pop("status")
+    extra_top = dict(valid)
+    extra_top["private"] = "forbidden"
+    missing_nested_projection = dict(projection)
+    missing_nested_projection.pop("stop_evidence")
+    extra_nested_projection = dict(projection)
+    extra_nested_projection["runtime_operation_id"] = "forbidden"
+    wrong_type_projection = dict(projection)
+    wrong_type_projection["provider_execution_started"] = "false"
+    invalid_row_projection = dict(projection)
+    invalid_row_projection["status_label"] = next(
+        candidate[4]
+        for candidate in sorted(_RUNTIME_CONTROL_EXACT_ROWS, key=repr)
+        if candidate[4] != row[4]
+        and tuple((
+            row[0], row[1], row[2], row[3], candidate[4],
+            row[5], row[6], row[7], row[8], row[9],
+        )) not in _RUNTIME_CONTROL_EXACT_ROWS
+    )
+    cases = [
+        {"name": "valid", "value": valid},
+        {"name": "null", "value": None},
+        {"name": "array", "value": []},
+        {"name": "missing-top", "value": missing_top},
+        {"name": "extra-top", "value": extra_top},
+        {"name": "missing-nested", "value": {**valid, "transcription_control": missing_nested_projection}},
+        {"name": "extra-private-nested", "value": {**valid, "transcription_control": extra_nested_projection}},
+        {"name": "wrong-type", "value": {**valid, "transcription_control": wrong_type_projection}},
+        {"name": "invalid-row", "value": {**valid, "transcription_control": invalid_row_projection}},
+        {"name": "throw", "throw": True},
+    ]
+    harness = control_script + (
+        "\nconst cases=" + json.dumps(cases, ensure_ascii=False, separators=(",", ":")) + ";"
+        "let activeCase=null,notificationCount=0,refreshCount=0;"
+        "const window={confirm:()=>true};"
+        "async function call(name,args){"
+        "if(name==='prepare_runtime_transcription_control')return {confirmation_id:'test',status_label:'test',warning:'test'};"
+        "if(name==='apply_runtime_transcription_control'){if(activeCase.throw)throw new Error('synthetic');return activeCase.value;}"
+        "throw new Error('unexpected call')}"
+        "function notify(){notificationCount+=1}"
+        "async function refreshShell(){refreshCount+=1}"
+        "(async()=>{const results=[];for(const item of cases){activeCase=item;notificationCount=0;refreshCount=0;"
+        "try{await runRuntimeTranscriptionControl()}catch(error){}"
+        "results.push({name:item.name,notifications:notificationCount,refreshes:refreshCount})}"
+        "process.stdout.write(JSON.stringify(results))})().catch(error=>{console.error(error);process.exit(1)});"
+    )
+    completed = subprocess.run(
+        [node, "-e", harness],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert completed.returncode == 0, completed.stderr
+    results = json.loads(completed.stdout)
+    assert results[0] == {"name": "valid", "notifications": 1, "refreshes": 1}
+    assert all(
+        result["notifications"] == 0 and result["refreshes"] == 1
+        for result in results[1:]
+    )
 
 
 def test_recording_meter_uses_existing_additive_extension_boundary():

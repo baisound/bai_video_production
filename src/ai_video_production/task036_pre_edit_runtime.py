@@ -8,10 +8,12 @@ or persisted in general Evidence.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 from pathlib import Path
 import re
 import secrets
 from threading import Lock
+from time import monotonic
 from typing import Any, Callable, Protocol
 
 from .cut_candidates import CutCandidateManifest
@@ -25,6 +27,141 @@ from .ids import IdKind, validate_id
 from .subtitles import TranscriptManifest
 from .subtitle_workspace import SubtitleWorkspace
 from .task036_native_dialog import Task036NativeDialogService
+
+
+_RUNTIME_CONTROL_KEYS = (
+    "control_mode", "phase", "cancel_state", "adjudication_state",
+    "available_action", "status_label", "provider_execution_started",
+    "provider_execution_known", "provider_stop_confirmed", "stop_evidence",
+    "slot_release_allowed", "no_replay",
+)
+_RUNTIME_CONTROL_ACTIONS = {
+    "NONE", "REQUEST_CANCEL",
+    "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY",
+}
+_RUNTIME_CONTROL_PHASES = {
+    "NOT_STARTED", "ADMISSION", "PROVIDER_STARTING", "PROVIDER_RUNNING",
+    "PUBLICATION_VALIDATING", "PUBLICATION_COMMITTING", "COMPLETED",
+    "UNKNOWN_AFTER_DISCONNECT", "BLOCKED",
+}
+_RUNTIME_CONTROL_CANCEL_STATES = {
+    "NOT_REQUESTED", "CANCEL_REQUESTED", "CANCELLED_BEFORE_PROVIDER_EFFECT",
+    "CANCELLED_AFTER_COOPERATIVE_BOUNDARY", "STOP_NOT_CONFIRMED",
+}
+_RUNTIME_CONTROL_ADJUDICATION_STATES = {
+    "NOT_REQUIRED", "REQUIRED", "CLOSED_FAILED_NO_REPLAY",
+}
+_RUNTIME_CONTROL_STOP_EVIDENCE = {
+    "NONE", "PRE_PROVIDER", "COOPERATIVE_CHECKPOINT", "HUMAN_ATTESTATION",
+}
+_RUNTIME_CONTROL_STATUS_LABELS = {
+    "状態が不正なため操作できません", "結果の確定処理が開始されています",
+    "キャンセル終了処理を安全に確定できません",
+    "Human終了処理を安全に確定できません", "Provider開始前にキャンセルしました",
+    "協調停止を確認してキャンセルしました",
+    "Human確認により失敗終了しました（再実行なし）",
+    "キャンセルを要求しました。停止確認中です", "Provider停止を確認できません",
+    "Provider停止のHuman確認が必要です", "既存結果の復旧が必要です",
+    "音声認識は完了しています", "実行許可を確認中です",
+    "音声認識を開始しています", "音声認識を実行中です", "結果を検証中です",
+    "結果確定の排他状態を確認できません", "実行状態を確認できません",
+    "開始待ちです", "音声認識は開始されていません", "失敗状態を確認してください",
+}
+
+
+def _runtime_control_signature(
+    phase: str, cancel: str, adjudication: str, action: str, label: str,
+    started: bool, known: bool, stopped: bool = False,
+    evidence: str = "NONE", release: bool = False,
+) -> tuple[Any, ...]:
+    return (
+        phase, cancel, adjudication, action, label, started, known, stopped,
+        evidence, release,
+    )
+
+
+_RUNTIME_CONTROL_EXACT_ROWS = frozenset({
+    _runtime_control_signature("BLOCKED", "STOP_NOT_CONFIRMED", "NOT_REQUIRED", "NONE", "状態が不正なため操作できません", False, False),
+    _runtime_control_signature("PUBLICATION_COMMITTING", "NOT_REQUESTED", "NOT_REQUIRED", "NONE", "結果の確定処理が開始されています", True, True),
+    _runtime_control_signature("BLOCKED", "STOP_NOT_CONFIRMED", "NOT_REQUIRED", "NONE", "キャンセル終了処理を安全に確定できません", False, False),
+    _runtime_control_signature("BLOCKED", "STOP_NOT_CONFIRMED", "REQUIRED", "NONE", "Human終了処理を安全に確定できません", False, False, evidence="HUMAN_ATTESTATION"),
+    _runtime_control_signature("BLOCKED", "CANCELLED_BEFORE_PROVIDER_EFFECT", "NOT_REQUIRED", "NONE", "Provider開始前にキャンセルしました", False, True, True, "PRE_PROVIDER", True),
+    _runtime_control_signature("BLOCKED", "CANCELLED_AFTER_COOPERATIVE_BOUNDARY", "NOT_REQUIRED", "NONE", "協調停止を確認してキャンセルしました", True, True, True, "COOPERATIVE_CHECKPOINT", True),
+    _runtime_control_signature("BLOCKED", "STOP_NOT_CONFIRMED", "CLOSED_FAILED_NO_REPLAY", "NONE", "Human確認により失敗終了しました（再実行なし）", False, False, evidence="HUMAN_ATTESTATION", release=True),
+    _runtime_control_signature("UNKNOWN_AFTER_DISCONNECT", "STOP_NOT_CONFIRMED", "NOT_REQUIRED", "NONE", "Provider停止を確認できません", False, True),
+    _runtime_control_signature("UNKNOWN_AFTER_DISCONNECT", "STOP_NOT_CONFIRMED", "NOT_REQUIRED", "NONE", "Provider停止を確認できません", True, True),
+    _runtime_control_signature("UNKNOWN_AFTER_DISCONNECT", "STOP_NOT_CONFIRMED", "REQUIRED", "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY", "Provider停止のHuman確認が必要です", False, False),
+    _runtime_control_signature("PUBLICATION_COMMITTING", "NOT_REQUESTED", "NOT_REQUIRED", "NONE", "既存結果の復旧が必要です", True, True),
+    _runtime_control_signature("COMPLETED", "NOT_REQUESTED", "NOT_REQUIRED", "NONE", "音声認識は完了しています", True, True),
+    _runtime_control_signature("ADMISSION", "NOT_REQUESTED", "NOT_REQUIRED", "REQUEST_CANCEL", "実行許可を確認中です", False, True),
+    _runtime_control_signature("PROVIDER_STARTING", "NOT_REQUESTED", "NOT_REQUIRED", "REQUEST_CANCEL", "音声認識を開始しています", False, True),
+    _runtime_control_signature("PROVIDER_RUNNING", "NOT_REQUESTED", "NOT_REQUIRED", "REQUEST_CANCEL", "音声認識を実行中です", True, True),
+    _runtime_control_signature("PUBLICATION_VALIDATING", "NOT_REQUESTED", "NOT_REQUIRED", "REQUEST_CANCEL", "結果を検証中です", True, True),
+    _runtime_control_signature("BLOCKED", "STOP_NOT_CONFIRMED", "NOT_REQUIRED", "NONE", "結果確定の排他状態を確認できません", True, True),
+    _runtime_control_signature("UNKNOWN_AFTER_DISCONNECT", "STOP_NOT_CONFIRMED", "NOT_REQUIRED", "NONE", "実行状態を確認できません", False, False),
+    _runtime_control_signature("NOT_STARTED", "NOT_REQUESTED", "NOT_REQUIRED", "NONE", "開始待ちです", False, True),
+    _runtime_control_signature("NOT_STARTED", "NOT_REQUESTED", "NOT_REQUIRED", "NONE", "音声認識は開始されていません", False, True),
+    _runtime_control_signature("BLOCKED", "STOP_NOT_CONFIRMED", "NOT_REQUIRED", "NONE", "失敗状態を確認してください", False, False),
+    *(
+        _runtime_control_signature(
+            phase, "CANCEL_REQUESTED", "NOT_REQUIRED", "NONE",
+            "キャンセルを要求しました。停止確認中です",
+            phase in {"PROVIDER_RUNNING", "PUBLICATION_VALIDATING"},
+            phase != "UNKNOWN_AFTER_DISCONNECT",
+        )
+        for phase in (
+            "ADMISSION", "PROVIDER_STARTING", "PROVIDER_RUNNING",
+            "PUBLICATION_VALIDATING", "UNKNOWN_AFTER_DISCONNECT",
+        )
+    ),
+})
+
+
+def _blocked_runtime_control() -> dict[str, Any]:
+    return {
+        "control_mode": "PHASE_ONLY_V1",
+        "phase": "BLOCKED",
+        "cancel_state": "STOP_NOT_CONFIRMED",
+        "adjudication_state": "NOT_REQUIRED",
+        "available_action": "NONE",
+        "status_label": "状態が不正なため操作できません",
+        "provider_execution_started": False,
+        "provider_execution_known": False,
+        "provider_stop_confirmed": False,
+        "stop_evidence": "NONE",
+        "slot_release_allowed": False,
+        "no_replay": True,
+    }
+
+
+def _validate_runtime_control_projection(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict) or tuple(value) != _RUNTIME_CONTROL_KEYS:
+        raise ValueError("runtime control projection keys are invalid")
+    if (
+        value["control_mode"] != "PHASE_ONLY_V1"
+        or value["available_action"] not in _RUNTIME_CONTROL_ACTIONS
+        or value["phase"] not in _RUNTIME_CONTROL_PHASES
+        or value["cancel_state"] not in _RUNTIME_CONTROL_CANCEL_STATES
+        or value["adjudication_state"] not in _RUNTIME_CONTROL_ADJUDICATION_STATES
+        or value["status_label"] not in _RUNTIME_CONTROL_STATUS_LABELS
+        or value["stop_evidence"] not in _RUNTIME_CONTROL_STOP_EVIDENCE
+        or any(type(value[key]) is not bool for key in (
+            "provider_execution_started", "provider_execution_known",
+            "provider_stop_confirmed", "slot_release_allowed", "no_replay",
+        ))
+        or value["no_replay"] is not True
+    ):
+        raise ValueError("runtime control projection values are invalid")
+    signature = _runtime_control_signature(
+        value["phase"], value["cancel_state"], value["adjudication_state"],
+        value["available_action"], value["status_label"],
+        value["provider_execution_started"], value["provider_execution_known"],
+        value["provider_stop_confirmed"], value["stop_evidence"],
+        value["slot_release_allowed"],
+    )
+    if signature not in _RUNTIME_CONTROL_EXACT_ROWS:
+        raise ValueError("runtime control projection row is invalid")
+    return {key: value[key] for key in _RUNTIME_CONTROL_KEYS}
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +230,21 @@ class _PendingTranscription:
 
 
 @dataclass(frozen=True, slots=True)
+class _PendingRuntimeTranscriptionControl:
+    confirmation_id: str
+    project_id: str
+    session_revision: int
+    source_asset_id: str
+    source_asset_sha256: str
+    source_path: Path
+    context_revision: int
+    action: str
+    public_projection: tuple[tuple[str, Any], ...]
+    private_snapshot: Any
+    prepared_at: float
+
+
+@dataclass(frozen=True, slots=True)
 class _PreEditCoordinate:
     project_id: str
     session_revision: int
@@ -153,6 +305,7 @@ class Task036PreEditRuntime:
     cut_candidate_port: CutCandidateGenerationPort
     speech_cue_port: SpeechCueGenerationPort | None = None
     transcription_runtime_mode: str = "LEGACY_V1"
+    confirmation_clock: Callable[[], float] = monotonic
     media: Task036MediaWorkflowFacade = field(init=False)
     binding: Task036PreEditBinding = field(init=False)
     application: Task036EditingApplication | None = field(default=None, init=False)
@@ -161,10 +314,14 @@ class Task036PreEditRuntime:
     _pre_edit_stage_lock: Lock = field(default_factory=Lock, init=False, repr=False)
     _confirmation_lock: Lock = field(default_factory=Lock, init=False, repr=False)
     _transcription_confirmations: dict[str, _PendingTranscription] = field(default_factory=dict, init=False, repr=False)
+    _runtime_control_confirmations: dict[str, _PendingRuntimeTranscriptionControl] = field(default_factory=dict, init=False, repr=False)
+    _runtime_control_last_clock: float | None = field(default=None, init=False, repr=False)
 
     def __post_init__(self) -> None:
         if self.transcription_runtime_mode not in {"LEGACY_V1", "RUNTIME_MANAGED_V2"}:
             raise ValueError("transcription_runtime_mode is invalid")
+        if not callable(self.confirmation_clock):
+            raise TypeError("confirmation_clock must be callable")
         self.media = Task036MediaWorkflowFacade(self.coordinator, self.native_dialog, self.ingest_port)
         self.binding = Task036PreEditBinding(self.coordinator)
 
@@ -247,6 +404,30 @@ class Task036PreEditRuntime:
             }.get(recovery_state, "NONE")
         elif recovery_state == "VERIFICATION_ONLY":
             label = "文字起こし結果は検証済みです"
+        control = _blocked_runtime_control()
+        if source_bound:
+            capture = getattr(
+                self.transcription_port,
+                "capture_runtime_transcription_control",
+                None,
+            )
+            try:
+                snapshot = capture(
+                    project_id=state.project_id,
+                    source_asset_id=state.source_asset_id,
+                    source_asset_sha256=state.source_asset_sha256,
+                ) if callable(capture) else None
+                projection_reader = getattr(snapshot, "public_projection", None)
+                control = _validate_runtime_control_projection(
+                    projection_reader() if callable(projection_reader) else None,
+                )
+            except Exception:
+                control = _blocked_runtime_control()
+        nested_action = control["available_action"]
+        if action != "NONE" and nested_action != "NONE":
+            action = "NONE"
+            label = "文字起こし制御状態が競合しているため停止しました"
+            control = _blocked_runtime_control()
         return {
             "available": True,
             "task_owner": "TASK-036",
@@ -263,6 +444,7 @@ class Task036PreEditRuntime:
             "transcription_recovery_state": recovery_state,
             "transcription_available_action": action,
             "transcription_status_label": label,
+            "transcription_control": control,
             "speech_cues": self.speech_cue_snapshot(),
         }
 
@@ -622,6 +804,289 @@ class Task036PreEditRuntime:
             "transcription_status_label": status["transcription_status_label"],
             "recovery": action == "RECOVER",
         }
+
+    def _runtime_control_now(self) -> float:
+        value = self.confirmation_clock()
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(float(value))
+            or float(value) < 0.0
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_CLOCK_INVALID",
+                "Runtime control confirmation clock is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        observed = float(value)
+        if (
+            self._runtime_control_last_clock is not None
+            and observed < self._runtime_control_last_clock
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_CLOCK_INVALID",
+                "Runtime control confirmation clock regressed",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        self._runtime_control_last_clock = observed
+        return observed
+
+    def _purge_runtime_control_confirmations(self, now: float) -> None:
+        expired = [
+            token for token, pending in self._runtime_control_confirmations.items()
+            if now - pending.prepared_at >= 300.0
+        ]
+        for token in expired:
+            self._runtime_control_confirmations.pop(token, None)
+
+    def _require_runtime_control_coordinate(self) -> tuple[Any, Path, Any]:
+        state = self.coordinator.state
+        source_path = self.media.runtime_source_path
+        project = self.coordinator.shell.project
+        if (
+            self.transcription_runtime_mode != "RUNTIME_MANAGED_V2"
+            or state.source_asset_id is None
+            or state.source_asset_sha256 is None
+            or source_path is None
+            or project is None
+            or state.next_recommended_action != "transcription.start"
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_CONTROL_NOT_AVAILABLE",
+                "Runtime transcription control requires the exact source stage",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return state, source_path, project
+
+    def prepare_runtime_transcription_control(self) -> dict[str, Any]:
+        with self._confirmation_lock:
+            state, source_path, project = self._require_runtime_control_coordinate()
+            top = self._runtime_managed_status()
+            if top["transcription_available_action"] != "NONE":
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_ROUTE_CONFLICT",
+                    "Runtime control cannot shadow START, RECOVER, or VERIFY",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            capture_reader = getattr(
+                self.transcription_port,
+                "capture_runtime_transcription_control",
+                None,
+            )
+            if not callable(capture_reader):
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_NOT_BOUND",
+                    "Runtime transcription control port is not bound",
+                    ProductErrorCategory.STATE,
+                )
+            snapshot = capture_reader(
+                project_id=state.project_id,
+                source_asset_id=state.source_asset_id,
+                source_asset_sha256=state.source_asset_sha256,
+            )
+            projection_reader = getattr(snapshot, "public_projection", None)
+            try:
+                projection = _validate_runtime_control_projection(
+                    projection_reader() if callable(projection_reader) else None,
+                )
+            except ValueError as exc:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                    "Runtime transcription control projection is invalid",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                ) from exc
+            action = projection["available_action"]
+            if action not in {
+                "REQUEST_CANCEL",
+                "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY",
+            } or top["transcription_control"] != projection:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_NOT_AVAILABLE",
+                    "Runtime transcription control action is not available",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            if (
+                action == "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY"
+                and getattr(snapshot, "active_worker_coordinate", None) is not None
+            ):
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_WORKER_ACTIVE",
+                    "Human closure is unavailable while the exact worker is active",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            now = self._runtime_control_now()
+            self._purge_runtime_control_confirmations(now)
+            if len(self._runtime_control_confirmations) >= 256:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_CONFIRMATION_CAPACITY",
+                    "Too many runtime control confirmations are pending",
+                    ProductErrorCategory.STATE,
+                )
+            token = secrets.token_urlsafe(24)
+            if not 0 < len(token) <= 256 or token in self._runtime_control_confirmations:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_CONFIRMATION_CONFLICT",
+                    "Runtime control confirmation identity collided",
+                    ProductErrorCategory.STATE,
+                )
+            self._runtime_control_confirmations[token] = _PendingRuntimeTranscriptionControl(
+                confirmation_id=token,
+                project_id=state.project_id,
+                session_revision=state.revision,
+                source_asset_id=state.source_asset_id,
+                source_asset_sha256=state.source_asset_sha256,
+                source_path=source_path,
+                context_revision=project.context_revision,
+                action=action,
+                public_projection=tuple(
+                    (key, projection[key]) for key in _RUNTIME_CONTROL_KEYS
+                ),
+                private_snapshot=snapshot,
+                prepared_at=now,
+            )
+        warning = (
+            "キャンセル要求は停止完了の証明ではありません。協調停止が確認されるまで停止確認中のままです。"
+            if action == "REQUEST_CANCEL"
+            else "この操作は音声を復旧せず、文字起こし成功も宣言しません。Provider停止をHuman確認し、再実行なしで失敗終了を確定します。"
+        )
+        return {
+            "task_owner": "TASK-098",
+            "operation": "RUNTIME_TRANSCRIPTION_CONTROL_PREPARE",
+            "confirmation_id": token,
+            "action": action,
+            "status_label": projection["status_label"],
+            "warning": warning,
+            "expires_in_seconds": 300,
+        }
+
+    def apply_runtime_transcription_control(
+        self, confirmation_id: str,
+    ) -> dict[str, Any]:
+        with self._confirmation_lock:
+            pending = self._runtime_control_confirmations.pop(confirmation_id, None)
+            if pending is None:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_CONFIRMATION_MISSING",
+                    "Runtime control confirmation is missing or already consumed",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            now = self._runtime_control_now()
+            if now - pending.prepared_at >= 300.0:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_CONFIRMATION_EXPIRED",
+                    "Runtime control confirmation expired",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            state, source_path, project = self._require_runtime_control_coordinate()
+            if (
+                state.project_id != pending.project_id
+                or state.revision != pending.session_revision
+                or state.source_asset_id != pending.source_asset_id
+                or state.source_asset_sha256 != pending.source_asset_sha256
+                or source_path is not pending.source_path
+                or project.context_revision != pending.context_revision
+            ):
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_STALE",
+                    "Runtime control confirmation no longer binds the source context",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            status = self._runtime_managed_status()
+            if (
+                status["transcription_available_action"] != "NONE"
+                or status["transcription_control"]
+                != dict(pending.public_projection)
+                or status["transcription_control"]["available_action"]
+                != pending.action
+            ):
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_STALE",
+                    "Runtime control action changed after confirmation",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            apply = getattr(
+                self.transcription_port,
+                "apply_runtime_transcription_control",
+                None,
+            )
+            if not callable(apply):
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_NOT_BOUND",
+                    "Runtime transcription control port is not bound",
+                    ProductErrorCategory.STATE,
+                )
+            result = apply(
+                pending.private_snapshot,
+                action=pending.action,
+                project_id=pending.project_id,
+                source_asset_id=pending.source_asset_id,
+                source_asset_sha256=pending.source_asset_sha256,
+            )
+            try:
+                projection = _validate_runtime_control_projection(result)
+            except ValueError as exc:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                    "Runtime transcription control result is invalid",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                ) from exc
+            return {
+                "task_owner": "TASK-098",
+                "status": "RUNTIME_TRANSCRIPTION_CONTROL_APPLIED",
+                "transcription_control": projection,
+            }
+
+    def cancel_runtime_transcription_control(
+        self, confirmation_id: str,
+    ) -> dict[str, Any]:
+        with self._confirmation_lock:
+            pending = self._runtime_control_confirmations.pop(confirmation_id, None)
+            if pending is None:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_CONFIRMATION_MISSING",
+                    "Runtime control confirmation is missing or already consumed",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            now = self._runtime_control_now()
+            if now - pending.prepared_at >= 300.0:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_CONFIRMATION_EXPIRED",
+                    "Runtime control confirmation expired",
+                    ProductErrorCategory.AUTHORIZATION,
+                )
+            state, _source_path, _project = self._require_runtime_control_coordinate()
+            capture = getattr(
+                self.transcription_port,
+                "capture_runtime_transcription_control",
+                None,
+            )
+            if not callable(capture):
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_NOT_BOUND",
+                    "Runtime transcription control port is not bound",
+                    ProductErrorCategory.STATE,
+                )
+            snapshot = capture(
+                project_id=state.project_id,
+                source_asset_id=state.source_asset_id,
+                source_asset_sha256=state.source_asset_sha256,
+            )
+            projection_reader = getattr(snapshot, "public_projection", None)
+            try:
+                projection = _validate_runtime_control_projection(
+                    projection_reader() if callable(projection_reader) else None,
+                )
+            except ValueError as exc:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CONTROL_INVALID",
+                    "Runtime transcription control projection is invalid",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                ) from exc
+            return {
+                "task_owner": "TASK-098",
+                "status": "RUNTIME_TRANSCRIPTION_CONTROL_CANCELLED",
+                "transcription_control": projection,
+            }
 
     def prepare_local_transcription(self, *, recovery: bool = False) -> dict[str, Any]:
         if self.transcription_runtime_mode == "RUNTIME_MANAGED_V2":

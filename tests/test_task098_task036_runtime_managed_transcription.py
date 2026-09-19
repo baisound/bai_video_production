@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import multiprocessing
+import shutil
 import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,6 +17,7 @@ from ai_video_production.errors import ProductError, ProductErrorCategory
 from ai_video_production.faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider
 from ai_video_production.faster_whisper_runtime_contract import FasterWhisperRuntimeRequestV1
 from ai_video_production.faster_whisper_runtime_preflight import evaluate_runtime_preflight
+from ai_video_production.ids import IdKind, generate_id
 from ai_video_production.task036_product_ports import (
     FasterWhisperProviderSettingsV2,
     RuntimeManagedLocalTranscriptionOutcomeV2,
@@ -31,6 +33,9 @@ from ai_video_production.task098_runtime_transcription_coordination import (
     derive_cross_version_guard_key,
     derive_output_slot_key,
     derive_runtime_operation_key_v2,
+)
+from ai_video_production.task098_runtime_transcription_control import (
+    RuntimeTranscriptionAdjudicationDecisionV1,
 )
 
 
@@ -113,6 +118,110 @@ def execute(port: Task036RuntimeManagedLocalTranscriptionPortV2, source: Path, d
         source_asset_id=ASSET_ID,
         source_asset_sha256=digest,
     )
+
+
+def test_r2c_capture_has_exact_not_started_projection_and_zero_durable_effect(
+    tmp_path: Path,
+) -> None:
+    port, store, _probe, _configs = make_port(tmp_path)
+    before = store.list_operations_by_command_prefix(
+        port.production_job_id, command_type_prefix="task", limit=32,
+    )
+    capture = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256="sha256:" + "a" * 64,
+    )
+    assert capture.public_projection() == {
+        "control_mode": "PHASE_ONLY_V1",
+        "phase": "NOT_STARTED",
+        "cancel_state": "NOT_REQUESTED",
+        "adjudication_state": "NOT_REQUIRED",
+        "available_action": "NONE",
+        "status_label": "音声認識は開始されていません",
+        "provider_execution_started": False,
+        "provider_execution_known": True,
+        "provider_stop_confirmed": False,
+        "stop_evidence": "NONE",
+        "slot_release_allowed": False,
+        "no_replay": True,
+    }
+    assert store.list_operations_by_command_prefix(
+        port.production_job_id, command_type_prefix="task", limit=32,
+    ) == before
+    assert not (port.output_directory / ".task036-runtime-control").exists()
+
+
+def test_r2c_pending_main_rejects_orphan_control_evidence(tmp_path: Path) -> None:
+    port, store, _probe, _configs = make_port(tmp_path)
+    digest = "sha256:" + "b" * 64
+    engine = port._engine()
+    engine._acquire_cross_version_lease(
+        PROJECT_ID, ASSET_ID, digest, version="v2",
+    )
+    operation, created = store.reserve_operation(
+        port.production_job_id,
+        "task036.local_transcription.v2",
+        port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert created is True and operation.status == "PENDING"
+    clean = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    assert clean.public_projection()["status_label"] == "開始待ちです"
+    orphan = (
+        port.output_directory / ".task036-runtime-control"
+        / operation.operation_id
+    )
+    orphan.mkdir(parents=True)
+    (orphan / "orphan.json").write_text("{}", encoding="utf-8")
+    blocked = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    assert blocked.recovery_state == "CORRUPT_BLOCKED"
+    assert blocked.public_projection()["status_label"] == "状態が不正なため操作できません"
+
+
+def test_r2c_process_local_phase_is_bound_to_epoch_and_cleared(tmp_path: Path) -> None:
+    port, _store, _probe, _configs = make_port(tmp_path)
+    _observation, decision = evaluate_runtime_preflight(
+        port.runtime_request, Probe(True), observed_at=port._clock_text(), ttl_seconds=300,
+    )
+    source_sha = "sha256:" + "b" * 64
+    provider_id, model_id, execution_sha = port._execution_identity()
+    coordinates = RuntimeTranscriptionCoordinatesV1(
+        production_job_id=port.production_job_id,
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=source_sha,
+        runtime_operation_id=generate_id(IdKind.OPERATION),
+        expected_attempt=1,
+        runtime_admission_ref=port._admission_ref(source_sha, decision),
+        runtime_request=port.runtime_request,
+        runtime_decision=decision,
+        provider_id=provider_id,
+        model_id=model_id,
+        execution_config_sha256=execution_sha,
+        slot_operation_id=generate_id(IdKind.OPERATION),
+    )
+    epoch = port._begin_runtime_invocation(coordinates)
+    port._observe_runtime_phase(epoch, "PROVIDER_RUNNING")
+    assert port._runtime_active_worker_coordinate == epoch
+    assert port._runtime_phase_coordinate == epoch + ("PROVIDER_RUNNING",)
+    with pytest.raises(ProductError) as reversed_phase:
+        port._observe_runtime_phase(epoch, "PROVIDER_STARTING")
+    assert reversed_phase.value.code == "ERR_TASK098_RUNTIME_PHASE_STALE"
+    assert port._runtime_phase_coordinate == epoch + ("PROVIDER_RUNNING",)
+    port._end_runtime_invocation(epoch)
+    assert port._runtime_active_worker_coordinate is None
+    assert port._runtime_phase_coordinate is None
+    with pytest.raises(ProductError) as stale:
+        port._observe_runtime_phase(epoch, "PUBLICATION_VALIDATING")
+    assert stale.value.code == "ERR_TASK098_RUNTIME_PHASE_STALE"
 
 
 def request_runtime_cancel(
@@ -247,6 +356,15 @@ def test_v2_success_is_fake_only_and_public_projection_excludes_private_paths(tm
     assert str(private_cache) not in body
     assert '"model_download_authorized": false' in body
 
+    capture = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    assert capture.recovery_state == "VERIFICATION_ONLY"
+    assert capture.public_projection()["phase"] == "COMPLETED"
+    assert capture.public_projection()["available_action"] == "NONE"
+
 
 def test_v2_success_observes_closed_phases_and_barrier_before_first_generation(tmp_path: Path) -> None:
     phases: list[str] = []
@@ -315,6 +433,50 @@ def test_v2_cancel_at_admission_closes_before_provider_factory_and_writes_no_gen
     )
     assert operation is not None and operation.status == "FAILED"
     assert not (port.output_directory / ".task036-publications").exists()
+
+
+def test_r2c_capture_and_apply_request_cancel_use_exact_live_coordinate(
+    tmp_path: Path,
+) -> None:
+    holder: dict[str, object] = {}
+    captured = []
+
+    def observe_phase(value: str) -> None:
+        if value != "ADMISSION":
+            return
+        port = holder["port"]
+        assert isinstance(port, Task036RuntimeManagedLocalTranscriptionPortV2)
+        snapshot = port.capture_runtime_transcription_control(
+            project_id=PROJECT_ID,
+            source_asset_id=ASSET_ID,
+            source_asset_sha256=holder["digest"],
+        )
+        assert snapshot.public_projection()["available_action"] == "REQUEST_CANCEL"
+        captured.append(snapshot)
+        result = port.apply_runtime_transcription_control(
+            snapshot,
+            action="REQUEST_CANCEL",
+            project_id=PROJECT_ID,
+            source_asset_id=ASSET_ID,
+            source_asset_sha256=holder["digest"],
+        )
+        assert result["cancel_state"] == "CANCEL_REQUESTED"
+        assert result["available_action"] == "NONE"
+
+    port, store, _probe, configs = make_port(tmp_path, phase_observer=observe_phase)
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, digest=digest)
+    with pytest.raises(ProductError) as cancelled:
+        execute(port, source, digest)
+    assert cancelled.value.code == "ERR_TASK098_RUNTIME_CANCELLED"
+    assert configs == []
+    assert len(captured) == 1
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == "FAILED"
+    assert port._runtime_active_worker_coordinate is None
+    assert port._runtime_phase_coordinate is None
 
 
 @pytest.mark.parametrize(
@@ -1208,6 +1370,123 @@ def test_v2_provider_factory_raw_exception_is_redacted_and_durable_admission_is_
     ) == "ADJUDICATION_REQUIRED_NO_PUBLICATION"
 
 
+def test_r2c_human_apply_builds_fixed_attestation_and_terminal_closure(tmp_path: Path) -> None:
+    def exploding_factory(_config: FasterWhisperConfig):
+        raise RuntimeError("synthetic disconnected provider")
+
+    port, store, _probe, _configs = make_port(
+        tmp_path, provider_factory=exploding_factory,
+    )
+    source, digest = source_file(tmp_path)
+    with pytest.raises(ProductError):
+        execute(port, source, digest)
+    prepared = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    assert prepared.active_worker_coordinate is None
+    assert prepared.public_projection()["available_action"] == (
+        "CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY"
+    )
+    result = port.apply_runtime_transcription_control(
+        prepared,
+        action="CONFIRM_PROVIDER_STOPPED_CLOSE_FAILED_NO_REPLAY",
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    assert result["adjudication_state"] == "CLOSED_FAILED_NO_REPLAY"
+    assert result["provider_stop_confirmed"] is False
+    assert result["stop_evidence"] == "HUMAN_ATTESTATION"
+    assert result["slot_release_allowed"] is True
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == "FAILED"
+    assert operation.result_ref.startswith("task098-runtime-adjudicated-failed:v1:")
+
+
+def test_r2c_capture_keeps_uncommitted_terminal_record_blocked_until_control_commit(
+    tmp_path: Path,
+) -> None:
+    def exploding_factory(_config: FasterWhisperConfig):
+        raise RuntimeError("synthetic disconnected provider")
+
+    port, store, _probe, _configs = make_port(
+        tmp_path, provider_factory=exploding_factory,
+    )
+    source, digest = source_file(tmp_path)
+    with pytest.raises(ProductError):
+        execute(port, source, digest)
+    prepared = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    coordinates = prepared.coordinates
+    assert coordinates is not None
+    coordinator = RuntimeTranscriptionCoordinatorV1(
+        store=store,
+        output_directory=port.output_directory.resolve(strict=True),
+        clock=port.clock,
+    )
+    decision = RuntimeTranscriptionAdjudicationDecisionV1.create(
+        adjudication_id=generate_id(IdKind.OPERATION),
+        runtime_operation_id=coordinates.runtime_operation_id,
+        slot_operation_id=coordinates.slot_operation_id,
+        source_asset_sha256=coordinates.source_asset_sha256,
+        runtime_admission_ref=coordinates.runtime_admission_ref,
+        runtime_request_sha256=coordinates.runtime_request.record_sha256,
+        runtime_decision_sha256=coordinates.runtime_decision_sha256,
+        expected_attempt=coordinates.expected_attempt,
+        decided_at=coordinator._now(),
+    )
+
+    def crash(stage: str) -> None:
+        if stage == "after_terminal_commit_write":
+            raise RuntimeError("synthetic terminal commit crash")
+
+    with pytest.raises(RuntimeError, match="terminal commit crash"):
+        coordinator.close_human_adjudication_from_durable_coordinates(
+            coordinates, decision, fault_hook=crash,
+        )
+    main = store.get_operation(coordinates.runtime_operation_id)
+    control = store.find_operation(
+        coordinates.production_job_id, coordinates.control_key,
+    )
+    slot = store.get_operation(coordinates.slot_operation_id)
+    assert main.status == "FAILED"
+    assert control is not None and control.status == "PARTIAL"
+    assert slot.status == "IN_PROGRESS"
+
+    blocked = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    assert blocked.control_chain_identity[-1] is not None
+    assert blocked.public_projection()["phase"] == "BLOCKED"
+    assert blocked.public_projection()["available_action"] == "NONE"
+    assert blocked.public_projection()["slot_release_allowed"] is False
+
+    committed = coordinator.close_human_adjudication_from_durable_coordinates(
+        coordinates, decision,
+    )
+    assert committed.closure_kind == "HUMAN_ADJUDICATED_FAILED"
+    assert store.find_operation(
+        coordinates.production_job_id, coordinates.control_key,
+    ).status == "COMPLETED"
+    assert store.get_operation(coordinates.slot_operation_id).status == "PENDING"
+    closed = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    ).public_projection()
+    assert closed["adjudication_state"] == "CLOSED_FAILED_NO_REPLAY"
+    assert closed["slot_release_allowed"] is True
+
+
 def test_v2_crash_after_publication_barrier_before_first_write_is_blocked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     def crash_before_publication(*_args, **_kwargs):
         raise RuntimeError("synthetic crash")
@@ -1243,6 +1522,92 @@ def test_v2_promotion_failure_leaves_bound_publication_recoverable(tmp_path: Pat
     assert port.recovery_state(
         project_id=PROJECT_ID, source_asset_id=ASSET_ID, source_asset_sha256=digest,
     ) == "RECOVERABLE_PUBLICATION"
+    capture = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    assert capture.recovery_state == "RECOVERABLE_PUBLICATION"
+    assert capture.public_projection()["phase"] == "PUBLICATION_COMMITTING"
+    assert capture.public_projection()["available_action"] == "NONE"
+
+
+@pytest.mark.parametrize("durable_state", ["PARTIAL", "COMPLETED"])
+@pytest.mark.parametrize("control_drift", ["missing-row-and-evidence", "wrong-status"])
+def test_r2c_publication_capture_requires_exact_publication_control_chain(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    durable_state: str,
+    control_drift: str,
+) -> None:
+    if durable_state == "PARTIAL":
+        monkeypatch.setattr(
+            _Task036LocalTranscriptionOperationEngine,
+            "_promote_publication",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(ProductError(
+                "ERR_SYNTHETIC_PROMOTION_FAILURE", "promotion failed",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )),
+        )
+    port, store, _probe, _configs = make_port(tmp_path)
+    source, digest = source_file(tmp_path)
+    if durable_state == "PARTIAL":
+        with pytest.raises(ProductError):
+            execute(port, source, digest)
+    else:
+        execute(port, source, digest)
+    operation = store.find_operation(
+        port.production_job_id,
+        port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == durable_state
+    control_key = derive_control_key(
+        production_job_id=port.production_job_id,
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+        runtime_operation_id=operation.operation_id,
+    )
+    control = store.find_operation(port.production_job_id, control_key)
+    assert control is not None
+    if control_drift == "missing-row-and-evidence":
+        with sqlite3.connect(store.path) as connection:
+            connection.execute(
+                "DELETE FROM operations WHERE operation_id=?", (control.operation_id,),
+            )
+        evidence = (
+            port.output_directory / ".task036-runtime-control"
+            / operation.operation_id
+        )
+        assert evidence.is_dir()
+        shutil.rmtree(evidence)
+    else:
+        with sqlite3.connect(store.path) as connection:
+            connection.execute(
+                "UPDATE operations SET status='PENDING', result_ref=NULL "
+                "WHERE operation_id=?",
+                (control.operation_id,),
+            )
+    capture = port.capture_runtime_transcription_control(
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    )
+    assert capture.recovery_state == "CORRUPT_BLOCKED"
+    assert capture.public_projection() == {
+        "control_mode": "PHASE_ONLY_V1",
+        "phase": "BLOCKED",
+        "cancel_state": "STOP_NOT_CONFIRMED",
+        "adjudication_state": "NOT_REQUIRED",
+        "available_action": "NONE",
+        "status_label": "状態が不正なため操作できません",
+        "provider_execution_started": False,
+        "provider_execution_known": False,
+        "provider_stop_confirmed": False,
+        "stop_evidence": "NONE",
+        "slot_release_allowed": False,
+        "no_replay": True,
+    }
 
 
 def test_v2_bound_partial_rolls_forward_with_zero_provider_reentry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

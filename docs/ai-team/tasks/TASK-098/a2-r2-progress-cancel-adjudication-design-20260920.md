@@ -470,3 +470,19 @@ acceptance.
 - Independent Judge final: `ACCEPT / R2a LIMITED IMPLEMENTATION ALLOCATED / 0 Critical / 0 High / 0 Medium / 0 Low`.
 - Allocation: only the four R2a implementation/test/schema files in section 9 plus bounded TASK-098/current-state/task-index documentation.
 - R2b/R2c, store, TASK-023 Provider, TASK-036 engine/Shell, serialized v2/native, private media and external effects remain unallocated.
+
+## 14. R2a implementation outcome
+
+- Implementation: `COMPLETE / COMMIT_READY` within the exact four-file ceiling.
+- Builder focused verification: `40 PASS`; direct R1a/R1b/R1c dependency
+  regression: `454 PASS`.
+- Independent Tester static/schema/fix review: `0/0/0/0`; its agent-local test
+  execution was `NOT_CONFIRMED`. Independent Judge supplied a separate stub-free
+  focused execution with `40 PASS`.
+- Independent Critic final: `ACCEPT / 0/0/0/0` after bounded fixes for the
+  state/ref matrix, nested fact fail-closed behavior and source-bound admission.
+- Independent Judge final: `ACCEPT / COMMIT_READY / 0/0/0/0`.
+- External checkpoint SHA-256/read-back:
+  `b9966804d2df0f74c6e8fb74960b3fd4fb6d0b62924114ab9d9d476f210fd34d / PASS`.
+- R2b is eligible only for a fresh pre-mutation review. No R2b/R2c
+  implementation or native/Product effect is allocated by this outcome.

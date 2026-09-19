@@ -1,16 +1,16 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2_DESIGN_ACCEPTED / A2-R2A_IMPLEMENTATION_ALLOCATED`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2_DESIGN_ACCEPTED / A2-R2A_COMPLETE / A2-R2B_REVIEW_ELIGIBLE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`
 - Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
-- Active Atomic Unit: `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`
-- Next action: `implement and test only the exact four-file R2a allocation; R2b/R2c remain unallocated`
+- Active Atomic Unit: `none; A2-R2a is complete and A2-R2b awaits fresh pre-mutation review`
+- Next action: `perform the R2b pre-mutation review and exact allocation decision; do not implement R2b/R2c before that gate`
 
 ## Objective
 
@@ -364,3 +364,30 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - Proposed R1c effects are fake/synthetic only and do not authorize real probe,
   model construction/inference/download, private audio, installation, Release,
   Deploy or Production Activation.
+
+## A2-R2a completion
+
+- Added six immutable durable control record types, a concrete immutable lease
+  fact, immutable reducer facts, an exact schema/package mirror and a pure
+  twelve-key phase-only public reducer.
+- The reducer validates exact source-bound admission, operation status/attempt/
+  ref, lease, slot, record family and predecessor digests before selecting a
+  priority row. Foreign/corrupt/impossible facts fail closed without action,
+  replay or release.
+- Only an exact terminal closure commit plus exact barrier and generation-
+  absence proof exposes `slot_release_allowed`. Only confirmed pre-Provider or
+  cooperative cancellation reports technical Provider stop; Human attestation
+  remains explicitly non-technical.
+- Builder focused verification: `40 PASS / 0 FAIL`.
+- Direct R1a/R1b/R1c dependency regression: `454 PASS / 0 FAIL`.
+- Independent Tester: static/schema/fix review `0/0/0/0`; its agent-local pytest
+  route was `NOT_CONFIRMED`. Independent Judge separately executed stub-free
+  focused pytest with `40 PASS / 0 FAIL`.
+- Final independent Critic: `ACCEPT / 0/0/0/0` after two bounded fix cycles.
+- Final independent Judge: `ACCEPT / COMMIT_READY / 0/0/0/0`.
+- External checkpoint read-back: `PASS`, SHA-256
+  `b9966804d2df0f74c6e8fb74960b3fd4fb6d0b62924114ab9d9d476f210fd34d`.
+- Evidence: `evidence/a2-r2a-runtime-control-20260920-r01.md`.
+- R2b is review-eligible only. R2b/R2c implementation, store, Provider, engine,
+  Shell, serialized v2/native, private media, model/training and release effects
+  remain unallocated or gated.

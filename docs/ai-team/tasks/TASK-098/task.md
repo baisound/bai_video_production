@@ -1,13 +1,15 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_IMPLEMENTATION_ALLOCATED / R1B_NOT_STARTED`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / NEXT_R1C_REVIEW_UNALLOCATED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
+- Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
 - Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`
-- Next Atomic Unit: `TASK-098/A2-R1b — implement the accepted shared TASK-036 engine and durable v2 under fake/synthetic tests only`
+- Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
+- Next action: `fresh A2-R1c pre-mutation review only; R1c implementation remains unallocated`
 
 ## Objective
 
@@ -290,3 +292,52 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - Product source/test/native/provider/model/private/training effects:
   `NOT_EXECUTED`.
 - Evidence: `evidence/a2-r1b-pre-mutation-review-20260919-r01.md`.
+
+## A2-R1b implementation recovery checkpoint
+
+- Implementation was attempted only inside the accepted source/test boundary and
+  remains uncommitted at HEAD `04c0f1e4eeb2b4267eabe2a0436f01266718dbc5`.
+- Independent Tester: `PASS / 238 passed in 35.87s`; four-source `py_compile`
+  and `git diff --check` also pass.
+- Final independent Critic after the second bounded fix cycle: `REJECT / 0
+  Critical / 4 High / 0 Medium / 0 Low`.
+- Unresolved High findings: direct recovery repairs a missing permanent lease;
+  recovery/publication lifecycle extraction is incomplete; foreign v2 audit can
+  accept a consistent `BLOCKED` decision; required negative/golden tests remain
+  incomplete.
+- This is not an Atomic Unit completion, implementation acceptance, Judge
+  acceptance or commit-ready state. DEV-3 review/fix budget is exhausted.
+- No real probe, Provider/model execution, download, private media, native
+  runtime, Dataset/training, Release, Deploy or Production effect occurred.
+- Durable checkpoint: `evidence/a2-r1b-runtime-managed-transcription-20260919-r01.md`.
+
+## A2-R1b Recovery R2 authorization
+
+- Owner authorization date: `2026-09-20`.
+- Responsibility remains A2-R1b. This is corrective completion of the accepted
+  TASK-036 runtime-managed transcription boundary, not TASK-098/A2-R2 and not a
+  new Product capability or canonical owner.
+- Exact goals: require an existing immutable v2 lease before v2
+  recovery/finalize while preserving the closed legacy v1 lease policy;
+  centralize v1/v2 recovery, immutable publication access and final binding in
+  the engine; reject foreign runtime decisions other than `READY_CPU` or
+  `READY_CUDA`; add the four missing negative/golden test families.
+- Existing 14-file ceiling remains the maximum. New code changes should be
+  limited to `task036_product_ports.py` and the two TASK-036/TASK-098 operation
+  test files unless independent review proves another existing allowed file is
+  required.
+- Recovery R2 receives a fresh maximum of two bounded review/fix cycles.
+- R1c, A2-R2, real/native probe, model execution/download, private audio,
+  training, Release, Deploy and Production Activation remain unauthorized.
+- Design review: independent Critic `ACCEPT / 0/0/0/0`; independent Tester
+  `PASS / 0/0/0/0` after two Medium clarifications were closed; independent
+  Judge `ACCEPT / implementation allocated / 0/0/0/0`.
+- Implementation completion:
+  - exact seven-file direct regression: `269 PASS in 60.32s`;
+  - final independent Critic: `ACCEPT / 0/0/0/0`;
+  - independent Tester: `PASS`;
+  - final independent Judge: `ACCEPT / COMMIT_READY / 0/0/0/0`;
+  - `git diff --check`: `PASS`;
+  - external Evidence read-back: `PASS`, SHA-256
+    `f41e89fae8bf8b04d2acb75bd675fa6e95b47017fe8a139ab816f2d68a56366b`.
+- A2-R1b status: `COMPLETE`; no native/model/private/training effect occurred.

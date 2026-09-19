@@ -2,16 +2,18 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import gc
 import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
 import stat
 import tempfile
 import time
-from typing import Any
+from typing import Any, Callable
 
 from .assets import AssetRecord, AssetType, AudioRightsStatus, PermissionState, RetentionClass, RightsStatus
 from .checkpoint import CheckpointRecord
@@ -77,9 +79,20 @@ class AssetPage:
 
 
 class SQLiteProductStore:
-    def __init__(self, path: str | Path, *, require_existing: bool = False, required_job_id: str | None = None) -> None:
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        require_existing: bool = False,
+        required_job_id: str | None = None,
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         self.path = Path(path)
         self._require_existing = require_existing
+        # This clock is deliberately used only by the opt-in validity-window
+        # CAS below.  Existing Product timestamps continue to use utc_now_iso
+        # so adding a deterministic admission clock cannot alter legacy rows.
+        self._operation_validity_clock = clock or (lambda: datetime.now(timezone.utc))
         self._pinned_database_identity: tuple[int, int] | None = None
         self._database_pin_fd: int | None = None
         if require_existing:
@@ -976,6 +989,159 @@ class SQLiteProductStore:
         if row is None:
             raise ProductError("ERR_INPUT_OPERATION_NOT_FOUND", "operation not found", ProductErrorCategory.VALIDATION)
         return self._row_to_operation(row), cursor.rowcount == 1
+
+    @staticmethod
+    def _parse_validity_timestamp(value: str, name: str) -> datetime:
+        """Parse the closed, second-precision UTC bound used by admission CAS."""
+
+        if not isinstance(value, str) or len(value) != 20 or not re.fullmatch(
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value,
+        ):
+            raise ValueError(f"{name} must be a canonical UTC Z timestamp")
+        try:
+            return datetime.fromisoformat(value[:-1] + "+00:00")
+        except ValueError as exc:
+            raise ValueError(f"{name} must be a canonical UTC Z timestamp") from exc
+
+    @staticmethod
+    def _validity_clock_timestamp(value: datetime) -> tuple[datetime, str]:
+        if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() != timezone.utc.utcoffset(value):
+            raise ValueError("operation validity clock must return an aware UTC datetime")
+        normalized = value.astimezone(timezone.utc)
+        suffix = (
+            normalized.strftime("%Y-%m-%dT%H:%M:%S")
+            + (f".{normalized.microsecond:06d}" if normalized.microsecond else "")
+            + "Z"
+        )
+        return normalized, suffix
+
+    def compare_and_set_operation_status_with_validity(
+        self,
+        operation_id: str,
+        *,
+        expected_statuses: tuple[str, ...],
+        status: str,
+        valid_from: str,
+        valid_until: str,
+        expected_result_refs: tuple[str | None, ...],
+        result_ref: str | None = None,
+        replace_result_ref: bool = False,
+        last_error_code: str | None = None,
+        increment_attempt: bool = False,
+    ) -> tuple[OperationRecord, bool, str]:
+        """CAS an operation only while an injected UTC validity window is fresh.
+
+        This is a deliberately generic store primitive.  It knows no runtime,
+        readiness, probe, provider, or Task policy: callers supply the closed
+        validity interval and the ordinary CAS predicates.  The store obtains
+        its one evaluation time only after `BEGIN IMMEDIATE` has acquired the
+        write lock, making freshness and the state transition one transaction.
+        """
+
+        validate_id(operation_id, IdKind.OPERATION)
+        allowed = {"PENDING", "IN_PROGRESS", "PARTIAL", "COMPLETED", "FAILED"}
+        if not expected_statuses or any(item not in allowed for item in expected_statuses):
+            raise ValueError("expected_statuses are invalid")
+        if status not in allowed:
+            raise ValueError("unsupported operation status")
+        if not expected_result_refs:
+            raise ValueError("expected_result_refs must not be empty")
+        valid_from_at = self._parse_validity_timestamp(valid_from, "valid_from")
+        valid_until_at = self._parse_validity_timestamp(valid_until, "valid_until")
+        if valid_from_at >= valid_until_at:
+            raise ValueError("validity window is invalid")
+        for value in (*expected_result_refs, result_ref):
+            if value is None:
+                continue
+            if not isinstance(value, str) or not value or len(value) > 2048 or "\x00" in value:
+                raise ValueError("operation result_ref is invalid")
+            try:
+                value.encode("utf-8")
+            except UnicodeEncodeError as exc:
+                raise ValueError("operation result_ref is invalid") from exc
+
+        placeholders = ",".join("?" for _ in expected_statuses)
+        non_null = [item for item in expected_result_refs if item is not None]
+        result_clauses: list[str] = []
+        if any(item is None for item in expected_result_refs):
+            result_clauses.append("result_ref IS NULL")
+        if non_null:
+            result_clauses.append("result_ref IN (" + ",".join("?" for _ in non_null) + ")")
+        result_predicate = " AND (" + " OR ".join(result_clauses) + ")"
+        result_assignment = "result_ref=?" if replace_result_ref else "result_ref=COALESCE(?, result_ref)"
+
+        with self._managed_connection() as conn:
+            # Do not move this call before BEGIN IMMEDIATE: a caller-provided
+            # probe timestamp must not decide a later serialized admission.
+            conn.execute("BEGIN IMMEDIATE")
+            evaluated_at, evaluated_at_text = self._validity_clock_timestamp(
+                self._operation_validity_clock(),
+            )
+            row = conn.execute(
+                "SELECT * FROM operations WHERE operation_id=?", (operation_id,),
+            ).fetchone()
+            if row is None:
+                raise ProductError("ERR_INPUT_OPERATION_NOT_FOUND", "operation not found", ProductErrorCategory.VALIDATION)
+            if not valid_from_at <= evaluated_at < valid_until_at:
+                return self._row_to_operation(row), False, evaluated_at_text
+            cursor = conn.execute(
+                f"UPDATE operations SET status=?, last_error_code=?, updated_at=?, "
+                f"attempt=attempt+?, {result_assignment} "
+                f"WHERE operation_id=? AND status IN ({placeholders}){result_predicate}",
+                (
+                    status,
+                    last_error_code,
+                    evaluated_at_text,
+                    1 if increment_attempt else 0,
+                    result_ref,
+                    operation_id,
+                    *expected_statuses,
+                    *non_null,
+                ),
+            )
+            row = conn.execute(
+                "SELECT * FROM operations WHERE operation_id=?", (operation_id,),
+            ).fetchone()
+        assert row is not None
+        return self._row_to_operation(row), cursor.rowcount == 1, evaluated_at_text
+
+    def list_operations_by_command_prefix(
+        self,
+        job_id: str,
+        *,
+        command_type_prefix: str,
+        limit: int,
+    ) -> tuple[OperationRecord, ...]:
+        """Return a bounded, literal command-prefix projection for one Job."""
+
+        validate_id(job_id, IdKind.JOB)
+        if (
+            not isinstance(command_type_prefix, str)
+            or not command_type_prefix
+            or "\x00" in command_type_prefix
+        ):
+            raise ValueError("command_type_prefix must be non-empty UTF-8 text")
+        try:
+            if len(command_type_prefix.encode("utf-8")) > 128:
+                raise ValueError("command_type_prefix must be at most 128 UTF-8 bytes")
+        except UnicodeEncodeError as exc:
+            raise ValueError("command_type_prefix must be valid UTF-8 text") from exc
+        if type(limit) is not int or not 1 <= limit <= 1024:
+            raise ValueError("limit must be an integer in 1..1024")
+        with self._managed_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM operations WHERE job_id=? "
+                "AND substr(command_type, 1, length(?))=? "
+                "ORDER BY operation_id LIMIT ?",
+                (job_id, command_type_prefix, command_type_prefix, limit + 1),
+            ).fetchall()
+        if len(rows) > limit:
+            raise ProductError(
+                "ERR_STORE_OPERATION_QUERY_LIMIT",
+                "Operation command-prefix query exceeded its bounded limit",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return tuple(self._row_to_operation(row) for row in rows)
 
     def update_operation_status(
         self,

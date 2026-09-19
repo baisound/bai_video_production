@@ -84,6 +84,17 @@ class FasterWhisperProvider:
         self._model_factory = model_factory
         self._loaded_model: Any | None = None
 
+    @property
+    def model_loaded(self) -> bool:
+        """Read-only observation used by pre-execution admission checks.
+
+        Accessing it intentionally performs no lazy model construction.  The
+        runtime-managed TASK-036 route uses this only to reject a factory result
+        that has already crossed the model-load boundary.
+        """
+
+        return self._loaded_model is not None
+
     def _model(self) -> Any:
         if self._loaded_model is not None:
             return self._loaded_model

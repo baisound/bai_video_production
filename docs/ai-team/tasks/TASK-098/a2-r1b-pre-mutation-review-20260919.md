@@ -441,3 +441,103 @@ Design result: `ACCEPTED / IMPLEMENTATION_ALLOCATED`.
   `NOT_EXECUTED`.
 - Next action: implement only the exact file set in section 9, then satisfy the
   section 10 tests and independent completion reviews.
+
+## 13. Implementation recovery result
+
+Implementation began under this allocation and remains inside the exact file
+ceiling. Independent testing reached `238 PASS`, but the second/final bounded
+DEV-3 fix cycle ended at `REJECT / 0 Critical / 4 High / 0 Medium / 0 Low`.
+The implementation is therefore preserved as an uncommitted recovery
+checkpoint, not accepted or commit-ready. A fresh recovery design/review must
+address missing-lease repair, the incomplete shared recovery/publication
+lifecycle, foreign `BLOCKED` admission rejection and the missing negative/golden
+matrix before further mutation.
+
+## 14. Recovery R2 pre-mutation design
+
+- Authority: Owner-approved additional fixes on `2026-09-20`.
+- Unit: `TASK-098/A2-R1b Recovery R2`, still `DEV-3`.
+- Baseline: HEAD `04c0f1e4eeb2b4267eabe2a0436f01266718dbc5`
+  with the exact preserved dirty implementation and `20260919` Recovery
+  Evidence. That Evidence remains immutable.
+- Scope ceiling: unchanged section 9 file set. New implementation deltas should
+  touch only `src/ai_video_production/task036_product_ports.py`,
+  `tests/test_task098_task036_runtime_managed_transcription.py` and
+  `tests/test_task036_local_transcription_operation.py`.
+
+### Required implementation boundary
+
+The engine adds a read-only existing-v2-lease validator. Recovery and finalize
+must use it and may not fall back to guard reservation or CAS. New transcription
+continues to use the mutating acquisition path; legacy v1 recovery may retain
+its closed compatibility policy.
+
+The engine owns one recovery method and one finalize method. They perform the
+shared operation, publication, promotion/completion, fixed-output, slot and
+release lifecycle. Version bindings/codecs may provide command/key/config
+identity, lease policy, metadata validation, v2 classifier and outcome wrapping,
+but may not perform physical file I/O, SQLite mutation, promotion, completion or
+slot release. Normal and foreign publication loading must share the existing
+bounded pinned reader, with foreign errors translated at the audit boundary.
+
+One pure v2 chain validator reparses request/observation/decision, independently
+resolves the decision, verifies exact digest/ref/timestamp/download bindings and
+requires `decision.outcome` to be `READY_CPU` or `READY_CUDA`. Exact recovery
+also recomputes current private config/TASK-023 identity; foreign audit does not
+inspect private config or construct a Provider.
+
+### Required tests and no-effect rules
+
+- Direct PARTIAL and COMPLETED recovery with missing, PENDING, wrong-version,
+  malformed or positive-attempt v2 lease rejects without changing operation,
+  lease, slot, immutable/fixed bytes, probe or factory count.
+- Finalize with missing/invalid lease never releases the slot.
+- A fully rehashed internally consistent foreign `BLOCKED` chain is rejected
+  before a requesting row/lease is created; valid READY different-source
+  history remains the positive control.
+- Historical admission time rejects `.000000Z`, 1/3/7 fractional digits,
+  offsets, missing `Z`, whitespace and invalid calendar values after complete
+  rehash/rebind. Integer seconds, nonzero six-digit fractions and one
+  microsecond before expiry pass; expiry equality fails.
+- A v1 test independently constructs and verifies immutable publication bytes,
+  all three fixed outputs and v1-only `publication-set.json` without using
+  production publication/key/config helpers as the oracle.
+- Shared v1/v2 recovery/finalize parity covers Provider-zero PARTIAL
+  roll-forward, COMPLETED no-repair, completion collision and exact slot
+  release. On a completion CAS collision, an observed `COMPLETED` row with the
+  same publication ref is the only idempotent success. Every other returned
+  row fails with `ERR_TASK036_TRANSCRIPTION_RECOVERY_INCOMPLETE`, remains exactly
+  as observed, leaves the exact output slot `IN_PROGRESS` for that operation and
+  does not rewrite immutable or fixed publication bytes.
+- FAILED zero-effect coverage is the v2 classifier/runtime responsibility:
+  every FAILED shape performs no probe, factory, Provider, publication,
+  recovery, slot release or row mutation. V1 only preserves its existing
+  behavior; Recovery R2 does not introduce a v2-style FAILED classifier into v1.
+
+Recovery R2 has a fresh maximum of two bounded review/fix cycles. Real/native
+probe, Provider/model execution, download, private media, training, R1c, A2-R2,
+Release, Deploy and Production Activation remain excluded.
+
+### Recovery R2 design review outcome
+
+- Independent Critic: `ACCEPT / 0 Critical / 0 High / 0 Medium / 0 Low`.
+- Independent Tester: first `PASS / 0/0/2/0`; both wording/expectation
+  clarifications were incorporated; final `PASS / 0/0/0/0`.
+- Independent Judge: `ACCEPT / implementation allocated / 0/0/0/0`.
+- Design status: `ACCEPTED`; implementation may resume only in the three
+  allocated files above and remains `NOT_COMMIT_READY` until completion review.
+
+### Recovery R2 implementation completion
+
+- Exact seven-file direct regression: `269 PASS in 60.32s`.
+- Implementation Critic cycle 1: `REJECT / 0/1/0/0`; the two test-only
+  acceptance omissions were closed in fix cycle 1.
+- Final independent Critic: `ACCEPT / 0/0/0/0`.
+- Independent Tester: `PASS`; four-source compile, accepted matrix, scope and
+  fake/synthetic effect boundary pass.
+- Final independent Judge: `ACCEPT / COMMIT_READY / 0/0/0/0`.
+- External Evidence:
+  `C:\home\baisound\evidence\bai-video-production\TASK-098\a2-r1b-recovery-r2\20260920T022637+0900\checkpoint.md`,
+  SHA-256 `f41e89fae8bf8b04d2acb75bd675fa6e95b47017fe8a139ab816f2d68a56366b`,
+  read-back `PASS`.
+- A2-R1b is complete. R1c and A2-R2 remain unallocated.

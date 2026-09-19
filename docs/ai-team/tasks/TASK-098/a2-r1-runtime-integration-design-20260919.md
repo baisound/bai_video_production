@@ -504,3 +504,40 @@ implementation-eligible.
   native/private and training effects: `NOT_EXECUTED`.
 - R1b remains implementation-unauthorized until its fresh DEV-3 pre-mutation
   review accepts exact allowed files, permanent-lease/store behavior and tests.
+
+## 15. A2-R1b Recovery R2 bounded continuation
+
+The `2026-09-20` Owner authorization permits an additional corrective pass for
+the four unresolved A2-R1b High findings. This remains A2-R1b because it restores
+the already accepted TASK-036 runtime-managed transcription responsibility; it
+does not implement A2-R2 progress/cancel/adjudication or create a new owner.
+
+Recovery R2 must:
+
+1. validate an existing v2 permanent lease without reserve/CAS before any
+   recovery/finalize file, slot or operation effect;
+2. route v1/v2 recovery and final binding through common engine methods that own
+   operation validation, immutable publication read, promotion/completion,
+   fixed-output verification and slot release, while codecs/policies supply only
+   version-specific identity and validation;
+3. use one bounded pinned immutable reader for normal and foreign sets;
+4. share a pure v2 admission-chain validator and require `READY_CPU` or
+   `READY_CUDA` in both exact recovery and foreign audit;
+5. preserve v1 public API, identity, publication bytes, recovery ordering and
+   mutable field forwarding.
+
+Missing, PENDING, wrong-version or malformed v2 leases must fail without row,
+slot or output mutation. Foreign `BLOCKED` chains must fail before a requesting
+operation or lease is created. Valid bound PARTIAL recovery stays Provider-zero;
+COMPLETED verification never repairs changed fixed output; finalize never
+releases a mismatched slot.
+
+The existing 14-file ceiling remains. New implementation edits are expected in
+`task036_product_ports.py` and the two operation test files only. Completion
+requires the existing seven-file baseline plus missing-lease no-effect,
+foreign-BLOCKED, canonical/noncanonical timestamp, independent v1 immutable-byte
+golden and shared recovery/finalize parity tests; independent Critic and Tester;
+final Judge; zero unresolved Critical/High; and external Evidence read-back.
+
+Recovery R2 implementation outcome: `COMPLETE / 269 PASS / final Critic and
+Judge 0/0/0/0 ACCEPT / Tester PASS / external Evidence read-back PASS`.

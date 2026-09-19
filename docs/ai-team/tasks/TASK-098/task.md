@@ -1,6 +1,6 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_REVIEW_NEXT`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_IMPLEMENTATION_ALLOCATED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
@@ -9,8 +9,8 @@
 - Branch: `codex/task-098-universal-wav-review-integration`
 - Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`
 - Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
-- Active Atomic Unit: `none — A2-R2b2 is complete`
-- Next action: `perform a fresh R2c pre-mutation review; no R2c implementation is allocated`
+- Active Atomic Unit: `TASK-098/A2-R2c — trusted application/Shell projection and Human control`
+- Next action: `implement and fake-test only the exact four-source/five-test R2c allocation`
 
 ## Objective
 
@@ -484,3 +484,21 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - R2c Shell/Human application, store/schema, launcher/CLI, serialized v2/native,
   real Provider/model/private media, voice learning, installation and release
   remain unallocated or gated.
+
+## A2-R2c pre-mutation review
+
+- Accepted review:
+  `a2-r2c-shell-human-pre-mutation-review-20260920.md`.
+- Proposed responsibility: exact read-only R2a projection, process-local phase,
+  bounded server-held Human confirmation and fake-only Shell control routing.
+- Proposed ceiling: four source and five focused test files plus bounded docs.
+- Independent Critic: initial `0/3/1/0`; final `ACCEPT / 0/0/0/0`.
+- Independent Tester: initial `0/2/2/0`; final `PASS / 0/0/0/0`.
+- Independent Judge: `ACCEPT / IMPLEMENTATION_ALLOCATED / 0/0/0/0`.
+- Exact implementation allocation: four source and five test files in the
+  accepted review plus bounded docs.
+- Canonical design Evidence:
+  `evidence/a2-r2c-design-allocation-20260920-r01.md`.
+- Store/schema/reducer, launcher/first-run/CLI, serialized/native v2, real
+  Provider/model/private media, voice learning and release effects remain
+  read-only, unallocated or gated.

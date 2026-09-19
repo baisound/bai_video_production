@@ -1,13 +1,13 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A0_COMPLETE / CRITIC_TESTER_PASS / A1_DESIGN_ALLOCATION_NEXT`
+- Status: `A1_ACCEPTED / CRITIC_TESTER_JUDGE_PASS / A2-R0_IMPLEMENTATION_ALLOCATED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Unit: `TASK-098/A0 — authority, direct dependencies, canonical boundaries and staged integration map`
-- Next Atomic Unit: `TASK-098/A1 — contract design and allocation checkpoint; mutation not yet authorized`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`
+- Next Atomic Unit: `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`
 
 ## Objective
 
@@ -24,14 +24,16 @@ parallel canonical model.
 | TASK-006 | canonical ASR request, Transcript, SRT publication and Subtitle Workspace foundations | extend through existing interfaces; never create a second Transcript/SRT authority |
 | TASK-023 | canonical FasterWhisper provider identity and reconciliation | extend the existing `FasterWhisperProvider`; no duplicate backend |
 | TASK-036 | unified Product Shell, local transcription operation and Subtitle Workspace integration | user-facing review belongs in the existing Product entrypoint |
+| TASK-041 | canonical audio source/capability/range/review intent/external receipt/Human decision metadata | reuse from A1 forward; do not create a second durable audio-review store |
 | TASK-046 | canonical Voice Dataset revision, Training, ModelCandidate and Owner approval | TASK-097 is a subordinate status/execution unit; TASK-098 performs no training or model selection |
 | TASK-047 | Voice Capture provenance and candidate receipt ABI; production-recording gates | UWR receipts remain opaque foreign input until an exact TASK-047 ABI lands under fresh DEV-4 authority |
 | TASK-048 | canonical voice-quality calibration and Dataset-eligibility decisions | TASK-098 may expose body-free observations only; it creates no quality score or eligibility decision |
 | TASK-097 | local TASK-046 P-VS-3B/4A GPT-SoVITS iteration status | status-only dependency; no canonical Dataset/Training/ModelCandidate ownership |
 
 TASK-096 remains an independent release-tooling unit and is not extended by this
-Task. TASK-041 Audio Workspace may be read later if the review UI needs its
-audition contract, but it is not an A0/A1 direct dependency.
+Task. A1 promoted TASK-041 to a direct dependency after its existing audition,
+waveform capability, sample-range intent and external-receipt boundary proved to
+cover the durable review responsibility; A0 history remains unchanged.
 
 ## Reference Evidence
 
@@ -51,9 +53,9 @@ Only bounded capability and test evidence may inform BVP design.
 | FasterWhisper ASR | existing TASK-006/023 Provider and Application Service | extend in place; keep TranscriptManifest canonical |
 | CPU/CUDA preflight and auto fallback | ASR runtime capability service | `auto` may fall back only on preflight capability-unavailable before model load/inference; explicit `cuda`, post-start failures and partial output fail closed without retry |
 | model folder picker and cache | existing Product settings/model-cache route | local path is private operational state, never canonical/public identity |
-| Voice Capture receipt import | opaque foreign-input quarantine boundary | do not parse or admit it as TASK-047; exact compatibility is deferred until the canonical ABI/parser lands and passes fresh DEV-4 review |
-| waveform/segment review | TASK-036 Subtitle/Audio Review workspace | non-destructive review session; no duplicate media bytes or Timeline truth |
-| `bvp.audio-review.v1` | versioned review-session/import adapter | never final Transcript authority |
+| Voice Capture receipt import | unsupported foreign input only | do not read, copy, persist, parse or admit its body; exact compatibility is deferred until the canonical ABI/parser lands and passes fresh DEV-4 review |
+| waveform/segment review | TASK-041 48 kHz canonical Asset/Candidate plus TASK-036 Subtitle Workspace | non-destructive review session over `BOUND_VERIFIED` canonical media only; no duplicate media bytes or Timeline truth |
+| `bvp.audio-review.v1` | foreign format label / optional future bounded importer | never persisted as a BVP store and never final Transcript authority |
 | accepted clip export | later Dataset/Training boundary | candidate export only; never automatic Dataset adoption/training |
 | HTTP range/port 8766 | existing Product media transport | preserve seek/cancel/error semantics; do not ship a resident standalone server |
 | progress/cancel/single-flight | Product operation lifecycle | explicit state, bounded cancellation and truthful recovery; no silent retry; requested/effective device, preflight fallback reason and execution identity remain observable |
@@ -62,15 +64,19 @@ Only bounded capability and test evidence may inform BVP design.
 
 1. Current `main` has a candidate TASK-047 receipt design, but its exact
    schema/parser ABI is unallocated and not landed. The prototype's receipt name
-   has no authority to fill that gap. A1 may define only an opaque unsupported/
-   quarantined foreign-input state; exact compatibility is deferred to a fresh
+   has no authority to fill that gap. A1 may define only the body-free
+   `UNSUPPORTED_FOREIGN_RECEIPT` state and may not read, copy or persist the body;
+   exact compatibility is deferred to a fresh
    DEV-4 TASK-047 allocation after its canonical prerequisites are satisfied.
 2. `FasterWhisperConfig` already owns model/device/compute/cache/download settings,
    but it has no explicit runtime capability result or policy-aware auto fallback.
 3. The provider retains lazy model reuse, but cancellation/progress and runtime
    failure classification are not a complete Product contract.
-4. Subtitle Workspace is canonical for text review; waveform and audio-region
-   review require an additive session model rather than modification of Transcript.
+4. Subtitle Workspace is canonical for text review. Waveform and audio-region
+   review are limited to TASK-041 48 kHz `BOUND_VERIFIED` canonical Asset/Candidate
+   sources and require an ephemeral additive ViewModel rather than modification
+   of Transcript or a second durable review store. Arbitrary or unregistered WAV
+   input must first pass the existing ingest/normalization/Asset/Candidate route.
 5. Prototype `preserve_receipt_verbatim_in_review_json=true` conflicts with BVP
    public Evidence minimization and cannot be adopted. A foreign receipt remains
    untrusted/opaque; BVP privacy and provenance policy wins.
@@ -92,7 +98,8 @@ Human Gates, Context Scope and durable Evidence. No Product runtime changes.
 
 Design additive runtime-capability/result and review-session/import contracts,
 including preflight-only fallback identity, privacy and failure states. It may
-define only an unsupported/quarantined state for foreign UWR receipts. Before any
+define only the body-free `UNSUPPORTED_FOREIGN_RECEIPT` state for foreign UWR
+receipts and cannot read, copy or persist their body. Before any
 mutation, A1 must publish exact DEV depth, allowed files, acceptance and independent
 review. It cannot define or admit a TASK-047-compatible schema/parser, issue a
 TASK-048 quality decision or perform real Provider/model/audio execution.
@@ -110,9 +117,10 @@ private path handling with the existing settings route. Downloads remain explici
 
 ### A4 — review workspace
 
-Add non-destructive whole-media waveform/segment review and independent scroll
-semantics inside the unified Product. Transcript remains canonical and media bytes
-are not duplicated into review state.
+Add non-destructive waveform/segment review and independent scroll semantics
+inside the unified Product, limited initially to TASK-041 48 kHz
+`BOUND_VERIFIED` canonical Asset/Candidate sources. Transcript remains canonical,
+the ViewModel is ephemeral and media bytes are not duplicated into review state.
 
 ### A5 — Voice Capture provenance adapter (dependency blocked)
 
@@ -131,14 +139,14 @@ contained output roots.
 Each Unit completes `Design -> Implement -> Test -> Evidence/Diff Review ->
 Commit-ready` before the next Unit begins.
 
-## A0 Context Scope
+## Context Scope
 
 ### Must read
 
 - `AGENTS.md`
 - `docs/ai-team/current-state.md`
-- this Task, TASK-046 and TASK-097 status
-- TASK-006, TASK-023 and TASK-036 task/contract summaries
+- this Task, the accepted A1 contract, and TASK-046/TASK-097 status
+- TASK-006, TASK-023, TASK-036 and TASK-041 exact task/contract sections
 - the exact TASK-047 candidate-ABI and TASK-048 quality-boundary sections
 - `faster_whisper_asr.py`, `faster_whisper_reconciliation.py`,
   `subtitle_workspace.py` and their focused tests
@@ -146,7 +154,6 @@ Commit-ready` before the next Unit begins.
 
 ### Read if required
 
-- TASK-041 audio audition contract for A4
 - TASK-036 Product port/application-service code for A2-A4
 - packaging/install contracts for A6
 
@@ -197,3 +204,17 @@ Later Units must publish their own narrower allowed-file list before mutation.
   Product contracts; diff, Markdown structure and ASCII filename checks PASS.
 - Product/runtime/native/private effects: `NOT_EXECUTED`.
 - Evidence: `evidence/a0-authority-boundary-20260919-r01.md`.
+
+## A1 completion
+
+- Design: `a1-contract-allocation-design-20260919.md`, accepted under
+  `DEV-3 HIGH ASSURANCE`.
+- Independent Critic: first `0/4/1/0`, second `0/1/2/0`, final `0/0/0/0 ACCEPT`.
+- Independent Tester: design/diff/scope checks `PASS`; direct-dependency
+  regression is `40 PASS`.
+- Independent Judge: `ACCEPT`, unresolved `0 Critical / 0 High / 0 Medium / 0 Low`.
+- A2-R0 is allocated only for the pure immutable request/decision contract,
+  schema mirror, validation, public projection and focused tests. It cannot probe
+  a runtime, construct a Provider, run inference, download a model or change UI.
+- Product source/schema/runtime/native/private effects: `NOT_EXECUTED`.
+- Evidence: `evidence/a1-contract-allocation-20260919-r01.md`.

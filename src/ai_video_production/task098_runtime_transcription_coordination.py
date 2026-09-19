@@ -817,6 +817,224 @@ class RuntimeTranscriptionCoordinatorV1:
             raise self._conflict("Cancel request lost the control-row CAS")
         return request
 
+    def observe_cancel_request(
+        self,
+        coordinates: RuntimeTranscriptionCoordinatesV1,
+    ) -> RuntimeTranscriptionCancelRequestV1 | None:
+        """Read one exact worker-visible request without reserving control."""
+
+        c = coordinates
+        self._require_active(c, status="IN_PROGRESS")
+        control = self.store.find_operation(c.production_job_id, c.control_key)
+        if control is None:
+            return None
+        if (
+            control.job_id != c.production_job_id
+            or control.command_type != CONTROL_COMMAND
+            or control.idempotency_key != c.control_key
+            or control.attempt != 0
+        ):
+            raise self._conflict("Runtime control row identity is invalid")
+        if control.status == "PENDING" and control.result_ref is None:
+            return None
+        if control.status != "IN_PROGRESS" or control.result_ref is None:
+            raise self._conflict("Control row is not an observable cancel request")
+        try:
+            request_digest = _typed_control_digest("cancel-request", control.result_ref)
+        except ValueError as exc:
+            raise self._conflict("Control row is not an exact cancel request") from exc
+        request = self._evidence(c).load("cancel-request", request_digest)
+        if not self._record_binds(request, c) or request.cancel_request_id != control.operation_id:
+            raise self._conflict("Cancel request does not bind the exact worker coordinate")
+        return request
+
+    def validate_active_control_state(
+        self,
+        *,
+        production_job_id: str,
+        project_id: str,
+        source_asset_id: str,
+        source_asset_sha256: str,
+        runtime_operation_id: str,
+        expected_attempt: int,
+        runtime_admission_ref: str,
+        runtime_request_sha256: str,
+        runtime_decision_sha256: str,
+        slot_operation_id: str,
+    ) -> bool:
+        """Validate a pre-publication control chain without reserving or mutating it."""
+
+        try:
+            validate_id(production_job_id, IdKind.JOB)
+            validate_project_id(project_id)
+            validate_id(source_asset_id, IdKind.ASSET)
+            _digest(source_asset_sha256, "source_asset_sha256")
+            validate_id(runtime_operation_id, IdKind.OPERATION)
+            validate_id(slot_operation_id, IdKind.OPERATION)
+            _digest(runtime_request_sha256, "runtime_request_sha256")
+            _digest(runtime_decision_sha256, "runtime_decision_sha256")
+            if type(expected_attempt) is not int or expected_attempt < 1:
+                return False
+            expected_control_key = derive_control_key(
+                production_job_id=production_job_id,
+                project_id=project_id,
+                source_asset_id=source_asset_id,
+                source_asset_sha256=source_asset_sha256,
+                runtime_operation_id=runtime_operation_id,
+            )
+            control = self.store.find_operation(production_job_id, expected_control_key)
+            if control is None:
+                return True
+            if (
+                control.job_id != production_job_id
+                or control.command_type != CONTROL_COMMAND
+                or control.idempotency_key != expected_control_key
+                or control.attempt != 0
+            ):
+                return False
+            if control.status == "PENDING" and control.result_ref is None:
+                return True
+            if control.status != "IN_PROGRESS" or control.result_ref is None:
+                return False
+            evidence = _ControlEvidenceStore(self.output_directory, runtime_operation_id)
+            kind: str
+            try:
+                record_digest = _typed_control_digest("cancel-request", control.result_ref)
+                kind = "cancel-request"
+            except ValueError:
+                record_digest = _typed_control_digest("cancel-outcome", control.result_ref)
+                kind = "cancel-outcome"
+            record = evidence.load(kind, record_digest)
+
+            def binds(value: Any) -> bool:
+                return (
+                    value.runtime_operation_id == runtime_operation_id
+                    and value.slot_operation_id == slot_operation_id
+                    and value.source_asset_sha256 == source_asset_sha256
+                    and value.runtime_admission_ref == runtime_admission_ref
+                    and value.runtime_request_sha256 == runtime_request_sha256
+                    and value.runtime_decision_sha256 == runtime_decision_sha256
+                    and value.expected_attempt == expected_attempt
+                )
+
+            if not binds(record):
+                return False
+            if kind == "cancel-request":
+                return record.cancel_request_id == control.operation_id
+            request = evidence.load("cancel-request", record.cancel_request_sha256)
+            return (
+                binds(request)
+                and request.cancel_request_id == control.operation_id
+                and record.cancel_request_sha256 == request.record_sha256
+            )
+        except (OSError, ProductError, TypeError, ValueError):
+            return False
+
+    def acknowledge_worker_cancel(
+        self,
+        coordinates: RuntimeTranscriptionCoordinatesV1,
+        *,
+        provider_execution_started: bool,
+        provider_stop_confirmed: bool,
+        fault_hook: Callable[[str], None] | None = None,
+    ) -> RuntimeTranscriptionCancelOutcomeV1:
+        """Bind a closed worker outcome and terminal-close only a proven stop."""
+
+        if type(provider_execution_started) is not bool or type(provider_stop_confirmed) is not bool:
+            raise TypeError("worker cancellation facts must be booleans")
+        if not provider_execution_started and not provider_stop_confirmed:
+            raise ValueError("pre-Provider cancellation must be synchronously confirmed")
+        if provider_stop_confirmed:
+            outcome_name = (
+                "CANCELLED_AFTER_COOPERATIVE_BOUNDARY"
+                if provider_execution_started
+                else "CANCELLED_BEFORE_PROVIDER_EFFECT"
+            )
+            evidence_name = "COOPERATIVE_CHECKPOINT" if provider_execution_started else "PRE_PROVIDER"
+        else:
+            outcome_name = "STOP_NOT_CONFIRMED"
+            evidence_name = "NONE"
+        c = coordinates
+        control = self.store.find_operation(c.production_job_id, c.control_key)
+        if control is None:
+            raise self._conflict("No exact cancel request is available to acknowledge")
+        if (
+            control.job_id != c.production_job_id
+            or control.command_type != CONTROL_COMMAND
+            or control.idempotency_key != c.control_key
+            or control.attempt != 0
+            or control.result_ref is None
+        ):
+            raise self._conflict("Runtime control row is not an exact cancellation chain")
+        evidence = self._evidence(c)
+        existing: RuntimeTranscriptionCancelOutcomeV1 | None = None
+        try:
+            if control.status == "IN_PROGRESS":
+                try:
+                    request_digest = _typed_control_digest("cancel-request", control.result_ref)
+                    request = evidence.load("cancel-request", request_digest)
+                except ValueError:
+                    outcome_digest = _typed_control_digest("cancel-outcome", control.result_ref)
+                    existing = evidence.load("cancel-outcome", outcome_digest)
+                    request = evidence.load("cancel-request", existing.cancel_request_sha256)
+            elif control.status == "PARTIAL":
+                barrier_digest = _typed_control_digest("commit-barrier", control.result_ref)
+                barrier = evidence.load("commit-barrier", barrier_digest)
+                if barrier.barrier_owner != "TERMINAL_CLOSURE" or barrier.closure_record_sha256 is None:
+                    raise ValueError("control is not a cancellation terminal barrier")
+                existing = evidence.load("cancel-outcome", barrier.closure_record_sha256)
+                request = evidence.load("cancel-request", existing.cancel_request_sha256)
+            elif control.status == "COMPLETED":
+                commit_digest = _typed_control_digest("terminal-commit", control.result_ref)
+                commit = evidence.load("terminal-commit", commit_digest)
+                if commit.closure_kind != "CONFIRMED_CANCEL":
+                    raise ValueError("completed control is not a cancellation commit")
+                existing = evidence.load("cancel-outcome", commit.closure_record_sha256)
+                request = evidence.load("cancel-request", existing.cancel_request_sha256)
+            else:
+                raise ValueError("control status is not a cancellation state")
+        except (OSError, ProductError, ValueError) as exc:
+            if isinstance(exc, ProductError) and exc.code == "ERR_TASK098_CONTROL_CONFLICT":
+                raise
+            raise self._conflict("Runtime control row is not an exact cancellation chain") from exc
+        if (
+            not self._record_binds(request, c)
+            or request.cancel_request_id != control.operation_id
+        ):
+            raise self._conflict("Cancellation chain does not bind the exact request")
+        if existing is not None:
+            if (
+                not self._record_binds(existing, c)
+                or existing.cancel_request_sha256 != request.record_sha256
+                or existing.outcome != outcome_name
+                or existing.provider_execution_started is not provider_execution_started
+                or existing.provider_stop_confirmed is not provider_stop_confirmed
+                or existing.stop_evidence != evidence_name
+            ):
+                raise self._conflict("A different worker cancellation outcome is authoritative")
+            if provider_stop_confirmed:
+                self.close_confirmed_cancel(c, fault_hook=fault_hook)
+            return existing
+        outcome = RuntimeTranscriptionCancelOutcomeV1.create(
+            cancel_request_sha256=request.record_sha256,
+            runtime_operation_id=c.runtime_operation_id,
+            slot_operation_id=c.slot_operation_id,
+            source_asset_sha256=c.source_asset_sha256,
+            runtime_admission_ref=c.runtime_admission_ref,
+            runtime_request_sha256=c.runtime_request.record_sha256,
+            runtime_decision_sha256=c.runtime_decision.record_sha256,
+            expected_attempt=c.expected_attempt,
+            outcome=outcome_name,
+            provider_execution_started=provider_execution_started,
+            provider_stop_confirmed=provider_stop_confirmed,
+            stop_evidence=evidence_name,
+            acknowledged_at=self._now(),
+        )
+        bound = self.bind_cancel_outcome(c, outcome, fault_hook=fault_hook)
+        if provider_stop_confirmed:
+            self.close_confirmed_cancel(c, fault_hook=fault_hook)
+        return bound
+
     def bind_cancel_outcome(
         self,
         coordinates: RuntimeTranscriptionCoordinatesV1,
@@ -925,6 +1143,102 @@ class RuntimeTranscriptionCoordinatorV1:
             if fault_hook is not None:
                 fault_hook("after_first_generation_write")
             return barrier
+
+    def complete_publication(
+        self,
+        coordinates: RuntimeTranscriptionCoordinatesV1,
+        publication_set_sha256: str,
+        barrier: RuntimeTranscriptionCommitBarrierV1,
+        *,
+        fault_hook: Callable[[str], None] | None = None,
+    ) -> RuntimeTranscriptionCommitBarrierV1:
+        """Close only the exact publication barrier after main binds its digest."""
+
+        c = coordinates
+        digest = _digest(publication_set_sha256, "publication_set_sha256")
+        checked = RuntimeTranscriptionCommitBarrierV1.from_dict(barrier.to_dict())
+        if (
+            checked.barrier_owner != "PUBLICATION"
+            or checked.closure_record_sha256 is not None
+            or not self._record_binds(checked, c)
+        ):
+            raise self._conflict("Publication barrier does not bind the exact coordinate")
+        self._require_lease(c)
+        main = self._require_main(
+            c, statuses=("PARTIAL", "COMPLETED"), result_refs=(digest,),
+        )
+        self._require_slot(c, statuses=("IN_PROGRESS",))
+        evidence = self._evidence(c)
+        stored = evidence.load("commit-barrier", checked.record_sha256)
+        if stored.to_dict() != checked.to_dict():
+            raise self._conflict("Publication barrier Evidence differs from the caller")
+        barrier_ref = _typed_control_ref("commit-barrier", checked.record_sha256)
+        control = self.store.find_operation(c.production_job_id, c.control_key)
+        if control is None:
+            raise self._conflict("Publication control row is missing")
+        if main.status == "COMPLETED":
+            self._require_control(
+                c, control.operation_id, status="COMPLETED", result_ref=barrier_ref,
+            )
+            return checked
+        if control.status == "COMPLETED" and control.attempt == 0 and control.result_ref == barrier_ref:
+            self._require_control(
+                c, control.operation_id, status="COMPLETED", result_ref=barrier_ref,
+            )
+            return checked
+        self._require_control(
+            c, control.operation_id, status="IN_PROGRESS", result_ref=barrier_ref,
+        )
+        updated, changed = self.store.compare_and_set_operation_status(
+            control.operation_id,
+            expected_statuses=("IN_PROGRESS",),
+            expected_result_refs=(barrier_ref,),
+            expected_attempt=0,
+            status="COMPLETED",
+            result_ref=barrier_ref,
+            replace_result_ref=True,
+        )
+        if not changed and not (
+            updated.status == "COMPLETED"
+            and updated.attempt == 0
+            and updated.result_ref == barrier_ref
+        ):
+            raise self._conflict("Publication completion lost the control-row CAS")
+        if fault_hook is not None:
+            fault_hook("after_publication_control_completion")
+        return checked
+
+    def reconcile_publication(
+        self,
+        coordinates: RuntimeTranscriptionCoordinatesV1,
+        publication_set_sha256: str,
+        *,
+        fault_hook: Callable[[str], None] | None = None,
+    ) -> RuntimeTranscriptionCommitBarrierV1:
+        """Recover an exact already-bound publication without reserving control."""
+
+        c = coordinates
+        control = self.store.find_operation(c.production_job_id, c.control_key)
+        if control is None or control.result_ref is None:
+            raise self._conflict("Publication recovery control row is missing")
+        if (
+            control.job_id != c.production_job_id
+            or control.command_type != CONTROL_COMMAND
+            or control.idempotency_key != c.control_key
+            or control.attempt != 0
+            or control.status not in {"IN_PROGRESS", "COMPLETED"}
+        ):
+            raise self._conflict("Publication recovery control row is invalid")
+        try:
+            barrier_digest = _typed_control_digest("commit-barrier", control.result_ref)
+        except ValueError as exc:
+            raise self._conflict("Publication recovery lacks its typed barrier") from exc
+        barrier = self._evidence(c).load("commit-barrier", barrier_digest)
+        if barrier.barrier_owner != "PUBLICATION" or not self._record_binds(barrier, c):
+            raise self._conflict("Publication recovery barrier is foreign")
+        return self.complete_publication(
+            c, publication_set_sha256, barrier, fault_hook=fault_hook,
+        )
 
     def close_confirmed_cancel(
         self,

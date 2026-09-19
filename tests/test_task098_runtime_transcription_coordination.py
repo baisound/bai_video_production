@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import multiprocessing
 import os
 from pathlib import Path
+import sqlite3
 
 import pytest
 
@@ -238,6 +239,107 @@ def make_human_decision(coordinates):
         expected_attempt=coordinates.expected_attempt,
         decided_at=T0_TEXT,
     )
+
+
+def test_worker_observation_does_not_reserve_absent_control(tmp_path: Path) -> None:
+    coordinator, store, coordinates, _output = make_runtime(tmp_path)
+    assert coordinator.observe_cancel_request(coordinates) is None
+    assert store.find_operation(coordinates.production_job_id, coordinates.control_key) is None
+
+
+def test_worker_stop_not_confirmed_binds_outcome_without_terminal_or_slot_release(
+    tmp_path: Path,
+) -> None:
+    coordinator, store, coordinates, _output = make_runtime(tmp_path)
+    coordinator.request_cancel(coordinates)
+    first = coordinator.acknowledge_worker_cancel(
+        coordinates, provider_execution_started=True, provider_stop_confirmed=False,
+    )
+    second = coordinator.acknowledge_worker_cancel(
+        coordinates, provider_execution_started=True, provider_stop_confirmed=False,
+    )
+    assert first.to_dict() == second.to_dict()
+    assert first.outcome == "STOP_NOT_CONFIRMED"
+    main = store.get_operation(coordinates.runtime_operation_id)
+    slot = store.get_operation(coordinates.slot_operation_id)
+    assert (main.status, main.result_ref, main.attempt) == (
+        "IN_PROGRESS", coordinates.runtime_admission_ref, coordinates.expected_attempt,
+    )
+    assert (slot.status, slot.result_ref) == ("IN_PROGRESS", coordinates.runtime_operation_id)
+
+
+def test_worker_confirmed_pre_provider_cancel_is_idempotent_terminal_closure(
+    tmp_path: Path,
+) -> None:
+    coordinator, store, coordinates, _output = make_runtime(tmp_path)
+    coordinator.request_cancel(coordinates)
+    first = coordinator.acknowledge_worker_cancel(
+        coordinates, provider_execution_started=False, provider_stop_confirmed=True,
+    )
+    second = coordinator.acknowledge_worker_cancel(
+        coordinates, provider_execution_started=False, provider_stop_confirmed=True,
+    )
+    assert first.to_dict() == second.to_dict()
+    main = store.get_operation(coordinates.runtime_operation_id)
+    slot = store.get_operation(coordinates.slot_operation_id)
+    assert main.status == "FAILED"
+    assert main.result_ref == (
+        "task098-runtime-cancelled:v1:" + first.record_sha256.removeprefix("sha256:")
+    )
+    assert (slot.status, slot.result_ref) == ("PENDING", coordinates.runtime_operation_id)
+
+
+def test_publication_completion_requires_main_digest_and_is_idempotent(tmp_path: Path) -> None:
+    coordinator, store, coordinates, _output = make_runtime(tmp_path)
+    digest = "sha256:" + "f" * 64
+    barrier = coordinator.acquire_publication_barrier(coordinates, lambda _barrier: None)
+    main, changed = store.compare_and_set_operation_status(
+        coordinates.runtime_operation_id,
+        expected_statuses=("IN_PROGRESS",),
+        expected_result_refs=(coordinates.runtime_admission_ref,),
+        expected_attempt=coordinates.expected_attempt,
+        status="PARTIAL",
+        result_ref=digest,
+        replace_result_ref=True,
+    )
+    assert changed and main.result_ref == digest
+    first = coordinator.complete_publication(coordinates, digest, barrier)
+    second = coordinator.reconcile_publication(coordinates, digest)
+    assert first.to_dict() == second.to_dict()
+    control = store.find_operation(coordinates.production_job_id, coordinates.control_key)
+    assert control is not None
+    assert control.status == "COMPLETED"
+    assert control.result_ref == (
+        "task098-runtime-commit-barrier:v1:"
+        + barrier.record_sha256.removeprefix("sha256:")
+    )
+
+
+def test_completed_publication_rejects_foreign_control_identity(tmp_path: Path) -> None:
+    coordinator, store, coordinates, _output = make_runtime(tmp_path)
+    digest = "sha256:" + "f" * 64
+    barrier = coordinator.acquire_publication_barrier(coordinates, lambda _barrier: None)
+    _main, changed = store.compare_and_set_operation_status(
+        coordinates.runtime_operation_id,
+        expected_statuses=("IN_PROGRESS",),
+        expected_result_refs=(coordinates.runtime_admission_ref,),
+        expected_attempt=coordinates.expected_attempt,
+        status="PARTIAL",
+        result_ref=digest,
+        replace_result_ref=True,
+    )
+    assert changed
+    coordinator.complete_publication(coordinates, digest, barrier)
+    control = store.find_operation(coordinates.production_job_id, coordinates.control_key)
+    assert control is not None
+    with sqlite3.connect(store.path) as connection:
+        connection.execute(
+            "UPDATE operations SET command_type=? WHERE operation_id=?",
+            ("foreign.publication.control", control.operation_id),
+        )
+    with pytest.raises(ProductError) as rejected:
+        coordinator.complete_publication(coordinates, digest, barrier)
+    assert rejected.value.code == "ERR_TASK098_CONTROL_CONFLICT"
 
 
 def test_cancel_request_is_deterministic_and_idempotent(tmp_path: Path) -> None:

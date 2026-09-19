@@ -11,6 +11,10 @@ import pytest
 from ai_video_production import (
     FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService,
 )
+from ai_video_production.faster_whisper_asr import (
+    CooperativeTranscriptionCancelled,
+    CooperativeTranscriptionStopNotConfirmed,
+)
 from ai_video_production.errors import ProductError
 from ai_video_production.ids import IdKind, generate_id
 from ai_video_production.subtitles import AsrRequest
@@ -42,6 +46,26 @@ class FakeModel:
         ]), FakeInfo()
 
 
+class CloseTrackingIterator:
+    def __init__(self, values, *, close_error: BaseException | None = None) -> None:
+        self._values = iter(values)
+        self.close_error = close_error
+        self.close_calls = 0
+        self.next_calls = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        self.next_calls += 1
+        return next(self._values)
+
+    def close(self) -> None:
+        self.close_calls += 1
+        if self.close_error is not None:
+            raise self.close_error
+
+
 def test_provider_is_local_only_by_default_and_normalizes_segments(tmp_path: Path) -> None:
     media = tmp_path / "sample.wav"
     media.write_bytes(b"fixture")
@@ -59,6 +83,92 @@ def test_provider_is_local_only_by_default_and_normalizes_segments(tmp_path: Pat
         (100_000, 1_250_000, "こんにちは"),
         (1_250_000, 2_000_000, "次の字幕です"),
     ]
+
+
+def test_cooperative_provider_checks_before_first_and_later_segment_pull(tmp_path: Path) -> None:
+    media = tmp_path / "sample.wav"
+    media.write_bytes(b"fixture")
+    iterator = CloseTrackingIterator([
+        RawSegment(0.1, 1.0, "first"),
+        RawSegment(1.0, 2.0, "second"),
+    ])
+
+    class CooperativeModel(FakeModel):
+        def transcribe(self, path: str, **kwargs):
+            return iterator, FakeInfo()
+
+    probes = iter((False, True))
+    provider = FasterWhisperProvider(FasterWhisperConfig(), model_factory=CooperativeModel)
+    with pytest.raises(CooperativeTranscriptionCancelled):
+        provider.transcribe_cooperatively(
+            AsrRequest(generate_id(IdKind.ASSET), str(media)),
+            lambda: next(probes),
+        )
+    assert iterator.next_calls == 1
+    assert iterator.close_calls == 1
+
+
+def test_cooperative_provider_first_checkpoint_never_pulls_after_confirmed_close(tmp_path: Path) -> None:
+    media = tmp_path / "sample.wav"
+    media.write_bytes(b"fixture")
+    iterator = CloseTrackingIterator([RawSegment(0.1, 1.0, "unused")])
+
+    class CooperativeModel(FakeModel):
+        def transcribe(self, path: str, **kwargs):
+            return iterator, FakeInfo()
+
+    provider = FasterWhisperProvider(FasterWhisperConfig(), model_factory=CooperativeModel)
+    with pytest.raises(CooperativeTranscriptionCancelled):
+        provider.transcribe_cooperatively(
+            AsrRequest(generate_id(IdKind.ASSET), str(media)), lambda: True,
+        )
+    assert iterator.next_calls == 0
+    assert iterator.close_calls == 1
+
+
+@pytest.mark.parametrize("close_mode", ["missing", "throwing"])
+def test_cooperative_provider_requires_successful_exact_iterator_close(
+    tmp_path: Path, close_mode: str,
+) -> None:
+    media = tmp_path / "sample.wav"
+    media.write_bytes(b"fixture")
+    if close_mode == "missing":
+        iterator = iter([RawSegment(0.1, 1.0, "unused")])
+    else:
+        iterator = CloseTrackingIterator(
+            [RawSegment(0.1, 1.0, "unused")], close_error=RuntimeError("close failed"),
+        )
+
+    class CooperativeModel(FakeModel):
+        def transcribe(self, path: str, **kwargs):
+            return iterator, FakeInfo()
+
+    provider = FasterWhisperProvider(FasterWhisperConfig(), model_factory=CooperativeModel)
+    with pytest.raises(CooperativeTranscriptionStopNotConfirmed):
+        provider.transcribe_cooperatively(
+            AsrRequest(generate_id(IdKind.ASSET), str(media)), lambda: True,
+        )
+    if close_mode == "throwing":
+        assert iterator.close_calls == 1
+
+
+def test_cooperative_provider_rejects_non_boolean_probe_without_pulling(tmp_path: Path) -> None:
+    media = tmp_path / "sample.wav"
+    media.write_bytes(b"fixture")
+    iterator = CloseTrackingIterator([RawSegment(0.1, 1.0, "unused")])
+
+    class CooperativeModel(FakeModel):
+        def transcribe(self, path: str, **kwargs):
+            return iterator, FakeInfo()
+
+    provider = FasterWhisperProvider(FasterWhisperConfig(), model_factory=CooperativeModel)
+    with pytest.raises(ProductError) as exc:
+        provider.transcribe_cooperatively(
+            AsrRequest(generate_id(IdKind.ASSET), str(media)), lambda: 1,  # type: ignore[arg-type]
+        )
+    assert exc.value.code == "ERR_TASK098_RUNTIME_CANCEL_PROBE_INVALID"
+    assert iterator.next_calls == 0
+    assert iterator.close_calls == 0
 
 
 def test_explicit_download_authorization_and_cache_are_forwarded(tmp_path: Path) -> None:

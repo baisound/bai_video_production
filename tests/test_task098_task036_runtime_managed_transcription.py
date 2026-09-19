@@ -24,7 +24,14 @@ from ai_video_production.task036_product_ports import (
     _Task036LocalTranscriptionOperationEngine,
 )
 from ai_video_production.serialization import canonical_json_bytes, sha256_bytes
-from ai_video_production.task098_runtime_transcription_coordination import derive_runtime_operation_key_v2
+from ai_video_production.task098_runtime_transcription_coordination import (
+    RuntimeTranscriptionCoordinatesV1,
+    RuntimeTranscriptionCoordinatorV1,
+    derive_control_key,
+    derive_cross_version_guard_key,
+    derive_output_slot_key,
+    derive_runtime_operation_key_v2,
+)
 
 
 PROJECT_ID = "task098-project"
@@ -66,6 +73,8 @@ def make_port(
     provider_factory=None,
     port_clock: datetime | str = T0,
     store_clock: datetime | None = None,
+    phase_observer=None,
+    lifecycle_observer=None,
 ) -> tuple[Task036RuntimeManagedLocalTranscriptionPortV2, SQLiteProductStore, Probe, list[FasterWhisperConfig]]:
     db = tmp_path / "product.sqlite3"
     effective_store_clock = store_clock if store_clock is not None else T0
@@ -90,6 +99,8 @@ def make_port(
         store=store,
         production_job_id=job.job_id,
         language="ja",
+        phase_observer=phase_observer,
+        lifecycle_observer=lifecycle_observer,
     )
     port.output_directory.mkdir()
     return port, store, observed_probe, configs
@@ -102,6 +113,48 @@ def execute(port: Task036RuntimeManagedLocalTranscriptionPortV2, source: Path, d
         source_asset_id=ASSET_ID,
         source_asset_sha256=digest,
     )
+
+
+def request_runtime_cancel(
+    port: Task036RuntimeManagedLocalTranscriptionPortV2,
+    store: SQLiteProductStore,
+    source_digest: str,
+) -> RuntimeTranscriptionCoordinatesV1:
+    _observation, decision = evaluate_runtime_preflight(
+        port.runtime_request, Probe(True), observed_at=port._clock_text(), ttl_seconds=300,
+    )
+    operation = store.find_operation(
+        port.production_job_id,
+        port._operation_key(PROJECT_ID, ASSET_ID, source_digest),
+    )
+    slot = store.find_operation(
+        port.production_job_id,
+        derive_output_slot_key(
+            production_job_id=port.production_job_id, project_id=PROJECT_ID,
+        ),
+    )
+    assert operation is not None and slot is not None
+    provider_id, model_id, execution_sha = port._execution_identity()
+    coordinates = RuntimeTranscriptionCoordinatesV1(
+        production_job_id=port.production_job_id,
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=source_digest,
+        runtime_operation_id=operation.operation_id,
+        expected_attempt=operation.attempt,
+        runtime_admission_ref=port._admission_ref(source_digest, decision),
+        runtime_request=port.runtime_request,
+        runtime_decision=decision,
+        provider_id=provider_id,
+        model_id=model_id,
+        execution_config_sha256=execution_sha,
+        slot_operation_id=slot.operation_id,
+    )
+    RuntimeTranscriptionCoordinatorV1(
+        store=store, output_directory=port.output_directory.resolve(strict=True),
+        clock=port.clock,
+    ).request_cancel(coordinates)
+    return coordinates
 
 
 def _v2_process_worker(db: str, output: str, job_id: str, source: str, digest: str, marker: str, barrier, queue) -> None:
@@ -195,6 +248,800 @@ def test_v2_success_is_fake_only_and_public_projection_excludes_private_paths(tm
     assert '"model_download_authorized": false' in body
 
 
+def test_v2_success_observes_closed_phases_and_barrier_before_first_generation(tmp_path: Path) -> None:
+    phases: list[str] = []
+    lifecycle: list[str] = []
+    generation_absence: list[bool] = []
+    holder: dict[str, object] = {}
+
+    def observe_lifecycle(value: str) -> None:
+        lifecycle.append(value)
+        if value == "AFTER_PUBLICATION_BARRIER":
+            port = holder["port"]
+            assert isinstance(port, Task036RuntimeManagedLocalTranscriptionPortV2)
+            generation_absence.append(not (port.output_directory / ".task036-publications").exists())
+
+    port, store, _probe, _configs = make_port(
+        tmp_path, phase_observer=phases.append, lifecycle_observer=observe_lifecycle,
+    )
+    holder["port"] = port
+    source, digest = source_file(tmp_path)
+    outcome = execute(port, source, digest)
+
+    assert phases == [
+        "ADMISSION", "PROVIDER_STARTING", "PROVIDER_RUNNING",
+        "PUBLICATION_VALIDATING", "PUBLICATION_COMMITTING", "COMPLETED",
+    ]
+    assert lifecycle == [
+        "AFTER_PUBLICATION_BARRIER", "AFTER_IMMUTABLE_WRITE",
+        "AFTER_MAIN_PUBLICATION_CAS", "AFTER_CONTROL_PUBLICATION_COMPLETION",
+        "AFTER_FIXED_PROMOTION", "AFTER_MAIN_COMPLETION",
+    ]
+    assert generation_absence == [True]
+    control = store.find_operation(
+        port.production_job_id,
+        derive_control_key(
+            production_job_id=port.production_job_id,
+            project_id=PROJECT_ID,
+            source_asset_id=ASSET_ID,
+            source_asset_sha256=digest,
+            runtime_operation_id=outcome.operation_id,
+        ),
+    )
+    assert control is not None and control.status == "COMPLETED"
+    assert control.result_ref.startswith("task098-runtime-commit-barrier:v1:")
+    assert outcome.publication_set_sha256.startswith("sha256:")
+
+
+def test_v2_cancel_at_admission_closes_before_provider_factory_and_writes_no_generation(
+    tmp_path: Path,
+) -> None:
+    holder: dict[str, object] = {}
+
+    def observe_phase(value: str) -> None:
+        if value == "ADMISSION":
+            request_runtime_cancel(holder["port"], holder["store"], holder["digest"])
+
+    port, store, _probe, configs = make_port(tmp_path, phase_observer=observe_phase)
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == "ERR_TASK098_RUNTIME_CANCELLED"
+    assert exc.value.details == {}
+    assert configs == []
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == "FAILED"
+    assert not (port.output_directory / ".task036-publications").exists()
+
+
+@pytest.mark.parametrize(
+    ("cancel_phase", "expected_factory_calls", "expected_code", "expected_status"),
+    [
+        ("PROVIDER_STARTING", 0, "ERR_TASK098_RUNTIME_CANCELLED", "FAILED"),
+        (
+            "PROVIDER_RUNNING", 1,
+            "ERR_TASK098_RUNTIME_STOP_NOT_CONFIRMED", "IN_PROGRESS",
+        ),
+    ],
+)
+def test_v2_phase_boundary_cancel_is_rechecked_before_next_provider_effect(
+    tmp_path: Path, cancel_phase: str, expected_factory_calls: int,
+    expected_code: str, expected_status: str,
+) -> None:
+    holder: dict[str, object] = {}
+    model_calls: list[str] = []
+
+    class CountingModel(FakeModel):
+        def transcribe(self, source: str, **kwargs):
+            model_calls.append("transcribe")
+            return super().transcribe(source, **kwargs)
+
+    def provider_factory(config: FasterWhisperConfig):
+        return FasterWhisperProvider(
+            config, model_factory=lambda *_args, **_kwargs: CountingModel(),
+        )
+
+    def observe_phase(value: str) -> None:
+        if value == cancel_phase:
+            request_runtime_cancel(holder["port"], holder["store"], holder["digest"])
+
+    port, store, _probe, configs = make_port(
+        tmp_path, provider_factory=provider_factory, phase_observer=observe_phase,
+    )
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == expected_code
+    assert len(configs) == expected_factory_calls
+    assert model_calls == []
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == expected_status
+    slot = store.find_operation(
+        port.production_job_id,
+        derive_output_slot_key(production_job_id=port.production_job_id, project_id=PROJECT_ID),
+    )
+    assert slot is not None
+    assert slot.status == ("PENDING" if expected_status == "FAILED" else "IN_PROGRESS")
+    assert not (port.output_directory / ".task036-publications").exists()
+
+
+def test_v2_missing_iterator_close_binds_stop_not_confirmed_and_retains_slot(tmp_path: Path) -> None:
+    holder: dict[str, object] = {}
+
+    class CancelBeforeFirstPullModel(FakeModel):
+        def transcribe(self, source: str, **kwargs):
+            request_runtime_cancel(holder["port"], holder["store"], holder["digest"])
+            return [SimpleNamespace(start=0.0, end=1.0, text="unused", words=[])], SimpleNamespace(language="ja")
+
+    def provider_factory(config: FasterWhisperConfig):
+        return FasterWhisperProvider(
+            config, model_factory=lambda *_args, **_kwargs: CancelBeforeFirstPullModel(),
+        )
+
+    port, store, _probe, _configs = make_port(
+        tmp_path, provider_factory=provider_factory,
+    )
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == "ERR_TASK098_RUNTIME_STOP_NOT_CONFIRMED"
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    slot = store.find_operation(
+        port.production_job_id,
+        derive_output_slot_key(production_job_id=port.production_job_id, project_id=PROJECT_ID),
+    )
+    assert operation is not None and operation.status == "IN_PROGRESS"
+    assert operation.result_ref.startswith("task098-runtime-admission:v2:")
+    assert slot is not None and (slot.status, slot.result_ref) == ("IN_PROGRESS", operation.operation_id)
+    assert not (port.output_directory / ".task036-publications").exists()
+
+
+@pytest.mark.parametrize("close_throws", [False, True])
+def test_v2_exact_iterator_close_controls_terminal_cancellation(
+    tmp_path: Path, close_throws: bool,
+) -> None:
+    holder: dict[str, object] = {}
+    close_calls: list[str] = []
+    pull_calls: list[str] = []
+
+    class ControlledIterator:
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            pull_calls.append("next")
+            raise StopIteration
+
+        def close(self):
+            close_calls.append("close")
+            if close_throws:
+                raise RuntimeError("synthetic close failure")
+
+    class ControlledModel(FakeModel):
+        def transcribe(self, source: str, **kwargs):
+            request_runtime_cancel(holder["port"], holder["store"], holder["digest"])
+            return ControlledIterator(), SimpleNamespace(language="ja")
+
+    def provider_factory(config: FasterWhisperConfig):
+        return FasterWhisperProvider(
+            config, model_factory=lambda *_args, **_kwargs: ControlledModel(),
+        )
+
+    port, store, _probe, _configs = make_port(
+        tmp_path, provider_factory=provider_factory,
+    )
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == (
+        "ERR_TASK098_RUNTIME_STOP_NOT_CONFIRMED"
+        if close_throws else "ERR_TASK098_RUNTIME_CANCELLED"
+    )
+    assert close_calls == ["close"]
+    assert pull_calls == []
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None
+    assert operation.status == ("IN_PROGRESS" if close_throws else "FAILED")
+    assert not (port.output_directory / ".task036-publications").exists()
+
+
+def test_v2_cancel_after_one_segment_closes_before_later_pull(tmp_path: Path) -> None:
+    holder: dict[str, object] = {}
+    close_calls: list[str] = []
+    next_calls: list[str] = []
+
+    class CancelAfterFirstIterator:
+        def __init__(self) -> None:
+            self.done = False
+
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            next_calls.append("next")
+            if self.done:
+                raise AssertionError("a later segment pull must not occur")
+            self.done = True
+            request_runtime_cancel(holder["port"], holder["store"], holder["digest"])
+            return SimpleNamespace(start=0.0, end=1.0, text="first", words=[])
+
+        def close(self):
+            close_calls.append("close")
+
+    class CancelAfterFirstModel(FakeModel):
+        def transcribe(self, source: str, **kwargs):
+            return CancelAfterFirstIterator(), SimpleNamespace(language="ja")
+
+    def provider_factory(config: FasterWhisperConfig):
+        return FasterWhisperProvider(
+            config, model_factory=lambda *_args, **_kwargs: CancelAfterFirstModel(),
+        )
+
+    port, store, _probe, _configs = make_port(
+        tmp_path, provider_factory=provider_factory,
+    )
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == "ERR_TASK098_RUNTIME_CANCELLED"
+    assert next_calls == ["next"]
+    assert close_calls == ["close"]
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == "FAILED"
+    assert not (port.output_directory / ".task036-publications").exists()
+
+
+def test_v2_cancel_observed_immediately_after_provider_return_writes_nothing(tmp_path: Path) -> None:
+    holder: dict[str, object] = {}
+
+    class RequestOnExhaustion:
+        def __iter__(self):
+            return self
+
+        def __next__(self):
+            request_runtime_cancel(holder["port"], holder["store"], holder["digest"])
+            raise StopIteration
+
+        def close(self):
+            raise AssertionError("synchronous Provider return does not require iterator close")
+
+    class ExhaustingModel(FakeModel):
+        def transcribe(self, source: str, **kwargs):
+            return RequestOnExhaustion(), SimpleNamespace(language="ja")
+
+    port, store, _probe, _configs = make_port(
+        tmp_path,
+        provider_factory=lambda config: FasterWhisperProvider(
+            config, model_factory=lambda *_args, **_kwargs: ExhaustingModel(),
+        ),
+    )
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == "ERR_TASK098_RUNTIME_CANCELLED"
+    assert not (port.output_directory / ".task036-publications").exists()
+
+
+def test_v2_cancel_after_temporary_validation_wins_before_publication_barrier(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    holder: dict[str, object] = {}
+    original = _Task036LocalTranscriptionOperationEngine._validate_publication
+    requested = False
+
+    def validate_then_request(self, *args, **kwargs):
+        nonlocal requested
+        result = original(self, *args, **kwargs)
+        if not requested:
+            requested = True
+            request_runtime_cancel(holder["port"], holder["store"], holder["digest"])
+        return result
+
+    monkeypatch.setattr(
+        _Task036LocalTranscriptionOperationEngine, "_validate_publication",
+        validate_then_request,
+    )
+    port, store, _probe, _configs = make_port(tmp_path)
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == "ERR_TASK098_RUNTIME_CANCELLED"
+    assert requested is True
+    assert not (port.output_directory / ".task036-publications").exists()
+
+
+def test_v2_final_barrier_cas_loser_uses_cancel_path_and_old_writer_stays_zero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_acquire = RuntimeTranscriptionCoordinatorV1.acquire_publication_barrier
+    writer_calls: list[str] = []
+
+    def request_then_acquire(self, coordinates, writer, **kwargs):
+        self.request_cancel(coordinates)
+        return original_acquire(self, coordinates, writer, **kwargs)
+
+    original_store = Task036RuntimeManagedLocalTranscriptionPortV2._store_v2_publication_set
+
+    def counted_store(self, *args, **kwargs):
+        writer_calls.append("write")
+        return original_store(self, *args, **kwargs)
+
+    monkeypatch.setattr(
+        RuntimeTranscriptionCoordinatorV1, "acquire_publication_barrier",
+        request_then_acquire,
+    )
+    monkeypatch.setattr(
+        Task036RuntimeManagedLocalTranscriptionPortV2,
+        "_store_v2_publication_set", counted_store,
+    )
+    port, store, _probe, _configs = make_port(tmp_path)
+    source, digest = source_file(tmp_path)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == "ERR_TASK098_RUNTIME_CANCELLED"
+    assert writer_calls == []
+    assert not (port.output_directory / ".task036-publications").exists()
+
+
+def test_v2_provider_zero_recovery_completes_open_publication_control_before_promotion(
+    tmp_path: Path,
+) -> None:
+    def crash_after_main_bind(value: str) -> None:
+        if value == "AFTER_MAIN_PUBLICATION_CAS":
+            raise RuntimeError("synthetic crash after main publication bind")
+
+    port, store, _probe, _configs = make_port(
+        tmp_path, lifecycle_observer=crash_after_main_bind,
+    )
+    source, digest = source_file(tmp_path)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == "ERR_TASK036_TRANSCRIPTION_COMPLETION_UNCERTAIN"
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == "PARTIAL"
+    control = store.find_operation(
+        port.production_job_id,
+        derive_control_key(
+            production_job_id=port.production_job_id,
+            project_id=PROJECT_ID,
+            source_asset_id=ASSET_ID,
+            source_asset_sha256=digest,
+            runtime_operation_id=operation.operation_id,
+        ),
+    )
+    assert control is not None and control.status == "IN_PROGRESS"
+    assert not (port.output_directory / "transcript.json").exists()
+
+    provider_calls: list[str] = []
+    recovered_port = Task036RuntimeManagedLocalTranscriptionPortV2(
+        settings=port.settings,
+        runtime_request=port.runtime_request,
+        capability_probe=Probe(True),
+        provider_factory=lambda _config: provider_calls.append("provider"),  # type: ignore[arg-type,return-value]
+        clock=port.clock,
+        output_directory=port.output_directory,
+        store=store,
+        production_job_id=port.production_job_id,
+        language=port.language,
+    )
+    recovered = recovered_port.recover_local_media(
+        project_id=PROJECT_ID, source_path=source,
+        source_asset_id=ASSET_ID, source_asset_sha256=digest,
+    )
+    assert provider_calls == []
+    assert recovered.recovered_from_durable_result is True
+    assert store.get_operation(operation.operation_id).status == "COMPLETED"
+    assert store.get_operation(control.operation_id).status == "COMPLETED"
+    assert (port.output_directory / "transcript.json").is_file()
+
+
+@pytest.mark.parametrize(
+    ("event", "drift"),
+    [
+        ("AFTER_CONTROL_PUBLICATION_COMPLETION", "lease"),
+        ("AFTER_CONTROL_PUBLICATION_COMPLETION", "main-attempt"),
+        ("AFTER_CONTROL_PUBLICATION_COMPLETION", "control"),
+        ("AFTER_CONTROL_PUBLICATION_COMPLETION", "slot"),
+        ("AFTER_FIXED_PROMOTION", "slot"),
+    ],
+)
+def test_v2_publication_revalidates_exact_rows_after_observable_boundaries(
+    tmp_path: Path, event: str, drift: str,
+) -> None:
+    holder: dict[str, object] = {}
+    mutated = False
+
+    def observe_lifecycle(value: str) -> None:
+        nonlocal mutated
+        if value != event or mutated:
+            return
+        mutated = True
+        port = holder["port"]
+        store = holder["store"]
+        digest = holder["digest"]
+        assert isinstance(port, Task036RuntimeManagedLocalTranscriptionPortV2)
+        assert isinstance(store, SQLiteProductStore)
+        operation = store.find_operation(
+            port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+        )
+        slot = store.find_operation(
+            port.production_job_id,
+            derive_output_slot_key(
+                production_job_id=port.production_job_id, project_id=PROJECT_ID,
+            ),
+        )
+        assert operation is not None and slot is not None
+        if drift == "lease":
+            key = derive_cross_version_guard_key(
+                project_id=PROJECT_ID, source_asset_id=ASSET_ID,
+                source_asset_sha256=digest,
+            )
+            row = store.find_operation(port.production_job_id, key)
+            assert row is not None
+            _changed_row, changed = store.compare_and_set_operation_status(
+                row.operation_id,
+                expected_statuses=("IN_PROGRESS",),
+                expected_result_refs=(row.result_ref,),
+                expected_attempt=row.attempt,
+                status="PARTIAL",
+                result_ref=row.result_ref,
+                replace_result_ref=True,
+            )
+        elif drift == "main-attempt":
+            _changed_row, changed = store.compare_and_set_operation_status(
+                operation.operation_id,
+                expected_statuses=("PARTIAL",),
+                expected_result_refs=(operation.result_ref,),
+                expected_attempt=operation.attempt,
+                status="PARTIAL",
+                result_ref=operation.result_ref,
+                replace_result_ref=True,
+                increment_attempt=True,
+            )
+        elif drift == "control":
+            key = derive_control_key(
+                production_job_id=port.production_job_id,
+                project_id=PROJECT_ID,
+                source_asset_id=ASSET_ID,
+                source_asset_sha256=digest,
+                runtime_operation_id=operation.operation_id,
+            )
+            row = store.find_operation(port.production_job_id, key)
+            assert row is not None
+            _changed_row, changed = store.compare_and_set_operation_status(
+                row.operation_id,
+                expected_statuses=("COMPLETED",),
+                expected_result_refs=(row.result_ref,),
+                expected_attempt=0,
+                status="FAILED",
+                result_ref=row.result_ref,
+                replace_result_ref=True,
+            )
+        else:
+            _changed_row, changed = store.compare_and_set_operation_status(
+                slot.operation_id,
+                expected_statuses=("IN_PROGRESS",),
+                expected_result_refs=(operation.operation_id,),
+                expected_attempt=slot.attempt,
+                status="PENDING",
+                result_ref=operation.operation_id,
+                replace_result_ref=True,
+            )
+        assert changed
+
+    port, store, _probe, _configs = make_port(
+        tmp_path, lifecycle_observer=observe_lifecycle,
+    )
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError):
+        execute(port, source, digest)
+    assert mutated is True
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status != "COMPLETED"
+    fixed = port.output_directory / "transcript.json"
+    assert fixed.exists() is (event == "AFTER_FIXED_PROMOTION")
+
+
+@pytest.mark.parametrize(
+    "crash_event",
+    [
+        "AFTER_IMMUTABLE_WRITE",
+        "AFTER_CONTROL_PUBLICATION_COMPLETION",
+        "AFTER_FIXED_PROMOTION",
+        "AFTER_MAIN_COMPLETION",
+    ],
+)
+def test_v2_crash_matrix_is_provider_zero_and_preserves_exact_durable_boundary(
+    tmp_path: Path, crash_event: str,
+) -> None:
+    def crash(value: str) -> None:
+        if value == crash_event:
+            raise RuntimeError("synthetic lifecycle crash")
+
+    port, store, _probe, _configs = make_port(tmp_path, lifecycle_observer=crash)
+    source, digest = source_file(tmp_path)
+    with pytest.raises(ProductError) as exc:
+        execute(port, source, digest)
+    assert exc.value.code == "ERR_TASK036_TRANSCRIPTION_COMPLETION_UNCERTAIN"
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None
+    expected_status = "IN_PROGRESS" if crash_event == "AFTER_IMMUTABLE_WRITE" else (
+        "COMPLETED" if crash_event == "AFTER_MAIN_COMPLETION" else "PARTIAL"
+    )
+    assert operation.status == expected_status
+    slot = store.find_operation(
+        port.production_job_id,
+        derive_output_slot_key(production_job_id=port.production_job_id, project_id=PROJECT_ID),
+    )
+    assert slot is not None and (slot.status, slot.result_ref) == (
+        "IN_PROGRESS", operation.operation_id,
+    )
+    generation = port.output_directory / ".task036-publications" / operation.operation_id
+    immutable_before = {
+        path.name: path.read_bytes() for path in generation.iterdir() if path.is_file()
+    }
+    fixed_names = ("transcript.json", "subtitles.srt", "transcription-report.json")
+    fixed_before = {
+        name: (port.output_directory / name).read_bytes()
+        for name in fixed_names if (port.output_directory / name).is_file()
+    }
+    provider_calls: list[str] = []
+    recovered_port = Task036RuntimeManagedLocalTranscriptionPortV2(
+        settings=port.settings,
+        runtime_request=port.runtime_request,
+        capability_probe=Probe(True),
+        provider_factory=lambda _config: provider_calls.append("provider"),  # type: ignore[arg-type,return-value]
+        clock=port.clock,
+        output_directory=port.output_directory,
+        store=store,
+        production_job_id=port.production_job_id,
+        language=port.language,
+    )
+    if crash_event == "AFTER_IMMUTABLE_WRITE":
+        with pytest.raises(ProductError) as rejected:
+            recovered_port.recover_local_media(
+                project_id=PROJECT_ID, source_path=source,
+                source_asset_id=ASSET_ID, source_asset_sha256=digest,
+            )
+        assert rejected.value.code == "ERR_TASK036_TRANSCRIPTION_RECOVERY_NOT_AVAILABLE"
+        assert recovered_port.recovery_state(
+            project_id=PROJECT_ID, source_asset_id=ASSET_ID,
+            source_asset_sha256=digest,
+        ) == "CORRUPT_BLOCKED"
+    else:
+        recovered = recovered_port.recover_local_media(
+            project_id=PROJECT_ID, source_path=source,
+            source_asset_id=ASSET_ID, source_asset_sha256=digest,
+        )
+        assert recovered.recovered_from_durable_result is True
+        assert store.get_operation(operation.operation_id).status == "COMPLETED"
+    assert provider_calls == []
+    assert {
+        path.name: path.read_bytes() for path in generation.iterdir() if path.is_file()
+    } == immutable_before
+    if fixed_before:
+        assert {
+            name: (port.output_directory / name).read_bytes() for name in fixed_names
+        } == fixed_before
+
+
+def test_v2_recovery_rejects_attempt_aba_before_terminal_completion(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def crash(value: str) -> None:
+        if value == "AFTER_MAIN_PUBLICATION_CAS":
+            raise RuntimeError("synthetic crash")
+
+    port, store, _probe, _configs = make_port(tmp_path, lifecycle_observer=crash)
+    source, digest = source_file(tmp_path)
+    with pytest.raises(ProductError):
+        execute(port, source, digest)
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == "PARTIAL"
+    admitted_attempt = operation.attempt
+    original_promote = _Task036LocalTranscriptionOperationEngine._promote_publication
+    drifted = False
+
+    def promote_then_drift(self, *args, **kwargs):
+        nonlocal drifted
+        result = original_promote(self, *args, **kwargs)
+        if not drifted:
+            drifted = True
+            current = store.get_operation(operation.operation_id)
+            _row, changed = store.compare_and_set_operation_status(
+                current.operation_id,
+                expected_statuses=("PARTIAL",),
+                expected_result_refs=(current.result_ref,),
+                expected_attempt=current.attempt,
+                status="PARTIAL",
+                result_ref=current.result_ref,
+                replace_result_ref=True,
+                increment_attempt=True,
+            )
+            assert changed
+        return result
+
+    monkeypatch.setattr(
+        _Task036LocalTranscriptionOperationEngine, "_promote_publication",
+        promote_then_drift,
+    )
+    provider_calls: list[str] = []
+    recovered_port = Task036RuntimeManagedLocalTranscriptionPortV2(
+        settings=port.settings,
+        runtime_request=port.runtime_request,
+        capability_probe=Probe(True),
+        provider_factory=lambda _config: provider_calls.append("provider"),  # type: ignore[arg-type,return-value]
+        clock=port.clock,
+        output_directory=port.output_directory,
+        store=store,
+        production_job_id=port.production_job_id,
+        language=port.language,
+    )
+    with pytest.raises(ProductError) as rejected:
+        recovered_port.recover_local_media(
+            project_id=PROJECT_ID, source_path=source,
+            source_asset_id=ASSET_ID, source_asset_sha256=digest,
+        )
+    assert rejected.value.code == "ERR_TASK098_CONTROL_CONFLICT"
+    assert provider_calls == []
+    current = store.get_operation(operation.operation_id)
+    assert (current.status, current.attempt) == ("PARTIAL", admitted_attempt + 1)
+
+
+def test_v2_recovery_does_not_accept_completed_cas_loser_from_another_attempt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def crash(value: str) -> None:
+        if value == "AFTER_MAIN_PUBLICATION_CAS":
+            raise RuntimeError("synthetic crash")
+
+    port, store, _probe, _configs = make_port(tmp_path, lifecycle_observer=crash)
+    source, digest = source_file(tmp_path)
+    with pytest.raises(ProductError):
+        execute(port, source, digest)
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None and operation.status == "PARTIAL"
+    original_compare = SQLiteProductStore.compare_and_set_operation_status
+    collided = False
+
+    def complete_from_new_attempt(self, operation_id, **kwargs):
+        nonlocal collided
+        if (
+            operation_id == operation.operation_id
+            and kwargs.get("status") == "COMPLETED"
+            and not collided
+        ):
+            collided = True
+            current = self.get_operation(operation_id)
+            winner, changed = original_compare(
+                self,
+                operation_id,
+                expected_statuses=("PARTIAL",),
+                expected_result_refs=(current.result_ref,),
+                expected_attempt=current.attempt,
+                status="COMPLETED",
+                result_ref=current.result_ref,
+                replace_result_ref=True,
+                increment_attempt=True,
+            )
+            assert changed and winner.attempt == current.attempt + 1
+            return winner, False
+        return original_compare(self, operation_id, **kwargs)
+
+    monkeypatch.setattr(
+        SQLiteProductStore, "compare_and_set_operation_status", complete_from_new_attempt,
+    )
+    provider_calls: list[str] = []
+    recovered_port = Task036RuntimeManagedLocalTranscriptionPortV2(
+        settings=port.settings,
+        runtime_request=port.runtime_request,
+        capability_probe=Probe(True),
+        provider_factory=lambda _config: provider_calls.append("provider"),  # type: ignore[arg-type,return-value]
+        clock=port.clock,
+        output_directory=port.output_directory,
+        store=store,
+        production_job_id=port.production_job_id,
+        language=port.language,
+    )
+    with pytest.raises(ProductError) as rejected:
+        recovered_port.recover_local_media(
+            project_id=PROJECT_ID, source_path=source,
+            source_asset_id=ASSET_ID, source_asset_sha256=digest,
+        )
+    assert rejected.value.code == "ERR_TASK036_TRANSCRIPTION_RECOVERY_INCOMPLETE"
+    assert collided is True
+    assert provider_calls == []
+    current = store.get_operation(operation.operation_id)
+    assert (current.status, current.attempt) == ("COMPLETED", operation.attempt + 1)
+
+
+@pytest.mark.parametrize(
+    "replacement_ref",
+    [
+        "task098-runtime-cancel-outcome:v1:short",
+        "task098-runtime-cancel-outcome:v1:" + "f" * 64,
+    ],
+)
+def test_v2_recovery_state_rejects_malformed_or_unbound_active_control(
+    tmp_path: Path, replacement_ref: str,
+) -> None:
+    holder: dict[str, object] = {}
+
+    class CancelModel(FakeModel):
+        def transcribe(self, source: str, **kwargs):
+            request_runtime_cancel(holder["port"], holder["store"], holder["digest"])
+            return [SimpleNamespace(start=0.0, end=1.0, text="unused", words=[])], SimpleNamespace(language="ja")
+
+    port, store, _probe, _configs = make_port(
+        tmp_path,
+        provider_factory=lambda config: FasterWhisperProvider(
+            config, model_factory=lambda *_args, **_kwargs: CancelModel(),
+        ),
+    )
+    source, digest = source_file(tmp_path)
+    holder.update(port=port, store=store, digest=digest)
+    with pytest.raises(ProductError) as stopped:
+        execute(port, source, digest)
+    assert stopped.value.code == "ERR_TASK098_RUNTIME_STOP_NOT_CONFIRMED"
+    operation = store.find_operation(
+        port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest),
+    )
+    assert operation is not None
+    control = store.find_operation(
+        port.production_job_id,
+        derive_control_key(
+            production_job_id=port.production_job_id,
+            project_id=PROJECT_ID,
+            source_asset_id=ASSET_ID,
+            source_asset_sha256=digest,
+            runtime_operation_id=operation.operation_id,
+        ),
+    )
+    assert control is not None
+    _row, changed = store.compare_and_set_operation_status(
+        control.operation_id,
+        expected_statuses=("IN_PROGRESS",),
+        expected_result_refs=(control.result_ref,),
+        expected_attempt=0,
+        status="IN_PROGRESS",
+        result_ref=replacement_ref,
+        replace_result_ref=True,
+    )
+    assert changed
+    assert port.recovery_state(
+        project_id=PROJECT_ID, source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+    ) == "CORRUPT_BLOCKED"
+
+
 def test_v2_bound_publication_recovers_and_finalize_releases_fixed_slot(tmp_path: Path) -> None:
     port, store, _probe, _configs = make_port(tmp_path)
     source, digest = source_file(tmp_path)
@@ -232,6 +1079,65 @@ def test_v2_bound_publication_recovers_and_finalize_releases_fixed_slot(tmp_path
     assert fixed_bytes_before_recovery == {
         name: (port.output_directory / name).read_bytes()
         for name in fixed_bytes_before_recovery
+    }
+
+
+@pytest.mark.parametrize("control_drift", ["missing", "foreign"])
+def test_v2_verification_only_requires_exact_publication_control(
+    tmp_path: Path, control_drift: str,
+) -> None:
+    port, store, _probe, _configs = make_port(tmp_path)
+    source, digest = source_file(tmp_path)
+    outcome = execute(port, source, digest)
+    assert outcome.operation_id and outcome.slot_operation_id
+    control_key = derive_control_key(
+        production_job_id=port.production_job_id,
+        project_id=PROJECT_ID,
+        source_asset_id=ASSET_ID,
+        source_asset_sha256=digest,
+        runtime_operation_id=outcome.operation_id,
+    )
+    control = store.find_operation(port.production_job_id, control_key)
+    assert control is not None and control.status == "COMPLETED"
+    with sqlite3.connect(store.path) as connection:
+        if control_drift == "missing":
+            connection.execute(
+                "DELETE FROM operations WHERE operation_id=?", (control.operation_id,),
+            )
+        else:
+            connection.execute(
+                "UPDATE operations SET command_type=? WHERE operation_id=?",
+                ("foreign.publication.control", control.operation_id),
+            )
+    fixed_before = {
+        name: (port.output_directory / name).read_bytes()
+        for name in ("transcript.json", "subtitles.srt", "transcription-report.json")
+    }
+    provider_calls: list[str] = []
+    recovered_port = Task036RuntimeManagedLocalTranscriptionPortV2(
+        settings=port.settings,
+        runtime_request=port.runtime_request,
+        capability_probe=Probe(True),
+        provider_factory=lambda _config: provider_calls.append("provider"),  # type: ignore[arg-type,return-value]
+        clock=port.clock,
+        output_directory=port.output_directory,
+        store=store,
+        production_job_id=port.production_job_id,
+        language=port.language,
+    )
+    with pytest.raises(ProductError) as rejected:
+        recovered_port.recover_local_media(
+            project_id=PROJECT_ID,
+            source_path=source,
+            source_asset_id=ASSET_ID,
+            source_asset_sha256=digest,
+        )
+    assert rejected.value.code == "ERR_TASK098_CONTROL_CONFLICT"
+    assert provider_calls == []
+    slot = store.get_operation(outcome.slot_operation_id)
+    assert (slot.status, slot.result_ref) == ("IN_PROGRESS", outcome.operation_id)
+    assert fixed_before == {
+        name: (port.output_directory / name).read_bytes() for name in fixed_before
     }
 
 
@@ -302,7 +1208,7 @@ def test_v2_provider_factory_raw_exception_is_redacted_and_durable_admission_is_
     ) == "ADJUDICATION_REQUIRED_NO_PUBLICATION"
 
 
-def test_v2_crash_before_publication_binding_is_adjudication_only(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_v2_crash_after_publication_barrier_before_first_write_is_blocked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     def crash_before_publication(*_args, **_kwargs):
         raise RuntimeError("synthetic crash")
 
@@ -311,13 +1217,14 @@ def test_v2_crash_before_publication_binding_is_adjudication_only(tmp_path: Path
     source, digest = source_file(tmp_path)
     with pytest.raises(ProductError) as exc:
         execute(port, source, digest)
-    assert exc.value.code == "ERR_TASK036_TRANSCRIPTION_UNCERTAIN"
+    assert exc.value.code == "ERR_TASK036_TRANSCRIPTION_COMPLETION_UNCERTAIN"
     operation = store.find_operation(port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest))
-    assert operation is not None and operation.status == "PARTIAL"
+    assert operation is not None and operation.status == "IN_PROGRESS"
     assert operation.result_ref is not None and operation.result_ref.startswith("task098-runtime-admission:v2:")
+    assert not (port.output_directory / ".task036-publications" / operation.operation_id).exists()
     assert port.recovery_state(
         project_id=PROJECT_ID, source_asset_id=ASSET_ID, source_asset_sha256=digest,
-    ) == "ADJUDICATION_REQUIRED_NO_PUBLICATION"
+    ) == "CORRUPT_BLOCKED"
 
 
 def test_v2_promotion_failure_leaves_bound_publication_recoverable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -564,11 +1471,12 @@ def test_v2_publication_bind_cas_failure_does_not_fabricate_recovery(tmp_path: P
     assert failed_once is True
     assert exc.value.code == "ERR_TASK036_TRANSCRIPTION_COMPLETION_UNCERTAIN"
     operation = store.find_operation(port.production_job_id, port._operation_key(PROJECT_ID, ASSET_ID, digest))
-    assert operation is not None and operation.status == "PARTIAL"
+    assert operation is not None and operation.status == "IN_PROGRESS"
     assert operation.result_ref is not None and operation.result_ref.startswith("task098-runtime-admission:v2:")
+    assert (port.output_directory / ".task036-publications" / operation.operation_id).is_dir()
     assert port.recovery_state(
         project_id=PROJECT_ID, source_asset_id=ASSET_ID, source_asset_sha256=digest,
-    ) == "ADJUDICATION_REQUIRED_NO_PUBLICATION"
+    ) == "CORRUPT_BLOCKED"
 
 
 @pytest.mark.parametrize("field", ["model", "beam_size", "vad_filter", "cache_directory"])

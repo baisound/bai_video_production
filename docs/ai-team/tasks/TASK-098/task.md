@@ -1,16 +1,16 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_IMPLEMENTATION_ALLOCATED`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_REVIEW_NEXT`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`
 - Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
-- Active Atomic Unit: `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`
-- Next action: `implement and fake-test only the exact seven-file R2b2 allocation; R2c remains unallocated`
+- Active Atomic Unit: `none — A2-R2b2 is complete`
+- Next action: `perform a fresh R2c pre-mutation review; no R2c implementation is allocated`
 
 ## Objective
 
@@ -450,3 +450,37 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - R2c, store/schema, Shell/launcher/CLI, serialized v2/native activation, real
   Provider/model/private media, voice learning and release effects remain
   unallocated or gated.
+
+## A2-R2b2 implementation and verification
+
+- Implementation stays within the accepted ceiling: three allocated source
+  files and three allocated test files changed; the fourth allowed legacy v1
+  regression file remains unchanged.
+- Legacy `transcribe(request)` remains exact. V2 alone uses cooperative lazy-
+  iterator checks, exact single `close()` confirmation, and closed cancellation
+  outcomes without adding a callback to the generic Provider Protocol.
+- Publication now binds main digest before exact control completion, revalidates
+  lease/main attempt/slot/control at observable boundaries, and requires exact
+  publication control in both recoverable and verification-only Provider-zero
+  recovery. Missing or foreign completed control fails closed and retains the
+  slot.
+- Final direct spawn-mode TASK-006/023/036/098 regression: `488 PASS / 0 FAIL`
+  at `/tmp/bvp-task098-r2b2-spawn-regression-20260920T235000-r11`.
+- Judge-specific completed-control and verification-only negative matrix:
+  `3 PASS / 0 FAIL` at
+  `/tmp/bvp-task098-r2b2-judge-high-fixes-20260920T234000-r10`.
+- `py_compile` and `git diff --check`: `PASS`.
+- Final independent Critic: `ACCEPT / 0/0/0/0`.
+- Final independent Tester: `PASS / 0/0/0/0`; independent pytest remained
+  `NOT_CONFIRMED` only because of its known WSL2 `E_ACCESSDENIED` route, without
+  conflict with the main isolated spawn result.
+- Final independent Judge: `ACCEPT / COMMIT_READY / 0/0/0/0` after external
+  checkpoint hash/read-back and all eleven path hashes were verified.
+- Accepted external checkpoint:
+  `C:\home\baisound\evidence\bai-video-production\TASK-098\a2-r2b2-provider-engine-lifecycle\20260920T235500+0900\checkpoint.md`, SHA-256
+  `1e8432890ffa6e697e960ee137cce4f0fa39d8dd8774328e213b13d74b2d96d0`.
+- Canonical tracked Evidence:
+  `evidence/a2-r2b2-provider-engine-lifecycle-20260920-r01.md`.
+- R2c Shell/Human application, store/schema, launcher/CLI, serialized v2/native,
+  real Provider/model/private media, voice learning, installation and release
+  remain unallocated or gated.

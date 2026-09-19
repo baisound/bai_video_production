@@ -25,7 +25,13 @@ from .cut_candidates import (
 )
 from .desktop_media_workflow import IngestedMediaIdentity
 from .errors import ProductError, ProductErrorCategory
-from .faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider, LocalTranscriptionService
+from .faster_whisper_asr import (
+    CooperativeTranscriptionCancelled,
+    CooperativeTranscriptionStopNotConfirmed,
+    FasterWhisperConfig,
+    FasterWhisperProvider,
+    LocalTranscriptionService,
+)
 from .faster_whisper_reconciliation import build_execution_identity_for_config
 from .faster_whisper_runtime_contract import (
     FasterWhisperRuntimeCapabilityObservationV1,
@@ -44,8 +50,25 @@ from .serialization import canonical_json_bytes, sha256_bytes
 from .store import SQLiteProductStore
 from .subtitles import TranscriptManifest, TranscriptSegment, TranscriptWord
 from .task036_pre_edit_runtime import LocalTranscriptionOutcome
-from .task098_runtime_transcription_coordination import derive_runtime_operation_key_v2
+from .task098_runtime_transcription_coordination import (
+    RuntimeTranscriptionCoordinatesV1,
+    RuntimeTranscriptionCoordinatorV1,
+    derive_runtime_operation_key_v2,
+)
 from .timebase import FrameRate
+
+
+class _RuntimeCancelSignal(Exception):
+    def __init__(self, *, provider_started: bool, stop_confirmed: bool) -> None:
+        super().__init__()
+        self.provider_started = provider_started
+        self.stop_confirmed = stop_confirmed
+
+
+class _RuntimePublicationBlocked(Exception):
+    def __init__(self, cause: BaseException) -> None:
+        super().__init__()
+        self.cause = cause
 
 
 def _file_sha256(path: Path) -> str:
@@ -798,6 +821,22 @@ class _Task036LocalTranscriptionOperationEngine:
                 ProductErrorCategory.DATA_INTEGRITY,
             ) from exc
 
+    def _generation_present_or_unknown(self, operation_id: str) -> bool:
+        """Conservatively detect any per-operation immutable generation."""
+
+        try:
+            with self._pinned_output_directory() as output:
+                if not output.child_exists(".task036-publications"):
+                    output.assert_current()
+                    return False
+                with output.pin_child(".task036-publications") as generations:
+                    present = generations.child_exists(operation_id)
+                    generations.assert_current()
+                    output.assert_current()
+                    return present
+        except (OSError, ValueError, ProductError):
+            return True
+
     def _read_immutable_publication_payloads(
         self,
         operation_id: str,
@@ -1369,24 +1408,79 @@ class _Task036LocalTranscriptionOperationEngine:
         language: str | None,
         timeline_rate: FrameRate,
         redact_unexpected: bool,
+        runtime_coordinates: RuntimeTranscriptionCoordinatesV1 | None = None,
+        runtime_coordinator: RuntimeTranscriptionCoordinatorV1 | None = None,
+        phase_observer: Callable[[str], None] | None = None,
+        lifecycle_observer: Callable[[str], None] | None = None,
     ) -> Any:
         """One post-admission Provider/publication lifecycle for v1 and v2."""
 
+        if (runtime_coordinates is None) is not (runtime_coordinator is None):
+            raise ValueError("runtime coordinates and coordinator must be supplied together")
+        runtime_mode = runtime_coordinates is not None
+        phase_values = {
+            "ADMISSION", "PROVIDER_STARTING", "PROVIDER_RUNNING",
+            "PUBLICATION_VALIDATING", "PUBLICATION_COMMITTING", "COMPLETED", "BLOCKED",
+        }
+        lifecycle_values = {
+            "AFTER_PUBLICATION_BARRIER", "AFTER_IMMUTABLE_WRITE",
+            "AFTER_MAIN_PUBLICATION_CAS", "AFTER_CONTROL_PUBLICATION_COMPLETION",
+            "AFTER_FIXED_PROMOTION", "AFTER_MAIN_COMPLETION",
+        }
+
+        def observe_phase(value: str) -> None:
+            if value not in phase_values:
+                raise ValueError("runtime phase is outside the closed set")
+            if phase_observer is not None:
+                phase_observer(value)
+
+        def observe_lifecycle(value: str) -> None:
+            if value not in lifecycle_values:
+                raise ValueError("runtime lifecycle boundary is outside the closed set")
+            if lifecycle_observer is not None:
+                lifecycle_observer(value)
+
+        def cancel_requested() -> bool:
+            assert runtime_coordinates is not None and runtime_coordinator is not None
+            return runtime_coordinator.observe_cancel_request(runtime_coordinates) is not None
+
+        publication_barrier_owned = False
         try:
+            if runtime_mode:
+                observe_phase("ADMISSION")
+                if cancel_requested():
+                    raise _RuntimeCancelSignal(provider_started=False, stop_confirmed=True)
+                observe_phase("PROVIDER_STARTING")
+                if cancel_requested():
+                    raise _RuntimeCancelSignal(provider_started=False, stop_confirmed=True)
             provider = provider_factory()
             validate_provider(provider)
             with self._provider_snapshot(
                 snapshot, source_asset_sha256, temporary / "provider-source.media",
             ) as provider_source:
-                publication = LocalTranscriptionService.run(
-                    provider_source,
-                    temporary / "publication",
-                    provider=provider,
-                    source_asset_id=source_asset_id,
-                    language=language,
-                    timeline_rate=timeline_rate,
-                    include_word_timestamps=True,
-                )
+                if runtime_mode:
+                    observe_phase("PROVIDER_RUNNING")
+                    if cancel_requested():
+                        raise _RuntimeCancelSignal(
+                            provider_started=True, stop_confirmed=False,
+                        )
+                try:
+                    publication = LocalTranscriptionService.run(
+                        provider_source,
+                        temporary / "publication",
+                        provider=provider,
+                        source_asset_id=source_asset_id,
+                        language=language,
+                        timeline_rate=timeline_rate,
+                        include_word_timestamps=True,
+                        cooperative_stop_probe=(cancel_requested if runtime_mode else None),
+                    )
+                except CooperativeTranscriptionCancelled:
+                    raise _RuntimeCancelSignal(provider_started=True, stop_confirmed=True)
+                except CooperativeTranscriptionStopNotConfirmed:
+                    raise _RuntimeCancelSignal(provider_started=True, stop_confirmed=False)
+            if runtime_mode and cancel_requested():
+                raise _RuntimeCancelSignal(provider_started=True, stop_confirmed=True)
             if (
                 publication.transcript.provider_id != provider_id
                 or publication.transcript.model_id != model_id
@@ -1396,6 +1490,8 @@ class _Task036LocalTranscriptionOperationEngine:
                     "Provider returned a foreign Transcript identity",
                     ProductErrorCategory.DATA_INTEGRITY,
                 )
+            if runtime_mode:
+                observe_phase("PUBLICATION_VALIDATING")
             values = {
                 "transcript.json": publication.transcript_path.read_bytes(),
                 "subtitles.srt": publication.subtitle_path.read_bytes(),
@@ -1407,20 +1503,72 @@ class _Task036LocalTranscriptionOperationEngine:
                 provider_id=provider_id,
                 model_id=model_id,
             )
-            publication_set_sha256 = store_publication(values, transcript, provider)
+            if runtime_mode and cancel_requested():
+                raise _RuntimeCancelSignal(provider_started=True, stop_confirmed=True)
+            publication_barrier = None
+            publication_digest: dict[str, str] = {}
+            if runtime_mode:
+                assert runtime_coordinates is not None and runtime_coordinator is not None
+
+                def write_first_generation(barrier: Any) -> None:
+                    nonlocal publication_barrier_owned
+                    publication_barrier_owned = True
+                    observe_phase("PUBLICATION_COMMITTING")
+                    observe_lifecycle("AFTER_PUBLICATION_BARRIER")
+                    publication_digest["value"] = store_publication(values, transcript, provider)
+                    observe_lifecycle("AFTER_IMMUTABLE_WRITE")
+
+                try:
+                    publication_barrier = runtime_coordinator.acquire_publication_barrier(
+                        runtime_coordinates, write_first_generation,
+                    )
+                except BaseException as exc:
+                    if isinstance(exc, (_RuntimeCancelSignal, KeyboardInterrupt, SystemExit)):
+                        raise
+                    if not publication_barrier_owned:
+                        try:
+                            if cancel_requested():
+                                raise _RuntimeCancelSignal(
+                                    provider_started=True, stop_confirmed=True,
+                                ) from exc
+                        except _RuntimeCancelSignal:
+                            raise
+                        except BaseException:
+                            pass
+                    raise _RuntimePublicationBlocked(exc) from exc
+                publication_set_sha256 = publication_digest["value"]
+            else:
+                publication_set_sha256 = store_publication(values, transcript, provider)
+            partial_cas: dict[str, Any] = {
+                "expected_statuses": ("IN_PROGRESS",),
+                "expected_result_refs": (admission_ref,),
+                "status": "PARTIAL",
+                "result_ref": publication_set_sha256,
+                "replace_result_ref": True,
+            }
+            if runtime_coordinates is not None:
+                partial_cas["expected_attempt"] = runtime_coordinates.expected_attempt
             partial, bound = self.store.compare_and_set_operation_status(
                 operation.operation_id,
-                expected_statuses=("IN_PROGRESS",),
-                expected_result_refs=(admission_ref,),
-                status="PARTIAL",
-                result_ref=publication_set_sha256,
-                replace_result_ref=True,
+                **partial_cas,
             )
             if not bound or partial.result_ref != publication_set_sha256:
                 raise ProductError(
                     "ERR_TASK036_TRANSCRIPTION_COMPLETION_UNCERTAIN",
                     "Immutable publication exists but its durable identity did not bind",
                     ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                )
+            if runtime_mode:
+                observe_lifecycle("AFTER_MAIN_PUBLICATION_CAS")
+                assert runtime_coordinates is not None
+                assert runtime_coordinator is not None
+                assert publication_barrier is not None
+                runtime_coordinator.complete_publication(
+                    runtime_coordinates, publication_set_sha256, publication_barrier,
+                )
+                observe_lifecycle("AFTER_CONTROL_PUBLICATION_COMPLETION")
+                runtime_coordinator.complete_publication(
+                    runtime_coordinates, publication_set_sha256, publication_barrier,
                 )
             promoted = self._promote_publication(
                 publication.output_directory,
@@ -1435,13 +1583,26 @@ class _Task036LocalTranscriptionOperationEngine:
                     "Fixed publication differs from the immutable generation",
                     ProductErrorCategory.DATA_INTEGRITY,
                 )
+            if runtime_mode:
+                observe_lifecycle("AFTER_FIXED_PROMOTION")
+                assert runtime_coordinates is not None
+                assert runtime_coordinator is not None
+                assert publication_barrier is not None
+                runtime_coordinator.complete_publication(
+                    runtime_coordinates, publication_set_sha256, publication_barrier,
+                )
+            completion_cas: dict[str, Any] = {
+                "expected_statuses": ("PARTIAL",),
+                "expected_result_refs": (publication_set_sha256,),
+                "status": "COMPLETED",
+                "result_ref": publication_set_sha256,
+                "replace_result_ref": True,
+            }
+            if runtime_coordinates is not None:
+                completion_cas["expected_attempt"] = runtime_coordinates.expected_attempt
             completed, changed = self.store.compare_and_set_operation_status(
                 operation.operation_id,
-                expected_statuses=("PARTIAL",),
-                expected_result_refs=(publication_set_sha256,),
-                status="COMPLETED",
-                result_ref=publication_set_sha256,
-                replace_result_ref=True,
+                **completion_cas,
             )
             if not changed or completed.result_ref != publication_set_sha256:
                 raise ProductError(
@@ -1449,11 +1610,72 @@ class _Task036LocalTranscriptionOperationEngine:
                     "Transcript publication completed but durable operation did not",
                     ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
                 )
+            if runtime_mode:
+                observe_lifecycle("AFTER_MAIN_COMPLETION")
+                assert runtime_coordinates is not None
+                assert runtime_coordinator is not None
+                assert publication_barrier is not None
+                runtime_coordinator.complete_publication(
+                    runtime_coordinates, publication_set_sha256, publication_barrier,
+                )
+                observe_phase("COMPLETED")
             return build_outcome(LocalTranscriptionOutcome(
                 transcript, True, False,
                 operation.operation_id, slot.operation_id, publication_set_sha256,
             ))
+        except _RuntimeCancelSignal as signal:
+            assert runtime_coordinates is not None and runtime_coordinator is not None
+            runtime_coordinator.acknowledge_worker_cancel(
+                runtime_coordinates,
+                provider_execution_started=signal.provider_started,
+                provider_stop_confirmed=signal.stop_confirmed,
+            )
+            if signal.stop_confirmed:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CANCELLED",
+                    "Runtime-managed transcription was cancelled",
+                    ProductErrorCategory.STATE,
+                ) from None
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_STOP_NOT_CONFIRMED",
+                "Runtime-managed transcription stop could not be confirmed",
+                ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+            ) from None
+        except _RuntimePublicationBlocked as blocked:
+            if phase_observer is not None:
+                try:
+                    observe_phase("BLOCKED")
+                except BaseException:
+                    pass
+            if isinstance(blocked.cause, ProductError):
+                raise blocked.cause
+            if redact_unexpected:
+                raise ProductError(
+                    "ERR_TASK036_TRANSCRIPTION_COMPLETION_UNCERTAIN",
+                    "Runtime publication stopped after the durable commit barrier",
+                    ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                ) from None
+            raise blocked.cause
         except BaseException as exc:
+            if runtime_mode and (
+                publication_barrier_owned
+                or (
+                    isinstance(exc, ProductError)
+                    and exc.code.startswith("ERR_TASK098_CONTROL_")
+                )
+            ):
+                if phase_observer is not None:
+                    try:
+                        observe_phase("BLOCKED")
+                    except BaseException:
+                        pass
+                if redact_unexpected and not isinstance(exc, ProductError):
+                    raise ProductError(
+                        "ERR_TASK036_TRANSCRIPTION_COMPLETION_UNCERTAIN",
+                        "Runtime publication stopped after the durable commit barrier",
+                        ProductErrorCategory.HUMAN_REVIEW_REQUIRED,
+                    ) from None
+                raise
             code = (
                 exc.code
                 if isinstance(exc, ProductError)
@@ -1464,6 +1686,10 @@ class _Task036LocalTranscriptionOperationEngine:
                 operation.operation_id,
                 expected_statuses=("IN_PROGRESS",),
                 expected_result_refs=(admission_ref,),
+                expected_attempt=(
+                    runtime_coordinates.expected_attempt
+                    if runtime_coordinates is not None else None
+                ),
                 status="PARTIAL",
                 last_error_code=code,
             )
@@ -1605,6 +1831,9 @@ class _Task036LocalTranscriptionOperationEngine:
         build_outcome: Callable[[LocalTranscriptionOutcome, Any], Any],
         missing_code: str,
         missing_message: str,
+        before_promotion: Callable[[Any, Any, Any], None] | None = None,
+        before_completion: Callable[[Any, Any, Any], None] | None = None,
+        require_expected_attempt: bool = False,
     ) -> Any:
         """Single Provider-zero immutable recovery lifecycle for v1 and v2."""
 
@@ -1658,6 +1887,8 @@ class _Task036LocalTranscriptionOperationEngine:
             slot = self._acquire_output_slot(
                 project_id, operation.operation_id, allow_existing_owner=True,
             )
+        if before_promotion is not None:
+            before_promotion(operation, slot, context)
         if state == "VERIFICATION_ONLY":
             promoted = self._publication_bytes()
         else:
@@ -1679,16 +1910,20 @@ class _Task036LocalTranscriptionOperationEngine:
                 ProductErrorCategory.DATA_INTEGRITY,
             )
         if state == "RECOVERABLE_PUBLICATION":
+            if before_completion is not None:
+                before_completion(operation, slot, context)
             completed, changed = self.store.compare_and_set_operation_status(
                 operation.operation_id,
                 expected_statuses=("PARTIAL",),
                 expected_result_refs=(operation.result_ref,),
+                expected_attempt=(operation.attempt if require_expected_attempt else None),
                 status="COMPLETED",
                 result_ref=operation.result_ref,
                 replace_result_ref=True,
             )
             if not changed and (
                 completed.status != "COMPLETED"
+                or completed.attempt != operation.attempt
                 or completed.result_ref != operation.result_ref
             ):
                 raise ProductError(
@@ -1870,7 +2105,6 @@ class _Task036LocalTranscriptionOperationEngine:
             operation, _created = self.store.reserve_operation(self.production_job_id, "task036.local_transcription.v2", operation_key)
             if operation.status != "PENDING" or operation.result_ref is not None:
                 raise ProductError("ERR_TASK036_TRANSCRIPTION_RECOVERY_REQUIRED", "Durable runtime transcription already exists; explicit recovery is required", ProductErrorCategory.HUMAN_REVIEW_REQUIRED)
-            self._preflight_generation_target(operation.operation_id)
             observation, decision = evaluate_runtime_preflight(
                 binding.runtime_request, binding.capability_probe, observed_at=binding._clock_text(), ttl_seconds=300,
             )
@@ -1899,6 +2133,26 @@ class _Task036LocalTranscriptionOperationEngine:
                 if isinstance(exc, ProductError):
                     raise
                 raise ProductError("ERR_TASK036_TRANSCRIPTION_OUTPUT_SLOT_BUSY", "Runtime transcription could not acquire the fixed output slot", ProductErrorCategory.HUMAN_REVIEW_REQUIRED) from None
+            coordinates = RuntimeTranscriptionCoordinatesV1(
+                production_job_id=self.production_job_id,
+                project_id=project_id,
+                source_asset_id=source_asset_id,
+                source_asset_sha256=source_asset_sha256,
+                runtime_operation_id=operation.operation_id,
+                expected_attempt=operation.attempt,
+                runtime_admission_ref=admission_ref,
+                runtime_request=binding.runtime_request,
+                runtime_decision=decision,
+                provider_id=provider_id,
+                model_id=model_id,
+                execution_config_sha256=execution_config_sha256,
+                slot_operation_id=slot.operation_id,
+            )
+            coordinator = RuntimeTranscriptionCoordinatorV1(
+                store=self.store,
+                output_directory=self.output_directory.resolve(strict=True),
+                clock=binding.clock,
+            )
             effective: dict[str, FasterWhisperConfig] = {}
 
             def make_provider() -> FasterWhisperProvider:
@@ -1948,6 +2202,10 @@ class _Task036LocalTranscriptionOperationEngine:
                 language=binding.language,
                 timeline_rate=binding.timeline_rate,
                 redact_unexpected=True,
+                runtime_coordinates=coordinates,
+                runtime_coordinator=coordinator,
+                phase_observer=binding._phase_observer,
+                lifecycle_observer=binding._lifecycle_observer,
             )
 
     def recover_runtime_managed(
@@ -1960,7 +2218,7 @@ class _Task036LocalTranscriptionOperationEngine:
         source_asset_sha256: str,
     ) -> Any:
         operation_key = binding._operation_key(project_id, source_asset_id, source_asset_sha256)
-        provider_id, model_id, _execution_sha = binding._execution_identity()
+        provider_id, model_id, execution_config_sha256 = binding._execution_identity()
 
         def validate_lease() -> None:
             self._require_existing_v2_lease(
@@ -1980,6 +2238,35 @@ class _Task036LocalTranscriptionOperationEngine:
             )
             return transcript, decision, state
 
+        def reconcile_publication(operation: Any, slot: Any, decision: Any) -> None:
+            if not isinstance(decision, FasterWhisperRuntimeDecisionV1):
+                raise ProductError(
+                    "ERR_TASK036_TRANSCRIPTION_RECOVERY_INCOMPLETE",
+                    "Runtime publication decision is unavailable for control recovery",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            admission_ref = binding._admission_ref(source_asset_sha256, decision)
+            coordinates = RuntimeTranscriptionCoordinatesV1(
+                production_job_id=self.production_job_id,
+                project_id=project_id,
+                source_asset_id=source_asset_id,
+                source_asset_sha256=source_asset_sha256,
+                runtime_operation_id=operation.operation_id,
+                expected_attempt=operation.attempt,
+                runtime_admission_ref=admission_ref,
+                runtime_request=binding.runtime_request,
+                runtime_decision=decision,
+                provider_id=provider_id,
+                model_id=model_id,
+                execution_config_sha256=execution_config_sha256,
+                slot_operation_id=slot.operation_id,
+            )
+            RuntimeTranscriptionCoordinatorV1(
+                store=self.store,
+                output_directory=self.output_directory.resolve(strict=True),
+                clock=binding.clock,
+            ).reconcile_publication(coordinates, operation.result_ref)
+
         return self._recover_bound_publication(
             project_id=project_id, source_path=source_path,
             source_asset_id=source_asset_id, source_asset_sha256=source_asset_sha256,
@@ -1991,6 +2278,9 @@ class _Task036LocalTranscriptionOperationEngine:
             build_outcome=lambda outcome, decision: binding._outcome(outcome, decision),
             missing_code="ERR_TASK036_TRANSCRIPTION_RECOVERY_NOT_AVAILABLE",
             missing_message="No runtime-managed transcription is available for recovery",
+            before_promotion=reconcile_publication,
+            before_completion=reconcile_publication,
+            require_expected_attempt=True,
         )
 
     def finalize_runtime_managed(
@@ -2324,6 +2614,8 @@ class Task036RuntimeManagedLocalTranscriptionPortV2:
         production_job_id: str,
         language: str | None = None,
         timeline_rate: FrameRate = FrameRate(30000, 1001),
+        phase_observer: Callable[[str], None] | None = None,
+        lifecycle_observer: Callable[[str], None] | None = None,
     ) -> None:
         if not isinstance(settings, FasterWhisperProviderSettingsV2):
             raise TypeError("settings must be FasterWhisperProviderSettingsV2")
@@ -2333,6 +2625,10 @@ class Task036RuntimeManagedLocalTranscriptionPortV2:
             raise TypeError("provider_factory and clock must be callable")
         if language is not None and not isinstance(language, str):
             raise ValueError("language must be text or null")
+        if phase_observer is not None and not callable(phase_observer):
+            raise TypeError("phase_observer must be callable or null")
+        if lifecycle_observer is not None and not callable(lifecycle_observer):
+            raise TypeError("lifecycle_observer must be callable or null")
         self.settings = settings
         self.runtime_request = FasterWhisperRuntimeRequestV1.from_dict(runtime_request.to_dict())
         self.capability_probe = capability_probe
@@ -2343,6 +2639,8 @@ class Task036RuntimeManagedLocalTranscriptionPortV2:
         self.production_job_id = production_job_id
         self.language = language
         self.timeline_rate = timeline_rate
+        self._phase_observer = phase_observer
+        self._lifecycle_observer = lifecycle_observer
 
     def _engine(self, provider: FasterWhisperProvider | None = None) -> _Task036LocalTranscriptionOperationEngine:
         # The engine methods used before factory entry never touch provider.
@@ -2738,6 +3036,34 @@ class Task036RuntimeManagedLocalTranscriptionPortV2:
         operation = self.store.find_operation(self.production_job_id, self._operation_key(project_id, source_asset_id, source_asset_sha256))
         if operation is None:
             return "PENDING_ADMISSION"
+        if operation.status == "IN_PROGRESS":
+            engine = self._engine()
+            if engine._generation_present_or_unknown(operation.operation_id):
+                return "CORRUPT_BLOCKED"
+            admission = (
+                _V2_ADMISSION_RE.fullmatch(operation.result_ref)
+                if isinstance(operation.result_ref, str) else None
+            )
+            slot = self.store.find_operation(
+                self.production_job_id, engine._slot_key(project_id),
+            )
+            if admission is not None and slot is not None and not RuntimeTranscriptionCoordinatorV1(
+                store=self.store,
+                output_directory=self.output_directory.resolve(strict=True),
+                clock=self.clock,
+            ).validate_active_control_state(
+                production_job_id=self.production_job_id,
+                project_id=project_id,
+                source_asset_id=source_asset_id,
+                source_asset_sha256=source_asset_sha256,
+                runtime_operation_id=operation.operation_id,
+                expected_attempt=operation.attempt,
+                runtime_admission_ref=operation.result_ref,
+                runtime_request_sha256=self.runtime_request.record_sha256,
+                runtime_decision_sha256="sha256:" + admission.group(2),
+                slot_operation_id=slot.operation_id,
+            ):
+                return "CORRUPT_BLOCKED"
         if isinstance(operation.result_ref, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", operation.result_ref):
             try:
                 engine = self._engine()

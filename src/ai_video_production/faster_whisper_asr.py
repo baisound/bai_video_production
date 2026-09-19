@@ -26,6 +26,14 @@ from .timeline_mapping import EditSegment, TimelineMappingService
 ModelFactory = Callable[..., Any]
 
 
+class CooperativeTranscriptionCancelled(Exception):
+    """The exact owned segment iterator stopped at a cooperative checkpoint."""
+
+
+class CooperativeTranscriptionStopNotConfirmed(Exception):
+    """A stop was requested but the exact iterator could not be closed safely."""
+
+
 @dataclass(frozen=True, slots=True)
 class FasterWhisperConfig:
     model: str = "small"
@@ -164,6 +172,131 @@ class FasterWhisperProvider:
             request.include_word_timestamps,
         )
 
+    def transcribe_cooperatively(
+        self,
+        request: AsrRequest,
+        stop_probe: Callable[[], bool],
+    ) -> TranscriptManifest:
+        """Run the v2-only lazy-iterator path with strict stop checkpoints.
+
+        The legacy ``transcribe(request)`` entrypoint intentionally remains a
+        separate unchanged call path.  This method is selected only by the
+        runtime-managed v2 engine.
+        """
+
+        if not callable(stop_probe):
+            raise TypeError("stop_probe must be callable")
+        source = Path(request.media_path).expanduser()
+        if not source.is_absolute():
+            source = source.absolute()
+        stable_descriptor = bool(
+            os.name == "posix"
+            and re.fullmatch(r"/proc/[0-9]+/fd/[0-9]+", source.as_posix())
+        )
+        try:
+            observed = os.stat(source, follow_symlinks=True)
+            unsafe_link = source.is_symlink() and not stable_descriptor
+        except OSError:
+            observed = None
+            unsafe_link = True
+        if observed is None or not stat.S_ISREG(observed.st_mode) or unsafe_link:
+            raise ProductError(
+                "ERR_ASR_MEDIA_NOT_FOUND", "Input media must be an existing regular file",
+                ProductErrorCategory.VALIDATION,
+            )
+        try:
+            model = self._model()
+            transcribe_kwargs: dict[str, Any] = {
+                "language": request.language,
+                "beam_size": self.config.beam_size,
+                "vad_filter": self.config.vad_filter,
+            }
+            if request.include_word_timestamps:
+                transcribe_kwargs["word_timestamps"] = True
+            raw_segments, info = model.transcribe(str(source), **transcribe_kwargs)
+            segments = self._segments_cooperatively(
+                raw_segments,
+                stop_probe=stop_probe,
+                include_word_timestamps=request.include_word_timestamps,
+            )
+        except (CooperativeTranscriptionCancelled, CooperativeTranscriptionStopNotConfirmed):
+            raise
+        except ProductError:
+            raise
+        except Exception as exc:
+            message = "FasterWhisper transcription failed"
+            if not self.config.allow_model_download:
+                message += "; install/cache the model or rerun with --allow-model-download"
+            raise ProductError(
+                "ERR_FASTER_WHISPER_EXECUTION", message,
+                ProductErrorCategory.EXTERNAL_DEPENDENCY,
+                details={"exception_type": type(exc).__name__},
+            ) from exc
+        language = request.language or getattr(info, "language", None) or "und"
+        return TranscriptManifest(
+            request.source_asset_id,
+            language,
+            self.provider_id,
+            self.model_id,
+            segments,
+            request.include_word_timestamps,
+        )
+
+    @staticmethod
+    def _segments_cooperatively(
+        raw_segments: Iterable[Any],
+        *,
+        stop_probe: Callable[[], bool],
+        include_word_timestamps: bool = False,
+    ) -> tuple[TranscriptSegment, ...]:
+        iterator = iter(raw_segments)
+        output: list[TranscriptSegment] = []
+        previous_end = 0
+        while True:
+            requested = stop_probe()
+            if type(requested) is not bool:
+                raise ProductError(
+                    "ERR_TASK098_RUNTIME_CANCEL_PROBE_INVALID",
+                    "Runtime cancellation probe returned an invalid result",
+                    ProductErrorCategory.DATA_INTEGRITY,
+                )
+            if requested:
+                close = getattr(iterator, "close", None)
+                if not callable(close):
+                    raise CooperativeTranscriptionStopNotConfirmed()
+                try:
+                    close()
+                except BaseException as exc:
+                    raise CooperativeTranscriptionStopNotConfirmed() from exc
+                raise CooperativeTranscriptionCancelled()
+            try:
+                raw = next(iterator)
+            except StopIteration:
+                break
+            text = str(getattr(raw, "text", "")).strip()
+            if not text:
+                continue
+            start = max(previous_end, _microseconds(getattr(raw, "start"), end=False))
+            end = _microseconds(getattr(raw, "end"), end=True)
+            if end <= start:
+                continue
+            words = (
+                FasterWhisperProvider._words(raw, segment_start=start, segment_end=end)
+                if include_word_timestamps
+                else ()
+            )
+            output.append(
+                TranscriptSegment(
+                    f"seg-{len(output) + 1:06d}",
+                    start,
+                    end,
+                    text,
+                    words=words,
+                )
+            )
+            previous_end = end
+        return tuple(output)
+
     @staticmethod
     def _segments(
         raw_segments: Iterable[Any],
@@ -268,15 +401,19 @@ class LocalTranscriptionService:
         language: str | None = None,
         timeline_rate: FrameRate = FrameRate(30000, 1001),
         include_word_timestamps: bool = False,
+        cooperative_stop_probe: Callable[[], bool] | None = None,
     ) -> TranscriptionPublication:
         asset_id = source_asset_id or generate_id(IdKind.ASSET)
-        transcript = provider.transcribe(
-            AsrRequest(
-                asset_id,
-                str(media_path),
-                language,
-                include_word_timestamps=include_word_timestamps,
-            )
+        request = AsrRequest(
+            asset_id,
+            str(media_path),
+            language,
+            include_word_timestamps=include_word_timestamps,
+        )
+        transcript = (
+            provider.transcribe(request)
+            if cooperative_stop_probe is None
+            else provider.transcribe_cooperatively(request, cooperative_stop_probe)
         )
         return LocalTranscriptionService.publish(
             transcript,

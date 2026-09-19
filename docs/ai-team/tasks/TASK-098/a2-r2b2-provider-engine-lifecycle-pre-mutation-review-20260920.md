@@ -377,3 +377,21 @@ TASK-046/097 voice-learning work.
 - Allocation: only the seven source/test paths in section 9 plus bounded docs.
 - R2c, store/schema, Shell/launcher/CLI, real/native/private/model/training,
   serialized activation, release, deploy and Production remain unallocated.
+
+## 12. Implementation outcome
+
+- The implementation changed three allocated source and three allocated test
+  files; the fourth allocated legacy v1 test file remains unchanged.
+- Final isolated spawn regression is `488 PASS / 0 FAIL` at
+  `/tmp/bvp-task098-r2b2-spawn-regression-20260920T235000-r11`.
+- Judge-specific direct negative coverage for foreign completed control and
+  missing/foreign verification-only control is `3 PASS / 0 FAIL`.
+- `py_compile` and `git diff --check` are `PASS`.
+- Final independent Critic is `ACCEPT / 0/0/0/0`; final independent Tester is
+  `PASS / 0/0/0/0`.
+- Final independent Judge is `ACCEPT / COMMIT_READY / 0/0/0/0` after durable
+  external checkpoint hash/read-back and all eleven path hashes were verified.
+- Accepted checkpoint SHA-256:
+  `1e8432890ffa6e697e960ee137cce4f0fa39d8dd8774328e213b13d74b2d96d0`.
+- No real Provider/model/private media, native, voice-learning, installation,
+  Release, Deploy or Production effect occurred.

@@ -1,13 +1,13 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A1_ACCEPTED / CRITIC_TESTER_JUDGE_PASS / A2-R0_IMPLEMENTATION_ALLOCATED`
+- Status: `A2-R0_COMPLETE / CRITIC_TESTER_JUDGE_PASS / A2-R1_DESIGN_OVERLAP_NEXT`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`
-- Next Atomic Unit: `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`
+- Next Atomic Unit: `TASK-098/A2-R1 — Provider/TASK-036 overlap design and allocation; integration mutation not yet authorized`
 
 ## Objective
 
@@ -218,3 +218,27 @@ Later Units must publish their own narrower allowed-file list before mutation.
   a runtime, construct a Provider, run inference, download a model or change UI.
 - Product source/schema/runtime/native/private effects: `NOT_EXECUTED`.
 - Evidence: `evidence/a1-contract-allocation-20260919-r01.md`.
+
+## A2-R0 completion
+
+- Implemented a pure immutable `FasterWhisperRuntimeRequestV1` and
+  request-bound `FasterWhisperRuntimeDecisionV1` contract with exact schema and
+  packaged mirror. No existing FasterWhisper config, Provider or TASK-036 state
+  machine is connected by this Unit.
+- The decision API requires one validated request object; raw request digest and
+  device cannot be supplied as competing inputs. The schema and runtime both
+  close the outcome/reason/effective device/compute/fallback matrix.
+- Domain-separated digest, unknown/tamper rejection, direct-constructor
+  validation, TTL `1..300`, `issued <= evaluated < expires`, body-free public
+  projection and all-false authority/effect flags are covered.
+- Independent Critic: first `0 Critical / 2 High / 1 Medium / 0 Low`; final
+  `0 Critical / 0 High / 0 Medium / 0 Low`, `ACCEPT`.
+- Independent Tester: `PASS`; focused tests `48 PASS`; direct-dependency suite
+  `88 PASS`.
+- Independent Judge: `ACCEPT / commit-ready`, unresolved `0/0/0/0`.
+- Probe, Provider, inference, download, UI, persistence, native and private-media
+  effects: `NOT_EXECUTED`.
+- Evidence: `evidence/a2-r0-runtime-contract-20260919-r01.md`.
+
+A2-R1 is design/overlap allocation only until a fresh review accepts its exact
+owner-contract changes, allowed files, state-machine migration rules and tests.

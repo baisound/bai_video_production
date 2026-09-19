@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bai-video-production.local/schemas/faster-whisper-runtime-contract.schema.json",
+  "oneOf": [{"$ref": "#/$defs/request"}, {"$ref": "#/$defs/decision"}],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "decision_matrix": {"oneOf": [
+      {"properties": {"reason_code": {"const": "REQUESTED_CPU_AVAILABLE"}, "outcome": {"const": "READY_CPU"}, "effective_device": {"const": "cpu"}, "effective_compute_type": {"const": "int8"}, "fallback_applied": {"const": false}}},
+      {"properties": {"reason_code": {"const": "REQUESTED_CUDA_AVAILABLE"}, "outcome": {"const": "READY_CUDA"}, "effective_device": {"const": "cuda"}, "effective_compute_type": {"const": "float16"}, "fallback_applied": {"const": false}}},
+      {"properties": {"reason_code": {"const": "AUTO_CUDA_AVAILABLE"}, "outcome": {"const": "READY_CUDA"}, "effective_device": {"const": "cuda"}, "effective_compute_type": {"const": "float16"}, "fallback_applied": {"const": false}}},
+      {"properties": {"reason_code": {"const": "AUTO_CUDA_UNAVAILABLE_CPU_AVAILABLE"}, "outcome": {"const": "READY_CPU"}, "effective_device": {"const": "cpu"}, "effective_compute_type": {"const": "int8"}, "fallback_applied": {"const": true}}},
+      {"properties": {"reason_code": {"const": "CPU_UNAVAILABLE"}, "outcome": {"const": "BLOCKED"}, "effective_device": {"const": null}, "effective_compute_type": {"const": null}, "fallback_applied": {"const": false}}},
+      {"properties": {"reason_code": {"const": "CUDA_UNAVAILABLE"}, "outcome": {"const": "BLOCKED"}, "effective_device": {"const": null}, "effective_compute_type": {"const": null}, "fallback_applied": {"const": false}}},
+      {"properties": {"reason_code": {"const": "AUTO_NO_RUNTIME_AVAILABLE"}, "outcome": {"const": "BLOCKED"}, "effective_device": {"const": null}, "effective_compute_type": {"const": null}, "fallback_applied": {"const": false}}},
+      {"properties": {"reason_code": {"const": "RUNTIME_PROBE_UNAVAILABLE"}, "outcome": {"const": "BLOCKED"}, "effective_device": {"const": null}, "effective_compute_type": {"const": null}, "fallback_applied": {"const": false}}},
+      {"properties": {"reason_code": {"const": "RUNTIME_PROBE_INVALID"}, "outcome": {"const": "BLOCKED"}, "effective_device": {"const": null}, "effective_compute_type": {"const": null}, "fallback_applied": {"const": false}}}
+    ]},
+    "request": {
+      "type": "object",
+      "properties": {
+        "record_type": {"const": "FasterWhisperRuntimeRequestV1"},
+        "schema_version": {"const": "1.0.0"},
+        "requested_device": {"enum": ["auto", "cpu", "cuda"]},
+        "compute_policy": {"const": "UWR_BALANCED_V1"},
+        "model_download_authorized": {"const": false},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["record_type", "schema_version", "requested_device", "compute_policy", "model_download_authorized", "record_sha256"],
+      "additionalProperties": false
+    },
+    "decision": {
+      "type": "object",
+      "properties": {
+        "record_type": {"const": "FasterWhisperRuntimeDecisionV1"},
+        "schema_version": {"const": "1.0.0"},
+        "runtime_request_sha256": {"$ref": "#/$defs/digest"},
+        "outcome": {"enum": ["READY_CPU", "READY_CUDA", "BLOCKED"]},
+        "reason_code": {"enum": ["REQUESTED_CPU_AVAILABLE", "CPU_UNAVAILABLE", "REQUESTED_CUDA_AVAILABLE", "CUDA_UNAVAILABLE", "AUTO_CUDA_AVAILABLE", "AUTO_CUDA_UNAVAILABLE_CPU_AVAILABLE", "AUTO_NO_RUNTIME_AVAILABLE", "RUNTIME_PROBE_UNAVAILABLE", "RUNTIME_PROBE_INVALID"]},
+        "effective_device": {"type": ["string", "null"], "enum": ["cpu", "cuda", null]},
+        "effective_compute_type": {"type": ["string", "null"], "enum": ["int8", "float16", null]},
+        "fallback_applied": {"type": "boolean"},
+        "capability_observation_sha256": {"$ref": "#/$defs/digest"},
+        "issued_at": {"$ref": "#/$defs/timestamp"},
+        "expires_at": {"$ref": "#/$defs/timestamp"},
+        "model_load_started": {"const": false},
+        "inference_started": {"const": false},
+        "partial_output_present": {"const": false},
+        "execution_authorized": {"const": false},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["record_type", "schema_version", "runtime_request_sha256", "outcome", "reason_code", "effective_device", "effective_compute_type", "fallback_applied", "capability_observation_sha256", "issued_at", "expires_at", "model_load_started", "inference_started", "partial_output_present", "execution_authorized", "record_sha256"],
+      "additionalProperties": false,
+      "allOf": [{"$ref": "#/$defs/decision_matrix"}]
+    },
+    "request_public_projection": {
+      "type": "object",
+      "properties": {"record_type": {"const": "FasterWhisperRuntimeRequestV1"}, "schema_version": {"const": "1.0.0"}, "requested_device": {"enum": ["auto", "cpu", "cuda"]}, "compute_policy": {"const": "UWR_BALANCED_V1"}, "model_download_authorized": {"const": false}},
+      "required": ["record_type", "schema_version", "requested_device", "compute_policy", "model_download_authorized"],
+      "additionalProperties": false
+    },
+    "decision_public_projection": {
+      "type": "object",
+      "properties": {"record_type": {"const": "FasterWhisperRuntimeDecisionV1"}, "schema_version": {"const": "1.0.0"}, "outcome": {"enum": ["READY_CPU", "READY_CUDA", "BLOCKED"]}, "reason_code": {"enum": ["REQUESTED_CPU_AVAILABLE", "CPU_UNAVAILABLE", "REQUESTED_CUDA_AVAILABLE", "CUDA_UNAVAILABLE", "AUTO_CUDA_AVAILABLE", "AUTO_CUDA_UNAVAILABLE_CPU_AVAILABLE", "AUTO_NO_RUNTIME_AVAILABLE", "RUNTIME_PROBE_UNAVAILABLE", "RUNTIME_PROBE_INVALID"]}, "effective_device": {"type": ["string", "null"], "enum": ["cpu", "cuda", null]}, "effective_compute_type": {"type": ["string", "null"], "enum": ["int8", "float16", null]}, "fallback_applied": {"type": "boolean"}, "model_load_started": {"const": false}, "inference_started": {"const": false}, "partial_output_present": {"const": false}, "execution_authorized": {"const": false}},
+      "required": ["record_type", "schema_version", "outcome", "reason_code", "effective_device", "effective_compute_type", "fallback_applied", "model_load_started", "inference_started", "partial_output_present", "execution_authorized"],
+      "additionalProperties": false,
+      "allOf": [{"$ref": "#/$defs/decision_matrix"}]
+    }
+  }
+}

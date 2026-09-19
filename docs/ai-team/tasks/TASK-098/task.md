@@ -1,13 +1,13 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_FRESH_REVIEW_NEXT / R1B_IMPLEMENTATION_NOT_AUTHORIZED`
+- Status: `A2-R1A_COMPLETE / A2-R1B_IMPLEMENTATION_ALLOCATED / R1B_NOT_STARTED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
 - Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`
-- Next Atomic Unit: `TASK-098/A2-R1b — fresh pre-mutation review for shared TASK-036 engine and durable v2; implementation not yet authorized`
+- Next Atomic Unit: `TASK-098/A2-R1b — implement the accepted shared TASK-036 engine and durable v2 under fake/synthetic tests only`
 
 ## Objective
 
@@ -275,3 +275,18 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - R1b is review-eligible only and remains implementation-unauthorized until its
   fresh DEV-3 pre-mutation review closes exact files and acceptance.
 - Evidence: `evidence/a2-r1a-runtime-preflight-20260919-r01.md`.
+
+## A2-R1b pre-mutation review completion
+
+- Accepted review: `a2-r1b-pre-mutation-review-20260919.md`.
+- Independent Critic: first `0 Critical / 0 High / 2 Medium / 0 Low`, final
+  `0 Critical / 0 High / 0 Medium / 0 Low / ACCEPT`.
+- Independent Tester: first `0/0/1/0`, final `0/0/0/0 / PASS`.
+- Independent Judge: `ACCEPT / implementation allocated / 0/0/0/0`.
+- Allocation is limited to the exact 14-file ceiling and fake/synthetic tests in
+  the review. R1c, A2-R2, real/native activation and old-binary writer shutdown
+  are not authorized by this checkpoint.
+- Technical implementation: `NOT_STARTED / NOT_CONFIRMED`.
+- Product source/test/native/provider/model/private/training effects:
+  `NOT_EXECUTED`.
+- Evidence: `evidence/a2-r1b-pre-mutation-review-20260919-r01.md`.

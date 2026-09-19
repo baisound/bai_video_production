@@ -1,13 +1,13 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1_DESIGN_ACCEPTED / A2-R1A_IMPLEMENTATION_ALLOCATED`
+- Status: `A2-R1A_COMPLETE / A2-R1B_FRESH_REVIEW_NEXT / R1B_IMPLEMENTATION_NOT_AUTHORIZED`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`
-- Next Atomic Unit: `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`
+- Next Atomic Unit: `TASK-098/A2-R1b — fresh pre-mutation review for shared TASK-036 engine and durable v2; implementation not yet authorized`
 
 ## Objective
 
@@ -253,3 +253,25 @@ Later Units must publish their own narrower allowed-file list before mutation.
   unallocated.
 - Product source/schema/runtime/native/private effects: `NOT_EXECUTED`.
 - Evidence: `evidence/a2-r1-design-allocation-20260919-r01.md`.
+
+## A2-R1a completion
+
+- Added the request-bound body-free
+  `FasterWhisperRuntimeCapabilityObservationV1` with domain-separated digest,
+  exact schema/mirror, closed request-specific matrix and TTL `1..300` seconds.
+- Added an injected fake-only capability Protocol/coordinator. It probes only
+  `cpu/int8` or `cuda/float16` in the accepted order and uniquely derives the
+  existing A2-R0 decision; probe lookup/call errors and non-boolean values fail
+  closed without auto fallback.
+- Existing A2-R0 request/decision API and serialized behavior remain unchanged.
+  No Provider, OS/GPU/DLL adapter, TASK-036, store, launcher or UI was connected.
+- Focused R1a+A2-R0 tests: `129 PASS`.
+- R1a plus TASK-006/023/036 direct-dependency regression: `168 PASS`.
+- Independent Critic: first `0 Critical / 0 High / 1 Medium / 2 Low`, final
+  `0 Critical / 0 High / 0 Medium / 0 Low / ACCEPT`.
+- Independent Tester: `PASS / 129 PASS / 0/0/0/0`.
+- Independent Judge: `ACCEPT / commit-ready / 0/0/0/0`.
+- Real/native/private/provider/model/network/download effects: `NOT_EXECUTED`.
+- R1b is review-eligible only and remains implementation-unauthorized until its
+  fresh DEV-3 pre-mutation review closes exact files and acceptance.
+- Evidence: `evidence/a2-r1a-runtime-preflight-20260919-r01.md`.

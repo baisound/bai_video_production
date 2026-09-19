@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bai-video-production.local/schemas/faster-whisper-runtime-contract.schema.json",
-  "oneOf": [{"$ref": "#/$defs/request"}, {"$ref": "#/$defs/decision"}],
+  "oneOf": [{"$ref": "#/$defs/request"}, {"$ref": "#/$defs/observation"}, {"$ref": "#/$defs/decision"}],
   "$defs": {
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "timestamp": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
@@ -16,6 +16,20 @@
       {"properties": {"reason_code": {"const": "RUNTIME_PROBE_UNAVAILABLE"}, "outcome": {"const": "BLOCKED"}, "effective_device": {"const": null}, "effective_compute_type": {"const": null}, "fallback_applied": {"const": false}}},
       {"properties": {"reason_code": {"const": "RUNTIME_PROBE_INVALID"}, "outcome": {"const": "BLOCKED"}, "effective_device": {"const": null}, "effective_compute_type": {"const": null}, "fallback_applied": {"const": false}}}
     ]},
+    "observation_matrix": {"oneOf": [
+      {"properties": {"probe_outcome": {"const": "OBSERVED"}, "cpu_capability": {"const": "AVAILABLE"}, "cuda_capability": {"const": "NOT_PROBED"}}},
+      {"properties": {"probe_outcome": {"const": "OBSERVED"}, "cpu_capability": {"const": "UNAVAILABLE"}, "cuda_capability": {"const": "NOT_PROBED"}}},
+      {"properties": {"probe_outcome": {"const": "OBSERVED"}, "cpu_capability": {"const": "NOT_PROBED"}, "cuda_capability": {"const": "AVAILABLE"}}},
+      {"properties": {"probe_outcome": {"const": "OBSERVED"}, "cpu_capability": {"const": "NOT_PROBED"}, "cuda_capability": {"const": "UNAVAILABLE"}}},
+      {"properties": {"probe_outcome": {"const": "OBSERVED"}, "cpu_capability": {"const": "AVAILABLE"}, "cuda_capability": {"const": "UNAVAILABLE"}}},
+      {"properties": {"probe_outcome": {"const": "OBSERVED"}, "cpu_capability": {"const": "UNAVAILABLE"}, "cuda_capability": {"const": "UNAVAILABLE"}}},
+      {"properties": {"probe_outcome": {"const": "RUNTIME_PROBE_UNAVAILABLE"}, "cpu_capability": {"const": "UNKNOWN"}, "cuda_capability": {"const": "NOT_PROBED"}}},
+      {"properties": {"probe_outcome": {"const": "RUNTIME_PROBE_INVALID"}, "cpu_capability": {"const": "UNKNOWN"}, "cuda_capability": {"const": "NOT_PROBED"}}},
+      {"properties": {"probe_outcome": {"const": "RUNTIME_PROBE_UNAVAILABLE"}, "cpu_capability": {"const": "NOT_PROBED"}, "cuda_capability": {"const": "UNKNOWN"}}},
+      {"properties": {"probe_outcome": {"const": "RUNTIME_PROBE_INVALID"}, "cpu_capability": {"const": "NOT_PROBED"}, "cuda_capability": {"const": "UNKNOWN"}}},
+      {"properties": {"probe_outcome": {"const": "RUNTIME_PROBE_UNAVAILABLE"}, "cpu_capability": {"const": "UNKNOWN"}, "cuda_capability": {"const": "UNAVAILABLE"}}},
+      {"properties": {"probe_outcome": {"const": "RUNTIME_PROBE_INVALID"}, "cpu_capability": {"const": "UNKNOWN"}, "cuda_capability": {"const": "UNAVAILABLE"}}}
+    ]},
     "request": {
       "type": "object",
       "properties": {
@@ -28,6 +42,27 @@
       },
       "required": ["record_type", "schema_version", "requested_device", "compute_policy", "model_download_authorized", "record_sha256"],
       "additionalProperties": false
+    },
+    "observation": {
+      "type": "object",
+      "properties": {
+        "record_type": {"const": "FasterWhisperRuntimeCapabilityObservationV1"},
+        "schema_version": {"const": "1.0.0"},
+        "runtime_request_sha256": {"$ref": "#/$defs/digest"},
+        "probe_outcome": {"enum": ["OBSERVED", "RUNTIME_PROBE_UNAVAILABLE", "RUNTIME_PROBE_INVALID"]},
+        "cpu_capability": {"enum": ["AVAILABLE", "UNAVAILABLE", "NOT_PROBED", "UNKNOWN"]},
+        "cuda_capability": {"enum": ["AVAILABLE", "UNAVAILABLE", "NOT_PROBED", "UNKNOWN"]},
+        "observed_at": {"$ref": "#/$defs/timestamp"},
+        "expires_at": {"$ref": "#/$defs/timestamp"},
+        "model_load_started": {"const": false},
+        "inference_started": {"const": false},
+        "network_used": {"const": false},
+        "model_download_authorized": {"const": false},
+        "record_sha256": {"$ref": "#/$defs/digest"}
+      },
+      "required": ["record_type", "schema_version", "runtime_request_sha256", "probe_outcome", "cpu_capability", "cuda_capability", "observed_at", "expires_at", "model_load_started", "inference_started", "network_used", "model_download_authorized", "record_sha256"],
+      "additionalProperties": false,
+      "allOf": [{"$ref": "#/$defs/observation_matrix"}]
     },
     "decision": {
       "type": "object",

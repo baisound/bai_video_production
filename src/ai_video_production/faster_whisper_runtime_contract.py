@@ -21,14 +21,17 @@ SCHEMA_NAME = "faster-whisper-runtime-contract.schema.json"
 SCHEMA_VERSION = "1.0.0"
 REQUEST_RECORD_TYPE = "FasterWhisperRuntimeRequestV1"
 DECISION_RECORD_TYPE = "FasterWhisperRuntimeDecisionV1"
+OBSERVATION_RECORD_TYPE = "FasterWhisperRuntimeCapabilityObservationV1"
 REQUEST_DOMAIN = b"bvp.task098.faster-whisper-runtime-request.v1\0"
 DECISION_DOMAIN = b"bvp.task098.faster-whisper-runtime-decision.v1\0"
+OBSERVATION_DOMAIN = b"bvp.task098.faster-whisper-runtime-capability.v1\0"
 COMPUTE_POLICY = "UWR_BALANCED_V1"
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _TIME = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z")
 
 _REQUEST_FIELDS = frozenset(("record_type", "schema_version", "requested_device", "compute_policy", "model_download_authorized", "record_sha256"))
 _DECISION_FIELDS = frozenset(("record_type", "schema_version", "runtime_request_sha256", "outcome", "reason_code", "effective_device", "effective_compute_type", "fallback_applied", "capability_observation_sha256", "issued_at", "expires_at", "model_load_started", "inference_started", "partial_output_present", "execution_authorized", "record_sha256"))
+_OBSERVATION_FIELDS = frozenset(("record_type", "schema_version", "runtime_request_sha256", "probe_outcome", "cpu_capability", "cuda_capability", "observed_at", "expires_at", "model_load_started", "inference_started", "network_used", "model_download_authorized", "record_sha256"))
 _MATRIX = {
     ("cpu", "READY_CPU", "REQUESTED_CPU_AVAILABLE"): ("cpu", "int8", False),
     ("cpu", "BLOCKED", "CPU_UNAVAILABLE"): (None, None, False),
@@ -41,6 +44,24 @@ _MATRIX = {
 for _device in ("cpu", "cuda", "auto"):
     for _reason in ("RUNTIME_PROBE_UNAVAILABLE", "RUNTIME_PROBE_INVALID"):
         _MATRIX[(_device, "BLOCKED", _reason)] = (None, None, False)
+
+_OBSERVATION_MATRIX = {
+    ("cpu", "OBSERVED", "AVAILABLE", "NOT_PROBED"),
+    ("cpu", "OBSERVED", "UNAVAILABLE", "NOT_PROBED"),
+    ("cpu", "RUNTIME_PROBE_UNAVAILABLE", "UNKNOWN", "NOT_PROBED"),
+    ("cpu", "RUNTIME_PROBE_INVALID", "UNKNOWN", "NOT_PROBED"),
+    ("cuda", "OBSERVED", "NOT_PROBED", "AVAILABLE"),
+    ("cuda", "OBSERVED", "NOT_PROBED", "UNAVAILABLE"),
+    ("cuda", "RUNTIME_PROBE_UNAVAILABLE", "NOT_PROBED", "UNKNOWN"),
+    ("cuda", "RUNTIME_PROBE_INVALID", "NOT_PROBED", "UNKNOWN"),
+    ("auto", "OBSERVED", "NOT_PROBED", "AVAILABLE"),
+    ("auto", "OBSERVED", "AVAILABLE", "UNAVAILABLE"),
+    ("auto", "OBSERVED", "UNAVAILABLE", "UNAVAILABLE"),
+    ("auto", "RUNTIME_PROBE_UNAVAILABLE", "NOT_PROBED", "UNKNOWN"),
+    ("auto", "RUNTIME_PROBE_INVALID", "NOT_PROBED", "UNKNOWN"),
+    ("auto", "RUNTIME_PROBE_UNAVAILABLE", "UNKNOWN", "UNAVAILABLE"),
+    ("auto", "RUNTIME_PROBE_INVALID", "UNKNOWN", "UNAVAILABLE"),
+}
 
 
 def _exact(value: Mapping[str, Any], fields: frozenset[str], name: str) -> None:
@@ -127,6 +148,114 @@ class FasterWhisperRuntimeRequestV1:
         return {"record_type": REQUEST_RECORD_TYPE, "schema_version": SCHEMA_VERSION,
                 "requested_device": self.requested_device, "compute_policy": COMPUTE_POLICY,
                 "model_download_authorized": False}
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class FasterWhisperRuntimeCapabilityObservationV1:
+    """Request-bound, body-free capability observation with a closed TTL window."""
+
+    runtime_request_sha256: str
+    probe_outcome: str
+    cpu_capability: str
+    cuda_capability: str
+    observed_at: str
+    expires_at: str
+    record_sha256: str
+    record_type: ClassVar[str] = OBSERVATION_RECORD_TYPE
+    schema_version: ClassVar[str] = SCHEMA_VERSION
+    model_load_started: ClassVar[bool] = False
+    inference_started: ClassVar[bool] = False
+    network_used: ClassVar[bool] = False
+    model_download_authorized: ClassVar[bool] = False
+
+    def __init__(self, *, request: FasterWhisperRuntimeRequestV1, probe_outcome: str,
+                 cpu_capability: str, cuda_capability: str, observed_at: str,
+                 expires_at: str, record_sha256: str | None = None) -> None:
+        if not isinstance(request, FasterWhisperRuntimeRequestV1):
+            raise TypeError("request must be a validated FasterWhisperRuntimeRequestV1")
+        request = FasterWhisperRuntimeRequestV1.from_dict(request.to_dict())
+        if (request.requested_device, probe_outcome, cpu_capability, cuda_capability) not in _OBSERVATION_MATRIX:
+            raise ValueError("capability observation is outside the closed request matrix")
+        observed, expires = _timestamp(observed_at, "observed_at"), _timestamp(expires_at, "expires_at")
+        if not 1 <= (expires - observed).total_seconds() <= 300:
+            raise ValueError("capability observation TTL must be 1..300 seconds")
+        body = {
+            "record_type": OBSERVATION_RECORD_TYPE,
+            "schema_version": SCHEMA_VERSION,
+            "runtime_request_sha256": request.record_sha256,
+            "probe_outcome": probe_outcome,
+            "cpu_capability": cpu_capability,
+            "cuda_capability": cuda_capability,
+            "observed_at": observed_at,
+            "expires_at": expires_at,
+            "model_load_started": False,
+            "inference_started": False,
+            "network_used": False,
+            "model_download_authorized": False,
+        }
+        expected = _body_digest(body, OBSERVATION_DOMAIN)
+        if record_sha256 is not None and _digest(record_sha256, "record_sha256") != expected:
+            raise ValueError("capability observation digest mismatch")
+        for name, item in body.items():
+            if name not in {"record_type", "schema_version", "model_load_started", "inference_started", "network_used", "model_download_authorized"}:
+                object.__setattr__(self, name, item)
+        object.__setattr__(self, "record_sha256", expected)
+
+    @classmethod
+    def create(cls, *, request: FasterWhisperRuntimeRequestV1, probe_outcome: str,
+               cpu_capability: str, cuda_capability: str, observed_at: str,
+               expires_at: str) -> "FasterWhisperRuntimeCapabilityObservationV1":
+        return cls(request=request, probe_outcome=probe_outcome,
+                   cpu_capability=cpu_capability, cuda_capability=cuda_capability,
+                   observed_at=observed_at, expires_at=expires_at)
+
+    @classmethod
+    def from_dict(cls, value: Mapping[str, Any], *, request: FasterWhisperRuntimeRequestV1) -> "FasterWhisperRuntimeCapabilityObservationV1":
+        _exact(value, _OBSERVATION_FIELDS, OBSERVATION_RECORD_TYPE)
+        _schema("observation", value)
+        if value["record_type"] != OBSERVATION_RECORD_TYPE or value["schema_version"] != SCHEMA_VERSION:
+            raise ValueError("capability observation identity/version is invalid")
+        if not isinstance(request, FasterWhisperRuntimeRequestV1):
+            raise TypeError("request must be a validated FasterWhisperRuntimeRequestV1")
+        request = FasterWhisperRuntimeRequestV1.from_dict(request.to_dict())
+        if value["runtime_request_sha256"] != request.record_sha256:
+            raise ValueError("capability observation does not bind the supplied runtime request")
+        _digest(value["runtime_request_sha256"], "runtime_request_sha256")
+        if (request.requested_device, value["probe_outcome"], value["cpu_capability"], value["cuda_capability"]) not in _OBSERVATION_MATRIX:
+            raise ValueError("capability observation is outside the closed request matrix")
+        if any(value[flag] is not False for flag in ("model_load_started", "inference_started", "network_used", "model_download_authorized")):
+            raise ValueError("capability observation cannot represent execution, network, or download")
+        observed, expires = _timestamp(value["observed_at"], "observed_at"), _timestamp(value["expires_at"], "expires_at")
+        if not 1 <= (expires - observed).total_seconds() <= 300:
+            raise ValueError("capability observation TTL must be 1..300 seconds")
+        digest = _digest(value["record_sha256"], "record_sha256")
+        if digest != _body_digest(value, OBSERVATION_DOMAIN):
+            raise ValueError("capability observation digest mismatch")
+        return cls(request=request, probe_outcome=value["probe_outcome"],
+                   cpu_capability=value["cpu_capability"], cuda_capability=value["cuda_capability"],
+                   observed_at=value["observed_at"], expires_at=value["expires_at"],
+                   record_sha256=digest)
+
+    def is_fresh_at(self, evaluated_at: str) -> bool:
+        evaluated = _timestamp(evaluated_at, "evaluated_at")
+        return _timestamp(self.observed_at, "observed_at") <= evaluated < _timestamp(self.expires_at, "expires_at")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "record_type": OBSERVATION_RECORD_TYPE,
+            "schema_version": SCHEMA_VERSION,
+            "runtime_request_sha256": self.runtime_request_sha256,
+            "probe_outcome": self.probe_outcome,
+            "cpu_capability": self.cpu_capability,
+            "cuda_capability": self.cuda_capability,
+            "observed_at": self.observed_at,
+            "expires_at": self.expires_at,
+            "model_load_started": False,
+            "inference_started": False,
+            "network_used": False,
+            "model_download_authorized": False,
+            "record_sha256": self.record_sha256,
+        }
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -247,6 +376,10 @@ def parse_runtime_decision(value: Mapping[str, Any], *, request: FasterWhisperRu
     return FasterWhisperRuntimeDecisionV1.from_dict(value, request=request)
 
 
+def parse_runtime_capability_observation(value: Mapping[str, Any], *, request: FasterWhisperRuntimeRequestV1) -> FasterWhisperRuntimeCapabilityObservationV1:
+    return FasterWhisperRuntimeCapabilityObservationV1.from_dict(value, request=request)
+
+
 def validate_runtime_pair(request: FasterWhisperRuntimeRequestV1,
                           decision: FasterWhisperRuntimeDecisionV1) -> tuple[FasterWhisperRuntimeRequestV1, FasterWhisperRuntimeDecisionV1]:
     """Validate a decision against its one stable semantic request identity."""
@@ -270,7 +403,8 @@ def validate_schema_mirror() -> None:
         raise ValueError("runtime contract schema mirror is not byte-identical")
 
 
-__all__ = ["COMPUTE_POLICY", "DECISION_RECORD_TYPE", "FasterWhisperRuntimeDecisionV1",
-           "FasterWhisperRuntimeRequestV1", "REQUEST_RECORD_TYPE", "SCHEMA_VERSION",
-           "parse_runtime_decision", "parse_runtime_request", "validate_runtime_pair",
-           "validate_schema_mirror"]
+__all__ = ["COMPUTE_POLICY", "DECISION_RECORD_TYPE", "FasterWhisperRuntimeCapabilityObservationV1",
+           "FasterWhisperRuntimeDecisionV1", "FasterWhisperRuntimeRequestV1",
+           "OBSERVATION_RECORD_TYPE", "REQUEST_RECORD_TYPE", "SCHEMA_VERSION",
+           "parse_runtime_capability_observation", "parse_runtime_decision",
+           "parse_runtime_request", "validate_runtime_pair", "validate_schema_mirror"]

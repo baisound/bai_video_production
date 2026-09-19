@@ -1,6 +1,6 @@
 # TASK-098 A2-R1 Runtime Integration Design and Allocation
 
-- Status: `ACCEPTED / A2-R1A_IMPLEMENTATION_ALLOCATED`
+- Status: `ACCEPTED / A2-R1A_COMPLETE / A2-R1B_FRESH_REVIEW_REQUIRED`
 - Date: `2026-09-19`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Base: `0189676a0f396755f71b11f97a61325cdd0ebef4`
@@ -491,3 +491,16 @@ implementation-eligible.
 - Independent Judge: `ACCEPT`; only A2-R1a is implementation-allocated.
 - Product source/schema/runtime/native/private effects: `NOT_EXECUTED`.
 - R1b, R1c, A2-R2 and every real/native adapter remain unallocated.
+
+## 14. A2-R1a implementation outcome
+
+- Result: `PASS / COMMIT_READY`.
+- Focused R1a+A2-R0 tests: `129 PASS`.
+- R1a plus TASK-006/023/036 direct-dependency regression: `168 PASS`.
+- Independent Critic: initial `0/0/1/2`, final `0/0/0/0 / ACCEPT`.
+- Independent Tester: `PASS / 129 PASS / 0/0/0/0`.
+- Independent Judge: `ACCEPT / 0/0/0/0`.
+- Real probe, Provider/model, network/download, TASK-036/store/launcher,
+  native/private and training effects: `NOT_EXECUTED`.
+- R1b remains implementation-unauthorized until its fresh DEV-3 pre-mutation
+  review accepts exact allowed files, permanent-lease/store behavior and tests.

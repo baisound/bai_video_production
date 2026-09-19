@@ -33,6 +33,27 @@ def test_first_run_bootstrap_creates_one_valid_private_configuration(tmp_path) -
     assert path.read_bytes() == first_bytes
 
 
+def test_first_run_is_byte_stable_v1_and_serialized_v2_is_not_accepted(tmp_path) -> None:
+    application_root = tmp_path / "local-app-data"
+    path = ensure_first_run_launch_configuration(application_root=application_root)
+    first_bytes = path.read_bytes()
+    document = json.loads(first_bytes)
+    assert document["launch_config_version"] == "1.0.0"
+    assert set(document["asr"]) == {
+        "model", "device", "compute_type", "beam_size", "vad_filter",
+        "allow_model_download", "language",
+    }
+    assert document["asr"]["allow_model_download"] is False
+    document["launch_config_version"] = "2.0.0"
+    path.write_text(json.dumps(document), encoding="utf-8")
+    with pytest.raises(ProductError) as rejected:
+        ensure_first_run_launch_configuration(application_root=application_root)
+    assert rejected.value.code == "ERR_TASK036_FIRST_RUN_CONFIG_INVALID"
+    path.write_bytes(first_bytes)
+    assert ensure_first_run_launch_configuration(application_root=application_root) == path
+    assert path.read_bytes() == first_bytes
+
+
 def test_first_run_bootstrap_rejects_malformed_existing_configuration(tmp_path) -> None:
     application_root = tmp_path / "local-app-data"
     config = application_root / "control" / "task036-first-run-launch.json"

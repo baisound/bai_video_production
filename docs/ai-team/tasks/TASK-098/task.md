@@ -1,15 +1,16 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / NEXT_R1C_REVIEW_UNALLOCATED`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R0 — pure FasterWhisper runtime request/decision contract`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`
 - Completed recovery boundary: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`
-- Next action: `fresh A2-R1c pre-mutation review only; R1c implementation remains unallocated`
+- Active Atomic Unit: `none; A2-R1c is complete and the next unit is not yet allocated`
+- Next action: `begin a fresh A2-R2 pre-mutation design/review; A2-R2 implementation remains unallocated`
 
 ## Objective
 
@@ -341,3 +342,25 @@ Later Units must publish their own narrower allowed-file list before mutation.
   - external Evidence read-back: `PASS`, SHA-256
     `f41e89fae8bf8b04d2acb75bd675fa6e95b47017fe8a139ab816f2d68a56366b`.
 - A2-R1b status: `COMPLETE`; no native/model/private/training effect occurred.
+
+## A2-R1c pre-mutation review
+
+- Review document: `a2-r1c-pre-mutation-review-20260920.md`.
+- Design review: independent Critic `ACCEPT / 0/0/0/0`; independent Tester
+  `PASS / 0/0/0/0`; independent Judge `ACCEPT / implementation allocated /
+  0/0/0/0`.
+- Implementation status: `COMPLETE / COMMIT_READY`.
+- Focused regression: `174 PASS / 0 FAIL`; `py_compile` and `git diff --check`
+  are `PASS`. Ordinary Windows/WSL pytest remains `NOT_CONFIRMED` because the
+  existing environments lack `jsonschema` or Argon2id respectively; no package
+  installation occurred.
+- Review closure: cycle 1 Critic `REJECT / 0/2/0/0`; cycle 2 Critic
+  `ACCEPT / 0/0/0/0`; final independent Tester `PASS / 0/0/0/0`.
+- Final independent Judge: `ACCEPT / COMMIT_READY / 0/0/0/0`.
+- Evidence: `evidence/a2-r1c-trusted-composition-20260920-r01.md`; external
+  checkpoint path, SHA-256 and successful read-back are recorded there.
+- Existing launch-config versions, first-run bootstrap, CLI and native entrypoints
+  remain v1-only. No serialized v2 version or production adapter is allocated.
+- Proposed R1c effects are fake/synthetic only and do not authorize real probe,
+  model construction/inference/download, private audio, installation, Release,
+  Deploy or Production Activation.

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+import re
 import secrets
 from threading import Lock
 from typing import Any, Callable, Protocol
@@ -20,6 +21,7 @@ from .desktop_media_workflow import MediaIngestPort, Task036MediaWorkflowFacade
 from .desktop_pre_edit_binding import Task036PreEditBinding
 from .desktop_shell import ShellCommand
 from .errors import ProductError, ProductErrorCategory
+from .ids import IdKind, validate_id
 from .subtitles import TranscriptManifest
 from .subtitle_workspace import SubtitleWorkspace
 from .task036_native_dialog import Task036NativeDialogService
@@ -83,7 +85,11 @@ class _PendingTranscription:
     source_asset_sha256: str
     source_path: Path
     context_revision: int
-    recovery: bool = False
+    action: str = "START"
+
+    @property
+    def recovery(self) -> bool:
+        return self.action == "RECOVER"
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +152,7 @@ class Task036PreEditRuntime:
     transcription_port: LocalTranscriptionPort
     cut_candidate_port: CutCandidateGenerationPort
     speech_cue_port: SpeechCueGenerationPort | None = None
+    transcription_runtime_mode: str = "LEGACY_V1"
     media: Task036MediaWorkflowFacade = field(init=False)
     binding: Task036PreEditBinding = field(init=False)
     application: Task036EditingApplication | None = field(default=None, init=False)
@@ -156,11 +163,15 @@ class Task036PreEditRuntime:
     _transcription_confirmations: dict[str, _PendingTranscription] = field(default_factory=dict, init=False, repr=False)
 
     def __post_init__(self) -> None:
+        if self.transcription_runtime_mode not in {"LEGACY_V1", "RUNTIME_MANAGED_V2"}:
+            raise ValueError("transcription_runtime_mode is invalid")
         self.media = Task036MediaWorkflowFacade(self.coordinator, self.native_dialog, self.ingest_port)
         self.binding = Task036PreEditBinding(self.coordinator)
 
     def status(self) -> dict[str, Any]:
         state = self.coordinator.state
+        if self.transcription_runtime_mode == "RUNTIME_MANAGED_V2":
+            return self._runtime_managed_status()
         recovery_required = False
         if state.source_asset_id is not None and state.source_asset_sha256 is not None and self.media.runtime_source_path is not None:
             status_reader = getattr(self.transcription_port, "recovery_required", None)
@@ -185,6 +196,73 @@ class Task036PreEditRuntime:
             "host_paths_exposed": False,
             "provider_configuration_from_javascript": False,
             "transcription_recovery_required": recovery_required,
+            "speech_cues": self.speech_cue_snapshot(),
+        }
+
+    def _runtime_managed_status(self) -> dict[str, Any]:
+        state = self.coordinator.state
+        source_bound = (
+            state.source_asset_id is not None
+            and state.source_asset_sha256 is not None
+            and self.media.runtime_source_path is not None
+        )
+        recovery_state: str | None = None
+        if source_bound:
+            reader = getattr(self.transcription_port, "recovery_state", None)
+            try:
+                observed = reader(
+                    project_id=state.project_id,
+                    source_asset_id=state.source_asset_id,
+                    source_asset_sha256=state.source_asset_sha256,
+                ) if callable(reader) else None
+            except Exception:
+                observed = None
+            known = {
+                "PENDING_ADMISSION", "RECOVERABLE_PUBLICATION", "VERIFICATION_ONLY",
+                "ACTIVE_UNKNOWN", "ADJUDICATION_REQUIRED_NO_PUBLICATION",
+                "FAILED_TERMINAL", "CORRUPT_BLOCKED",
+            }
+            recovery_state = observed if type(observed) is str and observed in known else "CORRUPT_BLOCKED"
+        labels = {
+            "PENDING_ADMISSION": "文字起こしを開始できます",
+            "RECOVERABLE_PUBLICATION": "文字起こし結果を復旧できます",
+            "VERIFICATION_ONLY": "文字起こし結果を検証できます",
+            "ACTIVE_UNKNOWN": "文字起こし処理の状態を確認できません",
+            "ADJUDICATION_REQUIRED_NO_PUBLICATION": "人による確認が必要です",
+            "FAILED_TERMINAL": "文字起こしは失敗しました",
+            "CORRUPT_BLOCKED": "文字起こし状態が破損しているため停止しました",
+        }
+        action = "NONE"
+        label = None if recovery_state is None else labels[recovery_state]
+        transcription_stage = (
+            source_bound
+            and state.transcript_sha256 is None
+            and state.next_recommended_action == "transcription.start"
+        )
+        if transcription_stage:
+            action = {
+                "PENDING_ADMISSION": "START",
+                "RECOVERABLE_PUBLICATION": "RECOVER",
+                "VERIFICATION_ONLY": "VERIFY",
+            }.get(recovery_state, "NONE")
+        elif recovery_state == "VERIFICATION_ONLY":
+            label = "文字起こし結果は検証済みです"
+        return {
+            "available": True,
+            "task_owner": "TASK-036",
+            "next_recommended_action": state.next_recommended_action,
+            "current_stage": state.current_stage.value,
+            "source_bound": state.source_asset_id is not None,
+            "transcript_bound": state.transcript_sha256 is not None,
+            "subtitle_workspace_bound": state.subtitle_workspace_sha256 is not None,
+            "cut_candidates_bound": state.cut_candidate_manifest_sha256 is not None,
+            "review_application_bound": self.application is not None,
+            "host_paths_exposed": False,
+            "provider_configuration_from_javascript": False,
+            "transcription_runtime_mode": "RUNTIME_MANAGED_V2",
+            "transcription_recovery_state": recovery_state,
+            "transcription_available_action": action,
+            "transcription_status_label": label,
             "speech_cues": self.speech_cue_snapshot(),
         }
 
@@ -356,7 +434,198 @@ class Task036PreEditRuntime:
             publication_set_sha256=outcome.publication_set_sha256,
         )
 
+    def _validate_runtime_managed_outcome(
+        self,
+        outcome: Any,
+        *,
+        action: str,
+    ) -> dict[str, Any] | None:
+        """Reject every untrusted v2 return before Product binding/finalization."""
+
+        if self.transcription_runtime_mode != "RUNTIME_MANAGED_V2":
+            return None
+        # Local import avoids reversing task036_product_ports -> pre-edit runtime.
+        from .task036_product_ports import RuntimeManagedLocalTranscriptionOutcomeV2
+
+        if (
+            type(outcome) is not RuntimeManagedLocalTranscriptionOutcomeV2
+            or type(outcome.transcript) is not TranscriptManifest
+            or action not in {"START", "RECOVER", "VERIFY"}
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_OUTCOME_INVALID",
+                "Runtime-managed transcription returned an invalid outcome type",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        coordinates = (
+            outcome.operation_id,
+            outcome.slot_operation_id,
+            outcome.publication_set_sha256,
+        )
+        try:
+            if (
+                not all(type(value) is str for value in coordinates)
+                or not all(value for value in coordinates)
+                or validate_id(outcome.operation_id, IdKind.OPERATION) != outcome.operation_id
+                or validate_id(outcome.slot_operation_id, IdKind.OPERATION) != outcome.slot_operation_id
+                or re.fullmatch(r"sha256:[0-9a-f]{64}", outcome.publication_set_sha256) is None
+            ):
+                raise ValueError("runtime outcome coordinates are invalid")
+        except (TypeError, ValueError):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_OUTCOME_INVALID",
+                "Runtime-managed transcription binding coordinates are invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from None
+        expected_flags = (True, False) if action == "START" else (False, True)
+        if (
+            type(outcome.provider_execution_started) is not bool
+            or type(outcome.recovered_from_durable_result) is not bool
+            or (
+                outcome.provider_execution_started,
+                outcome.recovered_from_durable_result,
+            ) != expected_flags
+            or not callable(getattr(self.transcription_port, "finalize_local_media_binding", None))
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_OUTCOME_INVALID",
+                "Runtime-managed transcription outcome violates its action contract",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        try:
+            request = dict(outcome.runtime_request_public)
+            decision = dict(outcome.runtime_decision_public)
+        except Exception as exc:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_OUTCOME_INVALID",
+                "Runtime-managed transcription metadata is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            ) from exc
+        request_keys = {
+            "record_type", "schema_version", "requested_device", "compute_policy",
+            "model_download_authorized",
+        }
+        decision_keys = {
+            "record_type", "schema_version", "outcome", "reason_code",
+            "effective_device", "effective_compute_type", "fallback_applied",
+            "model_load_started", "inference_started", "partial_output_present",
+            "execution_authorized",
+        }
+        expected = {
+            ("cpu", "READY_CPU", "REQUESTED_CPU_AVAILABLE"): ("cpu", "int8", False),
+            ("cuda", "READY_CUDA", "REQUESTED_CUDA_AVAILABLE"): ("cuda", "float16", False),
+            ("auto", "READY_CUDA", "AUTO_CUDA_AVAILABLE"): ("cuda", "float16", False),
+            ("auto", "READY_CPU", "AUTO_CUDA_UNAVAILABLE_CPU_AVAILABLE"): ("cpu", "int8", True),
+        }
+        key = (request.get("requested_device"), decision.get("outcome"), decision.get("reason_code"))
+        if (
+            set(request) != request_keys
+            or set(decision) != decision_keys
+            or request.get("record_type") != "FasterWhisperRuntimeRequestV1"
+            or request.get("schema_version") != "1.0.0"
+            or request.get("compute_policy") != "UWR_BALANCED_V1"
+            or request.get("model_download_authorized") is not False
+            or decision.get("record_type") != "FasterWhisperRuntimeDecisionV1"
+            or decision.get("schema_version") != "1.0.0"
+            or any(
+                type(value) is not str
+                for value in (
+                    request.get("record_type"), request.get("schema_version"),
+                    request.get("requested_device"), request.get("compute_policy"),
+                    decision.get("record_type"), decision.get("schema_version"),
+                    decision.get("outcome"), decision.get("reason_code"),
+                    decision.get("effective_device"),
+                    decision.get("effective_compute_type"),
+                )
+            )
+            or type(decision.get("fallback_applied")) is not bool
+            or any(decision.get(flag) is not False for flag in (
+                "model_load_started", "inference_started", "partial_output_present",
+                "execution_authorized",
+            ))
+            or key not in expected
+            or (
+                decision.get("effective_device"),
+                decision.get("effective_compute_type"),
+                decision.get("fallback_applied"),
+            ) != expected[key]
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_OUTCOME_INVALID",
+                "Runtime-managed transcription metadata is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return {
+            "requested_device": request["requested_device"],
+            "outcome": decision["outcome"],
+            "reason_code": decision["reason_code"],
+            "effective_device": decision["effective_device"],
+            "effective_compute_type": decision["effective_compute_type"],
+            "fallback_applied": decision["fallback_applied"],
+            "model_download_authorized": False,
+            "provider_configuration_from_javascript": False,
+            "transcript_text_exposed": False,
+            "host_path_exposed": False,
+        }
+
+    def _prepare_runtime_transcription_action(self, action: str) -> dict[str, Any]:
+        status = self._runtime_managed_status()
+        if status["transcription_available_action"] != action:
+            raise ProductError(
+                "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE",
+                "Runtime-managed transcription action is not available",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        with self._confirmation_lock:
+            if len(self._transcription_confirmations) >= 256:
+                raise ProductError(
+                    "ERR_TASK036_TRANSCRIPTION_CONFIRMATION_CAPACITY",
+                    "Too many local transcription confirmations are pending",
+                    ProductErrorCategory.STATE,
+                )
+            state = self.coordinator.state
+            source_path = self.media.runtime_source_path
+            project = self.coordinator.shell.project
+            if (
+                state.source_asset_id is None or state.source_asset_sha256 is None
+                or source_path is None or project is None
+                or state.next_recommended_action != "transcription.start"
+            ):
+                raise ProductError(
+                    "ERR_TASK036_RUNTIME_SOURCE_NOT_BOUND",
+                    "Runtime-managed transcription requires the exact source binding",
+                    ProductErrorCategory.STATE,
+                )
+            token = secrets.token_urlsafe(24)
+            if token in self._transcription_confirmations:
+                raise ProductError(
+                    "ERR_TASK036_TRANSCRIPTION_CONFIRMATION_CONFLICT",
+                    "Local transcription confirmation identity collided",
+                    ProductErrorCategory.STATE,
+                )
+            self._transcription_confirmations[token] = _PendingTranscription(
+                token, state.project_id, state.revision, state.source_asset_id,
+                state.source_asset_sha256, source_path, project.context_revision, action,
+            )
+        return {
+            "task_owner": "TASK-036",
+            "operation": "LOCAL_TRANSCRIPTION_PREPARE",
+            "confirmation_id": token,
+            "project_id": state.project_id,
+            "source_asset_id": state.source_asset_id,
+            "source_asset_sha256": state.source_asset_sha256,
+            "provider_execution_mode": "LOCAL",
+            "model_download_authorized": False,
+            "provider_execution_started": False,
+            "transcription_runtime_mode": "RUNTIME_MANAGED_V2",
+            "transcription_action": action,
+            "transcription_status_label": status["transcription_status_label"],
+            "recovery": action == "RECOVER",
+        }
+
     def prepare_local_transcription(self, *, recovery: bool = False) -> dict[str, Any]:
+        if self.transcription_runtime_mode == "RUNTIME_MANAGED_V2":
+            return self._prepare_runtime_transcription_action("RECOVER" if recovery else "START")
         with self._confirmation_lock:
             if len(self._transcription_confirmations) >= 256:
                 raise ProductError(
@@ -388,7 +657,8 @@ class Task036PreEditRuntime:
                 )
             pending = _PendingTranscription(
                 token, state.project_id, state.revision, state.source_asset_id,
-                state.source_asset_sha256, source_path, project.context_revision, recovery,
+                state.source_asset_sha256, source_path, project.context_revision,
+                "RECOVER" if recovery else "START",
             )
             self._transcription_confirmations[token] = pending
             return {
@@ -403,6 +673,15 @@ class Task036PreEditRuntime:
                 "provider_execution_started": False,
                 "recovery": recovery,
             }
+
+    def prepare_local_transcription_verification(self) -> dict[str, Any]:
+        if self.transcription_runtime_mode != "RUNTIME_MANAGED_V2":
+            raise ProductError(
+                "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE",
+                "Runtime-managed verification is not available in legacy mode",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return self._prepare_runtime_transcription_action("VERIFY")
 
     def cancel_local_transcription(self, confirmation_id: str) -> dict[str, Any]:
         with self._confirmation_lock:
@@ -429,7 +708,7 @@ class Task036PreEditRuntime:
                 "Local transcription confirmation is missing or already consumed",
                 ProductErrorCategory.AUTHORIZATION,
             )
-        if pending.recovery:
+        if pending.action != "START":
             raise ProductError(
                 "ERR_TASK036_TRANSCRIPTION_CONFIRMATION_INVALID",
                 "Recovery confirmation cannot authorize Provider execution",
@@ -461,6 +740,15 @@ class Task036PreEditRuntime:
                     "Editing source changed before local transcription started",
                     ProductErrorCategory.STATE,
                 )
+            if (
+                self.transcription_runtime_mode == "RUNTIME_MANAGED_V2"
+                and self._runtime_managed_status()["transcription_available_action"] != "START"
+            ):
+                raise ProductError(
+                    "ERR_TASK036_TRANSCRIPTION_CONTEXT_STALE",
+                    "Runtime-managed transcription authority changed before apply",
+                    ProductErrorCategory.STATE,
+                )
             expected = (
                 pending.project_id,
                 pending.session_revision,
@@ -483,6 +771,10 @@ class Task036PreEditRuntime:
                     source_path=source_path,
                     source_asset_id=pending.source_asset_id,
                     source_asset_sha256=pending.source_asset_sha256,
+                )
+                runtime_projection = self._validate_runtime_managed_outcome(
+                    outcome,
+                    action="START",
                 )
                 if self.media.runtime_source_path != source_path:
                     raise ProductError(
@@ -507,6 +799,8 @@ class Task036PreEditRuntime:
                 )
                 result["provider_execution_started"] = outcome.provider_execution_started
                 result["recovered_from_durable_result"] = outcome.recovered_from_durable_result
+                if runtime_projection is not None:
+                    result["runtime_transcription"] = runtime_projection
                 return result
 
             receipt = self.coordinator.shell.dispatch(command, executor=execute)
@@ -528,13 +822,18 @@ class Task036PreEditRuntime:
         finally:
             self._transcription_lock.release()
 
-    def recover_local_transcription(self, confirmation_id: str) -> dict[str, Any]:
+    def _apply_provider_zero_local_transcription(
+        self,
+        confirmation_id: str,
+        *,
+        required_action: str,
+    ) -> dict[str, Any]:
         with self._confirmation_lock:
             pending = self._transcription_confirmations.pop(confirmation_id, None)
-        if pending is None or not pending.recovery:
+        if pending is None or pending.action != required_action:
             raise ProductError(
                 "ERR_TASK036_TRANSCRIPTION_CONFIRMATION_INVALID",
-                "Local transcription recovery confirmation is missing or already consumed",
+                "Provider-zero transcription confirmation is missing or already consumed",
                 ProductErrorCategory.AUTHORIZATION,
             )
         if not self._transcription_lock.acquire(blocking=False):
@@ -553,11 +852,23 @@ class Task036PreEditRuntime:
                 or state.next_recommended_action != "transcription.start"
             ):
                 raise ProductError("ERR_TASK036_TRANSCRIPTION_CONTEXT_STALE", "Editing source changed before recovery", ProductErrorCategory.STATE)
+            if self.transcription_runtime_mode == "RUNTIME_MANAGED_V2":
+                available = self._runtime_managed_status()["transcription_available_action"]
+                if available != required_action:
+                    raise ProductError(
+                        "ERR_TASK036_TRANSCRIPTION_CONTEXT_STALE",
+                        "Runtime-managed transcription authority changed before apply",
+                        ProductErrorCategory.STATE,
+                    )
             outcome = self.transcription_port.recover_local_media(
                 project_id=pending.project_id,
                 source_path=pending.source_path,
                 source_asset_id=pending.source_asset_id,
                 source_asset_sha256=pending.source_asset_sha256,
+            )
+            runtime_projection = self._validate_runtime_managed_outcome(
+                outcome,
+                action=required_action,
             )
             result = self.binding.bind_transcript_if_current(
                 outcome.transcript,
@@ -574,7 +885,7 @@ class Task036PreEditRuntime:
                 source_asset_sha256=pending.source_asset_sha256,
                 transcript_manifest_sha256=result["transcript_manifest_sha256"],
             )
-            return {
+            response = {
                 **result,
                 "provider_execution_started": False,
                 "provider_execution_completed": True,
@@ -582,8 +893,27 @@ class Task036PreEditRuntime:
                 "provider_configuration_from_javascript": False,
                 "recovered_from_durable_result": True,
             }
+            if runtime_projection is not None:
+                response["runtime_transcription"] = runtime_projection
+            return response
         finally:
             self._transcription_lock.release()
+
+    def recover_local_transcription(self, confirmation_id: str) -> dict[str, Any]:
+        return self._apply_provider_zero_local_transcription(
+            confirmation_id, required_action="RECOVER",
+        )
+
+    def verify_local_transcription(self, confirmation_id: str) -> dict[str, Any]:
+        if self.transcription_runtime_mode != "RUNTIME_MANAGED_V2":
+            raise ProductError(
+                "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE",
+                "Runtime-managed verification is not available in legacy mode",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return self._apply_provider_zero_local_transcription(
+            confirmation_id, required_action="VERIFY",
+        )
 
     def _capture_pre_edit_coordinate(self, expected_action: str) -> _PreEditCoordinate:
         state = self.coordinator.state

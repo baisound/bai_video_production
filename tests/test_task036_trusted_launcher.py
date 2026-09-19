@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import gc
+import hashlib
+import inspect
+from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
 import subprocess
@@ -11,7 +14,7 @@ from time import monotonic, sleep
 import pytest
 
 from ai_video_production.errors import ProductError
-from ai_video_production.faster_whisper_asr import FasterWhisperConfig
+from ai_video_production.faster_whisper_asr import FasterWhisperConfig, FasterWhisperProvider
 from ai_video_production.ai_connections import (
     AiConnectionProfile,
     AiWorkload,
@@ -24,10 +27,15 @@ from ai_video_production.connection_settings_store import ConnectionSettingsStor
 from ai_video_production.task036_native_dialog import Task036NativeDialogService
 from ai_video_production.task036_trusted_launcher import (
     OwnerSigningKeyPpkLaunchConfiguration,
+    Task036DeterministicFakeProviderFactoryV2,
+    Task036DeterministicFakeRuntimeCapabilityProbeV2,
+    Task036DeterministicFakeUtcClockV2,
+    Task036RuntimeManagedTranscriptionInjectionV2,
     Task036LaunchConfiguration,
     _handoff_subtitle_path,
     _resolve_asset_bindings,
     build_trusted_launch,
+    build_runtime_managed_trusted_launch_for_tests,
 )
 from ai_video_production.owner_signing_key_ppk_shell_service import (
     OwnerSigningKeyPpkShellService,
@@ -62,6 +70,39 @@ from ai_video_production.task036_ollama_runtime import OllamaRuntimeSnapshot
 from ai_video_production.local_audio_model_inventory import compile_local_audio_model_inventory
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome
+from ai_video_production.faster_whisper_runtime_contract import FasterWhisperRuntimeRequestV1
+from ai_video_production.task036_product_ports import FasterWhisperProviderSettingsV2
+
+
+def test_runtime_managed_test_entrypoint_rejects_foreign_injection_before_configuration_use() -> None:
+    with pytest.raises(ProductError) as rejected:
+        build_runtime_managed_trusted_launch_for_tests(object(), object())
+    assert rejected.value.code == "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND"
+    assert "meter_host_factory" not in inspect.signature(
+        build_runtime_managed_trusted_launch_for_tests,
+    ).parameters
+
+
+def test_runtime_managed_injection_accepts_only_exact_deterministic_fake_wrappers() -> None:
+    settings = FasterWhisperProviderSettingsV2(model="test-model")
+    request = FasterWhisperRuntimeRequestV1.create("cpu")
+    with pytest.raises(ProductError) as rejected:
+        Task036RuntimeManagedTranscriptionInjectionV2(
+            settings=settings,
+            runtime_request=request,
+            capability_probe=lambda *_args: True,
+            provider_factory=Task036DeterministicFakeProviderFactoryV2(),
+            clock=Task036DeterministicFakeUtcClockV2(),
+        )
+    assert rejected.value.code == "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND"
+    injection = Task036RuntimeManagedTranscriptionInjectionV2(
+        settings=settings,
+        runtime_request=request,
+        capability_probe=Task036DeterministicFakeRuntimeCapabilityProbeV2(),
+        provider_factory=Task036DeterministicFakeProviderFactoryV2(),
+        clock=Task036DeterministicFakeUtcClockV2(),
+    )
+    assert type(injection.capability_probe) is Task036DeterministicFakeRuntimeCapabilityProbeV2
 
 
 def test_trusted_meter_factory_receives_selected_project_without_starting_capture(tmp_path):
@@ -187,6 +228,23 @@ class AsrProvider:
 
     def transcribe(self, request):
         raise AssertionError("provider must not execute during launch")
+
+
+def runtime_injection() -> Task036RuntimeManagedTranscriptionInjectionV2:
+    return Task036RuntimeManagedTranscriptionInjectionV2(
+        settings=FasterWhisperProviderSettingsV2(model="cached-local-model"),
+        runtime_request=FasterWhisperRuntimeRequestV1.create("cpu"),
+        capability_probe=Task036DeterministicFakeRuntimeCapabilityProbeV2(
+            cpu_available=True,
+            cuda_available=False,
+        ),
+        provider_factory=Task036DeterministicFakeProviderFactoryV2(
+            transcript_text="runtime text",
+        ),
+        clock=Task036DeterministicFakeUtcClockV2(
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        ),
+    )
 
 
 class OwnerSigningKeyImportStub:
@@ -505,6 +563,80 @@ def test_trusted_launch_owns_body_free_signing_key_service_lifetime(tmp_path: Pa
     launch.close()
     assert service.close_count == 1
     assert launch._owner_signing_key_import is None
+
+
+@pytest.mark.parametrize("invalid_kind", ["missing", "foreign", "mixed", "malformed", "clock"])
+def test_v2_injection_rejects_before_any_project_store_or_provider_effect(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid_kind: str,
+):
+    path, raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    if invalid_kind == "missing":
+        injection = None
+    elif invalid_kind == "foreign":
+        injection = object()
+    else:
+        injection = runtime_injection()
+        if invalid_kind == "mixed":
+            object.__setattr__(injection, "settings", config.asr_config)
+        elif invalid_kind == "malformed":
+            object.__setattr__(injection, "runtime_request", object())
+        else:
+            object.__setattr__(injection.clock, "utc_timestamp", "2026-99-99T00:00:00Z")
+
+    def forbidden_store(*_args, **_kwargs):
+        raise AssertionError("store must not be touched before injection validation")
+
+    monkeypatch.setattr("ai_video_production.task036_trusted_launcher.SQLiteProductStore", forbidden_store)
+    with pytest.raises(ProductError) as rejected:
+        build_runtime_managed_trusted_launch_for_tests(
+            config, injection,
+        )
+    assert rejected.value.code == "ERR_TASK098_RUNTIME_ADAPTER_NOT_BOUND"
+    project = Path(raw["project"]["project_root"])
+    assert not (project / "assets").exists()
+    assert not (project / "jobs").exists()
+    assert not (project / "transcription").exists()
+    assert not (project / "product.sqlite3").exists()
+
+
+def test_v2_test_entrypoint_composes_actual_r1b_port_with_fake_only_provider(tmp_path: Path):
+    path, raw = config_document(tmp_path)
+    config = Task036LaunchConfiguration.load(path)
+    injection = runtime_injection()
+    source = Path(raw["paths"]["source_roots"][0]) / "source.mp4"
+
+    class SourceDialog(DialogBackend):
+        def choose_open_media(self):
+            return str(source)
+
+    launch = build_runtime_managed_trusted_launch_for_tests(
+        config,
+        injection,
+        native_dialog=Task036NativeDialogService(SourceDialog()),
+        resolve_adapter=ResolveAdapter(),
+        local_planning_inventory_provider=lambda: (),
+    )
+    try:
+        class IngestStub:
+            def ingest_local_media(self, source_path):
+                digest = "sha256:" + hashlib.sha256(source_path.read_bytes()).hexdigest()
+                return IngestedMediaIdentity(
+                    "ASSET-00000000000000000000000000", digest, source_path,
+                )
+
+        launch.pre_edit_runtime.media.ingest_port = IngestStub()
+        bridge = launch.bridge
+        assert bridge.workflow_status({})["transcription_runtime_mode"] == "RUNTIME_MANAGED_V2"
+        bridge.choose_and_ingest_media({})
+        prepared = bridge.prepare_local_transcription({})
+        result = bridge.run_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+        assert result["runtime_transcription"]["outcome"] == "READY_CPU"
+        assert result["runtime_transcription"]["model_download_authorized"] is False
+        assert str(config.project_root) not in json.dumps(result)
+        assert launch._meter_controller_host is None
+    finally:
+        launch.close()
 
 
 def test_trusted_launch_releases_other_resources_when_signing_service_close_fails(

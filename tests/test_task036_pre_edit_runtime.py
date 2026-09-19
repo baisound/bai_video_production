@@ -11,8 +11,13 @@ from ai_video_production.desktop_editing_coordinator import DesktopEditingCoordi
 from ai_video_production.desktop_editing_session import EditingSessionState
 from ai_video_production.desktop_media_workflow import IngestedMediaIdentity
 from ai_video_production.errors import ProductError
+from ai_video_production.faster_whisper_runtime_contract import (
+    FasterWhisperRuntimeDecisionV1,
+    FasterWhisperRuntimeRequestV1,
+)
 from ai_video_production.subtitles import TranscriptManifest, TranscriptSegment
 from ai_video_production.task036_native_dialog import Task036NativeDialogService
+from ai_video_production.task036_product_ports import RuntimeManagedLocalTranscriptionOutcomeV2
 from ai_video_production.task036_pre_edit_runtime import LocalTranscriptionOutcome, Task036PreEditRuntime
 from ai_video_production.task036_shell_ui import Task036ShellBridge
 
@@ -98,6 +103,83 @@ def make_runtime(tmp_path: Path):
         cut,
     )
     return source, runtime, ingest, transcription, cut
+
+
+def make_v2_outcome(*, provider_started: bool = True) -> RuntimeManagedLocalTranscriptionOutcomeV2:
+    request = FasterWhisperRuntimeRequestV1.create("cpu")
+    decision = FasterWhisperRuntimeDecisionV1.create(
+        request=request,
+        outcome="READY_CPU",
+        reason_code="REQUESTED_CPU_AVAILABLE",
+        capability_observation_sha256=sha("d"),
+        issued_at="2026-09-19T12:00:00Z",
+        expires_at="2026-09-19T12:05:00Z",
+    )
+    return RuntimeManagedLocalTranscriptionOutcomeV2(
+        transcript=TranscriptManifest(
+            "ASSET-00000000000000000000000000", "ja", "faster-whisper", "local-cached-model",
+            (TranscriptSegment("seg-000001", 0, 1_000_000, "private text"),),
+        ),
+        provider_execution_started=provider_started,
+        recovered_from_durable_result=not provider_started,
+        operation_id="OP-00000000000000000000000000",
+        slot_operation_id="OP-11111111111111111111111111",
+        publication_set_sha256=sha("e"),
+        runtime_request=request,
+        runtime_decision=decision,
+    )
+
+
+class RuntimeManagedPort(TranscriptionPort):
+    def __init__(self, recovery_state: object, outcome: RuntimeManagedLocalTranscriptionOutcomeV2):
+        super().__init__()
+        self.state = recovery_state
+        self.outcome = outcome
+        self.recovery_state_calls = 0
+        self.recovery_calls = 0
+        self.transcribe_calls = 0
+        self.finalize_calls = 0
+        self.probe_calls = 0
+        self.factory_calls = 0
+        self.slot_release_calls = 0
+        self.durable_row_calls = 0
+
+    def recovery_state(self, **_kwargs):
+        self.recovery_state_calls += 1
+        return self.state
+
+    def transcribe_local_media(self, **_kwargs):
+        self.transcribe_calls += 1
+        self.calls.append((_kwargs["source_path"], _kwargs["source_asset_id"]))
+        return self.outcome
+
+    def recover_local_media(self, **_kwargs):
+        self.recovery_calls += 1
+        return self.outcome
+
+    def finalize_local_media_binding(self, **_kwargs):
+        self.finalize_calls += 1
+
+    def effect_counts(self) -> dict[str, int]:
+        return {
+            "probe": self.probe_calls,
+            "factory": self.factory_calls,
+            "recover": self.recovery_calls,
+            "transcribe": self.transcribe_calls,
+            "finalize": self.finalize_calls,
+            "slot_release": self.slot_release_calls,
+            "durable_row": self.durable_row_calls,
+        }
+
+
+class MissingRecoveryStatePort(RuntimeManagedPort):
+    recovery_state = None
+
+
+class RaisingRecoveryStatePort(RuntimeManagedPort):
+    def recovery_state(self, **_kwargs):
+        self.recovery_state_calls += 1
+        raise RuntimeError("synthetic recovery classifier failure")
 
 
 def run_transcription(bridge: Task036ShellBridge) -> dict:
@@ -489,6 +571,378 @@ def test_bridge_rejects_malformed_private_transcription_result_without_leaking_i
     with pytest.raises(ProductError) as invalid:
         bridge.run_local_transcription({"confirmation_id": "confirm"})
     assert invalid.value.code == "ERR_TASK036_TRANSCRIPTION_RESULT_INVALID"
+
+
+@pytest.mark.parametrize(
+    ("classifier", "action", "label"),
+    [
+        ("PENDING_ADMISSION", "START", "文字起こしを開始できます"),
+        ("RECOVERABLE_PUBLICATION", "RECOVER", "文字起こし結果を復旧できます"),
+        ("VERIFICATION_ONLY", "VERIFY", "文字起こし結果を検証できます"),
+        ("ACTIVE_UNKNOWN", "NONE", "文字起こし処理の状態を確認できません"),
+        ("ADJUDICATION_REQUIRED_NO_PUBLICATION", "NONE", "人による確認が必要です"),
+        ("FAILED_TERMINAL", "NONE", "文字起こしは失敗しました"),
+        ("CORRUPT_BLOCKED", "NONE", "文字起こし状態が破損しているため停止しました"),
+    ],
+)
+def test_v2_status_projects_exact_classifier_action_and_label(
+    tmp_path: Path, classifier: str, action: str, label: str,
+):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort(classifier, make_v2_outcome())
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+
+    status = bridge.workflow_status({})
+    assert status["transcription_runtime_mode"] == "RUNTIME_MANAGED_V2"
+    assert status["transcription_recovery_state"] == classifier
+    assert status["transcription_available_action"] == action
+    assert status["transcription_status_label"] == label
+    assert "transcription_recovery_required" not in status
+
+
+def test_v2_source_less_status_does_not_call_classifier_or_expose_action(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort("PENDING_ADMISSION", make_v2_outcome())
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+
+    status = bridge.workflow_status({})
+    assert status["transcription_recovery_state"] is None
+    assert status["transcription_available_action"] == "NONE"
+    assert status["transcription_status_label"] is None
+    assert port.recovery_state_calls == 0
+
+
+@pytest.mark.parametrize(
+    ("port_type", "classifier"),
+    [
+        (MissingRecoveryStatePort, "missing"),
+        (RaisingRecoveryStatePort, "raises"),
+        (RuntimeManagedPort, 123),
+        (RuntimeManagedPort, "UNKNOWN"),
+    ],
+)
+def test_v2_malformed_recovery_state_fails_closed_to_blocked_status(
+    tmp_path: Path, port_type: type[RuntimeManagedPort], classifier: object,
+):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = port_type(classifier, make_v2_outcome())
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+
+    status = bridge.workflow_status({})
+    assert status["transcription_recovery_state"] == "CORRUPT_BLOCKED"
+    assert status["transcription_available_action"] == "NONE"
+    assert status["transcription_status_label"] == "文字起こし状態が破損しているため停止しました"
+    with pytest.raises(ProductError) as rejected:
+        bridge.prepare_local_transcription({})
+    assert rejected.value.code == "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE"
+
+
+def test_v2_bound_verification_is_read_only_and_later_stage_keeps_existing_action_priority(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort("VERIFICATION_ONLY", make_v2_outcome())
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    coordinate = runtime.coordinator.state
+    project = runtime.coordinator.shell.project
+    assert project is not None
+    runtime.binding.bind_transcript_if_current(
+        port.outcome.transcript,
+        expected_project_id=coordinate.project_id,
+        expected_revision=coordinate.revision,
+        expected_source_asset_id=coordinate.source_asset_id,
+        expected_source_asset_sha256=coordinate.source_asset_sha256,
+        expected_context_revision=project.context_revision,
+    )
+
+    status = bridge.workflow_status({})
+    assert status["transcription_available_action"] == "NONE"
+    assert status["transcription_status_label"] == "文字起こし結果は検証済みです"
+    assert status["next_recommended_action"] == "subtitle.save"
+    with pytest.raises(ProductError) as rejected:
+        bridge.prepare_local_transcription_verification({})
+    assert rejected.value.code == "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE"
+    assert port.recovery_calls == 0
+
+
+@pytest.mark.parametrize(
+    "classifier",
+    [
+        "PENDING_ADMISSION", "VERIFICATION_ONLY", "ACTIVE_UNKNOWN",
+        "ADJUDICATION_REQUIRED_NO_PUBLICATION", "FAILED_TERMINAL", "CORRUPT_BLOCKED",
+    ],
+)
+def test_v2_nonrecoverable_direct_recovery_is_effect_zero(tmp_path: Path, classifier: str):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort(classifier, make_v2_outcome())
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+
+    with pytest.raises(ProductError) as rejected:
+        bridge.prepare_local_transcription_recovery({})
+    assert rejected.value.code == "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE"
+    assert port.recovery_calls == 0
+    assert port.calls == []
+    assert port.finalize_calls == 0
+
+
+@pytest.mark.parametrize(
+    "classifier",
+    [
+        "PENDING_ADMISSION",
+        "ACTIVE_UNKNOWN",
+        "ADJUDICATION_REQUIRED_NO_PUBLICATION",
+        "FAILED_TERMINAL",
+        "CORRUPT_BLOCKED",
+    ],
+)
+def test_v2_status_and_prepare_leave_available_fake_effect_counters_at_zero(
+    tmp_path: Path, classifier: str,
+):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort(classifier, make_v2_outcome())
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+
+    status = bridge.workflow_status({})
+    assert status["transcription_recovery_state"] == classifier
+    if classifier == "PENDING_ADMISSION":
+        assert status["transcription_available_action"] == "START"
+        prepared = bridge.prepare_local_transcription({})
+        assert bridge.cancel_local_transcription(
+            {"confirmation_id": prepared["confirmation_id"]}
+        )["status"] == "CANCELLED"
+    else:
+        assert status["transcription_available_action"] == "NONE"
+        with pytest.raises(ProductError) as rejected:
+            bridge.prepare_local_transcription({})
+        assert rejected.value.code == "ERR_SHELL_COMMAND_NOT_AVAILABLE_IN_STAGE"
+
+    assert port.effect_counts() == {
+        "probe": 0,
+        "factory": 0,
+        "recover": 0,
+        "transcribe": 0,
+        "finalize": 0,
+        "slot_release": 0,
+        "durable_row": 0,
+    }
+
+
+def test_v2_recoverable_positive_path_is_provider_zero_and_single_use(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort("RECOVERABLE_PUBLICATION", make_v2_outcome(provider_started=False))
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    prepared = bridge.prepare_local_transcription_recovery({})
+    result = bridge.recover_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+    assert result["runtime_transcription"]["outcome"] == "READY_CPU"
+    assert port.recovery_calls == 1
+    assert port.calls == []
+    assert port.finalize_calls == 1
+    with pytest.raises(ProductError) as repeated:
+        bridge.recover_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+    assert repeated.value.code == "ERR_TASK036_TRANSCRIPTION_CONFIRMATION_INVALID"
+    assert port.recovery_calls == 1
+
+
+def test_v2_verification_positive_path_is_distinct_provider_zero_action(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort("VERIFICATION_ONLY", make_v2_outcome(provider_started=False))
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    prepared = bridge.prepare_local_transcription_verification({})
+    result = bridge.verify_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+    assert result["runtime_transcription"]["outcome"] == "READY_CPU"
+    assert port.recovery_calls == 1
+    assert port.calls == []
+
+
+def test_v2_negative_and_stale_confirmation_have_zero_apply_effect(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort("PENDING_ADMISSION", make_v2_outcome())
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    cancelled = bridge.prepare_local_transcription({})
+    assert bridge.cancel_local_transcription({"confirmation_id": cancelled["confirmation_id"]})["status"] == "CANCELLED"
+    assert port.calls == []
+
+    stale = bridge.prepare_local_transcription({})
+    runtime.coordinator.bind_source(
+        asset_id="ASSET-11111111111111111111111111", asset_sha256=sha("b"),
+    )
+    with pytest.raises(ProductError) as rejected:
+        bridge.run_local_transcription({"confirmation_id": stale["confirmation_id"]})
+    assert rejected.value.code == "ERR_TASK036_TRANSCRIPTION_CONTEXT_STALE"
+    assert port.calls == []
+
+
+def test_v2_projection_is_exact_and_invalid_outcome_cannot_bind_or_finalize(tmp_path: Path):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort("PENDING_ADMISSION", make_v2_outcome())
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    prepared = bridge.prepare_local_transcription({})
+    result = bridge.run_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+    projection = result["runtime_transcription"]
+    assert set(projection) == {
+        "requested_device", "outcome", "reason_code", "effective_device",
+        "effective_compute_type", "fallback_applied", "model_download_authorized",
+        "provider_configuration_from_javascript", "transcript_text_exposed", "host_path_exposed",
+    }
+    assert projection == {
+        "requested_device": "cpu", "outcome": "READY_CPU",
+        "reason_code": "REQUESTED_CPU_AVAILABLE", "effective_device": "cpu",
+        "effective_compute_type": "int8", "fallback_applied": False,
+        "model_download_authorized": False,
+        "provider_configuration_from_javascript": False,
+        "transcript_text_exposed": False, "host_path_exposed": False,
+    }
+    assert "private text" not in json.dumps(result)
+    assert port.finalize_calls == 1
+    request_copy = port.outcome.runtime_request_public
+    request_copy["requested_device"] = "cuda"
+    assert result["runtime_transcription"]["requested_device"] == "cpu"
+
+
+@pytest.mark.parametrize(
+    "invalid_kind",
+    [
+        "dict", "subclass", "extra_private", "all_none", "partial",
+        "start_flags", "missing_finalizer",
+    ],
+)
+def test_v2_invalid_outcome_is_rejected_before_binding_finalize_or_slot_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, invalid_kind: str,
+):
+    tmp_path = tmp_path / invalid_kind
+    tmp_path.mkdir()
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    valid = make_v2_outcome()
+    if invalid_kind == "dict":
+        invalid = {"runtime_request_public": {"private": "value"}}
+    elif invalid_kind == "subclass":
+        class OutcomeSubclass(RuntimeManagedLocalTranscriptionOutcomeV2):
+            pass
+        invalid = OutcomeSubclass(
+            transcript=valid.transcript,
+            provider_execution_started=valid.provider_execution_started,
+            recovered_from_durable_result=valid.recovered_from_durable_result,
+            operation_id=valid.operation_id,
+            slot_operation_id=valid.slot_operation_id,
+            publication_set_sha256=valid.publication_set_sha256,
+            runtime_request=valid._runtime_request,
+            runtime_decision=valid._runtime_decision,
+        )
+    elif invalid_kind == "extra_private":
+        original = RuntimeManagedLocalTranscriptionOutcomeV2.runtime_request_public.fget
+        assert original is not None
+        monkeypatch.setattr(
+            RuntimeManagedLocalTranscriptionOutcomeV2,
+            "runtime_request_public",
+            property(lambda self: {**original(self), "private": "value"}),
+        )
+        invalid = valid
+    elif invalid_kind == "all_none":
+        object.__setattr__(valid, "operation_id", None)
+        object.__setattr__(valid, "slot_operation_id", None)
+        object.__setattr__(valid, "publication_set_sha256", None)
+        invalid = valid
+    elif invalid_kind == "partial":
+        object.__setattr__(valid, "slot_operation_id", None)
+        invalid = valid
+    elif invalid_kind == "start_flags":
+        object.__setattr__(valid, "provider_execution_started", False)
+        object.__setattr__(valid, "recovered_from_durable_result", True)
+        invalid = valid
+    else:
+        invalid = valid
+    port = RuntimeManagedPort("PENDING_ADMISSION", invalid)  # type: ignore[arg-type]
+    if invalid_kind == "missing_finalizer":
+        port.finalize_local_media_binding = None  # type: ignore[method-assign]
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    prepared = bridge.prepare_local_transcription({})
+    bind_calls = 0
+    binding_type = type(runtime.binding)
+    original_bind = binding_type.bind_transcript_if_current
+
+    def counting_bind(binding, *args, **kwargs):
+        nonlocal bind_calls
+        bind_calls += 1
+        return original_bind(binding, *args, **kwargs)
+
+    monkeypatch.setattr(binding_type, "bind_transcript_if_current", counting_bind)
+    with pytest.raises(ProductError) as rejected:
+        bridge.run_local_transcription({"confirmation_id": prepared["confirmation_id"]})
+    assert rejected.value.code == "ERR_TASK098_RUNTIME_OUTCOME_INVALID"
+    assert bind_calls == 0
+    assert runtime.binding.transcript is None
+    assert port.finalize_calls == 0
+    assert port.slot_release_calls == 0
+
+
+@pytest.mark.parametrize(
+    ("classifier", "prepare_name", "apply_name"),
+    [
+        ("RECOVERABLE_PUBLICATION", "prepare_local_transcription_recovery", "recover_local_transcription"),
+        ("VERIFICATION_ONLY", "prepare_local_transcription_verification", "verify_local_transcription"),
+    ],
+)
+def test_v2_provider_zero_actions_reject_provider_execution_flags_before_binding(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    classifier: str,
+    prepare_name: str,
+    apply_name: str,
+):
+    _, runtime, _, _, _ = make_runtime(tmp_path)
+    port = RuntimeManagedPort(classifier, make_v2_outcome(provider_started=True))
+    runtime.transcription_port = port
+    runtime.transcription_runtime_mode = "RUNTIME_MANAGED_V2"
+    bridge = Task036ShellBridge(runtime.coordinator.shell, pre_edit_runtime=runtime)
+    bridge.choose_and_ingest_media({})
+    prepared = getattr(bridge, prepare_name)({})
+    bind_calls = 0
+    binding_type = type(runtime.binding)
+    original_bind = binding_type.bind_transcript_if_current
+
+    def counting_bind(binding, *args, **kwargs):
+        nonlocal bind_calls
+        bind_calls += 1
+        return original_bind(binding, *args, **kwargs)
+
+    monkeypatch.setattr(binding_type, "bind_transcript_if_current", counting_bind)
+    with pytest.raises(ProductError) as rejected:
+        getattr(bridge, apply_name)({"confirmation_id": prepared["confirmation_id"]})
+    assert rejected.value.code == "ERR_TASK098_RUNTIME_OUTCOME_INVALID"
+    assert bind_calls == 0
+    assert runtime.binding.transcript is None
+    assert port.finalize_calls == 0
+    assert port.slot_release_calls == 0
 
 
 def test_trusted_factory_binds_post_review_runtime_after_cut_promotion(tmp_path: Path):

@@ -541,3 +541,11 @@ final Judge; zero unresolved Critical/High; and external Evidence read-back.
 
 Recovery R2 implementation outcome: `COMPLETE / 269 PASS / final Critic and
 Judge 0/0/0/0 ACCEPT / Tester PASS / external Evidence read-back PASS`.
+
+## 16. A2-R1c fresh review boundary
+
+The exact allocation proposal and acceptance matrix are recorded in
+`a2-r1c-pre-mutation-review-20260920.md`. R1c may compose the completed R1b port
+only through an explicit Python-only fake-injection seam. It may not accept or
+activate a new serialized launch-config version; that remains a later native/A6
+Human Gate. Existing `1.0.0`–`1.3.0`, first-run and CLI stay v1-only.

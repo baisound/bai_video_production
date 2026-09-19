@@ -112,7 +112,7 @@ def test_canonical_write_endpoints_all_have_meter_invalidation_guard():
     bridge = next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == 'Task036ShellBridge')
     actual = {node.name for node in bridge.body if isinstance(node, ast.FunctionDef)
               and any(isinstance(item, ast.Name) and item.id == '_meter_write_guarded' for item in node.decorator_list)}
-    expected = ["interactive_timeline_apply_edit","visual_asset_placement_apply","visual_asset_placement_recover","export_queue_apply_dispatch","export_queue_cancel","export_queue_reconcile","choose_and_ingest_media","run_local_transcription","recover_local_transcription","generate_speech_cues","apply_speech_cue_decision","create_runtime_subtitle_workspace","generate_runtime_cut_candidates","compile_resolve_assembly","apply_resolve_assembly","execute_native_render","bind_runtime_render_qa","create_editor_handoff","choose_project_folder","production_register_candidate","production_mark_ready_for_audit","production_apply_lock","audit_apply_human_decision","audit_apply_recovery","planning_generation_apply","planning_apply_revision","planning_apply_scene_revision","planning_apply_scene_finalization","planning_approve_go","planning_apply_install_plan","generation_safety_apply_review","continuity_apply_edge","continuity_inspect","continuity_apply_soft_approval","continuity_propagate_stale","continuity_apply_recovery","prompt_evidence_apply_prompt","prompt_evidence_apply_attempt","prompt_evidence_apply_regeneration","prompt_evidence_apply_recovery","final_review_apply","final_review_export_apply","generation_queue_apply","generation_execution_apply","generation_execution_recover","generation_output_adoption_apply","generation_output_adoption_recover","audio_workspace_apply_placement","audio_workspace_apply_decision","audio_placement_apply","review_candidate","approve_edit_plan"]
+    expected = ["interactive_timeline_apply_edit","visual_asset_placement_apply","visual_asset_placement_recover","export_queue_apply_dispatch","export_queue_cancel","export_queue_reconcile","choose_and_ingest_media","run_local_transcription","recover_local_transcription","verify_local_transcription","generate_speech_cues","apply_speech_cue_decision","create_runtime_subtitle_workspace","generate_runtime_cut_candidates","compile_resolve_assembly","apply_resolve_assembly","execute_native_render","bind_runtime_render_qa","create_editor_handoff","choose_project_folder","production_register_candidate","production_mark_ready_for_audit","production_apply_lock","audit_apply_human_decision","audit_apply_recovery","planning_generation_apply","planning_apply_revision","planning_apply_scene_revision","planning_apply_scene_finalization","planning_approve_go","planning_apply_install_plan","generation_safety_apply_review","continuity_apply_edge","continuity_inspect","continuity_apply_soft_approval","continuity_propagate_stale","continuity_apply_recovery","prompt_evidence_apply_prompt","prompt_evidence_apply_attempt","prompt_evidence_apply_regeneration","prompt_evidence_apply_recovery","final_review_apply","final_review_export_apply","generation_queue_apply","generation_execution_apply","generation_execution_recover","generation_output_adoption_apply","generation_output_adoption_recover","audio_workspace_apply_placement","audio_workspace_apply_decision","audio_placement_apply","review_candidate","approve_edit_plan"]
     assert actual == set(expected)
 
 
@@ -193,6 +193,16 @@ def test_ui_is_professional_nle_layout_not_chat_first():
     assert "BAI Video Production" in HTML
     assert "window.pywebview.api" in HTML
     assert "chat" not in HTML.lower()
+
+
+def test_v2_transcription_ui_requires_explicit_human_confirmation_and_cancel_route():
+    assert "RUNTIME_MANAGED_V2" in HTML
+    assert "prepare_local_transcription" in HTML
+    assert "confirmation_id:prepared.confirmation_id" in HTML
+    assert "prepared.transcription_status_label" in HTML
+    assert "cancel_local_transcription" in HTML
+    assert "transcription_recovery_required===true" in HTML  # unchanged v1 route remains present
+    assert "workflow.transcription_available_action" in HTML
 
 
 def test_bridge_exposes_snapshot_and_workspace_only():

@@ -157,7 +157,7 @@ async function prepareAudioPlacement(model,item){const reviewId=promptText('Plac
 async function decideAudioPlacement(model,row,decision){const prepared=await call('audio_workspace_prepare_decision',{review_id:row.review_id,decision,expected_production_snapshot_sha256:model.production_snapshot_sha256,expected_audio_snapshot_sha256:model.audio_snapshot_sha256});if(prepared&&window.confirm(`この音声Placement判断を保存しますか？\nReview: ${row.review_id}\nCandidate: ${row.candidate_id}\nDecision: ${decision}\n\nTASK-026/Resolve/Cubaseは開始しません。`)){await call('audio_workspace_apply_decision',{confirmation_id:prepared.confirmation_id});await refreshAudioWorkspace()}}
 async function prepareTask026Placement(model,row){const track=Number(promptText('配置先Track番号','1'));if(!Number.isInteger(track)||track<1||track>999)return;const mode=promptText('Bed mode: PREVIEW / FULL','FULL');if(!['PREVIEW','FULL'].includes(mode))return;const prepared=await call('audio_placement_prepare',{review_id:row.review_id,track_index:track,bed_mode:mode,expected_project_manifest_sha256:model.project_manifest_sha256,expected_production_snapshot_sha256:model.production_snapshot_sha256,expected_audio_snapshot_sha256:model.audio_snapshot_sha256,expected_timeline_snapshot_sha256:model.timeline_snapshot_sha256,expected_history_snapshot_sha256:model.history_snapshot_sha256});if(!prepared)return;const ok=window.confirm(`TASK-026 Placement Planを保存しますか？\nReview: ${prepared.review_id}\nCandidate / Asset: ${prepared.candidate_id} / ${prepared.asset_id}\nFrames: ${prepared.frame_range.start} + ${prepared.frame_range.duration}\nTrack / Bed: ${prepared.track_index} / ${prepared.bed_mode}\nLoop / Fade / Gain: ${prepared.loop} / ${prepared.fade_in_frames},${prepared.fade_out_frames} / ${prepared.gain_db??'未指定'}\nTASK-010 compatibility: ${prepared.task010_structurally_compatible?'YES':'GAPあり'}\n\nProvider・課金・音声生成・Resolve/Cubaseは開始しません。`);if(ok){await call('audio_placement_apply',{confirmation_id:prepared.confirmation_id});await refreshAudioWorkspace()}}
 function renderAudioWorkspace(model,placementModel){const drawer=document.querySelector('#audioWorkspace'),host=document.querySelector('#audioWorkspaceContent'),summary=document.querySelector('#audioWorkspaceSummary');host.replaceChildren();if(!model?.available){summary.textContent='Audio Workspace Applicationが接続されていません。';drawer.hidden=false;return}const placements=model.workspace?.placements||[],planRows=new Map((placementModel?.reviews||[]).map(x=>[x.review_id,x])),current=(placementModel?.records||[]).filter(x=>x.currentness==='CURRENT').length,stale=(placementModel?.records||[]).filter(x=>x.currentness==='STALE').length;summary.textContent=`Audio Candidate ${(model.available_audio_candidates||[]).length} / Placement ${placements.length} / TASK-026 Current ${current}・Stale ${stale}`;for(const item of model.available_audio_candidates||[]){const card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`${item.scene_id} · ${item.track_role} · ${item.lifecycle_state}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`Candidate: ${item.candidate_id}\nAsset: ${item.asset_id}\nSHA-256: ${item.asset_sha256}\nSlot: ${item.slot_id}`;card.append(title,meta);if(!item.placement_registered){const button=document.createElement('button');button.className='action';button.textContent='Placement Reviewを登録';button.addEventListener('click',()=>prepareAudioPlacement(model,item));card.append(button)}host.append(card)}for(const row of placements){const planRow=planRows.get(row.review_id),card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`${row.review_id} · ${row.track_role} · ${row.decision}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`Candidate: ${row.candidate_id} / ${row.candidate_lifecycle_state}\nFrames: ${row.timeline_start_frame}–${row.timeline_start_frame+row.duration_frames}\nGain: ${row.gain_db??'未指定'} dB\nTASK-026: ${planRow?.runnable?'READY':(planRow?.blocker_codes||['UNAVAILABLE']).join(', ')} / Resolve: NO`;card.append(title,meta);for(const decision of row.available_human_actions||[]){const button=document.createElement('button');button.className='action';button.textContent=decision;button.addEventListener('click',()=>decideAudioPlacement(model,row,decision));card.append(button)}if(planRow?.runnable){const compile=document.createElement('button');compile.className='action';compile.textContent='Placement Planを作成';compile.setAttribute('aria-label',`${row.review_id} のPlacement Planを作成`);compile.addEventListener('click',()=>prepareTask026Placement(placementModel,planRow));card.append(compile)}host.append(card)}for(const record of placementModel?.records||[]){const card=document.createElement('section');card.className='planning-card';const title=document.createElement('strong');title.textContent=`${record.currentness} · ${record.compilation_id}`;const meta=document.createElement('div');meta.className='production-meta';meta.textContent=`Review / Candidate: ${record.review_id} / ${record.candidate_id}\nAsset: ${record.asset_id}\nTrack / Bed: ${record.track_index} / ${record.bed_mode}\nPlan: ${record.task026_plan_sha256}\nTASK-010: ${record.task010_structurally_compatible?'compatible':'feature gap'}\nReasons: ${(record.reason_codes||[]).join(', ')||'NONE'}`;card.append(title,meta);host.append(card)}const boundary=document.createElement('div');boundary.className='production-meta planning-warning';boundary.textContent='TASK-026はHuman ACCEPT・LOCK・現行Timelineから配置Planだけを保存します。Provider・課金・音声生成・派生Media作成・TASK-010・Resolve/Cubase操作は開始しません。';host.append(boundary);drawer.hidden=false}
-async function refresh(){const vm=await call('view_model');const x=vm?.shell||await call('snapshot');if(!x)return;const p=x.project;document.querySelector('#projectName').textContent=p?p.display_name:'プロジェクト未選択';document.querySelector('#job').textContent=x.active_jobs?.length?`${x.active_jobs.length} job`:'待機中';document.querySelectorAll('.workspace').forEach(b=>b.classList.toggle('active',b.dataset.w===x.current_workspace));if(vm){renderRows(vm);renderTimeline(vm)}await refreshInteractiveTimeline();const review=await call('review_snapshot');if(review)renderReview(review);const drawer=document.querySelector('#productionWorkspace'),planningDrawer=document.querySelector('#planningWorkspace'),safetyDrawer=document.querySelector('#generationSafetyWorkspace'),continuityDrawer=document.querySelector('#continuityWorkspace'),promptDrawer=document.querySelector('#promptEvidenceWorkspace');if(x.current_workspace==='PRODUCTION_CONTROL'){const production=await call('production_snapshot');const audit=await call('audit_snapshot');renderProduction(production,audit);planningDrawer.hidden=true;safetyDrawer.hidden=true;continuityDrawer.hidden=true;promptDrawer.hidden=true}else if(x.current_workspace==='PLANNING'){const planning=await call('planning_snapshot');renderPlanning(planning);drawer.hidden=true;safetyDrawer.hidden=true;continuityDrawer.hidden=true;promptDrawer.hidden=true}else if(x.current_workspace==='GENERATION_SAFETY'){const safety=await call('generation_safety_snapshot');renderGenerationSafety(safety);drawer.hidden=true;planningDrawer.hidden=true;continuityDrawer.hidden=true;promptDrawer.hidden=true}else if(x.current_workspace==='CONTINUITY'){const continuity=await call('continuity_snapshot');renderContinuity(continuity);drawer.hidden=true;planningDrawer.hidden=true;safetyDrawer.hidden=true;promptDrawer.hidden=true}else if(x.current_workspace==='PROMPT_EVIDENCE'){const promptEvidence=await call('prompt_evidence_snapshot');renderPromptEvidence(promptEvidence);drawer.hidden=true;planningDrawer.hidden=true;safetyDrawer.hidden=true;continuityDrawer.hidden=true}else{drawer.hidden=true;planningDrawer.hidden=true;safetyDrawer.hidden=true;continuityDrawer.hidden=true;promptDrawer.hidden=true}const runtime=await call('workflow_status');const action=document.querySelector('#workflowActionButton');action.disabled=!runtime?.available||!['media.choose_and_ingest','transcription.start','subtitle.save','cut_candidates.generate','resolve.assembly.prepare','resolve.assembly.apply','render.start','render.qa.inspect','handoff.create'].includes(runtime.next_recommended_action);action.textContent=runtime?.next_recommended_action||'Continue'}
+async function refresh(){const vm=await call('view_model');const x=vm?.shell||await call('snapshot');if(!x)return;const p=x.project;document.querySelector('#projectName').textContent=p?p.display_name:'プロジェクト未選択';document.querySelector('#job').textContent=x.active_jobs?.length?`${x.active_jobs.length} job`:'待機中';document.querySelectorAll('.workspace').forEach(b=>b.classList.toggle('active',b.dataset.w===x.current_workspace));if(vm){renderRows(vm);renderTimeline(vm)}await refreshInteractiveTimeline();const review=await call('review_snapshot');if(review)renderReview(review);const drawer=document.querySelector('#productionWorkspace'),planningDrawer=document.querySelector('#planningWorkspace'),safetyDrawer=document.querySelector('#generationSafetyWorkspace'),continuityDrawer=document.querySelector('#continuityWorkspace'),promptDrawer=document.querySelector('#promptEvidenceWorkspace');if(x.current_workspace==='PRODUCTION_CONTROL'){const production=await call('production_snapshot');const audit=await call('audit_snapshot');renderProduction(production,audit);planningDrawer.hidden=true;safetyDrawer.hidden=true;continuityDrawer.hidden=true;promptDrawer.hidden=true}else if(x.current_workspace==='PLANNING'){const planning=await call('planning_snapshot');renderPlanning(planning);drawer.hidden=true;safetyDrawer.hidden=true;continuityDrawer.hidden=true;promptDrawer.hidden=true}else if(x.current_workspace==='GENERATION_SAFETY'){const safety=await call('generation_safety_snapshot');renderGenerationSafety(safety);drawer.hidden=true;planningDrawer.hidden=true;continuityDrawer.hidden=true;promptDrawer.hidden=true}else if(x.current_workspace==='CONTINUITY'){const continuity=await call('continuity_snapshot');renderContinuity(continuity);drawer.hidden=true;planningDrawer.hidden=true;safetyDrawer.hidden=true;promptDrawer.hidden=true}else if(x.current_workspace==='PROMPT_EVIDENCE'){const promptEvidence=await call('prompt_evidence_snapshot');renderPromptEvidence(promptEvidence);drawer.hidden=true;planningDrawer.hidden=true;safetyDrawer.hidden=true;continuityDrawer.hidden=true}else{drawer.hidden=true;planningDrawer.hidden=true;safetyDrawer.hidden=true;continuityDrawer.hidden=true;promptDrawer.hidden=true}const runtime=await call('workflow_status');const action=document.querySelector('#workflowActionButton'),v2Transcription=runtime?.transcription_runtime_mode==='RUNTIME_MANAGED_V2'&&runtime.next_recommended_action==='transcription.start';action.disabled=v2Transcription?!runtime?.available||runtime.transcription_available_action==='NONE':!runtime?.available||!['media.choose_and_ingest','transcription.start','subtitle.save','cut_candidates.generate','resolve.assembly.prepare','resolve.assembly.apply','render.start','render.qa.inspect','handoff.create'].includes(runtime.next_recommended_action);action.textContent=v2Transcription?(runtime.transcription_status_label||'Continue'):(runtime?.next_recommended_action||'Continue')}
 document.querySelectorAll('.workspace').forEach(b=>b.addEventListener('click',async()=>{await call('set_workspace',{workspace:b.dataset.w});await refresh();const queueDrawer=document.querySelector('#generationQueueWorkspace'),audioDrawer=document.querySelector('#audioWorkspace'),exportDrawer=document.querySelector('#exportWorkspace');if(b.dataset.w==='GENERATION_QUEUE'){renderGenerationQueue(await call('generation_queue_snapshot'))}else{queueDrawer.hidden=true}if(b.dataset.w==='AUDIO_WORKSPACE'){await refreshAudioWorkspace()}else{audioDrawer.hidden=true}if(b.dataset.w==='EXPORT'){renderExportQueue(await call('export_queue_snapshot'))}else{exportDrawer.hidden=true}}));
 document.querySelector('#closeProductionButton').addEventListener('click',async()=>{await call('set_workspace',{workspace:'EDIT'});await refresh()});
 document.querySelector('#closePlanningButton').addEventListener('click',async()=>{await call('set_workspace',{workspace:'EDIT'});await refresh()});
@@ -180,7 +180,7 @@ document.querySelector('#setOutButton').addEventListener('click',async()=>{if(!c
 document.querySelector('#keepButton').addEventListener('click',async()=>{const review=await call('review_snapshot');const selected=review?.candidates?.find(x=>x.selected);if(selected){await call('review_candidate',{candidate_id:selected.candidate_id,decision:'KEEP'});await refresh()}});
 document.querySelector('#cutButton').addEventListener('click',async()=>{const review=await call('review_snapshot');const selected=review?.candidates?.find(x=>x.selected);if(selected){await call('review_candidate',{candidate_id:selected.candidate_id,decision:'CUT'});await refresh()}});
 document.querySelector('#approvePlanButton').addEventListener('click',async()=>{const p=await call('prepare_edit_plan_approval');if(!p)return;const ok=window.confirm(`編集プランを承認しますか？\nCUT: ${p.cut_count} / KEEP: ${p.keep_count}`);if(ok){await call('approve_edit_plan',{confirmation_id:p.confirmation_id,draft_plan_sha256:p.draft_plan_sha256,approved_by:'desktop-owner'});await refresh()}});
-document.querySelector('#workflowActionButton').addEventListener('click',async()=>{const runtime=await call('workflow_status');if(!runtime?.available)return;let result=null;if(runtime.next_recommended_action==='media.choose_and_ingest')result=await call('choose_and_ingest_media',{});else if(runtime.next_recommended_action==='transcription.start')result=await call('run_local_transcription',{});else if(runtime.next_recommended_action==='subtitle.save')result=await call('create_runtime_subtitle_workspace',{});else if(runtime.next_recommended_action==='cut_candidates.generate')result=await call('generate_runtime_cut_candidates',{});else if(runtime.next_recommended_action==='resolve.assembly.prepare')result=await call('compile_resolve_assembly',{});else if(runtime.next_recommended_action==='resolve.assembly.apply'){const p=await call('prepare_resolve_apply',{});if(p&&window.confirm(`DaVinci Resolveへ適用しますか？\nProject: ${p.target_project}\nTimeline: ${p.target_timeline}`))result=await call('apply_resolve_assembly',{confirmation_id:p.confirmation_id})}else if(runtime.next_recommended_action==='render.start'){const p=await call('prepare_native_render_confirmation',{});if(p&&window.confirm(`DaVinci Resolveで書き出しますか？\nProject: ${p.target_project}\nTimeline: ${p.target_timeline}\nDestination: ${p.destination}`))result=await call('execute_native_render',{confirmation_id:p.confirmation_id})}else if(runtime.next_recommended_action==='render.qa.inspect')result=await call('bind_runtime_render_qa',{});else if(runtime.next_recommended_action==='handoff.create')result=await call('create_editor_handoff',{});const status=document.querySelector('#dialogStatus');status.textContent=result?'工程を完了しました':'工程を完了できませんでした';await refresh()});
+document.querySelector('#workflowActionButton').addEventListener('click',async()=>{const runtime=await call('workflow_status');if(!runtime?.available)return;let result=null;if(runtime.next_recommended_action==='media.choose_and_ingest')result=await call('choose_and_ingest_media',{});else if(runtime.next_recommended_action==='transcription.start'){if(runtime.transcription_runtime_mode==='RUNTIME_MANAGED_V2'){const route={START:['prepare_local_transcription','run_local_transcription'],RECOVER:['prepare_local_transcription_recovery','recover_local_transcription'],VERIFY:['prepare_local_transcription_verification','verify_local_transcription']}[runtime.transcription_available_action];if(route){const prepared=await call(route[0],{});if(prepared){if(window.confirm(prepared.transcription_status_label))result=await call(route[1],{confirmation_id:prepared.confirmation_id});else await call('cancel_local_transcription',{confirmation_id:prepared.confirmation_id})}}}else result=await call('run_local_transcription',{})}else if(runtime.next_recommended_action==='subtitle.save')result=await call('create_runtime_subtitle_workspace',{});else if(runtime.next_recommended_action==='cut_candidates.generate')result=await call('generate_runtime_cut_candidates',{});else if(runtime.next_recommended_action==='resolve.assembly.prepare')result=await call('compile_resolve_assembly',{});else if(runtime.next_recommended_action==='resolve.assembly.apply'){const p=await call('prepare_resolve_apply',{});if(p&&window.confirm(`DaVinci Resolveへ適用しますか？\nProject: ${p.target_project}\nTimeline: ${p.target_timeline}`))result=await call('apply_resolve_assembly',{confirmation_id:p.confirmation_id})}else if(runtime.next_recommended_action==='render.start'){const p=await call('prepare_native_render_confirmation',{});if(p&&window.confirm(`DaVinci Resolveで書き出しますか？\nProject: ${p.target_project}\nTimeline: ${p.target_timeline}\nDestination: ${p.destination}`))result=await call('execute_native_render',{confirmation_id:p.confirmation_id})}else if(runtime.next_recommended_action==='render.qa.inspect')result=await call('bind_runtime_render_qa',{});else if(runtime.next_recommended_action==='handoff.create')result=await call('create_editor_handoff',{});const status=document.querySelector('#dialogStatus');status.textContent=result?'工程を完了しました':'工程を完了できませんでした';await refresh()});
 async function chooseAndReport(method,label){const status=document.querySelector('#dialogStatus');status.textContent=`${label}を選択中`;const result=await call(method,{});if(!result){status.textContent=`${label}を選択できませんでした`;return}status.textContent=result.selected?`${label}を選択しました（操作は未開始）`:`${label}の選択をキャンセルしました`}
 document.querySelector('#chooseProjectButton').addEventListener('click',()=>chooseAndReport('choose_project_folder','プロジェクト'));
 document.querySelector('#chooseMediaButton').addEventListener('click',()=>chooseAndReport('choose_media_source','メディア'));
@@ -196,7 +196,39 @@ applyAccessibility();window.addEventListener('pywebviewready',refresh);setTimeou
 
 # The V6.1.1 Product template is intentionally isolated from the historical
 # functional spike.  The bridge below remains the single runtime Authority.
-HTML = V611_HTML
+def _compose_runtime_managed_v611_html(html: str) -> str:
+    """Add the bounded v2 transcription route without changing v1 behavior."""
+
+    replacements = (
+        (
+            "action.disabled=transcriptionInFlight||preEditStageInFlight||!workflow.next_recommended_action;action.dataset.nextAction=workflow.next_recommended_action||'';action.textContent=workflow.next_recommended_label||workflow.next_recommended_action||'次の工程'",
+            "const v2Transcription=workflow.transcription_runtime_mode==='RUNTIME_MANAGED_V2'&&workflow.next_recommended_action==='transcription.start';action.disabled=transcriptionInFlight||preEditStageInFlight||!workflow.next_recommended_action||(v2Transcription&&workflow.transcription_available_action==='NONE');action.dataset.nextAction=workflow.next_recommended_action||'';action.textContent=v2Transcription?(workflow.transcription_status_label||'次の工程'):(workflow.next_recommended_label||workflow.next_recommended_action||'次の工程')",
+        ),
+        (
+            "const recovery=workflow.transcription_recovery_required===true;prepared=await call(recovery?'prepare_local_transcription_recovery':'prepare_local_transcription',{});",
+            "const v2=workflow.transcription_runtime_mode==='RUNTIME_MANAGED_V2',action=v2?workflow.transcription_available_action:(workflow.transcription_recovery_required===true?'RECOVER':'START'),route={START:['prepare_local_transcription','run_local_transcription'],RECOVER:['prepare_local_transcription_recovery','recover_local_transcription'],VERIFY:['prepare_local_transcription_verification','verify_local_transcription']}[action];if(!route){notify('現在の文字起こし状態では実行できません。',true);return}const recovery=action==='RECOVER',verification=action==='VERIFY';prepared=await call(route[0],{});",
+        ),
+        (
+            "const prompt=recovery?`完了済みのローカル文字起こしEvidenceを照合して再結合しますか？\\nSource: ${prepared.source_asset_id}\\nSHA-256: ${prepared.source_asset_sha256}\\nProviderは再実行しません。`:`現在の動画を無償ローカルFasterWhisperで文字起こししますか？\\nSource: ${prepared.source_asset_id}\\nSHA-256: ${prepared.source_asset_sha256}\\nモデルの自動ダウンロード・有償Provider・Cloudは使用しません。`;",
+            "const prompt=v2?prepared.transcription_status_label:(recovery?`完了済みのローカル文字起こしEvidenceを照合して再結合しますか？\\nSource: ${prepared.source_asset_id}\\nSHA-256: ${prepared.source_asset_sha256}\\nProviderは再実行しません。`:`現在の動画を無償ローカルFasterWhisperで文字起こししますか？\\nSource: ${prepared.source_asset_id}\\nSHA-256: ${prepared.source_asset_sha256}\\nモデルの自動ダウンロード・有償Provider・Cloudは使用しません。`);",
+        ),
+        (
+            "const result=await call(recovery?'recover_local_transcription':'run_local_transcription',{confirmation_id:prepared.confirmation_id}),identity=transcriptionIdentity(result);",
+            "const result=await call(route[1],{confirmation_id:prepared.confirmation_id}),identity=transcriptionIdentity(result);",
+        ),
+        (
+            "notify(`${recovery?'文字起こしEvidenceを再結合':'ローカル文字起こしを完了'}しました: ${identity.digest}`)",
+            "notify(`${verification?'文字起こしEvidenceを検証':recovery?'文字起こしEvidenceを再結合':'ローカル文字起こしを完了'}しました: ${identity.digest}`)",
+        ),
+    )
+    for old, new in replacements:
+        if html.count(old) != 1:
+            raise RuntimeError("V6.1.1 transcription HTML anchor changed")
+        html = html.replace(old, new)
+    return html
+
+
+HTML = _compose_runtime_managed_v611_html(V611_HTML)
 
 
 def _nle_operation_guarded(method: Callable[..., dict[str, Any]]) -> Callable[..., dict[str, Any]]:
@@ -647,6 +679,72 @@ class Task036ShellBridge:
                 raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
             return self._pre_edit_runtime.prepare_local_transcription(recovery=True)
 
+    def prepare_local_transcription_verification(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "local transcription verification prepare")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            return self._pre_edit_runtime.prepare_local_transcription_verification()
+
+    def _runtime_transcription_projection(self, result: dict[str, Any]) -> dict[str, Any] | None:
+        runtime = self._pre_edit_runtime
+        if runtime is None or runtime.transcription_runtime_mode != "RUNTIME_MANAGED_V2":
+            return None
+        projection = result.get("runtime_transcription")
+        keys = {
+            "requested_device", "outcome", "reason_code", "effective_device",
+            "effective_compute_type", "fallback_applied", "model_download_authorized",
+            "provider_configuration_from_javascript", "transcript_text_exposed",
+            "host_path_exposed",
+        }
+        expected = {
+            ("cpu", "READY_CPU", "REQUESTED_CPU_AVAILABLE"): ("cpu", "int8", False),
+            ("cuda", "READY_CUDA", "REQUESTED_CUDA_AVAILABLE"): ("cuda", "float16", False),
+            ("auto", "READY_CUDA", "AUTO_CUDA_AVAILABLE"): ("cuda", "float16", False),
+            ("auto", "READY_CPU", "AUTO_CUDA_UNAVAILABLE_CPU_AVAILABLE"): ("cpu", "int8", True),
+        }
+        if not isinstance(projection, dict) or set(projection) != keys:
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_OUTCOME_INVALID",
+                "Runtime-managed transcription projection is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        key = (
+            projection.get("requested_device"), projection.get("outcome"),
+            projection.get("reason_code"),
+        )
+        if (
+            key not in expected
+            or any(
+                type(projection.get(name)) is not str
+                for name in (
+                    "requested_device", "outcome", "reason_code",
+                    "effective_device", "effective_compute_type",
+                )
+            )
+            or type(projection.get("fallback_applied")) is not bool
+            or (
+                projection.get("effective_device"),
+                projection.get("effective_compute_type"),
+                projection.get("fallback_applied"),
+            ) != expected[key]
+            or any(
+                projection.get(name) is not False
+                for name in (
+                    "model_download_authorized",
+                    "provider_configuration_from_javascript",
+                    "transcript_text_exposed",
+                    "host_path_exposed",
+                )
+            )
+        ):
+            raise ProductError(
+                "ERR_TASK098_RUNTIME_OUTCOME_INVALID",
+                "Runtime-managed transcription projection is invalid",
+                ProductErrorCategory.DATA_INTEGRITY,
+            )
+        return dict(projection)
+
     @staticmethod
     def _transcription_confirmation(args: Any, operation: str) -> str:
         if not isinstance(args, dict) or set(args) != {"confirmation_id"}:
@@ -698,7 +796,7 @@ class Task036ShellBridge:
                     "Local transcription returned an invalid private result",
                     ProductErrorCategory.DATA_INTEGRITY,
                 )
-            return {
+            response = {
                 "task_owner": "TASK-036",
                 "operation": "TRANSCRIPT_RESULT_BIND",
                 "status": "TRANSCRIBED",
@@ -712,6 +810,10 @@ class Task036ShellBridge:
                 "host_path_exposed": False,
                 "recovered_from_durable_result": result["recovered_from_durable_result"],
             }
+            runtime_projection = self._runtime_transcription_projection(result)
+            if runtime_projection is not None:
+                response["runtime_transcription"] = runtime_projection
+            return response
 
     @_meter_write_guarded
     def recover_local_transcription(self, args: Any = None) -> dict[str, Any]:
@@ -722,7 +824,8 @@ class Task036ShellBridge:
             result = self._pre_edit_runtime.recover_local_transcription(confirmation_id)
             digest = result.get("transcript_manifest_sha256") if isinstance(result, dict) else None
             if (
-                not isinstance(digest, str)
+                not isinstance(result, dict)
+                or not isinstance(digest, str)
                 or len(digest) != 71
                 or not digest.startswith("sha256:")
                 or any(char not in "0123456789abcdef" for char in digest[7:])
@@ -731,6 +834,47 @@ class Task036ShellBridge:
                 or result.get("recovered_from_durable_result") is not True
             ):
                 raise ProductError("ERR_TASK036_TRANSCRIPTION_RESULT_INVALID", "Local transcription recovery returned an invalid private result", ProductErrorCategory.DATA_INTEGRITY)
+            response = {
+                "task_owner": "TASK-036",
+                "operation": "TRANSCRIPT_RESULT_BIND",
+                "status": "TRANSCRIBED",
+                "transcript_manifest_sha256": digest,
+                "next_recommended_action": "subtitle.save",
+                "provider_execution_started": False,
+                "provider_execution_completed": True,
+                "provider_execution_mode": "LOCAL",
+                "provider_configuration_from_javascript": False,
+                "transcript_text_exposed": False,
+                "host_path_exposed": False,
+                "recovered_from_durable_result": True,
+            }
+            runtime_projection = self._runtime_transcription_projection(result)
+            if runtime_projection is not None:
+                response["runtime_transcription"] = runtime_projection
+            return response
+
+    @_meter_write_guarded
+    def verify_local_transcription(self, args: Any = None) -> dict[str, Any]:
+        confirmation_id = self._transcription_confirmation(args, "local transcription verification apply")
+        with self._nle_operation():
+            if self._pre_edit_runtime is None:
+                raise ProductError("ERR_TASK036_PRE_EDIT_RUNTIME_NOT_BOUND", "Trusted pre-edit runtime is not bound", ProductErrorCategory.STATE)
+            result = self._pre_edit_runtime.verify_local_transcription(confirmation_id)
+            digest = result.get("transcript_manifest_sha256") if isinstance(result, dict) else None
+            if (
+                not isinstance(result, dict)
+                or not isinstance(digest, str)
+                or len(digest) != 71
+                or not digest.startswith("sha256:")
+                or any(char not in "0123456789abcdef" for char in digest[7:])
+                or result.get("provider_execution_started") is not False
+                or result.get("provider_execution_completed") is not True
+                or result.get("recovered_from_durable_result") is not True
+            ):
+                raise ProductError("ERR_TASK036_TRANSCRIPTION_RESULT_INVALID", "Local transcription verification returned an invalid private result", ProductErrorCategory.DATA_INTEGRITY)
+            runtime_projection = self._runtime_transcription_projection(result)
+            if runtime_projection is None:
+                raise ProductError("ERR_TASK098_RUNTIME_OUTCOME_INVALID", "Runtime-managed verification outcome is missing", ProductErrorCategory.DATA_INTEGRITY)
             return {
                 "task_owner": "TASK-036",
                 "operation": "TRANSCRIPT_RESULT_BIND",
@@ -744,6 +888,7 @@ class Task036ShellBridge:
                 "transcript_text_exposed": False,
                 "host_path_exposed": False,
                 "recovered_from_durable_result": True,
+                "runtime_transcription": runtime_projection,
             }
 
     def speech_cue_snapshot(self, args: Any = None) -> dict[str, Any]:

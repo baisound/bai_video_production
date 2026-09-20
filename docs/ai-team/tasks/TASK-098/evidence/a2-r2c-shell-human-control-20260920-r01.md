@@ -113,5 +113,9 @@ All changed implementation/test paths are inside the accepted ceiling:
 
 ## Next action
 
-Commit the exact allowed paths and persist a post-commit receipt. The next
-implementation unit requires a fresh bounded design/authority review.
+Implementation commit:
+`92bd4592a6754bf65fe252c9258a930f3cbb7852`. External post-commit receipt:
+`C:\home\baisound\evidence\bai-video-production\TASK-098\a2-r2c-shell-human-control\20260920T085346+0900\post-commit-receipt.md`, SHA-256
+`055f17c33403f57408e02b7c5f7d2b0df0ab178c0f15b6e2eaf5612c30b38ea3`,
+size `2003`, read-back `PASS`. A2-R2c is complete. The next implementation
+unit requires a fresh bounded design/authority review.

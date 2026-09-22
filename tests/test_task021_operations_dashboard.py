@@ -4,6 +4,8 @@ import ast
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+
 from ai_video_production.assets import (
     AssetRecord,
     AssetType,
@@ -24,6 +26,9 @@ from ai_video_production.interactive_timeline import (
     TimelineTrack,
     TimelineTrackRole,
 )
+from ai_video_production.integrated_dashboard_operations import (
+    IntegratedDashboardSnapshotRevision,
+)
 from ai_video_production.task021_operations_dashboard import (
     EFFECT_SURFACE,
     CanonicalDashboardReaders,
@@ -41,6 +46,8 @@ PROJECT_ID = "PRJ-01ARZ3NDEKTSV4RRFFQ69G5FAV"
 T0 = "2026-09-22T00:00:00Z"
 T1 = "2026-09-22T00:01:00Z"
 H1 = "sha256:" + "1" * 64
+H2 = "sha256:" + "2" * 64
+H3 = "sha256:" + "3" * 64
 
 
 def job(kind: str = "LOCAL_ANALYSIS", state: DurableProductJobState = DurableProductJobState.QUEUED) -> DurableProductJob:
@@ -125,6 +132,34 @@ def validation(state: str = "PASS") -> CanonicalValidationResult:
         reason_codes=("BUNDLE_INVALID",) if state == "FAIL" else (),
         artifact_ref="evidence:bundle-validation",
         record_sha256=H1,
+    )
+
+
+def integrated_snapshot(
+    *,
+    project_id: str = PROJECT_ID,
+    snapshot_state: str = "STALE",
+    coverage_state: str = "PARTIAL",
+) -> IntegratedDashboardSnapshotRevision:
+    return IntegratedDashboardSnapshotRevision.create(
+        snapshot_id="task021-integrated-snapshot",
+        revision=1,
+        parent_record_sha256=None,
+        project_id=project_id,
+        policy_sha256=H1,
+        query_sha256=H2,
+        source_binding_hashes=[H3],
+        job_view_hashes=[],
+        evidence_view_hashes=[],
+        incident_view_hashes=[],
+        alert_hashes=[],
+        coverage_state=coverage_state,
+        snapshot_state=snapshot_state,
+        source_watermark_sha256=H1,
+        generated_at=T1,
+        body_included=False,
+        private_detail_included=False,
+        effect_started_by_dashboard=False,
     )
 
 
@@ -291,6 +326,134 @@ def test_large_sections_are_bounded_with_explicit_overflow_guidance() -> None:
     section = dashboard(validation_values=results).refresh().section("validation")
     assert len(section.rows) == 200
     assert "残り5件" in section.note_ja
+
+
+def test_integrated_snapshot_public_state_is_read_once_without_identity_leak() -> None:
+    calls = 0
+    canonical = integrated_snapshot()
+
+    def read_integrated_snapshot() -> IntegratedDashboardSnapshotRevision:
+        nonlocal calls
+        calls += 1
+        return canonical
+
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=read_integrated_snapshot,
+        ),
+    )
+
+    snapshot = service.refresh()
+    section = snapshot.section("operations-state")
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert calls == 1
+    assert snapshot.state is DashboardDisplayState.WARNING
+    assert section.state is DashboardDisplayState.WARNING
+    assert tuple(row.state_ja for row in section.rows) == ("情報が古い", "一部のみ")
+    assert "識別子、ハッシュ、時刻、非公開情報は表示しません" in section.note_ja
+    assert 'data-operation-enabled="false"' in html
+    assert canonical.record_sha256 not in html
+    assert "task021-integrated-snapshot" not in html
+    assert H1 not in html and H2 not in html and H3 not in html
+    assert T1 not in html
+
+
+@pytest.mark.parametrize(
+    ("snapshot_state", "expected_state", "expected_label"),
+    (
+        ("ACTION_REQUIRED", DashboardDisplayState.WARNING, "対応が必要"),
+        ("DEGRADED", DashboardDisplayState.IN_PROGRESS, "進行中または縮退"),
+        (
+            "NO_ACTIVE_INCIDENT_PROVEN",
+            DashboardDisplayState.SUCCESS,
+            "現在のIncidentなし（証明済み）",
+        ),
+        ("STALE", DashboardDisplayState.WARNING, "情報が古い"),
+        ("UNKNOWN", DashboardDisplayState.UNKNOWN, "判定不能"),
+    ),
+)
+def test_integrated_snapshot_closed_states_are_projected_without_reclassification(
+    snapshot_state: str,
+    expected_state: DashboardDisplayState,
+    expected_label: str,
+) -> None:
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: integrated_snapshot(
+                snapshot_state=snapshot_state,
+                coverage_state="COMPLETE",
+            ),
+        ),
+    )
+
+    snapshot = service.refresh()
+    state_row = snapshot.section("operations-state").rows[0]
+    assert state_row.state is expected_state
+    assert state_row.state_ja == expected_label
+    assert snapshot.state is expected_state
+
+
+def test_integrated_snapshot_absence_and_read_failure_remain_fail_closed() -> None:
+    empty_service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: None,
+        ),
+    )
+    empty = empty_service.refresh()
+    assert empty.section("operations-state").state is DashboardDisplayState.EMPTY
+    assert empty.state is DashboardDisplayState.EMPTY
+
+    def private_failure() -> IntegratedDashboardSnapshotRevision:
+        raise RuntimeError(r"C:\private\secret-token")
+
+    failed_service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=private_failure,
+        ),
+    )
+    failed = failed_service.refresh()
+    html = render_accessible_dashboard_html(failed)
+    assert failed.section("operations-state").state is DashboardDisplayState.FAILURE
+    assert "secret-token" not in html and r"C:\private" not in html
+
+
+def test_integrated_snapshot_project_mismatch_is_rejected() -> None:
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: integrated_snapshot(
+                project_id="PRJ-01ARZ3NDEKTSV4RRFFQ69G5FAW"
+            ),
+        ),
+    )
+
+    snapshot = service.refresh()
+    assert snapshot.section("operations-state").state is DashboardDisplayState.FAILURE
 
 
 def test_static_surface_has_no_store_filesystem_network_or_process_control() -> None:

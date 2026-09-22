@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import multiprocessing
 import os
 from pathlib import Path
+import pickle
 import sqlite3
 
 import pytest
@@ -240,6 +241,16 @@ def make_human_decision(coordinates):
         expected_attempt=coordinates.expected_attempt,
         decided_at=T0_TEXT,
     )
+
+
+def test_human_decision_is_pickle_safe_for_windows_spawn(tmp_path: Path) -> None:
+    _coordinator, _store, coordinates, _output = make_runtime(tmp_path)
+    decision = make_human_decision(coordinates)
+
+    restored = pickle.loads(pickle.dumps(decision))
+
+    assert type(restored) is type(decision)
+    assert restored.to_dict() == decision.to_dict()
 
 
 def test_worker_observation_does_not_reserve_absent_control(tmp_path: Path) -> None:

@@ -7,6 +7,8 @@ value is projected through the existing allowlisted ``Task036ShellBridge``.
 
 from __future__ import annotations
 
+from .task098_shell_html import compose_task098_product_shell_html
+
 
 HTML = r'''<!doctype html>
 <html lang="ja" data-bvp-ui-contract="V6.1.1">
@@ -346,6 +348,9 @@ $('gameApproveButton').addEventListener('click',()=>{const row=currentGameIntell
 applyAccessibility();window.addEventListener('pywebviewready',async()=>{await refreshShell();await refreshPage(currentPage)});window.setTimeout(()=>{if(window.pywebview)refreshShell()},350);
 </script>
 </body></html>'''
+
+
+HTML = compose_task098_product_shell_html(HTML)
 
 
 __all__ = ["HTML"]

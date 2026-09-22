@@ -166,6 +166,11 @@ class _ImmutableRecord:
     def to_dict(self) -> dict[str, Any]:
         return {key: self._values[key] for key in self.FIELDS}
 
+    def __reduce__(self) -> tuple[type["_ImmutableRecord"], tuple[dict[str, Any]]]:
+        """Rebuild through the validating constructor under Windows spawn."""
+
+        return type(self), (self.to_dict(),)
+
     def _validate(self, values: dict[str, Any]) -> dict[str, Any]:
         raise NotImplementedError
 

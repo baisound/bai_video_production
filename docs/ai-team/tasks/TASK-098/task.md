@@ -1,17 +1,17 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE / A4-R0_COMPLETE / A4-R1_DESIGN_COMPLETE / A4-R1A_COMPLETE / A4-R1B_COMPLETE / A4-R2_DESIGN_COMPLETE / A4-R2A_COMPLETE / A4-R2B1_COMPLETE / A4-R2B2_COMPLETE / A6-R1_COMPLETE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE / A4-R0_COMPLETE / A4-R1_DESIGN_COMPLETE / A4-R1A_COMPLETE / A4-R1B_COMPLETE / A4-R2_DESIGN_COMPLETE / A4-R2A_COMPLETE / A4-R2B1_COMPLETE / A4-R2B2_COMPLETE / A6-R1_COMPLETE / A6-R1_CI_REPAIR_LOCAL_COMPLETE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - A6 Owner authority: `2026-09-22` — connect the verified WAV review Runtime to the normal Product/Shell for Human-only canonical Asset private playback and waveform display plus bounded native verification; excludes automatic ingest, TASK-041 auto-completion, training, Release, Deploy and Production use
-- Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
+- Base: initial `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`; refreshed through merge commit `0b63eca497a3103e1ab296ad40d840ea0f0f992a` to current `origin/main` `ae456f46d0124108740be92a0411b83ce5e1c75b`
 - Branch: `codex/task-098-a4-review-workspace`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`; `TASK-098/A4-R0 — pure review-completion, timing projection and independent viewport contract`; `TASK-098/A4-R1 — exact-hash coordinator design`; `TASK-098/A4-R1a — pure body-free ephemeral exact-hash coordinator`; `TASK-098/A4-R1b — allowlisted unified Product/Shell projection`; `TASK-098/A4-R2 — playback/waveform authority design`; `TASK-098/A4-R2a — pure no-path fake-observation runtime contract/reducer`; `TASK-098/A4-R2b1 — concrete registry-bound WAV runtime and bounded synthetic Windows-native acceptance`; `TASK-098/A4-R2b2 — exact private WAV one-second Windows-native playback/waveform acceptance`; `TASK-098/A6-R1 — Human-only normal Product/Shell playback and ephemeral waveform display`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`; `TASK-098/A4-R0 — pure review-completion, timing projection and independent viewport contract`; `TASK-098/A4-R1 — exact-hash coordinator design`; `TASK-098/A4-R1a — pure body-free ephemeral exact-hash coordinator`; `TASK-098/A4-R1b — allowlisted unified Product/Shell projection`; `TASK-098/A4-R2 — playback/waveform authority design`; `TASK-098/A4-R2a — pure no-path fake-observation runtime contract/reducer`; `TASK-098/A4-R2b1 — concrete registry-bound WAV runtime and bounded synthetic Windows-native acceptance`; `TASK-098/A4-R2b2 — exact private WAV one-second Windows-native playback/waveform acceptance`; `TASK-098/A6-R1 — Human-only normal Product/Shell playback and ephemeral waveform display`; `TASK-098/A6-R1 CI compatibility repair — current-main integration, canonical Shell identity and Windows spawn portability`
 - Completed recovery boundaries: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`; `TASK-098/A2-R2c Recovery R1 — final-Judge H2/M1 corrections implemented and independently accepted, final Judge pending`
-- Active Atomic Unit: `NONE — A6-R1 Product/Shell connection and native acceptance are complete; A5 canonical TASK-047 receipt ABI remains dependency-blocked`
-- Next action: `wait for the canonical TASK-047 receipt ABI before fresh A5 DEV-4 review, or obtain a separate exact A6 packaging/installer/repair allocation; do not infer TASK-041 receipt/completion or Production authority from A6-R1`
+- Active Atomic Unit: `NONE — A6-R1 CI repair is locally complete; hosted real-dependency recheck awaits publication to the existing PR branch; A5 canonical TASK-047 receipt ABI remains dependency-blocked`
+- Next action: `publish the exact reviewed local TASK-098 branch to existing PR #562 only under Git remote-publication authority, then require hosted CI success; otherwise wait for the canonical TASK-047 receipt ABI before fresh A5 DEV-4 review or obtain a separate exact A6 packaging/installer allocation`
 
 ## Objective
 
@@ -779,3 +779,34 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - No Asset auto-ingest, ASR/model activation, Dataset/training, TASK-041
   completion, package/installer mutation, Release, Deploy or Production use
   occurred.
+
+## A6-R1 CI compatibility repair
+
+- Merged current `origin/main` exact
+  `ae456f46d0124108740be92a0411b83ce5e1c75b` without Product-source
+  conflicts. Local merge commit:
+  `0b63eca497a3103e1ab296ad40d840ea0f0f992a`.
+- PR #562's prior hosted failures were reduced to two owned causes: the
+  runtime Shell HTML was composed outside the owner-canonical V6.1.1 module,
+  and immutable adjudication records retained an unpicklable
+  `mappingproxy` across Windows spawn.
+- Moved deterministic runtime-control and WAV-review HTML composition into
+  `task098_shell_html.py`, invoked by the canonical V6.1.1 module. The Shell
+  now aliases that exact object instead of maintaining a second composition.
+- Added validating pickle reconstruction to the immutable runtime-control
+  record base and a direct round-trip regression. Windows spawn process races
+  for stale publication and cancel paths now pass.
+- Bounded regression: V6.1.1 plus coordination `98 PASS`; Shell plus trusted
+  launcher `115 PASS`; A6 application/projection/native-selection
+  `14 PASS / 1 SKIP` because `BVP_TASK098_PRIVATE_WAV` was intentionally not
+  supplied. Total: `227 PASS / 1 intentional skip`.
+- The local interpreter lacks `jsonschema` and `cryptography`; process-local
+  unused import stubs enabled the bounded tests and were removed afterward.
+  Hosted CI with real dependencies remains `NOT_CONFIRMED` until the exact
+  reviewed branch is published to existing PR #562.
+- Unique worktree-contained pytest roots and the temporary stub directory were
+  removed. No residual test artifact, private audio/native replay,
+  Dataset/training, package/install, Release, Deploy or Production effect
+  occurred.
+- Evidence:
+  `evidence/a6-r1-ci-compatibility-repair-20260922-r01.md`.

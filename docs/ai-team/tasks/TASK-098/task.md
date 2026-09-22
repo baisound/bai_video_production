@@ -1,16 +1,16 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE / A4-R0_COMPLETE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
-- Branch: `codex/task-098-a3-model-manager-settings`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`
+- Branch: `codex/task-098-a4-review-workspace`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`; `TASK-098/A4-R0 — pure review-completion, timing projection and independent viewport contract`
 - Completed recovery boundaries: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`; `TASK-098/A2-R2c Recovery R1 — final-Judge H2/M1 corrections implemented and independently accepted, final Judge pending`
-- Active Atomic Unit: `NONE — A3 is complete through A3-R3`
-- Next action: `fresh bounded A4 design/authority review for the review workspace; no A4 mutation is allocated by A3 completion`
+- Active Atomic Unit: `NONE — A4-R0 completed; A4-R1 is not yet allocated`
+- Next action: `fresh bounded A4-R1 design/authority review for the ephemeral exact-hash review coordinator`
 
 ## Objective
 
@@ -704,3 +704,38 @@ Later Units must publish their own narrower allowed-file list before mutation.
 - Evidence:
   `evidence/a3-r3-cache-restart-readback-20260922-r01.md`.
 - Next Unit: fresh A4 design/authority review for the review workspace.
+
+## A4-R0 review-completion / viewport contract completion
+
+- Design/review:
+  `a4-r0-review-completion-viewport-contract-pre-mutation-review-20260922.md`.
+- Added a separate A4 completion classifier over the existing TASK-041
+  inclusion proof. `COMPLETE` requires exact inclusion, `BOUND_VERIFIED`,
+  `COMPLETED`, canonical persistence and the exact requested audition/waveform
+  result flags; every missing, false, unknown, failed, cancelled or mismatched
+  condition remains `INCOMPLETE` with closed reason codes.
+- Added exact integer half-open projection from Transcript microseconds and
+  Subtitle Workspace milliseconds to 48 kHz samples. Start is floored, exclusive
+  end is ceiled, and there is no reverse/write-back path.
+- Added an immutable serialization-free viewport with independent waveform
+  horizontal and segment-list vertical scroll axes. Each reducer preserves the
+  other axis and clamps only to its own bounds.
+- Implementation Critic found directly constructible result/range values could
+  forge completion/effect or timing claims. Constructor-level closed reason,
+  digest, fixed-false effect and exact projection invariants corrected the High
+  finding. Final findings: `Critical 0 / High 0 / Medium 0 / Low 0`.
+- Direct A4-R0/TASK-041/TASK-006 regression: `57 PASS / 0 FAIL` in `3.04s`.
+  Final TASK-098 plus TASK-041/TASK-006 targeted regression:
+  `462 PASS / 0 FAIL` in `151.62s`. Python compile and Git diff check: `PASS`.
+- Windows fixed-Python collection was `NOT_CONFIRMED` because that interpreter
+  lacks `jsonschema`. No dependency changed; WSL used the same process-local
+  unused Argon2id import stub as A3. Its two pytest-cache permission warnings
+  did not affect collection, execution or results and created no cache output.
+- No media/text/path body, persistence, audio read/playback, waveform render,
+  Subtitle Workspace mutation, Human decision authorization, Product UI,
+  Provider/native/private effect, installation, Release, Deploy or Production
+  Activation occurred.
+- Evidence:
+  `evidence/a4-r0-review-completion-viewport-20260922-r01.md`.
+- Next Unit: fresh A4-R1 review for the ephemeral exact-hash coordinator; A4-R0
+  completion does not allocate its implementation.

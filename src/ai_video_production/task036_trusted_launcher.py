@@ -62,6 +62,7 @@ from .task098_review_shell_application import (
     Task098ReviewShellApplication,
     Task098ReviewShellBinding,
 )
+from .task098_product_review_binding import Task098ProductReviewBindingSelector
 from .task056_product_integration import Task056SpeechCueProductApplication
 from .game_intelligence_shell import GameIntelligenceShellApplication
 from .task044_nle_shell import Task044NleShellController
@@ -622,6 +623,9 @@ class Task036TrustedLaunch:
     _review_workspace_application: Task098ReviewShellApplication | None = field(
         default=None, repr=False
     )
+    _review_workspace_selector: Task098ProductReviewBindingSelector | None = field(
+        default=None, repr=False
+    )
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
@@ -649,6 +653,10 @@ class Task036TrustedLaunch:
         self._review_workspace_application = None
         if review_workspace_application is not None:
             review_workspace_application.close()
+        review_workspace_selector = self._review_workspace_selector
+        self._review_workspace_selector = None
+        if review_workspace_selector is not None:
+            review_workspace_selector.close()
         lease = self._runtime_lease
         if lease is not None:
             lease.close()
@@ -1182,18 +1190,8 @@ def _build_trusted_launch(
     ):
         store.close()
         raise ValueError("review workspace binding provider is invalid")
-    review_workspace_application = (
-        None
-        if review_workspace_binding_provider is None
-        else Task098ReviewShellApplication(
-            binding_provider=review_workspace_binding_provider,
-            runtime=RegistryBoundReviewMediaRuntimePort(
-                assets=store,
-                resolver=resolver,
-                playback=WindowsWavePlaybackBackend(),
-            ),
-        )
-    )
+    review_workspace_application = None
+    review_workspace_selector = None
     ingest_service = AssetIngestService(
         store=store,
         resolver=resolver,
@@ -1622,6 +1620,25 @@ def _build_trusted_launch(
     meter_controller_host = None
     try:
         meter_controller_host = meter_host_factory(configuration.project_root, configuration.project_id)
+        if review_workspace_binding_provider is None:
+            review_workspace_selector = Task098ProductReviewBindingSelector(
+                assets=store,
+                resolver=resolver,
+                candidate_snapshot_provider=audio_workspace_application.snapshot,
+                project_id=configuration.project_id,
+                production_job_id=configuration.production_job_id,
+            )
+            active_review_binding_provider = review_workspace_selector
+        else:
+            active_review_binding_provider = review_workspace_binding_provider
+        review_workspace_application = Task098ReviewShellApplication(
+            binding_provider=active_review_binding_provider,
+            runtime=RegistryBoundReviewMediaRuntimePort(
+                assets=store,
+                resolver=resolver,
+                playback=WindowsWavePlaybackBackend(),
+            ),
+        )
         if (
             owner_signing_key_import is None
             and configuration.owner_signing_key_import is not None
@@ -1659,6 +1676,7 @@ def _build_trusted_launch(
             generation_output_adoption_application=generation_output_adoption_application,
             audio_workspace_application=audio_workspace_application,
             review_workspace_application=review_workspace_application,
+            review_workspace_selector=review_workspace_selector,
             audio_placement_application=audio_placement_application,
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
@@ -1689,8 +1707,13 @@ def _build_trusted_launch(
             _ollama_runtime=managed_ollama_runtime,
             _meter_controller_host=meter_controller_host,
             _review_workspace_application=review_workspace_application,
+            _review_workspace_selector=review_workspace_selector,
         )
     except BaseException:
+        if review_workspace_application is not None:
+            review_workspace_application.close()
+        if review_workspace_selector is not None:
+            review_workspace_selector.close()
         if meter_controller_host is not None:
             try:
                 meter_controller_host.close()

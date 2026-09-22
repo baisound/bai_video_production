@@ -150,9 +150,24 @@ def _compose_review_html(html: str) -> str:
         "function clearUniversalWavReviewWaveform(){const canvas=$('universalWavReviewWaveform'),ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height)}"
         "function renderUniversalWavReviewWaveform(points){const canvas=$('universalWavReviewWaveform'),ctx=canvas.getContext('2d');clearUniversalWavReviewWaveform();if(!Array.isArray(points)||!points.length)return;ctx.strokeStyle='#69d2a4';ctx.lineWidth=1;ctx.beginPath();const mid=canvas.height/2;for(let i=0;i<points.length;i++){const value=points[i];if(!Number.isInteger(value)||value<0||value>1000){clearUniversalWavReviewWaveform();return}const x=i*(canvas.width-1)/Math.max(1,points.length-1),height=value*(canvas.height-4)/2000;ctx.moveTo(x,mid-height);ctx.lineTo(x,mid+height)}ctx.stroke()}"
         "async function refreshUniversalWavReview(){const model=await call('view_model',{}),review=model?.universal_wav_review,button=$('universalWavReviewButton'),status=$('universalWavReviewStatus'),ready=review?.available===true&&review?.capabilities?.audition===true&&review?.capabilities?.waveform_render===true;button.disabled=!ready;status.textContent=ready?'Human操作時のみ再生・波形表示できます':'canonical Asset review runtime未接続';if(!ready)clearUniversalWavReviewWaveform()}"
+        "async function selectUniversalWavReviewCandidate(item){const result=await call('universal_wav_review_select',{candidate_id:item.candidate_id});if(result?.task_owner==='TASK-098'&&result?.selected===true&&result?.canonical_state_changed===false&&result?.wav_header_read===true&&result?.audio_body_read===false&&result?.playback_started===false&&result?.waveform_render_started===false){notify('Universal WAV Review対象を選択しました。再生はまだ開始していません。');await refreshUniversalWavReview()}}"
         "async function runUniversalWavReview(){const button=$('universalWavReviewButton');button.disabled=true;clearUniversalWavReviewWaveform();let prepared=null,finalStatus=null;try{prepared=await call('universal_wav_review_prepare',{});if(!prepared?.confirmation_id)return;if(!window.confirm(`${prepared.status_label}を実行しますか？\\n\\n${prepared.warning}`)){await call('universal_wav_review_cancel',{confirmation_id:prepared.confirmation_id});return}const result=await call('universal_wav_review_apply',{confirmation_id:prepared.confirmation_id});const valid=result?.task_owner==='TASK-098'&&result?.runtime_state==='SUCCEEDED'&&result?.playback_observed===true&&result?.waveform_observed===true&&result?.canonical_receipt_created===false&&result?.review_completion_claimed===false&&result?.review_state_persisted===false&&result?.human_decision_authorized===false&&result?.media_mutation_started===false&&result?.waveform_ephemeral===true&&result?.audio_body_exposed===false&&result?.private_identity_exposed===false&&Array.isArray(result?.waveform_envelope_milli)&&result.waveform_envelope_milli.length>0&&result.waveform_envelope_milli.length<=2048;if(!valid){finalStatus='再生・波形結果を検証できませんでした';return}renderUniversalWavReviewWaveform(result.waveform_envelope_milli);finalStatus=`再生・波形表示完了 · ${result.waveform_envelope_milli.length} points · canonical state未変更`}finally{await refreshUniversalWavReview();if(finalStatus)$('universalWavReviewStatus').textContent=finalStatus}}"
     )
     html = html.replace(function_anchor, review_functions + function_anchor)
+
+    candidate_anchor = (
+        "if(!item.placement_registered){const button=element('button','btn primary','Placement Reviewを登録');"
+        "button.addEventListener('click',()=>prepareAudioPlacement(model,item));node.append(button)}host.append(node)}"
+    )
+    if html.count(candidate_anchor) != 1:
+        raise RuntimeError("TASK-098 Audio Workspace Candidate anchor changed")
+    candidate_controls = (
+        "if(!item.placement_registered){const button=element('button','btn primary','Placement Reviewを登録');"
+        "button.addEventListener('click',()=>prepareAudioPlacement(model,item));node.append(button)}"
+        "if(model.universal_wav_review_selection_available===true){const review=element('button','btn','Universal WAV Reviewで確認');"
+        "review.addEventListener('click',()=>selectUniversalWavReviewCandidate(item));node.append(review)}host.append(node)}"
+    )
+    html = html.replace(candidate_anchor, candidate_controls)
 
     refresh_anchor = "if(page==='edit'){await refreshReview();await refreshTimeline();await refreshSpeechCues()}"
     if html.count(refresh_anchor) != 1:

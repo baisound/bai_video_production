@@ -1,6 +1,6 @@
 # TASK-097 — TASK-046 P-VS-3B/4A Local GPT-SoVITS Iteration Status Unit
 
-- Status: `DATASET_V2_RECORDED_VERIFY_PASS / INDEPENDENT_REVERIFY_PENDING / FIRST_RUN_REPORTED_COMPLETE_NOT_INDEPENDENTLY_VERIFIED / SECOND_RUN_COMPLETE_PUBLIC_SAFE_VERIFIED / VALIDATION_SELECTION_PENDING`
+- Status: `DATASET_V2_RECORDED_VERIFY_PASS / INDEPENDENT_REVERIFY_PENDING / FIRST_RUN_REPORTED_COMPLETE_NOT_INDEPENDENTLY_VERIFIED / SECOND_RUN_COMPLETE_PUBLIC_SAFE_VERIFIED / OWNER_SELECTED_V2_FRESH_E4_E15 / PUBLIC_RELEASE_CONTRACT_PENDING`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
 - Owner routing: `2026-09-19` local-ChatGPT second run; Owner completion notification and formal Receipt received by `2026-09-22`
 - Canonical owner: `TASK-046 P-VS-3B Dataset revision / P-VS-4A Training and ModelCandidate`
@@ -40,9 +40,11 @@ sequential WARM/FRESH SoVITS/GPT phases are `COMPLETE`, and the test set was not
 accessed. Independent public-safe intake observed 14 exported checkpoint files:
 V2_WARM and V2_FRESH each contain four SoVITS plus three GPT candidates. Their
 filenames, sizes and SHA-256 identities are recorded in the bounded Evidence.
-This verifies training/export completion only; validation-set comparison,
-voice-quality judgment, final pair selection and model promotion remain Human
-decisions under TASK-046.
+The Owner clarified on `2026-09-22` that validation/selection was already
+completed and selected V2_FRESH e4 SoVITS plus V2_FRESH e15 GPT. TASK-046 records
+that Owner decision. Public Repository release finalization, BVP runtime
+admission and model promotion remain separate; selection does not activate the
+model.
 
 No BAISOUND-specific FasterWhisper fine-tuning is complete. GPT-SoVITS voice
 generation tuning, FasterWhisper inference integration and any future Whisper
@@ -60,6 +62,6 @@ training are separate responsibilities and must not be reported as one activity.
 
 ## Next action
 
-Perform Human validation-set comparison and select a checkpoint pair within
-V2_WARM and V2_FRESH under TASK-046. A later bounded status intake may record the
-Human-selected result without importing private bodies into this repository.
+Wait for the BAISOUND_VOICE_MODEL Public Repository modernization to finalize
+the `v2.0.0` release contract and public filenames. BVP consumer integration,
+installation and runtime use require their own later bounded review.

@@ -121,8 +121,7 @@ function Find-ButtonContaining([System.Windows.Automation.AutomationElement]$Roo
     [System.Windows.Automation.ControlType]::Button)
   $buttons = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
   foreach ($button in $buttons) {
-    if ($button.Current.IsEnabled -and -not $button.Current.IsOffscreen -and
-        $button.Current.Name.Contains($Text)) { return $button }
+    if ($button.Current.Name.Contains($Text)) { return $button }
   }
   return $null
 }

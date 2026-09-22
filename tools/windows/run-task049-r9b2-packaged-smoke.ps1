@@ -110,8 +110,7 @@ function Find-ButtonPrefix([System.Windows.Automation.AutomationElement]$Root, [
     [System.Windows.Automation.ControlType]::Button)
   $buttons = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
   foreach ($button in $buttons) {
-    if ($button.Current.IsEnabled -and -not $button.Current.IsOffscreen -and
-        $button.Current.Name.StartsWith($Prefix, [System.StringComparison]::Ordinal)) { return $button }
+    if ($button.Current.Name.StartsWith($Prefix, [System.StringComparison]::Ordinal)) { return $button }
   }
   return $null
 }

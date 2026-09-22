@@ -1,6 +1,6 @@
 # TASK-096 — One-command Windows Release Build Orchestrator
 
-- Status: `A1_COMPLETE / IMPLEMENTATION_COMPLETE / CONTRACT_VERIFIED / USER_NATIVE_BUILD_PENDING`
+- Status: `A1_COMPLETE / IMPLEMENTATION_COMPLETE / CONTRACT_VERIFIED / A2_EFFECT_ZERO_PREFLIGHT_COMPLETE / USER_NATIVE_BUILD_BLOCKED_PREREQUISITES`
 - Capability: `BVP-WINDOWS-RELEASE-BUILD-ORCHESTRATOR-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-16` — Windows の全リリース成果物を、公開処理から分離した単一 PowerShell コマンドで構築できるようにする
@@ -144,3 +144,20 @@ operator.
 - Durable Evidence: `docs/ai-team/tasks/TASK-096/evidence/a1-contract-verification-20260916-r01.md`.
 - Full native artifact production remains intentionally `NOT_EXECUTED`; the next
   action is the user's one-command run from a clean merged Windows checkout.
+
+## A2 native preflight — 2026-09-22
+
+- Exact clean merged source: `c3cd3a15fea82d7f6e9f761440fff7ade9ff982c`.
+- `-PreflightOnly` stopped with exit code `3` before build effects because the
+  default Inno Setup discovery did not find `ISCC.exe`.
+- Output children remained `0 -> 0`; no run directory or artifact was created.
+- The pinned Inno Setup 7.1.0 compiler was subsequently found at its documented
+  read-only runtime coordinate and matched the required SHA-256.
+- The official PSF-signed `python-3.12.10-amd64.exe` was not present in the
+  documented worktree, TASK-093 Evidence/temp, or bounded known local coordinates.
+- The installed CPython `3.12.10` candidate lacks the required `build` module.
+- Full native artifact production therefore remains `NOT_EXECUTED`. No dependency
+  or runtime was installed or downloaded. Resume only after a separately supplied
+  pinned Python installer and a TASK-096-owned prepared build environment satisfy
+  the existing preflight contract.
+- Durable record: `evidence/a2-native-preflight-20260922-r01.md`.

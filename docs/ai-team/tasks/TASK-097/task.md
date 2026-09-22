@@ -1,8 +1,8 @@
 # TASK-097 — TASK-046 P-VS-3B/4A Local GPT-SoVITS Iteration Status Unit
 
-- Status: `DATASET_V2_RECORDED_VERIFY_PASS / INDEPENDENT_REVERIFY_PENDING / FIRST_RUN_REPORTED_COMPLETE_NOT_INDEPENDENTLY_VERIFIED / SECOND_RUN_NOT_STARTED`
+- Status: `DATASET_V2_RECORDED_VERIFY_PASS / INDEPENDENT_REVERIFY_PENDING / FIRST_RUN_REPORTED_COMPLETE_NOT_INDEPENDENTLY_VERIFIED / SECOND_RUN_COMPLETE_PUBLIC_SAFE_VERIFIED / VALIDATION_SELECTION_PENDING`
 - Governance: `DEV-4 FOUNDATION CRITICAL`
-- Owner routing: `2026-09-19` — the second GPT-SoVITS learning run continues with local ChatGPT
+- Owner routing: `2026-09-19` local-ChatGPT second run; Owner completion notification and formal Receipt received by `2026-09-22`
 - Canonical owner: `TASK-046 P-VS-3B Dataset revision / P-VS-4A Training and ModelCandidate`
 - Relationship to TASK-098: `SEPARATE_LANE / SUBORDINATE_STATUS_EXECUTION_UNIT / STATUS_DEPENDENCY_ONLY`
 
@@ -31,9 +31,18 @@ paths, transcript bodies and audio are intentionally absent from this record.
 
 The supplied handoff reports the first GPT-SoVITS learning run complete with 206
 clips, 1965.79 seconds, four SoVITS candidates and three GPT candidates, yielding
-12 candidate pairs. That run is not independently reverified by this repository.
-Final pair selection remains a Human decision. The second learning run has not
-started and is routed to local ChatGPT outside the TASK-098 Codex integration lane.
+12 candidate pairs. That earlier run remains not independently reverified by
+this repository.
+
+The separately authorized second dual-V2 run is complete. Its formal completion
+Receipt and final run-state agree on `DUAL_V2_TRAINING_COMPLETE`, all four
+sequential WARM/FRESH SoVITS/GPT phases are `COMPLETE`, and the test set was not
+accessed. Independent public-safe intake observed 14 exported checkpoint files:
+V2_WARM and V2_FRESH each contain four SoVITS plus three GPT candidates. Their
+filenames, sizes and SHA-256 identities are recorded in the bounded Evidence.
+This verifies training/export completion only; validation-set comparison,
+voice-quality judgment, final pair selection and model promotion remain Human
+decisions under TASK-046.
 
 No BAISOUND-specific FasterWhisper fine-tuning is complete. GPT-SoVITS voice
 generation tuning, FasterWhisper inference integration and any future Whisper
@@ -51,6 +60,6 @@ training are separate responsibilities and must not be reported as one activity.
 
 ## Next action
 
-Local ChatGPT and the Owner perform the second learning run. A later bounded
-status intake may independently reverify public-safe manifest identity and record
-Human-selected results without importing private bodies into this repository.
+Perform Human validation-set comparison and select a checkpoint pair within
+V2_WARM and V2_FRESH under TASK-046. A later bounded status intake may record the
+Human-selected result without importing private bodies into this repository.

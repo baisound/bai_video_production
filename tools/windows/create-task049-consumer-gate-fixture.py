@@ -15,8 +15,58 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Create rights-safe synthetic fixtures for the TASK-049 Windows Consumer Gate"
     )
-    parser.add_argument("--root", required=True)
+    parser.add_argument("--root")
+    parser.add_argument("--verify-metadata")
+    parser.add_argument("--verification-output")
     args = parser.parse_args()
+
+    if bool(args.root) == bool(args.verify_metadata):
+        parser.error("specify exactly one of --root or --verify-metadata")
+    if args.verify_metadata:
+        metadata_path = Path(args.verify_metadata).resolve()
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if metadata.get("rights_basis") != "SYNTHETIC_CREATED_FOR_LOCAL_TEST":
+            raise ValueError("fixture rights basis mismatch")
+        if any(
+            metadata.get(name) is not False
+            for name in (
+                "real_media_used",
+                "private_media_used",
+                "human_gold_labels_created",
+                "provider_execution_started",
+                "model_or_runtime_acquired",
+                "production_timeline_mutated",
+                "resolve_write_performed",
+                "release_or_deploy_performed",
+            )
+        ):
+            raise ValueError("fixture non-effect boundary mismatch")
+        stored = DbDTriviaStore(metadata["trivia_database"]).latest(metadata["trivia_id"])
+        if stored.status is not TriviaStatus.CANDIDATE or stored.title != metadata["trivia_title"]:
+            raise ValueError("synthetic trivia candidate read-back mismatch")
+        marker = Path(metadata["training_workspace"]) / "workspace.json"
+        workspace_payload = json.loads(marker.read_text(encoding="utf-8"))
+        if workspace_payload.get("workspace_id") != metadata["training_workspace_id"]:
+            raise ValueError("training workspace read-back mismatch")
+        verification = {
+            "verification_version": "1.0.0",
+            "task": "TASK-049",
+            "result": "PASS",
+            "trivia_id": stored.trivia_id,
+            "trivia_status": stored.status.value,
+            "training_workspace_id": workspace_payload["workspace_id"],
+            "real_media_used": False,
+            "human_gold_labels_created": False,
+        }
+        if args.verification_output:
+            output = Path(args.verification_output).resolve()
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(
+                json.dumps(verification, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        print(json.dumps(verification, ensure_ascii=False, sort_keys=True))
+        return 0
 
     root = Path(args.root).resolve()
     if root.exists() and any(root.iterdir()):

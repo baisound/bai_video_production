@@ -60,6 +60,8 @@ def test_consumer_gate_orchestrates_three_packages_with_safe_bounded_evidence() 
         "BAI DbD Trivia Editor.exe",
         "BAI DbD Training Studio.exe",
         "candidate_readback = 'PASS'",
+        "--verify-metadata",
+        "canonical_readback_receipt_sha256",
         "workspace_template_readback = 'PASS'",
         "real_media_roi_calibration = 'NOT_CONFIRMED'",
         "human_gold_kpi = 'NOT_CONFIRMED'",
@@ -112,6 +114,24 @@ def test_consumer_gate_fixture_is_synthetic_candidate_without_human_gold(tmp_pat
     stored = trivia.latest(metadata["trivia_id"])
     assert stored.status.value == "CANDIDATE"
     assert stored.title == metadata["trivia_title"]
+    verification_path = root / "verification.json"
+    verify = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "tools" / "windows" / "create-task049-consumer-gate-fixture.py"),
+            "--verify-metadata",
+            str(root / "task049-consumer-gate-fixture.json"),
+            "--verification-output",
+            str(verification_path),
+        ],
+        cwd=ROOT,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert json.loads(verify.stdout)["result"] == "PASS"
+    assert json.loads(verification_path.read_text(encoding="utf-8"))["trivia_status"] == "CANDIDATE"
 
 
 def test_fixture_tool_creates_real_store_state_without_real_media_or_external_effects(tmp_path: Path) -> None:

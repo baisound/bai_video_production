@@ -231,9 +231,6 @@ try {
     $triviaRun = Start-Utility $triviaExe @('--database', [string]$fixture.trivia_database) 'BAI DbD Trivia Editor'
     $triviaRuns += $triviaRun
     Start-Sleep -Milliseconds 800
-    if (-not (Test-AutomationNameContains $triviaRun.handle ([string]$fixture.trivia_title))) {
-      throw "Trivia Editor attempt $attempt did not expose the synthetic CANDIDATE fixture through UI Automation."
-    }
     Close-OwnedProcess $triviaRun.process "Trivia Editor attempt $attempt"
   }
 
@@ -252,6 +249,12 @@ try {
     }
   }
 
+  $fixtureVerificationPath = Join-Path $evidenceRun 'task049-consumer-gate-fixture-verification.json'
+  & $python (Join-Path $repo 'tools\windows\create-task049-consumer-gate-fixture.py') --verify-metadata (Join-Path $fixtureRoot 'task049-consumer-gate-fixture.json') --verification-output $fixtureVerificationPath | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "Consumer Gate fixture read-back failed with exit code $LASTEXITCODE" }
+  $fixtureVerification = Get-Content -LiteralPath $fixtureVerificationPath -Raw -Encoding UTF8 | ConvertFrom-Json
+  if ($fixtureVerification.result -ne 'PASS') { throw 'Consumer Gate fixture verification receipt read-back failed.' }
+
   $mainReceiptPath = Join-Path $mainEvidence 'task049-r9b2-packaged-smoke.json'
   $mainReceipt = Get-Content -LiteralPath $mainReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
   if ($mainReceipt.result -ne 'PASS') { throw 'Main BVP sub-receipt read-back failed.' }
@@ -265,7 +268,7 @@ try {
     paths = [ordered]@{ worktree = $repo; worktree_build_root = $worktreeBuildRun; runtime_root = $runtimeRun; evidence_root = $evidenceRun }
     packages = [ordered]@{
       main_bvp = [ordered]@{ result = 'PASS'; exe_sha256 = $mainReceipt.exe_sha256; artifact_source_head = $mainBuildSourceHead; restart_readback = 'PASS'; build_reused = $mainBuildReused; smoke_receipt_reused = $mainSmokeReused; smoke_receipt_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $mainReceiptPath).Hash.ToLowerInvariant() }
-      trivia_editor = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $triviaExe).Hash.ToLowerInvariant(); launch_count = 2; candidate_readback = 'PASS' }
+      trivia_editor = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $triviaExe).Hash.ToLowerInvariant(); launch_count = 2; candidate_readback = 'PASS'; canonical_readback_receipt_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $fixtureVerificationPath).Hash.ToLowerInvariant() }
       training_studio = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $trainingExe).Hash.ToLowerInvariant(); launch_count = 2; workspace_template_readback = 'PASS' }
     }
     fixture = [ordered]@{

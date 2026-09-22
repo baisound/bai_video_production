@@ -41,15 +41,21 @@ def _task036_contract() -> tuple[int, Callable[[Any], Any]]:
     return TASK036_LAUNCH_CONFIG_MAX_BYTES, Task036LaunchConfiguration.from_dict
 
 
-def _identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
-    return (
+def _identity(value: os.stat_result) -> tuple[int, ...]:
+    identity = (
         value.st_dev,
         value.st_ino,
         value.st_mode,
         value.st_size,
         value.st_mtime_ns,
-        value.st_ctime_ns,
     )
+    # Windows path-stat and descriptor-stat do not expose a comparable ctime
+    # projection for the same unchanged file.  Prefer the stable birth time
+    # when available and keep the stronger ctime signal on POSIX.
+    if os.name == "nt":
+        birthtime = getattr(value, "st_birthtime_ns", None)
+        return identity if birthtime is None else (*identity, birthtime)
+    return (*identity, value.st_ctime_ns)
 
 
 def _is_alias(value: os.stat_result) -> bool:

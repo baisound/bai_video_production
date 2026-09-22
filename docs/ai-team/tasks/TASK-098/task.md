@@ -1,6 +1,6 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE / A4-R0_COMPLETE / A4-R1_DESIGN_COMPLETE / A4-R1A_COMPLETE / A4-R1B_COMPLETE / A4-R2_DESIGN_COMPLETE / A4-R2A_COMPLETE / A4-R2B1_COMPLETE / A4-R2B2_COMPLETE / A6-R1_COMPLETE / A6-R1_CI_REPAIR_LOCAL_COMPLETE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE / A4-R0_COMPLETE / A4-R1_DESIGN_COMPLETE / A4-R1A_COMPLETE / A4-R1B_COMPLETE / A4-R2_DESIGN_COMPLETE / A4-R2A_COMPLETE / A4-R2B1_COMPLETE / A4-R2B2_COMPLETE / A6-R1_COMPLETE / A6-R1_CI_REPAIR_LOCAL_COMPLETE / A6-R1_CI_REPAIR_R2_LOCAL_COMPLETE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
@@ -8,10 +8,10 @@
 - A6 Owner authority: `2026-09-22` — connect the verified WAV review Runtime to the normal Product/Shell for Human-only canonical Asset private playback and waveform display plus bounded native verification; excludes automatic ingest, TASK-041 auto-completion, training, Release, Deploy and Production use
 - Base: initial `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`; refreshed through merge commit `0b63eca497a3103e1ab296ad40d840ea0f0f992a` to current `origin/main` `ae456f46d0124108740be92a0411b83ce5e1c75b`
 - Branch: `codex/task-098-a4-review-workspace`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`; `TASK-098/A4-R0 — pure review-completion, timing projection and independent viewport contract`; `TASK-098/A4-R1 — exact-hash coordinator design`; `TASK-098/A4-R1a — pure body-free ephemeral exact-hash coordinator`; `TASK-098/A4-R1b — allowlisted unified Product/Shell projection`; `TASK-098/A4-R2 — playback/waveform authority design`; `TASK-098/A4-R2a — pure no-path fake-observation runtime contract/reducer`; `TASK-098/A4-R2b1 — concrete registry-bound WAV runtime and bounded synthetic Windows-native acceptance`; `TASK-098/A4-R2b2 — exact private WAV one-second Windows-native playback/waveform acceptance`; `TASK-098/A6-R1 — Human-only normal Product/Shell playback and ephemeral waveform display`; `TASK-098/A6-R1 CI compatibility repair — current-main integration, canonical Shell identity and Windows spawn portability`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`; `TASK-098/A4-R0 — pure review-completion, timing projection and independent viewport contract`; `TASK-098/A4-R1 — exact-hash coordinator design`; `TASK-098/A4-R1a — pure body-free ephemeral exact-hash coordinator`; `TASK-098/A4-R1b — allowlisted unified Product/Shell projection`; `TASK-098/A4-R2 — playback/waveform authority design`; `TASK-098/A4-R2a — pure no-path fake-observation runtime contract/reducer`; `TASK-098/A4-R2b1 — concrete registry-bound WAV runtime and bounded synthetic Windows-native acceptance`; `TASK-098/A4-R2b2 — exact private WAV one-second Windows-native playback/waveform acceptance`; `TASK-098/A6-R1 — Human-only normal Product/Shell playback and ephemeral waveform display`; `TASK-098/A6-R1 CI compatibility repair — current-main integration, canonical Shell identity and Windows spawn portability`; `TASK-098/A6-R1 CI compatibility repair R2 — Windows physical-identity portability, canonical Shell test synchronization and explicit native-audio gating`
 - Completed recovery boundaries: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`; `TASK-098/A2-R2c Recovery R1 — final-Judge H2/M1 corrections implemented and independently accepted, final Judge pending`
-- Active Atomic Unit: `NONE — A6-R1 CI repair is locally complete; hosted real-dependency recheck awaits publication to the existing PR branch; A5 canonical TASK-047 receipt ABI remains dependency-blocked`
-- Next action: `publish the exact reviewed local TASK-098 branch to existing PR #562 only under Git remote-publication authority, then require hosted CI success; otherwise wait for the canonical TASK-047 receipt ABI before fresh A5 DEV-4 review or obtain a separate exact A6 packaging/installer allocation`
+- Active Atomic Unit: `TASK-098/A6-R1 CI compatibility repair R2 — local correction complete; hosted real-dependency recheck awaits publication to existing PR #562; A5 canonical TASK-047 receipt ABI remains dependency-blocked`
+- Next action: `commit and publish the exact reviewed R2 correction to existing PR #562, require hosted CI success, and record the immutable run identity; otherwise wait for the canonical TASK-047 receipt ABI before fresh A5 DEV-4 review or obtain a separate exact A6 packaging/installer allocation`
 
 ## Objective
 
@@ -810,3 +810,46 @@ Later Units must publish their own narrower allowed-file list before mutation.
   occurred.
 - Evidence:
   `evidence/a6-r1-ci-compatibility-repair-20260922-r01.md`.
+
+## A6-R1 CI compatibility repair R2
+
+- Published repair commit `83e06683c67e9470fb715b5c894b10d93c920693`
+  to existing PR #562. Hosted run `35745131935` completed `FAIL` in the six
+  OS/Python test jobs; security and release-metadata jobs passed.
+- Linux 3.11/3.12/3.13 shared three stale canonical-Shell expectations:
+  the v2 route marker and the A6-added runtime control counts/inventory.
+- Windows 3.11/3.12/3.13 additionally exposed that path-based `stat` and
+  descriptor-based `fstat` return different `st_ctime_ns` projections for an
+  unchanged file. That collapsed valid model-directory/config reads into
+  `FILE_HASH_INVALID` or config-invalid failures. Windows now compares stable
+  file identity/type/size/mtime and includes `st_birthtime_ns` when the active
+  Python provides it; POSIX retains ctime checking.
+- The synthetic Windows playback test now requires explicit
+  `BVP_TASK098_NATIVE_AUDIO=1`. Hosted headless Windows therefore does not
+  require an audio endpoint or claim native playback. The already completed
+  bounded synthetic/private native acceptance remains historical Evidence.
+- Exact failing-test group after correction: `37 PASS / 1 intentional native
+  skip`. Focused model-directory/settings, V6.1.1 visual/interaction/element
+  and review-runtime regression: `123 PASS / 1 intentional native skip`.
+  Python compile and Git diff check: `PASS`.
+- A wider stub-enabled diagnostic reached `657 PASS / 2 SKIP`; its ten
+  remaining results were not accepted as Product failures: eight require real
+  `jsonschema` semantics intentionally absent from the import-only stub, and
+  two were caused by an overlong diagnostic basetemp path. Hosted CI remains
+  the authoritative real-dependency check.
+- Preserved worktree-contained residual roots after cleanup fail-closed:
+  `.task098-ci-r2-test` File ID `0x0000000000000000003400000002012b`,
+  `.t98` File ID `0x0000000000000000000c000000322234`, and
+  `.task098-ci-r2-stubs` File ID `0x000000000000000000ac000000081d26`.
+  Their pytest-created child ACLs deny complete enumeration to the current
+  process. No ACL takeover, ownership mutation, unsafe recursive deletion or
+  reuse occurred.
+- No private audio/native replay, Asset ingest, TASK-041 completion,
+  Dataset/training, package/install, Release, Deploy or Production effect
+  occurred.
+- Evidence:
+  `evidence/a6-r1-ci-compatibility-repair-r2-20260923-r01.md`.
+- External pre-commit checkpoint:
+  `C:\home\baisound\evidence\bai-video-production\TASK-098\a6-r1-ci-compatibility-repair-r2\20260923T004542+0900\checkpoint.md`,
+  SHA-256 `ebbd8a29f0de264a95b0fdc69f97e05a0ec54bf3d1078b48fb1b9c340a1422b8`,
+  read-back `PASS`.

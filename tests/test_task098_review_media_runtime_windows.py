@@ -448,7 +448,10 @@ def test_port_and_request_accept_no_host_path(tmp_path: Path) -> None:
     fixture.store.close()
 
 
-@pytest.mark.skipif(os.name != "nt", reason="Windows-native audio device acceptance")
+@pytest.mark.skipif(
+    os.name != "nt" or os.environ.get("BVP_TASK098_NATIVE_AUDIO") != "1",
+    reason="explicit Windows-native audio device acceptance",
+)
 def test_windows_native_backend_plays_bounded_synthetic_canonical_asset(
     tmp_path: Path,
 ) -> None:

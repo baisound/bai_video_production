@@ -34,15 +34,22 @@ def _blocked(*reasons: str) -> FasterWhisperModelDirectoryInspectionV1:
     return FasterWhisperModelDirectoryInspectionV1.blocked(*sorted(set(reasons)))
 
 
-def _physical_identity(metadata: os.stat_result) -> tuple[int, int, int, int, int, int]:
-    return (
+def _physical_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    identity = (
         metadata.st_dev,
         metadata.st_ino,
         metadata.st_mode,
         metadata.st_size,
         metadata.st_mtime_ns,
-        metadata.st_ctime_ns,
     )
+    # Windows path-stat and descriptor-stat expose different st_ctime_ns
+    # projections for the same unchanged file on supported Python versions.
+    # Prefer the stable birth time when Python exposes it; older Windows
+    # versions still retain identity, type, size and modification-time checks.
+    if os.name == "nt":
+        birthtime = getattr(metadata, "st_birthtime_ns", None)
+        return identity if birthtime is None else (*identity, birthtime)
+    return (*identity, metadata.st_ctime_ns)
 
 
 def _is_alias(metadata: os.stat_result) -> bool:

@@ -134,6 +134,14 @@ function Get-ButtonNames([System.Windows.Automation.AutomationElement]$Root) {
     ForEach-Object { $_.Current.Name } | Where-Object { $_ } | Sort-Object -Unique)
 }
 
+function Get-AutomationNames([System.Windows.Automation.AutomationElement]$Root) {
+  return @($Root.FindAll(
+      [System.Windows.Automation.TreeScope]::Descendants,
+      [System.Windows.Automation.Condition]::TrueCondition) |
+    ForEach-Object { $_.Current.Name } | Where-Object { $_ } | Sort-Object -Unique |
+    Select-Object -First 40)
+}
+
 function Invoke-Button([System.Windows.Automation.AutomationElement]$Button) {
   if ($null -eq $Button) { throw 'Required packaged Game Intelligence button is unavailable.' }
   $pattern = $null
@@ -171,7 +179,8 @@ function Start-App([int]$Attempt) {
     $gameButton = Find-ButtonContaining $root 'Game Intelligence'
   } while ($null -eq $gameButton -and [DateTime]::UtcNow -lt $readyDeadline)
   if ($null -eq $gameButton) {
-    throw "Packaged Shell did not expose the TASK-049 Game Intelligence stage. Observed buttons: $($names -join ', ')"
+    $automationNames = Get-AutomationNames $root
+    throw "Packaged Shell did not expose the TASK-049 Game Intelligence stage. Observed buttons: $($names -join ', '); observed elements: $($automationNames -join ' | ')"
   }
   return [ordered]@{ process=$process; root=$root; handle=$handle; gameButton=$gameButton }
 }

@@ -36,6 +36,7 @@ def test_windows_smoke_script_builds_existing_exe_and_checks_packaged_restart_re
         "$start.UseShellExecute = $false",
         "$start.EnvironmentVariables['BAI_TASK036_LAUNCH_CONFIG']",
         "Observed buttons:",
+        "observed elements:",
     ):
         assert token in source
     assert "Release" not in source or "public_release_performed" in source

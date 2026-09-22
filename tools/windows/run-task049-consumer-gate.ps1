@@ -4,7 +4,8 @@ param(
   [string]$EvidenceRoot = 'C:\home\baisound\evidence\bai-video-production',
   [string]$RunId = '',
   [string]$PythonExe = '',
-  [string]$ExistingMainBuildRoot = ''
+  [string]$ExistingMainBuildRoot = '',
+  [string]$ExistingMainBuildSourceHead = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -99,6 +100,9 @@ $runtimeRun = Assert-NotDriveRootChild (Join-Path $tempRoot "bai-video-productio
 $runtimeRun = Assert-Descendant $runtimeRun $tempRoot 'Runtime run root'
 $mainBuildReused = -not [string]::IsNullOrWhiteSpace($ExistingMainBuildRoot)
 if ($mainBuildReused) {
+  if ($ExistingMainBuildSourceHead -notmatch '^[0-9a-f]{40}$') {
+    throw 'ExistingMainBuildSourceHead must identify the exact 40-character source commit for a reused main build.'
+  }
   $mainBuildRoot = Assert-NotDriveRootChild $ExistingMainBuildRoot 'Existing main build root'
   $mainBuildRoot = Assert-Descendant $mainBuildRoot $repo 'Existing main build root'
   if (-not (Test-Path -LiteralPath $mainBuildRoot -PathType Container)) { throw "ExistingMainBuildRoot is unavailable: $mainBuildRoot" }
@@ -139,6 +143,7 @@ $python = (Resolve-Path -LiteralPath $PythonExe).Path
 $branch = (& git -C $repo branch --show-current).Trim()
 $head = (& git -C $repo rev-parse HEAD).Trim()
 $baseMain = (& git -C $repo rev-parse origin/main).Trim()
+$mainBuildSourceHead = if ($mainBuildReused) { $ExistingMainBuildSourceHead } else { $head }
 $dirty = @(& git -C $repo status --porcelain=v1 --untracked-files=all)
 if (-not $branch) { throw 'Consumer Gate requires a named task branch.' }
 if ($dirty.Count -gt 0) { throw 'Consumer Gate requires a clean source worktree.' }
@@ -240,7 +245,7 @@ try {
     source = [ordered]@{ branch = $branch; head = $head; origin_main = $baseMain; dirty = $false }
     paths = [ordered]@{ worktree = $repo; worktree_build_root = $worktreeBuildRun; runtime_root = $runtimeRun; evidence_root = $evidenceRun }
     packages = [ordered]@{
-      main_bvp = [ordered]@{ result = 'PASS'; exe_sha256 = $mainReceipt.exe_sha256; restart_readback = 'PASS'; build_reused = $mainBuildReused }
+      main_bvp = [ordered]@{ result = 'PASS'; exe_sha256 = $mainReceipt.exe_sha256; artifact_source_head = $mainBuildSourceHead; restart_readback = 'PASS'; build_reused = $mainBuildReused }
       trivia_editor = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $triviaExe).Hash.ToLowerInvariant(); launch_count = 2; candidate_readback = 'PASS' }
       training_studio = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $trainingExe).Hash.ToLowerInvariant(); launch_count = 2; workspace_template_readback = 'PASS' }
     }

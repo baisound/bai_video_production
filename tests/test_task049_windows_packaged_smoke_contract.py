@@ -68,6 +68,8 @@ def test_consumer_gate_orchestrates_three_packages_with_safe_bounded_evidence() 
         "worktree_build_root = $worktreeBuildRun",
         "System.Security.Cryptography.SHA256",
         "[string]$ExistingMainBuildRoot = ''",
+        "[string]$ExistingMainBuildSourceHead = ''",
+        "artifact_source_head = $mainBuildSourceHead",
         "-SkipBuild",
     ):
         assert token in source

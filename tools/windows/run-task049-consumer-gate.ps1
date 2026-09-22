@@ -5,7 +5,8 @@ param(
   [string]$RunId = '',
   [string]$PythonExe = '',
   [string]$ExistingMainBuildRoot = '',
-  [string]$ExistingMainBuildSourceHead = ''
+  [string]$ExistingMainBuildSourceHead = '',
+  [string]$ExistingMainSmokeReceipt = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -99,6 +100,10 @@ $tempRoot = Get-FullPath $env:TEMP
 $runtimeRun = Assert-NotDriveRootChild (Join-Path $tempRoot "bai-video-production\TASK-049\windows-consumer-gate\$RunId") 'Runtime run root'
 $runtimeRun = Assert-Descendant $runtimeRun $tempRoot 'Runtime run root'
 $mainBuildReused = -not [string]::IsNullOrWhiteSpace($ExistingMainBuildRoot)
+$mainSmokeReused = -not [string]::IsNullOrWhiteSpace($ExistingMainSmokeReceipt)
+if ($mainSmokeReused -and -not $mainBuildReused) {
+  throw 'ExistingMainSmokeReceipt requires ExistingMainBuildRoot and ExistingMainBuildSourceHead.'
+}
 if ($mainBuildReused) {
   if ($ExistingMainBuildSourceHead -notmatch '^[0-9a-f]{40}$') {
     throw 'ExistingMainBuildSourceHead must identify the exact 40-character source commit for a reused main build.'
@@ -176,12 +181,25 @@ try {
   # unique ignored worktree run directory; utility builds and fixtures remain
   # beneath the system temporary run root.
   $mainEvidence = Join-Path $evidenceRun 'main-bvp'
-  if ($mainBuildReused) {
+  if ($mainSmokeReused) {
+    $existingMainReceiptPath = Assert-Descendant $ExistingMainSmokeReceipt $requestedEvidenceRoot 'Existing main smoke receipt'
+    if (-not (Test-Path -LiteralPath $existingMainReceiptPath -PathType Leaf)) { throw "ExistingMainSmokeReceipt is unavailable: $existingMainReceiptPath" }
+    $mainReceipt = Get-Content -LiteralPath $existingMainReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $mainExe = Join-Path $mainBuildRoot 'BAI Video Production\BAI Video Production.exe'
+    if (-not (Test-Path -LiteralPath $mainExe -PathType Leaf)) { throw "Expected packaged EXE is missing: $mainExe" }
+    $observedMainHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $mainExe).Hash.ToLowerInvariant()
+    if ($mainReceipt.task -ne 'TASK-049' -or $mainReceipt.unit -ne 'R9B2' -or $mainReceipt.result -ne 'PASS' -or
+        $mainReceipt.build_root -ne $mainBuildRoot -or $mainReceipt.exe_sha256 -ne $observedMainHash) {
+      throw 'Existing main smoke receipt does not match the exact PASS build artifact.'
+    }
+    New-Item -ItemType Directory -Path $mainEvidence | Out-Null
+    Copy-Item -LiteralPath $existingMainReceiptPath -Destination (Join-Path $mainEvidence 'task049-r9b2-packaged-smoke.json')
+  } elseif ($mainBuildReused) {
     & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repo 'tools\windows\run-task049-r9b2-packaged-smoke.ps1') -RepositoryRoot $repo -EvidenceDirectory $mainEvidence -BuildRoot $mainBuildRoot -PythonExe $python -SkipBuild
   } else {
     & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repo 'tools\windows\run-task049-r9b2-packaged-smoke.ps1') -RepositoryRoot $repo -EvidenceDirectory $mainEvidence -BuildRoot $mainBuildRoot -PythonExe $python
   }
-  if ($LASTEXITCODE -ne 0) { throw "Main BVP packaged smoke failed with exit code $LASTEXITCODE" }
+  if (-not $mainSmokeReused -and $LASTEXITCODE -ne 0) { throw "Main BVP packaged smoke failed with exit code $LASTEXITCODE" }
   $mainExe = Join-Path $mainBuildRoot 'BAI Video Production\BAI Video Production.exe'
   if (-not (Test-Path -LiteralPath $mainExe -PathType Leaf)) { throw "Expected packaged EXE is missing: $mainExe" }
 
@@ -234,7 +252,8 @@ try {
     }
   }
 
-  $mainReceipt = Get-Content -LiteralPath (Join-Path $mainEvidence 'task049-r9b2-packaged-smoke.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+  $mainReceiptPath = Join-Path $mainEvidence 'task049-r9b2-packaged-smoke.json'
+  $mainReceipt = Get-Content -LiteralPath $mainReceiptPath -Raw -Encoding UTF8 | ConvertFrom-Json
   if ($mainReceipt.result -ne 'PASS') { throw 'Main BVP sub-receipt read-back failed.' }
   $receipt = [ordered]@{
     receipt_version = '1.0.0'
@@ -245,7 +264,7 @@ try {
     source = [ordered]@{ branch = $branch; head = $head; origin_main = $baseMain; dirty = $false }
     paths = [ordered]@{ worktree = $repo; worktree_build_root = $worktreeBuildRun; runtime_root = $runtimeRun; evidence_root = $evidenceRun }
     packages = [ordered]@{
-      main_bvp = [ordered]@{ result = 'PASS'; exe_sha256 = $mainReceipt.exe_sha256; artifact_source_head = $mainBuildSourceHead; restart_readback = 'PASS'; build_reused = $mainBuildReused }
+      main_bvp = [ordered]@{ result = 'PASS'; exe_sha256 = $mainReceipt.exe_sha256; artifact_source_head = $mainBuildSourceHead; restart_readback = 'PASS'; build_reused = $mainBuildReused; smoke_receipt_reused = $mainSmokeReused; smoke_receipt_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $mainReceiptPath).Hash.ToLowerInvariant() }
       trivia_editor = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $triviaExe).Hash.ToLowerInvariant(); launch_count = 2; candidate_readback = 'PASS' }
       training_studio = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $trainingExe).Hash.ToLowerInvariant(); launch_count = 2; workspace_template_readback = 'PASS' }
     }

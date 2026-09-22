@@ -73,6 +73,9 @@ def test_consumer_gate_orchestrates_three_packages_with_safe_bounded_evidence() 
         "[string]$ExistingMainBuildRoot = ''",
         "[string]$ExistingMainBuildSourceHead = ''",
         "artifact_source_head = $mainBuildSourceHead",
+        "[string]$ExistingMainSmokeReceipt = ''",
+        "Existing main smoke receipt does not match the exact PASS build artifact.",
+        "smoke_receipt_sha256",
         "-SkipBuild",
     ):
         assert token in source

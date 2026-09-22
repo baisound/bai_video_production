@@ -1,16 +1,16 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
-- Branch: `codex/task-098-universal-wav-review-integration`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`
+- Branch: `codex/task-098-a3-model-manager-settings`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`
 - Completed recovery boundaries: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`; `TASK-098/A2-R2c Recovery R1 — final-Judge H2/M1 corrections implemented and independently accepted, final Judge pending`
-- Active Atomic Unit: `NONE — A2-R2c completed; next staged unit is not yet allocated`
-- Next action: `fresh bounded design/authority review for the next Universal WAV Review staged integration unit`
+- Active Atomic Unit: `NONE — A3-R0 completed; A3-R1 is not yet allocated`
+- Next action: `fresh bounded A3-R1 design/authority review for the contained read-only model-directory inspector`
 
 ## Objective
 
@@ -575,3 +575,29 @@ Later Units must publish their own narrower allowed-file list before mutation.
   `C:\home\baisound\evidence\bai-video-production\TASK-098\a2-r2c-shell-human-control\20260920T085346+0900\post-commit-receipt.md`, SHA-256
   `055f17c33403f57408e02b7c5f7d2b0df0ab178c0f15b6e2eaf5612c30b38ea3`,
   size `2003`, read-back `PASS`.
+
+## A3-R0 model-directory contract completion
+
+- Design/review:
+  `a3-r0-model-directory-contract-pre-mutation-review-20260922.md`.
+- Added a pure, body-free model file observation and model-directory inspection
+  contract plus exact canonical/package schema mirrors. No filesystem, model,
+  network, download, Provider or inference behavior is present.
+- READY requires `config.json`, `model.bin`, `tokenizer.json` and exactly one of
+  `vocabulary.txt` / `vocabulary.json`; `preprocessor_config.json` is optional.
+  Per-file sizes, checksums, manifest/record digests and closed state/reason
+  matrices fail closed.
+- The public projection omits private locator/file/manifest/record digests and
+  every file observation while fixing download, model-load, inference, network
+  and execution flags to false.
+- Critic corrections closed schema-only semantic gaps for file-specific size
+  bounds, complete READY files and public READY/BLOCKED cross-products. Final
+  finding count: `Critical 0 / High 0 / Medium 0 / Low 0`.
+- Focused A3-R0 plus direct A2 runtime-contract regression:
+  `87 PASS / 0 FAIL`; Python compile, JSON parse, schema mirror and Git diff
+  checks: `PASS`.
+- Real directory inspection, launch-config/settings mutation, native picker,
+  model load/inference/download and private audio processing were not executed.
+- Evidence:
+  `evidence/a3-r0-model-directory-contract-20260922-r01.md`.
+- Next Unit: fresh A3-R1 review for the contained read-only filesystem inspector.

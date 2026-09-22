@@ -26,6 +26,7 @@ from .task098_faster_whisper_model_settings import (
 from .task098_review_workspace_coordinator import ReviewWorkspaceViewModel
 from .task098_review_workspace_shell_projection import project_review_workspace
 from .task098_review_shell_application import Task098ReviewShellApplication
+from .task098_product_review_binding import Task098ProductReviewBindingSelector
 from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_pre_edit_runtime import (
     Task036PreEditRuntime,
@@ -238,6 +239,7 @@ class Task036ShellBridge:
         faster_whisper_model_settings: Task098FasterWhisperModelSettingsService | None = None,
         review_workspace_provider: Callable[[], ReviewWorkspaceViewModel] | None = None,
         review_workspace_application: Task098ReviewShellApplication | None = None,
+        review_workspace_selector: Task098ProductReviewBindingSelector | None = None,
         pre_edit_runtime: Task036PreEditRuntime | None = None,
         workflow_runtime: Task036WorkflowRuntime | None = None,
         workflow_runtime_factory: Callable[[Task036EditingApplication], Task036WorkflowRuntime] | None = None,
@@ -296,7 +298,15 @@ class Task036ShellBridge:
             raise ValueError("review workspace application is invalid")
         if review_workspace_provider is not None and review_workspace_application is not None:
             raise ValueError("bind either a review provider or application, not both")
+        if (
+            review_workspace_selector is not None
+            and type(review_workspace_selector) is not Task098ProductReviewBindingSelector
+        ):
+            raise ValueError("review workspace selector is invalid")
+        if review_workspace_selector is not None and review_workspace_application is None:
+            raise ValueError("review workspace selector requires its application")
         self._review_workspace_application = review_workspace_application
+        self._review_workspace_selector = review_workspace_selector
         self._review_workspace_provider = (
             review_workspace_application.view_model
             if review_workspace_application is not None
@@ -1418,6 +1428,11 @@ class Task036ShellBridge:
             body = Task036DesktopViewModel(self._service.snapshot(), self._projection).to_dict()
         if self._review_workspace_provider is None:
             return body
+        if (
+            self._review_workspace_selector is not None
+            and not self._review_workspace_selector.is_ready()
+        ):
+            return body
         try:
             private_view = self._review_workspace_provider()
             public_projection = project_review_workspace(
@@ -1425,12 +1440,36 @@ class Task036ShellBridge:
                 review_runtime_enabled=self._review_workspace_application is not None,
             ).to_dict()
         except Exception:
+            if self._review_workspace_selector is not None:
+                # A Candidate/Asset can become stale between the readiness
+                # check and projection.  Disable only this optional review
+                # surface; never make the entire Product ViewModel unavailable.
+                return body
             raise ProductError(
                 "ERR_TASK098_REVIEW_WORKSPACE_PROJECTION_INVALID",
                 "Universal WAV Review projection is unavailable",
                 ProductErrorCategory.DATA_INTEGRITY,
             ) from None
         return {**body, "universal_wav_review": public_projection}
+
+    def universal_wav_review_select(self, args: Any) -> dict[str, object]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"candidate_id"}
+            or not isinstance(args["candidate_id"], str)
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Universal WAV Review selection request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        if self._review_workspace_selector is None:
+            raise ProductError(
+                "ERR_TASK098_REVIEW_SELECTION_NOT_BOUND",
+                "Universal WAV Review selection is not bound to this Shell",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return self._review_workspace_selector.select(args["candidate_id"])
 
     def _require_review_workspace_application(self) -> Task098ReviewShellApplication:
         if self._review_workspace_application is None:
@@ -2904,7 +2943,13 @@ class Task036ShellBridge:
         self._empty_args(args, "Audio Workspace snapshot")
         if self._audio_workspace_application is None:
             return {"available": False}
-        return {"available": True, **self._audio_workspace_application.snapshot()}
+        return {
+            "available": True,
+            **self._audio_workspace_application.snapshot(),
+            "universal_wav_review_selection_available": (
+                self._review_workspace_selector is not None
+            ),
+        }
 
     def audio_workspace_prepare_placement(self, args: Any) -> dict[str, Any]:
         required = {

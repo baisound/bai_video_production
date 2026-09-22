@@ -540,6 +540,7 @@ def test_trusted_launch_binds_task098_review_to_its_canonical_store_without_medi
     try:
         application = launch.bridge._review_workspace_application
         assert application is not None
+        assert launch._review_workspace_selector is None
         assert application._runtime._assets is launch._product_store
         model = launch.bridge.view_model()
         assert calls == 1
@@ -556,6 +557,36 @@ def test_trusted_launch_binds_task098_review_to_its_canonical_store_without_medi
     finally:
         launch.close()
     assert application._closed is True
+    assert launch._review_workspace_application is None
+
+
+def test_normal_trusted_launch_binds_human_selector_but_keeps_default_view_effect_zero(
+    tmp_path: Path,
+):
+    path, _raw = config_document(tmp_path)
+    launch = build_trusted_launch(
+        Task036LaunchConfiguration.load(path),
+        native_dialog=Task036NativeDialogService(DialogBackend()),
+        asr_provider=AsrProvider(),
+        resolve_adapter=ResolveAdapter(),
+    )
+    selector = launch._review_workspace_selector
+    application = launch._review_workspace_application
+    try:
+        assert selector is not None
+        assert application is not None
+        assert application._runtime._assets is launch._product_store
+        model = launch.bridge.view_model()
+        assert "universal_wav_review" not in model
+        audio = launch.bridge.audio_workspace_snapshot({})
+        assert audio["universal_wav_review_selection_available"] is True
+        assert selector.is_ready() is False
+        assert application._runtime._active_cancel is None
+    finally:
+        launch.close()
+    assert selector._closed is True
+    assert application._closed is True
+    assert launch._review_workspace_selector is None
     assert launch._review_workspace_application is None
 
 

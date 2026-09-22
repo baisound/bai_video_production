@@ -857,6 +857,12 @@ def test_html_exposes_human_only_universal_wav_review_without_auto_execution():
     assert "waveform_envelope_milli.length<=2048" in HTML
     assert "canonical_receipt_created===false" in HTML
     assert "review_completion_claimed===false" in HTML
+    assert "Universal WAV Reviewで確認" in HTML
+    assert "universal_wav_review_select',{candidate_id:item.candidate_id}" in HTML
+    assert "wav_header_read===true" in HTML
+    assert "audio_body_read===false" in HTML
+    assert "playback_started===false" in HTML
+    assert "waveform_render_started===false" in HTML
 
 
 def test_html_has_keyboard_focus_and_screen_reader_landmarks():

@@ -26,6 +26,7 @@ from .task098_faster_whisper_model_settings import (
 )
 from .task098_review_workspace_coordinator import ReviewWorkspaceViewModel
 from .task098_review_workspace_shell_projection import project_review_workspace
+from .task098_review_shell_application import Task098ReviewShellApplication
 from .owner_signing_key_ppk_shell_service import OwnerSigningKeyPpkShellService
 from .task036_pre_edit_runtime import (
     Task036PreEditRuntime,
@@ -325,7 +326,53 @@ def _compose_runtime_managed_v611_html(html: str) -> str:
     return html
 
 
-HTML = _compose_runtime_managed_v611_html(V611_HTML)
+def _compose_task098_review_html(html: str) -> str:
+    """Add Human-only local WAV review controls to the unified Product UI."""
+
+    button_anchor = '<button class="btn" id="runtimeControlButton" disabled>文字起こし制御</button>'
+    if html.count(button_anchor) != 1:
+        raise RuntimeError("TASK-098 review control button anchor changed")
+    review_markup = (
+        '<section class="record" id="universalWavReview" aria-label="Universal WAV Review">'
+        '<strong>Universal WAV Review</strong>'
+        '<div class="muted small" id="universalWavReviewStatus">canonical Asset未接続</div>'
+        '<canvas id="universalWavReviewWaveform" width="640" height="120" '
+        'aria-label="private音声の一時波形" style="width:100%;height:90px;background:#090c10;margin:8px 0"></canvas>'
+        '<button class="btn" id="universalWavReviewButton" disabled>音声を再生して波形を表示</button>'
+        '</section>'
+    )
+    html = html.replace(button_anchor, button_anchor + review_markup)
+
+    function_anchor = "async function workflowAction(){"
+    if html.count(function_anchor) != 1:
+        raise RuntimeError("TASK-098 review function anchor changed")
+    review_functions = (
+        "function clearUniversalWavReviewWaveform(){const canvas=$('universalWavReviewWaveform'),ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height)}"
+        "function renderUniversalWavReviewWaveform(points){const canvas=$('universalWavReviewWaveform'),ctx=canvas.getContext('2d');clearUniversalWavReviewWaveform();if(!Array.isArray(points)||!points.length)return;ctx.strokeStyle='#69d2a4';ctx.lineWidth=1;ctx.beginPath();const mid=canvas.height/2;for(let i=0;i<points.length;i++){const value=points[i];if(!Number.isInteger(value)||value<0||value>1000){clearUniversalWavReviewWaveform();return}const x=i*(canvas.width-1)/Math.max(1,points.length-1),height=value*(canvas.height-4)/2000;ctx.moveTo(x,mid-height);ctx.lineTo(x,mid+height)}ctx.stroke()}"
+        "async function refreshUniversalWavReview(){const model=await call('view_model',{}),review=model?.universal_wav_review,button=$('universalWavReviewButton'),status=$('universalWavReviewStatus'),ready=review?.available===true&&review?.capabilities?.audition===true&&review?.capabilities?.waveform_render===true;button.disabled=!ready;status.textContent=ready?'Human操作時のみ再生・波形表示できます':'canonical Asset review runtime未接続';if(!ready)clearUniversalWavReviewWaveform()}"
+        "async function runUniversalWavReview(){const button=$('universalWavReviewButton');button.disabled=true;clearUniversalWavReviewWaveform();let prepared=null,finalStatus=null;try{prepared=await call('universal_wav_review_prepare',{});if(!prepared?.confirmation_id)return;if(!window.confirm(`${prepared.status_label}を実行しますか？\\n\\n${prepared.warning}`)){await call('universal_wav_review_cancel',{confirmation_id:prepared.confirmation_id});return}const result=await call('universal_wav_review_apply',{confirmation_id:prepared.confirmation_id});const valid=result?.task_owner==='TASK-098'&&result?.runtime_state==='SUCCEEDED'&&result?.playback_observed===true&&result?.waveform_observed===true&&result?.canonical_receipt_created===false&&result?.review_completion_claimed===false&&result?.review_state_persisted===false&&result?.human_decision_authorized===false&&result?.media_mutation_started===false&&result?.waveform_ephemeral===true&&result?.audio_body_exposed===false&&result?.private_identity_exposed===false&&Array.isArray(result?.waveform_envelope_milli)&&result.waveform_envelope_milli.length>0&&result.waveform_envelope_milli.length<=2048;if(!valid){finalStatus='再生・波形結果を検証できませんでした';return}renderUniversalWavReviewWaveform(result.waveform_envelope_milli);finalStatus=`再生・波形表示完了 · ${result.waveform_envelope_milli.length} points · canonical state未変更`}finally{await refreshUniversalWavReview();if(finalStatus)$('universalWavReviewStatus').textContent=finalStatus}}"
+    )
+    html = html.replace(function_anchor, review_functions + function_anchor)
+
+    refresh_anchor = "if(page==='edit'){await refreshReview();await refreshTimeline();await refreshSpeechCues()}"
+    if html.count(refresh_anchor) != 1:
+        raise RuntimeError("TASK-098 review refresh anchor changed")
+    html = html.replace(
+        refresh_anchor,
+        "if(page==='edit'){await refreshReview();await refreshTimeline();await refreshSpeechCues();await refreshUniversalWavReview()}",
+    )
+
+    listener_anchor = "$('runtimeControlButton').addEventListener('click',runRuntimeTranscriptionControl);"
+    if html.count(listener_anchor) != 1:
+        raise RuntimeError("TASK-098 review listener anchor changed")
+    html = html.replace(
+        listener_anchor,
+        listener_anchor + "$('universalWavReviewButton').addEventListener('click',runUniversalWavReview);",
+    )
+    return html
+
+
+HTML = _compose_task098_review_html(_compose_runtime_managed_v611_html(V611_HTML))
 
 
 def _nle_operation_guarded(method: Callable[..., dict[str, Any]]) -> Callable[..., dict[str, Any]]:
@@ -358,6 +405,7 @@ class Task036ShellBridge:
         native_dialog: Task036NativeDialogService | None = None,
         faster_whisper_model_settings: Task098FasterWhisperModelSettingsService | None = None,
         review_workspace_provider: Callable[[], ReviewWorkspaceViewModel] | None = None,
+        review_workspace_application: Task098ReviewShellApplication | None = None,
         pre_edit_runtime: Task036PreEditRuntime | None = None,
         workflow_runtime: Task036WorkflowRuntime | None = None,
         workflow_runtime_factory: Callable[[Task036EditingApplication], Task036WorkflowRuntime] | None = None,
@@ -409,7 +457,19 @@ class Task036ShellBridge:
         self._faster_whisper_model_settings = faster_whisper_model_settings
         if review_workspace_provider is not None and not callable(review_workspace_provider):
             raise ValueError("review workspace provider is invalid")
-        self._review_workspace_provider = review_workspace_provider
+        if (
+            review_workspace_application is not None
+            and type(review_workspace_application) is not Task098ReviewShellApplication
+        ):
+            raise ValueError("review workspace application is invalid")
+        if review_workspace_provider is not None and review_workspace_application is not None:
+            raise ValueError("bind either a review provider or application, not both")
+        self._review_workspace_application = review_workspace_application
+        self._review_workspace_provider = (
+            review_workspace_application.view_model
+            if review_workspace_application is not None
+            else review_workspace_provider
+        )
         if pre_edit_runtime is not None and pre_edit_runtime.coordinator.shell is not service:
             raise ValueError("pre-edit runtime must use the supplied Shell service")
         self._pre_edit_runtime = pre_edit_runtime
@@ -1528,7 +1588,10 @@ class Task036ShellBridge:
             return body
         try:
             private_view = self._review_workspace_provider()
-            public_projection = project_review_workspace(private_view).to_dict()
+            public_projection = project_review_workspace(
+                private_view,
+                review_runtime_enabled=self._review_workspace_application is not None,
+            ).to_dict()
         except Exception:
             raise ProductError(
                 "ERR_TASK098_REVIEW_WORKSPACE_PROJECTION_INVALID",
@@ -1536,6 +1599,51 @@ class Task036ShellBridge:
                 ProductErrorCategory.DATA_INTEGRITY,
             ) from None
         return {**body, "universal_wav_review": public_projection}
+
+    def _require_review_workspace_application(self) -> Task098ReviewShellApplication:
+        if self._review_workspace_application is None:
+            raise ProductError(
+                "ERR_TASK098_REVIEW_RUNTIME_NOT_BOUND",
+                "Universal WAV Review runtime is not bound to this Shell",
+                ProductErrorCategory.AUTHORIZATION,
+            )
+        return self._review_workspace_application
+
+    def universal_wav_review_prepare(self, args: Any = None) -> dict[str, Any]:
+        self._empty_args(args, "Universal WAV Review prepare")
+        return self._require_review_workspace_application().prepare()
+
+    def universal_wav_review_cancel(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"].strip()
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Universal WAV Review cancel request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_review_workspace_application().cancel(
+            args["confirmation_id"]
+        )
+
+    def universal_wav_review_apply(self, args: Any) -> dict[str, Any]:
+        if (
+            not isinstance(args, dict)
+            or set(args) != {"confirmation_id"}
+            or not isinstance(args["confirmation_id"], str)
+            or not args["confirmation_id"].strip()
+        ):
+            raise ProductError(
+                "ERR_SHELL_BRIDGE_REQUEST_INVALID",
+                "Universal WAV Review apply request is invalid",
+                ProductErrorCategory.VALIDATION,
+            )
+        return self._require_review_workspace_application().apply(
+            args["confirmation_id"]
+        )
 
     def set_workspace(self, args: Any) -> dict[str, Any]:
         if not isinstance(args, dict) or set(args) != {"workspace"}:

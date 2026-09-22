@@ -212,3 +212,18 @@ def test_projection_requires_exact_private_view_model_type() -> None:
             subtitle_rows=(),
             viewport=ShellReviewViewport(0, 1, 0, 0, 1),
         )
+
+
+def test_projection_enables_only_audition_and_waveform_for_bound_a6_runtime() -> None:
+    body = project_review_workspace(
+        private_view(), review_runtime_enabled=True
+    ).to_dict()
+    assert body["capabilities"] == {
+        "local_viewport_scroll": True,
+        "audition": True,
+        "waveform_render": True,
+        "subtitle_mutation": False,
+        "review_completion": False,
+        "review_state_persistence": False,
+        "human_decision_authorized": False,
+    }

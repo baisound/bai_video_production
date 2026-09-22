@@ -32,6 +32,7 @@ from .task098_review_media_runtime_contract import (
 MAX_DECODED_RANGE_BYTES = 16 * 1024 * 1024
 MAX_SOURCE_WAV_BYTES = 8 * 1024 * 1024 * 1024
 MAX_AUDIO_CHANNELS = 8
+MAX_EPHEMERAL_WAVEFORM_POINTS = 2_048
 _HASH_CHUNK_BYTES = 4 * 1024 * 1024
 _ALLOWED_ASSET_TYPES = frozenset({AssetType.AUDIO, AssetType.BGM, AssetType.SFX})
 _ALLOWED_RIGHTS = frozenset(
@@ -208,6 +209,21 @@ def _range_wav(
     return output.getvalue()
 
 
+def _ephemeral_waveform_envelope(
+    peaks: list[int], *, sample_width: int
+) -> tuple[int, ...]:
+    if sample_width not in {1, 2, 3, 4} or not peaks:
+        raise ReviewRuntimeKnownFailure("waveform envelope is invalid")
+    target_count = min(len(peaks), MAX_EPHEMERAL_WAVEFORM_POINTS)
+    reduced: list[int] = []
+    for index in range(target_count):
+        start = index * len(peaks) // target_count
+        end = (index + 1) * len(peaks) // target_count
+        reduced.append(max(peaks[start:end]))
+    full_scale = (1 << (8 * sample_width - 1)) - 1 if sample_width > 1 else 128
+    return tuple(min(1_000, value * 1_000 // full_scale) for value in reduced)
+
+
 class RegistryBoundReviewMediaRuntimePort:
     """Concrete exact-Asset WAV runtime; construction is the activation gate."""
 
@@ -372,14 +388,37 @@ class RegistryBoundReviewMediaRuntimePort:
     def execute(
         self, request: ReviewMediaRuntimeRequest
     ) -> ReviewMediaRuntimeObservation:
+        observation, _envelope = self._execute(request)
+        return observation
+
+    def execute_with_ephemeral_waveform(
+        self, request: ReviewMediaRuntimeRequest
+    ) -> tuple[ReviewMediaRuntimeObservation, tuple[int, ...]]:
+        """Execute and return a process-local envelope for the A6 Shell adapter.
+
+        The returned normalized display envelope is never canonical and must
+        not be logged or persisted. Failure/cancel/disconnect returns none.
+        """
+
+        return self._execute(request, capture_waveform=True)
+
+    def _execute(
+        self,
+        request: ReviewMediaRuntimeRequest,
+        *,
+        capture_waveform: bool = False,
+    ) -> tuple[ReviewMediaRuntimeObservation, tuple[int, ...]]:
         if type(request) is not ReviewMediaRuntimeRequest:
             raise ValueError("request is invalid")
         with self._state_lock:
             if self._active_cancel is not None:
-                return self._observation(
-                    request,
-                    ReviewMediaRuntimeState.FAILED_KNOWN,
-                    reasons=("RUNTIME_FAILED",),
+                return (
+                    self._observation(
+                        request,
+                        ReviewMediaRuntimeState.FAILED_KNOWN,
+                        reasons=("RUNTIME_FAILED",),
+                    ),
+                    (),
                 )
             cancel_event = threading.Event()
             self._active_cancel = cancel_event
@@ -420,31 +459,48 @@ class RegistryBoundReviewMediaRuntimePort:
                 )
             if self._cleanup_disconnected.is_set():
                 raise ReviewRuntimeDisconnected()
-            return self._observation(
+            observation = self._observation(
                 request,
                 ReviewMediaRuntimeState.SUCCEEDED,
                 playback=playback_requested,
                 waveform=waveform_requested,
                 point_count=(len(waveform_peaks) if waveform_peaks is not None else None),
             )
+            return (
+                observation,
+                _ephemeral_waveform_envelope(
+                    waveform_peaks, sample_width=sample_width
+                )
+                if capture_waveform and waveform_peaks is not None
+                else (),
+            )
         except ReviewRuntimeCancelled:
-            return self._observation(
-                request,
-                ReviewMediaRuntimeState.CANCELLED_SAFE,
-                reasons=("CANCELLED_BY_RUNTIME",),
+            return (
+                self._observation(
+                    request,
+                    ReviewMediaRuntimeState.CANCELLED_SAFE,
+                    reasons=("CANCELLED_BY_RUNTIME",),
+                ),
+                (),
             )
         except ReviewRuntimeDisconnected:
-            return self._observation(
-                request,
-                ReviewMediaRuntimeState.UNKNOWN_AFTER_DISCONNECT,
-                reasons=("RUNTIME_DISCONNECTED",),
-                connected=False,
+            return (
+                self._observation(
+                    request,
+                    ReviewMediaRuntimeState.UNKNOWN_AFTER_DISCONNECT,
+                    reasons=("RUNTIME_DISCONNECTED",),
+                    connected=False,
+                ),
+                (),
             )
         except (OSError, ProductError, ReviewRuntimeKnownFailure, ValueError):
-            return self._observation(
-                request,
-                ReviewMediaRuntimeState.FAILED_KNOWN,
-                reasons=("RUNTIME_FAILED",),
+            return (
+                self._observation(
+                    request,
+                    ReviewMediaRuntimeState.FAILED_KNOWN,
+                    reasons=("RUNTIME_FAILED",),
+                ),
+                (),
             )
         finally:
             if waveform_peaks is not None:

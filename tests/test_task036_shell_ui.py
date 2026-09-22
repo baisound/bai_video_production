@@ -848,6 +848,17 @@ def test_html_exposes_allowlisted_post_review_workflow_action():
     assert "create_editor_handoff" in HTML
 
 
+def test_html_exposes_human_only_universal_wav_review_without_auto_execution():
+    assert 'id="universalWavReviewButton" disabled' in HTML
+    assert 'id="universalWavReviewWaveform"' in HTML
+    assert "universal_wav_review_prepare" in HTML
+    assert "window.confirm" in HTML
+    assert "universal_wav_review_apply',{confirmation_id:prepared.confirmation_id}" in HTML
+    assert "waveform_envelope_milli.length<=2048" in HTML
+    assert "canonical_receipt_created===false" in HTML
+    assert "review_completion_claimed===false" in HTML
+
+
 def test_html_has_keyboard_focus_and_screen_reader_landmarks():
     assert "button:focus-visible" in HTML
     assert 'class="skip-link"' in HTML

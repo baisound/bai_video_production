@@ -1,16 +1,17 @@
 # TASK-098 — Universal WAV Review Staged BVP Integration
 
-- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE / A4-R0_COMPLETE / A4-R1_DESIGN_COMPLETE / A4-R1A_COMPLETE / A4-R1B_COMPLETE / A4-R2_DESIGN_COMPLETE / A4-R2A_COMPLETE / A4-R2B1_COMPLETE / A4-R2B2_COMPLETE`
+- Status: `A2-R1A_COMPLETE / A2-R1B_COMPLETE / A2-R1C_COMPLETE / A2-R2A_COMPLETE / A2-R2B1_COMPLETE / A2-R2B2_COMPLETE / A2-R2C_COMPLETE / A3-R0_COMPLETE / A3-R1_COMPLETE / A3-R2_COMPLETE / A3-R3_COMPLETE / A4-R0_COMPLETE / A4-R1_DESIGN_COMPLETE / A4-R1A_COMPLETE / A4-R1B_COMPLETE / A4-R2_DESIGN_COMPLETE / A4-R2A_COMPLETE / A4-R2B1_COMPLETE / A4-R2B2_COMPLETE / A6-R1_COMPLETE`
 - Capability: `BVP-UNIVERSAL-WAV-REVIEW-INTEGRATION-001`
 - Governance: `DEV-3 HIGH ASSURANCE`
 - Owner authority: `2026-09-19` — proceed autonomously with staged Universal WAV Review integration while adapting cost and Context
 - Additional Owner authority: `2026-09-20` — additional fixes approved for the four unresolved A2-R1b High findings
+- A6 Owner authority: `2026-09-22` — connect the verified WAV review Runtime to the normal Product/Shell for Human-only canonical Asset private playback and waveform display plus bounded native verification; excludes automatic ingest, TASK-041 auto-completion, training, Release, Deploy and Production use
 - Base: `origin/main` / `0.24.3` / `28ba61e5f01047a716c681a3584be22500fe53fc`
 - Branch: `codex/task-098-a4-review-workspace`
-- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`; `TASK-098/A4-R0 — pure review-completion, timing projection and independent viewport contract`; `TASK-098/A4-R1 — exact-hash coordinator design`; `TASK-098/A4-R1a — pure body-free ephemeral exact-hash coordinator`; `TASK-098/A4-R1b — allowlisted unified Product/Shell projection`; `TASK-098/A4-R2 — playback/waveform authority design`; `TASK-098/A4-R2a — pure no-path fake-observation runtime contract/reducer`; `TASK-098/A4-R2b1 — concrete registry-bound WAV runtime and bounded synthetic Windows-native acceptance`; `TASK-098/A4-R2b2 — exact private WAV one-second Windows-native playback/waveform acceptance`
+- Completed Atomic Units: `TASK-098/A0 — authority and boundary reconnaissance`; `TASK-098/A1 — contract design and A2-R0 allocation`; `TASK-098/A2-R1 — runtime integration design and exact R1a allocation`; `TASK-098/A2-R1a — fake-only typed capability observation and deterministic resolver`; `TASK-098/A2-R1b Recovery R2 — persistent execution boundary`; `TASK-098/A2-R1c — trusted Python composition and public recovery presentation`; `TASK-098/A2-R2a — pure runtime transcription control contract and reducer`; `TASK-098/A2-R2b1 — durable control coordinator`; `TASK-098/A2-R2b2 — fake-only Provider / engine lifecycle integration`; `TASK-098/A2-R2c — trusted application/Shell projection and Human control`; `TASK-098/A3-R0 — pure local FasterWhisper model-directory inspection contract`; `TASK-098/A3-R1 — contained read-only model-directory inspector`; `TASK-098/A3-R2 — guarded private TASK-036 ASR model setting update and path-free Shell projection`; `TASK-098/A3-R3 — cache reuse/read-back and restart proof without model construction`; `TASK-098/A4-R0 — pure review-completion, timing projection and independent viewport contract`; `TASK-098/A4-R1 — exact-hash coordinator design`; `TASK-098/A4-R1a — pure body-free ephemeral exact-hash coordinator`; `TASK-098/A4-R1b — allowlisted unified Product/Shell projection`; `TASK-098/A4-R2 — playback/waveform authority design`; `TASK-098/A4-R2a — pure no-path fake-observation runtime contract/reducer`; `TASK-098/A4-R2b1 — concrete registry-bound WAV runtime and bounded synthetic Windows-native acceptance`; `TASK-098/A4-R2b2 — exact private WAV one-second Windows-native playback/waveform acceptance`; `TASK-098/A6-R1 — Human-only normal Product/Shell playback and ephemeral waveform display`
 - Completed recovery boundaries: `TASK-098/A2-R1b Recovery R2 — four preserved High findings closed`; `TASK-098/A2-R2c Recovery R1 — final-Judge H2/M1 corrections implemented and independently accepted, final Judge pending`
-- Active Atomic Unit: `NONE — A4 complete through A4-R2b2 isolated private native acceptance; A5 canonical TASK-047 receipt ABI remains dependency-blocked; A6 default Product/native acceptance remains separately gated`
-- Next action: `start a fresh A5 DEV-4 review when the canonical TASK-047 receipt ABI lands, or obtain exact A6 default Product/native activation authority; do not infer TASK-041 receipt/completion from A4-R2b2`
+- Active Atomic Unit: `NONE — A6-R1 Product/Shell connection and native acceptance are complete; A5 canonical TASK-047 receipt ABI remains dependency-blocked`
+- Next action: `wait for the canonical TASK-047 receipt ABI before fresh A5 DEV-4 review, or obtain a separate exact A6 packaging/installer/repair allocation; do not infer TASK-041 receipt/completion or Production authority from A6-R1`
 
 ## Objective
 
@@ -739,3 +740,42 @@ Later Units must publish their own narrower allowed-file list before mutation.
   `evidence/a4-r0-review-completion-viewport-20260922-r01.md`.
 - Next Unit: fresh A4-R1 review for the ephemeral exact-hash coordinator; A4-R0
   completion does not allocate its implementation.
+
+## A6-R1 Product/Shell review runtime completion
+
+- Owner approved the exact limited native scope on `2026-09-22`. Design and
+  boundary review:
+  `a6-r1-product-shell-review-runtime-design-20260922.md`.
+- Added an explicit private A4 binding provider to the normal trusted-launch
+  composition. The launcher constructs the existing registry-bound Windows
+  runtime from its own `SQLiteProductStore` and `LogicalPathResolver`; unbound
+  launches remain effect-zero and do not auto-select or ingest an Asset.
+- Added one-use, 300-second, capacity-bounded prepare/apply/cancel handling.
+  Apply consumes first, rebuilds the current exact request, rejects stale
+  binding and completes inside a launcher-owned lifetime that closes before the
+  Product store.
+- The unified Edit Shell now exposes one Human-confirmed action. Refresh and
+  navigation perform no media effect. Successful apply returns only the closed
+  A4 status and at most 2,048 normalized local-display peaks; no PCM, path,
+  Asset ID, digest, text or receipt enters JavaScript or Evidence.
+- A Critic pass removed the initially reachable high-resolution envelope,
+  bounded normalization inside the concrete runtime, preserved terminal UI
+  status across refresh and closed confirmation lifetime with the launcher.
+  Final findings: `Critical 0 / High 0 / Medium 0 / Low 0`.
+- Windows-native acceptance used the exact previously accepted TASK-097 V2
+  final reference digest, verified 48 kHz mono 24-bit PCM and 290,159 samples,
+  registered a contained temporary canonical test Asset, and executed the
+  normal Shell prepare/apply route for `[0, 48000)`. Result:
+  `SUCCEEDED`, playback observed, waveform observed and 2,048 display points.
+- Receipt creation, TASK-041/review completion, review persistence, Human
+  decision authorization and media mutation all remained false. The source was
+  unchanged; the temporary WAV copy and test database were deleted after both
+  native runs. Final intentional residual artifacts: none.
+- Focused post-Critic regression: `86 PASS / 1 Windows-native deselected`.
+  Final TASK-098/TASK-036 regression:
+  `192 PASS / 2 intentional Windows-native deselections` in `57.94s`.
+  Exact Evidence identity is recorded in
+  `evidence/a6-r1-product-shell-review-runtime-20260922-r01.md`.
+- No Asset auto-ingest, ASR/model activation, Dataset/training, TASK-041
+  completion, package/installer mutation, Release, Deploy or Production use
+  occurred.

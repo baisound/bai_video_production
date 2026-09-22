@@ -177,6 +177,7 @@ class ReviewWorkspaceShellProjection:
     transcript_rows: tuple[ShellTranscriptTimingRow, ...]
     subtitle_rows: tuple[ShellSubtitleTimingRow, ...]
     viewport: ShellReviewViewport
+    review_runtime_enabled: bool = False
     workspace_transcript_lineage_confirmed: bool = False
 
     def __post_init__(self) -> None:
@@ -190,6 +191,8 @@ class ReviewWorkspaceShellProjection:
         _integer(self.workspace_revision, "workspace_revision", minimum=0)
         if self.workspace_transcript_lineage_confirmed is not False:
             raise ValueError("workspace transcript lineage cannot be claimed")
+        if type(self.review_runtime_enabled) is not bool:
+            raise ValueError("review_runtime_enabled must be a boolean")
         if not isinstance(self.transcript_rows, tuple) or any(
             type(row) is not ShellTranscriptTimingRow for row in self.transcript_rows
         ):
@@ -258,8 +261,8 @@ class ReviewWorkspaceShellProjection:
             "viewport": self.viewport.to_dict(),
             "capabilities": {
                 "local_viewport_scroll": True,
-                "audition": False,
-                "waveform_render": False,
+                "audition": self.review_runtime_enabled,
+                "waveform_render": self.review_runtime_enabled,
                 "subtitle_mutation": False,
                 "review_completion": False,
                 "review_state_persistence": False,
@@ -270,9 +273,13 @@ class ReviewWorkspaceShellProjection:
 
 def project_review_workspace(
     value: ReviewWorkspaceViewModel,
+    *,
+    review_runtime_enabled: bool = False,
 ) -> ReviewWorkspaceShellProjection:
     if type(value) is not ReviewWorkspaceViewModel:
         raise ValueError("review workspace ViewModel is invalid")
+    if type(review_runtime_enabled) is not bool:
+        raise ValueError("review_runtime_enabled must be a boolean")
     private_viewport = value.viewport
     return ReviewWorkspaceShellProjection(
         sample_rate_hz=REQUIRED_SAMPLE_RATE_HZ,
@@ -291,6 +298,7 @@ def project_review_workspace(
             segment_scroll_index=private_viewport.segment_scroll_index,
             visible_segment_count=private_viewport.visible_segment_count,
         ),
+        review_runtime_enabled=review_runtime_enabled,
     )
 
 

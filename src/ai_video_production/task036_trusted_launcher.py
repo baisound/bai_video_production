@@ -54,6 +54,14 @@ from .task036_product_ports import (
     _file_sha256,
 )
 from .task036_shell_ui import HTML, Task036ShellBridge
+from .task098_review_media_runtime_windows import (
+    RegistryBoundReviewMediaRuntimePort,
+    WindowsWavePlaybackBackend,
+)
+from .task098_review_shell_application import (
+    Task098ReviewShellApplication,
+    Task098ReviewShellBinding,
+)
 from .task056_product_integration import Task056SpeechCueProductApplication
 from .game_intelligence_shell import GameIntelligenceShellApplication
 from .task044_nle_shell import Task044NleShellController
@@ -611,6 +619,9 @@ class Task036TrustedLaunch:
     _product_store: SQLiteProductStore | None = field(default=None, repr=False)
     _ollama_runtime: OllamaRuntimeLifecycle | None = field(default=None, repr=False)
     _meter_controller_host: MeterControllerHost | None = field(default=None, repr=False)
+    _review_workspace_application: Task098ReviewShellApplication | None = field(
+        default=None, repr=False
+    )
 
     def close(self) -> None:
         """Release the private mutation-runtime lease, if this launch owns one."""
@@ -634,6 +645,10 @@ class Task036TrustedLaunch:
         if local_lifetime is not None:
             local_lifetime.close()
             self._local_operation_lifetime = None
+        review_workspace_application = self._review_workspace_application
+        self._review_workspace_application = None
+        if review_workspace_application is not None:
+            review_workspace_application.close()
         lease = self._runtime_lease
         if lease is not None:
             lease.close()
@@ -1084,6 +1099,9 @@ def _build_trusted_launch(
     ollama_runtime: OllamaRuntimeLifecycle | None = None,
     local_audio_inventory: LocalAudioModelInventory | None = None,
     meter_host_factory: Callable[[Path, str], MeterControllerHost | None] = packaged_meter_host,
+    review_workspace_binding_provider: Callable[
+        [], Task098ReviewShellBinding
+    ] | None = None,
     transcription_port_factory: Callable[
         [Task036LaunchConfiguration, SQLiteProductStore], Any
     ],
@@ -1157,6 +1175,24 @@ def _build_trusted_launch(
             PathMapping("asset://", configuration.asset_root),
             PathMapping("job://", configuration.job_root),
         ]
+    )
+    if (
+        review_workspace_binding_provider is not None
+        and not callable(review_workspace_binding_provider)
+    ):
+        store.close()
+        raise ValueError("review workspace binding provider is invalid")
+    review_workspace_application = (
+        None
+        if review_workspace_binding_provider is None
+        else Task098ReviewShellApplication(
+            binding_provider=review_workspace_binding_provider,
+            runtime=RegistryBoundReviewMediaRuntimePort(
+                assets=store,
+                resolver=resolver,
+                playback=WindowsWavePlaybackBackend(),
+            ),
+        )
     )
     ingest_service = AssetIngestService(
         store=store,
@@ -1622,6 +1658,7 @@ def _build_trusted_launch(
             generation_execution_application=generation_execution_application,
             generation_output_adoption_application=generation_output_adoption_application,
             audio_workspace_application=audio_workspace_application,
+            review_workspace_application=review_workspace_application,
             audio_placement_application=audio_placement_application,
             quick_generation_application=quick_generation_application,
             connection_settings=connection_settings,
@@ -1651,6 +1688,7 @@ def _build_trusted_launch(
             _product_store=store,
             _ollama_runtime=managed_ollama_runtime,
             _meter_controller_host=meter_controller_host,
+            _review_workspace_application=review_workspace_application,
         )
     except BaseException:
         if meter_controller_host is not None:
@@ -1686,6 +1724,9 @@ def build_trusted_launch(
     ollama_runtime: OllamaRuntimeLifecycle | None = None,
     local_audio_inventory: LocalAudioModelInventory | None = None,
     meter_host_factory: Callable[[Path, str], MeterControllerHost | None] = packaged_meter_host,
+    review_workspace_binding_provider: Callable[
+        [], Task098ReviewShellBinding
+    ] | None = None,
 ) -> Task036TrustedLaunch:
     """Compose the byte-compatible legacy v1 trusted launch."""
 
@@ -1715,6 +1756,7 @@ def build_trusted_launch(
         ollama_runtime=ollama_runtime,
         local_audio_inventory=local_audio_inventory,
         meter_host_factory=meter_host_factory,
+        review_workspace_binding_provider=review_workspace_binding_provider,
         transcription_port_factory=transcription_port_factory,
     )
 

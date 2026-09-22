@@ -3,7 +3,8 @@ param(
   [string]$RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path,
   [string]$EvidenceRoot = 'C:\home\baisound\evidence\bai-video-production',
   [string]$RunId = '',
-  [string]$PythonExe = ''
+  [string]$PythonExe = '',
+  [string]$ExistingMainBuildRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -96,11 +97,20 @@ $evidenceRun = Assert-Descendant $evidenceRun $requestedEvidenceRoot 'Evidence r
 $tempRoot = Get-FullPath $env:TEMP
 $runtimeRun = Assert-NotDriveRootChild (Join-Path $tempRoot "bai-video-production\TASK-049\windows-consumer-gate\$RunId") 'Runtime run root'
 $runtimeRun = Assert-Descendant $runtimeRun $tempRoot 'Runtime run root'
-$worktreeBuildRun = Assert-NotDriveRootChild (Join-Path $repo "builds\task049-consumer-gate\$RunId") 'Worktree build run root'
-$worktreeBuildRun = Assert-Descendant $worktreeBuildRun $repo 'Worktree build run root'
+$mainBuildReused = -not [string]::IsNullOrWhiteSpace($ExistingMainBuildRoot)
+if ($mainBuildReused) {
+  $mainBuildRoot = Assert-NotDriveRootChild $ExistingMainBuildRoot 'Existing main build root'
+  $mainBuildRoot = Assert-Descendant $mainBuildRoot $repo 'Existing main build root'
+  if (-not (Test-Path -LiteralPath $mainBuildRoot -PathType Container)) { throw "ExistingMainBuildRoot is unavailable: $mainBuildRoot" }
+  $worktreeBuildRun = Split-Path -Parent $mainBuildRoot
+} else {
+  $worktreeBuildRun = Assert-NotDriveRootChild (Join-Path $repo "builds\task049-consumer-gate\$RunId") 'Worktree build run root'
+  $worktreeBuildRun = Assert-Descendant $worktreeBuildRun $repo 'Worktree build run root'
+  $mainBuildRoot = Join-Path $worktreeBuildRun 'main-build'
+}
 if (Test-Path -LiteralPath $evidenceRun) { throw "Evidence run root already exists: $evidenceRun" }
 if (Test-Path -LiteralPath $runtimeRun) { throw "Runtime run root already exists: $runtimeRun" }
-if (Test-Path -LiteralPath $worktreeBuildRun) { throw "Worktree build run root already exists: $worktreeBuildRun" }
+if (-not $mainBuildReused -and (Test-Path -LiteralPath $worktreeBuildRun)) { throw "Worktree build run root already exists: $worktreeBuildRun" }
 
 if (-not $PythonExe) {
   if ($env:BVP_BUILD_PYTHON) { $PythonExe = $env:BVP_BUILD_PYTHON }
@@ -149,9 +159,12 @@ try {
   # beneath the exact repository root. Keep only that main-package build in a
   # unique ignored worktree run directory; utility builds and fixtures remain
   # beneath the system temporary run root.
-  $mainBuildRoot = Join-Path $worktreeBuildRun 'main-build'
   $mainEvidence = Join-Path $evidenceRun 'main-bvp'
-  & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repo 'tools\windows\run-task049-r9b2-packaged-smoke.ps1') -RepositoryRoot $repo -EvidenceDirectory $mainEvidence -BuildRoot $mainBuildRoot -PythonExe $python
+  if ($mainBuildReused) {
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repo 'tools\windows\run-task049-r9b2-packaged-smoke.ps1') -RepositoryRoot $repo -EvidenceDirectory $mainEvidence -BuildRoot $mainBuildRoot -PythonExe $python -SkipBuild
+  } else {
+    & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $repo 'tools\windows\run-task049-r9b2-packaged-smoke.ps1') -RepositoryRoot $repo -EvidenceDirectory $mainEvidence -BuildRoot $mainBuildRoot -PythonExe $python
+  }
   if ($LASTEXITCODE -ne 0) { throw "Main BVP packaged smoke failed with exit code $LASTEXITCODE" }
   $mainExe = Join-Path $mainBuildRoot 'BAI Video Production\BAI Video Production.exe'
   if (-not (Test-Path -LiteralPath $mainExe -PathType Leaf)) { throw "Expected packaged EXE is missing: $mainExe" }
@@ -216,7 +229,7 @@ try {
     source = [ordered]@{ branch = $branch; head = $head; origin_main = $baseMain; dirty = $false }
     paths = [ordered]@{ worktree = $repo; worktree_build_root = $worktreeBuildRun; runtime_root = $runtimeRun; evidence_root = $evidenceRun }
     packages = [ordered]@{
-      main_bvp = [ordered]@{ result = 'PASS'; exe_sha256 = $mainReceipt.exe_sha256; restart_readback = 'PASS' }
+      main_bvp = [ordered]@{ result = 'PASS'; exe_sha256 = $mainReceipt.exe_sha256; restart_readback = 'PASS'; build_reused = $mainBuildReused }
       trivia_editor = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $triviaExe).Hash.ToLowerInvariant(); launch_count = 2; candidate_readback = 'PASS' }
       training_studio = [ordered]@{ result = 'PASS'; exe_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $trainingExe).Hash.ToLowerInvariant(); launch_count = 2; workspace_template_readback = 'PASS' }
     }

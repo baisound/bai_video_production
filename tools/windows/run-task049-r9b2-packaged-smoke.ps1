@@ -3,7 +3,8 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$EvidenceDirectory,
   [string]$BuildRoot = '',
-  [string]$PythonExe = ''
+  [string]$PythonExe = '',
+  [switch]$SkipBuild
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,8 +28,11 @@ $buildParent = [System.IO.Path]::GetDirectoryName($buildRootFull).TrimEnd('\', '
 if ($buildRootFull -eq $buildDriveRoot -or $buildParent -eq $buildDriveRoot) {
   throw "BuildRoot must not be a drive root or its direct child: $buildRootFull"
 }
-if (Test-Path -LiteralPath $buildRootFull) {
+if (-not $SkipBuild -and (Test-Path -LiteralPath $buildRootFull)) {
   throw "BuildRoot must be a fresh operation-owned path: $buildRootFull"
+}
+if ($SkipBuild -and -not (Test-Path -LiteralPath $buildRootFull -PathType Container)) {
+  throw "SkipBuild requires an existing BuildRoot: $buildRootFull"
 }
 
 if ([string]::IsNullOrWhiteSpace($PythonExe)) {
@@ -37,13 +41,15 @@ if ([string]::IsNullOrWhiteSpace($PythonExe)) {
 }
 
 $build = Join-Path $repo 'build-windows-exe.bat'
-$oldBuildRoot = $env:BVP_TASK048_BUILD_ROOT
-try {
-  $env:BVP_TASK048_BUILD_ROOT = $buildRootFull
-  & $build
-  if ($LASTEXITCODE -ne 0) { throw "Windows package build failed with exit code $LASTEXITCODE" }
-} finally {
-  $env:BVP_TASK048_BUILD_ROOT = $oldBuildRoot
+if (-not $SkipBuild) {
+  $oldBuildRoot = $env:BVP_TASK048_BUILD_ROOT
+  try {
+    $env:BVP_TASK048_BUILD_ROOT = $buildRootFull
+    & $build
+    if ($LASTEXITCODE -ne 0) { throw "Windows package build failed with exit code $LASTEXITCODE" }
+  } finally {
+    $env:BVP_TASK048_BUILD_ROOT = $oldBuildRoot
+  }
 }
 
 $package = Join-Path $buildRootFull 'BAI Video Production'
@@ -109,6 +115,17 @@ function Find-ButtonPrefix([System.Windows.Automation.AutomationElement]$Root, [
   return $null
 }
 
+function Find-ButtonContaining([System.Windows.Automation.AutomationElement]$Root, [string]$Text) {
+  $condition = [System.Windows.Automation.PropertyCondition]::new(
+    [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+    [System.Windows.Automation.ControlType]::Button)
+  $buttons = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
+  foreach ($button in $buttons) {
+    if ($button.Current.Name.Contains($Text)) { return $button }
+  }
+  return $null
+}
+
 function Invoke-Button([System.Windows.Automation.AutomationElement]$Button) {
   if ($null -eq $Button) { throw 'Required packaged Game Intelligence button is unavailable.' }
   $pattern = $null
@@ -145,7 +162,7 @@ function Start-App([int]$Attempt) {
   do {
     Start-Sleep -Milliseconds 400
     $root = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
-    $gameButton = Find-ButtonExact $root 'G Game Intelligence'
+    $gameButton = Find-ButtonContaining $root 'Game Intelligence'
   } while ($null -eq $gameButton -and [DateTime]::UtcNow -lt $readyDeadline)
   if ($null -eq $gameButton) { throw 'Packaged Shell did not expose the TASK-049 Game Intelligence stage.' }
   return [ordered]@{ process=$process; root=$root; handle=$handle; gameButton=$gameButton }
@@ -206,6 +223,7 @@ try {
     build_root = $buildRootFull
     runtime_root = $runRoot
     evidence_root = $evidence
+    build_reused = [bool]$SkipBuild
   }
   $receiptPath = Join-Path $evidence 'task049-r9b2-packaged-smoke.json'
   $receipt | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $receiptPath -Encoding UTF8

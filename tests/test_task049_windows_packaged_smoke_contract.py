@@ -19,7 +19,7 @@ def test_windows_smoke_script_builds_existing_exe_and_checks_packaged_restart_re
         "build-windows-exe.bat",
         "BAI Video Production.exe",
         "create-task049-game-intelligence-fixture.py",
-        "G Game Intelligence",
+        "Find-ButtonContaining $root 'Game Intelligence'",
         "Wait-ForEventState $first.root 'NEEDS_REVIEW'",
         "Wait-ForEventState $first.root 'CONFIRMED'",
         "Wait-ForEventState $second.root 'CONFIRMED'",
@@ -31,6 +31,8 @@ def test_windows_smoke_script_builds_existing_exe_and_checks_packaged_restart_re
         "[string]$BuildRoot = ''",
         "$env:BVP_TASK048_BUILD_ROOT = $buildRootFull",
         "$package = Join-Path $buildRootFull 'BAI Video Production'",
+        "[switch]$SkipBuild",
+        "build_reused = [bool]$SkipBuild",
     ):
         assert token in source
     assert "Release" not in source or "public_release_performed" in source
@@ -59,6 +61,8 @@ def test_consumer_gate_orchestrates_three_packages_with_safe_bounded_evidence() 
         "Get-Content -LiteralPath $receiptPath",
         'assert PyInstaller.__version__ == "6.22.2"',
         "worktree_build_root = $worktreeBuildRun",
+        "[string]$ExistingMainBuildRoot = ''",
+        "-SkipBuild",
     ):
         assert token in source
     assert "build-all-windows-release.ps1" not in source

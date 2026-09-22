@@ -27,11 +27,15 @@ from ai_video_production.interactive_timeline import (
     TimelineTrackRole,
 )
 from ai_video_production.integrated_dashboard_operations import (
+    DashboardExecutionReceiptBinding,
+    DashboardOperationProposalRevision,
+    HumanOperationConfirmationBinding,
     IntegratedDashboardSnapshotRevision,
 )
 from ai_video_production.task021_operations_dashboard import (
     EFFECT_SURFACE,
     CanonicalDashboardReaders,
+    CanonicalOperationState,
     CanonicalValidationResult,
     DashboardDisplayState,
     Task021OperationsDashboard,
@@ -45,6 +49,7 @@ MODULE = ROOT / "src" / "ai_video_production" / "task021_operations_dashboard.py
 PROJECT_ID = "PRJ-01ARZ3NDEKTSV4RRFFQ69G5FAV"
 T0 = "2026-09-22T00:00:00Z"
 T1 = "2026-09-22T00:01:00Z"
+T2 = "2026-09-22T01:00:00Z"
 H1 = "sha256:" + "1" * 64
 H2 = "sha256:" + "2" * 64
 H3 = "sha256:" + "3" * 64
@@ -161,6 +166,79 @@ def integrated_snapshot(
         private_detail_included=False,
         effect_started_by_dashboard=False,
     )
+
+
+def operation_proposal(
+    snapshot: IntegratedDashboardSnapshotRevision,
+    **overrides,
+) -> DashboardOperationProposalRevision:
+    fields = dict(
+        proposal_id="dashboard-operation-proposal",
+        revision=1,
+        parent_record_sha256=None,
+        snapshot_sha256=snapshot.record_sha256,
+        operation_kind="REQUEST_PAUSE",
+        target_source_sha256=H2,
+        expected_target_state_version=1,
+        precondition_hashes=[H1, H2],
+        proposal_state="PROPOSED",
+        reason_codes=[],
+        created_at=T0,
+        expires_at=T2,
+        proposal_only=True,
+        execution_started=False,
+    )
+    fields.update(overrides)
+    return DashboardOperationProposalRevision.create(**fields)
+
+
+def human_confirmation(
+    proposal: DashboardOperationProposalRevision,
+    **overrides,
+) -> HumanOperationConfirmationBinding:
+    proposal_data = proposal.to_dict()
+    fields = dict(
+        contract_state="BOUND_VERIFIED",
+        confirmation_id="dashboard-human-confirmation",
+        confirmation_revision=1,
+        confirmation_sha256=H3,
+        proposal_sha256=proposal.record_sha256,
+        snapshot_sha256=proposal_data["snapshot_sha256"],
+        target_source_sha256=proposal_data["target_source_sha256"],
+        operation_kind=proposal_data["operation_kind"],
+        reviewer_kind="HUMAN",
+        decision="APPROVE",
+        decided_at=T0,
+        expires_at=T2,
+        one_shot=True,
+        consumed=False,
+        evidence_ref="owner-gate-evidence",
+        evidence_sha256=H1,
+    )
+    fields.update(overrides)
+    return HumanOperationConfirmationBinding.create(**fields)
+
+
+def execution_receipt(
+    proposal: DashboardOperationProposalRevision,
+    confirmation: HumanOperationConfirmationBinding,
+    **overrides,
+) -> DashboardExecutionReceiptBinding:
+    fields = dict(
+        contract_state="BOUND_VERIFIED",
+        receipt_id="dashboard-execution-receipt",
+        receipt_ref="canonical-external-receipt",
+        receipt_sha256=H1,
+        proposal_sha256=proposal.record_sha256,
+        confirmation_sha256=confirmation.record_sha256,
+        operation_identity="external-operation",
+        external_state="ACCEPTED",
+        observed_at=T1,
+        canonical_persistence_verified=True,
+        effect_started_by_dashboard=False,
+    )
+    fields.update(overrides)
+    return DashboardExecutionReceiptBinding.create(**fields)
 
 
 def dashboard(
@@ -454,6 +532,310 @@ def test_integrated_snapshot_project_mismatch_is_rejected() -> None:
 
     snapshot = service.refresh()
     assert snapshot.section("operations-state").state is DashboardDisplayState.FAILURE
+
+
+def test_operation_gate_projects_exact_current_human_state_without_effect_authority() -> None:
+    canonical = integrated_snapshot(
+        snapshot_state="NO_ACTIVE_INCIDENT_PROVEN",
+        coverage_state="COMPLETE",
+    )
+    proposal = operation_proposal(canonical)
+    confirmation = human_confirmation(proposal)
+    calls = {"snapshot": 0, "operation": 0}
+
+    def read_snapshot() -> IntegratedDashboardSnapshotRevision:
+        calls["snapshot"] += 1
+        return canonical
+
+    def read_operation() -> CanonicalOperationState:
+        calls["operation"] += 1
+        return CanonicalOperationState(proposal, confirmation, None, T1)
+
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=read_snapshot,
+            read_operation_state=read_operation,
+        ),
+    )
+
+    snapshot = service.refresh()
+    section = snapshot.section("operation-gate")
+    html = render_accessible_dashboard_html(snapshot)
+
+    assert calls == {"snapshot": 1, "operation": 1}
+    assert section.state is DashboardDisplayState.WARNING
+    assert tuple(row.state_ja for row in section.rows) == (
+        "外部Human Gate準備完了",
+        "人間承認済み",
+        "未実行",
+    )
+    assert all(row.operation_available is False for row in section.rows)
+    assert snapshot.external_execution_available is False
+    assert EFFECT_SURFACE["dashboard_operation_execution"] is False
+    assert 'data-operation-enabled="false"' in html
+    assert proposal.record_sha256 not in html
+    assert confirmation.record_sha256 not in html
+    assert "dashboard-operation-proposal" not in html
+    assert T0 not in html and T1 not in html and T2 not in html
+
+
+def test_operation_gate_without_human_confirmation_remains_blocked() -> None:
+    canonical = integrated_snapshot()
+    proposal = operation_proposal(canonical)
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                proposal, None, None, T1
+            ),
+        ),
+    )
+
+    section = service.refresh().section("operation-gate")
+    assert section.state is DashboardDisplayState.WARNING
+    assert section.rows[0].state_ja == "ブロック中"
+    assert "人間確認が結び付いていません" in section.rows[0].failure_reason_ja
+    assert section.rows[1].state_ja == "人間確認なし"
+    assert section.rows[2].state_ja == "未実行"
+
+
+@pytest.mark.parametrize(
+    ("confirmation_overrides", "expected_label"),
+    (
+        ({"decision": "REJECT"}, "人間が却下"),
+        ({"decision": "REVISE"}, "修正依頼"),
+        ({"expires_at": T1}, "再確認が必要"),
+    ),
+)
+def test_operation_gate_preserves_closed_human_decisions(
+    confirmation_overrides: dict[str, str],
+    expected_label: str,
+) -> None:
+    canonical = integrated_snapshot()
+    proposal = operation_proposal(canonical)
+    confirmation = human_confirmation(proposal, **confirmation_overrides)
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                proposal, confirmation, None, T1
+            ),
+        ),
+    )
+
+    section = service.refresh().section("operation-gate")
+    assert section.state is DashboardDisplayState.WARNING
+    assert section.rows[0].state_ja == "ブロック中"
+    assert section.rows[1].state_ja == expected_label
+
+
+def test_operation_gate_renders_persisted_external_result_without_receipt_identity() -> None:
+    canonical = integrated_snapshot(
+        snapshot_state="NO_ACTIVE_INCIDENT_PROVEN",
+        coverage_state="COMPLETE",
+    )
+    proposal = operation_proposal(canonical)
+    confirmation = human_confirmation(proposal)
+    receipt = execution_receipt(proposal, confirmation)
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                proposal, confirmation, receipt, T1
+            ),
+        ),
+    )
+
+    snapshot = service.refresh()
+    section = snapshot.section("operation-gate")
+    html = render_accessible_dashboard_html(snapshot)
+    assert section.state is DashboardDisplayState.SUCCESS
+    assert tuple(row.state_ja for row in section.rows) == (
+        "外部結果記録済み",
+        "人間承認済み",
+        "外部で受理済み",
+    )
+    assert receipt.record_sha256 not in html
+    assert "canonical-external-receipt" not in html
+    assert "external-operation" not in html
+
+
+@pytest.mark.parametrize(
+    ("external_state", "expected_state", "expected_label"),
+    (
+        ("REJECTED", DashboardDisplayState.WARNING, "外部で拒否"),
+        ("FAILED", DashboardDisplayState.FAILURE, "外部で失敗"),
+    ),
+)
+def test_operation_gate_preserves_closed_external_results(
+    external_state: str,
+    expected_state: DashboardDisplayState,
+    expected_label: str,
+) -> None:
+    canonical = integrated_snapshot()
+    proposal = operation_proposal(canonical)
+    confirmation = human_confirmation(proposal)
+    receipt = execution_receipt(
+        proposal,
+        confirmation,
+        external_state=external_state,
+        canonical_persistence_verified=False,
+    )
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                proposal, confirmation, receipt, T1
+            ),
+        ),
+    )
+
+    section = service.refresh().section("operation-gate")
+    assert section.state is expected_state
+    assert section.rows[2].state_ja == expected_label
+
+
+def test_operation_gate_unknown_external_result_forbids_automatic_replay() -> None:
+    canonical = integrated_snapshot()
+    proposal = operation_proposal(canonical)
+    confirmation = human_confirmation(proposal)
+    receipt = execution_receipt(
+        proposal,
+        confirmation,
+        external_state="UNKNOWN",
+        canonical_persistence_verified=False,
+    )
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                proposal, confirmation, receipt, T1
+            ),
+        ),
+    )
+
+    section = service.refresh().section("operation-gate")
+    assert section.state is DashboardDisplayState.UNKNOWN
+    assert section.rows[2].state_ja == "外部結果不明"
+    assert "自動再実行は禁止" in section.rows[2].next_action_ja
+    assert "自動再実行" in section.rows[0].next_action_ja
+
+
+def test_operation_gate_receipt_mismatch_is_unknown_not_recorded_success() -> None:
+    canonical = integrated_snapshot()
+    proposal = operation_proposal(canonical)
+    confirmation = human_confirmation(proposal)
+    mismatched = execution_receipt(
+        proposal,
+        confirmation,
+        confirmation_sha256=H2,
+        external_state="REJECTED",
+    )
+    service = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                proposal, confirmation, mismatched, T1
+            ),
+        ),
+    )
+
+    section = service.refresh().section("operation-gate")
+    assert section.state is DashboardDisplayState.UNKNOWN
+    assert section.rows[0].state_ja == "外部結果照合不能"
+    assert "一致しません" in section.rows[0].failure_reason_ja
+    assert "自動再実行は禁止" in section.rows[0].next_action_ja
+
+
+def test_operation_gate_snapshot_crossing_and_private_reader_failure_fail_closed() -> None:
+    canonical = integrated_snapshot()
+    foreign = integrated_snapshot(
+        project_id=PROJECT_ID,
+        snapshot_state="UNKNOWN",
+    )
+    proposal = operation_proposal(foreign)
+    crossed = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                proposal, None, None, T1
+            ),
+        ),
+    ).refresh()
+    assert crossed.section("operation-gate").state is DashboardDisplayState.FAILURE
+
+    def private_failure() -> CanonicalOperationState:
+        raise RuntimeError(r"C:\private\secret-token")
+
+    failed = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=private_failure,
+        ),
+    ).refresh()
+    html = render_accessible_dashboard_html(failed)
+    assert failed.section("operation-gate").state is DashboardDisplayState.FAILURE
+    assert "secret-token" not in html and r"C:\private" not in html
+
+    invalid = Task021OperationsDashboard(
+        project_id=PROJECT_ID,
+        readers=CanonicalDashboardReaders(
+            read_jobs=jobs,
+            read_assets=lambda: (),
+            read_timeline=lambda: None,
+            read_validation_results=lambda: (),
+            read_integrated_snapshot=lambda: canonical,
+            read_operation_state=lambda: CanonicalOperationState(
+                "not-a-proposal", None, None, T1  # type: ignore[arg-type]
+            ),
+        ),
+    ).refresh()
+    assert invalid.section("operation-gate").state is DashboardDisplayState.FAILURE
 
 
 def test_static_surface_has_no_store_filesystem_network_or_process_control() -> None:

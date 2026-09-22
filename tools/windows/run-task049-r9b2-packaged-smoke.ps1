@@ -191,11 +191,12 @@ function Close-App($Run) {
   if (-not $Run.process.WaitForExit(15000)) { throw 'Packaged Shell did not close within 15 seconds.' }
 }
 
-function Wait-ForEventState([System.Windows.Automation.AutomationElement]$Root, [string]$State) {
+function Wait-ForEventState([IntPtr]$Handle, [string]$State) {
   $deadline = [DateTime]::UtcNow.AddSeconds(30)
   do {
     Start-Sleep -Milliseconds 350
-    $button = Find-ButtonPrefix $Root ("WINDOW_VAULT · " + $State)
+    $root = [System.Windows.Automation.AutomationElement]::FromHandle($Handle)
+    $button = Find-ButtonPrefix $root ("WINDOW_VAULT · " + $State)
   } while ($null -eq $button -and [DateTime]::UtcNow -lt $deadline)
   return $button
 }
@@ -205,22 +206,24 @@ $second = $null
 try {
   $first = Start-App 1
   Invoke-Button $first.gameButton
-  $initialEvent = Wait-ForEventState $first.root 'NEEDS_REVIEW'
+  $initialEvent = Wait-ForEventState $first.handle 'NEEDS_REVIEW'
   if ($null -eq $initialEvent) {
-    throw "Initial NEEDS_REVIEW Event was not projected from the packaged Game Intelligence store. Observed buttons: $((Get-ButtonNames $first.root) -join ', ')"
+    $currentRoot = [System.Windows.Automation.AutomationElement]::FromHandle($first.handle)
+    throw "Initial NEEDS_REVIEW Event was not projected from the packaged Game Intelligence store. Observed buttons: $((Get-ButtonNames $currentRoot) -join ', ')"
   }
   Invoke-Button $initialEvent
-  $confirm = Find-ButtonExact $first.root '承認 / Confirm'
+  $currentRoot = [System.Windows.Automation.AutomationElement]::FromHandle($first.handle)
+  $confirm = Find-ButtonExact $currentRoot '承認 / Confirm'
   if ($null -eq $confirm -or -not $confirm.Current.IsEnabled) { throw 'Human Confirm control is unavailable for the selected Event.' }
   Invoke-Button $confirm
-  $confirmed = Wait-ForEventState $first.root 'CONFIRMED'
+  $confirmed = Wait-ForEventState $first.handle 'CONFIRMED'
   if ($null -eq $confirmed) { throw 'Packaged Human Confirm did not read back as CONFIRMED.' }
   Close-App $first
   $first = $null
 
   $second = Start-App 2
   Invoke-Button $second.gameButton
-  $restartConfirmed = Wait-ForEventState $second.root 'CONFIRMED'
+  $restartConfirmed = Wait-ForEventState $second.handle 'CONFIRMED'
   if ($null -eq $restartConfirmed) { throw 'CONFIRMED Event did not survive packaged restart/read-back.' }
   Close-App $second
   $second = $null

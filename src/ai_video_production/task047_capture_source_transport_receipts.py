@@ -39,6 +39,24 @@ _LINEAGE_FIELDS = (
     "capture_job_revision_sha256",
     "capture_job_predecessor_readback_sha256",
 )
+_SOURCE_INTEGER_FIELDS = ("schema_version", "source_sample_rate_hz", "source_channel_count")
+_TRANSPORT_INTEGER_FIELDS = (
+    "schema_version",
+    "first_packet_sequence",
+    "last_packet_sequence",
+    "observed_packet_count",
+    "accepted_packet_count",
+    "source_frame_count",
+    "source_sample_count",
+    "first_source_timestamp_ns",
+    "last_source_timestamp_ns",
+    "gap_count",
+    "duplicate_count",
+    "reorder_count",
+    "overrun_count",
+    "reconnect_count",
+    "nonfinite_sample_count",
+)
 
 
 class Task047ReceiptError(ValueError):
@@ -117,6 +135,13 @@ def _validate_record(record: dict[str, Any]) -> ParsedCaptureReceipt:
     if type(record_type) is not str or record_type not in _DOMAINS:
         _fail("UNSUPPORTED_VERSION")
     if next(_VALIDATOR.iter_errors(record), None) is not None:
+        _fail("INVALID_SHAPE")
+    integer_fields = (
+        _SOURCE_INTEGER_FIELDS
+        if record_type == "CaptureSourceCurrentnessReceiptV1"
+        else _TRANSPORT_INTEGER_FIELDS
+    )
+    if any(type(record[field]) is not int for field in integer_fields):
         _fail("INVALID_SHAPE")
     created_at = _parse_time(record["created_at"])
     observed_at = _parse_time(record["observed_at"])

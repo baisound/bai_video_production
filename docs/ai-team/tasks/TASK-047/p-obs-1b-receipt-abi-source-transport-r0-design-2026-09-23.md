@@ -42,7 +42,9 @@ Asset store, packaging, installer, Release, Deploy or Production paths.
 ## Exact R0 wire grammar
 
 - UTF-8 JSON object, at most 64 KiB. Duplicate keys, non-finite numbers,
-  unknown fields and unsupported type/version pairs are rejected.
+  unknown fields and unsupported type/version pairs are rejected. All integer
+  fields require a JSON integer token; integral-looking floats such as `1.0`
+  are rejected despite JSON Schema's mathematical integer equivalence.
 - Both records have the exact common envelope from the capture-truth design:
   `record_type`, `schema_version`, `project_id`, `recording_session_id`,
   `segment_attempt_id`, `operation_id`, `idempotency_key`,
